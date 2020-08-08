@@ -1,0 +1,38 @@
+.dnd5e.sheet .item-buttons button {
+	font-size: 10px;
+	line-height: 12px;
+	margin: 0;
+}
+
+.dnd5e.sheet .item-buttons span {
+	padding: 0;
+}
+
+.local-qol-flavor-text {
+    font-size: 12px
+}
+
+.midi-qol-full-damage-button,
+.midi-qol-half-damage-button,
+.midi-qol-double-damage-button,
+.midi-qol-full-healing-button
+ {
+	width: 22px;
+	height:22px;
+	font-size:10px;
+	line-height:1px
+}
+
+.midi-qol-flex-container {
+	display: flex;
+	align-items: center;
+	flex-flow: row;
+	padding: 3px;
+}
+
+.midi-qol-target-name:hover {
+	text-shadow: 0 0 4px red;
+}
+.midi-qol-gmonly {
+	display: none;
+}

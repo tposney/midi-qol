@@ -1,0 +1,14 @@
+<div>
+    {{#each hits as |hit iid|}}
+    <div class="midi-qol-flex-container">
+      {{hit.attackType}}
+      {{hit.hitString}}&nbsp
+      {{#if isPC}} 
+        <div class="midi-qol-target-name" id={{hit.target.id}}> {{hit.target.actor.name}}&nbsp</div> 
+      {{else}}
+        <div class="midi-qol-target-npc midi-qol-target-name" id={{hit.target.id}}> {{hit.target.name}}&nbsp</div> 
+      {{/if}}
+        <img src= "{{hit.img}}" height="30" border:0>
+    </div>
+    {{/each}}
+</div>

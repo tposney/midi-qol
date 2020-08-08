@@ -1,0 +1,60 @@
+{
+  "name": "midi-qol",
+  "title": "midi qol",
+  "description": "",
+  "systems": ["dnd5e"],
+  "version": "0.1.0",
+  "author": "",
+  "authors": [
+    {
+      "name": "",
+      "email": "",
+      "url": ""
+    }
+  ],
+  "scripts": [],
+  "esmodules": ["midi-qol.js"],
+  "styles": ["css/styles.css"],
+  "packs": [],
+  "languages": [
+      {
+          "lang": "en",
+          "name": "English",
+          "path": "lang/en.json"
+      },
+      {
+          "lang": "ja",
+          "name": " 日本語",
+          "path": "lang/ja.json"
+      },
+      {
+          "lang": "ko",
+          "name": "Korean",
+          "path": "lang/ko.json"
+      },
+      {
+          "lang": "cn",
+          "name": "中文",
+          "path": "lang/cn.json"
+      },
+      {
+          "lang": "fr",
+          "name": "Français",
+          "path": "lang/fr.json"
+      },
+      {
+          "lang": "pt-BR",
+          "name": "Português (Brasil)",
+          "path": "lang/pt-BR.json"
+      }
+  ],
+  "minimumCoreVersion": "0.5.0",
+  "compatibleCoreVersion": "0.7.0",
+  "url": "",
+  "manifest": "",
+  "download": "",
+  "license": "",
+  "readme": "",
+  "bugs": "",
+  "changelog": ""
+}

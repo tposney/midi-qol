@@ -1,0 +1,19 @@
+<div>
+
+    {{#each saves as |save iid|}}
+    <div class="midi-qol-flex-container">
+        <img src= "{{save.img}}" height="40" border:0>
+        {{#if isPC}} 
+        <div class="midi-qol-target-name" id={{save.id}}> {{save.name}} &nbsp</div> 
+        {{else}}
+        <div class="midi-qol-target-npc midi-qol-target-name" id={{save.id}}> {{save.name}} &nbsp</div> 
+        {{/if}}
+        {{save.saveString}}
+        {{save.rollTotal}}
+        {{adv}}
+        {{save.noDamage}}
+    </div>
+    {{/each}}
+    <div class="flavor-text" style="text-align:center">{{damageAppliedString}}</div>
+    
+</div>
