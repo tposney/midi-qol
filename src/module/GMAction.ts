@@ -1,17 +1,17 @@
 import { installedModules } from "./setupModules";
 import { autoApplyDamage, playerRollSaves, useTokenNames } from "./settings";
-import { i18n, debug } from "../midi-qol";
+import { i18n, debug, error } from "../midi-qol";
 
 var traitList = {di: {}, dr: {}, dv: {}};
 
 
-const moduleSocket = "midi-qol";
+const moduleSocket = "module.midi-qol";
 let processAction = async data => {
   switch (data.action) {
       case "reverseDamageCard":
           if (!game.user.isGM)
               break;
-          if (autoApplyDamage == "none")
+          if (autoApplyDamage === "none")
               break;
           await createReverseDamageCard(data);
           break;
@@ -27,11 +27,12 @@ export let setupSocket = () => {
 
 export function broadcastData(data) {
   // if not a gm broadcast the message to a gm who can apply the damage
-  if (game.user.id !== data.intendedFor)
+  if (game.user.id !== data.intendedFor) {
   //@ts-ignore
     game.socket.emit(moduleSocket, data, resp => { });
-  else
+  } else {
     processAction(data);
+  }
 }
 
 export function initGMActionSetup() {
@@ -78,7 +79,7 @@ let createReverseDamageCard = async (data) => {
         ["di", "dv", "dr"].forEach(trait => {
           let traits = actor.data.data.traits[trait]
           if (traits.custom || traits.value.length > 0) {
-            whisperText = whisperText.concat(`<br>${traitList[trait]}: ${traits.value.map(t=>CONFIG.DND5E.damageTypes[t]).concat(traits.custom)}`);
+            whisperText = whisperText.concat(`<br>${traitList[trait]}: ${traits.value.map(t=>CONFIG.DND5E.damageResistanceTypes[t]).concat(traits.custom)}`);
           }
         });
         sep = "<br>";

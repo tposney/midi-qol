@@ -1,7 +1,7 @@
 import Item5e from "systems/dnd5e/module/item/entity.js"
-import { warn, debug } from "../midi-qol";
+import { warn, debug, error } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
-import { autoShiftClick, autoRollDamage, autoCheckSaves, speedItemRolls, autoTarget, itemDeleteCheck } from "./settings";
+import { autoShiftClick, autoRollDamage, autoCheckSaves, speedItemRolls, autoTarget, itemDeleteCheck, mergeCard } from "./settings";
 import { rollMappings } from "./patching";
 
 function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boolean, workflowData: any, selector: string) {
@@ -12,6 +12,8 @@ function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boole
         //@ts-ignore
         Hooks.off("preCreateChatMessage", hookId);
         workflowData[selector] = data;
+        //@ts-ignore
+        setProperty(data, "flags.midi-qol.permaHide", true);
         debug("hideChatMessage: workflow data ", selector, data);
         return false;
       } else return true;
@@ -19,71 +21,72 @@ function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boole
   } else return true;
 }
 
-export async function doAttackRoll({event = {shiftKey: true}}) {
-  let workflow = Workflow.workflows[this.uuid];
-  debug("Entering item attack roll ", event, workflow)
-  if (!workflow) {
-    warn("No workflow for item ", this.name);
+export async function doAttackRoll({event = {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}}) {
+  let workflow: Workflow = Workflow.getWorkflow(this.uuid);
+  debug("Entering item attack roll ", event, workflow, Workflow._workflows)
+  if (!workflow) { // TODO what to do with a random attack roll
+    warn("No workflow for item ", this.name, this.uuid);
     return rollMappings.itemAttack.roll.bind(this)({event})
   }
-  hideChatMessage(false, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
-  let result = rollMappings.itemAttack.roll.bind(this)({event}).then((result) =>{
-    debug("roll attack value is ", result)
-    workflow.attackRoll = result;
-    workflow.currentState = WORKFLOWSTATES.ATTACKROLLCOMPLETE;
-    workflow.next();
-    return result;
-  })
+  if (["all", "attack"].includes(autoShiftClick)) {
+    event.shiftKey = !(event.altKey || event.ctrlKey || event.metaKey)
+  }
+  hideChatMessage(mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
+  let result: Roll = await rollMappings.itemAttack.roll.bind(this)({event});
+  workflow.attackRoll = result;
+  workflow.attackRollHTML = await result.render();
+  workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
+  return result;
 }
 
-export async function doDamageRoll({event, spellLevel = null, versatile = false}) {
-  let workflow = Workflow.workflows[this.uuid];
+export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, spellLevel = null, versatile = false}) {
+  let workflow = Workflow.getWorkflow(this.uuid);
   debug(" do damage roll ", event, spellLevel, versatile, this.uuid, Workflow._workflows, workflow)
-  if (!workflow) {
+  if (!workflow) { //TODO - what to do with a random roll damage for an item?
     warn("No workflow for item ", this.name);
     return rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
   }
-  hideChatMessage(false, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
-  rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile}).then((result) => {
-    workflow.damageRoll = result;
-    workflow.damageTotal = result.total;
-    workflow.currentState = WORKFLOWSTATES.DAMAGEROLLCOMPLETE;
-    workflow.next();
-    return result;
-  });
+  if (["all", "damage"].includes(autoShiftClick)) {
+    event.shiftKey = !(event.altKey || event.ctrlKey || event.metaKey)
+  } else event.shiftKey = false;
+  hideChatMessage(mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
+  let result: Roll = await rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
+  workflow.damageRoll = result;
+  workflow.damageTotal = result.total;
+  workflow.damageRollHTML = await result.render();
+  workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
+  return result;
 }
 
-export async function doItemRoll({event, showFullCard = false}={event: {}}) {
+export async function doItemRoll({event = {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, showFullCard = false}={event: {}}) {
   debug("Do item roll event is ", event)
-  if (!event) {
-    event = {};
-    event["shiftKey"] = autoShiftClick;
-    event["ctrlKey"] = false;
-    event["altkey"] = false;
-    event["metakey"] = false;
-  }
+  let pseudoEvent = {
+  "shiftKey": autoShiftClick !== "none" || speedItemRolls || event.shiftKey,
+  "ctrlKey": false || event.ctrlKey,
+  "altKey" : false || event.altKey,
+  "metaKey": false || event.metaKey
+}
   let speaker = ChatMessage.getSpeaker();
   let spellLevel = this.data.data.level; // we are called with the updated spell level so record it.
   let baseItem = this.actor.getOwnedItem(this.id);
-  let workflow = new Workflow(this.actor, baseItem, speaker.token, speaker, event);
+  let workflow: Workflow = new Workflow(this.actor, baseItem, speaker.token, speaker, pseudoEvent);
   //@ts-ignore event .type not defined
   workflow.versatile = event?.type === "contextmenu";
-  workflow.itemLevel = spellLevel;
+  workflow.itemLevel = this.data.data.level;
   hideChatMessage(true, data => true, workflow, "itemCardData"); // how to tell if it is an item card
   await rollMappings.itemRoll.roll.bind(this)().then(async (result) => {
-    workflow.showCard = ["onCard", "off"].includes(speedItemRolls) || (
+    workflow.showCard = ["onCard", "off"].includes(speedItemRolls) || mergeCard || (
                   baseItem.isHealing && autoRollDamage === "none"  ||
                   baseItem.hasDamage && autoRollDamage === "none" ||
                   baseItem.hasSave && autoCheckSaves === "none")
 
     if (workflow.showCard) {
-      showItemCard(this, showFullCard).then((itemCard) => {
-        //@ts-ignore
-        workflow.itemCard = itemCard;
-        warn("Item Roll: ", workflow)
-      });
+      //@ts-ignore - 
+      let itemCard: ChatMessage = await showItemCard(this, showFullCard)
+      workflow.itemCardId = itemCard.id;
+      debug("Item Roll: showing card", itemCard, workflow)
     };
-    workflow.next();
+    workflow.next(WORKFLOWSTATES.NONE);
   });
 }
 
@@ -98,18 +101,19 @@ let showItemCard = async (item, showFullCard)  => {
     hasAttack: showFullCard || (item.hasAttack && speedItemRolls === "off"),
     isHealing: showFullCard || (item.isHealing && autoRollDamage === "none"),
     hasDamage: showFullCard || (item.hasDamage && autoRollDamage === "none"),
-    isVersatile: showFullCard || (item.isVersatile && (speedItemRolls === "off" || autoRollDamage === "none")),
+    isVersatile: showFullCard || (item.isVersatile && autoRollDamage === "none"),
     isSpell: item.type==="spell",
     hasSave: showFullCard || (item.hasSave && autoCheckSaves === "none"),
-    hasAreaTarget: showFullCard || item.hasAreaTarget
+    hasAreaTarget: showFullCard || item.hasAreaTarget,
+    hasAttackRoll: item.hasAttack
   };
 
   const templateType = ["tool"].includes(item.data.type) ? item.data.type : "item";
-  const template = `systems/dnd5e/templates/chat/${templateType}-card.html`;
+  const template = `modules/midi-qol/templates/${templateType}-card.html`;
   const html = await renderTemplate(template, templateData);
 
   //TODO: look at speaker for this message
-  // Basic chat message data
+  // Basic chat message dat
   const chatData = {
     user: game.user._id,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
@@ -126,7 +130,7 @@ let showItemCard = async (item, showFullCard)  => {
   if ( rollMode === "blindroll" ) chatData["blind"] = true;
 
   // Create the chat message
-  return ChatMessage.create(chatData);
+  return await ChatMessage.create(chatData);
 }
 
 export function selectTargets(scene, data, options) {
@@ -201,6 +205,5 @@ switch ( data.t ) {
   this.saves = new Set();
   this.targets = new Set(game.user.targets);
   this.hitTargets = new Set(game.user.targets);
-  this.currentState = WORKFLOWSTATES.TEMPLATEPLACED;
- return this.next();
+ return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
 };

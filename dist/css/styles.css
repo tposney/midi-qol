@@ -24,13 +24,17 @@
 }
 
 .midi-qol-flex-container {
-	display: flex;
+  display: flex;
+  flex-wrap: wrap;
 	align-items: left;
-	flex-flow: row;
-  padding: 3px;
-  border: 3px
+  align-items: center;
+  font-size: 14px;
+  line-height: 16px;
 }
 
+.midi-qol-flex-container > div {
+  margin: 2px;
+}
 .midi-qol-target-name:hover {
 	text-shadow: 0 0 4px red;
 }

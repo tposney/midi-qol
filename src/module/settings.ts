@@ -1,31 +1,34 @@
 import { debug, setDebugLevel } from "../midi-qol";
+import { ConfigPanel} from "./apps/ConfigPanel"
 
 export var itemRollButtons;
-export var speedItemRolls;
-export var autoShiftClick;
+export var speedItemRolls: string;
+export var autoShiftClick: string;
 export var autoTarget;
 export var autoCheckHit;
-export var autoCheckSaves;
-export var autoRollDamage;
+export var autoCheckSaves : string;
+export var checkSaveText: boolean;
+export var autoRollDamage: string;
 export var criticalDamage;
 export var addChatDamageButtons;
-export var autoApplyDamage;
-export var damageImmunities;
-export var macroSpeedRolls;
-export var hideNPCNames;
+export var autoApplyDamage: string;
+export var damageImmunities: string;
+export var macroSpeedRolls: string;
+export var hideNPCNames: string;
 export var useTokenNames;
-export var itemDeleteCheck;
-export var nsaFlag;
-export var autoItemEffects;
+export var itemDeleteCheck: boolean;
+export var nsaFlag: boolean;
+export var autoItemEffects: boolean;
 export var coloredBorders;
-export var rangeTarget;
+export var rangeTarget: boolean;
 export var autoRemoveTargets;
 export var checkBetterRolls;
 export var playerRollSaves;
-export var playerSaveTimeout;
+export var playerSaveTimeout: number;
 export var preRollChecks;
 export var saveRequests = {};
 export var saveTimeouts = {};
+export var mergeCard: boolean;
 
 export let fetchParams = (silent = false) => {
   debug("Fetch Params Loading");
@@ -36,6 +39,7 @@ export let fetchParams = (silent = false) => {
   autoCheckHit = game.settings.get("midi-qol", "AutoCheckHit");
   autoRemoveTargets = game.settings.get("midi-qol", "AutoRemoveTargets");
   autoCheckSaves = game.settings.get("midi-qol", "AutoCheckSaves");
+  checkSaveText = game.settings.get("midi-qol", "CheckSaveText");
   autoRollDamage = game.settings.get("midi-qol", "AutoRollDamage");
   criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
   addChatDamageButtons = game.settings.get("midi-qol", "AddChatDamageButtons");
@@ -52,6 +56,7 @@ export let fetchParams = (silent = false) => {
   playerRollSaves = game.settings.get("midi-qol", "PlayerRollSaves")
   playerSaveTimeout = game.settings.get("midi-qol", "PlayerSaveTimeout")
   preRollChecks = game.settings.get("midi-qol", "PreRollChecks")
+  mergeCard = game.settings.get("midi-qol", "MergeCard")
   debug("FetchParams ", speedItemRolls, autoShiftClick, autoRollDamage, autoCheckHit)
   let debugText = game.settings.get("midi-qol", "Debug");
   setDebugLevel(debugText);
@@ -87,10 +92,18 @@ const settings = [
     onChange: fetchParams //(value) => {window.location.reload()}
   },
   {
-    name: "AutoShiftClick",
+    name: "MergeCard",
     scope: "world",
     default: true,
     type: Boolean,
+    onChange: fetchParams
+  },
+  {
+    name: "AutoShiftClick",
+    scope: "world",
+    default: "all",
+    type: String,
+    choices: {off: "Off", attack: "Attack Rolls Only", damage: "Damage Rolls Only", all: "Attack and Damage"},
     onChange: fetchParams //(value) => {window.location.reload()}
   },
   {
@@ -122,6 +135,13 @@ const settings = [
     choices: {none: "None", all:  "Save - All see result", whisper: "Save - only GM sees", allShow: "Save - All see Result + Rolls"},
     default: "all",
     type: String,
+    onChange: fetchParams
+  },
+  {
+    name: "CheckSaveText",
+    scope: "world",
+    default: false,
+    type: Boolean,
     onChange: fetchParams
   },
   {
@@ -185,7 +205,7 @@ const settings = [
     scope: "world",
     default: "savesDefault",
     type: String,
-    choices: {none: "Never", savesDefault: "Apply saves - no text check", savesCheck: "Apply Saves - check text"},
+    choices: {none: "Never", immunityDefult: "apply immuniites", immunityPhysical: "apply immunities + physical"},
     onChange: fetchParams
   },
   {
@@ -205,8 +225,8 @@ const settings = [
   {
     name: "HideNPCNames",
     scope: "world",
-    default: true,
-    type: Boolean,
+    default: "????",
+    type: String,
     onChange: fetchParams
   },
   {
@@ -278,5 +298,27 @@ export const registerSettings = function() {
     console.log("setting name ", setting.name, options)
     game.settings.register("midi-qol", setting.name, options);
   });
+
+  if (isNewerVersion(game.data.version, "0.7.0")) {
+    game.settings.register("midi-qol", "playerControlsInvisibleTokens", {
+      name: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Name"),
+      hint: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Hint"),
+      scope: "world",
+      default: false,
+      config: true,
+      type: Boolean,
+      choices: [],
+      onChange: (value) => {window.location.reload()}
+    });
+
+    game.settings.registerMenu("midi-qol", "midi-qol", {
+      name: "midi-qol config",
+      label: "midi-qol",
+      hint: "midi-qol.configHint",
+      icon: "fas fa-dice-d20",
+      type: ConfigPanel,
+      restricted: false
+  });
+  }
 }
 

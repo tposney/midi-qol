@@ -1,14 +1,18 @@
 <div>
-    {{#each hits as |hit iid|}}
+  {{#unless oneCard}}
+    <div>{{attackType}}</div>
+  {{/unless}}
+  {{#each hits as |hit iid|}}
     <div class="midi-qol-flex-container">
-      {{hit.attackType}}
-      {{hit.hitString}}&nbsp
-      {{#if isPC}} 
-        <div class="midi-qol-target-name" id={{hit.target.id}}> {{hit.target.actor.name}}&nbsp</div> 
+      <div>
+        {{hit.hitString}}
+      </div>
+        {{#if isPC}} 
+        <div class="midi-qol-target-name" id={{hit.target.id}}> {{hit.target.name}}</div> 
       {{else}}
-        <div class="midi-qol-target-npc midi-qol-target-name" id={{hit.target.id}}> {{hit.target.name}}&nbsp</div> 
+        <div class="midi-qol-target-npc midi-qol-target-name" id={{hit.target.id}}> {{hit.target.name}}</div> 
       {{/if}}
-        <img src= "{{hit.img}}" height="30" border:0>
+      <div><img src= "{{hit.img}}" width="30" height="30" style="border:0px"/></div>
     </div>
-    {{/each}}
+  {{/each}}
 </div>

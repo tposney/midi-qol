@@ -1,5 +1,5 @@
 import { warn, error } from "../midi-qol";
-import { processpreCreateAttackRollMessage,processpreCreateDamageRollMessage, processpreCerateSaveRollMessaage, processpreCreateBetterRollsMessage, processcreateAttackRoll, processcreateDamageRoll, processcreateSaveRoll, processUndoDamageCard, processcreateBetterRollMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, processPreCreateDamageRoll } from "./chatMesssageHandling";
+import { processpreCreateAttackRollMessage,processpreCreateDamageRollMessage, processpreCerateSaveRollMessaage, processpreCreateBetterRollsMessage, processcreateAttackRoll, processcreateDamageRoll, processcreateSaveRoll, processUndoDamageCard, processcreateBetterRollMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, processPreCreateDamageRoll, hideStuffHandler } from "./chatMesssageHandling";
 
 export let initHooks = () => {
   error("Init Hooks processing");
@@ -29,14 +29,18 @@ export let initHooks = () => {
     return true;
   })
   
+  Hooks.on("updateChatMessage", () => {
+    // @ts-ignore
+    ui.chat.scrollBottom();
+  })
 
   Hooks.on("renderChatMessage", (message, html, data) => {
     //debug("render message hook ", message, html, data);
+    hideStuffHandler(message, html, data);
     processUndoDamageCard(message, html, data);
     diceSoNiceHandler(message, html, data);
     colorChatMessageHandler(message, html, data);
     nsaMessageHandler(message, html, data);
-
   })
 
 

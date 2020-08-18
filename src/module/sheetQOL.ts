@@ -49,7 +49,6 @@ let enableSheetQOL = (app, html, data) => {
         var rollTagElement = html.find(`${rollTag}`); // do not have the right nav tabs
       else
         var rollTagElement = html.find(`${tab} ${rollTag}`);
-        warn("Enable sheet qol ", rollTagElement)
 
       rollTagElement.off("click");
       rollTagElement.off("click", "midi-qol", itemRollHandler);
@@ -93,7 +92,7 @@ async function itemRollHandler(event) {
   // Allow shift/ctl/alt from the weapon img - unshifted works as before
   //let actor = game.actors.get(event.data.data.actor._id);
   let actor;
-  warn("Item roll handler ")
+
   // If the app has a token then this is a token sheet and we want the actor inside the token
   if (event.data.app.token)
       actor = event.data.app.token.actor;
@@ -103,9 +102,22 @@ async function itemRollHandler(event) {
   else
       actor = game.actors.get(event.data.data.actor._id); // but just in case we can get the global Actor if we must
 
-  let itemId = $(event.currentTarget).parents(".item").attr("data-item-id");
+      let itemId = $(event.currentTarget).parents(".item").attr("data-item-id");
+  let magicItemId = $(event.currentTarget).parents(".item").attr("data-magic-item-id")
+  if (magicItemId) { // item is a magic item component TODO:find out how to do this properly.
+    //@ts-ignore
+    // return MagicItems.actor(actor.id).roll(magicItemId, itemId);
+    return MagicItems.actor(actor.id).roll(magicItemId, itemId);
+    /*mActor = MgicItems.actor(actor.id);
+    //@ts-ignore
+    let item = mActor.getOwnedItem(actor.getOwnedItem, itemId)
+    let item = MagicItems.actor(actor.id).getOwnedItem(actor.getOwnedItem, itemId)
+    warn("Item is ", item)
+    return item.roll();*/
+
+  }
+  // This is for some sheets that have changed the layout.
   if (!itemId) itemId = $(event.currentTarget).attr("data-item-id");
-  warn("Item roll handler ", event, itemId, actor, $(event.currentTarget),  $(event.currentTarget).parents(".item"))
 
   if (!itemId) {
     console.error("Could not find item in character sheet")
@@ -113,7 +125,7 @@ async function itemRollHandler(event) {
   }
   let item = actor.getOwnedItem(itemId);
   if (item.type === "spell") actor.useSpell(item)
-  item.roll({event})
+  else item.roll({event})
 }
 
 function addItemSheetButtons(app, html, data, triggeringElement = "", buttonContainer = "") {

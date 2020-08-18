@@ -14,7 +14,7 @@
 import { registerSettings, fetchParams } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { setupModules } from './module/setupModules.js';
-import { readyPatching } from './module/patching.js';
+import { readyPatching, initPatching } from './module/patching.js';
 import { initHooks } from './module/Hooks.js';
 import { initGMActionSetup } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
@@ -31,7 +31,7 @@ export let i18n = key => {
 export let setDebugLevel = (debugText: string) => {
   debugEnabled = {"none": 0, "warn": 1, "debug": 2, "all": 3}[debugText] || 0;
   // 0 = none, warnings = 1, debug = 2, all = 3
-  CONFIG.debug.hooks = debugEnabled === 3;
+  CONFIG.debug.hooks = debugEnabled >= 3;
 }
 
 
@@ -58,11 +58,12 @@ Hooks.once('init', async function() {
 	
 	// Register custom module settings
 	registerSettings();
+  fetchParams();
 	
 	// Preload Handlebars templates
   await preloadTemplates();
   initHooks();
-  fetchParams();
+  initPatching();
 
 	// Register custom sheets (if any)
 });

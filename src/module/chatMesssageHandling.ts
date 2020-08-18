@@ -1,17 +1,16 @@
-import { debug, log, warn, undoDamageText, i18n } from "../midi-qol";
+import { debug, log, warn, undoDamageText, i18n, error } from "../midi-qol";
 //@ts-ignore
 import Actor5e from "/systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
 import Item5e  from "/systems/dnd5e/module/item/entity.js"
 import { installedModules } from "./setupModules";
-import { BetterRollsWorkflow, Workflow } from "./workflow";
-import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls } from "./settings";
+import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES, DamageOnlyWorkflow } from "./workflow";
+import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, hideNPCNames, autoCheckSaves, autoCheckHit, mergeCard } from "./settings";
 
 export let processUndoDamageCard = async(message, html, data) => {
-  if (!message?.data?.flavor || !message.data.flavor.startsWith(undoDamageText)) {
+  if (!message?.data?.flavor || !game.user.isGM || !message.data.flavor.startsWith(undoDamageText)) {
     return true;
   }
-  warn("process undo damage ", message.data.flags, message)
   message.data.flags["midi-qol"] && message.data.flags["midi-qol"].forEach(({tokenID, oldTempHP, oldHP}) => {
     let token = canvas.tokens.get(tokenID);
     if (!token) {
@@ -19,7 +18,6 @@ export let processUndoDamageCard = async(message, html, data) => {
       return;
     }
     let button = html.find(`#${tokenID}`);
-    warn("process undo damage ", button)
     button.click(async (ev) => {
       log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
       let actor = canvas.tokens.get(tokenID).actor;
@@ -57,8 +55,8 @@ export function processcreateBetterRollMessage(message, options, user) {
   debug("process better rolls card", flags?.id, message, workflow, workflow.betterRollsHookId);
   //@ts-ignore - does not support 
   Hooks.off("createChatMessage", workflow.betterRollsHookId, message);
-  workflow.itemCard = message;
-  workflow.next();
+  workflow.itemCardId = message.id;
+  workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
 }
 
 export let processpreCreateBetterRollsMessage = async (data: any, options:any, user: any) => {
@@ -148,19 +146,34 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
   return true;
 }
 
-export let diceSoNiceHandler = (message,html, data) => {
+export let diceSoNiceHandler = (message, html, data) => {
   if (installedModules.get("dice-so-nice") && getProperty(message.data.flags, "midi-qol.waitForDiceSoNice")) {
-    html.hide();
-    Hooks.once("diceSoNiceRollComplete", (id) => {
-      html.show(); 
-      //@ts-ignore
-      ui.chat.scrollBottom()
-    });
-    setTimeout(() => {
-      html.show(); 
-      //@ts-ignore
-      ui.chat.scrollBottom()
-    }, 3000); // backup display of messages
+    if (mergeCard) {
+      let hideTag = getProperty(message.data, "flags.midi-qol.hideTag")
+        html.find(hideTag).hide();
+        Hooks.once("diceSoNiceRollComplete", (id) => {
+          html.find(hideTag).show(); 
+          //@ts-ignore
+          ui.chat.scrollBottom()
+        });
+        setTimeout(() => {
+          html.find(hideTag).show(); 
+          //@ts-ignore
+          ui.chat.scrollBottom()
+        }, 3000); // backup display of messages
+    } else {
+      html.hide();
+      Hooks.once("diceSoNiceRollComplete", (id) => {
+        html.show(); 
+        //@ts-ignore
+        ui.chat.scrollBottom()
+      });
+      setTimeout(() => {
+        html.show(); 
+        //@ts-ignore
+        ui.chat.scrollBottom()
+      }, 3000); // backup display of messages
+    }
   }
   return true;
 }
@@ -184,59 +197,140 @@ export let nsaMessageHandler = (message, html, data) => {
   return true;
 }
 
-export let processPreCreateDamageRoll = (data, options) => {
-  if (criticalDamage === "default") return;
+let _highlighted = null;
 
-  if (!isNewerVersion(game.data.version, "0.6.5")) return;
+let _onTargetHover = (event) => {
+  error("On target hover ", event)
 
-  if (data.flavor?.includes(i18n("midi-qol.criticalText") || data.flavor?.includes(i18n("midi-qol.criticalTextAlt")))) {
-    let r = Roll.fromJSON(data.roll);
-    let rollBase = new Roll(r.formula);
-    if (criticalDamage === "maxDamage") {
-      //@ts-ignore .terms not defined
-      rollBase.terms = rollBase.terms.map(t => {
-        if (t?.number) t.number = t.number/2;
-        return t;
-      });
-      //@ts-ignore .evaluate not defined
-      rollBase.evaluate({maximize: true});
-      rollBase._formula = rollBase.formula;
-      data.roll = JSON.stringify(rollBase);
-      data.content = `${rollBase.total}`;
-    } else if (criticalDamage === "maxCrit") {
-      let rollCrit = new Roll(r.formula);
-      //@ts-ignore .terms not defined
-      rollCrit.terms = rollCrit.terms.map(t => {
-        if (t?.number) t.number = t.number/2;
-        if (typeof t === "number") t = 0;
-        return t;
-      });
-      //@ts-ignore .terms not defined
-      rollBase.terms = rollBase.terms.map(t => {
-        if (t?.number) t.number = t.number/2;
-        return t;
-      });
-      //@ts-ignore .evaluate not defined
-      rollCrit.evaluate({maximize: true});
-      //@ts-ignore.terms not defined
-      rollBase.terms.push("+")
-      //@ts-ignore .terms not defined
-      rollBase.terms.push(rollCrit.total)
-      rollBase._formula = rollBase.formula;
-      rollBase.roll();
-      data.total = rollBase.total;
-      data.roll = JSON.stringify(rollBase);
-    } else if (criticalDamage === "maxAll") {
-      //@ts-ignore .evaluate not defined
-      rollBase.evaluate({maximize: true});
-      data.roll = JSON.stringify(rollBase);
-      data.content = `${rollBase.total}`;
+  event.preventDefault();
+  if ( !canvas.scene.data.active ) return;
+//  const li = event.currentTarget;
+//  const token = canvas.tokens.get(li.id);
+  const token = canvas.tokens.get(event.currentTarget.id);
+  error("On trget hover ", event.currentTarget, token)
+  if ( token?.isVisible ) {
+    if ( !token._controlled ) token._onHoverIn(event);
+    _highlighted = token;
+  }
+}
+
+/* -------------------------------------------- */
+
+/**
+ * Handle mouse-unhover events for a combatant in the tracker
+ * @private
+ */
+let _onTargetHoverOut = (event) => {
+  error("On target hover out  ", event)
+
+  event.preventDefault();
+  if ( !canvas.scene.data.active ) return;
+  if (_highlighted ) _highlighted._onHoverOut(event);
+  _highlighted = null;
+}
+
+let _onTargetSelect = (event) => {
+  error("On target select ", event)
+  event.preventDefault();
+  if ( !canvas.scene.data.active ) return;
+  const token = canvas.tokens.get(event.currentTarget.id);
+  token.control({ multiSelect: false, releaseOthers: true });
+};
+
+export let hideStuffHandler = (message, html, data) => {
+
+  warn("message is ", message)
+  if (getProperty(message, "data.flags.midi-qol.permaHide")) {
+    html.hide();
+    return;
+  }
+  let ids = html.find(".midi-qol-target-name")
+  // let buttonTargets = html.getElementsByClassName("minor-qol-target-npc");
+  ids.hover(_onTargetHover, _onTargetHoverOut)
+  if (game.user.isGM)  {
+    ids.click(_onTargetSelect);
+  }
+  if (!game.user.isGM && hideNPCNames.length > 0) {
+    ids=html.find(".midi-qol-target-npc");
+    ids.text(hideNPCNames);
+  }
+  if (game.user.isGM) {
+    //@ts-ignore
+    ui.chat.scrollBottom
+    return;
+  }
+  if (autoCheckHit === "whisper") {
+    $(html).find(".midi-qol-hits-display").hide()
+  }
+  if (autoCheckSaves === "whisper") {
+    $(html).find(".midi-qol-saves-display").hide()
+  }
+  //@ts-ignore
+  // ui.chat.scrollBottom();
+}
+
+export let processPreCreateDamageRoll = (data, ...args) => {
+  debug("Process pre create Damage roll ", data.flags?.dnd5e?.roll.type, data, ...args)
+  if (data.flags?.dnd5e?.roll.type === "damage") {
+    const actor = game.actors.get(data.speaker.actor);
+    const item = actor.getOwnedItem(data.flags.dnd5e.roll.itemId);
+    if (item) {
+      if (data.flags.dnd5e.roll.critical) {
+        if (criticalDamage === "default") return;
+        if (isNewerVersion("0.7.0", game.data.version)) return;
+        let r = Roll.fromJSON(data.roll);
+        let rollBase = new Roll(r.formula);
+        if (criticalDamage === "maxDamage") {
+          //@ts-ignore .terms not defined
+          rollBase.terms = rollBase.terms.map(t => {
+            if (t?.number) t.number = t.number/2;
+            return t;
+          });
+          //@ts-ignore .evaluate not defined
+          rollBase.evaluate({maximize: true});
+          rollBase._formula = rollBase.formula;
+          data.roll = JSON.stringify(rollBase);
+          data.content = `${rollBase.total}`;
+        } else if (criticalDamage === "maxCrit") {
+          let rollCrit = new Roll(r.formula);
+          //@ts-ignore .terms not defined
+          rollCrit.terms = rollCrit.terms.map(t => {
+            if (t?.number) t.number = t.number/2;
+            if (typeof t === "number") t = 0;
+            return t;
+          });
+          //@ts-ignore .terms not defined
+          rollBase.terms = rollBase.terms.map(t => {
+            if (t?.number) t.number = t.number/2;
+            return t;
+          });
+          //@ts-ignore .evaluate not defined
+          rollCrit.evaluate({maximize: true});
+          //@ts-ignore.terms not defined
+          rollBase.terms.push("+")
+          //@ts-ignore .terms not defined
+          rollBase.terms.push(rollCrit.total)
+          rollBase._formula = rollBase.formula;
+          rollBase.roll();
+          data.total = rollBase.total;
+          data.roll = JSON.stringify(rollBase);
+        } else if (criticalDamage === "maxAll") {
+          //@ts-ignore .evaluate not defined
+          rollBase.evaluate({maximize: true});
+          data.roll = JSON.stringify(rollBase);
+          data.content = `${rollBase.total}`;
+        }
+      }
+    } else { // have a damage roll without an item
+      warn("damage roll without item detected ", data.flags.dnd5e.roll.flavor)
+      let wf = new DamageOnlyWorkflow(actor, null, data.speaker, parseInt(data.content), data.flags.dnd5e.roll.flavor || "radiant");
+      wf.next(WORKFLOWSTATES.NONE);
     }
   }
   return true;
 }
 
-let processBetterRollsChatCard = (message, html, data) => {
+export let processBetterRollsChatCard = (message, html, data) => {
   if (!checkBetterRolls && message?.data?.content?.startsWith('<div class="dnd5e red-full chat-card"'))  return;
   warn("*** Inside better rolls chat card ")
   if (debug) log("processBetterRollsChatCard", message. html, data)
