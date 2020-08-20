@@ -41,3 +41,4 @@ probably many however....
 * add chat damage buttons does not work with merged cards - yet.
 * The combined card does not play nicely with dice-so-nice.
 * Speed item rolls and magic items do not update consumed charges correctly - use no speed item rolls for the moment.
+* Language translations are not up to date.
