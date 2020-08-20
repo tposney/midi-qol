@@ -16,14 +16,15 @@
     <div class="card-buttons">
         {{#if hasAttack}}<button data-action="attack">{{ localize "DND5E.Attack" }}</button>{{/if}}
 
-        {{#if hasAttackRoll}}
+        {{#if condensed}}
         <div class="flexrow 2">
           <div class="midi-qol-attack-roll"></div>
           <div class="midi-qol-damage-roll"></div>
         </div>
         {{else}}
-        <div class="flexrow 1">
-          <div class="midi-qol-damage-roll"></div>
+        <div>
+          <div class="flexrow 1"><div class="midi-qol-attack-roll"></div></div>
+          <div class="flexrow 1"><div class="midi-qol-damage-roll"></div></div>
         </div>
         {{/if}}
         {{#if hasDamage}}

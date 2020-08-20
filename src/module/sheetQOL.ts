@@ -1,5 +1,6 @@
 import { itemDeleteCheck, itemRollButtons, speedItemRolls } from "./settings";
 import { i18n, debug, log, warn } from "../midi-qol";
+import { Workflow } from "./workflow";
 
 
 let knownSheets = {
@@ -124,7 +125,10 @@ async function itemRollHandler(event) {
     return false;
   }
   let item = actor.getOwnedItem(itemId);
-  if (item.type === "spell") actor.useSpell(item)
+  if (item.type === "spell") {
+    Workflow.eventHack = event;
+    actor.useSpell(item)
+  }
   else item.roll({event})
 }
 
@@ -188,33 +192,34 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
           buttons.find("button").click({app, data, html}, async (ev) =>  {
               ev.preventDefault();
               ev.stopPropagation();
-              if (debug) log("roll handler ", ev.target.dataset.action)
+              debug("roll handler ", ev.target.dataset.action);
+              let event = {shiftKey: ev.shiftKey, crtilKey: ev.ctrlKey, metaKey: ev.metaKey, altKey: ev.altKey};
               // If speed rolls are off
               switch (ev.target.dataset.action) {
                   case "attack":
-                      await item.rollAttack({ event: ev });
+                      await item.rollAttack({ event });
                       break;
                   case "versatileAttack":
-                      await item.rollAttack({ event: ev, versatile: true });
+                      await item.rollAttack({ event, versatile: true });
                       break;
                   case "damage":
-                      await item.rollDamage({ event: ev, versatile: false });
+                      await item.rollDamage({ event, versatile: false });
                       break;
                   case "versatileDamage":
-                      await item.rollDamage({ event: ev, versatile: true });
+                      await item.rollDamage({ event, versatile: true });
                       break;
                   case "consume":
-                      await item.roll({ event: ev });
+                      await item.roll({ event });
                       break;
                   case "toolCheck":
-                      await item.rollToolCheck({ event: ev });
+                      await item.rollToolCheck({ event });
                       break;
                   case "basicRoll":
                       if (item.type === "spell") {
                         await actor.useSpell(item, { configureDialog: true });
                       }
                       else
-                          await item.roll();
+                          await item.roll({event});
                       break;
               }
           });

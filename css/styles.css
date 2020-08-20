@@ -37,3 +37,8 @@
 .midi-qol-gmonly {
 	display: none;
 }
+
+.midi-qol-box {
+  border: 2px solid black;
+  color: red
+}

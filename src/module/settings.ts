@@ -1,62 +1,112 @@
 import { debug, setDebugLevel } from "../midi-qol";
 import { ConfigPanel} from "./apps/ConfigPanel"
 
-export var itemRollButtons;
+export var itemRollButtons: boolean;
 export var speedItemRolls: string;
 export var autoShiftClick: string;
-export var autoTarget;
-export var autoCheckHit;
+export var autoTarget: string;
+export var autoCheckHit: string;
 export var autoCheckSaves : string;
 export var checkSaveText: boolean;
 export var autoRollDamage: string;
-export var criticalDamage;
+export var criticalDamage: string;
 export var addChatDamageButtons;
 export var autoApplyDamage: string;
 export var damageImmunities: string;
 export var macroSpeedRolls: string;
 export var hideNPCNames: string;
-export var useTokenNames;
+export var useTokenNames: boolean;
 export var itemDeleteCheck: boolean;
 export var nsaFlag: boolean;
 export var autoItemEffects: boolean;
-export var coloredBorders;
+export var coloredBorders: string;
 export var rangeTarget: boolean;
-export var autoRemoveTargets;
-export var checkBetterRolls;
-export var playerRollSaves;
+export var autoRemoveTargets: string;
+export var checkBetterRolls: boolean;
+export var playerRollSaves: string;
 export var playerSaveTimeout: number;
-export var preRollChecks;
+export var preRollChecks: boolean;
 export var saveRequests = {};
 export var saveTimeouts = {};
 export var mergeCard: boolean;
+export var mergeCardCondensed: boolean;
+
+
+export var configSettings = {
+  speedItemRolls,
+  autoShiftClick,
+  autoTarget,
+  autoCheckHit,
+  autoRemoveTargets,
+  autoCheckSaves,
+  checkSaveText,
+  autoRollDamage,
+  addChatDamageButtons,
+  autoApplyDamage,
+  damageImmunities,
+  autoItemEffects,
+  rangeTarget,
+  playerRollSaves,
+  playerSaveTimeout,
+  preRollChecks,
+  mergeCard,
+  mergeCardCondensed,
+  hideNPCNames,
+  useTokenNames
+};
 
 export let fetchParams = (silent = false) => {
   debug("Fetch Params Loading");
-  itemRollButtons = game.settings.get("midi-qol", "ItemRollButtons");
-  speedItemRolls = game.settings.get("midi-qol", "SpeedItemRolls");
-  autoShiftClick = game.settings.get("midi-qol", "AutoShiftClick");
-  autoTarget = game.settings.get("midi-qol", "AutoTarget");
-  autoCheckHit = game.settings.get("midi-qol", "AutoCheckHit");
-  autoRemoveTargets = game.settings.get("midi-qol", "AutoRemoveTargets");
-  autoCheckSaves = game.settings.get("midi-qol", "AutoCheckSaves");
-  checkSaveText = game.settings.get("midi-qol", "CheckSaveText");
-  autoRollDamage = game.settings.get("midi-qol", "AutoRollDamage");
-  criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
-  addChatDamageButtons = game.settings.get("midi-qol", "AddChatDamageButtons");
-  autoApplyDamage = game.settings.get("midi-qol", "AutoApplyDamage");
-  damageImmunities = game.settings.get("midi-qol", "DamageImmunities");
+  configSettings = game.settings.get("midi-qol", "ConfigSettings")
+  console.warn("Fetch Params Loading", configSettings);
+  /*configSettings = {
+    speedItemRolls: "on",
+    autoShiftClick: "attack",
+    autoTarget: "wallsBlock",
+    autoCheckHit: "all",
+    autoRemoveTargets: "none",
+    autoCheckSaves: "all",
+    checkSaveText: false,
+    autoRollDamage: "onHit",
+    addChatDamageButtons: false,
+    autoApplyDamage: "yes",
+    damageImmunities: "immunityPhysical",
+    autoItemEffects: true,
+    rangeTarget: true,
+    playerRollSaves: "letme",
+    playerSaveTimeout: 20,
+    preRollChecks: false,
+    mergeCard: true,
+    hideNPCNames: "????",
+    useTokenNames: false
+  }
+  */
+  speedItemRolls = configSettings.speedItemRolls;
+  autoShiftClick = configSettings.autoShiftClick;
+  autoTarget = configSettings.autoTarget;
+  autoCheckHit = configSettings.autoCheckHit;
+  autoRemoveTargets = configSettings.autoRemoveTargets;
+  autoCheckSaves = configSettings.autoCheckSaves;
+  checkSaveText = configSettings.checkSaveText;
+  autoRollDamage = configSettings.autoRollDamage;
+  addChatDamageButtons = configSettings.addChatDamageButtons;
+  autoApplyDamage = configSettings.autoApplyDamage;
+  damageImmunities = configSettings.damageImmunities;
+  autoItemEffects = configSettings.autoItemEffects;
+  rangeTarget = configSettings.rangeTarget;
+  playerRollSaves = configSettings.playerRollSaves;
+  playerSaveTimeout = configSettings.playerSaveTimeout;
+  preRollChecks = configSettings.preRollChecks;
+  mergeCard = configSettings.mergeCard;
+  hideNPCNames = configSettings.hideNPCNames;
+  useTokenNames = configSettings.useTokenNames;
+
   macroSpeedRolls = game.settings.get("midi-qol", "MacroSpeedRolls");
-  hideNPCNames = game.settings.get("midi-qol", "HideNPCNames");
-  useTokenNames = game.settings.get("midi-qol", "UseTokenNames")
+  criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
   itemDeleteCheck = game.settings.get("midi-qol", "ItemDeleteCheck");
   nsaFlag = game.settings.get("midi-qol", "showGM");
-  autoItemEffects = game.settings.get("midi-qol", "AutoEffects");
   coloredBorders = game.settings.get("midi-qol", "ColoredBorders");
-  rangeTarget = game.settings.get("midi-qol", "RangeTarget");
-  playerRollSaves = game.settings.get("midi-qol", "PlayerRollSaves")
-  playerSaveTimeout = game.settings.get("midi-qol", "PlayerSaveTimeout")
-  preRollChecks = game.settings.get("midi-qol", "PreRollChecks")
-  mergeCard = game.settings.get("midi-qol", "MergeCard")
+  itemRollButtons = game.settings.get("midi-qol", "ItemRollButtons");
   debug("FetchParams ", speedItemRolls, autoShiftClick, autoRollDamage, autoCheckHit)
   let debugText = game.settings.get("midi-qol", "Debug");
   setDebugLevel(debugText);
@@ -84,90 +134,12 @@ const settings = [
     onChange: fetchParams
   },
   {
-    name: "SpeedItemRolls",
-    scope: "world",
-    default: "on",
-    type: String,
-    choices: {off: "Off", on: "On", onCard: "On + Show Item Card"},
-    onChange: fetchParams //(value) => {window.location.reload()}
-  },
-  {
-    name: "MergeCard",
-    scope: "world",
-    default: true,
-    type: Boolean,
-    onChange: fetchParams
-  },
-  {
-    name: "AutoShiftClick",
-    scope: "world",
-    default: "all",
-    type: String,
-    choices: {off: "Off", attack: "Attack Rolls Only", damage: "Damage Rolls Only", all: "Attack and Damage"},
-    onChange: fetchParams //(value) => {window.location.reload()}
-  },
-  {
     name: "PreRollChecks",
     scope: "world",
     default: false,
     type: Boolean,
-    onChange: fetchParams
-  },
-  {
-    name: "AutoTarget",
-    scope: "world",
-    default: "wallsBlock",
-    type: String,
-    choices: {none: "None", always: "Always", wallsBlock: "Walls Block"},
-    onChange: fetchParams
-  },
-  {
-    name: "AutoCheckHit",
-    scope: "world",
-    choices: {none: "None", all: "Check - all see result", whisper: "Check - only GM sees", snotty: "Auto check + abuse"},
-    default: "all",
-    type: String,
-    onChange: fetchParams
-  },
-  {
-    name: "AutoCheckSaves",
-    scope: "world",
-    choices: {none: "None", all:  "Save - All see result", whisper: "Save - only GM sees", allShow: "Save - All see Result + Rolls"},
-    default: "all",
-    type: String,
-    onChange: fetchParams
-  },
-  {
-    name: "CheckSaveText",
-    scope: "world",
-    default: false,
-    type: Boolean,
-    onChange: fetchParams
-  },
-  {
-    name: "PlayerRollSaves",
-    scope: "world",
-    choices: {none: "None",  letme: "Let Me Roll That For You", chat: "Chat Message"},
-    default: "none",
-    config: true,
-    type: String,
-    onChange: fetchParams
-  },
-  {
-    name: "PlayerSaveTimeout",
-    scope: "world",
-    default: 30,
-    type: Number,
-    config: true,
-    onChange: fetchParams
-  },
-  {
-    name: "AutoRollDamage",
-    scope: "world",
-    choices: {none: "None", always:  "Always", onHit: "Attack Hits"},
-    default: "onHit",
-    type: String,
-    onChange: fetchParams
+    onChange: fetchParams,
+    config: false
   },
   {
     name: "CriticalDamage",
@@ -182,14 +154,7 @@ const settings = [
     scope: "world",
     default: true,
     type: Boolean,
-    onChange: fetchParams
-  },
-  {
-    name: "AutoApplyDamage",
-    scope: "world",
-    default: "yesCard",
-    type: String,
-    choices: {none: "No", yes: "Yes", yesCard: "Yes + undo damage card"},
+    config: false,
     onChange: fetchParams
   },
   {
@@ -201,18 +166,11 @@ const settings = [
     onChange: fetchParams
   },
   {
-    name: "DamageImmunities",
-    scope: "world",
-    default: "savesDefault",
-    type: String,
-    choices: {none: "Never", immunityDefult: "apply immuniites", immunityPhysical: "apply immunities + physical"},
-    onChange: fetchParams
-  },
-  {
     name: "AutoEffects",
     scope: "world",
     default: true,
     type: Boolean,
+    config: false,
     onChange: fetchParams
   },
   {
@@ -223,25 +181,12 @@ const settings = [
     onChange: fetchParams
   },
   {
-    name: "HideNPCNames",
-    scope: "world",
-    default: "????",
-    type: String,
-    onChange: fetchParams
-  },
-  {
-    name: "UseTokenNames",
-    scope: "world",
-    default: false,
-    type: Boolean,
-    onChange: fetchParams
-  },
-  {
     name: "ItemDeleteCheck",
     scope: "client",
     default: true,
     type: Boolean,
     choices: [],
+    config:true,
     onChange: fetchParams
   },
   {
@@ -261,20 +206,19 @@ const settings = [
     onChange: fetchParams
   },
   {
-    name: "RangeTarget",
-    scope: "world",
-    default: false,
-    type: Boolean,
-    choices: [],
-    onChange: fetchParams
-  },
-  {
     name: "Debug",
     scope: "world",
     default: "None",
     type: String,
     choices: {none: "None", warn: "warnings", debug: "debug", all: "all"},
     onChange: fetchParams
+  },
+  {
+    name: "ConfigSettings",
+    scope: "world",
+    type: Object,
+    onChange: fetchParams,
+    config: false
   }
 ]
 
@@ -299,6 +243,15 @@ export const registerSettings = function() {
     game.settings.register("midi-qol", setting.name, options);
   });
 
+  game.settings.registerMenu("midi-qol", "midi-qol", {
+    name: "midi-qol config",
+    label: "midi-qol.WorkflowSettings",
+    hint: "midi-qol.Hint",
+    icon: "fas fa-dice-d20",
+    type: ConfigPanel,
+    restricted: true
+  });
+
   if (isNewerVersion(game.data.version, "0.7.0")) {
     game.settings.register("midi-qol", "playerControlsInvisibleTokens", {
       name: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Name"),
@@ -311,14 +264,7 @@ export const registerSettings = function() {
       onChange: (value) => {window.location.reload()}
     });
 
-    game.settings.registerMenu("midi-qol", "midi-qol", {
-      name: "midi-qol config",
-      label: "midi-qol",
-      hint: "midi-qol.configHint",
-      icon: "fas fa-dice-d20",
-      type: ConfigPanel,
-      restricted: false
-  });
+
   }
 }
 

@@ -4,8 +4,8 @@ import Actor5e from "/systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
 import Item5e  from "/systems/dnd5e/module/item/entity.js"
 import { installedModules } from "./setupModules";
-import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES, DamageOnlyWorkflow } from "./workflow";
-import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, hideNPCNames, autoCheckSaves, autoCheckHit, mergeCard } from "./settings";
+import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES, DamageOnlyWorkflow, getTraitMult, calculateDamage, createDamageList } from "./workflow";
+import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, hideNPCNames, autoCheckSaves, autoCheckHit, mergeCard, addChatDamageButtons } from "./settings";
 
 export let processUndoDamageCard = async(message, html, data) => {
   if (!message?.data?.flavor || !game.user.isGM || !message.data.flavor.startsWith(undoDamageText)) {
@@ -56,7 +56,7 @@ export function processcreateBetterRollMessage(message, options, user) {
   //@ts-ignore - does not support 
   Hooks.off("createChatMessage", workflow.betterRollsHookId, message);
   workflow.itemCardId = message.id;
-  workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
+  workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
 }
 
 export let processpreCreateBetterRollsMessage = async (data: any, options:any, user: any) => {
@@ -200,14 +200,12 @@ export let nsaMessageHandler = (message, html, data) => {
 let _highlighted = null;
 
 let _onTargetHover = (event) => {
-  error("On target hover ", event)
 
   event.preventDefault();
   if ( !canvas.scene.data.active ) return;
 //  const li = event.currentTarget;
 //  const token = canvas.tokens.get(li.id);
   const token = canvas.tokens.get(event.currentTarget.id);
-  error("On trget hover ", event.currentTarget, token)
   if ( token?.isVisible ) {
     if ( !token._controlled ) token._onHoverIn(event);
     _highlighted = token;
@@ -221,8 +219,6 @@ let _onTargetHover = (event) => {
  * @private
  */
 let _onTargetHoverOut = (event) => {
-  error("On target hover out  ", event)
-
   event.preventDefault();
   if ( !canvas.scene.data.active ) return;
   if (_highlighted ) _highlighted._onHoverOut(event);
@@ -230,7 +226,6 @@ let _onTargetHoverOut = (event) => {
 }
 
 let _onTargetSelect = (event) => {
-  error("On target select ", event)
   event.preventDefault();
   if ( !canvas.scene.data.active ) return;
   const token = canvas.tokens.get(event.currentTarget.id);
@@ -239,7 +234,7 @@ let _onTargetSelect = (event) => {
 
 export let hideStuffHandler = (message, html, data) => {
 
-  warn("message is ", message)
+  debug("hide info handler message: ", message)
   if (getProperty(message, "data.flags.midi-qol.permaHide")) {
     html.hide();
     return;
@@ -332,8 +327,7 @@ export let processPreCreateDamageRoll = (data, ...args) => {
 
 export let processBetterRollsChatCard = (message, html, data) => {
   if (!checkBetterRolls && message?.data?.content?.startsWith('<div class="dnd5e red-full chat-card"'))  return;
-  warn("*** Inside better rolls chat card ")
-  if (debug) log("processBetterRollsChatCard", message. html, data)
+  debug("processBetterRollsChatCard", message. html, data)
   const requestId = message.data.speaker.actor;
   if (!saveRequests[requestId]) return true;
   const title = html.find(".item-name")[0]?.innerHTML
@@ -346,4 +340,68 @@ export let processBetterRollsChatCard = (message, html, data) => {
   delete saveRequests[requestId];
   delete saveTimeouts[requestId];
   return true;
+}
+
+export let chatDamageButtons = (message, html, data) => {
+  debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll.type)
+  if (!addChatDamageButtons) return true;
+  if (message.data.flags?.dnd5e?.roll.type !== "damage") return true;
+  const itemId = message.data.flags.dnd5e.roll.itemId;
+  const item = game.actors.get(message.data.speaker.actor).items.get(itemId);
+  if (!item) {
+    warn("Damage roll for non item");
+    return;
+  }
+
+  // find the item => workflow => damageList, totalDamage
+  let defaultDamageType = item.data.data.damage?.parts[0][1] || "bludgeoning";
+  const damageList = createDamageList(message.roll, item, defaultDamageType);
+  const totalDamage = message.roll.total;
+  addChatDamageButtonsToHTML(totalDamage, damageList, html, item)
+  return true;
+}
+
+export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item) {
+  const btnContainer = $('<span class="dmgBtn-container" style="position:absolute; right:0; bottom:1px;"></span>');
+  let btnStyling = "width: 22px; height:22px; font-size:10px;line-height:1px";
+  const fullDamageButton = $(`<button class="dice-total-full-damage-button" style="${btnStyling}"><i class="fas fa-user-minus" title="Click to apply full damage to selected token(s)."></i></button>`);
+  const halfDamageButton = $(`<button class="dice-total-half-damage-button" style="${btnStyling}"><i class="fas fa-user-shield" title="Click to apply half damage to selected token(s)."></i></button>`);
+  const doubleDamageButton = $(`<button class="dice-total-double-damage-button" style="${btnStyling}"><i class="fas fa-user-injured" title="Click to apply double damage to selected token(s)."></i></button>`);
+  const fullHealingButton = $(`<button class="dice-total-full-healing-button" style="${btnStyling}"><i class="fas fa-user-plus" title="Click to apply full healing to selected token(s)."></i></button>`);
+  btnContainer.append(fullDamageButton);
+  btnContainer.append(halfDamageButton);
+  btnContainer.append(doubleDamageButton);
+  btnContainer.append(fullHealingButton);
+  $(html).find(".dice-total").append(btnContainer);
+  // Handle button clicks
+  let setButtonClick = (buttonID, mult) => {
+      let button = $(html).find(buttonID);
+      button.off("click");
+      button.click(async (ev) => {
+          ev.stopPropagation();
+          if (canvas.tokens.controlled.length === 0) {
+              console.warn(`Midi-qol | user ${game.user.name} ${i18n("midi-qol.noTokens")}`);
+              return ui.notifications.warn(`${game.user.name} ${i18n("midi-qol.noTokens")}`);
+          }
+          // find solution for non-magic weapons
+          let promises = [];
+          for (let t of canvas.tokens.controlled) {
+              let a = t.actor;
+              let appliedDamage = 0;
+              for (let { damage, type } of damageList) {
+                  let typeMult = mult * Math.abs(getTraitMult(a, type, item,)); // ignore damage type for buttons
+                  appliedDamage += Math.floor(Math.abs(damage * typeMult)) * Math.sign(typeMult);
+              }
+              let damageItem = calculateDamage(a, appliedDamage, t, totalDamage, "");
+              promises.push(a.update({ "data.attributes.hp.temp": damageItem.newTempHP, "data.attributes.hp.value": damageItem.newHP }));
+          }
+          let retval = await Promise.all(promises);
+          return retval;
+      });
+  };
+  setButtonClick(".dice-total-full-damage-button", 1);
+  setButtonClick(".dice-total-half-damage-button", 0.5);
+  setButtonClick(".dice-total-double-damage-button", 2);
+  setButtonClick(".dice-total-full-healing-button", -1);
+  return html;
 }

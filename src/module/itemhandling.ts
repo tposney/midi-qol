@@ -1,7 +1,7 @@
 import Item5e from "systems/dnd5e/module/item/entity.js"
 import { warn, debug, error } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
-import { autoShiftClick, autoRollDamage, autoCheckSaves, speedItemRolls, autoTarget, itemDeleteCheck, mergeCard } from "./settings";
+import { autoShiftClick, autoRollDamage, autoCheckSaves, speedItemRolls, autoTarget, itemDeleteCheck, mergeCard, configSettings, useTokenNames } from "./settings";
 import { rollMappings } from "./patching";
 
 function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boolean, workflowData: any, selector: string) {
@@ -25,15 +25,18 @@ export async function doAttackRoll({event = {shiftKey: false, altKey: false, ctr
   let workflow: Workflow = Workflow.getWorkflow(this.uuid);
   debug("Entering item attack roll ", event, workflow, Workflow._workflows)
   if (!workflow) { // TODO what to do with a random attack roll
-    warn("No workflow for item ", this.name, this.uuid);
+    warn("No workflow for item ", this.name, this.uuid, event);
     return rollMappings.itemAttack.roll.bind(this)({event})
   }
   if (["all", "attack"].includes(autoShiftClick)) {
     event.shiftKey = !(event.altKey || event.ctrlKey || event.metaKey)
   }
   hideChatMessage(mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
+  debug("doAttack Roll ", rollMappings.itemAttack, event)
   let result: Roll = await rollMappings.itemAttack.roll.bind(this)({event});
   workflow.attackRoll = result;
+  workflow.attackAdvantage = event.altKey;
+  workflow.attackDisadvantage = event.ctrlKey;
   workflow.attackRollHTML = await result.render();
   workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
   return result;
@@ -59,13 +62,15 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
 }
 
 export async function doItemRoll({event = {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, showFullCard = false}={event: {}}) {
+  if (Workflow.eventHack) event = Workflow.eventHack;
+  Workflow.eventHack = null;
   debug("Do item roll event is ", event)
   let pseudoEvent = {
-  "shiftKey": autoShiftClick !== "none" || speedItemRolls || event.shiftKey,
-  "ctrlKey": false || event.ctrlKey,
-  "altKey" : false || event.altKey,
-  "metaKey": false || event.metaKey
-}
+    shiftKey: ["attack", "all"].includes(autoShiftClick) || speedItemRolls !== "off" || event.shiftKey,
+    ctrlKey: false || event.ctrlKey,
+    altKey : false || event.altKey,
+    metaKey: false || event.metaKey
+  }
   let speaker = ChatMessage.getSpeaker();
   let spellLevel = this.data.data.level; // we are called with the updated spell level so record it.
   let baseItem = this.actor.getOwnedItem(this.id);
@@ -98,6 +103,7 @@ let showItemCard = async (item, showFullCard)  => {
     item: item.data,
     data: item.getChatData(),
     labels: item.labels,
+    condensed: item.hasAttack && configSettings.mergeCardCondensed,
     hasAttack: showFullCard || (item.hasAttack && speedItemRolls === "off"),
     isHealing: showFullCard || (item.isHealing && autoRollDamage === "none"),
     hasDamage: showFullCard || (item.hasDamage && autoRollDamage === "none"),
@@ -112,8 +118,7 @@ let showItemCard = async (item, showFullCard)  => {
   const template = `modules/midi-qol/templates/${templateType}-card.html`;
   const html = await renderTemplate(template, templateData);
 
-  //TODO: look at speaker for this message
-  // Basic chat message dat
+  debug(" do item roll ", useTokenNames,(useTokenNames && token) ? token.data.name : item.actor.name, token, token?.data.name, item.actor.name, ChatMessage.getSpeaker())
   const chatData = {
     user: game.user._id,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
@@ -121,7 +126,7 @@ let showItemCard = async (item, showFullCard)  => {
     speaker: {
       actor: item.actor._id,
       token: item.actor.token,
-      alias: item.actor.name
+      alias: useTokenNames && token ? token.data.name : item.actor.name
     }
   };
   // Toggle default roll mode

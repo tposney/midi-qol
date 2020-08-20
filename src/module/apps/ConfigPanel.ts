@@ -1,127 +1,56 @@
-import { itemRollButtons, speedItemRolls, autoShiftClick, autoTarget, autoCheckHit, autoCheckSaves, checkSaveText, autoRollDamage, criticalDamage,
+import {speedItemRolls, autoShiftClick, autoTarget, autoCheckHit, autoCheckSaves, checkSaveText, autoRollDamage, criticalDamage,
  addChatDamageButtons, autoApplyDamage, damageImmunities, macroSpeedRolls, hideNPCNames, useTokenNames, itemDeleteCheck, nsaFlag, autoItemEffects,
  coloredBorders, rangeTarget, autoRemoveTargets, checkBetterRolls, playerRollSaves, playerSaveTimeout, preRollChecks, mergeCard } from "../settings"
-import { warn } from "../../midi-qol";
+ import { configSettings } from "../settings"
+import { warn, i18n } from "../../midi-qol";
 export class ConfigPanel extends FormApplication {
   
   static get defaultOptions() {
-    warn("Config panel default options");
-
     return mergeObject(super.defaultOptions, {
       title: game.i18n.localize("DICESONICE.configTitle"),
       id: "midi-qol-config",
       template: "modules/midi-qol/templates/config.html",
-      width: 500,
+      width: 510,
       height: 845,
       closeOnSubmit: true
     })
   }
 
+  get title() {
+    return i18n("midi-qol.ConfigTitle")
+  }
+
   getData(options) {
-    warn("config panel get data")
     return {
-      itemRollButtons,
-      speedItemRolls,
-      speeItemRollsEnabled: speedItemRolls !== "none",
-      autoShiftClick,
-      autoTarget,
-      autoCheckHit,
-      autoCheckSaves,
-      checkSaveText,
-      autoRollDamage,
+      configSettings,
+      speedItemRollsOptions: {off: "Off", on: "On", onCard: "On + Show Item Card"},
+      autoCheckHitOptions: {none: "None", all: "Check - all see result", whisper: "Check - only GM sees", snotty: "Auto check + abuse"},
+      clickOptions: {off: "Off", attack: "Attack Rolls Only", damage: "Damage Rolls Only", all: "Attack and Damage"},
+      autoTargetOptions: {none: "None", always: "Always", wallsBlock: "Walls Block"},
+      autoCheckSavesOptions: {none: "None", all:  "Save - All see result", whisper: "Save - only GM sees", allShow: "Save - All see Result + Rolls"},
+      autoRollDamageOptions: {none: "None", always:  "Always", onHit: "Attack Hits"},
       criticalDamage,
       addChatDamageButtons,
-      autoApplyDamage,
-      damageImmunities,
+      autoApplyDamageOptions: {none: "No", yes: "Yes", yesCard: "Yes + undo damage card"},
+      damageImmunitiesOptions: {none: "Never", immunityDefult: "apply immuniites", immunityPhysical: "apply immunities + physical"},
       macroSpeedRolls,
-      hideNPCNames,
-      useTokenNames,
       itemDeleteCheck,
       nsaFlag,
       autoItemEffects,
       coloredBorders,
-      rangeTarget,
       autoRemoveTargets,
       checkBetterRolls,
-      playerRollSaves,
-      playerSaveTimeout,
+      playerRollSavesOptions: {none: "None",  letme: "Let Me Roll That For You", letmeQuery: "LMRTFY + Querey", chat: "Chat Message"},
       preRollChecks,
-      mergeCard
     }
-
-  }
-
-  activateListeners(html) {
-      super.activateListeners(html);
-
-  
-
-      html.find('input[name="hideAfterRoll"]').change(this.toggleHideAfterRoll.bind(this));
-      html.find('input[name="autoscale"]').change(this.toggleAutoScale.bind(this));
-      html.find('select[name="colorset"]').change(this.toggleCustomColors.bind(this));
-      html.find('input,select').change(this.onApply.bind(this));
-      html.find('button[name="reset"]').click(this.onReset.bind(this));
-
-  }
-
-  toggleHideAfterRoll() {
-    //@ts-ignore
-      let hideAfterRoll = $('input[name="hideAfterRoll"]')[0].checked;
-      $('input[name="timeBeforeHide"]').prop("disabled", !hideAfterRoll);
-      $('select[name="hideFX"]').prop("disabled", !hideAfterRoll);
-  }
-
-  toggleAutoScale() {
-    //@ts-ignore
-      let autoscale = $('input[name="autoscale"]')[0].checked;
-      $('input[name="scale"]').prop("disabled", autoscale);
-      $('.range-value').css({ 'opacity' : autoscale ? 0.4 : 1});
-  }
-
-  toggleCustomColors() {
-      let colorset = $('select[name="colorset"]').val() !== 'custom';
-      $('input[name="labelColor"]').prop("disabled", colorset);
-      $('input[name="diceColor"]').prop("disabled", colorset);
-      $('input[name="outlineColor"]').prop("disabled", colorset);
-      $('input[name="edgeColor"]').prop("disabled", colorset);
-      $('input[name="labelColorSelector"]').prop("disabled", colorset);
-      $('input[name="diceColorSelector"]').prop("disabled", colorset);
-      $('input[name="outlineColorSelector"]').prop("disabled", colorset);
-      $('input[name="edgeColorSelector"]').prop("disabled", colorset);
-  }
-
-  onApply(event) {
-      event.preventDefault();
-
-      setTimeout(() => {
-
-          let config = {
-              labelColor: $('input[name="labelColor"]').val(),
-              diceColor: $('input[name="diceColor"]').val(),
-              outlineColor: $('input[name="outlineColor"]').val(),
-              edgeColor: $('input[name="edgeColor"]').val(),
-              autoscale: false,
-              scale: 60,
-              shadowQuality:$('select[name="shadowQuality"]').val(),
-              bumpMapping: $('input[name="bumpMapping"]').is(':checked'),
-              colorset: $('select[name="colorset"]').val(),
-              texture: $('select[name="texture"]').val(),
-              sounds: $('input[name="sounds"]').is(':checked'),
-              system: $('select[name="system"]').val()
-          };
-
-      }, 100);
   }
 
   onReset() {
-      this.render();
+      this.render(true);
   }
 
   async _updateObject(event, formData) {
-      let settings = mergeObject(CONFIG, formData, { insertKeys: false, insertValues: false });
-      let appearance = mergeObject({}, formData, { insertKeys: false, insertValues: false });
-      await game.settings.set('dice-so-nice', 'settings', settings);
-      await game.user.setFlag("dice-so-nice", "appearance", appearance);
-      ui.notifications.info(game.i18n.localize("DICESONICE.saveMessage"));
+    const newSettings = mergeObject(configSettings, formData, {overwrite: true})
+    if (game.user.isGM) game.settings.set("midi-qol", "ConfigSettings", newSettings)
   }
 }

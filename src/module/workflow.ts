@@ -2,10 +2,10 @@
 import Actor5e from "/systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
 import Item5e  from "/systems/dnd5e/module/item/entity.js"
-import { warn, debug, log, i18n, noDamageSaves, cleanSpellName, MESSAGETYPES, savingThrowText, savingThrowTextAlt, error } from "../midi-qol";
-import { speedItemRolls, autoCheckHit, autoRollDamage, autoShiftClick, autoTarget, useTokenNames, autoApplyDamage, damageImmunities, playerRollSaves, itemRollButtons, autoCheckSaves, checkBetterRolls, playerSaveTimeout, mergeCard, autoItemEffects, checkSaveText } from "./settings";
+import { warn, debug, log, i18n, noDamageSaves, cleanSpellName, MESSAGETYPES, error } from "../midi-qol";
+import { speedItemRolls, autoCheckHit, autoRollDamage, autoShiftClick, autoTarget, useTokenNames, autoApplyDamage, damageImmunities, playerRollSaves, itemRollButtons, autoCheckSaves, checkBetterRolls, playerSaveTimeout, mergeCard, autoItemEffects, checkSaveText, configSettings } from "./settings";
 import { selectTargets } from "./itemhandling";
-import { processcreateDamageRoll } from "./chatMesssageHandling";
+import { addChatDamageButtonsToHTML } from "./chatMesssageHandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
 
@@ -29,6 +29,7 @@ export const WORKFLOWSTATES = {
 };
 
 export class Workflow {
+  [x: string]: any;
   static _actions: {};
   static _workflows: {} = {};
   actor : Actor5e;
@@ -54,9 +55,11 @@ export class Workflow {
   isFumble: boolean;
   hitTargets: Set<Token>;
   attackRoll: Roll;
+  attackAdvantage: boolean;
+  attackDisadvantage: boolean;
   diceRoll: number;
   attackTotal: number;
-  attackCardData: {};
+  attackCardData: ChatMessage;
   attackRollHTML: HTMLElement | JQuery<HTMLElement>;
   
   hitDisplayData: any[];
@@ -65,7 +68,7 @@ export class Workflow {
   damageTotal: number;
   damageDetail: any[];
   damageRollHTML: HTMLElement | JQuery<HTMLElement>;
-  damageCardData: {};
+  damageCardData: ChatMessage;
 
   saves: Set<Token>;
   failedSaves: Set<Token>
@@ -79,6 +82,8 @@ export class Workflow {
 
   chatMessage: ChatMessage;
   extraText: string;
+
+  static eventHack: any;
 
   static get workflows() {return Workflow._workflows}
   static getWorkflow(id:string):Workflow {
@@ -108,8 +113,8 @@ export class Workflow {
     this.itemLevel = item?.level || 0;
     this._id = randomID();
     this.itemCardData = {};
-    this.attackCardData = {};
-    this.damageCardData = {};
+    this.attackCardData = undefined;
+    this.damageCardData = undefined;
     this.event = event;
     this.saveRequests = {};
     this.saveTimeouts = {};
@@ -121,9 +126,8 @@ export class Workflow {
   }
 
   static removeWorkflow(id: string) {
-    if (!Workflow._workflows[id]) warn ("No such workflow ", id)
+    if (!Workflow._workflows[id]) warn ("removeWorkflow: No such workflow ", id)
     else {
-      warn("removing workflow ", id)
       let workflow = Workflow._workflows[id];
       // Just in case there were some hooks left enbled by mistake.
       if (workflow.hideSavesHookId) Hooks.off("preCreateChatMessage", workflow.hideSavesHookId);
@@ -172,7 +176,8 @@ export class Workflow {
         if (!this.item.hasAttack) {
           return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
         }
-        if (speedItemRolls !== "off") {
+        const shouldRoll = this.event.shiftKey || this.event.ctrlKey || this.event.altKey || this.event.metaKey || (speedItemRolls !== "off");
+        if (shouldRoll) {
           this.item.rollAttack({event: this.event});
         }
         return;
@@ -187,13 +192,16 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMGEROLL:
-         if (!this.item.hasDamage) return this.next(WORKFLOWSTATES.WAITFORSAVES);
-        if (this.isFumble) return this.next(WORKFLOWSTATES.ROLLFINISHED)
-        if (autoRollDamage === "always" || 
-              (autoRollDamage === "onHit" && (this.hitTargets.size > 0 || this.targets.size === 0))) {
-            this.event.altKey = this.isCritical;
-            debug("Rolling damage ", event, this.itemLevel, this.versatile);
-            await this.item.rollDamage({event: this.event, spellLevel: this.itemLevel, versatile: this.versatile})
+        if (!this.item.hasDamage) return this.next(WORKFLOWSTATES.WAITFORSAVES);
+        if (this.isFumble) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        const shouldRollDamage = autoRollDamage === "always" 
+                                  || (autoRollDamage !== "none" && !this.item.hasAttack)
+                                  || (autoRollDamage === "onHit" && (this.hitTargets.size > 0 || this.targets.size === 0))
+        if (shouldRollDamage) {
+          this.event.shiftKey = ["all", "damage"].includes(autoShiftClick);
+          this.event.altKey = this.isCritical;
+          debug("Rolling damage ", event, this.itemLevel, this.versatile);
+          await this.item.rollDamage({event: this.event, spellLevel: this.itemLevel, versatile: this.versatile})
         }
         return; // wait for a damage roll to advance the state.
 
@@ -245,7 +253,6 @@ export class Workflow {
         if (this.item?.data.flags) {
           let applicationTargets = new Set();
 
-          debug("flags for item are ", this.item.data.flags, installedModules.get("dynamiceffects"))
           if (this.item.hasSave) applicationTargets = this.failedSaves;
           else if (this.item.hasAttack) applicationTargets = this.hitTargets;
           else applicationTargets = this.targets;
@@ -253,7 +260,7 @@ export class Workflow {
             // If we rolled a save update theTargets
             //@ts-ignore
             let de = window.DynamicEffects;
-            console.warn("Calling dynamic effects with ", applicationTargets, de)
+            debug("Calling dynamic effects with ", applicationTargets, de)
             de.doEffects({item: this.item, actor: this.item.actor, activate: true, targets: applicationTargets, 
                   whisper: true, spellLevel: this.itemLevel, damageTotal: this.damageTotal}) 
           }
@@ -280,7 +287,8 @@ export class Workflow {
       let content = duplicate(chatMessage.data.content)
       let searchString = '<div class="midi-qol-attack-roll"></div>';
       let buttoneRe = /<button data-action="attack">[^<]*<\/button>/
-      let replaceString = `<div style="text-align:center" >Attack<div class="midi-qol-attack-roll">${this.attackRollHTML}</div></div>`
+      const attackString = this.attackAdvantage ? i18n("DND5E.Advantage") : this.attackDisadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
+      let replaceString = `<div style="text-align:center" >${attackString}<div class="midi-qol-attack-roll">${this.attackRollHTML}</div></div>`
       content = content.replace(searchString, replaceString);
       content = content.replace(buttoneRe, "")
       await chatMessage.update({"content": content});
@@ -295,13 +303,19 @@ export class Workflow {
       const searchString = '<div class="midi-qol-damage-roll"></div>';
       const damageRe = /<button data-action="damage">[^<]*<\/button>/
       const versatileRe = /<button data-action="versatile">[^<]*<\/button>/
-      let replaceString = `<div style="text-align:center" >Damage<div class="midi-qol-damage-roll">${this.damageRollHTML || ""}</div></div>`
+      //@ts-ignore flavor not defined on ChatMessage
+      
+      const damageString = i18n(this.versatile ? "DND5E.VersatileDamage" : "DND5E.Damage");
+      //@ts-ignore .flavor not defined
+      const dmgHeader = configSettings.mergeCardCondensed ? damageString : this.damageCardData.flavor;
+      let replaceString = `<div style="text-align:center" >${dmgHeader}<div class="midi-qol-damage-roll">${this.damageRollHTML || ""}</div></div>`
 
       content = content.replace(searchString, replaceString);
       content = content.replace(damageRe, "")
       content = content.replace(versatileRe, "<div></div>")
+      // content = addChatDamageButtonsToHTML(this.damageTotal, this.damageDetail, content, this.item);
       await chatMessage.update({"content": content});
-      //@ts-ignore
+      //@ts-ignore .conennt not defined on ChatMessage
       chatMessage.content = content;
     }
     // not merging it has been displayed by the item.rollAttack()
@@ -352,7 +366,9 @@ export class Workflow {
 
   async displaySaves(whisper, doMerge) {
     let chatData: any = {};
+    const noDamage = getSaveMultiplierForItem(this.item) === 0 ? i18n("midi-qol.noDamage") : "";
     let templateData = {
+      noDamage,
       saves: this.saveDisplayData, 
         // TODO force roll damage
     }
@@ -362,7 +378,7 @@ export class Workflow {
       // @ts-ignore .content not defined
       let content = duplicate(chatMessage.data.content)
       const searchString =  '<div class="midi-qol-saves-display"></div>';
-      const replaceString = `<div data-item-id="${this.item._id}"></div><div class="midi-qol-saves-display"><h3>${this.saveDisplayFlavor}</h3>${saveContent}</div>`
+      const replaceString = `<div data-item-id="${this.item._id}"></div><div class="midi-qol-saves-display"><div class="midi-qol-box midi-qol-bigger-text">${this.saveDisplayFlavor}</div>${saveContent}</div>`
       content = content.replace(searchString, replaceString);
       await chatMessage.update({"content": content});
       //@ts-ignore
@@ -390,21 +406,17 @@ export class Workflow {
 
   hideSaveRolls = (data, options) => {
     const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
-    debug("chat message is ", this.itemCardId, chatMessage);
-  
-    let flavor = data.flavor || "";
-    if (flavor.includes(savingThrowText) || (savingThrowTextAlt?.length > 0 && flavor.includes(savingThrowTextAlt))) {
-      if (data.user !== game.user.id) return true;
-      options.displaySheet = false;
-      this.saveCount -= 1;
-      if (this.saveCount <= 0) {
-        //@ts-ignore
-        Hooks.off("preCreateChatMessage", this.hideSavesHookId);
-        this.hideSavesHookId = null;
-      }
-      return false;
+    debug("hideSaveRolls: chat message is ", this.itemCardId, chatMessage, data.flags, this.saveCount);
+    if (data.flags?.dnd5e.roll.type !== "save") return true;
+    if (data.user !== game.user.id) return true;
+    options.displaySheet = false;
+    this.saveCount -= 1;
+    if (this.saveCount <= 0) {
+      //@ts-ignore
+      Hooks.off("preCreateChatMessage", this.hideSavesHookId);
+      this.hideSavesHookId = null;
     }
-    return true;
+    return false;
   }
 
 /**
@@ -514,8 +526,7 @@ export class Workflow {
 
       if (game.user.isGM) log(`Ability save: ${target.name} rolled ${rollTotal} vs ${rollAbility} DC ${rollDC}`);
       let saveString = i18n(saved ? "midi-qol.save-success" : "midi-qol.save-failure");
-      let noDamage = saved && getSaveMultiplierForItem(this.item) === 0 ? i18n("midi-qol.noDamage") : "";
-      let adv = this.advantageSaves.has(target) ? `(${i18n("midi-qol.advantage")})` : "";
+      let adv = this.advantageSaves.has(target) ? `(${i18n("DND5E.Advantage")})` : "";
       let img = target.data.img || target.actor.img;
       if ( VideoHelper.hasVideoExtension(img) ) {
         //@ts-ignore - createThumbnail not defined
@@ -528,7 +539,6 @@ export class Workflow {
         target, 
         saveString, 
         rollTotal, 
-        noDamage, 
         id: target.id, 
         adv
       });
@@ -651,13 +661,13 @@ export class BetterRollsWorkflow extends Workflow {
     let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===this.currentState)[0];
     switch (this.currentState) {
       case WORKFLOWSTATES.WAITFORATTACKROLL:
-        debug("betterRolls workflow.next ", state, speedItemRolls, this)
+        warn("betterRolls workflow.next ", state, speedItemRolls, this)
         // since this is better rolls as soon as we are ready for the attack roll we have both the attack roll and damage
         if (!this.item.hasAttack) return this.next(WORKFLOWSTATES.WAITFORSAVES);
         else return this.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE)
 
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
-        debug("betterRolls workflow.next ", state, speedItemRolls, this)
+        warn("betterRolls workflow.next ", state, speedItemRolls, this)
         debug(this.attackRollHTML)
         if (autoCheckHit !== "none") {
           await this.checkHits();
@@ -666,13 +676,13 @@ export class BetterRollsWorkflow extends Workflow {
         return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMGEROLL:
-        debug("betterRolls workflow.next ", state, speedItemRolls, this)
+        warn("betterRolls workflow.next ", state, speedItemRolls, this)
         // better rolls always have damage rolled
         if (!this.item.hasDamage) return this.next(WORKFLOWSTATES.WAITFORSAVES);
-        else this.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
+        else return this.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
-        debug("betterRolls workflow.next ", state, speedItemRolls, this)
+        warn("betterRolls workflow.next ", state, speedItemRolls, this)
         // apply damage to targets plus saves plus immunities
         if (this.isFumble) { //TODO: Is this right?
           return this.next(WORKFLOWSTATES.ROLLFINISHED);
@@ -688,46 +698,46 @@ export class BetterRollsWorkflow extends Workflow {
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
  */
-let createDamageList = (roll, item, defaultType = "radiant") => {
+export let createDamageList = (roll, item, defaultType = "radiant") => {
   if (isNewerVersion(game.data.version, "0.6.5") ) {
-    let damageList = [];
+    let damageList = []
     let rollTerms = roll.terms;
     let partPos = 0;
     let evalString;
     let damageSpec = item ? item.data.data.damage : {parts: []};
-    if (debug) log("Passed roll is ", roll)
-    if (debug) log("Damage spec is ", damageSpec)
+    debug("Passed roll is ", roll)
+    debug("Damage spec is ", damageSpec)
     for (let [spec, type] of damageSpec.parts) {
-      if (debug) log("single Spec is ", spec, type, item)
+      debug("single Spec is ", spec, type, item)
       if (item) {
         var rollSpec = new Roll(spec, item.actor?.getRollData() || {}).roll();
       }
-      if (debug) log("rollSpec is ", spec, rollSpec)
+      debug("rollSpec is ", spec, rollSpec)
       //@ts-ignore
       let specLength = rollSpec.terms.length;
       evalString = "";
 
       //@ts-ignore
-      if (debug) log("Spec Length ", specLength, rollSpec.terms)
+      debug("Spec Length ", specLength, rollSpec.terms)
       for (let i = 0; i < specLength && partPos < rollTerms.length; i++) {
         if (typeof rollTerms[partPos] !== "object") {
           evalString += rollTerms[partPos];
         } else {
-          if (debug) log("roll parts ", rollTerms[partPos])
+          debug("roll parts ", rollTerms[partPos])
           let total = rollTerms[partPos].total;
           evalString += total;
         }
         partPos += 1;
       }
       let damage = new Roll(evalString).roll().total;
-      if (debug) log("Damage is ", damage, type, evalString)
+      debug("Damage is ", damage, type, evalString)
       damageList.push({ damage: damage, type: type });
       partPos += 1; // skip the plus
     }
-    if (debug) log(partPos, damageList)
+    debug(partPos, damageList)
     evalString = "";
     while (partPos < rollTerms.length) {
-      if (debug) log(rollTerms[partPos])
+      debug(rollTerms[partPos])
       if (typeof rollTerms[partPos] === "object") {
         let total = rollTerms[partPos].total;
         evalString += total;
@@ -736,13 +746,13 @@ let createDamageList = (roll, item, defaultType = "radiant") => {
       partPos += 1;
     }
     if (evalString.length > 0) {
-      if (debug) log("Extras part is ", evalString)
+      debug("Extras part is ", evalString)
         let damage = new Roll(evalString).roll().total;
         let type = damageSpec.parts[0] ? damageSpec.parts[0][1] : defaultType;
         damageList.push({ damage, type});
-        if (debug) log("Extras part is ", evalString)
+        debug("Extras part is ", evalString)
     }
-    if (debug) log("Final damage list is ", damageList)
+    debug("Final damage list is ", damageList)
     return damageList;
   }
   let damageList = [];
@@ -750,21 +760,21 @@ let createDamageList = (roll, item, defaultType = "radiant") => {
   let partPos = 0;
   let evalString;
   let damageSpec = item ? item.data.data.damage : {parts: []};
-  if (debug) log("Passed roll is ", roll)
-  if (debug) log("Damage spec is ", damageSpec)
+  debug("Passed roll is ", roll)
+  debug("Damage spec is ", damageSpec)
   for (let [spec, type] of damageSpec.parts) {
-    if (debug) log("single Spec is ", spec, type, item)
+    debug("single Spec is ", spec, type, item)
     if (item) {
       var rollSpec = new Roll(spec, item.actor?.getRollData() || {}).roll();
     }
-    if (debug) log("rollSpec is ", spec, rollSpec)
+    debug("rollSpec is ", spec, rollSpec)
     let specLength = rollSpec.parts.length;
     evalString = "";
 
-    if (debug) log(specLength, rollSpec.parts)
+    debug(specLength, rollSpec.parts)
     for (let i = 0; i < specLength && partPos < rollParts.length; i++) {
       if (typeof rollParts[partPos] === "object") {
-        if (debug) log("roll parts ", rollParts[partPos])
+        debug("roll parts ", rollParts[partPos])
         let total = rollParts[partPos].total;
         evalString += total;
       }
@@ -772,14 +782,14 @@ let createDamageList = (roll, item, defaultType = "radiant") => {
       partPos += 1;
     }
     let damage = new Roll(evalString).roll().total;
-    if (debug) log("Damage is ", damage, type, evalString)
+    debug("Damage is ", damage, type, evalString)
     damageList.push({ damage: damage, type: type });
     partPos += 1; // skip the plus
   }
-  if (debug) log(partPos, damageList)
+  debug(partPos, damageList)
   evalString = "";
   while (partPos < rollParts.length) {
-    if (debug) log(rollParts[partPos])
+    debug(rollParts[partPos])
     if (typeof rollParts[partPos] === "object") {
       let total = rollParts[partPos].total;
       evalString += total;
@@ -788,13 +798,13 @@ let createDamageList = (roll, item, defaultType = "radiant") => {
     partPos += 1;
   }
   if (evalString.length > 0) {
-    if (debug) log("Extras part is ", evalString)
+    debug("Extras part is ", evalString)
       let damage = new Roll(evalString).roll().total;
       let type = damageSpec.parts[0] ? damageSpec.parts[0][1] : "radiant";
       damageList.push({ damage, type});
-      if (debug) log("Extras part is ", evalString)
+      debug("Extras part is ", evalString)
   }
-  if (debug) log("Final damage list is ", damageList)
+  debug("Final damage list is ", damageList)
   return damageList;
 }
 
@@ -823,7 +833,7 @@ let getParams = () => {
     checkBetterRolls: ${checkBetterRolls} `
 }
 // Calculate the hp/tempHP lost for an amount of damage of type
-function calculateDamage(a, appliedDamage, t, totalDamage, dmgType) {
+export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType) {
   debug("calculate damage ", a, appliedDamage, t, totalDamage, dmgType)
   let value = Math.floor(appliedDamage);
   if (dmgType.includes("temphp")) { // only relavent for healing of tmp HP
@@ -851,7 +861,7 @@ function calculateDamage(a, appliedDamage, t, totalDamage, dmgType) {
  * 
  */
 
-let getTraitMult = (actor, dmgTypeString, item) => {
+export let getTraitMult = (actor, dmgTypeString, item) => {
   if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) return -1;
 
   if (damageImmunities !== "none" && dmgTypeString !== "") {
@@ -867,7 +877,7 @@ let getTraitMult = (actor, dmgTypeString, item) => {
   return 1;
 };
 
-let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, saves) => {
+export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, saves) => {
   let damageList = [];
   let targetNames = [];
   let appliedDamage;
@@ -924,11 +934,7 @@ async function processDamageRoll(workflow: Workflow, defaultDamageType: string) 
   // const defaultDamageType = message.data.flavor && message.data.flavor.match(re);
 
   // Show damage buttons if enabled, but only for the applicable user and the GM
-  /*
-  if ((message.user.id === game.user.id || game.user.isGM)) {
-    addDamageButtons(damageDetail, totalDamage, html);
-  }
-  */
+  
   let theTargets = workflow.hitTargets;
   if (item?.data.data.target?.type === "self") theTargets = getSelfTargetSet(actor) || theTargets;
   if (autoApplyDamage !== "none") {

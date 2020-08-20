@@ -18,6 +18,8 @@ import { readyPatching, initPatching } from './module/patching.js';
 import { initHooks } from './module/Hooks.js';
 import { initGMActionSetup } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
+import { ConfigPanel } from './module/apps/ConfigPanel.js';
+import { applyTokenDamage } from './module/workflow.js';
 
 export let debugEnabled = 0;
 // 0 = none, warnings = 1, debug = 2, all = 3
@@ -82,6 +84,7 @@ Hooks.once('setup', function() {
   //@ts-ignore
   noDamageSaves = i18n("midi-qol.noDamageonSaveSpells").map(name => cleanSpellName(name));
   setupSheetQol();
+  setupMinorQolCompatibility()
 }); 
 
 /* ------------------------------------ */
@@ -90,7 +93,47 @@ Hooks.once('setup', function() {
 Hooks.once('ready', function() {
   // Do anything once the module is ready
   readyPatching();
+  //new ConfigPanel({},{}).render(true);
 
 });
 
 // Add any additional hooks if necessary
+
+// Backwards compatability
+function setupMinorQolCompatibility() {
+  //@ts-ignore
+  window.MinorQOL = {
+    doRoll: doRoll,
+    applyTokenDamage: applyTokenDamage
+  }
+}
+
+function doRoll(event={shiftKey: false, ctrlKey: false, altKey: false, metaKey: false, type: "none"}, itemName, options = {type: "", versatile: false})
+{
+  const speaker = ChatMessage.getSpeaker();
+  var actor;
+  if (speaker.token) {
+    const token = canvas.tokens.get(speaker.token)
+    actor = token.actor;
+  } else {
+    actor = game.actors.get(speaker.actor);
+  }
+  if (!actor) {
+    warn("No actor found for ", speaker);
+    return;
+  }
+  let pEvent = {
+    shiftKey: event.shiftKey,
+    ctrlKey: event.ctrlKey,
+    altKey: event.altKey,
+    metaKey: event.metaKey,
+    type: (event?.type === "contextmenu") || options.versatile ? "contextmenu" : ""
+  }
+  let item = actor?.items?.get(itemName) // see if we got an itemId
+  if (!item) item = actor?.items?.find(i => i.name === itemName && (!options.type || i.type === options.type));
+
+  console.log("passing event ", pEvent)
+  if (item) {
+    return item.roll({event: pEvent})
+  }
+} 

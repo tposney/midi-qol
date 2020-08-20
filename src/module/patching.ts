@@ -11,7 +11,7 @@ import { doItemRoll, doAttackRoll, doDamageRoll } from "./itemhandling";
 export const rollMappings = {
   "itemRoll" : {roll: Item5e.prototype.roll, methodName: "roll", class: Item5e, replacement: doItemRoll},
   "itemAttack": {roll: Item5e.prototype.rollAttack, methodName: "rollAttack", class: Item5e, replacement: doAttackRoll},
-  "itemDamage": {roll: Item5e.prototype.rollDamage, class: Item5e, methodName: "rollDamage", replacement: doDamageRoll},
+  "itemDamage": {roll: Item5e.prototype.rollDamage, methodName: "rollDamage", class: Item5e, replacement: doDamageRoll},
   "applyDamage": {roll: Actor5e.prototype.applyDamage, class: Actor5e}
 }
 
@@ -20,7 +20,6 @@ const oldItemRollAttack = Item5e.prototype.rollAttack;
 const oldItemRollDamage = Item5e.prototype.rollDamage;
 
 function restrictVisibility() {
-  debug("proxy restrictVisibility");
   // Tokens
   for ( let t of canvas.tokens.placeables ) {
     // ** TP  t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible;
@@ -62,7 +61,7 @@ function _isTokenVisionSource(token:Token) {
 
 export let initPatching = () => {
   if (isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")) {
-    console.log("dae | Patching SightLayer.restrictVisibility")
+    warn("midi-qol | Patching SightLayer.restrictVisibility")
     //@ts-ignore
     let restrictVisibilityProxy = new Proxy(SightLayer.prototype.restrictVisibility, {
       apply: (target, thisvalue, args) =>
@@ -71,7 +70,7 @@ export let initPatching = () => {
     //@ts-ignore
     SightLayer.prototype.restrictVisibility = restrictVisibilityProxy;
 
-    console.log("dae | Patching SightLayer._isTokenVisionSource")
+    warn("midi-qol | Patching SightLayer._isTokenVisionSource")
     //@ts-ignore
     let _isTokenVisionSourceProxy = new Proxy(SightLayer.prototype._isTokenVisionSource, {
       apply: (target, thisvalue, args) =>
@@ -89,10 +88,11 @@ export let readyPatching = () => {
 
   ["itemRoll", "itemAttack", "itemDamage"].forEach(rollId => {
     log("Pathcing ", rollId, rollMappings[rollId]);
-    let rollMapping = rollMappings[rollId]
+    let rollMapping = rollMappings[rollId];
+    // rollMapping.roll = rollMapping.class.prototype[rollMapping.methodName];
     rollMapping.class.prototype[rollMapping.methodName] = new Proxy(rollMapping.roll, {
             apply: (target, thisValue, args) => rollMapping.replacement.bind(thisValue)(...args)
     })
   });
-  console.log("After patching roll mappings are ", rollMappings)
+  debug("After patching roll mappings are ", rollMappings)
 }

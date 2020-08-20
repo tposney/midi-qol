@@ -31,6 +31,10 @@
   font-size: 14px;
   line-height: 16px;
 }
+.midi-qol-bigger-text {
+  font-size: 14px;
+  line-height: 16px;
+}
 
 .midi-qol-flex-container > div {
   margin: 2px;
@@ -40,4 +44,17 @@
 }
 .midi-qol-gmonly {
 	display: none;
+}
+
+.midi-qol-box {
+  border: 2px groove #eeede0;
+  padding: 3px;
+}
+.midi-qol-nobox {
+  padding: 5px;
+  border-bottom: 2px groove #eeede0;
+
+}
+.midi-qol-faint {
+  color: #606060;
 }
