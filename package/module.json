@@ -54,9 +54,5 @@
   "minimumSystemVersion": 0.95,
   "url": "https://gitlab.com/tposney/midi-qol",
   "manifest": "https://gitlab.com/tposney/midi-qol/raw/master/package/module.json",
-  "download": "https://gitlab.com/tposney/midi-qol/raw/master/package/midi-qol-v0.1.0.zip",
-  "license": "",
-  "readme": "",
-  "bugs": "",
-  "changelog": ""
+  "download": "https://gitlab.com/tposney/midi-qol/raw/master/package/midi-qol-v0.1.0.zip"
 }
