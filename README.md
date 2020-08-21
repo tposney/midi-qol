@@ -21,11 +21,11 @@ Speed item rolls now makes no changes to the character sheet, and does not need 
 * Better rolls can now use the merge card.  
 * A Bug fix for a better rolls edge case when auto checking saves with players rolling saves but not using LMRTFY.  
 * Magic Items are now fully supported with speed rolls, advantage/disadvantage on magic item spells/feats and resource consumption works. The only oddity is when casting an area effect spell (.eg. fireball) the template is not automatically placed, but once placed everything works as expected.  
-
+* Fix for range target auto select config not working.
 ## v0.1.1
 Fixes a bug in better rolls spellcasting.
 Fixed a couple of localisation omissions.
-If you have meerge cards on for better rolls the saving throw results are not displayed - diable merge card for better rolls.
+If you have merge cards on for better rolls the saving throw results are not displayed - diable merge card for better rolls.
 
 ## Technical Differences:
 * midi-qol does not use the creation of chat messages as the triggeer anymore, rather it hooks the standard item.roll, item.rollAttack, item.rollDamage.
