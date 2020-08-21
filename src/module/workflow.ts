@@ -343,7 +343,6 @@ export class Workflow {
 
     if(doMerge) {
       const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
-      warn("display hits chat message is ", chatMessage)
       // @ts-ignore .content not defined
       var content = duplicate(chatMessage.data.content);    
       var searchString;
@@ -449,13 +448,14 @@ export class Workflow {
     debug("hideSaveRolls: chat message is ", this.itemCardId, chatMessage, data.flags, this.saveCount);
     if (data.flags?.dnd5e.roll.type !== "save") return true;
     if (data.user !== game.user.id) return true;
-    options.displaySheet = false;
     this.saveCount -= 1;
-    if (this.saveCount <= 0) {
+    if (this.saveCount < 0) {
       //@ts-ignore
       Hooks.off("preCreateChatMessage", this.hideSavesHookId);
       this.hideSavesHookId = null;
+      return true
     }
+    options.displaySheet = false;
     return false;
   }
 
@@ -481,7 +481,7 @@ export class Workflow {
     try {
       if (autoCheckSaves !== "allShow") {
         //@ts-ignore ._hooks not defined
-        debug("Check Saves: renderChat message hooks length ", Hooks._hooks["preCreateCatMessage"]?.length)
+        debug("Check Saves: renderChat message hooks length ", Hooks._hooks["preCreateChatMessage"]?.length)
         this.hideSavesHookId = Hooks.on("preCreateChatMessage", this.hideSaveRolls.bind(this))
       } else this.hideSavesHookId = null;
 
@@ -519,16 +519,17 @@ export class Workflow {
           this.saveCount = Math.max(this.saveCount - 1, 0)
           debug(`Player ${player.name} controls actor ${target.actor.name} - requesting ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save`);
           promises.push(new Promise((resolve, reject) => {
-            let eventToUse = duplicate(event);
-            let advantageToUse = advantage;
+            const eventToUse = duplicate(event);
+            const advantageToUse = advantage;
             let requestId = target.actor.id;
+            const playerName = player.name;
             if (["letem", "letmeQuery"].includes(playerRollSaves) && installedModules.get("lmrtfy")) requestId = randomID();
             this.saveRequests[requestId] = resolve;
             requestPCSave(this.item.data.data.save.ability, player.id, target.actor.id, advantage, this.item.name, rollDC, requestId)
 
             // set a timeout for taking over the roll
             this.saveTimeouts[requestId] = setTimeout(async () => {
-              console.warn(`Timeout waiting for ${player.name} to roll ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save - rolling for them`)
+              console.warn(`Timeout waiting for ${playerName} to roll ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save - rolling for them`)
               if (this.saveRequests[requestId]) {
                   delete this.saveRequests[requestId];
                   delete this.saveTimeouts[requestId];
@@ -591,7 +592,7 @@ export class Workflow {
   processSaveRoll = (message, html, data) => {
     const isLMRTFY = (installedModules.get("lmrtfy") && message.data.flags?.lmrtfy?.data);
     const requestId =  isLMRTFY ? message.data.flags.lmrtfy.data : message.data?.speaker?.actor;
-    debug("processSaveToll", isLMRTFY, requestId, this.saveRequests )
+    warn("processSaveToll", isLMRTFY, requestId, this.saveRequests )
 
     if (!requestId) return true;
     if (!this.saveRequests[requestId]) return true;
@@ -690,7 +691,7 @@ export class DamageOnlyWorkflow extends Workflow {
     super(actor, null, token, speaker, event)
     this.damageTotal = damageTotal;
     this.damageDetail = [{type: damageType,  damage: damageTotal}];
-    warn("dmageonlyworkflow ", this)
+    log("dmageonlyworkflow ", this)
   }
 
   async _next(newState) {
@@ -983,6 +984,7 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
 };
 
 async function processDamageRoll(workflow: Workflow, defaultDamageType: string) {
+  warn("Process Damage Roll ", workflow)
   // proceed if adding chat damage buttons or applying damage for our selves
   let appliedDamage = 0;
   const actor = workflow.actor;

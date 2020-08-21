@@ -22,6 +22,7 @@ Speed item rolls now makes no changes to the character sheet, and does not need 
 * A Bug fix for a better rolls edge case when auto checking saves with players rolling saves but not using LMRTFY.  
 * Magic Items are now fully supported with speed rolls, advantage/disadvantage on magic item spells/feats and resource consumption works. The only oddity is when casting an area effect spell (.eg. fireball) the template is not automatically placed, but once placed everything works as expected.  
 * Fix for range target auto select config not working.
+
 ## v0.1.1
 Fixes a bug in better rolls spellcasting.
 Fixed a couple of localisation omissions.

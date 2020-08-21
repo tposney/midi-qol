@@ -113,7 +113,7 @@ let showItemCard = async (item, showFullCard: boolean, workflow: Workflow)  => {
     hasAttack: showFullCard || (item.hasAttack && needAttckButton),
     isHealing: showFullCard || (item.isHealing && autoRollDamage === "none"),
     hasDamage: showFullCard || (item.hasDamage && autoRollDamage === "none"),
-    isVersatile: showFullCard || (item.isVersatile && autoRollDamage === "none"),
+    isVersatile: (item.isVersatile && autoRollDamage === "none"),
     isSpell: item.type==="spell",
     hasSave: showFullCard || (item.hasSave && autoCheckSaves === "none"),
     hasAreaTarget: showFullCard || item.hasAreaTarget,

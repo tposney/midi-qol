@@ -74,16 +74,17 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
 
   let itemId = html[0].attributes["data-item-id"];
   if (!itemId) return true; // not an item roll.
-
+ 
   itemId = itemId.nodeValue;
   let itemRe = /[^(]\(([\d]*)[^)]*\)/
-  let token: Token = game.actors.tokens[data.speaker.token];
-  let actor: Actor5e = game.actors.tokens[data.speaker.token]?.actor;
+  let token: Token = canvas.tokens.get(data.speaker.token)
+  let actor: Actor5e = game.actors.tokens[data.speaker.token];
+  if (!actor) game.actors.tokens[data.speaker.token]?.actor;
   if (!actor) actor = game.actors.get(data.speaker.actor);
   let item: Item5e = actor.items.get(itemId);
 
   let levelMatch =  title.match(itemRe);
-  let itemLevel = levelMatch ? levelMatch[1] : (item.data.data.level || 0);
+  let itemLevel = levelMatch ? levelMatch[1] : (item?.data.data.level || 0);
   let damageStart = 0;
   let attackTotal = -1;
   let diceRoll;
@@ -184,9 +185,13 @@ export let colorChatMessageHandler = (message, html, data) => {
   if (coloredBorders === "none") return true;
   //@ts-ignore .color not defined
   html[0].style.borderColor = game.users.get(message.data.user).color;
-  if (coloredBorders === "borderNames") 
+  if (coloredBorders === "borderNamesBackground") {
     //@ts-ignore .color not defined
     html[0].children[0].children[0].style.backgroundColor = game.users.get(message.data.user).color;
+  } else if (coloredBorders === "borderNamesText") {
+    //@ts-ignore .color not defined
+    html[0].children[0].children[0].style.color = game.users.get(message.data.user).color;
+  }
  return true;
 }
 
@@ -237,7 +242,7 @@ let _onTargetSelect = (event) => {
 export let hideStuffHandler = (message, html, data) => {
 
   debug("hide info handler message: ", message)
-  if (getProperty(message, "data.flags.midi-qol.permaHide")) {
+  if (getProperty(message, "data.flags.midi-qol.permaHide") && false) {
     html.hide();
     return;
   }
@@ -267,10 +272,13 @@ export let hideStuffHandler = (message, html, data) => {
 }
 
 export let processPreCreateDamageRoll = (data, ...args) => {
-  debug("Process pre create Damage roll ", data.flags?.dnd5e?.roll.type, data, ...args)
   if (data.flags?.dnd5e?.roll.type === "damage") {
-    const actor = game.actors.get(data.speaker.actor);
-    const item = actor.getOwnedItem(data.flags.dnd5e.roll.itemId);
+    warn("Process pre create Damage roll ", data.flags?.dnd5e?.roll.type, data, ...args)
+    let token: Token = canvas.tokens.get(data.speaker.token)
+    let actor: Actor5e = game.actors.tokens[data.speaker.token];
+    if (!actor) game.actors.tokens[data.speaker.token]?.actor;
+    if (!actor) actor = game.actors.get(data.speaker.actor);
+    let item: Item5e = actor.items.get((data.flags.dnd5e.roll.itemId));
     if (item) {
       if (data.flags.dnd5e.roll.critical) {
         if (criticalDamage === "default") return;
@@ -320,7 +328,7 @@ export let processPreCreateDamageRoll = (data, ...args) => {
       }
     } else { // have a damage roll without an item
       warn("damage roll without item detected ", data.flags.dnd5e.roll.flavor)
-      let wf = new DamageOnlyWorkflow(actor, null, data.speaker, parseInt(data.content), data.flags.dnd5e.roll.flavor || "radiant");
+      let wf = new DamageOnlyWorkflow(actor, token, data.speaker, parseInt(data.content), data.flags.dnd5e.roll.flavor || "radiant");
       wf.next(WORKFLOWSTATES.NONE);
     }
   }

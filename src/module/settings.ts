@@ -59,29 +59,7 @@ export let fetchParams = (silent = false) => {
   debug("Fetch Params Loading");
   configSettings = game.settings.get("midi-qol", "ConfigSettings")
   warn("Fetch Params Loading", configSettings);
-  /*configSettings = {
-    speedItemRolls: "on",
-    autoFastForward: "attack",
-    autoTarget: "wallsBlock",
-    autoCheckHit: "all",
-    autoRemoveTargets: "none",
-    autoCheckSaves: "all",
-    checkSaveText: false,
-    autoRollDamage: "onHit",
-    addChatDamageButtons: false,
-    autoApplyDamage: "yes",
-    damageImmunities: "immunityPhysical",
-    autoItemEffects: true,
-    rangeTarget: true,
-    playerRollSaves: "letme",
-    playerSaveTimeout: 20,
-    preRollChecks: false,
-    mergeCard: true,
-    hideNPCNames: "????",
-    useTokenNames: false
-  }
-  */
-  speedItemRolls = configSettings.speedItemRolls;
+    speedItemRolls = configSettings.speedItemRolls;
   autoFastForward = configSettings.autoFastForward;
   autoTarget = configSettings.autoTarget;
   autoCheckHit = configSettings.autoCheckHit;
@@ -202,7 +180,7 @@ const settings = [
     scope: "world",
     default: "None",
     type: String,
-    choices: {none: "None", borders: "Borders Only", borderNames: "Border + Name"},
+    choices: {none: "None", borders: "Borders Only", borderNamesText: "Border + Name Text", borderNamesBackground: "Border + Name Background"},
     onChange: fetchParams
   },
   {
