@@ -17,8 +17,11 @@ Speed item rolls now makes no changes to the character sheet, and does not need 
 * ctrl = disadvantage attack
 * alt = advantage attack
 * shift means use versatile damage and ctrl/alt still work. I think this is a big improvement BUT **this is a change from both minor-qol and midi-qol. If it causes too much angst I will put back (as an option) the previous behaviour.**  
+
 AutoShiftClick has been renamed to auto fast forward and applies for attack and damage rolls. When enabled, if a roll would normally produce a dialog a normal roll will be made for attack rolls that have not been "speed" rolled. Damage rolls will be normal or critical if the attack hit and if the option is not set the dialog will be displayed.  
+
 Better rolls can now use the merge card.  
+
 A Bug fix for a better rolls edge case when auto checking saves with players rolling saves but not using LMRTFY.  
 Magic Items are now fully supported with speed rolls, advantage/disadvantage on magic item spells/feats and resource consumption works. The only oddity is when casting an area effect spell (.eg. fireball) the template is not automatically placed, but once placed everything works as expected.  
 
