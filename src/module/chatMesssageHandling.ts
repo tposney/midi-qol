@@ -48,15 +48,16 @@ export function processcreateDamageRoll(message, options, user) {
 export function processcreateSaveRoll(message, options, user) {
 }
 
+
 export function processcreateBetterRollMessage(message, options, user) {
   let flags = message.data?.flags && message.data.flags["midi-qol"];
   if (!flags?.id) return;
   let workflow: BetterRollsWorkflow = BetterRollsWorkflow.get(flags.id);
   debug("process better rolls card", flags?.id, message, workflow, workflow.betterRollsHookId);
   //@ts-ignore - does not support 
-  Hooks.off("createChatMessage", workflow.betterRollsHookId, message);
+  Hooks.off("createChatMessage", workflow.betterRollsHookId);
   workflow.itemCardId = message.id;
-  workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
+  workflow.next(WORKFLOWSTATES.NONE);
 }
 
 export let processpreCreateBetterRollsMessage = async (data: any, options:any, user: any) => {
@@ -140,9 +141,10 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
   workflow.damageDetail = damageList;
   workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
   workflow.itemLevel = itemLevel;
+  workflow.itemCardData = data;
   if (!data.flags) data.flags = {"midi-qol": {}};
   data.flags["midi-qol"].id = item.uuid;
-  workflow.betterRollsHookId = Hooks.on("createChatMessage", processcreateBetterRollMessage);
+//  workflow.next(WORKFLOWSTATES.NONE);
   return true;
 }
 

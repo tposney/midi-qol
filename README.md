@@ -11,7 +11,23 @@ Changes in midi-qol:
 * backwards compatibility for the minor-qol.doRoll function.
 * Lots more configuration options, accessed by a configuration screen.
 
-Technical Differences:
+## v0.2.0 [BREAKING]
+A big change to speed item rolls and auto shift click.  
+Speed item rolls now makes no changes to the character sheet, and does not need module suport to work with token bars/macro hot bar. Instead when it is enabled the mouse event is recorded when you do the roll. **The meaning of the keys have changed**:  
+* ctrl = disadvantage attack
+* alt = advantage attack
+* shift means use versatile damage and ctrl/alt still work. I think this is a big improvement BUT **this is a change from both minor-qol and midi-qol. If it causes too much angst I will put back (as an option) the previous behaviour.**  
+AutoShiftClick has been renamed to auto fast forward and applies for attack and damage rolls. When enabled, if a roll would normally produce a dialog a normal roll will be made for attack rolls that have not been "speed" rolled. Damage rolls will be normal or critical if the attack hit and if the option is not set the dialog will be displayed.  
+Better rolls can now use the merge card.  
+A Bug fix for a better rolls edge case when auto checking saves with players rolling saves but not using LMRTFY.  
+Magic Items are now fully supported with speed rolls, advantage/disadvantage on magic item spells/feats and resource consumption works. The only oddity is when casting an area effect spell (.eg. fireball) the template is not automatically placed, but once placed everything works as expected.  
+
+## v0.1.1
+Fixes a bug in better rolls spellcasting.
+Fixed a couple of localisation omissions.
+If you have meerge cards on for better rolls the saving throw results are not displayed - diable merge card for better rolls.
+
+## Technical Differences:
 * midi-qol does not use the creation of chat messages as the triggeer anymore, rather it hooks the standard item.roll, item.rollAttack, item.rollDamage.
 * midi-qol uses the new 0.9.5 chat message meta-data to determine if a roll is a damage/attack/save roll which means the specific text matching piece is gone.
 
@@ -42,3 +58,11 @@ probably many however....
 * The combined card does not play nicely with dice-so-nice.
 * Speed item rolls and magic items do not update consumed charges correctly - use no speed item rolls for the moment.
 * Language translations are not up to date.
+* Unselect targets at end of turn not implemented yet.
+
+## Notes
+For modules that want to call midi-qol it is easier than in minor-qol.
+Just call item.roll, and if you pass an event via item.roll({event}) you can have key accelerators.
+event.altKey: true => advantage roll
+event.crtlKey: true => disadvantage roll
+event.shiftKey: true => auto roll the attack roll

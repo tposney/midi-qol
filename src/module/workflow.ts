@@ -3,7 +3,7 @@ import Actor5e from "/systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
 import Item5e  from "/systems/dnd5e/module/item/entity.js"
 import { warn, debug, log, i18n, noDamageSaves, cleanSpellName, MESSAGETYPES, error } from "../midi-qol";
-import { speedItemRolls, autoCheckHit, autoRollDamage, autoShiftClick, autoTarget, useTokenNames, autoApplyDamage, damageImmunities, playerRollSaves, itemRollButtons, autoCheckSaves, checkBetterRolls, playerSaveTimeout, mergeCard, autoItemEffects, checkSaveText, configSettings } from "./settings";
+import { speedItemRolls, autoCheckHit, autoRollDamage, autoFastForward, autoTarget, useTokenNames, autoApplyDamage, damageImmunities, playerRollSaves, itemRollButtons, autoCheckSaves, checkBetterRolls, playerSaveTimeout, mergeCard, autoItemEffects, checkSaveText, configSettings } from "./settings";
 import { selectTargets } from "./itemhandling";
 import { addChatDamageButtonsToHTML } from "./chatMesssageHandling";
 import { broadcastData } from "./GMAction";
@@ -37,7 +37,7 @@ export class Workflow {
   itemCardId : string;
   itemCardData: {};
 
-  event: any;
+  event: {shiftKey: boolean, altKey: boolean, ctrlKey: boolean, metaKey: boolean, type: string};
   speaker: any;
   token: Token;
   targets: Set<Token>;
@@ -125,6 +125,10 @@ export class Workflow {
     Workflow._workflows[item?.uuid] = this;
   }
 
+  public someEventKeySet() {
+    return this.event.shiftKey || this.event.altKey || this.event.ctrlKey || this.event.metaKey;
+  }
+
   static removeWorkflow(id: string) {
     if (!Workflow._workflows[id]) warn ("removeWorkflow: No such workflow ", id)
     else {
@@ -176,9 +180,12 @@ export class Workflow {
         if (!this.item.hasAttack) {
           return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
         }
-        const shouldRoll = this.event.shiftKey || this.event.ctrlKey || this.event.altKey || this.event.metaKey || (speedItemRolls !== "off");
+        const shouldRoll = this.someEventKeySet() || (["all", "attack"].includes(autoFastForward));
+        let attackEvent = duplicate(this.event);
+        attackEvent.shiftKey = attackEvent.shiftKey || ["all", "attack"].includes(autoFastForward); // fast forward roll if required
+        warn("attack roll ", shouldRoll, attackEvent)
         if (shouldRoll) {
-          this.item.rollAttack({event: this.event});
+          this.item.rollAttack({event: attackEvent});
         }
         return;
 
@@ -198,10 +205,10 @@ export class Workflow {
                                   || (autoRollDamage !== "none" && !this.item.hasAttack)
                                   || (autoRollDamage === "onHit" && (this.hitTargets.size > 0 || this.targets.size === 0))
         if (shouldRollDamage) {
-          this.event.shiftKey = ["all", "damage"].includes(autoShiftClick);
-          this.event.altKey = this.isCritical;
+          this.event.shiftKey = ["all", "damage"].includes(autoFastForward);
+          this.event.altKey =   ["all", "damage"].includes(autoFastForward) && this.isCritical;
           debug("Rolling damage ", event, this.itemLevel, this.versatile);
-          await this.item.rollDamage({event: this.event, spellLevel: this.itemLevel, versatile: this.versatile})
+          await this.item.rollDamage({event: this.event, spellLevel: this.itemLevel, versatile: this.versatile});
         }
         return; // wait for a damage roll to advance the state.
 
@@ -227,11 +234,14 @@ export class Workflow {
           debug("Check Saves: renderChat message hooks length ", Hooks._hooks["renderChatMessage"]?.length)
           // setup to process saving throws as generated
           let hookId = Hooks.on("renderChatMessage", this.processSaveRoll.bind(this));
+          let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
           try {
             await this.checkSaves(true);
           } finally {
             //@ts-ignore - does not support ids
             Hooks.off("renderChatMessage", hookId);
+            //@ts-ignore does not support ids
+            Hooks.off("renderChatMessage", brHookId);
           }
           //@ts-ignore ._hooks not defined
           debug("Check Saves: renderChat message hooks length ", Hooks._hooks["renderChatMessage"]?.length)
@@ -330,16 +340,33 @@ export class Workflow {
     }
     debug("displayHits ", templateData, whisper, doMerge);
     const hitContent = await renderTemplate("modules/midi-qol/templates/hits.html", templateData);
+
     if(doMerge) {
       const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
+      warn("display hits chat message is ", chatMessage)
       // @ts-ignore .content not defined
-      let content = duplicate(chatMessage.data.content)
-      const searchString =  '<div class="midi-qol-hits-display"></div>';
-      const replaceString = `<div class="midi-qol-hits-display">${hitContent}</div>`
-      content = content.replace(searchString, replaceString);
-      await chatMessage.update({"content": content});
-      //@ts-ignore
-      chatMessage.content = content;
+      var content = duplicate(chatMessage.data.content);    
+      var searchString;
+      var replaceString;
+      switch (this.__proto__.constructor.name) {
+        case "BetterRollsWorkflow":
+          searchString =  '<footer class="card-footer">';
+          replaceString = `<div class="midi-qol-hits-display">${hitContent}</div><footer class="card-footer">`;
+          content = content.replace(searchString, replaceString);
+          await chatMessage.update({"content": content});
+          //@ts-ignore
+          chatMessage.content = content;
+          break;
+        case "Workflow":
+          // @ts-ignore .content not defined
+          searchString =  '<div class="midi-qol-hits-display"></div>';
+          replaceString = `<div class="midi-qol-hits-display">${hitContent}</div>`
+          content = content.replace(searchString, replaceString);
+          await chatMessage.update({"content": content});
+          //@ts-ignore
+          chatMessage.content = content;
+          break;
+        }
     } else {
       let speaker = ChatMessage.getSpeaker();
       speaker.alias = (useTokenNames && speaker.token) ? canvas.tokens.get(speaker.token).name : speaker.alias;
@@ -374,15 +401,28 @@ export class Workflow {
     }
     const saveContent = await renderTemplate("modules/midi-qol/templates/saves.html", templateData);
     if (doMerge) {
-      const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
-      // @ts-ignore .content not defined
-      let content = duplicate(chatMessage.data.content)
-      const searchString =  '<div class="midi-qol-saves-display"></div>';
-      const replaceString = `<div data-item-id="${this.item._id}"></div><div class="midi-qol-saves-display"><div class="midi-qol-box midi-qol-bigger-text">${this.saveDisplayFlavor}</div>${saveContent}</div>`
-      content = content.replace(searchString, replaceString);
-      await chatMessage.update({"content": content});
-      //@ts-ignore
-      chatMessage.data.content = content;
+        const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
+        // @ts-ignore .content not defined
+        let content = duplicate(chatMessage.data.content)
+        var searchString;
+        var replaceString;
+        switch (this.__proto__.constructor.name) {
+          case "BetterRollsWorkflow":
+            searchString =  '<footer class="card-footer">';
+            replaceString = `<div data-item-id="${this.item._id}"></div><div class="midi-qol-saves-display"><div class="midi-qol-box midi-qol-bigger-text">${this.saveDisplayFlavor}</div>${saveContent}</div><footer class="card-footer">`
+            content = content.replace(searchString, replaceString);
+            await chatMessage.update({"content": content});
+            //@ts-ignore
+            chatMessage.data.content = content;
+          break;
+        case "Workflow":
+            searchString =  '<div class="midi-qol-saves-display"></div>';
+            replaceString = `<div data-item-id="${this.item._id}"></div><div class="midi-qol-saves-display"><div class="midi-qol-box midi-qol-bigger-text">${this.saveDisplayFlavor}</div>${saveContent}</div>`
+            content = content.replace(searchString, replaceString);
+            await chatMessage.update({"content": content});
+            //@ts-ignore
+            chatMessage.data.content = content;
+        }
     } else {
       let speaker = ChatMessage.getSpeaker();
       speaker.alias = (useTokenNames && speaker.token) ? canvas.tokens.get(speaker.token).name : speaker.alias;
@@ -488,7 +528,7 @@ export class Workflow {
 
             // set a timeout for taking over the roll
             this.saveTimeouts[requestId] = setTimeout(async () => {
-              warn(`Timeout waiting for ${player.name} to roll ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save - rolling for them`)
+              console.warn(`Timeout waiting for ${player.name} to roll ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save - rolling for them`)
               if (this.saveRequests[requestId]) {
                   delete this.saveRequests[requestId];
                   delete this.saveTimeouts[requestId];
@@ -504,7 +544,7 @@ export class Workflow {
         }
       }
     } catch (err) {
-        warn(err)
+        console.warn(err)
     } finally {
     }
     debug("check saves: requests are ", this.saveRequests)
@@ -566,6 +606,22 @@ export class Workflow {
     return true;
   }
 
+  processBetterRollsChatCard (message, html, data) {
+    if (!checkBetterRolls && message?.data?.content?.startsWith('<div class="dnd5e red-full chat-card"'))  return;
+    debug("processBetterRollsChatCard", message. html, data)
+    const requestId = message.data.speaker.actor;
+    if (!this.saveRequests[requestId]) return true;
+    const title = html.find(".item-name")[0]?.innerHTML
+    if (!title) return true;
+    if (!title.includes("Save")) return true;
+    const formula = "1d20";
+    const total = html.find(".dice-total")[0]?.innerHTML;
+    clearTimeout(this.saveTimeouts[requestId]);
+    this.saveRequests[requestId]({total, formula})
+    delete this.saveRequests[requestId];
+    delete this.aveTimeouts[requestId];
+    return true;
+  }
 
   processAttackRoll() {
     if (isNewerVersion(game.data.version, "0.6.5") ) {
@@ -659,38 +715,39 @@ export class BetterRollsWorkflow extends Workflow {
   async _next(newState) {
     this.currentState = newState;
     let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===this.currentState)[0];
-    switch (this.currentState) {
+    warn("betterRolls workflow.next ", state, speedItemRolls, this)
+    switch (newState) {
       case WORKFLOWSTATES.WAITFORATTACKROLL:
-        warn("betterRolls workflow.next ", state, speedItemRolls, this)
         // since this is better rolls as soon as we are ready for the attack roll we have both the attack roll and damage
-        if (!this.item.hasAttack) return this.next(WORKFLOWSTATES.WAITFORSAVES);
-        else return this.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE)
+        if (!this.item.hasAttack) {
+          return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
+        }
+        return this.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
 
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
-        warn("betterRolls workflow.next ", state, speedItemRolls, this)
         debug(this.attackRollHTML)
         if (autoCheckHit !== "none") {
           await this.checkHits();
-          await this.displayHits(autoCheckHit === "whisper", false);
+          await this.displayHits(autoCheckHit === "whisper", mergeCard);
         }
         return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMGEROLL:
-        warn("betterRolls workflow.next ", state, speedItemRolls, this)
         // better rolls always have damage rolled
         if (!this.item.hasDamage) return this.next(WORKFLOWSTATES.WAITFORSAVES);
         else return this.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
-        warn("betterRolls workflow.next ", state, speedItemRolls, this)
         // apply damage to targets plus saves plus immunities
         if (this.isFumble) { //TODO: Is this right?
           return this.next(WORKFLOWSTATES.ROLLFINISHED);
         }
+        if (this.item.hasSave) return this.next(WORKFLOWSTATES.WAITFORSAVES)
         processDamageRoll(this, "psychic");
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
 
-      default: return super.next(newState);
+      default: 
+        return await super._next(newState);
     }
   }
 }

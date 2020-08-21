@@ -1,5 +1,5 @@
 import { warn, error } from "../midi-qol";
-import { processpreCreateAttackRollMessage,processpreCreateDamageRollMessage, processpreCerateSaveRollMessaage, processpreCreateBetterRollsMessage, processcreateAttackRoll, processcreateDamageRoll, processcreateSaveRoll, processUndoDamageCard, processcreateBetterRollMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, processPreCreateDamageRoll, hideStuffHandler, chatDamageButtons } from "./chatMesssageHandling";
+import { processpreCreateAttackRollMessage, processpreCreateDamageRollMessage, processpreCerateSaveRollMessaage, processpreCreateBetterRollsMessage, processcreateAttackRoll, processcreateDamageRoll, processcreateSaveRoll, processUndoDamageCard, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, processPreCreateDamageRoll, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage } from "./chatMesssageHandling";
 
 export let initHooks = () => {
   error("Init Hooks processing");
@@ -17,12 +17,12 @@ export let initHooks = () => {
   })
 
   Hooks.on("createChatMessage", (message, options, user) => {
+    processcreateBetterRollMessage(message, options, user);
     return true;
     warn("create message hook ", message, options, user)
     processcreateAttackRoll(message, options, user);
     processcreateDamageRoll(message, options, user);
     processcreateSaveRoll(message, options, user);
-    processcreateBetterRollMessage(message, options, user);
     // process coloring of the message
     // process whispers if required
     
@@ -42,7 +42,6 @@ export let initHooks = () => {
     colorChatMessageHandler(message, html, data);
     nsaMessageHandler(message, html, data);
     chatDamageButtons(message, html, data);
-
   })
 
 

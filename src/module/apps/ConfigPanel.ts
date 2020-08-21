@@ -1,6 +1,4 @@
-import {speedItemRolls, autoShiftClick, autoTarget, autoCheckHit, autoCheckSaves, checkSaveText, autoRollDamage, criticalDamage,
- addChatDamageButtons, autoApplyDamage, damageImmunities, macroSpeedRolls, hideNPCNames, useTokenNames, itemDeleteCheck, nsaFlag, autoItemEffects,
- coloredBorders, rangeTarget, autoRemoveTargets, checkBetterRolls, playerRollSaves, playerSaveTimeout, preRollChecks, mergeCard } from "../settings"
+import { criticalDamage, addChatDamageButtons, macroSpeedRolls, itemDeleteCheck, nsaFlag, autoItemEffects, coloredBorders, autoRemoveTargets, checkBetterRolls, preRollChecks } from "../settings"
  import { configSettings } from "../settings"
 import { warn, i18n } from "../../midi-qol";
 export class ConfigPanel extends FormApplication {
@@ -10,7 +8,7 @@ export class ConfigPanel extends FormApplication {
       title: game.i18n.localize("DICESONICE.configTitle"),
       id: "midi-qol-config",
       template: "modules/midi-qol/templates/config.html",
-      width: 510,
+      width: 520,
       height: 845,
       closeOnSubmit: true
     })
@@ -24,7 +22,7 @@ export class ConfigPanel extends FormApplication {
     return {
       configSettings,
       speedItemRollsOptions: {off: "Off", on: "On", onCard: "On + Show Item Card"},
-      autoCheckHitOptions: {none: "None", all: "Check - all see result", whisper: "Check - only GM sees", snotty: "Auto check + abuse"},
+      autoCheckHitOptions: {none: "None", all: "Check - all see result", whisper: "Check - only GM sees", snotty: "Require targets set"},
       clickOptions: {off: "Off", attack: "Attack Rolls Only", damage: "Damage Rolls Only", all: "Attack and Damage"},
       autoTargetOptions: {none: "None", always: "Always", wallsBlock: "Walls Block"},
       autoCheckSavesOptions: {none: "None", all:  "Save - All see result", whisper: "Save - only GM sees", allShow: "Save - All see Result + Rolls"},

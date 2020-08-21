@@ -1,4 +1,4 @@
-import { itemDeleteCheck, itemRollButtons, speedItemRolls } from "./settings";
+import { itemDeleteCheck, itemRollButtons } from "./settings";
 import { i18n, debug, log, warn } from "../midi-qol";
 import { Workflow } from "./workflow";
 
@@ -42,23 +42,6 @@ let enableSheetQOL = (app, html, data) => {
 
   if (itemRollButtons)
       addItemSheetButtons(app, html, data);
-
-  if (speedItemRolls !== "off") {
-    [".attributes", ".inventory", ".features", ".spellbook"].forEach(tab => {
-      // Item Rolling do attack and damge at the same
-      if (["BetterNPCActor5eSheet", "BetterNPCActor5eSheetDark"].includes(app.constructor.name)) 
-        var rollTagElement = html.find(`${rollTag}`); // do not have the right nav tabs
-      else
-        var rollTagElement = html.find(`${tab} ${rollTag}`);
-
-      rollTagElement.off("click");
-      rollTagElement.off("click", "midi-qol", itemRollHandler);
-      rollTagElement.on("click", {app, data, html}, itemRollHandler);
-      rollTagElement.off("contextmenu", "midi-qol", itemRollHandler);
-      rollTagElement.off("contextmenu");
-      rollTagElement.on("contextmenu", { app, data, html }, itemRollHandler);
-    })
-  }
   return true;
 };
 
@@ -125,8 +108,8 @@ async function itemRollHandler(event) {
     return false;
   }
   let item = actor.getOwnedItem(itemId);
+  Workflow.eventHack = event;
   if (item.type === "spell") {
-    Workflow.eventHack = event;
     actor.useSpell(item)
   }
   else item.roll({event})
@@ -162,8 +145,7 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
           case "weapon":
           case "spell":
           case "feat":
-              if (speedItemRolls !== "off")
-                  buttons.append(`<span class="tag"><button data-action="basicRoll">${i18n("midi-qol.buttons.roll")}</button></span>`);
+              buttons.append(`<span class="tag"><button data-action="basicRoll">${i18n("midi-qol.buttons.roll")}</button></span>`);
               if (item.hasAttack)
                   buttons.append(`<span class="tag"><button data-action="attack">${i18n("midi-qol.buttons.attack")}</button></span>`);
               if (item.hasDamage)
@@ -219,7 +201,7 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
                         await actor.useSpell(item, { configureDialog: true });
                       }
                       else
-                          await item.roll({event});
+                          await item.roll();
                       break;
               }
           });

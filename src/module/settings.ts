@@ -1,9 +1,9 @@
-import { debug, setDebugLevel } from "../midi-qol";
+import { debug, setDebugLevel, warn } from "../midi-qol";
 import { ConfigPanel} from "./apps/ConfigPanel"
 
 export var itemRollButtons: boolean;
 export var speedItemRolls: string;
-export var autoShiftClick: string;
+export var autoFastForward: string;
 export var autoTarget: string;
 export var autoCheckHit: string;
 export var autoCheckSaves : string;
@@ -34,7 +34,7 @@ export var mergeCardCondensed: boolean;
 
 export var configSettings = {
   speedItemRolls,
-  autoShiftClick,
+  autoFastForward,
   autoTarget,
   autoCheckHit,
   autoRemoveTargets,
@@ -58,10 +58,10 @@ export var configSettings = {
 export let fetchParams = (silent = false) => {
   debug("Fetch Params Loading");
   configSettings = game.settings.get("midi-qol", "ConfigSettings")
-  console.warn("Fetch Params Loading", configSettings);
+  warn("Fetch Params Loading", configSettings);
   /*configSettings = {
     speedItemRolls: "on",
-    autoShiftClick: "attack",
+    autoFastForward: "attack",
     autoTarget: "wallsBlock",
     autoCheckHit: "all",
     autoRemoveTargets: "none",
@@ -82,7 +82,7 @@ export let fetchParams = (silent = false) => {
   }
   */
   speedItemRolls = configSettings.speedItemRolls;
-  autoShiftClick = configSettings.autoShiftClick;
+  autoFastForward = configSettings.autoFastForward;
   autoTarget = configSettings.autoTarget;
   autoCheckHit = configSettings.autoCheckHit;
   autoRemoveTargets = configSettings.autoRemoveTargets;
@@ -107,7 +107,7 @@ export let fetchParams = (silent = false) => {
   nsaFlag = game.settings.get("midi-qol", "showGM");
   coloredBorders = game.settings.get("midi-qol", "ColoredBorders");
   itemRollButtons = game.settings.get("midi-qol", "ItemRollButtons");
-  debug("FetchParams ", speedItemRolls, autoShiftClick, autoRollDamage, autoCheckHit)
+  debug("FetchParams ", speedItemRolls, autoFastForward, autoRollDamage, autoCheckHit)
   let debugText = game.settings.get("midi-qol", "Debug");
   setDebugLevel(debugText);
 

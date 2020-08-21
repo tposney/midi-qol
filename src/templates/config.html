@@ -3,7 +3,7 @@
     <form autocomplete="off" class="midi-qol" style="padding: 5px">
       <div class="form-group">
         <button type="submit" name="submit">
-          <i class="fas fa-save"></i> {{localize "DICESONICE.Save"}}
+          <i class="fas fa-save"></i> {{localize "midi-qol.Save"}}
         </button>
       </div>
       <div class="midi-qol-box">
@@ -64,6 +64,7 @@
             </select>
           </div>
           <div class="midi-qol-faint">{{localize "midi-qol.AutoTarget.Hint"}}</div>
+
           <div class="form-group">
             <label>{{localize "midi-qol.RangeTarget.Name"}}</label>
             <input type="checkbox" name="configSettings.rangeTarget" data-dtype="Boolean"
@@ -72,17 +73,17 @@
           <div class="midi-qol-faint">{{localize "midi-qol.RangeTarget.Hint"}}</div>
         </div>
         <div class="midi-qol-nobox">
-          <div class="form-group autoShiftClick">
-            <label>{{localize "midi-qol.AutoShiftClick.Name"}}</label>
-            <select name="autoShiftClick" data-dtype="String">
-              {{#select configSettings.autoShiftClick}}
+          <div class="form-group autoFastForward">
+            <label>{{localize "midi-qol.AutoFastForward.Name"}}</label>
+            <select name="autoFastForward" data-dtype="String">
+              {{#select configSettings.autoFastForward}}
               {{#each clickOptions as |label val|}}
               <option value="{{val}}">{{label}}</option>
               {{/each}}
               {{/select}}
             </select>
           </div>
-          <div class="midi-qol-faint">{{localize "midi-qol.AutoShiftClick.Hint"}}</div>
+          <div class="midi-qol-faint">{{localize "midi-qol.AutoFastForward.Hint"}}</div>
 
           <div class="form-group autoCheckHit">
             <label>{{localize "midi-qol.AutoCheckHit.Name"}}</label>
@@ -191,7 +192,7 @@
       </div>
       <div class="form-group">
         <button type="submit" name="submit">
-          <i class="fas fa-save"></i> {{localize "DICESONICE.Save"}}
+          <i class="fas fa-save"></i> {{localize "midi-qol.Save"}}
         </button>
       </div>
 

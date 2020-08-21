@@ -1,7 +1,7 @@
 import Item5e from "systems/dnd5e/module/item/entity.js"
 import { warn, debug, error } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
-import { autoShiftClick, autoRollDamage, autoCheckSaves, speedItemRolls, autoTarget, itemDeleteCheck, mergeCard, configSettings, useTokenNames } from "./settings";
+import { autoFastForward, autoRollDamage, autoCheckSaves, speedItemRolls, autoTarget, mergeCard, configSettings, useTokenNames } from "./settings";
 import { rollMappings } from "./patching";
 
 function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boolean, workflowData: any, selector: string) {
@@ -28,7 +28,7 @@ export async function doAttackRoll({event = {shiftKey: false, altKey: false, ctr
     warn("No workflow for item ", this.name, this.uuid, event);
     return rollMappings.itemAttack.roll.bind(this)({event})
   }
-  if (["all", "attack"].includes(autoShiftClick)) {
+  if (["all", "attack"].includes(autoFastForward)) {
     event.shiftKey = !(event.altKey || event.ctrlKey || event.metaKey)
   }
   hideChatMessage(mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
@@ -49,9 +49,6 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
     warn("No workflow for item ", this.name);
     return rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
   }
-  if (["all", "damage"].includes(autoShiftClick)) {
-    event.shiftKey = !(event.altKey || event.ctrlKey || event.metaKey)
-  } else event.shiftKey = false;
   hideChatMessage(mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
   let result: Roll = await rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
   workflow.damageRoll = result;
@@ -61,33 +58,40 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
   return result;
 }
 
-export async function doItemRoll({event = {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, showFullCard = false}={event: {}}) {
-  if (Workflow.eventHack) event = Workflow.eventHack;
-  Workflow.eventHack = null;
-  debug("Do item roll event is ", event)
-  let pseudoEvent = {
-    shiftKey: ["attack", "all"].includes(autoShiftClick) || speedItemRolls !== "off" || event.shiftKey,
+export async function doItemRoll(showFullCard = false) {
+  let pseudoEvent = {shiftKey: false, ctrlKey: false, altKey: false, metakey: false, type: undefined}
+  // if speed item rolls is on process the mouse event states
+  if (speedItemRolls !== "off") pseudoEvent = {
+    //@ts-ignore
+    shiftKey: event.shiftKey,
+    //@ts-ignore
     ctrlKey: false || event.ctrlKey,
+    //@ts-ignore
     altKey : false || event.altKey,
-    metaKey: false || event.metaKey
+    //@ts-ignore
+    metaKey: false || event.metaKey,
+    type: event.type
   }
   let speaker = ChatMessage.getSpeaker();
   let spellLevel = this.data.data.level; // we are called with the updated spell level so record it.
   let baseItem = this.actor.getOwnedItem(this.id);
   let workflow: Workflow = new Workflow(this.actor, baseItem, speaker.token, speaker, pseudoEvent);
   //@ts-ignore event .type not defined
-  workflow.versatile = event?.type === "contextmenu";
+  workflow.versatile = event?.type === "contextmenu" || (pseudoEvent.shiftKey);
   workflow.itemLevel = this.data.data.level;
   hideChatMessage(true, data => true, workflow, "itemCardData"); // how to tell if it is an item card
   await rollMappings.itemRoll.roll.bind(this)().then(async (result) => {
+    const needAttckButton = !workflow.someEventKeySet() && !["all", "attack"].includes(autoFastForward);
+
     workflow.showCard = ["onCard", "off"].includes(speedItemRolls) || mergeCard || (
-                  baseItem.isHealing && autoRollDamage === "none"  ||
-                  baseItem.hasDamage && autoRollDamage === "none" ||
-                  baseItem.hasSave && autoCheckSaves === "none")
+                  (baseItem.isHealing && autoRollDamage === "none")  || // not rolling damage
+                  (baseItem.hasDamage && autoRollDamage === "none") ||
+                  baseItem.hasSave && autoCheckSaves === "none" ||
+                  (baseItem.hasAttack && needAttckButton));
 
     if (workflow.showCard) {
       //@ts-ignore - 
-      let itemCard: ChatMessage = await showItemCard(this, showFullCard)
+      let itemCard: ChatMessage = await showItemCard(this, showFullCard, workflow)
       workflow.itemCardId = itemCard.id;
       debug("Item Roll: showing card", itemCard, workflow)
     };
@@ -95,8 +99,10 @@ export async function doItemRoll({event = {shiftKey: false, altKey: false, ctrlK
   });
 }
 
-let showItemCard = async (item, showFullCard)  => {
+let showItemCard = async (item, showFullCard: boolean, workflow: Workflow)  => {
   const token = item.actor.token;
+  const needAttckButton = !workflow.someEventKeySet() && !["all", "attack"].includes(autoFastForward);
+
   const templateData = {
     actor: item.actor,
     tokenId: token ? `${token.scene._id}.${token.id}` : null,
@@ -104,7 +110,7 @@ let showItemCard = async (item, showFullCard)  => {
     data: item.getChatData(),
     labels: item.labels,
     condensed: item.hasAttack && configSettings.mergeCardCondensed,
-    hasAttack: showFullCard || (item.hasAttack && speedItemRolls === "off"),
+    hasAttack: showFullCard || (item.hasAttack && needAttckButton),
     isHealing: showFullCard || (item.isHealing && autoRollDamage === "none"),
     hasDamage: showFullCard || (item.hasDamage && autoRollDamage === "none"),
     isVersatile: showFullCard || (item.isVersatile && autoRollDamage === "none"),
