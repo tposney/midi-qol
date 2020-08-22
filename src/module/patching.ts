@@ -1,7 +1,7 @@
 //@ts-ignore
-import Item5e from "/systems/dnd5e/module/item/entity.js";
+import Item5e from "../../../systems/dnd5e/module/item/entity.js";
 //@ts-ignore
-import Actor5e from "/systems/dnd5e/module/actor/entity.js";
+import Actor5e from "../../../systems/dnd5e/module/actor/entity.js";
 
 import { log, warn, debug } from "../midi-qol";
 import { Workflow } from "./workflow";

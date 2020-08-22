@@ -1,11 +1,10 @@
 //@ts-ignore
-import Actor5e from "/systems/dnd5e/module/actor/entity.js"
+import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
-import Item5e  from "/systems/dnd5e/module/item/entity.js"
+import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 import { warn, debug, log, i18n, noDamageSaves, cleanSpellName, MESSAGETYPES, error } from "../midi-qol";
 import { speedItemRolls, autoCheckHit, autoRollDamage, autoFastForward, autoTarget, useTokenNames, autoApplyDamage, damageImmunities, playerRollSaves, itemRollButtons, autoCheckSaves, checkBetterRolls, playerSaveTimeout, mergeCard, autoItemEffects, checkSaveText, configSettings } from "./settings";
 import { selectTargets } from "./itemhandling";
-import { addChatDamageButtonsToHTML } from "./chatMesssageHandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
 
@@ -513,11 +512,13 @@ export class Workflow {
           if (!player?.active) { // no controller - find the first owner who is active
             //@ts-ignore permissions not define
             player = game.users.players.find(p=>p.active && target.actor.data.permission[p._id] === CONST.ENTITY_PERMISSIONS.OWNER)
+            //@ts-ignore permissions not define
+            if (!player) player = game.users.players.find(p=>p.active && target.actor.data.permission.default === CONST.ENTITY_PERMISSIONS.OWNER)
           }
         }
         if (playerRollSaves !== "none" && player?.active) {
           this.saveCount = Math.max(this.saveCount - 1, 0)
-          debug(`Player ${player.name} controls actor ${target.actor.name} - requesting ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save`);
+          warn(`Player ${player.name} controls actor ${target.actor.name} - requesting ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save`);
           promises.push(new Promise((resolve, reject) => {
             const eventToUse = duplicate(event);
             const advantageToUse = advantage;
@@ -691,7 +692,7 @@ export class DamageOnlyWorkflow extends Workflow {
     super(actor, null, token, speaker, event)
     this.damageTotal = damageTotal;
     this.damageDetail = [{type: damageType,  damage: damageTotal}];
-    log("dmageonlyworkflow ", this)
+    warn("dmageonlyworkflow ", this)
   }
 
   async _next(newState) {

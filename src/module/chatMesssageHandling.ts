@@ -1,8 +1,8 @@
 import { debug, log, warn, undoDamageText, i18n, error } from "../midi-qol";
 //@ts-ignore
-import Actor5e from "/systems/dnd5e/module/actor/entity.js"
+import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
-import Item5e  from "/systems/dnd5e/module/item/entity.js"
+import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES, DamageOnlyWorkflow, getTraitMult, calculateDamage, createDamageList } from "./workflow";
 import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, hideNPCNames, autoCheckSaves, autoCheckHit, mergeCard, addChatDamageButtons } from "./settings";

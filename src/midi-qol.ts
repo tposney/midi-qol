@@ -18,7 +18,6 @@ import { readyPatching, initPatching } from './module/patching.js';
 import { initHooks } from './module/Hooks.js';
 import { initGMActionSetup } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
-import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { applyTokenDamage } from './module/workflow.js';
 
 export let debugEnabled = 0;
@@ -35,7 +34,6 @@ export let setDebugLevel = (debugText: string) => {
   // 0 = none, warnings = 1, debug = 2, all = 3
   CONFIG.debug.hooks = debugEnabled >= 3;
 }
-
 
 export let noDamageSaves = [];
 export let undoDamageText;
@@ -104,6 +102,10 @@ function setupMinorQolCompatibility() {
   //@ts-ignore
   window.MinorQOL = {
     doRoll: doRoll,
+    applyTokenDamage: applyTokenDamage
+  }
+  //@ts-ignore
+  window.MidiQOL = {
     applyTokenDamage: applyTokenDamage
   }
 }

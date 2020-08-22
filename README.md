@@ -11,6 +11,13 @@ Changes in midi-qol:
 * backwards compatibility for the minor-qol.doRoll function.
 * Lots more configuration options, accessed by a configuration screen.
 
+## v0.2.1
+* Fix a saving throw bug where the first player saving throw was hidden.
+* Fix a race condition that could case saving throw rolls to fail
+* Fix an innacurate identification of a damage only workflow.
+* Added the ability to set the token name text color OR background color when highlighting chat cards.
+* Fixed inability to set range targeting flag.
+
 ## v0.2.0 [BREAKING]
 * A big change to speed item rolls and auto shift click.  
 Speed item rolls now makes no changes to the character sheet, and does not need module suport to work with token bars/macro hot bar. Instead when it is enabled the mouse event is recorded when you do the roll. **The meaning of the keys have changed**:  

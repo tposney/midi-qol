@@ -8,7 +8,7 @@
     "midi-qol.AutoFastForward.Name": "Auto fast forward rolls",
     "midi-qol.AutoFastForward.Hint": "When rolling attack or damage always fast forward rolls",
     "midi-qol.AutoCheckHit.Name": "Auto check if attack hits target",
-    "midi-qol.AutoCheckHit.Hint": "Check if an attack roll hits selected targets - damage is rolled if one or more targets is hit and auto roll damage is true. If disabled midi-qol will assume the attack hits and continue rolling",
+    "midi-qol.AutoCheckHit.Hint": "Check if an attack roll hits selected targets - damage is rolled if one or more targets is hit and auto roll damage is true. If disabled midi-qol will assume the attack hits and continue rolling. ",
     "midi-qol.AutoApplyDamage.Name": "Auto apply damage to target",
     "midi-qol.AutoApplyDamage.Hint": "Auto apply damage to hit targets (if autocheck hits on) or targets user has selected",
     "midi-qol.ItemRollButtons.Name": "Add attack/damage buttons to item inventory list",

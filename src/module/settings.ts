@@ -59,7 +59,7 @@ export let fetchParams = (silent = false) => {
   debug("Fetch Params Loading");
   configSettings = game.settings.get("midi-qol", "ConfigSettings")
   warn("Fetch Params Loading", configSettings);
-    speedItemRolls = configSettings.speedItemRolls;
+  speedItemRolls = configSettings.speedItemRolls;
   autoFastForward = configSettings.autoFastForward;
   autoTarget = configSettings.autoTarget;
   autoCheckHit = configSettings.autoCheckHit;

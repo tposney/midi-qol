@@ -1,4 +1,3 @@
-import Item5e from "systems/dnd5e/module/item/entity.js"
 import { warn, debug, error } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
 import { autoFastForward, autoRollDamage, autoCheckSaves, speedItemRolls, autoTarget, mergeCard, configSettings, useTokenNames } from "./settings";

@@ -2,7 +2,7 @@ import { warn, error } from "../midi-qol";
 import { processpreCreateAttackRollMessage, processpreCreateDamageRollMessage, processpreCerateSaveRollMessaage, processpreCreateBetterRollsMessage, processcreateAttackRoll, processcreateDamageRoll, processcreateSaveRoll, processUndoDamageCard, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, processPreCreateDamageRoll, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage } from "./chatMesssageHandling";
 
 export let initHooks = () => {
-  error("Init Hooks processing");
+  warn("Init Hooks processing");
   Hooks.on("preCreateChatMessage", (data, options, user) => {
     // debug("preCreateChatMessage entering", data, options, user)
     processpreCreateBetterRollsMessage(data, options, user);
