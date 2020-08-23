@@ -1,5 +1,5 @@
 ## v0.2.3
-* If player rolled saves is enabled and a token is required to save that has default owner pemission (in addition to tokens ownd by a player) a player will be chosen to foll for that token.
+* If player rolled saves is enabled and a token is required to save that has default owner pemission (in addition to tokens ownd by a player) a player will be chosen to roll for that token.
 * In merge cards critical hits/fumbles are now highlighted.
 * Added a new weapon property "Magical" which is also checked when determining if weapon's attack is magical for damage resistance.
 * Corrected a typo in the non-magical damage resistance check. Thanks @Jibby
