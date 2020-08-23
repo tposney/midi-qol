@@ -183,14 +183,24 @@ export let diceSoNiceHandler = (message, html, data) => {
 
 export let colorChatMessageHandler = (message, html, data) => {
   if (coloredBorders === "none") return true;
+  let actorId = message.data.speaker.actor;
+  let userId = message.data.user;
+  let actor = game.actors.get(actorId);
+  let user = game.users.get(userId);
+  if (!user || !actor) return true;
+  //@ts-ignore permission is actually not a boolean
+  if (actor.data.permission[userId] !== CONST.ENTITY_PERMISSIONS.OWNER && !user.isGM) {
+    user = game.users.find(p=>p.isGM && p.active)
+  }
+
   //@ts-ignore .color not defined
-  html[0].style.borderColor = game.users.get(message.data.user).color;
+  html[0].style.borderColor = user.data.color;
   if (coloredBorders === "borderNamesBackground") {
     //@ts-ignore .color not defined
-    html[0].children[0].children[0].style.backgroundColor = game.users.get(message.data.user).color;
+    html[0].children[0].children[0].style.backgroundColor = user.data.color;
   } else if (coloredBorders === "borderNamesText") {
     //@ts-ignore .color not defined
-    html[0].children[0].children[0].style.color = game.users.get(message.data.user).color;
+    html[0].children[0].children[0].style.color = user.data.color;
   }
  return true;
 }
@@ -362,7 +372,6 @@ export let chatDamageButtons = (message, html, data) => {
     warn("Damage roll for non item");
     return;
   }
-
   // find the item => workflow => damageList, totalDamage
   let defaultDamageType = item.data.data.damage?.parts[0][1] || "bludgeoning";
   const damageList = createDamageList(message.roll, item, defaultDamageType);

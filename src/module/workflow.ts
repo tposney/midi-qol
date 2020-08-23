@@ -60,6 +60,7 @@ export class Workflow {
   attackTotal: number;
   attackCardData: ChatMessage;
   attackRollHTML: HTMLElement | JQuery<HTMLElement>;
+  noAutoAttack: boolean; // override attack roll for standard care
   
   hitDisplayData: any[];
 
@@ -68,6 +69,7 @@ export class Workflow {
   damageDetail: any[];
   damageRollHTML: HTMLElement | JQuery<HTMLElement>;
   damageCardData: ChatMessage;
+  noAutoDamage: boolean; // override damage roll for damage rolls
 
   saves: Set<Token>;
   failedSaves: Set<Token>
@@ -179,11 +181,12 @@ export class Workflow {
         if (!this.item.hasAttack) {
           return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
         }
+        if (this.noAutoAttack) return;
         const shouldRoll = this.someEventKeySet() || (["all", "attack"].includes(autoFastForward));
-        let attackEvent = duplicate(this.event);
-        attackEvent.shiftKey = attackEvent.shiftKey || ["all", "attack"].includes(autoFastForward); // fast forward roll if required
-        warn("attack roll ", shouldRoll, attackEvent)
         if (shouldRoll) {
+          let attackEvent = duplicate(this.event);
+          attackEvent.shiftKey = attackEvent.shiftKey || ["all", "attack"].includes(autoFastForward); // fast forward roll if required
+          warn("attack roll ", shouldRoll, attackEvent)
           this.item.rollAttack({event: attackEvent});
         }
         return;
@@ -200,9 +203,10 @@ export class Workflow {
       case WORKFLOWSTATES.WAITFORDAMGEROLL:
         if (!this.item.hasDamage) return this.next(WORKFLOWSTATES.WAITFORSAVES);
         if (this.isFumble) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        if (this.noAutoDamage)  return;
         const shouldRollDamage = autoRollDamage === "always" 
-                                  || (autoRollDamage !== "none" && !this.item.hasAttack)
-                                  || (autoRollDamage === "onHit" && (this.hitTargets.size > 0 || this.targets.size === 0))
+                                || (autoRollDamage !== "none" && !this.item.hasAttack)
+                                || (autoRollDamage === "onHit" && (this.hitTargets.size > 0 || this.targets.size === 0))
         if (shouldRollDamage) {
           this.event.shiftKey = ["all", "damage"].includes(autoFastForward);
           this.event.altKey =   ["all", "damage"].includes(autoFastForward) && this.isCritical;
@@ -299,7 +303,21 @@ export class Workflow {
       const attackString = this.attackAdvantage ? i18n("DND5E.Advantage") : this.attackDisadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
       let replaceString = `<div style="text-align:center" >${attackString}<div class="midi-qol-attack-roll">${this.attackRollHTML}</div></div>`
       content = content.replace(searchString, replaceString);
-      content = content.replace(buttoneRe, "")
+      content = content.replace(buttoneRe, "");
+      warn("dice length ", this.attackRoll.dice.length)
+      if ( this.attackRoll.dice.length ) {
+        const d = this.attackRoll.dice[0];
+        const isD20 = (d.faces === 20) && ( d.results.length === 1 );
+        if (isD20 ) {
+          // Highlight successes and failures
+          if ( d.options.critical && (d.total >= d.options.critical) ) content = content.replace('dice-total', 'dice-total critical');
+          else if ( d.options.fumble && (d.total <= d.options.fumble) ) content = content.replace('dice-total', 'dice-total fumble');
+          else if ( d.options.target ) {
+            if ( this.attackRoll.total >= d.options.target ) content = content.replace('dice-total', 'dice-total success');
+            else content = content.replace('dice-total', 'dice-total failure');
+          }
+        }
+      }
       await chatMessage.update({"content": content});
     }
   }
@@ -322,6 +340,7 @@ export class Workflow {
       content = content.replace(searchString, replaceString);
       content = content.replace(damageRe, "")
       content = content.replace(versatileRe, "<div></div>")
+
       // content = addChatDamageButtonsToHTML(this.damageTotal, this.damageDetail, content, this.item);
       await chatMessage.update({"content": content});
       //@ts-ignore .conennt not defined on ChatMessage
@@ -676,7 +695,7 @@ export class Workflow {
       let img = targetToken.data?.img || targetToken.actor.img;
       if ( VideoHelper.hasVideoExtension(img) ) {
         //@ts-ignore
-        hitDetail.img = await game.video.createThumbnail(img, {width: 100, height: 100});
+        img = await game.video.createThumbnail(img, {width: 100, height: 100});
       }
       this.hitDisplayData.push({isPC: targetToken.actor.isPC, target: targetToken, hitString, attackType, img});
   
@@ -925,10 +944,10 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
 
   if (damageImmunities !== "none" && dmgTypeString !== "") {
     // if not checking all damage counts as magical
-    const magicalDamage = (damageImmunities !== "immunityPhysical") || (item?.type !== "weapon" || item?.data.data.attackBonus > 0);
+    const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
     for (let {type, mult}  of [{type: "di", mult: 0}, {type:"dr", mult: 0.5}, {type: "dv", mult: 2}]) {
       let trait = actor.data.data.traits[type].value;
-      if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slahsing", "piercing")
+      if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
       if (trait.includes(dmgTypeString)) return mult;
     }
   }

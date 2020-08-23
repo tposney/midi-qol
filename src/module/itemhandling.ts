@@ -1,6 +1,6 @@
-import { warn, debug, error } from "../midi-qol";
+import { warn, debug, error, i18n } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
-import { autoFastForward, autoRollDamage, autoCheckSaves, speedItemRolls, autoTarget, mergeCard, configSettings, useTokenNames } from "./settings";
+import { autoFastForward, autoRollDamage, autoCheckSaves, speedItemRolls, mergeCard, configSettings, useTokenNames } from "./settings";
 import { rollMappings } from "./patching";
 
 function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boolean, workflowData: any, selector: string) {
@@ -27,7 +27,7 @@ export async function doAttackRoll({event = {shiftKey: false, altKey: false, ctr
     warn("No workflow for item ", this.name, this.uuid, event);
     return rollMappings.itemAttack.roll.bind(this)({event})
   }
-  if (["all", "attack"].includes(autoFastForward)) {
+  if (!workflow.noAutoDamage && ["all", "attack"].includes(autoFastForward)) {
     event.shiftKey = !(event.altKey || event.ctrlKey || event.metaKey)
   }
   hideChatMessage(mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
@@ -49,6 +49,7 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
     return rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
   }
   hideChatMessage(mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
+  if (!(workflow.noAutoDamage) && ["all", "damage"].includes(autoFastForward)) event.shiftKey = !(event.altKey || event.ctrlKey || event.metaKey)
   let result: Roll = await rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
   workflow.damageRoll = result;
   workflow.damageTotal = result.total;
@@ -57,7 +58,18 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
   return result;
 }
 
-export async function doItemRoll(showFullCard = false) {
+export async function doItemRoll({showFullCard, event} = {showFullCard : false, event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false, type: ""}}) {
+  warn("do item roll ", showFullCard, event)
+  const shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
+                          || (game.user.targets.size > 0) // there are some target selected
+                          || (this.data.data.target?.type === "self") // self target
+                          || (this.hasAreaTarget && configSettings.autoTarget) // area effectspell and we will auto target
+                          || (configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type)); // rangetarget
+  if (!shouldAllowRoll) {
+    ui.notifications.warn(i18n("midi-qol.noTargets"));
+    warn(`${game.username} attempted to roll with no targets selected`)
+    return;
+  }
   let pseudoEvent = {shiftKey: false, ctrlKey: false, altKey: false, metakey: false, type: undefined}
   // if speed item rolls is on process the mouse event states
   if (speedItemRolls !== "off") pseudoEvent = {
@@ -78,6 +90,9 @@ export async function doItemRoll(showFullCard = false) {
   //@ts-ignore event .type not defined
   workflow.versatile = event?.type === "contextmenu" || (pseudoEvent.shiftKey);
   workflow.itemLevel = this.data.data.level;
+  // if showing a full card we don't want to auto roll attcks or damage.
+  workflow.noAutoDamage = showFullCard;
+  workflow.noAutoAttack = showFullCard;
   hideChatMessage(true, data => true, workflow, "itemCardData"); // how to tell if it is an item card
   await rollMappings.itemRoll.roll.bind(this)().then(async (result) => {
     const needAttckButton = !workflow.someEventKeySet() && !["all", "attack"].includes(autoFastForward);
@@ -101,7 +116,7 @@ export async function doItemRoll(showFullCard = false) {
 let showItemCard = async (item, showFullCard: boolean, workflow: Workflow)  => {
   const token = item.actor.token;
   const needAttckButton = !workflow.someEventKeySet() && !["all", "attack"].includes(autoFastForward);
-
+warn("show item card ", item, showFullCard, workflow)
   const templateData = {
     actor: item.actor,
     tokenId: token ? `${token.scene._id}.${token.id}` : null,
@@ -109,13 +124,13 @@ let showItemCard = async (item, showFullCard: boolean, workflow: Workflow)  => {
     data: item.getChatData(),
     labels: item.labels,
     condensed: item.hasAttack && configSettings.mergeCardCondensed,
-    hasAttack: showFullCard || (item.hasAttack && needAttckButton),
-    isHealing: showFullCard || (item.isHealing && autoRollDamage === "none"),
-    hasDamage: showFullCard || (item.hasDamage && autoRollDamage === "none"),
-    isVersatile: (item.isVersatile && autoRollDamage === "none"),
+    hasAttack: item.hasAttack && (showFullCard || needAttckButton),
+    isHealing: item.isHealing && (showFullCard || autoRollDamage === "none"),
+    hasDamage: item.hasDamage && (showFullCard || autoRollDamage === "none"),
+    isVersatile: item.isVersatile && (showFullCard || autoRollDamage === "none"),
     isSpell: item.type==="spell",
-    hasSave: showFullCard || (item.hasSave && autoCheckSaves === "none"),
-    hasAreaTarget: showFullCard || item.hasAreaTarget,
+    hasSave: item.hasSave && (showFullCard || autoCheckSaves === "none"),
+    hasAreaTarget: item.hasAreaTarget,
     hasAttackRoll: item.hasAttack
   };
 
@@ -146,7 +161,7 @@ let showItemCard = async (item, showFullCard: boolean, workflow: Workflow)  => {
 export function selectTargets(scene, data, options) {
   debug("select targets ", this._id, this.placeTemlateHoodId, scene, data)
   let item = this.item;
-  let targeting = autoTarget;
+  let targeting = configSettings.autoTarget;
   if (data.user !== game.user._id) {
       return true;
   }

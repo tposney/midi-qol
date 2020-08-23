@@ -3,21 +3,39 @@ import Item5e from "../../../systems/dnd5e/module/item/entity.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js";
 
-import { log, warn, debug } from "../midi-qol";
+import { log, warn, debug, i18n } from "../midi-qol";
 import { Workflow } from "./workflow";
 import { doItemRoll, doAttackRoll, doDamageRoll } from "./itemhandling";
+import { configSettings } from "./settings.js";
 
 
 export const rollMappings = {
   "itemRoll" : {roll: Item5e.prototype.roll, methodName: "roll", class: Item5e, replacement: doItemRoll},
   "itemAttack": {roll: Item5e.prototype.rollAttack, methodName: "rollAttack", class: Item5e, replacement: doAttackRoll},
   "itemDamage": {roll: Item5e.prototype.rollDamage, methodName: "rollDamage", class: Item5e, replacement: doDamageRoll},
+  "useSpell": {roll: Actor5e.prototype.useSpell, methodName: "useSpell", class: Actor5e, replacement: doUseSpell},
+
   "applyDamage": {roll: Actor5e.prototype.applyDamage, class: Actor5e}
 }
 
 const oldItemRoll = Item5e.prototype.roll;
 const oldItemRollAttack = Item5e.prototype.rollAttack;
 const oldItemRollDamage = Item5e.prototype.rollDamage;
+const oldActorUseSpell = Actor5e.prototype.useSpell;
+
+async function doUseSpell(item, {configureDialog=true}={}) {
+  const shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
+    || (game.user.targets.size > 0) // there are some target selected
+    || (item.data.data.target?.type === "self") // self target
+    || (item.hasAreaTarget && configSettings.autoTarget) // area effectspell and we will auto target
+    || (configSettings.rangeTarget && item.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(item.data.data.target?.type)); // rangetarget
+  if (!shouldAllowRoll) {
+    ui.notifications.warn(i18n("midi-qol.noTargets"));
+    warn(`${game.username} attempted to roll with no targets selected`)
+    return;
+  }
+  oldActorUseSpell.bind(this)(item, configureDialog )
+}
 
 function restrictVisibility() {
   // Tokens
@@ -86,7 +104,7 @@ export let readyPatching = () => {
   let ItemClass = CONFIG.Item.entityClass;
   let ActorClass = CONFIG.Actor.entityClass;
 
-  ["itemRoll", "itemAttack", "itemDamage"].forEach(rollId => {
+  ["itemRoll", "itemAttack", "itemDamage", "useSpell"].forEach(rollId => {
     log("Pathcing ", rollId, rollMappings[rollId]);
     let rollMapping = rollMappings[rollId];
     // rollMapping.roll = rollMapping.class.prototype[rollMapping.methodName];
@@ -95,4 +113,6 @@ export let readyPatching = () => {
     })
   });
   debug("After patching roll mappings are ", rollMappings)
+
+  CONFIG.DND5E.weaponProperties["mgc"] = "Magical";
 }

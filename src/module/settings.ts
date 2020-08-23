@@ -52,7 +52,8 @@ export var configSettings = {
   mergeCard,
   mergeCardCondensed,
   hideNPCNames,
-  useTokenNames
+  useTokenNames,
+  requireTargets: false
 };
 
 export let fetchParams = (silent = false) => {
