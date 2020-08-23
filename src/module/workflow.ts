@@ -606,7 +606,7 @@ export class Workflow {
       i++;
     }
 
-    this.saveDisplayFlavor = `${this.item.name} DC ${rollDC} ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(theTargets.size > 1 ? "minor-qol.saving-throws" : "minor-qol.saving-throw")}:`;
+    this.saveDisplayFlavor = `${this.item.name} DC ${rollDC} ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(theTargets.size > 1 ? "midi-qol.saving-throws" : "midi-qol.saving-throw")}:`;
   }
 
   processSaveRoll = (message, html, data) => {
