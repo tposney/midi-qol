@@ -90,8 +90,8 @@
     "midi-qol.CheckSaveText.Name": "Search spell description",
     "midi-qol.CheckSaveText.Hint": "Search spell description for save type - 'half as much damge'. If unchecked assume a save does 1/2 damage",
     "midi-qol.Save": "Save Settings",
-    "midi-qol.saving-throws": "Saving-Throws",
-    "mdi-qol.saving-throw": "Saving-Throw",
+    "midi-qol.saving-throws": "Saving Throws",
+    "midi-qol.saving-throw": "Saving Throw",
 
     "midi-qol.": ""
 }
