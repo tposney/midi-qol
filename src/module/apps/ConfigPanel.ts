@@ -22,7 +22,7 @@ export class ConfigPanel extends FormApplication {
     return {
       configSettings,
       speedItemRollsOptions: {off: "Off", on: "On", onCard: "On + Show Item Card"},
-      autoCheckHitOptions: {none: "None", all: "Check - all see result", whisper: "Check - only GM sees", snotty: "Require targets set"},
+      autoCheckHitOptions: {none: "None", all: "Check - all see result", whisper: "Check - only GM sees"},
       clickOptions: {off: "Off", attack: "Attack Rolls Only", damage: "Damage Rolls Only", all: "Attack and Damage"},
       autoTargetOptions: {none: "None", always: "Always", wallsBlock: "Walls Block"},
       autoCheckSavesOptions: {none: "None", all:  "Save - All see result", whisper: "Save - only GM sees", allShow: "Save - All see Result + Rolls"},
