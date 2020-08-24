@@ -461,6 +461,18 @@ export class Workflow {
     }
   }
 
+  playerFor(target: Token) {
+    // find the controlling player
+    let player = game.users.players.find(p => p.character?._id === target.actor._id);
+    if (!player?.active) { // no controller - find the first owner who is active
+      //@ts-ignore permissions not define
+      player = game.users.players.find(p => p.active && target.actor.data.permission[p._id] === CONST.ENTITY_PERMISSIONS.OWNER)
+      //@ts-ignore permissions not define
+      if (!player) player = game.users.players.find(p => p.active && target.actor.data.permission.default === CONST.ENTITY_PERMISSIONS.OWNER)
+    }
+    return player;
+  }
+
   hideSaveRolls = (data, options) => {
     const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
     debug("hideSaveRolls: chat message is ", this.itemCardId, chatMessage, data.flags, this.saveCount);
@@ -526,14 +538,7 @@ export class Workflow {
         else event = {shiftKey: true, ctlKey: false, altKey: false, metaKey: false}
 
         if (playerRollSaves !== "none") { // find a player to send the request to
-          // find the controlling player
-          var player = game.users.players.find(p=> p.character?._id === target.actor._id);
-          if (!player?.active) { // no controller - find the first owner who is active
-            //@ts-ignore permissions not define
-            player = game.users.players.find(p=>p.active && target.actor.data.permission[p._id] === CONST.ENTITY_PERMISSIONS.OWNER)
-            //@ts-ignore permissions not define
-            if (!player) player = game.users.players.find(p=>p.active && target.actor.data.permission.default === CONST.ENTITY_PERMISSIONS.OWNER)
-          }
+          var player = this.playerFor(target);
         }
         if (playerRollSaves !== "none" && player?.active) {
           this.saveCount = Math.max(this.saveCount - 1, 0)
@@ -554,14 +559,20 @@ export class Workflow {
                   delete this.saveRequests[requestId];
                   delete this.saveTimeouts[requestId];
                   //@ts-ignore actor.rollAbilitySave
-                  let result = await target.actor.rollAbilitySave(this.item.data.data.save.ability, {event: eventToUse, advantage: advantageToUse});
+                  let result = await target.actor.rollAbilitySave(this.item.data.data.save.ability, {messageData: { user: player._id }, event: eventToUse, advantage: advantageToUse});
                   resolve(result);
               }
             }, playerSaveTimeout * 1000);
           }))
         } else {
+          // Find a player owner for the roll if possible
+          let owner = this.playerFor(target);
+          // If no player owns the token, find an active GM
+          if (!owner) owner = game.users.find((u: User) => u.isGM && u.active);
+          // Fall back to rolling as the current user
+          if (!owner) owner = game.user;
           //@ts-ignore actor.rollAbilitySave
-          promises.push(target.actor.rollAbilitySave(this.item.data.data.save.ability, {event, advantage}));
+          promises.push(target.actor.rollAbilitySave(this.item.data.data.save.ability, {messageData: { user: owner._id }, event, advantage}));
         }
       }
     } catch (err) {
