@@ -1,4 +1,4 @@
-import { criticalDamage, addChatDamageButtons, macroSpeedRolls, itemDeleteCheck, nsaFlag, autoItemEffects, coloredBorders, autoRemoveTargets, checkBetterRolls, preRollChecks } from "../settings"
+import { criticalDamage, macroSpeedRolls, itemDeleteCheck, nsaFlag, coloredBorders, addChatDamageButtons,  checkBetterRolls } from "../settings"
  import { configSettings } from "../settings"
 import { warn, i18n } from "../../midi-qol";
 export class ConfigPanel extends FormApplication {
@@ -34,12 +34,9 @@ export class ConfigPanel extends FormApplication {
       macroSpeedRolls,
       itemDeleteCheck,
       nsaFlag,
-      autoItemEffects,
       coloredBorders,
-      autoRemoveTargets,
       checkBetterRolls,
       playerRollSavesOptions: {none: "None",  letme: "Let Me Roll That For You", letmeQuery: "LMRTFY + Querey", chat: "Chat Message"},
-      preRollChecks,
     }
   }
 

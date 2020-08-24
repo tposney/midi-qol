@@ -92,6 +92,7 @@
     "midi-qol.Save": "Save Settings",
     "midi-qol.saving-throws": "Saving Throws",
     "midi-qol.saving-throw": "Saving Throw",
+    "midi-qol.noAttackRoll": "You must roll the attack before rolling the damage",
 
     "midi-qol.": ""
 }

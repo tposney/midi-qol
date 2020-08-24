@@ -5,7 +5,7 @@ import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES, DamageOnlyWorkflow, getTraitMult, calculateDamage, createDamageList } from "./workflow";
-import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, hideNPCNames, autoCheckSaves, autoCheckHit, mergeCard, addChatDamageButtons } from "./settings";
+import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings } from "./settings";
 
 export let processUndoDamageCard = async(message, html, data) => {
   if (!message?.data?.flavor || !game.user.isGM || !message.data.flavor.startsWith(undoDamageText)) {
@@ -151,7 +151,7 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
 
 export let diceSoNiceHandler = (message, html, data) => {
   if (installedModules.get("dice-so-nice") && getProperty(message.data.flags, "midi-qol.waitForDiceSoNice")) {
-    if (mergeCard) {
+    if (configSettings.mergeCard) {
       let hideTag = getProperty(message.data, "flags.midi-qol.hideTag")
         html.find(hideTag).hide();
         Hooks.once("diceSoNiceRollComplete", (id) => {
@@ -195,10 +195,20 @@ export let colorChatMessageHandler = (message, html, data) => {
 
   //@ts-ignore .color not defined
   html[0].style.borderColor = user.data.color;
+  // const oldColor = html[0].children[0].children[0].style.backgroundColor;
+  const oldColor = html[0].children[0].children[0].style.backgroundColor;
+  warn("Old color is ", oldColor)
+
   if (coloredBorders === "borderNamesBackground") {
+
+    html[0].children[0].children[0].style["text-shadow"] = `1px 1px 1px #FFFFFF`;
     //@ts-ignore .color not defined
     html[0].children[0].children[0].style.backgroundColor = user.data.color;
+
   } else if (coloredBorders === "borderNamesText") {
+
+    //@ts-ignore .color not defined
+    html[0].children[0].children[0].style["text-shadow"] = `1px 1px 1px ${html[0].children[0].children[0].style.color}`;
     //@ts-ignore .color not defined
     html[0].children[0].children[0].style.color = user.data.color;
   }
@@ -262,19 +272,19 @@ export let hideStuffHandler = (message, html, data) => {
   if (game.user.isGM)  {
     ids.click(_onTargetSelect);
   }
-  if (!game.user.isGM && hideNPCNames.length > 0) {
+  if (!game.user.isGM && configSettings.hideNPCNames.length > 0) {
     ids=html.find(".midi-qol-target-npc");
-    ids.text(hideNPCNames);
+    ids.text(configSettings.hideNPCNames);
   }
   if (game.user.isGM) {
     //@ts-ignore
     ui.chat.scrollBottom
     return;
   }
-  if (autoCheckHit === "whisper") {
+  if (configSettings.autoCheckHit === "whisper") {
     $(html).find(".midi-qol-hits-display").hide()
   }
-  if (autoCheckSaves === "whisper") {
+  if (configSettings.autoCheckSaves === "whisper") {
     $(html).find(".midi-qol-saves-display").hide()
   }
   //@ts-ignore

@@ -2,91 +2,51 @@ import { debug, setDebugLevel, warn } from "../midi-qol";
 import { ConfigPanel} from "./apps/ConfigPanel"
 
 export var itemRollButtons: boolean;
-export var speedItemRolls: string;
-export var autoFastForward: string;
-export var autoTarget: string;
-export var autoCheckHit: string;
-export var autoCheckSaves : string;
-export var checkSaveText: boolean;
-export var autoRollDamage: string;
 export var criticalDamage: string;
-export var addChatDamageButtons;
-export var autoApplyDamage: string;
-export var damageImmunities: string;
 export var macroSpeedRolls: string;
-export var hideNPCNames: string;
-export var useTokenNames: boolean;
 export var itemDeleteCheck: boolean;
 export var nsaFlag: boolean;
-export var autoItemEffects: boolean;
 export var coloredBorders: string;
-export var rangeTarget: boolean;
-export var autoRemoveTargets: string;
 export var checkBetterRolls: boolean;
-export var playerRollSaves: string;
-export var playerSaveTimeout: number;
-export var preRollChecks: boolean;
 export var saveRequests = {};
 export var saveTimeouts = {};
-export var mergeCard: boolean;
-export var mergeCardCondensed: boolean;
+export var addChatDamageButtons: boolean;
 
 
 export var configSettings = {
-  speedItemRolls,
-  autoFastForward,
-  autoTarget,
-  autoCheckHit,
-  autoRemoveTargets,
-  autoCheckSaves,
-  checkSaveText,
-  autoRollDamage,
-  addChatDamageButtons,
-  autoApplyDamage,
-  damageImmunities,
-  autoItemEffects,
-  rangeTarget,
-  playerRollSaves,
-  playerSaveTimeout,
-  preRollChecks,
-  mergeCard,
-  mergeCardCondensed,
-  hideNPCNames,
-  useTokenNames,
-  requireTargets: false
+  speedItemRolls: null,
+  autoFastForward: null,
+  autoTarget: null,
+  autoCheckHit: null,
+  autoRemoveTargets: null,
+  autoCheckSaves: null,
+  checkSaveText: null,
+  autoRollDamage: null,
+  autoApplyDamage: null,
+  damageImmunities: null,
+  autoItemEffects: null,
+  rangeTarget: null,
+  playerRollSaves: null,
+  playerSaveTimeout: null,
+  preRollChecks: null,
+  mergeCard: null,
+  mergeCardCondensed: null,
+  hideNPCNames: null,
+  useTokenNames: null,
+  requireTargets: null
 };
 
 export let fetchParams = (silent = false) => {
   debug("Fetch Params Loading");
   configSettings = game.settings.get("midi-qol", "ConfigSettings")
   warn("Fetch Params Loading", configSettings);
-  speedItemRolls = configSettings.speedItemRolls;
-  autoFastForward = configSettings.autoFastForward;
-  autoTarget = configSettings.autoTarget;
-  autoCheckHit = configSettings.autoCheckHit;
-  autoRemoveTargets = configSettings.autoRemoveTargets;
-  autoCheckSaves = configSettings.autoCheckSaves;
-  checkSaveText = configSettings.checkSaveText;
-  autoRollDamage = configSettings.autoRollDamage;
-  addChatDamageButtons = configSettings.addChatDamageButtons;
-  autoApplyDamage = configSettings.autoApplyDamage;
-  damageImmunities = configSettings.damageImmunities;
-  autoItemEffects = configSettings.autoItemEffects;
-  rangeTarget = configSettings.rangeTarget;
-  playerRollSaves = configSettings.playerRollSaves;
-  playerSaveTimeout = configSettings.playerSaveTimeout;
-  preRollChecks = configSettings.preRollChecks;
-  mergeCard = configSettings.mergeCard;
-  hideNPCNames = configSettings.hideNPCNames;
-  useTokenNames = configSettings.useTokenNames;
-
   macroSpeedRolls = game.settings.get("midi-qol", "MacroSpeedRolls");
   criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
   itemDeleteCheck = game.settings.get("midi-qol", "ItemDeleteCheck");
   nsaFlag = game.settings.get("midi-qol", "showGM");
   coloredBorders = game.settings.get("midi-qol", "ColoredBorders");
   itemRollButtons = game.settings.get("midi-qol", "ItemRollButtons");
-  debug("FetchParams ", speedItemRolls, autoFastForward, autoRollDamage, autoCheckHit)
+  debug("FetchParams ", configSettings.speedItemRolls, configSettings.autoFastForward, configSettings.autoRollDamage, configSettings.autoCheckHit)
   let debugText = game.settings.get("midi-qol", "Debug");
   setDebugLevel(debugText);
 
@@ -95,13 +55,13 @@ export let fetchParams = (silent = false) => {
 let getParams = () => {
   return ` 
     itemRollButtons: ${itemRollButtons} <br>
-    speedItemRolls: ${speedItemRolls} <br>
-    autoTarget: ${autoTarget} <br>
-    autoCheckHit: ${autoCheckHit} <br>
-    autoCheckSaves: ${autoCheckSaves} <br>
-    autoApplyDamage: ${autoApplyDamage} <br>
-    autoRollDamage: ${autoRollDamage} <br>
-    playerRollSaves: ${playerRollSaves} <br>
+    speedItemRolls: ${configSettings.speedItemRolls} <br>
+    autoTarget: ${configSettings.autoTarget} <br>
+    autoCheckHit: ${configSettings.autoCheckHit} <br>
+    autoCheckSaves: ${configSettings.autoCheckSaves} <br>
+    autoApplyDamage: ${configSettings.autoApplyDamage} <br>
+    autoRollDamage: ${configSettings.autoRollDamage} <br>
+    playerRollSaves: ${configSettings.playerRollSaves} <br>
     checkBetterRolls: ${checkBetterRolls} `
 }
 const settings = [

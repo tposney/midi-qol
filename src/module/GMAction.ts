@@ -1,5 +1,5 @@
 import { installedModules } from "./setupModules";
-import { autoApplyDamage, playerRollSaves, useTokenNames } from "./settings";
+import { configSettings} from "./settings";
 import { i18n, debug, error } from "../midi-qol";
 
 var traitList = {di: {}, dr: {}, dv: {}};
@@ -11,7 +11,7 @@ let processAction = async data => {
       case "reverseDamageCard":
           if (!game.user.isGM)
               break;
-          if (autoApplyDamage === "none")
+          if (configSettings.autoApplyDamage === "none")
               break;
           await createReverseDamageCard(data);
           break;
@@ -70,7 +70,7 @@ let createReverseDamageCard = async (data) => {
         promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP }));
         let buttonID = `${token.id}`;
         let btntxt = `<button id="${buttonID}"style="${btnStyling}"><i class="fas fa-user-plus" title="Click to reverse damage."></i></button>`;
-        let tokenName = token.name && useTokenNames ? `<strong>${token.name}</strong>` : token.actor.name;
+        let tokenName = token.name && configSettings.useTokenNames ? `<strong>${token.name}</strong>` : token.actor.name;
         let dmgSign = appliedDamage < 0 ? "+" : "-"; // negative damage is added to hit points
         if (oldTempHP > 0)
             whisperText = whisperText.concat(`${sep}${duplicate(btntxt)} ${tokenName}<br> (${oldHP}:${oldTempHP}) ${dmgSign} ${Math.abs(appliedDamage)}[${totalDamage}] -> (${newHP}:${newTempHP})`);
@@ -90,7 +90,7 @@ let createReverseDamageCard = async (data) => {
     const speaker = ChatMessage.getSpeaker();
     speaker.alias = game.user.name;
     console.log("Whisper text is ", whisperText)
-    if (autoApplyDamage === "yesCard") {
+    if (configSettings.autoApplyDamage === "yesCard") {
       let chatData = {
         user: game.user._id,
         speaker,
