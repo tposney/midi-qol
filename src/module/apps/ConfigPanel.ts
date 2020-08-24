@@ -5,7 +5,7 @@ export class ConfigPanel extends FormApplication {
   
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
-      title: game.i18n.localize("DICESONICE.configTitle"),
+      title: game.i18n.localize("midi-qol.ConfigTitle"),
       id: "midi-qol-config",
       template: "modules/midi-qol/templates/config.html",
       width: 520,

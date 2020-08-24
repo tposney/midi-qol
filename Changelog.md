@@ -1,3 +1,17 @@
+## v0.2.4
+* Compatible with 0.6.6
+* Remove attack/damage buttons as they are "used" even if not using ombo card.
+* Put back ctl/alt/shift clicking on character sheet removed in 0.2.3
+* With shift being verstatile attacks, now CTL-ALT substitutes for the "default" fast forward shift.
+* Chat damage button disabled until other rolls complete, like attack or placing a template. Corrects problem case of rolling damage before rolling attacks.
+* Identified, but have not fixed, MESS incompatibility, including with placed templates.
+* Improved? background colored player names when highlighting cards.
+* If not auto targeting we can wait until the damage roll is done before recording targets. This might enable a workaround for mess not working with midi-qol until a proper fix is found
+  * Disable auto roll damage.
+  * Let mess place the template
+  * then roll damage.
+* Set user on auto-rolled ability saving throws thanks @spoider
+
 ## v0.2.3
 * If player rolled saves is enabled and a token is required to save that has default owner pemission (in addition to tokens ownd by a player) a player will be chosen to roll for that token.
 * In merge cards critical hits/fumbles are now highlighted.

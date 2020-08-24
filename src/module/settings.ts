@@ -1,4 +1,4 @@
-import { debug, setDebugLevel, warn } from "../midi-qol";
+import { debug, setDebugLevel, warn, i18n } from "../midi-qol";
 import { ConfigPanel} from "./apps/ConfigPanel"
 
 export var itemRollButtons: boolean;
@@ -14,24 +14,24 @@ export var addChatDamageButtons: boolean;
 
 
 export var configSettings = {
-  speedItemRolls: null,
-  autoFastForward: null,
-  autoTarget: null,
+  speedItemRolls: "",
+  autoFastForward: "",
+  autoTarget: "",
   autoCheckHit: null,
   autoRemoveTargets: null,
-  autoCheckSaves: null,
+  autoCheckSaves: "",
   checkSaveText: null,
-  autoRollDamage: null,
-  autoApplyDamage: null,
-  damageImmunities: null,
+  autoRollDamage: "",
+  autoApplyDamage: "",
+  damageImmunities: "",
   autoItemEffects: null,
   rangeTarget: null,
-  playerRollSaves: null,
-  playerSaveTimeout: null,
+  playerRollSaves: "",
+  playerSaveTimeout: 0,
   preRollChecks: null,
   mergeCard: null,
   mergeCardCondensed: null,
-  hideNPCNames: null,
+  hideNPCNames: "",
   useTokenNames: null,
   requireTargets: null
 };
@@ -183,9 +183,9 @@ export const registerSettings = function() {
   });
 
   game.settings.registerMenu("midi-qol", "midi-qol", {
-    name: "midi-qol config",
+    name: i18n("midi-qol.config"),
     label: "midi-qol.WorkflowSettings",
-    hint: "midi-qol.Hint",
+    hint: i18n("midi-qol.Hint"),
     icon: "fas fa-dice-d20",
     type: ConfigPanel,
     restricted: true

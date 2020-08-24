@@ -45,8 +45,14 @@ export async function doAttackRoll({event = {shiftKey: false, altKey: false, ctr
 export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, spellLevel = null, versatile = false}) {
   let workflow = Workflow.getWorkflow(this.uuid);
   if (workflow.currentState !== WORKFLOWSTATES.WAITFORDAMGEROLL){
-    ui.notifications.warn(i18n("midi-qol.noAttackRoll"));
-    return;
+    switch (workflow.currentState) {
+      case WORKFLOWSTATES.AWAITTEMPLATE:
+        return ui.notifications.warn(i18n("midi-qol.noTemplateSeen"));
+      case WORKFLOWSTATES.WAITFORATTACKROLL:
+        return ui.notifications.warn(i18n("midi-qol.noAttackRoll"));
+      default: 
+        return ui.notifications.warn(i18n("broken universe"));
+    }
   }
   debug(" do damage roll ", event, spellLevel, versatile, this.uuid, Workflow._workflows, workflow)
   if (!workflow) { //TODO - what to do with a random roll damage for an item?
@@ -89,12 +95,20 @@ export async function doItemRoll(options = {showFullCard: false}) {
     metaKey: false || event.metaKey,
     type: event.type
   }
+  const verstaile = event?.type === "contextmenu" || (pseudoEvent.shiftKey);
+  //@ts-ignore
+  if (event.altKey && event.ctrlKey) {
+    pseudoEvent.shiftKey = true;
+    pseudoEvent.ctrlKey = false;
+    pseudoEvent.altKey = false;
+  }
   let speaker = ChatMessage.getSpeaker();
   let spellLevel = this.data.data.level; // we are called with the updated spell level so record it.
   let baseItem = this.actor.getOwnedItem(this.id);
   let workflow: Workflow = new Workflow(this.actor, baseItem, speaker.token, speaker, pseudoEvent);
   //@ts-ignore event .type not defined
-  workflow.versatile = event?.type === "contextmenu" || (pseudoEvent.shiftKey);
+  workflow.versatile = verstaile;
+
   workflow.itemLevel = this.data.data.level;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = options.showFullCard;

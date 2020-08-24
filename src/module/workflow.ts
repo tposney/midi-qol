@@ -104,9 +104,9 @@ export class Workflow {
     this.token = token;
     this.speaker = speaker;
     this.targets = (item?.data.data.target?.type === "self") ? getSelfTargetSet(actor) : new Set(game.user.targets);
-    this.saves = new Set();
+     this.saves = new Set();
     this.failedSaves = new Set(this.targets)
-    this.hitTargets = new Set(game.user.targets);
+    this.hitTargets = new Set(this.targets);
     this.isCritical = false;
     this.isFumble = false;
     this.currentState = WORKFLOWSTATES.NONE;
@@ -153,13 +153,13 @@ export class Workflow {
     switch (newState) {
       case WORKFLOWSTATES.NONE:
         debug(" workflow.next ", state, this.item, configSettings.autoTarget, this.item.hasAreaTarget);
-        if (configSettings.autoTarget && this.item.hasAreaTarget) {
+        if (configSettings.autoTarget !== "none" && this.item.hasAreaTarget) {
           return this.next(WORKFLOWSTATES.AWAITTEMPLATE);
         }
         return this.next(WORKFLOWSTATES.VALIDATEROLL);
 
       case WORKFLOWSTATES.AWAITTEMPLATE:
-        if (this.item.hasAreaTarget && configSettings.autoTarget) {
+        if (this.item.hasAreaTarget && configSettings.autoTarget !== "none") {
           debug("Item has template registering Hook");
           this.placeTemlateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
           return;
@@ -216,8 +216,14 @@ export class Workflow {
         return; // wait for a damage roll to advance the state.
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
+         if (configSettings.autoTarget === "none" && this.item.hasAreaTarget && !this.item.hasAttack) { 
+           // we are not auto targeting so for area effect attacks, without hits (e.g. fireball)
+          this.targets = new Set(game.user.targets);
+          this.hitTargets = new Set(game.user.targets);
+          warn(" damage roll complete ", this)
+        }
         // apply damage to targets plus saves plus immunities
-         // done here cause not needed for betterrolls workflow
+        // done here cause not needed for betterrolls workflow
         await this.displayDamageRoll(false, configSettings.mergeCard)
         if (this.isFumble) {
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
@@ -269,6 +275,7 @@ export class Workflow {
           if (this.item.hasSave) applicationTargets = this.failedSaves;
           else if (this.item.hasAttack) applicationTargets = this.hitTargets;
           else applicationTargets = this.targets;
+          warn("APplication targets are ", applicationTargets)
           if (this.item && configSettings.autoItemEffects && installedModules.get("dynamiceffects") && applicationTargets?.size) { // perhaps apply item effects
             // If we rolled a save update theTargets
             //@ts-ignore
@@ -728,6 +735,7 @@ export class DamageOnlyWorkflow extends Workflow {
     let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===this.currentState)[0];
     switch(newState) {
       case WORKFLOWSTATES.NONE:
+        this.hitTargets = this.targets;
         debug("DamageOnlyWorkflow.next ", state, configSettings.speedItemRolls, this);
         applyTokenDamage(this.damageDetail, this.damageTotal, this.hitTargets, null, new Set())
         return super.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
@@ -768,6 +776,11 @@ export class BetterRollsWorkflow extends Workflow {
         else return this.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
+        if (configSettings.autoTarget === "none" && this.item.hasAreaTarget && !this.item.hasAttack) { 
+          // we are not auto targeting so for area effect attacks, without hits (e.g. fireball)
+          this.targets = new Set(game.user.targets);
+          this.hitTargets = new Set(game.user.targets);
+       }
         // apply damage to targets plus saves plus immunities
         if (this.isFumble) { //TODO: Is this right?
           return this.next(WORKFLOWSTATES.ROLLFINISHED);

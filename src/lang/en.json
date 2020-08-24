@@ -93,6 +93,7 @@
     "midi-qol.saving-throws": "Saving Throws",
     "midi-qol.saving-throw": "Saving Throw",
     "midi-qol.noAttackRoll": "You must roll the attack before rolling the damage",
-
+    "midi-qol.config": "Midi QoL config",
+    "midi-qol.Hint": "Configure the various workflow settings for midi-qol. Be warned there are lots of them",
     "midi-qol.": ""
 }

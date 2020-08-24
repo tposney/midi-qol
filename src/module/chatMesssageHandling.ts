@@ -347,6 +347,7 @@ export let processPreCreateDamageRoll = (data, ...args) => {
         }
       }
     } else { // have a damage roll without an item
+      return;
       warn("damage roll without item detected ", data.flags.dnd5e.roll.flavor)
       let wf = new DamageOnlyWorkflow(actor, token, data.speaker, parseInt(data.content), data.flags.dnd5e.roll.flavor || "radiant");
       wf.next(WORKFLOWSTATES.NONE);
