@@ -18,7 +18,7 @@ import { readyPatching, initPatching } from './module/patching.js';
 import { initHooks } from './module/Hooks.js';
 import { initGMActionSetup } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
-import { applyTokenDamage } from './module/workflow.js';
+import { applyTokenDamage, TrapWorkflow } from './module/workflow.js';
 
 export let debugEnabled = 0;
 // 0 = none, warnings = 1, debug = 2, all = 3
@@ -106,7 +106,8 @@ function setupMinorQolCompatibility() {
   }
   //@ts-ignore
   window.MidiQOL = {
-    applyTokenDamage: applyTokenDamage
+    applyTokenDamage: applyTokenDamage,
+    TrapWorkflow: TrapWorkflow
   }
 }
 

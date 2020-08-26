@@ -1,5 +1,5 @@
 import { warn, error } from "../midi-qol";
-import { processpreCreateAttackRollMessage, processpreCreateDamageRollMessage, processpreCerateSaveRollMessaage, processpreCreateBetterRollsMessage, processcreateAttackRoll, processcreateDamageRoll, processcreateSaveRoll, processUndoDamageCard, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, processPreCreateDamageRoll, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage } from "./chatMesssageHandling";
+import { processpreCreateAttackRollMessage, processpreCreateDamageRollMessage, processpreCerateSaveRollMessaage, processpreCreateBetterRollsMessage, processcreateAttackRoll, processcreateDamageRoll, processcreateSaveRoll, processUndoDamageCard, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, processPreCreateDamageRoll, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer } from "./chatMesssageHandling";
 
 export let initHooks = () => {
   warn("Init Hooks processing");
@@ -42,6 +42,8 @@ export let initHooks = () => {
     colorChatMessageHandler(message, html, data);
     nsaMessageHandler(message, html, data);
     chatDamageButtons(message, html, data);
+    mergeCardSoundPlayer(message, html, data);
+
   })
 
 

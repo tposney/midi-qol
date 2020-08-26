@@ -12,33 +12,38 @@ export var saveRequests = {};
 export var saveTimeouts = {};
 export var addChatDamageButtons: boolean;
 
-
 export var configSettings = {
-  speedItemRolls: "",
-  autoFastForward: "",
-  autoTarget: "",
-  autoCheckHit: null,
-  autoRemoveTargets: null,
-  autoCheckSaves: "",
+  speedItemRolls: "off",
+  autoRollAttack: false,
+  autoFastForward: "off",
+  autoTarget: "none",
+  autoCheckHit: "none",
+  autoRemoveTargets: "",
+  autoCheckSaves: "none",
   checkSaveText: null,
-  autoRollDamage: "",
-  autoApplyDamage: "",
-  damageImmunities: "",
+  autoRollDamage: "none",
+  autoApplyDamage: "none",
+  damageImmunities: "none",
   autoItemEffects: null,
   rangeTarget: null,
-  playerRollSaves: "",
+  playerRollSaves: "none",
   playerSaveTimeout: 0,
-  preRollChecks: null,
-  mergeCard: null,
-  mergeCardCondensed: null,
+  preRollChecks: false,
+  mergeCard: false,
+  mergeCardCondensed: false,
   hideNPCNames: "",
-  useTokenNames: null,
-  requireTargets: null
+  useTokenNames: false,
+  requireTargets: false,
+  fumbleSound: "dice",
+  diceSound: "dice",
+  criticalSound: "dice",
+  fullAuto: false
 };
 
 export let fetchParams = (silent = false) => {
   debug("Fetch Params Loading");
-  configSettings = game.settings.get("midi-qol", "ConfigSettings")
+  configSettings = game.settings.get("midi-qol", "ConfigSettings");
+  if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["midi-qol.fumble"];
   warn("Fetch Params Loading", configSettings);
   macroSpeedRolls = game.settings.get("midi-qol", "MacroSpeedRolls");
   criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
@@ -46,10 +51,10 @@ export let fetchParams = (silent = false) => {
   nsaFlag = game.settings.get("midi-qol", "showGM");
   coloredBorders = game.settings.get("midi-qol", "ColoredBorders");
   itemRollButtons = game.settings.get("midi-qol", "ItemRollButtons");
+  addChatDamageButtons = game.settings.get("midi-qol", "AddChatDamageButtons")
   debug("FetchParams ", configSettings.speedItemRolls, configSettings.autoFastForward, configSettings.autoRollDamage, configSettings.autoCheckHit)
   let debugText = game.settings.get("midi-qol", "Debug");
   setDebugLevel(debugText);
-
 }
 
 let getParams = () => {

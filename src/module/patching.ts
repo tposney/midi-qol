@@ -23,7 +23,7 @@ const oldItemRollAttack = Item5e.prototype.rollAttack;
 const oldItemRollDamage = Item5e.prototype.rollDamage;
 const oldActorUseSpell = Actor5e.prototype.useSpell;
 
-async function doUseSpell(item, {configureDialog=true}={}) {
+async function doUseSpell(item, ...args) {
   const shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
     || (game.user.targets.size > 0) // there are some target selected
     || (item.data.data.target?.type === "self") // self target
@@ -34,7 +34,7 @@ async function doUseSpell(item, {configureDialog=true}={}) {
     warn(`${game.username} attempted to roll with no targets selected`)
     return;
   }
-  oldActorUseSpell.bind(this)(item, configureDialog )
+  oldActorUseSpell.bind(this)(item, ...args)
 }
 
 function restrictVisibility() {
@@ -97,6 +97,12 @@ export let initPatching = () => {
     //@ts-ignore
     SightLayer.prototype._isTokenVisionSource = _isTokenVisionSourceProxy;
   }
+  CONFIG.sounds["midi-qol.fail1"] ="./modules/midi-qol/sounds/fail1.wav";
+  CONFIG.sounds["midi-qol.fail2"] ="./modules/midi-qol/sounds/fail2.wav";
+  CONFIG.sounds["midi-qol.fail3"] ="./modules/midi-qol/sounds/fail3.ogg";
+  CONFIG.sounds["midi-qol.critical1"] ="./modules/midi-qol/sounds/success-drums.ogg";
+  CONFIG.sounds["midi-qol.critical2"] ="./modules/midi-qol/sounds/success.wav";
+  CONFIG.sounds["midi-qol.critical3"] ="./modules/midi-qol/sounds/good-results.ogg";
 }
 
 export let readyPatching = () => {
@@ -115,4 +121,8 @@ export let readyPatching = () => {
   debug("After patching roll mappings are ", rollMappings)
 
   CONFIG.DND5E.weaponProperties["mgc"] = "Magical";
+  // create({src, preload=false, autoplay=false, volume=0.0, loop=false} = {}) {
+
+  // AudioHelpler.create({src})
+
 }

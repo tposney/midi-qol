@@ -27,6 +27,15 @@ export let processUndoDamageCard = async(message, html, data) => {
   })
 }
 
+export function mergeCardSoundPlayer(message, html, data) {
+  // warn("Merge card sound player ", getProperty(message.data, "flags.midi-qol.playSound"), message.data.sound)
+  if (getProperty(message.data, "flags.midi-qol.playSound") && message.data.sound) {
+      //@ts-ignore
+      AudioHelper.play({src: message.data.sound}, false);
+  }
+  return true;
+}
+
 export function processpreCreateAttackRollMessage(data, options, user) {
   // debug ("process create attack roll ", data, options, user);
   return true;
@@ -197,16 +206,11 @@ export let colorChatMessageHandler = (message, html, data) => {
   html[0].style.borderColor = user.data.color;
   // const oldColor = html[0].children[0].children[0].style.backgroundColor;
   const oldColor = html[0].children[0].children[0].style.backgroundColor;
-  warn("Old color is ", oldColor)
-
   if (coloredBorders === "borderNamesBackground") {
-
     html[0].children[0].children[0].style["text-shadow"] = `1px 1px 1px #FFFFFF`;
     //@ts-ignore .color not defined
     html[0].children[0].children[0].style.backgroundColor = user.data.color;
-
   } else if (coloredBorders === "borderNamesText") {
-
     //@ts-ignore .color not defined
     html[0].children[0].children[0].style["text-shadow"] = `1px 1px 1px ${html[0].children[0].children[0].style.color}`;
     //@ts-ignore .color not defined
@@ -260,19 +264,14 @@ let _onTargetSelect = (event) => {
 };
 
 export let hideStuffHandler = (message, html, data) => {
-
   debug("hide info handler message: ", message)
-  if (getProperty(message, "data.flags.midi-qol.permaHide") && false) {
-    html.hide();
-    return;
-  }
   let ids = html.find(".midi-qol-target-name")
   // let buttonTargets = html.getElementsByClassName("minor-qol-target-npc");
   ids.hover(_onTargetHover, _onTargetHoverOut)
   if (game.user.isGM)  {
     ids.click(_onTargetSelect);
   }
-  if (!game.user.isGM && configSettings.hideNPCNames.length > 0) {
+  if (!game.user.isGM && configSettings.hideNPCNames?.length > 0) {
     ids=html.find(".midi-qol-target-npc");
     ids.text(configSettings.hideNPCNames);
   }
@@ -347,7 +346,7 @@ export let processPreCreateDamageRoll = (data, ...args) => {
         }
       }
     } else { // have a damage roll without an item
-      return;
+      return true;
       warn("damage roll without item detected ", data.flags.dnd5e.roll.flavor)
       let wf = new DamageOnlyWorkflow(actor, token, data.speaker, parseInt(data.content), data.flags.dnd5e.roll.flavor || "radiant");
       wf.next(WORKFLOWSTATES.NONE);
@@ -374,7 +373,7 @@ export let processBetterRollsChatCard = (message, html, data) => {
 }
 
 export let chatDamageButtons = (message, html, data) => {
-  debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll.type)
+  warn("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll.type)
   if (!addChatDamageButtons) return true;
   if (message.data.flags?.dnd5e?.roll.type !== "damage") return true;
   const itemId = message.data.flags.dnd5e.roll.itemId;

@@ -100,9 +100,6 @@ let createReverseDamageCard = async (data) => {
         type: CONST.CHAT_MESSAGE_TYPES.OTHER,
         flags: {"midi-qol": tokenIdList}
       };
-      if (debug && false) {
-        chatData.content = chatData.content + `<br>${data.settings} <br>${data.targetNames} <br> ${data.extraText}`
-      }
       let message = await ChatMessage.create(chatData);
     }
   }

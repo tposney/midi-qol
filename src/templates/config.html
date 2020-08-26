@@ -1,4 +1,4 @@
-  <div id="midi-qol-configuration" style="width: 505px; height: 500px">
+  <div id="midi-qol-configuration" style="width: 500px; height: 500px">
       <form autocomplete="off" class="flexcol">
         <section id="config"class="content">
           <div class="midi-qol-box">
@@ -13,6 +13,8 @@
               </select>
               {{localize "midi-qol.SpeedItemRolls.Hint"}}
             </div>
+
+
           </div>
 
           <div class="midi-qol-nobox">
@@ -68,6 +70,11 @@
               <div class="midi-qol-faint">{{localize "midi-qol.RangeTarget.Hint"}}</div>
             </div>
             <div class="midi-qol-nobox">
+              <div class="form-group AutoRollAttack">
+                <label>{{localize "midi-qol.AutoRollAttack.Name"}}</label>
+                <input type="checkbox" name="autoRollAttack" data-dtype="Boolean" {{checked configSettings.autoRollAttack}} />
+              </div>
+              <div class="midi-qol-faint">{{localize "midi-qol.AutoRollAttack.Hint"}}</div>
               <div class="form-group autoFastForward">
                 <label>{{localize "midi-qol.AutoFastForward.Name"}}</label>
                 <select name="autoFastForward" data-dtype="String">
@@ -192,6 +199,40 @@
                 {{checked configSettings.autoItemEffects}} />
             </div>
             <div class="midi-qol-faint">{{localize "midi-qol.AutoEffects.Hint"}}</div>
+          </div>
+
+          <div>{{localize "midi-qol.DiceSounds.Hint"}}</div>
+          <div class="form-group diceSound">
+            <label>{{localize "midi-qol.DiceSound.Name"}}</label>
+            <select name="diceSound" data-dtype="String">
+              {{#select configSettings.diceSound}}
+              {{#each rollSoundOptions as |val label|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
+
+          <div class="form-group fumbleSound">
+            <label>{{localize "midi-qol.FumbleSound.Name"}}</label>
+            <select name="fumbleSound" data-dtype="String">
+              {{#select configSettings.fumbleSound}}
+              {{#each rollSoundOptions as |val label|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
+
+          <div class="form-group criticalSound">
+            <label>{{localize "midi-qol.CriticalSound.Name"}}</label>
+            <select name="criticalSound" data-dtype="String">
+              {{#select configSettings.criticalSound}}
+              {{#each rollSoundOptions as |val label|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
           </div>
         </section>
         <footer class="sheet-footer flexrow">

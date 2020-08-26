@@ -1,9 +1,33 @@
+## 0.2.5
+* play dice roll sound for combo card - not supported for better rolls or non-combo card. There were no sounds played when the combo card was displayed, since there is no roll rendered to chat. So, add back the dice sounds. Since we have to play it in the module, support different sounds for dice, critical and fumble. Next pass will create a config panel to add your own.
+* added new button, auto roll attack. This will cause the attack roll to be initiated, and auto fast forward is respected.  
+* previous support for traps broken in midi-qol. This provides enhanced functionality for trap macro writers.
+* Place template button removed from item card when template placed.
+Support a TrapWorkflow, triggered by
+```
+new MidiQOL.TrapWorkflow(actor, item, [targets], {x:number, y:number})
+```
+Which will roll the atack/and or damage and apply to the passed targets. If the item has an area template it will be placed at x,y and targets auto selected inside the template.
+Sample DoTrapAttack replacement:
+```
+  let tactor = game.actors.entities.find(a => a.name === args[0])
+  let item = tactor.items.find(i=>  i.name === args[1])
+  if (!item) return `/Whisper GM "DoTrap: Item ${args[1]} not found"`
+  let trapToken = canvas.tokens.placeables.find(t=>t.name === args[2])
+  new MidiQOL.TrapWorkflow(tactor, item, [token], trapToken.center)
+  ```
+**Bug fixes:**
+* item.roll() was not returning anything. Make it return what the underlying item.roll() returns, or the midi-qol item card if appropriate.
+* Correct error when rolling without combo card not displaying attacks/damage.
+**Notes** 
+For those wanting to hide the item description, just use the system setting "Collapse Item Cards In Chat".
+
 ## v0.2.4
 * Compatible with 0.6.6
 * Remove attack/damage buttons as they are "used" even if not using ombo card.
 * Put back ctl/alt/shift clicking on character sheet removed in 0.2.3
 * With shift being verstatile attacks, now CTL-ALT substitutes for the "default" fast forward shift.
-* Chat damage button disabled until other rolls complete, like attack or placing a template. Corrects problem case of rolling damage before rolling attacks.
+* Chat damage button disabled until other rolls complete, like attack or placing a template. Corrects problem case of rolling damage before rolling attacks. If you try to roll damage while waiting for a template or attack roll you will get an warning notification.
 * Identified, but have not fixed, MESS incompatibility, including with placed templates.
 * Improved? background colored player names when highlighting cards.
 * If not auto targeting we can wait until the damage roll is done before recording targets. This might enable a workaround for mess not working with midi-qol until a proper fix is found
@@ -11,6 +35,7 @@
   * Let mess place the template
   * then roll damage.
 * Set user on auto-rolled ability saving throws thanks @spoider
+* Disable damage-only workflow until a better solution is found. This will inactivate divine-smite spell in dynamic-effects.
 
 ## v0.2.3
 * If player rolled saves is enabled and a token is required to save that has default owner pemission (in addition to tokens ownd by a player) a player will be chosen to roll for that token.

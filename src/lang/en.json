@@ -4,11 +4,13 @@
     "midi-qol.DamageImmunities.Name": "Apply Damage immunities",
     "midi-qol.DamageImmunities.Hint": "When using midi-qol damage buttons or auto applying damage apply target's damage immunities/vulnerabilities/resistances. All damage types are checked. Saves - check text is selected check the spell descirption for special strings indicating 1/2 damage",
     "midi-qol.SpeedItemRolls.Name": "Enable Speed Item Rolls",
-    "midi-qol.SpeedItemRolls.Hint": "Midi-qol will use the ctrl/alt/meta/shift key stats when initiating a roll. ctl=disadvantage alt=advantage shift=versatile",
+    "midi-qol.SpeedItemRolls.Hint": "Midi-qol will use the ctrl/alt/meta/shift key stats when initiating a roll. This setting overrides auto-roll attack.  Keys are ctl=disadvantage alt=advantage shift=versatile ctl+alt=fast forward roll",
+    "midi-qol.AutoRollAttack.Name": "When item is rolled, automatically roll the attack if there is one",
+    "midi-qol.AutoRollAttack.Hint": "When the attack is rolled the auto fast forward roll settings are used to decide what to do",
     "midi-qol.AutoFastForward.Name": "Auto fast forward rolls",
-    "midi-qol.AutoFastForward.Hint": "When rolling attack or damage always fast forward rolls",
+    "midi-qol.AutoFastForward.Hint": "When rolling attack or damage always fast forward rolls also applies when clicking on attack/damage buttons",
     "midi-qol.AutoCheckHit.Name": "Auto check if attack hits target",
-    "midi-qol.AutoCheckHit.Hint": "Check if an attack roll hits selected targets - damage is rolled if one or more targets is hit and auto roll damage is true. If disabled midi-qol will assume the attack hits and continue rolling.",
+    "midi-qol.AutoCheckHit.Hint": "Check if an attack roll hits selected targets - damage is rolled if one or more targets is hit and auto roll damage is enabled. If disabled midi-qol will assume the attack hits and continue rolling.",
     "midi-qol.RequireTargets.Name": "Require targets to be selected before rolling",
     "midi-qol.RequireTargets.Hint": "If no tokens are targeted then only self target or aread affect target rolls will be allowed",
     "midi-qol.AutoApplyDamage.Name": "Auto apply damage to target",
@@ -95,5 +97,10 @@
     "midi-qol.noAttackRoll": "You must roll the attack before rolling the damage",
     "midi-qol.config": "Midi QoL config",
     "midi-qol.Hint": "Configure the various workflow settings for midi-qol. Be warned there are lots of them",
+    "midi-qol.DiceSound.Name": "Normal Attack",
+    "midi-qol.CriticalSound.Name": "Critical Attack",
+    "midi-qol.FumbleSound.Name": "Fumbled Attack",
+    "midi-qol.DiceSounds.Hint": "Sound to play for differnt sorts of rolls. ONLY applies to merged card",
+
     "midi-qol.": ""
 }

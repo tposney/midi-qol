@@ -25,8 +25,8 @@ export class ConfigPanel extends FormApplication {
       autoCheckHitOptions: {none: "None", all: "Check - all see result", whisper: "Check - only GM sees"},
       clickOptions: {off: "Off", attack: "Attack Rolls Only", damage: "Damage Rolls Only", all: "Attack and Damage"},
       autoTargetOptions: {none: "None", always: "Always", wallsBlock: "Walls Block"},
-      autoCheckSavesOptions: {none: "None", all:  "Save - All see result", whisper: "Save - only GM sees", allShow: "Save - All see Result + Rolls"},
-      autoRollDamageOptions: {none: "None", always:  "Always", onHit: "Attack Hits"},
+      autoCheckSavesOptions: {none: "Off", all:  "Save - All see result", whisper: "Save - only GM sees", allShow: "Save - All see Result + Rolls"},
+      autoRollDamageOptions: {none: "Never", always:  "Always", onHit: "Attack Hits"},
       criticalDamage,
       addChatDamageButtons,
       autoApplyDamageOptions: {none: "No", yes: "Yes", yesCard: "Yes + undo damage card"},
@@ -37,6 +37,7 @@ export class ConfigPanel extends FormApplication {
       coloredBorders,
       checkBetterRolls,
       playerRollSavesOptions: {none: "None",  letme: "Let Me Roll That For You", letmeQuery: "LMRTFY + Querey", chat: "Chat Message"},
+      rollSoundOptions: CONFIG.sounds
     }
   }
 
