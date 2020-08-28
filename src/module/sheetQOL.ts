@@ -1,6 +1,6 @@
 import { itemDeleteCheck, itemRollButtons } from "./settings";
 import { i18n, debug, log, warn } from "../midi-qol";
-import { Workflow } from "./workflow";
+import { Workflow, noKeySet, shiftOnlyEvent } from "./workflow";
 
 
 let knownSheets = {
@@ -132,11 +132,12 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
               ev.preventDefault();
               ev.stopPropagation();
               debug("roll handler ", ev.target.dataset.action);
-              let event = {shiftKey: ev.shiftKey, crtilKey: ev.ctrlKey, metaKey: ev.metaKey, altKey: ev.altKey};
+              let event = {shiftKey: ev.shiftKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, altKey: ev.altKey};
               // If speed rolls are off
               switch (ev.target.dataset.action) {
                   case "attack":
-                      await item.rollAttack({ event });
+                    console.warn("Inside roll attack button ", event)
+                      await item.rollAttack({ event, versatile: false });
                       break;
                   case "versatileAttack":
                       await item.rollAttack({ event, versatile: true });

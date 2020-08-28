@@ -1,3 +1,26 @@
+## 0.2.6
+* Now requires foundry dnd 0.9.6 or later
+* Damage buttons for combo card. Significant update to the undo damage card. You can have the card displayed even if damage is not applied, which gives details of all the hit targets and the damage to be applied. There are now 6 buttons per target, reverse and apply the computed damage which sets the hit points/temp hit points before/after the damage. Then the four normal buttons for each target. These buttons apply directly to the appropriate token, no need to select the target to apply damage. Works for GM only but since players cant apply damage to most tokens it should not matter.
+* Users can choose their own sounds via file picker for normal attacks, criticals and fumbles. (Meerge Card Only)
+* Added option to remove item description from the chat card. This is in addition/instead of the system setting to hide the item description.
+* Added an option to hide saving throw DC on chat cards and requests to players to save. For DMs who want a sense of mystery. (Merge Card)
+* Added damage types to damage roll display (combo card) instead of the useless heading "Damage".
+* A hack that should allow ctl/alt keyboard settings (if speed rolls enabled) to be carried through to the damage roll of a cast spell.
+* A little bit of fiddling with the display of the combo card and the config card.
+* Removed "Item Macros use Speed Rolls" setting since midi-qol uses standard dnd5e hotbar macros. If speed item rolls is enabled the macro will pass the event through.
+* Speed Item rolls is now a check box, since the Item Card will be shown when it needs to be. In the case that you use full auto and not the combo card you will also get an item card, where you would not before.
+* Fixed? an incompatibility with CUB 1.2. With CUB 1.2 if you display token names CUB will not hide those via it's hide names setting.
+
+Bug Fixes
+* Fix "Add chat damage buttons" setting being ignored. This has moved from the config settings tab to the main settings, since it can be used even if not using midi-qol to do the rolls.
+* Added a fix for trying to use an item which has run out of ammunition. Previously the roll would go ahead and and error to console. Because of the way that dnd5e works with ammo consumption (it is not checked until the attack is rolled) you will get an item card displayed, a warning when you try to roll the attack and the workflow will abort. With spells, if you do not have enough spell slots nothing will be sent to chat.
+* Fix a bug in timed out saving throws causing an error.
+
+Known Bugs/Lackings
+There is a problem with firefox and picking up the keyboard/mouse event in some cases. 
+Dice-so-nice not supported in combo card
+Some user have a problem with using Mess and template placement.
+
 ## 0.2.5
 * play dice roll sound for combo card - not supported for better rolls or non-combo card. There were no sounds played when the combo card was displayed, since there is no roll rendered to chat. So, add back the dice sounds. Since we have to play it in the module, support different sounds for dice, critical and fumble. Next pass will create a config panel to add your own.
 * added new button, auto roll attack. This will cause the attack roll to be initiated, and auto fast forward is respected.  

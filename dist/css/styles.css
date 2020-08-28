@@ -52,9 +52,9 @@
 }
 .midi-qol-nobox {
   padding: 5px;
-  border-bottom: 2px groove #eeede0;
-
+  border-top: 2px groove #eeede0;
 }
+
 .midi-qol-faint {
   color: #606060;
 }

@@ -3,7 +3,6 @@ import { ConfigPanel} from "./apps/ConfigPanel"
 
 export var itemRollButtons: boolean;
 export var criticalDamage: string;
-export var macroSpeedRolls: string;
 export var itemDeleteCheck: boolean;
 export var nsaFlag: boolean;
 export var coloredBorders: string;
@@ -13,13 +12,15 @@ export var saveTimeouts = {};
 export var addChatDamageButtons: boolean;
 
 export var configSettings = {
-  speedItemRolls: "off",
+  speedItemRolls: false,
+  showItemDetails: false,
   autoRollAttack: false,
   autoFastForward: "off",
   autoTarget: "none",
   autoCheckHit: "none",
   autoRemoveTargets: "",
   autoCheckSaves: "none",
+  displaySaveDC: true,
   checkSaveText: null,
   autoRollDamage: "none",
   autoApplyDamage: "none",
@@ -34,25 +35,26 @@ export var configSettings = {
   hideNPCNames: "",
   useTokenNames: false,
   requireTargets: false,
-  fumbleSound: "dice",
-  diceSound: "dice",
-  criticalSound: "dice",
+  fumbleSound: "sounds/dice.wav",
+  diceSound: "sounds/dice.wav",
+  criticalSound: "sounds/dice.wav",
   fullAuto: false
 };
 
 export let fetchParams = (silent = false) => {
   debug("Fetch Params Loading");
   configSettings = game.settings.get("midi-qol", "ConfigSettings");
-  if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["midi-qol.fumble"];
+  if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["dice"];
+  if (!configSettings.criticalSound) configSettings.criticalSound = CONFIG.sounds["dice"];
+  if (!configSettings.diceSound) configSettings.diceSound = CONFIG.sounds["dice"];
+
   warn("Fetch Params Loading", configSettings);
-  macroSpeedRolls = game.settings.get("midi-qol", "MacroSpeedRolls");
   criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
   itemDeleteCheck = game.settings.get("midi-qol", "ItemDeleteCheck");
   nsaFlag = game.settings.get("midi-qol", "showGM");
   coloredBorders = game.settings.get("midi-qol", "ColoredBorders");
   itemRollButtons = game.settings.get("midi-qol", "ItemRollButtons");
   addChatDamageButtons = game.settings.get("midi-qol", "AddChatDamageButtons")
-  debug("FetchParams ", configSettings.speedItemRolls, configSettings.autoFastForward, configSettings.autoRollDamage, configSettings.autoCheckHit)
   let debugText = game.settings.get("midi-qol", "Debug");
   setDebugLevel(debugText);
 }
@@ -98,7 +100,7 @@ const settings = [
     scope: "world",
     default: true,
     type: Boolean,
-    config: false,
+    config: true,
     onChange: fetchParams
   },
   {
@@ -115,13 +117,6 @@ const settings = [
     default: true,
     type: Boolean,
     config: false,
-    onChange: fetchParams
-  },
-  {
-    name: "MacroSpeedRolls",
-    scope: "world",
-    default: true,
-    type: Boolean,
     onChange: fetchParams
   },
   {
@@ -161,6 +156,7 @@ const settings = [
     name: "ConfigSettings",
     scope: "world",
     type: Object,
+    default: configSettings,
     onChange: fetchParams,
     config: false
   }
@@ -183,7 +179,6 @@ export const registerSettings = function() {
     };
     //@ts-ignore
     if (setting.choices) options.choices = setting.choices;
-    console.log("setting name ", setting.name, options)
     game.settings.register("midi-qol", setting.name, options);
   });
 

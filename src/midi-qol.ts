@@ -61,7 +61,7 @@ Hooks.once('init', async function() {
   fetchParams();
 	
 	// Preload Handlebars templates
-  await preloadTemplates();
+  preloadTemplates();
   initHooks();
   initPatching();
 

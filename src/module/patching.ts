@@ -18,7 +18,7 @@ export const rollMappings = {
   "applyDamage": {roll: Actor5e.prototype.applyDamage, class: Actor5e}
 }
 
-const oldItemRoll = Item5e.prototype.roll;
+export const oldItemRoll = Item5e.prototype.roll;
 const oldItemRollAttack = Item5e.prototype.rollAttack;
 const oldItemRollDamage = Item5e.prototype.rollDamage;
 const oldActorUseSpell = Actor5e.prototype.useSpell;
@@ -34,6 +34,7 @@ async function doUseSpell(item, ...args) {
     warn(`${game.username} attempted to roll with no targets selected`)
     return;
   }
+  Workflow.eventHack = event;
   oldActorUseSpell.bind(this)(item, ...args)
 }
 
@@ -110,7 +111,7 @@ export let readyPatching = () => {
   let ItemClass = CONFIG.Item.entityClass;
   let ActorClass = CONFIG.Actor.entityClass;
 
-  ["itemRoll", "itemAttack", "itemDamage", "useSpell"].forEach(rollId => {
+  ["itemAttack", "itemDamage", "useSpell"].forEach(rollId => {
     log("Pathcing ", rollId, rollMappings[rollId]);
     let rollMapping = rollMappings[rollId];
     // rollMapping.roll = rollMapping.class.prototype[rollMapping.methodName];
@@ -119,6 +120,7 @@ export let readyPatching = () => {
     })
   });
   debug("After patching roll mappings are ", rollMappings)
+  Item5e.prototype.roll = doItemRoll;
 
   CONFIG.DND5E.weaponProperties["mgc"] = "Magical";
   // create({src, preload=false, autoplay=false, volume=0.0, loop=false} = {}) {

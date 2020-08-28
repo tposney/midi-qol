@@ -1,18 +1,20 @@
 <div>
-<div class="midi-qol-bigger-text"><span>{{noDamage}}</span></div>
-  {{#each saves as |save iid|}}
-  <div class="midi-qol-flex-container">
-    {{#if isPC}}
-    <div class="midi-qol-target-name" id={{save.id}}> {{save.name}}</div>
-    {{else}}
-    <div class="midi-qol-target-npc midi-qol-target-name" id={{save.id}}> {{save.name}}</div>
-    {{/if}}
-    <div>
-      {{save.saveString}}
-      {{save.rollTotal}}
-      {{adv}}
+  <div class="midi-qol-nobox">
+  <div class="midi-qol-bigger-text"><span>{{noDamage}}</span></div>
+    {{#each saves as |save iid|}}
+    <div class="midi-qol-flex-container">
+      {{#if isPC}}
+      <div class="midi-qol-target-name" id={{save.id}}> {{save.name}}</div>
+      {{else}}
+      <div class="midi-qol-target-npc midi-qol-target-name" id={{save.id}}> {{save.name}}</div>
+      {{/if}}
+      <div>
+        {{save.saveString}}
+        {{save.rollTotal}}
+        {{adv}}
+      </div>
+      <div><img src="{{save.img}}" height="30" style="border:0px"></div>
     </div>
-    <div><img src="{{save.img}}" height="30" style="border:0px"></div>
+    {{/each}}
   </div>
-  {{/each}}
 </div>

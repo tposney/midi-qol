@@ -1,5 +1,6 @@
 import { warn, error } from "../midi-qol";
-import { processpreCreateAttackRollMessage, processpreCreateDamageRollMessage, processpreCerateSaveRollMessaage, processpreCreateBetterRollsMessage, processcreateAttackRoll, processcreateDamageRoll, processcreateSaveRoll, processUndoDamageCard, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, processPreCreateDamageRoll, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer } from "./chatMesssageHandling";
+import { processpreCreateAttackRollMessage, processpreCreateDamageRollMessage, processpreCerateSaveRollMessaage, processpreCreateBetterRollsMessage, processcreateAttackRoll, processcreateDamageRoll, processcreateSaveRoll, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, processPreCreateDamageRoll, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer } from "./chatMesssageHandling";
+import { processUndoDamageCard } from "./GMAction";
 
 export let initHooks = () => {
   warn("Init Hooks processing");
@@ -7,6 +8,7 @@ export let initHooks = () => {
     // debug("preCreateChatMessage entering", data, options, user)
     processpreCreateBetterRollsMessage(data, options, user);
     processPreCreateDamageRoll(data, options);
+
 
     return true;
     warn("pre create message hook ", data, options)
@@ -36,14 +38,13 @@ export let initHooks = () => {
 
   Hooks.on("renderChatMessage", (message, html, data) => {
     //debug("render message hook ", message, html, data);
+    mergeCardSoundPlayer(message, html, data);
     hideStuffHandler(message, html, data);
     processUndoDamageCard(message, html, data);
     diceSoNiceHandler(message, html, data);
     colorChatMessageHandler(message, html, data);
     nsaMessageHandler(message, html, data);
     chatDamageButtons(message, html, data);
-    mergeCardSoundPlayer(message, html, data);
-
   })
 
 

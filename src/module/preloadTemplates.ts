@@ -4,7 +4,10 @@ export const preloadTemplates = async function() {
     "modules/midi-qol/templates/saves.html",
     "modules/midi-qol/templates/hits.html",
     "modules/midi-qol/templates/item-card.html",
-    "modules/midi-qol/templates/tool-card.html"
+    "modules/midi-qol/templates/tool-card.html",
+    "modules/midi-qol/templates/config.html",
+    "modules/midi-qol/templates/damage-results.html"
+    
   ];
 	return loadTemplates(templatePaths);
 }

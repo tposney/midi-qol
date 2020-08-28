@@ -1,4 +1,4 @@
-import { debug, log, warn, undoDamageText, i18n, error } from "../midi-qol";
+import { debug, log, warn, i18n, error } from "../midi-qol";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
@@ -7,29 +7,11 @@ import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES, DamageOnlyWorkflow, getTraitMult, calculateDamage, createDamageList } from "./workflow";
 import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings } from "./settings";
 
-export let processUndoDamageCard = async(message, html, data) => {
-  if (!message?.data?.flavor || !game.user.isGM || !message.data.flavor.startsWith(undoDamageText)) {
-    return true;
-  }
-  message.data.flags["midi-qol"] && message.data.flags["midi-qol"].forEach(({tokenID, oldTempHP, oldHP}) => {
-    let token = canvas.tokens.get(tokenID);
-    if (!token) {
-      log(`Token ${tokenID} not found`);
-      return;
-    }
-    let button = html.find(`#${tokenID}`);
-    button.click(async (ev) => {
-      log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
-      let actor = canvas.tokens.get(tokenID).actor;
-      await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP });
-      ev.stopPropagation();
-    });
-  })
-}
+
 
 export function mergeCardSoundPlayer(message, html, data) {
-  // warn("Merge card sound player ", getProperty(message.data, "flags.midi-qol.playSound"), message.data.sound)
-  if (getProperty(message.data, "flags.midi-qol.playSound") && message.data.sound) {
+  debug("Merge card sound player ", message.data, getProperty(message.data, "flags.midiqol.playSound"), message.data.sound)
+  if (getProperty(message.data, "flags.midiqol.playSound") && message.data.sound) {
       //@ts-ignore
       AudioHelper.play({src: message.data.sound}, false);
   }
@@ -59,7 +41,7 @@ export function processcreateSaveRoll(message, options, user) {
 
 
 export function processcreateBetterRollMessage(message, options, user) {
-  let flags = message.data?.flags && message.data.flags["midi-qol"];
+  let flags = message.data.flags?.midiqol;
   if (!flags?.id) return;
   let workflow: BetterRollsWorkflow = BetterRollsWorkflow.get(flags.id);
   debug("process better rolls card", flags?.id, message, workflow, workflow.betterRollsHookId);
@@ -152,16 +134,15 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
   workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
   workflow.itemLevel = itemLevel;
   workflow.itemCardData = data;
-  if (!data.flags) data.flags = {"midi-qol": {}};
-  data.flags["midi-qol"].id = item.uuid;
+  setProperty(data, "flags.midiqol.id", item.uuid)
 //  workflow.next(WORKFLOWSTATES.NONE);
   return true;
 }
 
 export let diceSoNiceHandler = (message, html, data) => {
-  if (installedModules.get("dice-so-nice") && getProperty(message.data.flags, "midi-qol.waitForDiceSoNice")) {
+  if (installedModules.get("dice-so-nice") && getProperty(message.data.flags, "midiqol.waitForDiceSoNice")) {
     if (configSettings.mergeCard) {
-      let hideTag = getProperty(message.data, "flags.midi-qol.hideTag")
+      let hideTag = getProperty(message.data, "flags.midiqol.hideTag")
         html.find(hideTag).hide();
         Hooks.once("diceSoNiceRollComplete", (id) => {
           html.find(hideTag).show(); 
@@ -373,7 +354,7 @@ export let processBetterRollsChatCard = (message, html, data) => {
 }
 
 export let chatDamageButtons = (message, html, data) => {
-  warn("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll.type)
+  debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll.type)
   if (!addChatDamageButtons) return true;
   if (message.data.flags?.dnd5e?.roll.type !== "damage") return true;
   const itemId = message.data.flags.dnd5e.roll.itemId;

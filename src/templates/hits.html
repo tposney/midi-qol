@@ -1,18 +1,20 @@
 <div>
   {{#unless oneCard}}
-    <div>{{attackType}}</div>
+  <div>{{attackType}}</div>
   {{/unless}}
-  {{#each hits as |hit iid|}}
+  <div class="midi-qol-nobox">
+    {{#each hits as |hit iid|}}
     <div class="midi-qol-flex-container">
       <div>
         {{hit.hitString}}
       </div>
-        {{#if isPC}} 
-        <div class="midi-qol-target-name" id={{hit.target.id}}> {{hit.target.name}}</div> 
+      {{#if isPC}}
+      <div class="midi-qol-target-name" id={{hit.target.id}}> {{hit.target.name}}</div>
       {{else}}
-        <div class="midi-qol-target-npc midi-qol-target-name" id={{hit.target.id}}> {{hit.target.name}}</div> 
+      <div class="midi-qol-target-npc midi-qol-target-name" id={{hit.target.id}}> {{hit.target.name}}</div>
       {{/if}}
-      <div><img src= "{{hit.img}}" width="30" height="30" style="border:0px"/></div>
+      <div><img src="{{hit.img}}" width="30" height="30" style="border:0px" /></div>
     </div>
-  {{/each}}
+    {{/each}}
+  </div>
 </div>
