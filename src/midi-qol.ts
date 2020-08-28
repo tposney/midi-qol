@@ -14,7 +14,7 @@
 import { registerSettings, fetchParams } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { setupModules } from './module/setupModules.js';
-import { readyPatching, initPatching } from './module/patching.js';
+import { itemPatching, visionPatching, setupPatching } from './module/patching.js';
 import { initHooks } from './module/Hooks.js';
 import { initGMActionSetup } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
@@ -53,7 +53,7 @@ export let cleanSpellName = (name) => {
 /* ------------------------------------ */
 Hooks.once('init', async function() {
 	console.log('midi-qol | Initializing midi-qol');
-
+  initHooks();
 	// Assign custom classes and constants here
 	
 	// Register custom module settings
@@ -62,8 +62,9 @@ Hooks.once('init', async function() {
 	
 	// Preload Handlebars templates
   preloadTemplates();
-  initHooks();
-  initPatching();
+  // Class patching
+  visionPatching();
+  itemPatching();
 
 	// Register custom sheets (if any)
 });
@@ -83,6 +84,7 @@ Hooks.once('setup', function() {
   noDamageSaves = i18n("midi-qol.noDamageonSaveSpells").map(name => cleanSpellName(name));
   setupSheetQol();
   setupMinorQolCompatibility()
+  setupPatching();
 }); 
 
 /* ------------------------------------ */
@@ -90,7 +92,6 @@ Hooks.once('setup', function() {
 /* ------------------------------------ */
 Hooks.once('ready', function() {
   // Do anything once the module is ready
-  readyPatching();
   //new ConfigPanel({},{}).render(true);
 
 });
@@ -111,6 +112,7 @@ function setupMinorQolCompatibility() {
   }
 }
 
+// Minor-qol compatibility patching
 function doRoll(event={shiftKey: false, ctrlKey: false, altKey: false, metaKey: false, type: "none"}, itemName, options = {type: "", versatile: false})
 {
   const speaker = ChatMessage.getSpeaker();

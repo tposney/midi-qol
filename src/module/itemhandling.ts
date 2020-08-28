@@ -112,20 +112,21 @@ export async function doItemRoll(options = {showFullCard: false}) {
   let speaker = ChatMessage.getSpeaker();
   let spellLevel = this.data.data.level; // we are called with the updated spell level so record it.
   let baseItem = this.actor.getOwnedItem(this.id);
-  let workflow: Workflow = new Workflow(this.actor, baseItem, speaker.token, speaker, pseudoEvent);
+  let workflow: Workflow = new Workflow(this.actor, baseItem, speaker.token || this.actor.token?._id, speaker, pseudoEvent);
   //@ts-ignore event .type not defined
   workflow.versatile = versatile;
   workflow.itemLevel = this.data.data.level;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = options.showFullCard;
   workflow.noAutoAttack = options.showFullCard;
-  let result = await oldItemRoll.bind(this)({configureDialog:true, rollMode:null, createMessage:false});
+  // let result = await oldItemRoll.bind(this)({configureDialog:true, rollMode:null, createMessage:false});
+  let result = await rollMappings.itemRoll.roll.bind(this)({configureDialog:true, rollMode:null, createMessage:false});
+
   if(!result) {
     //TODO find the right way to clean this up
     // Workflow.removeWorkflow(workflow.id);
     return;
   }
-  // var itemCard = await rollMappings.itemRoll.roll.bind(this)();
   const needAttckButton = !workflow.someEventKeySet() && !["all", "attack"].includes(configSettings.autoFastForward);
   workflow.showCard = configSettings.speedItemRolls || configSettings.mergeCard || (
                 (baseItem.isHealing && configSettings.autoRollDamage === "none")  || // not rolling damage
@@ -170,7 +171,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const template = `modules/midi-qol/templates/${templateType}-card.html`;
   const html = await renderTemplate(template, templateData);
 
-  debug(" Show Item Card ", configSettings.useTokenNames,(configSettings.useTokenNames && token) ? token.data.name : this.actor.name, token, token?.data.name, this.actor.name, ChatMessage.getSpeaker())
+  debug(" Show Item Card ", configSettings.useTokenNames,(configSettings.useTokenNames && token) ? token?.data?.name : this.actor.name, token, token?.data.name, this.actor.name, ChatMessage.getSpeaker())
   const chatData = {
     user: game.user._id,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
@@ -178,7 +179,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     speaker: {
       actor: this.actor._id,
       token: this.actor.token,
-      alias: configSettings.useTokenNames && workflow.token ? token.data.name : this.actor.name
+      alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name
     }
   };
   // Toggle default roll mode

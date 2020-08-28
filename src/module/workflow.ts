@@ -42,7 +42,7 @@ export class Workflow {
 
   event: {shiftKey: boolean, altKey: boolean, ctrlKey: boolean, metaKey: boolean, type: string};
   speaker: any;
-  token: Token;
+  tokenId: string;
   targets: Set<Token>;
   placeTemlateHookId: number;
 
@@ -103,10 +103,10 @@ export class Workflow {
     }
     this.actor = actor;
     this.item = item;
-    this.token = token;
+    this.tokenId = token || speaker.token;
     this.speaker = speaker;
     this.targets = (item?.data.data.target?.type === "self") ? getSelfTargetSet(actor) : new Set(game.user.targets);
-     this.saves = new Set();
+    this.saves = new Set();
     this.failedSaves = new Set(this.targets)
     this.hitTargets = new Set(this.targets);
     this.isCritical = false;
@@ -713,7 +713,7 @@ export class Workflow {
     this.hitDisplayData = [];
   
     if (item?.data.data.target?.type === "self") {
-      this.targets = new Set([canvas.tokens.get(this.token)]); //TODO check this is right
+      this.targets = new Set([canvas.tokens.get(this.tokenId)]); //TODO check this is right
       debug("Check hits - self target")
     } else for (let targetToken of this.targets) {
       isHit = false;

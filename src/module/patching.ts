@@ -78,7 +78,7 @@ function _isTokenVisionSource(token:Token) {
   return !others.length;
 }
 
-export let initPatching = () => {
+export let visionPatching = () => {
   if (isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")) {
     warn("midi-qol | Patching SightLayer.restrictVisibility")
     //@ts-ignore
@@ -98,20 +98,14 @@ export let initPatching = () => {
     //@ts-ignore
     SightLayer.prototype._isTokenVisionSource = _isTokenVisionSourceProxy;
   }
-  CONFIG.sounds["midi-qol.fail1"] ="./modules/midi-qol/sounds/fail1.wav";
-  CONFIG.sounds["midi-qol.fail2"] ="./modules/midi-qol/sounds/fail2.wav";
-  CONFIG.sounds["midi-qol.fail3"] ="./modules/midi-qol/sounds/fail3.ogg";
-  CONFIG.sounds["midi-qol.critical1"] ="./modules/midi-qol/sounds/success-drums.ogg";
-  CONFIG.sounds["midi-qol.critical2"] ="./modules/midi-qol/sounds/success.wav";
-  CONFIG.sounds["midi-qol.critical3"] ="./modules/midi-qol/sounds/good-results.ogg";
 }
 
-export let readyPatching = () => {
+export let itemPatching = () => {
 
   let ItemClass = CONFIG.Item.entityClass;
   let ActorClass = CONFIG.Actor.entityClass;
 
-  ["itemAttack", "itemDamage", "useSpell"].forEach(rollId => {
+  ["itemAttack", "itemDamage", "useSpell", "itemRoll"].forEach(rollId => {
     log("Pathcing ", rollId, rollMappings[rollId]);
     let rollMapping = rollMappings[rollId];
     // rollMapping.roll = rollMapping.class.prototype[rollMapping.methodName];
@@ -121,10 +115,8 @@ export let readyPatching = () => {
   });
   debug("After patching roll mappings are ", rollMappings)
   Item5e.prototype.roll = doItemRoll;
+}
 
+export let setupPatching = () => {
   CONFIG.DND5E.weaponProperties["mgc"] = "Magical";
-  // create({src, preload=false, autoplay=false, volume=0.0, loop=false} = {}) {
-
-  // AudioHelpler.create({src})
-
 }
