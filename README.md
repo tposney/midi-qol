@@ -11,29 +11,24 @@ Changes in midi-qol:
 * backwards compatibility for the minor-qol.doRoll function.
 * Lots more configuration options, accessed by a configuration screen.
 
-## v0.2.1
-* Fix a saving throw bug where the first player saving throw was hidden.
-* Fix a race condition that could case saving throw rolls to fail
-* Fix an innacurate identification of a damage only workflow.
-* Added the ability to set the token name text color OR background color when highlighting chat cards.
-* Fixed inability to set range targeting flag.
+## CUB and midi-qol
+If you have just upgraded CUB to 1.2 There is an incompatibility until CUB 1.2.1 is released.
+If this is your problem you will see an error (Uncaught in Promise) cannot read property 'data' of null in itemhandling.js.
+If you are adventurous you can change 
+line 143 in Data/modules/combat-utility-belt/hide-names/hide-npc-names.js 
+from
+```
+        const token = canvas.tokens.get(messageTokenId) ?? tokenData ? new Token(tokenData) : null;
+```
+to
+```
+        const token = canvas.tokens.get(messageTokenId) ?? (tokenData ? new Token(tokenData) : null);
+```
+and the problem should go away. I'm hoping that a fix for that will appear soon in CUB
 
-## v0.2.0 [BREAKING]
-* A big change to speed item rolls and auto shift click.  
-Speed item rolls now makes no changes to the character sheet, and does not need module suport to work with token bars/macro hot bar. Instead when it is enabled the mouse event is recorded when you do the roll. **The meaning of the keys have changed**:  
-  * ctrl = disadvantage attack
-  * alt = advantage attack
-  * shift means use versatile damage and ctrl/alt still work. I think this is a big improvement BUT **this is a change from both minor-qol and midi-qol. If it causes too much angst I will put back (as an option) the previous behaviour.**  
-* AutoShiftClick has been renamed to auto fast forward and applies for attack and damage rolls. When enabled, if a roll would normally produce a dialog a normal roll will be made for attack rolls that have not been "speed" rolled. Damage rolls will be normal or critical if the attack hit and if the option is not set the dialog will be displayed.  
-* Better rolls can now use the merge card.  
-* A Bug fix for a better rolls edge case when auto checking saves with players rolling saves but not using LMRTFY.  
-* Magic Items are now fully supported with speed rolls, advantage/disadvantage on magic item spells/feats and resource consumption works. The only oddity is when casting an area effect spell (.eg. fireball) the template is not automatically placed, but once placed everything works as expected.  
-* Fix for range target auto select config not working.
+## Changelog
+https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
 
-## v0.1.1
-Fixes a bug in better rolls spellcasting.
-Fixed a couple of localisation omissions.
-If you have merge cards on for better rolls the saving throw results are not displayed - diable merge card for better rolls.
 
 ## Technical Differences:
 * midi-qol does not use the creation of chat messages as the triggeer anymore, rather it hooks the standard item.roll, item.rollAttack, item.rollDamage.
@@ -61,10 +56,8 @@ If you have merge cards on for better rolls the saving throw results are not dis
 
 ## Bugs
 probably many however....
-* better rolls does not work with merged cards - yet.
 * add chat damage buttons does not work with merged cards - yet.
 * The combined card does not play nicely with dice-so-nice.
-* Speed item rolls and magic items do not update consumed charges correctly - use no speed item rolls for the moment.
 * Language translations are not up to date.
 * Unselect targets at end of turn not implemented yet.
 
