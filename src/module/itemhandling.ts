@@ -94,10 +94,6 @@ export async function doItemRoll(options = {showFullCard: false}) {
   let versatile = false;
   // if speed item rolls is on process the mouse event states
   if (configSettings.speedItemRolls) {
-    if (Workflow.eventHack) {
-      event = Workflow.eventHack;
-      Workflow.eventHack = null;
-    }
     //@ts-ignore
     pseudoEvent = { shiftKey: event?.shiftKey, ctrlKey: event?.ctrlKey, altKey : event?.altKey, metaKey: event?.metaKey, type: event.type};
     versatile = event?.type === "contextmenu" || (pseudoEvent.shiftKey);

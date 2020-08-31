@@ -34,7 +34,6 @@ async function doUseSpell(item, ...args) {
     warn(`${game.username} attempted to roll with no targets selected`)
     return;
   }
-  Workflow.eventHack = event;
   oldActorUseSpell.bind(this)(item, ...args)
 }
 
