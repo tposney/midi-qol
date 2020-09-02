@@ -56,8 +56,6 @@ https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
 
 ## Bugs
 probably many however....
-* add chat damage buttons does not work with merged cards - yet.
-* The combined card does not play nicely with dice-so-nice.
 * Language translations are not up to date.
 * Unselect targets at end of turn not implemented yet.
 

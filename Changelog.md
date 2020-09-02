@@ -1,6 +1,6 @@
 # 0.2.7
-* Addeds support for dice so nice and combo card.
-* Added damage buttons to the combo card damage roll. These duplicate the better rolls 5e hover in/out behaviour. Buttons on the combo card and damage card require a target to be selected (useful if not displaying damgte application card). Buttons on the apply damage card apply to the targeted token(s), since there is one button per target.
+* Added support for dice so nice and combo card.
+* Added damage buttons to the combo card damage roll. These duplicate the better rolls 5e hover in/out behaviour. Buttons on the combo card and damage card require a target to be selected (useful if not displaying damage application card). Buttons on the apply damage card apply to the targeted token(s), since there is one button per target.
 * Always display the item icon in the combo card since it takes up no more room.
 * Fix edge case where item card not displayed for items with no effects.
 * Added DamageOnlyWorkflow(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token])  
@@ -8,7 +8,7 @@ Useful for writing macros that have custom damage effects. E.g. Divine Smite tha
 * Added auto fast forward for ability saves/checks option, if speed item rolls enabled. Treat ability saves/checks as if Shift was pressed.
 * Corrected icons on damage card, which were all the same.
 * Corrected incompatibility with MagicItems and speed rolls. If you attempted to speed roll a magic item (i.e. roll the staff attack for a Staff of the Woodlands) the speed item keys would not be passed through, this has been fixed.
-* Allow selective removal of item details, to allow showing of PC tiem descriptions but to hide NPC item descriptions also allow force display of item card. DIsplay an item card if nothing else was being displayed when rolling and item (e.g. no attacks/saves/damage).
+* Allow selective removal of item details, to allow showing of PC tiem descriptions but to hide NPC item descriptions also allow force display of item card. Display an item card if nothing else was being displayed when rolling and item (e.g. no attacks/saves/damage).
 * Setting to hide the DC of a saving throw from players in chat cards, chat message prompts and LMRTFY requests.
 * Fixed regression that caused speed rolls to get stuck on spell cast (hot fixed to 0.2.6)
 * Return a promise resolving to the result of item.roll() as the result of actor.useSpell()
