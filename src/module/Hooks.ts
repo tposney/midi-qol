@@ -1,11 +1,11 @@
-import { warn, error } from "../midi-qol";
-import { processpreCreateAttackRollMessage, processpreCreateDamageRollMessage, processpreCerateSaveRollMessaage, processpreCreateBetterRollsMessage, processcreateAttackRoll, processcreateDamageRoll, processcreateSaveRoll, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, processPreCreateDamageRoll, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer } from "./chatMesssageHandling";
+import { warn, error, debug } from "../midi-qol";
+import { processpreCreateAttackRollMessage, processpreCreateDamageRollMessage, processpreCerateSaveRollMessaage, processpreCreateBetterRollsMessage, processcreateAttackRoll, processcreateDamageRoll, processcreateSaveRoll, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, processPreCreateDamageRoll, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, diceSoNiceUpdateMessge } from "./chatMesssageHandling";
 import { processUndoDamageCard } from "./GMAction";
 
 export let initHooks = () => {
   warn("Init Hooks processing");
   Hooks.on("preCreateChatMessage", (data, options, user) => {
-    // debug("preCreateChatMessage entering", data, options, user)
+    debug("preCreateChatMessage entering", data, options, user)
     processpreCreateBetterRollsMessage(data, options, user);
     processPreCreateDamageRoll(data, options);
 
@@ -19,6 +19,7 @@ export let initHooks = () => {
   })
 
   Hooks.on("createChatMessage", (message, options, user) => {
+    debug("Create Chat Meesage ", message.id, message, options, user)
     processcreateBetterRollMessage(message, options, user);
     return true;
     warn("create message hook ", message, options, user)
@@ -31,22 +32,20 @@ export let initHooks = () => {
     return true;
   })
   
-  Hooks.on("updateChatMessage", () => {
-    // @ts-ignore
-    ui.chat.scrollBottom();
+  Hooks.on("updateChatMessage", (message, update, ...args) => {
+    diceSoNiceUpdateMessge(message, update, ...args)
   })
 
   Hooks.on("renderChatMessage", (message, html, data) => {
-    //debug("render message hook ", message, html, data);
+    debug("render message hook ", message.id, message, html, data);
     mergeCardSoundPlayer(message, html, data);
     hideStuffHandler(message, html, data);
+    chatDamageButtons(message, html, data);
     processUndoDamageCard(message, html, data);
     diceSoNiceHandler(message, html, data);
     colorChatMessageHandler(message, html, data);
     nsaMessageHandler(message, html, data);
-    chatDamageButtons(message, html, data);
   })
-
 
   // setup for rendering actor sheets
 }

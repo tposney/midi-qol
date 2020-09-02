@@ -9,12 +9,20 @@
       {{localize "midi-qol.SpeedItemRolls.Hint"}}
 
       <div class="midi-qol-box">
-        <div class="form-group">
+
+        <div class="form-group showItemDetails">
           <label>{{localize "midi-qol.ShowItemDetails.Name"}}</label>
-          <input type="checkbox" name="showItemDetails" data-dtype="Boolean"
-            {{checked configSettings.showItemDetails}} />
+          <select name="showItemDetails" data-dtype="String">
+            {{#select configSettings.showItemDetails}}
+            {{#each showItemDetailsOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
         </div>
-        <div class="midi-qol-faint">{{localize "midi-qol.ShowItemDetails.Hint"}}></div>
+        <div class="midi-qol-faint">{{localize "midi-qol.ShowItemDetails.Hint"}}</div>
+
+
         <div class="form-group">
           <label>{{localize "midi-qol.MergeCard.Name"}}</label>
           <input type="checkbox" name="mergeCard" data-dtype="Boolean" {{checked configSettings.mergeCard}} />
@@ -195,7 +203,18 @@
             </div>
             <div class="midi-qol-faint">{{localize "midi-qol.AutoEffects.Hint"}}</div>
           </div>
+
           <div class="midi-qol-nobox">
+            {{#if false}}
+            <div class="form-group useMaestroSounds">
+              <label>{{localize "midi-qol.UseMaestroSounds.Name"}}</label>
+              <input id="useMaestroSounds" type="checkbox" name="useMaestroSounds" data-dtype="Boolean"
+                {{checked configSettings.useMaestroSounds}} />
+            </div>
+            <div class="midi-qol-faint">{{localize "midi-qol.UseMaestroSounds.Hint"}}</div>
+            {{/if}}
+
+            {{#unless configSettings.useMaestroSounds}}
             {{localize "midi-qol.DiceSounds.Hint"}}
             <div class="form-group">
               <label>{{localize "midi-qol.DiceSound.Name"}}</label>
@@ -215,6 +234,7 @@
               <input class="String" type="audio" name="criticalSound" placeholder="{{configSettings.criticalSound}}"
                 value="{{configSettings.criticalSound}}" />
             </div>
+            {{/unless}}
           </div>
         </div>
     </section>

@@ -3,10 +3,10 @@ import Item5e from "../../../systems/dnd5e/module/item/entity.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js";
 
-import { log, warn, debug, i18n } from "../midi-qol";
-import { Workflow } from "./workflow";
+import { log, warn, debug, i18n, error } from "../midi-qol";
+import { Workflow, noKeySet } from "./workflow";
 import { doItemRoll, doAttackRoll, doDamageRoll } from "./itemhandling";
-import { configSettings } from "./settings.js";
+import { configSettings, autoFastForwardAbilityRolls } from "./settings.js";
 
 
 export const rollMappings = {
@@ -18,7 +18,7 @@ export const rollMappings = {
   "applyDamage": {roll: Actor5e.prototype.applyDamage, class: Actor5e}
 }
 
-export const oldItemRoll = Item5e.prototype.roll;
+const oldItemRoll = Item5e.prototype.roll;
 const oldItemRollAttack = Item5e.prototype.rollAttack;
 const oldItemRollDamage = Item5e.prototype.rollDamage;
 const oldActorUseSpell = Actor5e.prototype.useSpell;
@@ -34,14 +34,13 @@ async function doUseSpell(item, ...args) {
     warn(`${game.username} attempted to roll with no targets selected`)
     return;
   }
-  oldActorUseSpell.bind(this)(item, ...args)
+  return oldActorUseSpell.bind(this)(item, ...args)
 }
 
 function restrictVisibility() {
   // Tokens
   for ( let t of canvas.tokens.placeables ) {
     // ** TP  t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible;
-
     t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible || t.actor?.hasPerm(game.user, "OWNER");
   }
 
@@ -77,6 +76,25 @@ function _isTokenVisionSource(token:Token) {
   return !others.length;
 }
 
+const oldRollAbilitySave = Actor5e.prototype.rollAbilitySave;
+const oldRollAbilityTest = Actor5e.prototype.rollAbilityTest;
+
+function doAbilityRoll(func, abilityId, options={event}) {
+  warn("roll ", options)
+  if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
+    //@ts-ignore
+    options.event = mergeObject(options.event, {shiftKey: true}, {overwrite: true, inplace: true})
+  }
+  return func.bind(this)(abilityId, options)
+}
+function rollAbilityTest(abilityId, options={event: {}})  {
+   return doAbilityRoll.bind(this)(oldRollAbilityTest, abilityId, options)
+}
+
+function rollAbilitySave(abilityId, options={event: {}})  {
+  return doAbilityRoll.bind(this)(oldRollAbilitySave, abilityId, options)
+}
+
 export let visionPatching = () => {
   if (isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")) {
     warn("midi-qol | Patching SightLayer.restrictVisibility")
@@ -107,15 +125,16 @@ export let itemPatching = () => {
   ["itemAttack", "itemDamage", "useSpell", "itemRoll"].forEach(rollId => {
     log("Pathcing ", rollId, rollMappings[rollId]);
     let rollMapping = rollMappings[rollId];
-    // rollMapping.roll = rollMapping.class.prototype[rollMapping.methodName];
+    rollMapping.roll = rollMapping.class.prototype[rollMapping.methodName];
     rollMapping.class.prototype[rollMapping.methodName] = new Proxy(rollMapping.roll, {
             apply: (target, thisValue, args) => rollMapping.replacement.bind(thisValue)(...args)
     })
   });
   debug("After patching roll mappings are ", rollMappings)
-  Item5e.prototype.roll = doItemRoll;
 }
 
 export let setupPatching = () => {
+  Actor5e.prototype.rollAbilitySave = rollAbilitySave;
+  Actor5e.prototype.rollAbilityTest = rollAbilityTest;
   CONFIG.DND5E.weaponProperties["mgc"] = "Magical";
 }

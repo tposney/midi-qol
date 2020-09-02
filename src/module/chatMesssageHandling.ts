@@ -1,4 +1,4 @@
-import { debug, log, warn, i18n, error } from "../midi-qol";
+import { debug, log, warn, i18n, error, MESSAGETYPES } from "../midi-qol";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
@@ -10,8 +10,8 @@ import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, ch
 
 
 export function mergeCardSoundPlayer(message, html, data) {
-  debug("Merge card sound player ", message.data, getProperty(message.data, "flags.midiqol.playSound"), message.data.sound)
-  if (getProperty(message.data, "flags.midiqol.playSound") && message.data.sound) {
+  debug("Merge card sound player ", message.data, getProperty(message.data, "flags.midi-qol.playSound"), message.data.sound)
+  if (getProperty(message.data, "flags.midi-qol.playSound") && message.data.sound) {
       //@ts-ignore
       AudioHelper.play({src: message.data.sound}, false);
   }
@@ -41,7 +41,7 @@ export function processcreateSaveRoll(message, options, user) {
 
 
 export function processcreateBetterRollMessage(message, options, user) {
-  let flags = message.data.flags?.midiqol;
+  let flags = message.data.flags["midi-qol"];
   if (!flags?.id) return;
   let workflow: BetterRollsWorkflow = BetterRollsWorkflow.get(flags.id);
   debug("process better rolls card", flags?.id, message, workflow, workflow.betterRollsHookId);
@@ -134,39 +134,75 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
   workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
   workflow.itemLevel = itemLevel;
   workflow.itemCardData = data;
-  setProperty(data, "flags.midiqol.id", item.uuid)
+  setProperty(data, "flags.midi-qol.id", item.uuid)
 //  workflow.next(WORKFLOWSTATES.NONE);
   return true;
 }
 
-export let diceSoNiceHandler = (message, html, data) => {
-  if (installedModules.get("dice-so-nice") && getProperty(message.data.flags, "midiqol.waitForDiceSoNice")) {
-    if (configSettings.mergeCard) {
-      let hideTag = getProperty(message.data, "flags.midiqol.hideTag")
-        html.find(hideTag).hide();
-        Hooks.once("diceSoNiceRollComplete", (id) => {
-          html.find(hideTag).show(); 
-          //@ts-ignore
-          ui.chat.scrollBottom()
-        });
-        setTimeout(() => {
-          html.find(hideTag).show(); 
-          //@ts-ignore
-          ui.chat.scrollBottom()
-        }, 3000); // backup display of messages
-    } else {
-      html.hide();
-      Hooks.once("diceSoNiceRollComplete", (id) => {
-        html.show(); 
-        //@ts-ignore
-        ui.chat.scrollBottom()
-      });
-      setTimeout(() => {
-        html.show(); 
-        //@ts-ignore
-        ui.chat.scrollBottom()
-      }, 3000); // backup display of messages
+var DSNHandlers;
+export function initializeDSNHandler() {
+  DSNHandlers = new Map();
+  Hooks.on("diceSoNiceRollComplete", (id) => {
+    const handler = DSNHandlers.get(id);
+    if (handler) {
+      handler(id);
+      DSNHandlers.delete(id)
     }
+  });
+}
+
+
+export function diceSoNiceUpdateMessge(message, update, ...args) {
+  if (!game.dice3d || !getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
+  const type = getProperty(update, "flags.midi-qol.type")
+  if (![MESSAGETYPES.ATTACK, MESSAGETYPES.DAMAGE].includes(type)) return;
+  const displayId = duplicate(message.data.flags["midi-qol"].displayId)
+  game.dice3d.showForRoll(Roll.fromJSON(message.data.flags["midi-qol"].roll), message.user).then(displayed => {
+    delete message._dice3danimating;
+    Hooks.callAll("diceSoNiceRollComplete", displayId);
+    //@ts-ignore
+    ui.chat.scrollBottom();
+  });
+}
+let showHandler = (hideTags, displayId, html, header, id) => {
+  debug(header, hideTags, displayId, html, id)
+  error(header, hideTags, displayId, html, id)
+
+  if (id !== displayId) return;
+  if (hideTags) hideTags.forEach(hideTag => html.find(hideTag).show()); 
+  //@ts-ignore
+  ui.chat.scrollBottom()
+};
+
+export let diceSoNiceHandler = async (message, html, data) => {
+  debug("Dice so nice handler ", message, html, data);
+  if (!game.dice3d || !installedModules.get("dice-so-nice") || game.dice3d.messageHookDisabled || !game.dice3d.isEnabled()) return;
+  if (configSettings.mergeCard) {
+
+    if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
+    const type = message.data.flags["midi-qol"].type;
+    
+    if (type === undefined) return;
+    const hideTags = message.data.flags["midi-qol"].hideTag;
+    const displayId = message.data.flags["midi-qol"].displayId;
+    warn("dicesonice render chat handler ", type, hideTags, data, message, displayId)
+    if (hideTags) hideTags.forEach(hideTag => html.find(hideTag).hide());
+    DSNHandlers.set(displayId, showHandler.bind(this, duplicate(hideTags), duplicate(displayId), html, "dice so nice complete handler "))
+    setTimeout(showHandler.bind(this, duplicate(hideTags), duplicate(displayId), html, "dice so nice timeout handler ", duplicate(displayId)), 5000); // backup display of messages
+  } else {
+    if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
+    debug("dice so nice handler - non-merge card", html)
+    html.hide();
+    Hooks.once("diceSoNiceRollComplete", (id) => {
+      html.show(); 
+      //@ts-ignore
+      ui.chat.scrollBottom()
+    });
+    setTimeout(() => {
+      html.show(); 
+      //@ts-ignore
+      ui.chat.scrollBottom()
+    }, 3000); // backup display of messages
   }
   return true;
 }
@@ -245,7 +281,7 @@ let _onTargetSelect = (event) => {
 };
 
 export let hideStuffHandler = (message, html, data) => {
-  debug("hide info handler message: ", message)
+  debug("hide info handler message: ", message.id, message)
   let ids = html.find(".midi-qol-target-name")
   // let buttonTargets = html.getElementsByClassName("minor-qol-target-npc");
   ids.hover(_onTargetHover, _onTargetHoverOut)
@@ -326,11 +362,6 @@ export let processPreCreateDamageRoll = (data, ...args) => {
           data.content = `${rollBase.total}`;
         }
       }
-    } else { // have a damage roll without an item
-      return true;
-      warn("damage roll without item detected ", data.flags.dnd5e.roll.flavor)
-      let wf = new DamageOnlyWorkflow(actor, token, data.speaker, parseInt(data.content), data.flags.dnd5e.roll.flavor || "radiant");
-      wf.next(WORKFLOWSTATES.NONE);
     }
   }
   return true;
@@ -354,26 +385,34 @@ export let processBetterRollsChatCard = (message, html, data) => {
 }
 
 export let chatDamageButtons = (message, html, data) => {
-  debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll.type)
+  debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll.type, message.data.flags)
   if (!addChatDamageButtons) return true;
-  if (message.data.flags?.dnd5e?.roll.type !== "damage") return true;
-  const itemId = message.data.flags.dnd5e.roll.itemId;
-  const item = game.actors.get(message.data.speaker.actor).items.get(itemId);
-  if (!item) {
-    warn("Damage roll for non item");
-    return;
+
+  if (message.data.flags?.dnd5e?.roll.type === "damage") {
+    const itemId = message.data.flags.dnd5e.roll.itemId;
+    const item = game.actors.get(message.data.speaker.actor).items.get(itemId);
+    if (!item) {
+      warn("Damage roll for non item");
+      return;
+    }
+    // find the item => workflow => damageList, totalDamage
+    const defaultDamageType = item.data.data.damage?.parts[0][1] || "bludgeoning";
+    const damageList = createDamageList(message.roll, item, defaultDamageType);
+    const totalDamage = message.roll.total;
+    addChatDamageButtonsToHTML(totalDamage, damageList, html, item);
+  } else if (getProperty(message.data, "flags.midi-qol.damageDetail")) {
+    let midiFlags = getProperty(message.data, "flags.midi-qol");
+    const damageList = midiFlags.damageDetail;
+    const totalDamage = midiFlags.damageTotal;
+    const item = game.actors.get(midiFlags.actor).getOwnedItem(midiFlags.item);
+    addChatDamageButtonsToHTML(totalDamage, damageList, html, item, ".midi-qol-damage-roll .dice-total");
   }
-  // find the item => workflow => damageList, totalDamage
-  let defaultDamageType = item.data.data.damage?.parts[0][1] || "bludgeoning";
-  const damageList = createDamageList(message.roll, item, defaultDamageType);
-  const totalDamage = message.roll.total;
-  addChatDamageButtonsToHTML(totalDamage, damageList, html, item)
   return true;
 }
 
-export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item) {
-  const btnContainer = $('<span class="dmgBtn-container" style="position:absolute; right:0; bottom:1px;"></span>');
-  let btnStyling = "width: 22px; height:22px; font-size:10px;line-height:1px";
+export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, toMatch=".dice-total") {
+  const btnContainer = $('<span class="dmgBtn-container-mqol" style="position:absolute; right:0; bottom:1px;"></span>');
+  let btnStyling = "width: 22px; height:22px; background-color: #ffffff; font-size:10px;line-height:1px";
   const fullDamageButton = $(`<button class="dice-total-full-damage-button" style="${btnStyling}"><i class="fas fa-user-minus" title="Click to apply full damage to selected token(s)."></i></button>`);
   const halfDamageButton = $(`<button class="dice-total-half-damage-button" style="${btnStyling}"><i class="fas fa-user-shield" title="Click to apply half damage to selected token(s)."></i></button>`);
   const doubleDamageButton = $(`<button class="dice-total-double-damage-button" style="${btnStyling}"><i class="fas fa-user-injured" title="Click to apply double damage to selected token(s)."></i></button>`);
@@ -382,7 +421,7 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item) 
   btnContainer.append(halfDamageButton);
   btnContainer.append(doubleDamageButton);
   btnContainer.append(fullHealingButton);
-  $(html).find(".dice-total").append(btnContainer);
+  $(html).find(toMatch).append(btnContainer);
   // Handle button clicks
   let setButtonClick = (buttonID, mult) => {
       let button = $(html).find(buttonID);
@@ -413,5 +452,14 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item) 
   setButtonClick(".dice-total-half-damage-button", 0.5);
   setButtonClick(".dice-total-double-damage-button", 2);
   setButtonClick(".dice-total-full-healing-button", -1);
+  // logic to only show the buttons when the mouse is within the chatcard
+  html.find('.dmgBtn-container-mqol').hide();
+  $(html).hover(evIn => {
+  if (canvas.tokens.controlled.length > 0) {
+    html.find('.dmgBtn-container-mqol').show();
+  }
+  }, evOut => {
+      html.find('.dmgBtn-container-mqol').hide();
+  });
   return html;
 }

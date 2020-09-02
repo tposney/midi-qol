@@ -137,7 +137,7 @@ export let processUndoDamageCard = async(message, html, data) => {
   if (!message.data.flags?.midiqol?.undoDamage) return true;
   message.data.flags.midiqol.undoDamage.forEach(({tokenID, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
     let button = html.find(`#reverse-${tokenID}`);
-      //TODO clean this up - one handler with a bound paramater for the multiplier
+      //TODO clean this up - one handler with
     button.click(async (ev) => {
       let token = canvas.tokens.get(tokenID);
       if (!token?.actor) {

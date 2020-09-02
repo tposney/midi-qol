@@ -1,7 +1,22 @@
+# 0.2.7
+* Addeds support for dice so nice and combo card.
+* Added damage buttons to the combo card damage roll. These duplicate the better rolls 5e hover in/out behaviour. Buttons on the combo card and damage card require a target to be selected (useful if not displaying damgte application card). Buttons on the apply damage card apply to the targeted token(s), since there is one button per target.
+* Always display the item icon in the combo card since it takes up no more room.
+* Fix edge case where item card not displayed for items with no effects.
+* Added DamageOnlyWorkflow(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token])  
+Useful for writing macros that have custom damage effects. E.g. Divine Smite that checks target type. This version does not createa a combo card.
+* Added auto fast forward for ability saves/checks option, if speed item rolls enabled. Treat ability saves/checks as if Shift was pressed.
+* Corrected icons on damage card, which were all the same.
+* Corrected incompatibility with MagicItems and speed rolls. If you attempted to speed roll a magic item (i.e. roll the staff attack for a Staff of the Woodlands) the speed item keys would not be passed through, this has been fixed.
+* Allow selective removal of item details, to allow showing of PC tiem descriptions but to hide NPC item descriptions also allow force display of item card. DIsplay an item card if nothing else was being displayed when rolling and item (e.g. no attacks/saves/damage).
+* Setting to hide the DC of a saving throw from players in chat cards, chat message prompts and LMRTFY requests.
+* Fixed regression that caused speed rolls to get stuck on spell cast (hot fixed to 0.2.6)
+* Return a promise resolving to the result of item.roll() as the result of actor.useSpell()
+
 ## 0.2.6
 * Now requires foundry dnd 0.9.6 or later
 * Damage buttons for combo card. Significant update to the undo damage card. You can have the card displayed even if damage is not applied, which gives details of all the hit targets and the damage to be applied. There are now 6 buttons per target, reverse and apply the computed damage which sets the hit points/temp hit points before/after the damage. Then the four normal buttons for each target. These buttons apply directly to the appropriate token, no need to select the target to apply damage. Works for GM only but since players cant apply damage to most tokens it should not matter.
-* Users can choose their own sounds via file picker for normal attacks, criticals and fumbles. (Meerge Card Only)
+* Users can choose their own sounds via file picker for normal attacks, criticals and fumbles. (Meerge Card Only and not better rolls)
 * Added option to remove item description from the chat card. This is in addition/instead of the system setting to hide the item description.
 * Added an option to hide saving throw DC on chat cards and requests to players to save. For DMs who want a sense of mystery. (Merge Card)
 * Added damage types to damage roll display (combo card) instead of the useless heading "Damage".
@@ -10,6 +25,7 @@
 * Removed "Item Macros use Speed Rolls" setting since midi-qol uses standard dnd5e hotbar macros. If speed item rolls is enabled the macro will pass the event through.
 * Speed Item rolls is now a check box, since the Item Card will be shown when it needs to be. In the case that you use full auto and not the combo card you will also get an item card, where you would not before.
 * Fixed? an incompatibility with CUB 1.2. With CUB 1.2 if you display token names CUB will not hide those via it's hide names setting.
+* Changed the message displayed when checking targets selected before rolling to be less "intimidating".
 
 Bug Fixes
 * Fix "Add chat damage buttons" setting being ignored. This has moved from the config settings tab to the main settings, since it can be used even if not using midi-qol to do the rolls.

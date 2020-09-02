@@ -10,10 +10,11 @@ export var checkBetterRolls: boolean;
 export var saveRequests = {};
 export var saveTimeouts = {};
 export var addChatDamageButtons: boolean;
+export var autoFastForwardAbilityRolls: boolean;
 
 export var configSettings = {
   speedItemRolls: false,
-  showItemDetails: false,
+  showItemDetails: "",
   autoRollAttack: false,
   autoFastForward: "off",
   autoTarget: "none",
@@ -38,7 +39,8 @@ export var configSettings = {
   fumbleSound: "sounds/dice.wav",
   diceSound: "sounds/dice.wav",
   criticalSound: "sounds/dice.wav",
-  fullAuto: false
+  fullAuto: false,
+  useMaestroSounds: true
 };
 
 export let fetchParams = (silent = false) => {
@@ -55,6 +57,7 @@ export let fetchParams = (silent = false) => {
   coloredBorders = game.settings.get("midi-qol", "ColoredBorders");
   itemRollButtons = game.settings.get("midi-qol", "ItemRollButtons");
   addChatDamageButtons = game.settings.get("midi-qol", "AddChatDamageButtons")
+  autoFastForwardAbilityRolls = game.settings.get("midi-qol", "AutoFastForwardAbilityRolls")
   let debugText = game.settings.get("midi-qol", "Debug");
   setDebugLevel(debugText);
 }
@@ -77,6 +80,14 @@ const settings = [
     scope: "world",
     default: true,
     type: Boolean,
+    onChange: fetchParams
+  },
+  {
+    name: "AutoFastForwardAbilityRolls",
+    scope: "world",
+    default: false,
+    type: Boolean,
+    config: true,
     onChange: fetchParams
   },
   {
@@ -111,14 +122,7 @@ const settings = [
     choices: {none: "Never", dead: "untarget dead", all: "untarget all"},
     onChange: fetchParams
   },
-  {
-    name: "AutoEffects",
-    scope: "world",
-    default: true,
-    type: Boolean,
-    config: false,
-    onChange: fetchParams
-  },
+
   {
     name: "ItemDeleteCheck",
     scope: "client",

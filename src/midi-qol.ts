@@ -18,7 +18,8 @@ import { itemPatching, visionPatching, setupPatching } from './module/patching.j
 import { initHooks } from './module/Hooks.js';
 import { initGMActionSetup } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
-import { applyTokenDamage, TrapWorkflow } from './module/workflow.js';
+import { applyTokenDamage, TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
+import { initializeDSNHandler } from './module/chatMesssageHandling.js';
 
 export let debugEnabled = 0;
 // 0 = none, warnings = 1, debug = 2, all = 3
@@ -41,8 +42,11 @@ export let savingThrowText;
 export let savingThrowTextAlt;
 
 export const MESSAGETYPES = {
-  hitData: 1,
-  saveData: 2
+  HITS: 1,
+  SAVES: 2,
+  ATTACK: 3,
+  DAMAGE: 4,
+  ITEM: 0
 };
 export let cleanSpellName = (name) => {
   return name.toLowerCase().replace(/[^가-힣一-龠ぁ-ゔァ-ヴーa-zA-Z0-9ａ-ｚＡ-Ｚ０-９々〆〤]/g, '').replace("'", '').replace(/ /g, '');
@@ -65,6 +69,7 @@ Hooks.once('init', async function() {
   // Class patching
   visionPatching();
   itemPatching();
+  initializeDSNHandler();
 
 	// Register custom sheets (if any)
 });
@@ -107,8 +112,10 @@ function setupMinorQolCompatibility() {
   }
   //@ts-ignore
   window.MidiQOL = {
-    applyTokenDamage: applyTokenDamage,
-    TrapWorkflow: TrapWorkflow
+    applyTokenDamage,
+    TrapWorkflow,
+    DamageOnlyWorkflow,
+    Workflow
   }
 }
 

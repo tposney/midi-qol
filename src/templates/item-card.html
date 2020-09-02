@@ -6,12 +6,12 @@
   </header>
 
   <div class="card-content">
-    {{#if configSettings.showItemDetails}}
+    {{#unless hideItemDetails}}
       {{{data.description.value}}}
       {{#if data.materials.value}}
         <p><strong>{{ localize "DND5E.RequiredMaterials" }}.</strong> {{data.materials.value}}</p>
       {{/if}}
-    {{/if}}
+    {{/unless}}
   </div>
 
   <div class="card-buttons">

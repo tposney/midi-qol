@@ -30,6 +30,7 @@ export class ConfigPanel extends FormApplication {
       criticalDamage,
       autoApplyDamageOptions: {none: "No", noCard: "No + damage card", yes: "Yes", yesCard: "Yes + damage card", },
       damageImmunitiesOptions: {none: "Never", immunityDefult: "apply immuniites", immunityPhysical: "apply immunities + physical"},
+      showItemDetailsOptions: {none: "None", cardOnly: "Card Only", pc: "Card + Details: PC Only", all: "Card + Details: NPC + PC"},
       itemDeleteCheck,
       nsaFlag,
       coloredBorders,
@@ -44,6 +45,7 @@ export class ConfigPanel extends FormApplication {
   }
   activateListeners(html) {
     super.activateListeners(html);
+    html.find("#useMaestroSounds").click((ev) => {warn("click handler fired"); configSettings.useMaestroSounds = !configSettings.useMaestroSounds; this.render(false)});
   }
   async _updateObject(event, formData) {
     warn("Form data is ", formData)

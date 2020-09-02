@@ -136,7 +136,6 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
               // If speed rolls are off
               switch (ev.target.dataset.action) {
                   case "attack":
-                    console.warn("Inside roll attack button ", event)
                       await item.rollAttack({ event, versatile: false });
                       break;
                   case "versatileAttack":

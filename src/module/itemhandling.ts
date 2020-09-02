@@ -1,7 +1,7 @@
-import { warn, debug, error, i18n, log } from "../midi-qol";
+import { warn, debug, error, i18n, log, MESSAGETYPES } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
 import {  configSettings } from "./settings";
-import { rollMappings, oldItemRoll } from "./patching";
+import { rollMappings } from "./patching";
 
 function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boolean, workflowData: any, selector: string) {
   debug("Setting up hide chat message ", hideDefaultRoll, match, workflowData, selector);
@@ -24,7 +24,7 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
   let workflow: Workflow = Workflow.getWorkflow(this.uuid);
   debug("Entering item attack roll ", event, workflow, Workflow._workflows)
   if (!workflow) { // TODO what to do with a random attack roll
-    warn("Roll Attak No workflow for item ", this.name, this.uuid, event);
+    warn("Roll Attack: No workflow for item ", this.name, this.uuid, event);
     return rollMappings.itemAttack.roll.bind(this)(options)
   }
   if (workflow?.currentState !== WORKFLOWSTATES.WAITFORATTACKROLL) return;
@@ -33,13 +33,12 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
   }
   hideChatMessage(configSettings.mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
   let result: Roll = await rollMappings.itemAttack.roll.bind(this)(options);
-  debug("doAttack Roll ", rollMappings.itemAttack, event, result)
 
-  if (workflow.targets?.size === 0) {// no targets recorded when we started ther oll grab them now
+  if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
     workflow.targets = new Set(game.user.targets);
   }
   if (!result) { // attack roll failed.
-    workflow.next(WORKFLOWSTATES.ROLLFINISHED);
+    workflow._next(WORKFLOWSTATES.ROLLFINISHED);
 
   } else {
     workflow.attackRoll = result;
@@ -64,8 +63,8 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
     }
   }
   debug(" do damage roll ", event, spellLevel, versatile, this.uuid, Workflow._workflows, workflow)
-  if (!workflow) { //TODO - what to do with a random roll damage for an item?
-    warn("Roll Damage No workflow for item ", this.name);
+  if (!workflow) {
+    warn("Roll Damage: No workflow for item ", this.name);
     return rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
   }
   hideChatMessage(configSettings.mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
@@ -89,13 +88,14 @@ export async function doItemRoll(options = {showFullCard: false}) {
     warn(`${game.username} attempted to roll with no targets selected`)
     return;
   }
-  warn("doItemRoll ", event, window.event, !event ? "Event undefined speed rolls disabled" : " speed item rolls supported")
+  //@ts-ignore
+  debug("doItemRoll ", event?.shiftKey, event?.ctrlKey, event?.altKey);
   let pseudoEvent = {shiftKey: false, ctrlKey: false, altKey: false, metakey: false, type: undefined}
   let versatile = false;
   // if speed item rolls is on process the mouse event states
   if (configSettings.speedItemRolls) {
     //@ts-ignore
-    pseudoEvent = { shiftKey: event?.shiftKey, ctrlKey: event?.ctrlKey, altKey : event?.altKey, metaKey: event?.metaKey, type: event.type};
+    pseudoEvent = { shiftKey: event?.shiftKey, ctrlKey: event?.ctrlKey, altKey : event?.altKey, metaKey: event?.metaKey, type: event?.type};
     versatile = event?.type === "contextmenu" || (pseudoEvent.shiftKey);
     //@ts-ignore
     if (event?.altKey && event?.ctrlKey) {
@@ -108,14 +108,13 @@ export async function doItemRoll(options = {showFullCard: false}) {
   let speaker = ChatMessage.getSpeaker();
   let spellLevel = this.data.data.level; // we are called with the updated spell level so record it.
   let baseItem = this.actor.getOwnedItem(this.id);
-  let workflow: Workflow = new Workflow(this.actor, baseItem, speaker.token || this.actor.token?._id, speaker, pseudoEvent);
+  let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token, speaker, pseudoEvent);
   //@ts-ignore event .type not defined
   workflow.versatile = versatile;
   workflow.itemLevel = this.data.data.level;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = options.showFullCard;
   workflow.noAutoAttack = options.showFullCard;
-  // let result = await oldItemRoll.bind(this)({configureDialog:true, rollMode:null, createMessage:false});
   let result = await rollMappings.itemRoll.roll.bind(this)({configureDialog:true, rollMode:null, createMessage:false});
 
   if(!result) {
@@ -123,12 +122,13 @@ export async function doItemRoll(options = {showFullCard: false}) {
     // Workflow.removeWorkflow(workflow.id);
     return;
   }
-  const needAttckButton = !workflow.someEventKeySet() && !["all", "attack"].includes(configSettings.autoFastForward);
-  workflow.showCard = configSettings.speedItemRolls || configSettings.mergeCard || (
+  const needAttckButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
+  workflow.showCard = configSettings.mergeCard || (configSettings.showItemDetails !== "none") || (
                 (baseItem.isHealing && configSettings.autoRollDamage === "none")  || // not rolling damage
                 (baseItem.hasDamage && configSettings.autoRollDamage === "none") ||
-                baseItem.hasSave && configSettings.autoCheckSaves === "none" ||
-                (baseItem.hasAttack && needAttckButton));
+                (baseItem.hasSave && configSettings.autoCheckSaves === "none") ||
+                (baseItem.hasAttack && needAttckButton)) ||
+                (!baseItem.hasAttack && !baseItem.hasDamage && !baseItem.hasSave);
 
   if (workflow.showCard) {
     //@ts-ignore - 
@@ -160,8 +160,8 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     hasSave: !minimalCard && this.hasSave && (showFullCard || configSettings.autoCheckSaves === "none"),
     hasAreaTarget: !minimalCard && this.hasAreaTarget,
     hasAttackRoll: !minimalCard && this.hasAttack,
-    configSettings
-  };
+    configSettings,
+    hideItemDetails: ["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !this.actor.isPC)};
 
   const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
   const template = `modules/midi-qol/templates/${templateType}-card.html`;
@@ -176,7 +176,13 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
       actor: this.actor._id,
       token: this.actor.token,
       alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name
-    }
+    },
+    flags: {"midi-qol": {
+      item: workflow.item.id, 
+      actor: workflow.actor.id, 
+      type: MESSAGETYPES.ITEM, 
+      itemUUId: workflow.itemUUId
+    }}
   };
   // Toggle default roll mode
   let rollMode = game.settings.get("core", "rollMode");
