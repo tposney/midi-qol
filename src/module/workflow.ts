@@ -219,8 +219,8 @@ export class Workflow {
           await this.checkHits();
           await this.displayHits(configSettings.autoCheckHit === "whisper", configSettings.mergeCard);
         }
-        // We only roll damage on a hit. but we missed so all over.
-        if (configSettings.autoRollDamage === "onHit" && this.hitTargets.size === 0) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
+        if (configSettings.autoRollDamage === "onHit" && this.hitTargets.size === 0 && this.targets.size !== 0) return this.next(WORKFLOWSTATES.ROLLFINISHED);
         return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMGEROLL:
@@ -380,7 +380,6 @@ export class Workflow {
           }
         }
       }
-      playSound = (!installedModules.get("maestro") || !configSettings.useMaestroSounds);
       if (!!!game.dice3d?.messageHookDisabled) this.hideTags = [".midi-qol-attack-roll"];
       newFlags = mergeObject(flags, {
           "midi-qol": 
@@ -388,7 +387,7 @@ export class Workflow {
             type: MESSAGETYPES.ATTACK,
             waitForDiceSoNice: !!!game.dice3d?.messageHookDisabled,
             hideTag: this.hideTags,
-            playSound,
+            playSound: (!installedModules.get("maestro") || !configSettings.useMaestroSounds),
             roll: this.attackCardData.roll,
             displayId: this.displayId
           }

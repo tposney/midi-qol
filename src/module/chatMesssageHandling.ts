@@ -166,7 +166,6 @@ export function diceSoNiceUpdateMessge(message, update, ...args) {
 }
 let showHandler = (hideTags, displayId, html, header, id) => {
   debug(header, hideTags, displayId, html, id)
-  error(header, hideTags, displayId, html, id)
 
   if (id !== displayId) return;
   if (hideTags) hideTags.forEach(hideTag => html.find(hideTag).show()); 
