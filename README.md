@@ -65,3 +65,7 @@ Just call item.roll, and if you pass an event via item.roll({event}) you can hav
 event.altKey: true => advantage roll
 event.crtlKey: true => disadvantage roll
 event.shiftKey: true => auto roll the attack roll
+
+## Sample Chat Logs
+
+https://gitlab.com/tposney/midi-qol/-/blob/master/pcitures/nocombo.png
