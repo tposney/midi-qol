@@ -67,5 +67,4 @@ event.crtlKey: true => disadvantage roll
 event.shiftKey: true => auto roll the attack roll
 
 ## Sample Chat Logs
-- ![No Combo Card](pictures/nocombo.png)
-- ![Combo Card](pictures/combo.png)
+![No Combo Card](pictures/nocombo.png) ![Combo Card](pictures/combo.png)
