@@ -119,12 +119,42 @@ If the above was all too tedious here are the setings I use which .
 probably many however....
 * Language translations are not up to date.
 
-## Notes
-For modules that want to call midi-qol it is easier than in minor-qol.
-Just call item.roll, and if you pass an event via item.roll({event}) you can have key accelerators.
+## Notes For Macro writers
+For modules that want to call midi-qol it is easier than in minor-qol. Just call item.roll() or actor.useSpell, and if you pass an event via item.roll({event}) you can have key accelerators.
 event.altKey: true => advantage roll
 event.crtlKey: true => disadvantage roll
 event.shiftKey: true => auto roll the attack roll
+
+* MinorQOL.doRoll and MinorQOL.applyTokenDamage remain supported.
+* MidiQOL.applyTokenDamage is exported.
+* In addition there is a new DamageOnlyWorklow exported 
+* If you have macros that depend on being called when the roll is complete, that is still supported, both "minor-qol.RollComplete" and "midi-qol.RollComplete" are called when the roll is finished. The passed data has changed, it is a copy of the workflow which contains a big superset of the data passed in the minor-qol version, but some of the field names have changed.
+* midi-qol supports a TrapWorkflow, triggered by
+```
+new MidiQOL.TrapWorkflow(actor, item, [targets], {x:number, y:number})
+```
+Which will roll the atack/and or damage and apply to the passed targets. If the item has an area template it will be placed at x,y and targets auto selected inside the template.
+Sample DoTrapAttack replacement:
+```
+  let tactor = game.actors.entities.find(a => a.name === args[0])
+  let item = tactor.items.find(i=>  i.name === args[1])
+  let trapToken = canvas.tokens.placeables.find(t=>t.name === args[2])
+  new MidiQOL.TrapWorkflow(tactor, item, [token], trapToken.center)
+  ```
+* midi-qol supports a DamageOnlyWorkflow to support items/spells with special damage rolls. Divine Smit is a good example, the damage depends on whether the target is a fiend/undead. This is my implementation, which assumes it is activated via dynamiceffects/midi-qol.
+I have created a spell called "Divine Smite", with no saving throw or damage or attack, which has a single active effect
+"macro.execute" = "Divine Smite" @target @item.level. By having it as a spell you can capture the spell scaling for damage calculation.
+```
+if (args[0] === "on") {
+  let target = canvas.tokens.get(args[1])
+  let numDice = 1 + (Number(args[2]) || 1)
+  let undead = ["undead", "fiend"].some(type => (target.actor.data.data.details.type || "").toLowerCase().includes(type));
+  if (undead) numDice += 1;
+  let damageRoll = new Roll(`${numDice}d8`).roll();
+  damageRoll.toMessage({flavor: "Divine Smite - Damage Roll (Radiant)", speaker});
+  new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target])
+}
+```
 
 ## Sample Chat Logs
 ![No Combo Card](pictures/nocombo.png) ![Combo Card](pictures/combo.png)
