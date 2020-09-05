@@ -162,6 +162,6 @@ if (args[0] === "on") {
 ```
 Flavor is only used if you are not using combo cards.  
 ## Sound Seetings
-![Custom Sound Settings][pictures/sound.png]
+![Custom Sound Settings](pictures/sound.png])
 ## Sample Chat Logs
 ![No Combo Card](pictures/nocombo.png) ![Combo Card](pictures/combo.png)
