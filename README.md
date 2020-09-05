@@ -87,8 +87,8 @@ You can enable auto checking of hits. Funbles automatically miss and criticals a
 * Midi-qol uses whatever playlist you want for sounds, but they must all be in the same playlist. I will be extending the sound options, next will be specific sounds by damage type, then sounds per item use.
 * A tiny selection of sounds is distributed with the module and are available in Data/modules/midi-qol/sounds and can be used to setup a playlist. 
 * Attack, critical and fumble sounds are only available if using a combo card.
-* Item use sounds are available when midi-qol is enabled and handling the roll (i.e. not better rolls).
-
+* Item use sounds are available when midi-qol is enabled and handling the roll (i.e. not better rolls).  
+![Custom Sound Settings](pictures/sound.png)
 ## Other QOL settings ##
 * **Add attack damage buttons to the inventory** If enabled a set of buttons (to bypass the midi-qol behaviour) are added to the description drop down in the inventory.
 * **Fast forward ability rolls** If enabled allows you to bypass the advantage/disadvantage question when roll ability saves/checks, ctrl/alt are supported.
@@ -161,7 +161,6 @@ if (args[0] === "on") {
 }
 ```
 Flavor is only used if you are not using combo cards.  
-## Sound Seetings
-![Custom Sound Settings](pictures/sound.png])
+
 ## Sample Chat Logs
 ![No Combo Card](pictures/nocombo.png) ![Combo Card](pictures/combo.png)
