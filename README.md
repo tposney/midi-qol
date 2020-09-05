@@ -12,26 +12,23 @@ Changes in midi-qol:
 * Lots more configuration options, accessed by a configuration screen.
 
 ## CUB and midi-qol
-If you have just upgraded CUB to 1.2 There is an incompatibility until CUB 1.2.1 is released.
-If this is your problem you will see an error (Uncaught in Promise) cannot read property 'data' of null in itemhandling.js.
-If you are adventurous you can change 
-line 143 in Data/modules/combat-utility-belt/hide-names/hide-npc-names.js 
-from
-```
-        const token = canvas.tokens.get(messageTokenId) ?? tokenData ? new Token(tokenData) : null;
-```
-to
-```
-        const token = canvas.tokens.get(messageTokenId) ?? (tokenData ? new Token(tokenData) : null);
-```
-and the problem should go away. I'm hoping that a fix for that will appear soon in CUB
+If you are not on CUB 1.2.1 upgrade now. It fixes and incompatibility that caused all sorts of issues. Many thanks @errational.
 
 ## Changelog
 https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
 
 
+## (In)Compatibilities? ##
+Any module that overloads item.roll is potentially incompatible.  
+
+**Better Rolls** If you are using BetterRolls (which is a great module), midi-qol takes over once the hit/damage card is placed by better rolls. This means that resource consumption, template placement and critical/fumble determination is **all** handled by BetterRolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage and calls active effects. There is a known bug with midi-qol and BetterRolls versatile attacks, midi-qol will count both the normal attack and the versatile damage. Unfortunately the work around is to reverse applied damage from midi-qol and use the better rolls buttons to apply damage.  
+**Magic Items** Thanks to @simone for his help and midi-qol is fully compatible with magic-items. The only issue is that spell templates for spells in a mgaic item are not auto placed on cast. Once placed everything works as expected.  
+**Mess** Midi-qol and Mess dnd5e effects are not compatible. Template effects and the other features of that excellent module should work. If you want Mess attack/damage cards don't use midi-qol.  
+**Cozy player** Minor-qol was not compatible with cozy-player, with targets being lost before attack/damage rolls were made. I have done only limited testing but it seems that there are no problems with cozy-player and midi-qol.  
+**Cautious GM** Midi-qol breaks the blind chats by hidden GM feature of cautious GM.  
+
 ## Technical Differences:
-* midi-qol does not use the creation of chat messages as the triggeer anymore, rather it hooks the standard item.roll, item.rollAttack, item.rollDamage.
+* midi-qol does not use the creation of chat messages as the triggeer anymore, rather it hooks the standard item.roll, item.rollAttack, item.rollDamage. This means it is automatically compatible with any actor/npc sheet that uses standrd rolls (almost all of them)
 * midi-qol uses the new 0.9.5 chat message meta-data to determine if a roll is a damage/attack/save roll which means the specific text matching piece is gone.
 
 ## Short Guide to the settings:
@@ -72,6 +69,9 @@ ctl-alt is equivalent to the core shfit-click, i.e. skip the dialog for attack t
 If you want to use saving throws to control the application of dynamic effects or calling macros etc, but to not affect the damage applied, think of a weapon that does damage and requires a saving throw or be poisoned. To support those set **Check Spell Text** to true. The behaviour becomes.
   * A saving throw has no effect on damage caused **unless** the item has the exact text "half as much damage" (used in the SRD) or "half damage" in the spell description.
 
+### Hits ###
+You can enable auto checking of hits. Funbles automatically miss and criticals automatically hit. As GM you can mouse over the name of the hit target to highlight the token and click to select it. This is useful if you are not auto applying damage, since you can do all the damage application from the chat log, by clicking on the targets name, the clicking on the appropriate damage button.
+
 ### Damage ###
 * **Auto apply damge**
   * Yes, means that damage is auto applied to targeted tokens (**or self if self target is specified**) who were hit or did not save, or who waved and take half damage.
@@ -82,6 +82,12 @@ If you want to use saving throws to control the application of dynamic effects o
     * a weapon has an attack bonus > 0 it is assumed to be magical
     * a weapon has the "Magical" property set attacks are considered magical. (The magical property for weapons only exists if midi-qol is enabled)
 * **Auto Apply Item Effects** If the item had dynamiceffects active effects specified and the target was hit and did not save, or did not save or there are no attacks or saves dynamiceffects is called to apply the active effects to each such target. This includes self if a self target is specified.
+
+## Custom Sounds ##
+* Midi-qol uses whatever playlist you want for sounds, but they must all be in the same playlist. I will be extending the sound options, next will be specific sounds by damage type, then sounds per item use.
+* A tiny selection of sounds is distributed with the module and are available in Data/modules/midi-qol/sounds and can be used to setup a playlist. 
+* Attack, critical and fumble sounds are only available if using a combo card.
+* Item use sounds are available when midi-qol is enabled and handling the roll (i.e. not better rolls).
 
 ## Other QOL settings ##
 * **Add attack damage buttons to the inventory** If enabled a set of buttons (to bypass the midi-qol behaviour) are added to the description drop down in the inventory.
@@ -102,7 +108,7 @@ If the above was all too tedious here are the setings I use which .
 * Auto Target on template Draw - walls block
 * auto range target. Leave off until you are comfortable with the way everything else works.
 * Auto shift click - attack and damage. If you want to be prompted as to advantage/disadvanate/cirital/normal adjust appropriately. Even if enabled midi-qol will use the result of an attack (critica/normal) to do the roll.
-* Auto Check Attacks - Check your choice as to whether the players see the results.
+* Auto Check Hits - Check your choice as to whether the players see the results.
 * Auto roll damage - Attack Hits
 * Saves - Save, your choice of whether the players see the results
 * Check text save - depends on you. If enabled the text of the spell description is searched to see if the damage on save is half/no damage.
@@ -141,9 +147,9 @@ Sample DoTrapAttack replacement:
   let trapToken = canvas.tokens.placeables.find(t=>t.name === args[2])
   new MidiQOL.TrapWorkflow(tactor, item, [token], trapToken.center)
   ```
-* midi-qol supports a DamageOnlyWorkflow to support items/spells with special damage rolls. Divine Smit is a good example, the damage depends on whether the target is a fiend/undead. This is my implementation, which assumes it is activated via dynamiceffects/midi-qol.
+* midi-qol supports a DamageOnlyWorkflow to support items/spells with special damage rolls. Divine Smite is a good example, the damage depends on whether the target is a fiend/undead. This is my implementation, which assumes it is activated via dynamiceffects/midi-qol.
 I have created a spell called "Divine Smite", with no saving throw or damage or attack, which has a single active effect
-"macro.execute" = "Divine Smite" @target @item.level. By having it as a spell you can capture the spell scaling for damage calculation.
+"macro.execute" = "Divine Smite" @target @item.level @item. By having it as a spell you can capture the spell scaling for damage calculation.
 ```
 if (args[0] === "on") {
   let target = canvas.tokens.get(args[1])
@@ -151,10 +157,11 @@ if (args[0] === "on") {
   let undead = ["undead", "fiend"].some(type => (target.actor.data.data.details.type || "").toLowerCase().includes(type));
   if (undead) numDice += 1;
   let damageRoll = new Roll(`${numDice}d8`).roll();
-  damageRoll.toMessage({flavor: "Divine Smite - Damage Roll (Radiant)", speaker});
-  new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target])
+  new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemData: args[3]})
 }
 ```
-
+Flavor is only used if you are not using combo cards.  
+## Sound Seetings
+![Custom Sound Settings][pictures/sound.png]
 ## Sample Chat Logs
 ![No Combo Card](pictures/nocombo.png) ![Combo Card](pictures/combo.png)
