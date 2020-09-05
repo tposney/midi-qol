@@ -3,42 +3,44 @@ import { debug, log, warn, i18n, error, MESSAGETYPES } from "../midi-qol";
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
 import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
+
 import { installedModules } from "./setupModules";
-import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES, DamageOnlyWorkflow, getTraitMult, calculateDamage, createDamageList } from "./workflow";
+import { BetterRollsWorkflow, WORKFLOWSTATES } from "./workflow";
 import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings } from "./settings";
+import { createDamageList, getTraitMult, calculateDamage } from "./utils";
+import { config } from "process";
 
+export const MAESTRO_MODULE_NAME = "maestro";
 
+export const MODULE_LABEL = "Maestro";
 
-export function mergeCardSoundPlayer(message, html, data) {
-  debug("Merge card sound player ", message.data, getProperty(message.data, "flags.midi-qol.playSound"), message.data.sound)
-  if (getProperty(message.data, "flags.midi-qol.playSound") && message.data.sound) {
-      //@ts-ignore
-      AudioHelper.play({src: message.data.sound}, false);
+export function mergeCardSoundPlayer(message, update, options, user) {
+
+  debug("Merge card sound player ", message.data, getProperty(update, "flags.midi-qol.playSound"), message.data.sound)
+  const firstGM = game.user; //game.users.find(u=> u.isGM && u.active);
+  if (game.user !== firstGM) return;
+  const updateFlags = getProperty(update, "flags.midi-qol") || {};
+  const midiqolFlags = mergeObject(getProperty(message.data, "flags.midi-qol") || {}, updateFlags, { inplace: false, overwrite: true })
+  if (midiqolFlags.playSound && configSettings.useCustomSounds) {
+    const playlist = game.playlists.get(configSettings.customSoundsPlaylist);
+    const sound = playlist?.sounds.find(s=>s._id === midiqolFlags.sound)
+    debug("mergeCardsound player ", update, playlist, sound, sound?'playing sound':'not palying sound')
+
+    const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
+    let delay = (dice3dActive && midiqolFlags?.waitForDiceSoNice && [MESSAGETYPES.HITS].includes(midiqolFlags.type)) ? 500 : 0;
+    warn("mergeCardsound player ", update, playlist, sound, sound?'playing sound':'not palying sound', delay)
+    if (sound) {
+      setTimeout(() => {
+       sound.playing = true;
+        playlist.playSound(sound);
+      }, delay)
+    }
+
+    //@ts-ignore
+    // AudioHelper.play({ src: update.sound || midiqolFlags.sound }, true);
+    return true;
   }
-  return true;
 }
-
-export function processpreCreateAttackRollMessage(data, options, user) {
-  // debug ("process create attack roll ", data, options, user);
-  return true;
-}
-export function processpreCreateDamageRollMessage(data, options, user) {
-}
-
-export function processpreCerateSaveRollMessaage(data, options, user) {
-}
-
-export function processcreateAttackRoll(message, options, user) {
-  // debug ("process create attack roll ", message, options, user);
-  return true;
-}
-
-export function processcreateDamageRoll(message, options, user) {
-}
-
-export function processcreateSaveRoll(message, options, user) {
-}
-
 
 export function processcreateBetterRollMessage(message, options, user) {
   let flags = message.data.flags["midi-qol"];
@@ -153,7 +155,8 @@ export function initializeDSNHandler() {
 
 
 export function diceSoNiceUpdateMessge(message, update, ...args) {
-  if (!game.dice3d || !getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
+  const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
+  if (!dice3dActive || !getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
   const type = getProperty(update, "flags.midi-qol.type")
   if (![MESSAGETYPES.ATTACK, MESSAGETYPES.DAMAGE].includes(type)) return;
   const displayId = duplicate(message.data.flags["midi-qol"].displayId)
@@ -281,8 +284,10 @@ let _onTargetSelect = (event) => {
 
 export let hideStuffHandler = (message, html, data) => {
   debug("hide info handler message: ", message.id, message)
+  const midiqolFlags = getProperty(message.data, "flags.midi-qol");
   let ids = html.find(".midi-qol-target-name")
-  // let buttonTargets = html.getElementsByClassName("minor-qol-target-npc");
+  const actor = game.actors.get(midiqolFlags?.actor)
+    // let buttonTargets = html.getElementsByClassName("minor-qol-target-npc");
   ids.hover(_onTargetHover, _onTargetHoverOut)
   if (game.user.isGM)  {
     ids.click(_onTargetSelect);
@@ -296,6 +301,13 @@ export let hideStuffHandler = (message, html, data) => {
     ui.chat.scrollBottom
     return;
   }
+
+  if (!game.user.isGM && message.user.isGM && configSettings.hideRollDetails === "all") {
+    html.find(".dice-roll").replaceWith(i18n("midi-qol.DiceRolled"));
+  } else if (!game.user.isGM && message.user.isGM && configSettings.hideRollDetails === "details") {
+    html.find(".dice-tooltip").remove();
+    html.find(".dice-formula").remove();
+  }
   if (configSettings.autoCheckHit === "whisper") {
     $(html).find(".midi-qol-hits-display").hide()
   }
@@ -306,9 +318,9 @@ export let hideStuffHandler = (message, html, data) => {
   // ui.chat.scrollBottom();
 }
 
-export let processPreCreateDamageRoll = (data, ...args) => {
+export let recalcCriticalDamage = (data, ...args) => {
   if (data.flags?.dnd5e?.roll.type === "damage") {
-    warn("Process pre create Damage roll ", data.flags?.dnd5e?.roll.type, data, ...args)
+    warn("recalcCriticalDamage ", data.flags?.dnd5e?.roll.type, data, ...args)
     let token: Token = canvas.tokens.get(data.speaker.token)
     let actor: Actor5e = game.actors.tokens[data.speaker.token];
     if (!actor) game.actors.tokens[data.speaker.token]?.actor;
@@ -386,7 +398,6 @@ export let processBetterRollsChatCard = (message, html, data) => {
 export let chatDamageButtons = (message, html, data) => {
   debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll.type, message.data.flags)
   if (!addChatDamageButtons) return true;
-
   if (message.data.flags?.dnd5e?.roll.type === "damage") {
     const itemId = message.data.flags.dnd5e.roll.itemId;
     const item = game.actors.get(message.data.speaker.actor).items.get(itemId);
@@ -410,6 +421,7 @@ export let chatDamageButtons = (message, html, data) => {
 }
 
 export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, toMatch=".dice-total") {
+  debug("addChatDamageButtons", totalDamage, damageList, html, item, toMatch, $(html).find(toMatch))
   const btnContainer = $('<span class="dmgBtn-container-mqol" style="position:absolute; right:0; bottom:1px;"></span>');
   let btnStyling = "width: 22px; height:22px; background-color: #ffffff; font-size:10px;line-height:1px";
   const fullDamageButton = $(`<button class="dice-total-full-damage-button" style="${btnStyling}"><i class="fas fa-user-minus" title="Click to apply full damage to selected token(s)."></i></button>`);
@@ -451,7 +463,7 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, 
   setButtonClick(".dice-total-half-damage-button", 0.5);
   setButtonClick(".dice-total-double-damage-button", 2);
   setButtonClick(".dice-total-full-healing-button", -1);
-  // logic to only show the buttons when the mouse is within the chatcard
+  // logic to only show the buttons when the mouse is within the chatcard and a token is selected
   html.find('.dmgBtn-container-mqol').hide();
   $(html).hover(evIn => {
   if (canvas.tokens.controlled.length > 0) {
@@ -461,4 +473,20 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, 
       html.find('.dmgBtn-container-mqol').hide();
   });
   return html;
+}
+
+export function processItemCardCreation(message, options, user) {
+  const midiqolFlags = message.data.flags["midi-qol"];
+  debug("Doing item card creation", configSettings.useCustomSounds, configSettings.itemUseSound, midiqolFlags?.type)
+  if (configSettings.useCustomSounds && midiqolFlags?.type === MESSAGETYPES.ITEM) {
+    const playlist = game.playlists.get(configSettings.customSoundsPlaylist);
+    const sound = playlist?.sounds.find(s=>s._id === midiqolFlags?.sound);
+    const delay = 0;
+    if (sound) {
+      setTimeout(() => {
+      sound.playing = true;
+        playlist.playSound(sound);
+      }, delay)
+    }
+  }
 }

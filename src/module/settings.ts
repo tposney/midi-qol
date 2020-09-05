@@ -11,6 +11,8 @@ export var saveRequests = {};
 export var saveTimeouts = {};
 export var addChatDamageButtons: boolean;
 export var autoFastForwardAbilityRolls: boolean;
+export var autoRemoveTargets: string;
+
 
 export var configSettings = {
   speedItemRolls: false,
@@ -19,8 +21,8 @@ export var configSettings = {
   autoFastForward: "off",
   autoTarget: "none",
   autoCheckHit: "none",
-  autoRemoveTargets: "",
   autoCheckSaves: "none",
+  hideRollDetails: "none",
   displaySaveDC: true,
   checkSaveText: null,
   autoRollDamage: "none",
@@ -36,11 +38,16 @@ export var configSettings = {
   hideNPCNames: "",
   useTokenNames: false,
   requireTargets: false,
-  fumbleSound: "sounds/dice.wav",
-  diceSound: "sounds/dice.wav",
-  criticalSound: "sounds/dice.wav",
+  fumbleSound: "",
+  diceSound: "",
+  criticalSound: "",
+  itemUseSound: "",
+  spellUseSound: "",
+  weaponUseSound: "",
+  potionUseSound: "",
   fullAuto: false,
-  useMaestroSounds: true
+  useCustomSounds: true,
+  customSoundsPlaylist: "none"
 };
 
 export let fetchParams = (silent = false) => {
@@ -58,6 +65,7 @@ export let fetchParams = (silent = false) => {
   itemRollButtons = game.settings.get("midi-qol", "ItemRollButtons");
   addChatDamageButtons = game.settings.get("midi-qol", "AddChatDamageButtons")
   autoFastForwardAbilityRolls = game.settings.get("midi-qol", "AutoFastForwardAbilityRolls")
+  autoRemoveTargets = game.settings.get("midi-qol", "AutoRemoveTargets");
   let debugText = game.settings.get("midi-qol", "Debug");
   setDebugLevel(debugText);
 }
@@ -115,15 +123,6 @@ const settings = [
     onChange: fetchParams
   },
   {
-    name: "AutoRemoveTargets",
-    scope: "world",
-    default: "dead",
-    type: String,
-    choices: {none: "Never", dead: "untarget dead", all: "untarget all"},
-    onChange: fetchParams
-  },
-
-  {
     name: "ItemDeleteCheck",
     scope: "client",
     default: true,
@@ -138,22 +137,6 @@ const settings = [
     default: false,
     type: Boolean,
     choices: [],
-    onChange: fetchParams
-  },
-  {
-    name: "ColoredBorders",
-    scope: "world",
-    default: "None",
-    type: String,
-    choices: {none: "None", borders: "Borders Only", borderNamesText: "Border + Name Text", borderNamesBackground: "Border + Name Background"},
-    onChange: fetchParams
-  },
-  {
-    name: "Debug",
-    scope: "world",
-    default: "None",
-    type: String,
-    choices: {none: "None", warn: "warnings", debug: "debug", all: "all"},
     onChange: fetchParams
   },
   {
@@ -186,6 +169,29 @@ export const registerSettings = function() {
     game.settings.register("midi-qol", setting.name, options);
   });
 
+  game.settings.register("midi-qol", "ColoredBorders", 
+  {
+    name: "midi-qol.ColoredBorders.Name",
+    hint: "midi-qol.ColoredBorders.Hint",
+    scope: "world",
+    default: "None",
+    type: String,
+    config: true,
+    choices: i18n("midi-qol.ColoredBordersOptions"),
+    onChange: fetchParams
+  });
+
+  game.settings.register("midi-qol", "AutoRemoveTargets", {
+    name: "midi-qol.AutoRemoveTargets.Name",
+    hint: "midi-qol.AutoRemoveTargets.Hint",
+    scope: "world",
+    default: "dead",
+    type: String,
+    config: true,
+    choices: i18n("midi-qol.AutoRemoveTargetsOptions"),
+    onChange: fetchParams
+  });
+
   game.settings.registerMenu("midi-qol", "midi-qol", {
     name: i18n("midi-qol.config"),
     label: "midi-qol.WorkflowSettings",
@@ -206,8 +212,17 @@ export const registerSettings = function() {
       choices: [],
       onChange: (value) => {window.location.reload()}
     });
-
-
   }
+
+  game.settings.register("midi-qol", "Debug", {
+    name: "midi-qol.Debug.Name",
+    hint: "midi-qol.Debug.Hint",
+    scope: "world",
+    default: "None",
+    type: String,
+    config: true,
+    choices: {none: "None", warn: "warnings", debug: "debug", all: "all"},
+    onChange: fetchParams
+  })
 }
 

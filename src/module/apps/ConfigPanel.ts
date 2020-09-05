@@ -1,6 +1,6 @@
 import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, addChatDamageButtons,  checkBetterRolls } from "../settings"
  import { configSettings } from "../settings"
-import { warn, i18n } from "../../midi-qol";
+import { warn, i18n, error } from "../../midi-qol";
 export class ConfigPanel extends FormApplication {
   
   static get defaultOptions() {
@@ -18,10 +18,8 @@ export class ConfigPanel extends FormApplication {
     return i18n("midi-qol.ConfigTitle")
   }
 
-  getData(options) {
-    return {
-      configSettings,
-      speedItemRollsOptions: {off: "Off", on: "On", onCard: "On + Show Item Card"},
+  /*
+        speedItemRollsOptions: {off: "Off", on: "On", onCard: "On + Show Item Card"},
       autoCheckHitOptions: {none: "None", all: "Check - all see result", whisper: "Check - only GM sees"},
       clickOptions: {off: "Off", attack: "Attack Rolls Only", damage: "Damage Rolls Only", all: "Attack and Damage"},
       autoTargetOptions: {none: "None", always: "Always", wallsBlock: "Walls Block"},
@@ -37,6 +35,32 @@ export class ConfigPanel extends FormApplication {
       checkBetterRolls,
       playerRollSavesOptions: {none: "None",  letme: "Let Me Roll That For You", letmeQuery: "LMRTFY + Querey", chat: "Chat Message"},
       rollSoundOptions: CONFIG.sounds
+*/
+  getData(options) {
+    error(configSettings);
+
+    return {
+      configSettings,
+      speedItemRollsOptions: i18n("midi-qol.speedItemRollsOptions"),
+      autoCheckHitOptions: i18n("midi-qol.autoCheckHitOptions"),
+      clickOptions: i18n("midi-qol.clickOptions"),
+      autoTargetOptions: i18n("midi-qol.autoTargetOptions"),
+      autoCheckSavesOptions: i18n("midi-qol.autoCheckSavesOptions"),
+      autoRollDamageOptions: i18n("midi-qol.autoRollDamageOptions"),
+      criticalDamage,
+      autoApplyDamageOptions: i18n("midi-qol.autoApplyDamageOptions"),
+      damageImmunitiesOptions: i18n("midi-qol.damageImmunitiesOptions"),
+      showItemDetailsOptions: i18n("midi-qol.showItemDetailsOptions"),
+      itemDeleteCheck,
+      hideRollDetailsOptions: i18n("midi-qol.hideRollDetailsOptions"),
+      nsaFlag,
+      coloredBorders,
+      checkBetterRolls,
+      playerRollSavesOptions: i18n("midi-qol.playerRollSavesOptions"),
+      //@ts-ignore .map undefined
+      customSoundsPlaylistOptions: game.playlists.entries.reduce((acc, e) =>{acc[e._id]= e.name; return acc}, {}),
+      customSoundOptions: game.playlists.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) =>{acc[s._id]= s.name; return acc}, {"none": ""}),
+      rollSoundOptions: CONFIG.sounds
     }
   }
 
@@ -45,7 +69,6 @@ export class ConfigPanel extends FormApplication {
   }
   activateListeners(html) {
     super.activateListeners(html);
-    html.find("#useMaestroSounds").click((ev) => {warn("click handler fired"); configSettings.useMaestroSounds = !configSettings.useMaestroSounds; this.render(false)});
   }
   async _updateObject(event, formData) {
     warn("Form data is ", formData)

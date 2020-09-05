@@ -18,8 +18,9 @@ import { itemPatching, visionPatching, setupPatching } from './module/patching.j
 import { initHooks } from './module/Hooks.js';
 import { initGMActionSetup } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
-import { applyTokenDamage, TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
+import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
 import { initializeDSNHandler } from './module/chatMesssageHandling.js';
+import { applyTokenDamage } from './module/utils.js';
 
 export let debugEnabled = 0;
 // 0 = none, warnings = 1, debug = 2, all = 3
@@ -81,6 +82,7 @@ Hooks.once('setup', function() {
 	// Do anything after initialization but before
   // ready
   setupModules();
+  registerSettings();
   initGMActionSetup();
   undoDamageText = i18n("midi-qol.undoDamageFrom");
   savingThrowText = i18n("midi-qol.savingThrowText");
@@ -143,9 +145,9 @@ function doRoll(event={shiftKey: false, ctrlKey: false, altKey: false, metaKey: 
   }
   let item = actor?.items?.get(itemName) // see if we got an itemId
   if (!item) item = actor?.items?.find(i => i.name === itemName && (!options.type || i.type === options.type));
-
-  console.log("passing event ", pEvent)
   if (item) {
     return item.roll({event: pEvent})
+  } else {
+    ui.notifications.warn(game.i18n.format("DND5E.ActionWarningNoItem", {item: itemName, name: actor.name}));
   }
 } 

@@ -87,5 +87,8 @@
     "midi-qol.noDamageText": "Nenhum dano na salvaguarda",
     "midi-qol.PreRollChecks.Name": "Experimental: Aplique verificações antes de fazer a rolagem rápida/macro",
     "midi-qol.PreRollChecks.Hint": "Experimental: Verifica antes de fazer uma rolagem de item; atualmente à distancia e a rolagem tem > 0 PV",
+    "midi-qol.ColoredBordersOptions": {"none": "None", "borders": "Borders Only", "borderNamesText": "Border + Name Text", "borderNamesBackground": "Border + Name Background"},
+    "midi-qol.hideRollDetailsOptions": {"none": "None", "details": "Roll Formula", "all": "Entire Roll"},
+
     "midi-qol.": ""
 }

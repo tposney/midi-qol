@@ -8,7 +8,9 @@ import { warn, debug, log, i18n, noDamageSaves, cleanSpellName, MESSAGETYPES, er
 import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
-import { configSettings, checkBetterRolls, itemRollButtons } from "./settings.js";
+import { configSettings, checkBetterRolls, itemRollButtons, autoRemoveTargets } from "./settings.js";
+import { getSelfTargetSet, createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage } from "./utils"
+import { config } from "process";
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
 export function noKeySet(event) { return !(event.shiftKey || event.ctrlKey || event.altKey || event.metakey)}
@@ -312,6 +314,8 @@ export class Workflow {
         if (applicationTargets?.size) { // perhaps apply item effects
           //@ts-ignore
           let de = window.DynamicEffects;
+          // kludge for itemCardId - do differently in DAE
+          this.item.data.itemCardId = this.itemCardId;
           debug("Calling dynamic effects with ", applicationTargets, de)
           de.doEffects({item: this.item, actor: this.item.actor, activate: true, targets: applicationTargets, 
                 whisper: true, spellLevel: this.itemLevel, damageTotal: this.damageTotal}) 
@@ -323,7 +327,7 @@ export class Workflow {
         //@ts-ignore
         if (this.hideSavesHookId) Hooks.off("preCreateChatMessage", this.hideSavesHookId)
         delete Workflow._workflows[this.itemId];
-        
+        if (autoRemoveTargets !== "none") setTimeout(untargetDeadTokens, 500); // delay to let the updates finish
         Hooks.callAll("minor-qol.RollComplete", this); // just for the macro writers.
         Hooks.callAll("midi-qol.RollComplete", this);
         // disable sounds for when the chat card might be reloaed.
@@ -332,7 +336,7 @@ export class Workflow {
           "flags.midi-qol.playSound": false, 
           "flags.midi-qol.type": MESSAGETYPES.ITEM, 
           type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-          "flags.midi-qol.waitForDiceSoNice": !!!game.dice3d?.messageHookDisabled &&(this.item.hasAttck || this.item.hasDamage || this.item.hasSav),
+          "flags.midi-qol.waitForDiceSoNice": this.item?.hasAttck || this.item?.hasDamage || this.item?.hasSaves,
           "flags.midi-qol.hideTag": this.hideTags,
           "flags.midi-qol.displayId": this.displayId
         });
@@ -348,7 +352,6 @@ export class Workflow {
     let content = chatMessage && duplicate(chatMessage.data.content)
     let buttonRe = /<button data-action="attack">[^<]*<\/button>/
     content = content?.replace(buttonRe, "");
-    let playSound = false;
     var rollSound =  configSettings.diceSound;
     const flags = chatMessage?.data.flags || {};
     let newFlags = {};
@@ -361,18 +364,19 @@ export class Workflow {
       content = content.replace(searchString, replaceString);
       if ( this.attackRoll.dice.length ) {
         const d = this.attackRoll.dice[0];
+        
         const isD20 = (d.faces === 20) && ( d.results.length === 1 );
         if (isD20 ) {
           // Highlight successes and failures
           if ( d.options.critical && (d.total >= d.options.critical) ) {
             content = content.replace('dice-total', 'dice-total critical');
             // play a special noise for critical
-            rollSound = configSettings.criticalSound
+            // rollSound = configSettings.criticalSound
           } 
           else if ( d.options.fumble && (d.total <= d.options.fumble) ) {
             content = content.replace('dice-total', 'dice-total fumble');
              // play a special sound for fumble
-             rollSound = configSettings.fumbleSound;
+             // rollSound = configSettings.fumbleSound;
           }
           else if ( d.options.target ) {
             if ( this.attackRoll.total >= d.options.target ) content = content.replace('dice-total', 'dice-total success');
@@ -385,16 +389,20 @@ export class Workflow {
           "midi-qol": 
           {
             type: MESSAGETYPES.ATTACK,
-            waitForDiceSoNice: !!!game.dice3d?.messageHookDisabled,
+            waitForDiceSoNice: true,
             hideTag: this.hideTags,
-            playSound: (!installedModules.get("maestro") || !configSettings.useMaestroSounds),
+            playSound: true,
             roll: this.attackCardData.roll,
-            displayId: this.displayId
+            displayId: this.displayId,
+            isCritical: this.isCritical,
+            isFumble: this.isFumble,
+            isHit: this.isHit,
+            sound: rollSound
           }
         }, {overwrite: true, inplace: false}
       )
     }
-    await chatMessage?.update({"content": content, sound: rollSound, flags: newFlags });
+    await chatMessage?.update({"content": content, flags: newFlags });
   }
 
   async displayDamageRoll(whisper = false, doMerge) {
@@ -411,7 +419,7 @@ export class Workflow {
     if (doMerge) {
       const searchString = '<div class="midi-qol-damage-roll"></div>';
       // const damageString = i18n(this.versatile ? "DND5E.VersatileDamage" : "DND5E.Damage");
-      const damageString = `(${this.item.data.data.damage.parts.map(a=>CONFIG.DND5E.damageTypes[a[1]]).join(",")})`;
+      const damageString = `(${this.item?.data.data.damage.parts.map(a=>CONFIG.DND5E.damageTypes[a[1]]).join(",") || `${this.defaultDamageType}`})`;
       //@ts-ignore .flavor not defined
       const dmgHeader = configSettings.mergeCardCondensed ? damageString : this.damageCardData.flavor;
       let replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center" >${dmgHeader}${this.damageRollHTML || ""}</div></div>`
@@ -425,9 +433,10 @@ export class Workflow {
       this.displayId = randomID();
       newFlags = mergeObject(newFlags, {
         "midi-qol": {
-          waitForDiceSoNice: !!!game.dice3d?.messageHookDisabled,
+          waitForDiceSoNice: true,
           type: MESSAGETYPES.DAMAGE,
-          playSound: !installedModules.get("maestro") || !configSettings.useMaestroSounds,
+          playSound: false, 
+          sound: rollSound,
           roll: this.damageCardData.roll,
           damageDetail: this.damageDetail,
           damageTotal: this.damageTotal,
@@ -436,7 +445,7 @@ export class Workflow {
         }
       }, {overwrite: true, inplace: false});
     }
-    await chatMessage?.update( {"content": content, flags: newFlags, sound: rollSound});
+    await chatMessage?.update( {"content": content, flags: newFlags});
   }
 
   async displayHits(whisper = false, doMerge) {
@@ -466,12 +475,10 @@ export class Workflow {
             "flags.midi-qol.playSound": false,
             "flags.midi-qol.type": MESSAGETYPES.HITS,
             type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-            "flags.midi-qol.waitForDiceSoNice": !!!game.dice3d?.messageHookDisabled,
+            "flags.midi-qol.waitForDiceSoNice": true,
             "flags.midi-qol.hideTag": this.hideTags,
             "flags.midi-qol.displayId": this.displayId
           });
-          //@ts-ignore content not defind
-          chatMessage.content = content;
           break;
         case "Workflow":
         case "TrapWorkflow":
@@ -480,15 +487,14 @@ export class Workflow {
           content = content.replace(searchString, replaceString);
           await chatMessage.update({
             "content": content, 
-            "flags.midi-qol.playSound": false, 
+            "flags.midi-qol.playSound": this.isCritical || this.isFumble, 
             "flags.midi-qol.type": MESSAGETYPES.HITS,
             type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-            "flags.midi-qol.waitForDiceSoNice": !!!game.dice3d?.messageHookDisabled,
+            "flags.midi-qol.waitForDiceSoNice": true,
             "flags.midi-qol.hideTag": this.hideTags,
-            "flags.midi-qol.displayId": this.displayId
+            "flags.midi-qol.displayId": this.displayId,
+            "flags.midi-qol.sound": this.isCritical ? configSettings.criticalSound : configSettings.fumbleSound
           });
-          //@ts-ignore
-          chatMessage.content = content;
           break;
         }
     } else {
@@ -508,7 +514,7 @@ export class Workflow {
           chatData.user = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
           debug("Trying to whisper message", chatData)
         }
-        setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", !!!game.dice3d?.messageHookDisabled);
+        setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", true);
         setProperty(chatData, "flags.midi-qol.hideTag", "midi-qol-hits-display")
         ChatMessage.create(chatData);
       }
@@ -570,7 +576,7 @@ export class Workflow {
         content: `<div data-item-id="${this.item._id}"></div> ${saveContent}`,
         flavor: `<h4>${this.saveDisplayFlavor}</h4>`, 
         type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-        flags: { "midi-qol": {type: MESSAGETYPES.SAVES, waitForDiceSoNice: !!!game.dice3d?.messageHookDisabled}}
+        flags: { "midi-qol": {type: MESSAGETYPES.SAVES, waitForDiceSoNice: true}}
       };
       if (configSettings.autoCheckSaves === "whisper" || whisper) {
         chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active);
@@ -826,13 +832,18 @@ export class Workflow {
 }
 
 export class DamageOnlyWorkflow extends Workflow {
-  constructor(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token]) {
+  constructor(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll, 
+        options: {flavor: string, itemData: {itemCardId: string}}= {flavor: "", itemData: {itemCardId: null}}) {
     super(actor, null, token, ChatMessage.getSpeaker(), shiftOnlyEvent)
     this.damageTotal = damageTotal;
     this.damageDetail = [{type: damageType,  damage: damageTotal}];
-    warn("dmageonlyworkflow ", this);
+    this.damageRoll = roll;
+    this.flavor = options.flavor;
+    this.defaultDamageType = damageType;
     console.warn("Targets are ", targets)
     this.targets = new Set(targets);
+    if (options.itemData.itemCardId) this.itemCardId = options.itemData.itemCardId;
+    warn("Damage only workflow data", options.itemData, this)
     this.next(WORKFLOWSTATES.NONE);
     return this;
   }
@@ -843,13 +854,20 @@ export class DamageOnlyWorkflow extends Workflow {
     // let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===this.currentState)[0];
     switch(newState) {
       case WORKFLOWSTATES.NONE:
-        this.hitTargets = this.targets;
+        if (configSettings.mergeCard) {
+          this.damageRollHTML = await this.damageRoll.render();
+          this.damageCardData = {
+            //@ts-ignore
+            flavor: "damage flavor",
+            roll: this.damageRoll
+          }
+        } else this.damageRoll.toMessage({flavor: this.flavor});
+        this.hitTargets = new Set(this.targets);
         debug("DamageOnlyWorkflow.next ", newState, configSettings.speedItemRolls, this);
         warn("workflow damage only display Damage Roll")
-        await this.displayDamageRoll(false, false)
-        warn("workflow damage only display Damage Roll")
-        applyTokenDamage(this.damageDetail, this.damageTotal, this.hitTargets, null, new Set())
-        warn("workflow damage only display Damage Roll")
+        await this.displayDamageRoll(false, configSettings.mergeCard)
+        warn("workflow damage only apply damage Damage Roll")
+        applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, null, new Set())
         return super.next(WORKFLOWSTATES.ROLLFINISHED);
 
       default: return super._next(newState);
@@ -859,11 +877,11 @@ export class DamageOnlyWorkflow extends Workflow {
 
 export class TrapWorkflow extends Workflow {
 
-  trapSound: string;
+  trapSound: {playlist: string, sound: string};
   trapCenter: {x: number, y: number};
   saveTargets: any;
 
-  constructor(actor: Actor5e, item: Item5e, targets: [Token], trapCenter: {x: number, y: number} = undefined, trapSound: string = "",  event: any = null) {
+  constructor(actor: Actor5e, item: Item5e, targets: [Token], trapCenter: {x: number, y: number} = undefined, trapSound: {playlist: string , sound: string} = undefined,  event: any = null) {
     super(actor, item, null, ChatMessage.getSpeaker, event);
     this.targets = new Set(targets);
     if (!this.event) this.event = duplicate(shiftOnlyEvent);
@@ -943,7 +961,7 @@ export class TrapWorkflow extends Workflow {
         if (this.isFumble) {
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
         }
-        let defaultDamageType = this.item.data.data.damage?.parts[0][1] || "bludgeoning";
+        let defaultDamageType = this.item?.data.data.damage?.parts[0][1] || this.defaultDamageType;
         this.damageDetail = createDamageList(this.damageRoll, this.item, defaultDamageType);
         return this.next(WORKFLOWSTATES.WAITFORSAVES);
 
@@ -1048,298 +1066,3 @@ export class BetterRollsWorkflow extends Workflow {
   }
 }
 
-/**
- *  return a list of {damage: number, type: string} for the roll and the item
- */
-export let createDamageList = (roll, item, defaultType = "radiant") => {
-  if (isNewerVersion(game.data.version, "0.6.9") ) {
-    let damageList = []
-    let rollTerms = roll.terms;
-    let partPos = 0;
-    let evalString;
-    let damageSpec = item ? item.data.data.damage : {parts: []};
-    debug("Passed roll is ", roll)
-    debug("Damage spec is ", damageSpec)
-    for (let [spec, type] of damageSpec.parts) {
-      debug("single Spec is ", spec, type, item)
-      if (item) {
-        var rollSpec = new Roll(spec, item.actor?.getRollData() || {}).roll();
-      }
-      debug("rollSpec is ", spec, rollSpec)
-      //@ts-ignore
-      let specLength = rollSpec.terms.length;
-      evalString = "";
-
-      //@ts-ignore
-      debug("Spec Length ", specLength, rollSpec.terms)
-      for (let i = 0; i < specLength && partPos < rollTerms.length; i++) {
-        if (typeof rollTerms[partPos] !== "object") {
-          evalString += rollTerms[partPos];
-        } else {
-          debug("roll parts ", rollTerms[partPos])
-          let total = rollTerms[partPos].total;
-          evalString += total;
-        }
-        partPos += 1;
-      }
-      let damage = new Roll(evalString).roll().total;
-      debug("Damage is ", damage, type, evalString)
-      damageList.push({ damage: damage, type: type });
-      partPos += 1; // skip the plus
-    }
-    debug(partPos, damageList)
-    evalString = "";
-    while (partPos < rollTerms.length) {
-      debug(rollTerms[partPos])
-      if (typeof rollTerms[partPos] === "object") {
-        let total = rollTerms[partPos].total;
-        evalString += total;
-      }
-      else evalString += rollTerms[partPos];
-      partPos += 1;
-    }
-    if (evalString.length > 0) {
-      debug("Extras part is ", evalString)
-        let damage = new Roll(evalString).roll().total;
-        let type = damageSpec.parts[0] ? damageSpec.parts[0][1] : defaultType;
-        damageList.push({ damage, type});
-        debug("Extras part is ", evalString)
-    }
-    debug("Final damage list is ", damageList)
-    return damageList;
-  }
-  let damageList = [];
-  let rollParts = roll.parts;
-  let partPos = 0;
-  let evalString;
-  let damageSpec = item ? item.data.data.damage : {parts: []};
-  debug("Passed roll is ", roll)
-  debug("Damage spec is ", damageSpec)
-  for (let [spec, type] of damageSpec.parts) {
-    debug("single Spec is ", spec, type, item)
-    if (item) {
-      var rollSpec = new Roll(spec, item.actor?.getRollData() || {}).roll();
-    }
-    debug("rollSpec is ", spec, rollSpec)
-    let specLength = rollSpec.parts.length;
-    evalString = "";
-
-    debug(specLength, rollSpec.parts)
-    for (let i = 0; i < specLength && partPos < rollParts.length; i++) {
-      if (typeof rollParts[partPos] === "object") {
-        debug("roll parts ", rollParts[partPos])
-        let total = rollParts[partPos].total;
-        evalString += total;
-      }
-      else evalString += rollParts[partPos];
-      partPos += 1;
-    }
-    let damage = new Roll(evalString).roll().total;
-    debug("Damage is ", damage, type, evalString)
-    damageList.push({ damage: damage, type: type });
-    partPos += 1; // skip the plus
-  }
-  debug(partPos, damageList)
-  evalString = "";
-  while (partPos < rollParts.length) {
-    debug(rollParts[partPos])
-    if (typeof rollParts[partPos] === "object") {
-      let total = rollParts[partPos].total;
-      evalString += total;
-    }
-    else evalString += rollParts[partPos];
-    partPos += 1;
-  }
-  if (evalString.length > 0) {
-    debug("Extras part is ", evalString)
-      let damage = new Roll(evalString).roll().total;
-      let type = damageSpec.parts[0] ? damageSpec.parts[0][1] : "radiant";
-      damageList.push({ damage, type});
-      debug("Extras part is ", evalString)
-  }
-  debug("Final damage list is ", damageList)
-  return damageList;
-}
-
-function getSelfTarget(actor) {
-  if (actor.isPC) return actor.getActiveTokens()[0]; // if a pc always use the represented token
-  const speaker = ChatMessage.getSpeaker()
-  if (speaker.token) return canvas.tokens.get(speaker.token);
-  if (actor.token) return actor.token;
-  return undefined;
-}
-
-function getSelfTargetSet(actor) {
-  return new Set([getSelfTarget(actor)])
-}
-
-let getParams = () => {
-  return ` 
-    itemRollButtons: ${itemRollButtons} <br>
-    configSettings.speedItemRolls: ${configSettings.speedItemRolls} <br>
-    configSettings.autoTarget: ${configSettings.autoTarget} <br>
-    configSettings.autoCheckHit: ${configSettings.autoCheckHit} <br>
-    configSettings.autoCheckSaves: ${configSettings.autoCheckSaves} <br>
-    configSettings.autoApplyDamage: ${configSettings.autoApplyDamage} <br>
-    configSettings.autoRollDamage: ${configSettings.autoRollDamage} <br>
-    configSettings.playerRollSaves: ${configSettings.playerRollSaves} <br>
-    checkBetterRolls: ${checkBetterRolls} `
-}
-// Calculate the hp/tempHP lost for an amount of damage of type
-export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType) {
-  debug("calculate damage ", a, appliedDamage, t, totalDamage, dmgType)
-  let value = Math.floor(appliedDamage);
-  if (dmgType.includes("temphp")) { // only relavent for healing of tmp HP
-    var hp = a.data.data.attributes.hp;
-    var tmp = parseInt(hp.temp) || 0;
-    var oldHP = hp.value;
-    var newTemp = Math.max(tmp - value, 0);
-    var newHP: number = hp.value;
-  } else {
-    var hp = a.data.data.attributes.hp, tmp = parseInt(hp.temp) || 0, dt = value > 0 ? Math.min(tmp, value) : 0;
-    var newTemp = tmp - dt;
-    var oldHP = hp.value;
-    var newHP: number = Math.clamped(hp.value - (value - dt), 0, hp.max + (parseInt(hp.tempmax)|| 0));
-  }
-
-  if (game.user.isGM)
-      log(`${a.name} takes ${value} reduced from ${totalDamage} Temp HP ${newTemp} HP ${newHP}`);
-  return {tokenID: t.id, actorID: a._id, tempDamage: dt, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
-          oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value};
-}
-
-/** 
- * Work out the appropriate multiplier for DamageTypeString on actor
- * If configSettings.damageImmunities are not being checked always return 1
- * 
- */
-
-export let getTraitMult = (actor, dmgTypeString, item) => {
-  if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) return -1;
-
-  if (configSettings.damageImmunities !== "none" && dmgTypeString !== "") {
-    // if not checking all damage counts as magical
-    const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
-    for (let {type, mult}  of [{type: "di", mult: 0}, {type:"dr", mult: 0.5}, {type: "dv", mult: 2}]) {
-      let trait = actor.data.data.traits[type].value;
-      if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
-      if (trait.includes(dmgTypeString)) return mult;
-    }
-  }
-  // Check the custom immunities
-  return 1;
-};
-
-export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, saves) => {
-  let damageList = [];
-  let targetNames = [];
-  let appliedDamage;
-  let workflow = (Workflow.workflows && Workflow._workflows[item?.uuid]) || {};
-  debug("Apply token damage ", damageDetail, totalDamage, theTargets, item, saves, workflow)
-
-  if (!theTargets || theTargets.size === 0) {
-    workflow.currentState = WORKFLOWSTATES.ROLLFINISHED;
-    // probably called from refresh - don't do anything
-    return true;
-  }
-  for (let t of theTargets) {
-      let a = t.actor;
-      if (!a) continue;
-      appliedDamage = 0;
-      for (let { damage, type } of damageDetail) {
-        //let mult = 1;
-          let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
-          mult = mult * getTraitMult(a, type, item);
-          appliedDamage += Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
-          var dmgType = type;
-        }
-      damageList.push(calculateDamage(a, appliedDamage, t, totalDamage, dmgType));
-      targetNames.push(t.name)
-  }
-  if (theTargets.size > 0) {
-    let intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
-    if (!intendedGM) {
-      ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
-      error("No GM user connected - cannot apply damage");
-      return;
-    }
-
-    broadcastData({
-      action: "reverseDamageCard",
-      autoApplyDamage: configSettings.autoApplyDamage,
-      sender: game.user.name,
-      intendedFor: intendedGM.id,
-      damageList: damageList,
-      settings: getParams(),
-      targetNames,
-      chatCardId: workflow.itemCardId
-    });
-  }
-  return appliedDamage;
-};
-
-async function processDamageRoll(workflow: Workflow, defaultDamageType: string) {
-  warn("Process Damage Roll ", workflow)
-  // proceed if adding chat damage buttons or applying damage for our selves
-  let appliedDamage = 0;
-  const actor = workflow.actor;
-  let item = workflow.item;
-  // const re = /.*\((.*)\)/;
-  // const defaultDamageType = message.data.flavor && message.data.flavor.match(re);
-
-  // Show damage buttons if enabled, but only for the applicable user and the GM
-  
-  let theTargets = workflow.hitTargets;
-  if (item?.data.data.target?.type === "self") theTargets = getSelfTargetSet(actor) || theTargets;
-  appliedDamage = applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves);
-  debug("process damage roll: ", configSettings.autoApplyDamage, workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves)
-}
-
-let getSaveMultiplierForItem = item => {
-  // find a better way for this ? perhaps item property
-  if (!item) return 1;
-  if (noDamageSaves.includes(cleanSpellName(item.name))) return 0;
-  if (item.data.data.description.value.includes(i18n("midi-qol.noDamageText"))) {
-    return 0.0;
-  } 
-  if (!configSettings.checkSaveText) return 0.5;
-  if (item.data.data.description.value.includes(i18n("midi-qol.halfDamage")) || item.data.data.description.value.includes(i18n("midi-qol.halfDamageAlt"))) {
-    return 0.5;
-  }
-  //  Think about this. if (checkSavesText true && item.hasSave) return 0; // A save is specified but the half-damage is not specified.
-  return 1;
-  };
-
-function requestPCSave(ability, playerId, actorId, advantage, flavor, dc, requestId) {
-  if (installedModules.get("lmrtfy") && ["letme", "letmeQuery"].includes(configSettings.playerRollSaves)) {
-    const socketData = {
-      user: playerId,
-      actors: [actorId],
-      abilities: [],
-      saves: [ability],
-      skills: [],
-      advantage: configSettings.playerRollSaves === "letmeQuery"? 2 : (advantage ? 1 : 0),
-      mode: "roll",
-      title: i18n("midi-qol.saving-throw"),
-      message: `${configSettings.displaySaveDC ? "DC " + dc : ""} ${i18n("midi-qol.saving-throw")} ${flavor}`,
-      formula: "",
-      attach: requestId,
-      deathsave: false,
-      initiative: false
-    }
-    debug("process player save ", socketData)
-    //@ts-ignore - emit not in types
-    game.socket.emit('module.lmrtfy', socketData);
-   //@ts-ignore - global variable
-    LMRTFY.onMessage(socketData);
-  } else {
-    let player = game.users.get(playerId);
-    let actorName = game.actors.get(actorId).name;
-    let content = ` ${actorName} ${configSettings.displaySaveDC ? "DC " + dc : ""} ${CONFIG.DND5E.abilities[ability]} ${i18n("midi-qol.saving-throw")}`;
-    content = content + (advantage ? `(${i18n("DND5E.Advantage")}` : "") + ` - ${flavor}`;
-    ChatMessage.create({
-      content,
-      whisper: [player]
-    });
-  }
-}

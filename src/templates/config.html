@@ -34,7 +34,7 @@
           <input type="checkbox" name="mergeCardCondensed" data-dtype="Boolean"
             {{checked configSettings.mergeCardCondensed}} />
         </div>
-        <div class="midi-qol-faint">{{localize "midi-qol.MergeCardCondensed.Hint"}}></div>
+        <div class="midi-qol-faint">{{localize "midi-qol.MergeCardCondensed.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol.HideNPCNames.Name"}}</label>
@@ -80,6 +80,19 @@
               {{checked configSettings.autoRollAttack}} />
           </div>
           <div class="midi-qol-faint">{{localize "midi-qol.AutoRollAttack.Hint"}}</div>
+
+          <div class="form-group hideRolldetails">
+            <label>{{localize "midi-qol.HideRollDetails.Name"}}</label>
+            <select name="hideRollDetails" data-dtype="String">
+              {{#select configSettings.hideRollDetails}}
+              {{#each hideRollDetailsOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
+          <div class="midi-qol-faint">{{localize "midi-qol.HideRollDetails.Hint"}}</div>
+          
           <div class="form-group autoFastForward">
             <label>{{localize "midi-qol.AutoFastForward.Name"}}</label>
             <select name="autoFastForward" data-dtype="String">
@@ -204,39 +217,107 @@
             <div class="midi-qol-faint">{{localize "midi-qol.AutoEffects.Hint"}}</div>
           </div>
 
-          <div class="midi-qol-nobox">
-            {{#if false}}
-            <div class="form-group useMaestroSounds">
-              <label>{{localize "midi-qol.UseMaestroSounds.Name"}}</label>
-              <input id="useMaestroSounds" type="checkbox" name="useMaestroSounds" data-dtype="Boolean"
-                {{checked configSettings.useMaestroSounds}} />
-            </div>
-            <div class="midi-qol-faint">{{localize "midi-qol.UseMaestroSounds.Hint"}}</div>
-            {{/if}}
 
-            {{#unless false}}
-            {{localize "midi-qol.DiceSounds.Hint"}}
-            <div class="form-group">
-              <label>{{localize "midi-qol.DiceSound.Name"}}</label>
-              {{filePicker target="diceSound" type="audio"}}
-              <input class="String" type="audio" name="diceSound" placeholder="{{configSettings.diceSound}}"
-                value="{{configSettings.diceSound}}" />
-            </div>
-            <div class="form-group">
-              <label>{{localize "midi-qol.FumbleSound.Name"}}</label>
-              {{filePicker target="fumbleSound" type="audio"}}
-              <input class="String" type="audio" name="fumbleSound" placeholder="{{configSettings.fumbleSound}}"
-                value="{{configSettings.fumbleSound}}" />
-            </div>
-            <div class="form-group">
-              <label>{{localize "midi-qol.CriticalSound.Name"}}</label>
-              {{filePicker target="criticalSound" type="audio"}}
-              <input class="String" type="audio" name="criticalSound" placeholder="{{configSettings.criticalSound}}"
-                value="{{configSettings.criticalSound}}" />
-            </div>
-            {{/unless}}
+          <div class="form-group useCustomSounds">
+            <label>{{localize "midi-qol.UseCustomSounds.Name"}}</label>
+            <input id="useCustomSounds" type="checkbox" name="useCustomSounds" data-dtype="Boolean"
+              {{checked configSettings.useCustomSounds}} />
           </div>
+          <div class="midi-qol-faint">{{localize "midi-qol.UseCustomSounds.Hint"}}</div>
+
+          <div class="form-group customSoundsPlaylist">
+            <label>{{localize "midi-qol.CustomSoundsPlaylist.Name"}}</label>
+            <select name="customSoundsPlaylist" data-dtype="String">
+              {{#select configSettings.customSoundsPlaylist}}
+              {{#each customSoundsPlaylistOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>{{localize "midi-qol.WeaponUseSound.Name"}}</label>
+            <select name="weaponUseSound" data-dtype="String">
+              {{#select configSettings.weaponUseSound}}
+              {{#each customSoundOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>{{localize "midi-qol.SpellUseSound.Name"}}</label>
+            <select name="spellUseSound" data-dtype="String">
+              {{#select configSettings.spellUseSound}}
+              {{#each customSoundOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>{{localize "midi-qol.PotionUseSound.Name"}}</label>
+            <select name="potionUseSound" data-dtype="String">
+              {{#select configSettings.potionUseSound}}
+              {{#each customSoundOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
+
+
+          <div class="form-group">
+            <label>{{localize "midi-qol.ItemUseSound.Name"}}</label>
+            <select name="itemUseSound" data-dtype="String">
+              {{#select configSettings.itemUseSound}}
+              {{#each customSoundOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
+
+          {{localize "midi-qol.DiceSounds.Hint"}}
+          <div class="form-group">
+            <label>{{localize "midi-qol.DiceSound.Name"}}</label>
+            <select name="diceSound" data-dtype="String">
+              {{#select configSettings.diceSound}}
+              {{#each customSoundOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>{{localize "midi-qol.CriticalSound.Name"}}</label>
+            <select name="criticalSound" data-dtype="String">
+              {{#select configSettings.criticalSound}}
+              {{#each customSoundOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>{{localize "midi-qol.FumbleSound.Name"}}</label>
+            <select name="fumbleSound" data-dtype="String">
+              {{#select configSettings.fumbleSound}}
+              {{#each customSoundOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
+
+
         </div>
+      </div>
     </section>
 
     <footer class="sheet-footer flexrow">

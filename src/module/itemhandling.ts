@@ -1,6 +1,6 @@
 import { warn, debug, error, i18n, log, MESSAGETYPES } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
-import {  configSettings } from "./settings";
+import {  configSettings, itemDeleteCheck } from "./settings";
 import { rollMappings } from "./patching";
 
 function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boolean, workflowData: any, selector: string) {
@@ -145,6 +145,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const token = this.actor.token;
   const needAttckButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
   const sceneId = token?.scene && token.scene._id || canvas.scene._id;
+
   const templateData = {
     actor: this.actor,
     tokenId: token ? `${sceneId}.${token.id}` : null,
@@ -168,6 +169,10 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const html = await renderTemplate(template, templateData);
 
   debug(" Show Item Card ", configSettings.useTokenNames,(configSettings.useTokenNames && token) ? token?.data?.name : this.actor.name, token, token?.data.name, this.actor.name, ChatMessage.getSpeaker())
+  let theSound = configSettings.itemUseSound;
+  if (this.type === "weaon") theSound = configSettings.weaponUseSound;
+  else if (this.type === "spell") theSound = configSettings.spellUseSound;
+  else if (this.type === "consumable" && this.name.toLowerCase().includes(i18n("midi-qol.potion").toLowerCase())) theSound = configSettings.potionUseSound;
   const chatData = {
     user: game.user._id,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
@@ -180,6 +185,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     flags: {"midi-qol": {
       item: workflow.item.id, 
       actor: workflow.actor.id, 
+      sound: theSound,
       type: MESSAGETYPES.ITEM, 
       itemUUId: workflow.itemUUId
     }}

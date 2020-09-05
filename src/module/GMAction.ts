@@ -4,14 +4,12 @@ import { i18n, debug, error, log, undoDamageText, warn } from "../midi-qol";
 
 var traitList = { di: {}, dr: {}, dv: {} };
 
-
 const moduleSocket = "module.midi-qol";
 let processAction = async data => {
   switch (data.action) {
     case "reverseDamageCard":
       if (!game.user.isGM)
         break;
-warn("process action ", data.autoApplyDamage)        
       if (data.autoApplyDamage === "none")
         break;
       await createReverseDamageCard(data);
@@ -27,6 +25,7 @@ export let setupSocket = () => {
 };
 
 export function broadcastData(data) {
+  data.sceneId = canvas.scene.id;
   // if not a gm broadcast the message to a gm who can apply the damage
   if (game.user.id !== data.intendedFor) {
     //@ts-ignore
@@ -55,8 +54,20 @@ let createReverseDamageCard = async (data) => {
     damageApplied: ["yes", "yesCard"].includes(data.autoApplyDamage) ? "HP Updated" : "HP Not Updated",
     damageList: [] 
   };
+  let scene = canvas.scene;
   for (let { tokenID, actorID, tempDamage, hpDamage, totalDamage, appliedDamage } of damageList) {
     token = canvas.tokens.get(tokenID);
+    if (!token) { //Token does not exist on this scene, find it in on referenced scene.
+      scene = game.scenes.get(data.sceneId);
+      //@ts-ignore .tokens not defined
+      const tokenData = scene.data.tokens.find(t=>t._id === tokenID);
+      if (!tokenData) {
+        // we really should be able to fine the token
+        error(`GMAction: could not find token ${tokenID} in scene ${scene?.name || data.sceneId}`);
+        continue;
+      }
+      token = await Token.create(tokenData); // create a temp token for calcs
+    }
     actor = token.actor;
     const hp = actor.data.data.attributes.hp;
     const oldTempHP = hp.temp;
@@ -70,8 +81,14 @@ let createReverseDamageCard = async (data) => {
     }
     let newHP = Math.max(0, actor.data.data.attributes.hp.value - hpDamage);
     if (data.intendedFor === game.user.id && ["yes", "yesCard"].includes(data.autoApplyDamage)) {
-      promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP }));
+      if (token.data.actorLink || canvas.scene.id === scene.id) promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP }));
+      else promises.push(scene.updateEmbeddedEntity("Token", { // need to deal with the case that the token might be on another scene
+         "_id": tokenID, //use the original ID not the one from the potentially temp token
+         "actorData.data.attributes.hp.temp": newTempHP, 
+         "actorData.data.attributes.hp.value": newHP
+        }))
     }
+    
     tokenIdList.push({ tokenID, oldTempHP: oldTempHP, oldHP: hp.value, absDamage: Math.abs(totalDamage), newHP, newTempHP});
 
     let listItem = {
@@ -102,7 +119,7 @@ let createReverseDamageCard = async (data) => {
   }
   //@ts-ignore
   const results = await Promise.allSettled(promises);
-
+  warn("GM action results are ", results)
 
   if (["yesCard", "noCard"].includes(data.autoApplyDamage)) {
     const content = await renderTemplate("modules/midi-qol/templates/damage-results.html", templateData);
@@ -113,7 +130,6 @@ let createReverseDamageCard = async (data) => {
       speaker,
       content: content,
       whisper: ChatMessage.getWhisperRecipients("GM").filter(u => u.active),
-      //flavor: `${i18n("midi-qol.undoDamageFrom")} ${data.sender}`,
       type: CONST.CHAT_MESSAGE_TYPES.OTHER,
       flags: { "midiqol": {"undoDamage" :tokenIdList }}
     };
