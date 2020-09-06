@@ -170,7 +170,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
 
   debug(" Show Item Card ", configSettings.useTokenNames,(configSettings.useTokenNames && token) ? token?.data?.name : this.actor.name, token, token?.data.name, this.actor.name, ChatMessage.getSpeaker())
   let theSound = configSettings.itemUseSound;
-  if (this.type === "weaon") theSound = configSettings.weaponUseSound;
+  if (this.type === "weapon") theSound = configSettings.weaponUseSound;
   else if (this.type === "spell") theSound = configSettings.spellUseSound;
   else if (this.type === "consumable" && this.name.toLowerCase().includes(i18n("midi-qol.potion").toLowerCase())) theSound = configSettings.potionUseSound;
   const chatData = {
@@ -180,7 +180,8 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     speaker: {
       actor: this.actor._id,
       token: this.actor.token,
-      alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name
+      alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name,
+      // scene: canvas.scene.id
     },
     flags: {"midi-qol": {
       item: workflow.item.id, 

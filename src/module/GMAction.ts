@@ -82,11 +82,14 @@ let createReverseDamageCard = async (data) => {
     let newHP = Math.max(0, actor.data.data.attributes.hp.value - hpDamage);
     if (data.intendedFor === game.user.id && ["yes", "yesCard"].includes(data.autoApplyDamage)) {
       if (token.data.actorLink || canvas.scene.id === scene.id) promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP }));
-      else promises.push(scene.updateEmbeddedEntity("Token", { // need to deal with the case that the token might be on another scene
+      else {
+        debug("doing remote scene update")
+        promises.push(scene.updateEmbeddedEntity("Token", { // need to deal with the case that the token might be on another scene
          "_id": tokenID, //use the original ID not the one from the potentially temp token
          "actorData.data.attributes.hp.temp": newTempHP, 
          "actorData.data.attributes.hp.value": newHP
         }))
+      }
     }
     
     tokenIdList.push({ tokenID, oldTempHP: oldTempHP, oldHP: hp.value, absDamage: Math.abs(totalDamage), newHP, newTempHP});
@@ -127,7 +130,7 @@ let createReverseDamageCard = async (data) => {
     speaker.alias = game.user.name;
     let chatData = {
       user: game.user._id,
-      speaker,
+      speaker: {scene: canvas.scene, alias: game.user.name},
       content: content,
       whisper: ChatMessage.getWhisperRecipients("GM").filter(u => u.active),
       type: CONST.CHAT_MESSAGE_TYPES.OTHER,
