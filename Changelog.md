@@ -7,7 +7,8 @@
 * Fixed a bug that broke midi-qol if item.rollAttack throws an error. E.g. if ammunition is not properly configured.
 * Changed default damage type to healing. Some of the SRD spells don't specify a damage type of healing and so were, by default, doing damage rather than healing.
 * A blank player save timeout now defaults to 1 second, previously it default to 0 seconds.
-* Added spanish translation - thanks to @Sali Vader
+* Added Spanish translation - thanks to @Sali Vader
+* Update Korean translation - thanks to @KLO
 
 ## 0.2.8
 * Added auto untarget options.
