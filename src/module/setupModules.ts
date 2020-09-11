@@ -13,8 +13,11 @@ export let setupModules = () => {
   for (let name of Object.keys(modules)) { 
     installedModules.set(name,game.modules.get(name)?.data.version);
     installedModules.set(name, isNewerVersion(installedModules.get(name) || "0.0", modules[name]) && game.modules.get(name)?.active) 
-    if (game.modules.get(name)?.data.version && !installedModules.get(name)) 
-      error(`midi-qol requires ${name} to be of version ${modules[name]} or later, but it is version ${game.modules.get(name).data.version}`);
+    if (game.modules.get(name)?.data.version && !installedModules.get(name)) {
+      if (game.modules.get(name)?.active)
+        error(`midi-qol requires ${name} to be of version ${modules[name]} or later, but it is version ${game.modules.get(name).data.version}`);
+      else error(`module ${name} not active`)
+    }
   }
   if (debug || true)
     for (let module of installedModules.keys()) log(`module ${module} has valid version ${installedModules.get(module)}`)

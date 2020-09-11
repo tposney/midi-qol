@@ -24,11 +24,9 @@ export function mergeCardSoundPlayer(message, update, options, user) {
   if (midiqolFlags.playSound && configSettings.useCustomSounds) {
     const playlist = game.playlists.get(configSettings.customSoundsPlaylist);
     const sound = playlist?.sounds.find(s=>s._id === midiqolFlags.sound)
-    debug("mergeCardsound player ", update, playlist, sound, sound?'playing sound':'not palying sound')
-
     const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
-    let delay = (dice3dActive && midiqolFlags?.waitForDiceSoNice && [MESSAGETYPES.HITS].includes(midiqolFlags.type)) ? 500 : 0;
-    warn("mergeCardsound player ", update, playlist, sound, sound?'playing sound':'not palying sound', delay)
+    const delay = (dice3dActive && midiqolFlags?.waitForDiceSoNice && [MESSAGETYPES.HITS].includes(midiqolFlags.type)) ? 500 : 0;
+    debug("mergeCardsound player ", update, playlist, sound, sound?'playing sound':'not palying sound', delay)
     if (sound) {
       setTimeout(() => {
        sound.playing = true;
@@ -159,13 +157,17 @@ export function diceSoNiceUpdateMessge(message, update, ...args) {
   if (!dice3dActive || !getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
   const type = getProperty(update, "flags.midi-qol.type")
   if (![MESSAGETYPES.ATTACK, MESSAGETYPES.DAMAGE].includes(type)) return;
-  const displayId = duplicate(message.data.flags["midi-qol"].displayId)
-  game.dice3d.showForRoll(Roll.fromJSON(message.data.flags["midi-qol"].roll), message.user).then(displayed => {
-    delete message._dice3danimating;
-    Hooks.callAll("diceSoNiceRollComplete", displayId);
-    //@ts-ignore
-    ui.chat.scrollBottom();
-  });
+  const displayId = duplicate(message.data.flags["midi-qol"].displayId);
+  // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
+  let rollDice = message.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
+  if (rollDice) {
+    game.dice3d.showForRoll(Roll.fromJSON(message.data.flags["midi-qol"].roll), message.user).then(displayed => {
+      delete message._dice3danimating;
+      Hooks.callAll("diceSoNiceRollComplete", displayId);
+      //@ts-ignore
+      ui.chat.scrollBottom();
+    });
+  }
 }
 let showHandler = (hideTags, displayId, html, header, id) => {
   debug(header, hideTags, displayId, html, id)
@@ -179,6 +181,9 @@ let showHandler = (hideTags, displayId, html, header, id) => {
 export let diceSoNiceHandler = async (message, html, data) => {
   debug("Dice so nice handler ", message, html, data);
   if (!game.dice3d || !installedModules.get("dice-so-nice") || game.dice3d.messageHookDisabled || !game.dice3d.isEnabled()) return;
+  // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
+  let rollDice = message.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
+  if (!rollDice) return;
   if (configSettings.mergeCard) {
 
     if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
@@ -187,7 +192,7 @@ export let diceSoNiceHandler = async (message, html, data) => {
     if (type === undefined) return;
     const hideTags = message.data.flags["midi-qol"].hideTag;
     const displayId = message.data.flags["midi-qol"].displayId;
-    warn("dicesonice render chat handler ", type, hideTags, data, message, displayId)
+    debug("dicesonice render chat handler ", type, hideTags, data, message, displayId)
     if (hideTags) hideTags.forEach(hideTag => html.find(hideTag).hide());
     DSNHandlers.set(displayId, showHandler.bind(this, duplicate(hideTags), duplicate(displayId), html, "dice so nice complete handler "))
     setTimeout(showHandler.bind(this, duplicate(hideTags), duplicate(displayId), html, "dice so nice timeout handler ", duplicate(displayId)), 5000); // backup display of messages
@@ -243,6 +248,7 @@ export let nsaMessageHandler = (message, html, data) => {
   let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active).map(u=>u.id);
   let currentIds = data.whisper.map(u=>typeof(u) === "string" ? u : u.id);
   gmIds = gmIds.filter(id => !currentIds.includes(id));
+  debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmids ", gmIds)
   data.whisper = data.whisper.concat(gmIds);
   return true;
 }
@@ -302,17 +308,17 @@ export let hideStuffHandler = (message, html, data) => {
     return;
   }
 
-  if (!game.user.isGM && message.user.isGM && configSettings.hideRollDetails === "all") {
+  if (!message.user.isGM && configSettings.hideRollDetails === "all" || message.data.blind) {
     html.find(".dice-roll").replaceWith(i18n("midi-qol.DiceRolled"));
   } else if (!game.user.isGM && message.user.isGM && configSettings.hideRollDetails === "details") {
     html.find(".dice-tooltip").remove();
     html.find(".dice-formula").remove();
   }
-  if (configSettings.autoCheckHit === "whisper") {
-    $(html).find(".midi-qol-hits-display").hide()
+  if (configSettings.autoCheckHit === "whisper" || message.data.blind) {
+    $(html).find(".midi-qol-hits-display").remove()
   }
-  if (configSettings.autoCheckSaves === "whisper") {
-    $(html).find(".midi-qol-saves-display").hide()
+  if (configSettings.autoCheckSaves === "whisper" || message.data.blind) {
+    $(html).find(".midi-qol-saves-display").remove()
   }
   //@ts-ignore
   // ui.chat.scrollBottom();
@@ -320,7 +326,7 @@ export let hideStuffHandler = (message, html, data) => {
 
 export let recalcCriticalDamage = (data, ...args) => {
   if (data.flags?.dnd5e?.roll.type === "damage") {
-    warn("recalcCriticalDamage ", data.flags?.dnd5e?.roll.type, data, ...args)
+    debug("recalcCriticalDamage ", data.flags?.dnd5e?.roll.type, data, ...args)
     let token: Token = canvas.tokens.get(data.speaker.token)
     let actor: Actor5e = game.actors.tokens[data.speaker.token];
     if (!actor) game.actors.tokens[data.speaker.token]?.actor;

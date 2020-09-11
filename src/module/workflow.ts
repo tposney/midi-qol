@@ -41,6 +41,7 @@ export class Workflow {
   item: Item5e;
   itemCardId : string;
   itemCardData: {};
+  displayHookId: number;
 
   event: {shiftKey: boolean, altKey: boolean, ctrlKey: boolean, metaKey: boolean, type: string};
   speaker: any;
@@ -134,6 +135,7 @@ export class Workflow {
     this.damageDetail = [];
     this.versatile = false;
     this.hideTags = new Array();
+    this.displayHookId = null;
     Workflow._workflows[item?.uuid] = this;
   }
 
@@ -145,6 +147,8 @@ export class Workflow {
     if (!Workflow._workflows[id]) warn ("removeWorkflow: No such workflow ", id)
     else {
       let workflow = Workflow._workflows[id];
+      // If the attack roll broke and we did we roll again will have an extra hook laying around.
+      if (workflow.displayHookId) Hooks.off("preCreateChatMessage", workflow.displayHookId);
       // Just in case there were some hooks left enbled by mistake.
       if (workflow.hideSavesHookId) Hooks.off("preCreateChatMessage", workflow.hideSavesHookId);
       // This can lay around if the template was never placed.
@@ -256,7 +260,7 @@ export class Workflow {
         }
         // apply damage to targets plus saves plus immunities
         // done here cause not needed for betterrolls workflow
-        this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || "bludgeoning";
+        this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || "healing"; // a number of healing spells don't have a type set, so this will help those work
         this.damageDetail = createDamageList(this.damageRoll, this.item, this.defaultDamageType);
         await this.displayDamageRoll(false, configSettings.mergeCard)
         if (this.isFumble) {
@@ -385,6 +389,7 @@ export class Workflow {
         }
       }
       if (!!!game.dice3d?.messageHookDisabled) this.hideTags = [".midi-qol-attack-roll"];
+      warn("Display attack roll ", this.attackCardData, this.attackRoll)
       newFlags = mergeObject(flags, {
           "midi-qol": 
           {
@@ -538,6 +543,7 @@ export class Workflow {
         var replaceString;
         const saveFlavor = configSettings.displaySaveDC ? this.saveDisplayFlavor : `${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} ${i18n("midi-qol.saving-throws")}`;
         const saveHTML = `<div class="midi-qol-nobox midi-qol-bigger-text">${saveFlavor}</div>`;
+        if (!!!game.dice3d?.messageHookDisabled) this.hideTags = [".midi-qol-saves-display"];
         switch (this.__proto__.constructor.name) {
           case "BetterRollsWorkflow":
             searchString =  '<footer class="card-footer">';
@@ -547,6 +553,7 @@ export class Workflow {
               "content": content, 
               type: CONST.CHAT_MESSAGE_TYPES.OTHER,
               "flags.midi-qol.type": MESSAGETYPES.SAVES,
+              "flags.midi-qol.hideTag": this.hideTags
             });
 
             //@ts-ignore
@@ -562,6 +569,7 @@ export class Workflow {
               "content": content, 
               type: CONST.CHAT_MESSAGE_TYPES.OTHER,
               "flags.midi-qol.type": MESSAGETYPES.SAVES,
+              "flags.midi-qol.hideTag": this.hideTags
             });
             //@ts-ignore
             chatMessage.data.content = content;
@@ -678,7 +686,7 @@ export class Workflow {
                   let result = await target.actor.rollAbilitySave(this.item.data.data.save.ability, {messageData: { user: playerId }, event: eventToUse, advantage: advantageToUse});
                   resolve(result);
               }
-            }, configSettings.playerSaveTimeout * 1000);
+            }, (configSettings.playerSaveTimeout || 1) * 1000);
           }))
         } else {
           // Find a player owner for the roll if possible
@@ -738,6 +746,7 @@ export class Workflow {
 
   processSaveRoll = (message, html, data) => {
     const isLMRTFY = (installedModules.get("lmrtfy") && message.data.flags?.lmrtfy?.data);
+    if (!isLMRTFY && message.data.flags?.dnd5e?.roll?.type !== "save") return true;
     const requestId =  isLMRTFY ? message.data.flags.lmrtfy.data : message.data?.speaker?.actor;
     warn("processSaveToll", isLMRTFY, requestId, this.saveRequests )
 

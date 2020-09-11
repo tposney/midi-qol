@@ -3,20 +3,22 @@ import { Workflow, WORKFLOWSTATES } from "./workflow";
 import {  configSettings, itemDeleteCheck } from "./settings";
 import { rollMappings } from "./patching";
 
-function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boolean, workflowData: any, selector: string) {
-  debug("Setting up hide chat message ", hideDefaultRoll, match, workflowData, selector);
+function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boolean, workflow: Workflow, selector: string) {
+  debug("Setting up hide chat message ", hideDefaultRoll, match, workflow, selector);
 
   if (hideDefaultRoll) {
     let hookId = Hooks.on("preCreateChatMessage", (data, options) => {
       if (match(data)) {
         //@ts-ignore
         Hooks.off("preCreateChatMessage", hookId);
-        workflowData[selector] = data;
-        warn("Setting up hide chat message ", data, options, match, workflowData, selector);
+        workflow.displayHookId = null;
+        workflow[selector] = data;
+        warn("Setting up hide chat message ", data, options, match, workflow, selector);
         options.displaySheet = false;
         return false;
       } else return true;
     })
+    workflow.displayHookId = hookId;
   } else return true;
 }
 

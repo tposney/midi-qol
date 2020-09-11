@@ -8,7 +8,7 @@ const moduleSocket = "module.midi-qol";
 let processAction = async data => {
   switch (data.action) {
     case "reverseDamageCard":
-      if (!game.user.isGM)
+      if (!game.user.isGM || data?.intendedFor !== game.user.id)
         break;
       if (data.autoApplyDamage === "none")
         break;

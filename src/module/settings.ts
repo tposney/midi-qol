@@ -68,6 +68,7 @@ export let fetchParams = (silent = false) => {
   autoRemoveTargets = game.settings.get("midi-qol", "AutoRemoveTargets");
   let debugText = game.settings.get("midi-qol", "Debug");
   setDebugLevel(debugText);
+  setDebugLevel("warn")
 }
 
 let getParams = () => {

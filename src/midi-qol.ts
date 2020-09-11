@@ -11,16 +11,17 @@
  */
 
 // Import TypeScript modules
-import { registerSettings, fetchParams } from './module/settings.js';
-import { preloadTemplates } from './module/preloadTemplates.js';
-import { setupModules } from './module/setupModules.js';
-import { itemPatching, visionPatching, setupPatching } from './module/patching.js';
-import { initHooks } from './module/Hooks.js';
-import { initGMActionSetup } from './module/GMAction.js';
-import { setupSheetQol } from './module/sheetQOL.js';
-import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
-import { initializeDSNHandler } from './module/chatMesssageHandling.js';
-import { applyTokenDamage } from './module/utils.js';
+import { registerSettings, fetchParams } from './module/settings';
+import { preloadTemplates } from './module/preloadTemplates';
+import { setupModules } from './module/setupModules';
+import { itemPatching, visionPatching, setupPatching } from './module/patching';
+import { initHooks } from './module/Hooks';
+import { initGMActionSetup } from './module/GMAction';
+import { setupSheetQol } from './module/sheetQOL';
+import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
+import { initializeDSNHandler } from './module/chatMesssageHandling';
+import { applyTokenDamage } from './module/utils';
+import { ConfigPanel } from './module/apps/ConfigPanel';
 
 export let debugEnabled = 0;
 // 0 = none, warnings = 1, debug = 2, all = 3
@@ -117,7 +118,8 @@ function setupMinorQolCompatibility() {
     applyTokenDamage,
     TrapWorkflow,
     DamageOnlyWorkflow,
-    Workflow
+    Workflow,
+    ConfigPanel: ConfigPanel
   }
 }
 

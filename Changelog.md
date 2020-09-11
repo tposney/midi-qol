@@ -1,3 +1,14 @@
+## 0.2.9
+* Improved behaviour for blind/private gm rolls and showing/hiding rolls on item card.
+* Improved 3d dice showing for blind/private rolls.
+* Fixed errors when not show hits/saves to all players and using dice so nice rolls
+* Fixed a bug that caused multiple display of undo damage card if more than one GM logged in.
+* Fixed an 0.7.2. incompatibility. Not fully tested but should work with 0.7.2
+* Fixed a bug that broke midi-qol if item.rollAttack throws an error. E.g. if ammunition is not properly configured.
+* Changed default damage type to healing. Some of the SRD spells don't specify a damage type of healing and so were, by default, doing damage rather than healing.
+* A blank player save timeout now defaults to 1 second, previously it default to 0 seconds.
+* Added spanish translation - thanks to @Sali Vader
+
 ## 0.2.8
 * Added auto untarget options.
   * none - obvious
