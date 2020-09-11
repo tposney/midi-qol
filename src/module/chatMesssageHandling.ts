@@ -159,7 +159,7 @@ export function diceSoNiceUpdateMessge(message, update, ...args) {
   if (![MESSAGETYPES.ATTACK, MESSAGETYPES.DAMAGE].includes(type)) return;
   const displayId = duplicate(message.data.flags["midi-qol"].displayId);
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
-  let rollDice = message.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
+  let rollDice = game.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
   if (rollDice) {
     game.dice3d.showForRoll(Roll.fromJSON(message.data.flags["midi-qol"].roll), message.user).then(displayed => {
       delete message._dice3danimating;
@@ -182,7 +182,7 @@ export let diceSoNiceHandler = async (message, html, data) => {
   debug("Dice so nice handler ", message, html, data);
   if (!game.dice3d || !installedModules.get("dice-so-nice") || game.dice3d.messageHookDisabled || !game.dice3d.isEnabled()) return;
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
-  let rollDice = message.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
+  let rollDice = game.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
   if (!rollDice) return;
   if (configSettings.mergeCard) {
 
