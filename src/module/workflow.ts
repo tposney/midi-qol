@@ -936,6 +936,7 @@ export class TrapWorkflow extends Workflow {
 
       case WORKFLOWSTATES.WAITFORATTACKROLL:
         if (!this.item.hasAttack) {
+          this.hitTargets = new Set(this.targets);
           return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
         }
         warn("attack roll ", this.event)
