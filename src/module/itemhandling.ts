@@ -197,6 +197,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   let rollMode = game.settings.get("core", "rollMode");
   if ( ["gmroll", "blindroll"].includes(rollMode) ) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active);
   if ( rollMode === "blindroll" ) chatData["blind"] = true;
+  if (rollMode === "selfroll") chatData["whisper"] = [game.user.id];
 
   // Create the chat message
   return ChatMessage.create(chatData);
