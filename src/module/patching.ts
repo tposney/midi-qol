@@ -41,7 +41,9 @@ function restrictVisibility() {
   // Tokens
   for ( let t of canvas.tokens.placeables ) {
     // ** TP  t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible;
-    t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible || t.actor?.hasPerm(game.user, "OWNER");
+    t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible;
+    t.visalbe = t.visible || (t.data.stealth && t.actor?.hasPerm(game.user, "OBSERVER"));
+    t.visible = !this.tokenVision && (!t.data.hidden || t.actor?.hasPerm(game.user, "OWNER"));
   }
 
   // Door Icons
@@ -58,6 +60,10 @@ function _isTokenVisionSource(token:Token) {
   const isGM = game.user.isGM;
 
   // ** TP if (token.data.hidden && !(game.user.isGM)) return false;
+  /*
+  let noVisionSource = !isGM &&  (token.data.hidden || (token.data.stealh && !token.actor?.hasPerm(game.user, "OBSERVER")))
+  if (noVisionSource) return false;
+  */
   if (token.data.hidden && !(isGM || token.actor?.hasPerm(game.user, "OWNER"))) return true;
 
   // Always display controlled tokens which have vision

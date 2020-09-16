@@ -44,11 +44,14 @@ export function processcreateBetterRollMessage(message, options, user) {
   let flags = message.data.flags["midi-qol"];
   if (!flags?.id) return;
   let workflow: BetterRollsWorkflow = BetterRollsWorkflow.get(flags.id);
-  debug("process better rolls card", flags?.id, message, workflow, workflow.betterRollsHookId);
-  //@ts-ignore - does not support 
-  Hooks.off("createChatMessage", workflow.betterRollsHookId);
-  workflow.itemCardId = message.id;
-  workflow.next(WORKFLOWSTATES.NONE);
+  debug("process better rolls card", flags?.id, message, workflow, workflow?.betterRollsHookId);
+  if (workflow) {
+    if (workflow.betterRollsHookId) 
+    //@ts-ignore - does not support 
+      Hooks.off("createChatMessage", workflow.betterRollsHookId);
+    workflow.itemCardId = message.id;
+    workflow.next(WORKFLOWSTATES.NONE);
+  }
 }
 
 export let processpreCreateBetterRollsMessage = async (data: any, options:any, user: any) => {
@@ -159,6 +162,7 @@ export function diceSoNiceUpdateMessge(message, update, ...args) {
   if (![MESSAGETYPES.ATTACK, MESSAGETYPES.DAMAGE].includes(type)) return;
   const displayId = duplicate(message.data.flags["midi-qol"].displayId);
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
+  
   let rollDice = game.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
   if (rollDice) {
     game.dice3d.showForRoll(Roll.fromJSON(message.data.flags["midi-qol"].roll), message.user).then(displayed => {
@@ -308,9 +312,9 @@ export let hideStuffHandler = (message, html, data) => {
     return;
   }
 
-  if (!message.user.isGM && configSettings.hideRollDetails === "all" || message.data.blind) {
+  if ((message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails === "all") || message.data.blind) {
     html.find(".dice-roll").replaceWith(i18n("midi-qol.DiceRolled"));
-  } else if (!game.user.isGM && message.user.isGM && configSettings.hideRollDetails === "details") {
+  } else if (message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails === "details") {
     html.find(".dice-tooltip").remove();
     html.find(".dice-formula").remove();
   }

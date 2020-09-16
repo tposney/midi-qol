@@ -6,7 +6,9 @@ let modules = {"about-time": "0.0",
               "dynamiceffects": "0.0", 
               "dice-so-nice": "0.0", 
               "itemacro": "1.0.0", 
-              "lmrtfy": "0.9"};
+              "lmrtfy": "0.9",
+              "dae": "0.0"
+            };
 export let installedModules = new Map();
 
 export let setupModules = () => {

@@ -260,7 +260,7 @@ export class Workflow {
         }
         // apply damage to targets plus saves plus immunities
         // done here cause not needed for betterrolls workflow
-        this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || "healing"; // a number of healing spells don't have a type set, so this will help those work
+        this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || CONFIG.DND5E.healingTypes["healing"]; // a number of healing spells don't have a type set, so this will help those work
         this.damageDetail = createDamageList(this.damageRoll, this.item, this.defaultDamageType);
         await this.displayDamageRoll(false, configSettings.mergeCard)
         if (this.isFumble) {
@@ -306,23 +306,30 @@ export class Workflow {
 
       case WORKFLOWSTATES.APPLYDYNAMICEFFECTS:
         // no item, not auto effects or not module skip
-        if (!this.item || !configSettings.autoItemEffects || !installedModules.get("dynamiceffects")) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        if (!this.item || !configSettings.autoItemEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED);
         const hasDynamicEffects = (this.item?.data.flags?.dynamiceffects?.effects.some(ef => ef.active));
+        const hasDAE = (this.item?.data.flags?.dynamiceffects?.effects.some(ef => ef.active));
         // no dynamiceffects skip
-        if (!hasDynamicEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED);
         let applicationTargets = new Set();
         if (this.item.hasSave) applicationTargets = this.failedSaves;
         else if (this.item.hasAttack) applicationTargets = this.hitTargets;
         else applicationTargets = this.targets;
-        warn("Application targets are ", applicationTargets)
-        if (applicationTargets?.size) { // perhaps apply item effects
+        if (hasDynamicEffects && installedModules.get("dynamiceffects")) {
+          warn("Application targets are ", applicationTargets)
+          if (applicationTargets?.size) { // perhaps apply item effects
+            //@ts-ignore
+            let de = window.DynamicEffects;
+            // kludge for itemCardId - do differently in DAE
+            this.item.data.itemCardId = this.itemCardId;
+            debug("Calling dynamic effects with ", applicationTargets, de)
+            de.doEffects({item: this.item, actor: this.item.actor, activate: true, targets: applicationTargets, 
+                  whisper: true, spellLevel: this.itemLevel, damageTotal: this.damageTotal}) 
+          }
+        } else if (installedModules.get("dae")) {
+          console.warn("Doing DAE")
           //@ts-ignore
-          let de = window.DynamicEffects;
-          // kludge for itemCardId - do differently in DAE
-          this.item.data.itemCardId = this.itemCardId;
-          debug("Calling dynamic effects with ", applicationTargets, de)
-          de.doEffects({item: this.item, actor: this.item.actor, activate: true, targets: applicationTargets, 
-                whisper: true, spellLevel: this.itemLevel, damageTotal: this.damageTotal}) 
+          let dae = window.DAE;
+          dae.doEffects(this.item, true, applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal})
         }
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
@@ -336,14 +343,25 @@ export class Workflow {
         Hooks.callAll("midi-qol.RollComplete", this);
         // disable sounds for when the chat card might be reloaed.
         
-        await game.messages.get(this.itemCardId)?.update({
-          "flags.midi-qol.playSound": false, 
-          "flags.midi-qol.type": MESSAGETYPES.ITEM, 
-          type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-          "flags.midi-qol.waitForDiceSoNice": this.item?.hasAttck || this.item?.hasDamage || this.item?.hasSaves,
-          "flags.midi-qol.hideTag": this.hideTags,
-          "flags.midi-qol.displayId": this.displayId
-        });
+        if (this.__proto__.constructor.name !== "BetterRollsWorkflow") {
+          await game.messages.get(this.itemCardId)?.update({
+            "flags.midi-qol.playSound": false, 
+            "flags.midi-qol.type": MESSAGETYPES.ITEM, 
+            type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+            "flags.midi-qol.waitForDiceSoNice": this.item?.hasAttck || this.item?.hasDamage || this.item?.hasSaves,
+            "flags.midi-qol.hideTag": this.hideTags,
+            "flags.midi-qol.displayId": this.displayId
+          });
+        } else {
+          await game.messages.get(this.itemCardId)?.update({
+            "flags.midi-qol.playSound": false, 
+            "flags.midi-qol.type": MESSAGETYPES.ITEM, 
+            type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+            "flags.midi-qol.waitForDiceSoNice": false,
+            "flags.midi-qol.hideTag": "",
+            "flags.midi-qol.displayId": this.displayId
+          });
+        }
         //@ts-ignore ui.chat undefined.
         ui.chat.scrollBottom();
         return;
@@ -480,8 +498,8 @@ export class Workflow {
             "flags.midi-qol.playSound": false,
             "flags.midi-qol.type": MESSAGETYPES.HITS,
             type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-            "flags.midi-qol.waitForDiceSoNice": true,
-            "flags.midi-qol.hideTag": this.hideTags,
+            "flags.midi-qol.waitForDiceSoNice": false,
+            "flags.midi-qol.hideTag": "",
             "flags.midi-qol.displayId": this.displayId
           });
           break;
@@ -519,8 +537,14 @@ export class Workflow {
           chatData.user = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
           debug("Trying to whisper message", chatData)
         }
-        setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", true);
-        setProperty(chatData, "flags.midi-qol.hideTag", "midi-qol-hits-display")
+        console.error("proro ", this.__proto__.constructor.name)
+        if (this.__proto__.constructor.name !== "BetterRollsWorkflow") {
+            setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", true);
+            setProperty(chatData, "flags.midi-qol.hideTag", "midi-qol-hits-display")
+        } else {
+            setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", false);
+            setProperty(chatData, "flags.midi-qol.hideTag", "")
+        }
         ChatMessage.create(chatData);
       }
     }
@@ -937,7 +961,7 @@ export class TrapWorkflow extends Workflow {
       case WORKFLOWSTATES.WAITFORATTACKROLL:
         if (!this.item.hasAttack) {
           this.hitTargets = new Set(this.targets);
-          return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
+          return this.next(WORKFLOWSTATES.WAITFORSAVES);
         }
         warn("attack roll ", this.event)
         this.item.rollAttack({event: this.event});
@@ -948,7 +972,7 @@ export class TrapWorkflow extends Workflow {
         await this.displayAttackRoll(false, configSettings.mergeCard);
         await this.checkHits();
         await this.displayHits(configSettings.autoCheckHit === "whisper", configSettings.mergeCard);
-        return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
+        return this.next(WORKFLOWSTATES.WAITFORSAVES);
 
       case WORKFLOWSTATES.WAITFORDAMGEROLL:
         if (!this.item.hasDamage) return this.next(WORKFLOWSTATES.WAITFORSAVES);
@@ -973,13 +997,13 @@ export class TrapWorkflow extends Workflow {
         }
         let defaultDamageType = this.item?.data.data.damage?.parts[0][1] || this.defaultDamageType;
         this.damageDetail = createDamageList(this.damageRoll, this.item, defaultDamageType);
-        return this.next(WORKFLOWSTATES.WAITFORSAVES);
+        return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
 
       case WORKFLOWSTATES.WAITFORSAVES:
         if (!this.item.hasSave) {
           this.saves = new Set(); // no saving throw, so no-one saves
           this.failedSaves = new Set(this.hitTargets);
-          return this.next(WORKFLOWSTATES.SAVESCOMPLETE);
+          return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
         }
         let hookId = Hooks.on("renderChatMessage", this.processSaveRoll.bind(this));
         let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
@@ -997,7 +1021,7 @@ export class TrapWorkflow extends Workflow {
         return this.next(WORKFLOWSTATES.SAVESCOMPLETE);
 
       case WORKFLOWSTATES.SAVESCOMPLETE:
-        return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
+        return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
   
       case WORKFLOWSTATES.ALLROLLSCOMPLETE:
         debug("all rolls complete ", this.damageDetail)

@@ -1,3 +1,9 @@
+## 0.3.0
+* fix for better rolls and hiding cards incorrectly.
+* re-organize trap workflow to request saves before rolling damage
+* improve healing string display to use DND5E
+## 0.2.10 
+* fix for self rolls
 ## 0.2.9
 * Improved behaviour for blind/private gm rolls and showing/hiding rolls on item card.
 * Improved 3d dice showing for blind/private rolls.

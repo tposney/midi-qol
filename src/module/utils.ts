@@ -177,6 +177,7 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType) {
  */
 
 export let getTraitMult = (actor, dmgTypeString, item) => {
+console.error("get trait mult ", dmgTypeString)
   if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) return -1;
 
   if (configSettings.damageImmunities !== "none" && dmgTypeString !== "") {
@@ -211,6 +212,7 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
       for (let { damage, type } of damageDetail) {
         //let mult = 1;
           let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
+          if (!type) type = "healing";
           mult = mult * getTraitMult(a, type, item);
           appliedDamage += Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
           var dmgType = type;
