@@ -41,8 +41,8 @@ function restrictVisibility() {
   // Tokens
   for ( let t of canvas.tokens.placeables ) {
     // ** TP  t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible;
-    t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible;
-    t.visalbe = t.visible || (t.data.stealth && t.actor?.hasPerm(game.user, "OBSERVER"));
+    // t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible;
+    // t.visalbe = t.visible || (t.data.stealth && t.actor?.hasPerm(game.user, "OBSERVER"));
     t.visible = !this.tokenVision && (!t.data.hidden || t.actor?.hasPerm(game.user, "OWNER"));
   }
 
