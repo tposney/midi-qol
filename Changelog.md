@@ -1,3 +1,7 @@
+## 0.3.1
+Port minor-qol pre-roll chakecs to midi-qol. Checks for attack range and incapacity.
+Fix auto targeting for ranged spells/attacks.
+Fix for temporary hp healing.
 ## 0.3.0
 * fix for better rolls and hiding cards incorrectly.
 * re-organize trap workflow to request saves before rolling damage
