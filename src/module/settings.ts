@@ -57,6 +57,7 @@ export let fetchParams = (silent = false) => {
   if (!configSettings.criticalSound) configSettings.criticalSound = CONFIG.sounds["dice"];
   if (!configSettings.diceSound) configSettings.diceSound = CONFIG.sounds["dice"];
 
+  configSettings.preRollChecks = game.settings.get("midi-qol", "PreRollChecks")
   warn("Fetch Params Loading", configSettings);
   criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
   itemDeleteCheck = game.settings.get("midi-qol", "ItemDeleteCheck");
@@ -105,7 +106,7 @@ const settings = [
     default: false,
     type: Boolean,
     onChange: fetchParams,
-    config: false
+    config: true
   },
   {
     name: "CriticalDamage",

@@ -9,7 +9,7 @@ import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
 import { configSettings, checkBetterRolls, itemRollButtons, autoRemoveTargets } from "./settings.js";
-import { getSelfTargetSet, createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage } from "./utils"
+import { getSelfTargetSet, createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated } from "./utils"
 import { config } from "process";
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
@@ -172,6 +172,11 @@ export class Workflow {
         if (configSettings.autoTarget !== "none" && this.item.hasAreaTarget) {
           return this.next(WORKFLOWSTATES.AWAITTEMPLATE);
         }
+        const targetDetails = this.item.data.data.target;
+        if (configSettings.rangeTarget && targetDetails?.units === "ft" && ["creature", "ally", "enemy"].includes(targetDetails?.type)) {
+          this.setRangedTargets(targetDetails)
+          return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
+        }
         return this.next(WORKFLOWSTATES.VALIDATEROLL);
 
       case WORKFLOWSTATES.AWAITTEMPLATE:
@@ -198,6 +203,10 @@ export class Workflow {
 
       case WORKFLOWSTATES.VALIDATEROLL:
         // do pre roll checks
+        if (configSettings.preRollChecks) {
+          if (!checkRange(this.actor, this.item, null)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+          if (!checkIncapcitated(this.actor, this.item, null)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        }
         return this.next(WORKFLOWSTATES.PREAMBLECOMPLETE);
 
       case WORKFLOWSTATES.PREAMBLECOMPLETE:
@@ -386,8 +395,7 @@ export class Workflow {
       content = content.replace(searchString, replaceString);
       if ( this.attackRoll.dice.length ) {
         const d = this.attackRoll.dice[0];
-        
-        const isD20 = (d.faces === 20) && ( d.results.length === 1 );
+        const isD20 = (d.faces === 20);
         if (isD20 ) {
           // Highlight successes and failures
           if ( d.options.critical && (d.total >= d.options.critical) ) {
@@ -862,6 +870,38 @@ export class Workflow {
       if (isHit || this.isCritical) this.hitTargets.add(targetToken);
     }
   }
+
+  setRangedTargets(targetDetails) {
+    const speaker = ChatMessage.getSpeaker();
+    const token = canvas.tokens.get(speaker.token);
+    if (!token) {
+      ui.notifications.warn(`${game.i18n.localize("midi-qol.noSelection")}`)
+      return true;
+    }
+    // We have placed an area effect template and we need to check if we over selected
+    let dispositions = targetDetails.type === "creature" ? [-1,0,1] : targetDetails.type === "ally" ? [token.data.disposition] : [-token.data.disposition];
+    // release current targets
+    game.user.targets.forEach(t => {
+      //@ts-ignore
+      t.setTarget(false, { releaseOthers: false });
+    });
+    game.user.targets.clear();
+    // calculate pixels eqivalent distance - requires map to be in ft.
+    let minDist = targetDetails.value * canvas.grid.size / canvas.scene.data.gridDistance;
+    canvas.tokens.placeables
+        .filter(target => target.actor && target.actor.data.data.details.race !== "trigger"
+                          && target.actor.id !== token.actor.id
+                          && dispositions.includes(target.data.disposition) 
+                          && Math.hypot(token.center.x - target.center.x, token.center.y - target.center.y) <= minDist)
+        .forEach(token=> {
+          token.setTarget(true, { user: game.user, releaseOthers: false });
+          game.user.targets.add(token);
+    });
+    this.targets = new Set(game.user.targets);
+    this.saves = new Set();
+    this.failedSaves = new Set(this.targets)
+    this.hitTargets = new Set(this.targets);
+  }
 }
 
 export class DamageOnlyWorkflow extends Workflow {
@@ -938,6 +978,11 @@ export class TrapWorkflow extends Workflow {
         return this.next(WORKFLOWSTATES.AWAITTEMPLATE);
 
       case WORKFLOWSTATES.AWAITTEMPLATE:
+        const targetDetails = this.item.data.data.target;
+        if (configSettings.rangeTarget && targetDetails?.units === "ft" && ["creature", "ally", "enemy"].includes(targetDetails?.type)) {
+          this.setRangedTargets(targetDetails)
+          return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
+        }
         if (!this.item.hasAreaTarget || !this.trapCenter) return this.next(WORKFLOWSTATES.TEMPLATEPLACED)
         //@ts-ignore
         this.placeTemlateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));

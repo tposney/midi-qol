@@ -84,7 +84,8 @@ export async function doItemRoll(options = {showFullCard: false}) {
                           || (game.user.targets.size > 0) // there are some target selected
                           || (this.data.data.target?.type === "self") // self target
                           || (this.hasAreaTarget && configSettings.autoTarget) // area effectspell and we will auto target
-                          || (configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type)); // rangetarget
+                          || (configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type)) // rangetarget
+                          || (!this.hasAttack && !this.hasDamage && !this.hasSave); // does not do anything - need to chck dynamic effects
   if (!shouldAllowRoll) {
     ui.notifications.warn(i18n("midi-qol.noTargets"));
     warn(`${game.username} attempted to roll with no targets selected`)

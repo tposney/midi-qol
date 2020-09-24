@@ -89,7 +89,9 @@ function doAbilityRoll(func, abilityId, options={event}) {
   warn("roll ", options)
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
     //@ts-ignore
-    options.event = mergeObject(options.event, {shiftKey: true}, {overwrite: true, inplace: true})
+    // options.event = mergeObject(options.event, {shiftKey: true}, {overwrite: true, inplace: true})
+    options.event = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
+
   }
   return func.bind(this)(abilityId, options)
 }

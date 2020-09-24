@@ -150,6 +150,7 @@ export let getParams = () => {
 // Calculate the hp/tempHP lost for an amount of damage of type
 export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType) {
   debug("calculate damage ", a, appliedDamage, t, totalDamage, dmgType)
+
   let value = Math.floor(appliedDamage);
   if (dmgType.includes("temphp")) { // only relavent for healing of tmp HP
     var hp = a.data.data.attributes.hp;
@@ -158,15 +159,18 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType) {
     var newTemp = Math.max(tmp - value, 0);
     var newHP: number = hp.value;
   } else {
-    var hp = a.data.data.attributes.hp, tmp = parseInt(hp.temp) || 0, dt = value > 0 ? Math.min(tmp, value) : 0;
+    var hp = a.data.data.attributes.hp, 
+        tmp = parseInt(hp.temp) || 0, 
+        dt = value > 0 ? Math.min(tmp, value) : 0;
     var newTemp = tmp - dt;
     var oldHP = hp.value;
     var newHP: number = Math.clamped(hp.value - (value - dt), 0, hp.max + (parseInt(hp.tempmax)|| 0));
   }
 
-  if (game.user.isGM)
+  debug("calculateDamage: results are ", newTemp, newHP, appliedDamage, totalDamage)
+  if (game.user.isGM) 
       log(`${a.name} takes ${value} reduced from ${totalDamage} Temp HP ${newTemp} HP ${newHP}`);
-  return {tokenID: t.id, actorID: a._id, tempDamage: dt, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
+  return {tokenID: t.id, actorID: a._id, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
           oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value};
 }
 
@@ -331,4 +335,78 @@ export function untargetAllTokens(...args) {
     });
     game.user.targets.clear()
   }
+}
+
+export function checkIncapcitated(actor, item, event) {
+  if(actor.data.data.attributes?.hp?.value <= 0) {
+    console.log(`minor-qol | ${actor.name} is incapacitated`)
+    ui.notifications.warn(`${actor.name} is incapacitated`)
+    return false;
+  }
+  return true;
+}
+
+/** takes two tokens of any size and calculates the distance between them
+*** gets the shortest distance betwen two tokens taking into account both tokens size
+*** if wallblocking is set then wall are checked
+**/
+function getDistance (t1, t2, wallblocking = false) {
+  //Log("get distance callsed");
+  var x, x1, y, y1, d, r, segments=[], rdistance, distance;
+  for (x = 0; x < t1.data.width; x++) {
+    for (y = 0; y < t1.data.height; y++) {
+      const origin = new PIXI.Point(...canvas.grid.getCenter(t1.data.x + (canvas.dimensions.size * x), t1.data.y + (canvas.dimensions.size * y)));
+      for (x1 = 0; x1 < t2.data.width; x1++) {
+          for (y1 = 0; y1 < t2.data.height; y1++){
+          const dest = new PIXI.Point(...canvas.grid.getCenter(t2.data.x + (canvas.dimensions.size * x1), t2.data.y + (canvas.dimensions.size * y1)));
+          const r = new Ray(origin, dest)
+          if (wallblocking && canvas.walls.checkCollision(r)) {
+            //Log(`ray ${r} blocked due to walls`);
+            continue;
+          }
+          segments.push({ray: r});
+        }
+      }
+    }
+  }
+  // console.log(segments);
+  if (segments.length == 0) {
+    //Log(`${t2.data.name} full blocked by walls`);
+    return -1;
+  }
+  rdistance = canvas.grid.measureDistances(segments, {gridSpaces:true});
+  distance = rdistance[0];
+  rdistance.forEach(d=> {if (d < distance) distance = d;});
+  return distance;
+};
+
+export function checkRange(actor, item, event) {
+  let itemData = item.data.data;
+  if ((!itemData.range?.value && itemData.range?.units !== "touch") || !["creature", "ally", "enemy"].includes(itemData.target?.type)) 
+    return true;
+  let token = getSelfTarget(actor);
+  
+  if (!token) {
+    warn(`${game.user.name} no token selected cannot check range`)
+    ui.notifications.warn(`${game.user.name} no token selected`)
+    return false;
+  }
+
+  let range = itemData.range?.value || Math.max(token.w, token.h) / 2 / canvas.scene.data.grid * canvas.scene.data.gridDistance;
+  for (let target of game.user.targets) { 
+    // check the range
+    let distance = getDistance(token, target, configSettings.autoTarget === "wallsBlock") - 5; // assume 2.5 width for each token
+
+    if (distance > range) {
+      console.log(`minor-qol | ${target.name} is too far ${distance} from your character you cannot hit`)
+      ui.notifications.warn(`${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${range}`)
+      return false;
+    }
+    if (distance < 0) {
+      console.log(`minor-qol | ${target.name} is blocked by a wall`)
+      ui.notifications.warn(`${actor.name}'s target is blocked by a wall`)
+      return false;
+    }
+  }
+  return true;
 }

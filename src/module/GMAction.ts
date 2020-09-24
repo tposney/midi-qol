@@ -70,8 +70,8 @@ let createReverseDamageCard = async (data) => {
     }
     actor = token.actor;
     const hp = actor.data.data.attributes.hp;
-    const oldTempHP = hp.temp;
-    const oldHP = hp.value;
+    const oldTempHP = hp.temp || 0;
+    const oldHP = hp.value || 0;
 
     if (tempDamage > oldTempHP) {
       var newTempHP = 0;
@@ -81,7 +81,10 @@ let createReverseDamageCard = async (data) => {
     }
     let newHP = Math.max(0, actor.data.data.attributes.hp.value - hpDamage);
     if (data.intendedFor === game.user.id && ["yes", "yesCard"].includes(data.autoApplyDamage)) {
-      if (token.data.actorLink || canvas.scene.id === scene.id) promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP }));
+      if (token.data.actorLink || canvas.scene.id === scene.id) {
+        console.warn("update token ", oldTempHP, tempDamage, newTempHP)
+        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP }));
+      }
       else {
         debug("doing remote scene update")
         promises.push(scene.updateEmbeddedEntity("Token", { // need to deal with the case that the token might be on another scene
