@@ -545,7 +545,6 @@ export class Workflow {
           chatData.user = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
           debug("Trying to whisper message", chatData)
         }
-        console.error("proro ", this.__proto__.constructor.name)
         if (this.__proto__.constructor.name !== "BetterRollsWorkflow") {
             setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", true);
             setProperty(chatData, "flags.midi-qol.hideTag", "midi-qol-hits-display")

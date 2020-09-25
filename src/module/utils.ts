@@ -181,7 +181,6 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType) {
  */
 
 export let getTraitMult = (actor, dmgTypeString, item) => {
-console.error("get trait mult ", dmgTypeString)
   if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) return -1;
 
   if (configSettings.damageImmunities !== "none" && dmgTypeString !== "") {
