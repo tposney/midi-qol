@@ -6,7 +6,7 @@ import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 
 import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, WORKFLOWSTATES } from "./workflow";
-import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings } from "./settings";
+import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings, forceHideRoll } from "./settings";
 import { createDamageList, getTraitMult, calculateDamage } from "./utils";
 import { config } from "process";
 
@@ -164,8 +164,13 @@ export function diceSoNiceUpdateMessge(message, update, ...args) {
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
   
   let rollDice = game.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
+  let roll = Roll.fromJSON(message.data.flags["midi-qol"].roll);
+  warn("update message ", message.user, configSettings.hideRollDetails, message.isBlind)
+  if ((message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails !== "none") || message.data.blind) {
+    roll = roll.reroll()
+  }
   if (rollDice) {
-    game.dice3d.showForRoll(Roll.fromJSON(message.data.flags["midi-qol"].roll), message.user).then(displayed => {
+    game.dice3d.showForRoll(roll, message.user).then(displayed => {
       delete message._dice3danimating;
       Hooks.callAll("diceSoNiceRollComplete", displayId);
       //@ts-ignore
@@ -173,6 +178,7 @@ export function diceSoNiceUpdateMessge(message, update, ...args) {
     });
   }
 }
+
 let showHandler = (hideTags, displayId, html, header, id) => {
   debug(header, hideTags, displayId, html, id)
 
@@ -188,16 +194,19 @@ export let diceSoNiceHandler = async (message, html, data) => {
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
   let rollDice = game.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
   if (!rollDice) return;
-  if (configSettings.mergeCard) {
 
+  if (configSettings.mergeCard) {
     if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
     const type = message.data.flags["midi-qol"].type;
-    
     if (type === undefined) return;
     const hideTags = message.data.flags["midi-qol"].hideTag;
     const displayId = message.data.flags["midi-qol"].displayId;
     debug("dicesonice render chat handler ", type, hideTags, data, message, displayId)
-    if (hideTags) hideTags.forEach(hideTag => html.find(hideTag).hide());
+    if (hideTags) hideTags.forEach(hideTag => {
+      // Look at this for dice so nice cards.
+      // $(`#chat-log .message[data-message-id="${message.id}"]`).find(hideTag).show();
+      html.find(hideTag).hide()
+    });
     DSNHandlers.set(displayId, showHandler.bind(this, duplicate(hideTags), duplicate(displayId), html, "dice so nice complete handler "))
     setTimeout(showHandler.bind(this, duplicate(hideTags), duplicate(displayId), html, "dice so nice timeout handler ", duplicate(displayId)), 5000); // backup display of messages
   } else {
@@ -290,6 +299,25 @@ let _onTargetSelect = (event) => {
   if ( !canvas.scene.data.active ) return;
   const token = canvas.tokens.get(event.currentTarget.id);
   token.control({ multiSelect: false, releaseOthers: true });
+};
+
+export let hideRollRender = (app, html, msg) => {
+  if (forceHideRoll && msg.whisperTo !== '') {
+      if (game.user.isGM === false && game.user.id !== msg.author.data._id && msg.message.whisper.indexOf(game.user.id) === -1) {
+          html.hide();
+      }
+  }
+  return true;
+};
+
+export let hideRollUpdate = (message, data, diff, id) => {
+  if (forceHideRoll && message.whisperTo !== '') {
+    if (game.user.isGM === false && game.user.id !== message.author.data._id && message.message.whisper.indexOf(game.user.id) === -1) {
+      let messageLi = $(`.message[data-message-id=${data._id}]`);
+      messageLi.hide();
+    }
+  }
+  return true;
 };
 
 export let hideStuffHandler = (message, html, data) => {

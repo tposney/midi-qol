@@ -12,6 +12,7 @@ export var saveTimeouts = {};
 export var addChatDamageButtons: boolean;
 export var autoFastForwardAbilityRolls: boolean;
 export var autoRemoveTargets: string;
+export var forceHideRoll: boolean;
 
 
 export var configSettings = {
@@ -68,8 +69,8 @@ export let fetchParams = (silent = false) => {
   autoFastForwardAbilityRolls = game.settings.get("midi-qol", "AutoFastForwardAbilityRolls")
   autoRemoveTargets = game.settings.get("midi-qol", "AutoRemoveTargets");
   let debugText = game.settings.get("midi-qol", "Debug");
+  forceHideRoll = game.settings.get("midi-qol", "ForceHideRoll")
   setDebugLevel(debugText);
-  setDebugLevel("warn")
 }
 
 let getParams = () => {
@@ -127,6 +128,15 @@ const settings = [
   {
     name: "ItemDeleteCheck",
     scope: "client",
+    default: true,
+    type: Boolean,
+    choices: [],
+    config:true,
+    onChange: fetchParams
+  },
+  {
+    name: "ForceHideRoll",
+    scope: "world",
     default: true,
     type: Boolean,
     choices: [],

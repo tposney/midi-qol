@@ -105,11 +105,19 @@ export class Workflow {
     Workflow._actions = actions;
   }
   constructor(actor: Actor5e, item: Item5e, token, speaker, event: any) {
-    if (Workflow.getWorkflow(item?.uuid)) {
-      Workflow.removeWorkflow(item?.uuid);
-    }
+
     this.actor = actor;
     this.item = item;
+    if (!this.item) {
+      this.itemId = randomID();
+      this.itemUUId = this.itemId;
+    } else {
+      this.itemId = item?.uuid;
+      this.itemUUId = item?.uuid;
+    }
+    if (Workflow.getWorkflow(this.itemUUId)) {
+      Workflow.removeWorkflow(this.itemUUId);
+    }
     this.tokenId = token || speaker.token;
     this.speaker = speaker;
     this.targets = (item?.data.data.target?.type === "self") ? getSelfTargetSet(actor) : new Set(game.user.targets);
@@ -119,8 +127,6 @@ export class Workflow {
     this.isCritical = false;
     this.isFumble = false;
     this.currentState = WORKFLOWSTATES.NONE;
-    this.itemId = item?.uuid;
-    this.itemUUId = item?.uuid;
     this.itemLevel = item?.level || 0;
     this._id = randomID();
     this.displayId = this.id;
@@ -136,7 +142,7 @@ export class Workflow {
     this.versatile = false;
     this.hideTags = new Array();
     this.displayHookId = null;
-    Workflow._workflows[item?.uuid] = this;
+    Workflow._workflows[this.itemUUId] = this;
   }
 
   public someEventKeySet() {
@@ -335,7 +341,6 @@ export class Workflow {
                   whisper: true, spellLevel: this.itemLevel, damageTotal: this.damageTotal}) 
           }
         } else if (installedModules.get("dae")) {
-          console.warn("Doing DAE")
           //@ts-ignore
           let dae = window.DAE;
           dae.doEffects(this.item, true, applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal})
@@ -359,15 +364,6 @@ export class Workflow {
             type: CONST.CHAT_MESSAGE_TYPES.OTHER,
             "flags.midi-qol.waitForDiceSoNice": this.item?.hasAttck || this.item?.hasDamage || this.item?.hasSaves,
             "flags.midi-qol.hideTag": this.hideTags,
-            "flags.midi-qol.displayId": this.displayId
-          });
-        } else {
-          await game.messages.get(this.itemCardId)?.update({
-            "flags.midi-qol.playSound": false, 
-            "flags.midi-qol.type": MESSAGETYPES.ITEM, 
-            type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-            "flags.midi-qol.waitForDiceSoNice": false,
-            "flags.midi-qol.hideTag": "",
             "flags.midi-qol.displayId": this.displayId
           });
         }
@@ -400,13 +396,9 @@ export class Workflow {
           // Highlight successes and failures
           if ( d.options.critical && (d.total >= d.options.critical) ) {
             content = content.replace('dice-total', 'dice-total critical');
-            // play a special noise for critical
-            // rollSound = configSettings.criticalSound
           } 
           else if ( d.options.fumble && (d.total <= d.options.fumble) ) {
             content = content.replace('dice-total', 'dice-total fumble');
-             // play a special sound for fumble
-             // rollSound = configSettings.fumbleSound;
           }
           else if ( d.options.target ) {
             if ( this.attackRoll.total >= d.options.target ) content = content.replace('dice-total', 'dice-total success');
@@ -548,9 +540,9 @@ export class Workflow {
         if (this.__proto__.constructor.name !== "BetterRollsWorkflow") {
             setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", true);
             setProperty(chatData, "flags.midi-qol.hideTag", "midi-qol-hits-display")
-        } else {
+        } else { // better rolls workflow
             setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", false);
-            setProperty(chatData, "flags.midi-qol.hideTag", "")
+            // setProperty(chatData, "flags.midi-qol.hideTag", "")
         }
         ChatMessage.create(chatData);
       }
@@ -762,7 +754,8 @@ export class Workflow {
       this.saveDisplayData.push({
         name: target.name, 
         img, 
-        isPC: target.actor.isPC, 
+        //@ts-ignore hasPlayerOwner
+        isPC: target.actor.hasPlayerOwner, 
         target, 
         saveString, 
         rollTotal, 
@@ -863,7 +856,8 @@ export class Workflow {
         //@ts-ignore
         img = await game.video.createThumbnail(img, {width: 100, height: 100});
       }
-      this.hitDisplayData.push({isPC: targetToken.actor.isPC, target: targetToken, hitString, attackType, img});
+      //@ts-ignore hasPlayerOwner
+      this.hitDisplayData.push({isPC: targetToken.actor.hasPlayerOwner, target: targetToken, hitString, attackType, img});
   
       // If we hit and we have targets and we are applying damage say so.
       if (isHit || this.isCritical) this.hitTargets.add(targetToken);
@@ -906,15 +900,15 @@ export class Workflow {
 export class DamageOnlyWorkflow extends Workflow {
   constructor(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll, 
         options: {flavor: string, itemData: {itemCardId: string}}= {flavor: "", itemData: {itemCardId: null}}) {
+
     super(actor, null, token, ChatMessage.getSpeaker(), shiftOnlyEvent)
     this.damageTotal = damageTotal;
     this.damageDetail = [{type: damageType,  damage: damageTotal}];
     this.damageRoll = roll;
     this.flavor = options.flavor;
     this.defaultDamageType = damageType;
-    console.warn("Targets are ", targets)
     this.targets = new Set(targets);
-    if (options.itemData.itemCardId) this.itemCardId = options.itemData.itemCardId;
+    this.itemCardId = options.itemData?.itemCardId;
     warn("Damage only workflow data", options.itemData, this)
     this.next(WORKFLOWSTATES.NONE);
     return this;
@@ -926,20 +920,18 @@ export class DamageOnlyWorkflow extends Workflow {
     // let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===this.currentState)[0];
     switch(newState) {
       case WORKFLOWSTATES.NONE:
-        if (configSettings.mergeCard) {
+        if (configSettings.mergeCard && this.itemCardId) {
           this.damageRollHTML = await this.damageRoll.render();
           this.damageCardData = {
             //@ts-ignore
             flavor: "damage flavor",
             roll: this.damageRoll
           }
+          await this.displayDamageRoll(false, configSettings.mergeCard && this.itemCardId)
         } else this.damageRoll.toMessage({flavor: this.flavor});
         this.hitTargets = new Set(this.targets);
         debug("DamageOnlyWorkflow.next ", newState, configSettings.speedItemRolls, this);
-        warn("workflow damage only display Damage Roll")
-        await this.displayDamageRoll(false, configSettings.mergeCard)
-        warn("workflow damage only apply damage Damage Roll")
-        applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, null, new Set())
+        await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, null, new Set())
         return super.next(WORKFLOWSTATES.ROLLFINISHED);
 
       default: return super._next(newState);

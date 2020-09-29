@@ -174,6 +174,20 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType) {
           oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value};
 }
 
+/* How to create additional flags 
+CONFIG.DND5E.characterFlags["Test"]=
+{
+  name: "test", 
+  hint: "test hint", 
+  section: "Feats", 
+  type: Boolean
+}
+Options
+Danger Sense
+Uncanny Dodge
+: improved saves/adv override abilitySave/Check and set event before rolling
+: damage mult for dex save?
+*/
 /** 
  * Work out the appropriate multiplier for DamageTypeString on actor
  * If configSettings.damageImmunities are not being checked always return 1

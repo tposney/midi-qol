@@ -1,5 +1,5 @@
 import { warn, error, debug } from "../midi-qol";
-import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, diceSoNiceUpdateMessge, recalcCriticalDamage, processItemCardCreation } from "./chatMesssageHandling";
+import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, diceSoNiceUpdateMessge, recalcCriticalDamage, processItemCardCreation, hideRollUpdate, hideRollRender } from "./chatMesssageHandling";
 import { processUndoDamageCard } from "./GMAction";
 import { untargetDeadTokens, untargetAllTokens } from "./utils";
 
@@ -22,6 +22,7 @@ export let initHooks = () => {
   Hooks.on("updateChatMessage", (message, update, options, user) => {
     diceSoNiceUpdateMessge(message, update, options, user);
     mergeCardSoundPlayer(message, update, options, user);
+    hideRollUpdate(message, update, options, user)
     //@ts-ignore
     ui.chat.scrollBottom();
   })
@@ -39,5 +40,6 @@ export let initHooks = () => {
     diceSoNiceHandler(message, html, data);
     colorChatMessageHandler(message, html, data);
     nsaMessageHandler(message, html, data);
+    hideRollRender(message, html, data);
   })
 }

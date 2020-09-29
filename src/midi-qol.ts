@@ -20,7 +20,7 @@ import { initGMActionSetup } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
 import { initializeDSNHandler } from './module/chatMesssageHandling';
-import { applyTokenDamage } from './module/utils';
+import { applyTokenDamage, getTraitMult } from './module/utils';
 import { ConfigPanel } from './module/apps/ConfigPanel';
 
 export let debugEnabled = 0;
@@ -119,7 +119,8 @@ function setupMinorQolCompatibility() {
     TrapWorkflow,
     DamageOnlyWorkflow,
     Workflow,
-    ConfigPanel: ConfigPanel
+    ConfigPanel: ConfigPanel,
+    getTraitMult: getTraitMult
   }
 }
 

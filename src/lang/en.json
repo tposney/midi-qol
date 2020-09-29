@@ -132,6 +132,7 @@
     "midi-qol.HideRollDetails.Name": "Hide Roll Details",
     "midi-qol.HideRollDetails.Hint": "Choose how much of GM rolls to hide from players",
     "midi-qol.DiceRolled": "<div>Rolled</div>",
-
+    "midi-qol.ForceHideRoll.Name": "Really Hide private/blind/self rolls",
+    "midi-qol.ForceHideRoll.Hint": "Display nothing to non-recipients for private/blind/self rolls. Thanks to felix.mueller.86@web.de",
     "midi-qol.": ""
 }
