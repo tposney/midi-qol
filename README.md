@@ -1,6 +1,5 @@
 # midi-qol
 Midi-qol is a replacement for minor-qol and you should not have both modules active at the same time, but both can be installed at the same time.
-This is an 0.1 release and should be considered beta. It is unlikely to destory your world, but I guess it might.
 Because there are some subtle differences in the way the module works, comapared to minor-qol you will need to experiment with the settings.
 See minor-qol for most of the feature description.
 
@@ -10,9 +9,6 @@ Changes in midi-qol:
 * midi-qol works with MagicItems, there may be some wrinkles aoutstanding there.
 * backwards compatibility for the minor-qol.doRoll function.
 * Lots more configuration options, accessed by a configuration screen.
-
-## CUB and midi-qol
-If you are not on CUB 1.2.1 upgrade now. It fixes and incompatibility that caused all sorts of issues. Many thanks @errational.
 
 ## Changelog
 https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
@@ -99,6 +95,7 @@ You can enable auto checking of hits. Funbles automatically miss and criticals a
 * **DM sees all whispered messages** Copy the GM on all whispered messages.
 * **Untarget at end of turn** At the end of a players turn(i.e. combat tracker is advanced) all/dead targeted tokens are untargeted. There is a GM option since I regularly forget to untarget after an attack and break things on the next turn. If midi-qol is managing the roll then dead tokens are untargeted after an attack, so that players can avoid "flogging a dead horse" as it were.
 * **Players control invisible tokens** 0.7.1+. If enabled then players can both see and control tokens they own that are hidden. Also any token they own will **always** appear on their map.
+* **Force Hide Rolls** If enabled private/blind/gm only rolls will only appear on the recipients chat log. This must be enabled if you are using better rolls and combo cards.
 
 If the above was all too tedious here are the setings I use which .
 ## Settings for  full auto mode:
