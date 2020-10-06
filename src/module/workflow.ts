@@ -751,11 +751,13 @@ export class Workflow {
         //@ts-ignore - createThumbnail not defined
         img = await game.video.createThumbnail(img, {width: 100, height: 100});
       }
+      //@ts-ignore
+      let isPlayerOwned = target.actor.hasPlayerOwner;
+      if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = target.actor.isPC
       this.saveDisplayData.push({
         name: target.name, 
         img, 
-        //@ts-ignore hasPlayerOwner
-        isPC: target.actor.hasPlayerOwner, 
+        isPC: isPlayerOwned, 
         target, 
         saveString, 
         rollTotal, 
@@ -856,8 +858,11 @@ export class Workflow {
         //@ts-ignore
         img = await game.video.createThumbnail(img, {width: 100, height: 100});
       }
-      //@ts-ignore hasPlayerOwner
-      this.hitDisplayData.push({isPC: targetToken.actor.hasPlayerOwner, target: targetToken, hitString, attackType, img});
+      if (isNewerVersion("0.6.9", game.data.version)) 
+        this.hitDisplayData.push({isPC: targetToken.actor.isPC, target: targetToken, hitString, attackType, img});
+      else      
+        //@ts-ignore hasPlayerOwner
+        this.hitDisplayData.push({isPC: targetToken.actor.hasPlayerOwner, target: targetToken, hitString, attackType, img});
   
       // If we hit and we have targets and we are applying damage say so.
       if (isHit || this.isCritical) this.hitTargets.add(targetToken);

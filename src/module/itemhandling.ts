@@ -149,6 +149,8 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const needAttckButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
   const sceneId = token?.scene && token.scene._id || canvas.scene._id;
 
+  let isPlayerOwned = this.actor.hasPlayerOwner;
+  if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = this.actor.isPC
   const templateData = {
     actor: this.actor,
     tokenId: token ? `${sceneId}.${token.id}` : null,
@@ -165,7 +167,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     hasAreaTarget: !minimalCard && this.hasAreaTarget,
     hasAttackRoll: !minimalCard && this.hasAttack,
     configSettings,
-    hideItemDetails: ["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !this.actor.hasPlayerOwner)};
+    hideItemDetails: ["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned)};
 
   const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
   const template = `modules/midi-qol/templates/${templateType}-card.html`;

@@ -452,7 +452,7 @@ export let chatDamageButtons = (message, html, data) => {
     let midiFlags = getProperty(message.data, "flags.midi-qol");
     const damageList = midiFlags.damageDetail;
     const totalDamage = midiFlags.damageTotal;
-    const item = game.actors.get(midiFlags.actor).getOwnedItem(midiFlags.item);
+    const item = game.actors.get(midiFlags.actor)?.getOwnedItem(midiFlags.item);
     addChatDamageButtonsToHTML(totalDamage, damageList, html, item, ".midi-qol-damage-roll .dice-total");
   }
   return true;
