@@ -132,6 +132,10 @@
     "midi-qol.HideRollDetails.Name": "굴림 상세 숨기기",
     "midi-qol.HideRollDetails.Hint": "플레이어로부터 GM 굴림을 얼마나 숨기는 지에 대해 선택한다",
     "midi-qol.DiceRolled": "<div>굴림</div>",
+    "midi-qol.ForceHideRoll.Name": "진짜 개인/블라인드/혼자 굴림 숨기기",
+    "midi-qol.ForceHideRoll.Hint": "개인/블라인드/혼자 굴림에 대해 대상이 아닌 사용자에게 표시되지 않도록 한다. Thanks to felix.mueller.86@web.de",
+    "midi-qol.EnableWorkflow.Name": "굴림 자동화 지원 활성화",
+    "midi-qol.EnableWorkflow.Hint": "활성화된 굴림 자동화를 워크플로우 설정 패널에서 구성할 수 있다.",
 
     "midi-qol.": ""
 }
