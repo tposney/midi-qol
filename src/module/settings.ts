@@ -13,7 +13,7 @@ export var addChatDamageButtons: boolean;
 export var autoFastForwardAbilityRolls: boolean;
 export var autoRemoveTargets: string;
 export var forceHideRoll: boolean;
-
+export var enableWorkflow: boolean;
 
 export var configSettings = {
   speedItemRolls: false,
@@ -58,6 +58,7 @@ export let fetchParams = (silent = false) => {
   if (!configSettings.criticalSound) configSettings.criticalSound = CONFIG.sounds["dice"];
   if (!configSettings.diceSound) configSettings.diceSound = CONFIG.sounds["dice"];
 
+  enableWorkflow = game.settings.get("midi-qol", "EnableWorkflow");
   configSettings.preRollChecks = game.settings.get("midi-qol", "PreRollChecks")
   warn("Fetch Params Loading", configSettings);
   criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
@@ -87,42 +88,17 @@ let getParams = () => {
 }
 const settings = [
   {
+    name: "EnableWorkflow",
+    scope: "world",
+    default: true,
+    type: Boolean,
+    onChange: fetchParams
+  },
+  {
     name: "ItemRollButtons",
     scope: "world",
     default: true,
     type: Boolean,
-    onChange: fetchParams
-  },
-  {
-    name: "AutoFastForwardAbilityRolls",
-    scope: "world",
-    default: false,
-    type: Boolean,
-    config: true,
-    onChange: fetchParams
-  },
-  {
-    name: "PreRollChecks",
-    scope: "world",
-    default: false,
-    type: Boolean,
-    onChange: fetchParams,
-    config: true
-  },
-  {
-    name: "CriticalDamage",
-    scope: "world",
-    choices: {default: "DND5e default", maxDamage:  "base max only", maxCrit: "max critical dice", maxAll: "max all dice"},
-    default: "default",
-    type: String,
-    onChange: fetchParams
-  },
-  {
-    name: "AddChatDamageButtons",
-    scope: "world",
-    default: true,
-    type: Boolean,
-    config: true,
     onChange: fetchParams
   },
   {
@@ -135,12 +111,11 @@ const settings = [
     onChange: fetchParams
   },
   {
-    name: "ForceHideRoll",
+    name: "AddChatDamageButtons",
     scope: "world",
     default: true,
     type: Boolean,
-    choices: [],
-    config:true,
+    config: true,
     onChange: fetchParams
   },
   {
@@ -150,6 +125,39 @@ const settings = [
     type: Boolean,
     choices: [],
     onChange: fetchParams
+  },
+  {
+    name: "ForceHideRoll",
+    scope: "world",
+    default: true,
+    type: Boolean,
+    choices: [],
+    config:true,
+    onChange: fetchParams
+  },
+  {
+    name: "AutoFastForwardAbilityRolls",
+    scope: "world",
+    default: false,
+    type: Boolean,
+    config: true,
+    onChange: fetchParams
+  },
+  {
+    name: "CriticalDamage",
+    scope: "world",
+    choices: {default: "DND5e default", maxDamage:  "base max only", maxCrit: "max critical dice", maxAll: "max all dice"},
+    default: "default",
+    type: String,
+    onChange: fetchParams
+  },
+  {
+    name: "PreRollChecks",
+    scope: "world",
+    default: false,
+    type: Boolean,
+    onChange: fetchParams,
+    config: true
   },
   {
     name: "ConfigSettings",
@@ -165,10 +173,11 @@ const settings = [
 export const registerSettings = function() {
   // Register any custom module settings here
   
-  settings.forEach(setting => {
+  
+  settings.forEach((setting, i) => {
     let MODULE = "midi-qol"
     let options = {
-        name: game.i18n.localize(`${MODULE}.${setting.name}.Name`),
+        name: `${i} - `+ game.i18n.localize(`${MODULE}.${setting.name}.Name`),
         hint: game.i18n.localize(`${MODULE}.${setting.name}.Hint`),
         scope: setting.scope,
         config: (setting.config === undefined) ? true : setting.config,

@@ -6,7 +6,7 @@ import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 
 import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, WORKFLOWSTATES } from "./workflow";
-import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings, forceHideRoll } from "./settings";
+import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow } from "./settings";
 import { createDamageList, getTraitMult, calculateDamage } from "./utils";
 import { config } from "process";
 
@@ -357,6 +357,7 @@ export let hideStuffHandler = (message, html, data) => {
 }
 
 export let recalcCriticalDamage = (data, ...args) => {
+  if (configSettings.mergeCard) return true;
   if (data.flags?.dnd5e?.roll.type === "damage") {
     debug("recalcCriticalDamage ", data.flags?.dnd5e?.roll.type, data, ...args)
     let token: Token = canvas.tokens.get(data.speaker.token)

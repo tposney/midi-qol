@@ -1,6 +1,6 @@
 import { warn, debug, error, i18n, log, MESSAGETYPES } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
-import {  configSettings, itemDeleteCheck } from "./settings";
+import {  configSettings, itemDeleteCheck, enableWorkflow, criticalDamage } from "./settings";
 import { rollMappings } from "./patching";
 
 function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boolean, workflow: Workflow, selector: string) {
@@ -25,8 +25,8 @@ function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boole
 export async function doAttackRoll(options = {event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}}) {
   let workflow: Workflow = Workflow.getWorkflow(this.uuid);
   debug("Entering item attack roll ", event, workflow, Workflow._workflows)
-  if (!workflow) { // TODO what to do with a random attack roll
-    warn("Roll Attack: No workflow for item ", this.name, this.uuid, event);
+  if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
+    if (enableWorkflow) warn("Roll Attack: No workflow for item ", this.name, this.uuid, event);
     return rollMappings.itemAttack.roll.bind(this)(options)
   }
   if (workflow?.currentState !== WORKFLOWSTATES.WAITFORATTACKROLL) return;
@@ -54,6 +54,9 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
 
 export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, spellLevel = null, versatile = false}) {
   let workflow = Workflow.getWorkflow(this.uuid);
+  if (!enableWorkflow) {
+    return rollMappings.itemDamage.roll.bind(this)({event})
+  }
   if (workflow && workflow.currentState !== WORKFLOWSTATES.WAITFORDAMGEROLL){
     switch (workflow?.currentState) {
       case WORKFLOWSTATES.AWAITTEMPLATE:
@@ -72,6 +75,7 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
   hideChatMessage(configSettings.mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
   if (!(workflow.noAutoDamage) && ["all", "damage"].includes(configSettings.autoFastForward)) event.shiftKey = !(event.altKey || event.ctrlKey || event.metaKey)
   let result: Roll = await rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
+  if (workflow.isCritical) result = doCritModify(result);
   workflow.damageRoll = result;
   workflow.damageTotal = result.total;
   workflow.damageRollHTML = await result.render();
@@ -80,6 +84,9 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
 }
 
 export async function doItemRoll(options = {showFullCard: false}) {
+  if (!enableWorkflow) {
+    return rollMappings.itemRoll.roll.bind(this)({configureDialog:true, rollMode:null, createMessage:true});
+  }
   const shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
                           || (game.user.targets.size > 0) // there are some target selected
                           || (this.data.data.target?.type === "self") // self target
@@ -280,3 +287,46 @@ switch ( data.t ) {
   this.hitTargets = new Set(game.user.targets);
  return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
 };
+
+function doCritModify(result: Roll) {
+  if (criticalDamage === "default") result;
+  if (isNewerVersion("0.7.0", game.data.version)) return result;;
+  let rollBase = new Roll(result.formula);
+  if (criticalDamage === "maxDamage") {
+    //@ts-ignore .terms not defined
+    rollBase.terms = rollBase.terms.map(t => {
+      if (t?.number) t.number = t.number/2;
+      return t;
+    });
+    //@ts-ignore .evaluate not defined
+    rollBase.evaluate({maximize: true});
+    return result;
+  } else if (criticalDamage === "maxCrit") {
+    let rollCrit = new Roll(result.formula);
+    //@ts-ignore .terms not defined
+    rollCrit.terms = rollCrit.terms.map(t => {
+      if (t?.number) t.number = t.number/2;
+      if (typeof t === "number") t = 0;
+      return t;
+    });
+    //@ts-ignore .terms not defined
+    rollBase.terms = rollBase.terms.map(t => {
+      if (t?.number) t.number = t.number/2;
+      return t;
+    });
+    //@ts-ignore .evaluate not defined
+    rollCrit.evaluate({maximize: true});
+    //@ts-ignore.terms not defined
+    rollBase.terms.push("+")
+    //@ts-ignore .terms not defined
+    rollBase.terms.push(rollCrit.total)
+    rollBase._formula = rollBase.formula;
+    rollBase.roll();
+    return rollBase;
+  } else if (criticalDamage === "maxAll") {
+    result = new Roll(result.formula);
+    //@ts-ignore .evaluate not defined
+    result.evaluate({maximize: true});
+    return result;
+  }
+}

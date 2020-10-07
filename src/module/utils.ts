@@ -217,6 +217,8 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
   let workflow = (Workflow.workflows && Workflow._workflows[item?.uuid]) || {};
   debug("Apply token damage ", damageDetail, totalDamage, theTargets, item, saves, workflow)
 
+  warn("Apply token damage ", damageDetail, totalDamage, theTargets, item, saves, workflow)
+
   if (!theTargets || theTargets.size === 0) {
     workflow.currentState = WORKFLOWSTATES.ROLLFINISHED;
     // probably called from refresh - don't do anything

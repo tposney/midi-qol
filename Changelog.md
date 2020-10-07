@@ -1,3 +1,9 @@
+## 0.3.5
+* Order settings into non-alphabetical order (for 0.7.3+). Slight rearrangement of settings.
+* Add enable workflow toggle for those who just want features from the main module settings. If disabled none of the settings on the workflow config page will be active.
+* Enable critical hit calculation in 0.7.2+ for combo cards and auto apply damage.
+## 0.3.4
+a few little bug fixes
 ## 0.3.3
 * It turns out there is a bug in midi-qol and better rolls for hidden/blind/private rolls when using the combo card. There are 2 solutions,
 1. Don't use the combo card

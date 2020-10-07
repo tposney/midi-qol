@@ -936,6 +936,7 @@ export class DamageOnlyWorkflow extends Workflow {
         } else this.damageRoll.toMessage({flavor: this.flavor});
         this.hitTargets = new Set(this.targets);
         debug("DamageOnlyWorkflow.next ", newState, configSettings.speedItemRolls, this);
+        warn("DamageOnlyWorkflow.next ", this.damageDetails, this.damageTotal, this.targets);
         await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, null, new Set())
         return super.next(WORKFLOWSTATES.ROLLFINISHED);
 

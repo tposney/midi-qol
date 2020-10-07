@@ -134,5 +134,8 @@
     "midi-qol.DiceRolled": "<div>Rolled</div>",
     "midi-qol.ForceHideRoll.Name": "Really Hide private/blind/self rolls",
     "midi-qol.ForceHideRoll.Hint": "Display nothing to non-recipients for private/blind/self rolls. Thanks to felix.mueller.86@web.de",
+    "midi-qol.EnableWorkflow.Name": "Enable roll automation support",
+    "midi-qol.EnableWorkflow.Hint": "If enabled automation of rolls can be configured in the Workflow Settings panel",
+    
     "midi-qol.": ""
 }

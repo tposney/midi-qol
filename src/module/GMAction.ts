@@ -82,7 +82,6 @@ let createReverseDamageCard = async (data) => {
     let newHP = Math.max(0, actor.data.data.attributes.hp.value - hpDamage);
     if (data.intendedFor === game.user.id && ["yes", "yesCard"].includes(data.autoApplyDamage)) {
       if (token.data.actorLink || canvas.scene.id === scene.id) {
-        console.warn("update token ", oldTempHP, tempDamage, newTempHP)
         promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP }));
       }
       else {
