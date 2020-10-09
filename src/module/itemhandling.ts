@@ -289,7 +289,7 @@ switch ( data.t ) {
 };
 
 function doCritModify(result: Roll) {
-  if (criticalDamage === "default") result;
+  if (criticalDamage === "default") return result;
   if (isNewerVersion("0.7.0", game.data.version)) return result;;
   let rollBase = new Roll(result.formula);
   if (criticalDamage === "maxDamage") {

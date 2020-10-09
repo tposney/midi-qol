@@ -88,6 +88,8 @@ Hooks.once('setup', function() {
   undoDamageText = i18n("midi-qol.undoDamageFrom");
   savingThrowText = i18n("midi-qol.savingThrowText");
   savingThrowTextAlt = i18n("midi-qol.savingThrowTextAlt");
+  log("Adding Magical weapon property")
+  CONFIG.DND5E.weaponProperties["mgc"] = i18n("midi-qol.magical");
   //@ts-ignore
   noDamageSaves = i18n("midi-qol.noDamageonSaveSpells").map(name => cleanSpellName(name));
   setupSheetQol();

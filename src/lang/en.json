@@ -14,7 +14,7 @@
     "midi-qol.AutoCheckHit.Name": "Auto check if attack hits target",
     "midi-qol.AutoCheckHit.Hint": "Check if an attack roll hits selected targets - damage is rolled if one or more targets is hit and auto roll damage is enabled. If disabled midi-qol will assume the attack hits and continue rolling.",
     "midi-qol.RequireTargets.Name": "Require targets to be selected before rolling",
-    "midi-qol.RequireTargets.Hint": "If no tokens are targeted then only self target or aread affect target rolls will be allowed (not better-rolls)",
+    "midi-qol.RequireTargets.Hint": "If no tokens are targeted then only self target or aread affect target rolls will be allowed (does not work with better-rolls)",
     "midi-qol.AutoApplyDamage.Name": "Auto apply damage to target",
     "midi-qol.AutoApplyDamage.Hint": "Auto apply damage to hit targets (if autocheck hits on) or targets user has selected",
     "midi-qol.ItemRollButtons.Name": "Add attack/damage buttons to item inventory list",
@@ -136,6 +136,7 @@
     "midi-qol.ForceHideRoll.Hint": "Display nothing to non-recipients for private/blind/self rolls. Thanks to felix.mueller.86@web.de",
     "midi-qol.EnableWorkflow.Name": "Enable roll automation support",
     "midi-qol.EnableWorkflow.Hint": "If enabled automation of rolls can be configured in the Workflow Settings panel",
+    "midi-qol.magical": "Magical",
     
     "midi-qol.": ""
 }

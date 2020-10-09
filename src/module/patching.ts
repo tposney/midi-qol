@@ -131,7 +131,7 @@ export let itemPatching = () => {
   let ActorClass = CONFIG.Actor.entityClass;
 
   ["itemAttack", "itemDamage", "useSpell", "itemRoll"].forEach(rollId => {
-    log("Pathcing ", rollId, rollMappings[rollId]);
+    log("Patching ", rollId, rollMappings[rollId]);
     let rollMapping = rollMappings[rollId];
     rollMapping.roll = rollMapping.class.prototype[rollMapping.methodName];
     rollMapping.class.prototype[rollMapping.methodName] = new Proxy(rollMapping.roll, {
@@ -142,7 +142,8 @@ export let itemPatching = () => {
 }
 
 export let setupPatching = () => {
+  log("Patching rollAbilitySave")
   Actor5e.prototype.rollAbilitySave = rollAbilitySave;
+  log("Patching rollAbilityTest")
   Actor5e.prototype.rollAbilityTest = rollAbilityTest;
-  CONFIG.DND5E.weaponProperties["mgc"] = "Magical";
 }

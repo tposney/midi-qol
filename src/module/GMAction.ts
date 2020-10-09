@@ -54,8 +54,8 @@ let createReverseDamageCard = async (data) => {
     damageApplied: ["yes", "yesCard"].includes(data.autoApplyDamage) ? "HP Updated" : "HP Not Updated",
     damageList: [] 
   };
-  let scene = canvas.scene;
   for (let { tokenID, actorID, tempDamage, hpDamage, totalDamage, appliedDamage } of damageList) {
+    let scene = canvas.scene;
     token = canvas.tokens.get(tokenID);
     if (!token) { //Token does not exist on this scene, find it in on referenced scene.
       scene = game.scenes.get(data.sceneId);
@@ -86,11 +86,15 @@ let createReverseDamageCard = async (data) => {
       }
       else {
         debug("doing remote scene update")
-        promises.push(scene.updateEmbeddedEntity("Token", { // need to deal with the case that the token might be on another scene
-         "_id": tokenID, //use the original ID not the one from the potentially temp token
-         "actorData.data.attributes.hp.temp": newTempHP, 
-         "actorData.data.attributes.hp.value": newHP
-        }))
+        if (scene) {
+          promises.push(scene.updateEmbeddedEntity("Token", { // need to deal with the case that the token might be on another scene
+          "_id": tokenID, //use the original ID not the one from the potentially temp token
+          "actorData.data.attributes.hp.temp": newTempHP, 
+          "actorData.data.attributes.hp.value": newHP
+          }))
+        } else {
+          console.warn(`Could not apply damage to ${tokenID} on ${data.sceneId}`)
+        }
       }
     }
     
@@ -145,7 +149,8 @@ let createReverseDamageCard = async (data) => {
 async function doClick(event, tokenId, absDamage, mult) {
   let token = canvas.tokens.get(tokenId);
   if (!token?.actor) {
-    warn(`Process damage button: Actor for token ${tokenId} not found`);
+    ui.notifications.warn("Token not found in scene")
+    console.warn(`Process damage button: Actor for token ${tokenId} not found`);
     return;
   }
   let actor = token.actor;
@@ -162,7 +167,8 @@ export let processUndoDamageCard = async(message, html, data) => {
     button.click(async (ev) => {
       let token = canvas.tokens.get(tokenID);
       if (!token?.actor) {
-        warn(`Process damage button: Actor for token ${tokenID} not found`);
+        ui.notifications.warn("Token not found in scene")
+        console.warn(`Process damage button: Actor for token ${tokenID} not found`);
         return;
       }
       let actor = token.actor;
@@ -179,7 +185,7 @@ export let processUndoDamageCard = async(message, html, data) => {
         return;
       }
       let actor = token.actor;
-      log(`Setting HP to ${oldTempHP} and ${oldHP}`);
+      log(`Setting HP to ${newTempHP} and ${newHP}`);
       await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP });
       ev.stopPropagation();
     });

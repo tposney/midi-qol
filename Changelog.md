@@ -1,3 +1,6 @@
+## 0.3.6
+clean up some debug messaging
+fixed a bug in critical roll changes (0.7.0+) for default critical damage
 ## 0.3.5
 * Order settings into non-alphabetical order (for 0.7.3+). Slight rearrangement of settings.
 * Add enable workflow toggle for those who just want features from the main module settings. If disabled none of the settings on the workflow config page will be active.
