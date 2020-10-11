@@ -4,7 +4,7 @@ import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 //@ts-ignore
 import AbilityTemplate from "../../../systems/dnd5e/module/pixi/ability-template.js";
-import { warn, debug, log, i18n, noDamageSaves, cleanSpellName, MESSAGETYPES, error } from "../midi-qol";
+import { warn, debug, log, i18n, noDamageSaves, cleanSpellName, MESSAGETYPES, error, MQdefaultDamageType } from "../midi-qol";
 import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
@@ -275,7 +275,7 @@ export class Workflow {
         }
         // apply damage to targets plus saves plus immunities
         // done here cause not needed for betterrolls workflow
-        this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || CONFIG.DND5E.healingTypes["healing"]; // a number of healing spells don't have a type set, so this will help those work
+        this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || MQdefaultDamageType; // CONFIG.DND5E.healingTypes["healing"]; // a number of healing spells don't have a type set, so this will help those work
         this.damageDetail = createDamageList(this.damageRoll, this.item, this.defaultDamageType);
         await this.displayDamageRoll(false, configSettings.mergeCard)
         if (this.isFumble) {
@@ -442,7 +442,7 @@ export class Workflow {
     if (doMerge) {
       const searchString = '<div class="midi-qol-damage-roll"></div>';
       // const damageString = i18n(this.versatile ? "DND5E.VersatileDamage" : "DND5E.Damage");
-      const damageString = `(${this.item?.data.data.damage.parts.map(a=>CONFIG.DND5E.damageTypes[a[1]]).join(",") || `${this.defaultDamageType}`})`;
+      const damageString = `(${this.item?.data.data.damage.parts.map(a=>(CONFIG.DND5E.damageTypes[a[1]] || MQdefaultDamageType)).join(",") || `${this.defaultDamageType}`})`;
       //@ts-ignore .flavor not defined
       const dmgHeader = configSettings.mergeCardCondensed ? damageString : this.damageCardData.flavor;
       let replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center" >${dmgHeader}${this.damageRollHTML || ""}</div></div>`

@@ -22,7 +22,7 @@ function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boole
   } else return true;
 }
 
-export async function doAttackRoll(options = {event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}}) {
+export async function doAttackRoll(options = {event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, versatile: false}) {
   let workflow: Workflow = Workflow.getWorkflow(this.uuid);
   debug("Entering item attack roll ", event, workflow, Workflow._workflows)
   if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
@@ -41,7 +41,6 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
   }
   if (!result) { // attack roll failed.
     workflow._next(WORKFLOWSTATES.ROLLFINISHED);
-
   } else {
     workflow.attackRoll = result;
     workflow.attackAdvantage = options.event.altKey;
@@ -74,7 +73,7 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
   }
   hideChatMessage(configSettings.mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
   if (!(workflow.noAutoDamage) && ["all", "damage"].includes(configSettings.autoFastForward)) event.shiftKey = !(event.altKey || event.ctrlKey || event.metaKey)
-  let result: Roll = await rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
+  let result: Roll = await rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile: versatile || workflow.versatile})
   if (workflow.isCritical) result = doCritModify(result);
   workflow.damageRoll = result;
   workflow.damageTotal = result.total;
@@ -83,7 +82,7 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
   return result;
 }
 
-export async function doItemRoll(options = {showFullCard: false}) {
+export async function doItemRoll(options = {showFullCard: false, versatile: false}) {
   if (!enableWorkflow) {
     return rollMappings.itemRoll.roll.bind(this)({configureDialog:true, rollMode:null, createMessage:true});
   }
@@ -101,12 +100,12 @@ export async function doItemRoll(options = {showFullCard: false}) {
   //@ts-ignore
   debug("doItemRoll ", event?.shiftKey, event?.ctrlKey, event?.altKey);
   let pseudoEvent = {shiftKey: false, ctrlKey: false, altKey: false, metakey: false, type: undefined}
-  let versatile = false;
+  let versatile = options.versatile;
   // if speed item rolls is on process the mouse event states
   if (configSettings.speedItemRolls) {
     //@ts-ignore
     pseudoEvent = { shiftKey: event?.shiftKey, ctrlKey: event?.ctrlKey, altKey : event?.altKey, metaKey: event?.metaKey, type: event?.type};
-    versatile = event?.type === "contextmenu" || (pseudoEvent.shiftKey);
+    versatile = event?.type === "contextmenu" || (pseudoEvent.shiftKey) || options.versatile;
     //@ts-ignore
     if (event?.altKey && event?.ctrlKey) {
       pseudoEvent.shiftKey = true;
@@ -195,13 +194,16 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
       alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name,
       // scene: canvas.scene.id
     },
-    flags: {"midi-qol": {
-      item: workflow.item.id, 
-      actor: workflow.actor.id, 
-      sound: theSound,
-      type: MESSAGETYPES.ITEM, 
-      itemUUId: workflow.itemUUId
-    }}
+    flags: {
+      "midi-qol": {
+        item: workflow.item.id, 
+        actor: workflow.actor.id, 
+        sound: theSound,
+        type: MESSAGETYPES.ITEM, 
+        itemUUId: workflow.itemUUId
+      },
+    "core": {"canPopout": true}
+  }
   };
   // Toggle default roll mode
   let rollMode = game.settings.get("core", "rollMode");

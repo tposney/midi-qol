@@ -162,10 +162,10 @@ export function diceSoNiceUpdateMessge(message, update, ...args) {
   if (![MESSAGETYPES.ATTACK, MESSAGETYPES.DAMAGE].includes(type)) return;
   const displayId = duplicate(message.data.flags["midi-qol"].displayId);
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
-  
+
   let rollDice = game.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
   let roll = Roll.fromJSON(message.data.flags["midi-qol"].roll);
-  warn("update message ", message.user, configSettings.hideRollDetails, message.isBlind)
+  warn("update message ", message, configSettings.hideRollDetails, message.isBlind)
   if ((message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails !== "none") || message.data.blind) {
     roll = roll.reroll()
   }
@@ -179,11 +179,13 @@ export function diceSoNiceUpdateMessge(message, update, ...args) {
   }
 }
 
-let showHandler = (hideTags, displayId, html, header, id) => {
-  debug(header, hideTags, displayId, html, id)
-
+let showHandler = (hideTags, displayId, html, header, message, id) => {
+  debug(header, hideTags, displayId, html, id, message)
   if (id !== displayId) return;
   if (hideTags) hideTags.forEach(hideTag => html.find(hideTag).show()); 
+  //@ts-ignore
+  let li = ui.chat.element.find(`.message[data-message-id="${message.id}"]`);
+  li.replaceWith(html);
   //@ts-ignore
   ui.chat.scrollBottom()
 };
@@ -207,8 +209,8 @@ export let diceSoNiceHandler = async (message, html, data) => {
       // $(`#chat-log .message[data-message-id="${message.id}"]`).find(hideTag).show();
       html.find(hideTag).hide()
     });
-    DSNHandlers.set(displayId, showHandler.bind(this, duplicate(hideTags), duplicate(displayId), html, "dice so nice complete handler "))
-    setTimeout(showHandler.bind(this, duplicate(hideTags), duplicate(displayId), html, "dice so nice timeout handler ", duplicate(displayId)), 5000); // backup display of messages
+    DSNHandlers.set(displayId, showHandler.bind(this, duplicate(hideTags), duplicate(displayId), html, "dice so nice complete handler ", message))
+    // setTimeout(showHandler.bind(this, duplicate(hideTags), duplicate(displayId), html, "dice so nice timeout handler ", duplicate(displayId)), 8000); // backup display of messages
   } else {
     if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
     debug("dice so nice handler - non-merge card", html)

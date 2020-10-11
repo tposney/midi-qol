@@ -42,6 +42,7 @@ export let noDamageSaves = [];
 export let undoDamageText;
 export let savingThrowText;
 export let savingThrowTextAlt;
+export let MQdefaultDamageType;
 
 export const MESSAGETYPES = {
   HITS: 1,
@@ -88,6 +89,7 @@ Hooks.once('setup', function() {
   undoDamageText = i18n("midi-qol.undoDamageFrom");
   savingThrowText = i18n("midi-qol.savingThrowText");
   savingThrowTextAlt = i18n("midi-qol.savingThrowTextAlt");
+  MQdefaultDamageType = i18n("midi-qol.defaultDamageType");
   log("Adding Magical weapon property")
   CONFIG.DND5E.weaponProperties["mgc"] = i18n("midi-qol.magical");
   //@ts-ignore

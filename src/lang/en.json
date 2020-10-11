@@ -137,6 +137,7 @@
     "midi-qol.EnableWorkflow.Name": "Enable roll automation support",
     "midi-qol.EnableWorkflow.Hint": "If enabled automation of rolls can be configured in the Workflow Settings panel",
     "midi-qol.magical": "Magical",
+    "midi-qol.defaultDamageType": "None",
     
     "midi-qol.": ""
 }

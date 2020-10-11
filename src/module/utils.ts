@@ -1,4 +1,4 @@
-import { debug, i18n, error, warn, noDamageSaves, cleanSpellName } from "../midi-qol";
+import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType } from "../midi-qol";
 import { itemRollButtons, configSettings, checkBetterRolls, autoRemoveTargets } from "./settings";
 import { log } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
@@ -8,7 +8,7 @@ import { installedModules } from "./setupModules";
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
  */
-export let createDamageList = (roll, item, defaultType = "radiant") => {
+export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) => {
   if (isNewerVersion(game.data.version, "0.6.9") ) {
     let damageList = []
     let rollTerms = roll.terms;
@@ -20,9 +20,10 @@ export let createDamageList = (roll, item, defaultType = "radiant") => {
     for (let [spec, type] of damageSpec.parts) {
       debug("CreateDamageList: single Spec is ", spec, type, item)
       if (item) {
+        let rollData = item.actor?.getRollData();
         //@ts-ignore replaceFromulaData - blank out @fields with 0
-        let formula = Roll.replaceFormulaData(spec, {}, {missing: "0", warn: false});
-        var rollSpec: Roll = new Roll(formula, item.actor?.getRollData() || {}).roll();
+        let formula = Roll.replaceFormulaData(spec, rollData || {}, {missing: "0", warn: false});
+        var rollSpec: Roll = new Roll(formula, rollData || {}).roll();
       }
       debug("CreateDamageList: rollSpec is ", spec, rollSpec)
 
@@ -115,7 +116,7 @@ export let createDamageList = (roll, item, defaultType = "radiant") => {
   if (evalString.length > 0) {
     debug("CreateDamageList: Extras part is ", evalString)
       let damage = new Roll(evalString).roll().total;
-      let type = damageSpec.parts[0] ? damageSpec.parts[0][1] : "radiant";
+      let type = damageSpec.parts[0] ? damageSpec.parts[0][1] : defaultType;
       damageList.push({ damage, type});
       debug("CreateDamageList: Extras part is ", evalString)
   }
@@ -231,7 +232,7 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
       for (let { damage, type } of damageDetail) {
         //let mult = 1;
           let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
-          if (!type) type = "healing";
+          if (!type) type = MQdefaultDamageType;
           mult = mult * getTraitMult(a, type, item);
           appliedDamage += Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
           var dmgType = type;

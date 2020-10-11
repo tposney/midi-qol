@@ -1,3 +1,9 @@
+## 0.3.7
+* Fix for dice so nice 3d dice rolling and combo card message display.
+* Support iten.roll({versatile: boolean}) as an option for midi-qol to roll versatile attacks, useful for macro writers who want to trigger a midi-qol workflow.
+* Allow midi-qol combo cards to be popped out from chat. Only the first attack/damage for the card will trigger a workflow with auto rolls and damage application, so damage application will require you to use the chat damage buttons for subsequent rolls.
+* Change the default damage type to "none" instead of healing. Healing spells seem to be correct now, so it might be safe to go back to none. If your healing spells start doing damage, check the damage type specified (not the action type since midi-qol only looks at the damage type)
+
 ## 0.3.6
 clean up some debug messaging
 fixed a bug in critical roll changes (0.7.0+) for default critical damage
