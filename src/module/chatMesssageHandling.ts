@@ -129,6 +129,7 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
     if (type === "unmatched") type = (Object.entries(CONFIG.DND5E.healingTypes).find(entry => typeString.includes(entry[1])) || ["unmatched"])[0];
     damageList.push({type, damage})
   }
+  BetterRollsWorkflow.removeWorkflow(item.uuid)
   let workflow = new BetterRollsWorkflow(actor, item, token, data.speaker, null);
   workflow.isCritical = diceRoll >= criticalThreshold;
   workflow.isFumble = diceRoll === 1;
@@ -165,7 +166,7 @@ export function diceSoNiceUpdateMessge(message, update, ...args) {
 
   let rollDice = game.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
   let roll = Roll.fromJSON(message.data.flags["midi-qol"].roll);
-  warn("update message ", message, configSettings.hideRollDetails, message.isBlind)
+  warn("dsn update message ", message, configSettings.hideRollDetails, message.isBlind)
   if ((message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails !== "none") || message.data.blind) {
     roll = roll.reroll()
   }
@@ -180,7 +181,7 @@ export function diceSoNiceUpdateMessge(message, update, ...args) {
 }
 
 let showHandler = (hideTags, displayId, html, header, message, id) => {
-  debug(header, hideTags, displayId, html, id, message)
+  debug("Show Handler:", header, hideTags, displayId, html, id, message)
   if (id !== displayId) return;
   if (hideTags) hideTags.forEach(hideTag => html.find(hideTag).show()); 
   //@ts-ignore
@@ -305,7 +306,7 @@ let _onTargetSelect = (event) => {
 
 export let hideRollRender = (app, html, msg) => {
   if (forceHideRoll && msg.whisperTo !== '') {
-      if (game.user.isGM === false && game.user.id !== msg.author.data._id && msg.message.whisper.indexOf(game.user.id) === -1) {
+      if (game.user.isGM === false && !msg.isAauthor && msg.message.whisper.indexOf(game.user.id) === -1) {
           html.hide();
       }
   }
@@ -314,7 +315,7 @@ export let hideRollRender = (app, html, msg) => {
 
 export let hideRollUpdate = (message, data, diff, id) => {
   if (forceHideRoll && message.whisperTo !== '') {
-    if (game.user.isGM === false && game.user.id !== message.author.data._id && message.message.whisper.indexOf(game.user.id) === -1) {
+    if (game.user.isGM === false && !message.isAuthor && message.message.whisper.indexOf(game.user.id) === -1) {
       let messageLi = $(`.message[data-message-id=${data._id}]`);
       messageLi.hide();
     }

@@ -164,7 +164,7 @@ export class Workflow {
   }
 
   async next(nextState: number) {
-    setTimeout(() => this._next(nextState), 1); // give the rest of queued things a chance to happen
+    setTimeout(() => this._next(nextState), 0); // give the rest of queued things a chance to happen
     // this._next(nextState);
   }
 
@@ -442,7 +442,9 @@ export class Workflow {
     if (doMerge) {
       const searchString = '<div class="midi-qol-damage-roll"></div>';
       // const damageString = i18n(this.versatile ? "DND5E.VersatileDamage" : "DND5E.Damage");
-      const damageString = `(${this.item?.data.data.damage.parts.map(a=>(CONFIG.DND5E.damageTypes[a[1]] || MQdefaultDamageType)).join(",") || `${this.defaultDamageType}`})`;
+      const damageString = `(${this.item?.data.data.damage.parts
+          .map(a=>(CONFIG.DND5E.damageTypes[a[1]] || MQdefaultDamageType)).join(",") 
+            || MQdefaultDamageType})`;
       //@ts-ignore .flavor not defined
       const dmgHeader = configSettings.mergeCardCondensed ? damageString : this.damageCardData.flavor;
       let replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center" >${dmgHeader}${this.damageRollHTML || ""}</div></div>`
