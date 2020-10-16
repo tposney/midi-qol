@@ -97,7 +97,11 @@ You can enable auto checking of hits. Funbles automatically miss and criticals a
 * **Players control invisible tokens** 0.7.1+. If enabled then players can both see and control tokens they own that are hidden. Also any token they own will **always** appear on their map.
 * **Force Hide Rolls** If enabled private/blind/gm only rolls will only appear on the recipients chat log. This must be enabled if you are using better rolls and combo cards.
 
-If the above was all too tedious here are the setings I use which .
+## Not settings....
+### Magic resistance.
+If the target token has the SRD feat "Magic Resistance" or a custom damage reistance trait equal to exactly magic-resistant the saving throws agains magic effects (item type spell) then auto rolled saves with be rolled with advantage.  
+
+If the above was all too tedious here are the setings I use.
 ## Settings for  full auto mode:
 * Speed Item Rolls on - if you want to be able to shift/ctl/alt click.
 * Merge to One card checked,
@@ -105,14 +109,14 @@ If the above was all too tedious here are the setings I use which .
 * Auto Target on template Draw - walls block
 * auto range target. Leave off until you are comfortable with the way everything else works.
 * Auto shift click - attack and damage. If you want to be prompted as to advantage/disadvanate/cirital/normal adjust appropriately. Even if enabled midi-qol will use the result of an attack (critica/normal) to do the roll.
-* Auto Check Hits - Check your choice as to whether the players see the results.
+* Auto Check Hits - Check your choice as to whether the players see the results - I use on.
 * Auto roll damage - Attack Hits
-* Saves - Save, your choice of whether the players see the results
-* Check text save - depends on you. If enabled the text of the spell description is searched to see if the damage on save is half/no damage.
+* Saves - Save, your choice of whether the players see the results - I use players see reults.
+* Check text save - depends on you. If enabled the text of the spell  description is searched to see if the damage on save is half/no damage.
 * Players Roll saves - Let Me Roll That For you
 * PLayer save timout - I give my players 20 seconds but you can choose what works for you.
 * Auto apply damage - yes + undo damage card
-* damage immunities - apply immunities + physical. (if a weapon attack has a plus in the item detail or the damage came from a spell) the damage is considered magical.
+* damage immunities - apply immunities + physical. (if a weapon attack has a plus in the item detail or the damage came from a spell or the Magical property is checked) the damage is considered magical.
 * auto apply item effects to targets checked. This will apply any dynamic effects to targets when:
 1. The item has a save and the save fails.
 2. The item has an attack and the attack hits.

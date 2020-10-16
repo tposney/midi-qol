@@ -167,7 +167,7 @@ export function diceSoNiceUpdateMessge(message, update, ...args) {
   let rollDice = game.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
   let roll = Roll.fromJSON(message.data.flags["midi-qol"].roll);
   warn("dsn update message ", message, configSettings.hideRollDetails, message.isBlind)
-  if ((message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails !== "none") || message.data.blind) {
+  if ((message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails === "detailsDSN") || message.data.blind) {
     roll = roll.reroll()
   }
   if (rollDice) {
@@ -345,7 +345,7 @@ export let hideStuffHandler = (message, html, data) => {
 
   if ((message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails === "all") || message.data.blind) {
     html.find(".dice-roll").replaceWith(i18n("midi-qol.DiceRolled"));
-  } else if (message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails === "details") {
+  } else if (message.user?.isGM && !game.user.isGM && ["details", "detailsDSN"].includes(configSettings.hideRollDetails)) {
     html.find(".dice-tooltip").remove();
     html.find(".dice-formula").remove();
   }

@@ -1,3 +1,13 @@
+## 0.3.8
+* Fix thrown error in chatMessage handling when looking at author.
+* Some changes to make midi-qol work with SW5e.
+* Skills now accept fast forward rolls.
+* Hide roll formula now allows you to configure if the DSN dice rolls for players should be randomised or not.
+* Clean up the rest of the default damage type issues.
+
+Known Bugs:
+Player control invisible tokens not working. **DO NOT USE**
+
 ## 0.3.7
 * Fix for dice so nice 3d dice rolling and combo card message display.
 * Support iten.roll({versatile: boolean}) as an option for midi-qol to roll versatile attacks, useful for macro writers who want to trigger a midi-qol workflow.

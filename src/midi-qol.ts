@@ -71,7 +71,6 @@ Hooks.once('init', async function() {
   preloadTemplates();
   // Class patching
   visionPatching();
-  itemPatching();
   initializeDSNHandler();
 
 	// Register custom sheets (if any)
@@ -83,6 +82,8 @@ Hooks.once('init', async function() {
 Hooks.once('setup', function() {
 	// Do anything after initialization but before
   // ready
+  itemPatching();
+
   setupModules();
   registerSettings();
   initGMActionSetup();
