@@ -54,8 +54,8 @@
           "path": "lang/es.json"
       }
   ],
-  "minimumCoreVersion": "0.6.5",
-  "compatibleCoreVersion": "0.7.4",
+  "minimumCoreVersion": "0.0.7.4",
+  "compatibleCoreVersion": "0.7.5",
   "minimumSystemVersion": 0.96,
   "url": "https://gitlab.com/tposney/midi-qol",
   "manifest": "https://gitlab.com/tposney/midi-qol/raw/master/package/module.json",
