@@ -1,3 +1,29 @@
+## 0.3.9
+* Rework of ctl/alt/shift keys:
+If speed rolls are off, all of the ctl/alt|meta/shift keys and roll behaviour behave the same as in core. There is one additional feature, if you click on a damage button in chat, CTRL+ALT click will use the critical/normal hit status from the midi-qol roll data.
+
+If speed rolls are on you need to assign the keys yourself, however you can use the defaults.  
+* advantage key modifier, defaults to ALT/Meta
+* disadvantage key modifier, defaults to CTRL
+* versatile key modifier, defaults to Shift.
+* critical damage modifer, defaults to ALT/Meta.
+* fast-forward key (turn any attack or damage roll into a fastforwarded one) advnantage+disadvantage.  
+If you assign a key multiple meanings the behaviour is going to be confusing at best.
+
+* A hack for the trap workflow due to tokens not updating in a timely fashion. At least that is what I think the cause is.
+
+* A fix for a bug where message.data.user was being incorrectly set.
+
+* Fixes for Damage Only workflows: This is only relevant to people writing macros. There is a new pararmater you can pass to your macro, @itemCardId, which refers to the item card that triggered the macro (i.e. weapon attack spell cast). If you pass that id to the DamageOnlyWorkflow constructor the damage will be inserted into the item card if you are using merged rolls.
+
+For Example:
+macro.execute "Divine Smite" @target @item.level @itemCardId
+will pass the target token id, the spell cast level, and the item card id to the macro.
+```
+// do some rolls, lookup the target and the roll will get added to the item card
+new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target], damageRoll, {itemCardId: args[3]})
+```
+
 ## 0.3.8
 * Fix thrown error in chatMessage handling when looking at author.
 * Some changes to make midi-qol work with SW5e.

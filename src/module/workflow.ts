@@ -11,6 +11,7 @@ import { installedModules } from "./setupModules";
 import { configSettings, checkBetterRolls, itemRollButtons, autoRemoveTargets } from "./settings.js";
 import { getSelfTargetSet, createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated } from "./utils"
 import { config } from "process";
+import { ConfigPanel } from "./apps/ConfigPanel.js";
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
 export function noKeySet(event) { return !(event.shiftKey || event.ctrlKey || event.altKey || event.metakey)}
@@ -31,6 +32,13 @@ export const WORKFLOWSTATES = {
   ALLROLLSCOMPLETE: 12,
   APPLYDYNAMICEFFECTS: 13,
   ROLLFINISHED: 14
+};
+
+const defaultRollOptions = {
+  advantage: false,
+  disadvantage: false,
+  versatile: false,
+  fastForward: false
 };
 
 export class Workflow {
@@ -94,7 +102,7 @@ export class Workflow {
   displayId: string;
 
   static eventHack: any;
-
+  
   static get workflows() {return Workflow._workflows}
   static getWorkflow(id:string):Workflow {
     debug("Get workflow ", id, Workflow._workflows,  Workflow._workflows[id])
@@ -104,8 +112,73 @@ export class Workflow {
   static initActions(actions: {}) {
     Workflow._actions = actions;
   }
-  constructor(actor: Actor5e, item: Item5e, token, speaker, event: any) {
+  testKey(keyString, event) {
+    if (!event) return false;
+    switch (keyString) {
+      case "altKey":
+        return event.altKey || event.metaKey;
+      case "shiftKey":
+        return event.shiftKey;
+      case "ctrlKey":
+        return event.ctrlKey;
+      default:
+        error("Impossible key mapping for speed roll")
 
+    }
+  }
+  public processAttackEventOptions(event) {
+    if (configSettings.speedItemRolls) {
+      //TOD make this configurable
+      const advKey = this.testKey(configSettings.keyMapping["DND5E.Advantage"], event);
+      const disKey = this.testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
+      const versaKey = this.testKey(configSettings.keyMapping["DND5E.Versatile"], event);
+      this.rollOptions.fastForward = (["all", "attack"].includes(configSettings.autoFastForward));
+      this.rollOptions.fastForward = this.rollOptions.fastForward || ((advKey || disKey) || false);
+      this.rollOptions.advantage = this.rollOptions.advantage || ((advKey && !disKey) || false);
+      this.rollOptions.disadvantage = this.rollOptions.disadvantage || ((disKey && !advKey) || false);
+      this.rollOptions.versatile = this.rollOptions.versatile || (versaKey || false);
+    } else {
+      const advKey = event?.altKey || event?.metaKey;
+      const disKey = event?.ctrlKey;
+      // const versaKey = event?.shiftKey;
+      this.rollOptions.fastForward = (["all", "attack"].includes(configSettings.autoFastForward));
+      this.rollOptions.fastForward = this.rollOptions.fastForward ||event?.altKey || event?.shfitKey || event.ctrlKey;
+      this.rollOptions.advanatage = advKey;
+      this.rollOptions.disadvantage = disKey;
+    }
+  }
+  public processDamageEventOptions(event) { 
+    // if we have an event here it means they clicked on the damage button?
+    if (configSettings.speedItemRolls) {
+      const disKey = this.testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
+      const critKey = this.testKey(configSettings.keyMapping["DND5E.Critical"], event);
+      const advKey = this.testKey(configSettings.keyMapping["DND5E.Advantage"], event);
+      const versaKey = this.testKey(configSettings.keyMapping["DND5E.Versatile"], event);
+      const fastForwardKey = advKey && disKey
+      this.rollOptions.critical = this.isCritical || critKey;
+      this.rollOptions.fastForward = ["all", "damage"].includes(configSettings.autoFastForward);
+      this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || fastForwardKey;
+      this.rollOptions.versatile = this.rollOptions.versatile || versaKey;
+      if (fastForwardKey) this.rollOptions.critical = this.isCritical;
+      // work out what means use the roll results
+      // if (useKey) this.rollOptions.critical = this.isCritical;
+    } else { // use default behaviour
+      const critKey = event?.altKey || event?.metaKey;
+      const fastForwardKey = critKey && event?.ctrlKey;
+      this.rollOptions.fastForward = event?.shiftKey || event?.altKey;
+      this.rollOptions.critical = event?.altKey;
+      if (fastForwardKey) this.rollOptions.critical = this.isCritical;
+    }
+    this.rollOptions.spellLevel = this.itemLevel;
+    //TODO get rid of this when rolldamage accepts options
+    this.rollOptions.event = {
+      shiftKey: this.rollOptions.fastForward,
+      altKey: this.rollOptions.critical
+    }
+  }
+  constructor(actor: Actor5e, item: Item5e, token, speaker, event: any) {
+    this.rollOptions = duplicate(defaultRollOptions);
+    this.processAttackEventOptions(event);
     this.actor = actor;
     this.item = item;
     if (!this.item) {
@@ -139,7 +212,6 @@ export class Workflow {
     this.hideSavesHookId = null;
     this.placeTemlateHookId = null;
     this.damageDetail = [];
-    this.versatile = false;
     this.hideTags = new Array();
     this.displayHookId = null;
     Workflow._workflows[this.itemUUId] = this;
@@ -194,6 +266,8 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
 
       case WORKFLOWSTATES.TEMPLATEPLACED:
+        // Some modules stop being able to get the item card id.
+        if (!this.itemCardId) return this.next(WORKFLOWSTATES.VALIDATEROLL);
         const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
         // remove the place template button from the chat card.
         //@ts-ignore
@@ -226,10 +300,11 @@ export class Workflow {
         if (this.noAutoAttack) return;
         const shouldRoll = this.someEventKeySet() || configSettings.autoRollAttack;
         if (shouldRoll) {
-          let attackEvent = duplicate(this.event);
-          attackEvent.shiftKey = attackEvent.shiftKey || ["all", "attack"].includes(configSettings.autoFastForward); // fast forward roll if required
-          warn("attack roll ", shouldRoll, attackEvent)
-          this.item.rollAttack({event: attackEvent});
+          this.processAttackEventOptions(event);
+          //let attackEvent = duplicate(this.event);
+          // attackEvent.shiftKey = attackEvent.shiftKey || ["all", "attack"].includes(configSettings.autoFastForward); // fast forward roll if required
+          warn("attack roll ", shouldRoll, this.rollOptions)
+          this.item.rollAttack({event: {}});
         }
         return;
 
@@ -255,14 +330,11 @@ export class Workflow {
         const shouldRollDamage = configSettings.autoRollDamage === "always" 
                                 || (configSettings.autoRollDamage !== "none" && !this.item.hasAttack)
                                 || (configSettings.autoRollDamage === "onHit" && (this.hitTargets.size > 0 || this.targets.size === 0));
-        this.event = {shiftKey: false, altKey:false, ctrlKey: false, metaKey: false, type: ""};
         debug("autorolldamage ", configSettings.autoRollDamage, " has attack ", this.item.hasAttack, " targets ", this.hitTargets)
         if (shouldRollDamage) {
           warn(" about to roll damage ", this.event, configSettings.autoRollAttack, configSettings.autoFastForward)
-          this.event.shiftKey = ["all", "damage"].includes(configSettings.autoFastForward);
-          this.event.altKey =   ["all", "damage"].includes(configSettings.autoFastForward) && this.isCritical;
-          debug("Rolling damage ", event, this.itemLevel, this.versatile);
-          await this.item.rollDamage({event: this.event, spellLevel: this.itemLevel, versatile: this.versatile});
+          debug("Rolling damage ", event, this.itemLevel, this.rollOptions.versatile);
+          await this.item.rollDamage(this.rollOptions);
         }
         return; // wait for a damage roll to advance the state.
 
@@ -275,7 +347,8 @@ export class Workflow {
         }
         // apply damage to targets plus saves plus immunities
         // done here cause not needed for betterrolls workflow
-        this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || MQdefaultDamageType; // CONFIG.DND5E.healingTypes["healing"]; // a number of healing spells don't have a type set, so this will help those work
+        this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
+        // CONFIG.DND5E.healingTypes["healing"]; // a number of healing spells don't have a type set, so this will help those work
         this.damageDetail = createDamageList(this.damageRoll, this.item, this.defaultDamageType);
         await this.displayDamageRoll(false, configSettings.mergeCard)
         if (this.isFumble) {
@@ -334,16 +407,14 @@ export class Workflow {
           if (applicationTargets?.size) { // perhaps apply item effects
             //@ts-ignore
             let de = window.DynamicEffects;
-            // kludge for itemCardId - do differently in DAE
-            this.item.data.itemCardId = this.itemCardId;
             debug("Calling dynamic effects with ", applicationTargets, de)
             de.doEffects({item: this.item, actor: this.item.actor, activate: true, targets: applicationTargets, 
-                  whisper: true, spellLevel: this.itemLevel, damageTotal: this.damageTotal}) 
+                  whisper: true, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId}) 
           }
         } else if (installedModules.get("dae")) {
           //@ts-ignore
           let dae = window.DAE;
-          dae.doEffects(this.item, true, applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal})
+          dae.doEffects(this.item, true, applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId})
         }
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
@@ -358,14 +429,24 @@ export class Workflow {
         // disable sounds for when the chat card might be reloaed.
         
         if (this.__proto__.constructor.name !== "BetterRollsWorkflow") {
-          await game.messages.get(this.itemCardId)?.update({
+          let itemCard = game.messages.get(this.itemCardId);
+          let waitForDiceSoNice = configSettings.mergeCard && (this.item?.hasAttck || this.item?.hasDamage || this.item?.hasSaves);
+          waitForDiceSoNice = waitForDiceSoNice && game.dice3d?.messageHookDisabled && game.dice3d?.isEnabled();
+
+          await itemCard?.update({
             "flags.midi-qol.playSound": false, 
             "flags.midi-qol.type": MESSAGETYPES.ITEM, 
             type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-            "flags.midi-qol.waitForDiceSoNice": this.item?.hasAttck || this.item?.hasDamage || this.item?.hasSaves,
+            "flags.midi-qol.waitForDiceSoNice": waitForDiceSoNice,
             "flags.midi-qol.hideTag": this.hideTags,
             "flags.midi-qol.displayId": this.displayId
           });
+          
+          setTimeout(() => {
+            // remove hide tags after a bit
+            itemCard.update({"flags.midi-qol.hideTag": []});
+          },4000)
+          
         }
         //@ts-ignore ui.chat undefined.
         ui.chat.scrollBottom();
@@ -384,9 +465,9 @@ export class Workflow {
     let newFlags = {};
     
 
-    if (doMerge) { // display the attack roll
+    if (doMerge && chatMessage) { // display the attack roll
       let searchString = '<div class="midi-qol-attack-roll"></div>';
-      const attackString = this.attackAdvantage ? i18n("DND5E.Advantage") : this.attackDisadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
+      const attackString = this.rollOptions.advantage ? i18n("DND5E.Advantage") : this.rollOptions.disadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
       let replaceString = `<div style="text-align:center" >${attackString}<div class="midi-qol-attack-roll">${this.attackRollHTML}</div></div>`
       content = content.replace(searchString, replaceString);
       if ( this.attackRoll.dice.length ) {
@@ -406,7 +487,7 @@ export class Workflow {
           }
         }
       }
-      if (!!!game.dice3d?.messageHookDisabled) this.hideTags = [".midi-qol-attack-roll"];
+      if (!!!game.dice3d?.messageHookDisabled) this.hideTags = [".midi-qol-attack-roll", "midi-qol-damage-roll"];
       warn("Display attack roll ", this.attackCardData, this.attackRoll)
       newFlags = mergeObject(flags, {
           "midi-qol": 
@@ -438,13 +519,11 @@ export class Workflow {
     content = content?.replace(versatileRe, "<div></div>")
     var rollSound = configSettings.diceSound;
     var newFlags = chatMessage?.data.flags || {};
-  
-    if (doMerge) {
+    if (doMerge && chatMessage) {
       const searchString = '<div class="midi-qol-damage-roll"></div>';
-      // const damageString = i18n(this.versatile ? "DND5E.VersatileDamage" : "DND5E.Damage");
       const damageString = `(${this.item?.data.data.damage.parts
-          .map(a=>(CONFIG.DND5E.damageTypes[a[1]] || MQdefaultDamageType)).join(",") 
-            || MQdefaultDamageType})`;
+          .map(a=>(CONFIG.DND5E.damageTypes[a[1]] || this.defaultDamageType || MQdefaultDamageType)).join(",") 
+            || this.defaultDamageType || MQdefaultDamageType})`;
       //@ts-ignore .flavor not defined
       const dmgHeader = configSettings.mergeCardCondensed ? damageString : this.damageCardData.flavor;
       let replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center" >${dmgHeader}${this.damageRollHTML || ""}</div></div>`
@@ -482,11 +561,11 @@ export class Workflow {
     }
     warn("displayHits ", templateData, whisper, doMerge);
     const hitContent = await renderTemplate("modules/midi-qol/templates/hits.html", templateData) || "No Targets";
+    const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
 
-    if(doMerge) {
-      const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
+    if(doMerge && chatMessage) {
       // @ts-ignore .content not defined
-      var content = duplicate(chatMessage.data.content);    
+      var content = chatMessage && duplicate(chatMessage.data.content);    
       var searchString;
       var replaceString;
       if (!!!game.dice3d?.messageHookDisabled) this.hideTags.push(".midi-qol-hits-display")
@@ -528,7 +607,7 @@ export class Workflow {
 
       if (game.user.targets.size > 0) {
         let chatData: any = {
-          user: game.user._id,
+          user: game.user,
           speaker,
           content: hitContent || "No Targets",
           type: CONST.CHAT_MESSAGE_TYPES.OTHER
@@ -559,9 +638,9 @@ export class Workflow {
       saves: this.saveDisplayData, 
         // TODO force roll damage
     }
+    const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
     const saveContent = await renderTemplate("modules/midi-qol/templates/saves.html", templateData);
-    if (doMerge) {
-        const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
+    if (doMerge && chatMessage) {
         // @ts-ignore .content not defined
         let content = duplicate(chatMessage.data.content)
         var searchString;
@@ -604,7 +683,7 @@ export class Workflow {
       speaker.alias = (configSettings.useTokenNames && speaker.token) ? canvas.tokens.get(speaker.token).name : speaker.alias;
 
       chatData = {
-        user: game.user._id,
+        user: game.user,
         speaker,
         content: `<div data-item-id="${this.item._id}"></div> ${saveContent}`,
         flavor: `<h4>${this.saveDisplayFlavor}</h4>`, 
@@ -812,7 +891,7 @@ export class Workflow {
     if (isNewerVersion(game.data.version, "0.6.9") ) {
       //@ts-ignore
       this.diceRoll = this.attackRoll.results[0];
-     
+     //@ts-ignore
       //@ts-ignore .terms undefined
       this.isCritical = this.diceRoll  >= this.attackRoll.terms[0].options.critical;
       //@ts-ignore .terms undefined
@@ -906,17 +985,17 @@ export class Workflow {
 
 export class DamageOnlyWorkflow extends Workflow {
   constructor(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll, 
-        options: {flavor: string, itemData: {itemCardId: string}}= {flavor: "", itemData: {itemCardId: null}}) {
+        options: {flavor: string, itemCardId: string}) {
 
     super(actor, null, token, ChatMessage.getSpeaker(), shiftOnlyEvent)
     this.damageTotal = damageTotal;
     this.damageDetail = [{type: damageType,  damage: damageTotal}];
     this.damageRoll = roll;
     this.flavor = options.flavor;
-    this.defaultDamageType = damageType;
+    this.defaultDamageType = CONFIG.DND5E.damageTypes[damageType] || damageType;
     this.targets = new Set(targets);
-    this.itemCardId = options.itemData?.itemCardId;
-    warn("Damage only workflow data", options.itemData, this)
+    this.itemCardId = options.itemCardId;
+    warn("Damage only workflow data", options, this)
     this.next(WORKFLOWSTATES.NONE);
     return this;
   }
@@ -932,7 +1011,8 @@ export class DamageOnlyWorkflow extends Workflow {
           this.damageCardData = {
             //@ts-ignore
             flavor: "damage flavor",
-            roll: this.damageRoll
+            roll: this.damageRoll,
+            speaker: this.speaker
           }
           await this.displayDamageRoll(false, configSettings.mergeCard && this.itemCardId)
         } else this.damageRoll.toMessage({flavor: this.flavor});
@@ -954,13 +1034,14 @@ export class TrapWorkflow extends Workflow {
   saveTargets: any;
 
   constructor(actor: Actor5e, item: Item5e, targets: [Token], trapCenter: {x: number, y: number} = undefined, trapSound: {playlist: string , sound: string} = undefined,  event: any = null) {
-    super(actor, item, null, ChatMessage.getSpeaker, event);
+    super(actor, item, null, ChatMessage.getSpeaker(), event);
     this.targets = new Set(targets);
     if (!this.event) this.event = duplicate(shiftOnlyEvent);
     this.trapSound = trapSound;
     this.trapCenter = trapCenter;
     this.saveTargets = new Set(game.user.targets);
     this.next(WORKFLOWSTATES.NONE)
+    this.rollOptions.fastForward = true;
   }
   
   async _next(newState: number) {
@@ -969,7 +1050,7 @@ export class TrapWorkflow extends Workflow {
     warn("attack workflow.next ", state, this._id, this)
     switch (newState) {
       case WORKFLOWSTATES.NONE:
-        this.itemCardId = (await showItemCard.bind(this.item)(false, this, true)).id;
+        this.itemCardId = (await showItemCard.bind(this.item)(false, this, true))?.id;
         //@ts-ignore
         if (this.trapSound) AudioHelper.play({src: this.trapSound}, false)
         debug(" workflow.next ", state, this.item, configSettings.autoTarget, this.item.hasAreaTarget);
@@ -1024,9 +1105,10 @@ export class TrapWorkflow extends Workflow {
           // fumble means no trap damage/effects
           return this.next(WORKFLOWSTATES.ROLLFINISHED);
         } 
-        this.event.altKey =  this.isCritical;
-        debug("Rolling damage ", this.event, this.itemLevel, this.versatile);
-        await this.item.rollDamage({event: this.event, spellLevel: this.itemLevel, versatile: this.versatile});
+        this.rollOptions.critical = this.isCritical;
+        debug("Rolling damage ", this.event, this.itemLevel, this.rollOptions.versatile);
+        this.rollOptions.critical = this.isCritical;
+        await this.item.rollDamage(this.rollOptions);
         return; // wait for a damage roll to advance the state.
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
@@ -1039,6 +1121,7 @@ export class TrapWorkflow extends Workflow {
         if (this.isFumble) {
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
         }
+        // If the item does damage, use the same damage type as the item
         let defaultDamageType = this.item?.data.data.damage?.parts[0][1] || this.defaultDamageType;
         this.damageDetail = createDamageList(this.damageRoll, this.item, defaultDamageType);
         return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);

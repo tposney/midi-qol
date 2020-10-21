@@ -10,7 +10,7 @@ function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boole
     let hookId = Hooks.on("preCreateChatMessage", (data, options) => {
       if (match(data)) {
         //@ts-ignore
-        Hooks.off("preCreateChatMessage", hookId);
+        Hooks.off("preCreateChatMessage", duplicate(workflow.displayHookId));
         workflow.displayHookId = null;
         workflow[selector] = data;
         warn("Setting up hide chat message ", data, options, match, workflow, selector);
@@ -30,12 +30,15 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
     return rollMappings.itemAttack.roll.bind(this)(options)
   }
   if (workflow?.currentState !== WORKFLOWSTATES.WAITFORATTACKROLL) return;
+  /*
   if (!workflow.noAutoDamage && ["all", "attack"].includes(configSettings.autoFastForward)) {
     options.event.shiftKey = !(options.event.altKey || options.event.ctrlKey || options.event.metaKey)
   }
+  */
+  workflow.processAttackEventOptions(options?.event);
+  // we actually want to collect the html from the attack roll, so need to render and grab
   hideChatMessage(configSettings.mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
-  let result: Roll = await rollMappings.itemAttack.roll.bind(this)(options);
-
+  let result: Roll = await rollMappings.itemAttack.roll.bind(this)(options = workflow.rollOptions);
   if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
     workflow.targets = new Set(game.user.targets);
   }
@@ -43,15 +46,16 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
     workflow._next(WORKFLOWSTATES.ROLLFINISHED);
   } else {
     workflow.attackRoll = result;
-    workflow.attackAdvantage = options.event.altKey;
-    workflow.attackDisadvantage = options.event.ctrlKey;
+    //TODO get rid of workflow attackadvantage instead use rollOptions
+    workflow.attackAdvantage = workflow.rollOptions.advantage;
+    workflow.attackDisadvantage = workflow.rollOptions.disdavantage;
     workflow.attackRollHTML = await result.render();
     workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
   }
   return result;
 }
 
-export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, spellLevel = null, versatile = false}) {
+export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, spellLevel = null, versatile = null}) {
   let workflow = Workflow.getWorkflow(this.uuid);
   if (!enableWorkflow) {
     return rollMappings.itemDamage.roll.bind(this)({event})
@@ -66,16 +70,22 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
         return ui.notifications.warn(i18n("broken universe"));
     }
   }
-  debug(" do damage roll ", event, spellLevel, versatile, this.uuid, Workflow._workflows, workflow)
   if (!workflow) {
     warn("Roll Damage: No workflow for item ", this.name);
     return rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
   }
+  // we actually want to collect the html from the damage roll, so need to rendere and grab
   hideChatMessage(configSettings.mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
-  if (!(workflow.noAutoDamage) && ["all", "damage"].includes(configSettings.autoFastForward)) event.shiftKey = !(event.altKey || event.ctrlKey || event.metaKey)
-  let result: Roll = await rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile: versatile || workflow.versatile})
+  workflow.processDamageEventOptions(event);
+  // Allow overrides form the caller
+  if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
+  if (versatile !== null) workflow.rollOptions.versatile = versatile;
+  let result: Roll = await rollMappings.itemDamage.roll.bind(this)(workflow.rollOptions)
   if (workflow.isCritical) result = doCritModify(result);
   workflow.damageRoll = result;
+  if (!result.total) { // user backed out of damage roll
+    workflow.next(WORKFLOWSTATES.ROLLFINISHED);
+  }
   workflow.damageTotal = result.total;
   workflow.damageRollHTML = await result.render();
   workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
@@ -100,26 +110,13 @@ export async function doItemRoll(options = {showFullCard: false, versatile: fals
   //@ts-ignore
   debug("doItemRoll ", event?.shiftKey, event?.ctrlKey, event?.altKey);
   let pseudoEvent = {shiftKey: false, ctrlKey: false, altKey: false, metakey: false, type: undefined}
-  let versatile = options.versatile;
-  // if speed item rolls is on process the mouse event states
-  if (configSettings.speedItemRolls) {
-    //@ts-ignore
-    pseudoEvent = { shiftKey: event?.shiftKey, ctrlKey: event?.ctrlKey, altKey : event?.altKey, metaKey: event?.metaKey, type: event?.type};
-    versatile = event?.type === "contextmenu" || (pseudoEvent.shiftKey) || options.versatile;
-    //@ts-ignore
-    if (event?.altKey && event?.ctrlKey) {
-      pseudoEvent.shiftKey = true;
-      pseudoEvent.ctrlKey = false;
-      pseudoEvent.altKey = false;
-    }
-  }
-  
   let speaker = ChatMessage.getSpeaker();
   let spellLevel = this.data.data.level; // we are called with the updated spell level so record it.
   let baseItem = this.actor.getOwnedItem(this.id);
-  let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token, speaker, pseudoEvent);
+  let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token, speaker, event);
   //@ts-ignore event .type not defined
-  workflow.versatile = versatile;
+  workflow.rollOptions.versatile = workflow.rollOptions.versatile || options.versatile;
+  // workflow.versatile = versatile;
   workflow.itemLevel = this.data.data.level;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = options.showFullCard;
@@ -185,7 +182,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   else if (this.type === "spell") theSound = configSettings.spellUseSound;
   else if (this.type === "consumable" && this.name.toLowerCase().includes(i18n("midi-qol.potion").toLowerCase())) theSound = configSettings.potionUseSound;
   const chatData = {
-    user: game.user._id,
+    user: game.user,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     content: html,
     speaker: {
@@ -243,58 +240,63 @@ export function selectTargets(scene, data, options) {
 
   let tdx = data.x;
   let tdy = data.y;
-// Extract and prepare data
-  let {direction, distance, angle, width} = data;
-  distance *= canvas.scene.data.grid / canvas.scene.data.gridDistance;
-  width *= canvas.scene.data.grid / canvas.scene.data.gridDistance;
-  direction = toRadians(direction);
+  setTimeout(() => {
+  // Extract and prepare data
+    let {direction, distance, angle, width} = data;
+    distance *= canvas.scene.data.grid / canvas.scene.data.gridDistance;
+    width *= canvas.scene.data.grid / canvas.scene.data.gridDistance;
+    direction = toRadians(direction);
 
-  var shape
-// Get the Template shape
-switch ( data.t ) {
-  case "circle":
-    shape = templateDetails._getCircleShape(distance);
-    break;
-  case "cone":
-    shape = templateDetails._getConeShape(direction, angle, distance);
-    break;
-  case "rect":
-    shape = templateDetails._getRectShape(direction, distance);
-    break;
-  case "ray":
-    shape = templateDetails._getRayShape(direction, distance, width);
-  }
-  canvas.tokens.placeables.filter(t => {
-    if (!t.actor) return false;
-    // skip the caster
-    if (!selfTarget && this.token === t.id) return false;
-    // skip special tokens with a race of trigger
-    if (t.actor.data.data.details.race === "trigger") return false;
-    if (!shape.contains(t.center.x - tdx, t.center.y - tdy))
-      return false;
-    if (!wallsBlockTargeting)
-      return true;
-    // construct a ray and check for collision
-    let r = new Ray({ x: t.center.x, y: t.center.y}, templateDetails.data);
-    return !canvas.walls.checkCollision(r);
-  }).forEach(t => {
-    t.setTarget(true, { user: game.user, releaseOthers: false });
-    game.user.targets.add(t);
-  });
-  // game.user.broadcastActivity({targets: game.user.targets.ids});
+    var shape
+  // Get the Template shape
+  switch ( data.t ) {
+    case "circle":
+      shape = templateDetails._getCircleShape(distance);
+      break;
+    case "cone":
+      shape = templateDetails._getConeShape(direction, angle, distance);
+      break;
+    case "rect":
+      shape = templateDetails._getRectShape(direction, distance);
+      break;
+    case "ray":
+      shape = templateDetails._getRayShape(direction, distance, width);
+    }
+    canvas.tokens.placeables.filter(t => {
+      if (!t.actor) return false;
+      // skip the caster
+      if (!selfTarget && this.token === t.id) {
+        return false;
+      }
+      // skip special tokens with a race of trigger
+      if (t.actor.data.data.details.race === "trigger") return false;
+      t = canvas.tokens.get(t.id);
+      if (!shape.contains(t.center.x - tdx, t.center.y - tdy))
+        return false;
+      if (!wallsBlockTargeting)
+        return true;
+      // construct a ray and check for collision
+      let r = new Ray({ x: t.center.x, y: t.center.y}, templateDetails.data);
+      return !canvas.walls.checkCollision(r);
+    }).forEach(t => {
+      t.setTarget(true, { user: game.user, releaseOthers: false });
+      game.user.targets.add(t);
+    });
+    // game.user.broadcastActivity({targets: game.user.targets.ids});
 
-  // Assumes area affect do not have a to hit roll
-  this.saves = new Set();
-  this.targets = new Set(game.user.targets);
-  this.hitTargets = new Set(game.user.targets);
- return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
+    // Assumes area affect do not have a to hit roll
+    this.saves = new Set();
+    this.targets = new Set(game.user.targets);
+    this.hitTargets = new Set(game.user.targets);
+  return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
+  }, 250);
 };
 
 function doCritModify(result: Roll) {
   if (criticalDamage === "default") return result;
   if (isNewerVersion("0.7.0", game.data.version)) return result;;
   let rollBase = new Roll(result.formula);
-  if (criticalDamage === "maxDamage") {
+  if (criticalDamage === "maxDamage") {// max base damage
     //@ts-ignore .terms not defined
     rollBase.terms = rollBase.terms.map(t => {
       if (t?.number) t.number = t.number/2;
@@ -303,7 +305,7 @@ function doCritModify(result: Roll) {
     //@ts-ignore .evaluate not defined
     rollBase.evaluate({maximize: true});
     return result;
-  } else if (criticalDamage === "maxCrit") {
+  } else if (criticalDamage === "maxCrit") { // see about maximising one dice out of the two
     let rollCrit = new Roll(result.formula);
     //@ts-ignore .terms not defined
     rollCrit.terms = rollCrit.terms.map(t => {

@@ -4,7 +4,7 @@ Because there are some subtle differences in the way the module works, comapared
 See minor-qol for most of the feature description.
 
 Changes in midi-qol:
-* Speed item rolls has only a single function now, to enable ctl/shift/alt when clicking on the item icon. All other workflow features are configured separately.
+* Speed item rolls has only a single function now, to enable ctl/shift/alt when clicking on the item icon. All other workflow features are configured separately. See **speed item rolls** below.
 * There is support for a merged chat card containing attack/damage/hits/saves. (The merged card does not yet support better rolls). You can disable the merge card to restore the same operation as in minor-qol.
 * midi-qol works with MagicItems, there may be some wrinkles aoutstanding there.
 * backwards compatibility for the minor-qol.doRoll function.
@@ -22,18 +22,26 @@ Any module that overloads item.roll is potentially incompatible.
 **Mess** Midi-qol and Mess dnd5e effects are not compatible. Template effects and the other features of that excellent module should work. If you want Mess attack/damage cards don't use midi-qol.  
 **Cozy player** Minor-qol was not compatible with cozy-player, with targets being lost before attack/damage rolls were made. I have done only limited testing but it seems that there are no problems with cozy-player and midi-qol.  
 **Cautious GM** Midi-qol breaks the blind chats by hidden GM feature of cautious GM.  
-
+**Chat Portraits** If using Chat portraits the changes made by midi-qol to the token/actor name in chat cards are overwritten/lost. Choose which sort of highlighting you want - only one will work. Otherwise all seems to work.
+**Ez-Roller** The send to chat log feature of ez-roller will disable combo cards in midi-qol.
 ## Technical Differences:
 * midi-qol does not use the creation of chat messages as the triggeer anymore, rather it hooks the standard item.roll, item.rollAttack, item.rollDamage. This means it is automatically compatible with any actor/npc sheet that uses standrd rolls (almost all of them)
 * midi-qol uses the new 0.9.5 chat message meta-data to determine if a roll is a damage/attack/save roll which means the specific text matching piece is gone.
 
 ## Short Guide to the settings:
 ### Workflow settings
-* **Speed Item Rolls** - this enables some key bindings for initiating a roll in midi-qol. If enabled:
-ctl-click = roll with disadvantage.
-alt-click = roll with advantage.
-shift-click = roll a versatile attack (ctl/alt still apply) so ctl-shift click is a versatile attack with advantage.
-ctl-alt is equivalent to the core shfit-click, i.e. skip the dialog for attack type.
+* **Speed Item Rolls** 
+If speed rolls are off, all of the ctl/alt|meta/shift keys and roll behaviour behave the same as in core. There is one additional feature, if you click on a damage button in chat, CTRL+ALT click will use the critical/normal hit status from the midi-qol roll data.
+
+If speed rolls are on you need to assign the keys yourself.
+
+* advantage key modifier, defaults to ALT/Meta
+* disadvantage key modifier, defaults to CTRL
+* versatile key modifier, defaults to Shift.
+* critical damage modifer, defaults to ALT/Meta.
+* fast-forward key (turn any attack or damage roll into a fastforwarded one) advnantage+disadvantage.
+
+If you assign a key multiple meanings the behaviour is going to be confusing at best.
 
 ### Display ###
 * **Card styles** Midi-qol supports two options for item/attack/damge/save rolls. The combo card merges all of those rolls into a single card. If Megre card is disabled you will get a separate chat card for each roll, the default dnd5e look and feel. The condensed combo card simply put attack and damage next to eachother to convserve a bit more space.
@@ -94,7 +102,7 @@ You can enable auto checking of hits. Funbles automatically miss and criticals a
 * **Colored Border** Use the player color to put a colored border and/or color the actor/token name on chat messages.
 * **DM sees all whispered messages** Copy the GM on all whispered messages.
 * **Untarget at end of turn** At the end of a players turn(i.e. combat tracker is advanced) all/dead targeted tokens are untargeted. There is a GM option since I regularly forget to untarget after an attack and break things on the next turn. If midi-qol is managing the roll then dead tokens are untargeted after an attack, so that players can avoid "flogging a dead horse" as it were.
-* **Players control invisible tokens** 0.7.1+. If enabled then players can both see and control tokens they own that are hidden. Also any token they own will **always** appear on their map.
+* **Players control invisible tokens** 0.7.1+. If enabled then players can both see and control tokens they own that are hidden. Also any token they own will **always** appear on their map. **Broken** in 0.7.4
 * **Force Hide Rolls** If enabled private/blind/gm only rolls will only appear on the recipients chat log. This must be enabled if you are using better rolls and combo cards.
 
 ## Not settings....
@@ -149,8 +157,8 @@ Sample DoTrapAttack replacement:
   new MidiQOL.TrapWorkflow(tactor, item, [token], trapToken.center)
   ```
 * midi-qol supports a DamageOnlyWorkflow to support items/spells with special damage rolls. Divine Smite is a good example, the damage depends on whether the target is a fiend/undead. This is my implementation, which assumes it is activated via dynamiceffects/midi-qol.
-I have created a spell called "Divine Smite", with no saving throw or damage or attack, which has a single active effect
-"macro.execute" = "Divine Smite" @target @item.level @item. By having it as a spell you can capture the spell scaling for damage calculation.
+I have created a spell called "Divine Smite", with no saving throw or damage or attack, (although you can have such things) which has a single active effect
+"macro.execute" = "Divine Smite" @target @item.level @itemCardId. By having it as a spell you can capture the spell scaling for damage calculation.
 ```
 if (args[0] === "on") {
   let target = canvas.tokens.get(args[1])
@@ -158,10 +166,10 @@ if (args[0] === "on") {
   let undead = ["undead", "fiend"].some(type => (target.actor.data.data.details.type || "").toLowerCase().includes(type));
   if (undead) numDice += 1;
   let damageRoll = new Roll(`${numDice}d8`).roll();
-  new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemData: args[3]})
+  new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[3]})
 }
 ```
-Flavor is only used if you are not using combo cards.  
+Flavor is only used if you are not using combo cards. The itemCardId passes the id of the item card that caused the macro to be rolled, i.e. for divine smite the ItemCard of the Divine Smite spell/feature. By passing this to the macro and to the DamageOnlyWorkflow the damage roll can be added to the ItemCard making the whole effect look like an item damage roll (almost). You can use this feature to roll custom damage via a macro for any item, just leave the item damage blank and roll the damage in a macro and then pass the itemCardId.
 
 ## Sample Chat Logs
 ![No Combo Card](pictures/nocombo.png) ![Combo Card](pictures/combo.png)

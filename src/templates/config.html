@@ -1,13 +1,34 @@
 <form onsubmit="event.preventDefault();" class="midi-qol-config-panel">
-  <div style="width: 500px; height: 500px">
-    <div class="form-group">
-      <label>{{localize "midi-qol.SpeedItemRolls.Name"}}</label>
-      <input type="checkbox" name="speedItemRolls" data-dtype="Boolean" {{checked configSettings.speedItemRolls}} />
-    </div>
-    {{localize "midi-qol.SpeedItemRolls.Hint"}}
-
+  <section>
     <div class="midi-qol-box">
-
+      <div class="form-group speedRolls">
+        <label>{{localize "midi-qol.SpeedItemRolls.Name"}}</label>
+        <input type="checkbox" name="speedItemRolls" data-dtype="Boolean" {{checked configSettings.speedItemRolls}} />
+      </div>
+      {{#unless configSettings.speedItemRolls}}
+      {{localize "midi-qol.SpeedItemRolls.Hint"}}
+      {{/unless}}
+      {{#if configSettings.speedItemRolls}}
+      {{localize "midi-qol.SpeedItemRolls.Blurb"}}
+      <div style="width:80%">
+        <div class="form-group">
+          {{#each configSettings.keyMapping}}
+          <div class="form-group">
+            <label> {{localize @key }} </label>
+            <div class="keymapping">
+              <select name="keyMapping.{{@key}}" data-dtype="String">
+                {{selectOptions ../keys selected=@this}}
+              </select>
+            </div>
+          </div>
+          {{/each}}
+        </div>
+      </div>
+      {{/if}}
+    </div>
+  </section>
+  <section>
+    <div class="midi-qol-box">
       <div class="form-group">
         <label>{{localize "midi-qol.ShowItemDetails.Name"}}</label>
         <select name="showItemDetails" data-dtype="String">
@@ -47,7 +68,9 @@
       </div>
       <div class="midi-qol-faint">{{localize "midi-qol.UseTokenNames.Hint"}}</div>
     </div>
-
+    </div>
+  </section>
+  <section>
     <div class="midi-qol-box">
       <h3>
         <div style="text-align: center">Workflow Settings</div>
@@ -212,16 +235,17 @@
         </div>
 
 
-        <div class="form-group">
+        <div class="form-group customSounds">
           <label>{{localize "midi-qol.UseCustomSounds.Name"}}</label>
           <input id="useCustomSounds" type="checkbox" name="useCustomSounds" data-dtype="Boolean"
             {{checked configSettings.useCustomSounds}} />
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.UseCustomSounds.Hint"}}</div>
 
-        <div class="form-groups">
+        {{#if configSettings.useCustomSounds}}
+        <div class="form-group">
           <label>{{localize "midi-qol.CustomSoundsPlaylist.Name"}}</label>
-          <select name="customSoundsPlaylist" data-dtype="String">
+          <select class="playlist" name="customSoundsPlaylist" data-dtype="String">
             {{#select configSettings.customSoundsPlaylist}}
             {{#each customSoundsPlaylistOptions as |label val|}}
             <option value="{{val}}">{{label}}</option>
@@ -263,7 +287,6 @@
           </select>
         </div>
 
-
         <div class="form-group">
           <label>{{localize "midi-qol.ItemUseSound.Name"}}</label>
           <select name="itemUseSound" data-dtype="String">
@@ -276,6 +299,7 @@
         </div>
 
         {{localize "midi-qol.DiceSounds.Hint"}}
+
         <div class="form-group">
           <label>{{localize "midi-qol.DiceSound.Name"}}</label>
           <select name="diceSound" data-dtype="String">
@@ -308,12 +332,13 @@
             {{/select}}
           </select>
         </div>
+        {{/if}}
       </div>
     </div>
-    <footer class="sheet-footer flexrow">
-      <button type="submit" name="submit">
-        <i class="fas fa-save"></i> {{localize "midi-qol.Save"}}
-      </button>
-    </footer>
-  </div>
+  </section>
+  <footer class="sheet-footer flexrow">
+    <button type="submit" name="submit">
+      <i class="fas fa-save"></i> {{localize "midi-qol.Save"}}
+    </button>
+  </footer>
 </form>

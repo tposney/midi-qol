@@ -14,6 +14,12 @@ export var autoFastForwardAbilityRolls: boolean;
 export var autoRemoveTargets: string;
 export var forceHideRoll: boolean;
 export var enableWorkflow: boolean;
+const defaultKeyMapping = {
+  "DND5E.Advantage": "altKey", 
+  "DND5E.Disadvantage": "ctrlKey", 
+  "DND5E.Critical": "altKey",
+  "DND5E.Versatile": "shiftKey"
+};
 
 export var configSettings = {
   speedItemRolls: false,
@@ -48,7 +54,8 @@ export var configSettings = {
   potionUseSound: "",
   fullAuto: false,
   useCustomSounds: true,
-  customSoundsPlaylist: "none"
+  customSoundsPlaylist: "none",
+  keyMapping: defaultKeyMapping
 };
 
 export let fetchParams = (silent = false) => {
@@ -57,10 +64,13 @@ export let fetchParams = (silent = false) => {
   if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["dice"];
   if (!configSettings.criticalSound) configSettings.criticalSound = CONFIG.sounds["dice"];
   if (!configSettings.diceSound) configSettings.diceSound = CONFIG.sounds["dice"];
-
+  if (!configSettings.keyMapping) configSettings.keyMapping = defaultKeyMapping;
+  //@ts-ignore
+  if (!configSettings.keyMappings || !configSettings.keyMapping["DND5E.Advantage"]) configSettings.keyMapping = defaultKeyMapping;
   enableWorkflow = game.settings.get("midi-qol", "EnableWorkflow");
   configSettings.preRollChecks = game.settings.get("midi-qol", "PreRollChecks")
   warn("Fetch Params Loading", configSettings);
+  
   criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
   itemDeleteCheck = game.settings.get("midi-qol", "ItemDeleteCheck");
   nsaFlag = game.settings.get("midi-qol", "showGM");
@@ -71,6 +81,7 @@ export let fetchParams = (silent = false) => {
   autoRemoveTargets = game.settings.get("midi-qol", "AutoRemoveTargets");
   let debugText = game.settings.get("midi-qol", "Debug");
   forceHideRoll = game.settings.get("midi-qol", "ForceHideRoll")
+
   setDebugLevel(debugText);
 }
 

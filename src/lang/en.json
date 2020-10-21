@@ -4,7 +4,8 @@
     "midi-qol.DamageImmunities.Name": "Apply Damage immunities",
     "midi-qol.DamageImmunities.Hint": "When using midi-qol damage buttons or auto applying damage apply target's damage immunities/vulnerabilities/resistances. All damage types are checked. Saves - check text is selected check the spell descirption for special strings indicating 1/2 damage",
     "midi-qol.SpeedItemRolls.Name": "Enable Speed Item Rolls",
-    "midi-qol.SpeedItemRolls.Hint": "Midi-qol will use the ctrl/alt/meta/shift key stats when initiating a roll. This setting overrides auto-roll attack.  Keys are ctl=disadvantage alt=advantage shift=versatile ctl+alt=fast forward roll",
+    "midi-qol.SpeedItemRolls.Hint": "Midi-qol will use the ctrl/(alt|meta)/shift keys.",
+    "midi-qol.SpeedItemRolls.Blurb": "You can assign ctrl/(alt|meta)/shift mouse click modifiers how you want. Double up Advantage/Disadvantage/Versatile at your peril. Default: Adv = Alt, Disadv = Ctl, Versatile = Shift, Crit = Alt",
     "midi-qol.ShowItemDetails.Name": "Show Item details in chat card",
     "midi-qol.ShowItemDetails.Hint": "If set the item details will be displayed in the chat card. You can use the DND5E system setting to auto hide the description",
     "midi-qol.AutoRollAttack.Name": "When item is rolled, automatically roll the attack if there is one",
@@ -138,6 +139,8 @@
     "midi-qol.EnableWorkflow.Hint": "If enabled automation of rolls can be configured in the Workflow Settings panel",
     "midi-qol.magical": "Magical",
     "midi-qol.defaultDamageType": "None",
-    
-    "midi-qol.": ""
+    "midi-qol.playerControlsInvisibleTokens.Name": "Players control owned hidden tokens",
+    "midi-qol.playerControlsInvisibleTokens.Hint": "DO NOT USE - It's broken",
+    "midi-qol.Debug.Name": "Enable debug",
+    "midi-qol.Debug.Hint": "Set to None unless you want to fill up the console log. All enables CONFIG.hooks.debug"
 }

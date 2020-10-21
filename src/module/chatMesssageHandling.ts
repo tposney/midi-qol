@@ -195,7 +195,8 @@ export let diceSoNiceHandler = async (message, html, data) => {
   debug("Dice so nice handler ", message, html, data);
   if (!game.dice3d || !installedModules.get("dice-so-nice") || game.dice3d.messageHookDisabled || !game.dice3d.isEnabled()) return;
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
-  let rollDice = game.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
+  let rollDice = game.user.isGM ||
+        (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
   if (!rollDice) return;
 
   if (configSettings.mergeCard) {
@@ -315,7 +316,7 @@ export let hideRollRender = (app, html, msg) => {
 
 export let hideRollUpdate = (message, data, diff, id) => {
   if (forceHideRoll && message.whisperTo !== '') {
-    if (game.user.isGM === false && !message.isAuthor && message.message.whisper.indexOf(game.user.id) === -1) {
+    if (game.user.isGM === false && !message.isAuthor && message.data.whisper.indexOf(game.user.id) === -1) {
       let messageLi = $(`.message[data-message-id=${data._id}]`);
       messageLi.hide();
     }

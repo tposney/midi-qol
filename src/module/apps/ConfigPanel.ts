@@ -39,10 +39,37 @@ export class ConfigPanel extends FormApplication {
       //@ts-ignore .map undefined
       customSoundsPlaylistOptions: game.playlists.entries.reduce((acc, e) =>{acc[e._id]= e.name; return acc}, {}),
       customSoundOptions: game.playlists.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) =>{acc[s._id]= s.name; return acc}, {"none": ""}),
-      rollSoundOptions: CONFIG.sounds
+      rollSoundOptions: CONFIG.sounds,
+      keys: {
+        "altKey": "alt|meta",
+        "ctrlKey": "control",
+        "shiftKey": "shift"
+      }
     };
     warn("Returning data ", data)
     return data;
+  }
+
+  activateListeners(html) {
+    html.find(".speedRolls").change(() => {
+      configSettings.speedItemRolls = !configSettings.speedItemRolls;
+      this.render()
+    });
+    html.find(".customSounds").change(() => {
+      configSettings.useCustomSounds = !configSettings.useCustomSounds;
+      this.render()
+    });
+
+    html.find(".playlist").change(this._playList.bind(this));
+    super.activateListeners(html)
+
+  }
+
+  async _playList(event) {
+      event.preventDefault();
+      configSettings.customSoundsPlaylist = `${$(event.currentTarget).children("option:selected").val()}`;
+      //@ts-ignore
+      return this.submit({preventClose: true}).then(() => this.render());
   }
 
   onReset() {
@@ -50,9 +77,10 @@ export class ConfigPanel extends FormApplication {
   }
   
   async _updateObject(event, formData) {
-    debug("Form data is ", formData)
-    const newSettings = mergeObject(configSettings, formData, {overwrite: true})
-    console.warn("data is ", formData, configSettings)
+    delete formData.keyMappingArray;
+    delete formData.configSettings;
+    let newSettings = mergeObject(configSettings, expandObject(formData), {overwrite:true, inplace:false})
+    // const newSettings = mergeObject(configSettings, expand, {overwrite: true})
     if (game.user.isGM) game.settings.set("midi-qol", "ConfigSettings", newSettings);
   }
   
