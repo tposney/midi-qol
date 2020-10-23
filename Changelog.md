@@ -1,3 +1,6 @@
+## 0.3.10
+Fix for bug with better rolls and ctl/alt etc handling.
+Include updated cn.json
 ## 0.3.9
 * Rework of ctl/alt/shift keys:
 If speed rolls are off, all of the ctl/alt|meta/shift keys and roll behaviour behave the same as in core. There is one additional feature, if you click on a damage button in chat, CTRL+ALT click will use the critical/normal hit status from the midi-qol roll data.

@@ -14,7 +14,7 @@ import { config } from "process";
 import { ConfigPanel } from "./apps/ConfigPanel.js";
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
-export function noKeySet(event) { return !(event.shiftKey || event.ctrlKey || event.altKey || event.metakey)}
+export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metakey)}
 
 export const WORKFLOWSTATES = {
   NONE : 0,
@@ -103,6 +103,8 @@ export class Workflow {
 
   static eventHack: any;
   
+  get isBetterRollsWorkflow() {return false};
+
   static get workflows() {return Workflow._workflows}
   static getWorkflow(id:string):Workflow {
     debug("Get workflow ", id, Workflow._workflows,  Workflow._workflows[id])
@@ -127,7 +129,7 @@ export class Workflow {
     }
   }
   public processAttackEventOptions(event) {
-    if (configSettings.speedItemRolls) {
+    if (configSettings.speedItemRolls && !this.isBetterRollsWorkflow) {
       //TOD make this configurable
       const advKey = this.testKey(configSettings.keyMapping["DND5E.Advantage"], event);
       const disKey = this.testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
@@ -149,7 +151,7 @@ export class Workflow {
   }
   public processDamageEventOptions(event) { 
     // if we have an event here it means they clicked on the damage button?
-    if (configSettings.speedItemRolls) {
+    if (configSettings.speedItemRolls && !this.isBetterRollsWorkflow) {
       const disKey = this.testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
       const critKey = this.testKey(configSettings.keyMapping["DND5E.Critical"], event);
       const advKey = this.testKey(configSettings.keyMapping["DND5E.Advantage"], event);
@@ -1181,6 +1183,7 @@ export class BetterRollsWorkflow extends Workflow {
   static get(id:string):BetterRollsWorkflow {
     return Workflow._workflows[id];
   }
+  get isBetterRollsWorkflow() {return true};
 
   async _next(newState) {
     this.currentState = newState;
