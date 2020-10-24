@@ -120,11 +120,11 @@ export class Workflow {
     if (!event) return false;
     switch (keyString) {
       case "altKey":
-        return event.altKey ;
+        return event?.altKey ;
       case "shiftKey":
-        return event.shiftKey;
+        return event?.shiftKey;
       case "ctrlKey":
-        return event.ctrlKey || event.metaKey;
+        return event?.ctrlKey || event?.metaKey;
       default:
         error("Impossible key mapping for speed roll")
 
@@ -146,7 +146,7 @@ export class Workflow {
       const disKey = event?.ctrlKey || event?.metaKey;
       // const versaKey = event?.shiftKey;
       this.rollOptions.fastForward = (["all", "attack"].includes(configSettings.autoFastForward));
-      this.rollOptions.fastForward = this.rollOptions.fastForward ||event?.altKey || event?.shfitKey || event.ctrlKey;
+      this.rollOptions.fastForward = this.rollOptions.fastForward ||event?.altKey || event?.shfitKey || event?.ctrlKey;
       this.rollOptions.advanatage = advKey;
       this.rollOptions.disadvantage = disKey;
     }
@@ -224,7 +224,7 @@ export class Workflow {
   }
 
   public someEventKeySet() {
-    return this.event.shiftKey || this.event.altKey || this.event.ctrlKey || this.event.metaKey;
+    return this.event?.shiftKey || this.event?.altKey || this.event?.ctrlKey || this.event?.metaKey;
   }
 
   static removeWorkflow(id: string) {
