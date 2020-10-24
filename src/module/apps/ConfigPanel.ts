@@ -41,13 +41,14 @@ export class ConfigPanel extends FormApplication {
       customSoundOptions: game.playlists.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) =>{acc[s._id]= s.name; return acc}, {"none": ""}),
       rollSoundOptions: CONFIG.sounds,
       keys: {
-        "altKey": "alt|meta",
-        "ctrlKey": "control",
+        "altKey": "alt",
+        "ctrlKey": "ctrl|cmd",
         "shiftKey": "shift"
       }
     };
-    warn("Returning data ", data)
+    warn("Config Panel: getdata ", data)
     return data;
+
   }
 
   activateListeners(html) {
@@ -62,7 +63,6 @@ export class ConfigPanel extends FormApplication {
 
     html.find(".playlist").change(this._playList.bind(this));
     super.activateListeners(html)
-
   }
 
   async _playList(event) {
@@ -77,11 +77,24 @@ export class ConfigPanel extends FormApplication {
   }
   
   async _updateObject(event, formData) {
-    delete formData.keyMappingArray;
-    delete formData.configSettings;
-    let newSettings = mergeObject(configSettings, expandObject(formData), {overwrite:true, inplace:false})
+    /* special handling for:
+    keyMapping.DND5E.Advantage: "altKey"
+    keyMapping.DND5E.Critical: "altKey"
+    keyMapping.DND5E.Disadvantage: "ctrlKey"
+    keyMapping.DND5E.Versatile: "shiftKey"
+    */
+   const keyMapping = {
+     "DND5E.Advantage": formData["keyMapping.DND5E.Advantage"] || "altKey",
+     "DND5E.Critical": formData["keyMapping.DND5E.Critical"],
+     "DND5E.Disadvantage": formData["keyMapping.DND5E.Disadvantage"],
+     "DND5E.Versatile": formData["keyMapping.DND5E.Versatile"],
+   }
+    formData = expandObject(formData);
+    delete formData.keyMapping;
+    formData.keyMapping = keyMapping;
+
+    let newSettings = mergeObject(configSettings, formData, {overwrite:true, inplace:false})
     // const newSettings = mergeObject(configSettings, expand, {overwrite: true})
     if (game.user.isGM) game.settings.set("midi-qol", "ConfigSettings", newSettings);
   }
-  
 }

@@ -344,7 +344,9 @@ export let hideStuffHandler = (message, html, data) => {
     return;
   }
 
-  if ((message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails === "all") || message.data.blind) {
+  if (
+    (message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails === "all")
+     || message.data.blind) {
     html.find(".dice-roll").replaceWith(i18n("midi-qol.DiceRolled"));
   } else if (message.user?.isGM && !game.user.isGM && ["details", "detailsDSN"].includes(configSettings.hideRollDetails)) {
     html.find(".dice-tooltip").remove();

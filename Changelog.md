@@ -1,9 +1,12 @@
+## 0.3.11
+* Fix for broken key mapping editing and aligned control|Cmd since on some mac keyboards ctrl-click does not work, use CMD click instead.
+* Fix for saving throws beind displayed even if you asked them not to be
 ## 0.3.10
 Fix for bug with better rolls and ctl/alt etc handling.
 Include updated cn.json
 ## 0.3.9
 * Rework of ctl/alt/shift keys:
-If speed rolls are off, all of the ctl/alt|meta/shift keys and roll behaviour behave the same as in core. There is one additional feature, if you click on a damage button in chat, CTRL+ALT click will use the critical/normal hit status from the midi-qol roll data.
+If speed rolls are off, all of the ctl|cmd/alt/shift keys and roll behaviour behave the same as in core. There is one additional feature, if you click on a damage button in chat, CTRL+ALT click will use the critical/normal hit status from the midi-qol roll data.
 
 If speed rolls are on you need to assign the keys yourself, however you can use the defaults.  
 * advantage key modifier, defaults to ALT/Meta

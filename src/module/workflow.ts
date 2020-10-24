@@ -93,7 +93,9 @@ export class Workflow {
   advantageSaves : Set<Token>;
   saveRequests: any;
   saveTimeouts: any;
+  /* TODO pending removal in 0.3.12
   hideSavesHookId: number;
+  */
   versatile: boolean;
   saveDisplayData;
 
@@ -118,11 +120,11 @@ export class Workflow {
     if (!event) return false;
     switch (keyString) {
       case "altKey":
-        return event.altKey || event.metaKey;
+        return event.altKey ;
       case "shiftKey":
         return event.shiftKey;
       case "ctrlKey":
-        return event.ctrlKey;
+        return event.ctrlKey || event.metaKey;
       default:
         error("Impossible key mapping for speed roll")
 
@@ -140,8 +142,8 @@ export class Workflow {
       this.rollOptions.disadvantage = this.rollOptions.disadvantage || ((disKey && !advKey) || false);
       this.rollOptions.versatile = this.rollOptions.versatile || (versaKey || false);
     } else {
-      const advKey = event?.altKey || event?.metaKey;
-      const disKey = event?.ctrlKey;
+      const advKey = event?.altKey;
+      const disKey = event?.ctrlKey || event?.metaKey;
       // const versaKey = event?.shiftKey;
       this.rollOptions.fastForward = (["all", "attack"].includes(configSettings.autoFastForward));
       this.rollOptions.fastForward = this.rollOptions.fastForward ||event?.altKey || event?.shfitKey || event.ctrlKey;
@@ -165,8 +167,8 @@ export class Workflow {
       // work out what means use the roll results
       // if (useKey) this.rollOptions.critical = this.isCritical;
     } else { // use default behaviour
-      const critKey = event?.altKey || event?.metaKey;
-      const fastForwardKey = critKey && event?.ctrlKey;
+      const critKey = event?.altKey;
+      const fastForwardKey = critKey && (event?.ctrlKey || event?.metaKey);
       this.rollOptions.fastForward = event?.shiftKey || event?.altKey;
       this.rollOptions.critical = event?.altKey;
       if (fastForwardKey) this.rollOptions.critical = this.isCritical;
@@ -211,7 +213,9 @@ export class Workflow {
     this.event = event;
     this.saveRequests = {};
     this.saveTimeouts = {};
+    /* TODO pending removal in 0.3.12
     this.hideSavesHookId = null;
+    */
     this.placeTemlateHookId = null;
     this.damageDetail = [];
     this.hideTags = new Array();
@@ -229,8 +233,10 @@ export class Workflow {
       let workflow = Workflow._workflows[id];
       // If the attack roll broke and we did we roll again will have an extra hook laying around.
       if (workflow.displayHookId) Hooks.off("preCreateChatMessage", workflow.displayHookId);
+      /* TODO pending removal in 0.3.12
       // Just in case there were some hooks left enbled by mistake.
       if (workflow.hideSavesHookId) Hooks.off("preCreateChatMessage", workflow.hideSavesHookId);
+      */
       // This can lay around if the template was never placed.
       if (workflow.placeTemlateHookId) Hooks.off("createMeasuredTemplate", workflow.placeTemlateHookId)
       delete Workflow._workflows[id];
@@ -422,8 +428,10 @@ export class Workflow {
 
       case WORKFLOWSTATES.ROLLFINISHED:
         warn('Inside workflow.rollFINISHED')
+        /* TODO pending removal in 0.3.12
         //@ts-ignore
         if (this.hideSavesHookId) Hooks.off("preCreateChatMessage", this.hideSavesHookId)
+        */
         delete Workflow._workflows[this.itemId];
         if (autoRemoveTargets !== "none") setTimeout(untargetDeadTokens, 500); // delay to let the updates finish
         Hooks.callAll("minor-qol.RollComplete", this); // just for the macro writers.
@@ -712,14 +720,19 @@ export class Workflow {
     return player;
   }
 
+  /* TODO pending removal in 0.3.12
   hideSaveRolls = (data, options) => {
     const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
     debug("hideSaveRolls: chat message is ", this.itemCardId, chatMessage, data.flags, data.user);
     if (data.flags?.dnd5e.roll.type !== "save") return true;
     //@ts-ignore .role not defined. Hide gm/asst gm rolls
-    if ([3,4].includes(game.users.get(data.user)?.role)) return false;
-    return true;
+    console.error("hide saves ", data.user, game.user.id, data)
+    if (data.user == game.user.id && !game.usesr.isGM) return true;
+    if (configSettings.autoCheckSaves === "allShow") return true;
+    // if ([3,4].includes(game.users.get(data.user)?.role)) return true;
+    return false;
   }
+  */
 
 /**
  * update this.saves to be a Set of successful saves from the set of tokens this.hitTargets and failed saves to be the complement
@@ -741,12 +754,13 @@ export class Workflow {
     let promises = [];
     // make sure saving throws are renabled.
     try {
+      /* pending removal in 0.3.12
       if (configSettings.autoCheckSaves !== "allShow") {
         //@ts-ignore ._hooks not defined
         debug("Check Saves: renderChat message hooks length ", Hooks._hooks["preCreateChatMessage"]?.length)
         this.hideSavesHookId = Hooks.on("preCreateChatMessage", this.hideSaveRolls.bind(this))
       } else this.hideSavesHookId = null;
-
+    */
       for (let target of this.hitTargets) {
         if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
      
@@ -795,14 +809,16 @@ export class Workflow {
             }, (configSettings.playerSaveTimeout || 1) * 1000);
           }))
         } else {
+          let showRoll = configSettings.autoCheckSaves === "allShow";
           // Find a player owner for the roll if possible
           let owner = this.playerFor(target);
+          if (owner) showRoll = true; // Always show player save rolls
           // If no player owns the token, find an active GM
           if (!owner) owner = game.users.find((u: User) => u.isGM && u.active);
           // Fall back to rolling as the current user
           if (!owner) owner = game.user;
           //@ts-ignore actor.rollAbilitySave
-          promises.push(target.actor.rollAbilitySave(this.item.data.data.save.ability, {messageData: { user: owner._id }, event, advantage}));
+          promises.push(target.actor.rollAbilitySave(this.item.data.data.save.ability, { messageData: {user: owner._id}, chatMessage: showRoll,  event, advantage}));
         }
       }
     } catch (err) {
@@ -812,11 +828,13 @@ export class Workflow {
     debug("check saves: requests are ", this.saveRequests)
     var results = await Promise.all(promises);
     this.saveResults = results;
+    /* TODO pending removal in 0.3.12
     //@ts-ignore
     if (this.hideSavesHookId) Hooks.off("preCreateChatMessage", this.hideSavesHookId);
     //@ts-ignore ._hooks not defined
     debug("Check Saves: renderChat message hooks length ", Hooks._hooks["preCreateCatMessage"]?.length)
     this.hideSavesHookId = null;
+    */
 
     let i = 0;
     for (let target of this.hitTargets) {
