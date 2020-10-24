@@ -64,7 +64,10 @@ export let fetchParams = (silent = false) => {
   if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["dice"];
   if (!configSettings.criticalSound) configSettings.criticalSound = CONFIG.sounds["dice"];
   if (!configSettings.diceSound) configSettings.diceSound = CONFIG.sounds["dice"];
-  if (!configSettings.keyMapping || !configSettings.keyMapping["DND5E.Advantage"]) 
+  if (!configSettings.keyMapping 
+    || !configSettings.keyMapping["DND5E.Advantage"] 
+    || !configSettings.keyMapping["DND5E.Disadvantage"]
+    || !configSettings.keyMapping["DND5E.Critical"]) 
     configSettings.keyMapping = defaultKeyMapping;
   enableWorkflow = game.settings.get("midi-qol", "EnableWorkflow");
   configSettings.preRollChecks = game.settings.get("midi-qol", "PreRollChecks")
