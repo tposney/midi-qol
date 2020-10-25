@@ -1,6 +1,10 @@
+## 0.3.13
+Fix for a bad bug in application of DAE effects when dynamic effects not installed.
+## 0.3.12
+Yet another fix for speed mappings. Should finally squash the ctrlKey error and any saved data problems.
 ## 0.3.11
 * Fix for broken key mapping editing and aligned control|Cmd since on some mac keyboards ctrl-click does not work, use CMD click instead.
-* Fix for saving throws beind displayed even if you asked them not to be
+* Fix for saving throws beind displayed even if you asked them not to be.
 ## 0.3.10
 Fix for bug with better rolls and ctl/alt etc handling.
 Include updated cn.json

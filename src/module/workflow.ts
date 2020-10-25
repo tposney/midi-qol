@@ -403,8 +403,8 @@ export class Workflow {
       case WORKFLOWSTATES.APPLYDYNAMICEFFECTS:
         // no item, not auto effects or not module skip
         if (!this.item || !configSettings.autoItemEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED);
-        const hasDynamicEffects = (this.item?.data.flags?.dynamiceffects?.effects.some(ef => ef.active));
-        const hasDAE = (this.item?.data.flags?.dynamiceffects?.effects.some(ef => ef.active));
+        const hasDynamicEffects = installedModules.get("dynamiceffects") && (this.item?.data.flags?.dynamiceffects?.effects.some(ef => ef.active));
+        const hasDAE = installedModules.get("dae") && (this.item?.effects.entries.some(ef => ef.data.transfer === false));
         // no dynamiceffects skip
         let applicationTargets = new Set();
         if (this.item.hasSave) applicationTargets = this.failedSaves;
@@ -534,6 +534,7 @@ export class Workflow {
       const damageString = `(${this.item?.data.data.damage.parts
           .map(a=>(CONFIG.DND5E.damageTypes[a[1]] || this.defaultDamageType || MQdefaultDamageType)).join(",") 
             || this.defaultDamageType || MQdefaultDamageType})`;
+
       //@ts-ignore .flavor not defined
       const dmgHeader = configSettings.mergeCardCondensed ? damageString : this.damageCardData.flavor;
       let replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center" >${dmgHeader}${this.damageRollHTML || ""}</div></div>`
