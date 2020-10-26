@@ -34,9 +34,19 @@ function restrictVisibility() {
     d.visible = !this.tokenVision || d.isVisible;
   }
 }
+/*
+get isVisible() {
+  const gm = game.user.isGM;
+  if ( this.data.hidden ) return gm;
+  if (!canvas.sight.tokenVision) return true;
+  if ( this._controlled ) return true;
+  const tolerance = Math.min(this.w, this.h) / 4;
+  return canvas.sight.testVisibility(this.center, {tolerance});
+}
+*/
 
 function _isVisionSource() {
-  debug("proxy _isVisionSource");
+  error("proxy _isVisionSource");
   log("proxy _isVisionSource", this);
 
   if ( !canvas.sight.tokenVision || !this.hasSight ) return false;
@@ -44,7 +54,7 @@ function _isVisionSource() {
   // Only display hidden tokens for the GM
   const isGM = game.user.isGM;
   // TP insert
-  if (this.data.hidden && !(isGM || this.actor?.hasPerm(game.user, "OWNER"))) return true;
+  if (this.data.hidden && !(isGM || this.actor?.hasPerm(game.user, "OWNER"))) return false;
 
   // Always display controlled tokens which have vision
   if ( this._controlled ) return true;
@@ -59,6 +69,20 @@ function _isVisionSource() {
 //TP ** const others = this.layer.controlled.filter(t => !t.data.hidden && t.hasSight);
   return !others.length;
 }
+
+function isVisible() {
+  const gm = game.user.isGM;
+  if (this.actor?.hasPerm(game.user, "OWNER")) {
+//    this.data.hidden = false;
+    return true;
+  } 
+  if ( this.data.hidden ) return gm || this.actor?.hasPerm(game.user, "OWNER");
+  if (!canvas.sight.tokenVision) return true;
+  if ( this._controlled ) return true;
+  const tolerance = Math.min(this.w, this.h) / 4;
+  return canvas.sight.testVisibility(this.center, {tolerance});
+}
+
 var oldRollSkill;
 
 function doRollSkill(skillId, options={event}) {
@@ -95,6 +119,7 @@ function rollAbilitySave(abilityId, options={event: {}})  {
 export let visionPatching = () => {
   if (isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")) {
     warn("midi-qol | Patching SightLayer.restrictVisibility")
+    warn("midi-qol | Patching SightLayer.restrictVisibility")
     //@ts-ignore
     let restrictVisibilityProxy = new Proxy(SightLayer.prototype.restrictVisibility, {
       apply: (target, thisvalue, args) =>
@@ -111,7 +136,18 @@ export let visionPatching = () => {
     })
     //@ts-ignore
     Token.prototype._isVisionSource = _isVisionSourceProxy;
+
+     //@ts-ignore
+    let isVisibleProxy = new Proxy(Token.prototype.isVisible, {
+      get: (target, thisvalue, args) =>
+      isVisible.bind(thisvalue)(...args)
+    })
+    //@ts-ignore
+    Token.prototype.isVisible = isVisibleProxy;;
+
+
   }
+  warn("midi-qol | Patching Token is Visible")
 }
 
 export let itemPatching = () => {
