@@ -60,7 +60,6 @@ export let cleanSpellName = (name) => {
 /* ------------------------------------ */
 Hooks.once('init', async function() {
   console.log('midi-qol | Initializing midi-qol');
-  visionPatching();
   initHooks();
 	// Assign custom classes and constants here
 	
@@ -81,6 +80,7 @@ Hooks.once('setup', function() {
 	// Do anything after initialization but before
   // ready
   itemPatching();
+  visionPatching();
 
   setupModules();
   registerSettings();

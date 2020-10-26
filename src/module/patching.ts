@@ -46,7 +46,6 @@ get isVisible() {
 */
 
 function _isVisionSource() {
-  error("proxy _isVisionSource");
   log("proxy _isVisionSource", this);
 
   if ( !canvas.sight.tokenVision || !this.hasSight ) return false;
@@ -71,9 +70,10 @@ function _isVisionSource() {
 }
 
 function isVisible() {
+  console.error("Doing my isVisible")
   const gm = game.user.isGM;
   if (this.actor?.hasPerm(game.user, "OWNER")) {
-//    this.data.hidden = false;
+    //this.data.hidden = false;
     return true;
   } 
   if ( this.data.hidden ) return gm || this.actor?.hasPerm(game.user, "OWNER");
@@ -117,6 +117,7 @@ function rollAbilitySave(abilityId, options={event: {}})  {
 }
 
 export let visionPatching = () => {
+  return;
   if (isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")) {
     warn("midi-qol | Patching SightLayer.restrictVisibility")
     warn("midi-qol | Patching SightLayer.restrictVisibility")
@@ -136,14 +137,15 @@ export let visionPatching = () => {
     })
     //@ts-ignore
     Token.prototype._isVisionSource = _isVisionSourceProxy;
-
+/*
      //@ts-ignore
     let isVisibleProxy = new Proxy(Token.prototype.isVisible, {
-      get: (target, thisvalue, args) =>
+      apply: (thisvalue, target, args) =>
       isVisible.bind(thisvalue)(...args)
     })
+    */
     //@ts-ignore
-    Token.prototype.isVisible = isVisibleProxy;;
+    Token.prototype.isVisible = isVisible;
 
 
   }
