@@ -1,3 +1,6 @@
+## 0.3.14
+* reinstate token vision for invisible tokens - EXPERIMENTAL.
+* Some more error checking for "impossible" situations
 ## 0.3.13
 Fix for a bad bug in application of DAE effects when dynamic effects not installed.
 ## 0.3.12

@@ -26,7 +26,7 @@ function restrictVisibility() {
     // ** TP  t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible;
     // t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible;
     // t.visalbe = t.visible || (t.data.stealth && t.actor?.hasPerm(game.user, "OBSERVER"));
-    t.visible = !this.tokenVision && (!t.data.hidden || t.actor?.hasPerm(game.user, "OWNER"));
+    t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible || (!game.user.isGM && t.actor?.hasPerm(game.user, "OWNER"));
   }
 
   // Door Icons
@@ -44,7 +44,7 @@ function _isVisionSource() {
   // Only display hidden tokens for the GM
   const isGM = game.user.isGM;
   // TP insert
-  if (this.data.hidden && !(isGM || this.actor?.hasPerm(game.user, "OWNER"))) return false;
+  if (this.data.hidden && !(isGM || this.actor?.hasPerm(game.user, "OWNER"))) return true;
 
   // Always display controlled tokens which have vision
   if ( this._controlled ) return true;

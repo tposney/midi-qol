@@ -404,13 +404,13 @@ export class Workflow {
         // no item, not auto effects or not module skip
         if (!this.item || !configSettings.autoItemEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED);
         const hasDynamicEffects = installedModules.get("dynamiceffects") && (this.item?.data.flags?.dynamiceffects?.effects.some(ef => ef.active));
-        const hasDAE = installedModules.get("dae") && (this.item?.effects.entries.some(ef => ef.data.transfer === false));
+        const hasDAE = installedModules.get("dae") && (this.item?.effects?.entries.some(ef => ef.data.transfer === false));
         // no dynamiceffects skip
         let applicationTargets = new Set();
         if (this.item.hasSave) applicationTargets = this.failedSaves;
         else if (this.item.hasAttack) applicationTargets = this.hitTargets;
         else applicationTargets = this.targets;
-        if (hasDynamicEffects && installedModules.get("dynamiceffects")) {
+        if (hasDynamicEffects) {
           warn("Application targets are ", applicationTargets)
           if (applicationTargets?.size) { // perhaps apply item effects
             //@ts-ignore
@@ -419,7 +419,7 @@ export class Workflow {
             de.doEffects({item: this.item, actor: this.item.actor, activate: true, targets: applicationTargets, 
                   whisper: true, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId}) 
           }
-        } else if (installedModules.get("dae")) {
+        } else if (hasDAE) {
           //@ts-ignore
           let dae = window.DAE;
           dae.doEffects(this.item, true, applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId})
@@ -840,7 +840,8 @@ export class Workflow {
     let i = 0;
     for (let target of this.hitTargets) {
       if (!target.actor) continue;
-      let rollTotal = results[i].total;
+      if (!results[i]) error("Token ", target, "could not roll save assuming 0") 
+      let rollTotal = results[i]?.total || 0;
       let saved = rollTotal >= rollDC;
       if (rollTotal >= rollDC) this.saves.add(target);
       else this.failedSaves.add(target);
