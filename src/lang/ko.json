@@ -5,6 +5,7 @@
     "midi-qol.DamageImmunities.Hint": "midi-qol 피해 버튼이나 자동 피해 적용이 대상의 피해 면역/저항/취약성을 적용한다. 모든 피해 유형이 확인된다. 내성 굴림 - 문자 확인 설정은 주문 설명 내에서 1/2 피해를 나타내는 특수 문자열을 확인한다.",
     "midi-qol.SpeedItemRolls.Name": "빠른 아이템 굴림 사용",
     "midi-qol.SpeedItemRolls.Hint": "Midi-qol은 굴림을 할 때 Ctrl/Alt/Meta/Shift 키를 사용할 수 있다. 이 설정은 자동 공격 굴림을 무시한다. Ctrl=불리함 Alt=유리함 Shift=다용도 Ctrl+Alt=빠른 다음 굴림",
+    "midi-qol.SpeedItemRolls.Blurb": "원하는 방식으로 (ctrl|cmd)/alt/shift 마우스 클릭 수정자를 할당할 수 있다. 유리함/불리함/다용도 키를 공유하는 건 위험성이 따른다. . 기본값: Adv = Alt, Disadv = Ctl, 다용도 = Shift, Crit = Alt",
     "midi-qol.ShowItemDetails.Name": "채팅 카드에 아이템 세부 정보 표시",
     "midi-qol.ShowItemDetails.Hint": "설정시 채팅 카드에 아이템 세부 정보가 표시된다. DND5E 시스템 설정을 사용하여 설명을 자동으로 숨길 수 있다.",
     "midi-qol.AutoRollAttack.Name": "아이템 사용시 공격이 있을 경우 자동 굴림",
@@ -136,6 +137,10 @@
     "midi-qol.ForceHideRoll.Hint": "개인/블라인드/혼자 굴림에 대해 대상이 아닌 사용자에게 표시되지 않도록 한다. Thanks to felix.mueller.86@web.de",
     "midi-qol.EnableWorkflow.Name": "굴림 자동화 지원 활성화",
     "midi-qol.EnableWorkflow.Hint": "활성화된 굴림 자동화를 워크플로우 설정 패널에서 구성할 수 있다.",
-
-    "midi-qol.": ""
+    "midi-qol.magical": "마법적",
+    "midi-qol.defaultDamageType": "없음",
+    "midi-qol.playerControlsInvisibleTokens.Name": "플레이어가 소유한 숨겨진 토큰 제어",
+    "midi-qol.playerControlsInvisibleTokens.Hint": "Experimental - might work",
+    "midi-qol.Debug.Name": "디버그 활성화",
+    "midi-qol.Debug.Hint": "콘솔 로그를 채우려면 없음으로 설정할 것. All enables CONFIG.hooks.debug"
 }
