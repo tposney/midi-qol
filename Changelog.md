@@ -1,3 +1,7 @@
+0.3.17
+* Fix for merge cards and dice so nice immediately display card.
+* See owned hidden tokens. When token is hidden does not emit light - this is on purpose and contrary to dnd5e spell. Give them a torch token if you want to.
+0.3.15/0.3.16 oops
 ## 0.3.14
 * reinstate token vision for invisible tokens - EXPERIMENTAL.
 * Some more error checking for "impossible" situations

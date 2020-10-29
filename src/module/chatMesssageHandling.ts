@@ -200,7 +200,7 @@ export let diceSoNiceHandler = async (message, html, data) => {
   if (!rollDice) return;
 
   if (configSettings.mergeCard) {
-    if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
+    if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice") || game.settings.get("dice-so-nice", "immediatelyDisplayChatMessages")) return;
     const type = message.data.flags["midi-qol"].type;
     if (type === undefined) return;
     const hideTags = message.data.flags["midi-qol"].hideTag;

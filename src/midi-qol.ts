@@ -14,7 +14,7 @@
 import { registerSettings, fetchParams } from './module/settings';
 import { preloadTemplates } from './module/preloadTemplates';
 import { setupModules } from './module/setupModules';
-import { itemPatching, visionPatching, setupPatching } from './module/patching';
+import { itemPatching, visionPatching, actorAbilityRollPatching } from './module/patching';
 import { initHooks } from './module/Hooks';
 import { initGMActionSetup } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
@@ -81,7 +81,6 @@ Hooks.once('setup', function() {
   // ready
   itemPatching();
   visionPatching();
-
   setupModules();
   registerSettings();
   initGMActionSetup();
@@ -94,14 +93,15 @@ Hooks.once('setup', function() {
   //@ts-ignore
   noDamageSaves = i18n("midi-qol.noDamageonSaveSpells").map(name => cleanSpellName(name));
   setupSheetQol();
-  setupMinorQolCompatibility()
-  setupPatching();
+  setupMinorQolCompatibility();
 }); 
 
 /* ------------------------------------ */
 /* When ready							*/
 /* ------------------------------------ */
 Hooks.once('ready', function() {
+  actorAbilityRollPatching();
+
   // Do anything once the module is ready
   //new ConfigPanel({},{}).render(true);
 

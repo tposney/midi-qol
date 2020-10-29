@@ -26,7 +26,7 @@ function restrictVisibility() {
     // ** TP  t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible;
     // t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible;
     // t.visalbe = t.visible || (t.data.stealth && t.actor?.hasPerm(game.user, "OBSERVER"));
-    t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible || (!game.user.isGM && t.actor?.hasPerm(game.user, "OWNER"));
+    t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible || (t.actor?.hasPerm(game.user, "OWNER"));
   }
 
   // Door Icons
@@ -34,25 +34,16 @@ function restrictVisibility() {
     d.visible = !this.tokenVision || d.isVisible;
   }
 }
-/*
-get isVisible() {
-  const gm = game.user.isGM;
-  if ( this.data.hidden ) return gm;
-  if (!canvas.sight.tokenVision) return true;
-  if ( this._controlled ) return true;
-  const tolerance = Math.min(this.w, this.h) / 4;
-  return canvas.sight.testVisibility(this.center, {tolerance});
-}
-*/
 
 function _isVisionSource() {
-  log("proxy _isVisionSource", this);
+  // log("proxy _isVisionSource", this);
 
   if ( !canvas.sight.tokenVision || !this.hasSight ) return false;
 
   // Only display hidden tokens for the GM
   const isGM = game.user.isGM;
   // TP insert
+  // console.error("is vision source ", this.actor?.name, this.actor?.hasPerm(game.user, "OWNER"))
   if (this.data.hidden && !(isGM || this.actor?.hasPerm(game.user, "OWNER"))) return false;
 
   // Always display controlled tokens which have vision
@@ -61,6 +52,7 @@ function _isVisionSource() {
   // Otherwise vision is ignored for GM users
   if ( isGM ) return false;
 
+  if (this.actor?.hasPerm(game.user, "OWNER")) return true;
   // If a non-GM user controls no other tokens with sight, display sight anyways
   const canObserve = this.actor && this.actor.hasPerm(game.user, "OBSERVER");
   if ( !canObserve ) return false;
@@ -69,11 +61,15 @@ function _isVisionSource() {
   return !others.length;
 }
 
+function setVisible(visible: boolean) {
+  this._isVisible = visible;
+}
+
 function isVisible() {
-  console.error("Doing my isVisible")
+  // console.error("Doing my isVisible")
   const gm = game.user.isGM;
   if (this.actor?.hasPerm(game.user, "OWNER")) {
-    //this.data.hidden = false;
+//     this.data.hidden = false;
     return true;
   } 
   if ( this.data.hidden ) return gm || this.actor?.hasPerm(game.user, "OWNER");
@@ -104,10 +100,10 @@ function doAbilityRoll(func, abilityId, options={event}) {
     //@ts-ignore
     // options.event = mergeObject(options.event, {shiftKey: true}, {overwrite: true, inplace: true})
     options.event = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
-
   }
   return func.bind(this)(abilityId, options)
 }
+
 function rollAbilityTest(abilityId, options={event: {}})  {
    return doAbilityRoll.bind(this)(oldRollAbilityTest, abilityId, options)
 }
@@ -117,10 +113,9 @@ function rollAbilitySave(abilityId, options={event: {}})  {
 }
 
 export let visionPatching = () => {
-  return;
-  if (isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")) {
-    warn("midi-qol | Patching SightLayer.restrictVisibility")
-    warn("midi-qol | Patching SightLayer.restrictVisibility")
+  const patchVision = isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
+  if (patchVision) {
+    log("midi-qol | Patching SightLayer._restrictVisibility")
     //@ts-ignore
     let restrictVisibilityProxy = new Proxy(SightLayer.prototype.restrictVisibility, {
       apply: (target, thisvalue, args) =>
@@ -129,7 +124,7 @@ export let visionPatching = () => {
     //@ts-ignore
     SightLayer.prototype.restrictVisibility = restrictVisibilityProxy;
 
-    warn("midi-qol | Patching Token._isVisionSource")
+    log("midi-qol | Patching Token._isVisionSource")
     //@ts-ignore
     let _isVisionSourceProxy = new Proxy(Token.prototype._isVisionSource, {
       apply: (target, thisvalue, args) =>
@@ -137,19 +132,10 @@ export let visionPatching = () => {
     })
     //@ts-ignore
     Token.prototype._isVisionSource = _isVisionSourceProxy;
-/*
-     //@ts-ignore
-    let isVisibleProxy = new Proxy(Token.prototype.isVisible, {
-      apply: (thisvalue, target, args) =>
-      isVisible.bind(thisvalue)(...args)
-    })
-    */
-    //@ts-ignore
-    Token.prototype.isVisible = isVisible;
-
-
+  
+    Object.defineProperty(Token.prototype, "isVisible", { get: isVisible });
   }
-  warn("midi-qol | Patching Token is Visible")
+  console.warn("midi-qol | Vision patching - ", patchVision ? "enabled" : "disabled")
 }
 
 export let itemPatching = () => {
@@ -178,7 +164,7 @@ export let itemPatching = () => {
   debug("After patching roll mappings are ", rollMappings);
 }
 
-export let setupPatching = () => {
+export let actorAbilityRollPatching = () => {
   //@ts-ignore
   oldRollAbilitySave = CONFIG.Actor.entityClass.prototype.rollAbilitySave;
   //@ts-ignore
@@ -189,6 +175,7 @@ export let setupPatching = () => {
   log("Patching rollAbilitySave")
   //@ts-ignore
   CONFIG.Actor.entityClass.prototype.rollAbilitySave = rollAbilitySave;
+  //@ts-ignore
   log("Patching rollAbilityTest")
   //@ts-ignore
   CONFIG.Actor.entityClass.prototype.rollAbilityTest = rollAbilityTest;
