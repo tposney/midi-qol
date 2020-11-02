@@ -333,6 +333,13 @@
           </select>
         </div>
         {{/if}}
+
+        <div class="form-group allowUseMacro">
+          <label>{{localize "midi-qol.AllowUseMacro.Name"}}</label>
+          <input id="allowUseMacro" type="checkbox" name="allowUseMacro" data-dtype="Boolean"
+            {{checked configSettings.allowUseMacro}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.AllowUseMacro.Hint"}}</div>
       </div>
     </div>
   </section>

@@ -93,9 +93,7 @@ export class Workflow {
   advantageSaves : Set<Token>;
   saveRequests: any;
   saveTimeouts: any;
-  /* TODO pending removal in 0.3.12
-  hideSavesHookId: number;
-  */
+
   versatile: boolean;
   saveDisplayData;
 
@@ -168,8 +166,8 @@ export class Workflow {
       // if (useKey) this.rollOptions.critical = this.isCritical;
     } else { // use default behaviour
       const critKey = event?.altKey;
-      const fastForwardKey = critKey && (event?.ctrlKey || event?.metaKey);
-      this.rollOptions.fastForward = event?.shiftKey || event?.altKey;
+      const fastForwardKey = (critKey && (event?.ctrlKey || event?.metaKey)) || ["all", "damage"].includes(configSettings.autoFastForward);
+      this.rollOptions.fastForward = this.rollOptions.fastForward || event?.shiftKey || event?.altKey;
       this.rollOptions.critical = event?.altKey;
       if (fastForwardKey) this.rollOptions.critical = this.isCritical;
     }
@@ -213,9 +211,7 @@ export class Workflow {
     this.event = event;
     this.saveRequests = {};
     this.saveTimeouts = {};
-    /* TODO pending removal in 0.3.12
-    this.hideSavesHookId = null;
-    */
+
     this.placeTemlateHookId = null;
     this.damageDetail = [];
     this.hideTags = new Array();
@@ -233,10 +229,6 @@ export class Workflow {
       let workflow = Workflow._workflows[id];
       // If the attack roll broke and we did we roll again will have an extra hook laying around.
       if (workflow.displayHookId) Hooks.off("preCreateChatMessage", workflow.displayHookId);
-      /* TODO pending removal in 0.3.12
-      // Just in case there were some hooks left enbled by mistake.
-      if (workflow.hideSavesHookId) Hooks.off("preCreateChatMessage", workflow.hideSavesHookId);
-      */
       // This can lay around if the template was never placed.
       if (workflow.placeTemlateHookId) Hooks.off("createMeasuredTemplate", workflow.placeTemlateHookId)
       delete Workflow._workflows[id];
@@ -427,11 +419,54 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
       case WORKFLOWSTATES.ROLLFINISHED:
-        warn('Inside workflow.rollFINISHED')
-        /* TODO pending removal in 0.3.12
-        //@ts-ignore
-        if (this.hideSavesHookId) Hooks.off("preCreateChatMessage", this.hideSavesHookId)
-        */
+        warn('Inside workflow.rollFINISHED');
+        if (configSettings.allowUseMacro) {
+          const macro = getProperty(this.item, "data.flags.midi-qol.onUseMacroName");
+          let macroCommand;
+          if (macro) {
+            if (macro === "ItemMacro") {
+              const itemMacro = getProperty(this.item.data.flags, "itemacro.macro");
+              console.error("macro command is ", itemMacro);
+              macroCommand =  await CONFIG.Macro.entityClass.create({
+                name: "MQOL-Item-Macro",
+                type: "script",
+                img: null,
+                command: itemMacro.data.command,
+                flags: { "dnd5e.itemMacro": true }
+              }, { displaySheet: false, temporary: true });
+            }
+            else macroCommand = game.macros.getName(macro);
+          }
+          if (macroCommand) {
+            let targets = [];
+            let failedSaves = [];
+            let hitTargets = [];
+            let saves = [];
+            for (let target of this.targets) targets.push(target.data);
+            for (let save of this.saves) saves.push(save.data);
+            for (let hit of this.hitTargets) hitTargets.push(hit.data);
+            for (let failed of this.failedSaves) failedSaves.push(failed.data);
+            const macroData = {
+              actor: this.actor.data,
+              item: this.item.data,
+              targets,
+              hitTargets,
+              saves,
+              failedSaves,
+              damageRoll: this.damageRoll,
+              attackRoll: this.attackRoll,
+              itemCardId: this.itemCardId,
+              isCritical: this.isCritical,
+              isFumble: this.isFumble,
+              spellLevel: this.itemLevel,
+              damageTotal: this.damageTotal,
+              damageDetail: this.damageDetail
+            };
+            warn("macro data ", macroData)
+            //@ts-ignore -uses furnace macros which support arguments
+            macroCommand.execute(macroData);
+          }
+        }
         delete Workflow._workflows[this.itemId];
         if (autoRemoveTargets !== "none") setTimeout(untargetDeadTokens, 500); // delay to let the updates finish
         Hooks.callAll("minor-qol.RollComplete", this); // just for the macro writers.
@@ -454,7 +489,7 @@ export class Workflow {
           
           setTimeout(() => {
             // remove hide tags after a bit
-            itemCard.update({"flags.midi-qol.hideTag": []});
+            itemCard?.update({"flags.midi-qol.hideTag": []});
           },4000)
           
         }
@@ -721,20 +756,6 @@ export class Workflow {
     return player;
   }
 
-  /* TODO pending removal in 0.3.12
-  hideSaveRolls = (data, options) => {
-    const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
-    debug("hideSaveRolls: chat message is ", this.itemCardId, chatMessage, data.flags, data.user);
-    if (data.flags?.dnd5e.roll.type !== "save") return true;
-    //@ts-ignore .role not defined. Hide gm/asst gm rolls
-    console.error("hide saves ", data.user, game.user.id, data)
-    if (data.user == game.user.id && !game.usesr.isGM) return true;
-    if (configSettings.autoCheckSaves === "allShow") return true;
-    // if ([3,4].includes(game.users.get(data.user)?.role)) return true;
-    return false;
-  }
-  */
-
 /**
  * update this.saves to be a Set of successful saves from the set of tokens this.hitTargets and failed saves to be the complement
  */
@@ -829,13 +850,6 @@ export class Workflow {
     debug("check saves: requests are ", this.saveRequests)
     var results = await Promise.all(promises);
     this.saveResults = results;
-    /* TODO pending removal in 0.3.12
-    //@ts-ignore
-    if (this.hideSavesHookId) Hooks.off("preCreateChatMessage", this.hideSavesHookId);
-    //@ts-ignore ._hooks not defined
-    debug("Check Saves: renderChat message hooks length ", Hooks._hooks["preCreateCatMessage"]?.length)
-    this.hideSavesHookId = null;
-    */
 
     let i = 0;
     for (let target of this.hitTargets) {

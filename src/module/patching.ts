@@ -162,6 +162,7 @@ export let itemPatching = () => {
     rollMappings[rollId].class.prototype[rollMapping.methodName] = rollMapping.replacement;
   })
   debug("After patching roll mappings are ", rollMappings);
+
 }
 
 export let actorAbilityRollPatching = () => {

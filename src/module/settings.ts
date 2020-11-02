@@ -55,7 +55,8 @@ export var configSettings = {
   fullAuto: false,
   useCustomSounds: true,
   customSoundsPlaylist: "none",
-  keyMapping: defaultKeyMapping
+  keyMapping: defaultKeyMapping,
+  allowUseMacro: false
 };
 
 export let fetchParams = (silent = false) => {

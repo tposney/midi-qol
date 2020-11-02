@@ -89,7 +89,9 @@ Hooks.once('setup', function() {
   savingThrowTextAlt = i18n("midi-qol.savingThrowTextAlt");
   MQdefaultDamageType = i18n("midi-qol.defaultDamageType");
   log("Adding Magical weapon property")
-  CONFIG.DND5E.weaponProperties["mgc"] = i18n("midi-qol.magical");
+  CONFIG.DND5E.weaponProperties["mgc"] = i18n("midi-qol.magicalProp");
+  CONFIG.DND5E.weaponProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
+  CONFIG.DND5E.weaponProperties["faulldam"] = i18n("midi-qol.fullDamageSaveProp")
   //@ts-ignore
   noDamageSaves = i18n("midi-qol.noDamageonSaveSpells").map(name => cleanSpellName(name));
   setupSheetQol();

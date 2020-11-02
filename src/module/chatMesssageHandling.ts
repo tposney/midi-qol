@@ -165,7 +165,10 @@ export function diceSoNiceUpdateMessge(message, update, ...args) {
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
 
   let rollDice = game.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
-  let roll = Roll.fromJSON(message.data.flags["midi-qol"].roll);
+  let roll;
+  if (typeof message.data.flags["midi-qol"].roll === "string")
+    roll = Roll.fromJSON(message.data.flags["midi-qol"].roll);
+  else roll = new Roll(message.data.flags["midi-qol"].roll._formula);
   warn("dsn update message ", message, configSettings.hideRollDetails, message.isBlind)
   if ((message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails === "detailsDSN") || message.data.blind) {
     roll = roll.reroll()
@@ -307,7 +310,7 @@ let _onTargetSelect = (event) => {
 
 export let hideRollRender = (app, html, msg) => {
   if (forceHideRoll && msg.whisperTo !== '') {
-      if (game.user.isGM === false && !msg.isAauthor && msg.message.whisper.indexOf(game.user.id) === -1) {
+      if (game.user.isGM === false && msg.author !== game.user && msg.message.whisper.indexOf(game.user.id) === -1) {
           html.hide();
       }
   }
@@ -359,7 +362,7 @@ export let hideStuffHandler = (message, html, data) => {
     $(html).find(".midi-qol-saves-display").remove()
   }
   //@ts-ignore
-  // ui.chat.scrollBottom();
+  setTimeout( () => ui.chat.scrollBottom(), 0);
 }
 
 export let recalcCriticalDamage = (data, ...args) => {

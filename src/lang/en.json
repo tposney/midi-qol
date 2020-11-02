@@ -137,10 +137,16 @@
     "midi-qol.ForceHideRoll.Hint": "Display nothing to non-recipients for private/blind/self rolls. Thanks to felix.mueller.86@web.de",
     "midi-qol.EnableWorkflow.Name": "Enable roll automation support",
     "midi-qol.EnableWorkflow.Hint": "If enabled automation of rolls can be configured in the Workflow Settings panel",
-    "midi-qol.magical": "Magical",
+    "midi-qol.magicalProp": "Magical",
+    "midi-qol.noDamageSaveProp": "No Dam Save",
+    "midi-qol.fullDamageSaveProp": "Full Dam Save",
     "midi-qol.defaultDamageType": "None",
     "midi-qol.playerControlsInvisibleTokens.Name": "Players control owned hidden tokens",
     "midi-qol.playerControlsInvisibleTokens.Hint": "Experimental - might work",
     "midi-qol.Debug.Name": "Enable debug",
-    "midi-qol.Debug.Hint": "Set to None unless you want to fill up the console log. All enables CONFIG.hooks.debug"
+    "midi-qol.Debug.Hint": "Set to None unless you want to fill up the console log. All enables CONFIG.hooks.debug",
+    "midi-qol.AllowUseMacro.Name": "Add macro to call on use",
+    "midi-qol.AllowUseMacro.Hingt": "When able adds a macro name field which will be called on use. See the Readme for the details",
+    "midi-qol.onUseMacroLabel": " On Use Macro"
+
 }

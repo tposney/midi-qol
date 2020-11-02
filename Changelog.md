@@ -1,6 +1,26 @@
+0.3.18
+* Added drag and drop targeting. If you drag a spell/weapon to a target token the token will be targeted and the attack rolled, as if you had targeted and rolled from the character sheet.
+* Hopefully fix the chat log scroll problem?
+* Added on use macro field to the item sheet, plus a setting on the workflow settings to enable it. If a macro name is present then after the roll is complete the macro is called with the following args:
+                actor: the attacking actors data
+                item: the attacking item data
+                targets: an array of target actors' data
+                hitTargets: an array of the hit targets' data
+                saves: am array pf the saved targets data
+                failedSaves: an array of the falied saves targets's data
+                damageRoll: the damage roll if any
+                attackRoll: the attack roll if any
+                itemCardId: the id of the item card used to display the roll
+                isCritical: ciritcal hit?
+                isFumble: fumble?
+                spellLevel: the spell level if any
+                damageTotal: the total damage applied
+                damageDetail: an array of the damage detail, amount and type
+
 0.3.17
 * Fix for merge cards and dice so nice immediately display card.
 * See owned hidden tokens. When token is hidden does not emit light - this is on purpose and contrary to dnd5e spell. Give them a torch token if you want to.
+* Some changes to support times-up
 0.3.15/0.3.16 oops
 ## 0.3.14
 * reinstate token vision for invisible tokens - EXPERIMENTAL.
