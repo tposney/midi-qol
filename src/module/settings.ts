@@ -14,6 +14,8 @@ export var autoFastForwardAbilityRolls: boolean;
 export var autoRemoveTargets: string;
 export var forceHideRoll: boolean;
 export var enableWorkflow: boolean;
+export var dragDropTargeting: boolean;
+
 const defaultKeyMapping = {
   "DND5E.Advantage": "altKey", 
   "DND5E.Disadvantage": "ctrlKey", 
@@ -84,6 +86,7 @@ export let fetchParams = (silent = false) => {
   autoRemoveTargets = game.settings.get("midi-qol", "AutoRemoveTargets");
   let debugText = game.settings.get("midi-qol", "Debug");
   forceHideRoll = game.settings.get("midi-qol", "ForceHideRoll")
+  dragDropTargeting = game.settings.get("midi-qol", "DragDropTarget")
 
   setDebugLevel(debugText);
 }
@@ -165,6 +168,15 @@ const settings = [
     type: String,
     onChange: fetchParams
   },
+
+  {
+    name: "DragDropTarget",
+    scope: "world",
+    default: false,
+    type: Boolean,
+    onChange: fetchParams,
+    config: true
+  },
   {
     name: "PreRollChecks",
     scope: "world",
@@ -191,7 +203,7 @@ export const registerSettings = function() {
   settings.forEach((setting, i) => {
     let MODULE = "midi-qol"
     let options = {
-        name: `${i} - `+ game.i18n.localize(`${MODULE}.${setting.name}.Name`),
+        name: game.i18n.localize(`${MODULE}.${setting.name}.Name`),
         hint: game.i18n.localize(`${MODULE}.${setting.name}.Hint`),
         scope: setting.scope,
         config: (setting.config === undefined) ? true : setting.config,

@@ -76,7 +76,6 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
   }
   // we actually want to collect the html from the damage roll, so need to rendere and grab
   hideChatMessage(configSettings.mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
-  console.error("do damage roll event is ", event)
   workflow.processDamageEventOptions(event);
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;

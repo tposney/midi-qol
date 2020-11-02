@@ -175,7 +175,7 @@ export class Workflow {
     //TODO get rid of this when rolldamage accepts options
     this.rollOptions.event = {
       shiftKey: this.rollOptions.fastForward,
-      altKey: this.rollOptions.critical
+      altKey: this.rollOptions.critical && this.rollOptions.fastForward
     }
   }
   constructor(actor: Actor5e, item: Item5e, token, speaker, event: any) {
@@ -426,7 +426,6 @@ export class Workflow {
           if (macro) {
             if (macro === "ItemMacro") {
               const itemMacro = getProperty(this.item.data.flags, "itemacro.macro");
-              console.error("macro command is ", itemMacro);
               macroCommand =  await CONFIG.Macro.entityClass.create({
                 name: "MQOL-Item-Macro",
                 type: "script",

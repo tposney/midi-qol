@@ -3,7 +3,7 @@ import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNice
 import { processUndoDamageCard } from "./GMAction";
 import { untargetDeadTokens, untargetAllTokens } from "./utils";
 import { actorAbilityRollPatching } from "./patching";
-import { configSettings } from "./settings";
+import { configSettings, dragDropTargeting } from "./settings";
 
 export let initHooks = () => {
   warn("Init Hooks processing");
@@ -56,6 +56,7 @@ export let initHooks = () => {
   })
 
   Hooks.on('dropCanvasData', function(canvas, dropData) {
+    if (!dragDropTargeting) return true;
     if (dropData.type !== "Item") return true;;
     let grid_size = canvas.scene.data.grid
 
