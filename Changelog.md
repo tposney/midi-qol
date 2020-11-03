@@ -1,3 +1,7 @@
+0.3.21
+* Fix for ignoring speed keys when not auto fast-forwarding rolls.
+0.3.19/3.20
+Fix for broken saving throws
 0.3.18
 * Added drag and drop targeting. If you drag a spell/weapon to a target token the token will be targeted and the attack rolled, as if you had targeted and rolled from the character sheet. Thanks to @grape
 * Hopefully fix the chat log scroll problem?

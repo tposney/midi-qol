@@ -134,10 +134,17 @@ export class Workflow {
       const advKey = this.testKey(configSettings.keyMapping["DND5E.Advantage"], event);
       const disKey = this.testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
       const versaKey = this.testKey(configSettings.keyMapping["DND5E.Versatile"], event);
-      this.rollOptions.fastForward = (["all", "attack"].includes(configSettings.autoFastForward));
-      this.rollOptions.fastForward = this.rollOptions.fastForward || ((advKey || disKey) || false);
       this.rollOptions.advantage = this.rollOptions.advantage || ((advKey && !disKey) || false);
       this.rollOptions.disadvantage = this.rollOptions.disadvantage || ((disKey && !advKey) || false);
+
+      this.rollOptions.fastForward = (["all", "attack"].includes(configSettings.autoFastForward));
+      if (this.rollOptions.advantage && this.rollOptions.disadvantage) {
+        this.srollOptions.fastForward = true;
+        this.rollOptions.disadvantage = false;
+        this.rollOptions.advantage = false;
+      }
+      this.rollOptions.fastForward = this.rollOptions.fastForward || this.rollOptions.advantage || this.rollOptions.disadvantage;
+      this.rollOptions.fastForward = this.rollOptions.fastForward || advKey || disKey || false;
       this.rollOptions.versatile = this.rollOptions.versatile || (versaKey || false);
     } else {
       const advKey = event?.altKey;
