@@ -1,7 +1,8 @@
 0.3.18
-* Added drag and drop targeting. If you drag a spell/weapon to a target token the token will be targeted and the attack rolled, as if you had targeted and rolled from the character sheet.
+* Added drag and drop targeting. If you drag a spell/weapon to a target token the token will be targeted and the attack rolled, as if you had targeted and rolled from the character sheet. Thanks to @grape
 * Hopefully fix the chat log scroll problem?
-* Added on use macro field to the item sheet, plus a setting on the workflow settings to enable it. If a macro name is present then after the roll is complete the macro is called with the following args:
+* Really hide rolls no longer hides legitimate whisper messages.
+* Added on use macro field to the item sheet, plus a setting on the workflow settings to enable it. If a macro name is present then after the roll is complete the macro is called with the following args, the macro is always called, whether you hit or miss or the target saved. Calling the macro does not create any active effects on the target, it is just rune. Use the targets/hitTargets/saves/failedDsaves to work out which tokens to use. :
                 actor: the attacking actors data
                 item: the attacking item data
                 targets: an array of target actors' data
@@ -16,7 +17,7 @@
                 spellLevel: the spell level if any
                 damageTotal: the total damage applied
                 damageDetail: an array of the damage detail, amount and type
-
+This should make adding special weapon/spell effects actions much easier.
 0.3.17
 * Fix for merge cards and dice so nice immediately display card.
 * See owned hidden tokens. When token is hidden does not emit light - this is on purpose and contrary to dnd5e spell. Give them a torch token if you want to.

@@ -282,13 +282,13 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
 export let getSaveMultiplierForItem = item => {
   // find a better way for this ? perhaps item property
   if (!item) return 1;
-  if (item.data.data.properties.noDamSave ?? false) return 0;
+  if (item.data.data.properties?.noDamSave ?? false) return 0;
   if (item.data.data.properties?.fullDamSave ?? false) return 1;
   if (noDamageSaves.includes(cleanSpellName(item.name))) return 0;
   if (item.data.data.description.value.includes(i18n("midi-qol.noDamageText"))) {
     return 0.0;
   } 
-  
+
   if (!configSettings.checkSaveText) return 0.5;
   if (item.data.data.description.value.includes(i18n("midi-qol.halfDamage")) || item.data.data.description.value.includes(i18n("midi-qol.halfDamageAlt"))) {
     return 0.5;
