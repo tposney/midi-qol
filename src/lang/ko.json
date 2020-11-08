@@ -138,9 +138,16 @@
     "midi-qol.EnableWorkflow.Name": "굴림 자동화 지원 활성화",
     "midi-qol.EnableWorkflow.Hint": "활성화된 굴림 자동화를 워크플로우 설정 패널에서 구성할 수 있다.",
     "midi-qol.magical": "마법적",
+    "midi-qol.noDamageSaveProp": "무피해 내성굴림",
+    "midi-qol.fullDamageSaveProp": "최대피해 내성굴림",
     "midi-qol.defaultDamageType": "없음",
     "midi-qol.playerControlsInvisibleTokens.Name": "플레이어가 소유한 숨겨진 토큰 제어",
     "midi-qol.playerControlsInvisibleTokens.Hint": "Experimental - might work",
     "midi-qol.Debug.Name": "디버그 활성화",
-    "midi-qol.Debug.Hint": "콘솔 로그를 채우려면 없음으로 설정할 것. All enables CONFIG.hooks.debug"
-}
+    "midi-qol.Debug.Hint": "콘솔 로그를 채우려면 없음으로 설정할 것. All enables CONFIG.hooks.debug",
+    "midi-qol.AllowUseMacro.Name": "사용시 호출될 매크로 추가",
+    "midi-qol.AllowUseMacro.Hint": "사용 시 호출될 매크로 이름 필드를 추가한다. 세부사항은 Readme 참조.",
+    "midi-qol.onUseMacroLabel": " 매크로 사용",
+    "midi-qol.DragDropTarget.Name": "드래그 앤 드롭 타겟팅",
+    "midi-qol.DragDropTarget.Hint": "토큰에 아이템을 드래그하여 공격하는 것을 허용한다."
+  }
