@@ -15,7 +15,7 @@
     "midi-qol.AutoCheckHit.Name": "Auto check if attack hits target",
     "midi-qol.AutoCheckHit.Hint": "Check if an attack roll hits selected targets - damage is rolled if one or more targets is hit and auto roll damage is enabled. If disabled midi-qol will assume the attack hits and continue rolling.",
     "midi-qol.RequireTargets.Name": "Require targets to be selected before rolling",
-    "midi-qol.RequireTargets.Hint": "If no tokens are targeted then only self target or aread affect target rolls will be allowed (does not work with better-rolls)",
+    "midi-qol.RequireTargets.Hint": "If no tokens are targeted then only self target or area affect target rolls will be allowed (does not work with better-rolls)",
     "midi-qol.AutoApplyDamage.Name": "Auto apply damage to target",
     "midi-qol.AutoApplyDamage.Hint": "Auto apply damage to hit targets (if autocheck hits on) or targets user has selected",
     "midi-qol.ItemRollButtons.Name": "Add attack/damage buttons to item inventory list",
@@ -149,6 +149,8 @@
     "midi-qol.AllowUseMacro.Hint": "When able adds a macro name field which will be called on use. See the Readme for the details",
     "midi-qol.onUseMacroLabel": " On Use Macro",
     "midi-qol.DragDropTarget.Name": "Drag and Drop Targeting",
-    "midi-qol.DragDropTarget.Hint": "Allow dragging an item onto a token to attack it"
+    "midi-qol.DragDropTarget.Hint": "Allow dragging an item onto a token to attack it",
+    "midi-qol.GMFullAuto.Name": "GM Auto roll attack/damage",
+    "midi-qol.GMFullAuto.Hint": "If set GM rolls ignore the workflow settings and auto roll attacks and damage"
 
 }

@@ -1,10 +1,17 @@
 <form onsubmit="event.preventDefault();" class="midi-qol-config-panel">
   <section>
+    <div class="form-group">
+      <label>{{localize "midi-qol.GMFullAuto.Name"}}</label>
+      <input type="checkbox" name="gmFullAuto" data-dtype="Boolean" {{checked configSettings.gmFullAuto}} />
+    </div>
+    <div class="midi-qol-faint">{{localize "midi-qol.GMFullAuto.Hint"}}</div>
+
     <div class="midi-qol-box">
       <div class="form-group speedRolls">
         <label>{{localize "midi-qol.SpeedItemRolls.Name"}}</label>
         <input type="checkbox" name="speedItemRolls" data-dtype="Boolean" {{checked configSettings.speedItemRolls}} />
       </div>
+
       {{#unless configSettings.speedItemRolls}}
       {{localize "midi-qol.SpeedItemRolls.Hint"}}
       {{/unless}}

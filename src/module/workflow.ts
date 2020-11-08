@@ -155,6 +155,9 @@ export class Workflow {
       this.rollOptions.advanatage = advKey;
       this.rollOptions.disadvantage = disKey;
     }
+    if (configSettings.gmFullAuto && game.user.isGM) {
+      this.rollOptions.fastForward = true;
+    }
   }
   public processDamageEventOptions(event) { 
     // if we have an event here it means they clicked on the damage button?
@@ -177,6 +180,9 @@ export class Workflow {
       this.rollOptions.fastForward = this.rollOptions.fastForward || event?.shiftKey || event?.altKey;
       this.rollOptions.critical = event?.altKey;
       if (fastForwardKey) this.rollOptions.critical = this.isCritical;
+    }
+    if (configSettings.gmFullAuto && game.user.isGM) {
+      this.rollOptions.fastForward = true;
     }
     this.rollOptions.spellLevel = this.itemLevel;
     //TODO get rid of this when rolldamage accepts options
@@ -305,7 +311,7 @@ export class Workflow {
           return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
         }
         if (this.noAutoAttack) return;
-        const shouldRoll = this.someEventKeySet() || configSettings.autoRollAttack;
+        const shouldRoll = this.someEventKeySet() || configSettings.autoRollAttack ||(game.user.isGM && configSettings.gmFullAuto);
         if (shouldRoll) {
           this.processAttackEventOptions(event);
           //let attackEvent = duplicate(this.event);
@@ -323,7 +329,7 @@ export class Workflow {
           await this.displayHits(configSettings.autoCheckHit === "whisper", configSettings.mergeCard);
         }
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
-        if (configSettings.autoRollDamage === "onHit" && this.hitTargets.size === 0 && this.targets.size !== 0) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        if ((configSettings.autoRollDamage === "onHit" && this.hitTargets.size === 0 && this.targets.size !== 0)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
         return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMGEROLL:
@@ -336,7 +342,8 @@ export class Workflow {
         if (this.noAutoDamage) return; // we are emulating the standard card specially.
         const shouldRollDamage = configSettings.autoRollDamage === "always" 
                                 || (configSettings.autoRollDamage !== "none" && !this.item.hasAttack)
-                                || (configSettings.autoRollDamage === "onHit" && (this.hitTargets.size > 0 || this.targets.size === 0));
+                                || (configSettings.autoRollDamage === "onHit" && (this.hitTargets.size > 0 || this.targets.size === 0)
+                                || (configSettings.gmFullAuto && game.user.isGM));
         debug("autorolldamage ", configSettings.autoRollDamage, " has attack ", this.item.hasAttack, " targets ", this.hitTargets)
         if (shouldRollDamage) {
           warn(" about to roll damage ", this.event, configSettings.autoRollAttack, configSettings.autoFastForward)

@@ -1,3 +1,5 @@
+0.3.22
+* Added option for GM to auto fastword rolls always, ignoring the rest of the module settings. Intended for GMs who want their players to hit the various roll buttons but skip for their rolls. 
 0.3.21
 * Fix for ignoring speed keys when not auto fast-forwarding rolls.
 0.3.19/3.20

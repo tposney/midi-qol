@@ -24,6 +24,7 @@ const defaultKeyMapping = {
 };
 
 export var configSettings = {
+  gmFullAuto: false,
   speedItemRolls: false,
   showItemDetails: "",
   autoRollAttack: false,
