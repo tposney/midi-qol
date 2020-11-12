@@ -139,7 +139,7 @@ export class Workflow {
 
       this.rollOptions.fastForward = (["all", "attack"].includes(configSettings.autoFastForward));
       if (this.rollOptions.advantage && this.rollOptions.disadvantage) {
-        this.srollOptions.fastForward = true;
+        this.rollOptions.fastForward = true;
         this.rollOptions.disadvantage = false;
         this.rollOptions.advantage = false;
       }
@@ -155,6 +155,22 @@ export class Workflow {
       this.rollOptions.advanatage = advKey;
       this.rollOptions.disadvantage = disKey;
     }
+    const midiFlags = this.actor?.data.flags["midi-qol"];
+    const advantage = midiFlags?.advantage;
+    const disadvantage = midiFlags?.disadvantage;
+    if (advantage) {
+      const actType = this.item?.data.data?.actionType || "none"
+      const withAdvantage = advantage.all || advantage.attack?.all || (advantage.attack && advantage.attack[actType]);
+      this.rollOptions.advantage = this.rollOptions.advantage || withAdvantage;
+      if (withAdvantage) this.rollOptions.fastForward = true;
+    }
+    if (disadvantage) {
+      const actType = this.item?.data.data?.actionType || "none"
+      const withDisadvantage = disadvantage.all || disadvantage.attack?.all || (disadvantage.attack && disadvantage.attack[actType]);
+      this.rollOptions.disadvantage = this.rollOptions.disadvantage || withDisadvantage;
+      if (withDisadvantage) this.rollOptions.fastForward = true;
+    }
+
     if (configSettings.gmFullAuto && game.user.isGM) {
       this.rollOptions.fastForward = true;
     }
@@ -326,7 +342,9 @@ export class Workflow {
         await this.displayAttackRoll(false, configSettings.mergeCard);
         if (configSettings.autoCheckHit !== "none") {
           await this.checkHits();
-          await this.displayHits(configSettings.autoCheckHit === "whisper", configSettings.mergeCard);
+          const whisperCard = configSettings.autoCheckHit === "whisper" || game.settings.get("core", "rollMode") === "blindroll";
+          await this.displayHits(whisperCard, configSettings.mergeCard);
+ 
         }
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
         if ((configSettings.autoRollDamage === "onHit" && this.hitTargets.size === 0 && this.targets.size !== 0)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
@@ -669,17 +687,20 @@ export class Workflow {
           user: game.user,
           speaker,
           content: hitContent || "No Targets",
-          type: CONST.CHAT_MESSAGE_TYPES.OTHER
+          type: CONST.CHAT_MESSAGE_TYPES.OTHER,
         }
         if (whisper) 
         {
           chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active);
           chatData.user = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
+          if (game.settings.get("core", "rollMode") === "blindroll") {
+            chatData["blind"] = true;
+          }
           debug("Trying to whisper message", chatData)
         }
         if (this.__proto__.constructor.name !== "BetterRollsWorkflow") {
             setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", true);
-            setProperty(chatData, "flags.midi-qol.hideTag", "midi-qol-hits-display")
+            if (!whisper) setProperty(chatData, "flags.midi-qol.hideTag", "midi-qol-hits-display")
         } else { // better rolls workflow
             setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", false);
             // setProperty(chatData, "flags.midi-qol.hideTag", "")
@@ -738,11 +759,11 @@ export class Workflow {
             chatMessage.data.content = content;
         }
     } else {
-      let speaker = ChatMessage.getSpeaker();
-      speaker.alias = (configSettings.useTokenNames && speaker.token) ? canvas.tokens.get(speaker.token).name : speaker.alias;
-
+      const gmUser = game.users.find((u: User) => u.isGM && u.active);
+      //@ts-ignore
+      let speaker = ChatMessage._getSpeakerFromUser({user: gmUser});
       chatData = {
-        user: game.user,
+        user: gmUser._id,
         speaker,
         content: `<div data-item-id="${this.item._id}"></div> ${saveContent}`,
         flavor: `<h4>${this.saveDisplayFlavor}</h4>`, 
@@ -752,6 +773,7 @@ export class Workflow {
       if (configSettings.autoCheckSaves === "whisper" || whisper) {
         chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active);
         chatData.user = ChatMessage.getWhisperRecipients("GM").find(u=>u.active)
+        chatData.blind = true;
       }
       await ChatMessage.create(chatData);
     }
@@ -1145,7 +1167,8 @@ export class TrapWorkflow extends Workflow {
         this.processAttackRoll();
         await this.displayAttackRoll(false, configSettings.mergeCard);
         await this.checkHits();
-        await this.displayHits(configSettings.autoCheckHit === "whisper", configSettings.mergeCard);
+        const whisperCard = configSettings.autoCheckHit === "whisper" || game.settings.get("core", "rollMode") === "blindroll";
+        await this.displayHits(whisperCard, configSettings.mergeCard);
         return this.next(WORKFLOWSTATES.WAITFORSAVES);
 
       case WORKFLOWSTATES.WAITFORDAMGEROLL:
@@ -1157,6 +1180,7 @@ export class TrapWorkflow extends Workflow {
         this.rollOptions.critical = this.isCritical;
         debug("Rolling damage ", this.event, this.itemLevel, this.rollOptions.versatile);
         this.rollOptions.critical = this.isCritical;
+        this.rollOptions.fastForward = true;
         await this.item.rollDamage(this.rollOptions);
         return; // wait for a damage roll to advance the state.
 

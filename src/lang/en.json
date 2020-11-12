@@ -125,7 +125,7 @@
     "midi-qol.autoApplyDamageOptions": {"none": "No", "noCard": "No + damage card", "yes": "Yes", "yesCard": "Yes + damage card"},
     "midi-qol.damageImmunitiesOptions": {"none": "Never", "immunityDefult": "apply immuniites", "immunityPhysical": "apply immunities + physical"},
     "midi-qol.showItemDetailsOptions": {"none": "None", "cardOnly": "Card Only", "pc": "Card + Details: PC Only", "all": "Card + Details: NPC + PC"},
-    "midi-qol.playerRollSavesOptions": {"none": "None",  "letme": "Let Me Roll That For You", "letmeQuery": "LMRTFY + Querey", "chat": "Chat Message"},
+    "midi-qol.playerRollSavesOptions": {"none": "None",  "letme": "Let Me Roll That For You", "letmeQuery": "LMRTFY + Query", "chat": "Chat Message"},
     "midi-qol.AutoRemoveTargetsOptions": {"none": "Never", "dead": "untarget dead after roll", "allGM": "untarget dead and all GM", "all": "untarget all at end of turn"},
     "midi-qol.ColoredBordersOptions": {"none": "None", "borders": "Borders Only", "borderNamesText": "Border + Name Text", "borderNamesBackground": "Border + Name Background"},
     "midi-qol.hideRollDetailsOptions": {"none": "None", "details": "Roll Formula", "detailsDSN": "Roll Formula + DSN dice", "all": "Entire Roll"},

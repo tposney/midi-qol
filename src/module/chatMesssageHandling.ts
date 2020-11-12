@@ -195,8 +195,8 @@ let showHandler = (hideTags, displayId, html, header, message, id) => {
 };
 
 export let diceSoNiceHandler = async (message, html, data) => {
-  debug("Dice so nice handler ", message, html, data);
   if (!game.dice3d || !installedModules.get("dice-so-nice") || game.dice3d.messageHookDisabled || !game.dice3d.isEnabled()) return;
+  debug("Dice so nice handler ", message, html, data);
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
   let rollDice = game.user.isGM ||
         (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
@@ -309,8 +309,12 @@ let _onTargetSelect = (event) => {
 };
 
 export let hideRollRender = (app, html, msg) => {
-  if (forceHideRoll && msg.whisperTo !== '') {
-      if (game.user.isGM === false && msg.author !== game.user && msg.message.whisper.indexOf(game.user.id) === -1) {
+  if (forceHideRoll && msg.whisperTo !== '' || msg.message?.blind) {
+      if (game.user.isGM === false && 
+          (
+            (msg.author !== game.user && msg.message.whisper.indexOf(game.user.id) === -1)
+             || msg.message.blind
+          )) {
           html.hide();
       }
   }
@@ -318,8 +322,8 @@ export let hideRollRender = (app, html, msg) => {
 };
 
 export let hideRollUpdate = (message, data, diff, id) => {
-  if (forceHideRoll && message.whisperTo !== '') {
-    if (game.user.isGM === false && !message.isAuthor && message.data.whisper.indexOf(game.user.id) === -1) {
+  if (forceHideRoll && message.whisperTo !== '' || message.data.blind) {
+    if (game.user.isGM === false && ((!message.isAuthor && message.data.whisper.indexOf(game.user.id) === -1) || message.data.blind)) {
       let messageLi = $(`.message[data-message-id=${data._id}]`);
       messageLi.hide();
     }

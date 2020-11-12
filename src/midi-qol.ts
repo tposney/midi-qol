@@ -102,11 +102,8 @@ Hooks.once('setup', function() {
 /* When ready							*/
 /* ------------------------------------ */
 Hooks.once('ready', function() {
-  actorAbilityRollPatching();
-
   // Do anything once the module is ready
-  //new ConfigPanel({},{}).render(true);
-
+  actorAbilityRollPatching();
 });
 
 // Add any additional hooks if necessary

@@ -157,7 +157,7 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType) {
     var hp = a.data.data.attributes.hp;
     var tmp = parseInt(hp.temp) || 0;
     var oldHP = hp.value;
-    var newTemp = Math.max(tmp - value, 0);
+    var newTemp = Math.max(tmp, -value, 0);
     var newHP: number = hp.value;
   } else {
     var hp = a.data.data.attributes.hp, 
@@ -226,7 +226,7 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
     return true;
   }
   for (let t of theTargets) {
-      let a = t.actor;
+      let a = t?.actor;
       if (!a) continue;
       appliedDamage = 0;
       for (let { damage, type } of damageDetail) {
@@ -284,12 +284,12 @@ export let getSaveMultiplierForItem = item => {
   if (!item) return 1;
   if (item.data.data.properties?.noDamSave) return 0;
   if (item.data.data.properties?.fullDamSave) return 1;
-  if (noDamageSaves.includes(cleanSpellName(item.name))) return 0;
-  if (item.data.data.description.value.includes(i18n("midi-qol.noDamageText"))) {
+  if (noDamageSaves?.includes(cleanSpellName(item.name))) return 0;
+  if (item.data.data.description.value?.includes(i18n("midi-qol.noDamageText"))) {
     return 0.0;
   } 
   if (!configSettings.checkSaveText) return 0.5;
-  if (item.data.data.description.value.includes(i18n("midi-qol.halfDamage")) || item.data.data.description.value.includes(i18n("midi-qol.halfDamageAlt"))) {
+  if (item.data.data.description.value?.includes(i18n("midi-qol.halfDamage")) || item.data.data.description.value.includes(i18n("midi-qol.halfDamageAlt"))) {
     return 0.5;
   }
   //  Think about this. if (checkSavesText true && item.hasSave) return 0; // A save is specified but the half-damage is not specified.
@@ -328,6 +328,13 @@ export function requestPCSave(ability, playerId, actorId, advantage, flavor, dc,
       whisper: [player]
     });
   }
+}
+
+export function midiCustomEffect(actor, change) {
+  if (!change.key.startsWith("flags.midi-qol")) return;
+  //@ts-ignore
+  const val = Number.isNumber(change.value) ? parseInt(change.value) : 1;
+  setProperty(actor.data, change.key, change.value)
 }
 
 export function untargetDeadTokens() {
@@ -412,6 +419,7 @@ export function checkRange(actor, item, event) {
 
   let range = itemData.range?.value || Math.max(token.w, token.h) / 2 / canvas.scene.data.grid * canvas.scene.data.gridDistance;
   for (let target of game.user.targets) { 
+    if (target === token) continue;
     // check the range
     let distance = getDistance(token, target, configSettings.autoTarget === "wallsBlock") - 5; // assume 2.5 width for each token
 

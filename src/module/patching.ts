@@ -82,6 +82,7 @@ function isVisible() {
 var oldRollSkill;
 
 function doRollSkill(skillId, options={event}) {
+  procAdvantageSkill(this, skillId, options)
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
     //@ts-ignore
     // options.event = mergeObject(options.event, {shiftKey: true}, {overwrite: true, inplace: true})
@@ -104,14 +105,74 @@ function doAbilityRoll(func, abilityId, options={event}) {
   return func.bind(this)(abilityId, options)
 }
 
-function rollAbilityTest(abilityId, options={event: {}})  {
-   return doAbilityRoll.bind(this)(oldRollAbilityTest, abilityId, options)
+function rollAbilityTest(abilityId, options={event: {}, parts: []})  {
+  if (procAutoFail(this, "check", abilityId)) {
+      options.parts = ["-100"];
+    }
+    procAdvantage(this, "check", abilityId, options);
+  return doAbilityRoll.bind(this)(oldRollAbilityTest, abilityId, options)
 }
 
-function rollAbilitySave(abilityId, options={event: {}})  {
+function rollAbilitySave(abilityId, options={event: {}, parts: []})  {
+  if (procAutoFail(this, "save", abilityId)) {
+    options.parts = ["-100"];
+  }
+  procAdvantage(this, "save", abilityId, options);
   return doAbilityRoll.bind(this)(oldRollAbilitySave, abilityId, options)
 }
 
+function procAutoFail(actor, rollType, abilityId) {
+  const midiFlags = actor.data.flags["midi-qol"];
+  const fail = midiFlags?.fail;
+  if (fail?.ability || fail?.all) {
+    const rollFlags = fail.ability && fail.ability[rollType]
+    const autoFail = fail.all || fail.ability?.all || rollFlags?.all
+          || (rollFlags && rollFlags[abilityId])
+    return autoFail;
+  }
+  return false;
+}
+function procAdvantage(actor, rollType, abilityId, options) {
+  const midiFlags = actor.data.flags["midi-qol"];
+  const advantage = midiFlags?.advantage;
+  const disadvantage = midiFlags?.disadvantage;
+  if (advantage?.ability || advantage?.all) {
+    const rollFlags = advantage.ability && advantage.ability[rollType]
+    const withAdvantage = advantage.all || advantage.ability?.all || rollFlags?.all
+          || (rollFlags && rollFlags[abilityId])
+    if (withAdvantage) {
+      options.event = options.event = {shiftKey: true, altKey:true, ctrlKey: false, metaKey: false};
+    }
+  }
+  if (disadvantage?.ability || disadvantage?.all) {
+    const rollFlags = disadvantage.ability && disadvantage.ability[rollType]
+    const withDisadvantage = disadvantage?.all || disadvantage.ability?.all || rollFlags?.all
+          || (rollFlags && rollFlags[abilityId])
+    if (withDisadvantage) {
+      options.event = options.event = {shiftKey: true, altKey:false, ctrlKey: true, metaKey: true};
+    }
+  }
+}
+
+function procAdvantageSkill(actor, skillId, options) {
+  const midiFlags = actor.data.flags["midi-qol"];
+  const advantage = midiFlags?.advantage;
+  const disadvantage = midiFlags?.disadvantage;
+  if (advantage?.skill) {
+    const rollFlags = advantage.skill
+    const withAdvantage = advantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId]);
+    if (withAdvantage) {
+      options.event = options.event = {shiftKey: true, altKey:true, ctrlKey: false, metaKey: false};
+    }
+  }
+  if (disadvantage?.skill) {
+    const rollFlags = disadvantage.skill
+    const withDisadvantage = disadvantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId])
+    if (withDisadvantage) {
+      options.event = options.event = {shiftKey: true, altKey:false, ctrlKey: true, metaKey: true};
+    }
+  }
+}
 export let visionPatching = () => {
   const patchVision = isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
   if (patchVision) {

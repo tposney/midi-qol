@@ -1,5 +1,35 @@
+0.3.23
+* Support settings config permissions from user permissions.
+* Blind rolls no longer show the hits card except to the GM.
+* Don't prompt for critical/normal damage in TrapWorkflow.
+* Fix for empty description field causing a problem on saves.
+* Fix for self targets being reported as blocked by a wall in range check.
+Support for advantage/disadvantage, actor.setFlag() to enable (permanent) or via active effects (temporary).
+flags.midi-qol.advantage.all All rolls have advantage
+flags.midi-qol.advantage.attack.all All attack rolls have advantage
+flags.midi-qol.advantage.attack.mwak melee weapon attacks have advantage (mwak/rwak/msak/rsa)
+flags.midi-qol.advantage.ability.all all ability rolls have advantage
+flags.midi-qol.advantage.ability.save.all all ability saves have advantage
+flags.midi-qol.advantage.ability.save.str Strength saves have advantage (str, dex. wis, dex, cha)
+Same for flags.midi-qol.advantage.ability.test...... for ability checks
+
+flags.midi-qol.advantage.skill.all All skill rolls have advantage
+flags.midi-qol.advantage.skill.slt Sleight of hand has advantage. 
+(acr, ani, arc, ath, dec, his, ins, itm, inv, med, nat, prc, prf, per, rel, slt, ste, sur)
+Auto fail of ability rolls, (adds -100) to the to make sure it fails.
+Similarly for disadvantage.
+
+Cause auto failure of checks.
+flags.midi-qol.fail.ability.all fail all ability rolls
+flags.midi-qol.fail.ability.save.all fail all ability saves
+flags.midi-qol.fail.ability.test.all fail all ability checks
+flags.midi-qol.fail.ability.save.dex fail dex saves
+flags.midi-qol.fail.ability.test.dex fail dex test
+Currently no named field support in DAE, but any active effect can set the flag (i.e. CUB/DAE/Macro or can be permanent on the actor via actor.setFlag). 
+
 0.3.22
 * Added option for GM to auto fastword rolls always, ignoring the rest of the module settings. Intended for GMs who want their players to hit the various roll buttons but skip for their rolls. 
+* updated ko.json thans @KLO
 0.3.21
 * Fix for ignoring speed keys when not auto fast-forwarding rolls.
 0.3.19/3.20

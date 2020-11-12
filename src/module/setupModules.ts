@@ -1,9 +1,8 @@
-import { debug, error } from "../midi-qol";
+import { debug, error, debugEnabled } from "../midi-qol";
 import { log } from "../midi-qol";
 
 let modules = {"about-time": "0.0", 
               "betterrolls5e": "1.1", 
-              "dynamiceffects": "0.0", 
               "dice-so-nice": "0.0", 
               "itemacro": "1.0.0", 
               "lmrtfy": "0.9",
@@ -21,6 +20,6 @@ export let setupModules = () => {
       else error(`module ${name} not active`)
     }
   }
-  if (debug || true)
+  if (debugEnabled > 0)
     for (let module of installedModules.keys()) log(`module ${module} has valid version ${installedModules.get(module)}`)
 }

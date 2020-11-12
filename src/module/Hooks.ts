@@ -1,8 +1,7 @@
 import { warn, error, debug, i18n } from "../midi-qol";
 import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, diceSoNiceUpdateMessge, recalcCriticalDamage, processItemCardCreation, hideRollUpdate, hideRollRender } from "./chatMesssageHandling";
 import { processUndoDamageCard } from "./GMAction";
-import { untargetDeadTokens, untargetAllTokens } from "./utils";
-import { actorAbilityRollPatching } from "./patching";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect } from "./utils";
 import { configSettings, dragDropTargeting } from "./settings";
 
 export let initHooks = () => {
@@ -44,6 +43,8 @@ export let initHooks = () => {
     nsaMessageHandler(message, html, data);
     hideRollRender(message, html, data);
   })
+
+  Hooks.on("applyActiveEffect", midiCustomEffect); 
 
   Hooks.on("renderItemSheet", (app, html, data) => {
     if (configSettings.allowUseMacro) {

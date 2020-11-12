@@ -95,6 +95,6 @@ export class ConfigPanel extends FormApplication {
 
     let newSettings = mergeObject(configSettings, formData, {overwrite:true, inplace:false})
     // const newSettings = mergeObject(configSettings, expand, {overwrite: true})
-    if (game.user.isGM) game.settings.set("midi-qol", "ConfigSettings", newSettings);
+    if (game.user.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", newSettings);
   }
 }
