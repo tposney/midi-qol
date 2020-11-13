@@ -146,11 +146,13 @@ event.shiftKey: true => auto roll the attack roll
 * MidiQOL.applyTokenDamage is exported.
 * In addition there is a new DamageOnlyWorklow exported 
 * If you have macros that depend on being called when the roll is complete, that is still supported, both "minor-qol.RollComplete" and "midi-qol.RollComplete" are called when the roll is finished. The passed data has changed, it is a copy of the workflow which contains a big superset of the data passed in the minor-qol version, but some of the field names have changed.
+
 * midi-qol supports a TrapWorkflow, triggered by
 ```
 new MidiQOL.TrapWorkflow(actor, item, [targets], {x:number, y:number})
 ```
 Which will roll the atack/and or damage and apply to the passed targets. If the item has an area template it will be placed at x,y and targets auto selected inside the template.
+
 Sample DoTrapAttack replacement:
 ```
   let tactor = game.actors.entities.find(a => a.name === args[0])
@@ -158,20 +160,63 @@ Sample DoTrapAttack replacement:
   let trapToken = canvas.tokens.placeables.find(t=>t.name === args[2])
   new MidiQOL.TrapWorkflow(tactor, item, [token], trapToken.center)
   ```
+
 * midi-qol supports a DamageOnlyWorkflow to support items/spells with special damage rolls. Divine Smite is a good example, the damage depends on whether the target is a fiend/undead. This is my implementation, which assumes it is activated via dynamiceffects/midi-qol.
-I have created a spell called "Divine Smite", with no saving throw or damage or attack, (although you can have such things) which has a single active effect
-"macro.execute" = "Divine Smite" @target @item.level @itemCardId. By having it as a spell you can capture the spell scaling for damage calculation.
+I have created a spell called "Divine Smite", with no saving throw or damage or attack, (although you can have such things) which has an onUse macro set to Divine Smite. (see the onUse mcro details below)
+
 ```
-if (args[0] === "on") {
-  let target = canvas.tokens.get(args[1])
-  let numDice = 1 + (Number(args[2]) || 1)
-  let undead = ["undead", "fiend"].some(type => (target.actor.data.data.details.type || "").toLowerCase().includes(type));
-  if (undead) numDice += 1;
-  let damageRoll = new Roll(`${numDice}d8`).roll();
-  new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[3]})
+if (args[0].hitTargets.size === 0) {
+console.error("no target selected");
+return
 }
+let target = canvas.tokens.get(args[0].hitTargets[0]._id)
+let numDice = 1 + (Number(args[2]) || 1)
+let undead = ["undead", "fiend"].some(type => (target.actor.data.data.details.type || "").toLowerCase().includes(type));
+if (undead) numDice += 1;
+let damageRoll = new Roll(`${numDice}d8`).roll();
+new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[0].itemCardId})
 ```
-Flavor is only used if you are not using combo cards. The itemCardId passes the id of the item card that caused the macro to be rolled, i.e. for divine smite the ItemCard of the Divine Smite spell/feature. By passing this to the macro and to the DamageOnlyWorkflow the damage roll can be added to the ItemCard making the whole effect look like an item damage roll (almost). You can use this feature to roll custom damage via a macro for any item, just leave the item damage blank and roll the damage in a macro and then pass the itemCardId.
+
+Flavor is only used if you are not using combo cards. The args[0].itemCardId passes the id of the item card that caused the macro to be rolled, i.e. for divine smite the ItemCard of the Divine Smite spell/feature. By passing this to the  DamageOnlyWorkflow the damage roll can be added to the ItemCard making the whole effect look like an item damage roll (almost). You can use this feature to roll custom damage via a macro for any item, just leave the item damage blank and roll the damage in a macro and then pass the itemCardId.
+
+### OnUse macro field
+This field lets you specify a macro to call which is passed the following data as args[0]. The field should contain ONLY the macro name and recognises the exact text ItemMacro to mean calling the items itemMacro if any.
+```
+  actor = actor.data (the actor using the item)
+  item = item.data (the item, i.e. spell/weapon/feat)
+  targets = [token.data] (an array of token data taken from game.user.targets)
+  hitTargets = [token.data] (and arry of tokend ata take from targets that were hit)
+  saves= [token.data] (and arry of tokend ata take from targets that made a save)
+  failedSaves = [token.data] (and arry of tokend ata take from targets that failed the save)
+  damageRoll = the Roll object for the damage roll (if any)
+  attackRoll = the Roll object for the attack roll (if any)
+  itemCardId = the id of the chat message item card (see below)
+  isCritical = true/false
+  isFumble = true/false
+  spellLevel = spell/item level
+  damageTotal = damage total
+  damageDetail = [damage type, damage total] an array of the specific damage items for the attack/spell e.g. [{"piercing", 10}]
+```
+
+The combo card has some special divs included to allow you to easily add data to the card.
+```
+    <div class="midi-qol-attack-roll"></div>
+   <div class="midi-qol-damage-roll"></div>
+    <div class="midi-qol-hits-display"></div>
+    <div class="midi-qol-saves-display"></div>
+```
+Which it uses to update the card when things happen, like attacks damage saves etc. You can take over those fields to create custom items.
+
+This is the code that puts the hit roll detail on the item card
+```
+const chatMessage: ChatMessage = game.messages.get(itemCardId);
+var content = duplicate(chatMessage.data.content);    
+const searchString =  '<div class="midi-qol-hits-display"></div>';
+const replaceString = `<div class="midi-qol-hits-display">${hitContent}</div>`
+content = content.replace(searchString, replaceString);
+chatMessage.update({content: content});
+```
+hitContent is just html, so you could insert whatever you want in any of the divs above.
 
 ## Sample Chat Logs
 ![No Combo Card](pictures/nocombo.png) ![Combo Card](pictures/combo.png)
