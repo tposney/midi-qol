@@ -81,7 +81,10 @@ function isVisible() {
 
 var oldRollSkill;
 
-function doRollSkill(skillId, options={event}) {
+function doRollSkill(skillId, options={event: {}, parts: []}) {
+  if (procAutoFailSkill(this, skillId)) {
+    options.parts = ["-100"];
+  }
   procAdvantageSkill(this, skillId, options)
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
     //@ts-ignore
@@ -122,55 +125,73 @@ function rollAbilitySave(abilityId, options={event: {}, parts: []})  {
 }
 
 function procAutoFail(actor, rollType, abilityId) {
-  const midiFlags = actor.data.flags["midi-qol"];
-  const fail = midiFlags?.fail;
-  if (fail?.ability || fail?.all) {
-    const rollFlags = fail.ability && fail.ability[rollType]
-    const autoFail = fail.all || fail.ability?.all || rollFlags?.all
-          || (rollFlags && rollFlags[abilityId])
+  const midiFlags = actor.data.flags["midi-qol"] ?? {};
+  const fail = midiFlags.fail ?? {};
+  if (fail.ability || fail.all) {
+    const rollFlags = (fail.ability && fail.ability[rollType]) ?? {};
+    const autoFail = fail.all || fail.ability.all || rollFlags.all || rollFlags[abilityId];
+    return autoFail;
+  }
+  return false;
+}
+function procAutoFailSkill(actor, skillId) {
+  const midiFlags = actor.data.flags["midi-qol"] ?? {};
+  const fail = midiFlags.fail ?? {};
+  if (fail.skill || fail.all) {
+    const rollFlags = (fail.skill && fail.skill[skillId]) ?? {};
+    const autoFail = fail.all || fail.skill.all || rollFlags[skillId];
     return autoFail;
   }
   return false;
 }
 function procAdvantage(actor, rollType, abilityId, options) {
-  const midiFlags = actor.data.flags["midi-qol"];
-  const advantage = midiFlags?.advantage;
-  const disadvantage = midiFlags?.disadvantage;
-  if (advantage?.ability || advantage?.all) {
-    const rollFlags = advantage.ability && advantage.ability[rollType]
-    const withAdvantage = advantage.all || advantage.ability?.all || rollFlags?.all
-          || (rollFlags && rollFlags[abilityId])
+  const midiFlags = actor.data.flags["midi-qol"] ?? {};
+  const advantage = midiFlags.advantage ?? {};
+  const disadvantage = midiFlags.disadvantage ?? {};
+  var withAdvantage;
+  var withDisadvantage;
+  if (advantage.ability || advantage.all) {
+    const rollFlags = (advantage.ability && advantage.ability[rollType]) ?? {};
+    withAdvantage = advantage.all || advantage.ability.all || rollFlags.all || rollFlags[abilityId];
     if (withAdvantage) {
       options.event = options.event = {shiftKey: true, altKey:true, ctrlKey: false, metaKey: false};
     }
   }
-  if (disadvantage?.ability || disadvantage?.all) {
-    const rollFlags = disadvantage.ability && disadvantage.ability[rollType]
-    const withDisadvantage = disadvantage?.all || disadvantage.ability?.all || rollFlags?.all
-          || (rollFlags && rollFlags[abilityId])
+  if (disadvantage.ability || disadvantage.all) {
+    const rollFlags = (disadvantage.ability && disadvantage.ability[rollType]) ?? {};
+    withDisadvantage = disadvantage.all || disadvantage.ability.all || rollFlags.all || rollFlags[abilityId];
     if (withDisadvantage) {
       options.event = options.event = {shiftKey: true, altKey:false, ctrlKey: true, metaKey: true};
     }
   }
+  if (withAdvantage && withDisadvantage) {
+    options.event = options.event = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
+  }
+  console.error("proc advantage ", withAdvantage, withAdvantage, options.event)
 }
 
 function procAdvantageSkill(actor, skillId, options) {
   const midiFlags = actor.data.flags["midi-qol"];
   const advantage = midiFlags?.advantage;
   const disadvantage = midiFlags?.disadvantage;
+  var withAdvantage;
+  var withDisadvantage;
   if (advantage?.skill) {
     const rollFlags = advantage.skill
-    const withAdvantage = advantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId]);
+    withAdvantage = advantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId]);
     if (withAdvantage) {
       options.event = options.event = {shiftKey: true, altKey:true, ctrlKey: false, metaKey: false};
     }
   }
   if (disadvantage?.skill) {
     const rollFlags = disadvantage.skill
-    const withDisadvantage = disadvantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId])
+    withDisadvantage = disadvantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId])
     if (withDisadvantage) {
       options.event = options.event = {shiftKey: true, altKey:false, ctrlKey: true, metaKey: true};
     }
+  }
+  if (withAdvantage && withDisadvantage) {
+    options.event = options.event = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
   }
 }
 export let visionPatching = () => {

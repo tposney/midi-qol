@@ -17,17 +17,17 @@ https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
 ## (In)Compatibilities? ##
 Any module that overloads item.roll is potentially incompatible.  
 
-**Better Rolls** If you are using BetterRolls (which is a great module), midi-qol takes over once the hit/damage card is placed by better rolls. This means that resource consumption, template placement and critical/fumble determination is **all** handled by BetterRolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage and calls active effects.
+**Better Rolls** If you are using BetterRolls (which is a great module), midi-qol takes over once the hit/damage card is placed by better rolls. This means that resource consumption, template placement and critical/fumble determination is **all** handled by BetterRolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage and calls active effects.  
 **Magic Items** Thanks to @simone for his help and midi-qol is fully compatible with magic-items. The only issue is that spell templates for spells in a mgaic item are not auto placed on cast. Once placed everything works as expected.  
 **Mess** Midi-qol and Mess dnd5e effects are not compatible. Template effects and the other features of that excellent module should work. If you want Mess attack/damage cards don't use midi-qol.  
 **Cozy player** Minor-qol was not compatible with cozy-player, with targets being lost before attack/damage rolls were made. I have done only limited testing but it seems that there are no problems with cozy-player and midi-qol.  
 **Cautious GM** Midi-qol breaks the blind chats by hidden GM feature of cautious GM.  
 **Chat Portraits** If using Chat portraits the changes made by midi-qol to the token/actor name in chat cards are overwritten/lost. Choose which sort of highlighting you want - only one will work. Otherwise all seems to work.
-**Ez-Roller** The send to chat log feature of ez-roller will disable combo cards in midi-qol.
-**Combat Utility Belt** There seems to be an incompatibility with CUB if you have Use Token Names set in midi-qol. The symptoms of the issue vary, but include many console error messages, not being able to roll attacks/damage or being unable to update some actors. If you use CUB disable Use Token Names in midi-qol
+**Ez-Roller** The send to chat log feature of ez-roller will disable combo cards in midi-qol.  
+**Combat Utility Belt** There seems to be an incompatibility with CUB if you have Use Token Names set in midi-qol. The symptoms of the issue vary, but include many console error messages, not being able to roll attacks/damage or being unable to update some actors. If you use CUB disable Use Token Names in midi-qol  
 
-## Technical Differences:
-* midi-qol does not use the creation of chat messages as the triggeer anymore, rather it hooks the standard item.roll, item.rollAttack, item.rollDamage. This means it is automatically compatible with any actor/npc sheet that uses standrd rolls (almost all of them)
+## Technical Differences compared to minor-qol:
+* midi-qol does not use the creation of chat messages as the trigger anymore, rather it hooks the standard item.roll, item.rollAttack, item.rollDamage. This means it is automatically compatible with any actor/npc sheet that uses standrd rolls (almost all of them)
 * midi-qol uses the new 0.9.5 chat message meta-data to determine if a roll is a damage/attack/save roll which means the specific text matching piece is gone.
 
 ## Short Guide to the settings:
@@ -105,11 +105,11 @@ You can enable auto checking of hits. Funbles automatically miss and criticals a
 * **DM sees all whispered messages** Copy the GM on all whispered messages.
 * **Untarget at end of turn** At the end of a players turn(i.e. combat tracker is advanced) all/dead targeted tokens are untargeted. There is a GM option since I regularly forget to untarget after an attack and break things on the next turn. If midi-qol is managing the roll then dead tokens are untargeted after an attack, so that players can avoid "flogging a dead horse" as it were.
 * **Players control invisible tokens** 0.7.1+. If enabled then players can both see and control tokens they own that are hidden. Also any token they own will **always** appear on their map. **Broken** in 0.7.4
-* **Force Hide Rolls** If enabled private/blind/gm only rolls will only appear on the recipients chat log. This must be enabled if you are using better rolls and combo cards.
+* **Force Hide Rolls** If enabled private/blind/gm only rolls will only appear on the recipients chat log. This must be enabled if you are using better rolls and combo cards.  
 
 ## Not settings....
 ### Magic resistance.
-If the target token has the SRD feat "Magic Resistance" or a custom damage reistance trait equal to exactly magic-resistant the saving throws agains magic effects (item type spell) then auto rolled saves with be rolled with advantage.  
+If the target token has the SRD feat "Magic Resistance" or a custom damage reistance trait equal to exactly magic-resistant the auto rolled saving throws against magic effects (item type spell) with be rolled with advantage. This is really intended for NPCs with magic resistance to have their auto rolled saving throws made with advantage.    
 
 If the above was all too tedious here are the setings I use.
 ## Settings for  full auto mode:
@@ -118,7 +118,7 @@ If the above was all too tedious here are the setings I use.
 * Condense attack/damage cards checked.
 * Auto Target on template Draw - walls block
 * auto range target. Leave off until you are comfortable with the way everything else works.
-* Auto shift click - attack and damage. If you want to be prompted as to advantage/disadvanate/cirital/normal adjust appropriately. Even if enabled midi-qol will use the result of an attack (critica/normal) to do the roll.
+* Auto FastForward - attack and damage. If you want to be prompted as to advantage/disadvanate/cirital/normal adjust appropriately. Even if enabled midi-qol will use the result of an attack (critica/normal) to do the roll.
 * Auto Check Hits - Check your choice as to whether the players see the results - I use on.
 * Auto roll damage - Attack Hits
 * Saves - Save, your choice of whether the players see the results - I use players see reults.
@@ -137,15 +137,14 @@ probably many however....
 * Language translations are not up to date.
 
 ## Notes For Macro writers
-For modules that want to call midi-qol it is easier than in minor-qol. Just call item.roll() or actor.useSpell, and if you pass an event via item.roll({event}) you can have key accelerators.
+For modules that want to call midi-qol it is easier than in minor-qol. Just call item.roll() or actor.useSpell, and if you pass an event via item.roll({event}) you can have key accelerators. (the meanings of shift/ctl/alt will be interpreted using the speed rolls settings)
 event.altKey: true => advantage roll
 event.crtlKey: true => disadvantage roll
 event.shiftKey: true => auto roll the attack roll
 
 * MinorQOL.doRoll and MinorQOL.applyTokenDamage remain supported.
 * MidiQOL.applyTokenDamage is exported.
-* In addition there is a new DamageOnlyWorklow exported 
-* If you have macros that depend on being called when the roll is complete, that is still supported, both "minor-qol.RollComplete" and "midi-qol.RollComplete" are called when the roll is finished. The passed data has changed, it is a copy of the workflow which contains a big superset of the data passed in the minor-qol version, but some of the field names have changed.
+* If you have macros that depend on being called when the roll is complete, that is still supported, both "minor-qol.RollComplete" and "midi-qol.RollComplete" are called when the roll is finished. The passed data has changed, it is a copy of the workflow which contains a big superset of the data passed in the minor-qol version, but some of the field names have changed. See also the onUse macro field which can be used to achieve similar results.
 
 * midi-qol supports a TrapWorkflow, triggered by
 ```
@@ -161,7 +160,7 @@ Sample DoTrapAttack replacement:
   new MidiQOL.TrapWorkflow(tactor, item, [token], trapToken.center)
   ```
 
-* midi-qol supports a DamageOnlyWorkflow to support items/spells with special damage rolls. Divine Smite is a good example, the damage depends on whether the target is a fiend/undead. This is my implementation, which assumes it is activated via dynamiceffects/midi-qol.
+* midi-qol supports a DamageOnlyWorkflow to support items/spells with special damage rolls. Divine Smite is a good example, the damage depends on whether the target is a fiend/undead. This is my implementation, which assumes it is activated via midi-qol's onUse macro field.
 I have created a spell called "Divine Smite", with no saving throw or damage or attack, (although you can have such things) which has an onUse macro set to Divine Smite. (see the onUse mcro details below)
 
 ```
@@ -177,10 +176,13 @@ let damageRoll = new Roll(`${numDice}d8`).roll();
 new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[0].itemCardId})
 ```
 
-Flavor is only used if you are not using combo cards. The args[0].itemCardId passes the id of the item card that caused the macro to be rolled, i.e. for divine smite the ItemCard of the Divine Smite spell/feature. By passing this to the  DamageOnlyWorkflow the damage roll can be added to the ItemCard making the whole effect look like an item damage roll (almost). You can use this feature to roll custom damage via a macro for any item, just leave the item damage blank and roll the damage in a macro and then pass the itemCardId.
+Flavor is only used if you are not using combo cards.  
+The args[0].itemCardId passes the id of the item card that caused the macro to be rolled, i.e. for divine smite the ItemCard of the Divine Smite spell/feature. By passing this to the  DamageOnlyWorkflow the damage roll can be added to the ItemCard making the whole effect look like an item damage roll (almost). 
 
-### OnUse macro field
-This field lets you specify a macro to call which is passed the following data as args[0]. The field should contain ONLY the macro name and recognises the exact text ItemMacro to mean calling the items itemMacro if any.
+You can use this feature to roll custom damage via a macro for any item, just leave the item damage blank and roll the damage in a macro and then pass the itemCardId to the DamageOnlyWorkflow.
+
+### OnUse Macro Item detail field
+This field lets you specify a macro to call after the item roll is complete. It is ALWAYS called whether the attack hit/missed and is passed the following data as args[0]. The field should contain ONLY the macro name and recognises the exact text ItemMacro to mean calling the items itemMacro if any.
 ```
   actor = actor.data (the actor using the item)
   item = item.data (the item, i.e. spell/weapon/feat)
@@ -195,13 +197,14 @@ This field lets you specify a macro to call which is passed the following data a
   isFumble = true/false
   spellLevel = spell/item level
   damageTotal = damage total
-  damageDetail = [damage type, damage total] an array of the specific damage items for the attack/spell e.g. [{"piercing", 10}]
+  damageDetail = [type: string, damage: number] an array of the specific damage items for the attack/spell e.g. [{type: "piercing", damage: 10}]
 ```
+You can use the various target details to work out which tokens to apply the effect to, for example hitTargets is only those targets that the item roll "hit" if any.
 
 The combo card has some special divs included to allow you to easily add data to the card.
 ```
     <div class="midi-qol-attack-roll"></div>
-   <div class="midi-qol-damage-roll"></div>
+    <div class="midi-qol-damage-roll"></div>
     <div class="midi-qol-hits-display"></div>
     <div class="midi-qol-saves-display"></div>
 ```
@@ -209,7 +212,7 @@ Which it uses to update the card when things happen, like attacks damage saves e
 
 This is the code that puts the hit roll detail on the item card
 ```
-const chatMessage: ChatMessage = game.messages.get(itemCardId);
+const chatMessage: ChatMessage = game.messages.get(args[0].itemCardId);
 var content = duplicate(chatMessage.data.content);    
 const searchString =  '<div class="midi-qol-hits-display"></div>';
 const replaceString = `<div class="midi-qol-hits-display">${hitContent}</div>`

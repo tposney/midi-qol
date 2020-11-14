@@ -1,3 +1,7 @@
+0.3.24
+* added flags.midi-qol.fail.skill..... support
+* corrected behaviour so that having both advantage and disadvantage for a roll will cancel out to be a normal roll.
+* updated ko.json thanks @KLO
 0.3.23
 * Support settings config permissions from user permissions, i.e. trusted players instead of only GM ussers.
 * Blind rolls no longer show the hits card except to the GM.

@@ -170,6 +170,10 @@ export class Workflow {
       this.rollOptions.disadvantage = this.rollOptions.disadvantage || withDisadvantage;
       if (withDisadvantage) this.rollOptions.fastForward = true;
     }
+    if (this.rollOptions.advantage && this.rollOptions.disadvantage) {
+      this.rollOptions.advantage = false;
+      this.rollOptions.disadvantage = false;
+    }
 
     if (configSettings.gmFullAuto && game.user.isGM) {
       this.rollOptions.fastForward = true;
@@ -456,7 +460,7 @@ export class Workflow {
           const macro = getProperty(this.item, "data.flags.midi-qol.onUseMacroName");
           let macroCommand;
           if (macro) {
-            if (macro === "ItemMacro") {
+            if (macro === "ItemMacro" && getProperty(this.item.data.flags, "itemacro.macro")) {
               const itemMacro = getProperty(this.item.data.flags, "itemacro.macro");
               macroCommand =  await CONFIG.Macro.entityClass.create({
                 name: "MQOL-Item-Macro",
