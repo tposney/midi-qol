@@ -30,12 +30,9 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
     return rollMappings.itemAttack.roll.bind(this)(options)
   }
   if (workflow?.currentState !== WORKFLOWSTATES.WAITFORATTACKROLL) return;
-  /*
-  if (!workflow.noAutoDamage && ["all", "attack"].includes(configSettings.autoFastForward)) {
-    options.event.shiftKey = !(options.event.altKey || options.event.ctrlKey || options.event.metaKey)
-  }
-  */
+
   workflow.processAttackEventOptions(options?.event);
+  workflow.checkTargetAdvantage();
   // we actually want to collect the html from the attack roll, so need to render and grab
   hideChatMessage(configSettings.mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
   let result: Roll = await rollMappings.itemAttack.roll.bind(this)(options = workflow.rollOptions);

@@ -146,7 +146,7 @@
     "midi-qol.Debug.Name": "Enable debug",
     "midi-qol.Debug.Hint": "Set to None unless you want to fill up the console log. All enables CONFIG.hooks.debug",
     "midi-qol.AllowUseMacro.Name": "Add macro to call on use",
-    "midi-qol.AllowUseMacro.Hint": "When able adds a macro name field which will be called on use. See the Readme for the details",
+    "midi-qol.AllowUseMacro.Hint": "When enabled adds a macro name field which will be called on use. See the Readme for the details",
     "midi-qol.onUseMacroLabel": " On Use Macro",
     "midi-qol.DragDropTarget.Name": "Drag and Drop Targeting",
     "midi-qol.DragDropTarget.Hint": "Allow dragging an item onto a token to attack it",

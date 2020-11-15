@@ -173,6 +173,7 @@ export class Workflow {
     if (this.rollOptions.advantage && this.rollOptions.disadvantage) {
       this.rollOptions.advantage = false;
       this.rollOptions.disadvantage = false;
+      this.rollOptions.fastForward = true;
     }
 
     if (configSettings.gmFullAuto && game.user.isGM) {
@@ -211,6 +212,30 @@ export class Workflow {
       altKey: this.rollOptions.critical && this.rollOptions.fastForward
     }
   }
+
+  checkTargetAdvantage() {
+    if (!this.item) return;
+    if (!this.targets?.size) return;
+    const firstTarget = this.targets.values().next().value;
+    const grants = firstTarget.actor.data.flags["midi-qol"]?.grants;
+    if (!grants) return;
+
+    const actionType = this.item.data.data.actionType;
+    if (!["rwak", "mwak", "rsak", "msak"].includes(actionType)) return;
+
+    const attackAdvantage = grants.advantage?.attack || {};
+    const grantsAdvantage = grants.all || attackAdvantage.all || attackAdvantage[actionType]
+    const attackDisadvantage = grants.disadvantage?.attack || {};
+    const grantsDisadvantage = grants.all || attackDisadvantage.all || attackDisadvantage[actionType]
+    this.rollOptions.advantage = this.rollOptions.advantage || grantsAdvantage;
+    this.rollOptions.disadvantage = this.rollOptions.disadvantage || grantsDisadvantage;
+    if (this.rollOptions.advantage || this.rollOptions.disadvantage) this.rollOptions.fastForward = true;
+    if (this.rollOptions.advantage && this.rollOptions.disadvantage) {
+      this.rollOptions.advantage = false;
+      this.rollOptions.disadvantage = false;
+    }
+  }
+
   constructor(actor: Actor5e, item: Item5e, token, speaker, event: any) {
     this.rollOptions = duplicate(defaultRollOptions);
     this.processAttackEventOptions(event);

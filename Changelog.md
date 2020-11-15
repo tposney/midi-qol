@@ -1,3 +1,10 @@
+0.3.25
+* Ability check advantage/disadvantage now apply to skills based on the ability as well. (I'm told that's how it should be)
+* added ability to give attack advantage/disadvantage on attacks
+ flags.midi-qol.grant.advantage.all  
+ flags.midi-qol.grant.advantage.attack,all
+ flags.midi-qol.grant.advantage.attack.mwak/rwak/msak/rsak
+ and similarly for disadvantage.
 0.3.24
 * added flags.midi-qol.fail.skill..... support
 * corrected behaviour so that having both advantage and disadvantage for a roll will cancel out to be a normal roll.

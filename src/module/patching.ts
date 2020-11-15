@@ -80,16 +80,28 @@ function isVisible() {
 }
 
 var oldRollSkill;
+export const advantageEvent = {shiftKey: true, altKey: true, ctrlKey: false, metaKey: false};
+export const disadvantageEvent = {shiftKey: true, altKey:false, ctrlKey: true, metaKey: true};
+export const fastforwardEvent = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
 
 function doRollSkill(skillId, options={event: {}, parts: []}) {
   if (procAutoFailSkill(this, skillId)) {
     options.parts = ["-100"];
   }
+  let opt = {event: {}}
+  procAdvantage(this, "check", this.data.data.skills[skillId].ability, opt)
   procAdvantageSkill(this, skillId, options)
+  //@ts-ignore
+  const withAdvantage = opt.event.altKey || options?.event.altKey;
+  //@ts-ignore
+  const withDisadvantage = opt.event.ctrlKey || opt.event.metKey || options.event?.ctrlKey || options.event?.metaKey;
+  if (withAdvantage) options.event = advantageEvent;
+  else if (withDisadvantage) options.event = disadvantageEvent;
+  if (withAdvantage && withDisadvantage) {
+    options.event = fastforwardEvent;
+  }
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
-    //@ts-ignore
-    // options.event = mergeObject(options.event, {shiftKey: true}, {overwrite: true, inplace: true})
-    options.event = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
+    options.event = fastforwardEvent;
   }
   return oldRollSkill.bind(this)(skillId, options)
 }
@@ -103,7 +115,7 @@ function doAbilityRoll(func, abilityId, options={event}) {
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
     //@ts-ignore
     // options.event = mergeObject(options.event, {shiftKey: true}, {overwrite: true, inplace: true})
-    options.event = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
+    options.event = fastforwardEvent;
   }
   return func.bind(this)(abilityId, options)
 }
@@ -153,21 +165,14 @@ function procAdvantage(actor, rollType, abilityId, options) {
   if (advantage.ability || advantage.all) {
     const rollFlags = (advantage.ability && advantage.ability[rollType]) ?? {};
     withAdvantage = advantage.all || advantage.ability.all || rollFlags.all || rollFlags[abilityId];
-    if (withAdvantage) {
-      options.event = options.event = {shiftKey: true, altKey:true, ctrlKey: false, metaKey: false};
-    }
+    if (withAdvantage) options.event = advantageEvent;
   }
   if (disadvantage.ability || disadvantage.all) {
     const rollFlags = (disadvantage.ability && disadvantage.ability[rollType]) ?? {};
     withDisadvantage = disadvantage.all || disadvantage.ability.all || rollFlags.all || rollFlags[abilityId];
-    if (withDisadvantage) {
-      options.event = options.event = {shiftKey: true, altKey:false, ctrlKey: true, metaKey: true};
-    }
+    if (withDisadvantage) options.event = disadvantageEvent
   }
-  if (withAdvantage && withDisadvantage) {
-    options.event = options.event = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
-  }
-  console.error("proc advantage ", withAdvantage, withAdvantage, options.event)
+  if (withAdvantage && withDisadvantage) options.event = fastforwardEvent;
 }
 
 function procAdvantageSkill(actor, skillId, options) {
@@ -179,20 +184,14 @@ function procAdvantageSkill(actor, skillId, options) {
   if (advantage?.skill) {
     const rollFlags = advantage.skill
     withAdvantage = advantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId]);
-    if (withAdvantage) {
-      options.event = options.event = {shiftKey: true, altKey:true, ctrlKey: false, metaKey: false};
-    }
+    if (withAdvantage) options.event = advantageEvent;
   }
   if (disadvantage?.skill) {
     const rollFlags = disadvantage.skill
     withDisadvantage = disadvantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId])
-    if (withDisadvantage) {
-      options.event = options.event = {shiftKey: true, altKey:false, ctrlKey: true, metaKey: true};
-    }
+    if (withDisadvantage) options.event = disadvantageEvent;
   }
-  if (withAdvantage && withDisadvantage) {
-    options.event = options.event = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
-  }
+  if (withAdvantage && withDisadvantage) options.event = fastforwardEvent;
 }
 export let visionPatching = () => {
   const patchVision = isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
