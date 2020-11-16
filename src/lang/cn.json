@@ -153,7 +153,7 @@
     "midi-qol.DragDropTarget.Name": "拖放目标",
     "midi-qol.DragDropTarget.Hint": "允许把物品拖放到指示物上来攻击它",
     "midi-qol.GMFullAuto.Name": "GM自动掷攻击/伤害",
-    "midi-qol.GMFullAuto.Hint": "启用后，GM的掷骰会忽略工作流的设置并且自动掷攻击和伤害骰"
+    "midi-qol.GMFullAuto.Hint": "启用后，GM的掷骰会忽略工作流的设置并且自动掷攻击和伤害骰",
 
     "midi-qol.": ""
 }
