@@ -94,7 +94,7 @@
     "midi-qol.WorkflowSettings": "工作流设置",
     "midi-qol.CheckSaveText.Name": "检索法术描述",
     "midi-qol.CheckSaveText.Hint": "检索法术描述的内容以进行豁免后的伤害判断 - 'half as much damage'。关闭后会假设所有法术豁免成功时都造成一半的伤害",
-    "midi-qol.Save": "豁免设置",
+    "midi-qol.Save": "保存设置",
     "midi-qol.saving-throws": "豁免",
     "midi-qol.saving-throw": "豁免",
     "midi-qol.noAttackRoll": "在掷伤害骰前，你必须先掷攻击骰",
