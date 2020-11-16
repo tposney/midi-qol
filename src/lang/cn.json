@@ -147,7 +147,7 @@
     "midi-qol.playerControlsInvisibleTokens.Hint": "实验性 - 可能有用",
     "midi-qol.Debug.Name": "启用调试模式",
     "midi-qol.Debug.Hint": "如果不想控制台塞满日志就设为关闭。开启All也会启用CONFIG.hooks.debug",
-    "midi-qol.AllowUseMacro.Name": "使用物品时调用宏Add macro to call on use",
+    "midi-qol.AllowUseMacro.Name": "使用物品时调用宏",
     "midi-qol.AllowUseMacro.Hint": "启用后，填写一个宏的名字，每次使用物品时将会被调用。详情参见Readme",
     "midi-qol.onUseMacroLabel": " 物品调用宏",
     "midi-qol.DragDropTarget.Name": "拖放目标",
