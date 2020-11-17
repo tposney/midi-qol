@@ -1,9 +1,13 @@
+0.3.26
+Fix for consuming last of a consumable when not using automation.
+Fix for rejecting spell cast when no target selected even if there is nothing to target.
+Added speedAbilityRolls flag which applys your speed item rolls settings to ability rolls and skill rolls.
 0.3.25
 * Ability check advantage/disadvantage now apply to skills based on the ability as well. (I'm told that's how it should be)
-* added ability to give attack advantage/disadvantage on attacks
- flags.midi-qol.grant.advantage.all  
- flags.midi-qol.grant.advantage.attack,all
- flags.midi-qol.grant.advantage.attack.mwak/rwak/msak/rsak
+* added ability to give attack advantage/disadvantage on attacks (only works for midi-qol generated attacks - not better rolls)
+ flags.midi-qol.grants.advantage.all  
+ flags.midi-qol.grants.advantage.attack,all
+ flags.midi-qol.grants.advantage.attack.mwak/rwak/msak/rsak
  and similarly for disadvantage.
 0.3.24
 * added flags.midi-qol.fail.skill..... support

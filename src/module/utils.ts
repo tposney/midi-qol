@@ -216,7 +216,6 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
   let targetNames = [];
   let appliedDamage;
   let workflow = (Workflow.workflows && Workflow._workflows[item?.uuid]) || {};
-  debug("Apply token damage ", damageDetail, totalDamage, theTargets, item, saves, workflow)
 
   warn("Apply token damage ", damageDetail, totalDamage, theTargets, item, saves, workflow)
 
@@ -435,4 +434,18 @@ export function checkRange(actor, item, event) {
     }
   }
   return true;
+}
+
+export function testKey(keyString, event) {
+  if (!event) return false;
+  switch (keyString) {
+    case "altKey":
+      return event?.altKey ;
+    case "shiftKey":
+      return event?.shiftKey;
+    case "ctrlKey":
+      return event?.ctrlKey || event?.metaKey;
+    default:
+      error("Impossible key mapping for speed roll")
+  }
 }

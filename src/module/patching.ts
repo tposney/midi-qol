@@ -2,6 +2,7 @@ import { log, warn, debug, i18n, error } from "../midi-qol";
 import { Workflow, noKeySet } from "./workflow";
 import { doItemRoll, doAttackRoll, doDamageRoll } from "./itemhandling";
 import { configSettings, autoFastForwardAbilityRolls } from "./settings.js";
+import { testKey } from "./utils";
 
 
 export var rollMappings;
@@ -11,7 +12,8 @@ async function doUseSpell(item, ...args) {
     || (game.user.targets.size > 0) // there are some target selected
     || (item.data.data.target?.type === "self") // self target
     || (item.hasAreaTarget && configSettings.autoTarget) // area effectspell and we will auto target
-    || (configSettings.rangeTarget && item.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(item.data.data.target?.type)); // rangetarget
+    || (configSettings.rangeTarget && item.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(item.data.data.target?.type)) // rangetarget
+    || (!this.hasAttack && !this.hasDamage && !this.hasSave); // does not do anything - need to chck dynamic effects
   if (!shouldAllowRoll) {
     ui.notifications.warn(i18n("midi-qol.noTargets"));
     warn(`${game.username} attempted to roll with no targets selected`)
@@ -84,7 +86,19 @@ export const advantageEvent = {shiftKey: true, altKey: true, ctrlKey: false, met
 export const disadvantageEvent = {shiftKey: true, altKey:false, ctrlKey: true, metaKey: true};
 export const fastforwardEvent = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
 
+function mapSpeedKeys(event) {
+  if (configSettings.speedItemRolls && configSettings.speedAbilityRolls) {
+    const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
+    const disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
+    const fastFowrd = advKey && disKey;
+    if (fastFowrd) event = fastforwardEvent;
+    else if (disKey) event = disadvantageEvent;
+    else if (advKey) event = advantageEvent;
+    return event;
+  }
+}
 function doRollSkill(skillId, options={event: {}, parts: []}) {
+  options.event = mapSpeedKeys(options.event);
   if (procAutoFailSkill(this, skillId)) {
     options.parts = ["-100"];
   }
@@ -94,7 +108,7 @@ function doRollSkill(skillId, options={event: {}, parts: []}) {
   //@ts-ignore
   const withAdvantage = opt.event.altKey || options?.event.altKey;
   //@ts-ignore
-  const withDisadvantage = opt.event.ctrlKey || opt.event.metKey || options.event?.ctrlKey || options.event?.metaKey;
+  const withDisadvantage = opt.event.ctrlKey || opt.event.metaKey || options.event?.ctrlKey || options.event?.metaKey;
   if (withAdvantage) options.event = advantageEvent;
   else if (withDisadvantage) options.event = disadvantageEvent;
   if (withAdvantage && withDisadvantage) {
@@ -111,6 +125,7 @@ var oldRollAbilitySave;
 var oldRollAbilityTest;
 
 function doAbilityRoll(func, abilityId, options={event}) {
+  options.event = mapSpeedKeys(options.event);
   warn("roll ", options)
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
     //@ts-ignore
@@ -121,10 +136,8 @@ function doAbilityRoll(func, abilityId, options={event}) {
 }
 
 function rollAbilityTest(abilityId, options={event: {}, parts: []})  {
-  if (procAutoFail(this, "check", abilityId)) {
-      options.parts = ["-100"];
-    }
-    procAdvantage(this, "check", abilityId, options);
+  if (procAutoFail(this, "check", abilityId)) options.parts = ["-100"];
+  procAdvantage(this, "check", abilityId, options);
   return doAbilityRoll.bind(this)(oldRollAbilityTest, abilityId, options)
 }
 

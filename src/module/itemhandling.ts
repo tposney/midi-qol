@@ -2,6 +2,7 @@ import { warn, debug, error, i18n, log, MESSAGETYPES } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
 import {  configSettings, itemDeleteCheck, enableWorkflow, criticalDamage } from "./settings";
 import { rollMappings } from "./patching";
+import { getSelfTargetSet } from "./utils";
 
 function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boolean, workflow: Workflow, selector: string) {
   debug("Setting up hide chat message ", hideDefaultRoll, match, workflow, selector);
@@ -110,7 +111,8 @@ export async function doItemRoll(options = {showFullCard: false, versatile: fals
   let speaker = ChatMessage.getSpeaker();
   let spellLevel = this.data.data.level; // we are called with the updated spell level so record it.
   let baseItem = this.actor.getOwnedItem(this.id);
-  let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token, speaker, event);
+  const targets = (baseItem?.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : new Set(game.user.targets);
+  let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token, speaker, targets, event);
   //@ts-ignore event .type not defined
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || options.versatile;
   // workflow.versatile = versatile;
@@ -143,6 +145,55 @@ export async function doItemRoll(options = {showFullCard: false, versatile: fals
   return itemCard;
 }
 
+export async function showItemInfo() {
+  const token = this.actor.token;
+  const sceneId = token?.scene && token.scene._id || canvas.scene._id;
+
+  const templateData = {
+    actor: this.actor,
+    tokenId: token ? `${sceneId}.${token.id}` : null,
+    item: this.data,
+    data: this.getChatData(),
+    labels: this.labels,
+    condensed: false,
+    hasAttack: false,
+    isHealing: false,
+    hasDamage: false,
+    isVersatile: false,
+    isSpell: this.type==="spell",
+    hasSave: false,
+    hasAreaTarget: false,
+    hasAttackRoll: false,
+    configSettings,
+    hideItemDetails: false};
+
+  const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
+  const template = `modules/midi-qol/templates/${templateType}-card.html`;
+  const html = await renderTemplate(template, templateData);
+
+  const chatData = {
+    user: game.user,
+    type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+    content: html,
+    speaker: {
+      actor: this.actor._id,
+      token: this.actor.token,
+      alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name,
+      // scene: canvas.scene.id
+    },
+    flags: {
+      "core": {"canPopout": true}
+    }
+  };
+  // Toggle default roll mode
+  let rollMode = game.settings.get("core", "rollMode");
+  if ( ["gmroll", "blindroll"].includes(rollMode) ) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active);
+  if ( rollMode === "blindroll" ) chatData["blind"] = true;
+  if (rollMode === "selfroll") chatData["whisper"] = [game.user.id];
+
+  // Create the chat message
+  return ChatMessage.create(chatData);
+}
 export async function showItemCard(showFullCard: boolean, workflow: Workflow, minimalCard = false) {
   warn("show item card ", this, this.actor, this.actor.token, showFullCard, workflow)
   const token = this.actor.token;
@@ -199,6 +250,10 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     "core": {"canPopout": true}
   }
   };
+  if ( (this.data.type === "consumable") && !this.actor.items.has(this.id) ) {
+    chatData.flags["dnd5e.itemData"] = this.data;
+    console.error("Adding item data to chat card", chatData.flags)
+  }
   // Toggle default roll mode
   let rollMode = game.settings.get("core", "rollMode");
   if ( ["gmroll", "blindroll"].includes(rollMode) ) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active);

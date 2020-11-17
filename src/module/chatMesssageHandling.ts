@@ -130,7 +130,7 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
     damageList.push({type, damage})
   }
   BetterRollsWorkflow.removeWorkflow(item.uuid)
-  let workflow = new BetterRollsWorkflow(actor, item, token, data.speaker, null);
+  let workflow = new BetterRollsWorkflow(actor, item, token, data.speaker, game.user.targets, null);
   workflow.isCritical = diceRoll >= criticalThreshold;
   workflow.isFumble = diceRoll === 1;
   workflow.attackTotal = attackTotal;

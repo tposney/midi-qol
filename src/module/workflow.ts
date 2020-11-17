@@ -9,12 +9,12 @@ import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
 import { configSettings, checkBetterRolls, itemRollButtons, autoRemoveTargets } from "./settings.js";
-import { getSelfTargetSet, createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated } from "./utils"
+import { getSelfTargetSet, createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey } from "./utils"
 import { config } from "process";
 import { ConfigPanel } from "./apps/ConfigPanel.js";
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
-export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metakey)}
+export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey)}
 
 export const WORKFLOWSTATES = {
   NONE : 0,
@@ -114,26 +114,13 @@ export class Workflow {
   static initActions(actions: {}) {
     Workflow._actions = actions;
   }
-  testKey(keyString, event) {
-    if (!event) return false;
-    switch (keyString) {
-      case "altKey":
-        return event?.altKey ;
-      case "shiftKey":
-        return event?.shiftKey;
-      case "ctrlKey":
-        return event?.ctrlKey || event?.metaKey;
-      default:
-        error("Impossible key mapping for speed roll")
 
-    }
-  }
   public processAttackEventOptions(event) {
     if (configSettings.speedItemRolls && !this.isBetterRollsWorkflow) {
       //TOD make this configurable
-      const advKey = this.testKey(configSettings.keyMapping["DND5E.Advantage"], event);
-      const disKey = this.testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
-      const versaKey = this.testKey(configSettings.keyMapping["DND5E.Versatile"], event);
+      const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
+      const disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
+      const versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
       this.rollOptions.advantage = this.rollOptions.advantage || ((advKey && !disKey) || false);
       this.rollOptions.disadvantage = this.rollOptions.disadvantage || ((disKey && !advKey) || false);
 
@@ -183,10 +170,10 @@ export class Workflow {
   public processDamageEventOptions(event) { 
     // if we have an event here it means they clicked on the damage button?
     if (configSettings.speedItemRolls && !this.isBetterRollsWorkflow) {
-      const disKey = this.testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
-      const critKey = this.testKey(configSettings.keyMapping["DND5E.Critical"], event);
-      const advKey = this.testKey(configSettings.keyMapping["DND5E.Advantage"], event);
-      const versaKey = this.testKey(configSettings.keyMapping["DND5E.Versatile"], event);
+      const disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
+      const critKey = testKey(configSettings.keyMapping["DND5E.Critical"], event);
+      const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
+      const versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
       const fastForwardKey = advKey && disKey
       this.rollOptions.critical = this.isCritical || critKey;
       this.rollOptions.fastForward = ["all", "damage"].includes(configSettings.autoFastForward);
@@ -234,9 +221,10 @@ export class Workflow {
       this.rollOptions.advantage = false;
       this.rollOptions.disadvantage = false;
     }
+    console.error("rollOptions ", attackAdvantage, attackAdvantage, this.rollOptions)
   }
 
-  constructor(actor: Actor5e, item: Item5e, token, speaker, event: any) {
+  constructor(actor: Actor5e, item: Item5e, token, speaker, targets, event: any) {
     this.rollOptions = duplicate(defaultRollOptions);
     this.processAttackEventOptions(event);
     this.actor = actor;
@@ -253,7 +241,7 @@ export class Workflow {
     }
     this.tokenId = token || speaker.token;
     this.speaker = speaker;
-    this.targets = (item?.data.data.target?.type === "self") ? getSelfTargetSet(actor) : new Set(game.user.targets);
+    this.targets = targets; 
     this.saves = new Set();
     this.failedSaves = new Set(this.targets)
     this.hitTargets = new Set(this.targets);
@@ -988,20 +976,13 @@ export class Workflow {
   }
 
   processAttackRoll() {
-    if (isNewerVersion(game.data.version, "0.6.9") ) {
-      //@ts-ignore
-      this.diceRoll = this.attackRoll.results[0];
-     //@ts-ignore
-      //@ts-ignore .terms undefined
-      this.isCritical = this.diceRoll  >= this.attackRoll.terms[0].options.critical;
-      //@ts-ignore .terms undefined
-      this.isFumble = this.diceRoll <= this.attackRoll.terms[0].options.fumble;
-    } else {
-
-      this.diceRoll = this.attackRoll.dice[0].total;
-      this.isCritical = this.diceRoll  >= this.attackRoll.parts[0].options.critical;
-      this.isFumble = this.diceRoll <= this.attackRoll.parts[0].options.fumble;
-    }
+    //@ts-ignore
+    this.diceRoll = this.attackRoll.results[0];
+    //@ts-ignore
+    //@ts-ignore .terms undefined
+    this.isCritical = this.diceRoll  >= this.attackRoll.terms[0].options.critical;
+    //@ts-ignore .terms undefined
+    this.isFumble = this.diceRoll <= this.attackRoll.terms[0].options.fumble;
     this.attackTotal = this.attackRoll.total;
     debug("processItemRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble)
   }
@@ -1087,13 +1068,13 @@ export class DamageOnlyWorkflow extends Workflow {
   constructor(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll, 
         options: {flavor: string, itemCardId: string}) {
 
-    super(actor, null, token, ChatMessage.getSpeaker(), shiftOnlyEvent)
+    super(actor, null, token, ChatMessage.getSpeaker(), new Set(targets), shiftOnlyEvent)
     this.damageTotal = damageTotal;
     this.damageDetail = [{type: damageType,  damage: damageTotal}];
     this.damageRoll = roll;
     this.flavor = options.flavor;
     this.defaultDamageType = CONFIG.DND5E.damageTypes[damageType] || damageType;
-    this.targets = new Set(targets);
+    // this.targets = new Set(targets);
     this.itemCardId = options.itemCardId;
     warn("Damage only workflow data", options, this)
     this.next(WORKFLOWSTATES.NONE);
@@ -1134,8 +1115,8 @@ export class TrapWorkflow extends Workflow {
   saveTargets: any;
 
   constructor(actor: Actor5e, item: Item5e, targets: [Token], trapCenter: {x: number, y: number} = undefined, trapSound: {playlist: string , sound: string} = undefined,  event: any = null) {
-    super(actor, item, null, ChatMessage.getSpeaker(), event);
-    this.targets = new Set(targets);
+    super(actor, item, null, ChatMessage.getSpeaker(), new Set(targets), event);
+    // this.targets = new Set(targets);
     if (!this.event) this.event = duplicate(shiftOnlyEvent);
     this.trapSound = trapSound;
     this.trapCenter = trapCenter;

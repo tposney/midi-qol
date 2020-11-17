@@ -1,6 +1,7 @@
 import { itemDeleteCheck, itemRollButtons } from "./settings";
 import { i18n, debug, log, warn } from "../midi-qol";
 import { Workflow, noKeySet, shiftOnlyEvent } from "./workflow";
+import { showItemInfo } from "./itemhandling";
 
 
 let knownSheets = {
@@ -125,6 +126,9 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
               buttonsWereAdded = true;
               break;
       }
+      buttons.append(`<span class="tag"><button data-action="info">${i18n("midi-qol.buttons.info")}</button></span>`);
+      buttonsWereAdded = true;
+
       if (buttonsWereAdded) {
           buttons.append(`<br><header style="margin-top:6px"></header>`);
           // adding the buttons to the sheet
@@ -157,11 +161,13 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
                       break;
                   case "basicRoll":
                       if (item.type === "spell") {
-                        await actor.useSpell(item, { configureDialog: true , showFullCard: true});
+                        await actor.useSpell(item, { configureDialog: true, showFullCard: true});
                       }
                       else
                           await item.roll({showFullCard: true, event});
                       break;
+                  case "info":
+                    await showItemInfo.bind(item)()
               }
           });
       }

@@ -16,6 +16,12 @@
       {{localize "midi-qol.SpeedItemRolls.Hint"}}
       {{/unless}}
       {{#if configSettings.speedItemRolls}}
+
+      <div class="form-group speedAbilityRolls">
+        <label>{{localize "midi-qol.SpeedAbilityRolls.Name"}}</label>
+        <input type="checkbox" name="speedAbilityRolls" data-dtype="Boolean" {{checked configSettings.speedAbilityRolls}} />
+      </div>
+
       {{localize "midi-qol.SpeedItemRolls.Blurb"}}
       <div style="width:80%">
         <div class="form-group">
