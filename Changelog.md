@@ -1,7 +1,8 @@
 0.3.26
 Fix for consuming last of a consumable when not using automation.
 Fix for rejecting spell cast when no target selected even if there is nothing to target.
-Added speedAbilityRolls flag which applys your speed item rolls settings to ability rolls and skill rolls.
+Added speedAbilityRolls flag which applies your speed item rolls settings to ability rolls and skill rolls.
+Added info button to inventory buttons - just shows item info.
 0.3.25
 * Ability check advantage/disadvantage now apply to skills based on the ability as well. (I'm told that's how it should be)
 * added ability to give attack advantage/disadvantage on attacks (only works for midi-qol generated attacks - not better rolls)
