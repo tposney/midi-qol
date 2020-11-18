@@ -107,9 +107,8 @@ export async function doItemRoll(options = {showFullCard: false, versatile: fals
   }
   //@ts-ignore
   debug("doItemRoll ", event?.shiftKey, event?.ctrlKey, event?.altKey);
-  let pseudoEvent = {shiftKey: false, ctrlKey: false, altKey: false, metakey: false, type: undefined}
   let speaker = ChatMessage.getSpeaker();
-  let spellLevel = this.data.data.level; // we are called with the updated spell level so record it.
+  const spellLevel = this.data.data.level; // we are called with the updated spell level so record it.
   let baseItem = this.actor.getOwnedItem(this.id);
   const targets = (baseItem?.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : new Set(game.user.targets);
   let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token, speaker, targets, event);

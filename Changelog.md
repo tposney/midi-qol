@@ -1,3 +1,13 @@
+0.3.27
+* Auto fail on ability check flows throw to skill rolls for dependent skills.
+* Fix for altKey undefined on skill checks and no speedRolls.
+* Fix for saves prompting user for adv/disadv/normal when no speed rolls enabled.
+* In the quest to provide ever more arcane key combination support, Capslock now acts as an auto fastforward for atttack rolls (like adv+disadv). 
+* First installment of:
+  flags.midi-qol.fail.spell.all disable all spell casting for the character
+  flags.midi-qol.fail.spell.vocal fail casting of spells with vocal components (intended for silenced characters0)
+  flags.midi-qol.fail.spell.somatic - perhaps useful for restratined characters or some such.
+  flags.midi-qol.fail.spell.material (Can't think when this might be used but added it for completeness)
 0.3.26
 Fix for consuming last of a consumable when not using automation.
 Fix for rejecting spell cast when no target selected even if there is nothing to target.

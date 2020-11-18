@@ -3,6 +3,7 @@ import { Workflow, noKeySet } from "./workflow";
 import { doItemRoll, doAttackRoll, doDamageRoll } from "./itemhandling";
 import { configSettings, autoFastForwardAbilityRolls } from "./settings.js";
 import { testKey } from "./utils";
+import { setupSheetQol } from "./sheetQOL";
 
 
 export var rollMappings;
@@ -14,6 +15,28 @@ async function doUseSpell(item, ...args) {
     || (item.hasAreaTarget && configSettings.autoTarget) // area effectspell and we will auto target
     || (configSettings.rangeTarget && item.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(item.data.data.target?.type)) // rangetarget
     || (!this.hasAttack && !this.hasDamage && !this.hasSave); // does not do anything - need to chck dynamic effects
+  const midiFlags = this.data.flags["midi-qol"];
+  const needsVocal = item.data.data.components?.vocal;
+  const needsSomatic = item.data.data.components?.somatic;
+  const needsMaterial = item.data.data.components?.material;
+
+  if (midiFlags?.fail?.spell?.all) {
+    ui.notifications.warn("You are unable to cast the spell");
+    return;
+  }
+  if (midiFlags?.fail?.spell?.vocal && needsVocal) {
+    ui.notifications.warn("You make no sound and the spell fails");
+    return;
+  }
+  if (midiFlags?.fail?.spell?.somatic && needsSomatic) {
+    ui.notifications.warn("You can't make the gestures and the spell fails");
+    return;
+  }
+  if (midiFlags?.fail?.spell?.material && needsMaterial) {
+    ui.notifications.warn("You can't use the material component and the spell fails");
+    return;
+  }
+
   if (!shouldAllowRoll) {
     ui.notifications.warn(i18n("midi-qol.noTargets"));
     warn(`${game.username} attempted to roll with no targets selected`)
@@ -94,19 +117,18 @@ function mapSpeedKeys(event) {
     if (fastFowrd) event = fastforwardEvent;
     else if (disKey) event = disadvantageEvent;
     else if (advKey) event = advantageEvent;
-    return event;
   }
+  return event;
 }
+
 function doRollSkill(skillId, options={event: {}, parts: []}) {
   options.event = mapSpeedKeys(options.event);
-  if (procAutoFailSkill(this, skillId)) {
-    options.parts = ["-100"];
-  }
+
   let opt = {event: {}}
   procAdvantage(this, "check", this.data.data.skills[skillId].ability, opt)
   procAdvantageSkill(this, skillId, options)
   //@ts-ignore
-  const withAdvantage = opt.event.altKey || options?.event.altKey;
+  const withAdvantage = opt.event.altKey || options.event?.altKey;
   //@ts-ignore
   const withDisadvantage = opt.event.ctrlKey || opt.event.metaKey || options.event?.ctrlKey || options.event?.metaKey;
   if (withAdvantage) options.event = advantageEvent;
@@ -117,7 +139,11 @@ function doRollSkill(skillId, options={event: {}, parts: []}) {
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
     options.event = fastforwardEvent;
   }
-  return oldRollSkill.bind(this)(skillId, options)
+  if (procAutoFailSkill(this, skillId) || procAutoFail(this, "check", this.data.data.skills[skillId].ability))
+  {
+    options.parts = ["-100"];
+  }
+  return oldRollSkill.bind(this)(skillId, options);
 }
 
 

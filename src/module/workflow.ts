@@ -52,6 +52,7 @@ export class Workflow {
   displayHookId: number;
 
   event: {shiftKey: boolean, altKey: boolean, ctrlKey: boolean, metaKey: boolean, type: string};
+  capsLock: boolean;
   speaker: any;
   tokenId: string;
   targets: Set<Token>;
@@ -117,19 +118,13 @@ export class Workflow {
 
   public processAttackEventOptions(event) {
     if (configSettings.speedItemRolls && !this.isBetterRollsWorkflow) {
-      //TOD make this configurable
       const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
       const disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
       const versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
-      this.rollOptions.advantage = this.rollOptions.advantage || ((advKey && !disKey) || false);
-      this.rollOptions.disadvantage = this.rollOptions.disadvantage || ((disKey && !advKey) || false);
+      this.rollOptions.advantage = this.rollOptions.advantage || advKey;
+      this.rollOptions.disadvantage = this.rollOptions.disadvantage || disKey;
 
-      this.rollOptions.fastForward = (["all", "attack"].includes(configSettings.autoFastForward));
-      if (this.rollOptions.advantage && this.rollOptions.disadvantage) {
-        this.rollOptions.fastForward = true;
-        this.rollOptions.disadvantage = false;
-        this.rollOptions.advantage = false;
-      }
+      this.rollOptions.fastForward = this.rollOptions.fastForward || (["all", "attack"].includes(configSettings.autoFastForward));
       this.rollOptions.fastForward = this.rollOptions.fastForward || this.rollOptions.advantage || this.rollOptions.disadvantage;
       this.rollOptions.fastForward = this.rollOptions.fastForward || advKey || disKey || false;
       this.rollOptions.versatile = this.rollOptions.versatile || (versaKey || false);
@@ -157,12 +152,12 @@ export class Workflow {
       this.rollOptions.disadvantage = this.rollOptions.disadvantage || withDisadvantage;
       if (withDisadvantage) this.rollOptions.fastForward = true;
     }
+    if (this.capsLock) this.rollOptions.fastForward = true;
     if (this.rollOptions.advantage && this.rollOptions.disadvantage) {
       this.rollOptions.advantage = false;
       this.rollOptions.disadvantage = false;
       this.rollOptions.fastForward = true;
     }
-
     if (configSettings.gmFullAuto && game.user.isGM) {
       this.rollOptions.fastForward = true;
     }
@@ -221,12 +216,10 @@ export class Workflow {
       this.rollOptions.advantage = false;
       this.rollOptions.disadvantage = false;
     }
-    console.error("rollOptions ", attackAdvantage, attackAdvantage, this.rollOptions)
   }
 
   constructor(actor: Actor5e, item: Item5e, token, speaker, targets, event: any) {
     this.rollOptions = duplicate(defaultRollOptions);
-    this.processAttackEventOptions(event);
     this.actor = actor;
     this.item = item;
     if (!this.item) {
@@ -255,6 +248,8 @@ export class Workflow {
     this.attackCardData = undefined;
     this.damageCardData = undefined;
     this.event = event;
+    this.capsLock = event.getModifierState && event.getModifierState("CapsLock");
+    this.processAttackEventOptions(event);
     this.saveRequests = {};
     this.saveTimeouts = {};
 
@@ -266,7 +261,8 @@ export class Workflow {
   }
 
   public someEventKeySet() {
-    return this.event?.shiftKey || this.event?.altKey || this.event?.ctrlKey || this.event?.metaKey;
+    return this.event?.shiftKey || this.event?.altKey || this.event?.ctrlKey || this.event?.metaKey ||
+      this.rollOptions.advantage || this.rollOptions.disadvantage || this.rollOptions.fastForward;
   }
 
   static removeWorkflow(id: string) {
@@ -828,16 +824,8 @@ export class Workflow {
     let promises = [];
     // make sure saving throws are renabled.
     try {
-      /* pending removal in 0.3.12
-      if (configSettings.autoCheckSaves !== "allShow") {
-        //@ts-ignore ._hooks not defined
-        debug("Check Saves: renderChat message hooks length ", Hooks._hooks["preCreateChatMessage"]?.length)
-        this.hideSavesHookId = Hooks.on("preCreateChatMessage", this.hideSaveRolls.bind(this))
-      } else this.hideSavesHookId = null;
-    */
       for (let target of this.hitTargets) {
         if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
-     
         let advantage = false;
         // If spell, check for magic resistance
         if (this.item.data.type === "spell") {
@@ -851,6 +839,7 @@ export class Workflow {
         }
 
         let event = {};
+        // TODO need to modify this according to speed rolls settings
         if (advantage) event = {shiftKey: false, ctlKey: false, altKey: true, metaKey: false}
         else event = {shiftKey: true, ctlKey: false, altKey: false, metaKey: false}
 
@@ -892,7 +881,7 @@ export class Workflow {
           // Fall back to rolling as the current user
           if (!owner) owner = game.user;
           //@ts-ignore actor.rollAbilitySave
-          promises.push(target.actor.rollAbilitySave(this.item.data.data.save.ability, { messageData: {user: owner._id}, chatMessage: showRoll,  event, advantage}));
+          promises.push(target.actor.rollAbilitySave(this.item.data.data.save.ability, { messageData: {user: owner._id}, chatMessage: showRoll,  event: duplicate(event), advantage}));
         }
       }
     } catch (err) {
