@@ -9,120 +9,68 @@ import { installedModules } from "./setupModules";
  *  return a list of {damage: number, type: string} for the roll and the item
  */
 export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) => {
-  if (isNewerVersion(game.data.version, "0.6.9") ) {
-    let damageList = []
-    let rollTerms = roll.terms;
-    let partPos = 0;
-    let evalString;
-    let damageSpec = item ? item.data.data.damage : {parts: []};
-    debug("CreateDamageList: Passed roll is ", roll)
-    debug("CreateDamageList: Damage spec is ", damageSpec)
-    for (let [spec, type] of damageSpec.parts) {
-      debug("CreateDamageList: single Spec is ", spec, type, item)
-      if (item) {
-        let rollData = item.actor?.getRollData();
-        //@ts-ignore replaceFromulaData - blank out @fields with 0
-        let formula = Roll.replaceFormulaData(spec, rollData || {}, {missing: "0", warn: false});
-        var rollSpec: Roll = new Roll(formula, rollData || {}).roll();
-      }
-      debug("CreateDamageList: rollSpec is ", spec, rollSpec)
-
-      //@ts-ignore
-      let specLength = rollSpec.terms.length;
-      evalString = "";
-
-      //@ts-ignore
-      debug("CreateDamageList: Spec Length ", specLength, rollSpec.terms)
-      for (let i = 0; i < specLength && partPos < rollTerms.length; i++) {
-        if (typeof rollTerms[partPos] !== "object") {
-          evalString += rollTerms[partPos];
-        } else {
-          debug("CreateDamageList: roll parts ", rollTerms[partPos])
-          let total = rollTerms[partPos].total;
-          evalString += total;
-        }
-        partPos += 1;
-      }
-      let damage = new Roll(evalString).roll().total;
-      debug("CreateDamageList: Damage is ", damage, type, evalString)
-      damageList.push({ damage: damage, type: type });
-      partPos += 1; // skip the plus
-    }
-    debug(partPos, damageList)
-    evalString = "";
-    while (partPos < rollTerms.length) {
-      debug(rollTerms[partPos])
-      if (typeof rollTerms[partPos] === "object") {
-        let total = rollTerms[partPos].total;
-        evalString += total;
-      }
-      else evalString += rollTerms[partPos];
-      partPos += 1;
-    }
-    if (evalString.length > 0) {
-      debug("CreateDamageList: Extras part is ", evalString)
-      let damage = new Roll(evalString).roll().total;
-      let type = damageSpec.parts[0] ? damageSpec.parts[0][1] : defaultType;
-      damageList.push({ damage, type});
-      debug("CreateDamageList: Extras part is ", evalString)
-    }
-    debug("CreateDamageList: Final damage list is ", damageList)
-    return damageList;
-  }
-  let damageList = [];
-  let rollParts = roll.parts;
+  let damageList = []
+  let rollTerms = roll.terms;
   let partPos = 0;
   let evalString;
   let damageSpec = item ? item.data.data.damage : {parts: []};
   debug("CreateDamageList: Passed roll is ", roll)
   debug("CreateDamageList: Damage spec is ", damageSpec)
+  let negatedTerm = false;
   for (let [spec, type] of damageSpec.parts) {
     debug("CreateDamageList: single Spec is ", spec, type, item)
     if (item) {
-      var rollSpec = new Roll(spec, item.actor?.getRollData() || {}).roll();
+      let rollData = item.actor?.getRollData();
+      //@ts-ignore replaceFromulaData - blank out @fields with 0
+      let formula = Roll.replaceFormulaData(spec, rollData || {}, {missing: "0", warn: false});
+      var rollSpec: Roll = new Roll(formula, rollData || {}).roll();
     }
     debug("CreateDamageList: rollSpec is ", spec, rollSpec)
-    let specLength = rollSpec.parts.length;
+
+    //@ts-ignore
+    let specLength = rollSpec.terms.length;
     evalString = "";
 
-    debug("CreateDamageList: ", specLength, rollSpec.parts)
-    for (let i = 0; i < specLength && partPos < rollParts.length; i++) {
-      if (typeof rollParts[partPos] === "object") {
-        debug("CreateDamageList: roll parts ", rollParts[partPos])
-        let total = rollParts[partPos].total;
+    //@ts-ignore
+    debug("CreateDamageList: Spec Length ", specLength, rollSpec.terms)
+    for (let i = 0; i < specLength && partPos < rollTerms.length; i++) {
+      if (typeof rollTerms[partPos] !== "object") {
+        evalString += rollTerms[partPos];
+      } else {
+        debug("CreateDamageList: roll parts ", rollTerms[partPos])
+        let total = rollTerms[partPos].total;
         evalString += total;
       }
-      else evalString += rollParts[partPos];
       partPos += 1;
     }
     let damage = new Roll(evalString).roll().total;
     debug("CreateDamageList: Damage is ", damage, type, evalString)
-
     damageList.push({ damage: damage, type: type });
-    partPos += 1; // skip the plus
+    negatedTerm = rollTerms[partPos] === "-";
+    partPos += 1; // skip the plus/minus
   }
-  debug("CreateDamageList: ", partPos, damageList)
-
-  evalString = "";
-  while (partPos < rollParts.length) {
-    debug("CreateDamageList: ", rollParts[partPos])
-    if (typeof rollParts[partPos] === "object") {
-      let total = rollParts[partPos].total;
+  debug(partPos, damageList)
+  evalString = negatedTerm ? "-" : "";
+  while (partPos < rollTerms.length) {
+    debug(rollTerms[partPos])
+    if (typeof rollTerms[partPos] === "object") {
+      let total = rollTerms[partPos].total;
       evalString += total;
     }
-    else evalString += rollParts[partPos];
+    else evalString += rollTerms[partPos];
     partPos += 1;
   }
   if (evalString.length > 0) {
     debug("CreateDamageList: Extras part is ", evalString)
-      let damage = new Roll(evalString).roll().total;
-      let type = damageSpec.parts[0] ? damageSpec.parts[0][1] : defaultType;
-      damageList.push({ damage, type});
-      debug("CreateDamageList: Extras part is ", evalString)
+    let damage = new Roll(evalString).roll().total;
+    let type = damageSpec.parts[0] ? damageSpec.parts[0][1] : defaultType;
+    damageList.push({ damage, type});
+    debug("CreateDamageList: Extras part is ", evalString)
   }
   debug("CreateDamageList: Final damage list is ", damageList)
+
   return damageList;
-}
+} 
 
 export function getSelfTarget(actor) {
   if (actor.isPC) return actor.getActiveTokens()[0]; // if a pc always use the represented token
@@ -230,12 +178,16 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
       appliedDamage = 0;
       for (let { damage, type } of damageDetail) {
         //let mult = 1;
-          let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
-          if (!type) type = MQdefaultDamageType;
-          mult = mult * getTraitMult(a, type, item);
-          appliedDamage += Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
-          var dmgType = type;
-        }
+        let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
+        if (!type) type = MQdefaultDamageType;
+        mult = mult * getTraitMult(a, type, item);
+        appliedDamage += Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
+        var dmgType = type;
+      }
+      if (!Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType)) {
+        totalDamage = Math.max(totalDamage, 0);
+        appliedDamage = Math.max(appliedDamage, 0);
+      }
       damageList.push(calculateDamage(a, appliedDamage, t, totalDamage, dmgType));
       targetNames.push(t.name)
   }

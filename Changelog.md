@@ -1,5 +1,9 @@
+0.3.28
+* Fixed a bug in damage processing with negative modifiers (i.e. bonus/situational bonus) when applying damage. (negative mods turn positive)
+* Fixed a bug in chat damage buttons (similar to above)
+* Ensure that damage dealt can never be negative and end up incorrectly healing the target.
 0.3.27
-* Auto fail on ability check flows throw to skill rolls for dependent skills.
+* Auto fail on ability check flows through to skill rolls for dependent skills.
 * Fix for altKey undefined on skill checks and no speedRolls.
 * Fix for saves prompting user for adv/disadv/normal when no speed rolls enabled.
 * In the quest to provide ever more arcane key combination support, Capslock now acts as an auto fastforward for atttack rolls (like adv+disadv). 
@@ -37,7 +41,7 @@ flags.midi-qol.advantage.attack.all All attack rolls have advantage
 flags.midi-qol.advantage.attack.mwak melee weapon attacks have advantage   (mwak/rwak/msak/rsa)
 flags.midi-qol.advantage.ability.all all ability rolls have advantage  
 flags.midi-qol.advantage.ability.save.all all ability saves have advantage  
-flags.midi-qol.advantage.ability.save.str Strength saves have advantage (str, dex, wis, dex, cha)  
+flags.midi-qol.advantage.ability.save.str Strength saves have advantage (str, dex, wis, dex, cha, con)  
 Same for flags.midi-qol.advantage.ability.check...... for ability checks  
 
 flags.midi-qol.advantage.skill.all All skill rolls have advantage  

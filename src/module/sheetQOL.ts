@@ -4,7 +4,7 @@ import { Workflow, noKeySet, shiftOnlyEvent } from "./workflow";
 import { showItemInfo } from "./itemhandling";
 
 
-let knownSheets = {
+const knownSheets = {
   BetterNPCActor5eSheet: ".item .rollable",
   ActorSheet5eCharacter: ".item .item-image",
   BetterNPCActor5eSheetDark: ".item .rollable",

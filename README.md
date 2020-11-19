@@ -3,7 +3,10 @@ Midi-qol is a replacement for minor-qol and you should not have both modules act
 Because there are some subtle differences in the way the module works, comapared to minor-qol you will need to experiment with the settings.
 See minor-qol for most of the feature description.
 
-Changes in midi-qol:
+## HELP! My midi-qol disappeared.
+If you've just updated midi-qol and it disappears from your in game list of modules you probably need to update your dnd5e system to the latest one.
+
+### Changes in midi-qol:
 * Speed item rolls has only a single function now, to enable ctl/shift/alt when clicking on the item icon. All other workflow features are configured separately. See **speed item rolls** below.
 * There is support for a merged chat card containing attack/damage/hits/saves. (The merged card does not yet support better rolls). You can disable the merge card to restore the same operation as in minor-qol.
 * midi-qol works with MagicItems, there may be some wrinkles aoutstanding there.
@@ -17,7 +20,7 @@ https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
 ## (In)Compatibilities? ##
 Any module that overloads item.roll is potentially incompatible.  
 
-**Better Rolls** If you are using BetterRolls (which is a great module), midi-qol takes over once the hit/damage card is placed by better rolls. This means that resource consumption, template placement and critical/fumble determination is **all** handled by BetterRolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage and calls active effects.  
+**Better Rolls** If you are using BetterRolls (which is a great module), midi-qol takes over once the hit/damage card is placed by better rolls. This means that resource consumption, template placement and critical/fumble, advantage/disadvantage determination is **all** handled by BetterRolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage and calls active effects.  In particular better rolls does not support any of the flags.midi-qol.... 
 **Magic Items** Thanks to @simone for his help and midi-qol is fully compatible with magic-items. The only issue is that spell templates for spells in a mgaic item are not auto placed on cast. Once placed everything works as expected.  
 **Mess** Midi-qol and Mess dnd5e effects are not compatible. Template effects and the other features of that excellent module should work. If you want Mess attack/damage cards don't use midi-qol.  
 **Cozy player** Minor-qol was not compatible with cozy-player, with targets being lost before attack/damage rolls were made. I have done only limited testing but it seems that there are no problems with cozy-player and midi-qol.  
@@ -132,6 +135,31 @@ If the above was all too tedious here are the setings I use.
 1. The item has a save and the save fails.
 2. The item has an attack and the attack hits.
 3. There is no attack or save.
+
+## flags.midi-qol
+Midi-qol supports a number of flags values that alter how attacks/casts are rolled. They are supported by an modules that use item.rollI(), item.rollAttack(), item.rollDamage() or actor.useSpell() [the standard dnd5e rolls]. Usually you would apply these via active effects.  
+* flags.midi-qol.advantage.all  
+* flags.midi-qol.advantage.attack.all
+* flags.midi-qol.advantage.attack.mwak/rwak/msak/rsak
+* flags.midi-qol.advantage.ability.all
+* flags.midi-qol.advantage.ability.check.all
+* flags.midi-qol.advantage.ability.save.all
+* flags.midi-qol.advantage.ability.check.str/dex/wis/cha/int/con
+* flags.midi-qol.advantage.ability.save.str/dex/wis/cha/int/con
+* flags.midi-qol.advantage.skill.all
+* flags.midi-qol.advantage.skill.acr/ani/arc/ath/dec/his/ins/itm/inv/med/nat/prc/prf/per/rel/slt/ste/sur - if you have custom skills they should besupported automatically.  
+Similarly for disadvantage.  
+Advantage/disadvantage on checks for an ability check also grants advantage on the corresponding skill rolls.  
+
+flags.midi-qol.fail.all/ability.all/ability.check.all/ability.save.all/skill.all etc to auto fail a given roll.  
+
+* flags.midi-qol.fail.spell.all
+* flags.midi-qol.fail.spell.vocal/somatic/materical  
+Fails attempts to cast spells with the specified components (or all).
+
+* flags.grants.advantage.attack.all
+* flags.grants.advantage.attack.mwak/rwak/msak/rsak  
+Gives the attacker advantage on attacks made against the target. Midi-qol only checks the first target in the event that multiple are selected.
 
 ## Bugs
 probably many however....

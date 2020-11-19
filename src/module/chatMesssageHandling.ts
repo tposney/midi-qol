@@ -378,52 +378,50 @@ export let recalcCriticalDamage = (data, ...args) => {
     if (!actor) game.actors.tokens[data.speaker.token]?.actor;
     if (!actor) actor = game.actors.get(data.speaker.actor);
     let item: Item5e = actor.items.get((data.flags.dnd5e.roll.itemId));
-    if (item) {
-      if (data.flags.dnd5e.roll.critical) {
-        if (criticalDamage === "default") return;
-        if (isNewerVersion("0.7.0", game.data.version)) return;
-        let r = Roll.fromJSON(data.roll);
-        let rollBase = new Roll(r.formula);
-        if (criticalDamage === "maxDamage") {
-          //@ts-ignore .terms not defined
-          rollBase.terms = rollBase.terms.map(t => {
-            if (t?.number) t.number = t.number/2;
-            return t;
-          });
-          //@ts-ignore .evaluate not defined
-          rollBase.evaluate({maximize: true});
-          rollBase._formula = rollBase.formula;
-          data.roll = JSON.stringify(rollBase);
-          data.content = `${rollBase.total}`;
-        } else if (criticalDamage === "maxCrit") {
-          let rollCrit = new Roll(r.formula);
-          //@ts-ignore .terms not defined
-          rollCrit.terms = rollCrit.terms.map(t => {
-            if (t?.number) t.number = t.number/2;
-            if (typeof t === "number") t = 0;
-            return t;
-          });
-          //@ts-ignore .terms not defined
-          rollBase.terms = rollBase.terms.map(t => {
-            if (t?.number) t.number = t.number/2;
-            return t;
-          });
-          //@ts-ignore .evaluate not defined
-          rollCrit.evaluate({maximize: true});
-          //@ts-ignore.terms not defined
-          rollBase.terms.push("+")
-          //@ts-ignore .terms not defined
-          rollBase.terms.push(rollCrit.total)
-          rollBase._formula = rollBase.formula;
-          rollBase.roll();
-          data.total = rollBase.total;
-          data.roll = JSON.stringify(rollBase);
-        } else if (criticalDamage === "maxAll") {
-          //@ts-ignore .evaluate not defined
-          rollBase.evaluate({maximize: true});
-          data.roll = JSON.stringify(rollBase);
-          data.content = `${rollBase.total}`;
-        }
+    if (!item) return true;
+    if (data.flags.dnd5e.roll.critical) {
+      if (criticalDamage === "default") return;
+      let r = Roll.fromJSON(data.roll);
+      let rollBase = new Roll(r.formula);
+      if (criticalDamage === "maxDamage") {
+        //@ts-ignore .terms not defined
+        rollBase.terms = rollBase.terms.map(t => {
+          if (t?.number) t.number = t.number/2;
+          return t;
+        });
+        //@ts-ignore .evaluate not defined
+        rollBase.evaluate({maximize: true});
+        rollBase._formula = rollBase.formula;
+        data.roll = JSON.stringify(rollBase);
+        data.content = `${rollBase.total}`;
+      } else if (criticalDamage === "maxCrit") {
+        let rollCrit = new Roll(r.formula);
+        //@ts-ignore .terms not defined
+        rollCrit.terms = rollCrit.terms.map(t => {
+          if (t?.number) t.number = t.number/2;
+          if (typeof t === "number") t = 0;
+          return t;
+        });
+        //@ts-ignore .terms not defined
+        rollBase.terms = rollBase.terms.map(t => {
+          if (t?.number) t.number = t.number/2;
+          return t;
+        });
+        //@ts-ignore .evaluate not defined
+        rollCrit.evaluate({maximize: true});
+        //@ts-ignore.terms not defined
+        rollBase.terms.push("+")
+        //@ts-ignore .terms not defined
+        rollBase.terms.push(rollCrit.total)
+        rollBase._formula = rollBase.formula;
+        rollBase.roll();
+        data.total = rollBase.total;
+        data.roll = JSON.stringify(rollBase);
+      } else if (criticalDamage === "maxAll") {
+        //@ts-ignore .evaluate not defined
+        rollBase.evaluate({maximize: true});
+        data.roll = JSON.stringify(rollBase);
+        data.content = `${rollBase.total}`;
       }
     }
   }
@@ -448,7 +446,8 @@ export let processBetterRollsChatCard = (message, html, data) => {
 }
 
 export let chatDamageButtons = (message, html, data) => {
-  debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll.type, message.data.flags)
+  debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll?.type, message.data.flags)
+
   if (!addChatDamageButtons) return true;
   if (message.data.flags?.dnd5e?.roll.type === "damage") {
     const itemId = message.data.flags.dnd5e.roll.itemId;
@@ -501,9 +500,10 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, 
               let a = t.actor;
               let appliedDamage = 0;
               for (let { damage, type } of damageList) {
-                  let typeMult = mult * Math.abs(getTraitMult(a, type, item,)); // ignore damage type for buttons
-                  appliedDamage += Math.floor(Math.abs(damage * typeMult)) * Math.sign(typeMult);
+                  appliedDamage += Math.floor(damage * getTraitMult(a, type, item));
               }
+              appliedDamage = Math.floor(Math.abs(appliedDamage)) * mult;
+
               let damageItem = calculateDamage(a, appliedDamage, t, totalDamage, "");
               promises.push(a.update({ "data.attributes.hp.temp": damageItem.newTempHP, "data.attributes.hp.value": damageItem.newHP }));
           }
