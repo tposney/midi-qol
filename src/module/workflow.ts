@@ -248,7 +248,7 @@ export class Workflow {
     this.attackCardData = undefined;
     this.damageCardData = undefined;
     this.event = event;
-    this.capsLock = event.getModifierState && event.getModifierState("CapsLock");
+    this.capsLock = event?.getModifierState && event.getModifierState("CapsLock");
     this.processAttackEventOptions(event);
     this.saveRequests = {};
     this.saveTimeouts = {};
