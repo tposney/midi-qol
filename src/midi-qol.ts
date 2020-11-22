@@ -22,6 +22,7 @@ import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
 import { initializeDSNHandler } from './module/chatMesssageHandling';
 import { applyTokenDamage, getTraitMult } from './module/utils';
 import { ConfigPanel } from './module/apps/ConfigPanel';
+import { doCritModify } from './module/itemhandling';
 
 export let debugEnabled = 0;
 // 0 = none, warnings = 1, debug = 2, all = 3
@@ -122,7 +123,8 @@ function setupMinorQolCompatibility() {
     DamageOnlyWorkflow,
     Workflow,
     ConfigPanel: ConfigPanel,
-    getTraitMult: getTraitMult
+    getTraitMult: getTraitMult,
+    doCritModify: doCritModify
   }
 }
 

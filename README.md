@@ -1,7 +1,6 @@
 # midi-qol
 Midi-qol is a replacement for minor-qol and you should not have both modules active at the same time, but both can be installed at the same time.
 Because there are some subtle differences in the way the module works, comapared to minor-qol you will need to experiment with the settings.
-See minor-qol for most of the feature description.
 
 ## HELP! My midi-qol disappeared.
 If you've just updated midi-qol and it disappears from your in game list of modules you probably need to update your dnd5e system to the latest one.
@@ -20,14 +19,14 @@ https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
 ## (In)Compatibilities? ##
 Any module that overloads item.roll is potentially incompatible.  
 
-**Better Rolls** If you are using BetterRolls (which is a great module), midi-qol takes over once the hit/damage card is placed by better rolls. This means that resource consumption, template placement and critical/fumble, advantage/disadvantage determination is **all** handled by BetterRolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage and calls active effects.  In particular better rolls does not support any of the flags.midi-qol.... 
-**Magic Items** Thanks to @simone for his help and midi-qol is fully compatible with magic-items. The only issue is that spell templates for spells in a mgaic item are not auto placed on cast. Once placed everything works as expected.  
+**Better Rolls** If you are using BetterRolls (which is a great module), midi-qol takes over once the hit/damage card is placed by better rolls. This means that resource consumption, template placement and critical/fumble, advantage/disadvantage determination are **all** handled by BetterRolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage and calls active effects.  In particular better rolls does not use any of the flags.midi-qol....   
+**Magic Items** Thanks to @simone for his help and midi-qol is fully compatible with magic-items. The only issue is that spell templates for spells in a mgaic item are not auto placed on cast. Once placed everything works as expected.   
 **Mess** Midi-qol and Mess dnd5e effects are not compatible. Template effects and the other features of that excellent module should work. If you want Mess attack/damage cards don't use midi-qol.  
 **Cozy player** Minor-qol was not compatible with cozy-player, with targets being lost before attack/damage rolls were made. I have done only limited testing but it seems that there are no problems with cozy-player and midi-qol.  
 **Cautious GM** Midi-qol breaks the blind chats by hidden GM feature of cautious GM.  
 **Chat Portraits** If using Chat portraits the changes made by midi-qol to the token/actor name in chat cards are overwritten/lost. Choose which sort of highlighting you want - only one will work. Otherwise all seems to work.
 **Ez-Roller** The send to chat log feature of ez-roller will disable combo cards in midi-qol.  
-**Combat Utility Belt** There seems to be an incompatibility with CUB if you have Use Token Names set in midi-qol. The symptoms of the issue vary, but include many console error messages, not being able to roll attacks/damage or being unable to update some actors. If you use CUB disable Use Token Names in midi-qol  
+**Combat Utility Belt** There seems to be an incompatibility with CUB if you have Use Token Names set in midi-qol, so **DO NOT SET THIS IN Midi-qol** if you use CUB, which I do. The symptoms of the issue vary, but include many console error messages, not being able to roll attacks/damage or being unable to update some actors. If you use CUB disable Use Token Names in midi-qol  
 
 ## Technical Differences compared to minor-qol:
 * midi-qol does not use the creation of chat messages as the trigger anymore, rather it hooks the standard item.roll, item.rollAttack, item.rollDamage. This means it is automatically compatible with any actor/npc sheet that uses standrd rolls (almost all of them)
@@ -50,7 +49,7 @@ If you enable spee abilty rolls as well your key mappings will apply to ability 
 If you assign a key multiple meanings the behaviour is going to be confusing at best.
 
 ### Display ###
-* **Card styles** Midi-qol supports two options for item/attack/damge/save rolls. The combo card merges all of those rolls into a single card. If Megre card is disabled you will get a separate chat card for each roll, the default dnd5e look and feel. The condensed combo card simply put attack and damage next to eachother to convserve a bit more space.
+* **Card styles** Midi-qol supports two options for item/attack/damge/save rolls. The combo card merges all of those rolls into a single card. If Megre card is disabled you will get a separate chat card for each roll, the default dnd5e look and feel. The condensed combo card simply put attack and damage next to eachother to convserve a bit more space.  
 * **Item display**. You can configure whether the item details are included in the combo card. If disabled the item descrition is not added to the card. If enabld you can use the dnd5e setting to choose if it is expanded or hidden when displayed. 
 * **Hide Token names**. If the field is blank actual actor/token names will be used in the chat card, hits/saves display for non-GMs. If set to a string the actual names will be replaced in the chat cards with the string. This feature is not a replacement for Combat Utility Belts hide names feature, rather it addresses those fields that CUB does not know about. For full hiding of names on cards and the tracker you need to use CUB in conjunction with midi-qol.
 * **Chat cards use token name** By default chat cards are sent with the name of the actor (i.e. "Orc"). If enabled the name of the token will be used instead (i.e. "Orc with a terrible limp").
@@ -75,9 +74,11 @@ If you assign a key multiple meanings the behaviour is going to be confusing at 
 ** The default behaviour is **
   * Assume a saving throw does half damage **unless**:
     * The item is found in a module default list of no-damage spells, SRD cantrips plus SRD spells Disintegrate etc. These are search for by the name of the item being cast, so if you change the name of the spell it will go back to 1/2 damage.
-    * The item has the exact text "no damage on save" in its description in which case there is no damage on save.  
+    * The item has the exact text "no damage on save" in its description in which case there is no damage on save. 
 If you want to use saving throws to control the application of dynamic effects or calling macros etc, but to not affect the damage applied, think of a weapon that does damage and requires a saving throw or be poisoned. To support those set **Check Spell Text** to true. The behaviour becomes.
   * A saving throw has no effect on damage caused **unless** the item has the exact text "half as much damage" (used in the SRD) or "half damage" in the spell description.
+  * The item has the exact text "no damage on save" in its description in which case there is no damage on save.   
+For weapons the weapon properties (if set) take precedence over the description fields.
 
 ### Hits ###
 You can enable auto checking of hits. Funbles automatically miss and criticals automatically hit. As GM you can mouse over the name of the hit target to highlight the token and click to select it. This is useful if you are not auto applying damage, since you can do all the damage application from the chat log, by clicking on the targets name, the clicking on the appropriate damage button.

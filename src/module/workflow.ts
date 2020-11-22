@@ -193,6 +193,7 @@ export class Workflow {
       shiftKey: this.rollOptions.fastForward,
       altKey: this.rollOptions.critical && this.rollOptions.fastForward
     }
+    this.isCritical = this.isCritical || this.rollOptions.critical;
   }
 
   checkTargetAdvantage() {
@@ -249,7 +250,9 @@ export class Workflow {
     this.damageCardData = undefined;
     this.event = event;
     this.capsLock = event?.getModifierState && event.getModifierState("CapsLock");
-    this.processAttackEventOptions(event);
+    if (this.item && !this.item.hasAttack) this.processDamageEventOptions(event);
+    else this.processAttackEventOptions(event);
+
     this.saveRequests = {};
     this.saveTimeouts = {};
 
@@ -360,6 +363,7 @@ export class Workflow {
  
         }
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
+        Hooks.callAll("midi-qol.AttackRollComplete", this);
         if ((configSettings.autoRollDamage === "onHit" && this.hitTargets.size === 0 && this.targets.size !== 0)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
         return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
 
@@ -440,23 +444,13 @@ export class Workflow {
       case WORKFLOWSTATES.APPLYDYNAMICEFFECTS:
         // no item, not auto effects or not module skip
         if (!this.item || !configSettings.autoItemEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED);
-        const hasDynamicEffects = installedModules.get("dynamiceffects") && (this.item?.data.flags?.dynamiceffects?.effects.some(ef => ef.active));
         const hasDAE = installedModules.get("dae") && (this.item?.effects?.entries.some(ef => ef.data.transfer === false));
         // no dynamiceffects skip
         let applicationTargets = new Set();
         if (this.item.hasSave) applicationTargets = this.failedSaves;
         else if (this.item.hasAttack) applicationTargets = this.hitTargets;
         else applicationTargets = this.targets;
-        if (hasDynamicEffects) {
-          warn("Application targets are ", applicationTargets)
-          if (applicationTargets?.size) { // perhaps apply item effects
-            //@ts-ignore
-            let de = window.DynamicEffects;
-            debug("Calling dynamic effects with ", applicationTargets, de)
-            de.doEffects({item: this.item, actor: this.item.actor, activate: true, targets: applicationTargets, 
-                  whisper: true, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId}) 
-          }
-        } else if (hasDAE) {
+        if (hasDAE) {
           //@ts-ignore
           let dae = window.DAE;
           dae.doEffects(this.item, true, applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId})
@@ -646,7 +640,8 @@ export class Workflow {
     const templateData = {
       attackType: this.item.name,
       oneCard: configSettings.mergeCard,
-      hits: this.hitDisplayData, 
+      hits: this.hitDisplayData,
+      isCritical: this.isCritical, 
       isGM: game.user.isGM,
     }
     warn("displayHits ", templateData, whisper, doMerge);

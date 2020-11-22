@@ -42,6 +42,7 @@ async function doUseSpell(item, ...args) {
     warn(`${game.username} attempted to roll with no targets selected`)
     return;
   }
+  if (this.sheet.rendered && item?.hasAreaTarget) this.sheet.minimize();
   return rollMappings.useSpell.roll.bind(this)(item, ...args)
 }
 
@@ -108,6 +109,8 @@ var oldRollSkill;
 export const advantageEvent = {shiftKey: true, altKey: true, ctrlKey: false, metaKey: false};
 export const disadvantageEvent = {shiftKey: true, altKey:false, ctrlKey: true, metaKey: true};
 export const fastforwardEvent = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
+export const baseEvent = {shiftKey: false, altKey:false, ctrlKey: false, metaKey: false};
+
 
 function mapSpeedKeys(event) {
   if (configSettings.speedItemRolls && configSettings.speedAbilityRolls) {
@@ -126,11 +129,12 @@ function doRollSkill(skillId, options={event: {}, parts: []}) {
 
   let opt = {event: {}}
   procAdvantage(this, "check", this.data.data.skills[skillId].ability, opt)
-  procAdvantageSkill(this, skillId, options)
+  let opt2 = {event: {}};
+  procAdvantageSkill(this, skillId, opt2)
   //@ts-ignore
-  const withAdvantage = opt.event.altKey || options.event?.altKey;
+  const withAdvantage = opt.event.altKey || opt2.event.altKey || options.event?.altKey;
   //@ts-ignore
-  const withDisadvantage = opt.event.ctrlKey || opt.event.metaKey || options.event?.ctrlKey || options.event?.metaKey;
+  const withDisadvantage = opt.event.ctrlKey || opt.event.metaKey || opt2.event.ctrlKey || opt.event.metaKey || options.event?.ctrlKey || options.event?.metaKey;
   if (withAdvantage) options.event = advantageEvent;
   else if (withDisadvantage) options.event = disadvantageEvent;
   if (withAdvantage && withDisadvantage) {
@@ -152,7 +156,7 @@ var oldRollAbilityTest;
 
 function doAbilityRoll(func, abilityId, options={event}) {
   options.event = mapSpeedKeys(options.event);
-  warn("roll ", options)
+  warn("roll ", options.event)
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
     //@ts-ignore
     // options.event = mergeObject(options.event, {shiftKey: true}, {overwrite: true, inplace: true})
@@ -199,16 +203,16 @@ function procAdvantage(actor, rollType, abilityId, options) {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const advantage = midiFlags.advantage ?? {};
   const disadvantage = midiFlags.disadvantage ?? {};
-  var withAdvantage;
-  var withDisadvantage;
+  var withAdvantage = options.event?.altKey;
+  var withDisadvantage = options.event?.ctrlKey || options.event?.metaKey;;
   if (advantage.ability || advantage.all) {
     const rollFlags = (advantage.ability && advantage.ability[rollType]) ?? {};
-    withAdvantage = advantage.all || advantage.ability.all || rollFlags.all || rollFlags[abilityId];
+    withAdvantage |= advantage.all || advantage.ability.all || rollFlags.all || rollFlags[abilityId];
     if (withAdvantage) options.event = advantageEvent;
   }
   if (disadvantage.ability || disadvantage.all) {
     const rollFlags = (disadvantage.ability && disadvantage.ability[rollType]) ?? {};
-    withDisadvantage = disadvantage.all || disadvantage.ability.all || rollFlags.all || rollFlags[abilityId];
+    withDisadvantage |= disadvantage.all || disadvantage.ability.all || rollFlags.all || rollFlags[abilityId];
     if (withDisadvantage) options.event = disadvantageEvent
   }
   if (withAdvantage && withDisadvantage) options.event = fastforwardEvent;

@@ -386,7 +386,7 @@ export let recalcCriticalDamage = (data, ...args) => {
       if (criticalDamage === "maxDamage") {
         //@ts-ignore .terms not defined
         rollBase.terms = rollBase.terms.map(t => {
-          if (t?.number) t.number = t.number/2;
+          if (t?.number) t.number = Math.floor(t.number/2);
           return t;
         });
         //@ts-ignore .evaluate not defined
@@ -398,13 +398,13 @@ export let recalcCriticalDamage = (data, ...args) => {
         let rollCrit = new Roll(r.formula);
         //@ts-ignore .terms not defined
         rollCrit.terms = rollCrit.terms.map(t => {
-          if (t?.number) t.number = t.number/2;
+          if (t?.number) t.number = Math.ceil(t.number/2);
           if (typeof t === "number") t = 0;
           return t;
         });
         //@ts-ignore .terms not defined
         rollBase.terms = rollBase.terms.map(t => {
-          if (t?.number) t.number = t.number/2;
+          if (t?.number) t.number = Math.floor(t.number/2);
           return t;
         });
         //@ts-ignore .evaluate not defined

@@ -251,7 +251,6 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   };
   if ( (this.data.type === "consumable") && !this.actor.items.has(this.id) ) {
     chatData.flags["dnd5e.itemData"] = this.data;
-    console.error("Adding item data to chat card", chatData.flags)
   }
   // Toggle default roll mode
   let rollMode = game.settings.get("core", "rollMode");
@@ -343,30 +342,29 @@ export function selectTargets(scene, data, options) {
   }, 250);
 };
 
-function doCritModify(result: Roll) {
+export function doCritModify(result: Roll) {
   if (criticalDamage === "default") return result;
-  if (isNewerVersion("0.7.0", game.data.version)) return result;;
   let rollBase = new Roll(result.formula);
   if (criticalDamage === "maxDamage") {// max base damage
     //@ts-ignore .terms not defined
     rollBase.terms = rollBase.terms.map(t => {
-      if (t?.number) t.number = t.number/2;
+      if (t?.number) t.number = Math.floor(t.number/2);
       return t;
     });
     //@ts-ignore .evaluate not defined
     rollBase.evaluate({maximize: true});
-    return result;
+    return rollBase;
   } else if (criticalDamage === "maxCrit") { // see about maximising one dice out of the two
     let rollCrit = new Roll(result.formula);
     //@ts-ignore .terms not defined
     rollCrit.terms = rollCrit.terms.map(t => {
-      if (t?.number) t.number = t.number/2;
+      if (t?.number) t.number = Math.ceil(t.number/2);
       if (typeof t === "number") t = 0;
       return t;
     });
     //@ts-ignore .terms not defined
     rollBase.terms = rollBase.terms.map(t => {
-      if (t?.number) t.number = t.number/2;
+      if (t?.number) t.number = Math.floor(t.number/2);
       return t;
     });
     //@ts-ignore .evaluate not defined

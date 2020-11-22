@@ -17,7 +17,7 @@ export let setupModules = () => {
     if (game.modules.get(name)?.data.version && !installedModules.get(name)) {
       if (game.modules.get(name)?.active)
         error(`midi-qol requires ${name} to be of version ${modules[name]} or later, but it is version ${game.modules.get(name).data.version}`);
-      else error(`module ${name} not active`)
+      else console.warn(`module ${name} not active - some features disabled`)
     }
   }
   if (debugEnabled > 0)

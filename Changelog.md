@@ -1,3 +1,29 @@
+0.3.30
+* Fix bug in critical damage roll handling of "max base damage".
+* Improve, but not completely fix, case of odd number of dice in critical rolls and max crit damage. 
+* Correctly pass critical key to feats/spells that do not have an attack roll.
+* Fix for speed key setting and advnantage/disadvantage flags not working to gether.
+* Export MidiQOL.doCritModify(roll), whcih will adjust the roll according to the midi-qol critical damage settings. Useful for macro writers writing damage macros that want to deal with critical damage consistenlty with the midi-qol game settings.
+* Call Hooks.callAll("midi-qol.AttackRollComplete",.... when the attack roll is complete for a workflow. This allows processing if the attack missed and damage is not rolled.
+
+
+Example Divine smite onUse macro (assuming divine smite as a spell)
+```
+if (args[0].hitTargets.size === 0) {
+  console.error("no target selected/hit");
+  return
+}
+let target = canvas.tokens.get(args[0].hitTargets[0]._id)
+let numDice = 1 + args[0].spellLevel;
+let undead = ["undead", "fiend"].some(type => (target.actor.data.data.details.type || "").toLowerCase().includes(type));
+if (undead) numDice += 1;
+if (args[0].isCritical) numDice = numDice * 2;
+let damageRoll = new Roll(`${numDice}d8`).roll();
+if (args[0].isCritical) damageRoll = MidiQOL.doCritModify(damageRoll);
+new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[0].itemCardId})
+```
+0.3.29
+Fix bug for trap workflow and better rolls workflow when no event passed to constructor.
 0.3.28
 * Fixed a bug in damage processing with negative modifiers (i.e. bonus/situational bonus) when applying damage. (negative mods turn positive)
 * Fixed a bug in chat damage buttons (similar to above)
