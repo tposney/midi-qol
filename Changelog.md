@@ -2,9 +2,9 @@
 * Fix bug in critical damage roll handling of "max base damage".
 * Improve, but not completely fix, case of odd number of dice in critical rolls and max crit damage. 
 * Correctly pass critical key to feats/spells that do not have an attack roll.
-* Fix for speed key setting and advnantage/disadvantage flags not working to gether.
-* Export MidiQOL.doCritModify(roll), whcih will adjust the roll according to the midi-qol critical damage settings. Useful for macro writers writing damage macros that want to deal with critical damage consistenlty with the midi-qol game settings.
-* Call Hooks.callAll("midi-qol.AttackRollComplete",.... when the attack roll is complete for a workflow. This allows processing if the attack missed and damage is not rolled.
+* Fix for speed key setting and advnantage/disadvantage flags not working together.
+* Export MidiQOL.doCritModify(roll), which will adjust the roll according to the midi-qol critical damage settings. Useful for macro writers writing damage macros that want to deal with critical damage consistently with the midi-qol game settings.
+* Call Hooks.callAll("midi-qol.AttackRollComplete",.... when the attack roll is complete for a workflow. This allows processing if the attack missed and/or damage is not rolled.
 
 
 Example Divine smite onUse macro (assuming divine smite as a spell)

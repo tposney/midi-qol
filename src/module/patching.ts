@@ -134,7 +134,7 @@ function doRollSkill(skillId, options={event: {}, parts: []}) {
   //@ts-ignore
   const withAdvantage = opt.event.altKey || opt2.event.altKey || options.event?.altKey;
   //@ts-ignore
-  const withDisadvantage = opt.event.ctrlKey || opt.event.metaKey || opt2.event.ctrlKey || opt.event.metaKey || options.event?.ctrlKey || options.event?.metaKey;
+  const withDisadvantage = opt.event.ctrlKey || opt.event.metaKey || opt2.event.ctrlKey || opt2.event.metaKey || options.event?.ctrlKey || options.event?.metaKey;
   if (withAdvantage) options.event = advantageEvent;
   else if (withDisadvantage) options.event = disadvantageEvent;
   if (withAdvantage && withDisadvantage) {
@@ -155,7 +155,7 @@ var oldRollAbilitySave;
 var oldRollAbilityTest;
 
 function doAbilityRoll(func, abilityId, options={event}) {
-  options.event = mapSpeedKeys(options.event);
+
   warn("roll ", options.event)
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
     //@ts-ignore
@@ -167,6 +167,7 @@ function doAbilityRoll(func, abilityId, options={event}) {
 
 function rollAbilityTest(abilityId, options={event: {}, parts: []})  {
   if (procAutoFail(this, "check", abilityId)) options.parts = ["-100"];
+  options.event = mapSpeedKeys(options.event);
   procAdvantage(this, "check", abilityId, options);
   return doAbilityRoll.bind(this)(oldRollAbilityTest, abilityId, options)
 }
@@ -175,6 +176,7 @@ function rollAbilitySave(abilityId, options={event: {}, parts: []})  {
   if (procAutoFail(this, "save", abilityId)) {
     options.parts = ["-100"];
   }
+  options.event = mapSpeedKeys(options.event);
   procAdvantage(this, "save", abilityId, options);
   return doAbilityRoll.bind(this)(oldRollAbilitySave, abilityId, options)
 }
@@ -207,12 +209,12 @@ function procAdvantage(actor, rollType, abilityId, options) {
   var withDisadvantage = options.event?.ctrlKey || options.event?.metaKey;;
   if (advantage.ability || advantage.all) {
     const rollFlags = (advantage.ability && advantage.ability[rollType]) ?? {};
-    withAdvantage |= advantage.all || advantage.ability.all || rollFlags.all || rollFlags[abilityId];
+    withAdvantage = withAdvantage || advantage.all || advantage.ability.all || rollFlags.all || rollFlags[abilityId];
     if (withAdvantage) options.event = advantageEvent;
   }
   if (disadvantage.ability || disadvantage.all) {
     const rollFlags = (disadvantage.ability && disadvantage.ability[rollType]) ?? {};
-    withDisadvantage |= disadvantage.all || disadvantage.ability.all || rollFlags.all || rollFlags[abilityId];
+    withDisadvantage = withDisadvantage || disadvantage.all || disadvantage.ability.all || rollFlags.all || rollFlags[abilityId];
     if (withDisadvantage) options.event = disadvantageEvent
   }
   if (withAdvantage && withDisadvantage) options.event = fastforwardEvent;
