@@ -52,7 +52,8 @@ let createReverseDamageCard = async (data) => {
   let tokenIdList = [];
   let templateData = { 
     damageApplied: ["yes", "yesCard"].includes(data.autoApplyDamage) ? "HP Updated" : "HP Not Updated",
-    damageList: [] 
+    damageList: [] ,
+    needsButtonAll: false
   };
   for (let { tokenID, actorID, tempDamage, hpDamage, totalDamage, appliedDamage } of damageList) {
     let scene = canvas.scene;
@@ -126,6 +127,8 @@ let createReverseDamageCard = async (data) => {
     });
     templateData.damageList.push(listItem);
   }
+  templateData.needsButtonAll = damageList.length > 1;
+
   //@ts-ignore
   const results = await Promise.allSettled(promises);
   warn("GM action results are ", results)
@@ -161,6 +164,38 @@ async function doClick(event, tokenId, absDamage, mult) {
 
 export let processUndoDamageCard = async(message, html, data) => {
   if (!message.data.flags?.midiqol?.undoDamage) return true;
+  let button = html.find("#all-reverse");
+  button.click((ev) => {
+    message.data.flags.midiqol.undoDamage.forEach(async ({tokenID, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
+      let token = canvas.tokens.get(tokenID);
+      if (!token?.actor) {
+        ui.notifications.warn("Token not found in scene")
+        console.warn(`Process damage button: Actor for token ${tokenID} not found`);
+        return;
+      }
+      let actor = token.actor;
+      log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
+      await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP });
+      ev.stopPropagation();
+    })
+  })
+
+  button = html.find("#all-apply");
+  button.click((ev) => {
+    message.data.flags.midiqol.undoDamage.forEach(async ({tokenID, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
+      let token = canvas.tokens.get(tokenID);
+      if (!token?.actor) {
+        ui.notifications.warn("Token not found in scene")
+        console.warn(`Process damage button: Actor for token ${tokenID} not found`);
+        return;
+      }
+      let actor = token.actor;
+      log(`Setting HP to ${newTempHP} and ${newHP}`);
+      await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP });
+      ev.stopPropagation();
+    })
+  })
+
   message.data.flags.midiqol.undoDamage.forEach(({tokenID, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
     let button = html.find(`#reverse-${tokenID}`);
       //TODO clean this up - one handler with
@@ -189,13 +224,14 @@ export let processUndoDamageCard = async(message, html, data) => {
       await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP });
       ev.stopPropagation();
     });
+    button = html.find("#all-apply");
+
     button = html.find(`#full-${tokenID}`);
     button.click(async (ev) => doClick(ev, tokenID, absDamage, 1));
     button = html.find(`#half-${tokenID}`);
     button.click(async (ev) => doClick(ev, tokenID, absDamage, 0.5));
     button = html.find(`#double-${tokenID}`);
     button.click(async (ev) => doClick(ev, tokenID, absDamage, 2));
-
     button = html.find(`#heal-${tokenID}`);
     button.click(async (ev) => doClick(ev, tokenID, absDamage, -1));
   })

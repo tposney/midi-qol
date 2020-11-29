@@ -158,8 +158,8 @@ flags.midi-qol.fail.all/ability.all/ability.check.all/ability.save.all/skill.all
 * flags.midi-qol.fail.spell.vocal/somatic/materical  
 Fails attempts to cast spells with the specified components (or all).
 
-* flags.grants.advantage.attack.all
-* flags.grants.advantage.attack.mwak/rwak/msak/rsak  
+* flags.midi-qol.grants.advantage.attack.all
+* flags.midi-qol.grants.advantage.attack.mwak/rwak/msak/rsak  
 Gives the attacker advantage on attacks made against the target. Midi-qol only checks the first target in the event that multiple are selected.
 
 ## Bugs

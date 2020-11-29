@@ -1,3 +1,12 @@
+0.3.32
+Add damage all/restore all buttons to damage card.
+Hightlight/select enabled for damage card as well as hits card.
+Fix for trap workflow not fastforwarding damage rolls
+Don't error if target token has no actor data.
+Added a "No Damage" damage type for spells like sleep where the applied damage is always 0.
+Fix for crit-key = shift causing all spells without an attack to roll crit damage
+Process events passed to item.roll({event}), which got dropped by mistake
+0.3.31
 0.3.30
 * Fix bug in critical damage roll handling of "max base damage".
 * Improve, but not completely fix, case of odd number of dice in critical rolls and max crit damage. 

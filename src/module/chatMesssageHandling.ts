@@ -380,6 +380,7 @@ export let recalcCriticalDamage = (data, ...args) => {
     let item: Item5e = actor.items.get((data.flags.dnd5e.roll.itemId));
     if (!item) return true;
     if (data.flags.dnd5e.roll.critical) {
+      //TODO look at item to get correct damage roll
       if (criticalDamage === "default") return;
       let r = Roll.fromJSON(data.roll);
       let rollBase = new Roll(r.formula);
@@ -395,6 +396,7 @@ export let recalcCriticalDamage = (data, ...args) => {
         data.roll = JSON.stringify(rollBase);
         data.content = `${rollBase.total}`;
       } else if (criticalDamage === "maxCrit") {
+        //TODO validate #crit dice from item details
         let rollCrit = new Roll(r.formula);
         //@ts-ignore .terms not defined
         rollCrit.terms = rollCrit.terms.map(t => {

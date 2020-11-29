@@ -163,6 +163,8 @@ export class Workflow {
     }
   }
   public processDamageEventOptions(event) { 
+    // trap workflows are fastforward by default.
+    this.rollOptions.fastForward = this.__proto__.constructor.name === "TrapWorkflow";
     // if we have an event here it means they clicked on the damage button?
     if (configSettings.speedItemRolls && !this.isBetterRollsWorkflow) {
       const disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
@@ -171,7 +173,7 @@ export class Workflow {
       const versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
       const fastForwardKey = advKey && disKey
       this.rollOptions.critical = this.isCritical || critKey;
-      this.rollOptions.fastForward = ["all", "damage"].includes(configSettings.autoFastForward);
+      this.rollOptions.fastForward = this.rollOptions.fastForward || ["all", "damage"].includes(configSettings.autoFastForward);
       this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || fastForwardKey;
       this.rollOptions.versatile = this.rollOptions.versatile || versaKey;
       if (fastForwardKey) this.rollOptions.critical = this.isCritical;
@@ -188,11 +190,6 @@ export class Workflow {
       this.rollOptions.fastForward = true;
     }
     this.rollOptions.spellLevel = this.itemLevel;
-    //TODO get rid of this when rolldamage accepts options
-    this.rollOptions.event = {
-      shiftKey: this.rollOptions.fastForward,
-      altKey: this.rollOptions.critical && this.rollOptions.fastForward
-    }
     this.isCritical = this.isCritical || this.rollOptions.critical;
   }
 
@@ -200,7 +197,7 @@ export class Workflow {
     if (!this.item) return;
     if (!this.targets?.size) return;
     const firstTarget = this.targets.values().next().value;
-    const grants = firstTarget.actor.data.flags["midi-qol"]?.grants;
+    const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants;
     if (!grants) return;
 
     const actionType = this.item.data.data.actionType;
@@ -1222,20 +1219,20 @@ export class TrapWorkflow extends Workflow {
         if (this.damageDetail.length) processDamageRoll(this, this.damageDetail[0].type)
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
 
-        case WORKFLOWSTATES.ROLLFINISHED:
-        // area effect trap, put back the targets the way they were
-        if (this.saveTargets && this.item.hasAreaTarget) {
-            game.user.targets.forEach(t => {
-              //@ts-ignore
-              t.setTarget(false, { releaseOthers: false });
-            });
-            game.user.targets.clear();
-            this.saveTargets.forEach(t => {
-              t.setTarget(true, {releaseOthers: false})
-              game.user.targets.add(t)
-            })
-          }
-          return super._next(WORKFLOWSTATES.ROLLFINISHED);
+      case WORKFLOWSTATES.ROLLFINISHED:
+      // area effect trap, put back the targets the way they were
+      if (this.saveTargets && this.item.hasAreaTarget) {
+          game.user.targets.forEach(t => {
+            //@ts-ignore
+            t.setTarget(false, { releaseOthers: false });
+          });
+          game.user.targets.clear();
+          this.saveTargets.forEach(t => {
+            t.setTarget(true, {releaseOthers: false})
+            game.user.targets.add(t)
+          })
+        }
+        super._next(WORKFLOWSTATES.ROLLFINISHED);
 
       default:
         return super._next(newState);

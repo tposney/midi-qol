@@ -113,20 +113,20 @@ export const baseEvent = {shiftKey: false, altKey:false, ctrlKey: false, metaKey
 
 
 function mapSpeedKeys(event) {
-  if (configSettings.speedItemRolls && configSettings.speedAbilityRolls) {
+  if (configSettings.speedItemRolls) { //  && configSettings.speedAbilityRolls) {
     const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
     const disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
     const fastFowrd = advKey && disKey;
     if (fastFowrd) event = fastforwardEvent;
     else if (disKey) event = disadvantageEvent;
     else if (advKey) event = advantageEvent;
+    else event = baseEvent;
   }
   return event;
 }
 
 function doRollSkill(skillId, options={event: {}, parts: []}) {
   options.event = mapSpeedKeys(options.event);
-
   let opt = {event: {}}
   procAdvantage(this, "check", this.data.data.skills[skillId].ability, opt)
   let opt2 = {event: {}};

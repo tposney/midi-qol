@@ -152,5 +152,6 @@
     "midi-qol.DragDropTarget.Name": "Drag and Drop Targeting",
     "midi-qol.DragDropTarget.Hint": "Allow dragging an item onto a token to attack it",
     "midi-qol.GMFullAuto.Name": "GM Auto roll attack/damage",
-    "midi-qol.GMFullAuto.Hint": "If set GM rolls ignore the workflow settings and auto roll attacks and damage"
+    "midi-qol.GMFullAuto.Hint": "If set GM rolls ignore the workflow settings and auto roll attacks and damage",
+    "midi-qol.midi-none": "No Damage"
 }

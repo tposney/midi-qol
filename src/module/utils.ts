@@ -145,7 +145,7 @@ Uncanny Dodge
 
 export let getTraitMult = (actor, dmgTypeString, item) => {
   if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) return -1;
-
+  if (dmgTypeString.includes("midi-none")) return 0;
   if (configSettings.damageImmunities !== "none" && dmgTypeString !== "") {
     // if not checking all damage counts as magical
     const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);

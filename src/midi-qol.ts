@@ -93,6 +93,7 @@ Hooks.once('setup', function() {
   CONFIG.DND5E.weaponProperties["mgc"] = i18n("midi-qol.magicalProp");
   CONFIG.DND5E.weaponProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
   CONFIG.DND5E.weaponProperties["faulldam"] = i18n("midi-qol.fullDamageSaveProp")
+  CONFIG.DND5E.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
   //@ts-ignore
   noDamageSaves = i18n("midi-qol.noDamageonSaveSpells").map(name => cleanSpellName(name));
   setupSheetQol();

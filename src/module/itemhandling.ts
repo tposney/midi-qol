@@ -75,6 +75,11 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
   // we actually want to collect the html from the damage roll, so need to rendere and grab
   hideChatMessage(configSettings.mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
   workflow.processDamageEventOptions(event);
+      //TODO get rid of this when rolldamage accepts options
+  workflow.rollOptions.event = {
+      shiftKey: workflow.rollOptions.fastForward,
+      altKey: workflow.rollOptions.critical && workflow.rollOptions.fastForward
+    };
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
@@ -90,7 +95,7 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
   return result;
 }
 
-export async function doItemRoll(options = {showFullCard: false, versatile: false}) {
+export async function doItemRoll(options = {showFullCard: false, versatile: false, event: null}) {
   if (!enableWorkflow) {
     return rollMappings.itemRoll.roll.bind(this)({configureDialog:true, rollMode:null, createMessage:true});
   }
@@ -108,10 +113,11 @@ export async function doItemRoll(options = {showFullCard: false, versatile: fals
   //@ts-ignore
   debug("doItemRoll ", event?.shiftKey, event?.ctrlKey, event?.altKey);
   let speaker = ChatMessage.getSpeaker();
+
   const spellLevel = this.data.data.level; // we are called with the updated spell level so record it.
   let baseItem = this.actor.getOwnedItem(this.id);
   const targets = (baseItem?.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : new Set(game.user.targets);
-  let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token, speaker, targets, event);
+  let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token, speaker, targets, (options.event ? options.event : event));
   //@ts-ignore event .type not defined
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || options.versatile;
   // workflow.versatile = versatile;
