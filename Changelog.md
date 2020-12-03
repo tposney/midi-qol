@@ -1,3 +1,21 @@
+0.3.33
+* Added a new flags.midi-qol.DR which implements damage reduction, i.e. reduce incoming damage by a fixed amount
+flags.midi-qol.DR.all - all incoming damage
+flags.midi-qol.DR.non-magical - non-magical bludgeoning/slashing/piercing
+flags.midi-qol.DR.acid - specific damage types
+flags.midi-qol.DR.bludgeoning
+flags.midi-qol.DR.cold
+flags.midi-qol.DR.fire
+flags.midi-qol.DR.force
+flags.midi-qol.DR.lightning
+etc
+These flags can be set by active effects and are evaluated after derived fields are calclulated, so things like dex.mod etc ar available.
+
+* fix for templates and large tokens.
+* fix for npcs requiring players to roll saves.
+* Added Hooks.callAll("midi-qol.DamageRollComplete", workflow) after damage has been applied.
+* updated de.json
+
 0.3.32
 Add damage all/restore all buttons to damage card.
 Hightlight/select enabled for damage card as well as hits card.

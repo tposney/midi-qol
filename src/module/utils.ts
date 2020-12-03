@@ -176,6 +176,7 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
       let a = t?.actor;
       if (!a) continue;
       appliedDamage = 0;
+      const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
       for (let { damage, type } of damageDetail) {
         //let mult = 1;
         let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
@@ -183,7 +184,18 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
         mult = mult * getTraitMult(a, type, item);
         appliedDamage += Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
         var dmgType = type;
+        let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
+        appliedDamage -= DRType;
+        if (["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
+          DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
+          appliedDamage -= DRType;
+        }
+        // consider mwak damage redution
       }
+      const DR = parseInt(getProperty(t.actor.data, "flags.midi-qol.DR.all")) || 0;
+      appliedDamage -= DR;
+
+
       if (!Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType)) {
         totalDamage = Math.max(totalDamage, 0);
         appliedDamage = Math.max(appliedDamage, 0);
@@ -284,7 +296,7 @@ export function requestPCSave(ability, playerId, actorId, advantage, flavor, dc,
 export function midiCustomEffect(actor, change) {
   if (!change.key.startsWith("flags.midi-qol")) return;
   //@ts-ignore
-  const val = Number.isNumber(change.value) ? parseInt(change.value) : 1;
+  const val = Number.isNumeric(change.value) ? parseInt(change.value) : 1;
   setProperty(actor.data, change.key, change.value)
 }
 

@@ -324,16 +324,28 @@ export function selectTargets(scene, data, options) {
       if (!selfTarget && this.token === t.id) {
         return false;
       }
-      // skip special tokens with a race of trigger
-      if (t.actor.data.data.details.race === "trigger") return false;
       t = canvas.tokens.get(t.id);
-      if (!shape.contains(t.center.x - tdx, t.center.y - tdy))
-        return false;
-      if (!wallsBlockTargeting)
-        return true;
-      // construct a ray and check for collision
-      let r = new Ray({ x: t.center.x, y: t.center.y}, templateDetails.data);
-      return !canvas.walls.checkCollision(r);
+      // skip special tokens with a race of trigger
+      if (t.actor.data?.data.details.race === "trigger") return false;
+      const w = t.width >= 1 ? 0.5 : t.data.width / 2;
+      const h = t.height >= 1 ? 0.5 : t.data.height / 2;
+      const gridSize = canvas.scene.data.grid;
+      let contained = false;
+      for (let xstep = w; xstep < t.data.width && !contained; xstep++) {
+        for (let ystep = h; ystep < t.data.height && !contained; ystep++) {
+          const tx = t.x + xstep * gridSize;
+          const ty = t.y + ystep * gridSize;
+          if (shape.contains(tx - tdx, ty - tdy)) {
+            if (!wallsBlockTargeting) {
+              contained = true;
+            } else {
+              let r = new Ray({ x: tx, y: ty}, templateDetails.data);
+              contained = !canvas.walls.checkCollision(r);
+            }
+          }
+        }
+      }
+      return contained;
     }).forEach(t => {
       t.setTarget(true, { user: game.user, releaseOthers: false });
       game.user.targets.add(t);

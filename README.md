@@ -162,6 +162,19 @@ Fails attempts to cast spells with the specified components (or all).
 * flags.midi-qol.grants.advantage.attack.mwak/rwak/msak/rsak  
 Gives the attacker advantage on attacks made against the target. Midi-qol only checks the first target in the event that multiple are selected.
 
+
+* flags.midi-qol.DR.all - all incoming damage
+* flags.midi-qol.DR.non-magical - non-magical bludgeoning/slashing/piercing
+* flags.midi-qol.DR.acid - specific damage types
+* flags.midi-qol.DR.bludgeoning
+* flags.midi-qol.DR.cold
+* flags.midi-qol.DR.fire
+* flags.midi-qol.DR.force
+* flags.midi-qol.DR.lightning
+* etc  
+These flags can be used to grant damage reduction to a character and can be set by active effects and are evaluated after derived fields are calclulated, so things like dex.mod etc ar available.  
+flags.midi-qol.DR.all upgrade 3, will give 3 points of damage reduction to all incoming damage.
+
 ## Bugs
 probably many however....
 * Language translations are not up to date.

@@ -436,6 +436,7 @@ export class Workflow {
       case WORKFLOWSTATES.ALLROLLSCOMPLETE:
         debug("all rolls complete ", this.damageDetail)
         if (this.damageDetail.length) processDamageRoll(this, this.damageDetail[0].type)
+        Hooks.callAll("midi-qol.DamageRollComplete", this)
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
 
       case WORKFLOWSTATES.APPLYDYNAMICEFFECTS:
@@ -873,7 +874,7 @@ export class Workflow {
           // Fall back to rolling as the current user
           if (!owner) owner = game.user;
           //@ts-ignore actor.rollAbilitySave
-          promises.push(target.actor.rollAbilitySave(this.item.data.data.save.ability, { messageData: {user: owner._id}, chatMessage: showRoll,  event: duplicate(event), advantage}));
+          promises.push(target.actor.rollAbilitySave(this.item.data.data.save.ability, { messageData: {user: owner._id}, chatMessage: showRoll,  event: duplicate(event), mapKeys: false, advantage}));
         }
       }
     } catch (err) {
@@ -1265,6 +1266,7 @@ export class BetterRollsWorkflow extends Workflow {
           await this.checkHits();
           await this.displayHits(configSettings.autoCheckHit === "whisper", configSettings.mergeCard);
         }
+        Hooks.callAll("midi-qol.AttackRollComplete", this);
         return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMGEROLL:
@@ -1284,6 +1286,7 @@ export class BetterRollsWorkflow extends Workflow {
         }
         if (this.item.hasSave) return this.next(WORKFLOWSTATES.WAITFORSAVES)
         processDamageRoll(this, "psychic");
+        Hooks.callAll("midi-qol.DamageRollComplete", this)
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
 
       default: 
