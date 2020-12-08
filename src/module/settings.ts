@@ -108,8 +108,9 @@ let getParams = () => {
 const settings = [
   {
     name: "EnableWorkflow",
-    scope: "world",
+    scope: "client",
     default: true,
+    config: true,
     type: Boolean,
     onChange: fetchParams
   },

@@ -1,3 +1,27 @@
+0.3.34
+* Slight fix to self targets, should now work without targeting self
+* added flags.midi-qol.advantage.attack.dex/str/wis etc to give advantage on dex/str/wis etc mwak/rwak
+* added flags.midi-qol.disadvantage.attack.dex/str/wis etc to give disadvantage on dex/str/wis etc mwak/rwak
+[BREAKING] "enable workflow automation" is now a client setting, rather than a world setting. This means that players can choose workflow enabled or not independently of the GM and must set it for their client. Default is workflow automation enabled.
+* Fix for aborted attack/damage rolls advancing the workflow. Attack/damage buttons remain active until a roll is made (either auto or manual) or a new item roll for that item is started.
+* Process damage flavor data for bonus damage (traits/situational bonus) when calclulating damage types, so a bonus of 1d6[Fire] will be recognised as fire damage. If no damage flavor is specified ti will be treated as having a flavor euqal to the first damage type in the item spec.
+* Correctly bucket damage types so that multiple damage elements are added before resitances are applied.
+* Fix a bug in speed rolls for ability saves/checks ignoring the accelerator keys (introduced in 0.3.33)
+
+* [Requires DAE 0.2.25+] Items support additional active effect durations that can be specified:
+  * 1Attack: active effects last for one attack - requires workflow automation
+  * 1Action: active effects last for one action - requires workflow automation 
+  * 1Hit: active effects last until the next successful hit - requires workflow automation 
+  * turnStart: effects last until the start of self/target's next turn (check combat tracker)  
+  * turnEnd: effects last until the end of self/target's next turn (checks combat tracker)  
+  All of these effects expire at the end of combat
+* added flags.midi-qol.fail.skill..... support
+* corrected behaviour so that having both advantage and disadvantage for a roll will cancel out to be a normal roll.
+* updated ko.json thanks @KLO
+
+* Know Bugs: critical roll modifications do not preserve damage types from bonuses.
+
+
 0.3.33
 * Added a new flags.midi-qol.DR which implements damage reduction, i.e. reduce incoming damage by a fixed amount
 flags.midi-qol.DR.all - all incoming damage
@@ -9,12 +33,12 @@ flags.midi-qol.DR.fire
 flags.midi-qol.DR.force
 flags.midi-qol.DR.lightning
 etc
-These flags can be set by active effects and are evaluated after derived fields are calclulated, so things like dex.mod etc ar available.
+These flags can be set by active effects and are evaluated after derived fields are calculated, so things like dex.mod etc ar available.
 
 * fix for templates and large tokens.
 * fix for npcs requiring players to roll saves.
 * Added Hooks.callAll("midi-qol.DamageRollComplete", workflow) after damage has been applied.
-* updated de.json
+* updated de.json thanks @acd-jake
 
 0.3.32
 Add damage all/restore all buttons to damage card.

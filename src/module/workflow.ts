@@ -193,6 +193,16 @@ export class Workflow {
     this.isCritical = this.isCritical || this.rollOptions.critical;
   }
 
+  checkAbilityAdvantage() {
+    if (!["mwak", "rwak"].includes(this.item?.data.data.actionType)) return;
+    const ability = this.item?.data.data.ability ?? "str";
+    this.rollOptions.advantage |= getProperty(this.actor.data, `flags.midi-qol.advantage.attack.${ability}`);
+    this.rollOptions.disadvantage |= getProperty(this.actor.data, `flags.midi-qol.disadvantage.attack.${ability}`);
+    if (this.rollOptions.advantage && this.rollOptions.disadvantage) {
+      this.rollOptions.advantage = false;
+      this.rollOptions.disadvantage = false;
+    }
+  }
   checkTargetAdvantage() {
     if (!this.item) return;
     if (!this.targets?.size) return;
@@ -503,6 +513,12 @@ export class Workflow {
             macroCommand.execute(macroData);
           }
         }
+        const expiredEffects = this.actor.effects.filter(ef => 
+          ef.data.flags?.dae?.specialDuration === "1Action" ||
+          (ef.data.flags?.dae?.specialDuration === "1Attack" && this.item?.hasAttack) ||
+          (ef.data.flags?.dae?.specialDuration === "1Hit" && this.hitTargets.size > 0)
+        ).map(ef=>ef.id);
+        (expiredEffects.length > 0) && await this.actor.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
         delete Workflow._workflows[this.itemId];
         if (autoRemoveTargets !== "none") setTimeout(untargetDeadTokens, 500); // delay to let the updates finish
         Hooks.callAll("minor-qol.RollComplete", this); // just for the macro writers.
@@ -607,7 +623,7 @@ export class Workflow {
             || this.defaultDamageType || MQdefaultDamageType})`;
 
       //@ts-ignore .flavor not defined
-      const dmgHeader = configSettings.mergeCardCondensed ? damageString : this.damageCardData.flavor;
+      const dmgHeader = configSettings.mergeCardCondensed ? damageString : this.damageCardData?.flavor ?? this.flavor;
       let replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center" >${dmgHeader}${this.damageRollHTML || ""}</div></div>`
       content = content.replace(searchString, replaceString);
       if (!!!game.dice3d?.messageHookDisabled) {
@@ -982,6 +998,7 @@ export class Workflow {
     if (item?.data.data.target?.type === "self") {
       this.targets = new Set([canvas.tokens.get(this.tokenId)]); //TODO check this is right
       debug("Check hits - self target")
+
     } else for (let targetToken of this.targets) {
       isHit = false;
       let targetName = configSettings.useTokenNames && targetToken.name ? targetToken.name : targetToken.actor?.name;

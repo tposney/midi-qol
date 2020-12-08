@@ -165,18 +165,18 @@ function doAbilityRoll(func, abilityId, options={event}) {
   return func.bind(this)(abilityId, options)
 }
 
-function rollAbilityTest(abilityId, options={event: {}, parts: [], mapKeys: true})  {
+function rollAbilityTest(abilityId, options={event: {}, parts: []})  {
   if (procAutoFail(this, "check", abilityId)) options.parts = ["-100"];
-  if (options.mapKeys) options.event = mapSpeedKeys(options.event);
+  options.event = mapSpeedKeys(options.event);
   procAdvantage(this, "check", abilityId, options);
   return doAbilityRoll.bind(this)(oldRollAbilityTest, abilityId, options)
 }
 
-function rollAbilitySave(abilityId, options={event: {}, parts: [], mapKeys: true})  {
+function rollAbilitySave(abilityId, options={event: {}, parts: []})  {
   if (procAutoFail(this, "save", abilityId)) {
     options.parts = ["-100"];
   }
-  if (options.mapKeys) options.event = mapSpeedKeys(options.event);
+  options.event = mapSpeedKeys(options.event);
   procAdvantage(this, "save", abilityId, options);
   return doAbilityRoll.bind(this)(oldRollAbilitySave, abilityId, options)
 }

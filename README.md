@@ -137,11 +137,22 @@ If the above was all too tedious here are the setings I use.
 2. The item has an attack and the attack hits.
 3. There is no attack or save.
 
+## Special Active Effect Expiry
+* [Requires DAE 0.2.25+] Items support additional active effect durations that can be specified:
+  * 1Attack: active effects last for one attack - requires workflow automation
+  * 1Action: active effects last for one action - requires workflow automation 
+  * 1Hit: active effects last until the next successful hit - requires workflow automation 
+  * turnStart: effects last until the start of self/target's next turn (check combat tracker)  
+  * turnEnd: effects last until the end of self/target's next turn (checks combat tracker)  
+  All of these effects expire at the end of combat
+
 ## flags.midi-qol
 Midi-qol supports a number of flags values that alter how attacks/casts are rolled. They are supported by an modules that use item.rollI(), item.rollAttack(), item.rollDamage() or actor.useSpell() [the standard dnd5e rolls]. Usually you would apply these via active effects.  
 * flags.midi-qol.advantage.all  
 * flags.midi-qol.advantage.attack.all
 * flags.midi-qol.advantage.attack.mwak/rwak/msak/rsak
+* flags.midi-qol.advantage.attack.dex/str/wis etc advantage on rwak/rwak using the attribute
+* flags.midi-qol.advantage.attack.dex/str/wis... disadvantage on mwak/rwak using the attribute
 * flags.midi-qol.advantage.ability.all
 * flags.midi-qol.advantage.ability.check.all
 * flags.midi-qol.advantage.ability.save.all

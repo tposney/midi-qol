@@ -7,7 +7,7 @@ import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, WORKFLOWSTATES } from "./workflow";
 import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow } from "./settings";
-import { createDamageList, getTraitMult, calculateDamage } from "./utils";
+import { createDamageList, getTraitMult, calculateDamage, getSelfTargetSet } from "./utils";
 import { config } from "process";
 
 export const MAESTRO_MODULE_NAME = "maestro";
@@ -130,7 +130,8 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
     damageList.push({type, damage})
   }
   BetterRollsWorkflow.removeWorkflow(item.uuid)
-  let workflow = new BetterRollsWorkflow(actor, item, token, data.speaker, game.user.targets, null);
+  const targets = (item?.data.data.target?.type === "self") ? getSelfTargetSet(actor) : new Set(game.user.targets);
+  let workflow = new BetterRollsWorkflow(actor, item, token, data.speaker, targets, null);
   workflow.isCritical = diceRoll >= criticalThreshold;
   workflow.isFumble = diceRoll === 1;
   workflow.attackTotal = attackTotal;

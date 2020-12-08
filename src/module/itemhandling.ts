@@ -34,13 +34,15 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
 
   workflow.processAttackEventOptions(options?.event);
   workflow.checkTargetAdvantage();
+  workflow.checkAbilityAdvantage();
   // we actually want to collect the html from the attack roll, so need to render and grab
-  hideChatMessage(configSettings.mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
+  hideChatMessage(configSettings.mergeCard && enableWorkflow, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
   let result: Roll = await rollMappings.itemAttack.roll.bind(this)(options = workflow.rollOptions);
   if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
     workflow.targets = new Set(game.user.targets);
   }
   if (!result) { // attack roll failed.
+    return;
     workflow._next(WORKFLOWSTATES.ROLLFINISHED);
   } else {
     workflow.attackRoll = result;
@@ -73,7 +75,7 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
     return rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
   }
   // we actually want to collect the html from the damage roll, so need to rendere and grab
-  hideChatMessage(configSettings.mergeCard, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
+  hideChatMessage(configSettings.mergeCard && enableWorkflow, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
   workflow.processDamageEventOptions(event);
       //TODO get rid of this when rolldamage accepts options
   workflow.rollOptions.event = {
@@ -84,11 +86,11 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
   let result: Roll = await rollMappings.itemDamage.roll.bind(this)(workflow.rollOptions)
+  if (!result?.total) { // user backed out of damage roll or roll failed
+    return;
+  }
   if (workflow.isCritical) result = doCritModify(result);
   workflow.damageRoll = result;
-  if (!result.total) { // user backed out of damage roll
-    workflow.next(WORKFLOWSTATES.ROLLFINISHED);
-  }
   workflow.damageTotal = result.total;
   workflow.damageRollHTML = await result.render();
   workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);

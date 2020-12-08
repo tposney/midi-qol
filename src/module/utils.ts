@@ -9,8 +9,8 @@ import { installedModules } from "./setupModules";
  *  return a list of {damage: number, type: string} for the roll and the item
  */
 export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) => {
-  let damageList = []
-  let rollTerms = roll.terms;
+  let damageParts = {};
+  const rollTerms = roll.terms;
   let partPos = 0;
   let evalString;
   let damageSpec = item ? item.data.data.damage : {parts: []};
@@ -21,6 +21,7 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
     debug("CreateDamageList: single Spec is ", spec, type, item)
     if (item) {
       let rollData = item.actor?.getRollData();
+      rollData.mod = 0;
       //@ts-ignore replaceFromulaData - blank out @fields with 0
       let formula = Roll.replaceFormulaData(spec, rollData || {}, {missing: "0", warn: false});
       var rollSpec: Roll = new Roll(formula, rollData || {}).roll();
@@ -45,38 +46,51 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
     }
     let damage = new Roll(evalString).roll().total;
     debug("CreateDamageList: Damage is ", damage, type, evalString)
-    damageList.push({ damage: damage, type: type });
+    damageParts[type] = (damageParts[type] || 0) + damage;
     negatedTerm = rollTerms[partPos] === "-";
     partPos += 1; // skip the plus/minus
   }
-  debug(partPos, damageList)
-  evalString = negatedTerm ? "-" : "";
-  while (partPos < rollTerms.length) {
+  debug(partPos, damageParts);
+  partPos -= 1
+
+  // process any damage items not in the item spec
+  const validTypes = Object.entries(CONFIG.DND5E.damageTypes).deepFlatten().concat(Object.entries(CONFIG.DND5E.healingTypes).deepFlatten())
+  while (partPos < rollTerms.length -1) {
+    const sign = rollTerms[partPos] === "-" ? -1 : 1
+    partPos += 1;
+    var type = defaultType;
     debug(rollTerms[partPos])
     if (typeof rollTerms[partPos] === "object") {
-      let total = rollTerms[partPos].total;
-      evalString += total;
-    }
-    else evalString += rollTerms[partPos];
+      const die = rollTerms[partPos] instanceof DicePool ? rollTerms[partPos].dice[0] : rollTerms[partPos];
+      let total = die.total;
+      let flavor = die.options?.flavor;
+      const flavorIndex = validTypes.indexOf(flavor)
+      if (flavorIndex !== -1) {
+        if (!CONFIG.DND5E.damageTypes[flavor] && !CONFIG.DND5E.healingTypes[flavor]) {
+          // need to look up the internal flavor type from the validTypes
+          flavor = validTypes[flavorIndex - 1];
+        }
+        type = flavor
+      }
+      var term = rollTerms[partPos].total * sign;
+    } else var term = Number(rollTerms[partPos]) * sign;
+    damageParts[type] = (damageParts[type] || 0) + term;
     partPos += 1;
   }
-  if (evalString.length > 0) {
-    debug("CreateDamageList: Extras part is ", evalString)
-    let damage = new Roll(evalString).roll().total;
-    let type = damageSpec.parts[0] ? damageSpec.parts[0][1] : defaultType;
-    damageList.push({ damage, type});
-    debug("CreateDamageList: Extras part is ", evalString)
-  }
+  const damageList = Object.entries(damageParts).map(([type, damage]) => {return {damage, type}})
   debug("CreateDamageList: Final damage list is ", damageList)
-
+  //TODO remove this eventually
+  console.warn("CreateDamageList: final damage is  ", damageList, damageParts)
   return damageList;
 } 
 
 export function getSelfTarget(actor) {
-  if (actor.isPC) return actor.getActiveTokens()[0]; // if a pc always use the represented token
+  const activeToken = actor?.getActiveTokens()[0];
+  if (actor?.data.type === "character") return activeToken; // if a pc always use the represented token
+  if (actor.token) return actor.token;
   const speaker = ChatMessage.getSpeaker()
   if (speaker.token) return canvas.tokens.get(speaker.token);
-  if (actor.token) return actor.token;
+  if (activeToken) return activeToken;
   return undefined;
 }
 
