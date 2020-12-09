@@ -19,7 +19,8 @@
 
       <div class="form-group speedAbilityRolls">
         <label>{{localize "midi-qol.SpeedAbilityRolls.Name"}}</label>
-        <input type="checkbox" name="speedAbilityRolls" data-dtype="Boolean" {{checked configSettings.speedAbilityRolls}} />
+        <input type="checkbox" name="speedAbilityRolls" data-dtype="Boolean"
+          {{checked configSettings.speedAbilityRolls}} />
       </div>
 
       {{localize "midi-qol.SpeedItemRolls.Blurb"}}
@@ -42,15 +43,21 @@
   </section>
   <section>
     <div class="midi-qol-box">
-      <div class="form-group">
-        <label>{{localize "midi-qol.ShowItemDetails.Name"}}</label>
-        <select name="showItemDetails" data-dtype="String">
-          {{#select configSettings.showItemDetails}}
-          {{#each showItemDetailsOptions as |label val|}}
-          <option value="{{val}}">{{label}}</option>
-          {{/each}}
-          {{/select}}
-        </select>
+      <div class="form-group flexrow">
+        <div style="flex-grow:3">
+          <label>{{localize "midi-qol.ShowItemDetails.Name"}}</label>
+          <select name="showItemDetails" data-dtype="String">
+            {{#select configSettings.showItemDetails}}
+            {{#each showItemDetailsOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select> 
+          <label>{{localize "midi-qol.DisplayItems"}}</label>
+          <a class="itemTypeListEdit" style="flex-shrink:3" data-action="edit" title="{{localize 'midi-qol.ItemList'}}"">
+            <i class="fas fa-edit"></i>
+          </a>
+        </div>
       </div>
       <div class="midi-qol-faint">{{localize "midi-qol.ShowItemDetails.Hint"}}</div>
 

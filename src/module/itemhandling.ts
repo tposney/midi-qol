@@ -89,6 +89,7 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
   if (!result?.total) { // user backed out of damage roll or roll failed
     return;
   }
+
   if (workflow.isCritical) result = doCritModify(result);
   workflow.damageRoll = result;
   workflow.damageTotal = result.total;
@@ -119,7 +120,7 @@ export async function doItemRoll(options = {showFullCard: false, versatile: fals
   const spellLevel = this.data.data.level; // we are called with the updated spell level so record it.
   let baseItem = this.actor.getOwnedItem(this.id);
   const targets = (baseItem?.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : new Set(game.user.targets);
-  let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token, speaker, targets, (options.event ? options.event : event));
+  let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token?.id, speaker, targets, (options.event ? options.event : event));
   //@ts-ignore event .type not defined
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || options.versatile;
   // workflow.versatile = versatile;
@@ -209,6 +210,8 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
 
   let isPlayerOwned = this.actor.hasPlayerOwner;
   if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = this.actor.isPC
+  const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned)) 
+                            || !configSettings.itemTypeList.includes(this.type);
   const templateData = {
     actor: this.actor,
     tokenId: token ? `${sceneId}.${token.id}` : null,
@@ -225,8 +228,8 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     hasAreaTarget: !minimalCard && this.hasAreaTarget,
     hasAttackRoll: !minimalCard && this.hasAttack,
     configSettings,
-    hideItemDetails: ["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned)};
-
+    hideItemDetails
+  }
   const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
   const template = `modules/midi-qol/templates/${templateType}-card.html`;
   const html = await renderTemplate(template, templateData);

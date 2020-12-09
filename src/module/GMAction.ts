@@ -14,6 +14,12 @@ let processAction = async data => {
         break;
       await createReverseDamageCard(data);
       break;
+    case "removeEffects":
+      const token = canvas.tokens.get(data.tokenId);
+      if (token) {
+        token.actor?.deleteEmbeddedEntity("ActiveEffect", data.effects)
+      }
+      break;
   }
 };
 
@@ -27,7 +33,7 @@ export let setupSocket = () => {
 export function broadcastData(data) {
   data.sceneId = canvas.scene.id;
   // if not a gm broadcast the message to a gm who can apply the damage
-  if (game.user.id !== data.intendedFor) {
+  if (!game.user.isGM) {
     //@ts-ignore
     game.socket.emit(moduleSocket, data, resp => { });
   } else {

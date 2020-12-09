@@ -11,7 +11,7 @@
  */
 
 // Import TypeScript modules
-import { registerSettings, fetchParams } from './module/settings';
+import { registerSettings, fetchParams, configSettings } from './module/settings';
 import { preloadTemplates } from './module/preloadTemplates';
 import { setupModules } from './module/setupModules';
 import { itemPatching, visionPatching, actorAbilityRollPatching } from './module/patching';
@@ -80,6 +80,7 @@ Hooks.once('init', async function() {
 Hooks.once('setup', function() {
 	// Do anything after initialization but before
   // ready
+  fetchParams();
   itemPatching();
   visionPatching();
   setupModules();
@@ -123,6 +124,7 @@ function setupMinorQolCompatibility() {
     TrapWorkflow,
     DamageOnlyWorkflow,
     Workflow,
+    configSettings,
     ConfigPanel: ConfigPanel,
     getTraitMult: getTraitMult,
     doCritModify: doCritModify

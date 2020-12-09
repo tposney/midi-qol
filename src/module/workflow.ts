@@ -226,7 +226,7 @@ export class Workflow {
     }
   }
 
-  constructor(actor: Actor5e, item: Item5e, token, speaker, targets, event: any) {
+  constructor(actor: Actor5e, item: Item5e, tokenId, speaker, targets, event: any) {
     this.rollOptions = duplicate(defaultRollOptions);
     this.actor = actor;
     this.item = item;
@@ -240,7 +240,8 @@ export class Workflow {
     if (Workflow.getWorkflow(this.itemUUId)) {
       Workflow.removeWorkflow(this.itemUUId);
     }
-    this.tokenId = token || speaker.token;
+    
+    this.tokenId = tokenId ?? speaker.token;
     this.speaker = speaker;
     this.targets = targets; 
     this.saves = new Set();
@@ -454,14 +455,14 @@ export class Workflow {
         if (!this.item || !configSettings.autoItemEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED);
         const hasDAE = installedModules.get("dae") && (this.item?.effects?.entries.some(ef => ef.data.transfer === false));
         // no dynamiceffects skip
-        let applicationTargets = new Set();
-        if (this.item.hasSave) applicationTargets = this.failedSaves;
-        else if (this.item.hasAttack) applicationTargets = this.hitTargets;
-        else applicationTargets = this.targets;
+        this.applicationTargets = new Set();
+        if (this.item.hasSave) this.applicationTargets = this.failedSaves;
+        else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
+        else this.applicationTargets = this.targets;
         if (hasDAE) {
           //@ts-ignore
           let dae = window.DAE;
-          dae.doEffects(this.item, true, applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId})
+          dae.doEffects(this.item, true, this.applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId})
         }
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
@@ -494,6 +495,7 @@ export class Workflow {
             for (let failed of this.failedSaves) failedSaves.push(failed.data);
             const macroData = {
               actor: this.actor.data,
+              tokenId: this.tokenId,
               item: this.item.data,
               targets,
               hitTargets,
@@ -513,18 +515,46 @@ export class Workflow {
             macroCommand.execute(macroData);
           }
         }
-        const expiredEffects = this.actor.effects.filter(ef => 
+
+        // expire any effects on the actor that require it
+        const myExpiredEffects = this.actor.effects.filter(ef => 
           ef.data.flags?.dae?.specialDuration === "1Action" ||
           (ef.data.flags?.dae?.specialDuration === "1Attack" && this.item?.hasAttack) ||
           (ef.data.flags?.dae?.specialDuration === "1Hit" && this.hitTargets.size > 0)
         ).map(ef=>ef.id);
-        (expiredEffects.length > 0) && await this.actor.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
+        (myExpiredEffects.length > 0) && await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
+
+        // expire effects on targeted tokens as required
+        for (let target of this.targets) {
+          //@ts-ignore effects
+          const expiredEffects = target.actor?.effects?.filter(ef => {
+            const wasAttacked = this.item?.hasAttack;
+            const wasDamaged = this.item?.hasDamage && this.applicationTargets?.has(target);
+            return (ef.data.flags?.dae?.specialDuration === "isAttacked" && wasAttacked) ||
+                   (ef.data.flags?.dae?.specialDuration === "isDamaged" && wasDamaged) 
+          }).map(ef=> ef.id);
+          if (expiredEffects.length > 0) {
+            const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
+            if (!intendedGM) {
+              ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
+              error("No GM user connected - cannot remove effects");
+              return;
+            }
+            broadcastData({
+              action: "removeEffects",
+              tokenId: target.id,
+              effects: expiredEffects,
+              intendedFor: intendedGM.id
+            });
+          } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
+        }
+
         delete Workflow._workflows[this.itemId];
-        if (autoRemoveTargets !== "none") setTimeout(untargetDeadTokens, 500); // delay to let the updates finish
         Hooks.callAll("minor-qol.RollComplete", this); // just for the macro writers.
         Hooks.callAll("midi-qol.RollComplete", this);
+        if (autoRemoveTargets !== "none") setTimeout(untargetDeadTokens, 500); // delay to let the updates finish
+
         // disable sounds for when the chat card might be reloaed.
-        
         if (this.__proto__.constructor.name !== "BetterRollsWorkflow") {
           let itemCard = game.messages.get(this.itemCardId);
           let waitForDiceSoNice = configSettings.mergeCard && (this.item?.hasAttck || this.item?.hasDamage || this.item?.hasSaves);
@@ -875,7 +905,7 @@ export class Workflow {
                   delete this.saveRequests[requestId];
                   delete this.saveTimeouts[requestId];
                   //@ts-ignore actor.rollAbilitySave
-                  let result = await target.actor.rollAbilitySave(this.item.data.data.save.ability, {messageData: { user: playerId }, event: eventToUse, advantage: advantageToUse});
+                  let result = await target.actor.rollAbilitySave(this.item.data.data.save.ability, {messageData: { user: playerId }, advantage: advantageToUse, fastForward: true});
                   resolve(result);
               }
             }, (configSettings.playerSaveTimeout || 1) * 1000);
@@ -890,7 +920,7 @@ export class Workflow {
           // Fall back to rolling as the current user
           if (!owner) owner = game.user;
           //@ts-ignore actor.rollAbilitySave
-          promises.push(target.actor.rollAbilitySave(this.item.data.data.save.ability, { messageData: {user: owner._id}, chatMessage: showRoll,  event: duplicate(event), mapKeys: false, advantage}));
+          promises.push(target.actor.rollAbilitySave(this.item.data.data.save.ability, { messageData: {user: owner._id}, chatMessage: showRoll,  mapKeys: false, advantage, fastForward: true}));
         }
       }
     } catch (err) {
@@ -1190,7 +1220,7 @@ export class TrapWorkflow extends Workflow {
         debug("Rolling damage ", this.event, this.itemLevel, this.rollOptions.versatile);
         this.rollOptions.critical = this.isCritical;
         this.rollOptions.fastForward = true;
-        await this.item.rollDamage(this.rollOptions);
+        this.item.rollDamage(this.rollOptions);
         return; // wait for a damage roll to advance the state.
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:

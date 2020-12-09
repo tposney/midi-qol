@@ -155,7 +155,6 @@ var oldRollAbilitySave;
 var oldRollAbilityTest;
 
 function doAbilityRoll(func, abilityId, options={event}) {
-
   warn("roll ", options.event)
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
     //@ts-ignore

@@ -138,13 +138,16 @@ If the above was all too tedious here are the setings I use.
 3. There is no attack or save.
 
 ## Special Active Effect Expiry
-* [Requires DAE 0.2.25+] Items support additional active effect durations that can be specified:
+* [Requires DAE 0.2.25+]  Effects support additional expiry options (which apply in addition to the normal duration based expiry) (available on the DAE effect duration screen) that can be chosen:
   * 1Attack: active effects last for one attack - requires workflow automation
   * 1Action: active effects last for one action - requires workflow automation 
   * 1Hit: active effects last until the next successful hit - requires workflow automation 
   * turnStart: effects last until the start of self/target's next turn (check combat tracker)  
   * turnEnd: effects last until the end of self/target's next turn (checks combat tracker)  
-  All of these effects expire at the end of combat
+  * isAttacked: the effect lasts until the next attack against the target.
+  * isDamaged: the effect lasts until the target takes damage.
+All of these effects expire at the end of the comabt
+
 
 ## flags.midi-qol
 Midi-qol supports a number of flags values that alter how attacks/casts are rolled. They are supported by an modules that use item.rollI(), item.rollAttack(), item.rollDamage() or actor.useSpell() [the standard dnd5e rolls]. Usually you would apply these via active effects.  

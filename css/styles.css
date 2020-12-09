@@ -42,3 +42,9 @@
   border: 2px solid black;
   color: red
 }
+
+#midi-qol-item-selector .item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

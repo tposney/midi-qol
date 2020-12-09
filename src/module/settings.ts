@@ -28,6 +28,7 @@ export var configSettings = {
   speedItemRolls: false,
   speedAbilityRolls: false,
   showItemDetails: "",
+  itemTypeList: null,
   autoRollAttack: false,
   autoFastForward: "off",
   autoTarget: "none",
@@ -72,8 +73,14 @@ export let fetchParams = (silent = false) => {
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
     || !configSettings.keyMapping["DND5E.Disadvantage"]
-    || !configSettings.keyMapping["DND5E.Critical"]) 
-    configSettings.keyMapping = defaultKeyMapping;
+    || !configSettings.keyMapping["DND5E.Critical"]) configSettings.keyMapping = defaultKeyMapping;
+
+  //@ts-ignore typeLabels
+  const itemList = Object.keys(CONFIG.Item?.typeLabels ?? {});
+  if (!configSettings.itemTypeList && itemList.length > 0) {
+    configSettings.itemTypeList = itemList;
+  }
+
   enableWorkflow = game.settings.get("midi-qol", "EnableWorkflow");
   configSettings.preRollChecks = game.settings.get("midi-qol", "PreRollChecks")
   warn("Fetch Params Loading", configSettings);
