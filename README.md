@@ -5,6 +5,13 @@ Because there are some subtle differences in the way the module works, comapared
 ## HELP! My midi-qol disappeared.
 If you've just updated midi-qol and it disappears from your in game list of modules you probably need to update your dnd5e system to the latest one.
 
+## 0.7.8 + Hotfix
+If you are running 0.7.8 plus the hotfix then processing of damage flavours is broken, that is damage flavors don't work. If you want them to come back changes lines 7661 of foundry.js to look like this:
+```
+    if (hasInner) {
+      const formula = this.constructor.cleanFormula(this.terms);
+      this.terms = this._identifyTerms(formula, {step: 1});
+    }
 ### Changes in midi-qol:
 * Speed item rolls has only a single function now, to enable ctl/shift/alt when clicking on the item icon. All other workflow features are configured separately. See **speed item rolls** below.
 * There is support for a merged chat card containing attack/damage/hits/saves. (The merged card does not yet support better rolls). You can disable the merge card to restore the same operation as in minor-qol.
