@@ -1,13 +1,16 @@
+0.3.36
+added flags.midi-qol.advantage.deathSave, added flags.midi-qol.disadvantage.deathSave, and death saves also look at flags.midi-qol.(dis)advantage.all
+
 0.3.35
 * fixed a bug with speed rolls/auto check saves that caused the attacking player to be prompted for the save type for NPCs.
-
 * added support for configurable list of items that have item details displayed
+* added current token's tokenId as argument to onUseMacro data.
 
 [BREAKING] change to special expiry effects: (Reuqires DAE 0.2.27)
 * removed from item duration (too cluttered)
 * added as option field in Effect Duration panel. (You must use DAE effect editor). The special expriy conditions apply in addition to the normal duration.
 * Added support for isAttacked and isDamaged expiry conditions.
-Example: Guiding Bolt. Start with the SRD guiding bolt spell 
+Example: Guiding Bolt. Start wi th the SRD guiding bolt spell 
   * Bring up the DAE editor and add an effect.
   * On the duration tab, set the duration to be 1 round + 1 turn and the special expiry isAttacked.
   * On the effects tab add an effect

@@ -153,6 +153,26 @@ function doRollSkill(skillId, options={event: {}, parts: []}) {
 
 var oldRollAbilitySave;
 var oldRollAbilityTest;
+var oldRollDeathSave;
+
+function rollDeathSave(options) {
+  console.error("Roll death save ", options, this.data.flags);
+  const event = mapSpeedKeys(options.event);
+  const advFlags = getProperty(this.data.flags, "midi-qol")?.advantage ?? {};
+  const disFlags = getProperty(this.data.flags, "midi-qol")?.disadvantage ?? {};
+
+  console.error("flags", advFlags, disFlags)
+  options.advantage = event.altKey || advFlags.deathSave || advFlags.all;
+  options.disadvantage = event.ctrlKey || event.metaKey || disFlags.deathSave || disFlags.all;
+  options.fastForward = event.altKey && (event.ctrklKey || options.metaKey);
+  
+  if (autoFastForwardAbilityRolls) options.fastForward = true;
+  if (options.advantage && options.disadvantage) {
+    options.advantage = options.disadvantage = false;
+  }
+  console.error("options are ", options)
+  return oldRollDeathSave.bind(this)(options);
+}
 
 function doAbilityRoll(func, abilityId, options={event}) {
   warn("roll ", options.event)
@@ -200,6 +220,7 @@ function procAutoFailSkill(actor, skillId) {
   }
   return false;
 }
+
 function procAdvantage(actor, rollType, abilityId, options) {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const advantage = midiFlags.advantage ?? {};
@@ -297,6 +318,8 @@ export let actorAbilityRollPatching = () => {
   oldRollAbilityTest = CONFIG.Actor.entityClass.prototype.rollAbilityTest;
   //@ts-ignore
   oldRollSkill = CONFIG.Actor.entityClass.prototype.rollSkill;
+  //@ts-ignore
+  oldRollDeathSave = CONFIG.Actor.entityClass.prototype.rollDeathSave;
 
   log("Patching rollAbilitySave")
   //@ts-ignore
@@ -308,4 +331,9 @@ export let actorAbilityRollPatching = () => {
   log("Patching rollSkill");
   //@ts-ignore
   CONFIG.Actor.entityClass.prototype.rollSkill = doRollSkill;
+  log("Patching rollDeathSave");
+  console.error("Patching rollDeathSave");
+  //@ts-ignore
+  CONFIG.Actor.entityClass.prototype.rollDeathSave = rollDeathSave;
+
 }

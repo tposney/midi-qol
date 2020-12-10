@@ -158,7 +158,7 @@ All of these effects expire at the end of the comabt
 
 ## flags.midi-qol
 Midi-qol supports a number of flags values that alter how attacks/casts are rolled. They are supported by an modules that use item.rollI(), item.rollAttack(), item.rollDamage() or actor.useSpell() [the standard dnd5e rolls]. Usually you would apply these via active effects.  
-* flags.midi-qol.advantage.all  
+* flags.midi-qol.advantage.all  - gives advantage as if all of the settings below were set
 * flags.midi-qol.advantage.attack.all
 * flags.midi-qol.advantage.attack.mwak/rwak/msak/rsak
 * flags.midi-qol.advantage.attack.dex/str/wis etc advantage on rwak/rwak using the attribute
@@ -170,6 +170,7 @@ Midi-qol supports a number of flags values that alter how attacks/casts are roll
 * flags.midi-qol.advantage.ability.save.str/dex/wis/cha/int/con
 * flags.midi-qol.advantage.skill.all
 * flags.midi-qol.advantage.skill.acr/ani/arc/ath/dec/his/ins/itm/inv/med/nat/prc/prf/per/rel/slt/ste/sur - if you have custom skills they should besupported automatically.  
+* flags.midi-qol.advantage.deathSave - gives advantage on death saves
 Similarly for disadvantage.  
 Advantage/disadvantage on checks for an ability check also grants advantage on the corresponding skill rolls.  
 
@@ -184,6 +185,10 @@ Fails attempts to cast spells with the specified components (or all).
 Gives the attacker advantage on attacks made against the target. Midi-qol only checks the first target in the event that multiple are selected.
 
 
+* flags.midi-qol.critical.all
+* flags.midi-qol.critical.mwak/rwak/msak/rsak/other
+* flags.midi-qol.noCritical.all
+* flags.midi-qol.noCritical.mwak/rwak/msak/rsak/other
 * flags.midi-qol.DR.all - all incoming damage
 * flags.midi-qol.DR.non-magical - non-magical bludgeoning/slashing/piercing
 * flags.midi-qol.DR.acid - specific damage types

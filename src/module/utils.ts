@@ -198,15 +198,18 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
         mult = mult * getTraitMult(a, type, item);
         appliedDamage += Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
         var dmgType = type;
-        let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
+//         let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
+        let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).roll().total;
         appliedDamage -= DRType;
         if (["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
-          DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
+           DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"))).roll().total;
+//         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
           appliedDamage -= DRType;
         }
         // consider mwak damage redution
       }
-      const DR = parseInt(getProperty(t.actor.data, "flags.midi-qol.DR.all")) || 0;
+      const DR = (new Roll((getProperty(t.actor.data, "flags.midi-qol.DR.all") || "0"))).roll().total;
+//      const DR = parseInt(getProperty(t.actor.data, "flags.midi-qol.DR.all")) || 0;
       appliedDamage -= DR;
 
 
