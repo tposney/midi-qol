@@ -12,7 +12,7 @@ If you are running 0.7.8 plus the hotfix then processing of damage flavours is b
       const formula = this.constructor.cleanFormula(this.terms);
       this.terms = this._identifyTerms(formula, {step: 1});
     }
-    ```
+```
 ### Changes in midi-qol:
 * Speed item rolls has only a single function now, to enable ctl/shift/alt when clicking on the item icon. All other workflow features are configured separately. See **speed item rolls** below.
 * There is support for a merged chat card containing attack/damage/hits/saves. (The merged card does not yet support better rolls). You can disable the merge card to restore the same operation as in minor-qol.
