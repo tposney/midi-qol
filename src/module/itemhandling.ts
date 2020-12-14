@@ -103,7 +103,7 @@ export async function doDamageRoll({event = null, spellLevel = null, versatile =
 }
 
 export async function doItemRoll(options = {showFullCard: false, createWorkflow: true, versatile: false, event: null}) {
-  if (!enableWorkflow || !options.createWorkflow) {
+  if (!enableWorkflow || options.createWorkflow === false) {
     return rollMappings.itemRoll.roll.bind(this)({configureDialog:true, rollMode:null, createMessage:true});
   }
   const shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
@@ -163,6 +163,7 @@ export async function doItemRoll(options = {showFullCard: false, createWorkflow:
   }
   workflow.itemLevel = this.data.data.level;
   if (this.type === "spell") {
+    //TODO look to use returned data when available
     let spellStuff = result.content?.match(/.*data-spell-level="(.*)">/);
     const level = parseInt(spellStuff[1]) || this.data.data.level;
     workflow.itemLevel = level;
