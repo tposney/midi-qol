@@ -161,7 +161,7 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
                       break;
                   case "basicRoll":
                       if (item.type === "spell") {
-                        await actor.useSpell(item, { configureDialog: true, showFullCard: true});
+                        item.rolll({configureDialog: true, showFullCard: true, event});
                       }
                       else
                           await item.roll({showFullCard: true, event});

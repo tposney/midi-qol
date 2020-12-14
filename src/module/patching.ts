@@ -7,44 +7,6 @@ import { setupSheetQol } from "./sheetQOL";
 
 
 export var rollMappings;
-var oldActorUseSpell;
-async function doUseSpell(item, ...args) {
-  const shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
-    || (game.user.targets.size > 0) // there are some target selected
-    || (item.data.data.target?.type === "self") // self target
-    || (item.hasAreaTarget && configSettings.autoTarget) // area effectspell and we will auto target
-    || (configSettings.rangeTarget && item.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(item.data.data.target?.type)) // rangetarget
-    || (!this.hasAttack && !this.hasDamage && !this.hasSave); // does not do anything - need to chck dynamic effects
-  const midiFlags = this.data.flags["midi-qol"];
-  const needsVocal = item.data.data.components?.vocal;
-  const needsSomatic = item.data.data.components?.somatic;
-  const needsMaterial = item.data.data.components?.material;
-
-  if (midiFlags?.fail?.spell?.all) {
-    ui.notifications.warn("You are unable to cast the spell");
-    return;
-  }
-  if (midiFlags?.fail?.spell?.vocal && needsVocal) {
-    ui.notifications.warn("You make no sound and the spell fails");
-    return;
-  }
-  if (midiFlags?.fail?.spell?.somatic && needsSomatic) {
-    ui.notifications.warn("You can't make the gestures and the spell fails");
-    return;
-  }
-  if (midiFlags?.fail?.spell?.material && needsMaterial) {
-    ui.notifications.warn("You can't use the material component and the spell fails");
-    return;
-  }
-
-  if (!shouldAllowRoll) {
-    ui.notifications.warn(i18n("midi-qol.noTargets"));
-    warn(`${game.username} attempted to roll with no targets selected`)
-    return;
-  }
-  if (this.sheet.rendered && item?.hasAreaTarget) this.sheet.minimize();
-  return rollMappings.useSpell.roll.bind(this)(item, ...args)
-}
 
 function restrictVisibility() {
   // Tokens
@@ -111,7 +73,6 @@ export const disadvantageEvent = {shiftKey: true, altKey:false, ctrlKey: true, m
 export const fastforwardEvent = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
 export const baseEvent = {shiftKey: false, altKey:false, ctrlKey: false, metaKey: false};
 
-
 function mapSpeedKeys(event) {
   if (configSettings.speedItemRolls) { //  && configSettings.speedAbilityRolls) {
     const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
@@ -156,12 +117,10 @@ var oldRollAbilityTest;
 var oldRollDeathSave;
 
 function rollDeathSave(options) {
-  console.error("Roll death save ", options, this.data.flags);
   const event = mapSpeedKeys(options.event);
   const advFlags = getProperty(this.data.flags, "midi-qol")?.advantage ?? {};
   const disFlags = getProperty(this.data.flags, "midi-qol")?.disadvantage ?? {};
 
-  console.error("flags", advFlags, disFlags)
   options.advantage = event.altKey || advFlags.deathSave || advFlags.all;
   options.disadvantage = event.ctrlKey || event.metaKey || disFlags.deathSave || disFlags.all;
   options.fastForward = event.altKey && (event.ctrklKey || options.metaKey);
@@ -170,7 +129,6 @@ function rollDeathSave(options) {
   if (options.advantage && options.disadvantage) {
     options.advantage = options.disadvantage = false;
   }
-  console.error("options are ", options)
   return oldRollDeathSave.bind(this)(options);
 }
 
@@ -258,6 +216,7 @@ function procAdvantageSkill(actor, skillId, options) {
   }
   if (withAdvantage && withDisadvantage) options.event = fastforwardEvent;
 }
+
 export let visionPatching = () => {
   const patchVision = isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
   if (patchVision) {
@@ -296,19 +255,15 @@ export let itemPatching = () => {
     "itemAttack": {roll: ItemClass.prototype.rollAttack, methodName: "rollAttack", class: CONFIG.Item.entityClass, replacement: doAttackRoll},
     //@ts-ignore
     "itemDamage": {roll: ItemClass.prototype.rollDamage, methodName: "rollDamage", class: CONFIG.Item.entityClass, replacement: doDamageRoll},
-  //  "itemDamage": {roll: Item5e.prototype.rollDamage, methodName: "rollDamage", class: Item5e, replacement: doDamageRoll},
-    //@ts-ignore
-    "useSpell": {roll: ActorClass.prototype.useSpell, methodName: "useSpell", class: CONFIG.Actor.entityClass, replacement: doUseSpell},
     //@ts-ignore
     "applyDamage": {roll: ActorClass.prototype.applyDamage, class: CONFIG.Actor.entityClass}
   };
-  ["itemAttack", "itemDamage", "useSpell", "itemRoll"].forEach(rollId => {
+  ["itemAttack", "itemDamage", "itemRoll"].forEach(rollId => {
     log("Patching ", rollId, rollMappings[rollId]);
     let rollMapping = rollMappings[rollId];
     rollMappings[rollId].class.prototype[rollMapping.methodName] = rollMapping.replacement;
   })
   debug("After patching roll mappings are ", rollMappings);
-
 }
 
 export let actorAbilityRollPatching = () => {
@@ -332,7 +287,6 @@ export let actorAbilityRollPatching = () => {
   //@ts-ignore
   CONFIG.Actor.entityClass.prototype.rollSkill = doRollSkill;
   log("Patching rollDeathSave");
-  console.error("Patching rollDeathSave");
   //@ts-ignore
   CONFIG.Actor.entityClass.prototype.rollDeathSave = rollDeathSave;
 

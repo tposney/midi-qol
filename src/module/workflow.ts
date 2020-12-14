@@ -127,6 +127,11 @@ export class Workflow {
       this.rollOptions.fastForward = this.rollOptions.fastForward || (["all", "attack"].includes(configSettings.autoFastForward));
       this.rollOptions.fastForward = this.rollOptions.fastForward || this.rollOptions.advantage || this.rollOptions.disadvantage;
       this.rollOptions.fastForward = this.rollOptions.fastForward || advKey || disKey || false;
+      /* TODO Look at thsi further
+      if (["attack", "all"].includes(configSettings.autoFastForward) && advKey && disKey) { // don't need fastforward
+        this.rollOptions.critical = true;
+      }
+      */
       this.rollOptions.versatile = this.rollOptions.versatile || (versaKey || false);
     } else {
       const advKey = event?.altKey;
@@ -172,7 +177,7 @@ export class Workflow {
       const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
       const versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
       const fastForwardKey = advKey && disKey
-      this.rollOptions.critical = this.isCritical || critKey;
+      this.rollOptions.critical = this.isCritical || this.rollOptions.critical || critKey;
       this.rollOptions.fastForward = this.rollOptions.fastForward || ["all", "damage"].includes(configSettings.autoFastForward);
       this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || fastForwardKey;
       this.rollOptions.versatile = this.rollOptions.versatile || versaKey;
@@ -258,6 +263,7 @@ export class Workflow {
     this.damageCardData = undefined;
     this.event = event;
     this.capsLock = event?.getModifierState && event.getModifierState("CapsLock");
+    this.rollOptions = {};
     if (this.item && !this.item.hasAttack) this.processDamageEventOptions(event);
     else this.processAttackEventOptions(event);
 
@@ -857,7 +863,8 @@ export class Workflow {
       this.saveDisplayFlavor = `<span>${i18n("midi-qol.noSaveTargets")}</span>`
       return;
     }
-    let rollDC = this.item.data.data.save.dc;
+    // let rollDC = this.item.data.data.save.dc;
+    let rollDC = this.item.getSaveDC()
     let rollAbility = this.item.data.data.save.ability;
   
     let promises = [];
@@ -933,7 +940,7 @@ export class Workflow {
 
     let i = 0;
     for (let target of this.hitTargets) {
-      if (!target.actor) continue;
+      if (!target.actor) continue; // these were skipped when doing the rolls so they can be skipped now
       if (!results[i]) error("Token ", target, "could not roll save assuming 0") 
       let rollTotal = results[i]?.total || 0;
       let saved = rollTotal >= rollDC;

@@ -28,9 +28,12 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
   debug("Entering item attack roll ", event, workflow, Workflow._workflows)
   if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
     if (enableWorkflow) warn("Roll Attack: No workflow for item ", this.name, this.uuid, event);
-    return rollMappings.itemAttack.roll.bind(this)(options)
+    return rollMappings.itemAttack.roll.bind(this)(options);
   }
-  if (workflow?.currentState !== WORKFLOWSTATES.WAITFORATTACKROLL) return;
+  if (workflow?.currentState !== WORKFLOWSTATES.WAITFORATTACKROLL) {
+    warn("Workflow state not wait for attack roll");
+    return;
+  }
 
   workflow.processAttackEventOptions(options?.event);
   workflow.checkTargetAdvantage();
@@ -42,8 +45,9 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
     workflow.targets = new Set(game.user.targets);
   }
   if (!result) { // attack roll failed.
+    error("Itemhandling rollAttack failed")
     return;
-    workflow._next(WORKFLOWSTATES.ROLLFINISHED);
+    // workflow._next(WORKFLOWSTATES.ROLLFINISHED);
   } else {
     workflow.attackRoll = result;
     //TODO get rid of workflow attackadvantage instead use rollOptions
@@ -55,7 +59,7 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
   return result;
 }
 
-export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, spellLevel = null, versatile = null}) {
+export async function doDamageRoll({event = null, spellLevel = null, versatile = null}= {}) {
   let workflow = Workflow.getWorkflow(this.uuid);
   if (!enableWorkflow) {
     return rollMappings.itemDamage.roll.bind(this)({event})
@@ -98,8 +102,8 @@ export async function doDamageRoll({event = {shiftKey: false, altKey: false, ctr
   return result;
 }
 
-export async function doItemRoll(options = {showFullCard: false, versatile: false, event: null}) {
-  if (!enableWorkflow) {
+export async function doItemRoll(options = {showFullCard: false, createWorkflow: true, versatile: false, event: null}) {
+  if (!enableWorkflow || !options.createWorkflow) {
     return rollMappings.itemRoll.roll.bind(this)({configureDialog:true, rollMode:null, createMessage:true});
   }
   const shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
@@ -108,6 +112,30 @@ export async function doItemRoll(options = {showFullCard: false, versatile: fals
                           || (this.hasAreaTarget && configSettings.autoTarget) // area effectspell and we will auto target
                           || (configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type)) // rangetarget
                           || (!this.hasAttack && !this.hasDamage && !this.hasSave); // does not do anything - need to chck dynamic effects
+
+  if (this.type === "spell") {
+    const midiFlags = this.actor.data.flags["midi-qol"];
+    const needsVocal = this.data.data.components?.vocal;
+    const needsSomatic = this.data.data.components?.somatic;
+    const needsMaterial = this.data.data.components?.material;
+
+    if (midiFlags?.fail?.spell?.all) {
+      ui.notifications.warn("You are unable to cast the spell");
+      return;
+    }
+    if (midiFlags?.fail?.spell?.vocal && needsVocal) {
+      ui.notifications.warn("You make no sound and the spell fails");
+      return;
+    }
+    if (midiFlags?.fail?.spell?.somatic && needsSomatic) {
+      ui.notifications.warn("You can't make the gestures and the spell fails");
+      return;
+    }
+    if (midiFlags?.fail?.spell?.material && needsMaterial) {
+      ui.notifications.warn("You can't use the material component and the spell fails");
+      return;
+    }
+  }
   if (!shouldAllowRoll) {
     ui.notifications.warn(i18n("midi-qol.noTargets"));
     warn(`${game.username} attempted to roll with no targets selected`)
@@ -117,24 +145,29 @@ export async function doItemRoll(options = {showFullCard: false, versatile: fals
   debug("doItemRoll ", event?.shiftKey, event?.ctrlKey, event?.altKey);
   let speaker = ChatMessage.getSpeaker();
 
-  const spellLevel = this.data.data.level; // we are called with the updated spell level so record it.
   let baseItem = this.actor.getOwnedItem(this.id);
   const targets = (baseItem?.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : new Set(game.user.targets);
   let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token?.id, speaker, targets, (options.event ? options.event : event));
   //@ts-ignore event .type not defined
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || options.versatile;
   // workflow.versatile = versatile;
-  workflow.itemLevel = this.data.data.level;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = options.showFullCard;
   workflow.noAutoAttack = options.showFullCard;
   let result = await rollMappings.itemRoll.roll.bind(this)({configureDialog:true, rollMode:null, createMessage:false});
-
+  /* need to get spell level from the html returned in result */
   if(!result) {
     //TODO find the right way to clean this up
     // Workflow.removeWorkflow(workflow.id);
     return;
   }
+  workflow.itemLevel = this.data.data.level;
+  if (this.type === "spell") {
+    let spellStuff = result.content?.match(/.*data-spell-level="(.*)">/);
+    const level = parseInt(spellStuff[1]) || this.data.data.level;
+    workflow.itemLevel = level;
+  }
+
   const needAttckButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
   workflow.showCard = configSettings.mergeCard || (configSettings.showItemDetails !== "none") || (
                 (baseItem.isHealing && configSettings.autoRollDamage === "none")  || // not rolling damage
@@ -150,7 +183,7 @@ export async function doItemRoll(options = {showFullCard: false, versatile: fals
     debug("Item Roll: showing card", itemCard, workflow)
   };
   workflow.next(WORKFLOWSTATES.NONE);
-  return itemCard;
+  return itemCard ?? result;
 }
 
 export async function showItemInfo() {

@@ -1,4 +1,4 @@
-import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, addChatDamageButtons,  checkBetterRolls } from "../settings"
+import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, addChatDamageButtons,  checkBetterRolls, autoFastForwardAbilityRolls } from "../settings"
  import { configSettings } from "../settings"
 import { warn, i18n, error, debug } from "../../midi-qol";
 export class ConfigPanel extends FormApplication {
@@ -17,6 +17,8 @@ export class ConfigPanel extends FormApplication {
     return i18n("midi-qol.ConfigTitle")
   }
   getData() {
+    if (autoFastForwardAbilityRolls && configSettings.playerRollSaves === "letmeQuery")
+      configSettings.playerRollSaves = "letme";
 //@ts-ignore
     let data = {
       configSettings,
@@ -37,7 +39,7 @@ export class ConfigPanel extends FormApplication {
       nsaFlag,
       coloredBorders,
       checkBetterRolls,
-      playerRollSavesOptions: i18n("midi-qol.playerRollSavesOptions"),
+      playerRollSavesOptions: autoFastForwardAbilityRolls ? i18n("midi-qol.playerRollSavesOptionsReduced") : i18n("midi-qol.playerRollSavesOptions") ,
       //@ts-ignore .map undefined
       customSoundsPlaylistOptions: game.playlists.entries.reduce((acc, e) =>{acc[e._id]= e.name; return acc}, {}),
       customSoundOptions: game.playlists.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) =>{acc[s._id]= s.name; return acc}, {"none": ""}),

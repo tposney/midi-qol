@@ -278,13 +278,19 @@ export let getSaveMultiplierForItem = item => {
 
 export function requestPCSave(ability, playerId, actorId, advantage, flavor, dc, requestId) {
   if (installedModules.get("lmrtfy") && ["letme", "letmeQuery"].includes(configSettings.playerRollSaves)) {
+    if (configSettings.speedAbilityRolls || (configSettings.playerRollSaves === "letmeQuery")) {
+/* TODO - if LMRTFY passes the actual event then change to 
+      if ((configSettings.playerRollSaves === "letmeQuery")) {
+*/        
+        advantage = 2;
+    } else advantage = (advantage ? 1 : 0);
     const socketData = {
       user: playerId,
       actors: [actorId],
       abilities: [],
       saves: [ability],
       skills: [],
-      advantage: configSettings.playerRollSaves === "letmeQuery"? 2 : (advantage ? 1 : 0),
+      advantage,
       mode: "roll",
       title: i18n("midi-qol.saving-throw"),
       message: `${configSettings.displaySaveDC ? "DC " + dc : ""} ${i18n("midi-qol.saving-throw")} ${flavor}`,

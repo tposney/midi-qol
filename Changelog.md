@@ -1,5 +1,10 @@
 0.3.36
-added flags.midi-qol.advantage.deathSave, added flags.midi-qol.disadvantage.deathSave, and death saves also look at flags.midi-qol.(dis)advantage.all
+* added flags.midi-qol.advantage.deathSave, added flags.midi-qol.disadvantage.deathSave, and death saves also look at flags.midi-qol.(dis)advantage.all
+* fix for LMRTFY and speed item roll mappings.
+* fix for change from actor.useSpell changes and upscaling of spells.
+* use new item.getSaveDC() for spell saves.
+* added a new paramter to item.roll({createWorkflow: true}). If you se this to false when calling item.roll a workflow will not be initiated - useful if you have macros that do a complete roll and you don't want midi-qol to start automation for the item roll.
+
 
 0.3.35
 * fixed a bug with speed rolls/auto check saves that caused the attacking player to be prompted for the save type for NPCs.
