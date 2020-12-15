@@ -863,8 +863,9 @@ export class Workflow {
       this.saveDisplayFlavor = `<span>${i18n("midi-qol.noSaveTargets")}</span>`
       return;
     }
-    // let rollDC = this.item.data.data.save.dc;
-    let rollDC = this.item.getSaveDC()
+    let rollDC = this.item.data.data.save.dc;
+    if (this.item.getSaveDC)
+      rollDC = this.item.getSaveDC()
     let rollAbility = this.item.data.data.save.ability;
   
     let promises = [];

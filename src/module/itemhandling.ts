@@ -277,6 +277,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     user: game.user,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     content: html,
+    flavor: this.data.data.chatFlavor || this.name,
     speaker: {
       actor: this.actor._id,
       token: this.actor.token,
