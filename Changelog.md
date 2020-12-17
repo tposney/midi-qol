@@ -1,3 +1,4 @@
+
 0.3.38
 * fix for sw5e and saving throws  
 * Add flavor text in item card.  
@@ -23,9 +24,9 @@ Example: Guiding Bolt. Start wi th the SRD guiding bolt spell
   * Bring up the DAE editor and add an effect.
   * On the duration tab, set the duration to be 1 round + 1 turn and the special expiry isAttacked.
   * On the effects tab add an effect
-  ```
+```
     flags.midi-qol.grants.advantage.attack.all override 1.
-````
+```
   * Now when you cast the spell at a target and hit, the effect will be applied that grants advantage on the next attack.
 
 0.3.34
