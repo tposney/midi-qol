@@ -1,4 +1,3 @@
-import { installedModules } from "./setupModules";
 import { configSettings } from "./settings";
 import { i18n, debug, error, log, undoDamageText, warn } from "../midi-qol";
 
