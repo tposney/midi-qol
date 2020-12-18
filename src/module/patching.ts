@@ -70,7 +70,6 @@ function isVisible() {
   return canvas.sight.testVisibility(this.center, {tolerance});
 }
 
-var oldRollSkill;
 export const advantageEvent = {shiftKey: true, altKey: true, ctrlKey: false, metaKey: false};
 export const disadvantageEvent = {shiftKey: true, altKey:false, ctrlKey: true, metaKey: true};
 export const fastforwardEvent = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
@@ -89,7 +88,7 @@ function mapSpeedKeys(event) {
   return event;
 }
 
-function doRollSkill(skillId, options={event: {}, parts: []}) {
+function doRollSkill(wrapped, skillId, options={event: {}, parts: []}) {
   options.event = mapSpeedKeys(options.event);
   let opt = {event: {}}
   procAdvantage(this, "check", this.data.data.skills[skillId].ability, opt)
@@ -111,15 +110,10 @@ function doRollSkill(skillId, options={event: {}, parts: []}) {
   {
     options.parts = ["-100"];
   }
-  return oldRollSkill.bind(this)(skillId, options);
+  return wrapped(skillId, options);
 }
 
-
-var oldRollAbilitySave;
-var oldRollAbilityTest;
-var oldRollDeathSave;
-
-function rollDeathSave(options) {
+function rollDeathSave(wrapped, options) {
   const event = mapSpeedKeys(options.event);
   const advFlags = getProperty(this.data.flags, "midi-qol")?.advantage ?? {};
   const disFlags = getProperty(this.data.flags, "midi-qol")?.disadvantage ?? {};
@@ -132,33 +126,33 @@ function rollDeathSave(options) {
   if (options.advantage && options.disadvantage) {
     options.advantage = options.disadvantage = false;
   }
-  return oldRollDeathSave.bind(this)(options);
+  return wrapped(options);
 }
 
-function doAbilityRoll(func, abilityId, options={event}) {
+function doAbilityRoll(wrapped, abilityId, options={event}) {
   warn("roll ", options.event)
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
     //@ts-ignore
     // options.event = mergeObject(options.event, {shiftKey: true}, {overwrite: true, inplace: true})
     options.event = fastforwardEvent;
   }
-  return func.bind(this)(abilityId, options)
+  return wrapped(abilityId, options)
 }
 
-function rollAbilityTest(abilityId, options={event: {}, parts: []})  {
+function rollAbilityTest(wrapped, abilityId, options={event: {}, parts: []})  {
   if (procAutoFail(this, "check", abilityId)) options.parts = ["-100"];
   options.event = mapSpeedKeys(options.event);
   procAdvantage(this, "check", abilityId, options);
-  return doAbilityRoll.bind(this)(oldRollAbilityTest, abilityId, options)
+  return doAbilityRoll.call(this, wrapped, abilityId, options)
 }
 
-function rollAbilitySave(abilityId, options={event: {}, parts: []})  {
+function rollAbilitySave(wrapped, abilityId, options={event: {}, parts: []})  {
   if (procAutoFail(this, "save", abilityId)) {
     options.parts = ["-100"];
   }
   options.event = mapSpeedKeys(options.event);
   procAdvantage(this, "save", abilityId, options);
-  return doAbilityRoll.bind(this)(oldRollAbilitySave, abilityId, options)
+  return doAbilityRoll.call(this, wrapped, abilityId, options)
 }
 
 function procAutoFail(actor, rollType, abilityId) {
@@ -223,25 +217,40 @@ function procAdvantageSkill(actor, skillId, options) {
 export let visionPatching = () => {
   const patchVision = isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
   if (patchVision) {
-    log("midi-qol | Patching SightLayer._restrictVisibility")
-    //@ts-ignore
-    let restrictVisibilityProxy = new Proxy(SightLayer.prototype.restrictVisibility, {
-      apply: (target, thisvalue, args) =>
-          restrictVisibility.bind(thisvalue)(...args)
-    })
-    //@ts-ignore
-    SightLayer.prototype.restrictVisibility = restrictVisibilityProxy;
+    if (game.modules.get("lib-wrapper")?.active) {
+      log("midi-qol | Patching SightLayer._restrictVisibility")
+      //@ts-ignore
+      libWrapper.register("midi-qol", "SightLayer.prototype.restrictVisibility", restrictVisibility, "OVERRIDE");
 
-    log("midi-qol | Patching Token._isVisionSource")
-    //@ts-ignore
-    let _isVisionSourceProxy = new Proxy(Token.prototype._isVisionSource, {
-      apply: (target, thisvalue, args) =>
-      _isVisionSource.bind(thisvalue)(...args)
-    })
-    //@ts-ignore
-    Token.prototype._isVisionSource = _isVisionSourceProxy;
-  
-    Object.defineProperty(Token.prototype, "isVisible", { get: isVisible });
+      log("midi-qol | Patching Token._isVisionSource")
+      //@ts-ignore
+      libWrapper.register("midi-qol", "Token.prototype._isVisionSource", _isVisionSource, "OVERRIDE");
+
+      log("midi-qol | Patching Token.isVisible")
+      //@ts-ignore
+      libWrapper.register("midi-qol", "Token.prototype.isVisible", isVisible, "OVERRIDE");
+    } else {
+      log("midi-qol | Patching SightLayer._restrictVisibility")
+      //@ts-ignore
+      let restrictVisibilityProxy = new Proxy(SightLayer.prototype.restrictVisibility, {
+        apply: (target, thisvalue, args) =>
+            restrictVisibility.bind(thisvalue)(...args)
+      })
+      //@ts-ignore
+      SightLayer.prototype.restrictVisibility = restrictVisibilityProxy;
+
+      log("midi-qol | Patching Token._isVisionSource")
+      //@ts-ignore
+      let _isVisionSourceProxy = new Proxy(Token.prototype._isVisionSource, {
+        apply: (target, thisvalue, args) =>
+        _isVisionSource.bind(thisvalue)(...args)
+      })
+      //@ts-ignore
+      Token.prototype._isVisionSource = _isVisionSourceProxy;
+
+      log("midi-qol | Patching Token.isVisible")
+      Object.defineProperty(Token.prototype, "isVisible", { get: isVisible });
+    }
   }
   console.warn("midi-qol | Vision patching - ", patchVision ? "enabled" : "disabled")
 }
@@ -253,44 +262,74 @@ export let itemPatching = () => {
 
   rollMappings = {
     //@ts-ignore
-    "itemRoll" : {roll: ItemClass.prototype.roll, methodName: "roll", class: CONFIG.Item.entityClass, replacement: doItemRoll},
+    "itemRoll" : {roll: ItemClass.prototype.roll, methodName: "roll", class: CONFIG.Item.entityClass, target: "CONFIG.Item.entityClass.prototype.roll", replacement: doItemRoll},
     //@ts-ignore
-    "itemAttack": {roll: ItemClass.prototype.rollAttack, methodName: "rollAttack", class: CONFIG.Item.entityClass, replacement: doAttackRoll},
+    "itemAttack": {roll: ItemClass.prototype.rollAttack, methodName: "rollAttack", class: CONFIG.Item.entityClass, target: "CONFIG.Item.entityClass.prototype.rollAttack", replacement: doAttackRoll},
     //@ts-ignore
-    "itemDamage": {roll: ItemClass.prototype.rollDamage, methodName: "rollDamage", class: CONFIG.Item.entityClass, replacement: doDamageRoll},
+    "itemDamage": {roll: ItemClass.prototype.rollDamage, methodName: "rollDamage", class: CONFIG.Item.entityClass, target: "CONFIG.Item.entityClass.prototype.rollDamage", replacement: doDamageRoll},
     //@ts-ignore
-    "applyDamage": {roll: ActorClass.prototype.applyDamage, class: CONFIG.Actor.entityClass}
+    "applyDamage": {roll: ActorClass.prototype.applyDamage, class: CONFIG.Actor.entityClass, target: "CONFIG.Actor.entityClass.prototype.applyDamage"}
   };
   ["itemAttack", "itemDamage", "itemRoll"].forEach(rollId => {
     log("Patching ", rollId, rollMappings[rollId]);
     let rollMapping = rollMappings[rollId];
-    rollMappings[rollId].class.prototype[rollMapping.methodName] = rollMapping.replacement;
+    if (game.modules.get("lib-wrapper")?.active) {
+      //@ts-ignore
+      libWrapper.register("midi-qol", rollMapping.target, rollMapping.replacement, "OVERRIDE");
+    } else {
+      rollMappings[rollId].class.prototype[rollMapping.methodName] = rollMapping.replacement;
+    }
   })
   debug("After patching roll mappings are ", rollMappings);
 }
 
 export let actorAbilityRollPatching = () => {
-  //@ts-ignore
-  oldRollAbilitySave = CONFIG.Actor.entityClass.prototype.rollAbilitySave;
-  //@ts-ignore
-  oldRollAbilityTest = CONFIG.Actor.entityClass.prototype.rollAbilityTest;
-  //@ts-ignore
-  oldRollSkill = CONFIG.Actor.entityClass.prototype.rollSkill;
-  //@ts-ignore
-  oldRollDeathSave = CONFIG.Actor.entityClass.prototype.rollDeathSave;
+  if (game.modules.get("lib-wrapper")?.active) {
+    log("Patching rollAbilitySave")
+    //@ts-ignore
+    libWrapper.register("midi-qol", "CONFIG.Actor.entityClass.prototype.rollAbilitySave", rollAbilitySave, "WRAPPER");
 
-  log("Patching rollAbilitySave")
-  //@ts-ignore
-  CONFIG.Actor.entityClass.prototype.rollAbilitySave = rollAbilitySave;
-  //@ts-ignore
-  log("Patching rollAbilityTest")
-  //@ts-ignore
-  CONFIG.Actor.entityClass.prototype.rollAbilityTest = rollAbilityTest;
-  log("Patching rollSkill");
-  //@ts-ignore
-  CONFIG.Actor.entityClass.prototype.rollSkill = doRollSkill;
-  log("Patching rollDeathSave");
-  //@ts-ignore
-  CONFIG.Actor.entityClass.prototype.rollDeathSave = rollDeathSave;
+    log("Patching rollAbilityTest")
+    //@ts-ignore
+    libWrapper.register("midi-qol", "CONFIG.Actor.entityClass.prototype.rollAbilityTest", rollAbilityTest, "WRAPPER");
+
+    log("Patching rollSkill");
+    //@ts-ignore
+    libWrapper.register("midi-qol", "CONFIG.Actor.entityClass.prototype.rollSkill", doRollSkill, "WRAPPER");
+
+    log("Patching rollDeathSave");
+    //@ts-ignore
+    libWrapper.register("midi-qol", "CONFIG.Actor.entityClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
+  } else {
+    //@ts-ignore
+    const oldRollAbilitySave = CONFIG.Actor.entityClass.prototype.rollAbilitySave;
+    //@ts-ignore
+    const oldRollAbilityTest = CONFIG.Actor.entityClass.prototype.rollAbilityTest;
+    //@ts-ignore
+    const oldRollSkill = CONFIG.Actor.entityClass.prototype.rollSkill;
+    //@ts-ignore
+    const oldRollDeathSave = CONFIG.Actor.entityClass.prototype.rollDeathSave;
+
+    log("Patching rollAbilitySave")
+    //@ts-ignore
+    CONFIG.Actor.entityClass.prototype.rollAbilitySave = function () {
+      return rollAbilitySave.call(this, oldRollAbilitySave.bind(this), ...arguments);
+    };
+    log("Patching rollAbilityTest")
+    //@ts-ignore
+    CONFIG.Actor.entityClass.prototype.rollAbilityTest = function () {
+      return rollAbilityTest.call(this, oldRollAbilityTest.bind(this), ...arguments);
+    };
+    log("Patching rollSkill");
+    //@ts-ignore
+    CONFIG.Actor.entityClass.prototype.rollSkill = function () {
+      return doRollSkill.call(this, oldRollSkill.bind(this), ...arguments);
+    };
+    log("Patching rollDeathSave");
+    //@ts-ignore
+    CONFIG.Actor.entityClass.prototype.rollDeathSave = function () {
+      return rollDeathSave.call(this, oldRollDeathSave.bind(this), ...arguments);
+    };
+  }
 
 }
