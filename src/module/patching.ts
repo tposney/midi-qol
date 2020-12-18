@@ -21,6 +21,9 @@ function restrictVisibility() {
   for ( let d of canvas.controls.doors.children ) {
     d.visible = !this.tokenVision || d.isVisible;
   }
+
+  // Dispatch a hook that modules can use
+  Hooks.callAll("sightRefresh", this);
 }
 
 function _isVisionSource() {
