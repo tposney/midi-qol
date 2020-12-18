@@ -3,7 +3,6 @@ import { Workflow, noKeySet } from "./workflow";
 import { doItemRoll, doAttackRoll, doDamageRoll } from "./itemhandling";
 import { configSettings, autoFastForwardAbilityRolls } from "./settings.js";
 import { testKey } from "./utils";
-import { setupSheetQol } from "./sheetQOL";
 
 
 export var rollMappings;
@@ -76,7 +75,7 @@ export const fastforwardEvent = {shiftKey: true, altKey:false, ctrlKey: false, m
 export const baseEvent = {shiftKey: false, altKey:false, ctrlKey: false, metaKey: false};
 
 function mapSpeedKeys(event) {
-  if (configSettings.speedItemRolls) { //  && configSettings.speedAbilityRolls) {
+  if (configSettings.speedItemRolls && configSettings.speedAbilityRolls) {
     const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
     const disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
     const fastFowrd = advKey && disKey;
