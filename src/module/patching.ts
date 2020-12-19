@@ -88,7 +88,8 @@ function mapSpeedKeys(event) {
   return event;
 }
 
-function doRollSkill(wrapped, skillId, options={event: {}, parts: []}) {
+function doRollSkill(wrapped, ...args) {
+  const [ skillId, options={event: {}, parts: []} ] = args;
   options.event = mapSpeedKeys(options.event);
   let opt = {event: {}}
   procAdvantage(this, "check", this.data.data.skills[skillId].ability, opt)
@@ -110,10 +111,11 @@ function doRollSkill(wrapped, skillId, options={event: {}, parts: []}) {
   {
     options.parts = ["-100"];
   }
-  return wrapped(skillId, options);
+  return wrapped(...args);
 }
 
-function rollDeathSave(wrapped, options) {
+function rollDeathSave(wrapped, ...args) {
+  const [ options ] = args;
   const event = mapSpeedKeys(options.event);
   const advFlags = getProperty(this.data.flags, "midi-qol")?.advantage ?? {};
   const disFlags = getProperty(this.data.flags, "midi-qol")?.disadvantage ?? {};
@@ -126,33 +128,36 @@ function rollDeathSave(wrapped, options) {
   if (options.advantage && options.disadvantage) {
     options.advantage = options.disadvantage = false;
   }
-  return wrapped(options);
+  return wrapped(...args);
 }
 
-function doAbilityRoll(wrapped, abilityId, options={event}) {
+function doAbilityRoll(wrapped, ...args) {
+  const [ abilityId, options={event} ] = args;
   warn("roll ", options.event)
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
     //@ts-ignore
     // options.event = mergeObject(options.event, {shiftKey: true}, {overwrite: true, inplace: true})
     options.event = fastforwardEvent;
   }
-  return wrapped(abilityId, options)
+  return wrapped(...args);
 }
 
-function rollAbilityTest(wrapped, abilityId, options={event: {}, parts: []})  {
+function rollAbilityTest(wrapped, ...args)  {
+  const [ abilityId, options={event: {}, parts: []} ] = args;
   if (procAutoFail(this, "check", abilityId)) options.parts = ["-100"];
   options.event = mapSpeedKeys(options.event);
   procAdvantage(this, "check", abilityId, options);
-  return doAbilityRoll.call(this, wrapped, abilityId, options)
+  return doAbilityRoll.call(this, wrapped, ...args);
 }
 
-function rollAbilitySave(wrapped, abilityId, options={event: {}, parts: []})  {
+function rollAbilitySave(wrapped, ...args)  {
+  const [ abilityId, options={event: {}, parts: []} ] = args;
   if (procAutoFail(this, "save", abilityId)) {
     options.parts = ["-100"];
   }
   options.event = mapSpeedKeys(options.event);
   procAdvantage(this, "save", abilityId, options);
-  return doAbilityRoll.call(this, wrapped, abilityId, options)
+  return doAbilityRoll.call(this, wrapped, ...args);
 }
 
 function procAutoFail(actor, rollType, abilityId) {
