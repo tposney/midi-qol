@@ -164,7 +164,6 @@ export function diceSoNiceUpdateMessge(message, update, ...args) {
   if (![MESSAGETYPES.ATTACK, MESSAGETYPES.DAMAGE].includes(type)) return;
   const displayId = duplicate(message.data.flags["midi-qol"].displayId);
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
-
   let rollDice = game.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
   let roll;
   if (typeof message.data.flags["midi-qol"].roll === "string")

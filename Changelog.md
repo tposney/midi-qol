@@ -1,4 +1,6 @@
-
+0.3.39
+* updated ja.json thanks @touge  
+* fix for auto fast forward ability rolls setting being ignored.  
 0.3.38
 * fix for sw5e and saving throws  
 * Add flavor text in item card.  

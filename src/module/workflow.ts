@@ -408,6 +408,7 @@ export class Workflow {
           this.hitTargets = new Set(game.user.targets);
           warn(" damage roll complete for non auto target area effects spells", this)
         }
+        Hooks.callAll("midi-qol.preDamageRollComplete", this)
         // apply damage to targets plus saves plus immunities
         // done here cause not needed for betterrolls workflow
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
@@ -452,6 +453,7 @@ export class Workflow {
   
       case WORKFLOWSTATES.ALLROLLSCOMPLETE:
         debug("all rolls complete ", this.damageDetail)
+
         if (this.damageDetail.length) processDamageRoll(this, this.damageDetail[0].type)
         Hooks.callAll("midi-qol.DamageRollComplete", this)
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
@@ -528,6 +530,7 @@ export class Workflow {
           (ef.data.flags?.dae?.specialDuration === "1Attack" && this.item?.hasAttack) ||
           (ef.data.flags?.dae?.specialDuration === "1Hit" && this.hitTargets.size > 0)
         ).map(ef=>ef.id);
+        warn("1 off expiry ", myExpiredEffects);
         (myExpiredEffects.length > 0) && await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
 
         // expire effects on targeted tokens as required
