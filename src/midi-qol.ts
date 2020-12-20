@@ -105,6 +105,9 @@ Hooks.once('setup', function() {
 /* When ready							*/
 /* ------------------------------------ */
 Hooks.once('ready', function() {
+  if (!game.modules.get("lib-wrapper")?.active && game.user.isGM)
+    ui.notifications.warn("The 'Midi QOL' module recommends to install and activate the 'libWrapper' module.");
+
   // Do anything once the module is ready
   actorAbilityRollPatching();
 });
