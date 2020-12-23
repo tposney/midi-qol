@@ -221,6 +221,8 @@ function procAdvantageSkill(actor, skillId, options) {
 export let visionPatching = () => {
   const patchVision = isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
   if (patchVision) {
+    // ui.notifications.warn("This setting is deprecated please switch to Conditional Visibility")
+    console.error("Player controls tokens setting is deprecated please switch to Conditional Visibility")
     if (game.modules.get("lib-wrapper")?.active) {
       log("midi-qol | Patching SightLayer._restrictVisibility")
       //@ts-ignore

@@ -1,3 +1,9 @@
+0.3.40
+* Fix for trapworkflow calling onUse macro twice.
+* Some more clean up of crtical/advantage settings in workflows. Dont pass an event, use optins values
+* Fix for modifying critical damage on all workflow paths
+Fix for perfect vision incompatibility thanks to the module author for the fix.
+Deprecation notice: The player controls invisible tokens setting will be removed in a subsequent release since the "conditional visibility" module does a much better job.
 0.3.39
 * updated ja.json thanks @touge  
 * fix for auto fast forward ability rolls setting being ignored.  

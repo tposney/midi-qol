@@ -81,20 +81,18 @@ export async function doDamageRoll({event = null, spellLevel = null, versatile =
   // we actually want to collect the html from the damage roll, so need to rendere and grab
   hideChatMessage(configSettings.mergeCard && enableWorkflow, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
   workflow.processDamageEventOptions(event);
-      //TODO get rid of this when rolldamage accepts options
-  workflow.rollOptions.event = {
-      shiftKey: workflow.rollOptions.fastForward,
-      altKey: workflow.rollOptions.critical && workflow.rollOptions.fastForward
-    };
+
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
-  let result: Roll = await rollMappings.itemDamage.roll.bind(this)(workflow.rollOptions)
+  let result: Roll = await rollMappings.itemDamage.roll.bind(this)({critical: workflow.rollOptions.critical,options: workflow.rollOptions})
   if (!result?.total) { // user backed out of damage roll or roll failed
     return;
   }
-
-  if (workflow.isCritical) result = doCritModify(result);
+// If the roll was a critical or the user selected crtical
+//@ts-ignore
+  if (workflow.isCritical || result.terms[0].options?.critical) 
+    result = doCritModify(result);
   workflow.damageRoll = result;
   workflow.damageTotal = result.total;
   workflow.damageRollHTML = await result.render();
@@ -396,6 +394,7 @@ export function selectTargets(scene, data, options) {
     this.saves = new Set();
     this.targets = new Set(game.user.targets);
     this.hitTargets = new Set(game.user.targets);
+    this.templateData = data;
   return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
   }, 250);
 };

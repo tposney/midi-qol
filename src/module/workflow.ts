@@ -117,14 +117,13 @@ export class Workflow {
   }
 
   public processAttackEventOptions(event) {
+    this.rollOptions.fastForward = this.rollOptions.fastForward || (["all", "attack"].includes(configSettings.autoFastForward));
     if (configSettings.speedItemRolls && !this.isBetterRollsWorkflow) {
       const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
       const disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
       const versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
       this.rollOptions.advantage = this.rollOptions.advantage || advKey;
       this.rollOptions.disadvantage = this.rollOptions.disadvantage || disKey;
-
-      this.rollOptions.fastForward = this.rollOptions.fastForward || (["all", "attack"].includes(configSettings.autoFastForward));
       this.rollOptions.fastForward = this.rollOptions.fastForward || this.rollOptions.advantage || this.rollOptions.disadvantage;
       this.rollOptions.fastForward = this.rollOptions.fastForward || advKey || disKey || false;
       /* TODO Look at thsi further
@@ -170,6 +169,7 @@ export class Workflow {
   public processDamageEventOptions(event) { 
     // trap workflows are fastforward by default.
     this.rollOptions.fastForward = this.__proto__.constructor.name === "TrapWorkflow";
+    if (["all", "damage"].includes(configSettings.autoFastForward)) this.rollOptions.fastForward = true;
     // if we have an event here it means they clicked on the damage button?
     if (configSettings.speedItemRolls && !this.isBetterRollsWorkflow) {
       const disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
@@ -177,8 +177,12 @@ export class Workflow {
       const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
       const versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
       const fastForwardKey = advKey && disKey
-      this.rollOptions.critical = this.isCritical || this.rollOptions.critical || critKey;
-      this.rollOptions.fastForward = this.rollOptions.fastForward || ["all", "damage"].includes(configSettings.autoFastForward);
+      if (configSettings.autoRollDamage !== "none") {
+        this.rollOptions.critical = this.isCritical || this.rollOptions.critical || critKey;
+      } else {
+        this.rollOptions.critical = critKey;
+        this.critical = critKey;
+      }
       this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || fastForwardKey;
       this.rollOptions.versatile = this.rollOptions.versatile || versaKey;
       if (fastForwardKey) this.rollOptions.critical = this.isCritical;
@@ -191,11 +195,19 @@ export class Workflow {
       this.rollOptions.critical = event?.altKey;
       if (fastForwardKey) this.rollOptions.critical = this.isCritical;
     }
+    this.rollOptions.spellLevel = this.itemLevel;
     if (configSettings.gmFullAuto && game.user.isGM) {
       this.rollOptions.fastForward = true;
+    } else {
+      // if Not auto fast forwarding the roll dont set the crtical flag unless fast forwarding
+      if ((configSettings.autoRollDamage === "none" || !this.rollOptions.fastForward) && noKeySet(event)) {
+        this.isCritical = false;
+        this.rollOptions.critical = false;
+      } else {
+        this.isCritical = this.isCritical || this.rollOptions.critical;
+        this.rollOptions.critical = this.critical || this.rollOptions.critical;
+      }
     }
-    this.rollOptions.spellLevel = this.itemLevel;
-    this.isCritical = this.isCritical || this.rollOptions.critical;
   }
 
   checkAbilityAdvantage() {
@@ -1291,7 +1303,7 @@ export class TrapWorkflow extends Workflow {
             game.user.targets.add(t)
           })
         }
-        super._next(WORKFLOWSTATES.ROLLFINISHED);
+        return super._next(WORKFLOWSTATES.ROLLFINISHED);
 
       default:
         return super._next(newState);
