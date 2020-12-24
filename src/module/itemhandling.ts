@@ -40,7 +40,7 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
   workflow.checkAbilityAdvantage();
   // we actually want to collect the html from the attack roll, so need to render and grab
   hideChatMessage(configSettings.mergeCard && enableWorkflow, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
-  let result: Roll = await rollMappings.itemAttack.roll.bind(this)(options = workflow.rollOptions);
+  let result: Roll = await rollMappings.itemAttack.roll.bind(this)(workflow.rollOptions);
   if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
     workflow.targets = new Set(game.user.targets);
   }
@@ -81,11 +81,10 @@ export async function doDamageRoll({event = null, spellLevel = null, versatile =
   // we actually want to collect the html from the damage roll, so need to rendere and grab
   hideChatMessage(configSettings.mergeCard && enableWorkflow, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
   workflow.processDamageEventOptions(event);
-
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
-  let result: Roll = await rollMappings.itemDamage.roll.bind(this)({critical: workflow.rollOptions.critical, spellLevel: workflow.rollOptions.spellLevel, options: workflow.rollOptions})
+  let result: Roll = await rollMappings.itemDamage.roll.bind(this)({critical: workflow.rollOptions.critical, spellLevel: workflow.rollOptions.spellLevel, versatile: workflow.rollOptions.versatile, options: workflow.rollOptions})
   if (!result?.total) { // user backed out of damage roll or roll failed
     return;
   }
@@ -101,7 +100,6 @@ export async function doDamageRoll({event = null, spellLevel = null, versatile =
 }
 
 export async function doItemRoll(options  = {showFullCard: false, createWorkflow: true, versatile: false, event: null}) {
-  console.error("Options are options", options)
   if (!enableWorkflow || options?.createWorkflow === false) {
     return rollMappings.itemRoll.roll.bind(this)({configureDialog:true, rollMode:null, createMessage:true});
   }
