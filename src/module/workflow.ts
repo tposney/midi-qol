@@ -423,8 +423,9 @@ export class Workflow {
         Hooks.callAll("midi-qol.preDamageRollComplete", this)
         // apply damage to targets plus saves plus immunities
         // done here cause not needed for betterrolls workflow
+
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
-        // CONFIG.DND5E.healingTypes["healing"]; // a number of healing spells don't have a type set, so this will help those work
+        if (this.item?.data.data.actionType === "heal") this.defaultDamageType = CONFIG.DND5E.healingTypes["healing"]; 
         this.damageDetail = createDamageList(this.damageRoll, this.item, this.defaultDamageType);
         await this.displayDamageRoll(false, configSettings.mergeCard)
         if (this.isFumble) {
@@ -933,7 +934,7 @@ export class Workflow {
               }
             }, (configSettings.playerSaveTimeout || 1) * 1000);
           }))
-        } else {
+        } else {  // GM to roll save
           let showRoll = configSettings.autoCheckSaves === "allShow";
           // Find a player owner for the roll if possible
           let owner = this.playerFor(target);
@@ -942,6 +943,7 @@ export class Workflow {
           if (!owner) owner = game.users.find((u: User) => u.isGM && u.active);
           // Fall back to rolling as the current user
           if (!owner) owner = game.user;
+          
           //@ts-ignore actor.rollAbilitySave
           promises.push(target.actor.rollAbilitySave(this.item.data.data.save.ability, { messageData: {user: owner._id}, chatMessage: showRoll,  mapKeys: false, advantage, fastForward: true}));
         }
