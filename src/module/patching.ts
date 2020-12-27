@@ -281,7 +281,7 @@ export let itemPatching = () => {
     let rollMapping = rollMappings[rollId];
     if (game.modules.get("lib-wrapper")?.active) {
       //@ts-ignore
-      libWrapper.register("midi-qol", rollMapping.target, rollMapping.replacement, "OVERRIDE");
+      libWrapper.register("midi-qol", rollMapping.target, rollMapping.replacement, "MIXED");
     } else {
       rollMappings[rollId].class.prototype[rollMapping.methodName] = rollMapping.replacement;
     }

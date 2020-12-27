@@ -99,8 +99,12 @@ export async function doDamageRoll({event = null, spellLevel = null, versatile =
   return result;
 }
 
-export async function doItemRoll(options  = {showFullCard: false, createWorkflow: true, versatile: false, event: null}) {
-  if (!enableWorkflow || options?.createWorkflow === false) {
+export async function doItemRoll(options = {showFullCard:false, createWorkflow:true, versatile:false, configureDialog:true}) {
+  let showFullCard = options?.showFullCard ?? false;
+  let createWorkflow = options?.createWorkflow ?? true;
+  let versatile = options?.versatile ?? false;
+  let configureDialog = options?.configureDialog ?? true;
+  if (!enableWorkflow || createWorkflow === false) {
     return rollMappings.itemRoll.roll.bind(this)({configureDialog:true, rollMode:null, createMessage:true});
   }
   const shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
@@ -144,14 +148,14 @@ export async function doItemRoll(options  = {showFullCard: false, createWorkflow
 
   let baseItem = this.actor.getOwnedItem(this.id);
   const targets = (baseItem?.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : new Set(game.user.targets);
-  let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token?.id, speaker, targets, (options?.event ? options.event : event));
+  let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token?.id, speaker, targets, event);
   //@ts-ignore event .type not defined
-  workflow.rollOptions.versatile = workflow.rollOptions.versatile || options?.versatile;
+  workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile;
   // workflow.versatile = versatile;
   // if showing a full card we don't want to auto roll attcks or damage.
-  workflow.noAutoDamage = options?.showFullCard;
-  workflow.noAutoAttack = options?.showFullCard;
-  let result = await rollMappings.itemRoll.roll.bind(this)({configureDialog:true, rollMode:null, createMessage:false});
+  workflow.noAutoDamage = showFullCard;
+  workflow.noAutoAttack = showFullCard;
+  let result = await rollMappings.itemRoll.roll.bind(this)({configureDialog, rollMode:null, createMessage:false});
   /* need to get spell level from the html returned in result */
   if(!result) {
     //TODO find the right way to clean this up
@@ -162,9 +166,7 @@ export async function doItemRoll(options  = {showFullCard: false, createWorkflow
   if (this.type === "spell") {
     //TODO look to use returned data when available
     let spellStuff = result.content?.match(/.*data-spell-level="(.*)">/);
-    const level = parseInt(spellStuff[1]) || this.data.data.level;
-    workflow.itemLevel = level;
-    
+    workflow.itemLevel = parseInt(spellStuff[1]) || this.data.data.level;;
   }
 
   const needAttckButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
@@ -175,9 +177,14 @@ export async function doItemRoll(options  = {showFullCard: false, createWorkflow
                 (baseItem.hasAttack && needAttckButton)) ||
                 (!baseItem.hasAttack && !baseItem.hasDamage && !baseItem.hasSave);
 
+  let item = this;
+  if (this.data.data.level !== workflow.itemLevel) {
+    const upcastData = mergeObject(this.data, {"data.level": workflow.itemLevel}, {inplace: false});
+    item = this.constructor.createOwned(upcastData, this.actor);  // Replace the item with an upcast version
+  }
   if (workflow.showCard) {
     //@ts-ignore - 
-    var itemCard: ChatMessage = await showItemCard.bind(this)(options?.showFullCard, workflow)
+    var itemCard: ChatMessage = await showItemCard.bind(item)(showFullCard, workflow)
     workflow.itemCardId = itemCard.id;
     debug("Item Roll: showing card", itemCard, workflow)
   };

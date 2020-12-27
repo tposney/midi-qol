@@ -19,6 +19,8 @@ let processAction = async data => {
         token.actor?.deleteEmbeddedEntity("ActiveEffect", data.effects)
       }
       break;
+    case "GMRollSave": 
+    // This needs to roll the save, with prompt and send back the data with the correct id
   }
 };
 

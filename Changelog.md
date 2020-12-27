@@ -1,3 +1,10 @@
+0.3.43  
+* Fix for spell scaling not working if not auto rolling damage.  
+* Fix for AOE magic items spells throwing an error.   
+* Fix for ammo damage after libwrapper installed.
+* Included merge request to refrain from deleting non-special duration effects at combat end. Thanks @DangereosrDan.  
+The first 2 fixes required a change to how keyboard event processing is done. As far as I can tell there are no problems, but there are too many workflow variations for me to test them all, so a bug (or many) is possible.  
+Don't update just before game time.
 0.3.42  
 fix for versatile shortcut being ignored.  
 0.3.41  

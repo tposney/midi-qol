@@ -100,7 +100,7 @@ Hooks.on("preUpdateCombat", async (combat, update, ...args) => {
 Hooks.on("preDeleteCombat", (combat, options) => {
   combat.turns.forEach(async turn => {
     // Assume round/turn spells expire on completion of comabat
-    let expiredEffects = turn.actor.temporaryEffects.filter(ef => ef.data.flags?.dae?.specialDuration);
+    let expiredEffects = turn.actor.temporaryEffects.filter(ef => ef.data.flags?.dae?.specialDuration && ef.data.flags?.dae?.specialDuration !== "None");
     expiredEffects = expiredEffects.map(ef=>ef.id || ef.data.id);
     if (expiredEffects.length > 0) 
     { 
