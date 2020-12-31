@@ -220,21 +220,21 @@ export let visionPatching = () => {
   const patchVision = isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
   if (patchVision) {
     // ui.notifications.warn("This setting is deprecated please switch to Conditional Visibility")
-    console.error("Player controls tokens setting is deprecated please switch to Conditional Visibility")
+    console.error("midi-qol | Player controls tokens setting is deprecated please switch to Conditional Visibility")
     if (game.modules.get("lib-wrapper")?.active) {
-      log("midi-qol | Patching SightLayer._restrictVisibility")
+      log("Patching SightLayer._restrictVisibility")
       //@ts-ignore
       libWrapper.register("midi-qol", "SightLayer.prototype.restrictVisibility", restrictVisibility, "OVERRIDE");
 
-      log("midi-qol | Patching Token._isVisionSource")
+      log("Patching Token._isVisionSource")
       //@ts-ignore
       libWrapper.register("midi-qol", "Token.prototype._isVisionSource", _isVisionSource, "OVERRIDE");
 
-      log("midi-qol | Patching Token.isVisible")
+      log("Patching Token.isVisible")
       //@ts-ignore
       libWrapper.register("midi-qol", "Token.prototype.isVisible", isVisible, "OVERRIDE");
     } else {
-      log("midi-qol | Patching SightLayer._restrictVisibility")
+      log("Patching SightLayer._restrictVisibility")
       //@ts-ignore
       let restrictVisibilityProxy = new Proxy(SightLayer.prototype.restrictVisibility, {
         apply: (target, thisvalue, args) =>
@@ -243,7 +243,7 @@ export let visionPatching = () => {
       //@ts-ignore
       SightLayer.prototype.restrictVisibility = restrictVisibilityProxy;
 
-      log("midi-qol | Patching Token._isVisionSource")
+      log("Patching Token._isVisionSource")
       //@ts-ignore
       let _isVisionSourceProxy = new Proxy(Token.prototype._isVisionSource, {
         apply: (target, thisvalue, args) =>
@@ -252,11 +252,11 @@ export let visionPatching = () => {
       //@ts-ignore
       Token.prototype._isVisionSource = _isVisionSourceProxy;
 
-      log("midi-qol | Patching Token.isVisible")
+      log("Patching Token.isVisible")
       Object.defineProperty(Token.prototype, "isVisible", { get: isVisible });
     }
   }
-  console.warn("midi-qol | Vision patching - ", patchVision ? "enabled" : "disabled")
+  log("Vision patching - ", patchVision ? "enabled" : "disabled")
 }
 
 export let itemPatching = () => {

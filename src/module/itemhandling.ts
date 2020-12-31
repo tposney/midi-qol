@@ -65,7 +65,6 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
 
 export async function doDamageRoll(wrapped, {event = null, spellLevel = null, versatile = null} = {}) {
   let workflow = Workflow.getWorkflow(this.uuid);
-  console.error("do damage roll ", wrapped, versatile, event)
   if (!enableWorkflow) {
     return await wrapped({event, versatile})
   }
@@ -128,7 +127,6 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
 }
 
 export async function doItemRoll(wrapped, options = {showFullCard:false, createWorkflow:true, versatile:false, configureDialog:true}) {
-  console.error("options are ", options)
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
   let versatile = options?.versatile ?? false;
