@@ -95,7 +95,7 @@
     "midi-qol.ConfigTitle": "Midi-Qol Configuration",
     "midi-qol.WorkflowSettings": "Workflow Settings",
     "midi-qol.CheckSaveText.Name": "Search spell description",
-    "midi-qol.CheckSaveText.Hint": "Search spell description for save type - 'half as much damge'. If unchecked assume a save does 1/2 damage",
+    "midi-qol.CheckSaveText.Hint": "Search spell description for save type - 'half as much daamge'. If unchecked assume a save does 1/2 damage",
     "midi-qol.Save": "Save Settings",
     "midi-qol.saving-throws": "Saving Throws",
     "midi-qol.saving-throw": "Saving Throw",

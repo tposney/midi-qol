@@ -177,7 +177,7 @@ export class Workflow {
       const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
       const versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
       const fastForwardKey = advKey && disKey
-      if (configSettings.autoRollDamage !== "none") {
+      if (configSettings.autoRollDamage !== "none" || this.rollOptions.fastForward) {
         this.rollOptions.critical = this.isCritical || this.rollOptions.critical || critKey;
       } else {
         this.rollOptions.critical = critKey;
@@ -427,7 +427,8 @@ export class Workflow {
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
         if (this.item?.data.data.actionType === "heal") this.defaultDamageType = CONFIG.DND5E.healingTypes["healing"]; 
         this.damageDetail = createDamageList(this.damageRoll, this.item, this.defaultDamageType);
-        await this.displayDamageRoll(false, configSettings.mergeCard)
+        this.criticalDetail = createDamageList(this.criticalRoll, this.item, this.defaultDamageType);
+        await this.displayDamageRoll(false, configSettings.mergeCard);
         if (this.isFumble) {
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
         }
@@ -544,7 +545,7 @@ export class Workflow {
           (ef.data.flags?.dae?.specialDuration === "1Hit" && this.hitTargets.size > 0)
         ).map(ef=>ef.id);
         warn("1 off expiry ", myExpiredEffects);
-        (myExpiredEffects.length > 0) && await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
+        (myExpiredEffects?.length > 0) && await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
 
         // expire effects on targeted tokens as required
         for (let target of this.targets) {
@@ -555,7 +556,7 @@ export class Workflow {
             return (ef.data.flags?.dae?.specialDuration === "isAttacked" && wasAttacked) ||
                    (ef.data.flags?.dae?.specialDuration === "isDamaged" && wasDamaged) 
           }).map(ef=> ef.id);
-          if (expiredEffects.length > 0) {
+          if (expiredEffects?.length > 0) {
             const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
             if (!intendedGM) {
               ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
@@ -645,7 +646,8 @@ export class Workflow {
             waitForDiceSoNice: true,
             hideTag: this.hideTags,
             playSound: true,
-            roll: this.attackCardData.roll,
+            roll: this.attackRoll.roll,
+            // roll: this.attackCardData.roll,
             displayId: this.displayId,
             isCritical: this.isCritical,
             isFumble: this.isFumble,
@@ -691,7 +693,8 @@ export class Workflow {
           type: MESSAGETYPES.DAMAGE,
           playSound: false, 
           sound: rollSound,
-          roll: this.damageCardData.roll,
+          // roll: this.damageCardData.roll,
+          roll: this.damageRoll.roll,
           damageDetail: this.damageDetail,
           damageTotal: this.damageTotal,
           hideTag: this.hideTags,
@@ -924,7 +927,6 @@ export class Workflow {
 
             // set a timeout for taking over the roll
             this.saveTimeouts[requestId] = setTimeout(async () => {
-              console.warn(`Timeout waiting for ${playerName} to roll ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save - rolling for them`)
               if (this.saveRequests[requestId]) {
                   delete this.saveRequests[requestId];
                   delete this.saveTimeouts[requestId];

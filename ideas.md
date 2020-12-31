@@ -1,15 +1,23 @@
+critical damage grant/force
+
+Suport for 
+flags.midi-qol.grants.all.critical
+flags.midi-qol.grants.mwak.critical
+flags.midi-qol.grants.rwak.critical
+flags.midi-qol.grants.msak.critical
+flags.midi-qol.grants.rsak.critical
+flags.midi-qol.fail.all.crtical
+flags.midi-qol.fail.mwak.critical
+flags.midi-qol.fail.rwak.critical
+flags.midi-qol.fail.msak.critical
+flags.midi-qol.fail.rsak.critical
+flags.midi-qol.force.all.crticial
+flags.midi-qol.force.mwak.critical
+flags.midi-qol.force.rwak.critical
+flags.midi-qol.force.msak.critical
+flags.midi-qol.force.rsak.critical
+
 chat damage buttons on merged card
 ?? chaining items
-How to treat saves on items with attack rolls? 
-How to display damage types on mergee card - perhaps grab the html flavor and regex it
-auto roll damage for npcs only/all characters
 
-New Features Summary
-Better dnd5e integration, uses standard dnd5e rolls.
-merge card for attack/damage
-magic items support
-new ui for configuration
-immunities support dnd5e new physical damage - backport to minor-qol?
-critical damage application types
-Synthetic damage roll support (e.g. divine smite/hunters mark)
 

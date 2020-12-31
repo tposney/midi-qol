@@ -111,8 +111,6 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
               if (item.hasDamage)
                   buttons.append(`<span class="tag"><button data-action="damage">${i18n("midi-qol.buttons.damage")}</button></span>`);
               if (item.isVersatile) 
-                  buttons.append(`<span class="tag"><button data-action="versatileAttack">${i18n("midi-qol.buttons.versatileAttack")}</button></span>`);
-              if (item.isVersatile) 
                 buttons.append(`<span class="tag"><button data-action="versatileDamage">${i18n("midi-qol.buttons.versatileDamage")}</button></span>`);
               buttonsWereAdded = true;
               break;
@@ -138,7 +136,7 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
               ev.preventDefault();
               ev.stopPropagation();
               debug("roll handler ", ev.target.dataset.action);
-              const event = {shiftKey: ev.shiftKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, altKey: ev.altKey};
+              let event = {shiftKey: ev.shiftKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, altKey: ev.altKey};
               // If speed rolls are off
               switch (ev.target.dataset.action) {
                   case "attack":
@@ -151,7 +149,7 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
                       await item.rollDamage({ event, versatile: false });
                       break;
                   case "versatileDamage":
-                      await item.rollDamage({versatile: true, event });
+                      await item.rollDamage({ event, versatile: true });
                       break;
                   case "consume":
                       await item.roll({ event });

@@ -1,3 +1,7 @@
+0.3.44  
+Fix for some libwrapper incompatibilities.
+Fix for multilevel tokens throwing an error
+
 0.3.43  
 * Fix for spell scaling not working if not auto rolling damage.  
 * Fix for AOE magic items spells throwing an error.   

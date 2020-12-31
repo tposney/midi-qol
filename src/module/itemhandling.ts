@@ -23,7 +23,7 @@ function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boole
   } else return true;
 }
 
-export async function doAttackRoll(options = {event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, versatile: false}) {
+export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, versatile: false}) {
   let workflow: Workflow = Workflow.getWorkflow(this.uuid);
   debug("Entering item attack roll ", event, workflow, Workflow._workflows)
   if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
@@ -39,8 +39,13 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
   workflow.checkTargetAdvantage();
   workflow.checkAbilityAdvantage();
   // we actually want to collect the html from the attack roll, so need to render and grab
-  hideChatMessage(configSettings.mergeCard && enableWorkflow, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
-  let result: Roll = await rollMappings.itemAttack.roll.bind(this)(workflow.rollOptions);
+  // hideChatMessage(configSettings.mergeCard && enableWorkflow, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
+  let result: Roll = await rollMappings.itemAttack.roll.bind(this)({
+    advantage: workflow.rollOptions.advantage,
+    disadvantage: workflow.rollOptions.disadvantage,
+    chatMessage: !configSettings.mergeCard,
+    event: {shiftKey: workflow.rollOptions.fastForward}
+  });
   if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
     workflow.targets = new Set(game.user.targets);
   }
@@ -59,12 +64,17 @@ export async function doAttackRoll(options = {event: {shiftKey: false, altKey: f
   return result;
 }
 
-export async function doDamageRoll({event = null, spellLevel = null, versatile = null}= {}) {
+export async function doDamageRoll(wrapped, {event = null, spellLevel = null, versatile = null} = {}) {
   let workflow = Workflow.getWorkflow(this.uuid);
+  console.error("do damage roll ", wrapped, versatile, event)
   if (!enableWorkflow) {
-    return rollMappings.itemDamage.roll.bind(this)({event})
+    return rollMappings.itemDamage.roll.bind(this)({event, versatile})
   }
-  if (workflow && workflow.currentState !== WORKFLOWSTATES.WAITFORDAMGEROLL){
+  if (!workflow) {
+    warn("Roll Damage: No workflow for item ", this.name);
+    return rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
+  }
+  if (workflow.currentState !== WORKFLOWSTATES.WAITFORDAMGEROLL){
     switch (workflow?.currentState) {
       case WORKFLOWSTATES.AWAITTEMPLATE:
         return ui.notifications.warn(i18n("midi-qol.noTemplateSeen"));
@@ -74,17 +84,21 @@ export async function doDamageRoll({event = null, spellLevel = null, versatile =
         return ui.notifications.warn(i18n("broken universe"));
     }
   }
-  if (!workflow) {
-    warn("Roll Damage: No workflow for item ", this.name);
-    return rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
-  }
-  // we actually want to collect the html from the damage roll, so need to rendere and grab
-  hideChatMessage(configSettings.mergeCard && enableWorkflow, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
+  // we actually want to collect the html from the damage roll, so need to render and grab
+  // hideChatMessage(configSettings.mergeCard && enableWorkflow, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
   workflow.processDamageEventOptions(event);
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
-  let result: Roll = await rollMappings.itemDamage.roll.bind(this)({critical: workflow.rollOptions.critical, spellLevel: workflow.rollOptions.spellLevel, versatile: workflow.rollOptions.versatile, options: workflow.rollOptions})
+  let result: Roll = await rollMappings.itemDamage.roll.bind(this)({
+    critical: workflow.rollOptions.critical, 
+    spellLevel: workflow.rollOptions.spellLevel, 
+    versatile: workflow.rollOptions.versatile || versatile, 
+    event: {shiftKey: workflow.rollOptions.fastForward},
+    options: {
+      fastForward: workflow.rollOptions.fastForward, 
+      chatMessage: !configSettings.mergeCard,
+    }})
   if (!result?.total) { // user backed out of damage roll or roll failed
     return;
   }
@@ -95,11 +109,27 @@ export async function doDamageRoll({event = null, spellLevel = null, versatile =
   workflow.damageRoll = result;
   workflow.damageTotal = result.total;
   workflow.damageRollHTML = await result.render();
+
+  // roll a critical as well
+  let critResult: Roll = await rollMappings.itemDamage.roll.bind(this)({
+    critical: true, 
+    spellLevel: workflow.rollOptions.spellLevel, 
+    versatile: workflow.rollOptions.versatile || versatile, 
+    event: {shiftKey: workflow.rollOptions.fastForward},
+    options: {
+      fastForward: true, 
+      chatMessage: false
+    }})
+  critResult = doCritModify(critResult);
+  workflow.criticalRoll = critResult;
+  workflow.criticalTotal = critResult.total;
+  workflow.criticalRollHTML = await critResult.render();
   workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
   return result;
 }
 
-export async function doItemRoll(options = {showFullCard:false, createWorkflow:true, versatile:false, configureDialog:true}) {
+export async function doItemRoll(wrapped, options = {showFullCard:false, createWorkflow:true, versatile:false, configureDialog:true}) {
+  console.error("options are ", options)
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
   let versatile = options?.versatile ?? false;

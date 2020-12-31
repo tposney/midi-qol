@@ -266,27 +266,31 @@ export let itemPatching = () => {
   let ItemClass = CONFIG.Item.entityClass;
   let ActorClass = CONFIG.Actor.entityClass;
 
-  rollMappings = {
+  
+rollMappings = {
+  //@ts-ignore
+  "itemRoll" : {roll: ItemClass.prototype.roll, methodName: "roll", class: CONFIG.Item.entityClass, target: "CONFIG.Item.entityClass.prototype.roll", replacement: doItemRoll},
+  //@ts-ignore
+  "itemAttack": {roll: ItemClass.prototype.rollAttack, methodName: "rollAttack", class: CONFIG.Item.entityClass, target: "CONFIG.Item.entityClass.prototype.rollAttack", replacement: doAttackRoll},
+  //@ts-ignore
+  "itemDamage": {roll: ItemClass.prototype.rollDamage, methodName: "rollDamage", class: CONFIG.Item.entityClass, target: "CONFIG.Item.entityClass.prototype.rollDamage", replacement: doDamageRoll},
+  //@ts-ignore
+  // "applyDamage": {roll: ActorClass.prototype.applyDamage, class: CONFIG.Actor.entityClass, target: "CONFIG.Actor.entityClass.prototype.applyDamage"}
+};
+["itemAttack", "itemDamage", "itemRoll"].forEach(rollId => {
+  log("Patching ", rollId, rollMappings[rollId]);
+  let rollMapping = rollMappings[rollId];
+  if (game.modules.get("lib-wrapper")?.active) {
     //@ts-ignore
-    "itemRoll" : {roll: ItemClass.prototype.roll, methodName: "roll", class: CONFIG.Item.entityClass, target: "CONFIG.Item.entityClass.prototype.roll", replacement: doItemRoll},
-    //@ts-ignore
-    "itemAttack": {roll: ItemClass.prototype.rollAttack, methodName: "rollAttack", class: CONFIG.Item.entityClass, target: "CONFIG.Item.entityClass.prototype.rollAttack", replacement: doAttackRoll},
-    //@ts-ignore
-    "itemDamage": {roll: ItemClass.prototype.rollDamage, methodName: "rollDamage", class: CONFIG.Item.entityClass, target: "CONFIG.Item.entityClass.prototype.rollDamage", replacement: doDamageRoll},
-    //@ts-ignore
-    "applyDamage": {roll: ActorClass.prototype.applyDamage, class: CONFIG.Actor.entityClass, target: "CONFIG.Actor.entityClass.prototype.applyDamage"}
-  };
-  ["itemAttack", "itemDamage", "itemRoll"].forEach(rollId => {
-    log("Patching ", rollId, rollMappings[rollId]);
-    let rollMapping = rollMappings[rollId];
-    if (game.modules.get("lib-wrapper")?.active) {
-      //@ts-ignore
-      libWrapper.register("midi-qol", rollMapping.target, rollMapping.replacement, "MIXED");
-    } else {
-      rollMappings[rollId].class.prototype[rollMapping.methodName] = rollMapping.replacement;
-    }
-  })
-  debug("After patching roll mappings are ", rollMappings);
+    libWrapper.register("midi-qol", rollMapping.target, rollMapping.replacement, "MIXED");
+  } else {
+    rollMappings[rollId].class.prototype[rollMapping.methodName] = function() {
+       return rollMapping.replacement.call(this,  rollMappings[rollId].class.prototype[rollMapping.methodName], ...arguments)
+    };
+    // rollMappings[rollId].class.prototype[rollMapping.methodName] = rollMapping.replacement;
+  }
+})
+debug("After patching roll mappings are ", rollMappings);
 }
 
 export let actorAbilityRollPatching = () => {
