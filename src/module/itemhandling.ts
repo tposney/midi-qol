@@ -27,7 +27,7 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   debug("Entering item attack roll ", event, workflow, Workflow._workflows)
   if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
     if (enableWorkflow) warn("Roll Attack: No workflow for item ", this.name, this.uuid, event);
-    return wrapped(options);
+    return await wrapped(options);
   }
   if (workflow?.currentState !== WORKFLOWSTATES.WAITFORATTACKROLL) {
     warn("Workflow state not wait for attack roll");
@@ -67,11 +67,11 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   let workflow = Workflow.getWorkflow(this.uuid);
   console.error("do damage roll ", wrapped, versatile, event)
   if (!enableWorkflow) {
-    return wrapped({event, versatile})
+    return await wrapped({event, versatile})
   }
   if (!workflow) {
     warn("Roll Damage: No workflow for item ", this.name);
-    return wrapped({event, spellLevel, versatile})
+    return await wrapped({event, spellLevel, versatile})
   }
   if (workflow.currentState !== WORKFLOWSTATES.WAITFORDAMGEROLL){
     switch (workflow?.currentState) {
@@ -134,7 +134,7 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   let versatile = options?.versatile ?? false;
   let configureDialog = options?.configureDialog ?? true;
   if (!enableWorkflow || createWorkflow === false) {
-    return wrapped({configureDialog:true, rollMode:null, createMessage:true});
+    return await wrapped({configureDialog:true, rollMode:null, createMessage:true});
   }
   const shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
                           || (game.user.targets.size > 0) // there are some target selected
