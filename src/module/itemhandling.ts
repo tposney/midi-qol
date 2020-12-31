@@ -1,7 +1,6 @@
 import { warn, debug, error, i18n, log, MESSAGETYPES } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
 import {  configSettings, itemDeleteCheck, enableWorkflow, criticalDamage } from "./settings";
-import { rollMappings } from "./patching";
 import { getSelfTargetSet } from "./utils";
 
 function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boolean, workflow: Workflow, selector: string) {
@@ -28,7 +27,7 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   debug("Entering item attack roll ", event, workflow, Workflow._workflows)
   if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
     if (enableWorkflow) warn("Roll Attack: No workflow for item ", this.name, this.uuid, event);
-    return rollMappings.itemAttack.roll.bind(this)(options);
+    return wrapped(options);
   }
   if (workflow?.currentState !== WORKFLOWSTATES.WAITFORATTACKROLL) {
     warn("Workflow state not wait for attack roll");
@@ -40,7 +39,7 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   workflow.checkAbilityAdvantage();
   // we actually want to collect the html from the attack roll, so need to render and grab
   // hideChatMessage(configSettings.mergeCard && enableWorkflow, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
-  let result: Roll = await rollMappings.itemAttack.roll.bind(this)({
+  let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
     disadvantage: workflow.rollOptions.disadvantage,
     chatMessage: !configSettings.mergeCard,
@@ -68,11 +67,11 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   let workflow = Workflow.getWorkflow(this.uuid);
   console.error("do damage roll ", wrapped, versatile, event)
   if (!enableWorkflow) {
-    return rollMappings.itemDamage.roll.bind(this)({event, versatile})
+    return wrapped({event, versatile})
   }
   if (!workflow) {
     warn("Roll Damage: No workflow for item ", this.name);
-    return rollMappings.itemDamage.roll.bind(this)({event, spellLevel, versatile})
+    return wrapped({event, spellLevel, versatile})
   }
   if (workflow.currentState !== WORKFLOWSTATES.WAITFORDAMGEROLL){
     switch (workflow?.currentState) {
@@ -90,7 +89,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
-  let result: Roll = await rollMappings.itemDamage.roll.bind(this)({
+  let result: Roll = await wrapped({
     critical: workflow.rollOptions.critical, 
     spellLevel: workflow.rollOptions.spellLevel, 
     versatile: workflow.rollOptions.versatile || versatile, 
@@ -111,7 +110,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   workflow.damageRollHTML = await result.render();
 
   // roll a critical as well
-  let critResult: Roll = await rollMappings.itemDamage.roll.bind(this)({
+  let critResult: Roll = await wrapped({
     critical: true, 
     spellLevel: workflow.rollOptions.spellLevel, 
     versatile: workflow.rollOptions.versatile || versatile, 
@@ -135,7 +134,7 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   let versatile = options?.versatile ?? false;
   let configureDialog = options?.configureDialog ?? true;
   if (!enableWorkflow || createWorkflow === false) {
-    return rollMappings.itemRoll.roll.bind(this)({configureDialog:true, rollMode:null, createMessage:true});
+    return wrapped({configureDialog:true, rollMode:null, createMessage:true});
   }
   const shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
                           || (game.user.targets.size > 0) // there are some target selected
@@ -185,7 +184,7 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = showFullCard;
   workflow.noAutoAttack = showFullCard;
-  let result = await rollMappings.itemRoll.roll.bind(this)({configureDialog, rollMode:null, createMessage:false});
+  let result = await wrapped({configureDialog, rollMode:null, createMessage:false});
   /* need to get spell level from the html returned in result */
   if(!result) {
     //TODO find the right way to clean this up

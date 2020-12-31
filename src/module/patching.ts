@@ -5,8 +5,6 @@ import { configSettings, autoFastForwardAbilityRolls } from "./settings.js";
 import { testKey } from "./utils";
 
 
-export var rollMappings;
-
 function restrictVisibility() {
   // Tokens
   for ( let t of canvas.tokens.placeables ) {
@@ -267,7 +265,7 @@ export let itemPatching = () => {
   let ActorClass = CONFIG.Actor.entityClass;
 
   
-rollMappings = {
+const rollMappings = {
   //@ts-ignore
   "itemRoll" : {roll: ItemClass.prototype.roll, methodName: "roll", class: CONFIG.Item.entityClass, target: "CONFIG.Item.entityClass.prototype.roll", replacement: doItemRoll},
   //@ts-ignore
@@ -284,10 +282,11 @@ rollMappings = {
     //@ts-ignore
     libWrapper.register("midi-qol", rollMapping.target, rollMapping.replacement, "MIXED");
   } else {
-    rollMappings[rollId].class.prototype[rollMapping.methodName] = function() {
-       return rollMapping.replacement.call(this,  rollMappings[rollId].class.prototype[rollMapping.methodName], ...arguments)
+    const replacementMethod = rollMapping.replacement;
+    const originalMethod = rollMapping.roll;
+    rollMapping.class.prototype[rollMapping.methodName] = function() {
+       return replacementMethod.call(this, originalMethod.bind(this), ...arguments);
     };
-    // rollMappings[rollId].class.prototype[rollMapping.methodName] = rollMapping.replacement;
   }
 })
 debug("After patching roll mappings are ", rollMappings);
