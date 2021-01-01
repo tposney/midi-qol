@@ -138,7 +138,7 @@ export class Workflow {
       // const versaKey = event?.shiftKey;
       this.rollOptions.fastForward = (["all", "attack"].includes(configSettings.autoFastForward));
       this.rollOptions.fastForward = this.rollOptions.fastForward ||event?.altKey || event?.shfitKey || event?.ctrlKey;
-      this.rollOptions.advanatage = advKey;
+      this.rollOptions.advantage = advKey;
       this.rollOptions.disadvantage = disKey;
     }
     const midiFlags = this.actor?.data.flags["midi-qol"];
