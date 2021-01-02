@@ -1,5 +1,5 @@
 import { warn, error, debug, i18n } from "../midi-qol";
-import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, diceSoNiceUpdateMessge, recalcCriticalDamage, processItemCardCreation, hideRollUpdate, hideRollRender } from "./chatMesssageHandling";
+import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, recalcCriticalDamage, processItemCardCreation, hideRollUpdate, hideRollRender } from "./chatMesssageHandling";
 import { processUndoDamageCard } from "./GMAction";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect } from "./utils";
 import { configSettings, dragDropTargeting } from "./settings";
@@ -21,7 +21,6 @@ export let initHooks = () => {
   })
   
   Hooks.on("updateChatMessage", (message, update, options, user) => {
-    diceSoNiceUpdateMessge(message, update, options, user);
     mergeCardSoundPlayer(message, update, options, user);
     hideRollUpdate(message, update, options, user)
     //@ts-ignore

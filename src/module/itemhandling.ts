@@ -39,12 +39,24 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   workflow.checkAbilityAdvantage();
   // we actually want to collect the html from the attack roll, so need to render and grab
   // hideChatMessage(configSettings.mergeCard && enableWorkflow, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
+  const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
   let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
     disadvantage: workflow.rollOptions.disadvantage,
     chatMessage: !configSettings.mergeCard,
     event: {shiftKey: workflow.rollOptions.fastForward}
   });
+  if (dice3dActive && configSettings.mergeCard) {
+    let whisperIds = null;
+    const rollMode = game.settings.get("core", "rollMode");
+    if ((configSettings.hideRollDetails !== "none" && game.user.isGM) || rollMode === "blindroll") {
+      whisperIds = ChatMessage.getWhisperRecipients("GM")
+    } else if (rollMode === "selfroll") {
+      whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
+    }
+    await game.dice3d.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+  }
+
   if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
     workflow.targets = new Set(game.user.targets);
   }
@@ -100,6 +112,17 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   if (!result?.total) { // user backed out of damage roll or roll failed
     return;
   }
+  const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
+  if (dice3dActive && configSettings.mergeCard) {
+    let whisperIds = null;
+    const rollMode = game.settings.get("core", "rollMode");
+    if ((configSettings.hideRollDetails !== "none" && game.user.isGM) || rollMode === "blindroll") {
+      whisperIds = ChatMessage.getWhisperRecipients("GM")
+    } else if (rollMode === "selfroll") {
+      whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
+    }
+    await game.dice3d.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+  }
 // If the roll was a critical or the user selected crtical
 //@ts-ignore
   if (workflow.isCritical || result.terms[0].options?.critical) 
@@ -108,6 +131,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   workflow.damageTotal = result.total;
   workflow.damageRollHTML = await result.render();
 
+  /*
   // roll a critical as well
   let critResult: Roll = await wrapped({
     critical: true, 
@@ -118,10 +142,12 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
       fastForward: true, 
       chatMessage: false
     }})
+    console.error("critical roll is ", critResult)
   critResult = doCritModify(critResult);
   workflow.criticalRoll = critResult;
   workflow.criticalTotal = critResult.total;
   workflow.criticalRollHTML = await critResult.render();
+  */
   workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
   return result;
 }
@@ -332,10 +358,9 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   }
   // Toggle default roll mode
   let rollMode = game.settings.get("core", "rollMode");
-  if ( ["gmroll", "blindroll"].includes(rollMode) ) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active);
+  if ( ["gmroll", "blindroll"].includes(rollMode) ) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM");
   if ( rollMode === "blindroll" ) chatData["blind"] = true;
   if (rollMode === "selfroll") chatData["whisper"] = [game.user.id];
-
   // Create the chat message
   return ChatMessage.create(chatData);
 }

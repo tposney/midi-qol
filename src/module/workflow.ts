@@ -177,7 +177,7 @@ export class Workflow {
       const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
       const versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
       const fastForwardKey = advKey && disKey
-      if (configSettings.autoRollDamage !== "none" || this.rollOptions.fastForward) {
+      if ((configSettings.autoRollDamage !== "none" || this.rollOptions.fastForward) && !disKey) {
         this.rollOptions.critical = this.isCritical || this.rollOptions.critical || critKey;
       } else {
         this.rollOptions.critical = critKey;
@@ -190,10 +190,16 @@ export class Workflow {
       // if (useKey) this.rollOptions.critical = this.isCritical;
     } else { // use default behaviour
       const critKey = event?.altKey;
+      const noCritKey = event?.ctrlKey;
       const fastForwardKey = (critKey && (event?.ctrlKey || event?.metaKey)) || ["all", "damage"].includes(configSettings.autoFastForward);
       this.rollOptions.fastForward = this.rollOptions.fastForward || event?.shiftKey || event?.altKey;
       this.rollOptions.critical = event?.altKey;
-      if (fastForwardKey) this.rollOptions.critical = this.isCritical;
+      if ((configSettings.autoRollDamage !== "none" || this.rollOptions.fastForward) && !noCritKey) {
+        this.rollOptions.critical = this.isCritical || this.rollOptions.critical || critKey;
+      } else {
+        this.rollOptions.critical = critKey;
+        this.critical = critKey;
+      }
     }
     this.rollOptions.spellLevel = this.itemLevel;
     if (configSettings.gmFullAuto && game.user.isGM) {
@@ -290,8 +296,8 @@ export class Workflow {
   }
 
   public someEventKeySet() {
-    return this.event?.shiftKey || this.event?.altKey || this.event?.ctrlKey || this.event?.metaKey ||
-      this.rollOptions.advantage || this.rollOptions.disadvantage || this.rollOptions.fastForward;
+    return this.event?.shiftKey || this.event?.altKey || this.event?.ctrlKey || this.event?.metaKey;
+     // || this.rollOptions.advantage || this.rollOptions.disadvantage || this.rollOptions.fastForward;
   }
 
   static removeWorkflow(id: string) {
@@ -384,9 +390,9 @@ export class Workflow {
         await this.displayAttackRoll(false, configSettings.mergeCard);
         if (configSettings.autoCheckHit !== "none") {
           await this.checkHits();
-          const whisperCard = configSettings.autoCheckHit === "whisper" || game.settings.get("core", "rollMode") === "blindroll";
-          await this.displayHits(whisperCard, configSettings.mergeCard);
- 
+          const rollMode = game.settings.get("core", "rollMode");
+          this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === "blindroll" || rollMode === "gmroll";
+          await this.displayHits(this.whisperAttackCard, configSettings.mergeCard);
         }
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
         Hooks.callAll("midi-qol.AttackRollComplete", this);
@@ -427,7 +433,9 @@ export class Workflow {
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
         if (this.item?.data.data.actionType === "heal") this.defaultDamageType = CONFIG.DND5E.healingTypes["healing"]; 
         this.damageDetail = createDamageList(this.damageRoll, this.item, this.defaultDamageType);
+        /*
         this.criticalDetail = createDamageList(this.criticalRoll, this.item, this.defaultDamageType);
+        */
         await this.displayDamageRoll(false, configSettings.mergeCard);
         if (this.isFumble) {
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
@@ -766,13 +774,15 @@ export class Workflow {
           content: hitContent || "No Targets",
           type: CONST.CHAT_MESSAGE_TYPES.OTHER,
         }
-        if (whisper) 
+        const rollMode = game.settings.get("core", "rollMode");
+        if (whisper || rollMode !== "publicRoll") 
         {
           chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active);
           chatData.user = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
-          if (game.settings.get("core", "rollMode") === "blindroll") {
+          if (rollMode === "blindroll") {
             chatData["blind"] = true;
           }
+
           debug("Trying to whisper message", chatData)
         }
         if (this.__proto__.constructor.name !== "BetterRollsWorkflow") {
@@ -847,10 +857,17 @@ export class Workflow {
         type: CONST.CHAT_MESSAGE_TYPES.OTHER,
         flags: { "midi-qol": {type: MESSAGETYPES.SAVES, waitForDiceSoNice: true}}
       };
-      if (configSettings.autoCheckSaves === "whisper" || whisper) {
+
+      const rollMode = game.settings.get("core", "rollMode");
+      if (configSettings.autoCheckSaves === "whisper" || whisper || rollMode !== "publicRoll") 
+      {
         chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active);
-        chatData.user = ChatMessage.getWhisperRecipients("GM").find(u=>u.active)
-        chatData.blind = true;
+        chatData.user = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
+        if (rollMode === "blindroll") {
+          chatData["blind"] = true;
+        }
+
+        debug("Trying to whisper message", chatData)
       }
       await ChatMessage.create(chatData);
     }

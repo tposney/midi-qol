@@ -80,7 +80,6 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
   const damageList = Object.entries(damageParts).map(([type, damage]) => {return {damage, type}})
   debug("CreateDamageList: Final damage list is ", damageList)
   //TODO remove this eventually
-  console.warn("CreateDamageList: final damage is  ", damageList, damageParts)
   return damageList;
 } 
 

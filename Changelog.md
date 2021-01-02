@@ -1,3 +1,6 @@
+0.3.45
+DSN fix (I hope).
+Support for new tidysheet5e (0.4.0+)
 0.3.44  
 Fix for some libwrapper incompatibilities.
 Fix for multilevel tokens throwing an error

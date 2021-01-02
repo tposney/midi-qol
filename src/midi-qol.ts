@@ -19,7 +19,6 @@ import { initHooks } from './module/Hooks';
 import { initGMActionSetup } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
-import { initializeDSNHandler } from './module/chatMesssageHandling';
 import { applyTokenDamage, getTraitMult } from './module/utils';
 import { ConfigPanel } from './module/apps/ConfigPanel';
 import { doCritModify } from './module/itemhandling';
@@ -70,7 +69,6 @@ Hooks.once('init', async function() {
 	
 	// Preload Handlebars templates
   preloadTemplates();
-  initializeDSNHandler();
 	// Register custom sheets (if any)
 });
 

@@ -15,7 +15,6 @@ export const MAESTRO_MODULE_NAME = "maestro";
 export const MODULE_LABEL = "Maestro";
 
 export function mergeCardSoundPlayer(message, update, options, user) {
-
   debug("Merge card sound player ", message.data, getProperty(update, "flags.midi-qol.playSound"), message.data.sound)
   const firstGM = game.user; //game.users.find(u=> u.isGM && u.active);
   if (game.user !== firstGM) return;
@@ -27,6 +26,7 @@ export function mergeCardSoundPlayer(message, update, options, user) {
     const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
     const delay = (dice3dActive && midiqolFlags?.waitForDiceSoNice && [MESSAGETYPES.HITS].includes(midiqolFlags.type)) ? 500 : 0;
     debug("mergeCardsound player ", update, playlist, sound, sound?'playing sound':'not palying sound', delay)
+
     if (sound) {
       setTimeout(() => {
        sound.playing = true;
@@ -145,43 +145,6 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
 }
 
 var DSNHandlers;
-export function initializeDSNHandler() {
-  DSNHandlers = new Map();
-  Hooks.on("diceSoNiceRollComplete", (id) => {
-    const handler = DSNHandlers.get(id);
-    if (handler) {
-      handler(id);
-      DSNHandlers.delete(id)
-    }
-  });
-}
-
-
-export function diceSoNiceUpdateMessge(message, update, ...args) {
-  const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
-  if (!dice3dActive || !getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
-  const type = getProperty(update, "flags.midi-qol.type")
-  if (![MESSAGETYPES.ATTACK, MESSAGETYPES.DAMAGE].includes(type)) return;
-  const displayId = duplicate(message.data.flags["midi-qol"].displayId);
-  // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
-  let rollDice = game.user.isGM || (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
-  let roll;
-  if (typeof message.data.flags["midi-qol"].roll === "string")
-    roll = Roll.fromJSON(message.data.flags["midi-qol"].roll);
-  else roll = new Roll(message.data.flags["midi-qol"].roll._formula);
-  warn("dsn update message ", message, configSettings.hideRollDetails, message.isBlind)
-  if ((message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails === "detailsDSN") || message.data.blind) {
-    roll = roll.reroll()
-  }
-  if (rollDice) {
-    game.dice3d.showForRoll(roll, message.user).then(displayed => {
-      delete message._dice3danimating;
-      Hooks.callAll("diceSoNiceRollComplete", displayId);
-      //@ts-ignore
-      ui.chat.scrollBottom();
-    });
-  }
-}
 
 let showHandler = (hideTags, displayId, html, header, message, id) => {
   debug("Show Handler:", header, hideTags, displayId, html, id, message)
@@ -202,21 +165,7 @@ export let diceSoNiceHandler = async (message, html, data) => {
         (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
   if (!rollDice) return;
 
-  if (configSettings.mergeCard) {
-    if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice") || game.settings.get("dice-so-nice", "immediatelyDisplayChatMessages")) return;
-    const type = message.data.flags["midi-qol"].type;
-    if (type === undefined) return;
-    const hideTags = message.data.flags["midi-qol"].hideTag;
-    const displayId = message.data.flags["midi-qol"].displayId;
-    debug("dicesonice render chat handler ", type, hideTags, data, message, displayId)
-    if (hideTags) hideTags.forEach(hideTag => {
-      // Look at this for dice so nice cards.
-      // $(`#chat-log .message[data-message-id="${message.id}"]`).find(hideTag).show();
-      html.find(hideTag).hide()
-    });
-    DSNHandlers.set(displayId, showHandler.bind(this, duplicate(hideTags), duplicate(displayId), html, "dice so nice complete handler ", message))
-    // setTimeout(showHandler.bind(this, duplicate(hideTags), duplicate(displayId), html, "dice so nice timeout handler ", duplicate(displayId)), 8000); // backup display of messages
-  } else {
+  if (configSettings.mergeCard) return;
     if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
     debug("dice so nice handler - non-merge card", html)
     html.hide();
@@ -230,7 +179,6 @@ export let diceSoNiceHandler = async (message, html, data) => {
       //@ts-ignore
       ui.chat.scrollBottom()
     }, 3000); // backup display of messages
-  }
   return true;
 }
 
