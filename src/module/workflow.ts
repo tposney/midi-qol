@@ -685,7 +685,7 @@ export class Workflow {
             || this.defaultDamageType || MQdefaultDamageType})`;
 
       //@ts-ignore .flavor not defined
-      const dmgHeader = configSettings.mergeCardCondensed ? damageString : this.damageCardData?.flavor ?? this.flavor;
+      const dmgHeader = configSettings.mergeCardCondensed ? damageString : (this.flavor ?? damageString);
       let replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center" >${dmgHeader}${this.damageRollHTML || ""}</div></div>`
       content = content.replace(searchString, replaceString);
       if (!!!game.dice3d?.messageHookDisabled) {
