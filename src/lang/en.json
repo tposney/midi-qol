@@ -130,7 +130,7 @@
     "midi-qol.playerRollSavesOptionsReduced": {"none": "None",  "letme": "Let Me Roll That For You", "chat": "Chat Message"},
     "midi-qol.AutoRemoveTargetsOptions": {"none": "Never", "dead": "untarget dead after roll", "allGM": "untarget dead and all GM", "all": "untarget all at end of turn"},
     "midi-qol.ColoredBordersOptions": {"none": "None", "borders": "Borders Only", "borderNamesText": "Border + Name Text", "borderNamesBackground": "Border + Name Background"},
-    "midi-qol.hideRollDetailsOptions": {"none": "None", "details": "Roll Formula", "detailsDSN": "Roll Formula + DSN dice", "all": "Entire Roll"},
+    "midi-qol.hideRollDetailsOptions": {"none": "None", "details": "Roll Formula", "all": "Entire Roll"},
     "midi-qol.potion": "Potion",
     "midi-qol.HideRollDetails.Name": "Hide Roll Details",
     "midi-qol.HideRollDetails.Hint": "Choose how much of GM rolls to hide from players. Roll Details + DSN means the players will see random DSN dice so they cannot work out monster plusses from the DSN dice",

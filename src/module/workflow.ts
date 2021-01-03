@@ -214,6 +214,37 @@ export class Workflow {
         this.rollOptions.critical = this.critical || this.rollOptions.critical;
       }
     }
+    this.processCriticalFlags()
+  }
+
+  processCriticalFlags() {
+
+    /*
+* flags.midi-qol.critical.all
+* flags.midi-qol.critical.mwak/rwak/msak/rsak/other
+* flags.midi-qol.noCritical.all
+* flags.midi-qol.noCritical.mwak/rwak/msak/rsak/other
+*/
+    // check actor force critical/noCritical
+    const criticalFlags = getProperty(this.actor.data, `flags.midi-qol.critical`) ?? {};
+    const noCriticalFlags = getProperty(this.actor.data, `flags.midi-qol.noCritical`) ?? {};
+    const attackType = this.item?.data.data.actionType;
+    if (criticalFlags.all || criticalFlags[attackType]) this.rollOptions.critical = true;
+    if (noCriticalFlags.all || noCriticalFlags[attackType]) this.rollOptions.critical = false;
+    if (this.rollOptions.critical !== undefined) this.isCritical = this.rollOptions.critical;
+
+    // check max roll
+    const maxFlags = getProperty(this.actor.data, `flags.midi-qol.maxRoll`) ?? {};
+    this.rollOptions.maxRoll = (maxFlags.all || maxFlags[attackType]) ?? false;
+
+    // check target critical/nocritical
+    if (this.targets.size !== 1) return;
+    const firstTarget = this.targets.values().next().value;
+    const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants?.critical ?? {};
+    const fails = firstTarget.actor?.data.flags["midi-qol"]?.fail?.critical ?? {};
+    if (grants?.all || grants[attackType]) this.rollOptions.critical = true;
+    if (fails?.all || fails[attackType]) this.rollOptions.critical = false;
+    if (this.rollOptions.critical !== undefined) this.isCritical = this.rollOptions.critical;
   }
 
   checkAbilityAdvantage() {
@@ -226,6 +257,7 @@ export class Workflow {
       this.rollOptions.disadvantage = false;
     }
   }
+
   checkTargetAdvantage() {
     if (!this.item) return;
     if (!this.targets?.size) return;
@@ -775,7 +807,7 @@ export class Workflow {
           type: CONST.CHAT_MESSAGE_TYPES.OTHER,
         }
         const rollMode = game.settings.get("core", "rollMode");
-        if (whisper || rollMode !== "publicRoll") 
+        if (whisper || rollMode !== "roll") 
         {
           chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active);
           chatData.user = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
@@ -859,7 +891,7 @@ export class Workflow {
       };
 
       const rollMode = game.settings.get("core", "rollMode");
-      if (configSettings.autoCheckSaves === "whisper" || whisper || rollMode !== "publicRoll") 
+      if (configSettings.autoCheckSaves === "whisper" || whisper || rollMode !== "roll") 
       {
         chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active);
         chatData.user = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
@@ -1070,6 +1102,7 @@ export class Workflow {
     this.hitDisplayData = [];
   
     if (item?.data.data.target?.type === "self") {
+      this.processCriticalFlags();
       this.targets = new Set([canvas.tokens.get(this.tokenId)]); //TODO check this is right
       debug("Check hits - self target")
 
@@ -1083,7 +1116,9 @@ export class Workflow {
           // check to see if the roll hit the target
           // let targetAC = targetActor.data.data.attributes.ac.value;
           isHit = this.attackTotal >= targetAC;
+          if (isHit) this.processCriticalFlags();
       }
+
       if (game.user.isGM) log(`${this.speaker.alias} Rolled a ${this.attackTotal} to hit ${targetName}'s AC of ${targetAC} is hit ${isHit || this.isCritical}`);
       // Log the hit on the target
       let attackType = ""; //item?.name ? i18n(item.name) : "Attack";

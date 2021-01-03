@@ -303,7 +303,7 @@ export let hideStuffHandler = (message, html, data) => {
     (message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails === "all")
      || message.data.blind) {
     html.find(".dice-roll").replaceWith(i18n("midi-qol.DiceRolled"));
-  } else if (message.user?.isGM && !game.user.isGM && ["details", "detailsDSN"].includes(configSettings.hideRollDetails)) {
+  } else if (message.user?.isGM && !game.user.isGM && ["details"].includes(configSettings.hideRollDetails)) {
     html.find(".dice-tooltip").remove();
     html.find(".dice-formula").remove();
   }
@@ -318,7 +318,7 @@ export let hideStuffHandler = (message, html, data) => {
 }
 
 export let recalcCriticalDamage = (data, ...args) => {
-  if (configSettings.mergeCard) return true;
+  if (enableWorkflow) return true;
   if (data.flags?.dnd5e?.roll.type === "damage") {
     debug("recalcCriticalDamage ", data.flags?.dnd5e?.roll.type, data, ...args)
     let token: Token = canvas.tokens.get(data.speaker.token)

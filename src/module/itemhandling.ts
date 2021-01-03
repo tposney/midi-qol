@@ -3,25 +3,6 @@ import { Workflow, WORKFLOWSTATES } from "./workflow";
 import {  configSettings, itemDeleteCheck, enableWorkflow, criticalDamage } from "./settings";
 import { getSelfTargetSet } from "./utils";
 
-function hideChatMessage(hideDefaultRoll: boolean, match: (messageData) => boolean, workflow: Workflow, selector: string) {
-  debug("Setting up hide chat message ", hideDefaultRoll, match, workflow, selector);
-
-  if (hideDefaultRoll) {
-    let hookId = Hooks.on("preCreateChatMessage", (data, options) => {
-      if (match(data)) {
-        //@ts-ignore
-        Hooks.off("preCreateChatMessage", duplicate(workflow.displayHookId));
-        workflow.displayHookId = null;
-        workflow[selector] = data;
-        warn("Setting up hide chat message ", data, options, match, workflow, selector);
-        options.displaySheet = false;
-        return false;
-      } else return true;
-    })
-    workflow.displayHookId = hookId;
-  } else return true;
-}
-
 export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, versatile: false}) {
   let workflow: Workflow = Workflow.getWorkflow(this.uuid);
   debug("Entering item attack roll ", event, workflow, Workflow._workflows)
@@ -37,8 +18,6 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   workflow.processAttackEventOptions(options?.event);
   workflow.checkTargetAdvantage();
   workflow.checkAbilityAdvantage();
-  // we actually want to collect the html from the attack roll, so need to render and grab
-  // hideChatMessage(configSettings.mergeCard && enableWorkflow, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "attackCardData");
   const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
   let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
@@ -94,8 +73,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
         return ui.notifications.warn(i18n("broken universe"));
     }
   }
-  // we actually want to collect the html from the damage roll, so need to render and grab
-  // hideChatMessage(configSettings.mergeCard && enableWorkflow, data => data?.type === CONST.CHAT_MESSAGE_TYPES.ROLL, Workflow.workflows[this.uuid], "damageCardData");
+
   workflow.processDamageEventOptions(event);
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
@@ -107,13 +85,30 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
     event: {shiftKey: workflow.rollOptions.fastForward},
     options: {
       fastForward: workflow.rollOptions.fastForward, 
-      chatMessage: !configSettings.mergeCard,
+      chatMessage: false, // !configSettings.mergeCard,
     }})
   if (!result?.total) { // user backed out of damage roll or roll failed
     return;
   }
+
+  // If the roll was a critical or the user selected crtical
+  //@ts-ignore
+  if (workflow.isCritical || result.terms[0].options?.critical) 
+    result = doCritModify(result);
+  else if (workflow.rollOptions.maxRoll)
+    //@ts-ignore .evaluate not defined.
+    result = (new Roll(result._formula)).evaluate({maximize: true});
+
+  if (!configSettings.mergeCard) {
+    const title = `${this.name} - ${game.i18n.localize("DND5E.DamageRoll")}`;
+    result.toMessage({
+      title,
+      flavor: this.labels.damageTypes.length ? `${title} (${this.labels.damageTypes})` : title,
+      speaker: ChatMessage.getSpeaker({actor: this.actor}),
+    },  game.settings.get("core", "rollMode"), )
+  }
   const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
-  if (dice3dActive && configSettings.mergeCard) {
+  if (dice3dActive && configSettings.mergeCard && ["none", "details"].includes(configSettings.hideRollDetails)) {
     let whisperIds = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((configSettings.hideRollDetails !== "none" && game.user.isGM) || rollMode === "blindroll") {
@@ -123,10 +118,6 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
     }
     await game.dice3d.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
   }
-// If the roll was a critical or the user selected crtical
-//@ts-ignore
-  if (workflow.isCritical || result.terms[0].options?.critical) 
-    result = doCritModify(result);
   workflow.damageRoll = result;
   workflow.damageTotal = result.total;
   workflow.damageRollHTML = await result.render();
@@ -458,19 +449,20 @@ export function selectTargets(scene, data, options) {
   }, 250);
 };
 
-export function doCritModify(result: Roll) {
-  if (criticalDamage === "default") return result;
+export function doCritModify(result: Roll, criticalModify = criticalDamage) {
+  if (criticalModify === "default") return result;
   let rollBase = new Roll(result.formula);
-  if (criticalDamage === "maxDamage") {// max base damage
+  if (criticalModify === "maxDamage") {// max base damage
     //@ts-ignore .terms not defined
     rollBase.terms = rollBase.terms.map(t => {
       if (t?.number) t.number = Math.floor(t.number/2);
       return t;
     });
+    rollBase = new Roll(rollBase.formula);
     //@ts-ignore .evaluate not defined
     rollBase.evaluate({maximize: true});
     return rollBase;
-  } else if (criticalDamage === "maxCrit") { // see about maximising one dice out of the two
+  } else if (criticalModify === "maxCrit") { // see about maximising one dice out of the two
     let rollCrit = new Roll(result.formula);
     //@ts-ignore .terms not defined
     rollCrit.terms = rollCrit.terms.map(t => {
@@ -492,7 +484,7 @@ export function doCritModify(result: Roll) {
     rollBase._formula = rollBase.formula;
     rollBase.roll();
     return rollBase;
-  } else if (criticalDamage === "maxAll") {
+  } else if (criticalModify === "maxAll") {
     result = new Roll(result.formula);
     //@ts-ignore .evaluate not defined
     result.evaluate({maximize: true});

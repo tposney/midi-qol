@@ -1,6 +1,29 @@
-0.3.45
-DSN fix (I hope).
-Support for new tidysheet5e (0.4.0+)
+0.3.46
+* Removed Formula + DSN option from hide roll details. Hiding the roll formula will disable DSN dice on non-gm clients.
+* Fix for not displaying hit details on non-combo cards  
+First implementation of critical damage flags.  
+* flags.midi-qol.critical.all  
+* flags.midi-qol.critical.mwak/rwak/msak/rsak/...  
+* flags.midi-qol.noCritical.all  
+* flags.midi-qol.noCritical.mwak/rwak/msak/rsak/...
+* flags.midi-qol.maxRoll.all  
+* flags.midi-qol.maxRoll.mwak/rwak/msak/rsak/...
+* flags.midi-qol.maxRoll.heal heal damage rolls are always maximized - think "Supreme Healing"
+
+These force the damage roll from attacks by the actor that has the effect to be critical.  
+
+The following grants/fail flags apply ONLY if it is the single target of the attack.
+These flags force/disable critical hits when a single target has been hit.  
+* flags.midi-qol.grants.critical.all  // All damage rolls are critical  
+* flags.midi-qol.grants.critical.mwak/rwak/msak/rsak/other  
+If there is a single target (which has the effect) and the attack hit, upgrade the attack to a critical attack. (Think unconcious)  
+* flags.midi-qol.fail.critical.all  // no dmage rolls are critical  
+* flags.midi-qol.fail.critical.mwak/rwak/msak/rsak/other   
+Cause attack on the target to not be critical. (Think adamanitne armor)  
+
+0.3.45  
+DSN fix (I hope).  
+Support for new tidysheet5e (0.4.0+)  
 0.3.44  
 Fix for some libwrapper incompatibilities.
 Fix for multilevel tokens throwing an error

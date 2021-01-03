@@ -157,6 +157,7 @@ Uncanny Dodge
  */
 
 export let getTraitMult = (actor, dmgTypeString, item) => {
+  dmgTypeString = dmgTypeString.toLowerCase()
   if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) return -1;
   if (dmgTypeString.includes("midi-none")) return 0;
   if (configSettings.damageImmunities !== "none" && dmgTypeString !== "") {
@@ -177,7 +178,6 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
   let targetNames = [];
   let appliedDamage;
   let workflow = (Workflow.workflows && Workflow._workflows[item?.uuid]) || {};
-
   warn("Apply token damage ", damageDetail, totalDamage, theTargets, item, saves, workflow)
 
   if (!theTargets || theTargets.size === 0) {
@@ -196,7 +196,7 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
         if (!type) type = MQdefaultDamageType;
         mult = mult * getTraitMult(a, type, item);
         appliedDamage += Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
-        var dmgType = type;
+        var dmgType = type.toLowerCase();
 //         let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
         let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).roll().total;
         appliedDamage -= DRType;
@@ -207,6 +207,7 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
         }
         // consider mwak damage redution
       }
+
       const DR = (new Roll((getProperty(t.actor.data, "flags.midi-qol.DR.all") || "0"))).roll().total;
 //      const DR = parseInt(getProperty(t.actor.data, "flags.midi-qol.DR.all")) || 0;
       appliedDamage -= DR;
