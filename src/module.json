@@ -57,6 +57,11 @@
           "lang": "de",
           "name": "Deutsch",
           "path": "lang/de.json"
+      },
+      {
+          "lang": "it",
+          "name": "Italian",
+          "path": "lang/it.json"
       }
   ],
   "minimumCoreVersion": "0.7.6",
