@@ -30,7 +30,7 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
     const rollMode = game.settings.get("core", "rollMode");
     if ((configSettings.hideRollDetails !== "none" && game.user.isGM) || rollMode === "blindroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM")
-    } else if (rollMode === "selfroll") {
+    } else if (rollMode === "selfroll" || rollMode === "gmroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
     }
     await game.dice3d.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
@@ -113,7 +113,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
     const rollMode = game.settings.get("core", "rollMode");
     if ((configSettings.hideRollDetails !== "none" && game.user.isGM) || rollMode === "blindroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM")
-    } else if (rollMode === "selfroll") {
+    } else if (rollMode === "selfroll" || rollMode === "gmroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
     }
     await game.dice3d.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)

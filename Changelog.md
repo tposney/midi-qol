@@ -1,3 +1,9 @@
+0.3.47
+* Added it.json thanks @Simone [UTC +1]#6710   
+* Fix for flags.midi-qol advantage and speed keys being selected.
+* Set spellLevel in rollDamage() call correctly.
+* support for tidysheet-5e new version config setting
+* private rolls by GM no longer show the dice to the players.
 0.3.46
 * Removed Formula + DSN option from hide roll details. Hiding the roll formula will disable DSN dice on non-gm clients.
 * Fix for not displaying hit details on non-combo cards  

@@ -119,27 +119,27 @@ export class Workflow {
   public processAttackEventOptions(event) {
     this.rollOptions.fastForward = this.rollOptions.fastForward || (["all", "attack"].includes(configSettings.autoFastForward));
     if (configSettings.speedItemRolls && !this.isBetterRollsWorkflow) {
-      const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
-      const disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
-      const versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
-      this.rollOptions.advantage = this.rollOptions.advantage || advKey;
-      this.rollOptions.disadvantage = this.rollOptions.disadvantage || disKey;
+      this.rollOptions.advKey = this.rollOptions.advKey || testKey(configSettings.keyMapping["DND5E.Advantage"], event);
+      this.rollOptions.disKey = this.rollOptions.disKey || testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
+      this.rollOptions.versaKey = this.rollOptions.versaKey || testKey(configSettings.keyMapping["DND5E.Versatile"], event);
+      this.rollOptions.advantage = this.rollOptions.advantage || this.rollOptions.advKey;
+      this.rollOptions.disadvantage = this.rollOptions.disadvantage || this.rollOptions.disKey;
       this.rollOptions.fastForward = this.rollOptions.fastForward || this.rollOptions.advantage || this.rollOptions.disadvantage;
-      this.rollOptions.fastForward = this.rollOptions.fastForward || advKey || disKey || false;
+      this.rollOptions.fastForward = this.rollOptions.fastForward || this.rollOptions.advKey || this.rollOptions.disKey || false;
       /* TODO Look at thsi further
       if (["attack", "all"].includes(configSettings.autoFastForward) && advKey && disKey) { // don't need fastforward
         this.rollOptions.critical = true;
       }
       */
-      this.rollOptions.versatile = this.rollOptions.versatile || (versaKey || false);
+      this.rollOptions.versatile = this.rollOptions.versatile || (this.rollOptions.versaKey || false);
     } else {
-      const advKey = event?.altKey;
-      const disKey = event?.ctrlKey || event?.metaKey;
+      this.rollOptions.advKey = this.rollOptions.advKey || event?.altKey;
+      this.rollOptions.disKey = this.rollOptions.disKey || event?.ctrlKey || event?.metaKey;
       // const versaKey = event?.shiftKey;
       this.rollOptions.fastForward = (["all", "attack"].includes(configSettings.autoFastForward));
       this.rollOptions.fastForward = this.rollOptions.fastForward ||event?.altKey || event?.shfitKey || event?.ctrlKey;
-      this.rollOptions.advantage = advKey;
-      this.rollOptions.disadvantage = disKey;
+      this.rollOptions.advantage = this.rollOptions.advKey;
+      this.rollOptions.disadvantage = this.rollOptions.disKey;
     }
     const midiFlags = this.actor?.data.flags["midi-qol"];
     const advantage = midiFlags?.advantage;
@@ -313,9 +313,10 @@ export class Workflow {
     this.damageCardData = undefined;
     this.event = event;
     this.capsLock = event?.getModifierState && event.getModifierState("CapsLock");
-    this.rollOptions = {};
+    this.rollOptions = {disKey: false, advKey: false, versaKey: false, critKey: false};
     if (this.item && !this.item.hasAttack) this.processDamageEventOptions(event);
     else this.processAttackEventOptions(event);
+    
 
     this.saveRequests = {};
     this.saveTimeouts = {};
@@ -410,8 +411,6 @@ export class Workflow {
         const shouldRoll = this.someEventKeySet() || configSettings.autoRollAttack ||(game.user.isGM && configSettings.gmFullAuto);
         if (shouldRoll) {
           this.processAttackEventOptions(event);
-          //let attackEvent = duplicate(this.event);
-          // attackEvent.shiftKey = attackEvent.shiftKey || ["all", "attack"].includes(configSettings.autoFastForward); // fast forward roll if required
           warn("attack roll ", shouldRoll, this.rollOptions)
           this.item.rollAttack({event: {}});
         }
@@ -447,6 +446,7 @@ export class Workflow {
         if (shouldRollDamage) {
           warn(" about to roll damage ", this.event, configSettings.autoRollAttack, configSettings.autoFastForward)
           debug("Rolling damage ", event, this.itemLevel, this.rollOptions.versatile);
+          this.rollOptions.spellLevel = this.itemLevel;
           await this.item.rollDamage(this.rollOptions);
         }
         return; // wait for a damage roll to advance the state.
