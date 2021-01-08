@@ -88,8 +88,6 @@ Hooks.once('setup', function() {
   savingThrowText = i18n("midi-qol.savingThrowText");
   savingThrowTextAlt = i18n("midi-qol.savingThrowTextAlt");
   MQdefaultDamageType = i18n("midi-qol.defaultDamageType");
-  log("Adding Magical weapon property")
-  CONFIG.DND5E.weaponProperties["mgc"] = i18n("midi-qol.magicalProp");
   CONFIG.DND5E.weaponProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
   CONFIG.DND5E.weaponProperties["faulldam"] = i18n("midi-qol.fullDamageSaveProp")
   CONFIG.DND5E.damageTypes["midi-none"] = i18n("midi-qol.midi-none");

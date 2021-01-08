@@ -1,10 +1,15 @@
 <form onsubmit="event.preventDefault();" class="midi-qol-config-panel">
   <section>
     <div class="form-group">
-      <label>{{localize "midi-qol.GMFullAuto.Name"}}</label>
-      <input type="checkbox" name="gmFullAuto" data-dtype="Boolean" {{checked configSettings.gmFullAuto}} />
+      <label>{{localize "midi-qol.GMAutoAttack.Name"}}</label>
+      <input type="checkbox" name="gmAutoAttack" data-dtype="Boolean" {{checked configSettings.gmAutoAttack}} />
     </div>
-    <div class="midi-qol-faint">{{localize "midi-qol.GMFullAuto.Hint"}}</div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.GMAutoDamage.Name"}}</label>
+      <input type="checkbox" name="gmAutoDamage" data-dtype="Boolean" {{checked configSettings.gmAutoDamage}} />
+    </div>
+    <div class="midi-qol-faint">{{localize "midi-qol.GMAutoRoll.Hint"}}</div>
 
     <div class="midi-qol-box">
       <div class="form-group speedRolls">
@@ -214,6 +219,17 @@
           </div>
           <div class="midi-qol-faint">{{localize "midi-qol.PlayerRollSaves.Hint"}}</div>
 
+          <div class="form-group">
+            <label>{{localize "midi-qol.rollNPCSaves.Name"}}</label>
+            <select name="rollNPCSaves" data-dtype="String">
+              {{#select configSettings.rollNPCSaves}}
+              {{#each rollNPCSavesOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
+          <div class="midi-qol-faint">{{localize "midi-qol.rollNPCSaves.Hint"}}</div>
           <div class="form-group">
             <label>{{localize "midi-qol.PlayerSaveTimeout.Name"}}</label>
             <input type="Number" name="playerSaveTimeout" value="{{configSettings.playerSaveTimeout}}"

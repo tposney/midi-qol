@@ -124,7 +124,7 @@ export class Workflow {
       this.rollOptions.versaKey = this.rollOptions.versaKey || testKey(configSettings.keyMapping["DND5E.Versatile"], event);
       this.rollOptions.advantage = this.rollOptions.advantage || this.rollOptions.advKey;
       this.rollOptions.disadvantage = this.rollOptions.disadvantage || this.rollOptions.disKey;
-      this.rollOptions.fastForward = this.rollOptions.fastForward || this.rollOptions.advantage || this.rollOptions.disadvantage;
+      this.rollOptions.fastForward = this.rollOptions.fastForward || ["all", "attack"].includes(configSettings.autoFastForward); // || this.rollOptions.advantage || this.rollOptions.disadvantage;
       this.rollOptions.fastForward = this.rollOptions.fastForward || this.rollOptions.advKey || this.rollOptions.disKey || false;
       /* TODO Look at thsi further
       if (["attack", "all"].includes(configSettings.autoFastForward) && advKey && disKey) { // don't need fastforward
@@ -136,8 +136,8 @@ export class Workflow {
       this.rollOptions.advKey = this.rollOptions.advKey || event?.altKey;
       this.rollOptions.disKey = this.rollOptions.disKey || event?.ctrlKey || event?.metaKey;
       // const versaKey = event?.shiftKey;
-      this.rollOptions.fastForward = (["all", "attack"].includes(configSettings.autoFastForward));
-      this.rollOptions.fastForward = this.rollOptions.fastForward ||event?.altKey || event?.shfitKey || event?.ctrlKey;
+      this.rollOptions.fastForward = this.rollOptions.fastForward || (["all", "attack"].includes(configSettings.autoFastForward));
+      this.rollOptions.fastForward = this.rollOptions.fastForward || (event?.altKey || event?.shfitKey || event?.ctrlKey);
       this.rollOptions.advantage = this.rollOptions.advKey;
       this.rollOptions.disadvantage = this.rollOptions.disKey;
     }
@@ -148,13 +148,13 @@ export class Workflow {
       const actType = this.item?.data.data?.actionType || "none"
       const withAdvantage = advantage.all || advantage.attack?.all || (advantage.attack && advantage.attack[actType]);
       this.rollOptions.advantage = this.rollOptions.advantage || withAdvantage;
-      if (withAdvantage) this.rollOptions.fastForward = true;
+      // if (withAdvantage) this.rollOptions.fastForward = true;
     }
     if (disadvantage) {
       const actType = this.item?.data.data?.actionType || "none"
       const withDisadvantage = disadvantage.all || disadvantage.attack?.all || (disadvantage.attack && disadvantage.attack[actType]);
       this.rollOptions.disadvantage = this.rollOptions.disadvantage || withDisadvantage;
-      if (withDisadvantage) this.rollOptions.fastForward = true;
+      // if (withDisadvantage) this.rollOptions.fastForward = true;
     }
     if (this.capsLock) this.rollOptions.fastForward = true;
     if (this.rollOptions.advantage && this.rollOptions.disadvantage) {
@@ -162,7 +162,7 @@ export class Workflow {
       this.rollOptions.disadvantage = false;
       this.rollOptions.fastForward = true;
     }
-    if (configSettings.gmFullAuto && game.user.isGM) {
+    if (configSettings.gmAutoAttack && game.user.isGM) {
       this.rollOptions.fastForward = true;
     }
   }
@@ -171,55 +171,53 @@ export class Workflow {
     this.rollOptions.fastForward = this.__proto__.constructor.name === "TrapWorkflow";
     if (["all", "damage"].includes(configSettings.autoFastForward)) this.rollOptions.fastForward = true;
     // if we have an event here it means they clicked on the damage button?
+    var critKey;
+    var disKey;
+    var advKey;
+    var versaKey;
+    var fastForwardKey;
+    var noCritKey;
     if (configSettings.speedItemRolls && !this.isBetterRollsWorkflow) {
-      const disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
-      const critKey = testKey(configSettings.keyMapping["DND5E.Critical"], event);
-      const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
-      const versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
-      const fastForwardKey = advKey && disKey
-      if ((configSettings.autoRollDamage !== "none" || this.rollOptions.fastForward) && !disKey) {
-        this.rollOptions.critical = this.isCritical || this.rollOptions.critical || critKey;
-      } else {
-        this.rollOptions.critical = critKey;
-        this.critical = critKey;
-      }
-      this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || fastForwardKey;
-      this.rollOptions.versatile = this.rollOptions.versatile || versaKey;
-      if (fastForwardKey) this.rollOptions.critical = this.isCritical;
-      // work out what means use the roll results
-      // if (useKey) this.rollOptions.critical = this.isCritical;
+      disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
+      critKey = testKey(configSettings.keyMapping["DND5E.Critical"], event);
+      advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
+      versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
+      noCritKey = disKey;
+      fastForwardKey = (advKey && disKey) || this.capsLock;
     } else { // use default behaviour
-      const critKey = event?.altKey;
-      const noCritKey = event?.ctrlKey;
-      const fastForwardKey = (critKey && (event?.ctrlKey || event?.metaKey)) || ["all", "damage"].includes(configSettings.autoFastForward);
-      this.rollOptions.fastForward = this.rollOptions.fastForward || event?.shiftKey || event?.altKey;
-      this.rollOptions.critical = event?.altKey;
-      if ((configSettings.autoRollDamage !== "none" || this.rollOptions.fastForward) && !noCritKey) {
-        this.rollOptions.critical = this.isCritical || this.rollOptions.critical || critKey;
-      } else {
-        this.rollOptions.critical = critKey;
-        this.critical = critKey;
-      }
+      critKey = event?.altKey;
+      noCritKey = event?.ctrlKey;
+      fastForwardKey = (critKey && (event?.ctrlKey || event?.metaKey));
     }
-    this.rollOptions.spellLevel = this.itemLevel;
-    if (configSettings.gmFullAuto && game.user.isGM) {
+
+    if (fastForwardKey) critKey = false;
+    if (fastForwardKey) { // fastforwarding roll
+      this.rollOptions.critical = this.isCritical;
       this.rollOptions.fastForward = true;
-    } else {
-      // if Not auto fast forwarding the roll dont set the crtical flag unless fast forwarding
-      if ((configSettings.autoRollDamage === "none" || !this.rollOptions.fastForward) && noKeySet(event)) {
-        this.isCritical = false;
+    } else if (["all", "damage"].includes(configSettings.autoFastForward)) {
+      this.rollOptions.critical = this.rollOptions.critical || this.isCritical || critKey;
+      if (noCritKey) {
         this.rollOptions.critical = false;
-      } else {
-        this.isCritical = this.isCritical || this.rollOptions.critical;
-        this.rollOptions.critical = this.critical || this.rollOptions.critical;
+        this.isCritical = false;
       }
+    } else if (configSettings.autoRollDamage !== "none") {
+      this.rollOptions.critical = this.isCritical || this.rollOptions.critical || critKey;
+    } else {
+      this.rollOptions.critical = critKey;
     }
+    this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || fastForwardKey || ["all", "damage"].includes(configSettings.autoRollDamage);
+    this.rollOptions.versatile = this.rollOptions.versatile || versaKey;
+
+    this.rollOptions.spellLevel = this.itemLevel;
+    if (configSettings.gmAutoDamage && game.user.isGM) {
+      this.rollOptions.fastForward = true;
+      this.rollOptions.critical = this.isCritical;
+    } 
     this.processCriticalFlags()
   }
 
   processCriticalFlags() {
-
-    /*
+/*
 * flags.midi-qol.critical.all
 * flags.midi-qol.critical.mwak/rwak/msak/rsak/other
 * flags.midi-qol.noCritical.all
@@ -313,7 +311,7 @@ export class Workflow {
     this.damageCardData = undefined;
     this.event = event;
     this.capsLock = event?.getModifierState && event.getModifierState("CapsLock");
-    this.rollOptions = {disKey: false, advKey: false, versaKey: false, critKey: false};
+    this.rollOptions = {disKey: false, advKey: false, versaKey: false, critKey: false, fastForward: false};
     if (this.item && !this.item.hasAttack) this.processDamageEventOptions(event);
     else this.processAttackEventOptions(event);
     
@@ -408,7 +406,7 @@ export class Workflow {
           return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
         }
         if (this.noAutoAttack) return;
-        const shouldRoll = this.someEventKeySet() || configSettings.autoRollAttack ||(game.user.isGM && configSettings.gmFullAuto);
+        const shouldRoll = this.someEventKeySet() || configSettings.autoRollAttack ||(game.user.isGM && configSettings.gmAutoAttack);
         if (shouldRoll) {
           this.processAttackEventOptions(event);
           warn("attack roll ", shouldRoll, this.rollOptions)
@@ -438,10 +436,10 @@ export class Workflow {
           return this.next(WORKFLOWSTATES.ROLLFINISHED);
         } 
         if (this.noAutoDamage) return; // we are emulating the standard card specially.
-        const shouldRollDamage = configSettings.autoRollDamage === "always" 
+        let shouldRollDamage = configSettings.autoRollDamage === "always" 
                                 || (configSettings.autoRollDamage !== "none" && !this.item.hasAttack)
-                                || (configSettings.autoRollDamage === "onHit" && (this.hitTargets.size > 0 || this.targets.size === 0)
-                                || (configSettings.gmFullAuto && game.user.isGM));
+                                || (configSettings.autoRollDamage === "onHit" && (this.hitTargets.size > 0 || this.targets.size === 0));
+        if (game.user.isGM) shouldRollDamage = configSettings.gmAutoDamage;
         debug("autorolldamage ", configSettings.autoRollDamage, " has attack ", this.item.hasAttack, " targets ", this.hitTargets)
         if (shouldRollDamage) {
           warn(" about to roll damage ", this.event, configSettings.autoRollAttack, configSettings.autoFastForward)
@@ -960,8 +958,10 @@ export class Workflow {
 
         if (configSettings.playerRollSaves !== "none") { // find a player to send the request to
           var player = this.playerFor(target);
+          //@ts-ignore
+          if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
         }
-        if (configSettings.playerRollSaves !== "none" && player?.active && !player.isGM) {
+        if ((configSettings.playerRollSaves !== "none" && player?.active && !player?.isGM) || configSettings.rollNPCSaves !== "auto" ) { 
           warn(`Player ${player.name} controls actor ${target.actor.name} - requesting ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save`);
           promises.push(new Promise((resolve, reject) => {
             const eventToUse = duplicate(event);
@@ -972,7 +972,7 @@ export class Workflow {
             if (["letem", "letmeQuery"].includes(configSettings.playerRollSaves) && installedModules.get("lmrtfy")) requestId = randomID();
             this.saveRequests[requestId] = resolve;
             
-            requestPCSave(this.item.data.data.save.ability, player.id, target.actor.id, advantage, this.item.name, rollDC, requestId)
+            requestPCSave(this.item.data.data.save.ability, player, target.actor.id, advantage, this.item.name, rollDC, requestId)
 
             // set a timeout for taking over the roll
             this.saveTimeouts[requestId] = setTimeout(async () => {
@@ -1083,8 +1083,10 @@ export class Workflow {
     //@ts-ignore
     this.diceRoll = this.attackRoll.results[0];
     //@ts-ignore
+    this.diceRoll = this.attackRoll.terms[0].results.find(d => d.active).result;
     //@ts-ignore .terms undefined
     this.isCritical = this.diceRoll  >= this.attackRoll.terms[0].options.critical;
+    //@ts-ignore
     //@ts-ignore .terms undefined
     this.isFumble = this.diceRoll <= this.attackRoll.terms[0].options.fumble;
     this.attackTotal = this.attackRoll.total;

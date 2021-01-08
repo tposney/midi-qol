@@ -24,7 +24,8 @@ const defaultKeyMapping = {
 };
 
 export var configSettings = {
-  gmFullAuto: false,
+  gmAutoAttack: false,
+  gmAutoDamage: false,
   speedItemRolls: false,
   speedAbilityRolls: false,
   showItemDetails: "",
@@ -44,6 +45,7 @@ export var configSettings = {
   rangeTarget: null,
   playerRollSaves: "none",
   playerSaveTimeout: 0,
+  rollNPCSaves: "auto",
   preRollChecks: false,
   mergeCard: false,
   mergeCardCondensed: false,

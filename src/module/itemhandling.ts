@@ -19,11 +19,14 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   workflow.checkTargetAdvantage();
   workflow.checkAbilityAdvantage();
   const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
+  const defaultOption = workflow.rollOptions.advantage ?  "advantage" : workflow.rollOptions.disadvantage ? "disadvantage" : "normal"
   let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
     disadvantage: workflow.rollOptions.disadvantage,
     chatMessage: !configSettings.mergeCard,
-    event: {shiftKey: workflow.rollOptions.fastForward}
+    //event: {shiftKey: workflow.rollOptions.fastForward},
+    fastForward: workflow.rollOptions.fastForward,
+    "data.default": defaultOption
   });
   if (dice3dActive && configSettings.mergeCard) {
     let whisperIds = null;
@@ -78,11 +81,16 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
+  console.error("is critical ", workflow.rollOptions.critical, workflow.isCritical, workflow)
+  this.data.data.default = (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal";
+
   let result: Roll = await wrapped({
-    critical: workflow.rollOptions.critical, 
+    critical: workflow.rollOptions.fastForward && workflow.rollOptions.critical, 
     spellLevel: workflow.rollOptions.spellLevel, 
     versatile: workflow.rollOptions.versatile || versatile, 
-    event: {shiftKey: workflow.rollOptions.fastForward},
+    fastForward: workflow.rollOptions.fastForward,
+    "data.default": (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal",
+    // event: {shiftKey: workflow.rollOptions.fastForward},
     options: {
       fastForward: workflow.rollOptions.fastForward, 
       chatMessage: false, // !configSettings.mergeCard,
@@ -93,7 +101,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
 
   // If the roll was a critical or the user selected crtical
   //@ts-ignore
-  if (workflow.isCritical || result.terms[0].options?.critical) 
+  if (result.terms[0].options?.critical) 
     result = doCritModify(result);
   else if (workflow.rollOptions.maxRoll)
     //@ts-ignore .evaluate not defined.
@@ -122,23 +130,6 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   workflow.damageTotal = result.total;
   workflow.damageRollHTML = await result.render();
 
-  /*
-  // roll a critical as well
-  let critResult: Roll = await wrapped({
-    critical: true, 
-    spellLevel: workflow.rollOptions.spellLevel, 
-    versatile: workflow.rollOptions.versatile || versatile, 
-    event: {shiftKey: workflow.rollOptions.fastForward},
-    options: {
-      fastForward: true, 
-      chatMessage: false
-    }})
-    console.error("critical roll is ", critResult)
-  critResult = doCritModify(critResult);
-  workflow.criticalRoll = critResult;
-  workflow.criticalTotal = critResult.total;
-  workflow.criticalRollHTML = await critResult.render();
-  */
   workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
   return result;
 }
@@ -304,7 +295,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     condensed: this.hasAttack && configSettings.mergeCardCondensed,
     hasAttack: !minimalCard && this.hasAttack && (showFullCard || needAttckButton),
     isHealing: !minimalCard && this.isHealing && (showFullCard || configSettings.autoRollDamage === "none"),
-    hasDamage: this.hasDamage && (showFullCard || configSettings.autoRollDamage === "none"),
+    hasDamage: this.hasDamage && ((showFullCard || configSettings.autoRollDamage === "none") || (game.user.isGM && !configSettings.gmAutoDamage)),
     isVersatile: this.isVersatile && (showFullCard || configSettings.autoRollDamage === "none"),
     isSpell: this.type==="spell",
     hasSave: !minimalCard && this.hasSave && (showFullCard || configSettings.autoCheckSaves === "none"),

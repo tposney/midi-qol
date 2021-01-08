@@ -277,22 +277,26 @@ export let getSaveMultiplierForItem = item => {
   return 1;
   };
 
-export function requestPCSave(ability, playerId, actorId, advantage, flavor, dc, requestId) {
+export function requestPCSave(ability, player, actorId, advantage, flavor, dc, requestId) {
   if (installedModules.get("lmrtfy") && ["letme", "letmeQuery"].includes(configSettings.playerRollSaves)) {
-    if (configSettings.speedAbilityRolls || (configSettings.playerRollSaves === "letmeQuery")) {
+  if (configSettings.speedAbilityRolls || (configSettings.playerRollSaves === "letmeQuery")) {
 /* TODO - if LMRTFY passes the actual event then change to 
       if ((configSettings.playerRollSaves === "letmeQuery")) {
 */        
         advantage = 2;
     } else advantage = (advantage ? 1 : 0);
+    let mode = "roll";
+    if (player.isGM && configSettings.autoCheckSaves !== "allShow") {
+      mode = "blindroll";
+    }
     const socketData = {
-      user: playerId,
+      user: player.id,
       actors: [actorId],
       abilities: [],
       saves: [ability],
       skills: [],
-      advantage,
-      mode: "roll",
+      advantage: player.isGM ? 2 : advantage,
+      mode,
       title: i18n("midi-qol.saving-throw"),
       message: `${configSettings.displaySaveDC ? "DC " + dc : ""} ${i18n("midi-qol.saving-throw")} ${flavor}`,
       formula: "",
@@ -306,7 +310,6 @@ export function requestPCSave(ability, playerId, actorId, advantage, flavor, dc,
    //@ts-ignore - global variable
     LMRTFY.onMessage(socketData);
   } else {
-    let player = game.users.get(playerId);
     let actorName = game.actors.get(actorId).name;
     let content = ` ${actorName} ${configSettings.displaySaveDC ? "DC " + dc : ""} ${CONFIG.DND5E.abilities[ability]} ${i18n("midi-qol.saving-throw")}`;
     content = content + (advantage ? `(${i18n("DND5E.Advantage")}` : "") + ` - ${flavor}`;
