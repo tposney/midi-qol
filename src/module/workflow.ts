@@ -162,8 +162,8 @@ export class Workflow {
       this.rollOptions.disadvantage = false;
       this.rollOptions.fastForward = true;
     }
-    if (configSettings.gmAutoAttack && game.user.isGM) {
-      this.rollOptions.fastForward = true;
+    if (game.user.isGM) {
+      this.rollOptions.fastForward = configSettings.gmAutoFastForwardAttack || this.rollOptions.advKey || this.rollOptions.disKey;
     }
   }
   public processDamageEventOptions(event) { 
@@ -185,34 +185,35 @@ export class Workflow {
       noCritKey = disKey;
       fastForwardKey = (advKey && disKey) || this.capsLock;
     } else { // use default behaviour
-      critKey = event?.altKey;
+      critKey = event?.altKey || event?.metaKey;
       noCritKey = event?.ctrlKey;
-      fastForwardKey = (critKey && (event?.ctrlKey || event?.metaKey));
+      fastForwardKey = (critKey && noCritKey);
     }
 
     if (fastForwardKey) critKey = false;
     if (fastForwardKey) { // fastforwarding roll
       this.rollOptions.critical = this.isCritical;
       this.rollOptions.fastForward = true;
-    } else if (["all", "damage"].includes(configSettings.autoFastForward)) {
+    } else if ((!game.user.isGM && ["all", "damage"].includes(configSettings.autoFastForward)) ||
+               (game.user.isGM && configSettings.gmAutoFastForwardDamage) ) {
       this.rollOptions.critical = this.rollOptions.critical || this.isCritical || critKey;
       if (noCritKey) {
         this.rollOptions.critical = false;
         this.isCritical = false;
       }
-    } else if (configSettings.autoRollDamage !== "none") {
+      this.rollOptions.fastForward = true;
+    } else if ((!game.user.isGM && configSettings.autoRollDamage !== "none") || 
+                (game.user.isGM && configSettings.gmAutoDamage !== "none") ) {
       this.rollOptions.critical = this.isCritical || this.rollOptions.critical || critKey;
     } else {
-      this.rollOptions.critical = critKey;
+      this.rollOptions.critical = critKey && !noCritKey;
     }
-    this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || fastForwardKey || ["all", "damage"].includes(configSettings.autoRollDamage);
+    this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || noCritKey || fastForwardKey 
+      || (!game.user.isGM && ["all", "damage"].includes(configSettings.autoFastForward)) 
+      || ( game.user.isGM && configSettings.gmAutoFastForwardAttack );
     this.rollOptions.versatile = this.rollOptions.versatile || versaKey;
 
     this.rollOptions.spellLevel = this.itemLevel;
-    if (configSettings.gmAutoDamage && game.user.isGM) {
-      this.rollOptions.fastForward = true;
-      this.rollOptions.critical = this.isCritical;
-    } 
     this.processCriticalFlags()
   }
 
@@ -406,7 +407,9 @@ export class Workflow {
           return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
         }
         if (this.noAutoAttack) return;
-        const shouldRoll = this.someEventKeySet() || configSettings.autoRollAttack ||(game.user.isGM && configSettings.gmAutoAttack);
+        let shouldRoll = this.someEventKeySet() || configSettings.autoRollAttack;
+        if (game.user.isGM) 
+          shouldRoll = configSettings.gmAutoAttack || this.someEventKeySet();
         if (shouldRoll) {
           this.processAttackEventOptions(event);
           warn("attack roll ", shouldRoll, this.rollOptions)
@@ -425,7 +428,8 @@ export class Workflow {
         }
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
         Hooks.callAll("midi-qol.AttackRollComplete", this);
-        if ((configSettings.autoRollDamage === "onHit" && this.hitTargets.size === 0 && this.targets.size !== 0)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        if (!game.user.isGM && (configSettings.autoRollDamage === "onHit" && this.hitTargets.size === 0 && this.targets.size !== 0)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        if (game.user.isGM && (configSettings.gmAutoDamage === "onHit" && this.hitTargets.size === 0 && this.targets.size !== 0)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
         return this.next(WORKFLOWSTATES.WAITFORDAMGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMGEROLL:
@@ -439,7 +443,11 @@ export class Workflow {
         let shouldRollDamage = configSettings.autoRollDamage === "always" 
                                 || (configSettings.autoRollDamage !== "none" && !this.item.hasAttack)
                                 || (configSettings.autoRollDamage === "onHit" && (this.hitTargets.size > 0 || this.targets.size === 0));
-        if (game.user.isGM) shouldRollDamage = configSettings.gmAutoDamage;
+        if (game.user.isGM) {
+          shouldRollDamage = configSettings.gmAutoDamage === "always" 
+                                || (configSettings.gmAutoDamage !== "none" && !this.item.hasAttack)
+                                || (configSettings.gmAutoDamage === "onHit" && (this.hitTargets.size > 0 || this.targets.size === 0));
+        }
         debug("autorolldamage ", configSettings.autoRollDamage, " has attack ", this.item.hasAttack, " targets ", this.hitTargets)
         if (shouldRollDamage) {
           warn(" about to roll damage ", this.event, configSettings.autoRollAttack, configSettings.autoFastForward)
@@ -930,8 +938,9 @@ export class Workflow {
       return;
     }
     let rollDC = this.item.data.data.save.dc;
-    if (this.item.getSaveDC)
+    if (this.item.getSaveDC) {
       rollDC = this.item.getSaveDC()
+    }
     let rollAbility = this.item.data.data.save.ability;
   
     let promises = [];
@@ -961,8 +970,8 @@ export class Workflow {
           //@ts-ignore
           if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
         }
-        if ((configSettings.playerRollSaves !== "none" && player?.active && !player?.isGM) || configSettings.rollNPCSaves !== "auto" ) { 
-          warn(`Player ${player.name} controls actor ${target.actor.name} - requesting ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save`);
+        if ((configSettings.playerRollSaves !== "none" && player?.active && !player?.isGM) || (configSettings.rollNPCSaves ?? "auto") !== "auto" ) { 
+          warn(`Player ${player?.name} controls actor ${target.actor.name} - requesting ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save`);
           promises.push(new Promise((resolve, reject) => {
             const eventToUse = duplicate(event);
             const advantageToUse = advantage;
@@ -994,7 +1003,6 @@ export class Workflow {
           if (!owner) owner = game.users.find((u: User) => u.isGM && u.active);
           // Fall back to rolling as the current user
           if (!owner) owner = game.user;
-          
           //@ts-ignore actor.rollAbilitySave
           promises.push(target.actor.rollAbilitySave(this.item.data.data.save.ability, { messageData: {user: owner._id}, chatMessage: showRoll,  mapKeys: false, advantage, fastForward: true}));
         }

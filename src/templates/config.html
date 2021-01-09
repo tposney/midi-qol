@@ -6,9 +6,26 @@
     </div>
 
     <div class="form-group">
-      <label>{{localize "midi-qol.GMAutoDamage.Name"}}</label>
-      <input type="checkbox" name="gmAutoDamage" data-dtype="Boolean" {{checked configSettings.gmAutoDamage}} />
+      <label>{{localize "midi-qol.GMAutoFastForwardAttack.Name"}}</label>
+      <input type="checkbox" name="gmAutoFastForwardAttack" data-dtype="Boolean" {{checked configSettings.gmAutoFastForwardAttack}} />
     </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.GMAutoDamage.Name"}}</label>
+      <select name="gmAutoDamage" data-dtype="String">
+        {{#select configSettings.gmAutoDamage}}
+        {{#each autoRollDamageOptions as |label val|}}
+        <option value="{{val}}">{{label}}</option>
+        {{/each}}
+        {{/select}}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.GMAutoFastForwardDamage.Name"}}</label>
+      <input type="checkbox" name="gmAutoFastForwardDamage" data-dtype="Boolean" {{checked configSettings.gmAutoFastForwardDamage}} />
+    </div>
+
     <div class="midi-qol-faint">{{localize "midi-qol.GMAutoRoll.Hint"}}</div>
 
     <div class="midi-qol-box">

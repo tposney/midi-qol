@@ -1,3 +1,9 @@
+0.3.49
+* Revamped DM roll flags (again), due to the various interactions that people had with the workflow settings. There are now 4 gm settings:
+  * GM Auto Roll Attack: If true the attack roll will be auto rolled for the GM if set.
+  * GM Auto fast forward attack rolls: If true the GM attack rolls will be auto fastforarded. Key modifiers are supported.
+  * GM Auto Roll Damage. Options are never, attack hits, always.
+  * GM Auto Fast Forward damage: If true roll will be auto fast forwarded. Will pick up whether the attack was critical or not and will recongnise critical and No critical keys if the roll was not auto rolled.
 0.3.48
 * More tinkering with dadmage critical rolls. If an attack is critical and damage rolls are auto fastforwarded it will use the critical status from the attack roll.
 * If not auto rolling damage rolls and auto fast forwarding damage rolls pressing the disadvantage key (ctrl by default) will force the roll to be a normal roll.  

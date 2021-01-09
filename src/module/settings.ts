@@ -25,7 +25,9 @@ const defaultKeyMapping = {
 
 export var configSettings = {
   gmAutoAttack: false,
-  gmAutoDamage: false,
+  gmAutoFastForwardAttack: false,
+  gmAutoDamage: "none",
+  gmAutoFastForwardDamage: false,
   speedItemRolls: false,
   speedAbilityRolls: false,
   showItemDetails: "",

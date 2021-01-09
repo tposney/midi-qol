@@ -81,7 +81,6 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
-  console.error("is critical ", workflow.rollOptions.critical, workflow.isCritical, workflow)
   this.data.data.default = (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal";
 
   let result: Roll = await wrapped({
@@ -279,8 +278,13 @@ export async function showItemInfo() {
 export async function showItemCard(showFullCard: boolean, workflow: Workflow, minimalCard = false) {
   warn("show item card ", this, this.actor, this.actor.token, showFullCard, workflow)
   const token = this.actor.token;
-  const needAttckButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
-  const sceneId = token?.scene && token.scene._id || canvas.scene._id;
+  let needAttackButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
+  needAttackButton = needAttackButton || (game.user.isGM && !configSettings.gmAutoAttack);
+  let needDamagebutton = this.hasDamage && (
+                          showFullCard || (!game.user.isGM && configSettings.autoRollDamage === "none") || (game.user.isGM && configSettings.gmAutoDamage === "none")
+                          );
+
+const sceneId = token?.scene && token.scene._id || canvas.scene._id;
 
   let isPlayerOwned = this.actor.hasPlayerOwner;
   if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = this.actor.isPC
@@ -293,9 +297,9 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     data: this.getChatData(),
     labels: this.labels,
     condensed: this.hasAttack && configSettings.mergeCardCondensed,
-    hasAttack: !minimalCard && this.hasAttack && (showFullCard || needAttckButton),
+    hasAttack: !minimalCard && this.hasAttack && (showFullCard || needAttackButton),
     isHealing: !minimalCard && this.isHealing && (showFullCard || configSettings.autoRollDamage === "none"),
-    hasDamage: this.hasDamage && ((showFullCard || configSettings.autoRollDamage === "none") || (game.user.isGM && !configSettings.gmAutoDamage)),
+    hasDamage: needDamagebutton,
     isVersatile: this.isVersatile && (showFullCard || configSettings.autoRollDamage === "none"),
     isSpell: this.type==="spell",
     hasSave: !minimalCard && this.hasSave && (showFullCard || configSettings.autoCheckSaves === "none"),

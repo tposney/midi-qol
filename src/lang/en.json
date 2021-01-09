@@ -156,9 +156,11 @@
     "midi-qol.DragDropTarget.Name": "Drag and Drop Targeting",
     "midi-qol.DragDropTarget.Hint": "Allow dragging an item onto a token to attack it",
     "midi-qol.GMAutoAttack.Name": "GM Auto roll attack",
-    "midi-qol.GMAutoAttack.Hint": "If set GM rolls ignore the workflow settings and auto roll attacks and damage",
     "midi-qol.GMAutoDamage.Name": "GM Auto roll damage",
-    "midi-qol.GMAutoRoll.Hint": "If set GM rolls ignore the workflow settings and auto roll attacks and damage",
+    "midi-qol.GMAutoFastForwardAttack.Name": "GM Auto fast forward attack",
+    "midi-qol.GMAutoFastForwardDamage.Name": "GM Auto fast forward damage",
+
+    "midi-qol.GMAutoRoll.Hint": "GM Rolls ingore the fast forward/auto attack settings and use these flags",
     "midi-qol.midi-none": "No Damage",
     "midi-qol.ItemList": "Choose items which display details on item card",
     "midi-qol.DisplayItems": "Show Details"
