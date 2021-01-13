@@ -195,7 +195,7 @@ function procAdvantage(actor, rollType, abilityId, options) {
     if (withDisadvantage) options.event = disadvantageEvent
   }
   if (withAdvantage && withDisadvantage) options.event = fastforwardEvent;
-  if (configSettings.speedAbilityRolls && options.event.altKey && options.event.crtlKey)
+  if (configSettings.speedAbilityRolls && options.event?.altKey && options.event?.crtlKey)
     options.event = baseEvent;
 }
 
