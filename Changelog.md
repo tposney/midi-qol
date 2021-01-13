@@ -1,3 +1,11 @@
+0.3.50
+* Fix for damage buttons not being added for non-merge card damage cards.
+* Fix some cases of errors being thrown when first loading and canvas not initialised.
+* Fix for versatile damage button being displayed when not required.
+* If not auto rolling attack rolls, display advantage/disadvantage in the attack button for the item card, as a hint for the roll. If auto fast forwarding the roll will be made with the suggested setting, speed keys override the setting as does choosing from the roll dialog.
+* Fix for incorrectly displaying advantage/disadvantage on chat card if user selects something else from the damage dialog.
+* Fix for blind rolls being completely hidden forever.
+* Fix for GM rollNPCSaves set to LMRTFY and player set to auto roll not causing roll to not be completed.
 0.3.49
 * Revamped DM roll flags (again), due to the various interactions that people had with the workflow settings. There are now 4 gm settings:
   * GM Auto Roll Attack: If true the attack roll will be auto rolled for the GM if set.

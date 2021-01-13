@@ -261,7 +261,7 @@ export let hideRollRender = (app, html, msg) => {
       if (game.user.isGM === false && 
           (
             (msg.author !== game.user && msg.message.whisper.indexOf(game.user.id) === -1)
-             || msg.message.blind
+            // || msg.message.blind
           )) {
           html.hide();
       }
@@ -321,7 +321,6 @@ export let recalcCriticalDamage = (data, ...args) => {
   if (enableWorkflow) return true;
   if (data.flags?.dnd5e?.roll.type === "damage") {
     debug("recalcCriticalDamage ", data.flags?.dnd5e?.roll.type, data, ...args)
-    let token: Token = canvas.tokens.get(data.speaker.token)
     let actor: Actor5e = game.actors.tokens[data.speaker.token];
     if (!actor) game.actors.tokens[data.speaker.token]?.actor;
     if (!actor) actor = game.actors.get(data.speaker.actor);
@@ -397,7 +396,6 @@ export let processBetterRollsChatCard = (message, html, data) => {
 
 export let chatDamageButtons = (message, html, data) => {
   debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll?.type, message.data.flags)
-
   if (!addChatDamageButtons) return true;
   if (message.data.flags?.dnd5e?.roll.type === "damage") {
     const itemId = message.data.flags.dnd5e.roll.itemId;
@@ -440,7 +438,7 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, 
       button.off("click");
       button.click(async (ev) => {
           ev.stopPropagation();
-          if (canvas.tokens.controlled.length === 0) {
+          if (canvas && canvas.tokens.controlled.length === 0) {
               console.warn(`Midi-qol | user ${game.user.name} ${i18n("midi-qol.noTokens")}`);
               return ui.notifications.warn(`${game.user.name} ${i18n("midi-qol.noTokens")}`);
           }
@@ -468,7 +466,7 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, 
   // logic to only show the buttons when the mouse is within the chatcard and a token is selected
   html.find('.dmgBtn-container-mqol').hide();
   $(html).hover(evIn => {
-  if (canvas.tokens.controlled.length > 0) {
+  if (canvas?.tokens.controlled.length > 0) {
     html.find('.dmgBtn-container-mqol').show();
   }
   }, evOut => {

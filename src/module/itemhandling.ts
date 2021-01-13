@@ -18,9 +18,9 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   workflow.processAttackEventOptions(options?.event);
   workflow.checkTargetAdvantage();
   workflow.checkAbilityAdvantage();
-  const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
-  const defaultOption = workflow.rollOptions.advantage ?  "advantage" : workflow.rollOptions.disadvantage ? "disadvantage" : "normal"
-  let result: Roll = await wrapped({
+  
+  const defaultOption = workflow.rollOptions.advantage ?  "advantage" : workflow.rollOptions.disadvantage ? "disadvantage" : "normal";
+   let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
     disadvantage: workflow.rollOptions.disadvantage,
     chatMessage: !configSettings.mergeCard,
@@ -28,7 +28,9 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
     fastForward: workflow.rollOptions.fastForward,
     "data.default": defaultOption
   });
-  if (dice3dActive && configSettings.mergeCard) {
+ 
+  const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
+   if (dice3dActive && configSettings.mergeCard) {
     let whisperIds = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((configSettings.hideRollDetails !== "none" && game.user.isGM) || rollMode === "blindroll") {
@@ -108,11 +110,12 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
 
   if (!configSettings.mergeCard) {
     const title = `${this.name} - ${game.i18n.localize("DND5E.DamageRoll")}`;
-    result.toMessage({
+    let messageData = mergeObject({
       title,
       flavor: this.labels.damageTypes.length ? `${title} (${this.labels.damageTypes})` : title,
       speaker: ChatMessage.getSpeaker({actor: this.actor}),
-    },  game.settings.get("core", "rollMode"), )
+    }, {"flags.dnd5e.roll": {type: "damage", itemId: this.id }});
+    result.toMessage(messageData, game.settings.get("core", "rollMode"), )
   }
   const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
   if (dice3dActive && configSettings.mergeCard && ["none", "details"].includes(configSettings.hideRollDetails)) {
@@ -280,10 +283,13 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const token = this.actor.token;
   let needAttackButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
   needAttackButton = needAttackButton || (game.user.isGM && !configSettings.gmAutoAttack);
-  let needDamagebutton = this.hasDamage && (
+  const needDamagebutton = this.hasDamage && (
                           showFullCard || (!game.user.isGM && configSettings.autoRollDamage === "none") || (game.user.isGM && configSettings.gmAutoDamage === "none")
                           );
-
+  const needVersatileButton = this.hasDamage && (
+                            showFullCard || (!game.user.isGM && configSettings.autoRollDamage === "none") || (game.user.isGM && configSettings.gmAutoDamage === "none")
+                            );
+  
 const sceneId = token?.scene && token.scene._id || canvas.scene._id;
 
   let isPlayerOwned = this.actor.hasPlayerOwner;
@@ -300,7 +306,7 @@ const sceneId = token?.scene && token.scene._id || canvas.scene._id;
     hasAttack: !minimalCard && this.hasAttack && (showFullCard || needAttackButton),
     isHealing: !minimalCard && this.isHealing && (showFullCard || configSettings.autoRollDamage === "none"),
     hasDamage: needDamagebutton,
-    isVersatile: this.isVersatile && (showFullCard || configSettings.autoRollDamage === "none"),
+    isVersatile: needVersatileButton,
     isSpell: this.type==="spell",
     hasSave: !minimalCard && this.hasSave && (showFullCard || configSettings.autoCheckSaves === "none"),
     hasAreaTarget: !minimalCard && this.hasAreaTarget,

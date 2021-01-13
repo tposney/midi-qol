@@ -278,13 +278,17 @@ export let getSaveMultiplierForItem = item => {
   };
 
 export function requestPCSave(ability, player, actorId, advantage, flavor, dc, requestId) {
-  if (installedModules.get("lmrtfy") && ["letme", "letmeQuery"].includes(configSettings.playerRollSaves)) {
-  if (configSettings.speedAbilityRolls || (configSettings.playerRollSaves === "letmeQuery")) {
+  const playerLetme = !player?.isGM && ["letme", "letmeQuery"].includes(configSettings.playerRollSaves);
+  const gmLetme  = player.isGM && ["letme", "letmeQuery"].includes(configSettings.rollNPCSaves);
+  if (player && installedModules.get("lmrtfy") && (playerLetme || gmLetme)) {
+    if (configSettings.speedAbilityRolls || (configSettings.playerRollSaves === "letmeQuery") || (configSettings.rollNPCSaves === "letme")) {
 /* TODO - if LMRTFY passes the actual event then change to 
       if ((configSettings.playerRollSaves === "letmeQuery")) {
 */        
         advantage = 2;
-    } else advantage = (advantage ? 1 : 0);
+    } else {
+      advantage = (advantage ? 1 : 0);
+    }
     let mode = "roll";
     if (player.isGM && configSettings.autoCheckSaves !== "allShow") {
       mode = "blindroll";

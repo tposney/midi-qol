@@ -410,9 +410,23 @@ export class Workflow {
         let shouldRoll = this.someEventKeySet() || configSettings.autoRollAttack;
         if (game.user.isGM) 
           shouldRoll = configSettings.gmAutoAttack || this.someEventKeySet();
+        this.processAttackEventOptions(event);
+
+        if (configSettings.mergeCard && !shouldRoll) {
+            const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
+          if (chatMessage) {
+            // provide a hint as to the type of roll expected.
+            //@ts-ignore
+            let content = chatMessage && duplicate(chatMessage.data.content)
+            let searchRe = /<button data-action="attack">[^<]+<\/button>/;
+            const attackString = this.rollOptions.advantage ? i18n("DND5E.Advantage") : this.rollOptions.disadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
+            let replaceString = `<button data-action="attack">${attackString}</button>`
+            content = content.replace(searchRe, replaceString);
+            await chatMessage?.update({"content": content});
+          }
+        }
+          
         if (shouldRoll) {
-          this.processAttackEventOptions(event);
-          warn("attack roll ", shouldRoll, this.rollOptions)
           this.item.rollAttack({event: {}});
         }
         return;
@@ -576,7 +590,9 @@ export class Workflow {
               isFumble: this.isFumble,
               spellLevel: this.itemLevel,
               damageTotal: this.damageTotal,
-              damageDetail: this.damageDetail
+              damageDetail: this.damageDetail,
+              rollOptions: this.rollOptions,
+              event: this.event
             };
             warn("macro data ", macroData)
             //@ts-ignore -uses furnace macros which support arguments
@@ -662,10 +678,15 @@ export class Workflow {
     
 
     if (doMerge && chatMessage) { // display the attack roll
-      let searchString = '<div class="midi-qol-attack-roll"></div>';
+      let searchRe = '<div class="midi-qol-attack-roll"></div>';
+      //@ts-ignore
+      this.rollOptions.advantage = this.attackRoll.terms[0].options.advantage;
+      //@ts-ignore
+      this.rollOptions.disadvantage = this.attackRoll.terms[0].options.disadvantage;
       const attackString = this.rollOptions.advantage ? i18n("DND5E.Advantage") : this.rollOptions.disadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
       let replaceString = `<div style="text-align:center" >${attackString}<div class="midi-qol-attack-roll">${this.attackRollHTML}</div></div>`
-      content = content.replace(searchString, replaceString);
+      content = content.replace(searchRe, replaceString);
+
       if ( this.attackRoll.dice.length ) {
         const d = this.attackRoll.dice[0];
         const isD20 = (d.faces === 20);
@@ -959,26 +980,26 @@ export class Workflow {
           if (advantage) this.advantageSaves.add(target);
           debug(`${target.actor.name} resistant to magic : ${advantage}`);
         }
-
+/* TODO remove this
         let event = {};
         // TODO need to modify this according to speed rolls settings
         if (advantage) event = {shiftKey: false, ctlKey: false, altKey: true, metaKey: false}
         else event = {shiftKey: true, ctlKey: false, altKey: false, metaKey: false}
-
-        if (configSettings.playerRollSaves !== "none") { // find a player to send the request to
-          var player = this.playerFor(target);
-          //@ts-ignore
-          if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
-        }
-        if ((configSettings.playerRollSaves !== "none" && player?.active && !player?.isGM) || (configSettings.rollNPCSaves ?? "auto") !== "auto" ) { 
+*/
+        var player = this.playerFor(target);
+        //@ts-ignore
+        if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
+        const promptPlayer = (!player?.isGM && configSettings.playerRollSaves !== "none") || (player?.isGM && configSettings.rollNPCSaves !== "auto");
+        if (promptPlayer && player?.active) { 
           warn(`Player ${player?.name} controls actor ${target.actor.name} - requesting ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save`);
           promises.push(new Promise((resolve, reject) => {
-            const eventToUse = duplicate(event);
             const advantageToUse = advantage;
             let requestId = target.actor.id;
             const playerName = player.name;
             const playerId = player._id;
-            if (["letem", "letmeQuery"].includes(configSettings.playerRollSaves) && installedModules.get("lmrtfy")) requestId = randomID();
+            if (["letme", "letmeQuery"].includes(configSettings.playerRollSaves) && installedModules.get("lmrtfy")) requestId = randomID();
+            if (["letme", "letmeQuery"].includes(configSettings.rollNPCSaves) && installedModules.get("lmrtfy")) requestId = randomID();
+
             this.saveRequests[requestId] = resolve;
             
             requestPCSave(this.item.data.data.save.ability, player, target.actor.id, advantage, this.item.name, rollDC, requestId)
@@ -1185,7 +1206,6 @@ export class Workflow {
 export class DamageOnlyWorkflow extends Workflow {
   constructor(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll, 
         options: {flavor: string, itemCardId: string}) {
-
     super(actor, null, token, ChatMessage.getSpeaker(), new Set(targets), shiftOnlyEvent)
     this.damageTotal = damageTotal;
     this.damageDetail = [{type: damageType,  damage: damageTotal}];

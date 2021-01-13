@@ -58,6 +58,7 @@ export let cleanSpellName = (name) => {
 /* ------------------------------------ */
 /* Initialize module					*/
 /* ------------------------------------ */
+
 Hooks.once('init', async function() {
   console.log('midi-qol | Initializing midi-qol');
   initHooks();
@@ -69,7 +70,7 @@ Hooks.once('init', async function() {
 	
 	// Preload Handlebars templates
   preloadTemplates();
-	// Register custom sheets (if any)
+  // Register custom sheets (if any)
 });
 
 /* ------------------------------------ */
