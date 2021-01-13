@@ -286,7 +286,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const needDamagebutton = this.hasDamage && (
                           showFullCard || (!game.user.isGM && configSettings.autoRollDamage === "none") || (game.user.isGM && configSettings.gmAutoDamage === "none")
                           );
-  const needVersatileButton = this.hasDamage && (
+  const needVersatileButton = this.isVersatile && (
                             showFullCard || (!game.user.isGM && configSettings.autoRollDamage === "none") || (game.user.isGM && configSettings.gmAutoDamage === "none")
                             );
   
