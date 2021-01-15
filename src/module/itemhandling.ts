@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, log, MESSAGETYPES } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
-import {  configSettings, itemDeleteCheck, enableWorkflow, criticalDamage } from "./settings";
-import { getSelfTargetSet } from "./utils";
+import {  configSettings, itemDeleteCheck, enableWorkflow, criticalDamage, autoFastForwardAbilityRolls } from "./settings";
+import { getAutoRollAttack, getAutoRollDamage, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile } from "./utils";
 
 export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, versatile: false}) {
   let workflow: Workflow = Workflow.getWorkflow(this.uuid);
@@ -18,7 +18,13 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   workflow.processAttackEventOptions(options?.event);
   workflow.checkTargetAdvantage();
   workflow.checkAbilityAdvantage();
-  
+  workflow.rollOptions.fastForward = workflow.rollOptions.fastForwardKey ? !isAutoFastAttack() : isAutoFastAttack();
+  if (!workflow.rollOptions.fastForwardKey && (workflow.rollOptions.advKey || workflow.rollOptions.disKey))
+    workflow.rollOptions.fastForward = true;
+  if (workflow.rollOptions.advantage && workflow.rollOptions.disadvantage) {
+    workflow.rollOptions.advantage = false;
+    workflow.rollOptions.disadvantage = false;
+  }
   const defaultOption = workflow.rollOptions.advantage ?  "advantage" : workflow.rollOptions.disadvantage ? "disadvantage" : "normal";
    let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
@@ -48,14 +54,13 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
     error("Itemhandling rollAttack failed")
     return;
     // workflow._next(WORKFLOWSTATES.ROLLFINISHED);
-  } else {
-    workflow.attackRoll = result;
-    //TODO get rid of workflow attackadvantage instead use rollOptions
-    workflow.attackAdvantage = workflow.rollOptions.advantage;
-    workflow.attackDisadvantage = workflow.rollOptions.disdavantage;
-    workflow.attackRollHTML = await result.render();
-    workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
   }
+  workflow.attackRoll = result;
+  //TODO get rid of workflow attackadvantage instead use rollOptions
+  workflow.attackAdvantage = workflow.rollOptions.advantage;
+  workflow.attackDisadvantage = workflow.rollOptions.disdavantage;
+  workflow.attackRollHTML = await result.render();
+  workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
   return result;
 }
 
@@ -68,7 +73,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
     warn("Roll Damage: No workflow for item ", this.name);
     return await wrapped({event, spellLevel, versatile})
   }
-  if (workflow.currentState !== WORKFLOWSTATES.WAITFORDAMGEROLL){
+  if (workflow.currentState !== WORKFLOWSTATES.WAITFORDAMAGEROLL){
     switch (workflow?.currentState) {
       case WORKFLOWSTATES.AWAITTEMPLATE:
         return ui.notifications.warn(i18n("midi-qol.noTemplateSeen"));
@@ -86,7 +91,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   this.data.data.default = (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal";
 
   let result: Roll = await wrapped({
-    critical: workflow.rollOptions.fastForward && workflow.rollOptions.critical, 
+    critical: workflow.rollOptions.critical, 
     spellLevel: workflow.rollOptions.spellLevel, 
     versatile: workflow.rollOptions.versatile || versatile, 
     fastForward: workflow.rollOptions.fastForward,
@@ -149,7 +154,7 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
                           || (this.data.data.target?.type === "self") // self target
                           || (this.hasAreaTarget && configSettings.autoTarget) // area effectspell and we will auto target
                           || (configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type)) // rangetarget
-                          || (!this.hasAttack && !this.hasDamage && !this.hasSave); // does not do anything - need to chck dynamic effects
+                          || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
 
   if (this.type === "spell") {
     const midiFlags = this.actor.data.flags["midi-qol"];
@@ -205,15 +210,16 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
     let spellStuff = result.content?.match(/.*data-spell-level="(.*)">/);
     workflow.itemLevel = parseInt(spellStuff[1]) || this.data.data.level;;
   }
-
-  const needAttckButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
+  workflow.processAttackEventOptions(event);
+  workflow.checkTargetAdvantage();
+  workflow.checkAbilityAdvantage();
+  const needAttckButton = !workflow.someEventKeySet() && !getAutoRollAttack();
   workflow.showCard = configSettings.mergeCard || (configSettings.showItemDetails !== "none") || (
                 (baseItem.isHealing && configSettings.autoRollDamage === "none")  || // not rolling damage
-                (baseItem.hasDamage && configSettings.autoRollDamage === "none") ||
+                (itemHasDamage(baseItem) && configSettings.autoRollDamage === "none") ||
                 (baseItem.hasSave && configSettings.autoCheckSaves === "none") ||
                 (baseItem.hasAttack && needAttckButton)) ||
-                (!baseItem.hasAttack && !baseItem.hasDamage && !baseItem.hasSave);
-
+                (!baseItem.hasAttack && !itemHasDamage(baseItem) && !baseItem.hasSave);
   let item = this;
   if (this.data.data.level !== workflow.itemLevel) {
     const upcastData = mergeObject(this.data, {"data.level": workflow.itemLevel}, {inplace: false});
@@ -282,17 +288,13 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   warn("show item card ", this, this.actor, this.actor.token, showFullCard, workflow)
   const token = this.actor.token;
   let needAttackButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
-  needAttackButton = needAttackButton || (game.user.isGM && !configSettings.gmAutoAttack);
-  const needDamagebutton = this.hasDamage && (
-                          showFullCard || (!game.user.isGM && configSettings.autoRollDamage === "none") || (game.user.isGM && configSettings.gmAutoDamage === "none")
-                          );
-  const needVersatileButton = this.isVersatile && (
-                            showFullCard || (!game.user.isGM && configSettings.autoRollDamage === "none") || (game.user.isGM && configSettings.gmAutoDamage === "none")
-                            );
-  
-const sceneId = token?.scene && token.scene._id || canvas.scene._id;
-
+  needAttackButton = true || needAttackButton || !getAutoRollAttack();
+  needAttackButton = needAttackButton || (getAutoRollAttack() && workflow.rollOptions.fastForwardKey)
+  const needDamagebutton = itemHasDamage(this) && (showFullCard || getAutoRollDamage() === "none");
+  const needVersatileButton = itemIsVersatile(this) && (showFullCard || getAutoRollDamage() === "none");
+  const sceneId = token?.scene && token.scene._id || canvas.scene._id;
   let isPlayerOwned = this.actor.hasPlayerOwner;
+
   if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = this.actor.isPC
   const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned)) 
                             || !configSettings.itemTypeList.includes(this.type);

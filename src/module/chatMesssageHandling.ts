@@ -397,7 +397,7 @@ export let processBetterRollsChatCard = (message, html, data) => {
 export let chatDamageButtons = (message, html, data) => {
   debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll?.type, message.data.flags)
   if (!addChatDamageButtons) return true;
-  if (message.data.flags?.dnd5e?.roll.type === "damage") {
+  if (message.data.flags?.dnd5e?.roll?.type === "damage") {
     const itemId = message.data.flags.dnd5e.roll.itemId;
     const item = game.actors.get(message.data.speaker.actor).items.get(itemId);
     if (!item) {

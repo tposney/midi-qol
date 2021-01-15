@@ -444,3 +444,29 @@ export function testKey(keyString, event) {
       error("Impossible key mapping for speed roll")
   }
 }
+
+export function isAutoFastAttack():boolean {
+  return game.user.isGM ? configSettings.gmAutoFastForwardAttack : ["all", "attack"].includes(configSettings.autoFastForward);
+}
+
+export function isAutoFastDamage(): boolean {
+  return game.user.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward)
+}
+
+export function getAutoRollDamage(): string {
+  return game.user.isGM ? configSettings.gmAutoDamage : configSettings.autoRollDamage;
+}
+
+export function getAutoRollAttack(): boolean {
+  return game.user.isGM ? configSettings.gmAutoAttack : configSettings.autoRollAttack;
+}
+
+export function itemHasDamage(item) {
+  console.error("itemhasdamage", item?.data.data.action, item)
+  return item?.data.data.actionType !== "" && item?.hasDamage;
+}
+
+export function itemIsVersatile(item) {
+  console.error("itemhasdamage", item?.data.data.action, item)
+  return item?.data.data.actionType !== "" && item?.versatile;
+}

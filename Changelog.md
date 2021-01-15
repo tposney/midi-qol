@@ -1,8 +1,28 @@
+0.3.51
+* Fix for error being thrown for items that do not have a damage roll.
+[BREAKING] If the action type for an item is blank (so that the damage rolls are not displayed when edited) then no damage button will be displayed/rolled.
+* Yet more advantage/disadvantage/critical changes/improvements (sorry, but hopefully this is the last one).
+Chat card buttons should correctly reflect the status for adnvantage/disadvantage/critical that midi-qol thinks when displaying the buttons (i.e. not auto rolling) and includes looking at various advantage/disadvantage/grants/critical flags.  
+
+Fast forwarding has been cleaned up/changed.
+
+When clicking from the character sheet/macro/token HUD, adv+dis will toggle the attack auto roll status, i.e. if the attack roll normally auto rolls the attack button will be displayed and vice versa.
+
+The behaviour of ctrl+alt (or adv + disadv if using speed rolls) has been changed. It inverts the next attack/damage fast forward status. So if you auto fastforward attacks ctrl+alt will prompt for the advantage/disadvantage and vice versa. So you can set the workflow for what you do most of the time and use adv+disadv to reverse it.
+
+The same applies for critical rolls and the use of ctrl-alt. In addition if your default critical key is alt then ctrl will be set non-critical for the damage.
+
+Be aware that the critical display includes flags.midi-qol settings so the roll may not be a critical roll but the damage button can correctly display critical.
+
+If you do not auto roll an attack or damage roll the fast forward status will be displayed in the attack/damage button (i.e. what clicking on the button will mean), (fast) means that the roll will fast forward.
+
+I'm sure there will be some workflow that someone uses for whom the changes are utterly unbearable, so feel free to let me know (they work for me).
+
 0.3.50
 * Fix for damage buttons not being added for non-merge card damage cards.
 * Fix some cases of errors being thrown when first loading and canvas not initialised.
 * Fix for versatile damage button being displayed when not required.
-* If not auto rolling attack rolls, display advantage/disadvantage in the attack button for the item card, as a hint for the roll. If auto fast forwarding the roll will be made with the suggested setting, speed keys override the setting as does choosing from the roll dialog.
+* If not auto rolling attack rolls and using the merge card, display advantage/disadvantage in the attack button for the item card, as a hint for the roll (based on the various flags that can be set). It will not detect target specific flags however. If auto fast forwarding the roll will be made with the suggested setting, speed keys override the setting as does choosing from the roll dialog.
 * Fix for incorrectly displaying advantage/disadvantage on chat card if user selects something else from the damage dialog.
 * Fix for blind rolls being completely hidden forever.
 * Fix for GM rollNPCSaves set to LMRTFY and player set to auto roll not causing roll to not be completed.

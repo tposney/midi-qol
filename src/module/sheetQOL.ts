@@ -2,6 +2,7 @@ import { itemDeleteCheck, itemRollButtons } from "./settings";
 import { i18n, debug, log, warn } from "../midi-qol";
 import { Workflow, noKeySet, shiftOnlyEvent } from "./workflow";
 import { showItemInfo } from "./itemhandling";
+import { itemHasDamage, itemIsVersatile } from "./utils";
 
 
 const knownSheets = {
@@ -113,7 +114,7 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
                   buttons.append(`<span class="tag"><button data-action="attack">${i18n("midi-qol.buttons.attack")}</button></span>`);
               if (item.hasDamage)
                   buttons.append(`<span class="tag"><button data-action="damage">${i18n("midi-qol.buttons.damage")}</button></span>`);
-              if (item.isVersatile)
+              if (itemIsVersatile(item))
                   buttons.append(`<span class="tag"><button data-action="versatileDamage">${i18n("midi-qol.buttons.versatileDamage")}</button></span>`);
               buttonsWereAdded = true;
               break;
@@ -190,9 +191,9 @@ function addTidy5eItemSheetButtons(app, html, data) {
               buttons.append(`<a class="button" data-action="basicRoll" title="${i18n("midi-qol.buttons.roll")}"><i class="fas fa-comment-alt"></i> ${i18n("midi-qol.buttons.roll")}</a>`);
               if (item.hasAttack)
                   buttons.append(`<a class="button" data-action="attack" title="Roll standard/advantage/disadvantage ${i18n("midi-qol.buttons.attack")}"><i class="fas fa-dice-d20"></i> ${i18n("midi-qol.buttons.attack")}</a>`);
-              if (item.hasDamage)
+              if (itemHasDamage(item))
                   buttons.append(`<a class="button" data-action="damage" title="Roll ${i18n("midi-qol.buttons.damage")}"><i class="fas fa-dice-six"></i> ${i18n("midi-qol.buttons.damage")}</a>`);
-              if (item.isVersatile)
+              if (itemIsVersatile(item))
                   buttons.append(`<a class="button" data-action="versatileDamage" title="Roll ${i18n("midi-qol.buttons.versatileDamage")}"><i class="fas fa-dice-six"></i> ${i18n("midi-qol.buttons.versatileDamage")}</a>`);
               buttonsWereAdded = true;
               break;

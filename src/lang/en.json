@@ -163,5 +163,6 @@
     "midi-qol.GMAutoRoll.Hint": "GM Rolls ingore the fast forward/auto attack settings and use these flags",
     "midi-qol.midi-none": "No Damage",
     "midi-qol.ItemList": "Choose items which display details on item card",
-    "midi-qol.DisplayItems": "Show Details"
+    "midi-qol.DisplayItems": "Show Details",
+    "midi-qol.fastForward": "(fast)"
 }
