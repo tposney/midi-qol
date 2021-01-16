@@ -462,11 +462,9 @@ export function getAutoRollAttack(): boolean {
 }
 
 export function itemHasDamage(item) {
-  console.error("itemhasdamage", item?.data.data.action, item)
   return item?.data.data.actionType !== "" && item?.hasDamage;
 }
 
 export function itemIsVersatile(item) {
-  console.error("itemhasdamage", item?.data.data.action, item)
   return item?.data.data.actionType !== "" && item?.versatile;
 }
