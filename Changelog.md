@@ -1,7 +1,9 @@
+0.3.52
+
 0.3.51
-* Fix for error being thrown for items that do not have a damage roll.
-[BREAKING] If the action type for an item is blank (so that the damage rolls are not displayed when edited) then no damage button will be displayed/rolled.
-* Yet more advantage/disadvantage/critical changes/improvements (sorry, but hopefully this is the last one).
+* Fix for error being thrown for items that do not have a damage roll.  
+[BREAKING] If the action type for an item is blank (so that the damage rolls are not displayed when edited) then no damage button will be displayed/rolled.  
+* Yet more advantage/disadvantage/critical changes/improvements (sorry, but hopefully this is the last one).  
 Chat card buttons should correctly reflect the status for adnvantage/disadvantage/critical that midi-qol thinks when displaying the buttons (i.e. not auto rolling) and includes looking at various advantage/disadvantage/grants/critical flags.  
 
 Fast forwarding has been cleaned up/changed.

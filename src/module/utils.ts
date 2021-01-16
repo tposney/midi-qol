@@ -466,5 +466,5 @@ export function itemHasDamage(item) {
 }
 
 export function itemIsVersatile(item) {
-  return item?.data.data.actionType !== "" && item?.versatile;
+  return item?.data.data.actionType !== "" && item?.isVersatile;
 }
