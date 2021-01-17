@@ -3,6 +3,7 @@ import { Workflow, noKeySet } from "./workflow";
 import { doItemRoll, doAttackRoll, doDamageRoll } from "./itemhandling";
 import { configSettings, autoFastForwardAbilityRolls } from "./settings.js";
 import { testKey } from "./utils";
+import { installedModules } from "./setupModules";
 
 
 function restrictVisibility() {
@@ -342,5 +343,48 @@ export let actorAbilityRollPatching = () => {
       return rollDeathSave.call(this, oldRollDeathSave.bind(this), ...arguments);
     };
   }
+}
 
+export function patchLMRTFY() {
+  if (installedModules.get("lmrtfy")) {
+    if (game.modules.get("lib-wrapper")?.active) {
+      log("Patching rollAbilitySave")
+      //@ts-ignore
+      libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "WRAPPER");
+    } else {
+      //@ts-ignore
+      LMRTFYRoller.prototype._makeRoll = function () {
+        //@ts-ignore
+        return _makeRoll.call(this, LMRTFYRoller.prototype._makeRoll.bind(this), ...arguments);
+      };
+    };
+  }
+}
+
+export function _makeRoll(wrapper, event, rollMethod, ...args) {
+  let options;
+  switch(this.advantage) {
+      case -1: 
+        options = {disadvantage: true};
+        break;
+      case 0:
+        options = {fastforward: true};
+        break;
+      case 1:
+        options = {advantage: true};
+        break;
+      case 2: 
+        options = {event: event}
+        break;
+}
+  const rollMode = game.settings.get("core", "rollMode");
+  game.settings.set("core", "rollMode", this.mode || CONST.DICE_ROLL_MODES);
+  for (let actor of this.actors) {
+      Hooks.once("preCreateChatMessage", this._tagMessage.bind(this));
+          actor[rollMethod].call(actor, ...args, options);                        
+  }
+  game.settings.set("core", "rollMode", rollMode);
+  event.currentTarget.disabled = true;
+  if (this.element.find("button").filter((i, e) => !e.disabled).length === 0)
+      this.close();
 }

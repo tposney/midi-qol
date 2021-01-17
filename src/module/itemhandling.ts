@@ -21,10 +21,8 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   workflow.rollOptions.fastForward = workflow.rollOptions.fastForwardKey ? !isAutoFastAttack() : isAutoFastAttack();
   if (!workflow.rollOptions.fastForwardKey && (workflow.rollOptions.advKey || workflow.rollOptions.disKey))
     workflow.rollOptions.fastForward = true;
-  if (workflow.rollOptions.advantage && workflow.rollOptions.disadvantage) {
-    workflow.rollOptions.advantage = false;
-    workflow.rollOptions.disadvantage = false;
-  }
+  workflow.rollOptions.advantage = workflow.disadvantage ? false : workflow.advantage;
+  workflow.rollOptions.disadvantage = workflow.advantage ? false : workflow.disadvantage;
   const defaultOption = workflow.rollOptions.advantage ?  "advantage" : workflow.rollOptions.disadvantage ? "disadvantage" : "normal";
    let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
@@ -56,9 +54,6 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
     // workflow._next(WORKFLOWSTATES.ROLLFINISHED);
   }
   workflow.attackRoll = result;
-  //TODO get rid of workflow attackadvantage instead use rollOptions
-  workflow.attackAdvantage = workflow.rollOptions.advantage;
-  workflow.attackDisadvantage = workflow.rollOptions.disdavantage;
   workflow.attackRollHTML = await result.render();
   workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
   return result;
@@ -88,7 +83,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
-  this.data.data.default = (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal";
+  this.data.data.default = (workflow.rollOptions.critical) ? "critical" : "normal";
 
   let result: Roll = await wrapped({
     critical: workflow.rollOptions.critical, 

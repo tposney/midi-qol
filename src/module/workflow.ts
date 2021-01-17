@@ -71,8 +71,6 @@ export class Workflow {
   isFumble: boolean;
   hitTargets: Set<Token>;
   attackRoll: Roll;
-  attackAdvantage: boolean;
-  attackDisadvantage: boolean;
   diceRoll: number;
   attackTotal: number;
   attackCardData: ChatMessage;
@@ -134,8 +132,8 @@ export class Workflow {
     this.rollOptions.advKey = this.rollOptions.advKey || (advKey && !disKey)
     this.rollOptions.disKey = this.rollOptions.disKey || (!advKey && disKey)
 
-    this.rollOptions.advantage = this.rollOptions.advantage || this.rollOptions.advKey;
-    this.rollOptions.disadvantage = this.rollOptions.disadvantage || this.rollOptions.disKey;
+    this.advantage = this.advantage || this.rollOptions.advKey;
+    this.disadvantage = this.disadvantage || this.rollOptions.disKey;
 
     const midiFlags = this.actor?.data.flags["midi-qol"];
     const advantage = midiFlags?.advantage;
@@ -143,12 +141,12 @@ export class Workflow {
     if (advantage) {
       const actType = this.item?.data.data?.actionType || "none"
       const withAdvantage = advantage.all || advantage.attack?.all || (advantage.attack && advantage.attack[actType]);
-      this.rollOptions.advantage = this.rollOptions.advantage || withAdvantage;
+      this.advantage = this.advantage || withAdvantage;
     }
     if (disadvantage) {
       const actType = this.item?.data.data?.actionType || "none"
       const withDisadvantage = disadvantage.all || disadvantage.attack?.all || (disadvantage.attack && disadvantage.attack[actType]);
-      this.rollOptions.disadvantage = this.rollOptions.disadvantage || withDisadvantage;
+      this.disadvantage = this.disadvantage || withDisadvantage;
     }
   }
   public processDamageEventOptions(event) { 
@@ -176,19 +174,16 @@ export class Workflow {
       fastForwardKey = (critKey && noCritKey);
       this.rollOptions.versaKey = false;
     }
+    this.rollOptions.critical = undefined;
     this.processCriticalFlags();
     if (fastForwardKey) {
       critKey = false;
       noCritKey = false;
     }
-
-    this.rollOptions.critical = this.rollOptions.critical || this.isCritical || (critKey && !noCritKey);
+    if (this.noCritFlagSet || noCritKey) this.rollOptions.critical = false;
+    else this.rollOptions.critical = this.isCritical || critKey || this.critFlagSet;
     this.rollOptions.fastForward = fastForwardKey ? !isAutoFastDamage() : isAutoFastDamage();
     this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || noCritKey;
-    if (noCritKey || critKey) {
-      this.rollOptions.critical = this.rollOptions.critical || (critKey && !noCritKey);
-      this.isCritical = critKey && !noCritKey;;
-    }
   }
 
   processCriticalFlags() {
@@ -202,9 +197,10 @@ export class Workflow {
     const criticalFlags = getProperty(this.actor.data, `flags.midi-qol.critical`) ?? {};
     const noCriticalFlags = getProperty(this.actor.data, `flags.midi-qol.noCritical`) ?? {};
     const attackType = this.item?.data.data.actionType;
-    if (criticalFlags.all || criticalFlags[attackType]) this.rollOptions.critical = true;
-    if (noCriticalFlags.all || noCriticalFlags[attackType]) this.rollOptions.critical = false;
-    if (this.rollOptions.critical !== undefined) this.isCritical = this.rollOptions.critical;
+    this.critFlagSet = false;
+    this.noCritFlagSet = false;
+    this.critFlagSet = criticalFlags.all || criticalFlags[attackType];
+    this.noCritFlagSet = noCriticalFlags.all || noCriticalFlags[attackType];
 
     // check max roll
     const maxFlags = getProperty(this.actor.data, `flags.midi-qol.maxRoll`) ?? {};
@@ -215,16 +211,15 @@ export class Workflow {
     const firstTarget = this.targets.values().next().value;
     const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants?.critical ?? {};
     const fails = firstTarget.actor?.data.flags["midi-qol"]?.fail?.critical ?? {};
-    if (grants?.all || grants[attackType]) this.rollOptions.critical = true;
-    if (fails?.all || fails[attackType]) this.rollOptions.critical = false;
-    if (this.rollOptions.critical !== undefined) this.isCritical = this.rollOptions.critical;
+    if (grants?.all || grants[attackType]) this.critFlagSet = true;
+    if (fails?.all || fails[attackType]) this.noCritFlagSet = true;
   }
 
   checkAbilityAdvantage() {
     if (!["mwak", "rwak"].includes(this.item?.data.data.actionType)) return;
     const ability = this.item?.data.data.ability ?? "str";
-    this.rollOptions.advantage = this.rollOptions.advantage || getProperty(this.actor.data, `flags.midi-qol.advantage.attack.${ability}`);
-    this.rollOptions.disadvantage = this.rollOptions.disadvantage || getProperty(this.actor.data, `flags.midi-qol.disadvantage.attack.${ability}`);
+    this.advantage = this.advantage || getProperty(this.actor.data, `flags.midi-qol.advantage.attack.${ability}`);
+    this.disadvantage = this.disadvantage || getProperty(this.actor.data, `flags.midi-qol.disadvantage.attack.${ability}`);
   }
 
   checkTargetAdvantage() {
@@ -240,8 +235,8 @@ export class Workflow {
     const grantsAdvantage = grants.all || attackAdvantage.all || attackAdvantage[actionType]
     const attackDisadvantage = grants.disadvantage?.attack || {};
     const grantsDisadvantage = grants.all || attackDisadvantage.all || attackDisadvantage[actionType]
-    this.rollOptions.advantage = this.rollOptions.advantage || grantsAdvantage;
-    this.rollOptions.disadvantage = this.rollOptions.disadvantage || grantsDisadvantage;
+    this.advantage = this.advantage || grantsAdvantage;
+    this.disadvantage = this.disadvantage || grantsDisadvantage;
   }
 
   constructor(actor: Actor5e, item: Item5e, tokenId, speaker, targets, event: any) {
@@ -293,7 +288,6 @@ export class Workflow {
 
   public someEventKeySet() {
     return this.event?.shiftKey || this.event?.altKey || this.event?.ctrlKey || this.event?.metaKey;
-     // || this.rollOptions.advantage || this.rollOptions.disadvantage || this.rollOptions.fastForward;
   }
 
   static removeWorkflow(id: string) {
@@ -373,7 +367,6 @@ export class Workflow {
         if (this.noAutoAttack) return;
         let shouldRoll = this.someEventKeySet() || getAutoRollAttack();
         this.processAttackEventOptions(event);
-        const autoFast = shouldRoll && this.rollOptions.fastForwardKey && isAutoFastAttack();
 
         if (getAutoRollAttack() && this.rollOptions.fastForwardKey) shouldRoll = false;
 
@@ -384,7 +377,9 @@ export class Workflow {
             //@ts-ignore
             let content = chatMessage && duplicate(chatMessage.data.content)
             let searchRe = /<button data-action="attack">[^<]+<\/button>/;
-            let attackString = this.rollOptions.advantage ? i18n("DND5E.Advantage") : this.rollOptions.disadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
+            const hasAdvantage = this.advantage && !this.disadvantage;
+            const hasDisadvantage = this.disadvantage && !this.advantage;
+            let attackString = hasAdvantage ? i18n("DND5E.Advantage") : hasDisadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
             if (isAutoFastAttack() || (!isAutoFastAttack() && this.rollOptions.fastForwardKey)) attackString += ` ${i18n("midi-qol.fastForward")}`;
             let replaceString = `<button data-action="attack">${attackString}</button>`
             content = content.replace(searchRe, replaceString);
@@ -443,9 +438,14 @@ export class Workflow {
             //@ts-ignore
             let content = chatMessage && duplicate(chatMessage.data.content)
             let searchRe = /<button data-action="damage">[^<]+<\/button>/;
-            let damageString = (this.rollOptions.critical || this.isCritical) ? i18n("DND5E.Critical") : i18n("DND5E.Damage");
+            let damageString = (this.rollOptions.critical) ? i18n("DND5E.Critical") : i18n("DND5E.Damage");
             if (isAutoFastDamage()) damageString += ` ${i18n("midi-qol.fastForward")}`;
             let replaceString = `<button data-action="damage">${damageString}</button>`
+            content = content.replace(searchRe, replaceString);
+            searchRe = /<button data-action="versatile">[^<]+<\/button>/;
+            damageString = i18n("DND5E.Versatile")
+            if (isAutoFastDamage()) damageString += ` ${i18n("midi-qol.fastForward")}`;
+            replaceString = `<button data-action="versatile">${damageString}</button>`
             content = content.replace(searchRe, replaceString);
             await chatMessage?.update({"content": content});
           }
@@ -567,7 +567,7 @@ export class Workflow {
               damageRoll: this.damageRoll,
               attackRoll: this.attackRoll,
               itemCardId: this.itemCardId,
-              isCritical: this.isCritical,
+              isCritical: this.rollOptions.critical,
               isFumble: this.isFumble,
               spellLevel: this.itemLevel,
               damageTotal: this.damageTotal,
@@ -661,10 +661,10 @@ export class Workflow {
     if (doMerge && chatMessage) { // display the attack roll
       let searchRe = '<div class="midi-qol-attack-roll"></div>';
       //@ts-ignore
-      this.rollOptions.advantage = this.attackRoll.terms[0].options.advantage;
+      this.advantage = this.attackRoll.terms[0].options.advantage;
       //@ts-ignore
-      this.rollOptions.disadvantage = this.attackRoll.terms[0].options.disadvantage;
-      const attackString = this.rollOptions.advantage ? i18n("DND5E.Advantage") : this.rollOptions.disadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
+      this.disadvantage = this.attackRoll.terms[0].options.disadvantage;
+      const attackString = this.advantage ? i18n("DND5E.Advantage") : this.disadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
       let replaceString = `<div style="text-align:center" >${attackString}<div class="midi-qol-attack-roll">${this.attackRollHTML}</div></div>`
       content = content.replace(searchRe, replaceString);
 
