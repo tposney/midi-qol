@@ -14,7 +14,7 @@
 import { registerSettings, fetchParams, configSettings } from './module/settings';
 import { preloadTemplates } from './module/preloadTemplates';
 import { setupModules } from './module/setupModules';
-import { itemPatching, visionPatching, actorAbilityRollPatching } from './module/patching';
+import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY } from './module/patching';
 import { initHooks } from './module/Hooks';
 import { initGMActionSetup } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
@@ -83,6 +83,7 @@ Hooks.once('setup', function() {
   itemPatching();
   visionPatching();
   setupModules();
+  patchLMRTFY();
   registerSettings();
   initGMActionSetup();
   undoDamageText = i18n("midi-qol.undoDamageFrom");

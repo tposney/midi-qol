@@ -1,5 +1,11 @@
+0.3.53
+* Improve/Fix advantage/disadvantage on roll buttons when you have flags that set both advantage and disadvantage. Once you have something that sets advantage and disadvantage the roll will always be done as a normal roll.
+* Fix for LMRTFY always rolling with advantage if you change the speed roll settings.
+* Fix for LMRTFY to recognise adv/dis keys if you request a LMRTFY+Query roll.
+* Improve critical damage display on buttons. The hit/miss card will display the raw result of the roll and the button will display the expected critical status after any flags are applied. So they may not be the same.
+* If you want to override the critical button you need to bring up the dialog and choose critical/normal from the dialog, i.e. not fast forward roll.
 0.3.52
-
+Fix for versatile button MIA.
 0.3.51
 * Fix for error being thrown for items that do not have a damage roll.  
 [BREAKING] If the action type for an item is blank (so that the damage rolls are not displayed when edited) then no damage button will be displayed/rolled.  
