@@ -65,7 +65,10 @@ export var configSettings = {
   useCustomSounds: true,
   customSoundsPlaylist: "none",
   keyMapping: defaultKeyMapping,
-  allowUseMacro: false
+  allowUseMacro: false,
+  rollOtherDamage: false,
+  removeButtons: true,
+  gmRemoveButtons: true
 };
 
 export let fetchParams = (silent = false) => {
@@ -258,6 +261,7 @@ export const registerSettings = function() {
     label: "midi-qol.WorkflowSettings",
     hint: i18n("midi-qol.Hint"),
     icon: "fas fa-dice-d20",
+    scope: "world",
     type: ConfigPanel,
     restricted: true
   });

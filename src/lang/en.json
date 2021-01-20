@@ -68,7 +68,7 @@
     "midi-qol.ColoredBorders.Name": "Colored Border Messages",
     "midi-qol.ColoredBorders.Hint": "Each chat message has a border in the player characters color",
     "midi-qol.AutoEffects.Name": "Auto apply item effects to targets",
-    "midi-qol.AutoEffects.Hint": "Automatically apply item active effects to targets if they are hit, failed a save or don't get a save. Requires ddynamiceffects and works better with about-time as well.",
+    "midi-qol.AutoEffects.Hint": "Automatically apply item active effects to targets if they are hit, failed a save or don't get a save. Requires ddynamiceffects and works better with about-time and or times-up as well.",
     "midi-qol.RangeTarget.Name": "Autotarget for ranged target spells/attacks",
     "midi-qol.RangeTarget.Hint": "Auto target for ranged target types if the target type is creature/enemy/ally",
     "midi-qol.PlayerRollSaves.Name": "Prompt Players to Roll Saves",
@@ -97,7 +97,7 @@
     "midi-qol.ConfigTitle": "Midi-Qol Configuration",
     "midi-qol.WorkflowSettings": "Workflow Settings",
     "midi-qol.CheckSaveText.Name": "Search spell description",
-    "midi-qol.CheckSaveText.Hint": "Search spell description for save type - 'half as much daamge'. If unchecked assume a save does 1/2 damage",
+    "midi-qol.CheckSaveText.Hint": "Search spell description for save type - 'half as much damage'. If unchecked assume a save does 1/2 damage",
     "midi-qol.Save": "Save Settings",
     "midi-qol.saving-throws": "Saving Throws",
     "midi-qol.saving-throw": "Saving Throw",
@@ -159,10 +159,15 @@
     "midi-qol.GMAutoDamage.Name": "GM Auto roll damage",
     "midi-qol.GMAutoFastForwardAttack.Name": "GM Auto fast forward attack",
     "midi-qol.GMAutoFastForwardDamage.Name": "GM Auto fast forward damage",
-
     "midi-qol.GMAutoRoll.Hint": "GM Rolls ingore the fast forward/auto attack settings and use these flags",
     "midi-qol.midi-none": "No Damage",
     "midi-qol.ItemList": "Choose items which display details on item card",
     "midi-qol.DisplayItems": "Show Details",
-    "midi-qol.fastForward": "(fast)"
+    "midi-qol.fastForward": "(fast)",
+    "midi-qol.RollOtherDamage.Name": "Roll Other formula on failed save for rwak/mwak",
+    "midi-qol.RollOtherDamage.Hint": "If set roll 'Other' formula as additional damage on failed save for rwak/mwak. 1/2 damage on save, weapon properties noDamSave and fullDamSave override",
+    "midi-qol.ApplyEffects": "Apply Active Effects",
+    "midi-qol.spell-damage": "Spell Damage",
+    "midi-qol.RemoveButtons.Name": "(Player) Remove chat card buttons on roll completion",
+    "midi-qol.gmRemoveButtons.Name": "(GM) Remove chat card buttons on roll completion"
 }

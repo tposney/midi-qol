@@ -41,7 +41,7 @@ let enableSheetQOL = (app, html, data) => {
   if (itemRollButtons)
       if (["Tidy5eSheet", "Tidy5eNPC"].includes(app.constructor.name)) {
         if (game.modules.get("tidy5e-sheet").active && 
-        isNewerVersion(game.modules.get("tidy5e-sheet").data.version, "0.3.9") &&
+        isNewerVersion(game.modules.get("tidy5e-sheet").data.version, "0.4.0") &&
         game.settings.get("tidy5e-sheet", "contextRollButtons")) {
           addTidy5eItemSheetButtons(app, html, data);
         } else {

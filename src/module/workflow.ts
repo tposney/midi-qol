@@ -9,9 +9,10 @@ import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
 import { configSettings, checkBetterRolls, itemRollButtons, autoRemoveTargets } from "./settings.js";
-import { getSelfTargetSet, createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage } from "./utils"
+import { getSelfTargetSet, createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveButtons } from "./utils"
 import { config } from "process";
 import { ConfigPanel } from "./apps/ConfigPanel.js";
+import { setupSheetQol } from "./sheetQOL.js";
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey)}
@@ -217,7 +218,8 @@ export class Workflow {
 
   checkAbilityAdvantage() {
     if (!["mwak", "rwak"].includes(this.item?.data.data.actionType)) return;
-    const ability = this.item?.data.data.ability ?? "str";
+    let ability = this.item?.data.data.ability;
+    if (ability === "") ability = this.item?.data.data.properties?.fin ? "dex" : "str";
     this.advantage = this.advantage || getProperty(this.actor.data, `flags.midi-qol.advantage.attack.${ability}`);
     this.disadvantage = this.disadvantage || getProperty(this.actor.data, `flags.midi-qol.disadvantage.attack.${ability}`);
   }
@@ -281,6 +283,7 @@ export class Workflow {
 
     this.placeTemlateHookId = null;
     this.damageDetail = [];
+    this.otherDamageDetail = [];
     this.hideTags = new Array();
     this.displayHookId = null;
     Workflow._workflows[this.itemUUId] = this;
@@ -367,12 +370,12 @@ export class Workflow {
         if (this.noAutoAttack) return;
         let shouldRoll = this.someEventKeySet() || getAutoRollAttack();
         this.processAttackEventOptions(event);
-
         if (getAutoRollAttack() && this.rollOptions.fastForwardKey) shouldRoll = false;
 
-        if (configSettings.mergeCard) {
-            const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
-          if (chatMessage) {
+  //      if (configSettings.mergeCard) {
+        {
+          const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
+          if (chatMessage && !shouldRoll) {
             // provide a hint as to the type of roll expected.
             //@ts-ignore
             let content = chatMessage && duplicate(chatMessage.data.content)
@@ -384,7 +387,7 @@ export class Workflow {
             let replaceString = `<button data-action="attack">${attackString}</button>`
             content = content.replace(searchRe, replaceString);
             await chatMessage?.update({"content": content});
-          } else error("no chat message")
+          } else if (!chatMessage) error("no chat message")
         }
         if (shouldRoll) {
           this.item.rollAttack({event: {}});
@@ -431,8 +434,9 @@ export class Workflow {
         }
         this.processDamageEventOptions(event);
 
-        if (configSettings.mergeCard && !shouldRollDamage) {
-          const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
+//        if (configSettings.mergeCard && !shouldRollDamage) {
+          if (!shouldRollDamage) {
+            const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
           if (chatMessage) {
             // provide a hint as to the type of roll expected.
             //@ts-ignore
@@ -466,6 +470,8 @@ export class Workflow {
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
         if (this.item?.data.data.actionType === "heal") this.defaultDamageType = CONFIG.DND5E.healingTypes["healing"]; 
         this.damageDetail = createDamageList(this.damageRoll, this.item, this.defaultDamageType);
+        if (this.otherDamageRoll && configSettings.rollOtherDamage)
+          this.otherDamageDetail = createDamageList(this.otherDamageRoll, null, this.defaultDamageType);
         /*
         this.criticalDetail = createDamageList(this.criticalRoll, this.item, this.defaultDamageType);
         */
@@ -526,6 +532,14 @@ export class Workflow {
           //@ts-ignore
           let dae = window.DAE;
           dae.doEffects(this.item, true, this.applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId})
+          const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
+          if (chatMessage) {
+            const buttonRe = /<button data-action="applyEffects">.*?<\/button>/;
+            //@ts-ignore
+            let content = duplicate(chatMessage.data.content)
+            content = content?.replace(buttonRe, "");
+            chatMessage.update({content})
+          }
         }
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
@@ -615,7 +629,7 @@ export class Workflow {
           } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
         }
 
-        delete Workflow._workflows[this.itemId];
+        // delete Workflow._workflows[this.itemId];
         Hooks.callAll("minor-qol.RollComplete", this); // just for the macro writers.
         Hooks.callAll("midi-qol.RollComplete", this);
         if (autoRemoveTargets !== "none") setTimeout(untargetDeadTokens, 500); // delay to let the updates finish
@@ -625,20 +639,30 @@ export class Workflow {
           let itemCard = game.messages.get(this.itemCardId);
           let waitForDiceSoNice = configSettings.mergeCard && (this.item?.hasAttck || itemHasDamage(this.item) || this.item?.hasSaves);
           waitForDiceSoNice = waitForDiceSoNice && game.dice3d?.messageHookDisabled && game.dice3d?.isEnabled();
-
+          //@ts-ignore .content
+          let content = itemCard?.data.content;
+          if (getRemoveButtons() && content) {
+            const versatileRe = /<button data-action="versatile">[^<]*<\/button>/
+            const damageRe = /<button data-action="damage">[^<]*<\/button>/
+            const formulaRe = /<button data-action="formula">[^<]*<\/button>/
+            content = content?.replace(damageRe, "")
+            content = content?.replace(formulaRe, "")
+            content = content?.replace(versatileRe, "<div></div>")
+          }
           await itemCard?.update({
             "flags.midi-qol.playSound": false, 
             "flags.midi-qol.type": MESSAGETYPES.ITEM, 
             type: CONST.CHAT_MESSAGE_TYPES.OTHER,
             "flags.midi-qol.waitForDiceSoNice": waitForDiceSoNice,
             "flags.midi-qol.hideTag": this.hideTags,
-            "flags.midi-qol.displayId": this.displayId
+            "flags.midi-qol.displayId": this.displayId,
+            content
           });
           
           setTimeout(() => {
             // remove hide tags after a bit
             itemCard?.update({"flags.midi-qol.hideTag": []});
-          },4000)
+          }, 3000)
           
         }
         //@ts-ignore ui.chat undefined.
@@ -650,24 +674,25 @@ export class Workflow {
   async displayAttackRoll(whisper = false, doMerge) {
     const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
     //@ts-ignore content not definted
-    let content = chatMessage && duplicate(chatMessage.data.content)
-    let buttonRe = /<button data-action="attack">[^<]*<\/button>/
-    content = content?.replace(buttonRe, "");
+    let content = chatMessage && duplicate(chatMessage.data.content);
     var rollSound =  configSettings.diceSound;
     const flags = chatMessage?.data.flags || {};
     let newFlags = {};
-    
-
+    if (content && getRemoveButtons()) {
+      const searchRe = /<button data-action="attack">[^<]*<\/button>/;
+      content = content.replace(searchRe, "");
+    }
     if (doMerge && chatMessage) { // display the attack roll
-      let searchRe = '<div class="midi-qol-attack-roll"></div>';
+      //let searchRe = /<div class="midi-qol-attack-roll">.*?<\/div>/;
+      let searchRe = /<div class="midi-qol-attack-roll">[\s\S]*?<div class="end-midi-qol-attack-roll">/
       //@ts-ignore
       this.advantage = this.attackRoll.terms[0].options.advantage;
       //@ts-ignore
       this.disadvantage = this.attackRoll.terms[0].options.disadvantage;
       const attackString = this.advantage ? i18n("DND5E.Advantage") : this.disadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
-      let replaceString = `<div style="text-align:center" >${attackString}<div class="midi-qol-attack-roll">${this.attackRollHTML}</div></div>`
+      let replaceString = `<div class="midi-qol-attack-roll"><div style="text-align:center" >${attackString}</div>${this.attackRollHTML}<div class="end-midi-qol-attack-roll">`
       content = content.replace(searchRe, replaceString);
-
+ 
       if ( this.attackRoll.dice.length ) {
         const d = this.attackRoll.dice[0];
         const isD20 = (d.faces === 20);
@@ -712,27 +737,34 @@ export class Workflow {
     let chatMessage: ChatMessage = game.messages.get(this.itemCardId);
     //@ts-ignore content not definted 
     let content = chatMessage && duplicate(chatMessage.data.content)
-    const versatileRe = /<button data-action="versatile">[^<]*<\/button>/
-    const damageRe = /<button data-action="damage">[^<]*<\/button>/
-    content = content?.replace(damageRe, "")
-    content = content?.replace(versatileRe, "<div></div>")
+    if (getRemoveButtons()) {
+      const versatileRe = /<button data-action="versatile">[^<]*<\/button>/
+      const damageRe = /<button data-action="damage">[^<]*<\/button>/
+      const formulaRe = /<button data-action="formula">[^<]*<\/button>/
+      content = content?.replace(damageRe, "")
+      content = content?.replace(formulaRe, "")
+      content = content?.replace(versatileRe, "<div></div>")
+    }
     var rollSound = configSettings.diceSound;
     var newFlags = chatMessage?.data.flags || {};
     if (doMerge && chatMessage) {
-      const searchString = '<div class="midi-qol-damage-roll"></div>';
+      const searchRe = /<div class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
       const damageString = `(${this.item?.data.data.damage.parts
           .map(a=>(CONFIG.DND5E.damageTypes[a[1]] || this.defaultDamageType || MQdefaultDamageType)).join(",") 
             || this.defaultDamageType || MQdefaultDamageType})`;
 
       //@ts-ignore .flavor not defined
       const dmgHeader = configSettings.mergeCardCondensed ? damageString : (this.flavor ?? damageString);
-      let replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center" >${dmgHeader}${this.damageRollHTML || ""}</div></div>`
-      content = content.replace(searchString, replaceString);
+      let replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center">${dmgHeader}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-damage-roll">`
+      content = content.replace(searchRe, replaceString);
+      const otherSearchRe = /<div class="midi-qol-other-roll">[\s\S]*?<div class="end-midi-qol-other-roll">/;
+      let otherReplaceString = `<div class="midi-qol-other-roll"><div style="text-align:center" >${this.otherHTML || ""}</div><div class="end-midi-qol-other-roll">`
+      content = content.replace(otherSearchRe, otherReplaceString);
       if (!!!game.dice3d?.messageHookDisabled) {
-        if (configSettings.autoRollDamage  === "none" || !["all","damage"].includes(configSettings.autoFastForward)) {
+        if (getAutoRollDamage()  === "none" || !isAutoFastDamage()) {
           // not auto rolling damage so hits will have been long displayed
-          this.hideTags = [".midi-qol-damage-roll"]
-        } else this.hideTags.push(".midi-qol-damage-roll");
+          this.hideTags = [".midi-qol-damage-roll", ".midi-qol.other-roll"]
+        } else this.hideTags.push(".midi-qol-damage-roll", ".midi-qol.other-roll");
       }
       this.displayId = randomID();
       newFlags = mergeObject(newFlags, {
@@ -788,11 +820,12 @@ export class Workflow {
           break;
         case "Workflow":
         case "TrapWorkflow":
-          searchString =  '<div class="midi-qol-hits-display"></div>';
-          replaceString = `<div class="midi-qol-hits-display">${hitContent}</div>`
+          searchString =  /<div class="midi-qol-hits-display">[\s\S]*?<div class="end-midi-qol-hits-display">/;
+          replaceString = `<div class="midi-qol-hits-display">${hitContent}<div class="end-midi-qol-hits-display">`
           content = content.replace(searchString, replaceString);
           await chatMessage.update({
             "content": content, 
+            timestamp: new Date().getTime(),
             "flags.midi-qol.playSound": this.isCritical || this.isFumble, 
             "flags.midi-qol.type": MESSAGETYPES.HITS,
             type: CONST.CHAT_MESSAGE_TYPES.OTHER,
@@ -801,6 +834,7 @@ export class Workflow {
             "flags.midi-qol.displayId": this.displayId,
             "flags.midi-qol.sound": this.isCritical ? configSettings.criticalSound : configSettings.fumbleSound
           });
+
           break;
         }
     } else {
@@ -872,9 +906,9 @@ export class Workflow {
           break;
         case "Workflow":
         case "TrapWorkflow":
-            searchString =  '<div class="midi-qol-saves-display"></div>';
+            searchString =  /<div class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
             // replaceString = `<div data-item-id="${this.item._id}"></div><div class="midi-qol-saves-display"><div class="midi-qol-nobox midi-qol-bigger-text">${saveFlavor}</div>${saveContent}</div>`
-            replaceString = `<div data-item-id="${this.item._id}"></div><div class="midi-qol-saves-display">${saveHTML}${saveContent}</div><footer class="card-footer">`
+            replaceString = `<div class="midi-qol-saves-display"><div data-item-id="${this.item._id}">${saveHTML}${saveContent}</div><div class="end-midi-qol-saves-display">`
             content = content.replace(searchString, replaceString);
             await chatMessage.update({
               "content": content, 
@@ -961,12 +995,7 @@ export class Workflow {
           if (advantage) this.advantageSaves.add(target);
           debug(`${target.actor.name} resistant to magic : ${advantage}`);
         }
-/* TODO remove this
-        let event = {};
-        // TODO need to modify this according to speed rolls settings
-        if (advantage) event = {shiftKey: false, ctlKey: false, altKey: true, metaKey: false}
-        else event = {shiftKey: true, ctlKey: false, altKey: false, metaKey: false}
-*/
+
         var player = this.playerFor(target);
         //@ts-ignore
         if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);

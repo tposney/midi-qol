@@ -62,7 +62,7 @@ let createReverseDamageCard = async (data) => {
     damageList: [] ,
     needsButtonAll: false
   };
-  for (let { tokenID, actorID, tempDamage, hpDamage, totalDamage, appliedDamage } of damageList) {
+  for (let { tokenID, actorID, oldHP, oldTempHP, tempDamage, hpDamage, totalDamage, appliedDamage } of damageList) {
     let scene = canvas.scene;
     token = canvas.tokens.get(tokenID);
     if (!token) { //Token does not exist on this scene, find it in on referenced scene.
@@ -78,8 +78,8 @@ let createReverseDamageCard = async (data) => {
     }
     actor = token.actor;
     const hp = actor.data.data.attributes.hp;
-    const oldTempHP = hp.temp || 0;
-    const oldHP = hp.value || 0;
+    // const oldTempHP = hp.temp || 0;
+    // const oldHP = hp.value || 0;
 
     if (tempDamage > oldTempHP) {
       var newTempHP = 0;
@@ -87,7 +87,7 @@ let createReverseDamageCard = async (data) => {
     } else {
       var newTempHP = oldTempHP - tempDamage;
     }
-    let newHP = Math.max(0, actor.data.data.attributes.hp.value - hpDamage);
+    let newHP = Math.max(0, oldHP - hpDamage);
     if (data.intendedFor === game.user.id && ["yes", "yesCard"].includes(data.autoApplyDamage)) {
       if (token.data.actorLink || canvas.scene.id === scene.id) {
         promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP }));
@@ -106,7 +106,7 @@ let createReverseDamageCard = async (data) => {
       }
     }
     
-    tokenIdList.push({ tokenID, oldTempHP: oldTempHP, oldHP: hp.value, absDamage: Math.abs(totalDamage), newHP, newTempHP});
+    tokenIdList.push({ tokenID, oldTempHP: oldTempHP, oldHP, absDamage: Math.abs(totalDamage), newHP, newTempHP});
 
     let listItem = {
       tokenId: tokenID,

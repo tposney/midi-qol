@@ -110,23 +110,26 @@ export let getParams = () => {
     checkBetterRolls: ${checkBetterRolls} `
 }
 // Calculate the hp/tempHP lost for an amount of damage of type
-export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType) {
+export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, existingDamage=[]) {
   debug("calculate damage ", a, appliedDamage, t, totalDamage, dmgType)
-
+  let prevDamage = existingDamage.find(ed=> ed.tokenId = t.id);
+  var hp = a.data.data.attributes.hp;
+  var oldHP, tmp;
+  if (prevDamage) {
+    oldHP =  prevDamage.newHP;
+    tmp = prevDamage.newTempHP;
+  } else {
+    oldHP = hp.value;
+    tmp = parseInt(hp.temp) || 0;    
+  }
   let value = Math.floor(appliedDamage);
   if (dmgType.includes("temphp")) { // only relavent for healing of tmp HP
-    var hp = a.data.data.attributes.hp;
-    var tmp = parseInt(hp.temp) || 0;
-    var oldHP = hp.value;
     var newTemp = Math.max(tmp, -value, 0);
-    var newHP: number = hp.value;
+    var newHP: number = oldHP;
   } else {
-    var hp = a.data.data.attributes.hp, 
-        tmp = parseInt(hp.temp) || 0, 
-        dt = value > 0 ? Math.min(tmp, value) : 0;
+    var dt = value > 0 ? Math.min(tmp, value) : 0;
     var newTemp = tmp - dt;
-    var oldHP = hp.value;
-    var newHP: number = Math.clamped(hp.value - (value - dt), 0, hp.max + (parseInt(hp.tempmax)|| 0));
+    var newHP: number = Math.clamped(oldHP - (value - dt), 0, hp.max + (parseInt(hp.tempmax)|| 0));
   }
 
   debug("calculateDamage: results are ", newTemp, newHP, appliedDamage, totalDamage)
@@ -165,6 +168,7 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
     const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
     for (let {type, mult}  of [{type: "di", mult: 0}, {type:"dr", mult: 0.5}, {type: "dv", mult: 2}]) {
       let trait = actor.data.data.traits[type].value;
+      if (item?.type === "spell" && trait.includes("spell")) return mult;
       if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
       if (trait.includes(dmgTypeString)) return mult;
     }
@@ -173,7 +177,7 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   return 1;
 };
 
-export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, saves) => {
+export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, saves, existingDamage = []): any[] => {
   let damageList = [];
   let targetNames = [];
   let appliedDamage;
@@ -183,7 +187,7 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
   if (!theTargets || theTargets.size === 0) {
     workflow.currentState = WORKFLOWSTATES.ROLLFINISHED;
     // probably called from refresh - don't do anything
-    return true;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+    return [];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
   }
   for (let t of theTargets) {
       let a = t?.actor;
@@ -217,7 +221,7 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
         totalDamage = Math.max(totalDamage, 0);
         appliedDamage = Math.max(appliedDamage, 0);
       }
-      damageList.push(calculateDamage(a, appliedDamage, t, totalDamage, dmgType));
+      damageList.push(calculateDamage(a, appliedDamage, t, totalDamage, dmgType, existingDamage));
       targetNames.push(t.name)
   }
   if (theTargets.size > 0) {
@@ -227,7 +231,6 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
       error("No GM user connected - cannot apply damage");
       return;
     }
-
     broadcastData({
       action: "reverseDamageCard",
       autoApplyDamage: configSettings.autoApplyDamage,
@@ -239,13 +242,13 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
       chatCardId: workflow.itemCardId
     });
   }
-  return appliedDamage;
+  return damageList;
 };
 
 export async function processDamageRoll(workflow: Workflow, defaultDamageType: string) {
   warn("Process Damage Roll ", workflow)
   // proceed if adding chat damage buttons or applying damage for our selves
-  let appliedDamage = 0;
+  let appliedDamage = [];
   const actor = workflow.actor;
   let item = workflow.item;
   // const re = /.*\((.*)\)/;
@@ -256,15 +259,22 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   let theTargets = workflow.hitTargets;
   if (item?.data.data.target?.type === "self") theTargets = getSelfTargetSet(actor) || theTargets;
   //**TP critical
-  appliedDamage = applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves);
+  if (["rwak", "mwak"].includes(workflow.item?.data.data.actionType) && configSettings.rollOtherDamage) {
+    appliedDamage = applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, new Set());
+    if (workflow.otherDamageRoll) {
+      // assume pervious damage applied and then calc extra damage
+      appliedDamage = applyTokenDamage(workflow.otherDamageDetail, workflow.otherDamageTotal, theTargets, item, workflow.saves, appliedDamage);
+    }
+  } else
+    appliedDamage = applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves);
   debug("process damage roll: ", configSettings.autoApplyDamage, workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves)
 }
 
 export let getSaveMultiplierForItem = item => {
   // find a better way for this ? perhaps item property
   if (!item) return 1;
-  if (item.data.data.properties?.noDamSave) return 0;
-  if (item.data.data.properties?.fullDamSave) return 1;
+  if (item.data.data.properties?.nodam) return 0;
+  if (item.data.data.properties?.fulldam) return 1;
   if (noDamageSaves?.includes(cleanSpellName(item.name))) return 0;
   if (item.data.data.description.value?.includes(i18n("midi-qol.noDamageText"))) {
     return 0.0;
@@ -467,4 +477,8 @@ export function itemHasDamage(item) {
 
 export function itemIsVersatile(item) {
   return item?.data.data.actionType !== "" && item?.isVersatile;
+}
+
+export function getRemoveButtons() {
+  return game.user.isGM ? configSettings.gmRemoveButtons : configSettings.removeButtons;
 }

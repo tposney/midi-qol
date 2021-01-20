@@ -26,6 +26,11 @@
       <input type="checkbox" name="gmAutoFastForwardDamage" data-dtype="Boolean" {{checked configSettings.gmAutoFastForwardDamage}} />
     </div>
 
+    <div class="form-group">
+      <label>{{localize "midi-qol.gmRemoveButtons.Name"}}</label>
+      <input type="checkbox" name="gmRemoveButtons" data-dtype="Boolean" {{checked configSettings.gmRemoveButtons}} />
+    </div>
+
     <div class="midi-qol-faint">{{localize "midi-qol.GMAutoRoll.Hint"}}</div>
 
     <div class="midi-qol-box">
@@ -103,7 +108,6 @@
       </div>
       <div class="midi-qol-faint">{{localize "midi-qol.HideNPCNames.Hint"}}</div>
 
-
       <div class="form-group">
         <label>{{localize "midi-qol.UseTokenNames.Name"}}</label>
         <input type="checkbox" name="useTokenNames" data-dtype="Boolean" {{checked configSettings.useTokenNames}} />
@@ -143,6 +147,11 @@
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.AutoRollAttack.Hint"}}</div>
 
+        <div class="form-group">
+          <label>{{localize "midi-qol.RemoveButtons.Name"}}</label>
+          <input type="checkbox" name="removeButtons" data-dtype="Boolean" {{checked configSettings.removeButtons}} />
+        </div>
+    
         <div class="form-group">
           <label>{{localize "midi-qol.HideRollDetails.Name"}}</label>
           <select name="hideRollDetails" data-dtype="String">
@@ -198,6 +207,12 @@
           </select>
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.AutoRollDamage.Hint"}}</div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.RollOtherDamage.Name"}}</label>
+          <input type="checkbox" name="rollOtherDamage" data-dtype="Boolean" {{checked configSettings.rollOtherDamage}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.RollOtherDamage.Hint"}}</div>
 
         <div class="midi-qol-nobox">
           <div class="form-group">

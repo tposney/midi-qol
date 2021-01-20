@@ -5,7 +5,7 @@ import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 
 import { installedModules } from "./setupModules";
-import { BetterRollsWorkflow, WORKFLOWSTATES } from "./workflow";
+import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
 import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow } from "./settings";
 import { createDamageList, getTraitMult, calculateDamage, getSelfTargetSet } from "./utils";
 import { config } from "process";
@@ -490,3 +490,45 @@ export function processItemCardCreation(message, options, user) {
     }
   }
 }
+
+export async function _onChatCardAction(event) {
+  event.preventDefault();
+
+  // Extract card data
+  const button = event.currentTarget;
+  button.disabled = true;
+  const card = button.closest(".chat-card");
+  const messageId = card.closest(".message").dataset.messageId;
+  const message =  game.messages.get(messageId);
+  const action = button.dataset.action;
+  let targets = game.user.targets;
+
+  // Validate permission to proceed with the roll
+  if ( !(game.user.isGM || message.isAuthor ) ) return;
+  if (!(targets?.size > 0)) return; // cope with targets undefined
+  if (action !== "applyEffects") return;
+
+  // Recover the actor for the chat card
+  //@ts-ignore _getChatCardActor
+  const actor = CONFIG.Item.entityClass._getChatCardActor(card);
+  if ( !actor ) return;
+
+  // Get the Item from stored flag data or by the item ID on the Actor
+  const storedData = message.getFlag("dnd5e", "itemData");
+  const item = storedData ? this.createOwned(storedData, actor) : actor.getOwnedItem(card.dataset.itemId);
+  if ( !item ) {
+    return ui.notifications.error(game.i18n.format("DND5E.ActionWarningNoItem", {item: card.dataset.itemId, name: actor.name}))
+  }
+  let workflow = Workflow.getWorkflow(item.uuid);
+  const spellLevel = parseInt(card.dataset.spellLevel) || null;
+  const hasDAE = installedModules.get("dae") && (item?.effects?.entries.some(ef => ef.data.transfer === false));
+  if (hasDAE) {
+    //@ts-ignore
+    let dae = window.DAE;
+    dae.doEffects(item, true, game.user.targets, {whisper: false, spellLevel: workflow?.itemLevel, damageTotal: workflow?.damageTotal, critical: workflow?.isCritical, fumble: workflow?.isFumble, itemCardId: workflow?.itemCardId})
+  }
+
+  // Re-enable the button
+  button.disabled = false;
+}
+

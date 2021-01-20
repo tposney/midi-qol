@@ -1,9 +1,32 @@
+0.3.54 Some big QOL changes in this release. Some significant changes under the hood, so DO NOT UPGRADE on game day.
+* fix for advantage from flags.midi-qol.advantage.attack.str/dex on weapons with default ability settings.  Will now check finesse property if ability set to default.  
+* Added an apply dynamic effects button which will apply effects to the targeted tokens when pressed.
+
+* [BREAKING] New feature for action type rwak/mwak that have a saving throw. The "Other" formula will be rolled as additional damage. (This required some changes to the damage application logic so should be considered experimental as well)
+  * Default is 1/2 damage on save, but you can set the noDamSave or FullDamSave flags to modify the behaviour.
+  * The saving throw has no effect on base weapon damage, it always does full damage if the attack hits.
+  * You can specify the Other formula as 3d6[poision] and the extra damage will be treated as poison damage for damage resistances/immunities/vulnerabilities.
+
+* [BREAKINGish] Workflows remain active after completion. This means that you can reroll attacks/damage for an item. (This should be considered a little bit "experimental") Because workflows can be restarted there is now much better support for Popped out item cards. A workflow remains viable until another workflow with the same item is started, then it will fail.
+  * Popped out item cards. If you pop out the chat card whatever buttons have not been removed remain active (see also setting to keep buttons). So if you pop out magic missile (before the damage is rolled) you can roll the damage multiple times and the damage is applied.  
+  * The same applies for attacks and saves. If auto applying damage new damage cards will be created for each set of applied damage. 
+  * If the item has an attack and you change targets between one roll and the next the new targets will be used. This does not yet work for damage only items (I need to think about it a bit more).
+  * The initial item chat card is updated with new hits/damage. This can be a problem if the display scrolls too far befor you want to roll again.
+  * New config settings to help with popped out messages, attack/damage buttons can remain active for both player and GM, and will restart the workflow from that point, so rolling the damage again will re-reoll the damage and apply it to the targets.  
+
+One obvious use case is that if you auto roll everything, adv-dis the roll to get a complete chat card, and then pop out the card and you can re-roll as often as you want.
+
+* Fix to mark workflow settings as global so that DF Settings Clarity does not report workflow settings are per user.
+
+* Support for "Spell Damage" resistance type (resistance/immunity/vulnberability). Any damage from an item of type "spell" will be checked against this resistance/immmunity/vulnerability and if present will change the damage by a factor of 0.5/0/2. You can only get one such multiplier per category, so resistance to "Spell Damage" and Fire will result in a single 0.5 multiplier. The is useful for things like Aura of Warding.  
+This is separate to the existing magic resistance support, which gives advantage on saving throws, which remains unchanged.
 0.3.53
 * Improve/Fix advantage/disadvantage on roll buttons when you have flags that set both advantage and disadvantage. Once you have something that sets advantage and disadvantage the roll will always be done as a normal roll.
 * Fix for LMRTFY always rolling with advantage if you change the speed roll settings.
 * Fix for LMRTFY to recognise adv/dis keys if you request a LMRTFY+Query roll.
 * Improve critical damage display on buttons. The hit/miss card will display the raw result of the roll and the button will display the expected critical status after any flags are applied. So they may not be the same.
 * If you want to override the critical button you need to bring up the dialog and choose critical/normal from the dialog, i.e. not fast forward roll.
+* Small fix for onUseMacro to pass through critical key status in args[0].isCritical
 0.3.52
 Fix for versatile button MIA.
 0.3.51

@@ -12,9 +12,9 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   }
   if (workflow?.currentState !== WORKFLOWSTATES.WAITFORATTACKROLL) {
     warn("Workflow state not wait for attack roll");
-    return;
+    // return;
   }
-
+  workflow.targets = (this.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : new Set(game.user.targets);
   workflow.processAttackEventOptions(options?.event);
   workflow.checkTargetAdvantage();
   workflow.checkAbilityAdvantage();
@@ -74,8 +74,6 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
         return ui.notifications.warn(i18n("midi-qol.noTemplateSeen"));
       case WORKFLOWSTATES.WAITFORATTACKROLL:
         return ui.notifications.warn(i18n("midi-qol.noAttackRoll"));
-      default: 
-        return ui.notifications.warn(i18n("broken universe"));
     }
   }
 
@@ -107,7 +105,14 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   else if (workflow.rollOptions.maxRoll)
     //@ts-ignore .evaluate not defined.
     result = (new Roll(result._formula)).evaluate({maximize: true});
-
+  let otherResult = undefined;
+  if (
+    configSettings.rollOtherDamage && 
+    workflow.item.hasSave && ["rwak", "mwak"].includes(workflow.item.data.data.actionType) && 
+    workflow.item.data.data.formula !== ""
+  ) {
+    otherResult = new Roll(workflow.item.data.data.formula, workflow.actor?.getRollData()).roll();
+  }
   if (!configSettings.mergeCard) {
     const title = `${this.name} - ${game.i18n.localize("DND5E.DamageRoll")}`;
     let messageData = mergeObject({
@@ -116,6 +121,14 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
       speaker: ChatMessage.getSpeaker({actor: this.actor}),
     }, {"flags.dnd5e.roll": {type: "damage", itemId: this.id }});
     result.toMessage(messageData, game.settings.get("core", "rollMode"), )
+    if (otherResult) {
+      messageData = mergeObject({
+          title,
+          flavor: title,
+          speaker: ChatMessage.getSpeaker({actor: this.actor}),
+        }, {"flags.dnd5e.roll": {type: "damage", itemId: this.id }});
+      otherResult.toMessage(messageData, game.settings.get("core", "rollMode"), )
+    }
   }
   const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
   if (dice3dActive && configSettings.mergeCard && ["none", "details"].includes(configSettings.hideRollDetails)) {
@@ -127,10 +140,17 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
       whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
     }
     await game.dice3d.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+    if (configSettings.rollOtherDamage && otherResult)
+      await game.dice3d.showForRoll(otherResult, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+
   }
   workflow.damageRoll = result;
   workflow.damageTotal = result.total;
   workflow.damageRollHTML = await result.render();
+  workflow.otherDamageRoll = otherResult;
+  workflow.otherDamageTotal = otherResult?.total;
+  workflow.otherHTML = await otherResult?.render()
+
 
   workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
   return result;
@@ -250,7 +270,8 @@ export async function showItemInfo() {
     hasAreaTarget: false,
     hasAttackRoll: false,
     configSettings,
-    hideItemDetails: false};
+    hideItemDetails: false,
+    hasEffects: false};
 
   const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
   const template = `modules/midi-qol/templates/${templateType}-card.html`;
@@ -285,7 +306,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   let needAttackButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
   needAttackButton = true || needAttackButton || !getAutoRollAttack();
   needAttackButton = needAttackButton || (getAutoRollAttack() && workflow.rollOptions.fastForwardKey)
-  const needDamagebutton = itemHasDamage(this) && (showFullCard || getAutoRollDamage() === "none");
+  const needDamagebutton = itemHasDamage(this);
   const needVersatileButton = itemIsVersatile(this) && (showFullCard || getAutoRollDamage() === "none");
   const sceneId = token?.scene && token.scene._id || canvas.scene._id;
   let isPlayerOwned = this.actor.hasPlayerOwner;
@@ -293,6 +314,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = this.actor.isPC
   const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned)) 
                             || !configSettings.itemTypeList.includes(this.type);
+  const hasEffects = this.data.effects.find(ae=> !ae.transfer);
   const templateData = {
     actor: this.actor,
     tokenId: token ? `${sceneId}.${token.id}` : null,
@@ -309,7 +331,8 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     hasAreaTarget: !minimalCard && this.hasAreaTarget,
     hasAttackRoll: !minimalCard && this.hasAttack,
     configSettings,
-    hideItemDetails
+    hideItemDetails,
+    hasEffects
   }
   const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
   const template = `modules/midi-qol/templates/${templateType}-card.html`;

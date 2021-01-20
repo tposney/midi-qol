@@ -1,5 +1,5 @@
 import { warn, error, debug, i18n } from "../midi-qol";
-import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, recalcCriticalDamage, processItemCardCreation, hideRollUpdate, hideRollRender } from "./chatMesssageHandling";
+import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, recalcCriticalDamage, processItemCardCreation, hideRollUpdate, hideRollRender, _onChatCardAction } from "./chatMesssageHandling";
 import { processUndoDamageCard } from "./GMAction";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect } from "./utils";
 import { configSettings, dragDropTargeting } from "./settings";
@@ -54,6 +54,12 @@ export let initHooks = () => {
       element.append(macroField)
     }
   })
+
+  function _chatListeners(html) {
+    html.on("click", '.card-buttons button', _onChatCardAction.bind(this))
+  }
+
+  Hooks.on("renderChatLog", (app, html, data) => _chatListeners(html));
 
   Hooks.on('dropCanvasData', function(canvas, dropData) {
     if (!dragDropTargeting) return true;

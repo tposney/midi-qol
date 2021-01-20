@@ -91,8 +91,9 @@ Hooks.once('setup', function() {
   savingThrowTextAlt = i18n("midi-qol.savingThrowTextAlt");
   MQdefaultDamageType = i18n("midi-qol.defaultDamageType");
   CONFIG.DND5E.weaponProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
-  CONFIG.DND5E.weaponProperties["faulldam"] = i18n("midi-qol.fullDamageSaveProp")
+  CONFIG.DND5E.weaponProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp")
   CONFIG.DND5E.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
+  CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
   //@ts-ignore
   noDamageSaves = i18n("midi-qol.noDamageonSaveSpells").map(name => cleanSpellName(name));
   setupSheetQol();

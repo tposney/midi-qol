@@ -95,6 +95,14 @@ You can enable auto checking of hits. Funbles automatically miss and criticals a
 * **Auto apply damge**
   * Yes, means that damage is auto applied to targeted tokens (**or self if self target is specified**) who were hit or did not save, or who waved and take half damage.
   * "+ damage card". If included a chat card is sent to the GM which includes each target that had damage applied with details of the damge, any immunities/resitances and 6 buttons. The set the target hit points based on the calculation displaed. The first the hp back they way they were before the roll and the second sets them as displayed in the calculation (an undo/redo). The next 4 are the standard DND apply damage buttons but **do not** take into account resitance/immunity.
+
+* **Roll Other Damge**
+A feature for action types rwak/mwak that have a saving throw. The "Other" formula will be rolled as additional damage. This is useful for attacks that do additional damage if the target fails its save.  Often posion damage, e.g. Giant Spiders.
+* Default is 1/2 damage on save, but you can set the noDamSave or FullDamSave flags to modify the behaviour.  
+* The saving throw has no effect on base weapon damage, it always does full damage if the attack hits.  
+* You can specify the other formula as 3d6[poision] and the extra damage will be treated as poison damage for damage resistances/immunities/vulnerabilities.  
+* Most monstrers from the SRD will require a minor edit for this to work properly. Make sure the additional damage is in the Other field and the damage type is specified, e.g. 2d6[poision], 2d8[necrotic] and so on.  
+
 * **Apply Damage immunities** Midi-qol will use the target resitance/immunity for each type of damage in the attack and calculate how uch of the damage applies. If "+physical" is set midi-qol will look at the item that did the attack to see if the damage is magical or not accoring to the following;
   * If the item is:
     * not a weapon the damge is assumed to be magical
@@ -190,6 +198,10 @@ Gives the attacker advantage on attacks made against the target. Midi-qol only c
 * flags.midi-qol.critical.mwak/rwak/msak/rsak/other
 * flags.midi-qol.noCritical.all
 * flags.midi-qol.noCritical.mwak/rwak/msak/rsak/other
+* flags.midi-qol.grants.critical.all (applies when targeted)
+* flags.midi-qol.grants.critical.mwak/rwak/msak/rsak/other (applies when targeted)
+* flags.midi-qol.fail.critical.all (applies when targeted)
+* flags.midi-qol.fail.critical.mwak/rwak/msak/rsak/other (applies when targeted)
 * flags.midi-qol.DR.all - all incoming damage
 * flags.midi-qol.DR.non-magical - non-magical bludgeoning/slashing/piercing
 * flags.midi-qol.DR.acid - specific damage types
