@@ -350,7 +350,7 @@ export function patchLMRTFY() {
     if (game.modules.get("lib-wrapper")?.active) {
       log("Patching rollAbilitySave")
       //@ts-ignore
-      libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "WRAPPER");
+      libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "OVERRIDE");
     } else {
       //@ts-ignore
       LMRTFYRoller.prototype._makeRoll = function () {
@@ -361,7 +361,7 @@ export function patchLMRTFY() {
   }
 }
 
-export function _makeRoll(wrapper, event, rollMethod, ...args) {
+export function _makeRoll(event, rollMethod, ...args) {
   let options;
   switch(this.advantage) {
       case -1: 
@@ -376,7 +376,7 @@ export function _makeRoll(wrapper, event, rollMethod, ...args) {
       case 2: 
         options = {event: event}
         break;
-}
+  }
   const rollMode = game.settings.get("core", "rollMode");
   game.settings.set("core", "rollMode", this.mode || CONST.DICE_ROLL_MODES);
   for (let actor of this.actors) {

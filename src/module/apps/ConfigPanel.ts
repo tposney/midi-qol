@@ -28,6 +28,7 @@ export class ConfigPanel extends FormApplication {
       autoTargetOptions: i18n("midi-qol.autoTargetOptions"),
       autoCheckSavesOptions: i18n("midi-qol.autoCheckSavesOptions"),
       autoRollDamageOptions: i18n("midi-qol.autoRollDamageOptions"),
+      removeButtonsOptions: i18n("midi-qol.removeButtonsOptions"),
       criticalDamage,
       autoApplyDamageOptions: i18n("midi-qol.autoApplyDamageOptions"),
       damageImmunitiesOptions: i18n("midi-qol.damageImmunitiesOptions"),

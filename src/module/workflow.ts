@@ -9,7 +9,7 @@ import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
 import { configSettings, checkBetterRolls, itemRollButtons, autoRemoveTargets } from "./settings.js";
-import { getSelfTargetSet, createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveButtons } from "./utils"
+import { getSelfTargetSet, createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons } from "./utils"
 import { config } from "process";
 import { ConfigPanel } from "./apps/ConfigPanel.js";
 import { setupSheetQol } from "./sheetQOL.js";
@@ -409,6 +409,7 @@ export class Workflow {
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
         Hooks.callAll("midi-qol.AttackRollComplete", this);
         if (getAutoRollDamage() === "onHit" && this.hitTargets.size === 0 && this.targets.size !== 0) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        if (getAutoRollDamage() === "none" && (this.hitTargets.size === 0 ||this.targets.size === 0)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
         return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMAGEROLL:
@@ -503,7 +504,7 @@ export class Workflow {
           }
           //@ts-ignore ._hooks not defined
           debug("Check Saves: renderChat message hooks length ", Hooks._hooks["renderChatMessage"]?.length)
-          this.displaySaves(configSettings.autoCheckSaves === "whisper", configSettings.mergeCard);
+          await this.displaySaves(configSettings.autoCheckSaves === "whisper", configSettings.mergeCard);
         } else {// has saves but we are not checking so do nothing with the damage
           return this.next(WORKFLOWSTATES.ROLLFINISHED)
         }
@@ -538,7 +539,7 @@ export class Workflow {
             //@ts-ignore
             let content = duplicate(chatMessage.data.content)
             content = content?.replace(buttonRe, "");
-            chatMessage.update({content})
+            await chatMessage.update({content})
           }
         }
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
@@ -587,7 +588,8 @@ export class Workflow {
               damageTotal: this.damageTotal,
               damageDetail: this.damageDetail,
               rollOptions: this.rollOptions,
-              event: this.event
+              event: this.event,
+              damageList: this.damageList
             };
             warn("macro data ", macroData)
             //@ts-ignore -uses furnace macros which support arguments
@@ -601,8 +603,9 @@ export class Workflow {
           (ef.data.flags?.dae?.specialDuration === "1Attack" && this.item?.hasAttack) ||
           (ef.data.flags?.dae?.specialDuration === "1Hit" && this.hitTargets.size > 0)
         ).map(ef=>ef.id);
-        warn("1 off expiry ", myExpiredEffects);
         (myExpiredEffects?.length > 0) && await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
+        warn("1 off expiry ", myExpiredEffects);
+
 
         // expire effects on targeted tokens as required
         for (let target of this.targets) {
@@ -641,7 +644,7 @@ export class Workflow {
           waitForDiceSoNice = waitForDiceSoNice && game.dice3d?.messageHookDisabled && game.dice3d?.isEnabled();
           //@ts-ignore .content
           let content = itemCard?.data.content;
-          if (getRemoveButtons() && content) {
+          if (getRemoveDamageButtons() && content) {
             const versatileRe = /<button data-action="versatile">[^<]*<\/button>/
             const damageRe = /<button data-action="damage">[^<]*<\/button>/
             const formulaRe = /<button data-action="formula">[^<]*<\/button>/
@@ -659,10 +662,12 @@ export class Workflow {
             content
           });
           
+          const timeoutMillis =  game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled) ? 3000 : 1000;
+
           setTimeout(() => {
             // remove hide tags after a bit
             itemCard?.update({"flags.midi-qol.hideTag": []});
-          }, 3000)
+          }, timeoutMillis)
           
         }
         //@ts-ignore ui.chat undefined.
@@ -678,7 +683,7 @@ export class Workflow {
     var rollSound =  configSettings.diceSound;
     const flags = chatMessage?.data.flags || {};
     let newFlags = {};
-    if (content && getRemoveButtons()) {
+    if (content && getRemoveAttackButtons()) {
       const searchRe = /<button data-action="attack">[^<]*<\/button>/;
       content = content.replace(searchRe, "");
     }
@@ -733,11 +738,11 @@ export class Workflow {
     await chatMessage?.update({"content": content, flags: newFlags });
   }
 
-  async displayDamageRoll(whisper = false, doMerge) {
+  async displayDamageRoll(whisper = false, doMerge, options = {useOther: false}) {
     let chatMessage: ChatMessage = game.messages.get(this.itemCardId);
     //@ts-ignore content not definted 
     let content = chatMessage && duplicate(chatMessage.data.content)
-    if (getRemoveButtons()) {
+    if (getRemoveDamageButtons()) {
       const versatileRe = /<button data-action="versatile">[^<]*<\/button>/
       const damageRe = /<button data-action="damage">[^<]*<\/button>/
       const formulaRe = /<button data-action="formula">[^<]*<\/button>/
@@ -748,18 +753,22 @@ export class Workflow {
     var rollSound = configSettings.diceSound;
     var newFlags = chatMessage?.data.flags || {};
     if (doMerge && chatMessage) {
-      const searchRe = /<div class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
       const damageString = `(${this.item?.data.data.damage.parts
           .map(a=>(CONFIG.DND5E.damageTypes[a[1]] || this.defaultDamageType || MQdefaultDamageType)).join(",") 
             || this.defaultDamageType || MQdefaultDamageType})`;
 
       //@ts-ignore .flavor not defined
       const dmgHeader = configSettings.mergeCardCondensed ? damageString : (this.flavor ?? damageString);
+      let searchRe = /<div class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
       let replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center">${dmgHeader}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-damage-roll">`
+      if (options.useOther) {
+        searchRe = /<div class="midi-qol-other-roll">[\s\S]*?<div class="end-midi-qol-other-roll">/;
+        replaceString = `<div class="midi-qol-other-roll"><div style="text-align:center">${dmgHeader}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-other-roll">`
+      }
       content = content.replace(searchRe, replaceString);
       const otherSearchRe = /<div class="midi-qol-other-roll">[\s\S]*?<div class="end-midi-qol-other-roll">/;
       let otherReplaceString = `<div class="midi-qol-other-roll"><div style="text-align:center" >${this.otherHTML || ""}</div><div class="end-midi-qol-other-roll">`
-      content = content.replace(otherSearchRe, otherReplaceString);
+      if (!options.useOther) content = content.replace(otherSearchRe, otherReplaceString);
       if (!!!game.dice3d?.messageHookDisabled) {
         if (getAutoRollDamage()  === "none" || !isAutoFastDamage()) {
           // not auto rolling damage so hits will have been long displayed
@@ -895,12 +904,11 @@ export class Workflow {
             replaceString = `<div data-item-id="${this.item._id}"></div><div class="midi-qol-saves-display">${saveHTML}${saveContent}</div><footer class="card-footer">`
             content = content.replace(searchString, replaceString);
             await chatMessage.update({
-              "content": content, 
+              content, 
               type: CONST.CHAT_MESSAGE_TYPES.OTHER,
               "flags.midi-qol.type": MESSAGETYPES.SAVES,
               "flags.midi-qol.hideTag": this.hideTags
             });
-
             //@ts-ignore
             chatMessage.data.content = content;
           break;
@@ -911,7 +919,7 @@ export class Workflow {
             replaceString = `<div class="midi-qol-saves-display"><div data-item-id="${this.item._id}">${saveHTML}${saveContent}</div><div class="end-midi-qol-saves-display">`
             content = content.replace(searchString, replaceString);
             await chatMessage.update({
-              "content": content, 
+              content, 
               type: CONST.CHAT_MESSAGE_TYPES.OTHER,
               "flags.midi-qol.type": MESSAGETYPES.SAVES,
               "flags.midi-qol.hideTag": this.hideTags
@@ -1217,14 +1225,14 @@ export class Workflow {
 
 export class DamageOnlyWorkflow extends Workflow {
   constructor(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll, 
-        options: {flavor: string, itemCardId: string}) {
+        options: {flavor: string, itemCardId: string, damageList: []}) {
     super(actor, null, token, ChatMessage.getSpeaker(), new Set(targets), shiftOnlyEvent)
     this.damageTotal = damageTotal;
     this.damageDetail = [{type: damageType,  damage: damageTotal}];
     this.damageRoll = roll;
     this.flavor = options.flavor;
     this.defaultDamageType = CONFIG.DND5E.damageTypes[damageType] || damageType;
-    // this.targets = new Set(targets);
+    this.damageList = options.damageList;
     this.itemCardId = options.itemCardId;
     warn("Damage only workflow data", options, this)
     this.next(WORKFLOWSTATES.NONE);
@@ -1245,12 +1253,12 @@ export class DamageOnlyWorkflow extends Workflow {
             roll: this.damageRoll,
             speaker: this.speaker
           }
-          await this.displayDamageRoll(false, configSettings.mergeCard && this.itemCardId)
+          await this.displayDamageRoll(false, configSettings.mergeCard && this.itemCardId, {useOther: true})
         } else this.damageRoll.toMessage({flavor: this.flavor});
         this.hitTargets = new Set(this.targets);
         debug("DamageOnlyWorkflow.next ", newState, configSettings.speedItemRolls, this);
         warn("DamageOnlyWorkflow.next ", this.damageDetails, this.damageTotal, this.targets);
-        await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, null, new Set())
+        this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, null, new Set(), this.damageList)
         return super.next(WORKFLOWSTATES.ROLLFINISHED);
 
       default: return super._next(newState);
@@ -1377,7 +1385,7 @@ export class TrapWorkflow extends Workflow {
         }
         //@ts-ignore ._hooks not defined
         debug("Check Saves: renderChat message hooks length ", Hooks._hooks["renderChatMessage"]?.length)
-        this.displaySaves(configSettings.autoCheckSaves === "whisper", configSettings.mergeCard);
+        await this.displaySaves(configSettings.autoCheckSaves === "whisper", configSettings.mergeCard);
         return this.next(WORKFLOWSTATES.SAVESCOMPLETE);
 
       case WORKFLOWSTATES.SAVESCOMPLETE:

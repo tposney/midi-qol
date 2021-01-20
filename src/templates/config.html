@@ -25,10 +25,16 @@
       <label>{{localize "midi-qol.GMAutoFastForwardDamage.Name"}}</label>
       <input type="checkbox" name="gmAutoFastForwardDamage" data-dtype="Boolean" {{checked configSettings.gmAutoFastForwardDamage}} />
     </div>
-
+    
     <div class="form-group">
       <label>{{localize "midi-qol.gmRemoveButtons.Name"}}</label>
-      <input type="checkbox" name="gmRemoveButtons" data-dtype="Boolean" {{checked configSettings.gmRemoveButtons}} />
+      <select name="gmRemoveButtons" data-dtype="String">
+        {{#select configSettings.gmRemoveButtons}}
+        {{#each removeButtonsOptions as |label val|}}
+        <option value="{{val}}">{{label}}</option>
+        {{/each}}
+        {{/select}}
+      </select>
     </div>
 
     <div class="midi-qol-faint">{{localize "midi-qol.GMAutoRoll.Hint"}}</div>
@@ -149,9 +155,15 @@
 
         <div class="form-group">
           <label>{{localize "midi-qol.RemoveButtons.Name"}}</label>
-          <input type="checkbox" name="removeButtons" data-dtype="Boolean" {{checked configSettings.removeButtons}} />
+          <select name="removeButtons" data-dtype="String">
+            {{#select configSettings.removeButtons}}
+            {{#each removeButtonsOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
         </div>
-    
+
         <div class="form-group">
           <label>{{localize "midi-qol.HideRollDetails.Name"}}</label>
           <select name="hideRollDetails" data-dtype="String">

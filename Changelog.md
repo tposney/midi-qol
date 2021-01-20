@@ -1,3 +1,16 @@
+0.3.55 Bugfix release
+* fix for LMRTFY override to fix libWrapper problem.
+* fix for Other rolls sometimes not displaying saving throws.
+* [BREAKING] If auto roll damage is none and no targets were hit or selected the workflow will complete (triggering effect expiry). If you want to have the dmage buttons available enable it from the workflow (disable remove damage buttons on completion), you will still need to manually apply damage.
+* Addition to onUseMacros arguments. Since it is quite possible to have race issues when calling a macro that applies damage to targets as part of an item attack, for onUseMacros args[0].damageList provides a snapshot of the damage/HP totals in the roll so far. In particular if creating a damageOnlyWorkflow you can pass the damageList to the constructor to have the workflow take those values into account. 
+```
+  new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "piercing", [target], damageRoll, {flavor: "Giant Slayer bonus damage", damageList: args[0].damageList});
+```
+
+* [BREAKINGish] DamageOnlyWorkflow damage results will appear in the space reserved for "Other" damage in the combo chat card. This means that you can have a weapon roll normal damage, and run a macro that does other damage and put that damage in the same combo card.
+```
+  new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "piercing", [target], damageRoll, {flavor: "Giant Slayer bonus damage", damageList: args[0].damageList, itemCardId: args[0].itemCardId});
+```
 0.3.54 Some big QOL changes in this release. Some significant changes under the hood, so DO NOT UPGRADE on game day.
 * fix for advantage from flags.midi-qol.advantage.attack.str/dex on weapons with default ability settings.  Will now check finesse property if ability set to default.  
 * Added an apply dynamic effects button which will apply effects to the targeted tokens when pressed.

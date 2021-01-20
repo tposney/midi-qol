@@ -267,6 +267,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     }
   } else
     appliedDamage = applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves);
+  workflow.damageList = appliedDamage;
   debug("process damage roll: ", configSettings.autoApplyDamage, workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves)
 }
 
@@ -479,6 +480,13 @@ export function itemIsVersatile(item) {
   return item?.data.data.actionType !== "" && item?.isVersatile;
 }
 
-export function getRemoveButtons() {
-  return game.user.isGM ? configSettings.gmRemoveButtons : configSettings.removeButtons;
+export function getRemoveAttackButtons() {
+  return game.user.isGM ? 
+    ["all", "attack"].includes(configSettings.gmRemoveButtons) : 
+    ["all", "attack"].includes(configSettings.removeButtons);
+}
+export function getRemoveDamageButtons() {
+  return game.user.isGM ? 
+    ["all", "damage"].includes(configSettings.gmRemoveButtons) : 
+    ["all", "damage"].includes(configSettings.removeButtons);
 }

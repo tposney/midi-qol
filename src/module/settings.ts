@@ -67,8 +67,8 @@ export var configSettings = {
   keyMapping: defaultKeyMapping,
   allowUseMacro: false,
   rollOtherDamage: false,
-  removeButtons: true,
-  gmRemoveButtons: true
+  removeButtons: "all",
+  gmRemoveButtons: "all"
 };
 
 export let fetchParams = (silent = false) => {
