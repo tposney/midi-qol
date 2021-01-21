@@ -313,6 +313,7 @@ export class Workflow {
   async _next(newState: number) {
     this.currentState = newState;
     let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===newState)[0];
+    const hasDAE = installedModules.get("dae") && (this.item?.effects?.entries.some(ef => ef.data.transfer === false));
     warn("workflow.next ", state, this._id, this)
     switch (newState) {
       case WORKFLOWSTATES.NONE:
@@ -408,8 +409,11 @@ export class Workflow {
         }
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
         Hooks.callAll("midi-qol.AttackRollComplete", this);
-        if (getAutoRollDamage() === "onHit" && this.hitTargets.size === 0 && this.targets.size !== 0) return this.next(WORKFLOWSTATES.ROLLFINISHED);
-        if (getAutoRollDamage() === "none" && (this.hitTargets.size === 0 ||this.targets.size === 0)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        if ((getAutoRollDamage() === "onHit" && this.hitTargets.size === 0 && this.targets.size !== 0) ||
+             getAutoRollDamage() === "none" && (this.hitTargets.size === 0 ||this.targets.size === 0)) {
+          this.expireMyEffects(["1Attack", "1Action"])
+          return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        }
         return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMAGEROLL:
@@ -417,6 +421,7 @@ export class Workflow {
         if (!itemHasDamage(this.item)) return this.next(WORKFLOWSTATES.WAITFORSAVES);
         if (this.isFumble && configSettings.autoRollDamage !== "none") {
           // Auto rolling damage but we fumbled - we failed - skip everything.
+          this.expireMyEffects(["1Attack", "1Action"])
           return this.next(WORKFLOWSTATES.ROLLFINISHED);
         } 
         if (this.noAutoDamage) return; // we are emulating the standard card specially.
@@ -430,14 +435,15 @@ export class Workflow {
         if (shouldRollDamage) {
           warn(" about to roll damage ", this.event, configSettings.autoRollAttack, configSettings.autoFastForward)
           this.rollOptions.spellLevel = this.itemLevel;
-          await this.item.rollDamage(this.rollOptions);
+          this.item.rollDamage(this.rollOptions);
           return;
         }
         this.processDamageEventOptions(event);
 
 //        if (configSettings.mergeCard && !shouldRollDamage) {
-          if (!shouldRollDamage) {
-            const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
+        //if (!shouldRollDamage) {
+        {
+          const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
           if (chatMessage) {
             // provide a hint as to the type of roll expected.
             //@ts-ignore
@@ -478,8 +484,10 @@ export class Workflow {
         */
         await this.displayDamageRoll(false, configSettings.mergeCard);
         if (this.isFumble) {
+          this.expireMyEffects(["1Action", "1Attack"]);
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
         }
+        this.expireMyEffects(["1Action", "1Attack", "1Hit"]);
         return this.next(WORKFLOWSTATES.WAITFORSAVES);
 
       case WORKFLOWSTATES.WAITFORSAVES:
@@ -511,6 +519,7 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.SAVESCOMPLETE);
 
       case WORKFLOWSTATES.SAVESCOMPLETE:
+        this.expireMyEffects(["1Action"]);
         return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
   
       case WORKFLOWSTATES.ALLROLLSCOMPLETE:
@@ -521,9 +530,9 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
 
       case WORKFLOWSTATES.APPLYDYNAMICEFFECTS:
+        this.expireMyEffects(["1Action"]);
         // no item, not auto effects or not module skip
         if (!this.item || !configSettings.autoItemEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED);
-        const hasDAE = installedModules.get("dae") && (this.item?.effects?.entries.some(ef => ef.data.transfer === false));
         // no dynamiceffects skip
         this.applicationTargets = new Set();
         if (this.item.hasSave) this.applicationTargets = this.failedSaves;
@@ -597,16 +606,6 @@ export class Workflow {
           }
         }
 
-        // expire any effects on the actor that require it
-        const myExpiredEffects = this.actor.effects.filter(ef => 
-          ef.data.flags?.dae?.specialDuration === "1Action" ||
-          (ef.data.flags?.dae?.specialDuration === "1Attack" && this.item?.hasAttack) ||
-          (ef.data.flags?.dae?.specialDuration === "1Hit" && this.hitTargets.size > 0)
-        ).map(ef=>ef.id);
-        (myExpiredEffects?.length > 0) && await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
-        warn("1 off expiry ", myExpiredEffects);
-
-
         // expire effects on targeted tokens as required
         for (let target of this.targets) {
           //@ts-ignore effects
@@ -675,6 +674,20 @@ export class Workflow {
         return;
     }
   }
+
+  async expireMyEffects(effectsToExpire: string[]) {
+    const expireHit = effectsToExpire.includes("1Hit");
+    const expireAction = effectsToExpire.includes("1Action");
+    const expireAttack = effectsToExpire.includes("1Attack");
+    // expire any effects on the actor that require it
+    const myExpiredEffects = this.actor.effects.filter(ef => 
+      (expireAction && ef.data.flags?.dae?.specialDuration === "1Action") ||
+      (expireAttack && ef.data.flags?.dae?.specialDuration === "1Attack" && this.item?.hasAttack) ||
+      (expireHit && this.item?.hasAttack && ef.data.flags?.dae?.specialDuration === "1Hit" && this.hitTargets.size > 0)
+    ).map(ef=>ef.id);
+    warn("expire my effects", myExpiredEffects, expireAction, expireAttack, expireHit);
+    if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
+}
 
   async displayAttackRoll(whisper = false, doMerge) {
     const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
@@ -1358,7 +1371,8 @@ export class TrapWorkflow extends Workflow {
          if (!this.item.hasAttack) { // no attack roll so everyone is hit
           this.hitTargets = new Set(this.targets)
           warn(" damage roll complete for non auto target area effects spells", this)
-        }
+        } else  this.expireMyEffects(["1Action", "1Attack", "1Hit"]);
+
         // apply damage to targets plus saves plus immunities
         await this.displayDamageRoll(false, configSettings.mergeCard)
         if (this.isFumble) {
@@ -1453,6 +1467,8 @@ export class BetterRollsWorkflow extends Workflow {
         else return this.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
+        this.expireMyEffects(["1Attack", "1Action"]);
+
         if (configSettings.autoTarget === "none" && this.item.hasAreaTarget && !this.item.hasAttack) { 
           // we are not auto targeting so for area effect attacks, without hits (e.g. fireball)
           this.targets = new Set(game.user.targets);

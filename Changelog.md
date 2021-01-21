@@ -1,3 +1,5 @@
+0.3.57
+Fix for self targeted attack/action/hit durations.
 0.3.56
 * Extended the rwak/mwak + saving throw functionality. If the item has "Other" filled in, midi will roll that for the save damage, otherwise it will roll the versatile damage. This change means it should work out of the box with SRD monsters.
 * Fix for damage buttons on the item card.
