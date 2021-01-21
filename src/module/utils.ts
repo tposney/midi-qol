@@ -258,10 +258,10 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   
   let theTargets = workflow.hitTargets;
   if (item?.data.data.target?.type === "self") theTargets = getSelfTargetSet(actor) || theTargets;
-  if (theTargets.size > 0 && this.item?.hasAttack) this.expireMyEffects(["1Hit"]);
+  if (theTargets.size > 0 && item?.hasAttack) workflow.expireMyEffects(["1Hit"]);
 
-  //**TP critical
-  if (["rwak", "mwak"].includes(workflow.item?.data.data.actionType) && configSettings.rollOtherDamage) {
+  // Don't check for critical - RAW say these don't get critical damage
+  if (["rwak", "mwak"].includes(item?.data.data.actionType) && configSettings.rollOtherDamage) {
     appliedDamage = applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, new Set());
     if (workflow.otherDamageRoll) {
       // assume pervious damage applied and then calc extra damage
