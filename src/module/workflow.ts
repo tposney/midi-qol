@@ -151,9 +151,7 @@ export class Workflow {
     }
   }
   public processDamageEventOptions(event) { 
-    // trap workflows are fastforward by default.
     this.rollOptions.fastForward = this.__proto__.constructor.name === "TrapWorkflow" ? true : isAutoFastDamage();
-    
     // if (!game.user.isGM && ["all", "damage"].includes(configSettings.autoFastForward)) this.rollOptions.fastForward = true;
     // if (game.user.isGM && configSettings.gmAutoFastForwardDamage) this.rollOptions.fastForward = true;
     // if we have an event here it means they clicked on the damage button?
@@ -185,6 +183,10 @@ export class Workflow {
     else this.rollOptions.critical = this.isCritical || critKey || this.critFlagSet;
     this.rollOptions.fastForward = fastForwardKey ? !isAutoFastDamage() : isAutoFastDamage();
     this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || noCritKey;
+    // trap workflows are fastforward by default.
+    if (this.__proto__.constructor.name === "TrapWorkflow")
+      this.rollOptions.fastForward =  true;
+
   }
 
   processCriticalFlags() {

@@ -492,3 +492,4 @@ export function getRemoveDamageButtons() {
     ["all", "damage"].includes(configSettings.gmRemoveButtons) : 
     ["all", "damage"].includes(configSettings.removeButtons);
 }
+

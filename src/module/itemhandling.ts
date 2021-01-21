@@ -24,6 +24,8 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   workflow.rollOptions.advantage = workflow.disadvantage ? false : workflow.advantage;
   workflow.rollOptions.disadvantage = workflow.advantage ? false : workflow.disadvantage;
   const defaultOption = workflow.rollOptions.advantage ?  "advantage" : workflow.rollOptions.disadvantage ? "disadvantage" : "normal";
+  if (workflow.__proto__.constructor.name === "TrapWorkflow") workflow.rollOptions.fastForward = true;
+
    let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
     disadvantage: workflow.rollOptions.disadvantage,

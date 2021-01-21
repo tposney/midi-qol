@@ -1,5 +1,8 @@
+0.3.58
+Fix for 0.3.57 release bug.
+Fix for trap worfklow not fastforwarding.
 0.3.57
-Fix for self targeted attack/action/hit durations.
+Fix for self targeted attack/action/hit durations. This required quite a few changes in the workflow so it's possible some cases are not covered so be warned.
 0.3.56
 * Extended the rwak/mwak + saving throw functionality. If the item has "Other" filled in, midi will roll that for the save damage, otherwise it will roll the versatile damage. This change means it should work out of the box with SRD monsters.
 * Fix for damage buttons on the item card.
