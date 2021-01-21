@@ -408,25 +408,26 @@ export let chatDamageButtons = (message, html, data) => {
     const defaultDamageType = item.data.data.damage?.parts[0][1] || "bludgeoning";
     const damageList = createDamageList(message.roll, item, defaultDamageType);
     const totalDamage = message.roll.total;
-    addChatDamageButtonsToHTML(totalDamage, damageList, html, item);
+    addChatDamageButtonsToHTML(totalDamage, damageList, html, item, "damage");
   } else if (getProperty(message.data, "flags.midi-qol.damageDetail")) {
     let midiFlags = getProperty(message.data, "flags.midi-qol");
-    const damageList = midiFlags.damageDetail;
-    const totalDamage = midiFlags.damageTotal;
+    // if (midiFlags.type !== MESSAGETYPES.DAMAGE) return; - cant do this as each update overwrites the html
     const item = game.actors.get(midiFlags.actor)?.getOwnedItem(midiFlags.item);
-    addChatDamageButtonsToHTML(totalDamage, damageList, html, item, ".midi-qol-damage-roll .dice-total");
+    addChatDamageButtonsToHTML(midiFlags.damageTotal, midiFlags.damageDetail, html, item, "damage", ".midi-qol-damage-roll .dice-total");
+    addChatDamageButtonsToHTML(midiFlags.otherDamageTotal, midiFlags.otherDamageDetail, html, item, "other", ".midi-qol-other-roll .dice-total");
   }
+  
   return true;
 }
 
-export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, toMatch=".dice-total") {
+export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, tag="damage",toMatch=".dice-total") {
   debug("addChatDamageButtons", totalDamage, damageList, html, item, toMatch, $(html).find(toMatch))
   const btnContainer = $('<span class="dmgBtn-container-mqol" style="position:absolute; right:0; bottom:1px;"></span>');
   let btnStyling = "width: 22px; height:22px; background-color: #ffffff; font-size:10px;line-height:1px";
-  const fullDamageButton = $(`<button class="dice-total-full-damage-button" style="${btnStyling}"><i class="fas fa-user-minus" title="Click to apply full damage to selected token(s)."></i></button>`);
-  const halfDamageButton = $(`<button class="dice-total-half-damage-button" style="${btnStyling}"><i class="fas fa-user-shield" title="Click to apply half damage to selected token(s)."></i></button>`);
-  const doubleDamageButton = $(`<button class="dice-total-double-damage-button" style="${btnStyling}"><i class="fas fa-user-injured" title="Click to apply double damage to selected token(s)."></i></button>`);
-  const fullHealingButton = $(`<button class="dice-total-full-healing-button" style="${btnStyling}"><i class="fas fa-user-plus" title="Click to apply full healing to selected token(s)."></i></button>`);
+  const fullDamageButton = $(`<button class="dice-total-full-${tag}-button" style="${btnStyling}"><i class="fas fa-user-minus" title="Click to apply full damage to selected token(s)."></i></button>`);
+  const halfDamageButton = $(`<button class="dice-total-half-${tag}-button" style="${btnStyling}"><i class="fas fa-user-shield" title="Click to apply half damage to selected token(s)."></i></button>`);
+  const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button" style="${btnStyling}"><i class="fas fa-user-injured" title="Click to apply double damage to selected token(s)."></i></button>`);
+  const fullHealingButton = $(`<button class="dice-total-full-${tag}-healing-button" style="${btnStyling}"><i class="fas fa-user-plus" title="Click to apply full healing to selected token(s)."></i></button>`);
   btnContainer.append(fullDamageButton);
   btnContainer.append(halfDamageButton);
   btnContainer.append(doubleDamageButton);
@@ -459,10 +460,10 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, 
           return retval;
       });
   };
-  setButtonClick(".dice-total-full-damage-button", 1);
-  setButtonClick(".dice-total-half-damage-button", 0.5);
-  setButtonClick(".dice-total-double-damage-button", 2);
-  setButtonClick(".dice-total-full-healing-button", -1);
+  setButtonClick(`.dice-total-full-${tag}-button`, 1);
+  setButtonClick(`.dice-total-half-${tag}-button`, 0.5);
+  setButtonClick(`.dice-total-double-${tag}-button`, 2);
+  setButtonClick(`.dice-total-full-${tag}-healing-button`, -1);
   // logic to only show the buttons when the mouse is within the chatcard and a token is selected
   html.find('.dmgBtn-container-mqol').hide();
   $(html).hover(evIn => {

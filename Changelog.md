@@ -1,6 +1,10 @@
+0.3.56
+* Extended the rwak/mwak + saving throw functionality. If the item has "Other" filled in, midi will roll that for the save damage, otherwise it will roll the versatile damage. This change means it should work out of the box with SRD monsters.
+* Fix for damage buttons on the item card.
 0.3.55 Bugfix release
 * fix for LMRTFY override to fix libWrapper problem.
 * fix for Other rolls sometimes not displaying saving throws.
+* [BREAKING] Change to remove buttons settings to configure attack/damage buttons for GM/Player. You need to reset the settings.
 * [BREAKING] If auto roll damage is none and no targets were hit or selected the workflow will complete (triggering effect expiry). If you want to have the dmage buttons available enable it from the workflow (disable remove damage buttons on completion), you will still need to manually apply damage.
 * Addition to onUseMacros arguments. Since it is quite possible to have race issues when calling a macro that applies damage to targets as part of an item attack, for onUseMacros args[0].damageList provides a snapshot of the damage/HP totals in the roll so far. In particular if creating a damageOnlyWorkflow you can pass the damageList to the constructor to have the workflow take those values into account. 
 ```

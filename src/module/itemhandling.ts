@@ -108,10 +108,21 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   let otherResult = undefined;
   if (
     configSettings.rollOtherDamage && 
-    workflow.item.hasSave && ["rwak", "mwak"].includes(workflow.item.data.data.actionType) && 
-    workflow.item.data.data.formula !== ""
+    workflow.item.hasSave && ["rwak", "mwak"].includes(workflow.item.data.data.actionType)
   ) {
-    otherResult = new Roll(workflow.item.data.data.formula, workflow.actor?.getRollData()).roll();
+    if (workflow.item.data.data.formula !== "")
+      otherResult = new Roll(workflow.item.data.data.formula, workflow.actor?.getRollData()).roll();
+    else otherResult = await wrapped({
+      critical: false,
+      spellLevel: workflow.rollOptions.spellLevel, 
+      versatile: true,
+      fastForward: true,
+      "data.default": (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal",
+      // event: {shiftKey: workflow.rollOptions.fastForward},
+      options: {
+        fastForward: true,
+        chatMessage: false, // !configSettings.mergeCard,
+      }});
   }
   if (!configSettings.mergeCard) {
     const title = `${this.name} - ${game.i18n.localize("DND5E.DamageRoll")}`;
@@ -120,14 +131,14 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
       flavor: this.labels.damageTypes.length ? `${title} (${this.labels.damageTypes})` : title,
       speaker: ChatMessage.getSpeaker({actor: this.actor}),
     }, {"flags.dnd5e.roll": {type: "damage", itemId: this.id }});
-    result.toMessage(messageData, game.settings.get("core", "rollMode"), )
+    result.toMessage(messageData, game.settings.get("core", "rollMode"))
     if (otherResult) {
       messageData = mergeObject({
           title,
           flavor: title,
           speaker: ChatMessage.getSpeaker({actor: this.actor}),
         }, {"flags.dnd5e.roll": {type: "damage", itemId: this.id }});
-      otherResult.toMessage(messageData, game.settings.get("core", "rollMode"), )
+      otherResult.toMessage(messageData, game.settings.get("core", "rollMode"))
     }
   }
   const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
@@ -144,14 +155,13 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
       await game.dice3d.showForRoll(otherResult, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
 
   }
+
   workflow.damageRoll = result;
   workflow.damageTotal = result.total;
   workflow.damageRollHTML = await result.render();
   workflow.otherDamageRoll = otherResult;
   workflow.otherDamageTotal = otherResult?.total;
   workflow.otherHTML = await otherResult?.render()
-
-
   workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
   return result;
 }

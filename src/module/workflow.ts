@@ -786,6 +786,8 @@ export class Workflow {
           roll: this.damageRoll.roll,
           damageDetail: this.damageDetail,
           damageTotal: this.damageTotal,
+          otherDamageDetail: this.otherDamageDetail,
+          otherDamageTotal: this.otherDamageTotal,
           hideTag: this.hideTags,
           displayId: this.displayId
         }
