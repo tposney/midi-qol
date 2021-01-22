@@ -114,7 +114,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   ) {
     if (workflow.item.data.data.formula !== "")
       otherResult = new Roll(workflow.item.data.data.formula, workflow.actor?.getRollData()).roll();
-    else otherResult = await wrapped({
+    else if (this.isVersatile) otherResult = await wrapped({
       critical: false,
       spellLevel: workflow.rollOptions.spellLevel, 
       versatile: true,

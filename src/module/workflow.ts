@@ -243,6 +243,7 @@ export class Workflow {
     this.disadvantage = this.disadvantage || grantsDisadvantage;
   }
 
+
   constructor(actor: Actor5e, item: Item5e, tokenId, speaker, targets, event: any) {
     this.rollOptions = duplicate(defaultRollOptions);
     this.actor = actor;

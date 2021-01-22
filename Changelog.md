@@ -1,3 +1,5 @@
+0.3.59
+Fix for rwak/mwak and applying Other/versatile damage always rolling something even if no Other or versatile damage (it would roll the weapon damage again)
 0.3.58
 Fix for 0.3.57 release bug.
 Fix for trap worfklow not fastforwarding.
