@@ -85,32 +85,3 @@ export let initHooks = () => {
     }
   })
 }
-
-Hooks.on("preUpdateCombat", async (combat, update, ...args) => {
-  debug("update combat ", combat, combat.turns)
-  const currentTurn = (update.round ?? combat.round) * combat.turns.length + (update.turn ?? combat.turn);
-  let startTurn = (combat.previous.round ?? combat.round) * combat.turns.length + (combat.previous.turn ?? combat.turn);
-  // let expiredEffects = [];
-  for (let checkTurn = startTurn; checkTurn <= currentTurn; checkTurn++) {
-    const turn = combat.turns[checkTurn % combat.turns.length];
-    let expiredEffects = turn.actor.effects?.filter(ef => 
-      (ef.data.flags?.dae?.specialDuration === "turnStart") && (checkTurn > startTurn ) ||
-      (ef.data.flags?.dae?.specialDuration === "turnEnd") && (checkTurn < currentTurn)
-    ).map(ef => ef.id);
-    if (expiredEffects?.length > 0) turn.actor.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
-  };
-  return true;
-});
-
-Hooks.on("preDeleteCombat", (combat, options) => {
-  combat.turns.forEach(async turn => {
-    // Assume round/turn spells expire on completion of comabat
-    let expiredEffects = turn.actor.temporaryEffects.filter(ef => ef.data.flags?.dae?.specialDuration && ef.data.flags?.dae?.specialDuration !== "None");
-    expiredEffects = expiredEffects.map(ef=>ef.id || ef.data.id);
-    if (expiredEffects.length > 0) 
-    { 
-      await turn.actor.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
-      warn("Deleting effects ", turn.actor, expiredEffects);
-    }
-  })
-});

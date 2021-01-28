@@ -43,6 +43,7 @@ export let undoDamageText;
 export let savingThrowText;
 export let savingThrowTextAlt;
 export let MQdefaultDamageType;
+export let allDamageTypes;
 
 export const MESSAGETYPES = {
   HITS: 1,
@@ -94,6 +95,8 @@ Hooks.once('setup', function() {
   CONFIG.DND5E.weaponProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp")
   CONFIG.DND5E.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
   CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
+  allDamageTypes = mergeObject(CONFIG.DND5E.damageTypes, CONFIG.DND5E.healingTypes, {inplace:false});
+
   //@ts-ignore
   noDamageSaves = i18n("midi-qol.noDamageonSaveSpells").map(name => cleanSpellName(name));
   setupSheetQol();

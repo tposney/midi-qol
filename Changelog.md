@@ -1,3 +1,13 @@
+0.3.60
+* Now requires dnd5e/sw5e 1.2.3 or later.
+* Fix for critical key not being detected for some damage rolls.
+* Fix with perfect-vision to not infinte loop.
+* Fix for healing damage bonus in other languages not working.
+* Fix for Damage vs Healing displayed for healing action types on the item card button.
+* Improved (?) behaviour on the 1attack/1hit/isDamaged/isAttacked expiries. There may be some missed edge cases.
+* startNextTurn/endNextTurn expiry moved to times-up.
+* Implement 5/5/5 distance calcs for ranged area trgeting.
+
 0.3.59
 Fix for rwak/mwak and applying Other/versatile damage always rolling something even if no Other or versatile damage (it would roll the weapon damage again)
 0.3.58

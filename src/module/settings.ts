@@ -274,7 +274,6 @@ export const registerSettings = function() {
       default: false,
       config: true,
       type: Boolean,
-      choices: [],
       onChange: (value) => {window.location.reload()}
     });
   }

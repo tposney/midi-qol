@@ -64,9 +64,9 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
 
   let rollDivs = html.find(".dice-roll.red-dual");//.find(".dice-row-item");
   let rollData = html.find("red-full");
-  if (debug) log("better rolls ", rollData, rollDivs)
 
   let itemId = html[0].attributes["data-item-id"];
+  debug("better rolls ", rollData, rollDivs, itemId)
   if (!itemId) return true; // not an item roll.
  
   itemId = itemId.nodeValue;
@@ -135,6 +135,7 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
   workflow.isCritical = diceRoll >= criticalThreshold;
   workflow.isFumble = diceRoll === 1;
   workflow.attackTotal = attackTotal;
+  workflow.attackRoll = new Roll(`${attackTotal}`).roll();
   workflow.damageDetail = damageList;
   workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
   workflow.itemLevel = itemLevel;

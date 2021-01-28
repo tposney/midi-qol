@@ -147,7 +147,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   if (dice3dActive && configSettings.mergeCard && ["none", "details"].includes(configSettings.hideRollDetails)) {
     let whisperIds = null;
     const rollMode = game.settings.get("core", "rollMode");
-    if ((configSettings.hideRollDetails !== "none" && game.user.isGM) || rollMode === "blindroll") {
+    if ((configSettings.hideRollDetails === "details" && game.user.isGM) || rollMode === "blindroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM")
     } else if (rollMode === "selfroll" || rollMode === "gmroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
@@ -349,7 +349,6 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
   const template = `modules/midi-qol/templates/${templateType}-card.html`;
   const html = await renderTemplate(template, templateData);
-
   debug(" Show Item Card ", configSettings.useTokenNames,(configSettings.useTokenNames && token) ? token?.data?.name : this.actor.name, token, token?.data.name, this.actor.name, ChatMessage.getSpeaker())
   let theSound = configSettings.itemUseSound;
   if (this.type === "weapon") theSound = configSettings.weaponUseSound;

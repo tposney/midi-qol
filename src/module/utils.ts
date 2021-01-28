@@ -112,7 +112,7 @@ export let getParams = () => {
 // Calculate the hp/tempHP lost for an amount of damage of type
 export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, existingDamage=[]) {
   debug("calculate damage ", a, appliedDamage, t, totalDamage, dmgType)
-  let prevDamage = existingDamage.find(ed=> ed.tokenId = t.id);
+  let prevDamage = existingDamage.find(ed=> ed.tokenId === t.id);
   var hp = a.data.data.attributes.hp;
   var oldHP, tmp;
   if (prevDamage) {
@@ -134,7 +134,7 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, exist
 
   debug("calculateDamage: results are ", newTemp, newHP, appliedDamage, totalDamage)
   if (game.user.isGM) 
-      log(`${a.name} takes ${value} reduced from ${totalDamage} Temp HP ${newTemp} HP ${newHP}`);
+      log(`${a.name} ${oldHP} takes ${value} reduced from ${totalDamage} Temp HP ${newTemp} HP ${newHP} `);
   return {tokenID: t.id, actorID: a._id, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
           oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value};
 }
@@ -402,7 +402,7 @@ function getDistance (t1, t2, wallblocking = false) {
     }
   }
   // console.log(segments);
-  if (segments.length == 0) {
+  if (segments.length === 0) {
     //Log(`${t2.data.name} full blocked by walls`);
     return -1;
   }
@@ -424,10 +424,11 @@ export function checkRange(actor, item, event) {
     return false;
   }
 
-  let range = itemData.range?.value || Math.max(token.w, token.h) / 2 / canvas.scene.data.grid * canvas.scene.data.gridDistance;
+   let range = itemData.range?.value || 5;
   for (let target of game.user.targets) { 
     if (target === token) continue;
     // check the range
+    
     let distance = getDistance(token, target, configSettings.autoTarget === "wallsBlock") - 5; // assume 2.5 width for each token
 
     if (distance > range) {
@@ -492,4 +493,3 @@ export function getRemoveDamageButtons() {
     ["all", "damage"].includes(configSettings.gmRemoveButtons) : 
     ["all", "damage"].includes(configSettings.removeButtons);
 }
-

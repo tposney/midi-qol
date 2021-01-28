@@ -4,7 +4,7 @@ import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 //@ts-ignore
 import AbilityTemplate from "../../../systems/dnd5e/module/pixi/ability-template.js";
-import { warn, debug, log, i18n, noDamageSaves, cleanSpellName, MESSAGETYPES, error, MQdefaultDamageType } from "../midi-qol";
+import { warn, debug, log, i18n, noDamageSaves, cleanSpellName, MESSAGETYPES, error, MQdefaultDamageType, allDamageTypes } from "../midi-qol";
 import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
@@ -180,13 +180,15 @@ export class Workflow {
       noCritKey = false;
     }
     if (this.noCritFlagSet || noCritKey) this.rollOptions.critical = false;
-    else this.rollOptions.critical = this.isCritical || critKey || this.critFlagSet;
+    else {
+      this.rollOptions.critical = this.isCritical || critKey || this.critFlagSet;
+      this.isCritical = this.rollOptions.critical;
+    }
     this.rollOptions.fastForward = fastForwardKey ? !isAutoFastDamage() : isAutoFastDamage();
     this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || noCritKey;
     // trap workflows are fastforward by default.
     if (this.__proto__.constructor.name === "TrapWorkflow")
       this.rollOptions.fastForward =  true;
-
   }
 
   processCriticalFlags() {
@@ -452,7 +454,8 @@ export class Workflow {
             //@ts-ignore
             let content = chatMessage && duplicate(chatMessage.data.content)
             let searchRe = /<button data-action="damage">[^<]+<\/button>/;
-            let damageString = (this.rollOptions.critical) ? i18n("DND5E.Critical") : i18n("DND5E.Damage");
+            const damageTypeString = (this.item.data?.data?.actionType === "heal") ? i18n("DND5E.Healing") : i18n("DND5E.Damage");
+            let damageString = (this.rollOptions.critical) ? i18n("DND5E.Critical") : damageTypeString;
             if (isAutoFastDamage()) damageString += ` ${i18n("midi-qol.fastForward")}`;
             let replaceString = `<button data-action="damage">${damageString}</button>`
             content = content.replace(searchRe, replaceString);
@@ -461,7 +464,7 @@ export class Workflow {
             if (isAutoFastDamage()) damageString += ` ${i18n("midi-qol.fastForward")}`;
             replaceString = `<button data-action="versatile">${damageString}</button>`
             content = content.replace(searchRe, replaceString);
-            await chatMessage?.update({"content": content});
+            await chatMessage?.update({content});
           }
         }
         return; // wait for a damage roll to advance the state.
@@ -478,7 +481,7 @@ export class Workflow {
         // done here cause not needed for betterrolls workflow
 
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
-        if (this.item?.data.data.actionType === "heal") this.defaultDamageType = CONFIG.DND5E.healingTypes["healing"]; 
+        if (this.item?.data.data.actionType === "heal") this.defaultDamageType = "healing"; 
         this.damageDetail = createDamageList(this.damageRoll, this.item, this.defaultDamageType);
         if (this.otherDamageRoll && configSettings.rollOtherDamage)
           this.otherDamageDetail = createDamageList(this.otherDamageRoll, null, this.defaultDamageType);
@@ -526,9 +529,37 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
   
       case WORKFLOWSTATES.ALLROLLSCOMPLETE:
-        debug("all rolls complete ", this.damageDetail)
-
         if (this.damageDetail.length) processDamageRoll(this, this.damageDetail[0].type)
+        debug("all rolls complete ", this.damageDetail)
+        // expire effects on targeted tokens as required
+        this.applicationTargets = new Set();
+        if (this.item.hasSave) this.applicationTargets = this.failedSaves;
+        else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
+        else this.applicationTargets = this.targets;
+        for (let target of this.targets) {
+          //@ts-ignore effects
+          const expiredEffects = target.actor?.effects?.filter(ef => {
+            const wasAttacked = this.item?.hasAttack;
+            const wasDamaged = itemHasDamage(this.item) && this.applicationTargets?.has(target);
+            const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
+            return specialDuration && ((specialDuration.includes("isAttacked") && wasAttacked) ||
+                                        (specialDuration.includes("isDamaged") && wasDamaged));
+          }).map(ef=> ef.id);
+          if (expiredEffects?.length > 0) {
+            const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
+            if (!intendedGM) {
+              ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
+              error("No GM user connected - cannot remove effects");
+              return;
+            }
+            broadcastData({
+              action: "removeEffects",
+              tokenId: target.id,
+              effects: expiredEffects,
+              intendedFor: intendedGM.id
+            });
+          } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
+       }
         Hooks.callAll("midi-qol.DamageRollComplete", this)
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
 
@@ -593,8 +624,9 @@ export class Workflow {
               failedSaves,
               damageRoll: this.damageRoll,
               attackRoll: this.attackRoll,
+              attackTotal: this.attackTotal,
               itemCardId: this.itemCardId,
-              isCritical: this.rollOptions.critical,
+              isCritical: this.rollOptions.critical || this.isCritical,
               isFumble: this.isFumble,
               spellLevel: this.itemLevel,
               damageTotal: this.damageTotal,
@@ -607,31 +639,6 @@ export class Workflow {
             //@ts-ignore -uses furnace macros which support arguments
             macroCommand.execute(macroData);
           }
-        }
-
-        // expire effects on targeted tokens as required
-        for (let target of this.targets) {
-          //@ts-ignore effects
-          const expiredEffects = target.actor?.effects?.filter(ef => {
-            const wasAttacked = this.item?.hasAttack;
-            const wasDamaged = itemHasDamage(this.item) && this.applicationTargets?.has(target);
-            return (ef.data.flags?.dae?.specialDuration === "isAttacked" && wasAttacked) ||
-                   (ef.data.flags?.dae?.specialDuration === "isDamaged" && wasDamaged) 
-          }).map(ef=> ef.id);
-          if (expiredEffects?.length > 0) {
-            const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
-            if (!intendedGM) {
-              ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
-              error("No GM user connected - cannot remove effects");
-              return;
-            }
-            broadcastData({
-              action: "removeEffects",
-              tokenId: target.id,
-              effects: expiredEffects,
-              intendedFor: intendedGM.id
-            });
-          } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
         }
 
         // delete Workflow._workflows[this.itemId];
@@ -683,14 +690,26 @@ export class Workflow {
     const expireAction = effectsToExpire.includes("1Action");
     const expireAttack = effectsToExpire.includes("1Attack");
     // expire any effects on the actor that require it
-    const myExpiredEffects = this.actor.effects.filter(ef => 
-      (expireAction && ef.data.flags?.dae?.specialDuration === "1Action") ||
-      (expireAttack && ef.data.flags?.dae?.specialDuration === "1Attack" && this.item?.hasAttack) ||
-      (expireHit && this.item?.hasAttack && ef.data.flags?.dae?.specialDuration === "1Hit" && this.hitTargets.size > 0)
-    ).map(ef=>ef.id);
+
+/*
+    const test = this.actor.effects.map(ef => {
+      const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
+      return [(expireAction && specialDuration?.includes("1Action")),
+      (expireAttack && specialDuration?.includes("1Attack") && this.item?.hasAttack),
+      (expireHit && this.item?.hasAttack && specialDuration?.includes("1Hit") && this.hitTargets.size > 0)]
+    })
+    console.error("expiry map is ", test)
+    */
+    const myExpiredEffects = this.actor.effects.filter(ef => {
+      const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
+      if (!specialDuration) return false;
+      return (expireAction && specialDuration.includes("1Action")) ||
+      (expireAttack && specialDuration.includes("1Attack") && this.item?.hasAttack) ||
+      (expireHit && this.item?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.size > 0)
+    }).map(ef=>ef.id);
     warn("expire my effects", myExpiredEffects, expireAction, expireAttack, expireHit);
     if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
-}
+  }
 
   async displayAttackRoll(whisper = false, doMerge) {
     const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
@@ -770,7 +789,7 @@ export class Workflow {
     var newFlags = chatMessage?.data.flags || {};
     if (doMerge && chatMessage) {
       const damageString = `(${this.item?.data.data.damage.parts
-          .map(a=>(CONFIG.DND5E.damageTypes[a[1]] || this.defaultDamageType || MQdefaultDamageType)).join(",") 
+          .map(a=>(allDamageTypes[a[1]] || allDamageTypes[this.defaultDamageType] || MQdefaultDamageType)).join(",") 
             || this.defaultDamageType || MQdefaultDamageType})`;
 
       //@ts-ignore .flavor not defined
@@ -1223,16 +1242,17 @@ export class Workflow {
       t.setTarget(false, { releaseOthers: false });
     });
     game.user.targets.clear();
-    // calculate pixels eqivalent distance - requires map to be in ft.
-    let minDist = targetDetails.value * canvas.grid.size / canvas.scene.data.gridDistance;
-    canvas.tokens.placeables
-        .filter(target => target.actor && target.actor.data.data.details.race !== "trigger"
-                          && target.actor.id !== token.actor.id
-                          && dispositions.includes(target.data.disposition) 
-                          && Math.hypot(token.center.x - target.center.x, token.center.y - target.center.y) <= minDist)
-        .forEach(token=> {
-          token.setTarget(true, { user: game.user, releaseOthers: false });
-          game.user.targets.add(token);
+    // min dist is the number of grid squares away.
+    let minDist = targetDetails.value;
+ 
+    canvas.tokens.placeables.filter(target => 
+      target.actor && target.actor.data.data.details.race !== "trigger"
+      && target.actor.id !== token.actor.id
+      && dispositions.includes(target.data.disposition) 
+      && (canvas.grid.measureDistances([{ray:new Ray(target.center, token.center)}], {gridSpaces: true})[0] <= minDist)
+    ).forEach(token=> {
+        token.setTarget(true, { user: game.user, releaseOthers: false });
+        game.user.targets.add(token);
     });
     this.targets = new Set(game.user.targets);
     this.saves = new Set();

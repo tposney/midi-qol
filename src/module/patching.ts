@@ -75,8 +75,13 @@ export const baseEvent = {shiftKey: false, altKey:false, ctrlKey: false, metaKey
 
 function mapSpeedKeys(event) {
   if (configSettings.speedItemRolls && configSettings.speedAbilityRolls) {
-    const advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
-    const disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
+    if (game.system.id === "sw5e")  {
+      var advKey = testKey(configSettings.keyMapping["SW5E.Advantage"], event);
+      var disKey = testKey(configSettings.keyMapping["SW5E.Disadvantage"], event);
+    } else {
+      var advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
+      var disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
+    }
     const fastFowrd = advKey && disKey;
     if (fastFowrd) event = fastforwardEvent;
     else if (disKey) event = disadvantageEvent;
@@ -346,7 +351,7 @@ export let actorAbilityRollPatching = () => {
 }
 
 export function patchLMRTFY() {
-  if (installedModules.get("lmrtfy")) {
+  if (installedModules.get("lmrtfy") && !isNewerVersion(game.modules.get("lmrtfy").data.version, "0.1.5")) {
     if (game.modules.get("lib-wrapper")?.active) {
       log("Patching rollAbilitySave")
       //@ts-ignore
