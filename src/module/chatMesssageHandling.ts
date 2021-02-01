@@ -130,7 +130,7 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
     damageList.push({type, damage})
   }
   BetterRollsWorkflow.removeWorkflow(item.uuid)
-  const targets = (item?.data.data.target?.type === "self") ? getSelfTargetSet(actor) : new Set(game.user.targets);
+  const targets = (item?.data.data.target?.type === "self") ? await getSelfTargetSet(actor) : new Set(game.user.targets);
   let workflow = new BetterRollsWorkflow(actor, item, token, data.speaker, targets, null);
   workflow.isCritical = diceRoll >= criticalThreshold;
   workflow.isFumble = diceRoll === 1;
@@ -227,9 +227,7 @@ let _highlighted = null;
 let _onTargetHover = (event) => {
 
   event.preventDefault();
-  if ( !canvas.scene.data.active ) return;
-//  const li = event.currentTarget;
-//  const token = canvas.tokens.get(li.id);
+  if ( !canvas?.scene?.data.active ) return;
   const token = canvas.tokens.get(event.currentTarget.id);
   if ( token?.isVisible ) {
     if ( !token._controlled ) token._onHoverIn(event);
@@ -245,35 +243,33 @@ let _onTargetHover = (event) => {
  */
 let _onTargetHoverOut = (event) => {
   event.preventDefault();
-  if ( !canvas.scene.data.active ) return;
+  if ( !canvas?.scene?.data.active ) return;
   if (_highlighted ) _highlighted._onHoverOut(event);
   _highlighted = null;
 }
 
 let _onTargetSelect = (event) => {
   event.preventDefault();
-  if ( !canvas.scene.data.active ) return;
+  if ( !canvas?.scene?.data.active ) return;
   const token = canvas.tokens.get(event.currentTarget.id);
   token.control({ multiSelect: false, releaseOthers: true });
 };
 
-export let hideRollRender = (app, html, msg) => {
-  if (forceHideRoll && msg.whisperTo !== '' || msg.message?.blind) {
-      if (game.user.isGM === false && 
-          (
-            (msg.author !== game.user && msg.message.whisper.indexOf(game.user.id) === -1)
-            // || msg.message.blind
-          )) {
-          html.hide();
+export let hideRollRender = (msg, html, data) => {
+  if (forceHideRoll && (msg.data.whisper.length > 0 || msg.data?.blind)) {
+      if (!game.user.isGM && !msg.isAuthor && msg.data.whisper.indexOf(game.user.id) === -1) {
+        warn("hideRollRender | hiding message", msg.data.whisper)
+        html.hide();
       }
   }
   return true;
 };
 
 export let hideRollUpdate = (message, data, diff, id) => {
-  if (forceHideRoll && message.whisperTo !== '' || message.data.blind) {
-    if (game.user.isGM === false && ((!message.isAuthor && message.data.whisper.indexOf(game.user.id) === -1) || message.data.blind)) {
+  if (forceHideRoll && message.data.whisper.length > 0 || message.data.blind) {
+    if (!game.user.isGM && ((!message.isAuthor && (message.data.whisper.indexOf(game.user.id) === -1) || message.data.blind))) {
       let messageLi = $(`.message[data-message-id=${data._id}]`);
+      warn("hideRollUpdate: Hiding ", message.data.whisper, messageLi)
       messageLi.hide();
     }
   }
@@ -281,18 +277,24 @@ export let hideRollUpdate = (message, data, diff, id) => {
 };
 
 export let hideStuffHandler = (message, html, data) => {
-  debug("hide info handler message: ", message.id, message)
+  debug("hideStuffHandler message: ", message.id, message)
+
   const midiqolFlags = getProperty(message.data, "flags.midi-qol");
   let ids = html.find(".midi-qol-target-name")
-  const actor = game.actors.get(midiqolFlags?.actor)
+  // const actor = game.actors.get(message?.speaker.actor)
     // let buttonTargets = html.getElementsByClassName("minor-qol-target-npc");
   ids.hover(_onTargetHover, _onTargetHoverOut)
   if (game.user.isGM)  {
     ids.click(_onTargetSelect);
   }
-  if (!game.user.isGM && configSettings.hideNPCNames?.length > 0) {
+
+  let replacementName = configSettings.hideNPCNames;
+  if (!game.user.isGM && installedModules.get("combat-utility-belt") && game.settings.get("combat-utility-belt", "enableHideHostileNames")) {
+    replacementName = game.settings.get("combat-utility-belt", "hostileNameReplacement")
+  }
+  if (!game.user.isGM && replacementName?.length > 0) {
     ids=html.find(".midi-qol-target-npc");
-    ids.text(configSettings.hideNPCNames);
+    ids.text(replacementName);
   }
   if (game.user.isGM) {
     //@ts-ignore

@@ -14,7 +14,7 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
     warn("Workflow state not wait for attack roll");
     // return;
   }
-  workflow.targets = (this.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : new Set(game.user.targets);
+  workflow.targets = (this.data.data.target?.type === "self") ? new Set(await getSelfTargetSet(this.actor)) : new Set(game.user.targets);
   workflow.processAttackEventOptions(options?.event);
   workflow.checkTargetAdvantage();
   workflow.checkAbilityAdvantage();
@@ -84,6 +84,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
   this.data.data.default = (workflow.rollOptions.critical) ? "critical" : "normal";
+  warn("rolling damage  ", this.name, this);
 
   let result: Roll = await wrapped({
     critical: workflow.rollOptions.critical, 
@@ -96,7 +97,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
       fastForward: workflow.rollOptions.fastForward, 
       chatMessage: false, // !configSettings.mergeCard,
     }})
-  if (!result?.total) { // user backed out of damage roll or roll failed
+  if (!result) { // user backed out of damage roll or roll failed
     return;
   }
 
@@ -215,8 +216,8 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   debug("doItemRoll ", event?.shiftKey, event?.ctrlKey, event?.altKey);
   let speaker = ChatMessage.getSpeaker();
 
-  let baseItem = this.actor.getOwnedItem(this.id);
-  const targets = (baseItem?.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : new Set(game.user.targets);
+  let baseItem = this.actor.getOwnedItem(this.id) ?? this;
+  const targets = (baseItem?.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : new Set(game.user.targets);
   let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token?.id, speaker, targets, event);
   //@ts-ignore event .type not defined
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile;
@@ -313,14 +314,15 @@ export async function showItemInfo() {
   return ChatMessage.create(chatData);
 }
 export async function showItemCard(showFullCard: boolean, workflow: Workflow, minimalCard = false) {
-  warn("show item card ", this, this.actor, this.actor.token, showFullCard, workflow)
+  warn("show item card ", this, this.actor, this.actor.token, showFullCard, workflow);
+
   const token = this.actor.token;
   let needAttackButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
   needAttackButton = true || needAttackButton || !getAutoRollAttack();
   needAttackButton = needAttackButton || (getAutoRollAttack() && workflow.rollOptions.fastForwardKey)
-  const needDamagebutton = itemHasDamage(this);
+  const needDamagebutton = itemHasDamage(this) && getAutoRollDamage() === "none";
   const needVersatileButton = itemIsVersatile(this) && (showFullCard || getAutoRollDamage() === "none");
-  const sceneId = token?.scene && token.scene._id || canvas.scene._id;
+  const sceneId = token?.scene && token.scene._id || canvas.scene?._id;
   let isPlayerOwned = this.actor.hasPlayerOwner;
 
   if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = this.actor.isPC
@@ -360,7 +362,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     content: html,
     flavor: this.data.data.chatFlavor || this.name,
     speaker: {
-      actor: this.actor._id,
+      actor: this.actor,
       token: this.actor.token,
       alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name,
       // scene: canvas.scene.id

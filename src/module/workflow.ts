@@ -4,7 +4,7 @@ import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 //@ts-ignore
 import AbilityTemplate from "../../../systems/dnd5e/module/pixi/ability-template.js";
-import { warn, debug, log, i18n, noDamageSaves, cleanSpellName, MESSAGETYPES, error, MQdefaultDamageType, allDamageTypes } from "../midi-qol";
+import { warn, debug, log, i18n, noDamageSaves, cleanSpellName, MESSAGETYPES, error, MQdefaultDamageType, allDamageTypes, debugEnabled } from "../midi-qol";
 import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
@@ -103,12 +103,19 @@ export class Workflow {
 
   static eventHack: any;
   
-  get isBetterRollsWorkflow() {return false};
-
+  
   static get workflows() {return Workflow._workflows}
   static getWorkflow(id:string):Workflow {
     debug("Get workflow ", id, Workflow._workflows,  Workflow._workflows[id])
     return Workflow._workflows[id];
+  }
+
+  get isBetterRollsWorkflow() {return false};
+  
+  get hasDAE() {
+    if (this._hasDAE === undefined)
+      this._hasDAE = installedModules.get("dae") && (this.item?.effects?.entries.some(ef => ef.data.transfer === false));
+    return this._hasDAE
   }
 
   static initActions(actions: {}) {
@@ -318,7 +325,6 @@ export class Workflow {
   async _next(newState: number) {
     this.currentState = newState;
     let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===newState)[0];
-    const hasDAE = installedModules.get("dae") && (this.item?.effects?.entries.some(ef => ef.data.transfer === false));
     warn("workflow.next ", state, this._id, this)
     switch (newState) {
       case WORKFLOWSTATES.NONE:
@@ -360,12 +366,13 @@ export class Workflow {
       case WORKFLOWSTATES.VALIDATEROLL:
         // do pre roll checks
         if (configSettings.preRollChecks) {
-          if (!checkRange(this.actor, this.item, null)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+          if (!await checkRange(this.actor, this.item, null)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
           if (!checkIncapcitated(this.actor, this.item, null)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
         }
         return this.next(WORKFLOWSTATES.PREAMBLECOMPLETE);
 
       case WORKFLOWSTATES.PREAMBLECOMPLETE:
+        this.effectsAlreadyExpired = [];
         return this.next(WORKFLOWSTATES.WAITFORATTACKROLL);
         break;
 
@@ -572,18 +579,11 @@ export class Workflow {
         if (this.item.hasSave) this.applicationTargets = this.failedSaves;
         else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
         else this.applicationTargets = this.targets;
-        if (hasDAE) {
+        if (this.hasDAE) {
           //@ts-ignore
           let dae = window.DAE;
           dae.doEffects(this.item, true, this.applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId})
-          const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
-          if (chatMessage) {
-            const buttonRe = /<button data-action="applyEffects">.*?<\/button>/;
-            //@ts-ignore
-            let content = duplicate(chatMessage.data.content)
-            content = content?.replace(buttonRe, "");
-            await chatMessage.update({content})
-          }
+          this.removeEffectsButton();
         }
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
@@ -631,9 +631,13 @@ export class Workflow {
               spellLevel: this.itemLevel,
               damageTotal: this.damageTotal,
               damageDetail: this.damageDetail,
+              damageList: this.damageList,
+              otherDamageTotal: this.otherDamageTotal,
+              otherDamageDetail: this.otherDamageDetail,
+              otherDamageList: this.otherDamageList,
               rollOptions: this.rollOptions,
               event: this.event,
-              damageList: this.damageList
+
             };
             warn("macro data ", macroData)
             //@ts-ignore -uses furnace macros which support arguments
@@ -647,13 +651,13 @@ export class Workflow {
         if (autoRemoveTargets !== "none") setTimeout(untargetDeadTokens, 500); // delay to let the updates finish
 
         // disable sounds for when the chat card might be reloaed.
-        if (this.__proto__.constructor.name !== "BetterRollsWorkflow") {
+        if (this.isBetterRollsWorkflow) {
           let itemCard = game.messages.get(this.itemCardId);
           let waitForDiceSoNice = configSettings.mergeCard && (this.item?.hasAttck || itemHasDamage(this.item) || this.item?.hasSaves);
           waitForDiceSoNice = waitForDiceSoNice && game.dice3d?.messageHookDisabled && game.dice3d?.isEnabled();
           //@ts-ignore .content
           let content = itemCard?.data.content;
-          if (getRemoveDamageButtons() && content) {
+          if (getRemoveDamageButtons() && content && this.damageRoll) {
             const versatileRe = /<button data-action="versatile">[^<]*<\/button>/
             const damageRe = /<button data-action="damage">[^<]*<\/button>/
             const formulaRe = /<button data-action="formula">[^<]*<\/button>/
@@ -685,21 +689,33 @@ export class Workflow {
     }
   }
 
+  async removeEffectsButton() {
+  
+    if (!this.itemCardId) return;
+    const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
+    if (chatMessage) {
+      const buttonRe = /<button data-action="applyEffects">.*?<\/button>/;
+      //@ts-ignore
+      let content = duplicate(chatMessage.data.content)
+      content = content?.replace(buttonRe, "");
+      await chatMessage.update({content})
+    }
+  }
   async expireMyEffects(effectsToExpire: string[]) {
-    const expireHit = effectsToExpire.includes("1Hit");
-    const expireAction = effectsToExpire.includes("1Action");
-    const expireAttack = effectsToExpire.includes("1Attack");
+    const expireHit = effectsToExpire.includes("1Hit") && !this.effectsAlreadyExpired.includes("1Hit");
+    const expireAction = effectsToExpire.includes("1Action") && !this.effectsAlreadyExpired.includes("1Axtion");
+    const expireAttack = effectsToExpire.includes("1Attack") && !this.effectsAlreadyExpired.includes("1Attack");
     // expire any effects on the actor that require it
 
-/*
-    const test = this.actor.effects.map(ef => {
-      const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
-      return [(expireAction && specialDuration?.includes("1Action")),
-      (expireAttack && specialDuration?.includes("1Attack") && this.item?.hasAttack),
-      (expireHit && this.item?.hasAttack && specialDuration?.includes("1Hit") && this.hitTargets.size > 0)]
-    })
-    console.error("expiry map is ", test)
-    */
+    if (debugEnabled) {
+      const test = this.actor.effects.map(ef => {
+        const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
+        return [(expireAction && specialDuration?.includes("1Action")),
+        (expireAttack && specialDuration?.includes("1Attack") && this.item?.hasAttack),
+        (expireHit && this.item?.hasAttack && specialDuration?.includes("1Hit") && this.hitTargets.size > 0)]
+      })
+      warn("expiry map is ", test)
+    }
     const myExpiredEffects = this.actor.effects.filter(ef => {
       const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
       if (!specialDuration) return false;
@@ -708,6 +724,7 @@ export class Workflow {
       (expireHit && this.item?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.size > 0)
     }).map(ef=>ef.id);
     warn("expire my effects", myExpiredEffects, expireAction, expireAttack, expireHit);
+    this.effectsAlreadyExpired = this.effectsAlreadyExpired.concat(effectsToExpire);
     if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
   }
 
@@ -773,7 +790,13 @@ export class Workflow {
     await chatMessage?.update({"content": content, flags: newFlags });
   }
 
-  async displayDamageRoll(whisper = false, doMerge, options = {useOther: false}) {
+  damageFlavor() {
+    return `(${this.item?.data.data.damage.parts
+    .map(a=>(allDamageTypes[a[1]] || allDamageTypes[this.defaultDamageType] || MQdefaultDamageType)).join(",") 
+      || this.defaultDamageType || MQdefaultDamageType})`;
+  }
+
+  async displayDamageRoll(whisper = false, doMerge, options = {useOther: true}) {
     let chatMessage: ChatMessage = game.messages.get(this.itemCardId);
     //@ts-ignore content not definted 
     let content = chatMessage && duplicate(chatMessage.data.content)
@@ -788,22 +811,29 @@ export class Workflow {
     var rollSound = configSettings.diceSound;
     var newFlags = chatMessage?.data.flags || {};
     if (doMerge && chatMessage) {
-      const damageString = `(${this.item?.data.data.damage.parts
-          .map(a=>(allDamageTypes[a[1]] || allDamageTypes[this.defaultDamageType] || MQdefaultDamageType)).join(",") 
-            || this.defaultDamageType || MQdefaultDamageType})`;
 
       //@ts-ignore .flavor not defined
-      const dmgHeader = configSettings.mergeCardCondensed ? damageString : (this.flavor ?? damageString);
-      let searchRe = /<div class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
-      let replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center">${dmgHeader}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-damage-roll">`
-      if (options.useOther) {
-        searchRe = /<div class="midi-qol-other-roll">[\s\S]*?<div class="end-midi-qol-other-roll">/;
-        replaceString = `<div class="midi-qol-other-roll"><div style="text-align:center">${dmgHeader}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-other-roll">`
+      const dmgHeader = configSettings.mergeCardCondensed ? this.damageFlavor() : (this.flavor ?? this.damageFlavor());
+      if (this.damageRollHTML) {
+        if (!this.useOther) {
+          const searchRe = /<div class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
+          const replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center">${dmgHeader}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-damage-roll">`
+          content = content.replace(searchRe, replaceString);
+        } else {
+          const otherSearchRe = /<div class="midi-qol-other-roll">[\s\S]*?<div class="end-midi-qol-other-roll">/;
+          const otherReplaceString = `<div class="midi-qol-other-roll"><div style="text-align:center">${dmgHeader}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-other-roll">`
+          content = content.replace(otherSearchRe, otherReplaceString);
+        }
+        if (this.otherHTML) {
+            const otherSearchRe = /<div class="midi-qol-other-roll">[\s\S]*?<div class="end-midi-qol-other-roll">/;
+            const otherReplaceString = `<div class="midi-qol-other-roll"><div style="text-align:center" >${this.otherHTML || ""}</div><div class="end-midi-qol-other-roll">`
+            content = content.replace(otherSearchRe, otherReplaceString);
+        }
+      } else if (this.otherHTML) {
+        const otherSearchRe = /<div class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
+        const otherReplaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center"></div>${this.otherHTML || ""}<div class="end-midi-qol-damge-roll">`
+        content = content.replace(otherSearchRe, otherReplaceString);
       }
-      content = content.replace(searchRe, replaceString);
-      const otherSearchRe = /<div class="midi-qol-other-roll">[\s\S]*?<div class="end-midi-qol-other-roll">/;
-      let otherReplaceString = `<div class="midi-qol-other-roll"><div style="text-align:center" >${this.otherHTML || ""}</div><div class="end-midi-qol-other-roll">`
-      if (!options.useOther) content = content.replace(otherSearchRe, otherReplaceString);
       if (!!!game.dice3d?.messageHookDisabled) {
         if (getAutoRollDamage()  === "none" || !isAutoFastDamage()) {
           // not auto rolling damage so hits will have been long displayed
@@ -905,7 +935,7 @@ export class Workflow {
 
           debug("Trying to whisper message", chatData)
         }
-        if (this.__proto__.constructor.name !== "BetterRollsWorkflow") {
+        if (!this.isBetterRollsWorkflow) {
             setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", true);
             if (!whisper) setProperty(chatData, "flags.midi-qol.hideTag", "midi-qol-hits-display")
         } else { // better rolls workflow
@@ -1263,8 +1293,9 @@ export class Workflow {
 
 export class DamageOnlyWorkflow extends Workflow {
   constructor(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll, 
-        options: {flavor: string, itemCardId: string, damageList: []}) {
-    super(actor, null, token, ChatMessage.getSpeaker(), new Set(targets), shiftOnlyEvent)
+        options: {flavor: string, itemCardId: string, damageList: [], useOther: true, itemData: null}) {
+          super(actor, null, token.id, ChatMessage.getSpeaker(), new Set(targets), shiftOnlyEvent)
+    this.itemData = options.itemData;
     this.damageTotal = damageTotal;
     this.damageDetail = [{type: damageType,  damage: damageTotal}];
     this.damageRoll = roll;
@@ -1272,9 +1303,14 @@ export class DamageOnlyWorkflow extends Workflow {
     this.defaultDamageType = CONFIG.DND5E.damageTypes[damageType] || damageType;
     this.damageList = options.damageList;
     this.itemCardId = options.itemCardId;
-    warn("Damage only workflow data", options, this)
+    this.useOther = options.useOther;
     this.next(WORKFLOWSTATES.NONE);
     return this;
+  }
+
+  damageFlavor() { 
+    if (this.useOther && this.flavor) return this.flavor;
+    else return super.damageFlavor();
   }
 
   async _next(newState) {
@@ -1283,6 +1319,15 @@ export class DamageOnlyWorkflow extends Workflow {
     // let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===this.currentState)[0];
     switch(newState) {
       case WORKFLOWSTATES.NONE:
+        if (this.itemCardId === "new" && this.itemData) { // create a new chat card for the item
+          this.creatCount += 1;
+          //@ts-ignore
+          this.item = Item.createOwned(this.itemData, this.actor);
+          this.itemCard = await showItemCard.bind(this.item)(false, this, true);
+          this.itemCardId = this.itemCard.id;
+          // Since this could to be the same item don't roll the on use macro, since this could loop forever
+          setProperty(this.item, "data.flags.midi-qol.onUseMacroName", null);        }
+    
         if (configSettings.mergeCard && this.itemCardId) {
           this.damageRollHTML = await this.damageRoll.render();
           this.damageCardData = {
@@ -1291,15 +1336,14 @@ export class DamageOnlyWorkflow extends Workflow {
             roll: this.damageRoll,
             speaker: this.speaker
           }
-          await this.displayDamageRoll(false, configSettings.mergeCard && this.itemCardId, {useOther: true})
+          await this.displayDamageRoll(false, configSettings.mergeCard && this.itemCardId, {useOther: this.useOther})
         } else this.damageRoll.toMessage({flavor: this.flavor});
         this.hitTargets = new Set(this.targets);
-        debug("DamageOnlyWorkflow.next ", newState, configSettings.speedItemRolls, this);
-        warn("DamageOnlyWorkflow.next ", this.damageDetails, this.damageTotal, this.targets);
         this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, null, new Set(), this.damageList)
-        return super.next(WORKFLOWSTATES.ROLLFINISHED);
 
-      default: return super._next(newState);
+        return super._next(WORKFLOWSTATES.ROLLFINISHED);
+
+      default: return super.next(newState);
     }
   }
 }

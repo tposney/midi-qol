@@ -7,7 +7,8 @@ let modules = {"about-time": "0.0",
               "itemacro": "1.0.0", 
               "lmrtfy": "0.9",
               "libWraopper": "1.8.0",
-              "dae": "0.0"
+              "dae": "0.0",
+              "combat-utility-belt": "1.3.7"
             };
 export let installedModules = new Map();
 

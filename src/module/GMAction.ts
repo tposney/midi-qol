@@ -62,16 +62,16 @@ let createReverseDamageCard = async (data) => {
     damageList: [] ,
     needsButtonAll: false
   };
-  for (let { tokenID, actorID, oldHP, oldTempHP, tempDamage, hpDamage, totalDamage, appliedDamage } of damageList) {
+  for (let { tokenId, actorID, oldHP, oldTempHP, tempDamage, hpDamage, totalDamage, appliedDamage } of damageList) {
     let scene = canvas.scene;
-    token = canvas.tokens.get(tokenID);
+    token = canvas.tokens.get(tokenId);
     if (!token) { //Token does not exist on this scene, find it in on referenced scene.
       scene = game.scenes.get(data.sceneId);
       //@ts-ignore .tokens not defined
-      const tokenData = scene.data.tokens.find(t=>t._id === tokenID);
+      const tokenData = scene.data.tokens.find(t=>t._id === tokenId);
       if (!tokenData) {
         // we really should be able to fine the token
-        error(`GMAction: could not find token ${tokenID} in scene ${scene?.name || data.sceneId}`);
+        error(`GMAction: could not find token ${tokenId} in scene ${scene?.name || data.sceneId}`);
         continue;
       }
       token = await Token.create(tokenData); // create a temp token for calcs
@@ -96,20 +96,20 @@ let createReverseDamageCard = async (data) => {
         debug("doing remote scene update")
         if (scene) {
           promises.push(scene.updateEmbeddedEntity("Token", { // need to deal with the case that the token might be on another scene
-          "_id": tokenID, //use the original ID not the one from the potentially temp token
+          "_id": tokenId, //use the original ID not the one from the potentially temp token
           "actorData.data.attributes.hp.temp": newTempHP, 
           "actorData.data.attributes.hp.value": newHP
           }))
         } else {
-          console.warn(`Could not apply damage to ${tokenID} on ${data.sceneId}`)
+          console.warn(`Could not apply damage to ${tokenId} on ${data.sceneId}`)
         }
       }
     }
     
-    tokenIdList.push({ tokenID, oldTempHP: oldTempHP, oldHP, absDamage: Math.abs(totalDamage), newHP, newTempHP});
+    tokenIdList.push({ tokenId, oldTempHP: oldTempHP, oldHP, absDamage: Math.abs(totalDamage), newHP, newTempHP});
 
     let listItem = {
-      tokenId: tokenID,
+      tokenId: tokenId,
       hpDamage,
       tempDamage,
       totalDamage: Math.abs(totalDamage),
@@ -173,11 +173,11 @@ export let processUndoDamageCard = async(message, html, data) => {
   if (!message.data.flags?.midiqol?.undoDamage) return true;
   let button = html.find("#all-reverse");
   button.click((ev) => {
-    message.data.flags.midiqol.undoDamage.forEach(async ({tokenID, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
-      let token = canvas.tokens.get(tokenID);
+    message.data.flags.midiqol.undoDamage.forEach(async ({tokenId, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
+      let token = canvas.tokens.get(tokenId);
       if (!token?.actor) {
         ui.notifications.warn("Token not found in scene")
-        console.warn(`Process damage button: Actor for token ${tokenID} not found`);
+        console.warn(`Process damage button: Actor for token ${tokenId} not found`);
         return;
       }
       let actor = token.actor;
@@ -189,11 +189,11 @@ export let processUndoDamageCard = async(message, html, data) => {
 
   button = html.find("#all-apply");
   button.click((ev) => {
-    message.data.flags.midiqol.undoDamage.forEach(async ({tokenID, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
-      let token = canvas.tokens.get(tokenID);
+    message.data.flags.midiqol.undoDamage.forEach(async ({tokenId, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
+      let token = canvas.tokens.get(tokenId);
       if (!token?.actor) {
         ui.notifications.warn("Token not found in scene")
-        console.warn(`Process damage button: Actor for token ${tokenID} not found`);
+        console.warn(`Process damage button: Actor for token ${tokenId} not found`);
         return;
       }
       let actor = token.actor;
@@ -203,14 +203,14 @@ export let processUndoDamageCard = async(message, html, data) => {
     })
   })
 
-  message.data.flags.midiqol.undoDamage.forEach(({tokenID, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
-    let button = html.find(`#reverse-${tokenID}`);
+  message.data.flags.midiqol.undoDamage.forEach(({tokenId, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
+    let button = html.find(`#reverse-${tokenId}`);
       //TODO clean this up - one handler with
     button.click(async (ev) => {
-      let token = canvas.tokens.get(tokenID);
+      let token = canvas.tokens.get(tokenId);
       if (!token?.actor) {
         ui.notifications.warn("Token not found in scene")
-        console.warn(`Process damage button: Actor for token ${tokenID} not found`);
+        console.warn(`Process damage button: Actor for token ${tokenId} not found`);
         return;
       }
       let actor = token.actor;
@@ -219,11 +219,11 @@ export let processUndoDamageCard = async(message, html, data) => {
       await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP });
       ev.stopPropagation();
     });
-    button = html.find(`#apply-${tokenID}`);
+    button = html.find(`#apply-${tokenId}`);
     button.click(async (ev) => {
-      let token = canvas.tokens.get(tokenID);
+      let token = canvas.tokens.get(tokenId);
       if (!token?.actor) {
-        warn(`Process damage button: Actor for token ${tokenID} not found`);
+        warn(`Process damage button: Actor for token ${tokenId} not found`);
         return;
       }
       let actor = token.actor;
@@ -233,13 +233,13 @@ export let processUndoDamageCard = async(message, html, data) => {
     });
     button = html.find("#all-apply");
 
-    button = html.find(`#full-${tokenID}`);
-    button.click(async (ev) => doClick(ev, tokenID, absDamage, 1));
-    button = html.find(`#half-${tokenID}`);
-    button.click(async (ev) => doClick(ev, tokenID, absDamage, 0.5));
-    button = html.find(`#double-${tokenID}`);
-    button.click(async (ev) => doClick(ev, tokenID, absDamage, 2));
-    button = html.find(`#heal-${tokenID}`);
-    button.click(async (ev) => doClick(ev, tokenID, absDamage, -1));
+    button = html.find(`#full-${tokenId}`);
+    button.click(async (ev) => doClick(ev, tokenId, absDamage, 1));
+    button = html.find(`#half-${tokenId}`);
+    button.click(async (ev) => doClick(ev, tokenId, absDamage, 0.5));
+    button = html.find(`#double-${tokenId}`);
+    button.click(async (ev) => doClick(ev, tokenId, absDamage, 2));
+    button = html.find(`#heal-${tokenId}`);
+    button.click(async (ev) => doClick(ev, tokenId, absDamage, -1));
   })
 }

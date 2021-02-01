@@ -158,11 +158,11 @@ If the above was all too tedious here are the setings I use.
   * 1Attack: active effects last for one attack - requires workflow automation
   * 1Action: active effects last for one action - requires workflow automation 
   * 1Hit: active effects last until the next successful hit - requires workflow automation 
-  * turnStart: effects last until the start of self/target's next turn (check combat tracker)  
-  * turnEnd: effects last until the end of self/target's next turn (checks combat tracker)  
+  * turnStart: Moved to times-up
+  * turnEnd: Moved to times-up
   * isAttacked: the effect lasts until the next attack against the target.
   * isDamaged: the effect lasts until the target takes damage.
-All of these effects expire at the end of the comabt
+All of these effects expire at the end of the combat if no other duration is specified.
 
 
 ## flags.midi-qol

@@ -83,18 +83,19 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
   return damageList;
 } 
 
-export function getSelfTarget(actor) {
-  const activeToken = actor?.getActiveTokens()[0];
-  if (actor?.data.type === "character") return activeToken; // if a pc always use the represented token
+export async function getSelfTarget(actor) {
   if (actor.token) return actor.token;
+  const activeToken = actor?.getActiveTokens()[0];
+  if (activeToken) return activeToken; // if a pc always use the represented token
   const speaker = ChatMessage.getSpeaker()
   if (speaker.token) return canvas.tokens.get(speaker.token);
   if (activeToken) return activeToken;
-  return undefined;
+  //@ts-ignore
+  return Token.fromActor(actor);
 }
 
-export function getSelfTargetSet(actor) {
-  return new Set([getSelfTarget(actor)])
+export async function getSelfTargetSet(actor) {
+  return new Set([await getSelfTarget(actor)])
 }
 
 export let getParams = () => {
@@ -135,7 +136,7 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, exist
   debug("calculateDamage: results are ", newTemp, newHP, appliedDamage, totalDamage)
   if (game.user.isGM) 
       log(`${a.name} ${oldHP} takes ${value} reduced from ${totalDamage} Temp HP ${newTemp} HP ${newHP} `);
-  return {tokenID: t.id, actorID: a._id, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
+  return {tokenId: t.id, actorID: a._id, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
           oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value};
 }
 
@@ -257,7 +258,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   // Show damage buttons if enabled, but only for the applicable user and the GM
   
   let theTargets = workflow.hitTargets;
-  if (item?.data.data.target?.type === "self") theTargets = getSelfTargetSet(actor) || theTargets;
+  if (item?.data.data.target?.type === "self") theTargets = await getSelfTargetSet(actor) || theTargets;
   if (theTargets.size > 0 && item?.hasAttack) workflow.expireMyEffects(["1Hit"]);
 
   // Don't check for critical - RAW say these don't get critical damage
@@ -412,11 +413,11 @@ function getDistance (t1, t2, wallblocking = false) {
   return distance;
 };
 
-export function checkRange(actor, item, event) {
+export async function checkRange(actor, item, event) {
   let itemData = item.data.data;
   if ((!itemData.range?.value && itemData.range?.units !== "touch") || !["creature", "ally", "enemy"].includes(itemData.target?.type)) 
     return true;
-  let token = getSelfTarget(actor);
+  let token = await getSelfTarget(actor);
   
   if (!token) {
     warn(`${game.user.name} no token selected cannot check range`)

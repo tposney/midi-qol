@@ -44,6 +44,8 @@ export let savingThrowText;
 export let savingThrowTextAlt;
 export let MQdefaultDamageType;
 export let allDamageTypes;
+export let midiFlags = [];
+
 
 export const MESSAGETYPES = {
   HITS: 1,
@@ -80,6 +82,7 @@ Hooks.once('init', async function() {
 Hooks.once('setup', function() {
 	// Do anything after initialization but before
   // ready
+  setupMidiFlags();
   fetchParams();
   itemPatching();
   visionPatching();
@@ -112,6 +115,9 @@ Hooks.once('ready', function() {
 
   // Do anything once the module is ready
   actorAbilityRollPatching();
+  if(configSettings.hideNPCNames && game.user.isGM) {
+    ui.notifications.warn("midi-qol - hide pc names deprecated please use COMBAT UTILITY BELT")
+  }
 });
 
 // Add any additional hooks if necessary
@@ -132,7 +138,8 @@ function setupMinorQolCompatibility() {
     configSettings,
     ConfigPanel: ConfigPanel,
     getTraitMult: getTraitMult,
-    doCritModify: doCritModify
+    doCritModify: doCritModify,
+    midiFlags
   }
 }
 
@@ -166,3 +173,82 @@ function doRoll(event={shiftKey: false, ctrlKey: false, altKey: false, metaKey: 
     ui.notifications.warn(game.i18n.format("DND5E.ActionWarningNoItem", {item: itemName, name: actor.name}));
   }
 } 
+
+function setupMidiFlags() {
+  midiFlags.push("flags.midi-qol.advantage.all")
+  midiFlags.push("flags.midi-qol.disadvantage.all")
+  midiFlags.push("flags.midi-qol.advantage.attack.all")
+  midiFlags.push("flags.midi-qol.disadvantage.attack.all")
+  midiFlags.push("flags.midi-qol.critical.all")
+  midiFlags.push("flags.midi-qol.noCritical.all")
+  midiFlags.push("flags.midi-qol.fail.all")
+  midiFlags.push("flags.midi-qol.fail.attack.all")
+  midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
+  midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
+  midiFlags.push(`flags.midi-qol.grants.critical..all`);
+  midiFlags.push(`flags.midi-qol.grants.noCritical.all`);
+  midiFlags.push(`flags.midi-qol.maxroll..all`);
+  midiFlags.push(`flags.midi-qol.grants.maxRoll.all`);
+
+
+  const attackTypes = ["rwa","mwak","rsak", "msak"];
+  attackTypes.forEach(at => {
+    midiFlags.push(`flags.midi-qol.advantage.attack.${at}`);
+    midiFlags.push(`flags.midi-qol.disadvantage.attack.${at}`);
+    midiFlags.push(`flags.midi-qol.fail.attack.${at}`);
+    midiFlags.push(`flags.midi-qol.critical.${at}`);
+    midiFlags.push(`flags.midi-qol.noCritical.${at}`);
+    midiFlags.push(`flags.midi-qol.grants.advantage.attack.${at}`);
+    midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.${at}`);
+    midiFlags.push(`flags.midi-qol.grants.critical.damage.${at}`);
+    midiFlags.push(`flags.midi-qol.grants.noCritical.attack.${at}`);
+  
+  });
+  midiFlags.push("flags.midi-qol.advantage.ability.all");
+  midiFlags.push("flags.midi-qol.advantage.ability.check.all");
+  midiFlags.push("flags.midi-qol.advantage.ability.save.all");
+  midiFlags.push("flags.midi-qol.disadvantage.ability.all");
+  midiFlags.push("flags.midi-qol.disadvantage.ability.check.all");
+  midiFlags.push("flags.midi-qol.disadvantage.ability.save.all");
+  midiFlags.push("flags.midi-qol.fail.ability.all");
+  midiFlags.push("flags.midi-qol.fail.ability.check.all");
+  midiFlags.push("flags.midi-qol.fail.ability.save.all");
+
+  Object.keys(CONFIG.DND5E.abilities).forEach(abl => {
+    midiFlags.push(`flags.midi-qol.advantage.ability.check.${abl}`);
+    midiFlags.push(`flags.midi-qol.disadvantage.ability.check.${abl}`);
+    midiFlags.push(`flags.midi-qol.advantage.ability.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.disadvantage.ability.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.fail.ability.check.${abl}`);
+    midiFlags.push(`flags.midi-qol.fail.ability.save.${abl}`);
+  })
+  midiFlags.push(`flags.midi-qol.advantage.skill.all`);
+  midiFlags.push(`flags.midi-qol.disadvantage.skill.all`);
+  midiFlags.push(`flags.midi-qol.fail.skill.all`);
+  Object.keys(CONFIG.DND5E.skills).forEach(skill => {
+    midiFlags.push(`flags.midi-qol.advantage.skill.${skill}`);
+    midiFlags.push(`flags.midi-qol.disadvantage.skill.${skill}`);
+    midiFlags.push(`flags.midi-qol.fail.skill.${skill}`);
+  })
+  midiFlags.push(`flags.midi-qol.advantage.deathSave`);
+  midiFlags.push(`flags.midi-qol.disadvantage.deathSave`);
+
+  Object.values(CONFIG.DND5E.spellComponents).forEach((comp: string) => {
+    midiFlags.push(`flags.midi-qol.fail.spell.${comp.toLowerCase()}`);  
+  });
+  midiFlags.push(`flags.midi-qol.DR.all`);
+  midiFlags.push(`flags.midi-qol.DR.non-magical`);
+  Object.keys(CONFIG.DND5E.damageTypes).forEach(dt => {
+    midiFlags.push(`flags.midi-qol.DR.${dt}`);  
+  })
+ 
+  /*
+  midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
+  midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
+  midiFlags.push(``);
+
+  midiFlags.push(``);
+  midiFlags.push(``);
+  */
+  midiFlags.sort()
+}

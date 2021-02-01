@@ -1,3 +1,15 @@
+0.3.61
+* Fix bug not displaying tool item details.
+* Fix bug for over zealously removing damage buttons.
+* Fix bug in applying damage on auto rolled other damage not including base damage in calculation.
+* Fix for possible race condition when expiring specialDuration effects that could cause the effect to be deleted more than once, resulting in server deleted 0 ActiveEffects messages.
+* Support for additional argument in the DamageOnlyWorkflow (userOther: boolean, defaults to true) to specify which slot to use on the item card, if it is passed. If true the damage from the roll will be placed immediately below the attack roll, otherwise it will be placed in the normal damage area.
+* If CUB is installed and active midi-qol will use CUBs hostile name replacement for hit/save cards. A future release will remove the midi-setting entirely since there is no reason to use midi's hide name if not using CUB hide names.
+* New option to DamageOnlyWorkflow, it you pass itemCardId: "new" together with itemData as itemData: itemData, a new chat card for the item will be created and the dmage inserted into the chatcard. (consider this experimental).
+* Fix for rolling self targeted items when no token for the actor exists in the current scene.
+* Fix for rolling items if no scene exists in the world.
+* Fix for not displaing damage total when 0 damage was rolled.
+
 0.3.60
 * Now requires dnd5e/sw5e 1.2.3 or later.
 * Fix for critical key not being detected for some damage rolls.

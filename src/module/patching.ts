@@ -228,7 +228,7 @@ export let visionPatching = () => {
   const patchVision = isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
   if (patchVision) {
     // ui.notifications.warn("This setting is deprecated please switch to Conditional Visibility")
-    console.error("midi-qol | Player controls tokens setting is deprecated please switch to Conditional Visibility")
+    console.warn("midi-qol | Player controls tokens setting is deprecated please switch to Conditional Visibility")
     if (game.modules.get("lib-wrapper")?.active) {
       log("Patching SightLayer._restrictVisibility")
       //@ts-ignore
@@ -351,7 +351,7 @@ export let actorAbilityRollPatching = () => {
 }
 
 export function patchLMRTFY() {
-  if (installedModules.get("lmrtfy") && !isNewerVersion(game.modules.get("lmrtfy").data.version, "0.1.5")) {
+  if (installedModules.get("lmrtfy") && !isNewerVersion(game.modules.get("lmrtfy").data.version, "0.1.7")) {
     if (game.modules.get("lib-wrapper")?.active) {
       log("Patching rollAbilitySave")
       //@ts-ignore

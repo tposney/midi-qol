@@ -75,7 +75,7 @@ export let initHooks = () => {
 
     const actor = game.actors.get(dropData.actorId);
     const item = actor && actor.items.get(dropData.data._id);
-    if (!actor || !item) console.error("actor / item broke ", actor, item);
+    if (!actor || !item) error("actor / item broke ", actor, item);
     if (item.type === "spell") {
       //@ts-ignore
       actor.useSpell(item, {configureDialog: true})
