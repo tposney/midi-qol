@@ -1,3 +1,6 @@
+0.3.62
+* Fix bug for over zealously removing damage buttons. 
+* Fix for damage only workflow so that useOther defaults to true
 0.3.61
 * Fix bug not displaying tool item details.
 * Fix bug for over zealously removing damage buttons.

@@ -253,7 +253,7 @@ export class Workflow {
   }
 
 
-  constructor(actor: Actor5e, item: Item5e, tokenId, speaker, targets, event: any) {
+  constructor(actor: Actor5e, item: Item5e, speaker, targets, event: any) {
     this.rollOptions = duplicate(defaultRollOptions);
     this.actor = actor;
     this.item = item;
@@ -268,7 +268,7 @@ export class Workflow {
       Workflow.removeWorkflow(this.itemUUId);
     }
     
-    this.tokenId = tokenId ?? speaker.token;
+    this.tokenId = speaker.token;
     this.speaker = speaker;
     this.targets = targets; 
     this.saves = new Set();
@@ -318,8 +318,8 @@ export class Workflow {
   }
 
   async next(nextState: number) {
-    setTimeout(() => this._next(nextState), 0); // give the rest of queued things a chance to happen
-    // this._next(nextState);
+    // setTimeout(() => this._next(nextState), 0); // give the rest of queued things a chance to happen
+    this._next(nextState);
   }
 
   async _next(newState: number) {
@@ -582,7 +582,7 @@ export class Workflow {
         if (this.hasDAE) {
           //@ts-ignore
           let dae = window.DAE;
-          dae.doEffects(this.item, true, this.applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId})
+          dae.doEffects(this.item, true, this.applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId})
           this.removeEffectsButton();
         }
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
@@ -914,7 +914,7 @@ export class Workflow {
           break;
         }
     } else {
-      let speaker = ChatMessage.getSpeaker();
+      let speaker = duplicate(this.speaker);
       speaker.alias = (configSettings.useTokenNames && speaker.token) ? canvas.tokens.get(speaker.token).name : speaker.alias;
 
       if (game.user.targets.size > 0) {
@@ -1258,8 +1258,7 @@ export class Workflow {
   }
 
   setRangedTargets(targetDetails) {
-    const speaker = ChatMessage.getSpeaker();
-    const token = canvas.tokens.get(speaker.token);
+    const token = canvas.tokens.get(this.speaker.token);
     if (!token) {
       ui.notifications.warn(`${game.i18n.localize("midi-qol.noSelection")}`)
       return true;
@@ -1293,8 +1292,8 @@ export class Workflow {
 
 export class DamageOnlyWorkflow extends Workflow {
   constructor(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll, 
-        options: {flavor: string, itemCardId: string, damageList: [], useOther: true, itemData: null}) {
-          super(actor, null, token.id, ChatMessage.getSpeaker(), new Set(targets), shiftOnlyEvent)
+        options: {flavor: string, itemCardId: string, damageList: [], useOther: boolean, itemData: null}) {
+          super(actor, null, ChatMessage.getSpeaker(token), new Set(targets), shiftOnlyEvent)
     this.itemData = options.itemData;
     this.damageTotal = damageTotal;
     this.damageDetail = [{type: damageType,  damage: damageTotal}];
@@ -1303,7 +1302,7 @@ export class DamageOnlyWorkflow extends Workflow {
     this.defaultDamageType = CONFIG.DND5E.damageTypes[damageType] || damageType;
     this.damageList = options.damageList;
     this.itemCardId = options.itemCardId;
-    this.useOther = options.useOther;
+    this.useOther = options.useOther ?? true;
     this.next(WORKFLOWSTATES.NONE);
     return this;
   }
@@ -1355,7 +1354,7 @@ export class TrapWorkflow extends Workflow {
   saveTargets: any;
 
   constructor(actor: Actor5e, item: Item5e, targets: [Token], trapCenter: {x: number, y: number} = undefined, trapSound: {playlist: string , sound: string} = undefined,  event: any = null) {
-    super(actor, item, null, ChatMessage.getSpeaker(), new Set(targets), event);
+    super(actor, item, ChatMessage.getSpeaker(actor), new Set(targets), event);
     // this.targets = new Set(targets);
     if (!this.event) this.event = duplicate(shiftOnlyEvent);
     this.trapSound = trapSound;
@@ -1511,6 +1510,8 @@ export class BetterRollsWorkflow extends Workflow {
     this.currentState = newState;
     let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===this.currentState)[0];
     warn("betterRolls workflow.next ", state, configSettings.speedItemRolls, this)
+    console.warn("betterRolls workflow.next ", state, configSettings.speedItemRolls, this)
+
     switch (newState) {
       case WORKFLOWSTATES.WAITFORATTACKROLL:
         // since this is better rolls as soon as we are ready for the attack roll we have both the attack roll and damage
@@ -1545,7 +1546,8 @@ export class BetterRollsWorkflow extends Workflow {
         if (this.isFumble) { //TODO: Is this right?
           return this.next(WORKFLOWSTATES.ROLLFINISHED);
         }
-        if (this.item.hasSave) return this.next(WORKFLOWSTATES.WAITFORSAVES)
+        if (this.item.hasSave) return this.next(WORKFLOWSTATES.WAITFORSAVES);
+        return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE)
         processDamageRoll(this, "psychic");
         Hooks.callAll("midi-qol.DamageRollComplete", this)
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);

@@ -23,6 +23,24 @@ function restrictVisibility() {
   // Dispatch a hook that modules can use
   Hooks.callAll("sightRefresh", this);
 }
+function _getUsageUpdates(wrapped, {consumeQuantity=false, consumeRecharge=false, consumeResource=false, consumeSpellSlot=false, consumeUsage=false}) {
+  const updates = wrapped({consumeQuantity, consumeRecharge, consumeResource, consumeSpellSlot, consumeUsage})
+  const itemData = this.data.data;
+  console.error("In my get Usage Updates", itemData.materials, itemData.components, itemData.materials?.consumed, itemData.components?.material, updates)
+
+  if (updates && this.type === "spell" && 
+       itemData.components?.material && itemData.materials?.cost > 0) {
+    const supplyAvailable = itemData.materials.supply ?? 0;
+    console.error("supply", supplyAvailable, itemData.materials.supply)
+    if (supplyAvailable < 1) {
+      ui.notifications.warn(`MidiQOL: No ${itemData.materials.value} available`)
+      return false;
+    }
+    if (itemData.materials?.consumed)
+      updates.itemUpdates["data.materials.supply"] = supplyAvailable - 1;
+  }
+  return updates;
+}
 
 function _isVisionSource() {
   // log("proxy _isVisionSource", this);
@@ -317,6 +335,10 @@ export let actorAbilityRollPatching = () => {
     log("Patching rollDeathSave");
     //@ts-ignore
     libWrapper.register("midi-qol", "CONFIG.Actor.entityClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
+
+    //@ts-ignore - not ready for release yet
+    // libWrapper.register("midi-qol", "CONFIG.Item.entityClass.prototype._getUsageUpdates", _getUsageUpdates, "WRAPPER");
+
   } else {
     //@ts-ignore
     const oldRollAbilitySave = CONFIG.Actor.entityClass.prototype.rollAbilitySave;

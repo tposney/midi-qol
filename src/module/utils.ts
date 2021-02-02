@@ -85,11 +85,8 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
 
 export async function getSelfTarget(actor) {
   if (actor.token) return actor.token;
-  const activeToken = actor?.getActiveTokens()[0];
-  if (activeToken) return activeToken; // if a pc always use the represented token
-  const speaker = ChatMessage.getSpeaker()
+  const speaker = ChatMessage.getSpeaker({actor})
   if (speaker.token) return canvas.tokens.get(speaker.token);
-  if (activeToken) return activeToken;
   //@ts-ignore
   return Token.fromActor(actor);
 }

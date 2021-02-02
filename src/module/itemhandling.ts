@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, log, MESSAGETYPES } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
 import {  configSettings, itemDeleteCheck, enableWorkflow, criticalDamage, autoFastForwardAbilityRolls } from "./settings";
-import { getAutoRollAttack, getAutoRollDamage, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile } from "./utils";
+import { getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile } from "./utils";
 
 export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, versatile: false}) {
   let workflow: Workflow = Workflow.getWorkflow(this.uuid);
@@ -129,17 +129,18 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   }
   if (!configSettings.mergeCard) {
     const title = `${this.name} - ${game.i18n.localize("DND5E.DamageRoll")}`;
+    const speaker = ChatMessage.getSpeaker({actor: this.actor});
     let messageData = mergeObject({
       title,
       flavor: this.labels.damageTypes.length ? `${title} (${this.labels.damageTypes})` : title,
-      speaker: ChatMessage.getSpeaker({actor: this.actor}),
+      speaker,
     }, {"flags.dnd5e.roll": {type: "damage", itemId: this.id }});
     result.toMessage(messageData, game.settings.get("core", "rollMode"))
     if (otherResult) {
       messageData = mergeObject({
           title,
           flavor: title,
-          speaker: ChatMessage.getSpeaker({actor: this.actor}),
+          speaker,
         }, {"flags.dnd5e.roll": {type: "damage", itemId: this.id }});
       otherResult.toMessage(messageData, game.settings.get("core", "rollMode"))
     }
@@ -214,11 +215,11 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   }
   //@ts-ignore
   debug("doItemRoll ", event?.shiftKey, event?.ctrlKey, event?.altKey);
-  let speaker = ChatMessage.getSpeaker();
+  let speaker = ChatMessage.getSpeaker({actor: this.actor});
 
   let baseItem = this.actor.getOwnedItem(this.id) ?? this;
   const targets = (baseItem?.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : new Set(game.user.targets);
-  let workflow: Workflow = new Workflow(this.actor, baseItem, this.actor.token?.id, speaker, targets, event);
+  let workflow: Workflow = new Workflow(this.actor, baseItem, speaker, targets, event);
   //@ts-ignore event .type not defined
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile;
   // workflow.versatile = versatile;
@@ -320,7 +321,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   let needAttackButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
   needAttackButton = true || needAttackButton || !getAutoRollAttack();
   needAttackButton = needAttackButton || (getAutoRollAttack() && workflow.rollOptions.fastForwardKey)
-  const needDamagebutton = itemHasDamage(this) && getAutoRollDamage() === "none";
+  const needDamagebutton = itemHasDamage(this) && (getAutoRollDamage() === "none" || !getRemoveDamageButtons());
   const needVersatileButton = itemIsVersatile(this) && (showFullCard || getAutoRollDamage() === "none");
   const sceneId = token?.scene && token.scene._id || canvas.scene?._id;
   let isPlayerOwned = this.actor.hasPlayerOwner;
@@ -351,7 +352,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
   const template = `modules/midi-qol/templates/${templateType}-card.html`;
   const html = await renderTemplate(template, templateData);
-  debug(" Show Item Card ", configSettings.useTokenNames,(configSettings.useTokenNames && token) ? token?.data?.name : this.actor.name, token, token?.data.name, this.actor.name, ChatMessage.getSpeaker())
+  debug(" Show Item Card ", configSettings.useTokenNames,(configSettings.useTokenNames && token) ? token?.data?.name : this.actor.name, token, token?.data.name, this.actor.name)
   let theSound = configSettings.itemUseSound;
   if (this.type === "weapon") theSound = configSettings.weaponUseSound;
   else if (this.type === "spell") theSound = configSettings.spellUseSound;

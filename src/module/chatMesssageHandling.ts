@@ -9,6 +9,7 @@ import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
 import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow } from "./settings";
 import { createDamageList, getTraitMult, calculateDamage, getSelfTargetSet } from "./utils";
 import { config } from "process";
+import { setupSheetQol } from "./sheetQOL";
 
 export const MAESTRO_MODULE_NAME = "maestro";
 
@@ -41,23 +42,22 @@ export function mergeCardSoundPlayer(message, update, options, user) {
 }
 
 export function processcreateBetterRollMessage(message, options, user) {
-  let flags = message.data.flags["midi-qol"];
-  if (!flags?.id) return;
-  let workflow: BetterRollsWorkflow = BetterRollsWorkflow.get(flags.id);
-  debug("process better rolls card", flags?.id, message, workflow, workflow?.betterRollsHookId);
+
+  const flags = message.data.flags?.betterrolls5e;
+  if (!flags) return;
+  const uuid = `Actor.${flags.actorId}.OwnedItem.${flags.itemId}`;
+  let workflow: BetterRollsWorkflow = BetterRollsWorkflow.get(uuid);
+
   if (workflow) {
-    if (workflow.betterRollsHookId) 
-    //@ts-ignore - does not support 
-      Hooks.off("createChatMessage", workflow.betterRollsHookId);
     workflow.itemCardId = message.id;
     workflow.next(WORKFLOWSTATES.NONE);
   }
+  return true;
 }
 
 export let processpreCreateBetterRollsMessage = async (data: any, options:any, user: any) => {
   if (installedModules["betterrolls5e"] || !data.content?.startsWith('<div class="dnd5e red-full chat-card"')) return true;
   debug("process precratebetteerrollscard ", data, options, installedModules["betterrolls5e"], data.content?.startsWith('<div class="dnd5e red-full chat-card"') )
-
   const requestId = data.speaker.token;
   let html = $(data.content);
   const title = html.find(".item-name")[0]?.innerHTML;
@@ -66,14 +66,15 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
   let rollData = html.find("red-full");
 
   let itemId = html[0].attributes["data-item-id"];
+
   debug("better rolls ", rollData, rollDivs, itemId)
   if (!itemId) return true; // not an item roll.
  
   itemId = itemId.nodeValue;
+
   let itemRe = /[^(]\(([\d]*)[^)]*\)/
   let token: Token = canvas.tokens.get(data.speaker.token)
-  let actor: Actor5e = game.actors.tokens[data.speaker.token];
-  if (!actor) game.actors.tokens[data.speaker.token]?.actor;
+  let actor: Actor5e = token?.actor;
   if (!actor) actor = game.actors.get(data.speaker.actor);
   let item: Item5e = actor.items.get(itemId);
 
@@ -102,7 +103,6 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
   let isCritical = diceRoll >= criticalThreshold;
 
   let damageList = [];
-  if (debug) log("Better Rolls Chat card", title, itemLevel, attackTotal, damageStart, isCritical)
   // document.activeElement.blur();
   for (let i = damageStart; i < rollDivs.length; i++) {
     let child = rollDivs[i].children;
@@ -131,7 +131,7 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
   }
   BetterRollsWorkflow.removeWorkflow(item.uuid)
   const targets = (item?.data.data.target?.type === "self") ? await getSelfTargetSet(actor) : new Set(game.user.targets);
-  let workflow = new BetterRollsWorkflow(actor, item, token, data.speaker, targets, null);
+  let workflow = new BetterRollsWorkflow(actor, item, data.speaker, targets, null);
   workflow.isCritical = diceRoll >= criticalThreshold;
   workflow.isFumble = diceRoll === 1;
   workflow.attackTotal = attackTotal;
@@ -140,8 +140,7 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
   workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
   workflow.itemLevel = itemLevel;
   workflow.itemCardData = data;
-  setProperty(data, "flags.midi-qol.id", item.uuid)
-//  workflow.next(WORKFLOWSTATES.NONE);
+  // Workflow will be advanced when the better rolls card is displayed.
   return true;
 }
 
@@ -327,7 +326,7 @@ export let recalcCriticalDamage = (data, ...args) => {
     let actor: Actor5e = game.actors.tokens[data.speaker.token];
     if (!actor) game.actors.tokens[data.speaker.token]?.actor;
     if (!actor) actor = game.actors.get(data.speaker.actor);
-    let item: Item5e = actor.items.get((data.flags.dnd5e.roll.itemId));
+    let item: Item5e = actor?.items.get((data.flags.dnd5e.roll.itemId));
     if (!item) return true;
     if (data.flags.dnd5e.roll.critical) {
       //TODO look at item to get correct damage roll
