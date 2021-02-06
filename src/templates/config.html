@@ -7,7 +7,8 @@
 
     <div class="form-group">
       <label>{{localize "midi-qol.GMAutoFastForwardAttack.Name"}}</label>
-      <input type="checkbox" name="gmAutoFastForwardAttack" data-dtype="Boolean" {{checked configSettings.gmAutoFastForwardAttack}} />
+      <input type="checkbox" name="gmAutoFastForwardAttack" data-dtype="Boolean" {{checked
+        configSettings.gmAutoFastForwardAttack}} />
     </div>
 
     <div class="form-group">
@@ -23,9 +24,10 @@
 
     <div class="form-group">
       <label>{{localize "midi-qol.GMAutoFastForwardDamage.Name"}}</label>
-      <input type="checkbox" name="gmAutoFastForwardDamage" data-dtype="Boolean" {{checked configSettings.gmAutoFastForwardDamage}} />
+      <input type="checkbox" name="gmAutoFastForwardDamage" data-dtype="Boolean" {{checked
+        configSettings.gmAutoFastForwardDamage}} />
     </div>
-    
+
     <div class="form-group">
       <label>{{localize "midi-qol.gmRemoveButtons.Name"}}</label>
       <select name="gmRemoveButtons" data-dtype="String">
@@ -52,8 +54,8 @@
 
       <div class="form-group speedAbilityRolls">
         <label>{{localize "midi-qol.SpeedAbilityRolls.Name"}}</label>
-        <input type="checkbox" name="speedAbilityRolls" data-dtype="Boolean"
-          {{checked configSettings.speedAbilityRolls}} />
+        <input type="checkbox" name="speedAbilityRolls" data-dtype="Boolean" {{checked
+          configSettings.speedAbilityRolls}} />
       </div>
 
       {{localize "midi-qol.SpeedItemRolls.Blurb"}}
@@ -85,10 +87,10 @@
             <option value="{{val}}">{{label}}</option>
             {{/each}}
             {{/select}}
-          </select> 
+          </select>
           <label>{{localize "midi-qol.DisplayItems"}}</label>
           <a class="itemTypeListEdit" style="flex-shrink:3" data-action="edit" title="{{localize 'midi-qol.ItemList'}}"">
-            <i class="fas fa-edit"></i>
+            <i class=" fas fa-edit"></i>
           </a>
         </div>
       </div>
@@ -102,18 +104,12 @@
 
       <div class="form-group">
         <label>{{localize "midi-qol.MergeCardCondensed.Name"}}</label>
-        <input type="checkbox" name="mergeCardCondensed" data-dtype="Boolean"
-          {{checked configSettings.mergeCardCondensed}} />
+        <input type="checkbox" name="mergeCardCondensed" data-dtype="Boolean" {{checked
+          configSettings.mergeCardCondensed}} />
       </div>
       <div class="midi-qol-faint">{{localize "midi-qol.MergeCardCondensed.Hint"}}</div>
     </div>
     <div class="midi-qol-box">
-      <div class="form-group">
-        <label>{{localize "midi-qol.HideNPCNames.Name"}}</label>
-        <input type="String" name="hideNPCNames" value="{{configSettings.hideNPCNames}}" data-dtype="String" />
-      </div>
-      <div class="midi-qol-faint">{{localize "midi-qol.HideNPCNames.Hint"}}</div>
-
       <div class="form-group">
         <label>{{localize "midi-qol.UseTokenNames.Name"}}</label>
         <input type="checkbox" name="useTokenNames" data-dtype="Boolean" {{checked configSettings.useTokenNames}} />
@@ -222,9 +218,17 @@
 
         <div class="form-group">
           <label>{{localize "midi-qol.RollOtherDamage.Name"}}</label>
-          <input type="checkbox" name="rollOtherDamage" data-dtype="Boolean" {{checked configSettings.rollOtherDamage}} />
+          <input type="checkbox" name="rollOtherDamage" data-dtype="Boolean" {{checked
+            configSettings.rollOtherDamage}} />
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.RollOtherDamage.Hint"}}</div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.ConcentrationAutomation.Name"}}</label>
+          <input type="checkbox" name="concentrationAutomation" data-dtype="Boolean" {{checked
+            configSettings.concentrationAutomation}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.ConcentrationAutomation.Hint"}}</div>
 
         <div class="midi-qol-nobox">
           <div class="form-group">
@@ -308,8 +312,8 @@
           <div class="midi-qol-faint">{{localize "midi-qol.DamageImmunities.Hint"}}</div>
           <div class="form-group">
             <label>{{localize "midi-qol.AutoEffects.Name"}}</label>
-            <input type="checkbox" name="autoItemEffects" data-dtype="Boolean"
-              {{checked configSettings.autoItemEffects}} />
+            <input type="checkbox" name="autoItemEffects" data-dtype="Boolean" {{checked
+              configSettings.autoItemEffects}} />
           </div>
           <div class="midi-qol-faint">{{localize "midi-qol.AutoEffects.Hint"}}</div>
         </div>
@@ -317,8 +321,8 @@
 
         <div class="form-group customSounds">
           <label>{{localize "midi-qol.UseCustomSounds.Name"}}</label>
-          <input id="useCustomSounds" type="checkbox" name="useCustomSounds" data-dtype="Boolean"
-            {{checked configSettings.useCustomSounds}} />
+          <input id="useCustomSounds" type="checkbox" name="useCustomSounds" data-dtype="Boolean" {{checked
+            configSettings.useCustomSounds}} />
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.UseCustomSounds.Hint"}}</div>
 
@@ -416,8 +420,8 @@
 
         <div class="form-group allowUseMacro">
           <label>{{localize "midi-qol.AllowUseMacro.Name"}}</label>
-          <input id="allowUseMacro" type="checkbox" name="allowUseMacro" data-dtype="Boolean"
-            {{checked configSettings.allowUseMacro}} />
+          <input id="allowUseMacro" type="checkbox" name="allowUseMacro" data-dtype="Boolean" {{checked
+            configSettings.allowUseMacro}} />
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.AllowUseMacro.Hint"}}</div>
       </div>

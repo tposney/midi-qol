@@ -1,7 +1,8 @@
 import { warn, debug, error, i18n, log, MESSAGETYPES } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
 import {  configSettings, itemDeleteCheck, enableWorkflow, criticalDamage, autoFastForwardAbilityRolls } from "./settings";
-import { getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile } from "./utils";
+import { getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile } from "./utils";
+import { installedModules } from "./setupModules";
 
 export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, versatile: false}) {
   let workflow: Workflow = Workflow.getWorkflow(this.uuid);
@@ -39,7 +40,7 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
    if (dice3dActive && configSettings.mergeCard) {
     let whisperIds = null;
     const rollMode = game.settings.get("core", "rollMode");
-    if ((configSettings.hideRollDetails !== "none" && game.user.isGM) || rollMode === "blindroll") {
+    if ((["details", "all"].includes(configSettings.hideRollDetails) && game.user.isGM) || rollMode === "blindroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM")
     } else if (rollMode === "selfroll" || rollMode === "gmroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
@@ -178,18 +179,20 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   if (!enableWorkflow || createWorkflow === false) {
     return await wrapped({configureDialog:true, rollMode:null, createMessage:true});
   }
-  const shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
+  let shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
                           || (game.user.targets.size > 0) // there are some target selected
                           || (this.data.data.target?.type === "self") // self target
                           || (this.hasAreaTarget && configSettings.autoTarget) // area effectspell and we will auto target
                           || (configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type)) // rangetarget
                           || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
 
-  if (this.type === "spell") {
+  const needsConcentration = this.data.data.components?.concentration;
+  if (this.type === "spell" && shouldAllowRoll) {
     const midiFlags = this.actor.data.flags["midi-qol"];
     const needsVocal = this.data.data.components?.vocal;
     const needsSomatic = this.data.data.components?.somatic;
     const needsMaterial = this.data.data.components?.material;
+
 
     if (midiFlags?.fail?.spell?.all) {
       ui.notifications.warn("You are unable to cast the spell");
@@ -206,6 +209,24 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
     if (midiFlags?.fail?.spell?.material && needsMaterial) {
       ui.notifications.warn("You can't use the material component and the spell fails");
       return;
+    }
+
+    const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
+    if (needsConcentration && checkConcentration) {
+      const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
+      const concentrationCheck = this.actor.data.effects.find(i => i.label === concentrationName);
+
+      if (concentrationCheck) {
+        let d = await Dialog.confirm({
+          title: i18n("midi-qol.ActiveConcentrationSpell.Title"),
+          content: i18n("midi-qol.ActiveConcentrationSpell.Content"),
+          yes: async () => {
+            game.cub.removeCondition(concentrationName, [await getSelfTarget(this.actor)], {warn: false});
+          },
+          no: () => {shouldAllowRoll = false;}
+        });
+      }
+      if (!shouldAllowRoll) return; // user aborted spell
     }
   }
   if (!shouldAllowRoll) {
@@ -237,7 +258,37 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   if (this.type === "spell") {
     //TODO look to use returned data when available
     let spellStuff = result.content?.match(/.*data-spell-level="(.*)">/);
-    workflow.itemLevel = parseInt(spellStuff[1]) || this.data.data.level;;
+    workflow.itemLevel = parseInt(spellStuff[1]) || this.data.data.level;
+    if (needsConcentration) {
+      await this.actor.unsetFlag("midi-qol", "concentration-data");
+      if (installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation) {
+        let selfTarget = await getSelfTarget(this.actor);
+        const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
+        const itemDuration = this.data.data.duration;
+        // set the token as concentrating
+        await game.cub.addCondition(concentrationName, [selfTarget], { warn: false });
+
+        // Update the duration of the concentration effect - TODO remove it CUB supports a duration
+        if (workflow.hasDAE) {
+          const ae = duplicate(selfTarget.actor.data.effects.find(ae => ae.label === concentrationName));
+          if (ae) {
+            //@ts-ignore
+            const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.data._id));
+            const convertedDuration = workflow.dae.convertDuration(itemDuration, inCombat);
+            if (convertedDuration.type === "seconds") {
+              ae.duration.seconds = convertedDuration.seconds;
+              ae.duration.startTime = game.time.worldTime;
+            } else if (convertedDuration.type === "turns") {
+              ae.duration.rounds = convertedDuration.rounds;
+              ae.duration.turns = convertedDuration.turns;
+              ae.duration.startRound = game.combat?.round;
+              ae.duration.startTurn = game.combat?.turn;
+            }
+            selfTarget.actor.updateEmbeddedEntity("ActiveEffect", ae)
+          }
+        }
+      }
+    }
   }
   workflow.processAttackEventOptions(event);
   workflow.checkTargetAdvantage();
@@ -299,7 +350,7 @@ export async function showItemInfo() {
       actor: this.actor._id,
       token: this.actor.token,
       alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name,
-      // scene: canvas.scene.id
+      scene: canvas?.scene?.id
     },
     flags: {
       "core": {"canPopout": true}
@@ -329,7 +380,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = this.actor.isPC
   const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned)) 
                             || !configSettings.itemTypeList.includes(this.type);
-  const hasEffects = this.data.effects.find(ae=> !ae.transfer);
+  const hasEffects = workflow.hasDAE && this.data.effects.find(ae=> !ae.transfer);
   const templateData = {
     actor: this.actor,
     tokenId: token ? `${sceneId}.${token.id}` : null,
@@ -366,7 +417,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
       actor: this.actor,
       token: this.actor.token,
       alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name,
-      // scene: canvas.scene.id
+      scene: canvas?.scene?.id
     },
     flags: {
       "midi-qol": {
@@ -392,7 +443,8 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
 }
 
 export function selectTargets(scene, data, options) {
-  debug("select targets ", this._id, this.placeTemlateHoodId, scene, data)
+  debug("select targets ", this._id, scene, data)
+  this.templateId = data._id;
   let item = this.item;
   let targeting = configSettings.autoTarget;
   if (data.user !== game.user._id) {

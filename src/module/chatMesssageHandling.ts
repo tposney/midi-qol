@@ -7,7 +7,7 @@ import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
 import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow } from "./settings";
-import { createDamageList, getTraitMult, calculateDamage, getSelfTargetSet } from "./utils";
+import { createDamageList, getTraitMult, calculateDamage, getSelfTargetSet, getSelfTarget } from "./utils";
 import { config } from "process";
 import { setupSheetQol } from "./sheetQOL";
 
@@ -128,9 +128,12 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
     //@ts-ignore - entry[1] type unknown
     if (type === "unmatched") type = (Object.entries(CONFIG.DND5E.healingTypes).find(entry => typeString.includes(entry[1])) || ["unmatched"])[0];
     damageList.push({type, damage})
-  }
+  };
+
+  const selfTarget = await getSelfTarget(actor);
+
   BetterRollsWorkflow.removeWorkflow(item.uuid)
-  const targets = (item?.data.data.target?.type === "self") ? await getSelfTargetSet(actor) : new Set(game.user.targets);
+  const targets = (item?.data.data.target?.type === "self") ? new Set([selfTarget]) : new Set(game.user.targets);
   let workflow = new BetterRollsWorkflow(actor, item, data.speaker, targets, null);
   workflow.isCritical = diceRoll >= criticalThreshold;
   workflow.isFumble = diceRoll === 1;
@@ -140,6 +143,20 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
   workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
   workflow.itemLevel = itemLevel;
   workflow.itemCardData = data;
+  if (configSettings.concentrationAutomation) {
+    const needsConcentration = item.data.data.components?.concentration;
+    const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
+    if (needsConcentration && checkConcentration) {
+      const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
+      const concentrationCheck = item.actor.data.effects.find(i => i.label === concentrationName);
+      if (concentrationCheck) {
+        await game.cub.removeCondition(concentrationName, selfTarget, {warn: false});
+        // await item.actor.unsetFlag("midi-qol", "concentration-data");
+      }
+      if (needsConcentration)
+        await game.cub.addCondition(concentrationName, selfTarget)
+    }
+  }
   // Workflow will be advanced when the better rolls card is displayed.
   return true;
 }
@@ -287,13 +304,10 @@ export let hideStuffHandler = (message, html, data) => {
     ids.click(_onTargetSelect);
   }
 
-  let replacementName = configSettings.hideNPCNames;
-  if (!game.user.isGM && installedModules.get("combat-utility-belt") && game.settings.get("combat-utility-belt", "enableHideHostileNames")) {
-    replacementName = game.settings.get("combat-utility-belt", "hostileNameReplacement")
-  }
-  if (!game.user.isGM && replacementName?.length > 0) {
-    ids=html.find(".midi-qol-target-npc");
-    ids.text(replacementName);
+  if (game.user.isGM) {
+    html.find(".midi-qol-target-npc-Player").hide();
+  } else {
+    html.find(".midi-qol-target-npc-GM").hide();
   }
   if (game.user.isGM) {
     //@ts-ignore
@@ -305,10 +319,17 @@ export let hideStuffHandler = (message, html, data) => {
     (message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails === "all")
      || message.data.blind) {
     html.find(".dice-roll").replaceWith(i18n("midi-qol.DiceRolled"));
-  } else if (message.user?.isGM && !game.user.isGM && ["details"].includes(configSettings.hideRollDetails)) {
+  } else if (message.user?.isGM && !game.user.isGM && ["details", "d20Only"].includes(configSettings.hideRollDetails)) {
     html.find(".dice-tooltip").remove();
     html.find(".dice-formula").remove();
+  } 
+  if (message.user?.isGM && !game.user.isGM && ["d20Only"].includes(configSettings.hideRollDetails)) {
+    const d20AttackRoll = getProperty(message.data.flags, "midi-qol.d20AttackRoll");
+    if (d20AttackRoll) {
+      html.find(".midi-qol-attack-roll .dice-total").text(`(d20) ${d20AttackRoll}`);
+    }
   }
+
   if (configSettings.autoCheckHit === "whisper" || message.data.blind) {
     $(html).find(".midi-qol-hits-display").remove()
   }

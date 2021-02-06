@@ -13,9 +13,9 @@
 // Import TypeScript modules
 import { registerSettings, fetchParams, configSettings } from './module/settings';
 import { preloadTemplates } from './module/preloadTemplates';
-import { setupModules } from './module/setupModules';
+import { installedModules, setupModules } from './module/setupModules';
 import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY } from './module/patching';
-import { initHooks } from './module/Hooks';
+import { initHooks, readyHooks } from './module/Hooks';
 import { initGMActionSetup } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
@@ -115,9 +115,13 @@ Hooks.once('ready', function() {
 
   // Do anything once the module is ready
   actorAbilityRollPatching();
-  if(configSettings.hideNPCNames && game.user.isGM) {
-    ui.notifications.warn("midi-qol - hide pc names deprecated please use COMBAT UTILITY BELT")
+
+  if (game.user.isGM && !installedModules.get("dae")) {
+    ui.notifications.error("DAE needs to be installed and at least version 0.2.43 or many things will nto work");
   }
+  checkCubInstalled();
+  checkConcentrationSettings();
+  readyHooks();
 });
 
 // Add any additional hooks if necessary
@@ -140,6 +144,65 @@ function setupMinorQolCompatibility() {
     getTraitMult: getTraitMult,
     doCritModify: doCritModify,
     midiFlags
+  }
+}
+
+export function checkCubInstalled() {
+  if (game.user?.isGM && configSettings.concentrationAutomation && !installedModules.get("combat-utility-belt")) {
+    let d = new Dialog({
+      // localize this text
+      title: i18n("dae.confirm"),
+      content: `<p>You have enabled midi-qol concentration automation. This requires that you install and activate Combat Utility Belt as well. Concentration Automation will be disalbed</p>`,
+      buttons: {
+          one: {
+              icon: '<i class="fas fa-check"></i>',
+              label: "OK",
+              callback: ()=>{
+                configSettings.concentrationAutomation = false;
+              }
+          }
+      },
+      default: "one"
+    })
+    d.render(true);
+  }
+}
+
+export function checkConcentrationSettings() {
+  const needToUpdateCubSettings = installedModules.get("combat-utility-belt") && (
+    game.settings.get("combat-utility-belt", "enableConcentrator")
+    // game.settings.get("combat-utility-belt", "autoConcentrate") ||
+    // game.settings.get("combat-utility-belt", "concentratorPromptPlayer")
+    // game.settings.get("combat-utility-belt", "concentratorOutputToChat")
+  );
+  if (game.user?.isGM && configSettings.concentrationAutomation && needToUpdateCubSettings) {
+    let d = new Dialog({
+    // localize this text
+    title: i18n("dae.confirm"),
+    content: `<p>You have enabled midi-qol concentration automation.</p><p>This requires Combat Utility Belt Concentration to be disabled.</p><p>Choose which concentration automation to disable</p>`,
+    buttons: {
+        one: {
+            icon: '<i class="fas fa-cross"></i>',
+            label: "Disable CUB",
+            callback: ()=>{
+              game.settings.set("combat-utility-belt", "enableConcentrator", false)
+              // game.settings.set("combat-utility-belt", "autoConcentrate", false);
+              // game.settings.set("combat-utility-belt", "concentratorPromptPlayer", false);
+              // game.settings.set("combat-utility-belt", "concentratorOutputToChat", false);
+            }
+        },
+        two: {
+          icon: '<i class="fas fa-cross"></i>',
+          label: "Disable Midi",
+          callback: ()=>{
+            configSettings.concentrationAutomation = false;
+            game.settings.set("midi-qol", "ConfigSettings", configSettings)
+          }
+        }
+      },
+      default: "one"
+    });
+    d.render(true);
   }
 }
 
@@ -187,11 +250,14 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.critical..all`);
   midiFlags.push(`flags.midi-qol.grants.noCritical.all`);
-  midiFlags.push(`flags.midi-qol.maxroll..all`);
+  midiFlags.push(`flags.midi-qol.maxroll.all`);
   midiFlags.push(`flags.midi-qol.grants.maxRoll.all`);
 
 
-  const attackTypes = ["rwa","mwak","rsak", "msak"];
+  let attackTypes = ["rwa","mwak","rsak", "msak"];
+  if (game.system.id === "sw5e")
+    attackTypes = ["rwa","mwak","rpak", "mpak"];
+
   attackTypes.forEach(at => {
     midiFlags.push(`flags.midi-qol.advantage.attack.${at}`);
     midiFlags.push(`flags.midi-qol.disadvantage.attack.${at}`);
@@ -233,15 +299,17 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.advantage.deathSave`);
   midiFlags.push(`flags.midi-qol.disadvantage.deathSave`);
 
-  Object.values(CONFIG.DND5E.spellComponents).forEach((comp: string) => {
-    midiFlags.push(`flags.midi-qol.fail.spell.${comp.toLowerCase()}`);  
-  });
-  midiFlags.push(`flags.midi-qol.DR.all`);
-  midiFlags.push(`flags.midi-qol.DR.non-magical`);
-  Object.keys(CONFIG.DND5E.damageTypes).forEach(dt => {
-    midiFlags.push(`flags.midi-qol.DR.${dt}`);  
-  })
- 
+  if (game.system.id === "dnd5e") {
+    Object.values(CONFIG.DND5E.spellComponents).forEach((comp: string) => {
+      midiFlags.push(`flags.midi-qol.fail.spell.${comp.toLowerCase()}`);  
+    });
+    midiFlags.push(`flags.midi-qol.DR.all`);
+    midiFlags.push(`flags.midi-qol.DR.non-magical`);
+    Object.keys(CONFIG.DND5E.damageTypes).forEach(dt => {
+      midiFlags.push(`flags.midi-qol.DR.${dt}`);  
+    })
+  }
+  
   /*
   midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);

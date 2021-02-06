@@ -1,4 +1,4 @@
-import { debug, setDebugLevel, warn, i18n } from "../midi-qol";
+import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, checkCubInstalled } from "../midi-qol";
 import { ConfigPanel} from "./apps/ConfigPanel"
 
 export var itemRollButtons: boolean;
@@ -51,7 +51,6 @@ export var configSettings = {
   preRollChecks: false,
   mergeCard: false,
   mergeCardCondensed: false,
-  hideNPCNames: "",
   useTokenNames: false,
   requireTargets: false,
   fumbleSound: "",
@@ -68,7 +67,8 @@ export var configSettings = {
   allowUseMacro: false,
   rollOtherDamage: false,
   removeButtons: "all",
-  gmRemoveButtons: "all"
+  gmRemoveButtons: "all", 
+  concentrationAutomation: false
 };
 
 export let fetchParams = (silent = false) => {
@@ -105,6 +105,10 @@ export let fetchParams = (silent = false) => {
   dragDropTargeting = game.settings.get("midi-qol", "DragDropTarget")
 
   setDebugLevel(debugText);
+  if (configSettings.concentrationAutomation) {
+    checkCubInstalled();
+    checkConcentrationSettings();
+  }
 }
 
 let getParams = () => {

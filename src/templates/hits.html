@@ -8,11 +8,8 @@
       <div>
         {{hit.hitString}}
       </div>
-      {{#if isPC}}
-      <div class="midi-qol-target-name" id={{hit.target.id}}> {{hit.target.name}}</div>
-      {{else}}
-      <div class="midi-qol-target-npc midi-qol-target-name" id={{hit.target.id}}> {{hit.target.name}}</div>
-      {{/if}}
+      <div class="midi-qol-target-npc-GM midi-qol-target-name" id={{hit.target.id}}> {{hit.gmName}}</div>
+      <div class="midi-qol-target-npc-Player midi-qol-target-name" id={{hit.target.id}}> {{hit.playerName}}</div>
       <div><img src="{{hit.img}}" width="30" height="30" style="border:0px" /></div>
     </div>
     {{/each}}

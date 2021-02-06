@@ -3,11 +3,8 @@
   <div class="midi-qol-bigger-text"><span>{{noDamage}}</span></div>
     {{#each saves as |save iid|}}
     <div class="midi-qol-flex-container">
-      {{#if isPC}}
-      <div class="midi-qol-target-name" id={{save.id}}> {{save.name}}</div>
-      {{else}}
-      <div class="midi-qol-target-npc midi-qol-target-name" id={{save.id}}> {{save.name}}</div>
-      {{/if}}
+      <div class="midi-qol-target-npc-GM midi-qol-target-name-GM" id={{save.id}}> {{save.gmName}}</div>
+      <div class="midi-qol-target-npc-Player midi-qol-target-name-Player" id={{save.id}}> {{save.playerName}}</div>
       <div>
         {{save.saveString}}
         {{save.rollTotal}}

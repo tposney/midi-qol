@@ -1,6 +1,50 @@
+0.3.63
+* A couple of fixes for sw5e.
+* Updated ja.json thanks @louge
+* A new option for hiding DM attck rolls (only works with the merged card). "Show Attack D20", players will only see the d20 result, not the roll total, so they get a feel of how good the monster is. This simulates what the players could see at the table (i.e. see the dice roll) but not know what the total is. Otherwise this option behaves the same as Hide Rol Fomula.
+* DamageOnlyWorflow will now display all of the targets as normal hit targets so you can see who took damage.
+* Support (I think) all of the CUB name replacement options in midi-qol. Names changed on hit/save cards remain changed once the card is placed no matter what you change the setings to. midi-qol uses the CUB options to do name hiding. Midi hideNPCNames removed.
+* Fix for data.abilities.str/dex/.../.dc CUSTOM not updating display of spell DCs.
+* Initial support for concentation automation. The is dependent on DAE and Combat utility belt being installed and or the right version and requires CUB concnetration automation to be disabled.
+Features: (see the full change log for more details).
+  * Enabled via config setting (near auto check saves)
+  * Get user confirmation before casting a second concentration spell while the first is still active. First concentration is removed if you proceed.
+  * Taking damage causes concentration check, failure removes concentration.
+  * If the spell that caused concentration expires concentration is removed
+  * Concentration can be removed from the token effects HUD and will work as expected.
+  * If concentration is removed any effects due to the spell on any tokens (self + targets) are removed.
+  * If concentration is removed any measured templates associated with the spell are removed.
+  * No changes are required to any spells/effects for this to work, it keys off the concentration attribute in the spell details.
+  * Expect bugs....
+
+* Some more detail on concentation automation:
+  * Caveats:
+  * CUB concentration automation is NOT comaptible with midi-qol concentration automation. Midi-checks the settings and will disable CUB concentrator if you accept.
+  * Midi-qol REQUIRES that CUB be installed and the "Concentrating" condition be setup for midi-qol concentation automation to work. Midi shows a dialog if this is not the case. 
+  * Midi will use the CUB concentrating condition when applying concentration (so you can add extra effects if you like, change the name/icon or whatever).
+  * Midi-qol concentration automation will add an item to your world items, "Concnentration Check - Midi QOL". It is required for concentration automation and will be recreated as required each time you start the world if midi-qol concentration automation is enabled.
+* DAE 0.2.43 is REQUIRED for this version, a notification will be shown and concentration and auto application of effects wont work if DAE not installed. So upgrade/install DAE if you use those features.
+* A farily recent version of CUB must also be installed and active.
+
+* Features:
+  * Enabled via config setting (near auto check saves)
+  * If you cast a spell that requires concentration when you already have concentration, the caster is asked to confirm before casting the new spell and the previous concentration is removed.
+  * If a token takes damage and doesn't save concentration is removed. The save will be rolled as a "Concentration Check" item and your settings for token saves will be used, i.e. auto roll/LMRTFY etc.
+  * If the spell that caused concentration expires concentration is removed
+  * Concentration can be removed from the token effects HUD and will work as expected gme.cub.removeCondition("Concnetrating", tokens) will also trigger the rest of concentration remvoal.
+  * If concentration is removed any effects due to the spell on any tokens (self + targets) are removed.
+  * If concentration is removed any measured templates associated with the spell are removed.
+  * No changes are required to any spells/effects for this to work, it keys off the concentration attribute in the spell details.
+
+* Note this is a first implementation and a) there will be bugs and b) it is quite slow and needs substanital optimisation and c) there will be bugs.
+* Better rolls support is limited (and possibly buggy). There is no query for existing concentration, existing concentration is simply removed.
+* For the name replacement on midi hit/save cards I have implemented what I guess the funcitonality to be. But I have created the behaviour from scratch so might have missed something.
+
 0.3.62
 * Fix bug for over zealously removing damage buttons. 
-* Fix for damage only workflow so that useOther defaults to true
+* Fix for damage only workflow so that useOther defaults to true.
+* Fix for BetterRolls self targeted spells not working.
+* Fix for BetterRolls not checking isAttacked/isDamaged expiry
 0.3.61
 * Fix bug not displaying tool item details.
 * Fix bug for over zealously removing damage buttons.

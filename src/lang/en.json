@@ -49,7 +49,7 @@
     "midi-qol.fumbles": "badly misses",
     "midi-qol.hits": "hits",
     "midi-qol.misses": "misses",
-    "midi-qol.save-success": " saves with ",
+    "midi-qol.save-success": " succeeds with ",
     "midi-qol.save-failure": " fails with ",
     "midi-qol.damage-applied": "Hit Points Updated",
     "midi-qol.noItemNamed": "Your selected token does not have an item named",
@@ -101,6 +101,8 @@
     "midi-qol.Save": "Save Settings",
     "midi-qol.saving-throws": "Saving Throws",
     "midi-qol.saving-throw": "Saving Throw",
+    "midi-qol.ability-check": "Ability Check",
+    "midi-qol.ability-checks": "Ability Checks",
     "midi-qol.noAttackRoll": "You must roll the attack before rolling the damage",
     "midi-qol.config": "Midi QoL config",
     "midi-qol.Hint": "Configure the various workflow settings for midi-qol. Be warned there are lots of them",
@@ -134,7 +136,7 @@
     "midi-qol.playerRollSavesOptionsReduced": {"none": "None",  "letme": "Let Me Roll That For You", "chat": "Chat Message"},
     "midi-qol.AutoRemoveTargetsOptions": {"none": "Never", "dead": "untarget dead after roll", "allGM": "untarget dead and all GM", "all": "untarget all at end of turn"},
     "midi-qol.ColoredBordersOptions": {"none": "None", "borders": "Borders Only", "borderNamesText": "Border + Name Text", "borderNamesBackground": "Border + Name Background"},
-    "midi-qol.hideRollDetailsOptions": {"none": "None", "details": "Roll Formula", "all": "Entire Roll"},
+    "midi-qol.hideRollDetailsOptions": {"none": "None", "details": "Roll Formula", "d20Only": "Show attack D20", "all": "Entire Roll"},
     "midi-qol.potion": "Potion",
     "midi-qol.HideRollDetails.Name": "Hide Roll Details",
     "midi-qol.HideRollDetails.Hint": "Choose how much of GM rolls to hide from players. Roll Details + DSN means the players will see random DSN dice so they cannot work out monster plusses from the DSN dice",
@@ -170,5 +172,9 @@
     "midi-qol.ApplyEffects": "Apply Active Effects",
     "midi-qol.spell-damage": "Spell Damage",
     "midi-qol.RemoveButtons.Name": "Remove chat card buttons after roll",
-    "midi-qol.gmRemoveButtons.Name": "Remove chat card buttons after roll"
+    "midi-qol.gmRemoveButtons.Name": "Remove chat card buttons after roll",
+    "midi-qol.ActiveConcentrationSpell.Title": "Active Concentration Spell",
+    "midi-qol.ActiveConcentrationSpell.Content": "You are already concentrating on a spell. End current spell and continue casting?",
+    "midi-qol.ConcentrationAutomation.Name": "Enable Concentration Automation",
+    "midi-qol.ConcentrationAutomation.Hint": "If enabled will handle concenration management via midi-qol. Will disable CUB concentration management"
 }

@@ -285,10 +285,10 @@ export let getSaveMultiplierForItem = item => {
     return 0.5;
   }
   //  Think about this. if (checkSavesText true && item.hasSave) return 0; // A save is specified but the half-damage is not specified.
-  return 1;
+  return 0;
   };
 
-export function requestPCSave(ability, player, actorId, advantage, flavor, dc, requestId) {
+export function requestPCSave(ability, rollType, player, actorId, advantage, flavor, dc, requestId) {
   const playerLetme = !player?.isGM && ["letme", "letmeQuery"].includes(configSettings.playerRollSaves);
   const gmLetme  = player.isGM && ["letme", "letmeQuery"].includes(configSettings.rollNPCSaves);
   if (player && installedModules.get("lmrtfy") && (playerLetme || gmLetme)) {
@@ -304,11 +304,14 @@ export function requestPCSave(ability, player, actorId, advantage, flavor, dc, r
     if (player.isGM && configSettings.autoCheckSaves !== "allShow") {
       mode = "blindroll";
     }
+    let message = `${configSettings.displaySaveDC ? "DC " + dc : ""} ${i18n("midi-qol.saving-throw")} ${flavor}`;
+    if (rollType === "abil")
+      message = `${configSettings.displaySaveDC ? "DC " + dc : ""} ${i18n("midi-qol.ability-check")} ${flavor}`;
     const socketData = {
       user: player.id,
       actors: [actorId],
-      abilities: [],
-      saves: [ability],
+      abilities: rollType === "abil" ? [ability] : [],
+      saves: rollType !== "abil" ? [ability] : [],
       skills: [],
       advantage: player.isGM ? 2 : advantage,
       mode,
@@ -490,4 +493,28 @@ export function getRemoveDamageButtons() {
   return game.user.isGM ? 
     ["all", "damage"].includes(configSettings.gmRemoveButtons) : 
     ["all", "damage"].includes(configSettings.removeButtons);
+}
+
+
+export function getTokenPlayerName(token: Token) {
+  if (!installedModules.get("combat-utility-belt")) return token.name;
+  if (!game.settings.get("combat-utility-belt", "enableHideNPCNames")) return token.name;
+  if (getProperty(token.actor.data.flags, "combat-utility-belt.enableHideName"))
+    return getProperty(token.actor.data.flags, "combat-utility-belt.hideNameReplacement")
+  //@ts-ignore hasPlayerOwner not defined.
+  if (token.actor.hasPlayerOwner) return token.name;
+    switch (token.data.disposition) {
+      case -1:
+        if (game.settings.get("combat-utility-belt", "enableHideHostileNames")) 
+          return game.settings.get("combat-utility-belt", "hostileNameReplacement")
+        break;
+      case 0:
+        if (game.settings.get("combat-utility-belt", "enableHideNeutralNames")) 
+          return game.settings.get("combat-utility-belt", "neutralNameReplacement")
+      case 1:
+        if (game.settings.get("combat-utility-belt", "enableHideFriendlyNames")) 
+        return game.settings.get("combat-utility-belt", "friendlyNameReplacement")
+      default: 
+    }
+    return token.name;
 }
