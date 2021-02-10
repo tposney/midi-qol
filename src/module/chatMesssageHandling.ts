@@ -445,8 +445,8 @@ export let chatDamageButtons = (message, html, data) => {
 
 export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, tag="damage",toMatch=".dice-total") {
   debug("addChatDamageButtons", totalDamage, damageList, html, item, toMatch, $(html).find(toMatch))
-  const btnContainer = $('<span class="dmgBtn-container-mqol" style="position:absolute; right:0; bottom:1px;"></span>');
-  let btnStyling = "width: 22px; height:22px; background-color: #ffffff; font-size:10px;line-height:1px";
+  const btnContainer = $('<span class="dmgBtn-container-mqol" style="position:relative; right:0; bottom:1px;"></span>');
+  let btnStyling = "width: 20%; margin-top: 5%; height: 90%; background-color: #ffffff; font-size:14px;line-height:1px";
   const fullDamageButton = $(`<button class="dice-total-full-${tag}-button" style="${btnStyling}"><i class="fas fa-user-minus" title="Click to apply full damage to selected token(s)."></i></button>`);
   const halfDamageButton = $(`<button class="dice-total-half-${tag}-button" style="${btnStyling}"><i class="fas fa-user-shield" title="Click to apply half damage to selected token(s)."></i></button>`);
   const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button" style="${btnStyling}"><i class="fas fa-user-injured" title="Click to apply double damage to selected token(s)."></i></button>`);

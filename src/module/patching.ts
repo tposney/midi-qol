@@ -194,9 +194,11 @@ function procAutoFail(actor, rollType, abilityId) {
 function procAutoFailSkill(actor, skillId) {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const fail = midiFlags.fail ?? {};
+  console.error("skill roll ", fail, skillId)
   if (fail.skill || fail.all) {
-    const rollFlags = (fail.skill && fail.skill[skillId]) ?? {};
-    const autoFail = fail.all || fail.skill.all || rollFlags[skillId];
+    const rollFlags = (fail.skill && fail.skill[skillId]) || false;
+    const autoFail = fail.all || fail.skill.all || rollFlags;
+    console.error("returning autofail ", autoFail, rollFlags)
     return autoFail;
   }
   return false;

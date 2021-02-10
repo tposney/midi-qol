@@ -6,12 +6,12 @@ import { configSettings, dragDropTargeting } from "./settings";
 import { installedModules } from "./setupModules";
 
 const concentrationCheckItemName = "Concentration Check - Midi QOL";
-const concentrationCheckItemDisplayName = "Concentration Check";
+export var concentrationCheckItemDisplayName = "Concentration Check";
 
 
 export let readyHooks = async () => {
   //  const item = game.items.getName("Concentration Check")
-
+  concentrationCheckItemDisplayName = i18n("midi-qol.concentrationCheckName");
 
   if (installedModules.get("combat-utility-belt")) {
     Hooks.on("preUpdateActor", (actor, update, diff) => {
@@ -22,20 +22,25 @@ export let readyHooks = async () => {
       if (!game.cub?.hasCondition(concentrationName, actor)) return true;
       const hpDiff = actor.data.data.attributes.hp.value - hpUpdate;
       if (hpDiff <= 0) return true;
-      Hooks.once("updateActor", async () => {
-        const item = game.items.getName(concentrationCheckItemName);
-        item.data.data.name = concentrationCheckItemDisplayName;
-        // actor took damage and is concentrating....
-        const saveDC = Math.max(10, Math.floor(hpDiff/2));
-        const saveTargets = game.user.targets;
-        game.user.targets = await getSelfTargetSet(actor);
-        const ownedItem = Item.createOwned(item.data, actor)
-        ownedItem.data.data.save.dc = saveDC;
-        try {
-          //@ts-ignore
-          ownedItem.roll({showFullCard:false, createWorkflow:true, versatile:false, configureDialog:false})
-        } finally {
-          game.user.targets = saveTargets;
+      Hooks.once("updateActor", async (updatedActor, ...args) => {
+        if (updatedActor.data.data.attributes.hp.value === 0) {
+          await game.cub.removeCondition(concentrationName, updatedActor, {warn: false})
+        } else {
+          const item = game.items.getName(concentrationCheckItemName);
+          const itemData = duplicate(item.data);
+          itemData.name = concentrationCheckItemDisplayName;
+          // actor took damage and is concentrating....
+          const saveDC = Math.max(10, Math.floor(hpDiff/2));
+          const saveTargets = game.user.targets;
+          game.user.targets = await getSelfTargetSet(actor);
+          const ownedItem = Item.createOwned(itemData, actor)
+          ownedItem.data.data.save.dc = saveDC;
+          try {
+            //@ts-ignore
+            ownedItem.roll({showFullCard:false, createWorkflow:true, versatile:false, configureDialog:false})
+          } finally {
+            game.user.targets = saveTargets;
+          }
         }
       })
       return true;
@@ -48,18 +53,17 @@ export let readyHooks = async () => {
       const token = canvas.tokens.get(tokenData._id);
       const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
       if (!game.cub?.hasCondition(concentrationName, token)) return true;
- 
-      const hpDiff = token.actor.data.data.attributes.hp.value - hpUpdate;
+       const hpDiff = token.actor.data.data.attributes.hp.value - hpUpdate;
       if (hpDiff <= 0) return true;
-      Hooks.once("updateToken", async () => {
+      Hooks.once("updateToken", async (scene, updatedTokenData, update) => {
         const item = game.items.getName(concentrationCheckItemName);
-        item.data.data.name = concentrationCheckItemDisplayName;
+        const itemData = duplicate(item.data);
+        itemData.name = concentrationCheckItemDisplayName;
         // actor took damage and is concentrating....
         const saveDC = Math.max(10, Math.floor(hpDiff/2));
         const saveTargets = game.user.targets;
         game.user.targets = new Set([token]);
-
-        const ownedItem = Item.createOwned(item.data, token.actor)
+        const ownedItem = Item.createOwned(itemData, token.actor)
         ownedItem.data.data.save.dc = saveDC;
         try {
           //@ts-ignore
@@ -171,7 +175,7 @@ export let initHooks = () => {
 }
 
 const itemJSONData = {
-  "_id": "yoMNjpJyjx7kIfiq",
+  "_id": "GtxZ0ytuyom2EKgY",
   "name": "Concentration Check - Midi QOL",
   "type": "weapon",
   "data": {
@@ -278,17 +282,17 @@ const itemJSONData = {
     "itemacro": {
       "macro": {
         "_data": {
-          "name": "Concentration Check",
+          "name": "Concentration Check - Midi QOL",
           "type": "script",
           "scope": "global",
-          "command": "if (args[0].failedSaves.length === 0) return;\nconst failed = canvas.tokens.get(args[0].failedSaves[0]._id);\ngame.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), failed, {warn: false});",
+          "command": "for (let targetData of args[0].targets) {\n let target = canvas.tokens.get(targetData._id);\n if (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id))\ngame.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), target,  {warn: false});\n}",
           "author": "devnIbfBHb74U9Zv"
         },
         "data": {
-          "name": "Concentration Check",
+          "name": "Concentration Check - Midi QOL",
           "type": "script",
           "scope": "global",
-          "command": "if (args[0].failedSaves.length === 0) return;\nconst failed = canvas.tokens.get(args[0].failedSaves[0]._id);\ngame.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), failed,  {warn: false});",
+          "command": "for (let targetData of args[0].targets) {\n let target = canvas.tokens.get(targetData._id);\n if (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id))\ngame.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), target,  {warn: false});\n}",
           "author": "devnIbfBHb74U9Zv"
         },
         "options": {},
@@ -301,8 +305,22 @@ const itemJSONData = {
       "system": "dnd5e",
       "coreVersion": "0.7.9",
       "systemVersion": "1.2.4"
+    },
+    "magicitems": {
+      "enabled": false,
+      "equipped": false,
+      "attuned": false,
+      "charges": "0",
+      "chargeType": "c1",
+      "destroy": false,
+      "destroyFlavorText": "reaches 0 charges: it crumbles into ashes and is destroyed.",
+      "rechargeable": false,
+      "recharge": "0",
+      "rechargeType": "t1",
+      "rechargeUnit": "r1",
+      "sorting": "l"
     }
   },
-  "img": "icons/svg/mystery-man.svg",
+  "img": "modules/combat-utility-belt/icons/concentrating.svg",
   "effects": []
-};
+}

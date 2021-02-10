@@ -89,6 +89,7 @@ export class Workflow {
   noAutoDamage: boolean; // override damage roll for damage rolls
 
   saves: Set<Token>;
+  superSaveers: Set<Token>;
   failedSaves: Set<Token>
   advantageSaves : Set<Token>;
   saveRequests: any;
@@ -110,8 +111,8 @@ export class Workflow {
     return Workflow._workflows[id];
   }
 
-  get isBetterRollsWorkflow() {return false};
-  
+  get workflowType() {return this.__proto__.constructor.name};
+
   get hasDAE() {
     if (this._hasDAE === undefined) {
       this._hasDAE = installedModules.get("dae") && (this.item?.effects?.entries.some(ef => ef.data.transfer === false));
@@ -277,6 +278,7 @@ export class Workflow {
     if (this.speaker.scene) this.speaker.scene = canvas?.scene?.id;
     this.targets = targets; 
     this.saves = new Set();
+    this.superSavers = new Set();
     this.failedSaves = new Set(this.targets)
     this.hitTargets = new Set(this.targets);
     this.isCritical = false;
@@ -586,8 +588,10 @@ export class Workflow {
         else this.applicationTargets = this.targets;
         if (this.hasDAE) {
           this.dae.doEffects(this.item, true, this.applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId})
-          this.removeEffectsButton();
         }
+        if (configSettings.autoItemEffects || this.workflowType !== "Workflow")
+          this.removeEffectsButton();
+
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
       case WORKFLOWSTATES.ROLLFINISHED:
@@ -613,10 +617,14 @@ export class Workflow {
             let failedSaves = [];
             let hitTargets = [];
             let saves = [];
+            let superSavers = [];
             for (let target of this.targets) targets.push(target.data);
             for (let save of this.saves) saves.push(save.data);
             for (let hit of this.hitTargets) hitTargets.push(hit.data);
             for (let failed of this.failedSaves) failedSaves.push(failed.data);
+            for (let save of this.superSavers) superSavers.push(save.data);
+
+
             const macroData = {
               actor: this.actor.data,
               tokenId: this.tokenId,
@@ -624,6 +632,7 @@ export class Workflow {
               targets,
               hitTargets,
               saves,
+              superSavers,
               failedSaves,
               damageRoll: this.damageRoll,
               attackRoll: this.attackRoll,
@@ -639,8 +648,7 @@ export class Workflow {
               otherDamageDetail: this.otherDamageDetail,
               otherDamageList: this.otherDamageList,
               rollOptions: this.rollOptions,
-              event: this.event,
-
+              event: this.event
             };
             warn("macro data ", macroData)
             //@ts-ignore -uses furnace macros which support arguments
@@ -816,7 +824,7 @@ export class Workflow {
     let chatMessage: ChatMessage = game.messages.get(this.itemCardId);
     //@ts-ignore content not definted 
     let content = chatMessage && duplicate(chatMessage.data.content)
-    if (getRemoveDamageButtons()) {
+    if (getRemoveDamageButtons() || this.workflowType !== "Workflow") {
       const versatileRe = /<button data-action="versatile">[^<]*<\/button>/
       const damageRe = /<button data-action="damage">[^<]*<\/button>/
       const formulaRe = /<button data-action="formula">[^<]*<\/button>/
@@ -895,7 +903,7 @@ export class Workflow {
       var searchString;
       var replaceString;
       if (!!!game.dice3d?.messageHookDisabled) this.hideTags.push(".midi-qol-hits-display")
-      switch (this.__proto__.constructor.name) {
+      switch (this.workflowType) {
         case "BetterRollsWorkflow":
           searchString =  '<footer class="card-footer">';
           replaceString = `<div class="midi-qol-hits-display">${hitContent}</div><footer class="card-footer">`;
@@ -1155,6 +1163,8 @@ export class Workflow {
       if (!results[i]) error("Token ", target, "could not roll save/check assuming 0") 
       let rollTotal = results[i]?.total || 0;
       let saved = rollTotal >= rollDC;
+      if (this.checkSuperSaver(target.actor, this.item.data.data.save.ability)) 
+        this.superSavers.add(target);
       if (rollTotal >= rollDC) this.saves.add(target);
       else this.failedSaves.add(target);
 
@@ -1206,6 +1216,15 @@ export class Workflow {
       delete this.saveTimeouts[requestId];
     }      
     return true;
+  }
+
+  checkSuperSaver(actor, ability:string) {
+    // TODO workout what this looks like
+    const flags = getProperty(actor.data.flags, "midi-qol.superSaver");
+    if (!flags) return false;
+    if (flags?.all) return true;
+    if (getProperty(flags, `${ability}`)) return true;
+    return false;
   }
 
   processBetterRollsChatCard (message, html, data) {
@@ -1339,6 +1358,7 @@ export class DamageOnlyWorkflow extends Workflow {
     return this;
   }
 
+  get workflowType() {return this.__proto__.constructor.name};
   damageFlavor() { 
     if (this.useOther && this.flavor) return this.flavor;
     else return super.damageFlavor();
@@ -1350,6 +1370,7 @@ export class DamageOnlyWorkflow extends Workflow {
     // let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===this.currentState)[0];
     switch(newState) {
       case WORKFLOWSTATES.NONE:
+        this.effectsAlreadyExpired = [];
         if (this.itemCardId === "new" && this.itemData) { // create a new chat card for the item
           this.createCount += 1;
           //@ts-ignore
@@ -1380,7 +1401,8 @@ export class DamageOnlyWorkflow extends Workflow {
           await this.displayDamageRoll(false, configSettings.mergeCard && this.itemCardId, {useOther: this.useOther})
         } else this.damageRoll.toMessage({flavor: this.flavor});
         this.hitTargets = new Set(this.targets);
-        this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, null, new Set(), this.damageList)
+        this.applicationTargets = new Set(this.targets);
+        this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, null, new Set(), {existingDamage: this.damageList, superSavers: new Set()})
         return super._next(WORKFLOWSTATES.ROLLFINISHED);
 
       default: return super.next(newState);
@@ -1393,6 +1415,8 @@ export class TrapWorkflow extends Workflow {
   trapSound: {playlist: string, sound: string};
   trapCenter: {x: number, y: number};
   saveTargets: any;
+
+  get isTrapWorkflow() { return true};
 
   constructor(actor: Actor5e, item: Item5e, targets: [Token], trapCenter: {x: number, y: number} = undefined, trapSound: {playlist: string , sound: string} = undefined,  event: any = null) {
     super(actor, item, ChatMessage.getSpeaker(actor), new Set(targets), event);
@@ -1411,6 +1435,7 @@ export class TrapWorkflow extends Workflow {
     warn("attack workflow.next ", state, this._id, this)
     switch (newState) {
       case WORKFLOWSTATES.NONE:
+        this.effectsAlreadyExpired = [];
         this.itemCardId = (await showItemCard.bind(this.item)(false, this, true))?.id;
         //@ts-ignore
         if (this.trapSound) AudioHelper.play({src: this.trapSound}, false)

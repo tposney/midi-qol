@@ -117,7 +117,7 @@ Hooks.once('ready', function() {
   actorAbilityRollPatching();
 
   if (game.user.isGM && !installedModules.get("dae")) {
-    ui.notifications.error("DAE needs to be installed and at least version 0.2.43 or many things will nto work");
+    ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.2.43 or many automation effects won't work");
   }
   checkCubInstalled();
   checkConcentrationSettings();
@@ -279,6 +279,7 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.fail.ability.all");
   midiFlags.push("flags.midi-qol.fail.ability.check.all");
   midiFlags.push("flags.midi-qol.fail.ability.save.all");
+  midiFlags.push("flags.midi-qol.superSaver.all");
 
   Object.keys(CONFIG.DND5E.abilities).forEach(abl => {
     midiFlags.push(`flags.midi-qol.advantage.ability.check.${abl}`);
@@ -287,6 +288,7 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.disadvantage.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.fail.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.fail.ability.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.superSaver.${abl}`);
   })
   midiFlags.push(`flags.midi-qol.advantage.skill.all`);
   midiFlags.push(`flags.midi-qol.disadvantage.skill.all`);

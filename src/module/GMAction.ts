@@ -90,18 +90,23 @@ let createReverseDamageCard = async (data) => {
     let newHP = Math.max(0, oldHP - hpDamage);
     if (data.intendedFor === game.user.id && ["yes", "yesCard"].includes(data.autoApplyDamage)) {
       if (token.data.actorLink || canvas.scene.id === scene.id) {
-        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP }));
+        if (newHP !== oldHP || newTempHP !== oldTempHP)  {
+          promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damgeApplied": appliedDamage}));
+        }
       }
       else {
         debug("doing remote scene update")
-        if (scene) {
-          promises.push(scene.updateEmbeddedEntity("Token", { // need to deal with the case that the token might be on another scene
-          "_id": tokenId, //use the original ID not the one from the potentially temp token
-          "actorData.data.attributes.hp.temp": newTempHP, 
-          "actorData.data.attributes.hp.value": newHP
-          }))
-        } else {
-          console.warn(`Could not apply damage to ${tokenId} on ${data.sceneId}`)
+        if (newHP !== oldHP || newTempHP !== oldTempHP)  {
+          if (scene) {
+            promises.push(scene.updateEmbeddedEntity("Token", { // need to deal with the case that the token might be on another scene
+            "_id": tokenId, //use the original ID not the one from the potentially temp token
+            "actorData.data.attributes.hp.temp": newTempHP, 
+            "actorData.data.attributes.hp.value": newHP,
+            "flags.dae.damgeApplied": appliedDamage
+            }))
+          } else {
+            console.warn(`Could not apply damage to ${tokenId} on ${data.sceneId}`)
+          }
         }
       }
     }
@@ -139,7 +144,6 @@ let createReverseDamageCard = async (data) => {
   //@ts-ignore
   const results = await Promise.allSettled(promises);
   warn("GM action results are ", results)
-
   if (["yesCard", "noCard"].includes(data.autoApplyDamage)) {
     const content = await renderTemplate("modules/midi-qol/templates/damage-results.html", templateData);
     const speaker = ChatMessage.getSpeaker();

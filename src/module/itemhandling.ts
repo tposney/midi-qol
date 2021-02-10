@@ -194,7 +194,8 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
     const needsMaterial = this.data.data.components?.material;
 
 
-    if (midiFlags?.fail?.spell?.all) {
+      //TODO Consider how to disable this check for Damageonly workflowa and trap workflowss
+      if (midiFlags?.fail?.spell?.all) {
       ui.notifications.warn("You are unable to cast the spell");
       return;
     }
@@ -284,7 +285,7 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
               ae.duration.startRound = game.combat?.round;
               ae.duration.startTurn = game.combat?.turn;
             }
-            selfTarget.actor.updateEmbeddedEntity("ActiveEffect", ae)
+            await selfTarget.actor.updateEmbeddedEntity("ActiveEffect", ae)
           }
         }
       }
@@ -380,7 +381,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = this.actor.isPC
   const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned)) 
                             || !configSettings.itemTypeList.includes(this.type);
-  const hasEffects = workflow.hasDAE && this.data.effects.find(ae=> !ae.transfer);
+  const hasEffects = workflow.hasDAE && workflow.workflowType === "Workflow" && this.data.effects.find(ae=> !ae.transfer);
   const templateData = {
     actor: this.actor,
     tokenId: token ? `${sceneId}.${token.id}` : null,
@@ -398,6 +399,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     hasAttackRoll: !minimalCard && this.hasAttack,
     configSettings,
     hideItemDetails,
+    showProperties: workflow.workflowType === "Workflow",
     hasEffects
   }
   const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";

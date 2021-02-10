@@ -175,7 +175,10 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   return 1;
 };
 
-export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, saves, existingDamage = []): any[] => {
+export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, saves, options: {existingDamage, superSavers} = {existingDamage: [], superSavers: new Set()}): any[] => {
+  return applyTokenDamageMany([damageDetail], [totalDamage], theTargets, item, [saves], {existingDamage: options.existingDamage ?? [], superSavers: [options.superSavers ?? new Set()]});
+}
+/* TODO remove this  
   let damageList = [];
   let targetNames = [];
   let appliedDamage;
@@ -193,8 +196,13 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
       appliedDamage = 0;
       const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
       for (let { damage, type } of damageDetail) {
+        console.error("apply token damage ", t, options?.superSavers)
         //let mult = 1;
         let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
+        if (options?.superSavers.has(t)) {
+          console.error("Super saves ", options.superSavers)
+          mult = saves.has(t) ? 0 : 0.5;
+        }
         if (!type) type = MQdefaultDamageType;
         mult = mult * getTraitMult(a, type, item);
         appliedDamage += Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
@@ -219,7 +227,85 @@ export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, save
         totalDamage = Math.max(totalDamage, 0);
         appliedDamage = Math.max(appliedDamage, 0);
       }
-      damageList.push(calculateDamage(a, appliedDamage, t, totalDamage, dmgType, existingDamage));
+      damageList.push(calculateDamage(a, appliedDamage, t, totalDamage, dmgType, options.existingDamage));
+      targetNames.push(t.name)
+  }
+  if (theTargets.size > 0) {
+    let intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
+    if (!intendedGM) {
+      ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
+      error("No GM user connected - cannot apply damage");
+      return;
+    }
+    broadcastData({
+      action: "reverseDamageCard",
+      autoApplyDamage: configSettings.autoApplyDamage,
+      sender: game.user.name,
+      intendedFor: intendedGM.id,
+      damageList: damageList,
+      settings: getParams(),
+      targetNames,
+      chatCardId: workflow.itemCardId
+    });
+  }
+  return damageList;
+};
+*/
+export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, item, savesArr, options= {existingDamage: [], superSavers: []}): any[] => {
+  let damageList = [];
+  let targetNames = [];
+  let appliedDamage;
+  let workflow = (Workflow.workflows && Workflow._workflows[item?.uuid]) || {};
+  warn("Apply token damage ", damageDetailArr, totalDamageArr, theTargets, item, savesArr, workflow)
+
+  if (!theTargets || theTargets.size === 0) {
+    workflow.currentState = WORKFLOWSTATES.ROLLFINISHED;
+    // probably called from refresh - don't do anything
+    return [];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+  }
+  let totalDamage = totalDamageArr.reduce((a,b) => a+b)
+
+  for (let t of theTargets) {
+      let a = t?.actor;
+      if (!a) continue;
+      appliedDamage = 0;
+      const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
+
+      for (let i = 0; i < totalDamageArr.length; i++) {
+        let damageDetail = damageDetailArr[i];
+        let saves = savesArr[i] ?? new Set();
+        let superSavers = options.superSavers[i] ?? new Set();
+        for (let { damage, type } of damageDetail) {
+          //let mult = 1;
+          let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
+          if (superSavers.has(t)) {
+            mult = saves.has(t) ? 0 : 0.5;
+          }
+          if (!type) type = MQdefaultDamageType;
+          mult = mult * getTraitMult(a, type, item);
+          appliedDamage += Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
+          var dmgType = type.toLowerCase();
+          //         let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
+          let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).roll().total;
+          appliedDamage -= DRType;
+          if (["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
+            DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"))).roll().total;
+            //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
+            appliedDamage -= DRType;
+          }
+          // consider mwak damage redution
+        }
+      }
+      const DR = (new Roll((getProperty(t.actor.data, "flags.midi-qol.DR.all") || "0"), a.getRollData())).roll().total;
+//      const DR = parseInt(getProperty(t.actor.data, "flags.midi-qol.DR.all")) || 0;
+      appliedDamage -= DR;
+
+
+      if (!Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType)) {
+        totalDamage = Math.max(totalDamage, 0);
+        appliedDamage = Math.max(appliedDamage, 0);
+      }
+      damageList.push(calculateDamage(a, appliedDamage, t, totalDamage, dmgType, options.existingDamage));
       targetNames.push(t.name)
   }
   if (theTargets.size > 0) {
@@ -260,13 +346,26 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
 
   // Don't check for critical - RAW say these don't get critical damage
   if (["rwak", "mwak"].includes(item?.data.data.actionType) && configSettings.rollOtherDamage) {
-    appliedDamage = applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, new Set());
-    if (workflow.otherDamageRoll) {
-      // assume pervious damage applied and then calc extra damage
-      appliedDamage = applyTokenDamage(workflow.otherDamageDetail, workflow.otherDamageTotal, theTargets, item, workflow.saves, appliedDamage);
+    if (workflow.otherDamageRoll && configSettings.singleConcentrationRoll) {
+      appliedDamage = applyTokenDamageMany(
+        [workflow.damageDetail, workflow.otherDamageDetail], 
+        [workflow.damageTotal, workflow.otherDamageTotal],
+         theTargets,
+         item, 
+         [new Set(), workflow.saves], 
+         {existingDamage: [], 
+         superSavers: [new Set(), workflow.superSavers]
+      });
+    
+    } else {
+      appliedDamage = await applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, new Set(), {existingDamage: [], superSavers: new Set()});
+      if (workflow.otherDamageRoll) {
+        // assume pervious damage applied and then calc extra damage
+        appliedDamage = await applyTokenDamage(workflow.otherDamageDetail, workflow.otherDamageTotal, theTargets, item, workflow.saves, {existingDamage: appliedDamage, superSavers: workflow.superSavers});
+      }
     }
   } else
-    appliedDamage = applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves);
+    appliedDamage = await applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves, {existingDamage: [], superSavers: workflow.superSavers});
   workflow.damageList = appliedDamage;
   debug("process damage roll: ", configSettings.autoApplyDamage, workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves)
 }

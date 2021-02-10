@@ -69,8 +69,10 @@
   </div>
 
   <footer class="card-footer">
+    {{#if showProperties}}
     {{#each data.properties}}
     <span>{{this}}</span>
     {{/each}}
+    {{/if}}
   </footer>
 </div>

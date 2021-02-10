@@ -68,7 +68,8 @@ export var configSettings = {
   rollOtherDamage: false,
   removeButtons: "all",
   gmRemoveButtons: "all", 
-  concentrationAutomation: false
+  concentrationAutomation: false,
+  singleConcentrationRoll: true
 };
 
 export let fetchParams = (silent = false) => {
@@ -80,7 +81,9 @@ export let fetchParams = (silent = false) => {
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
     || !configSettings.keyMapping["DND5E.Disadvantage"]
-    || !configSettings.keyMapping["DND5E.Critical"]) configSettings.keyMapping = defaultKeyMapping;
+    || !configSettings.keyMapping["DND5E.Critical"]) {
+      configSettings.keyMapping = defaultKeyMapping;
+  }
 
   //@ts-ignore typeLabels
   const itemList = Object.keys(CONFIG.Item?.typeLabels ?? {});

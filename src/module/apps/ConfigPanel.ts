@@ -7,9 +7,11 @@ export class ConfigPanel extends FormApplication {
     return mergeObject(super.defaultOptions, {
       title: game.i18n.localize("midi-qol.ConfigTitle"),
       template: "modules/midi-qol/templates/config.html",
+      id: "midi-qol-settings",
       width: 520,
-      height: 845,
+      height: "auto",
       closeOnSubmit: true,
+      tabs: [{navSelector: ".tabs", contentSelector: ".content", initial: "gm"}]
     })
   }
 

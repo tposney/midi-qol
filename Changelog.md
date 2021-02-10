@@ -1,15 +1,25 @@
+0.3.64
+* Added flags.midi-qol.superSaver.all/dex/str etc. If set, then saves against the specified ability do 0/0.5 damage insted of 0.5/1 times the damage. Meant for things like rogues evasion. Apply with an active effect and it will apply, failed save+effect = 1/2 damage, save+effect = 0 damage.
+* Fixed a bug in concentation check that 0 damage Other/Verstatile damage caused a second concentration check.
+* Allowed GM to decide if spider bite, (piercing damage + save against poision damage) causes 1 or 2 concentration checks.
+* Token being reduced to 0 automatically removes concentration. At the moment the saving throw is still rolled, but I will find a way to avoid that.
+* Fix for flags.midi-qol.fail.skill.acr/... not working.
+* [For macro writers] Damage only workflows will no longer trigger CUB concentrator if rolling an item as part of the workflow (niche I know, but annoying).
+* Re-organised the config settings into a different disorganised layout.
+Please update DAE as well.
+
 0.3.63
 * A couple of fixes for sw5e.
 * Updated ja.json thanks @louge
 * A new option for hiding DM attck rolls (only works with the merged card). "Show Attack D20", players will only see the d20 result, not the roll total, so they get a feel of how good the monster is. This simulates what the players could see at the table (i.e. see the dice roll) but not know what the total is. Otherwise this option behaves the same as Hide Rol Fomula.
 * DamageOnlyWorflow will now display all of the targets as normal hit targets so you can see who took damage.
-* Support (I think) all of the CUB name replacement options in midi-qol. Names changed on hit/save cards remain changed once the card is placed no matter what you change the setings to. midi-qol uses the CUB options to do name hiding. Midi hideNPCNames removed.
+* Support (I think) all of the CUB name replacement options in midi-qol. Names changed on hit/save cards remain changed once the card is placed no matter what you change the settings to. midi-qol uses the CUB options to do name hiding. Midi hideNPCNames removed.
 * Fix for data.abilities.str/dex/.../.dc CUSTOM not updating display of spell DCs.
-* Initial support for concentation automation. The is dependent on DAE and Combat utility belt being installed and or the right version and requires CUB concnetration automation to be disabled.
+* Initial support for **concentration automation**. The is dependent on DAE and Combat utility belt being installed and of the right version and **requires** CUB concentration automation to be disabled.
 Features: (see the full change log for more details).
   * Enabled via config setting (near auto check saves)
   * Get user confirmation before casting a second concentration spell while the first is still active. First concentration is removed if you proceed.
-  * Taking damage causes concentration check, failure removes concentration.
+  * Taking damage causes a concentration check, failure removes concentration.
   * If the spell that caused concentration expires concentration is removed
   * Concentration can be removed from the token effects HUD and will work as expected.
   * If concentration is removed any effects due to the spell on any tokens (self + targets) are removed.

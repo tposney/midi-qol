@@ -214,6 +214,7 @@ Gives the attacker advantage on attacks made against the target. Midi-qol only c
 These flags can be used to grant damage reduction to a character and can be set by active effects and are evaluated after derived fields are calclulated, so things like dex.mod etc ar available.  
 flags.midi-qol.DR.all upgrade 3, will give 3 points of damage reduction to all incoming damage.
 
+flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver will tke 0.5/0 dmage on failed/successful save, compared to the normal 1/0.5. Useful for things like rogue's evasion class feature.
 ## Bugs
 probably many however....
 * Language translations are not up to date.
