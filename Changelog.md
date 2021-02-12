@@ -1,7 +1,7 @@
 0.3.64
-* Added flags.midi-qol.superSaver.all/dex/str etc. If set, then saves against the specified ability do 0/0.5 damage insted of 0.5/1 times the damage. Meant for things like rogues evasion. Apply with an active effect and it will apply, failed save+effect = 1/2 damage, save+effect = 0 damage.
-* Fixed a bug in concentation check that 0 damage Other/Verstatile damage caused a second concentration check.
-* Allowed GM to decide if spider bite, (piercing damage + save against poision damage) causes 1 or 2 concentration checks.
+* Added flags.midi-qol.superSaver.all/dex/str etc. If set, then saves against the specified ability do 0/0.5 damage instead of 0.5/1 times the damage. Meant for things like rogues evasion. Apply with an active effect and it will apply, failed save+effect = 1/2 damage, save+effect = 0 damage.
+* Fixed a bug in concentration check that 0 damage Other/Versatile damage caused a second concentration check.
+* Allowed GM to decide if spider bite, (piercing damage + save against poison damage) causes 1 or 2 concentration checks.
 * Token being reduced to 0 automatically removes concentration. At the moment the saving throw is still rolled, but I will find a way to avoid that.
 * Fix for flags.midi-qol.fail.skill.acr/... not working.
 * [For macro writers] Damage only workflows will no longer trigger CUB concentrator if rolling an item as part of the workflow (niche I know, but annoying).

@@ -15,7 +15,9 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
     warn("Workflow state not wait for attack roll");
     // return;
   }
-  workflow.targets = (this.data.data.target?.type === "self") ? new Set(await getSelfTargetSet(this.actor)) : new Set(game.user.targets);
+  if (workflow.workflowType === "Workflow") {
+    workflow.targets = (this.data.data.target?.type === "self") ? new Set(await getSelfTargetSet(this.actor)) : new Set(game.user.targets);
+  }
   workflow.processAttackEventOptions(options?.event);
   workflow.checkTargetAdvantage();
   workflow.checkAbilityAdvantage();

@@ -134,10 +134,10 @@
     "midi-qol.playerRollSavesOptionsReduced": {"none": "オフ",  "letme": "Let Me Roll That For You", "chat": "チャットメッセージで通知"},
     "midi-qol.AutoRemoveTargetsOptions": {"none": "何もしない", "dead": "ターゲットが死亡したとき", "allGM": "ターゲットが死亡したとき（＋GMは常に）", "all": "全員が常に"},
     "midi-qol.ColoredBordersOptions": {"none": "オフ", "borders": "枠線のみ", "borderNamesText": "枠線と名前", "borderNamesBackground": "枠線と名前の背景"},
-    "midi-qol.hideRollDetailsOptions": {"none": "オフ", "details": "計算式のみ", "all": "ロール全体"},
+    "midi-qol.hideRollDetailsOptions": {"none": "オフ", "details": "計算式を隠す", "d20Only": "d20の出目のみ表示", "all": "すべて隠す"},
     "midi-qol.potion": "ポーション",
     "midi-qol.HideRollDetails.Name": "ロールの詳細を隠す",
-    "midi-qol.HideRollDetails.Hint": "GMのロールのうち、何をプレイヤーに隠すか設定します。「計算式＋DSNダイス」ではDice So Niceのダイスが表示されますが、その内容はランダムです。このため出目からモンスターの修正値を推測できなくなります。",
+    "midi-qol.HideRollDetails.Hint": "GMのロールのうち、何をプレイヤーに隠すか設定します。「d20の出目のみ表示」ではプレイヤーはダイスの出目のみを確認でき、計算結果は伏せる形になります。",
     "midi-qol.DiceRolled": "<div>ロール済</div>",
     "midi-qol.ForceHideRoll.Name": "プライベート/ブラインド/セルフロールを本当に隠す",
     "midi-qol.ForceHideRoll.Hint": "プライベート/ブラインド/セルフロールは、非対象者に表示されなくなります。BetterRollや統合されたチャットカードを使用している場合は、この機能を有効にする必要があります（felix.mueller.86@web.deに感謝）。",
@@ -171,7 +171,10 @@
     "midi-qol.spell-damage": "呪文ダメージ",
     "midi-qol.RemoveButtons.Name": "ロール後はボタンを隠す",
     "midi-qol.gmRemoveButtons.Name": "ロール後はボタンを隠す",
-
+    "midi-qol.ActiveConcentrationSpell.Title": "精神集中の管理",
+    "midi-qol.ActiveConcentrationSpell.Content": "すでに集中が必要な呪文を維持しています。現在の呪文を終了し、新しい呪文を行使しますか？",
+    "midi-qol.ConcentrationAutomation.Name": "精神集中の自動化を有効にする",
+    "midi-qol.ConcentrationAutomation.Hint": "Midi-QOLを介して集中状態を管理します。有効にすると、CUBによる集中管理が無効化されます",
 
 
     "midi-qol.GMFullAuto.Name": "GMの自動ロール設定（攻撃/ダメージ）",

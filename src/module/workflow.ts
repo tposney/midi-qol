@@ -3,15 +3,12 @@ import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
 import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 //@ts-ignore
-import { warn, debug, log, i18n, noDamageSaves, cleanSpellName, MESSAGETYPES, error, MQdefaultDamageType, allDamageTypes, debugEnabled } from "../midi-qol";
+import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, allDamageTypes, debugEnabled } from "../midi-qol";
 import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
-import { configSettings, checkBetterRolls, itemRollButtons, autoRemoveTargets } from "./settings.js";
-import { getSelfTargetSet, createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName } from "./utils"
-import { config } from "process";
-import { ConfigPanel } from "./apps/ConfigPanel.js";
-import { setupSheetQol } from "./sheetQOL.js";
+import { configSettings, checkBetterRolls, autoRemoveTargets } from "./settings.js";
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName } from "./utils"
 import { _onChatCardAction } from "./chatMesssageHandling.js";
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
@@ -162,7 +159,7 @@ export class Workflow {
     }
   }
   public processDamageEventOptions(event) { 
-    this.rollOptions.fastForward = this.__proto__.constructor.name === "TrapWorkflow" ? true : isAutoFastDamage();
+    this.rollOptions.fastForward = this.workflowType === "TrapWorkflow" ? true : isAutoFastDamage();
     // if (!game.user.isGM && ["all", "damage"].includes(configSettings.autoFastForward)) this.rollOptions.fastForward = true;
     // if (game.user.isGM && configSettings.gmAutoFastForwardDamage) this.rollOptions.fastForward = true;
     // if we have an event here it means they clicked on the damage button?
@@ -198,7 +195,7 @@ export class Workflow {
     this.rollOptions.fastForward = fastForwardKey ? !isAutoFastDamage() : isAutoFastDamage();
     this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || noCritKey;
     // trap workflows are fastforward by default.
-    if (this.__proto__.constructor.name === "TrapWorkflow")
+    if (this.workflowType === "TrapWorkflow")
       this.rollOptions.fastForward =  true;
   }
 
@@ -419,7 +416,7 @@ export class Workflow {
 
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
         this.processAttackRoll();
-        await this.displayAttackRoll(false, configSettings.mergeCard);
+        await this.displayAttackRoll(configSettings.mergeCard);
         if (configSettings.autoCheckHit !== "none") {
           await this.checkHits();
           const rollMode = game.settings.get("core", "rollMode");
@@ -502,7 +499,7 @@ export class Workflow {
         /*
         this.criticalDetail = createDamageList(this.criticalRoll, this.item, this.defaultDamageType);
         */
-        await this.displayDamageRoll(false, configSettings.mergeCard);
+        await this.displayDamageRoll(configSettings.mergeCard);
         if (this.isFumble) {
           this.expireMyEffects(["1Action", "1Attack"]);
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
@@ -661,7 +658,7 @@ export class Workflow {
         if (hasConcentration && checkConcentration) {
           let targets = [];
           for (let hit of this.applicationTargets) targets.push({tokenId: hit.id, actorId: hit.actor.id});
-          await this.actor.setFlag("midi-qol", "concentration-data", {uuid: this.item.uuid, targets, templateId: this.templateId})
+          await this.actor.setFlag("midi-qol", "concentration-data", {uuid: this.item.uuid, targets, templates: [this.templateId]})
           if (this.token) {
             await game.cub.addCondition(game.settings.get("combat-utility-belt", "concentratorConditionName"), [this.token])
           }
@@ -750,7 +747,7 @@ export class Workflow {
     if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
   }
 
-  async displayAttackRoll(whisper = false, doMerge) {
+  async displayAttackRoll(doMerge) {
     const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
     //@ts-ignore content not definted
     let content = chatMessage && duplicate(chatMessage.data.content);
@@ -800,7 +797,6 @@ export class Workflow {
             hideTag: this.hideTags,
             playSound: true,
             roll: this.attackRoll.roll,
-            // roll: this.attackCardData.roll,
             displayId: this.displayId,
             isCritical: this.isCritical,
             isFumble: this.isFumble,
@@ -820,7 +816,7 @@ export class Workflow {
       || this.defaultDamageType || MQdefaultDamageType})`;
   }
 
-  async displayDamageRoll(whisper = false, doMerge, options = {useOther: true}) {
+  async displayDamageRoll(doMerge) {
     let chatMessage: ChatMessage = game.messages.get(this.itemCardId);
     //@ts-ignore content not definted 
     let content = chatMessage && duplicate(chatMessage.data.content)
@@ -992,7 +988,7 @@ export class Workflow {
         const saveFlavor = configSettings.displaySaveDC ? this.saveDisplayFlavor : `${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} ${i18n(saveType)}`;
         const saveHTML = `<div class="midi-qol-nobox midi-qol-bigger-text">${saveFlavor}</div>`;
         if (!!!game.dice3d?.messageHookDisabled) this.hideTags = [".midi-qol-saves-display"];
-        switch (this.__proto__.constructor.name) {
+        switch (this.workflowType) {
           case "BetterRollsWorkflow":
             searchString =  '<footer class="card-footer">';
             replaceString = `<div data-item-id="${this.item._id}"></div><div class="midi-qol-saves-display">${saveHTML}${saveContent}</div><footer class="card-footer">`
@@ -1114,10 +1110,9 @@ export class Workflow {
         const promptPlayer = (!player?.isGM && configSettings.playerRollSaves !== "none") || (player?.isGM && configSettings.rollNPCSaves !== "auto");
         if (promptPlayer && player?.active) { 
           warn(`Player ${player?.name} controls actor ${target.actor.name} - requesting ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save`);
-          promises.push(new Promise((resolve, reject) => {
+          promises.push(new Promise((resolve) => {
             const advantageToUse = advantage;
             let requestId = target.actor.id;
-            const playerName = player.name;
             const playerId = player._id;
             if (["letme", "letmeQuery"].includes(configSettings.playerRollSaves) && installedModules.get("lmrtfy")) requestId = randomID();
             if (["letme", "letmeQuery"].includes(configSettings.rollNPCSaves) && installedModules.get("lmrtfy")) requestId = randomID();
@@ -1199,7 +1194,7 @@ export class Workflow {
       this.saveDisplayFlavor = `${this.item.name} DC ${rollDC} ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(this.hitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:`;
   }
 
-  processSaveRoll = (message, html, data) => {
+  processSaveRoll = (message) => {
     const isLMRTFY = (installedModules.get("lmrtfy") && message.data.flags?.lmrtfy?.data);
     if (!isLMRTFY && message.data.flags?.dnd5e?.roll?.type !== "save") return true;
     const requestId =  isLMRTFY ? message.data.flags.lmrtfy.data : message.data?.speaker?.actor;
@@ -1261,7 +1256,6 @@ export class Workflow {
   async checkHits() {
     let isHit = true;
 
-    let actor = this.actor;
     let item = this.item;
     
     // check for a hit/critical/fumble
@@ -1398,7 +1392,7 @@ export class DamageOnlyWorkflow extends Workflow {
             roll: this.damageRoll,
             speaker: this.speaker
           }
-          await this.displayDamageRoll(false, configSettings.mergeCard && this.itemCardId, {useOther: this.useOther})
+          await this.displayDamageRoll(configSettings.mergeCard && this.itemCardId)
         } else this.damageRoll.toMessage({flavor: this.flavor});
         this.hitTargets = new Set(this.targets);
         this.applicationTargets = new Set(this.targets);
@@ -1416,8 +1410,6 @@ export class TrapWorkflow extends Workflow {
   trapCenter: {x: number, y: number};
   saveTargets: any;
 
-  get isTrapWorkflow() { return true};
-
   constructor(actor: Actor5e, item: Item5e, targets: [Token], trapCenter: {x: number, y: number} = undefined, trapSound: {playlist: string , sound: string} = undefined,  event: any = null) {
     super(actor, item, ChatMessage.getSpeaker(actor), new Set(targets), event);
     // this.targets = new Set(targets);
@@ -1432,14 +1424,14 @@ export class TrapWorkflow extends Workflow {
   async _next(newState: number) {
     this.currentState = newState;
     let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===newState)[0];
-    warn("attack workflow.next ", state, this._id, this)
+    warn("attack workflow.next ", state, this._id, this.targets)
     switch (newState) {
       case WORKFLOWSTATES.NONE:
         this.effectsAlreadyExpired = [];
         this.itemCardId = (await showItemCard.bind(this.item)(false, this, true))?.id;
         //@ts-ignore
         if (this.trapSound) AudioHelper.play({src: this.trapSound}, false)
-        debug(" workflow.next ", state, this.item, configSettings.autoTarget, this.item.hasAreaTarget);
+        debug(" workflow.none ", state, this.item, configSettings.autoTarget, this.item.hasAreaTarget, this.targets);
         // don't support the placement of a tempalte
         return this.next(WORKFLOWSTATES.AWAITTEMPLATE);
 
@@ -1463,11 +1455,14 @@ export class TrapWorkflow extends Workflow {
         return;
 
       case WORKFLOWSTATES.TEMPLATEPLACED:
+        debug(" workflow.next ", state, this.item, configSettings.autoTarget, this.item.hasAreaTarget, this.targets);
+
         // perhaps auto place template?
         return this.next(WORKFLOWSTATES.VALIDATEROLL);
 
       case WORKFLOWSTATES.VALIDATEROLL:
         // do pre roll checks
+        debug(" workflow.next ", state, this.item, configSettings.autoTarget, this.item.hasAreaTarget, this.targets);
         return this.next(WORKFLOWSTATES.WAITFORATTACKROLL);
 
       case WORKFLOWSTATES.WAITFORATTACKROLL:
@@ -1481,7 +1476,7 @@ export class TrapWorkflow extends Workflow {
 
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
         this.processAttackRoll();
-        await this.displayAttackRoll(false, configSettings.mergeCard);
+        await this.displayAttackRoll(configSettings.mergeCard);
         await this.checkHits();
         const whisperCard = configSettings.autoCheckHit === "whisper" || game.settings.get("core", "rollMode") === "blindroll";
         await this.displayHits(whisperCard, configSettings.mergeCard);
@@ -1494,20 +1489,21 @@ export class TrapWorkflow extends Workflow {
           return this.next(WORKFLOWSTATES.ROLLFINISHED);
         } 
         this.rollOptions.critical = this.isCritical;
-        debug("Rolling damage ", this.event, this.itemLevel, this.rollOptions.versatile);
+        debug("TrapWorkflow: Rolling damage ", this.event, this.itemLevel, this.rollOptions.versatile, this.targets, this.hitTargets);
         this.rollOptions.critical = this.isCritical;
         this.rollOptions.fastForward = true;
         this.item.rollDamage(this.rollOptions);
         return; // wait for a damage roll to advance the state.
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
+        console.warn("Trapworkflow ", this.targets, this.item.hasAttack)
          if (!this.item.hasAttack) { // no attack roll so everyone is hit
           this.hitTargets = new Set(this.targets)
           warn(" damage roll complete for non auto target area effects spells", this)
         } else  this.expireMyEffects(["1Action", "1Attack", "1Hit"]);
 
         // apply damage to targets plus saves plus immunities
-        await this.displayDamageRoll(false, configSettings.mergeCard)
+        await this.displayDamageRoll(configSettings.mergeCard)
         if (this.isFumble) {
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
         }
