@@ -264,6 +264,13 @@
           </select>
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.DamageImmunities.Hint"}}</div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.RollOtherDamage.Name"}}</label>
+          <input type="checkbox" name="rollOtherDamage" data-dtype="Boolean" {{checked
+            configSettings.rollOtherDamage}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.RollOtherDamage.Hint"}}</div>
       </div>
     </div>
     <!-- Misc Tab -->
