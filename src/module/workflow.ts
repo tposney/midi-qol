@@ -712,6 +712,8 @@ export class Workflow {
       otherDamageDetail: this.otherDamageDetail,
       otherDamageList: this.otherDamageList,
       rollOptions: this.rollOptions,
+      advantage: this.advantage,
+      disadvantage: this.disadvantage,
       event: this.event,
       uuid: this.item.uuid,
       concentrationData: getProperty(this.actor.data.flags, "midi-qol.concentration-data")
