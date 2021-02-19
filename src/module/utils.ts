@@ -61,9 +61,8 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
     var type = defaultType;
     debug(rollTerms[partPos])
     if (typeof rollTerms[partPos] === "object") {
-      const die = rollTerms[partPos] instanceof DicePool ? rollTerms[partPos].dice[0] : rollTerms[partPos];
-      let total = die.total;
-      let flavor = die.options?.flavor;
+      const total = rollTerms[partPos].total;
+      let flavor = rollTerms[partPos].options?.flavor;
       const flavorIndex = validTypes.indexOf(flavor)
       if (flavorIndex !== -1) {
         if (!CONFIG.DND5E.damageTypes[flavor] && !CONFIG.DND5E.healingTypes[flavor]) {
@@ -178,79 +177,7 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
 export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, saves, options: {existingDamage, superSavers} = {existingDamage: [], superSavers: new Set()}): any[] => {
   return applyTokenDamageMany([damageDetail], [totalDamage], theTargets, item, [saves], {existingDamage: options.existingDamage ?? [], superSavers: [options.superSavers ?? new Set()]});
 }
-/* TODO remove this  
-  let damageList = [];
-  let targetNames = [];
-  let appliedDamage;
-  let workflow = (Workflow.workflows && Workflow._workflows[item?.uuid]) || {};
-  warn("Apply token damage ", damageDetail, totalDamage, theTargets, item, saves, workflow)
 
-  if (!theTargets || theTargets.size === 0) {
-    workflow.currentState = WORKFLOWSTATES.ROLLFINISHED;
-    // probably called from refresh - don't do anything
-    return [];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
-  }
-  for (let t of theTargets) {
-      let a = t?.actor;
-      if (!a) continue;
-      appliedDamage = 0;
-      const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
-      for (let { damage, type } of damageDetail) {
-        console.error("apply token damage ", t, options?.superSavers)
-        //let mult = 1;
-        let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
-        if (options?.superSavers.has(t)) {
-          console.error("Super saves ", options.superSavers)
-          mult = saves.has(t) ? 0 : 0.5;
-        }
-        if (!type) type = MQdefaultDamageType;
-        mult = mult * getTraitMult(a, type, item);
-        appliedDamage += Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
-        var dmgType = type.toLowerCase();
-//         let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
-        let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).roll().total;
-        appliedDamage -= DRType;
-        if (["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
-           DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"))).roll().total;
-//         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
-          appliedDamage -= DRType;
-        }
-        // consider mwak damage redution
-      }
-
-      const DR = (new Roll((getProperty(t.actor.data, "flags.midi-qol.DR.all") || "0"))).roll().total;
-//      const DR = parseInt(getProperty(t.actor.data, "flags.midi-qol.DR.all")) || 0;
-      appliedDamage -= DR;
-
-
-      if (!Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType)) {
-        totalDamage = Math.max(totalDamage, 0);
-        appliedDamage = Math.max(appliedDamage, 0);
-      }
-      damageList.push(calculateDamage(a, appliedDamage, t, totalDamage, dmgType, options.existingDamage));
-      targetNames.push(t.name)
-  }
-  if (theTargets.size > 0) {
-    let intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
-    if (!intendedGM) {
-      ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
-      error("No GM user connected - cannot apply damage");
-      return;
-    }
-    broadcastData({
-      action: "reverseDamageCard",
-      autoApplyDamage: configSettings.autoApplyDamage,
-      sender: game.user.name,
-      intendedFor: intendedGM.id,
-      damageList: damageList,
-      settings: getParams(),
-      targetNames,
-      chatCardId: workflow.itemCardId
-    });
-  }
-  return damageList;
-};
-*/
 export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, item, savesArr, options= {existingDamage: [], superSavers: []}): any[] => {
   let damageList = [];
   let targetNames = [];
@@ -375,12 +302,16 @@ export let getSaveMultiplierForItem = item => {
   if (!item) return 1;
   if (item.data.data.properties?.nodam) return 0;
   if (item.data.data.properties?.fulldam) return 1;
+  if (item.data.data.properties?.halfdam) return 0.5;
   if (noDamageSaves?.includes(cleanSpellName(item.name))) return 0;
-  if (item.data.data.description.value?.includes(i18n("midi-qol.noDamageText"))) {
+  //@ts-ignore decodeHTML
+  let description = TextEditor.decodeHTML((item.data.data.description?.value || "")).toLocaleLowerCase();
+  if (description?.includes(i18n("midi-qol.noDamageText"))) {
     return 0.0;
   } 
+  
   if (!configSettings.checkSaveText) return 0.5;
-  if (item.data.data.description.value?.includes(i18n("midi-qol.halfDamage")) || item.data.data.description.value.includes(i18n("midi-qol.halfDamageAlt"))) {
+  if (description?.includes(i18n("midi-qol.halfDamage")) || description?.includes(i18n("midi-qol.halfDamageAlt"))) {
     return 0.5;
   }
   //  Think about this. if (checkSavesText true && item.hasSave) return 0; // A save is specified but the half-damage is not specified.

@@ -222,8 +222,6 @@ const settings = [
 
 export const registerSettings = function() {
   // Register any custom module settings here
-  
-  
   settings.forEach((setting, i) => {
     let MODULE = "midi-qol"
     let options = {
@@ -294,6 +292,6 @@ export const registerSettings = function() {
     config: true,
     choices: {none: "None", warn: "warnings", debug: "debug", all: "all"},
     onChange: fetchParams
-  })
+  });
 }
 

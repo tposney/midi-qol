@@ -32,6 +32,10 @@ export let error = (...args) => console.error("midi-qol | ", ...args)
 export let i18n = key => {
   return game.i18n.localize(key);
 };
+export let i18nFormat = (key, data = {}) => {
+  return game.i18n.format(key, data);
+}
+
 export let setDebugLevel = (debugText: string) => {
   debugEnabled = {"none": 0, "warn": 1, "debug": 2, "all": 3}[debugText] || 0;
   // 0 = none, warnings = 1, debug = 2, all = 3
@@ -95,10 +99,21 @@ Hooks.once('setup', function() {
   savingThrowTextAlt = i18n("midi-qol.savingThrowTextAlt");
   MQdefaultDamageType = i18n("midi-qol.defaultDamageType");
   CONFIG.DND5E.weaponProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
-  CONFIG.DND5E.weaponProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp")
+  CONFIG.DND5E.weaponProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
+  CONFIG.DND5E.weaponProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp")
   CONFIG.DND5E.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
   CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
   allDamageTypes = mergeObject(CONFIG.DND5E.damageTypes, CONFIG.DND5E.healingTypes, {inplace:false});
+
+  if (configSettings.allowUseMacro) {
+    CONFIG.DND5E.characterFlags["DamageBonusMacro"] = {
+      hint: i18n("midi-qol.DamageMacro.Hint"),
+      name: i18n("midi-qol.DamageMacro.Name"),
+      placeholder: "",
+      section: i18n("midi-qol.DAEMidiQOL"),
+      type: String
+    }
+  };
 
   //@ts-ignore
   noDamageSaves = i18n("midi-qol.noDamageonSaveSpells").map(name => cleanSpellName(name));
@@ -322,3 +337,7 @@ function setupMidiFlags() {
   */
   midiFlags.sort()
 }
+
+
+
+

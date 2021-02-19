@@ -86,7 +86,7 @@ function isVisible() {
   return canvas.sight.testVisibility(this.center, {tolerance});
 }
 
-export const advantageEvent = {shiftKey: true, altKey: true, ctrlKey: false, metaKey: false};
+export const advantageEvent = {shiftKey: false, altKey: true, ctrlKey: false, metaKey: false};
 export const disadvantageEvent = {shiftKey: true, altKey:false, ctrlKey: true, metaKey: true};
 export const fastforwardEvent = {shiftKey: true, altKey:false, ctrlKey: false, metaKey: false};
 export const baseEvent = {shiftKey: false, altKey:false, ctrlKey: false, metaKey: false};
@@ -120,18 +120,24 @@ function doRollSkill(wrapped, ...args) {
   const withAdvantage = opt.event.altKey || opt2.event.altKey || options.event?.altKey;
   //@ts-ignore
   const withDisadvantage = opt.event.ctrlKey || opt.event.metaKey || opt2.event.ctrlKey || opt2.event.metaKey || options.event?.ctrlKey || options.event?.metaKey;
-  if (withAdvantage) options.event = advantageEvent;
-  else if (withDisadvantage) options.event = disadvantageEvent;
+  if (withAdvantage || withDisadvantage) options.fastForward = true;
+  if (withAdvantage) {
+    options.advantage = true;
+  } else if (withDisadvantage) {
+    options.disadvantage = true;
+  }
   if (withAdvantage && withDisadvantage) {
-    options.event = fastforwardEvent;
+    options.advantage = false;
+    options.disadvantage = false;
   }
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
-    options.event = fastforwardEvent;
+    options.fastforward = true;
   }
   if (procAutoFailSkill(this, skillId) || procAutoFail(this, "check", this.data.data.skills[skillId].ability))
   {
     options.parts = ["-100"];
   }
+  options.event = {};
   return wrapped(...args);
 }
 

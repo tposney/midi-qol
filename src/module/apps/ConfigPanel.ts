@@ -89,12 +89,7 @@ export class ConfigPanel extends FormApplication {
   }
   
   async _updateObject(event, formData) {
-    /* special handling for:
-    keyMapping.DND5E.Advantage: "altKey"
-    keyMapping.DND5E.Critical: "altKey"
-    keyMapping.DND5E.Disadvantage: "ctrlKey"
-    keyMapping.DND5E.Versatile: "shiftKey"
-    */
+
    const keyMapping = {
      "DND5E.Advantage": formData["keyMapping.DND5E.Advantage"] || "altKey",
      "DND5E.Critical": formData["keyMapping.DND5E.Critical"],

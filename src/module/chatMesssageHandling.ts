@@ -423,12 +423,13 @@ export let chatDamageButtons = (message, html, data) => {
   if (message.data.flags?.dnd5e?.roll?.type === "damage") {
     const itemId = message.data.flags.dnd5e.roll.itemId;
     const item = game.actors.get(message.data.speaker.actor).items.get(itemId);
-    if (!item) {
+    if (!item && false) {
       warn("Damage roll for non item");
+      console.error("Damage roll for non item");
       return;
     }
     // find the item => workflow => damageList, totalDamage
-    const defaultDamageType = item.data.data.damage?.parts[0][1] || "bludgeoning";
+    const defaultDamageType = (item?.data.data.damage.parts[0] && item?.data.data.damage?.parts[0][1]) ?? "bludgeoning";
     const damageList = createDamageList(message.roll, item, defaultDamageType);
     const totalDamage = message.roll.total;
     addChatDamageButtonsToHTML(totalDamage, damageList, html, item, "damage");

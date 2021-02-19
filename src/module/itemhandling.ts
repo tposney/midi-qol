@@ -1,4 +1,4 @@
-import { warn, debug, error, i18n, log, MESSAGETYPES } from "../midi-qol";
+import { warn, debug, error, i18n, log, MESSAGETYPES, i18nFormat } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
 import {  configSettings, itemDeleteCheck, enableWorkflow, criticalDamage, autoFastForwardAbilityRolls } from "./settings";
 import { getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile } from "./utils";
@@ -18,6 +18,11 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   if (workflow.workflowType === "Workflow") {
     workflow.targets = (this.data.data.target?.type === "self") ? new Set(await getSelfTargetSet(this.actor)) : new Set(game.user.targets);
   }
+  if (workflow.attackRoll) { // we are re-rolling the attack.
+    workflow.damageRoll = undefined;
+    workflow.itemCardId = (await showItemCard.bind(this)(false, workflow, false)).id;
+
+  }
   workflow.processAttackEventOptions(options?.event);
   workflow.checkTargetAdvantage();
   workflow.checkAbilityAdvantage();
@@ -27,7 +32,7 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   workflow.rollOptions.advantage = workflow.disadvantage ? false : workflow.advantage;
   workflow.rollOptions.disadvantage = workflow.advantage ? false : workflow.disadvantage;
   const defaultOption = workflow.rollOptions.advantage ?  "advantage" : workflow.rollOptions.disadvantage ? "disadvantage" : "normal";
-  if (workflow.__proto__.constructor.name === "TrapWorkflow") workflow.rollOptions.fastForward = true;
+  if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
 
    let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
@@ -82,6 +87,10 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
     }
   }
 
+  if (workflow.damageRoll) { // we are re-rolling the attack.
+    let chatMessage = game.messages.get(workflow.itemCardId);
+    workflow.itemCardId = (await ChatMessage.create(chatMessage.data)).id;
+  }
   workflow.processDamageEventOptions(event);
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
@@ -149,10 +158,10 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
     }
   }
   const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
-  if (dice3dActive && configSettings.mergeCard && ["none", "details"].includes(configSettings.hideRollDetails)) {
+  if (dice3dActive) { 
     let whisperIds = null;
     const rollMode = game.settings.get("core", "rollMode");
-    if ((configSettings.hideRollDetails === "details" && game.user.isGM) || rollMode === "blindroll") {
+    if ((configSettings.hideRollDetails !== "none" && game.user.isGM) || rollMode === "blindroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM")
     } else if (rollMode === "selfroll" || rollMode === "gmroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
@@ -188,6 +197,14 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
                           || (configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type)) // rangetarget
                           || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
 
+  // only allow weapon attacks against at most the specified number of targets
+  let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9099) ?? 9999
+  if (game.system.id === "dnd5e" && configSettings.requireTargets && game.user.targets.size > allowedTargets) {
+    shouldAllowRoll = false;
+    ui.notifications.warn(i18nFormat("midi-qol.wrongNumberTargets", {allowedTargets}));
+    warn(`${game.user.name} ${i18nFormat("midi-qol.midi-qol.wrongNumberTargets", {allowedTargets})}`)
+    return;
+  }
   const needsConcentration = this.data.data.components?.concentration;
   if (this.type === "spell" && shouldAllowRoll) {
     const midiFlags = this.actor.data.flags["midi-qol"];
@@ -234,7 +251,7 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   }
   if (!shouldAllowRoll) {
     ui.notifications.warn(i18n("midi-qol.noTargets"));
-    warn(`${game.username} attempted to roll with no targets selected`)
+    warn(`${game.user.name} attempted to roll with no targets selected`)
     return;
   }
   //@ts-ignore
@@ -375,7 +392,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   let needAttackButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
   needAttackButton = true || needAttackButton || !getAutoRollAttack();
   needAttackButton = needAttackButton || (getAutoRollAttack() && workflow.rollOptions.fastForwardKey)
-  const needDamagebutton = itemHasDamage(this) && (getAutoRollDamage() === "none" || !getRemoveDamageButtons());
+  const needDamagebutton = itemHasDamage(this) && (getAutoRollDamage() === "none" || !getRemoveDamageButtons() || showFullCard);
   const needVersatileButton = itemIsVersatile(this) && (showFullCard || getAutoRollDamage() === "none");
   const sceneId = token?.scene && token.scene._id || canvas.scene?._id;
   let isPlayerOwned = this.actor.hasPlayerOwner;
