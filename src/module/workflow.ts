@@ -718,8 +718,9 @@ export class Workflow {
     };
     warn("macro data ", macroData)
     for (let  macro of macroNames) {
-      values.push(await this.callMacro(macro, macroData))
+      values.push(this.callMacro(macro, macroData))
     }
+    values = await Promise.all(values);
     return values;
   }
 
@@ -741,9 +742,8 @@ export class Workflow {
         else macroCommand = game.macros.getName(macro);
       }
       if (macroCommand) {
-
         //@ts-ignore -uses furnace macros which support arguments
-        return await macroCommand.execute(macroData) || {};
+        return macroCommand.execute(macroData) || {};
       }
     } catch (err) {
       console.warn("Macro execution failed ", err);
@@ -763,20 +763,21 @@ export class Workflow {
       await chatMessage.update({content})
     }
   }
+
   async expireMyEffects(effectsToExpire: string[]) {
     const expireHit = effectsToExpire.includes("1Hit") && !this.effectsAlreadyExpired.includes("1Hit");
     const expireAction = effectsToExpire.includes("1Action") && !this.effectsAlreadyExpired.includes("1Axtion");
     const expireAttack = effectsToExpire.includes("1Attack") && !this.effectsAlreadyExpired.includes("1Attack");
     // expire any effects on the actor that require it
 
-    if (debugEnabled) {
+    if (debugEnabled && false) {
       const test = this.actor.effects.map(ef => {
         const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
         return [(expireAction && specialDuration?.includes("1Action")),
         (expireAttack && specialDuration?.includes("1Attack") && this.item?.hasAttack),
         (expireHit && this.item?.hasAttack && specialDuration?.includes("1Hit") && this.hitTargets.size > 0)]
       })
-      warn("expiry map is ", test)
+      debug("expiry map is ", test)
     }
     const myExpiredEffects = this.actor.effects.filter(ef => {
       const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
@@ -785,7 +786,7 @@ export class Workflow {
       (expireAttack && specialDuration.includes("1Attack") && this.item?.hasAttack) ||
       (expireHit && this.item?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.size > 0)
     }).map(ef=>ef.id);
-    warn("expire my effects", myExpiredEffects, expireAction, expireAttack, expireHit);
+    debug("expire my effects", myExpiredEffects, expireAction, expireAttack, expireHit);
     this.effectsAlreadyExpired = this.effectsAlreadyExpired.concat(effectsToExpire);
     if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
   }

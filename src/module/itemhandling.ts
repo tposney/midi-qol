@@ -500,19 +500,19 @@ export function selectTargets(scene, data, options) {
     direction = toRadians(direction);
 
     var shape
-  // Get the Template shape
-  switch ( data.t ) {
-    case "circle":
-      shape = templateDetails._getCircleShape(distance);
-      break;
-    case "cone":
-      shape = templateDetails._getConeShape(direction, angle, distance);
-      break;
-    case "rect":
-      shape = templateDetails._getRectShape(direction, distance);
-      break;
-    case "ray":
-      shape = templateDetails._getRayShape(direction, distance, width);
+    // Get the Template shape
+    switch ( data.t ) {
+      case "circle":
+        shape = templateDetails._getCircleShape(distance);
+        break;
+      case "cone":
+        shape = templateDetails._getConeShape(direction, angle, distance);
+        break;
+      case "rect":
+        shape = templateDetails._getRectShape(direction, distance);
+        break;
+      case "ray":
+        shape = templateDetails._getRayShape(direction, distance, width);
     }
     canvas.tokens.placeables.filter(t => {
       if (!t.actor) return false;
@@ -535,8 +535,16 @@ export function selectTargets(scene, data, options) {
             if (!wallsBlockTargeting) {
               contained = true;
             } else {
-              let r = new Ray({ x: tx, y: ty}, templateDetails.data);
-              contained = !canvas.walls.checkCollision(r);
+              if (data.t === "rect") {
+                // for rectangles the origin is top left, so measure from the centre instaed.
+                let template_x = templateDetails.x + shape.width / 2;
+                let template_y = templateDetails.y + shape.height / 2;
+                const r = new Ray({ x: tx, y: ty}, {x: template_x, y: template_y});
+                contained = !canvas.walls.checkCollision(r);
+              } else {
+                const r = new Ray({ x: tx, y: ty}, templateDetails.data);
+                contained = !canvas.walls.checkCollision(r);
+              }
             }
           }
         }

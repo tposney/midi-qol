@@ -19,7 +19,7 @@ import { initHooks, readyHooks } from './module/Hooks';
 import { initGMActionSetup } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
-import { applyTokenDamage, getTraitMult } from './module/utils';
+import { applyTokenDamage, getDistance, getTraitMult } from './module/utils';
 import { ConfigPanel } from './module/apps/ConfigPanel';
 import { doCritModify } from './module/itemhandling';
 
@@ -158,7 +158,11 @@ function setupMinorQolCompatibility() {
     ConfigPanel: ConfigPanel,
     getTraitMult: getTraitMult,
     doCritModify: doCritModify,
-    midiFlags
+    getDistance: getDistance,
+    midiFlags,
+    debug,
+    log,
+    warn
   }
 }
 

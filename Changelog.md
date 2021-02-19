@@ -1,3 +1,5 @@
+0.3.68
+* "Fix" for placing rectangular templates and auto targeting, now treats the origin of the template as the center of the template. Fixes and incompatibility with dnd5e helpers that replaces circle templates with equivlently size rectangular templates.
 0.3.67
 * Checking you have tokens targeted now checks the number of tokens targeted.A target type of creature will use the number specified in the spell details and defaults to unlimitted if not specified.
 * An addition to TrapWorkflow. Instead of taking {x: xpos, y: ypos}, it will now accept {x: xpos, y: ypos, direciton: rotation_angle_degrees} for placed templates. Previously direction was hard coded to 0 degrees.

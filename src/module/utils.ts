@@ -413,7 +413,7 @@ export function checkIncapcitated(actor, item, event) {
 *** gets the shortest distance betwen two tokens taking into account both tokens size
 *** if wallblocking is set then wall are checked
 **/
-function getDistance (t1, t2, wallblocking = false) {
+export function getDistance (t1, t2, wallblocking = false) {
   //Log("get distance callsed");
   var x, x1, y, y1, d, r, segments=[], rdistance, distance;
   for (x = 0; x < t1.data.width; x++) {
