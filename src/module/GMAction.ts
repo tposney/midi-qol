@@ -150,7 +150,7 @@ let createReverseDamageCard = async (data) => {
     speaker.alias = game.user.name;
     let chatData = {
       user: game.user._id,
-      speaker: {scene: canvas.scene, alias: game.user.name},
+      speaker: {scene: canvas.scene.id, alias: game.user.name, user: game.user.id},
       content: content,
       whisper: ChatMessage.getWhisperRecipients("GM").filter(u => u.active),
       type: CONST.CHAT_MESSAGE_TYPES.OTHER,

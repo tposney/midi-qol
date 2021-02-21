@@ -9,7 +9,6 @@ import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
 import { configSettings, checkBetterRolls, autoRemoveTargets } from "./settings.js";
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName } from "./utils"
-import { _onChatCardAction } from "./chatMesssageHandling.js";
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey)}
@@ -217,8 +216,8 @@ export class Workflow {
     this.noCritFlagSet = noCriticalFlags.all || noCriticalFlags[attackType];
 
     // check max roll
-    const maxFlags = getProperty(this.actor.data, `flags.midi-qol.maxRoll`) ?? {};
-    this.rollOptions.maxRoll = (maxFlags.all || maxFlags[attackType]) ?? false;
+    const maxFlags = getProperty(this.actor.data, `flags.midi-qol.maxDamage`) ?? {};
+    this.rollOptions.maxDamage = (maxFlags.all || maxFlags[attackType]) ?? false;
 
     // check target critical/nocritical
     if (this.targets.size !== 1) return;
@@ -498,13 +497,11 @@ export class Workflow {
         if (damageBonusMacro && this.workflowType === "Workflow") {
           await this.rollBonusDamage(damageBonusMacro);
         }
-        if (this.otherDamageRoll && configSettings.rollOtherDamage)
+//        if (this.otherDamageRoll && configSettings.rollOtherDamage)
+        if (this.otherDamageRoll)
           this.otherDamageDetail = createDamageList(this.otherDamageRoll, null, this.defaultDamageType);
-        /*
-        this.criticalDetail = createDamageList(this.criticalRoll, this.item, this.defaultDamageType);
-        */
 
-        await this.displayDamageRoll(configSettings.mergeCard);
+          await this.displayDamageRoll(configSettings.mergeCard);
         if (this.isFumble) {
           this.expireMyEffects(["1Action", "1Attack"]);
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
@@ -591,7 +588,7 @@ export class Workflow {
         if (this.hasDAE) {
           this.dae.doEffects(this.item, true, this.applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId})
         }
-        if (configSettings.autoItemEffects)
+        if (configSettings.autoItemEffects && false)
           await this.removeEffectsButton();
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
@@ -617,39 +614,6 @@ export class Workflow {
         Hooks.callAll("midi-qol.RollComplete", this);
         if (autoRemoveTargets !== "none") setTimeout(untargetDeadTokens, 500); // delay to let the updates finish
 
-        // disable sounds for when the chat card might be reloaed.
-        if (this.workflowType === "BetterRollsWorkflow") {
-          let itemCard = game.messages.get(this.itemCardId);
-          let waitForDiceSoNice = configSettings.mergeCard && (this.item?.hasAttck || itemHasDamage(this.item) || this.item?.hasSaves);
-          waitForDiceSoNice = waitForDiceSoNice && game.dice3d?.messageHookDisabled && game.dice3d?.isEnabled();
-          //@ts-ignore .content
-          let content = itemCard?.data.content;
-          if (getRemoveDamageButtons() && content && this.damageRoll) {
-            const versatileRe = /<button data-action="versatile">[^<]*<\/button>/
-            const damageRe = /<button data-action="damage">[^<]*<\/button>/
-            const formulaRe = /<button data-action="formula">[^<]*<\/button>/
-            content = content?.replace(damageRe, "")
-            content = content?.replace(formulaRe, "")
-            content = content?.replace(versatileRe, "<div></div>")
-          }
-          await itemCard?.update({
-            "flags.midi-qol.playSound": false, 
-            "flags.midi-qol.type": MESSAGETYPES.ITEM, 
-            type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-            "flags.midi-qol.waitForDiceSoNice": waitForDiceSoNice,
-            "flags.midi-qol.hideTag": this.hideTags,
-            "flags.midi-qol.displayId": this.displayId,
-            content
-          });
-          
-          const timeoutMillis =  game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled) ? 3000 : 500;
-
-          setTimeout(() => {
-            // remove hide tags after a bit
-            itemCard?.update({"flags.midi-qol.hideTag": []});
-          }, timeoutMillis)
-          
-        }
         //@ts-ignore ui.chat undefined.
         ui.chat.scrollBottom();
         return;
@@ -663,15 +627,26 @@ export class Workflow {
     for (let extraDamage of extraDamages) {
       if (extraDamage?.damageRoll) {
         formula += (formula ? "+" : "") + extraDamage.damageRoll;
-        flavor = extraDamage.flavor ? extraDamage.flavor : flavor;
+        if (extraDamage.flavor) {
+          flavor = `${flavor}${flavor !== "" ? "<br>" : ""}${extraDamage.flavor}`
+        }
+        // flavor = extraDamage.flavor ? extraDamage.flavor : flavor;
       }
     }
-    if (formula) {
-      const roll = new Roll(formula, this.actor.getRollData()).roll();
-      this.otherDamageRoll = roll;
-      this.otherDamageTotal = roll.total;
-      this.otherHTML = await roll.render();
-      this.otherFlavor = flavor ?? "";
+    if (formula !== "") {
+      try {
+        const roll = new Roll(formula, this.actor.getRollData()).roll();
+      this.bonusDamageRoll = roll;
+      this.bonusDamageTotal = roll.total;
+      this.bonusDamageHTML = await roll.render();
+      this.bonusDamageFlavor = flavor ?? "";
+      this.bonusDamageDetail = createDamageList(this.bonusDamageRoll, null, this.defaultDamageType);
+      return;
+      } catch (err) {
+        console.warn(`midi-qol | error in evaluating${formula} in bonus damage`, err);
+      }
+      this.bonusDamageRoll = null;
+      this.bonusDamageDetail = [];
     }
   }
 
@@ -744,8 +719,12 @@ export class Workflow {
         else macroCommand = game.macros.getName(macro);
       }
       if (macroCommand) {
-        //@ts-ignore -uses furnace macros which support arguments
-        return macroCommand.execute(macroData) || {};
+        try {
+          //@ts-ignore -uses furnace macros which support arguments
+          return macroCommand.execute(macroData) || {};
+        } catch(err) {
+          console.warn("midi-qol | macro call failed in callMacros: ", err)
+        }
       }
     } catch (err) {
       console.warn("Macro execution failed ", err);
@@ -856,7 +835,7 @@ export class Workflow {
     await chatMessage?.update({"content": content, flags: newFlags });
   }
 
-  damageFlavor() {
+  get damageFlavor() {
     return `(${this.item?.data.data.damage.parts
     .map(a=>(allDamageTypes[a[1]] || allDamageTypes[this.defaultDamageType] || MQdefaultDamageType)).join(",") 
       || this.defaultDamageType || MQdefaultDamageType})`;
@@ -878,8 +857,8 @@ export class Workflow {
     var newFlags = chatMessage?.data.flags || {};
     if (doMerge && chatMessage) {
       //@ts-ignore .flavor not defined
-      const dmgHeader = configSettings.mergeCardCondensed ? this.damageFlavor() : (this.flavor ?? this.damageFlavor());
       if (this.damageRollHTML) {
+        const dmgHeader = configSettings.mergeCardCondensed ? this.damageFlavor : (this.flavor ?? this.damageFlavor);
         if (!this.useOther) {
           const searchRe = /<div class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
           const replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center">${dmgHeader}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-damage-roll">`
@@ -889,15 +868,27 @@ export class Workflow {
           const otherReplaceString = `<div class="midi-qol-other-roll"><div style="text-align:center">${dmgHeader}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-other-roll">`
           content = content.replace(otherSearchRe, otherReplaceString);
         }
-        if (this.otherHTML) {
+        if (this.otherDamageHTML) {
             const otherSearchRe = /<div class="midi-qol-other-roll">[\s\S]*?<div class="end-midi-qol-other-roll">/;
-            const otherReplaceString = `<div class="midi-qol-other-roll"><div style="text-align:center" >${this.otherFlavor}${this.otherHTML || ""}</div><div class="end-midi-qol-other-roll">`
+            const otherReplaceString = `<div class="midi-qol-other-roll"><div style="text-align:center" >${this.item?.name ?? this.damageFlavor}${this.otherDamageHTML || ""}</div><div class="end-midi-qol-other-roll">`
             content = content.replace(otherSearchRe, otherReplaceString);
         }
-      } else if (this.otherHTML) {
-        const otherSearchRe = /<div class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
-        const otherReplaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center"></div>${this.otherHTML || ""}<div class="end-midi-qol-damge-roll">`
-        content = content.replace(otherSearchRe, otherReplaceString);
+        if (this.bonusDamageRoll) {
+          const bonusSearchRe = /<div class="midi-qol-bonus-roll">[\s\S]*?<div class="end-midi-qol-bonus-roll">/;
+          const bonusReplaceString = `<div class="midi-qol-bonus-roll"><div style="text-align:center" >${this.bonusDamageFlavor}${this.bonusDamageHTML || ""}</div><div class="end-midi-qol-bonus-roll">`
+          content = content.replace(bonusSearchRe, bonusReplaceString);
+        }
+      } else {
+        if (this.otherDamageHTML) {
+          const otherSearchRe = /<div class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
+          const otherReplaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center"></div>${this.otherDamageHTML || ""}<div class="end-midi-qol-damge-roll">`
+          content = content.replace(otherSearchRe, otherReplaceString);
+        }
+        if (this.bonusDamageRoll) {
+          const bonusSearchRe = /<div class="midi-qol-bonus-roll">[\s\S]*?<div class="end-midi-qol-bonus-roll">/;
+          const bonusReplaceString = `<div class="midi-qol-bonus-roll"><div style="text-align:center" >${this.bonusDamageeFlavor}${this.bonusDamageHTML || ""}</div><div class="end-midi-qol-bonus-roll">`
+          content = content.replace(bonusSearchRe, bonusReplaceString);
+        }
       }
       if (!!!game.dice3d?.messageHookDisabled) {
         if (getAutoRollDamage()  === "none" || !isAutoFastDamage()) {
@@ -918,18 +909,31 @@ export class Workflow {
           damageTotal: this.damageTotal,
           otherDamageDetail: this.otherDamageDetail,
           otherDamageTotal: this.otherDamageTotal,
+          bonusDamageDetail: this.bonusDamageDetail,
+          bonusDamageTotal: this.bonusDamageTotal,
           hideTag: this.hideTags,
           displayId: this.displayId
         }
       }, {overwrite: true, inplace: false});
-    } else if (!doMerge && this.otherDamageRoll) {
+    }
+    /*
+    if (!doMerge && this.otherDamageRoll) {
       const messageData = {
         flavor: this.otherFlavor,
         speaker: this.speaker
       }
       setProperty(messageData, "flags.dnd5e.roll.type", "damage");
       this.otherDamageRoll.toMessage(messageData);
+    } */
+    if (!doMerge && this.bonusDamageRoll) {
+      const messageData = {
+        flavor: this.bonusDamageFlavor,
+        speaker: this.speaker
+      }
+      setProperty(messageData, "flags.dnd5e.roll.type", "damage");
+      this.bonusDamageRoll.toMessage(messageData);
     }
+    
     await chatMessage?.update( {"content": content, flags: newFlags});
   }
 
@@ -989,7 +993,7 @@ export class Workflow {
     } else {
       let speaker = duplicate(this.speaker);
       speaker.alias = (configSettings.useTokenNames && speaker.token) ? canvas.tokens.get(speaker.token).name : speaker.alias;
-
+      speaker.scene = canvas?.scene?.id
       if (game.user.targets.size > 0) {
         let chatData: any = {
           user: game.user,
@@ -1002,7 +1006,7 @@ export class Workflow {
         {
           chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active);
           chatData.user = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
-          if (rollMode === "blindroll") {
+          if (rollMode === "blindroll" ) {
             chatData["blind"] = true;
           }
 
@@ -1073,6 +1077,7 @@ export class Workflow {
       const gmUser = game.users.find((u: User) => u.isGM && u.active);
       //@ts-ignore
       let speaker = ChatMessage._getSpeakerFromUser({user: gmUser});
+      speaker.scene = canvas?.scene?.id;
       chatData = {
         user: gmUser._id,
         speaker,
@@ -1138,8 +1143,6 @@ export class Workflow {
       //@ts-ignore actor.rollAbilitySave
       rollAction = CONFIG.Actor.entityClass.prototype.rollAbilityTest;
     }
-     
-
     // make sure saving throws are renabled.
     try {
       for (let target of this.hitTargets) {
@@ -1405,9 +1408,9 @@ export class DamageOnlyWorkflow extends Workflow {
   }
 
   get workflowType() {return this.__proto__.constructor.name};
-  damageFlavor() { 
+  get damageFlavor() { 
     if (this.useOther && this.flavor) return this.flavor;
-    else return super.damageFlavor();
+    else return super.damageFlavor;
   }
 
   async _next(newState) {
@@ -1629,8 +1632,22 @@ export class BetterRollsWorkflow extends Workflow {
     console.warn("betterRolls workflow.next ", state, configSettings.speedItemRolls, this)
 
     switch (newState) {
+
       case WORKFLOWSTATES.WAITFORATTACKROLL:
-        // since this is better rolls as soon as we are ready for the attack roll we have both the attack roll and damage
+        const hasEffects = this.hasDAE && this.item.data.effects.find(ae=> !ae.transfer);
+        // console.error("brw has effects", hasEffects, this.item.data.effects)
+        if (hasEffects && false) {
+          console.error("Adding effect button")
+          const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
+          //@ts-ignore
+          let content = chatMessage && duplicate(chatMessage.data.content)
+          const searchString =  '<footer class="card-footer">';
+          const button = `<button data-action="applyEffects">${i18n("midi-qol.ApplyEffects")}</button>`
+          const replaceString = `<div class="card-buttons">${button}</div><footer class="card-footer">`;
+          content = content.replace(searchString, replaceString);
+          await chatMessage.update({content});
+        }
+          // since this is better rolls as soon as we are ready for the attack roll we have both the attack roll and damage
         if (!this.item.hasAttack) {
           return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
         }
@@ -1657,12 +1674,20 @@ export class BetterRollsWorkflow extends Workflow {
         }
         if (this.otherDamageRoll) {
           const messageData = {
-            flavor: this.otherFlavor,
+            flavor: this.otherDamageFlavor ?? this.damageFlavor,
             speaker: this.speaker
           }
           setProperty(messageData, "flags.dnd5e.roll.type", "damage");
-          this.otherDamageRoll.toMessage(messageData);
+          //  Not required as we pick up the damage from the better rolls data this.otherDamageRoll.toMessage(messageData);
           this.otherDamageDetail = createDamageList(this.otherDamageRoll, null, this.defaultDamageType);
+        }
+        if (this.bonusDamageRoll) {
+          const messageData = {
+            flavor: this.bonusDamageFlavor,
+            speaker: this.speaker
+          }
+          setProperty(messageData, "flags.dnd5e.roll.type", "damage");
+          this.bonusDamageRoll.toMessage(messageData);
         }
         this.expireMyEffects(["1Attack", "1Action"]);
 

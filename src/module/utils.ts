@@ -87,7 +87,7 @@ export async function getSelfTarget(actor) {
   const speaker = ChatMessage.getSpeaker({actor})
   if (speaker.token) return canvas.tokens.get(speaker.token);
   //@ts-ignore
-  return Token.fromActor(actor);
+  return await Token.fromActor(actor);
 }
 
 export async function getSelfTargetSet(actor) {
@@ -190,7 +190,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
     // probably called from refresh - don't do anything
     return [];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
   }
-  let totalDamage = totalDamageArr.reduce((a,b) => a+b)
+  let totalDamage = totalDamageArr.reduce((a,b) => (a??0)+b)
 
   for (let t of theTargets) {
       let a = t?.actor;
@@ -275,17 +275,27 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   if (["rwak", "mwak"].includes(item?.data.data.actionType) && configSettings.rollOtherDamage) {
     if (workflow.otherDamageRoll && configSettings.singleConcentrationRoll) {
       appliedDamage = applyTokenDamageMany(
-        [workflow.damageDetail, workflow.otherDamageDetail], 
-        [workflow.damageTotal, workflow.otherDamageTotal],
+        [workflow.damageDetail, workflow.otherDamageDetail, workflow.bonusDamageDetail ?? []], 
+        [workflow.damageTotal, workflow.otherDamageTotal, workflow.bonusDamageTotal ?? 0],
          theTargets,
          item, 
-         [new Set(), workflow.saves], 
+         [new Set(), workflow.saves, new Set()], 
          {existingDamage: [], 
-         superSavers: [new Set(), workflow.superSavers]
+         superSavers: [new Set(), workflow.superSavers, new Set()]
       });
     
     } else {
-      appliedDamage = await applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, new Set(), {existingDamage: [], superSavers: new Set()});
+      appliedDamage = applyTokenDamageMany(
+        [workflow.damageDetail, workflow.bonusDamageDetail ?? []], 
+        [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
+         theTargets,
+         item, 
+         [workflow.saves, workflow.saves], 
+         {existingDamage: [], 
+         superSavers: [workflow.superSavers, workflow.superSaveers]
+      });
+
+//      appliedDamage = await applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, new Set(), {existingDamage: [], superSavers: new Set()});
       if (workflow.otherDamageRoll) {
         // assume pervious damage applied and then calc extra damage
         appliedDamage = await applyTokenDamage(workflow.otherDamageDetail, workflow.otherDamageTotal, theTargets, item, workflow.saves, {existingDamage: appliedDamage, superSavers: workflow.superSavers});
@@ -293,7 +303,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     }
   } else
     appliedDamage = await applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves, {existingDamage: [], superSavers: workflow.superSavers});
-  workflow.damageList = appliedDamage;
+    workflow.damageList = appliedDamage;
   debug("process damage roll: ", configSettings.autoApplyDamage, workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves)
 }
 
@@ -547,4 +557,37 @@ export function getTokenPlayerName(token: Token) {
       default: 
     }
     return token.name;
+}
+
+// Add the concentration marker to the character and update the duration if possible
+export async function addConcentration(options: {workflow: Workflow}) {
+  const item = options.workflow.item;
+  await item.actor.unsetFlag("midi-qol", "concentration-data");
+  if (installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation) {
+    let selfTarget = await getSelfTarget(item.actor);
+    const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
+    const itemDuration = item.data.data.duration;
+    // set the token as concentrating
+    await game.cub.addCondition(concentrationName, [selfTarget], { warn: false });
+
+    // Update the duration of the concentration effect - TODO remove it CUB supports a duration
+    if (options.workflow.hasDAE) {
+      const ae = duplicate(selfTarget.actor.data.effects.find(ae => ae.label === concentrationName));
+      if (ae) {
+        //@ts-ignore
+        const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.data._id));
+        const convertedDuration = options.workflow.dae.convertDuration(itemDuration, inCombat);
+        if (convertedDuration.type === "seconds") {
+          ae.duration.seconds = convertedDuration.seconds;
+          ae.duration.startTime = game.time.worldTime;
+        } else if (convertedDuration.type === "turns") {
+          ae.duration.rounds = convertedDuration.rounds;
+          ae.duration.turns = convertedDuration.turns;
+          ae.duration.startRound = game.combat?.round;
+          ae.duration.startTurn = game.combat?.turn;
+        }
+        await selfTarget.actor.updateEmbeddedEntity("ActiveEffect", ae)
+      }
+    }
+  }
 }

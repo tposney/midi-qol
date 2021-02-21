@@ -1,5 +1,5 @@
 import { warn, error, debug, i18n } from "../midi-qol";
-import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, recalcCriticalDamage, processItemCardCreation, hideRollUpdate, hideRollRender, _onChatCardAction } from "./chatMesssageHandling";
+import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, recalcCriticalDamage, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons } from "./chatMesssageHandling";
 import { processUndoDamageCard } from "./GMAction";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet } from "./utils";
 import { configSettings, dragDropTargeting } from "./settings";
@@ -129,6 +129,7 @@ export let initHooks = () => {
     colorChatMessageHandler(message, html, data);
     nsaMessageHandler(message, html, data);
     hideRollRender(message, html, data);
+    betterRollsButtons(message, html, data);
   })
 
   Hooks.on("applyActiveEffect", midiCustomEffect); 
@@ -144,7 +145,7 @@ export let initHooks = () => {
   })
 
   function _chatListeners(html) {
-    html.on("click", '.card-buttons button', _onChatCardAction.bind(this))
+    html.on("click", '.card-buttons button', onChatCardAction.bind(this))
   }
 
   Hooks.on("renderChatLog", (app, html, data) => _chatListeners(html));

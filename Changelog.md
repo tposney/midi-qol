@@ -1,3 +1,23 @@
+0.3.70
+* Cleaned up display when re-rolling dmage from an existing card. No longer displays old damage on the card while waiting for the roll.
+* Provided support for having both bonus damage and rollOtherDamage for things like bite poison damage. If on the merge card both will appear as separate lines, otherwise separate cards.
+* Fixed hit and save display ignorind show to gm/player settings for non-merged card rolls.
+* Fixed Bonus damage macro rolling by removing dependency on other damage roll setting.
+* Display all flavors returned from damageBonusMacro
+* Fix for hits/saves display ignoring the workflow display setting if not using merged card.
+* Fix for not fast forwarding skill rolls.
+* Support for flags.midi-qol.maxDamage.all/flags.midi-qol.maxDamage.rwka/mwak/heal/spell.... which, for non-critical hits, means damage rolls for base damage roll wil be maximum, for actions of the specified type.
+* Cleaned up 0.5/full/no damage saves for weapons. If rollOtherDameage is disabled, the item setting will apply to the base damage rolled. If rollOtherDamge is enabled, the base weapon damage will ALWAYS be full damage and the save modifier will apply to the otherDamageRoll damage.
+* Put back token selection in saves display (same behaviour as hits/damage cards)
+
+* Better Rolls support got some love.
+  * Concentration is now fully supported (except that when caasting a spell requiring concentration no prompt is given to the user, concentration is just removed).
+  * Cleaned up damage parsing, should be solid now. Won't include "Other" damage in base rolls.
+  * If you disable "auto apply item effects" a button will added to the better rolls chat card to allow you to apply the effects to TARGETED tokens. This means you can apply effects even if not using auto damage/saves.
+  * Support rollOtherDamage for mwak/rwak and uses the Other field from the better rolls card.
+  * Support for damageBonusMacro. Damage will appear as a spearate card.
+  * Critical hit, advantage and disadvantage are populated from the Better Rolls card so whould more accurately represent the better rolls data.
+
 0.3.69
 Added advantage/disadvantage to data passed to onUse/Damage bonus macros.
 0.3.68

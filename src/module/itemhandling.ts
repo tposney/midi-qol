@@ -1,8 +1,9 @@
-import { warn, debug, error, i18n, log, MESSAGETYPES, i18nFormat } from "../midi-qol";
+import { warn, debug, error, i18n, log, MESSAGETYPES, i18nFormat, midiFlags } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
 import {  configSettings, itemDeleteCheck, enableWorkflow, criticalDamage, autoFastForwardAbilityRolls } from "./settings";
-import { getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile } from "./utils";
+import { addConcentration, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile } from "./utils";
 import { installedModules } from "./setupModules";
+import { setupSheetQol } from "./sheetQOL";
 
 export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, versatile: false}) {
   let workflow: Workflow = Workflow.getWorkflow(this.uuid);
@@ -71,6 +72,7 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
 
 export async function doDamageRoll(wrapped, {event = null, spellLevel = null, versatile = null} = {}) {
   let workflow = Workflow.getWorkflow(this.uuid);
+  const midiFlags = workflow.actor.data.flags["midi-qol"]
   if (!enableWorkflow) {
     return await wrapped({event, versatile})
   }
@@ -87,8 +89,23 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
     }
   }
 
-  if (workflow.damageRoll) { // we are re-rolling the attack.
+  if (workflow.damageRoll) { // we are re-rolling the damage. redisplay the item card but remove the damage
     let chatMessage = game.messages.get(workflow.itemCardId);
+    //@ts-ignore
+    let content = chatMessage && duplicate(chatMessage.data.content);
+    if (content) {
+      let searchRe = /<div class="midi-qol-damage-roll">[\s\S\n\r]*<div class="end-midi-qol-damage-roll">/;
+      let replaceString = `<div class="midi-qol-damage-roll"><div class="end-midi-qol-damage-roll">`
+      content = content.replace(searchRe, replaceString);
+      searchRe = /<div class="midi-qol-other-roll">[\s\S\n\r]*<div class="end-midi-qol-other-roll">/;
+      replaceString = `<div class="midi-qol-other-roll"><div class="end-midi-qol-other-roll">`
+      content = content.replace(searchRe, replaceString);
+      searchRe = /<div class="midi-qol-bonus-roll">[\s\S\n\r]*<div class="end-midi-qol-bonus-roll">/;
+      replaceString = `<div class="midi-qol-bonus-roll"><div class="end-midi-qol-bonus-roll">`
+      content = content.replace(searchRe, replaceString);
+      //@ts-ignore
+      chatMessage.data.content = content;
+    }
     workflow.itemCardId = (await ChatMessage.create(chatMessage.data)).id;
   }
   workflow.processDamageEventOptions(event);
@@ -107,19 +124,19 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
     // event: {shiftKey: workflow.rollOptions.fastForward},
     options: {
       fastForward: workflow.rollOptions.fastForward, 
-      chatMessage: false, // !configSettings.mergeCard,
+      chatMessage: false //!configSettings.mergeCard
     }})
   if (!result) { // user backed out of damage roll or roll failed
     return;
   }
-
+  
   // If the roll was a critical or the user selected crtical
   //@ts-ignore
   if (result.terms[0].options?.critical) 
     result = doCritModify(result);
-  else if (workflow.rollOptions.maxRoll)
+  else if (workflow.rollOptions.maxDamage)
     //@ts-ignore .evaluate not defined.
-    result = (new Roll(result._formula)).evaluate({maximize: true});
+    result = (new Roll(result.formula)).evaluate({maximize: true});
   let otherResult = undefined;
   if (
     configSettings.rollOtherDamage && 
@@ -136,7 +153,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
       // event: {shiftKey: workflow.rollOptions.fastForward},
       options: {
         fastForward: true,
-        chatMessage: false, // !configSettings.mergeCard,
+        chatMessage: false //!configSettings.mergeCard,
       }});
   }
   if (!configSettings.mergeCard) {
@@ -153,12 +170,12 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
           title,
           flavor: title,
           speaker,
-        }, {"flags.dnd5e.roll": {type: "damage", itemId: this.id }});
+        }, {"flags.dnd5e.roll": {type: "other", itemId: this.id }});
       otherResult.toMessage(messageData, game.settings.get("core", "rollMode"))
     }
   }
   const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
-  if (dice3dActive) { 
+  if (dice3dActive && configSettings.mergeCard) { 
     let whisperIds = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((configSettings.hideRollDetails !== "none" && game.user.isGM) || rollMode === "blindroll") {
@@ -177,7 +194,9 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   workflow.damageRollHTML = await result.render();
   workflow.otherDamageRoll = otherResult;
   workflow.otherDamageTotal = otherResult?.total;
-  workflow.otherHTML = await otherResult?.render()
+  workflow.otherDamageHTML = await otherResult?.render();
+  workflow.bonusDamageRoll = null;
+  workflow.bonusDamageHTML = null;
   workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
   return result;
 }
@@ -279,36 +298,7 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
     //TODO look to use returned data when available
     let spellStuff = result.content?.match(/.*data-spell-level="(.*)">/);
     workflow.itemLevel = parseInt(spellStuff[1]) || this.data.data.level;
-    if (needsConcentration) {
-      await this.actor.unsetFlag("midi-qol", "concentration-data");
-      if (installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation) {
-        let selfTarget = await getSelfTarget(this.actor);
-        const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
-        const itemDuration = this.data.data.duration;
-        // set the token as concentrating
-        await game.cub.addCondition(concentrationName, [selfTarget], { warn: false });
-
-        // Update the duration of the concentration effect - TODO remove it CUB supports a duration
-        if (workflow.hasDAE) {
-          const ae = duplicate(selfTarget.actor.data.effects.find(ae => ae.label === concentrationName));
-          if (ae) {
-            //@ts-ignore
-            const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.data._id));
-            const convertedDuration = workflow.dae.convertDuration(itemDuration, inCombat);
-            if (convertedDuration.type === "seconds") {
-              ae.duration.seconds = convertedDuration.seconds;
-              ae.duration.startTime = game.time.worldTime;
-            } else if (convertedDuration.type === "turns") {
-              ae.duration.rounds = convertedDuration.rounds;
-              ae.duration.turns = convertedDuration.turns;
-              ae.duration.startRound = game.combat?.round;
-              ae.duration.startTurn = game.combat?.turn;
-            }
-            await selfTarget.actor.updateEmbeddedEntity("ActiveEffect", ae)
-          }
-        }
-      }
-    }
+    if (needsConcentration) addConcentration({workflow})
   }
   workflow.processAttackEventOptions(event);
   workflow.checkTargetAdvantage();

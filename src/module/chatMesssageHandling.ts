@@ -7,7 +7,7 @@ import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
 import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow } from "./settings";
-import { createDamageList, getTraitMult, calculateDamage, getSelfTargetSet, getSelfTarget } from "./utils";
+import { createDamageList, getTraitMult, calculateDamage, getSelfTargetSet, getSelfTarget, addConcentration } from "./utils";
 import { config } from "process";
 import { setupSheetQol } from "./sheetQOL";
 
@@ -42,7 +42,6 @@ export function mergeCardSoundPlayer(message, update, options, user) {
 }
 
 export function processcreateBetterRollMessage(message, options, user) {
-
   const flags = message.data.flags?.betterrolls5e;
   if (!flags) return;
   const uuid = `Actor.${flags.actorId}.OwnedItem.${flags.itemId}`;
@@ -55,34 +54,33 @@ export function processcreateBetterRollMessage(message, options, user) {
   return true;
 }
 
-export let processpreCreateBetterRollsMessage = async (data: any, options:any, user: any) => {
-  if (installedModules["betterrolls5e"] || !data.content?.startsWith('<div class="dnd5e red-full chat-card"')) return true;
+export let processpreCreateBetterRollsMessage = (data: any, options:any, user: any) => {
+  const brFlags = data.flags?.betterrolls5e;
+  if (installedModules["betterrolls5e"] || !brFlags) return true;
   debug("process precratebetteerrollscard ", data, options, installedModules["betterrolls5e"], data.content?.startsWith('<div class="dnd5e red-full chat-card"') )
-  const requestId = data.speaker.token;
-  let html = $(data.content);
-  const title = html.find(".item-name")[0]?.innerHTML;
 
-  let rollDivs = html.find(".dice-roll.red-dual");//.find(".dice-row-item");
-  let rollData = html.find("red-full");
-
-  let itemId = html[0].attributes["data-item-id"];
-
-  debug("better rolls ", rollData, rollDivs, itemId)
-  if (!itemId) return true; // not an item roll.
- 
-  itemId = itemId.nodeValue;
-
-  let itemRe = /[^(]\(([\d]*)[^)]*\)/
   let token: Token = canvas.tokens.get(data.speaker.token)
   let actor: Actor5e = token?.actor;
-  if (!actor) actor = game.actors.get(data.speaker.actor);
-  let item: Item5e = actor.items.get(itemId);
+  let speaker;
+  if (!actor) {
+    actor = game.actors.get(data.speaker.actor);
+    speaker = ChatMessage.getSpeaker({actor})
+    token = canvas.tokens.get(speaker.token);
+    if (!token) {
+      console.error("too bad - no token selected");
+      return true;
+    } 
+  } else speaker = data.speaker;
+  let item: Item5e = actor.items.get(brFlags.itemId);
 
-  let levelMatch =  title.match(itemRe);
-  let itemLevel = levelMatch ? levelMatch[1] : (item?.data.data.level || 0);
+  // Try and help name hider
+  if (!data.speaker.scene) data.speaker.scene = canvas.scene.id;
+  if (!data.speaker.token) data.speaker.token = token.id;
   let damageStart = 0;
   let attackTotal = -1;
   let diceRoll;
+  let html = $(data.content);
+  let rollDivs = html.find(".dice-roll.red-dual");//.find(".dice-row-item");
 
   if (item.hasAttack) {
     damageStart = 1
@@ -97,65 +95,66 @@ export let processpreCreateBetterRollsMessage = async (data: any, options:any, u
     }
   }
 
-  // each weapon has it's own critical threshold
-  let criticalThreshold = item.data.flags.betterRolls5e?.critRange?.value || 20;
-  if (item.data.type === "weapon") criticalThreshold = Math.min(criticalThreshold, actor.data.flags.dnd5e?.weaponCriticalThreshold || 20);
-  let isCritical = diceRoll >= criticalThreshold;
-
   let damageList = [];
-  // document.activeElement.blur();
-  for (let i = damageStart; i < rollDivs.length; i++) {
-    let child = rollDivs[i].children;
-    let damage = 0;
-    // Structure is [flavor-text, dice-result]. If there is no flavor-text use the first else the second
-    let resultIndex = child.length === 1 ? 0 : 1;
-    for (let j = 0; j < $(child[resultIndex]).find(".dice-total")[0]?.children?.length; j++) {
-      let damageDiv = $(child[resultIndex]).find(".dice-total")[0].children[j];
-      // see if this damage is critical damage or not
-      let isCriticalDamage = false;
-      if (!isCritical) {
-        for (let k = 0; k < damageDiv.classList.length; k++) {
-          if (damageDiv.classList[k] === "red-crit-damage" ) isCriticalDamage = true;
-        }
-      }
-      if (!isCritical && isCriticalDamage) continue;
-      let damageitem = parseInt(damageDiv.innerHTML);
-      if (!isNaN(damageitem)) damage += damageitem;
+  let otherDamageList = [];
+  for (let entry of brFlags.entries) {
+    if (entry.type === "damage") {
+      let damage = entry.baseRoll.total;
+      let type = entry.damageType;
+      if (brFlags.isCrit && entry.critRoll) damage += entry.critRoll.total;
+      // Check for versatile and flag set.
+      if (entry.damageIndex !== "other")
+        damageList.push({type, damage});
+      else if(configSettings.rollOtherDamage)
+        otherDamageList.push({type, damage});
     }
-    const typeString = child[0].innerHTML;
-    //@ts-ignore - entry[1] type unknown
-    let type = (Object.entries(CONFIG.DND5E.damageTypes).find(entry => typeString.includes(entry[1])) || ["unmatched"])[0];
-    //@ts-ignore - entry[1] type unknown
-    if (type === "unmatched") type = (Object.entries(CONFIG.DND5E.healingTypes).find(entry => typeString.includes(entry[1])) || ["unmatched"])[0];
-    damageList.push({type, damage})
-  };
+  }
 
-  const selfTarget = await getSelfTarget(actor);
-
-  BetterRollsWorkflow.removeWorkflow(item.uuid)
-  const targets = (item?.data.data.target?.type === "self") ? new Set([selfTarget]) : new Set(game.user.targets);
-  let workflow = new BetterRollsWorkflow(actor, item, data.speaker, targets, null);
-  workflow.isCritical = diceRoll >= criticalThreshold;
+  BetterRollsWorkflow.removeWorkflow(item.uuid);
+  const targets = (item?.data.data.target?.type === "self") ? new Set([token]) : new Set(game.user.targets);
+  let workflow = new BetterRollsWorkflow(actor, item, speaker, targets, null);
+  workflow.isCritical = brFlags.isCrit;
   workflow.isFumble = diceRoll === 1;
   workflow.attackTotal = attackTotal;
   workflow.attackRoll = new Roll(`${attackTotal}`).roll();
+
   workflow.damageDetail = damageList;
   workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
-  workflow.itemLevel = itemLevel;
+
+  if (otherDamageList.length > 0) {
+    workflow.otherDamageTotal = otherDamageList.reduce((acc, a) => a.damage + acc, 0);
+    workflow.otherDamageRoll = new Roll(`${workflow.otherDamageTotal}`).roll();
+  }
+
+  workflow.itemLevel = brFlags.params.slotLevel ?? 0;
   workflow.itemCardData = data;
+  workflow.advantage = brFlags.params.adv === 1;
+  workflow.disadvantage = brFlags.params.disadv === 1;
+  if (!workflow.tokenId) workflow.tokenId = token.id;
   if (configSettings.concentrationAutomation) {
-    const needsConcentration = item.data.data.components?.concentration;
-    const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
-    if (needsConcentration && checkConcentration) {
+    let doConcentration = async () => {
       const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
-      const concentrationCheck = item.actor.data.effects.find(i => i.label === concentrationName);
-      if (concentrationCheck) {
-        await game.cub.removeCondition(concentrationName, selfTarget, {warn: false});
-        // await item.actor.unsetFlag("midi-qol", "concentration-data");
+      const needsConcentration = workflow.item.data.data.components?.concentration;
+      const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
+      if (needsConcentration && checkConcentration) {
+        const concentrationCheck = item.actor.data.effects.find(i => i.label === concentrationName);
+        if (concentrationCheck) {
+          await game.cub.removeCondition(concentrationName, [token], {warn: false});
+          // await item.actor.unsetFlag("midi-qol", "concentration-data");
+        }
+        if (needsConcentration)
+          addConcentration({workflow});
       }
-      if (needsConcentration)
-        await game.cub.addCondition(concentrationName, selfTarget)
     }
+    doConcentration();
+  }
+  const hasEffects = workflow.hasDAE && item.data.effects.find(ae=> !ae.transfer);
+  if (hasEffects && !configSettings.autoItemEffects) {
+    //@ts-ignore
+    const searchString = '<footer class="card-footer">';
+    const button = `<button data-action="applyEffects">${i18n("midi-qol.ApplyEffects")}</button>`
+    const replaceString = `<div class="card-buttons-midi-br">${button}</div><footer class="card-footer">`;
+    data.content = data.content.replace(searchString, replaceString);
   }
   // Workflow will be advanced when the better rolls card is displayed.
   return true;
@@ -331,10 +330,22 @@ export let hideStuffHandler = (message, html, data) => {
   }
 
   if (configSettings.autoCheckHit === "whisper" || message.data.blind) {
-    $(html).find(".midi-qol-hits-display").remove()
+    if (configSettings.mergeCard) {
+      $(html).find(".midi-qol-hits-display").hide();
+    } else {
+      if ($(html).find(".midi-qol-hits-display").length === 1) {
+        html.hide();
+      }
+    }
   }
   if (configSettings.autoCheckSaves === "whisper" || message.data.blind) {
-    $(html).find(".midi-qol-saves-display").remove()
+    if (configSettings.mergeCard) {
+      $(html).find(".midi-qol-saves-display").hide();
+    } else {
+      if ($(html).find(".midi-qol-saves-display").length === 1) {
+        html.hide();
+      }
+    }
   }
   //@ts-ignore
   setTimeout( () => ui.chat.scrollBottom(), 0);
@@ -417,16 +428,31 @@ export let processBetterRollsChatCard = (message, html, data) => {
   return true;
 }
 
+export function betterRollsButtons(message, html, data) {
+  if (!message.data.flags.betterrolls5e) return;
+  //@ts-ignore speaker
+  const betterRollsBinding = message.BetterRollsCardBinding;
+  const item = betterRollsBinding?.roll.item;
+  if (!item || !Workflow.getWorkflow(item.uuid)) {
+    html.find('.card-buttons-midi-br').remove();
+  } else {
+    html.find('.card-buttons-midi-br').off("click", 'button');
+    html.find('.card-buttons-midi-br').on("click", 'button', onChatCardAction.bind(this))
+  }
+}
+
 export let chatDamageButtons = (message, html, data) => {
   debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll?.type, message.data.flags)
   if (!addChatDamageButtons) return true;
-  if (message.data.flags?.dnd5e?.roll?.type === "damage") {
-    const itemId = message.data.flags.dnd5e.roll.itemId;
-    const item = game.actors.get(message.data.speaker.actor).items.get(itemId);
-    if (!item && false) {
-      warn("Damage roll for non item");
-      console.error("Damage roll for non item");
-      return;
+  if (["other", "damage"].includes(message.data.flags?.dnd5e?.roll?.type)) {
+    let item;
+    if (message.data.flags?.dnd5e?.roll?.type === "damage") {
+      const itemId = message.data.flags.dnd5e.roll.itemId;
+      item = game.actors.get(message.data.speaker.actor).items.get(itemId);
+      if (!item) {
+        warn("Damage roll for non item");
+        return;
+      }
     }
     // find the item => workflow => damageList, totalDamage
     const defaultDamageType = (item?.data.data.damage.parts[0] && item?.data.data.damage?.parts[0][1]) ?? "bludgeoning";
@@ -516,9 +542,8 @@ export function processItemCardCreation(message, options, user) {
   }
 }
 
-export async function _onChatCardAction(event) {
+export async function onChatCardAction(event) {
   event.preventDefault();
-
   // Extract card data
   const button = event.currentTarget;
   button.disabled = true;
@@ -532,20 +557,28 @@ export async function _onChatCardAction(event) {
   if ( !(game.user.isGM || message.isAuthor ) ) return;
   if (!(targets?.size > 0)) return; // cope with targets undefined
   if (action !== "applyEffects") return;
+  
+  //@ts-ignore speaker
+  const betterRollsBinding = message.BetterRollsCardBinding;
+  var actor, item;
+  if (betterRollsBinding) {
+    actor = betterRollsBinding.roll.actor;
+    item = betterRollsBinding.roll.item;
+  } else {
+    // Recover the actor for the chat card
+    //@ts-ignore
+    actor = CONFIG.Item.entityClass._getChatCardActor(card);
+    if ( !actor ) return;
 
-  // Recover the actor for the chat card
-  //@ts-ignore _getChatCardActor
-  const actor = CONFIG.Item.entityClass._getChatCardActor(card);
-  if ( !actor ) return;
-
-  // Get the Item from stored flag data or by the item ID on the Actor
-  const storedData = message.getFlag("dnd5e", "itemData");
-  const item = storedData ? this.createOwned(storedData, actor) : actor.getOwnedItem(card.dataset.itemId);
-  if ( !item ) {
-    return ui.notifications.error(game.i18n.format("DND5E.ActionWarningNoItem", {item: card.dataset.itemId, name: actor.name}))
+    // Get the Item from stored flag data or by the item ID on the Actor
+    const storedData = message.getFlag("dnd5e", "itemData");
+    item = storedData ? this.createOwned(storedData, actor) : actor.getOwnedItem(card.dataset.itemId);
+    if ( !item ) {
+      return ui.notifications.error(game.i18n.format("DND5E.ActionWarningNoItem", {item: card.dataset.itemId, name: actor.name}))
+    }
   }
+  if (!actor || !item) return;
   let workflow = Workflow.getWorkflow(item.uuid);
-  const spellLevel = parseInt(card.dataset.spellLevel) || null;
   const hasDAE = installedModules.get("dae") && (item?.effects?.entries.some(ef => ef.data.transfer === false));
   if (hasDAE) {
     //@ts-ignore
@@ -557,3 +590,136 @@ export async function _onChatCardAction(event) {
   button.disabled = false;
 }
 
+/*
+export let processpreCreateBetterRollsMessageOld = async (data: any, options:any, user: any) => {
+  if (installedModules["betterrolls5e"] || !data.content?.startsWith('<div class="dnd5e red-full chat-card"')) return true;
+  debug("process precratebetteerrollscard ", data, options, installedModules["betterrolls5e"], data.content?.startsWith('<div class="dnd5e red-full chat-card"') )
+
+  const brFlags = data.flags;
+  let html = $(data.content);
+  const title = html.find(".item-name")[0]?.innerHTML;
+
+  let rollDivs = html.find(".dice-roll.red-dual");//.find(".dice-row-item");
+  let rollData = html.find("red-full");
+
+  let itemId = html[0].attributes["data-item-id"];
+
+  debug("better rolls ", rollData, rollDivs, itemId)
+  if (!itemId) return true; // not an item roll.
+ 
+  itemId = itemId.nodeValue;
+
+  let itemRe = /[^(]\(([\d]*)[^)]*\)/
+  let token: Token = canvas.tokens.get(data.speaker.token)
+  let actor: Actor5e = token?.actor;
+  if (!actor) actor = game.actors.get(data.speaker.actor);
+  let item: Item5e = actor.items.get(itemId);
+
+  let levelMatch =  title.match(itemRe);
+  let itemLevel = levelMatch ? levelMatch[1] : (item?.data.data.level || 0);
+  let damageStart = 0;
+  let attackTotal = -1;
+  let diceRoll;
+
+  if (item.hasAttack) {
+    damageStart = 1
+    const attackRolls = $(rollDivs[0]).find(".dice-total");
+    let diceRolls = $(rollDivs[0]).find(".roll.die.d20");
+    for (let i = 0; i < attackRolls.length; i++) {
+      if (!attackRolls[i].classList.value.includes("ignore")) {
+        attackTotal = parseInt(attackRolls[i]?.innerHTML);
+        diceRoll = parseInt(diceRolls[i]?.innerHTML);
+        break;
+      }
+    }
+  }
+
+  // each weapon has it's own critical threshold
+  let criticalThreshold = item.data.flags.betterRolls5e?.critRange?.value || 20;
+  if (item.data.type === "weapon") criticalThreshold = Math.min(criticalThreshold, actor.data.flags.dnd5e?.weaponCriticalThreshold || 20);
+// critical calc removed - oops
+  let damageList = [];
+  // document.activeElement.blur();
+  for (let i = damageStart; i < rollDivs.length; i++) {
+    let child = rollDivs[i].children;
+    let damage = 0;
+    // Structure is [flavor-text, dice-result]. If there is no flavor-text use the first else the second
+    let resultIndex = child.length === 1 ? 0 : 1;
+    for (let j = 0; j < $(child[resultIndex]).find(".dice-total")[0]?.children?.length; j++) {
+      let damageDiv = $(child[resultIndex]).find(".dice-total")[0].children[j];
+      // see if this damage is critical damage or not
+      let isCriticalDamage = false;
+      if (!isCritical) {
+        for (let k = 0; k < damageDiv.classList.length; k++) {
+          if (damageDiv.classList[k] === "red-crit-damage" ) isCriticalDamage = true;
+        }
+      }
+      if (!isCritical && isCriticalDamage) continue;
+      let damageitem = parseInt(damageDiv.innerHTML);
+      if (!isNaN(damageitem)) damage += damageitem;
+    }
+    const typeString = child[0].innerHTML;
+    //@ts-ignore - entry[1] type unknown
+    let type = (Object.entries(CONFIG.DND5E.damageTypes).find(entry => typeString.includes(entry[1])) || ["unmatched"])[0];
+    //@ts-ignore - entry[1] type unknown
+    if (type === "unmatched") type = (Object.entries(CONFIG.DND5E.healingTypes).find(entry => typeString.includes(entry[1])) || ["unmatched"])[0];
+    damageList.push({type, damage})
+  };
+
+  const selfTarget = await getSelfTarget(actor);
+
+  BetterRollsWorkflow.removeWorkflow(item.uuid);
+  const targets = (item?.data.data.target?.type === "self") ? new Set([selfTarget]) : new Set(game.user.targets);
+  let workflow = new BetterRollsWorkflow(actor, item, data.speaker, targets, null);
+  workflow.isCritical = diceRoll >= criticalThreshold;
+  workflow.isFumble = diceRoll === 1;
+  workflow.attackTotal = attackTotal;
+  workflow.attackRoll = new Roll(`${attackTotal}`).roll();
+  workflow.damageDetail = damageList;
+  workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
+  workflow.itemLevel = itemLevel;
+  workflow.itemCardData = data;
+  workflow.advantage = brFlags.params.adv === 1;
+  workflow.disadvantage = brFlags.params.disadv === 1;
+  if (!workflow.tokenId) workflow.tokenId = selfTarget.id;
+  console.error("Better rolls workflow ", configSettings.concentrationAutomation, data.speaker, workflow.speaker, workflow.tokenId, workflow)
+  if (configSettings.concentrationAutomation) {
+    const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
+    const needsConcentration = workflow.item.data.data.components?.concentration;
+    const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
+    const itemDuration = workflow.item.data.data.duration;
+    console.error("Concentration check", concentrationName, needsConcentration, checkConcentration, selfTarget)
+
+    if (needsConcentration && checkConcentration) {
+      const concentrationCheck = item.actor.data.effects.find(i => i.label === concentrationName);
+      if (concentrationCheck) {
+        await game.cub.removeCondition(concentrationName, selfTarget, {warn: false});
+        // await item.actor.unsetFlag("midi-qol", "concentration-data");
+      }
+      if (needsConcentration)
+        await game.cub.addCondition(concentrationName, [selfTarget], { warn: false });
+    }
+     // Update the duration of the concentration effect - TODO remove it CUB supports a duration
+     if (workflow.hasDAE) {
+      const ae = duplicate(selfTarget.actor.data.effects.find(ae => ae.label === concentrationName));
+      if (ae) {
+        //@ts-ignore
+        const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.data._id));
+        const convertedDuration = workflow.dae.convertDuration(itemDuration, inCombat);
+        if (convertedDuration.type === "seconds") {
+          ae.duration.seconds = convertedDuration.seconds;
+          ae.duration.startTime = game.time.worldTime;
+        } else if (convertedDuration.type === "turns") {
+          ae.duration.rounds = convertedDuration.rounds;
+          ae.duration.turns = convertedDuration.turns;
+          ae.duration.startRound = game.combat?.round;
+          ae.duration.startTurn = game.combat?.turn;
+        }
+        await selfTarget.actor.updateEmbeddedEntity("ActiveEffect", ae)
+      }
+    }
+  }
+  // Workflow will be advanced when the better rolls card is displayed.
+  return true;
+}
+*/

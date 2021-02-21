@@ -1,10 +1,10 @@
 <div>
-  <div class="midi-qol-nobox">
-  <div class="midi-qol-bigger-text"><span>{{noDamage}}</span></div>
+  <div class="midi-qol-nobox midi-qol-saves-display">
+    <div class="midi-qol-bigger-text"><span>{{noDamage}}</span></div>
     {{#each saves as |save iid|}}
     <div class="midi-qol-flex-container">
-      <div class="midi-qol-target-npc-GM midi-qol-target-name-GM" id={{save.id}}> {{save.gmName}}</div>
-      <div class="midi-qol-target-npc-Player midi-qol-target-name-Player" id={{save.id}}> {{save.playerName}}</div>
+      <div class="midi-qol-target-npc-GM midi-qol-target-name" id={{save.id}}> {{save.gmName}}</div>
+      <div class="midi-qol-target-npc-Player midi-qol-target-name" id={{save.id}}> {{save.playerName}}</div>
       <div>
         {{save.saveString}}
         {{save.rollTotal}}

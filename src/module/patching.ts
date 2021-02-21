@@ -131,7 +131,7 @@ function doRollSkill(wrapped, ...args) {
     options.disadvantage = false;
   }
   if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
-    options.fastforward = true;
+    options.fastForward = true;
   }
   if (procAutoFailSkill(this, skillId) || procAutoFail(this, "check", this.data.data.skills[skillId].ability))
   {

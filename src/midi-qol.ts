@@ -39,7 +39,7 @@ export let i18nFormat = (key, data = {}) => {
 export let setDebugLevel = (debugText: string) => {
   debugEnabled = {"none": 0, "warn": 1, "debug": 2, "all": 3}[debugText] || 0;
   // 0 = none, warnings = 1, debug = 2, all = 3
-  CONFIG.debug.hooks = debugEnabled >= 3;
+  if (debugEnabled >= 3) CONFIG.debug.hooks = true;
 }
 
 export let noDamageSaves = [];
@@ -84,6 +84,7 @@ Hooks.once('init', async function() {
 /* Setup module							*/
 /* ------------------------------------ */
 Hooks.once('setup', function() {
+
 	// Do anything after initialization but before
   // ready
   setupMidiFlags();
@@ -143,6 +144,7 @@ Hooks.once('ready', function() {
 
 // Backwards compatability
 function setupMinorQolCompatibility() {
+
   //@ts-ignore
   window.MinorQOL = {
     doRoll: doRoll,
@@ -269,13 +271,15 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.critical..all`);
   midiFlags.push(`flags.midi-qol.grants.noCritical.all`);
-  midiFlags.push(`flags.midi-qol.maxroll.all`);
-  midiFlags.push(`flags.midi-qol.grants.maxRoll.all`);
+  midiFlags.push(`flags.midi-qol.maxDamage.all`);
+  midiFlags.push(`flags.midi-qol.grants.maxDamage.all`);
 
 
-  let attackTypes = ["rwa","mwak","rsak", "msak"];
+  let attackTypes = ["rwak","mwak","rsak", "msak"];
   if (game.system.id === "sw5e")
-    attackTypes = ["rwa","mwak","rpak", "mpak"];
+    attackTypes = ["rwak","mwak","rpak", "mpak"];
+  
+  attackTypes = attackTypes.concat(["heal", "other", "save", "util"])
 
   attackTypes.forEach(at => {
     midiFlags.push(`flags.midi-qol.advantage.attack.${at}`);
@@ -287,6 +291,8 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.${at}`);
     midiFlags.push(`flags.midi-qol.grants.critical.damage.${at}`);
     midiFlags.push(`flags.midi-qol.grants.noCritical.attack.${at}`);
+    midiFlags.push(`flags.midi-qol.maxDamage.${at}`);
+
   
   });
   midiFlags.push("flags.midi-qol.advantage.ability.all");
