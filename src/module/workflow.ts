@@ -735,7 +735,6 @@ export class Workflow {
       concentrationData: getProperty(this.actor.data.flags, "midi-qol.concentration-data")
     };
     warn("macro data ", macroData)
-    console.error("Calling macros ", macroNames)
 
     for (let  macro of macroNames) {
       values.push(this.callMacro(macro, macroData))
@@ -757,7 +756,6 @@ export class Workflow {
             const parts = macro.split(".");
             macro = parts[1];
             let item = this.actor.items.find(i=>i.name === macro && getProperty(i.data.flags, "itemacro.macro"))
-            console.error("call macro ", macro, item, itemMacro)
             if (item) itemMacro = getProperty(item.data.flags, "itemacro.macro")
             else return {};
           }
