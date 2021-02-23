@@ -69,8 +69,22 @@ export var configSettings = {
   removeButtons: "all",
   gmRemoveButtons: "all", 
   concentrationAutomation: false,
-  singleConcentrationRoll: true
-};
+  singleConcentrationRoll: true,
+  optionalRulesEnabled: false,
+  optionalRules: {
+    invisAdvantage: true,
+    checkRange: true,
+    nearbyFoe: true,
+    nearbyAllyRanged: true,
+    incapacitated: true,
+    removeHiddenInvis: true
+  }
+}
+
+
+export function checkRule(rule: string) {
+  return configSettings.optionalRulesEnabled && configSettings.optionalRules[rule];
+}
 
 export let fetchParams = (silent = false) => {
   debug("Fetch Params Loading");
@@ -85,6 +99,16 @@ export let fetchParams = (silent = false) => {
       configSettings.keyMapping = defaultKeyMapping;
   }
 
+  if (!configSettings.optionalRules) {
+    configSettings.optionalRules = {
+      invisAdvantage: false,
+      checkRange: false,
+      nearbyFoe: false,
+      nearbyAllyRanged: false,
+      incapacitated: false,
+      removeHiddenInvis: false
+    }
+  }
   //@ts-ignore typeLabels
   const itemList = Object.keys(CONFIG.Item?.typeLabels ?? {});
   if (!configSettings.itemTypeList && itemList.length > 0) {
@@ -114,18 +138,6 @@ export let fetchParams = (silent = false) => {
   }
 }
 
-let getParams = () => {
-  return ` 
-    itemRollButtons: ${itemRollButtons} <br>
-    speedItemRolls: ${configSettings.speedItemRolls} <br>
-    autoTarget: ${configSettings.autoTarget} <br>
-    autoCheckHit: ${configSettings.autoCheckHit} <br>
-    autoCheckSaves: ${configSettings.autoCheckSaves} <br>
-    autoApplyDamage: ${configSettings.autoApplyDamage} <br>
-    autoRollDamage: ${configSettings.autoRollDamage} <br>
-    playerRollSaves: ${configSettings.playerRollSaves} <br>
-    checkBetterRolls: ${checkBetterRolls} `
-}
 const settings = [
   {
     name: "EnableWorkflow",

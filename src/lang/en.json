@@ -191,5 +191,16 @@
     "midi-qol.concentrationCheckName": "Concentration",
     "midi-qol.DamageMacro.Name": "Bonus Damage Macros",
     "midi-qol.DamageMacro.Hint": "Comma separated list of macros to call when calculating damage which will be applied when calculating damage to targets",
-    "midi-qol.DAEMidiQOL": "DAE/Midi-QOL specific"
+    "midi-qol.DAEMidiQOL": "DAE/Midi-QOL specific",
+    "midi-qol.Optional": "Optional",
+    "midi-qol.OptionalRules.Name": "(EXPERIMENTAL) Optional Game Rules",
+    "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable. Generally don't work with better rolls.",
+    "midi-qol.InvisAdvantage.Name": "Hidden/Invisible attackers have advantage on attacks (requiresCUB or CV)",
+    "midi-qol.CheckRange.Name": "Check weapon range when attacking",
+    "midi-qol.NearbyFoe.Name": "Ranged attacks when a foe is within 5ft of the attacker have disadvantage",
+    "midi-qol.NearbyAllyRanged.Name": "(House Rule) Ranged Attacks into melee with allies have disadvantage, unless target is huge or larger",
+    "midi-qol.Incapacitated.Name": "Incapacitated actors can't make attacks",
+    "midi-qol.RemoveHiddenInvis.Name": "Attacking removes hidden/invisible (requires Conditional Visibility or CUB)",
+    "midi-qol.invisible": "Invisible",
+    "midi-qol.hidden": "Hidden"
 }

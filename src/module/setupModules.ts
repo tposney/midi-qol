@@ -9,7 +9,8 @@ let modules = {"about-time": "0.0",
               "lib-wrapper": "1.3.5",
               "dae": "0.2.43",
               "combat-utility-belt": "1.3.8",
-              "times-up": "0.1.2"
+              "times-up": "0.1.2",
+              "conditional-visibility": "0.0"
             };
 export let installedModules = new Map();
 

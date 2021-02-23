@@ -5,6 +5,8 @@
     <a class="item" data-tab="player"><i class="fas fa-dice-d20"></i> {{localize "midi-qol.PlayerSettings"}}</a>
     <a class="item" data-tab="workflow"><i class="fas fa-cogs"></i> {{localize "midi-qol.Workflow"}}</a>
     <a class="item" data-tab="misc"><i class="fas fa-cogs"></i> {{localize "midi-qol.Misc"}}</a>
+    <a class="item" data-tab="optional"><i class="fas fa-cogs"></i> {{localize "midi-qol.Optional"}}</a>
+
   </nav>
   <section id="config-tabs" class="content">
     <!-- GM Tab -->
@@ -452,6 +454,55 @@
           </select>
         </div>
         {{/if}}
+      </div>
+    </div>
+
+    <!-- Optional Rules Tab-->
+    <div class="tab" data-tab="optional" data-group="sections">
+      <div class="midi-qol-box">
+        <div class="form-group optionalRulesEnabled">
+          <label>{{localize "midi-qol.OptionalRules.Name"}}</label>
+          <input type="checkbox" name="soptionalRulesEnabled" data-dtype="Boolean" {{checked
+            configSettings.optionalRulesEnabled}} />
+        </div>
+        <div>
+          {{#unless configSettings.optionalRulesEnabled}}
+          {{localize "midi-qol.OptionalRules.Hint"}}
+          {{/unless}}
+          {{#if configSettings.optionalRulesEnabled}}
+          <div class="form-group">
+            <label>{{localize "midi-qol.Incapacitated.Name"}}</label>
+            <input type="checkbox" name="optionalRules.incapacitated" data-dtype="Boolean" {{checked
+              configSettings.optionalRules.incapacitated}} />
+          </div>
+          <div class="form-group">
+            <label>{{localize "midi-qol.InvisAdvantage.Name"}}</label>
+            <input type="checkbox" name="optionalRules.invisAdvantage" data-dtype="Boolean" {{checked
+              configSettings.optionalRules.invisAdvantage}} />
+          </div>
+          <div class="form-group">
+            <label>{{localize "midi-qol.RemoveHiddenInvis.Name"}}</label>
+            <input type="checkbox" name="optionalRules.removeHiddenInvis" data-dtype="Boolean" {{checked
+              configSettings.optionalRules.removeHiddenInvis}} />
+          </div>
+          <div class="form-group">
+            <label>{{localize "midi-qol.CheckRange.Name"}}</label>
+            <input type="checkbox" name="optionalRules.checkRange" data-dtype="Boolean" {{checked
+              configSettings.optionalRules.checkRange}} />
+          </div>
+
+          <div class="form-group">
+            <label>{{localize "midi-qol.NearbyFoe.Name"}}</label>
+            <input type="checkbox" name="optionalRules.nearbyFoe" data-dtype="Boolean" {{checked
+              configSettings.optionalRules.nearbyFoe}} />
+          </div>
+          <div class="form-group">
+            <label>{{localize "midi-qol.NearbyAllyRanged.Name"}}</label>
+            <input type="checkbox" name="optionalRules.nearbyAllyRanged" data-dtype="Boolean" {{checked
+              configSettings.optionalRules.nearbyAllyRanged}} />
+          </div>
+          {{/if}}
+        </div>
       </div>
     </div>
   </section>

@@ -75,6 +75,10 @@ export class ConfigPanel extends FormApplication {
     html.find(".itemTypeListEdit").on("click", event => {
       new IemTypeSelector({}, {}).render(true)
     })
+    html.find(".optionalRulesEnabled").on("click", event => {
+      configSettings.optionalRulesEnabled = !configSettings.optionalRulesEnabled;
+      this.render();
+    })
   }
 
   async _playList(event) {
@@ -100,7 +104,6 @@ export class ConfigPanel extends FormApplication {
     formData.itemTypeList = configSettings.itemTypeList;
     delete formData.keyMapping;
     formData.keyMapping = keyMapping;
-
     let newSettings = mergeObject(configSettings, formData, {overwrite:true, inplace:false})
     // const newSettings = mergeObject(configSettings, expand, {overwrite: true})
     if (game.user.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", newSettings);

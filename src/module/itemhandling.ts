@@ -25,8 +25,7 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
 
   }
   workflow.processAttackEventOptions(options?.event);
-  workflow.checkTargetAdvantage();
-  workflow.checkAbilityAdvantage();
+  workflow.checkAttackAdvantage();
   workflow.rollOptions.fastForward = workflow.rollOptions.fastForwardKey ? !isAutoFastAttack() : isAutoFastAttack();
   if (!workflow.rollOptions.fastForwardKey && (workflow.rollOptions.advKey || workflow.rollOptions.disKey))
     workflow.rollOptions.fastForward = true;
@@ -34,7 +33,6 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   workflow.rollOptions.disadvantage = workflow.advantage ? false : workflow.disadvantage;
   const defaultOption = workflow.rollOptions.advantage ?  "advantage" : workflow.rollOptions.disadvantage ? "disadvantage" : "normal";
   if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
-
    let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
     disadvantage: workflow.rollOptions.disadvantage,
@@ -66,6 +64,7 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   }
   workflow.attackRoll = result;
   workflow.attackRollHTML = await result.render();
+
   workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
   return result;
 }
@@ -301,8 +300,9 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
     if (needsConcentration) addConcentration({workflow})
   }
   workflow.processAttackEventOptions(event);
-  workflow.checkTargetAdvantage();
-  workflow.checkAbilityAdvantage();
+  if (getAutoRollAttack() ? workflow.rollOptions.fastForwardKey : !workflow.rollOptions.fastForwardKey) {
+    workflow.checkAttackAdvantage();
+  }
   const needAttckButton = !workflow.someEventKeySet() && !getAutoRollAttack();
   workflow.showCard = configSettings.mergeCard || (configSettings.showItemDetails !== "none") || (
                 (baseItem.isHealing && configSettings.autoRollDamage === "none")  || // not rolling damage

@@ -1,3 +1,13 @@
+0.3.71
+* bugfix in sneak atack damage applicaiton.
+* Cleaned up range check when attacking, returns disadvantage when above short range and shorter than long range.
+* Added a handful of optional rules on a new options tab, mainly for automated advantage/disadvantage. Consider them experimental. And more will come.
+  * If attacking token has an effect "hidden" or "invisible" it gets advantage
+* Removed some duplicate checks for advantage/disadvantage - any oddities let me know.
+* Added support for conditional damage/onUse Macros macros to be of the form ItemMacro.ItemName, the character's items will be searched for an item that matches the name and has an itemMacro defined on it.
+* Added addtional paramaeter (tag) to onUse and damageBonus macros args[0] data, which is "OnUse" when called via onUse macro fields and "DamageBonus" when called via damageBonusMacro.
+* update ko.jsom
+
 0.3.70
 * Cleaned up display when re-rolling dmage from an existing card. No longer displays old damage on the card while waiting for the roll.
 * Provided support for having both bonus damage and rollOtherDamage for things like bite poison damage. If on the merge card both will appear as separate lines, otherwise separate cards.

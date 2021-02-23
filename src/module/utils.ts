@@ -292,7 +292,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
          item, 
          [workflow.saves, workflow.saves], 
          {existingDamage: [], 
-         superSavers: [workflow.superSavers, workflow.superSaveers]
+         superSavers: [workflow.superSavers, workflow.superSavers]
       });
 
 //      appliedDamage = await applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, new Set(), {existingDamage: [], superSavers: new Set()});
@@ -301,9 +301,18 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         appliedDamage = await applyTokenDamage(workflow.otherDamageDetail, workflow.otherDamageTotal, theTargets, item, workflow.saves, {existingDamage: appliedDamage, superSavers: workflow.superSavers});
       }
     }
-  } else
-    appliedDamage = await applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves, {existingDamage: [], superSavers: workflow.superSavers});
-    workflow.damageList = appliedDamage;
+  } else {
+    appliedDamage = applyTokenDamageMany(
+      [workflow.damageDetail, workflow.bonusDamageDetail ?? []], 
+      [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
+      theTargets,
+      item, 
+      [workflow.saves, workflow.saves], 
+      {existingDamage: [], 
+      superSavers: [workflow.superSavers, workflow.superSavers]
+    });
+  }
+workflow.damageList = appliedDamage;
   debug("process damage roll: ", configSettings.autoApplyDamage, workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves)
 }
 
@@ -414,9 +423,9 @@ export function checkIncapcitated(actor, item, event) {
   if(actor.data.data.attributes?.hp?.value <= 0) {
     console.log(`minor-qol | ${actor.name} is incapacitated`)
     ui.notifications.warn(`${actor.name} is incapacitated`)
-    return false;
+    return true;
   }
-  return true;
+  return false;
 }
 
 /** takes two tokens of any size and calculates the distance between them
@@ -453,37 +462,41 @@ export function getDistance (t1, t2, wallblocking = false) {
   return distance;
 };
 
-export async function checkRange(actor, item, event) {
+export function checkRange(actor, item, tokenId) {
   let itemData = item.data.data;
   if ((!itemData.range?.value && itemData.range?.units !== "touch") || !["creature", "ally", "enemy"].includes(itemData.target?.type)) 
-    return true;
-  let token = await getSelfTarget(actor);
+    return "normal";
+  let token: Token = canvas.tokens.get(tokenId);
+  // let token = await getSelfTarget(actor);
   
   if (!token) {
     warn(`${game.user.name} no token selected cannot check range`)
     ui.notifications.warn(`${game.user.name} no token selected`)
-    return false;
+    return "fail";
   }
 
-   let range = itemData.range?.value || 5;
+  let range = itemData.range?.value || 5;
+  let longRange = itemData.range?.long ?? range;
+  if (["mwak", "msak", "mpak"].includes(itemData.actionType)) longRange = range;
   for (let target of game.user.targets) { 
     if (target === token) continue;
     // check the range
     
     let distance = getDistance(token, target, configSettings.autoTarget === "wallsBlock") - 5; // assume 2.5 width for each token
-
-    if (distance > range) {
+    
+    if (distance > longRange) {
       console.log(`minor-qol | ${target.name} is too far ${distance} from your character you cannot hit`)
-      ui.notifications.warn(`${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${range}`)
-      return false;
+      ui.notifications.warn(`${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange}`)
+      return "fail";
     }
+    if (distance > range) return "dis";
     if (distance < 0) {
       console.log(`minor-qol | ${target.name} is blocked by a wall`)
       ui.notifications.warn(`${actor.name}'s target is blocked by a wall`)
-      return false;
+      return "fail";
     }
   }
-  return true;
+  return "normal";
 }
 
 export function testKey(keyString, event) {
@@ -586,8 +599,50 @@ export async function addConcentration(options: {workflow: Workflow}) {
           ae.duration.startRound = game.combat?.round;
           ae.duration.startTurn = game.combat?.turn;
         }
+
         await selfTarget.actor.updateEmbeddedEntity("ActiveEffect", ae)
       }
     }
+  }
+}
+
+export function checkNearby(disposition, token, maxSize) {
+  if (!token) return false;
+  const size = token.data.height * token.data.width;
+  if (size > maxSize) return false;
+  let targetDisposition = token.data.disposition;
+  if (token.data.disposition === 0) targetDisposition = -1;
+  targetDisposition = targetDisposition * disposition;
+  let nearby = canvas.tokens.placeables.find(t => {
+    const tokenDistance = getDistance(t, token, true)
+    return t.actor &&
+      // t.actor.id !== token.actor.id && // not me
+      t.id !== token.id && // not the token
+      t.actor.data.data.attributes?.hp?.value > 0 && // not incapacitated
+      t.data.disposition === targetDisposition &&
+      0 < tokenDistance && tokenDistance <= 5
+  });
+  return nearby ? true : false;
+}
+
+export function hasCondition(token, condition: string) {
+  const localCondition = i18n(`midi-qol.${condition}`);
+  if (getProperty((token.actor.data.flags), `conditional-visibility.${condition}`)) return true;
+  if (installedModules.get("combat-utility-belt")) {
+    return game.cub.hasCondition(localCondition, [token], {warn: false}); 
+  }  
+  return false;
+}
+
+export async function removeCondition(token, condition: string) {
+  //@ts-ignore
+  const CV = window.ConditionalVisibility;
+  const localCondition = i18n(`midi-qol.${condition}`);
+  if (condition === "hidden") {
+    CV?.unHide([token]);
+  } else CV?.setCondition([token], condition, false);
+  if (installedModules.get("combat-utility-belt")) {
+    // console.error(game.cub.hasCondition(localCondition, token, {warn: false})); 
+    game.cub.removeCondition(localCondition, token, {warn: false}); 
   }
 }

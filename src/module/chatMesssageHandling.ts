@@ -1,4 +1,4 @@
-import { debug, log, warn, i18n, error, MESSAGETYPES } from "../midi-qol";
+import { debug, log, warn, i18n, error, MESSAGETYPES, timelog } from "../midi-qol";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
@@ -179,9 +179,13 @@ export let diceSoNiceHandler = async (message, html, data) => {
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
   let rollDice = game.user.isGM ||
         (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
-  if (!rollDice) return;
+  if (!rollDice) {
+    return;
+  }
 
-  if (configSettings.mergeCard) return;
+  if (configSettings.mergeCard) {
+    return;
+  }
     if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
     debug("dice so nice handler - non-merge card", html)
     html.hide();
@@ -199,6 +203,7 @@ export let diceSoNiceHandler = async (message, html, data) => {
 }
 
 export let colorChatMessageHandler = (message, html, data) => {
+
   if (coloredBorders === "none") return true;
   let actorId = message.data.speaker.actor;
   let userId = message.data.user;
@@ -443,7 +448,9 @@ export function betterRollsButtons(message, html, data) {
 
 export let chatDamageButtons = (message, html, data) => {
   debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll?.type, message.data.flags)
-  if (!addChatDamageButtons) return true;
+  if (!addChatDamageButtons) {
+    return true;
+  }
   if (["other", "damage"].includes(message.data.flags?.dnd5e?.roll?.type)) {
     let item;
     if (message.data.flags?.dnd5e?.roll?.type === "damage") {
@@ -466,11 +473,11 @@ export let chatDamageButtons = (message, html, data) => {
     addChatDamageButtonsToHTML(midiFlags.damageTotal, midiFlags.damageDetail, html, item, "damage", ".midi-qol-damage-roll .dice-total");
     addChatDamageButtonsToHTML(midiFlags.otherDamageTotal, midiFlags.otherDamageDetail, html, item, "other", ".midi-qol-other-roll .dice-total");
   }
-  
   return true;
 }
 
 export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, tag="damage",toMatch=".dice-total") {
+
   debug("addChatDamageButtons", totalDamage, damageList, html, item, toMatch, $(html).find(toMatch))
   const btnContainer = $('<span class="dmgBtn-container-mqol" style="position:relative; right:0; bottom:1px;"></span>');
   let btnStyling = "width: 20%; margin-top: 5%; height: 90%; background-color: #ffffff; font-size:14px;line-height:1px";

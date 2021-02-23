@@ -28,7 +28,9 @@ export let debugEnabled = 0;
 export let debug = (...args) => {if (debugEnabled > 1) console.log("DEBUG: midi-qol | ", ...args)};
 export let log = (...args) => console.log("midi-qol | ", ...args);
 export let warn = (...args) => {if (debugEnabled > 0) console.warn("midi-qol | ", ...args)};
-export let error = (...args) => console.error("midi-qol | ", ...args)
+export let error = (...args) => console.error("midi-qol | ", ...args);
+export let timelog = (...args) => warn("midi-qol | ", Date.now(), ...args);
+
 export let i18n = key => {
   return game.i18n.localize(key);
 };
@@ -49,7 +51,6 @@ export let savingThrowTextAlt;
 export let MQdefaultDamageType;
 export let allDamageTypes;
 export let midiFlags = [];
-
 
 export const MESSAGETYPES = {
   HITS: 1,
@@ -78,13 +79,13 @@ Hooks.once('init', async function() {
 	// Preload Handlebars templates
   preloadTemplates();
   // Register custom sheets (if any)
+
 });
 
 /* ------------------------------------ */
 /* Setup module							*/
 /* ------------------------------------ */
 Hooks.once('setup', function() {
-
 	// Do anything after initialization but before
   // ready
   setupMidiFlags();
