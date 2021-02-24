@@ -166,6 +166,7 @@ All of these effects expire at the end of the combat if no other duration is spe
 
 
 ## flags.midi-qol
+There is a handy spreadsheet that has a table of flags plus explanation thanks to (dstein766) https://docs.google.com/spreadsheets/d/1Vze_sJhhMwLZDj1IKI5w1pvfuynUO8wxE2j8AwNbnHE/edit?usp=sharing
 Midi-qol supports a number of flags values that alter how attacks/casts are rolled. They are supported by an modules that use item.rollI(), item.rollAttack(), item.rollDamage() or actor.useSpell() [the standard dnd5e rolls]. Usually you would apply these via active effects.  
 * flags.midi-qol.advantage.all  - gives advantage as if all of the settings below were set
 * flags.midi-qol.advantage.attack.all
