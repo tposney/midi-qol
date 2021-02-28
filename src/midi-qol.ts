@@ -19,7 +19,7 @@ import { initHooks, readyHooks } from './module/Hooks';
 import { initGMActionSetup } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
-import { applyTokenDamage, getDistance, getTraitMult } from './module/utils';
+import { applyTokenDamage, checkNearby, findNearby, getDistance, getTraitMult } from './module/utils';
 import { ConfigPanel } from './module/apps/ConfigPanel';
 import { doCritModify } from './module/itemhandling';
 
@@ -165,7 +165,9 @@ function setupMinorQolCompatibility() {
     midiFlags,
     debug,
     log,
-    warn
+    warn,
+    findNearby: findNearby,
+    checkNearby: checkNearby
   }
 }
 
@@ -270,7 +272,7 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.fail.attack.all")
   midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
-  midiFlags.push(`flags.midi-qol.grants.critical..all`);
+  midiFlags.push(`flags.midi-qol.grants.critical.all`);
   midiFlags.push(`flags.midi-qol.grants.noCritical.all`);
   midiFlags.push(`flags.midi-qol.maxDamage.all`);
   midiFlags.push(`flags.midi-qol.grants.maxDamage.all`);

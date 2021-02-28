@@ -185,7 +185,6 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
     await game.dice3d.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
     if (configSettings.rollOtherDamage && otherResult)
       await game.dice3d.showForRoll(otherResult, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
-
   }
 
   workflow.damageRoll = result;
@@ -346,7 +345,8 @@ export async function showItemInfo() {
     hasAttackRoll: false,
     configSettings,
     hideItemDetails: false,
-    hasEffects: false};
+    hasEffects: false,
+    isMerge: false};
 
   const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
   const template = `modules/midi-qol/templates/${templateType}-card.html`;
@@ -409,7 +409,8 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     configSettings,
     hideItemDetails,
     showProperties: workflow.workflowType === "Workflow",
-    hasEffects
+    hasEffects,
+    isMerge: configSettings.mergeCard
   }
   const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
   const template = `modules/midi-qol/templates/${templateType}-card.html`;
@@ -507,7 +508,7 @@ export function selectTargets(scene, data, options) {
     canvas.tokens.placeables.filter(t => {
       if (!t.actor) return false;
       // skip the caster
-      if (!selfTarget && this.token === t.id) {
+      if (!selfTarget && this.tokenId === t.id) {
         return false;
       }
       t = canvas.tokens.get(t.id);
@@ -517,8 +518,8 @@ export function selectTargets(scene, data, options) {
       const h = t.height >= 1 ? 0.5 : t.data.height / 2;
       const gridSize = canvas.scene.data.grid;
       let contained = false;
-      for (let xstep = w; xstep < t.data.width && !contained; xstep++) {
-        for (let ystep = h; ystep < t.data.height && !contained; ystep++) {
+      for (let xstep = w; xstep <= t.data.width && !contained; xstep++) {
+        for (let ystep = h; ystep <= t.data.height && !contained; ystep++) {
           const tx = t.x + xstep * gridSize;
           const ty = t.y + ystep * gridSize;
           if (shape.contains(tx - tdx, ty - tdy)) {

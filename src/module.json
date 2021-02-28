@@ -16,7 +16,16 @@
   "scripts": [],
   "esmodules": ["midi-qol.js"],
   "styles": ["css/styles.css"],
-  "packs": [],
+  "packs": [
+    {
+      "name": "midiqol-sample-items",
+      "label": "MidiQOL Sample Items",
+      "path": "./packs/sampleitems.db",
+      "module": "world",
+      "entity": "Item",
+      "lang": ["en", "de"]
+    }
+  ],
   "languages": [
       {
           "lang": "en",
@@ -67,6 +76,8 @@
   "minimumCoreVersion": "0.7.6",
   "compatibleCoreVersion": "0.7.9",
   "minimumSystemVersion": "1.2.3",
+  "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",
+  "allowBugReporter": true,
   "url": "https://gitlab.com/tposney/midi-qol",
   "manifest": "https://gitlab.com/tposney/midi-qol/raw/master/package/module.json",
   "download": "https://gitlab.com/tposney/midi-qol/raw/master/package/midi-qol-v0.3.72.zip"

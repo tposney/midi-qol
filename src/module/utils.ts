@@ -1,5 +1,5 @@
 import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType } from "../midi-qol";
-import { itemRollButtons, configSettings, checkBetterRolls, autoRemoveTargets } from "./settings";
+import { itemRollButtons, configSettings, checkBetterRolls, autoRemoveTargets, checkRule } from "./settings";
 import { log } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
 import { broadcastData } from "./GMAction";
@@ -20,10 +20,11 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
   for (let [spec, type] of damageSpec.parts) {
     debug("CreateDamageList: single Spec is ", spec, type, item)
     if (item) {
-      let rollData = item.actor?.getRollData();
+      let rollData = item?.getRollData();
       rollData.mod = 0;
-      //@ts-ignore replaceFromulaData - blank out @fields with 0
+      //@ts-ignore replaceFromulaData - blank out @field
       let formula = Roll.replaceFormulaData(spec, rollData || {}, {missing: "0", warn: false});
+      // get rid of any remaining @fields
       var rollSpec: Roll = new Roll(formula, rollData || {}).roll();
     }
     debug("CreateDamageList: rollSpec is ", spec, rollSpec)
@@ -464,8 +465,10 @@ export function getDistance (t1, t2, wallblocking = false) {
 
 export function checkRange(actor, item, tokenId) {
   let itemData = item.data.data;
-  if ((!itemData.range?.value && itemData.range?.units !== "touch") || !["creature", "ally", "enemy"].includes(itemData.target?.type)) 
+
+  if ((!itemData.range?.value && itemData.range?.units !== "touch") || !["creature", "ally", "enemy"].includes(itemData.target?.type)) {
     return "normal";
+  }
   let token: Token = canvas.tokens.get(tokenId);
   // let token = await getSelfTarget(actor);
   
@@ -477,12 +480,13 @@ export function checkRange(actor, item, tokenId) {
 
   let range = itemData.range?.value || 5;
   let longRange = itemData.range?.long ?? range;
+  if (longRange < range) longRange = range; // allow for 0 long range specs
   if (["mwak", "msak", "mpak"].includes(itemData.actionType)) longRange = range;
   for (let target of game.user.targets) { 
     if (target === token) continue;
     // check the range
     
-    let distance = getDistance(token, target, configSettings.autoTarget === "wallsBlock") - 5; // assume 2.5 width for each token
+    let distance = getDistance(token, target, configSettings.autoTarget === "wallsBlock"); // assume 2.5 width for each token
     
     if (distance > longRange) {
       console.log(`minor-qol | ${target.name} is too far ${distance} from your character you cannot hit`)
@@ -599,30 +603,37 @@ export async function addConcentration(options: {workflow: Workflow}) {
           ae.duration.startRound = game.combat?.round;
           ae.duration.startTurn = game.combat?.turn;
         }
-
         await selfTarget.actor.updateEmbeddedEntity("ActiveEffect", ae)
       }
     }
   }
 }
 
-export function checkNearby(disposition, token, maxSize) {
+/** 
+ * Find tokens nearby
+ * @param {number|null} disposition. same(1), opposite(-1), neutral(0), ignore(null) token disposition
+ * @param {Token} token The token to search around
+ * @param {number} distance in game units to consider near
+ */
+
+export function findNearby(disposition, token, distance, maxSize = undefined) {
   if (!token) return false;
-  const size = token.data.height * token.data.width;
-  if (size > maxSize) return false;
-  let targetDisposition = token.data.disposition;
-  if (token.data.disposition === 0) targetDisposition = -1;
-  targetDisposition = targetDisposition * disposition;
-  let nearby = canvas.tokens.placeables.find(t => {
-    const tokenDistance = getDistance(t, token, true)
-    return t.actor &&
-      // t.actor.id !== token.actor.id && // not me
-      t.id !== token.id && // not the token
-      t.actor.data.data.attributes?.hp?.value > 0 && // not incapacitated
-      t.data.disposition === targetDisposition &&
-      0 < tokenDistance && tokenDistance <= 5
+  let targetDisposition = token.data.disposition * disposition;
+  let nearby = canvas.tokens.placeables.filter(t => {
+    if (t.data.height * t.data.width > maxSize) return false;
+    if (t.actor &&
+    t.id !== token.id && // not the token
+    t.actor.data.data.attributes?.hp?.value > 0 && // not incapacitated
+    (disposition === null || t.data.disposition === targetDisposition)) {
+      const tokenDistance = getDistance(t, token, true)
+      return 0 < tokenDistance && tokenDistance <= distance
+    } else return false;
   });
-  return nearby ? true : false;
+  return nearby;
+}
+
+export function checkNearby(disposition, token, distance) {
+  return findNearby(disposition, token, distance).length !== 0;;
 }
 
 export function hasCondition(token, condition: string) {
@@ -642,7 +653,7 @@ export async function removeCondition(token, condition: string) {
     CV?.unHide([token]);
   } else CV?.setCondition([token], condition, false);
   if (installedModules.get("combat-utility-belt")) {
-    // console.error(game.cub.hasCondition(localCondition, token, {warn: false})); 
     game.cub.removeCondition(localCondition, token, {warn: false}); 
   }
 }
+

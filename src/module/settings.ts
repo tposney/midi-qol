@@ -75,7 +75,7 @@ export var configSettings = {
     invisAdvantage: true,
     checkRange: true,
     nearbyFoe: true,
-    nearbyAllyRanged: true,
+    nearbyAllyRanged: 4,
     incapacitated: true,
     removeHiddenInvis: true
   }
@@ -104,7 +104,7 @@ export let fetchParams = (silent = false) => {
       invisAdvantage: false,
       checkRange: false,
       nearbyFoe: false,
-      nearbyAllyRanged: false,
+      nearbyAllyRanged: 0,
       incapacitated: false,
       removeHiddenInvis: false
     }

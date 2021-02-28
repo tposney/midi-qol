@@ -1,11 +1,30 @@
+0.3.72 
+* Fix for better rolls processing of criticals, was deciding critical when it shouldn't.
+* Fix for disavantage due to nearby foes on ranged attacks.
+* Added advantage/disadvantage display for all saving throws, not just magic resistant ones.
+* Put chat card damage buttons back to overlay, I think the opening up and closing was just too distracting.
+* Display Dice So Nice dice rolls for bonus damage rolls as well.
+* Fix for referencing item data in damage rolls, broken by 0.3.71
+* Support for bug-reporter.
+* Fix for not ignoring self when checking template targets.
+* Inclusion of a very little compendium of items that demonstrate some of the features that can be automated in midi-qol with conditional damage macros, sneak attack, hunter's mark and rage.
+* Fix for hiding too many chat cards when hide-saves/hide-hits enabled and not using merge cards.
+* Fix for check range before rolling, faiing almost all ranged spell attacks.
+* Fix for removing measured templates on concentration expiry when no tokens were targeted by the template.
+* Fix for not auto targeting itty bitty tokens when placing measured templates. The halflings of the world will rue the day.
+* Added "faster" short circuit eval for ItemMacro calls.
+* A change to the damage chat card. Instead of a pletheroa of buttons a new streamlined display which shows the icon of the token that was damaged (which can be clicked on to hightlight the token on the map), a summary fo the damge done, and a drop down list of buttons. Calc means the damage after applying immunities and the numeric multipliers refer to the base rolld damage. The tick applies the currently selected mulitplier's damage and the undo always puts the character back to the HP before the attack.
+So if the damage was 18 hit points and resistances reduced that to 9, the MQoL multiplier will apply 9 points, the 1X 18, the 2X 36 and the heal will heal the character of 18 points of damage. The MQoL option will always set the HP to the after damage total and applying it multiple times will not have any additional effects, the other buttons will cumulatively apply damage. 
+* **Many thanks to @Engranado for providing this.**
+
 0.3.71
-* bugfix in sneak atack damage applicaiton.
+* bugfix in sneak attack damage application.
 * Cleaned up range check when attacking, returns disadvantage when above short range and shorter than long range.
 * Added a handful of optional rules on a new options tab, mainly for automated advantage/disadvantage. Consider them experimental. And more will come.
   * If attacking token has an effect "hidden" or "invisible" it gets advantage
 * Removed some duplicate checks for advantage/disadvantage - any oddities let me know.
 * Added support for conditional damage/onUse Macros macros to be of the form ItemMacro.ItemName, the character's items will be searched for an item that matches the name and has an itemMacro defined on it.
-* Added addtional paramaeter (tag) to onUse and damageBonus macros args[0] data, which is "OnUse" when called via onUse macro fields and "DamageBonus" when called via damageBonusMacro.
+* Added additional parameter (tag) to onUse and damageBonus macros args[0] data, which is "OnUse" when called via onUse macro fields and "DamageBonus" when called via damageBonusMacro.
 * update ko.jsom
 
 0.3.70

@@ -23,24 +23,6 @@ function restrictVisibility() {
   // Dispatch a hook that modules can use
   Hooks.callAll("sightRefresh", this);
 }
-function _getUsageUpdates(wrapped, {consumeQuantity=false, consumeRecharge=false, consumeResource=false, consumeSpellSlot=false, consumeUsage=false}) {
-  const updates = wrapped({consumeQuantity, consumeRecharge, consumeResource, consumeSpellSlot, consumeUsage})
-  const itemData = this.data.data;
-  console.error("In my get Usage Updates", itemData.materials, itemData.components, itemData.materials?.consumed, itemData.components?.material, updates)
-
-  if (updates && this.type === "spell" && 
-       itemData.components?.material && itemData.materials?.cost > 0) {
-    const supplyAvailable = itemData.materials.supply ?? 0;
-    console.error("supply", supplyAvailable, itemData.materials.supply)
-    if (supplyAvailable < 1) {
-      ui.notifications.warn(`MidiQOL: No ${itemData.materials.value} available`)
-      return false;
-    }
-    if (itemData.materials?.consumed)
-      updates.itemUpdates["data.materials.supply"] = supplyAvailable - 1;
-  }
-  return updates;
-}
 
 function _isVisionSource() {
   // log("proxy _isVisionSource", this);
@@ -200,11 +182,9 @@ function procAutoFail(actor, rollType, abilityId) {
 function procAutoFailSkill(actor, skillId) {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const fail = midiFlags.fail ?? {};
-  console.error("skill roll ", fail, skillId)
   if (fail.skill || fail.all) {
     const rollFlags = (fail.skill && fail.skill[skillId]) || false;
     const autoFail = fail.all || fail.skill.all || rollFlags;
-    console.error("returning autofail ", autoFail, rollFlags)
     return autoFail;
   }
   return false;

@@ -78,9 +78,7 @@ let createReverseDamageCard = async (data) => {
     }
     actor = token.actor;
     const hp = actor.data.data.attributes.hp;
-    // const oldTempHP = hp.temp || 0;
-    // const oldHP = hp.value || 0;
-
+ 
     if (tempDamage > oldTempHP) {
       var newTempHP = 0;
       hpDamage += (tempDamage - oldTempHP)
@@ -111,10 +109,11 @@ let createReverseDamageCard = async (data) => {
       }
     }
     
-    tokenIdList.push({ tokenId, oldTempHP: oldTempHP, oldHP, absDamage: Math.abs(totalDamage), newHP, newTempHP});
+    tokenIdList.push({ tokenId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP});
 
     let listItem = {
       tokenId: tokenId,
+      tokenImg: token.data.img,
       hpDamage,
       tempDamage,
       totalDamage: Math.abs(totalDamage),
@@ -154,13 +153,13 @@ let createReverseDamageCard = async (data) => {
       content: content,
       whisper: ChatMessage.getWhisperRecipients("GM").filter(u => u.active),
       type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-      flags: { "midiqol": {"undoDamage" :tokenIdList }}
+      flags: { "midiqol": {"undoDamage": tokenIdList }}
     };
     let message = await ChatMessage.create(chatData);
   }
 }
 
-async function doClick(event, tokenId, absDamage, mult) {
+async function doClick(event, tokenId, totalDamage, mult) {
   let token = canvas.tokens.get(tokenId);
   if (!token?.actor) {
     ui.notifications.warn("Token not found in scene")
@@ -168,16 +167,27 @@ async function doClick(event, tokenId, absDamage, mult) {
     return;
   }
   let actor = token.actor;
-  log(`Applying ${absDamage} mult ${mult} HP to ${actor.name}`);
-  await actor.applyDamage(absDamage, mult);
+  log(`Applying ${totalDamage} mult ${mult} HP to ${actor.name}`);
+  await actor.applyDamage(totalDamage, mult);
   event.stopPropagation();
+}
+
+async function doMidiClick(ev, tokenId, newTempHP, newHP) {
+  let token = canvas.tokens.get(tokenId);
+  if (!token?.actor) {
+    warn(`Process damage button: Actor for token ${tokenId} not found`);
+    return;
+  }
+  let actor = token.actor;
+  log(`Setting HP to ${newTempHP} and ${newHP}`);
+  await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP });
 }
 
 export let processUndoDamageCard = async(message, html, data) => {
   if (!message.data.flags?.midiqol?.undoDamage) return true;
   let button = html.find("#all-reverse");
   button.click((ev) => {
-    message.data.flags.midiqol.undoDamage.forEach(async ({tokenId, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
+    message.data.flags.midiqol.undoDamage.forEach(async ({tokenId, oldTempHP, oldHP, totalDamage, newHP, newTempHP}) => {
       let token = canvas.tokens.get(tokenId);
       if (!token?.actor) {
         ui.notifications.warn("Token not found in scene")
@@ -207,9 +217,9 @@ export let processUndoDamageCard = async(message, html, data) => {
     })
   })
 
-  message.data.flags.midiqol.undoDamage.forEach(({tokenId, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
+  message.data.flags.midiqol.undoDamage.forEach(({tokenId, oldTempHP, oldHP, totalDamage, newHP, newTempHP}) => {
     let button = html.find(`#reverse-${tokenId}`);
-      //TODO clean this up - one handler with
+    //TODO clean this up - one handler with
     button.click(async (ev) => {
       let token = canvas.tokens.get(tokenId);
       if (!token?.actor) {
@@ -223,6 +233,8 @@ export let processUndoDamageCard = async(message, html, data) => {
       await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP });
       ev.stopPropagation();
     });
+
+    // Default action of button is to do midi damage
     button = html.find(`#apply-${tokenId}`);
     button.click(async (ev) => {
       let token = canvas.tokens.get(tokenId);
@@ -235,15 +247,49 @@ export let processUndoDamageCard = async(message, html, data) => {
       await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP });
       ev.stopPropagation();
     });
+    /*
     button = html.find("#all-apply");
 
     button = html.find(`#full-${tokenId}`);
-    button.click(async (ev) => doClick(ev, tokenId, absDamage, 1));
+    button.click(async (ev) => doClick(ev, tokenId, totalDamage, 1));
     button = html.find(`#half-${tokenId}`);
-    button.click(async (ev) => doClick(ev, tokenId, absDamage, 0.5));
+    button.click(async (ev) => doClick(ev, tokenId, totalDamage, 0.5));
     button = html.find(`#double-${tokenId}`);
-    button.click(async (ev) => doClick(ev, tokenId, absDamage, 2));
+    button.click(async (ev) => doClick(ev, tokenId, totalDamage, 2));
     button = html.find(`#heal-${tokenId}`);
-    button.click(async (ev) => doClick(ev, tokenId, absDamage, -1));
+    button.click(async (ev) => doClick(ev, tokenId, totalDamage, -1));
+    */
+     //dmg-multiplier-{{damage.tokenId}}
+    let select = html.find(`#dmg-multiplier-${tokenId}`);
+    select.change(async (ev) => {
+      let multiplier = html.find(`#dmg-multiplier-${tokenId}`).val();
+      button = html.find(`#apply-${tokenId}`);
+      button.off('click');
+      switch (multiplier) {
+        case "mq":
+          button.click(async (ev) => doMidiClick(ev, tokenId, newTempHP, newHP));
+          break;
+        case "Heal": {
+          button.click(async (ev) => doClick(ev, tokenId, totalDamage, -1));
+          break;
+        }
+        case "x1": {
+          button.click(async (ev) => doClick(ev, tokenId, totalDamage, 1));
+          break;
+        }
+        case "x1/4": {
+          button.click(async (ev) => doClick(ev, tokenId, totalDamage, 0.25));
+          break;
+        }
+        case "x1/2": {
+          button.click(async (ev) => doClick(ev, tokenId, totalDamage, 0.5));
+          break;
+        }
+        case "x2": {
+          button.click(async (ev) => doClick(ev, tokenId, totalDamage, 2));
+          break;
+        }
+      }
+    });
   })
 }

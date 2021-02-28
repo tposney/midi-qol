@@ -97,23 +97,26 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
 
   let damageList = [];
   let otherDamageList = [];
+  let criticalThreshold = -1;
   for (let entry of brFlags.entries) {
     if (entry.type === "damage") {
       let damage = entry.baseRoll.total;
       let type = entry.damageType;
-      if (brFlags.isCrit && entry.critRoll) damage += entry.critRoll.total;
+      if (diceRoll >= criticalThreshold && entry.critRoll) damage += entry.critRoll.total;
       // Check for versatile and flag set.
       if (entry.damageIndex !== "other")
         damageList.push({type, damage});
       else if(configSettings.rollOtherDamage)
         otherDamageList.push({type, damage});
+    } else if (entry.type === "multiroll") {
+      criticalThreshold = entry.critThreshold;
+
     }
   }
-
   BetterRollsWorkflow.removeWorkflow(item.uuid);
   const targets = (item?.data.data.target?.type === "self") ? new Set([token]) : new Set(game.user.targets);
   let workflow = new BetterRollsWorkflow(actor, item, speaker, targets, null);
-  workflow.isCritical = brFlags.isCrit;
+  workflow.isCritical = diceRoll >= criticalThreshold;
   workflow.isFumble = diceRoll === 1;
   workflow.attackTotal = attackTotal;
   workflow.attackRoll = new Roll(`${attackTotal}`).roll();
@@ -162,6 +165,7 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
 
 var DSNHandlers;
 
+/*
 let showHandler = (hideTags, displayId, html, header, message, id) => {
   debug("Show Handler:", header, hideTags, displayId, html, id, message)
   if (id !== displayId) return;
@@ -172,6 +176,7 @@ let showHandler = (hideTags, displayId, html, header, message, id) => {
   //@ts-ignore
   ui.chat.scrollBottom()
 };
+*/
 
 export let diceSoNiceHandler = async (message, html, data) => {
   if (!game.dice3d || !installedModules.get("dice-so-nice") || game.dice3d.messageHookDisabled || !game.dice3d.isEnabled()) return;
@@ -186,19 +191,32 @@ export let diceSoNiceHandler = async (message, html, data) => {
   if (configSettings.mergeCard) {
     return;
   }
-    if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
-    debug("dice so nice handler - non-merge card", html)
-    html.hide();
-    Hooks.once("diceSoNiceRollComplete", (id) => {
+
+  if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
+  debug("dice so nice handler - non-merge card", html)
+  html.hide();
+  Hooks.once("diceSoNiceRollComplete", (id) => {
+    let savesDisplay = $(html).find(".midi-qol-saves-display").length === 1;
+    let hitsDisplay = $(html).find(".midi-qol-hits-display").length == 1;
+    if (savesDisplay) {
+      if (configSettings.autoCheckHit !== "whisper" && !message.data.blind) 
+        html.show()
+    } else if (hitsDisplay) {
+      if (configSettings.autoCheckSaves !== "whisper" && !message.data.blind) 
+        html.show()
+    }
+    else {
       html.show(); 
       //@ts-ignore
       ui.chat.scrollBottom()
-    });
-    setTimeout(() => {
-      html.show(); 
-      //@ts-ignore
-      ui.chat.scrollBottom()
-    }, 3000); // backup display of messages
+    
+      setTimeout(() => {
+        html.show(); 
+        //@ts-ignore
+        ui.chat.scrollBottom()
+      }, 3000); // backup display of messages
+    }
+  });
   return true;
 }
 
@@ -314,6 +332,13 @@ export let hideStuffHandler = (message, html, data) => {
     html.find(".midi-qol-target-npc-GM").hide();
   }
   if (game.user.isGM) {
+    if (configSettings.mergeCard) {
+      $(html).find(".midi-qol-hits-display").show();
+    } else {
+      if ($(html).find(".midi-qol-hits-display").length === 1) {
+        html.show();
+      }
+    }
     //@ts-ignore
     ui.chat.scrollBottom
     return;
@@ -347,11 +372,11 @@ export let hideStuffHandler = (message, html, data) => {
     if (configSettings.mergeCard) {
       $(html).find(".midi-qol-saves-display").hide();
     } else {
-      if ($(html).find(".midi-qol-saves-display").length === 1) {
+      if ($(html).find(".midi-qol-nobox .midi-qol-saves-display").length === 1) {
         html.hide();
       }
     }
-  }
+  } 
   //@ts-ignore
   setTimeout( () => ui.chat.scrollBottom(), 0);
 }
@@ -427,7 +452,7 @@ export let processBetterRollsChatCard = (message, html, data) => {
   const formula = "1d20";
   const total = html.find(".dice-total")[0]?.innerHTML;
   clearTimeout(saveTimeouts[requestId]);
-  saveRequests[requestId]({total, formula})
+  saveRequests[requestId]({total, formula, terms: []})
   delete saveRequests[requestId];
   delete saveTimeouts[requestId];
   return true;
@@ -472,12 +497,11 @@ export let chatDamageButtons = (message, html, data) => {
     const item = game.actors.get(midiFlags.actor)?.getOwnedItem(midiFlags.item);
     addChatDamageButtonsToHTML(midiFlags.damageTotal, midiFlags.damageDetail, html, item, "damage", ".midi-qol-damage-roll .dice-total");
     addChatDamageButtonsToHTML(midiFlags.otherDamageTotal, midiFlags.otherDamageDetail, html, item, "other", ".midi-qol-other-roll .dice-total");
+    addChatDamageButtonsToHTML(midiFlags.bonusDamageTotal, midiFlags.bonusDamageDetail, html, item, "other", ".midi-qol-bonus-roll .dice-total");
   }
   return true;
 }
-
-export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, tag="damage",toMatch=".dice-total") {
-
+/*
   debug("addChatDamageButtons", totalDamage, damageList, html, item, toMatch, $(html).find(toMatch))
   const btnContainer = $('<span class="dmgBtn-container-mqol" style="position:relative; right:0; bottom:1px;"></span>');
   let btnStyling = "width: 20%; margin-top: 5%; height: 90%; background-color: #ffffff; font-size:14px;line-height:1px";
@@ -485,6 +509,22 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, 
   const halfDamageButton = $(`<button class="dice-total-half-${tag}-button" style="${btnStyling}"><i class="fas fa-user-shield" title="Click to apply half damage to selected token(s)."></i></button>`);
   const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button" style="${btnStyling}"><i class="fas fa-user-injured" title="Click to apply double damage to selected token(s)."></i></button>`);
   const fullHealingButton = $(`<button class="dice-total-full-${tag}-healing-button" style="${btnStyling}"><i class="fas fa-user-plus" title="Click to apply full healing to selected token(s)."></i></button>`);
+
+*/
+/*
+const btnContainer = $('<span class="dmgBtn-container-mqol" style="position:absolute; right:0; bottom:1px;"></span>');
+let btnStyling = "width: 22px; height:22px; background-color: #ffffff; font-size:10px;line-height:1px";
+*/
+export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, tag="damage",toMatch=".dice-total") {
+
+  debug("addChatDamageButtons", totalDamage, damageList, html, item, toMatch, $(html).find(toMatch))
+  const btnContainer = $('<span class="dmgBtn-container-mqol" ></span>');
+  let btnStyling = "width: 20%; height:100%; background-color: #e8e8ef;top:0px;  font-size:8pt;line-height:1px";
+  const fullDamageButton = $(`<button class="dice-total-full-${tag}-button" style="${btnStyling}"><i class="fas fa-user-minus" title="Click to apply full damage to selected token(s)."></i></button>`);
+  const halfDamageButton = $(`<button class="dice-total-half-${tag}-button" style="${btnStyling}"><i class="fas fa-user-shield" title="Click to apply half damage to selected token(s)."></i></button>`);
+  const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button" style="${btnStyling}"><i class="fas fa-user-injured" title="Click to apply double damage to selected token(s)."></i></button>`);
+  const fullHealingButton = $(`<button class="dice-total-full-${tag}-healing-button" style="${btnStyling}"><i class="fas fa-user-plus" title="Click to apply full healing to selected token(s)."></i></button>`);
+
   btnContainer.append(fullDamageButton);
   btnContainer.append(halfDamageButton);
   btnContainer.append(doubleDamageButton);
@@ -596,137 +636,3 @@ export async function onChatCardAction(event) {
   // Re-enable the button
   button.disabled = false;
 }
-
-/*
-export let processpreCreateBetterRollsMessageOld = async (data: any, options:any, user: any) => {
-  if (installedModules["betterrolls5e"] || !data.content?.startsWith('<div class="dnd5e red-full chat-card"')) return true;
-  debug("process precratebetteerrollscard ", data, options, installedModules["betterrolls5e"], data.content?.startsWith('<div class="dnd5e red-full chat-card"') )
-
-  const brFlags = data.flags;
-  let html = $(data.content);
-  const title = html.find(".item-name")[0]?.innerHTML;
-
-  let rollDivs = html.find(".dice-roll.red-dual");//.find(".dice-row-item");
-  let rollData = html.find("red-full");
-
-  let itemId = html[0].attributes["data-item-id"];
-
-  debug("better rolls ", rollData, rollDivs, itemId)
-  if (!itemId) return true; // not an item roll.
- 
-  itemId = itemId.nodeValue;
-
-  let itemRe = /[^(]\(([\d]*)[^)]*\)/
-  let token: Token = canvas.tokens.get(data.speaker.token)
-  let actor: Actor5e = token?.actor;
-  if (!actor) actor = game.actors.get(data.speaker.actor);
-  let item: Item5e = actor.items.get(itemId);
-
-  let levelMatch =  title.match(itemRe);
-  let itemLevel = levelMatch ? levelMatch[1] : (item?.data.data.level || 0);
-  let damageStart = 0;
-  let attackTotal = -1;
-  let diceRoll;
-
-  if (item.hasAttack) {
-    damageStart = 1
-    const attackRolls = $(rollDivs[0]).find(".dice-total");
-    let diceRolls = $(rollDivs[0]).find(".roll.die.d20");
-    for (let i = 0; i < attackRolls.length; i++) {
-      if (!attackRolls[i].classList.value.includes("ignore")) {
-        attackTotal = parseInt(attackRolls[i]?.innerHTML);
-        diceRoll = parseInt(diceRolls[i]?.innerHTML);
-        break;
-      }
-    }
-  }
-
-  // each weapon has it's own critical threshold
-  let criticalThreshold = item.data.flags.betterRolls5e?.critRange?.value || 20;
-  if (item.data.type === "weapon") criticalThreshold = Math.min(criticalThreshold, actor.data.flags.dnd5e?.weaponCriticalThreshold || 20);
-// critical calc removed - oops
-  let damageList = [];
-  // document.activeElement.blur();
-  for (let i = damageStart; i < rollDivs.length; i++) {
-    let child = rollDivs[i].children;
-    let damage = 0;
-    // Structure is [flavor-text, dice-result]. If there is no flavor-text use the first else the second
-    let resultIndex = child.length === 1 ? 0 : 1;
-    for (let j = 0; j < $(child[resultIndex]).find(".dice-total")[0]?.children?.length; j++) {
-      let damageDiv = $(child[resultIndex]).find(".dice-total")[0].children[j];
-      // see if this damage is critical damage or not
-      let isCriticalDamage = false;
-      if (!isCritical) {
-        for (let k = 0; k < damageDiv.classList.length; k++) {
-          if (damageDiv.classList[k] === "red-crit-damage" ) isCriticalDamage = true;
-        }
-      }
-      if (!isCritical && isCriticalDamage) continue;
-      let damageitem = parseInt(damageDiv.innerHTML);
-      if (!isNaN(damageitem)) damage += damageitem;
-    }
-    const typeString = child[0].innerHTML;
-    //@ts-ignore - entry[1] type unknown
-    let type = (Object.entries(CONFIG.DND5E.damageTypes).find(entry => typeString.includes(entry[1])) || ["unmatched"])[0];
-    //@ts-ignore - entry[1] type unknown
-    if (type === "unmatched") type = (Object.entries(CONFIG.DND5E.healingTypes).find(entry => typeString.includes(entry[1])) || ["unmatched"])[0];
-    damageList.push({type, damage})
-  };
-
-  const selfTarget = await getSelfTarget(actor);
-
-  BetterRollsWorkflow.removeWorkflow(item.uuid);
-  const targets = (item?.data.data.target?.type === "self") ? new Set([selfTarget]) : new Set(game.user.targets);
-  let workflow = new BetterRollsWorkflow(actor, item, data.speaker, targets, null);
-  workflow.isCritical = diceRoll >= criticalThreshold;
-  workflow.isFumble = diceRoll === 1;
-  workflow.attackTotal = attackTotal;
-  workflow.attackRoll = new Roll(`${attackTotal}`).roll();
-  workflow.damageDetail = damageList;
-  workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
-  workflow.itemLevel = itemLevel;
-  workflow.itemCardData = data;
-  workflow.advantage = brFlags.params.adv === 1;
-  workflow.disadvantage = brFlags.params.disadv === 1;
-  if (!workflow.tokenId) workflow.tokenId = selfTarget.id;
-  console.error("Better rolls workflow ", configSettings.concentrationAutomation, data.speaker, workflow.speaker, workflow.tokenId, workflow)
-  if (configSettings.concentrationAutomation) {
-    const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
-    const needsConcentration = workflow.item.data.data.components?.concentration;
-    const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
-    const itemDuration = workflow.item.data.data.duration;
-    console.error("Concentration check", concentrationName, needsConcentration, checkConcentration, selfTarget)
-
-    if (needsConcentration && checkConcentration) {
-      const concentrationCheck = item.actor.data.effects.find(i => i.label === concentrationName);
-      if (concentrationCheck) {
-        await game.cub.removeCondition(concentrationName, selfTarget, {warn: false});
-        // await item.actor.unsetFlag("midi-qol", "concentration-data");
-      }
-      if (needsConcentration)
-        await game.cub.addCondition(concentrationName, [selfTarget], { warn: false });
-    }
-     // Update the duration of the concentration effect - TODO remove it CUB supports a duration
-     if (workflow.hasDAE) {
-      const ae = duplicate(selfTarget.actor.data.effects.find(ae => ae.label === concentrationName));
-      if (ae) {
-        //@ts-ignore
-        const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.data._id));
-        const convertedDuration = workflow.dae.convertDuration(itemDuration, inCombat);
-        if (convertedDuration.type === "seconds") {
-          ae.duration.seconds = convertedDuration.seconds;
-          ae.duration.startTime = game.time.worldTime;
-        } else if (convertedDuration.type === "turns") {
-          ae.duration.rounds = convertedDuration.rounds;
-          ae.duration.turns = convertedDuration.turns;
-          ae.duration.startRound = game.combat?.round;
-          ae.duration.startTurn = game.combat?.turn;
-        }
-        await selfTarget.actor.updateEmbeddedEntity("ActiveEffect", ae)
-      }
-    }
-  }
-  // Workflow will be advanced when the better rolls card is displayed.
-  return true;
-}
-*/
