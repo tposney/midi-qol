@@ -1,3 +1,8 @@
+0.3.73
+updated cn.json, thanks Mitch Hwang.
+updated ja.json, thanks to Brother Sharp and @louge
+* Fix for reapplying midi-qol calculated values - oops.
+* change to chat damage buttons, hopefully more readable.
 0.3.72 
 * Fix for better rolls processing of criticals, was deciding critical when it shouldn't.
 * Fix for disavantage due to nearby foes on ranged attacks.
@@ -13,8 +18,8 @@
 * Fix for removing measured templates on concentration expiry when no tokens were targeted by the template.
 * Fix for not auto targeting itty bitty tokens when placing measured templates. The halflings of the world will rue the day.
 * Added "faster" short circuit eval for ItemMacro calls.
-* A change to the damage chat card. Instead of a pletheroa of buttons a new streamlined display which shows the icon of the token that was damaged (which can be clicked on to hightlight the token on the map), a summary fo the damge done, and a drop down list of buttons. Calc means the damage after applying immunities and the numeric multipliers refer to the base rolld damage. The tick applies the currently selected mulitplier's damage and the undo always puts the character back to the HP before the attack.
-So if the damage was 18 hit points and resistances reduced that to 9, the MQoL multiplier will apply 9 points, the 1X 18, the 2X 36 and the heal will heal the character of 18 points of damage. The MQoL option will always set the HP to the after damage total and applying it multiple times will not have any additional effects, the other buttons will cumulatively apply damage. 
+* A change to the damage chat card. Instead of a pletheroa of buttons a new streamlined display which shows the icon of the token that was damaged (which can be clicked on to hightlight the token on the map), a summary fo the damge done, and a drop down list of buttons. Calc means the damage after applying immunities and the numeric multipliers refer to the base rolled damage. The tick applies the currently selected mulitplier's damage and the undo always puts the character back to the HP before the attack.
+So if the damage was 18 hit points and resistances reduced that to 9, the MQoL multiplier will apply 9 points, the 1X 18, the 2X 36 and the heal will heal the character of 18 points of damage.
 * **Many thanks to @Engranado for providing this.**
 
 0.3.71
@@ -25,7 +30,7 @@ So if the damage was 18 hit points and resistances reduced that to 9, the MQoL m
 * Removed some duplicate checks for advantage/disadvantage - any oddities let me know.
 * Added support for conditional damage/onUse Macros macros to be of the form ItemMacro.ItemName, the character's items will be searched for an item that matches the name and has an itemMacro defined on it.
 * Added additional parameter (tag) to onUse and damageBonus macros args[0] data, which is "OnUse" when called via onUse macro fields and "DamageBonus" when called via damageBonusMacro.
-* update ko.jsom
+* update ko.json, thanks @KLO
 
 0.3.70
 * Cleaned up display when re-rolling dmage from an existing card. No longer displays old damage on the card while waiting for the roll.
@@ -123,7 +128,7 @@ The two macros above are sufficient to implement all of the features of hunter's
 0.3.66
 Put back config option to roll Other/Versatile damage on failed save for rwak/mwak.
 0.3.65
-update ja.json
+update ja.json thanks @louge
 Fix for TrapWorkflow targets not being set
 0.3.64
 * Added flags.midi-qol.superSaver.all/dex/str etc. If set, then saves against the specified ability do 0/0.5 damage instead of 0.5/1 times the damage. Meant for things like rogues evasion. Apply with an active effect and it will apply, failed save+effect = 1/2 damage, save+effect = 0 damage.

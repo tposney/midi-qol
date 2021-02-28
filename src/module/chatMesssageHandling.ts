@@ -519,11 +519,21 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, 
 
   debug("addChatDamageButtons", totalDamage, damageList, html, item, toMatch, $(html).find(toMatch))
   const btnContainer = $('<span class="dmgBtn-container-mqol" ></span>');
-  let btnStyling = "width: 20%; height:100%; background-color: #e8e8ef;top:0px;  font-size:8pt;line-height:1px";
-  const fullDamageButton = $(`<button class="dice-total-full-${tag}-button" style="${btnStyling}"><i class="fas fa-user-minus" title="Click to apply full damage to selected token(s)."></i></button>`);
-  const halfDamageButton = $(`<button class="dice-total-half-${tag}-button" style="${btnStyling}"><i class="fas fa-user-shield" title="Click to apply half damage to selected token(s)."></i></button>`);
-  const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button" style="${btnStyling}"><i class="fas fa-user-injured" title="Click to apply double damage to selected token(s)."></i></button>`);
-  const fullHealingButton = $(`<button class="dice-total-full-${tag}-healing-button" style="${btnStyling}"><i class="fas fa-user-plus" title="Click to apply full healing to selected token(s)."></i></button>`);
+/*
+  let btnStylinggreen = "width: 20%; height:100%; background-color: #e8e8ef;top:0px;  font-size:8pt;line-height:1px;";
+  let btnStylingred = "width: 20%; height:100%; background-color: #e8e8ef;top:0px;  font-size:8pt;line-height:1px background-color: red";
+*/
+
+  let btnStylinggreen = "width: 20%; height:100%; background-color:lightgreen;top:0px;  font-size:8pt;line-height:1px;";
+  let btnStylingred = "width: 20%; height:100%; background-color:red; top:0px;  font-size:8pt;line-height:1px background-color:";
+  const fullDamageButton = $(`<button class="dice-total-full-${tag}-button" style="${btnStylingred}"><i class="fas fa-user-minus" title="Click to apply full damage to selected token(s)."></i></button>`);
+  const halfDamageButton = $(`<button class="dice-total-half-${tag}-button" style="${btnStylingred}"><i title="Click to apply half damage to selected token(s).">&frac12;</i></button>`);
+  const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button" style="${btnStylingred}"><i title="Click to apply double damage to selected token(s).">2</i></button>`);
+/*
+  const halfDamageButton = $(`<button class="dice-total-half-${tag}-button" style="${btnStylingred}"><i class="fas fa-user-shield" title="Click to apply half damage to selected token(s)."></i></button>`);
+  const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button" style="${btnStylingred}"><i class="fas fa-user-injured" title="Click to apply double damage to selected token(s)."></i></button>`);
+  */
+  const fullHealingButton = $(`<button class="dice-total-full-${tag}-healing-button" style="${btnStylinggreen}"><i class="fas fa-user-plus" title="Click to apply full healing to selected token(s)."></i></button>`);
 
   btnContainer.append(fullDamageButton);
   btnContainer.append(halfDamageButton);

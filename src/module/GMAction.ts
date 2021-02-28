@@ -266,7 +266,7 @@ export let processUndoDamageCard = async(message, html, data) => {
       button = html.find(`#apply-${tokenId}`);
       button.off('click');
       switch (multiplier) {
-        case "mq":
+        case "Calc":
           button.click(async (ev) => doMidiClick(ev, tokenId, newTempHP, newHP));
           break;
         case "Heal": {
