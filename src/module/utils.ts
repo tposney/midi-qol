@@ -491,7 +491,6 @@ export function checkRange(actor, item, tokenId, targets) {
     // check the range
     
     let distance = getDistance(token, target, configSettings.autoTarget === "wallsBlock"); // assume 2.5 width for each token
-    console.error("check is ", distance, longRange, range)
     if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
       console.log(`minor-qol | ${target.name} is too far ${distance} from your character you cannot hit`)
       ui.notifications.warn(`${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`)

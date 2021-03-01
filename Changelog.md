@@ -1,3 +1,5 @@
+0.3.75
+remove accidental debug left in.
 0.3.74
 * More work on range checking when casting. Range checks now occur before consuming a spell slot/rolling item card.
 * Localisation Support for new text strings in damage card.
