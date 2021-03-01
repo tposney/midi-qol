@@ -4,9 +4,9 @@
       <table>
         <thead style="line-height: 16px; vertical-align: middle;">
           <th style="text-align:center;">{{damageApplied}}</th>
-          <th style="text-align:center">Mult</th>
-          <th style="text-align:center">Apply</th>
-          <th style="text-align:center">Undo</th>
+          <th style="text-align:center">{{localize "midi-qol.DamageCardMultHeader"}}</th>
+          <th style="text-align:center">{{localize "midi-qol.DamageCardApplyHeader"}}</th>
+          <th style="text-align:center">{{localize "midi-qol.DamageCardUndoHeader"}}</th>
         </thead>
 
         <tbody>
@@ -48,12 +48,12 @@
 
             <td style="text-align:center;">
               <select id="dmg-multiplier-{{damage.tokenId}}" title="Choose the multipler for the damage."">
-                <option value=" mq" selected>Calc</option>
+                <option value=" mq" selected>{{localize "midi-qol.DamageCardCalc"}}</option>
                 <option value="1">x1</option>
                 <option value="x0.5">x1/2</option>
                 <option value="x2">x2</option>
                 <option value="x0.25">x1/4</option>
-                <option value="-1">Heal</option>
+                <option value="-1">{{localize "midi-qol.DamageCardHeal"}}</option>
               </select>
             </td>
             <td style="text-align:center">

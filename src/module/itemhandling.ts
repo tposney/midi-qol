@@ -1,7 +1,7 @@
-import { warn, debug, error, i18n, log, MESSAGETYPES, i18nFormat, midiFlags } from "../midi-qol";
+import { warn, debug, error, i18n, log, MESSAGETYPES, i18nFormat, midiFlags, allAttackTypes } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
-import {  configSettings, itemDeleteCheck, enableWorkflow, criticalDamage, autoFastForwardAbilityRolls } from "./settings";
-import { addConcentration, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile } from "./utils";
+import {  configSettings, itemDeleteCheck, enableWorkflow, criticalDamage, autoFastForwardAbilityRolls, checkRule } from "./settings";
+import { addConcentration, checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, untargetAllTokens } from "./utils";
 import { installedModules } from "./setupModules";
 import { setupSheetQol } from "./sheetQOL";
 
@@ -71,14 +71,12 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
 
 export async function doDamageRoll(wrapped, {event = null, spellLevel = null, versatile = null} = {}) {
   let workflow = Workflow.getWorkflow(this.uuid);
-  const midiFlags = workflow.actor.data.flags["midi-qol"]
-  if (!enableWorkflow) {
+  if (!enableWorkflow || !workflow) {
+    if (!workflow)
+      warn("Roll Damage: No workflow for item ", this.name);
     return await wrapped({event, versatile})
   }
-  if (!workflow) {
-    warn("Roll Damage: No workflow for item ", this.name);
-    return await wrapped({event, spellLevel, versatile})
-  }
+  const midiFlags = workflow.actor.data.flags["midi-qol"]
   if (workflow.currentState !== WORKFLOWSTATES.WAITFORDAMAGEROLL){
     switch (workflow?.currentState) {
       case WORKFLOWSTATES.AWAITTEMPLATE:
@@ -216,6 +214,12 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
 
   // only allow weapon attacks against at most the specified number of targets
   let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9099) ?? 9999
+  let speaker = ChatMessage.getSpeaker({actor: this.actor});
+  // do pre roll checks
+  if (configSettings.preRollChecks || checkRule("checkRange")) {
+    if (speaker.token && checkRange(this.actor, this, speaker.token, game.user.targets) === "fail") 
+        return;
+  }
   if (game.system.id === "dnd5e" && configSettings.requireTargets && game.user.targets.size > allowedTargets) {
     shouldAllowRoll = false;
     ui.notifications.warn(i18nFormat("midi-qol.wrongNumberTargets", {allowedTargets}));
@@ -273,8 +277,10 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   }
   //@ts-ignore
   debug("doItemRoll ", event?.shiftKey, event?.ctrlKey, event?.altKey);
-  let speaker = ChatMessage.getSpeaker({actor: this.actor});
 
+  if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
+    return wrapped({configureDialog:true, rollMode:null, createMessage:true});
+  }
   let baseItem = this.actor.getOwnedItem(this.id) ?? this;
   const targets = (baseItem?.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : new Set(game.user.targets);
   let workflow: Workflow = new Workflow(this.actor, baseItem, speaker, targets, event);
@@ -289,7 +295,7 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   if(!result) {
     //TODO find the right way to clean this up
     // Workflow.removeWorkflow(workflow.id);
-    return;
+    return null;
   }
   workflow.itemLevel = this.data.data.level;
   if (this.type === "spell") {

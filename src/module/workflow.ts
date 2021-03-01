@@ -3,7 +3,7 @@ import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
 import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 //@ts-ignore
-import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, allDamageTypes, debugEnabled, timelog, CV } from "../midi-qol";
+import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, allDamageTypes, debugEnabled, timelog, CV, allAttackTypes } from "../midi-qol";
 import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
@@ -396,11 +396,9 @@ export class Workflow {
       case WORKFLOWSTATES.VALIDATEROLL:
         // do pre roll checks
         if (configSettings.preRollChecks || checkRule("checkRange")) {
-          switch ( checkRange(this.actor, this.item, this.tokenId)) {
+          switch ( checkRange(this.actor, this.item, this.tokenId, this.targets)) {
             case "fail": return this.next(WORKFLOWSTATES.ROLLFINISHED);
-            case "dis": 
-            if (["rwak", "rsak", "rpak"].includes(this.item.data.data.actionType)) 
-              this.disadvantage = true;
+            case "dis": this.disadvantage = true;
           }
         }
         if (checkRule("incapacitated") && checkIncapcitated(this.actor, this.item, null)) return this.next(WORKFLOWSTATES.ROLLFINISHED);

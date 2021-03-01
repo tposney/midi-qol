@@ -1,3 +1,7 @@
+0.3.74
+* More work on range checking when casting. Range checks now occur before consuming a spell slot/rolling item card.
+* Localisation Support for new text strings in damage card.
+
 0.3.73
 updated cn.json, thanks Mitch Hwang.
 updated ja.json, thanks to Brother Sharp and @louge

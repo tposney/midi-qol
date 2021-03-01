@@ -1,4 +1,4 @@
-import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType } from "../midi-qol";
+import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes } from "../midi-qol";
 import { itemRollButtons, configSettings, checkBetterRolls, autoRemoveTargets, checkRule } from "./settings";
 import { log } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
@@ -463,34 +463,38 @@ export function getDistance (t1, t2, wallblocking = false) {
   return distance;
 };
 
-export function checkRange(actor, item, tokenId) {
+export function checkRange(actor, item, tokenId, targets) {
   let itemData = item.data.data;
 
-  if ((!itemData.range?.value && itemData.range?.units !== "touch") || !["creature", "ally", "enemy"].includes(itemData.target?.type)) {
-    return "normal";
-  }
+  // check that a range is specified at all
+  if (!itemData.range) return;
+  if (!itemData.range.value && !itemData.range.long && itemData.range.units !== "touch" ) return "normal";
+  // skip non mwak/rwak/rsak/msak types that do not specify a target type
+  if (!allAttackTypes.includes(itemData.actionType) && !["creature", "ally", "enemy"].includes(itemData.target?.type)) return "normal";
+
   let token: Token = canvas.tokens.get(tokenId);
-  // let token = await getSelfTarget(actor);
-  
   if (!token) {
     warn(`${game.user.name} no token selected cannot check range`)
     ui.notifications.warn(`${game.user.name} no token selected`)
     return "fail";
   }
 
-  let range = itemData.range?.value || 5;
-  let longRange = itemData.range?.long ?? range;
-  if (longRange < range) longRange = range; // allow for 0 long range specs
-  if (["mwak", "msak", "mpak"].includes(itemData.actionType)) longRange = range;
-  for (let target of game.user.targets) { 
+  let range = itemData.range?.value || 0;
+  let longRange = itemData.range?.long || 0;
+  if (itemData.range.units === "touch") {
+    range = 5;
+    longRange = 0;
+  }
+  if (["mwak", "msak", "mpak"].includes(itemData.actionType)) longRange = 0;
+  for (let target of targets) { 
     if (target === token) continue;
     // check the range
     
     let distance = getDistance(token, target, configSettings.autoTarget === "wallsBlock"); // assume 2.5 width for each token
-    
-    if (distance > longRange) {
+    console.error("check is ", distance, longRange, range)
+    if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
       console.log(`minor-qol | ${target.name} is too far ${distance} from your character you cannot hit`)
-      ui.notifications.warn(`${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange}`)
+      ui.notifications.warn(`${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`)
       return "fail";
     }
     if (distance > range) return "dis";

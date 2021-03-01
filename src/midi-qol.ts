@@ -51,6 +51,7 @@ export let savingThrowTextAlt;
 export let MQdefaultDamageType;
 export let allDamageTypes;
 export let midiFlags = [];
+export let allAttackTypes = []
 
 export const MESSAGETYPES = {
   HITS: 1,
@@ -278,11 +279,11 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.grants.maxDamage.all`);
 
 
-  let attackTypes = ["rwak","mwak","rsak", "msak"];
+  allAttackTypes = ["rwak","mwak","rsak", "msak"];
   if (game.system.id === "sw5e")
-    attackTypes = ["rwak","mwak","rpak", "mpak"];
+    allAttackTypes = ["rwak","mwak","rpak", "mpak"];
   
-  attackTypes = attackTypes.concat(["heal", "other", "save", "util"])
+  let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
 
   attackTypes.forEach(at => {
     midiFlags.push(`flags.midi-qol.advantage.attack.${at}`);
