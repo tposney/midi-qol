@@ -1,5 +1,5 @@
 {
-	"midi-qol:Debug.Hint": "'Warnings' 提供活动概述，'debug' 提供更多信息，'all'会同时启用CONFIG.debug.hooks",
+	"midi-qol:Debug.Hint": "'Warnings' 提供活动概述，'debug' 提供更多信息，'all' 会同时启用CONFIG.debug.hooks",
 	"midi-qol:Debug.Name": "启用调试模式",
 	"midi-qol.ability-check": "属性检定",
 	"midi-qol.ability-checks": "属性检定",
@@ -109,6 +109,11 @@
 	"midi-qol.DAEMidiQOL": "DAE/Midi-QOL特定",
 	"midi-qol.Damage": "伤害",
 	"midi-qol.damage-applied": "HP已更新",
+	"midi-qol.DamageCardApplyHeader": "应用",
+	"midi-qol.DamageCardCalc": "计算",
+	"midi-qol.DamageCardHeal": "治疗",
+	"midi-qol.DamageCardMultHeader": "加倍",
+	"midi-qol.DamageCardUndoHeader": "撤销",
 	"midi-qol.DamageImmunities.Hint": "当使用midi-qol伤害按钮或自动应用伤害时，应用目标的伤害免疫/易伤/抗性。包含所有伤害类型",
 	"midi-qol.DamageImmunities.Name": "应用伤害免疫",
 	"midi-qol.damageImmunitiesOptions": {
@@ -174,6 +179,7 @@
 	"midi-qol.midi-none": "无伤",
 	"midi-qol.Misc": "杂项",
 	"midi-qol.misses": "失误",
+	"midi-qol.NearbyAllyRanged.Hint": "对距离盟友5尺内的敌人（小于w*h体型）进行远程攻击带有劣势。0为禁用",
 	"midi-qol.NearbyAllyRanged.Name": "(房规) 对正与盟友近战的敌人进行远程攻击带有劣势，除非目标体型为巨型或更大",
 	"midi-qol.NearbyFoe.Name": "对5尺内敌人进行远程攻击带有劣势",
 	"midi-qol.noAttackRoll": "在掷伤害骰前，你必须先掷攻击骰",
@@ -288,8 +294,8 @@
 	"midi-qol.SingleConcentrationRoll.Name": "单次专注检查",
 	"midi-qol.Special": "特殊",
 	"midi-qol.SpeedAbilityRolls.Name": "启用快速属性（豁免/检定/技能）掷骰",
-	"midi-qol.SpeedItemRolls.Blurb": "你可以任意分配(ctrl|cmd)/alt/shift鼠标单击的调整值。尤其需要注意优势/劣势/多用。默认：优势 = Alt，劣势 = Ctl，多用 = Shift，重击 = Alt",
-	"midi-qol.SpeedItemRolls.Hint": "Midi-qol使用ctrl/alt/meta/shift键来进行快捷掷骰。该设置将会覆盖自动掷攻击骰。按键为ctl=劣势，alt=优势，shift=多用，ctl+alt=快进掷骰。",
+	"midi-qol.SpeedItemRolls.Blurb": "你可以任意分配(ctrl|cmd)/alt/shift鼠标单击的调整值。尤其需要注意优势/劣势/多用。默认：优势 = Alt，劣势 = Ctrl，多用 = Shift，重击 = Alt",
+	"midi-qol.SpeedItemRolls.Hint": "Midi-qol使用ctrl/alt/meta/shift键来进行快捷掷骰。该设置将会覆盖自动掷攻击骰。按键为Ctrl=劣势，Alt=优势，Shift=多用，Ctrl+Alt=快进掷骰。",
 	"midi-qol.SpeedItemRolls.Name": "启用快捷物品掷骰",
 	"midi-qol.speedItemRollsOptions": {
 		"off": "禁用",
