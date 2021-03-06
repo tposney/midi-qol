@@ -1,6 +1,7 @@
 import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, addChatDamageButtons,  checkBetterRolls, autoFastForwardAbilityRolls } from "../settings"
  import { configSettings } from "../settings"
-import { warn, i18n, error, debug } from "../../midi-qol";
+import { warn, i18n, error, debug, gameStats } from "../../midi-qol";
+import { RollStats } from "../RollStats";
 export class ConfigPanel extends FormApplication {
   
   static get defaultOptions() {
@@ -11,6 +12,7 @@ export class ConfigPanel extends FormApplication {
       width: 520,
       height: "auto",
       closeOnSubmit: true,
+      scrollY:[".tab.workflow"],
       tabs: [{navSelector: ".tabs", contentSelector: ".content", initial: "gm"}]
     })
   }
@@ -78,6 +80,10 @@ export class ConfigPanel extends FormApplication {
     html.find(".optionalRulesEnabled").on("click", event => {
       configSettings.optionalRulesEnabled = !configSettings.optionalRulesEnabled;
       this.render();
+    })
+
+    html.find("#midi-qol-show-stats").on("click", event => {
+      gameStats.showStats();
     })
   }
 

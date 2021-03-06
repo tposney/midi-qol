@@ -138,11 +138,11 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
               ev.preventDefault();
               ev.stopPropagation();
               debug("roll handler ", ev.target.dataset.action);
-              let event = { shiftKey: ev.shiftKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, altKey: ev.altKey };
+              let event = { shiftKey: ev.shiftKey == true, ctrlKey: ev.ctrlKey === true, metaKey: ev.metaKey === true, altKey: ev.altKey === true};
               // If speed rolls are off
               switch (ev.target.dataset.action) {
                   case "attack":
-                      await item.rollAttack({ event, versatile: false });
+                      await item.rollAttack({ event, versatile: false, resetAdvantage: true});
                       break;
                   case "damage":
                       await item.rollDamage({ event, versatile: false });

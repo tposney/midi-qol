@@ -78,7 +78,10 @@ export var configSettings = {
     nearbyAllyRanged: 4,
     incapacitated: true,
     removeHiddenInvis: true
-  }
+  },
+  keepRollStats: false,
+  saveStatsEvery: 20,
+  playerStatsOnly: false
 }
 
 

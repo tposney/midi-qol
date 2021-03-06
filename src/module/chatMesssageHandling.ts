@@ -1,4 +1,4 @@
-import { debug, log, warn, i18n, error, MESSAGETYPES, timelog } from "../midi-qol";
+import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats } from "../midi-qol";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
@@ -10,6 +10,8 @@ import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, ch
 import { createDamageList, getTraitMult, calculateDamage, getSelfTargetSet, getSelfTarget, addConcentration } from "./utils";
 import { config } from "process";
 import { setupSheetQol } from "./sheetQOL";
+import { Bounds } from "pixi.js";
+import { disadvantageEvent } from "./patching";
 
 export const MAESTRO_MODULE_NAME = "maestro";
 
@@ -76,41 +78,31 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
   // Try and help name hider
   if (!data.speaker.scene) data.speaker.scene = canvas.scene.id;
   if (!data.speaker.token) data.speaker.token = token.id;
-  let damageStart = 0;
   let attackTotal = -1;
   let diceRoll;
-  let html = $(data.content);
-  let rollDivs = html.find(".dice-roll.red-dual");//.find(".dice-row-item");
-
-  if (item.hasAttack) {
-    damageStart = 1
-    const attackRolls = $(rollDivs[0]).find(".dice-total");
-    let diceRolls = $(rollDivs[0]).find(".roll.die.d20");
-    for (let i = 0; i < attackRolls.length; i++) {
-      if (!attackRolls[i].classList.value.includes("ignore")) {
-        attackTotal = parseInt(attackRolls[i]?.innerHTML);
-        diceRoll = parseInt(diceRolls[i]?.innerHTML);
-        break;
-      }
-    }
-  }
 
   let damageList = [];
   let otherDamageList = [];
   let criticalThreshold = -1;
+  let advantage;
+  let disadvantage;
   for (let entry of brFlags.entries) {
     if (entry.type === "damage") {
       let damage = entry.baseRoll.total;
       let type = entry.damageType;
       if (diceRoll >= criticalThreshold && entry.critRoll) damage += entry.critRoll.total;
-      // Check for versatile and flag set.
+      // Check for versatile and flag set. TODO damageIndex !== other looks like nonsense.
       if (entry.damageIndex !== "other")
         damageList.push({type, damage});
       else if(configSettings.rollOtherDamage)
         otherDamageList.push({type, damage});
-    } else if (entry.type === "multiroll") {
+    } else if (entry.type === "multiroll" && entry.rollType === "attack") {
+      const index = entry.entries[0].ignored ? 1 : 0;
+      attackTotal = entry.entries[index].total;
+      diceRoll = attackTotal - entry.bonus.total;
+      advantage = entry.rollState === "highest";
+      disadvantage = entry.rollState === "lowest";
       criticalThreshold = entry.critThreshold;
-
     }
   }
   BetterRollsWorkflow.removeWorkflow(item.uuid);
@@ -121,6 +113,9 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
   workflow.attackTotal = attackTotal;
   workflow.attackRoll = new Roll(`${attackTotal}`).roll();
 
+  if (configSettings.keepRollStats) {
+    gameStats.addAttackRoll({rawRoll: diceRoll, total: attackTotal, fumble: workflow.isFumble, critical: workflow.isCritical}, item);
+  }
   workflow.damageDetail = damageList;
   workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
 
@@ -128,11 +123,10 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
     workflow.otherDamageTotal = otherDamageList.reduce((acc, a) => a.damage + acc, 0);
     workflow.otherDamageRoll = new Roll(`${workflow.otherDamageTotal}`).roll();
   }
-
   workflow.itemLevel = brFlags.params.slotLevel ?? 0;
   workflow.itemCardData = data;
-  workflow.advantage = brFlags.params.adv === 1;
-  workflow.disadvantage = brFlags.params.disadv === 1;
+  workflow.advantage = advantage;
+  workflow.disadvantage = disadvantage;
   if (!workflow.tokenId) workflow.tokenId = token.id;
   if (configSettings.concentrationAutomation) {
     let doConcentration = async () => {
@@ -461,9 +455,9 @@ export let processBetterRollsChatCard = (message, html, data) => {
 export function betterRollsButtons(message, html, data) {
   if (!message.data.flags.betterrolls5e) return;
   //@ts-ignore speaker
-  const betterRollsBinding = message.BetterRollsCardBinding;
-  const item = betterRollsBinding?.roll.item;
-  if (!item || !Workflow.getWorkflow(item.uuid)) {
+  const betterRollsFlags = message.data.flags.betterrolls5e;
+  const uuid =  `Actor.${betterRollsFlags.actorId}.OwnedItem.${betterRollsFlags.itemId}`
+  if (!Workflow.getWorkflow(uuid)) {
     html.find('.card-buttons-midi-br').remove();
   } else {
     html.find('.card-buttons-midi-br').off("click", 'button');
@@ -478,9 +472,11 @@ export let chatDamageButtons = (message, html, data) => {
   }
   if (["other", "damage"].includes(message.data.flags?.dnd5e?.roll?.type)) {
     let item;
+    let itemId;
+    let actorId = message.data.speaker.actor;
     if (message.data.flags?.dnd5e?.roll?.type === "damage") {
-      const itemId = message.data.flags.dnd5e.roll.itemId;
-      item = game.actors.get(message.data.speaker.actor).items.get(itemId);
+      itemId = message.data.flags.dnd5e.roll.itemId;
+      item = game.actors.get(actorId).items.get(itemId);
       if (!item) {
         warn("Damage roll for non item");
         return;
@@ -490,66 +486,39 @@ export let chatDamageButtons = (message, html, data) => {
     const defaultDamageType = (item?.data.data.damage.parts[0] && item?.data.data.damage?.parts[0][1]) ?? "bludgeoning";
     const damageList = createDamageList(message.roll, item, defaultDamageType);
     const totalDamage = message.roll.total;
-    addChatDamageButtonsToHTML(totalDamage, damageList, html, item, "damage");
+    addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemId, "damage", ".dice-total", "position:relative; top:5px; color:blue");
   } else if (getProperty(message.data, "flags.midi-qol.damageDetail")) {
     let midiFlags = getProperty(message.data, "flags.midi-qol");
-    // if (midiFlags.type !== MESSAGETYPES.DAMAGE) return; - cant do this as each update overwrites the html
-    const item = game.actors.get(midiFlags.actor)?.getOwnedItem(midiFlags.item);
-    addChatDamageButtonsToHTML(midiFlags.damageTotal, midiFlags.damageDetail, html, item, "damage", ".midi-qol-damage-roll .dice-total");
-    addChatDamageButtonsToHTML(midiFlags.otherDamageTotal, midiFlags.otherDamageDetail, html, item, "other", ".midi-qol-other-roll .dice-total");
-    addChatDamageButtonsToHTML(midiFlags.bonusDamageTotal, midiFlags.bonusDamageDetail, html, item, "other", ".midi-qol-bonus-roll .dice-total");
+    addChatDamageButtonsToHTML(midiFlags.damageTotal, midiFlags.damageDetail, html, midiFlags.actor, midiFlags.item, "damage", ".midi-qol-damage-roll .dice-total");
+    addChatDamageButtonsToHTML(midiFlags.otherDamageTotal, midiFlags.otherDamageDetail, html, midiFlags.actor, midiFlags.item, "other", ".midi-qol-other-roll .dice-total");
+    addChatDamageButtonsToHTML(midiFlags.bonusDamageTotal, midiFlags.bonusDamageDetail, html, midiFlags.actor, midiFlags.item, "other", ".midi-qol-bonus-roll .dice-total");
   }
   return true;
 }
-/*
-  debug("addChatDamageButtons", totalDamage, damageList, html, item, toMatch, $(html).find(toMatch))
-  const btnContainer = $('<span class="dmgBtn-container-mqol" style="position:relative; right:0; bottom:1px;"></span>');
-  let btnStyling = "width: 20%; margin-top: 5%; height: 90%; background-color: #ffffff; font-size:14px;line-height:1px";
-  const fullDamageButton = $(`<button class="dice-total-full-${tag}-button" style="${btnStyling}"><i class="fas fa-user-minus" title="Click to apply full damage to selected token(s)."></i></button>`);
-  const halfDamageButton = $(`<button class="dice-total-half-${tag}-button" style="${btnStyling}"><i class="fas fa-user-shield" title="Click to apply half damage to selected token(s)."></i></button>`);
-  const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button" style="${btnStyling}"><i class="fas fa-user-injured" title="Click to apply double damage to selected token(s)."></i></button>`);
-  const fullHealingButton = $(`<button class="dice-total-full-${tag}-healing-button" style="${btnStyling}"><i class="fas fa-user-plus" title="Click to apply full healing to selected token(s)."></i></button>`);
 
-*/
-/*
-const btnContainer = $('<span class="dmgBtn-container-mqol" style="position:absolute; right:0; bottom:1px;"></span>');
-let btnStyling = "width: 22px; height:22px; background-color: #ffffff; font-size:10px;line-height:1px";
-*/
-export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, tag="damage",toMatch=".dice-total") {
+export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemId, tag="damage",toMatch=".dice-total", style="margin: 0px;") {
 
-  debug("addChatDamageButtons", totalDamage, damageList, html, item, toMatch, $(html).find(toMatch))
-  const btnContainer = $('<span class="dmgBtn-container-mqol" ></span>');
-/*
-  let btnStylinggreen = "width: 20%; height:100%; background-color: #e8e8ef;top:0px;  font-size:8pt;line-height:1px;";
-  let btnStylingred = "width: 20%; height:100%; background-color: #e8e8ef;top:0px;  font-size:8pt;line-height:1px background-color: red";
-*/
-
-  let btnStylinggreen = "width: 20%; height:100%; background-color:lightgreen;top:0px;  font-size:8pt;line-height:1px;";
-  let btnStylingred = "width: 20%; height:100%; background-color:red; top:0px;  font-size:8pt;line-height:1px background-color:";
-  const fullDamageButton = $(`<button class="dice-total-full-${tag}-button" style="${btnStylingred}"><i class="fas fa-user-minus" title="Click to apply full damage to selected token(s)."></i></button>`);
-  const halfDamageButton = $(`<button class="dice-total-half-${tag}-button" style="${btnStylingred}"><i title="Click to apply half damage to selected token(s).">&frac12;</i></button>`);
-  const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button" style="${btnStylingred}"><i title="Click to apply double damage to selected token(s).">2</i></button>`);
-/*
-  const halfDamageButton = $(`<button class="dice-total-half-${tag}-button" style="${btnStylingred}"><i class="fas fa-user-shield" title="Click to apply half damage to selected token(s)."></i></button>`);
-  const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button" style="${btnStylingred}"><i class="fas fa-user-injured" title="Click to apply double damage to selected token(s)."></i></button>`);
-  */
-  const fullHealingButton = $(`<button class="dice-total-full-${tag}-healing-button" style="${btnStylinggreen}"><i class="fas fa-user-plus" title="Click to apply full healing to selected token(s)."></i></button>`);
+  debug("addChatDamageButtons", totalDamage, damageList, html, actorId, itemId, toMatch, html.find(toMatch))
+  const btnContainer = $('<span class="dmgBtn-container-mqol"></span>');
+  let btnStylinggreen = `width: 20%; height:90%; background-color:lightgreen; line-height:1px; ${style}`;
+  let btnStylingred =   `width: 20%; height:90%; background-color:red; line-height:1px; ${style}`;
+  const fullDamageButton = $(`<button class="dice-total-full-${tag}-button" style="${btnStylingred}"><i class="fas fa-user-minus" title="Click to apply up to ${totalDamage} damage to selected token(s)."></i></button>`);
+  const halfDamageButton = $(`<button class="dice-total-half-${tag}-button" style="${btnStylingred}"><i title="Click to apply up to ${Math.floor(totalDamage/2)} damage to selected token(s).">&frac12;</i></button>`);
+  const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button" style="${btnStylingred}"><i title="Click to apply up to ${totalDamage * 2} damage to selected token(s).">2</i></button>`);
+  const fullHealingButton = $(`<button class="dice-total-full-${tag}-healing-button" style="${btnStylinggreen}"><i class="fas fa-user-plus" title="Click to heal up to ${totalDamage} to selected token(s)."></i></button>`);
 
   btnContainer.append(fullDamageButton);
   btnContainer.append(halfDamageButton);
   btnContainer.append(doubleDamageButton);
   btnContainer.append(fullHealingButton);
-  $(html).find(toMatch).append(btnContainer);
+  html.find(toMatch).append(btnContainer);
   // Handle button clicks
   let setButtonClick = (buttonID, mult) => {
-      let button = $(html).find(buttonID);
+      let button = html.find(buttonID);
       button.off("click");
       button.click(async (ev) => {
           ev.stopPropagation();
-          if (canvas && canvas.tokens.controlled.length === 0) {
-              console.warn(`Midi-qol | user ${game.user.name} ${i18n("midi-qol.noTokens")}`);
-              return ui.notifications.warn(`${game.user.name} ${i18n("midi-qol.noTokens")}`);
-          }
+          const item = game.actors.get(actorId).items.get(itemId);
           // find solution for non-magic weapons
           let promises = [];
           for (let t of canvas.tokens.controlled) {
@@ -559,7 +528,6 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, item, 
                   appliedDamage += Math.floor(damage * getTraitMult(a, type, item));
               }
               appliedDamage = Math.floor(Math.abs(appliedDamage)) * mult;
-
               let damageItem = calculateDamage(a, appliedDamage, t, totalDamage, "");
               promises.push(a.update({ "data.attributes.hp.temp": damageItem.newTempHP, "data.attributes.hp.value": damageItem.newHP }));
           }
@@ -616,11 +584,11 @@ export async function onChatCardAction(event) {
   if (action !== "applyEffects") return;
   
   //@ts-ignore speaker
-  const betterRollsBinding = message.BetterRollsCardBinding;
+  const betterRollsFlags = message.data.flags.betterrolls5e;
   var actor, item;
-  if (betterRollsBinding) {
-    actor = betterRollsBinding.roll.actor;
-    item = betterRollsBinding.roll.item;
+  if (betterRollsFlags) {
+    actor = game.actors.get(betterRollsFlags.actorId);
+    item = actor.items.get(betterRollsFlags.itemId);
   } else {
     // Recover the actor for the chat card
     //@ts-ignore

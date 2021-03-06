@@ -31,7 +31,7 @@ export const WORKFLOWSTATES = {
   ROLLFINISHED: 14
 };
 
-const defaultRollOptions = {
+export const defaultRollOptions = {
   advantage: false,
   disadvantage: false,
   versatile: false,
@@ -168,7 +168,7 @@ export class Workflow {
       this.advantage = this.advantage || hidden || invisible;
     }
     // Neaarby foe gives disadvantage on ranged attacks
-    if (["rwak", "rsak", "rpak"].includes(actType) && checkRule("nearbyFoe")) { // Check if there is a foe near me when doing ranged attack
+    if (["rwak", "rsak", "rpak"].includes(actType) && checkRule("nearbyFoe") || this.item.data.data.properties?.thr) { // Check if there is a foe near me when doing ranged attack
       let nearbyFoe = checkNearby(-1, canvas.tokens.get(this.tokenId), 5);
       if (nearbyFoe) warn("Ranged attack at disadvantage beause of nearbye foe")
       this.disadvantage = this.disadvantage || nearbyFoe;
@@ -280,7 +280,7 @@ export class Workflow {
     this.disadvantage = this.disadvantage || grantsDisadvantage;
   }
 
-  constructor(actor: Actor5e, item: Item5e, speaker, targets, event: any) {
+  constructor(actor: Actor5e, item: Item5e, speaker, targets, options: any) {
     this.rollOptions = duplicate(defaultRollOptions);
     this.actor = actor;
     this.item = item;
@@ -312,11 +312,11 @@ export class Workflow {
     this.itemCardData = {};
     this.attackCardData = undefined;
     this.damageCardData = undefined;
-    this.event = event;
-    this.capsLock = event?.getModifierState && event.getModifierState("CapsLock");
+    this.event = options?.event;
+    this.capsLock = options?.event?.getModifierState && options?.event.getModifierState("CapsLock");
     this.rollOptions = {disKey: false, advKey: false, versaKey: false, critKey: false, fastForward: false, fasForwardKey: false};
-    if (this.item && !this.item.hasAttack) this.processDamageEventOptions(event);
-    else this.processAttackEventOptions(event);
+    if (this.item && !this.item.hasAttack) this.processDamageEventOptions(options?.event);
+    else this.processAttackEventOptions(options?.event);
     this.templateId = null;
 
     this.saveRequests = {};
@@ -334,6 +334,25 @@ export class Workflow {
     return this.event?.shiftKey || this.event?.altKey || this.event?.ctrlKey || this.event?.metaKey;
   }
 
+  static removeAttackDamageButtons(id) {
+    let workflow = Workflow.getWorkflow(id)
+    if (!workflow) return;
+    let chatMessage: ChatMessage = game.messages.get(workflow.itemCardId);
+    if (!chatMessage) return;
+    //@ts-ignore content not definted 
+    let content = chatMessage && duplicate(chatMessage.data.content);
+    // TODO work out what to do if we are a damage only workflow and betters rolls is active - display update wont work.
+    const versatileRe = /<button data-action="versatile">[^<]*<\/button>/
+    const damageRe = /<button data-action="damage">[^<]*<\/button>/
+    const formulaRe = /<button data-action="formula">[^<]*<\/button>/
+    content = content?.replace(damageRe, "")
+    content = content?.replace(formulaRe, "")
+    content = content?.replace(versatileRe, "<div></div>")
+    const searchRe = /<button data-action="attack">[^<]*<\/button>/;
+    content = content.replace(searchRe, "");
+    chatMessage.update({content});
+  }
+
   static removeWorkflow(id: string) {
     if (!Workflow._workflows[id]) warn ("removeWorkflow: No such workflow ", id)
     else {
@@ -342,6 +361,8 @@ export class Workflow {
       if (workflow.displayHookId) Hooks.off("preCreateChatMessage", workflow.displayHookId);
       // This can lay around if the template was never placed.
       if (workflow.placeTemlateHookId) Hooks.off("createMeasuredTemplate", workflow.placeTemlateHookId)
+      // Remove buttons
+      this.removeAttackDamageButtons(id);
       delete Workflow._workflows[id];
     }
   }
@@ -567,6 +588,8 @@ export class Workflow {
             //@ts-ignore does not support ids
             Hooks.off("renderChatMessage", brHookId);
           }
+          debug("Check Saves: ", this.saveRequests, this.saveTimeouts, this.saves);
+
           //@ts-ignore ._hooks not defined
           debug("Check Saves: renderChat message hooks length ", Hooks._hooks["renderChatMessage"]?.length)
           await this.displaySaves(configSettings.autoCheckSaves === "whisper", configSettings.mergeCard);
@@ -657,6 +680,8 @@ export class Workflow {
         return;
     }
   }
+
+
 
   async rollBonusDamage(damageBonusMacro) {
     let formula = "";
@@ -776,9 +801,9 @@ export class Workflow {
           const character = game.user.character;
           const args = [macroData];
           try {
-            const asyncFunction = itemMacro.data.command.includes("await") ? "async" : "";
+            // const asyncFunction = itemMacro.data.command.includes("await") ? "async" : "";
             return (new Function(`"use strict";
-                return (${asyncFunction} function ({speaker, actor, token, character, args}={}) {
+                return (async function ({speaker, actor, token, character, args}={}) {
                     ${itemMacro.data.command}
                     });`))().call(this, {speaker, actor, token, character, args});
           } catch (err) {
@@ -914,7 +939,8 @@ export class Workflow {
   async displayDamageRoll(doMerge) {
     let chatMessage: ChatMessage = game.messages.get(this.itemCardId);
     //@ts-ignore content not definted 
-    let content = chatMessage && duplicate(chatMessage.data.content)
+    let content = chatMessage && duplicate(chatMessage.data.content);
+    // TODO work out what to do if we are a damage only workflow and betters rolls is active - display update wont work.
     if (getRemoveDamageButtons() || this.workflowType !== "Workflow") {
       const versatileRe = /<button data-action="versatile">[^<]*<\/button>/
       const damageRe = /<button data-action="damage">[^<]*<\/button>/
@@ -1024,7 +1050,8 @@ export class Workflow {
       var content = chatMessage && duplicate(chatMessage.data.content);    
       var searchString;
       var replaceString;
-      if (!!!game.dice3d?.messageHookDisabled) this.hideTags.push(".midi-qol-hits-display")
+      if (!!!game.dice3d?.messageHookDisabled) this.hideTags.push(".midi-qol-hits-display");
+      // TODO test if we are doing better rolls rolls for the new chat cards and damageonlyworkflow
       switch (this.workflowType) {
         case "BetterRollsWorkflow":
           searchString =  '<footer class="card-footer">';
@@ -1147,6 +1174,7 @@ export class Workflow {
       const gmUser = game.users.find((u: User) => u.isGM && u.active);
       //@ts-ignore
       let speaker = ChatMessage._getSpeakerFromUser({user: gmUser});
+      const waitForDSN = configSettings.playerRollSaves !== "none" && this.saveDisplayData.some(data => data.isPC);
       speaker.scene = canvas?.scene?.id;
       chatData = {
         user: gmUser._id,
@@ -1154,7 +1182,7 @@ export class Workflow {
         content: `<div data-item-id="${this.item._id}"></div> ${saveContent}`,
         flavor: `<h4>${this.saveDisplayFlavor}</h4>`, 
         type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-        flags: { "midi-qol": {type: MESSAGETYPES.SAVES, waitForDiceSoNice: true}}
+        flags: { "midi-qol": {type: MESSAGETYPES.SAVES, waitForDiceSoNice: waitForDSN}}
       };
 
       const rollMode = game.settings.get("core", "rollMode");
@@ -1304,7 +1332,6 @@ export class Workflow {
       }
       //@ts-ignore
       let isPlayerOwned = target.actor.hasPlayerOwner;
-      if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = target.actor.isPC
       this.saveDisplayData.push({
         gmName: target.name, 
         playerName: getTokenPlayerName(target),
@@ -1455,7 +1482,6 @@ export class Workflow {
       && (canvas.grid.measureDistances([{ray:new Ray(target.center, token.center)}], {gridSpaces: true})[0] <= minDist)
     ).forEach(token=> {
         token.setTarget(true, { user: game.user, releaseOthers: false });
-        game.user.targets.add(token);
     });
     this.targets = new Set(game.user.targets);
     this.saves = new Set();
@@ -1466,9 +1492,10 @@ export class Workflow {
 
 export class DamageOnlyWorkflow extends Workflow {
   constructor(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll, 
-        options: {flavor: string, itemCardId: string, damageList: [], useOther: boolean, itemData: null}) {
-          super(actor, null, ChatMessage.getSpeaker(token), new Set(targets), shiftOnlyEvent)
+        options: {flavor: string, itemCardId: string, damageList: [], useOther: boolean, itemData: {}}) {
+          super(actor, null, ChatMessage.getSpeaker({token}), new Set(targets), shiftOnlyEvent)
     this.itemData = options.itemData;
+
     this.damageTotal = damageTotal;
     this.damageDetail = [{type: damageType,  damage: damageTotal}];
     this.damageRoll = roll;
@@ -1494,14 +1521,17 @@ export class DamageOnlyWorkflow extends Workflow {
     switch(newState) {
       case WORKFLOWSTATES.NONE:
         this.effectsAlreadyExpired = [];
-        if (this.itemCardId === "new" && this.itemData) { // create a new chat card for the item
-          this.createCount += 1;
+        if (this.itemData) {
           //@ts-ignore
           this.item = Item.createOwned(this.itemData, this.actor);
+          setProperty(this.item, "data.flags.midi-qol.onUseMacroName", null);
+        } else this.item = null;
+        if (this.itemCardId === "new" && this.itemData) { // create a new chat card for the item
+          this.createCount += 1;
+
           this.itemCard = await showItemCard.bind(this.item)(false, this, true);
           this.itemCardId = this.itemCard.id;
           // Since this could to be the same item don't roll the on use macro, since this could loop forever
-          setProperty(this.item, "data.flags.midi-qol.onUseMacroName", null);
         }
 
         // Need to pretend there was an attack roll so that hits can be residtered and the correct string created
@@ -1525,7 +1555,7 @@ export class DamageOnlyWorkflow extends Workflow {
         } else this.damageRoll.toMessage({flavor: this.flavor});
         this.hitTargets = new Set(this.targets);
         this.applicationTargets = new Set(this.targets);
-        this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, null, new Set(), {existingDamage: this.damageList, superSavers: new Set()})
+        this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, this.item, new Set(), {existingDamage: this.damageList, superSavers: new Set()})
         return super._next(WORKFLOWSTATES.ROLLFINISHED);
 
       default: return super.next(newState);
@@ -1536,11 +1566,11 @@ export class DamageOnlyWorkflow extends Workflow {
 export class TrapWorkflow extends Workflow {
 
   trapSound: {playlist: string, sound: string};
-  templateLocation: {x: number, y: number, direction: number};
+  templateLocation: {x: number, y: number, direction: number, removeDelay: number};
   saveTargets: any;
 
-  constructor(actor: Actor5e, item: Item5e, targets: [Token], templateLocation: {x: number, y: number, direction: number} = undefined, trapSound: {playlist: string , sound: string} = undefined,  event: any = null) {
-    super(actor, item, ChatMessage.getSpeaker(actor), new Set(targets), event);
+  constructor(actor: Actor5e, item: Item5e, targets: [Token], templateLocation: {x: number, y: number, direction: number, removeDelay: number} = undefined, trapSound: {playlist: string , sound: string} = undefined,  event: any = null) {
+    super(actor, item, ChatMessage.getSpeaker({actor}), new Set(targets), event);
     // this.targets = new Set(targets);
     if (!this.event) this.event = duplicate(shiftOnlyEvent);
     this.trapSound = trapSound;
@@ -1582,7 +1612,11 @@ export class TrapWorkflow extends Workflow {
         template.data.direction = this.templateLocation.direction || 0;
 
         // Create the template
-        canvas.scene.createEmbeddedEntity("MeasuredTemplate", template.data);
+        canvas.scene.createEmbeddedEntity("MeasuredTemplate", template.data).then((data) => {
+          if (this.templateLocation.removeDelay) {
+            setTimeout(() => canvas.scene.deleteEmbeddedEntity("MeasuredTemplate", data._id), this.templateLocation.removeDelay * 1000);
+          }
+        });
         return;
 
       case WORKFLOWSTATES.TEMPLATEPLACED:
@@ -1685,6 +1719,7 @@ export class TrapWorkflow extends Workflow {
             game.user.targets.add(t)
           })
         }
+
         return super._next(WORKFLOWSTATES.ROLLFINISHED);
 
       default:
@@ -1697,6 +1732,13 @@ export class BetterRollsWorkflow extends Workflow {
   betterRollsHookId: number;
   static get(id:string):BetterRollsWorkflow {
     return Workflow._workflows[id];
+  }
+
+  constructor(actor: Actor5e, item: Item5e, speaker, targets, options: any) {
+    super (actor, item, speaker, targets, options);
+    this.advantage = options?.advantage;
+    this.disadvantage = options?.disadvantage
+    this.rollOptions.fastForward = options?.fastForward;
   }
 
   async _next(newState) {
@@ -1730,6 +1772,11 @@ export class BetterRollsWorkflow extends Workflow {
         else return this.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
+        if (this.critflagSet || this.nocritFlagSet) {
+          if (this.critFlagSet) {
+            // TODO:  somehow call forceCrit
+          }
+        }
         const damageBonusMacro = getProperty(this.actor.data.flags, "dnd5e.DamageBonusMacro");
         if (damageBonusMacro) {
           await this.rollBonusDamage(damageBonusMacro);
@@ -1769,9 +1816,19 @@ export class BetterRollsWorkflow extends Workflow {
         Hooks.callAll("midi-qol.DamageRollComplete", this)
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
 
+        case WORKFLOWSTATES.ROLLFINISHED:
+          super._next(WORKFLOWSTATES.ROLLFINISHED);
+          Workflow.removeWorkflow(this.item.uuid)
+          return;
+      
       default: 
         return await super._next(newState);
     }
   }
 }
 
+export class DummyWorkflow extends BetterRollsWorkflow {
+  async _next(newState) {
+    Workflow.removeWorkflow(this.item.uuid)
+  }
+}

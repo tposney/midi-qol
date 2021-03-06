@@ -6,7 +6,8 @@ export const preloadTemplates = async function() {
     "modules/midi-qol/templates/item-card.html",
     "modules/midi-qol/templates/tool-card.html",
     "modules/midi-qol/templates/config.html",
-    "modules/midi-qol/templates/damage-results.html"
+    "modules/midi-qol/templates/damage-results.html",
+    "modules/midi-qol/templates/roll-stats.html"
     
   ];
 	return loadTemplates(templatePaths);

@@ -22,6 +22,7 @@ import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
 import { applyTokenDamage, checkNearby, findNearby, getDistance, getTraitMult } from './module/utils';
 import { ConfigPanel } from './module/apps/ConfigPanel';
 import { doCritModify } from './module/itemhandling';
+import { RollStats } from './module/RollStats';
 
 export let debugEnabled = 0;
 // 0 = none, warnings = 1, debug = 2, all = 3
@@ -52,7 +53,7 @@ export let MQdefaultDamageType;
 export let allDamageTypes;
 export let midiFlags = [];
 export let allAttackTypes = []
-
+export let gameStats: RollStats;
 export const MESSAGETYPES = {
   HITS: 1,
   SAVES: 2,
@@ -89,6 +90,7 @@ Hooks.once('init', async function() {
 Hooks.once('setup', function() {
 	// Do anything after initialization but before
   // ready
+
   setupMidiFlags();
   fetchParams();
   itemPatching();
@@ -128,7 +130,6 @@ Hooks.once('setup', function() {
   //@ts-ignore
   noDamageSaves = i18n("midi-qol.noDamageonSaveSpells").map(name => cleanSpellName(name));
   setupSheetQol();
-  setupMinorQolCompatibility();
 }); 
 
 /* ------------------------------------ */
@@ -137,9 +138,11 @@ Hooks.once('setup', function() {
 Hooks.once('ready', function() {
   if (!game.modules.get("lib-wrapper")?.active && game.user.isGM)
     ui.notifications.warn("The 'Midi QOL' module recommends to install and activate the 'libWrapper' module.");
+  gameStats = new RollStats();
 
   // Do anything once the module is ready
   actorAbilityRollPatching();
+  setupMinorQolCompatibility();
 
   if (game.user.isGM && !installedModules.get("dae")) {
     ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.2.43 or many automation effects won't work");
@@ -175,7 +178,8 @@ function setupMinorQolCompatibility() {
     log,
     warn,
     findNearby: findNearby,
-    checkNearby: checkNearby
+    checkNearby: checkNearby,
+    gameStats
   }
 }
 

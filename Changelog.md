@@ -1,5 +1,30 @@
+0.3.76
+* Fixed a bug I could have sworn I already fixed in TrapWorkflow not getting the right token for spell casting purposes. Resulted in AOE spells not targeting the token that triggered the trap.
+* Cleaned up better rolls button handling to avoid fetching the item/actor when rendering the chat card.
+* Chat damage buttons retained the item in the chat card, this has been removed.
+The combined effect of these seems to reduce memory growth a bit.
+* Stopped advantage/disadvantage being "sticky" when rolling from the attack button on the chat card.
+* Clean up attack/damage buttons when no longer active.
+* Slight change to check range optional rule. Melee weapons with the "Thrown" property will check the range/longrange the same as for ranged attacks. They will also incur disadvantage if a foe is nearby, again as if a ranged attack. If you want a pure melee version, create a second item with melee and 5ft ranage and disable the thrown property.
+* Added an additional optional parameter to TrapWorkflow templateLocation
+```
+  templateLocation: {x: number, y: number, direction: number, removeDelay: number};
+```
+As well as x,y position and direction you can now specify a delay in real time seconds (not game time seconds) after whih the template will be removed. Gives a nice effect for, say burning hands, which flashes the cone of fire then removes it removeDelay seconds later.
+* Suport for midi-qol advantage/disadvantage flags in BettereRolls **1.3.10** and later for attacks, ability saves and checks and skill checks.
+* In response to popular demand (well 1 person at least) and becuase I like stats, I've added roll statistics to midi-qol. This is a first cut, so do not expect perfection. 
+* To launch the stats dislplay:
+  * as GM you can choose show stats from the midi-qol misc settings configuration,
+    * or create a macro with the following command, which will work for players and GMs
+    ```
+    MidiQOL.gameStats.showStats()
+    ```
+  * See the Readme.md for more details.
+* Slight tweak to Sneak Attack. Added a feature "auto sneak attack" which causes the sneak attack feature to get rolled as soon as possible without showing a dialog. Requires you to load the updated sneak attack. If the auto sneak attack feature is removed, or the effect disabled, the dialog will show prompting to use sneak attack.
+
 0.3.75
 remove accidental debug left in.
+
 0.3.74
 * More work on range checking when casting. Range checks now occur before consuming a spell slot/rolling item card.
 * Localisation Support for new text strings in damage card.

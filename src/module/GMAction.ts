@@ -1,5 +1,5 @@
 import { configSettings } from "./settings";
-import { i18n, debug, error, log, undoDamageText, warn } from "../midi-qol";
+import { i18n, debug, error, log, undoDamageText, warn, gameStats } from "../midi-qol";
 
 var traitList = { di: {}, dr: {}, dv: {} };
 
@@ -21,6 +21,10 @@ let processAction = async data => {
       break;
     case "GMRollSave": 
     // This needs to roll the save, with prompt and send back the data with the correct id
+    case "updateActorStats":
+      return gameStats.GMupdateActor(data);
+    case "removeStatsForActorId":
+      return gameStats.GMremoveActorStats(data.actorId);
   }
 };
 
@@ -247,19 +251,7 @@ export let processUndoDamageCard = async(message, html, data) => {
       await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP });
       ev.stopPropagation();
     });
-    /*
-    button = html.find("#all-apply");
 
-    button = html.find(`#full-${tokenId}`);
-    button.click(async (ev) => doClick(ev, tokenId, totalDamage, 1));
-    button = html.find(`#half-${tokenId}`);
-    button.click(async (ev) => doClick(ev, tokenId, totalDamage, 0.5));
-    button = html.find(`#double-${tokenId}`);
-    button.click(async (ev) => doClick(ev, tokenId, totalDamage, 2));
-    button = html.find(`#heal-${tokenId}`);
-    button.click(async (ev) => doClick(ev, tokenId, totalDamage, -1));
-    */
-     //dmg-multiplier-{{damage.tokenId}}
     let select = html.find(`#dmg-multiplier-${tokenId}`);
     select.change(async (ev) => {
       let multiplier = html.find(`#dmg-multiplier-${tokenId}`).val();

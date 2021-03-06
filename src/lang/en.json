@@ -208,7 +208,18 @@
     "midi-qol.DamageCardUndoHeader": "Undo",
     "midi-qol.DamageCardApplyHeader": "Apply",
     "midi-qol.DamageCardCalc": "Calc",
-    "midi-qol.DamageCardHeal": "Heal"
-
-
+    "midi-qol.DamageCardHeal": "Heal",
+    "midi-qol.StatsTitle": "Roll Statistics",
+    "midi-qol.RollStats": "Statistics",
+    "midi-qol.RollStatsConfig": "Statisitics Config",
+    "midi-qol.RemoveStats": "Remove All Stats For",
+    "midi-qol.ClearStats": "Clear All Statistics",
+    "midi-qol.EndSession": "Clear Session Statistics",
+    "midi-qol.KeepRollStats.Name": "Keep Roll Statistics",
+    "midi-qol.KeepRollStats.Hint": "Record attack and damage roll data for actors",
+    "midi-qol.SaveStatsEvery.Name": "Save statisticss Every",
+    "midi-qol.SaveStatsEvery.Hint": "Save statistics every N rolls. Each attack and damage counts as a roll. Suggest 10-20 or greater",
+    "midi-qol.PlayerStatsOnly.Name": "Player statistics only",
+    "midi-qol.PlayerStatsOnly.Hint": "Only keep statistics for player owned actors",
+    "midi-qol.ShowStats": "Show Statistics Window"
 }

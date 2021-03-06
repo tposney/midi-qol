@@ -34,7 +34,25 @@ Any module that overloads item.roll is potentially incompatible.
 **Cautious GM** Midi-qol breaks the blind chats by hidden GM feature of cautious GM.  
 **Chat Portraits** If using Chat portraits the changes made by midi-qol to the token/actor name in chat cards are overwritten/lost. Choose which sort of highlighting you want - only one will work. Otherwise all seems to work.
 **Ez-Roller** The send to chat log feature of ez-roller will disable combo cards in midi-qol.  
-**Combat Utility Belt** There seems to be an incompatibility with CUB if you have Use Token Names set in midi-qol, so **DO NOT SET THIS IN Midi-qol** if you use CUB, which I do. The symptoms of the issue vary, but include many console error messages, not being able to roll attacks/damage or being unable to update some actors. If you use CUB disable Use Token Names in midi-qol  
+**Combat Utility Belt** Cub concentrator and midi-qol concentration automation are incompatible. Choose one or the other.
+**Maestro** Maestro looks for the attack roll chat card in chat log to play its critical/attack/fumble sounds. If you are using the merge card then the attack roll card is never created and Meastro can't play it's sounds. You an use the midi-qol custom sounds instead.
+
+**Roll Statistics**
+  * Most of the time when an attack roll is made, a spell cast that does damage, the actual attack rolls, and damage rolled are recorded. This is recorded for every unique actor, on a session and lifetime basis, as well as recording the same data for each item used by the actor on a session basis. So you might be able to answer questions like "is my longsword better than my dagger given the foes we are fighting". The data kept is
+  * #attack rolls
+  * #crriticals
+  * #fumbles
+  * #number of natural 20's
+  * #rolls that did damage
+  * The average damage rolled per attack, this is the raw damage before resistances/saves. If you were using the wrong weapon against a target then the total damage might be high, but the applied damage would be low. For AoE spells the total of the dice rolled is recorded, ignoring the number of targets.  
+  * The average damage applied per attack, if you have an area effect spell this might do X points of damage to Y opponents, meaning the applied damage is X * Y and then modified by saves/resistances. The applied damage includes saves and immunities so might be an effective measure of damage per use, but recognises the value of AoE spells in doing mass damage.  
+  
+  The data is stored in settings.db, via a world setting. You probably don't want to hit the database for every roll made by any player/monster, so you can specify how often the data is saved, I suggest every 10-20 rolls, rather than every roll. The graphical display is updated whenever the data is saved to permanent storage and locally for players own rolls.  
+  * MidiQOL.gameStats.clearStats() to reset all data. (GM Only)
+  * MidiQOL.gameStats.clearActorStats(actorId) to clear the stats for a given actor. (GM only)
+  * MidiQOL.gameStats.endSession() to end the current session and start a new one. (GM only)
+  * MidiQOL.gameStats.showStats() display a window displaying the statistics kept. Players only see their own characters.
+  * MidiQOL.gameStats.statData returns the current statData (have a look and see what is stored)
 
 ## Technical Differences compared to minor-qol:
 * midi-qol does not use the creation of chat messages as the trigger anymore, rather it hooks the standard item.roll, item.rollAttack, item.rollDamage. This means it is automatically compatible with any actor/npc sheet that uses standrd rolls (almost all of them)

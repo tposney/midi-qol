@@ -1,5 +1,5 @@
 <form class="flexcol" autocomplete="off">
-  <!-- COnfig Settings Configuration Tabs -->
+  <!-- Config Settings Configuration Tabs -->
   <nav class="sheet-tabs tabs" data-group="sections">
     <a class="item" data-tab="gm"><i class="fas fa-dice-d20"></i> {{localize "midi-qol.GMSettings"}}</a>
     <a class="item" data-tab="player"><i class="fas fa-dice-d20"></i> {{localize "midi-qol.PlayerSettings"}}</a>
@@ -317,6 +317,29 @@
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.UseTokenNames.Hint"}}</div>
       </div>
+      <div class="midi-qol-box">
+        <div class="form-group">
+          <label>{{localize "midi-qol.KeepRollStats.Name"}}</label>
+          <input type="checkbox" name="keepRollStats" data-dtype="Boolean" {{checked configSettings.keepRollStats}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.KeepRollStats.Hint"}}</div>
+        <div class="form-group">
+          <span>
+            <label>{{localize "midi-qol.SaveStatsEvery.Name"}}</label>
+            <input type="Number" style="width:40px;" name="saveStatsEvery"
+              value="{{configSettings.saveStatsEvery}}" data-dtype="Number" />
+          </span>
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.SaveStatsEvery.Hint"}}</div>
+        <div class="form-group">
+          <label>{{localize "midi-qol.PlayerStatsOnly.Name"}}</label>
+          <input type="checkbox" name="playerStatsOnly" data-dtype="Boolean" {{checked configSettings.playerStatsOnly}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.PlayerStatsOnly.Hint"}}</div>
+        <button type="button" name="show-stats" id="midi-qol-show-stats">
+          <i class="fas fa-dice-d20"></i> {{localize "midi-qol.ShowStats"}}
+        </button>
+      </div>
       <div class=" midi-qol-box">
         <div>
           <!-- Speed Rolls -->
@@ -455,6 +478,7 @@
         </div>
         {{/if}}
       </div>
+
     </div>
 
     <!-- Optional Rules Tab-->
@@ -498,9 +522,9 @@
           </div>
           <div class="form-fields">
             <span>
-            <label>{{localize "midi-qol.NearbyAllyRanged.Name"}}</label>
-            <input type="Number" style="width:40px;" name="optionalRules.nearbyAllyRanged" value="{{configSettings.optionalRules.nearbyAllyRanged}}"
-              data-dtype="Number" />
+              <label>{{localize "midi-qol.NearbyAllyRanged.Name"}}</label>
+              <input type="Number" style="width:40px;" name="optionalRules.nearbyAllyRanged"
+                value="{{configSettings.optionalRules.nearbyAllyRanged}}" data-dtype="Number" />
             </span>
           </div>
           <div class="midi-qol-faint">{{localize "midi-qol.NearbyAllyRanged.Hint"}}</div>

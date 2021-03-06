@@ -1,4 +1,4 @@
-import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes } from "../midi-qol";
+import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats } from "../midi-qol";
 import { itemRollButtons, configSettings, checkBetterRolls, autoRemoveTargets, checkRule } from "./settings";
 import { log } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
@@ -192,7 +192,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
     return [];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
   }
   let totalDamage = totalDamageArr.reduce((a,b) => (a??0)+b)
-
+  let totalAppliedDamage = 0;
   for (let t of theTargets) {
       let a = t?.actor;
       if (!a) continue;
@@ -233,6 +233,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
         totalDamage = Math.max(totalDamage, 0);
         appliedDamage = Math.max(appliedDamage, 0);
       }
+      totalAppliedDamage += appliedDamage;
       damageList.push(calculateDamage(a, appliedDamage, t, totalDamage, dmgType, options.existingDamage));
       targetNames.push(t.name)
   }
@@ -253,6 +254,9 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
       targetNames,
       chatCardId: workflow.itemCardId
     });
+  }
+  if (configSettings.keepRollStats) {
+    gameStats.addDamage(totalAppliedDamage, totalDamage, theTargets.size, item)
   }
   return damageList;
 };
@@ -485,7 +489,7 @@ export function checkRange(actor, item, tokenId, targets) {
     range = 5;
     longRange = 0;
   }
-  if (["mwak", "msak", "mpak"].includes(itemData.actionType)) longRange = 0;
+  if (["mwak", "msak", "mpak"].includes(itemData.actionType) && !itemData.properties?.thr) longRange = 0;
   for (let target of targets) { 
     if (target === token) continue;
     // check the range
