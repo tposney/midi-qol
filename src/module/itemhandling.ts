@@ -63,7 +63,7 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
 
   if(workflow.workflowType === "DummyWorkflow") {
     // we are rolling this for better rolls
-    Workflow.removeWorkflow(this.item.uuid)
+    Workflow.removeWorkflow(this.uuid)
     return result;
   }
 

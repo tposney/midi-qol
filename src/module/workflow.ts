@@ -166,6 +166,7 @@ export class Workflow {
       // const invisible = this.actor.data.effects.find(ef=>ef.label === "Invisible");
       const invisible = hasCondition(token, "invisible");
       this.advantage = this.advantage || hidden || invisible;
+      if (hidden || invisible) log(`Advantage given to ${this.actor.name} due to hidden/invisible`)
     }
     // Neaarby foe gives disadvantage on ranged attacks
     if (["rwak", "rsak", "rpak"].includes(actType) && checkRule("nearbyFoe") || this.item.data.data.properties?.thr) { // Check if there is a foe near me when doing ranged attack
@@ -176,7 +177,10 @@ export class Workflow {
         const me = canvas.tokens.get(this.tokenId);
         if (getDistance(me, firstTarget, false) <= 5) nearbyFoe = false;
       }
-      if (nearbyFoe) warn("Ranged attack at disadvantage beause of nearbye foe")
+      if (nearbyFoe) {
+        log(`Ranged attack by ${this.actor.name} at disadvantage due to neabye foe`);
+        warn("Ranged attack at disadvantage due to nearvy foe");
+      }
       this.disadvantage = this.disadvantage || nearbyFoe;
     }
     this.checkAbilityAdvantage();
@@ -270,7 +274,10 @@ export class Workflow {
     if (checkRule("nearbyAllyRanged") && ["rwak", "rsak", "rpak"].includes(actionType)) {
       if (firstTarget.data.width * firstTarget.data.height < checkRule("nearbyAllyRanged")) {
         const nearbyAlly = checkNearby(-1, firstTarget, 5); // targets near a friend that is not too big
-        if (nearbyAlly) warn("ranged attack with disadvantage because target is near a friend");
+        if (nearbyAlly) {
+          warn("ranged attack with disadvantage because target is near a friend");
+          log(`Ranged attack by ${this.actor.name} at disadvantage due to nearvy ally`)
+        }
         this.disadvantage = this.disadvantage || nearbyAlly
       }
     }
@@ -484,7 +491,8 @@ export class Workflow {
           const token = canvas.tokens.get(this.tokenId);
           removeCondition(token, "hidden").then( () => {
             removeCondition(token, "invisible");
-          })
+          });
+          log(`Hidden/Invisibility removed for ${this.actor.name} due to attack`)
         }
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
         Hooks.callAll("midi-qol.AttackRollComplete", this);
@@ -1740,13 +1748,6 @@ export class BetterRollsWorkflow extends Workflow {
     return Workflow._workflows[id];
   }
 
-  constructor(actor: Actor5e, item: Item5e, speaker, targets, options: any) {
-    super (actor, item, speaker, targets, options);
-    this.advantage = options?.advantage;
-    this.disadvantage = options?.disadvantage
-    this.rollOptions.fastForward = options?.fastForward;
-  }
-
   async _next(newState) {
     this.currentState = newState;
     let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===this.currentState)[0];
@@ -1834,6 +1835,14 @@ export class BetterRollsWorkflow extends Workflow {
 }
 
 export class DummyWorkflow extends BetterRollsWorkflow {
+  constructor(actor: Actor5e, item: Item5e, speaker, targets, options: any) {
+    super (actor, item, speaker, targets, options);
+    this.advantage = options?.advantage;
+    this.disadvantage = options?.disadvantage
+    this.rollOptions.fastForward = options?.fastForward;
+    this.rollOptions.fastForwardKey = options?.fastFowrd;
+  }
+  
   async _next(newState) {
     Workflow.removeWorkflow(this.item.uuid)
   }
