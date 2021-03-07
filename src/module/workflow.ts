@@ -8,7 +8,7 @@ import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
 import { configSettings, checkBetterRolls, autoRemoveTargets, checkRule } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition } from "./utils"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance } from "./utils"
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey)}
@@ -170,6 +170,12 @@ export class Workflow {
     // Neaarby foe gives disadvantage on ranged attacks
     if (["rwak", "rsak", "rpak"].includes(actType) && checkRule("nearbyFoe") || this.item.data.data.properties?.thr) { // Check if there is a foe near me when doing ranged attack
       let nearbyFoe = checkNearby(-1, canvas.tokens.get(this.tokenId), 5);
+      // special case check for thrown weapons within 5 feet (players will forget to set the property)
+      if (this.item.data.data.properties?.thr) {
+        const firstTarget = this.targets.values().next().value;
+        const me = canvas.tokens.get(this.tokenId);
+        if (getDistance(me, firstTarget, false) <= 5) nearbyFoe = false;
+      }
       if (nearbyFoe) warn("Ranged attack at disadvantage beause of nearbye foe")
       this.disadvantage = this.disadvantage || nearbyFoe;
     }

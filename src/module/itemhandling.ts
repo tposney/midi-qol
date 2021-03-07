@@ -24,7 +24,6 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
 
   if (workflow.workflowType === "Workflow") {
     workflow.targets = (this.data.data.target?.type === "self") ? new Set(await getSelfTargetSet(this.actor)) : new Set(game.user.targets);
-
   }
   if (workflow.attackRoll) { // we are re-rolling the attack.
     workflow.damageRoll = undefined;
