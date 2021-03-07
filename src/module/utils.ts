@@ -524,11 +524,13 @@ export function testKey(keyString, event) {
   }
 }
 
-export function isAutoFastAttack():boolean {
+export function isAutoFastAttack(workFlow: Workflow = null):boolean {
+  if (workFlow && workFlow.workflowType === "DummyWorkflow") return workFlow.rollOptions.fastForward;
   return game.user.isGM ? configSettings.gmAutoFastForwardAttack : ["all", "attack"].includes(configSettings.autoFastForward);
 }
 
-export function isAutoFastDamage(): boolean {
+export function isAutoFastDamage(workFlow: Workflow = null): boolean {
+  if (workFlow && workFlow.workflowType === "DummyWorkflow") return workFlow.rollOptions.fastForward;;
   return game.user.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward)
 }
 

@@ -38,7 +38,8 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   }
   workflow.processAttackEventOptions(options?.event);
   workflow.checkAttackAdvantage();
-  workflow.rollOptions.fastForward = workflow.rollOptions.fastForwardKey ? !isAutoFastAttack() : isAutoFastAttack();
+  
+  workflow.rollOptions.fastForward = workflow.rollOptions.fastForwardKey ? !isAutoFastAttack(workflow) : isAutoFastAttack(workflow);
   if (!workflow.rollOptions.fastForwardKey && (workflow.rollOptions.advKey || workflow.rollOptions.disKey))
     workflow.rollOptions.fastForward = true;
   workflow.rollOptions.advantage = workflow.disadvantage ? false : workflow.advantage;
