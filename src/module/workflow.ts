@@ -161,21 +161,23 @@ export class Workflow {
     // TODO Hidden should check the target to see if they notice them?
     if (checkRule("invisAdvantage")) {
       const token = canvas.tokens.get(this.tokenId);
-      const hidden = hasCondition(token, "hidden");
-      // const hidden = this.actor.data.effects.find(ef=>ef.label === "Hidden");
-      // const invisible = this.actor.data.effects.find(ef=>ef.label === "Invisible");
-      const invisible = hasCondition(token, "invisible");
-      this.advantage = this.advantage || hidden || invisible;
-      if (hidden || invisible) log(`Advantage given to ${this.actor.name} due to hidden/invisible`)
+      if (token) {
+        const hidden = hasCondition(token, "hidden");
+        // const hidden = this.actor.data.effects.find(ef=>ef.label === "Hidden");
+        // const invisible = this.actor.data.effects.find(ef=>ef.label === "Invisible");
+        const invisible = hasCondition(token, "invisible");
+        this.advantage = this.advantage || hidden || invisible;
+        if (hidden || invisible) log(`Advantage given to ${this.actor.name} due to hidden/invisible`)
+      }
     }
     // Neaarby foe gives disadvantage on ranged attacks
-    if (["rwak", "rsak", "rpak"].includes(actType) && checkRule("nearbyFoe") || this.item.data.data.properties?.thr) { // Check if there is a foe near me when doing ranged attack
+    if (checkRule("nearbyFoe") && (["rwak", "rsak", "rpak"].includes(actType) || this.item.data.data.properties?.thr)) { // Check if there is a foe near me when doing ranged attack
       let nearbyFoe = checkNearby(-1, canvas.tokens.get(this.tokenId), 5);
       // special case check for thrown weapons within 5 feet (players will forget to set the property)
       if (this.item.data.data.properties?.thr) {
         const firstTarget = this.targets.values().next().value;
         const me = canvas.tokens.get(this.tokenId);
-        if (getDistance(me, firstTarget, false) <= 5) nearbyFoe = false;
+        if (firstTarget && me && getDistance(me, firstTarget, false) <= 5) nearbyFoe = false;
       }
       if (nearbyFoe) {
         log(`Ranged attack by ${this.actor.name} at disadvantage due to neabye foe`);
@@ -630,8 +632,21 @@ export class Workflow {
             const wasAttacked = this.item?.hasAttack;
             const wasDamaged = itemHasDamage(this.item) && this.applicationTargets?.has(target);
             const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
-            return specialDuration && ((specialDuration.includes("isAttacked") && wasAttacked) ||
-                                        (specialDuration.includes("isDamaged") && wasDamaged));
+            if (!specialDuration) return false;
+            if ((specialDuration.includes("isAttacked") && wasAttacked) ||
+              (specialDuration.includes("isDamaged") && wasDamaged))
+              return true;
+            if (this.item.hasSave && specialDuration.includes("isSave")) return true;
+            if (this.item.hasSave && specialDuration.includes(`isSaveSuccess`) && this.saves.has(target)) return true;
+            if (this.item.hasSave && specialDuration.includes(`isSaveFailure`) && !this.saves.has(target)) return true;
+            const abl = this.item.data.data.save.ability;
+            if (this.item.hasSave && specialDuration.includes(`isSave.${abl}`)) return true;
+            if (this.item.hasSave && specialDuration.includes(`isSaveSuccsss.${abl}`) && this.saves.has(target)) return true;
+            if (this.item.hasSave && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) return true;
+            for (let dt of this.damageDetail) {
+              if (specialDuration.includes(`isDamaged.${dt.type}`)) return true;
+            }
+            return false;
           }).map(ef=> ef.id);
           if (expiredEffects?.length > 0) {
             const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
@@ -1257,6 +1272,19 @@ export class Workflow {
       rollAction = CONFIG.Actor.entityClass.prototype.rollAbilityTest;
     }
     // make sure saving throws are renabled.
+
+
+    /*
+    if (installedModules.get("monks-tokenbar")) {
+      game.MonksTokenBar.requestRoll(
+        Array.from(this.hitTargets), 
+        {
+          request:`save:${this.item.data.data.save.ability}`, 
+          silent: true, 
+          rollMode: "gmroll"
+      });
+    }
+    */
     try {
       for (let target of this.hitTargets) {
         if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
@@ -1270,6 +1298,12 @@ export class Workflow {
           advantage = advantage || target?.actor?.data.items.find(a => a.type==="feat" && a.name===i18n("midi-qol.MagicResistanceFeat"));
           if (advantage) this.advantageSaves.add(target);
           debug(`${target.actor.name} resistant to magic : ${advantage}`);
+        }
+        if (this.item.data.flags["midi-qol"]?.isConcentrationCheck) {
+          if (getProperty(target.actor.data.flags, "midi-qol.advantage.concentration")) {
+             advantage = true;
+            this.advantageSaves.add(target);
+          }
         }
 
         var player = this.playerFor(target);
@@ -1452,7 +1486,7 @@ export class Workflow {
       if (isHit || this.isCritical) this.processCriticalFlags();
 
 
-      if (game.user.isGM) log(`${this.speaker.alias} Rolled a ${this.attackTotal} to hit ${targetName}'s AC of ${targetAC} is hit ${isHit || this.isCritical}`);
+      if (game.user.isGM) log(`${this.speaker.alias} Rolled a ${this.attackTotal} to hit ${targetName}'s AC of ${targetAC} ${(isHit || this.isCritical) ? "hitting" : "missing"}`);
       // Log the hit on the target
       let attackType = ""; //item?.name ? i18n(item.name) : "Attack";
       let hitString = this.isCritical ? i18n("midi-qol.criticals") : this.isFumble? i18n("midi-qol.fumbles") : isHit ? i18n("midi-qol.hits") : i18n("midi-qol.misses");
@@ -1675,7 +1709,6 @@ export class TrapWorkflow extends Workflow {
         return; // wait for a damage roll to advance the state.
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
-        console.warn("Trapworkflow ", this.targets, this.item.hasAttack)
          if (!this.item.hasAttack) { // no attack roll so everyone is hit
           this.hitTargets = new Set(this.targets)
           warn(" damage roll complete for non auto target area effects spells", this)
@@ -1752,7 +1785,6 @@ export class BetterRollsWorkflow extends Workflow {
     this.currentState = newState;
     let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===this.currentState)[0];
     warn("betterRolls workflow.next ", state, configSettings.speedItemRolls, this)
-    console.warn("betterRolls workflow.next ", state, configSettings.speedItemRolls, this)
 
     switch (newState) {
 

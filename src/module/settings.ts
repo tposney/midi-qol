@@ -136,6 +136,11 @@ export let fetchParams = (silent = false) => {
 
   setDebugLevel(debugText);
   if (configSettings.concentrationAutomation) {
+    // Force on use macro to true
+    if (!configSettings.allowUseMacro) {
+      console.warn("Concentration required On Use Macro to be enabled. Enabling")
+      configSettings.allowUseMacro = true;
+    }
     checkCubInstalled();
     checkConcentrationSettings();
   }

@@ -194,6 +194,7 @@ Midi-qol supports a number of flags values that alter how attacks/casts are roll
 * flags.midi-qol.advantage.ability.all
 * flags.midi-qol.advantage.ability.check.all
 * flags.midi-qol.advantage.ability.save.all
+* flags.midi-qol.advantage.concentration
 * flags.midi-qol.advantage.ability.check.str/dex/wis/cha/int/con
 * flags.midi-qol.advantage.ability.save.str/dex/wis/cha/int/con
 * flags.midi-qol.advantage.skill.all

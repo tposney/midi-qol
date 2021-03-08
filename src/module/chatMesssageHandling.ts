@@ -8,10 +8,6 @@ import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
 import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow } from "./settings";
 import { createDamageList, getTraitMult, calculateDamage, getSelfTargetSet, getSelfTarget, addConcentration } from "./utils";
-import { config } from "process";
-import { setupSheetQol } from "./sheetQOL";
-import { Bounds } from "pixi.js";
-import { disadvantageEvent } from "./patching";
 
 export const MAESTRO_MODULE_NAME = "maestro";
 
@@ -44,15 +40,13 @@ export function mergeCardSoundPlayer(message, update, options, user) {
 }
 
 export function processcreateBetterRollMessage(message, options, user) {
-  const flags = message.data.flags?.betterrolls5e;
-  if (!flags) return;
-  const uuid = `Actor.${flags.actorId}.OwnedItem.${flags.itemId}`;
-  let workflow: BetterRollsWorkflow = BetterRollsWorkflow.get(uuid);
-
-  if (workflow) {
-    workflow.itemCardId = message.id;
-    workflow.next(WORKFLOWSTATES.NONE);
-  }
+  const flags = message.data.flags;
+  if (!flags) return true;
+  const uuid = flags["midi-qol"]?.uuid;
+  let workflow = BetterRollsWorkflow.get(uuid);
+  if (!workflow) return true;
+  workflow.itemCardId = message.id;
+  workflow.next(WORKFLOWSTATES.NONE);
   return true;
 }
 
@@ -60,24 +54,26 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
   const brFlags = data.flags?.betterrolls5e;
   if (installedModules["betterrolls5e"] || !brFlags) return true;
   debug("process precratebetteerrollscard ", data, options, installedModules["betterrolls5e"], data.content?.startsWith('<div class="dnd5e red-full chat-card"') )
-
-  let token: Token = canvas.tokens.get(data.speaker.token)
-  let actor: Actor5e = token?.actor;
+  
   let speaker;
+  let actorId = data.speaker?.actor;
+  let tokenId = data.speaker?.token;
+  let token: Token = canvas.tokens.get(tokenId)
+  let actor: Actor5e = token?.actor;
   if (!actor) {
-    actor = game.actors.get(data.speaker.actor);
+    actor = game.actors.get(actorId);
     speaker = ChatMessage.getSpeaker({actor})
     token = canvas.tokens.get(speaker.token);
-    if (!token) {
-      console.error("too bad - no token selected");
-      return true;
-    } 
   } else speaker = data.speaker;
   let item: Item5e = actor.items.get(brFlags.itemId);
+  if (!item) item = game.items.get(brFlags.itemId);
+  if (item && brFlags.params?.midiSaveDC) { // TODO this a nasty hack should be fixed
+    item.data.data.save.dc = brFlags.params.midiSaveDC;
+  }
 
   // Try and help name hider
   if (!data.speaker.scene) data.speaker.scene = canvas.scene.id;
-  if (!data.speaker.token) data.speaker.token = token.id;
+  if (!data.speaker.token) data.speaker.token = token?.id;
   let attackTotal = -1;
   let diceRoll;
 
@@ -106,6 +102,7 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
     }
   }
   BetterRollsWorkflow.removeWorkflow(item.uuid);
+  setProperty(data, "flags.midi-qol.uuid", item.uuid);
   const targets = (item?.data.data.target?.type === "self") ? new Set([token]) : new Set(game.user.targets);
   let workflow = new BetterRollsWorkflow(actor, item, speaker, targets, null);
   workflow.isCritical = diceRoll >= criticalThreshold;
@@ -113,7 +110,7 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
   workflow.attackTotal = attackTotal;
   workflow.attackRoll = new Roll(`${attackTotal}`).roll();
 
-  if (configSettings.keepRollStats) {
+  if (configSettings.keepRollStats && item.hasAttack) {
     gameStats.addAttackRoll({rawRoll: diceRoll, total: attackTotal, fumble: workflow.isFumble, critical: workflow.isCritical}, item);
   }
   workflow.damageDetail = damageList;
@@ -127,7 +124,7 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
   workflow.itemCardData = data;
   workflow.advantage = advantage;
   workflow.disadvantage = disadvantage;
-  if (!workflow.tokenId) workflow.tokenId = token.id;
+  if (!workflow.tokenId) workflow.tokenId = token?.id;
   if (configSettings.concentrationAutomation) {
     let doConcentration = async () => {
       const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
@@ -223,8 +220,9 @@ export let colorChatMessageHandler = (message, html, data) => {
   let user = game.users.get(userId);
   if (!user || !actor) return true;
   //@ts-ignore permission is actually not a boolean
-  if (actor.data.permission[userId] !== CONST.ENTITY_PERMISSIONS.OWNER && !user.isGM) {
+  if (actor.data.permission[userId] !== CONST.ENTITY_PERMISSIONS.OWNER && !actor.data.permission["default"] !== CONST.ENTITY_PERMISSIONS.OWNER && !user.isGM) {
     user = game.users.find(p=>p.isGM && p.active)
+    if (!user) return true;
   }
 
   //@ts-ignore .color not defined

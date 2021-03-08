@@ -1,3 +1,16 @@
+0.3.80
+[BREAKING] Measured templates now target the caster ONLY if range has type "any", othewise the csater won't be targeted by the AoE template.
+* Added special durations for specific daamage type, expires if the target takes damage of the specific type.  
+* Added special duration isSave. Effect expires if the character makes a saving throw in response to an item usage against it. Also added ability type specific expiry on save.  
+Not really sure how useful the ability/damage type expriry options but at least 1 person has asked for them both.  requires latest DAE to work.
+* Added special durations save.success and save.failure.
+* Added flags.midi-qol.advantage.concentration which gives advantage to concentration checks.
+* Fix for other damage rolls with saves and dual concentration rolls always doing 1/2 damage on save.
+* Fix for checking range of thrown weapons when rule disabled.
+* Force set on Use Macro when concentration automation is enabled so that the checks will actually do something.
+* Support for better rolls 5e 1.3.11. Quite a lot changed under the hood. midi-qol advantage/disadvantage flags and optional rules should work with better rolls now. If you don't update to this version of midi-qol then concentration automation fails with 1.3.11.
+
+0.3.78/79 Better rolls compatibility fixes
 0.3.77
 * Tweak to nearby foes disadvantage check. If using a thrown weapon within 5ft of the target, assume that the weapon is not thrown.
 0.3.76

@@ -189,7 +189,7 @@ export class RollStats {
   }
 
   public addAttackRoll({rawRoll, fumble, critical, total}, item) {
-    const currentStats = this.getActorStats(item.actor.id);
+    const currentStats = this.getActorStats(item.actor?.id);
     if (!currentStats) return;
     const itemStats = this.getitemStats(item).session;
     const session = currentStats.session;

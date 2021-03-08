@@ -12,7 +12,6 @@ export var concentrationCheckItemDisplayName = "Concentration Check";
 export let readyHooks = async () => {
   //  const item = game.items.getName("Concentration Check")
   concentrationCheckItemDisplayName = i18n("midi-qol.concentrationCheckName");
-
   if (installedModules.get("combat-utility-belt")) {
     Hooks.on("preUpdateActor", (actor, update, diff) => {
       if (!configSettings.concentrationAutomation) return true;
@@ -36,8 +35,13 @@ export let readyHooks = async () => {
           const ownedItem = Item.createOwned(itemData, actor)
           ownedItem.data.data.save.dc = saveDC;
           try {
-            //@ts-ignore
-            ownedItem.roll({showFullCard:false, createWorkflow:true, versatile:false, configureDialog:false})
+            if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e").data.version, "1.3.10")) { // better rolls breaks the normal roll process
+              //@ts-ignore
+              await BetterRolls.rollItem(ownedItem, {adv:0, disadv:0, midiSaveDC: saveDC}).toMessage();
+            } else {
+              //@ts-ignore
+              ownedItem.roll({showFullCard:false, createWorkflow:true, versatile:false, configureDialog:false})
+            }
           } finally {
             game.user.targets = saveTargets;
           }
@@ -165,13 +169,8 @@ export let initHooks = () => {
     const actor = game.actors.get(dropData.actorId);
     const item = actor && actor.items.get(dropData.data._id);
     if (!actor || !item) error("actor / item broke ", actor, item);
-    if (item.type === "spell") {
-      //@ts-ignore
-      actor.useSpell(item, {configureDialog: true})
-    } else {
       //@ts-ignore
       item.roll();
-    }
   })
 }
 
@@ -278,7 +277,8 @@ const itemJSONData = {
   "sort": 23700000,
   "flags": {
     "midi-qol": {
-      "onUseMacroName": "ItemMacro"
+      "onUseMacroName": "ItemMacro",
+      "isConcentrationCheck":  true
     },
     "itemacro": {
       "macro": {

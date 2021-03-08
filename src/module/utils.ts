@@ -295,7 +295,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
          theTargets,
          item, 
-         [workflow.saves, workflow.saves], 
+         [new Set(), workflow.saves], 
          {existingDamage: [], 
          superSavers: [workflow.superSavers, workflow.superSavers]
       });
@@ -438,6 +438,7 @@ export function checkIncapcitated(actor, item, event) {
 *** if wallblocking is set then wall are checked
 **/
 export function getDistance (t1, t2, wallblocking = false) {
+  if (!t1 || !t2) return 0;
   //Log("get distance callsed");
   var x, x1, y, y1, d, r, segments=[], rdistance, distance;
   for (x = 0; x < t1.data.width; x++) {
@@ -563,6 +564,7 @@ export function getRemoveDamageButtons() {
 
 
 export function getTokenPlayerName(token: Token) {
+  if (!token) return game.user.name;
   if (!installedModules.get("combat-utility-belt")) return token.name;
   if (!game.settings.get("combat-utility-belt", "enableHideNPCNames")) return token.name;
   if (getProperty(token.actor.data.flags, "combat-utility-belt.enableHideName"))
@@ -591,6 +593,7 @@ export async function addConcentration(options: {workflow: Workflow}) {
   await item.actor.unsetFlag("midi-qol", "concentration-data");
   if (installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation) {
     let selfTarget = await getSelfTarget(item.actor);
+    if (!selfTarget) return;
     const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
     const itemDuration = item.data.data.duration;
     // set the token as concentrating
@@ -626,7 +629,7 @@ export async function addConcentration(options: {workflow: Workflow}) {
  */
 
 export function findNearby(disposition, token, distance, maxSize = undefined) {
-  if (!token) return false;
+  if (!token) return [];
   let targetDisposition = token.data.disposition * disposition;
   let nearby = canvas.tokens.placeables.filter(t => {
     if (t.data.height * t.data.width > maxSize) return false;
@@ -646,6 +649,7 @@ export function checkNearby(disposition, token, distance) {
 }
 
 export function hasCondition(token, condition: string) {
+  if (!token) return false;
   const localCondition = i18n(`midi-qol.${condition}`);
   if (getProperty((token.actor.data.flags), `conditional-visibility.${condition}`)) return true;
   if (installedModules.get("combat-utility-belt")) {
@@ -655,6 +659,7 @@ export function hasCondition(token, condition: string) {
 }
 
 export async function removeCondition(token, condition: string) {
+  if (!token) return;
   //@ts-ignore
   const CV = window.ConditionalVisibility;
   const localCondition = i18n(`midi-qol.${condition}`);

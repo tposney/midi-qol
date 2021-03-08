@@ -507,9 +507,79 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   return ChatMessage.create(chatData);
 }
 
+export function getTargetedTokens(scene, data, selfTarget) {
+  let targeting = configSettings.autoTarget;
+  // release current targets
+  game.user.targets.forEach(t => {
+    //@ts-ignore
+    t.setTarget(false, { releaseOthers: false });
+  });
+  game.user.targets.clear();
+
+  let wallsBlockTargeting = targeting === "wallsBlock";
+  let templateDetails = canvas.templates.get(data._id);
+  let tdx = data.x;
+  let tdy = data.y;
+  // Extract and prepare data
+  let {direction, distance, angle, width} = data;
+  distance *= canvas.scene.data.grid / canvas.scene.data.gridDistance;
+  width *= canvas.scene.data.grid / canvas.scene.data.gridDistance;
+  direction = toRadians(direction);
+
+  var shape
+  // Get the Template shape
+  switch ( data.t ) {
+    case "circle":
+      shape = templateDetails._getCircleShape(distance);
+      break;
+    case "cone":
+      shape = templateDetails._getConeShape(direction, angle, distance);
+      break;
+    case "rect":
+      shape = templateDetails._getRectShape(direction, distance);
+      break;
+    case "ray":
+      shape = templateDetails._getRayShape(direction, distance, width);
+  }
+  return canvas.tokens.placeables.filter(t => {
+    if (!t.actor) return false;
+    if (selfTarget === t.id) return false;
+    t = canvas.tokens.get(t.id);
+    // skip special tokens with a race of trigger
+    if (t.actor.data?.data.details.race === "trigger") return false;
+    const w = t.width >= 1 ? 0.5 : t.data.width / 2;
+    const h = t.height >= 1 ? 0.5 : t.data.height / 2;
+    const gridSize = canvas.scene.data.grid;
+    let contained = false;
+    for (let xstep = w; xstep <= t.data.width && !contained; xstep++) {
+      for (let ystep = h; ystep <= t.data.height && !contained; ystep++) {
+        const tx = t.x + xstep * gridSize;
+        const ty = t.y + ystep * gridSize;
+
+        if (shape.contains(tx - tdx, ty - tdy)) {
+          if (!wallsBlockTargeting) {
+            contained = true;
+          } else {
+            if (data.t === "rect") {
+              // for rectangles the origin is top left, so measure from the centre instaed.
+              let template_x = templateDetails.x + shape.width / 2;
+              let template_y = templateDetails.y + shape.height / 2;
+              const r = new Ray({ x: tx, y: ty}, {x: template_x, y: template_y});
+              contained = !canvas.walls.checkCollision(r);
+            } else {
+              const r = new Ray({ x: tx, y: ty}, templateDetails.data);
+              contained = !canvas.walls.checkCollision(r);
+            }
+          }
+        }
+      }
+    }
+    if (contained) t.setTarget(true, { user: game.user, releaseOthers: false });
+    return contained;
+  });
+}
+
 export function selectTargets(scene, data, options) {
-  debug("select targets ", this._id, scene, data)
-  this.templateId = data._id;
   let item = this.item;
   let targeting = configSettings.autoTarget;
   if (data.user !== game.user._id) {
@@ -519,93 +589,20 @@ export function selectTargets(scene, data, options) {
     Hooks.callAll("midi-qol-targeted", game.user.targets);
     return true;
   } 
-  if (data) {
-    // release current targets
-    game.user.targets.forEach(t => {
-      //@ts-ignore
-      t.setTarget(false, { releaseOthers: false });
-    });
-    game.user.targets.clear();
-  }
+  if (!data) return true;
+  this.templateId = data._id;
 
   // if the item specifies a range of "self" don't target the caster.
-  let selfTarget = !(item?.data.data.range?.units === "self")
+  let selfTarget = (item?.data.data.range?.units !== "any") ? this.tokenId : null;
 
-  let wallsBlockTargeting = targeting === "wallsBlock";
-  let templateDetails = canvas.templates.get(data._id);
-  let tdx = data.x;
-  let tdy = data.y;
   setTimeout(() => {
-  // Extract and prepare data
-    let {direction, distance, angle, width} = data;
-    distance *= canvas.scene.data.grid / canvas.scene.data.gridDistance;
-    width *= canvas.scene.data.grid / canvas.scene.data.gridDistance;
-    direction = toRadians(direction);
-
-    var shape
-    // Get the Template shape
-    switch ( data.t ) {
-      case "circle":
-        shape = templateDetails._getCircleShape(distance);
-        break;
-      case "cone":
-        shape = templateDetails._getConeShape(direction, angle, distance);
-        break;
-      case "rect":
-        shape = templateDetails._getRectShape(direction, distance);
-        break;
-      case "ray":
-        shape = templateDetails._getRayShape(direction, distance, width);
-    }
-    canvas.tokens.placeables.filter(t => {
-      if (!t.actor) return false;
-      // skip the caster
-      if (!selfTarget && this.tokenId === t.id) {
-        return false;
-      }
-      t = canvas.tokens.get(t.id);
-      // skip special tokens with a race of trigger
-      if (t.actor.data?.data.details.race === "trigger") return false;
-      const w = t.width >= 1 ? 0.5 : t.data.width / 2;
-      const h = t.height >= 1 ? 0.5 : t.data.height / 2;
-      const gridSize = canvas.scene.data.grid;
-      let contained = false;
-      for (let xstep = w; xstep <= t.data.width && !contained; xstep++) {
-        for (let ystep = h; ystep <= t.data.height && !contained; ystep++) {
-          const tx = t.x + xstep * gridSize;
-          const ty = t.y + ystep * gridSize;
-
-          if (shape.contains(tx - tdx, ty - tdy)) {
-            if (!wallsBlockTargeting) {
-              contained = true;
-            } else {
-              if (data.t === "rect") {
-                // for rectangles the origin is top left, so measure from the centre instaed.
-                let template_x = templateDetails.x + shape.width / 2;
-                let template_y = templateDetails.y + shape.height / 2;
-                const r = new Ray({ x: tx, y: ty}, {x: template_x, y: template_y});
-                contained = !canvas.walls.checkCollision(r);
-              } else {
-                const r = new Ray({ x: tx, y: ty}, templateDetails.data);
-                contained = !canvas.walls.checkCollision(r);
-              }
-            }
-          }
-        }
-      }
-      return contained;
-    }).forEach(t => {
-      t.setTarget(true, { user: game.user, releaseOthers: false });
-      game.user.targets.add(t);
-    });
-    // game.user.broadcastActivity({targets: game.user.targets.ids});
-
+    getTargetedTokens(scene, data, selfTarget)
     // Assumes area affect do not have a to hit roll
     this.saves = new Set();
     this.targets = new Set(game.user.targets);
     this.hitTargets = new Set(game.user.targets);
     this.templateData = data;
-  return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
+    return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
   }, 250);
 };
 

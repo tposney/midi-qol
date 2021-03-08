@@ -247,6 +247,7 @@ export let visionPatching = () => {
       log("Patching Token.isVisible")
       //@ts-ignore
       libWrapper.register("midi-qol", "Token.prototype.isVisible", isVisible, "OVERRIDE");
+
     } else {
       log("Patching SightLayer._restrictVisibility")
       //@ts-ignore
@@ -303,6 +304,7 @@ const rollMappings = {
     };
   }
 })
+
 debug("After patching roll mappings are ", rollMappings);
 }
 
