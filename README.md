@@ -74,6 +74,10 @@ If you enable spee abilty rolls as well your key mappings will apply to ability 
 
 If you assign a key multiple meanings the behaviour is going to be confusing at best.
 
+For ability check/save/skill there are two setting you need to look at. The first is on the main midi-qol settings page Auto Fast Forward Ability rolls, which means that rolls will be auto fast forwarded (bypass the advantage/etc dialog). With just this setting the normal ctrl/alt/shift key settings will apply. You can tell midi to use your speed item setting by setting ability rolls use speed keys in the misc tab of the workflow settings.
+
+**If you are using better rolls** Better rolls takes over the meaning of ctrl/alt/shift for attack rolls and will ignore the midi-qol speed roll settings. You can use speed rolls to set the key accelerators for skill/save/check rolls and you may wish to set those up to align with the better rolls settings you have.
+
 ### Display ###
 * **Card styles** Midi-qol supports two options for item/attack/damge/save rolls. The combo card merges all of those rolls into a single card. If Megre card is disabled you will get a separate chat card for each roll, the default dnd5e look and feel. The condensed combo card simply put attack and damage next to eachother to convserve a bit more space.  
 * **Item display**. You can configure whether the item details are included in the combo card. If disabled the item descrition is not added to the card. If enabld you can use the dnd5e setting to choose if it is expanded or hidden when displayed. 

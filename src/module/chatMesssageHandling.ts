@@ -71,6 +71,7 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
     item.data.data.save.dc = brFlags.params.midiSaveDC;
   }
 
+  if (!item) return;
   // Try and help name hider
   if (!data.speaker.scene) data.speaker.scene = canvas.scene.id;
   if (!data.speaker.token) data.speaker.token = token?.id;

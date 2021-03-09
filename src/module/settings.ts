@@ -48,7 +48,6 @@ export var configSettings = {
   playerRollSaves: "none",
   playerSaveTimeout: 0,
   rollNPCSaves: "auto",
-  preRollChecks: false,
   mergeCard: false,
   mergeCardCondensed: false,
   useTokenNames: false,
@@ -71,6 +70,7 @@ export var configSettings = {
   concentrationAutomation: false,
   singleConcentrationRoll: true,
   optionalRulesEnabled: false,
+  itemRollStartWorkflow: false,
   optionalRules: {
     invisAdvantage: true,
     checkRange: true,
@@ -119,7 +119,6 @@ export let fetchParams = (silent = false) => {
   }
 
   enableWorkflow = game.settings.get("midi-qol", "EnableWorkflow");
-  configSettings.preRollChecks = game.settings.get("midi-qol", "PreRollChecks")
   warn("Fetch Params Loading", configSettings);
   
   criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
@@ -215,14 +214,6 @@ const settings = [
 
   {
     name: "DragDropTarget",
-    scope: "world",
-    default: false,
-    type: Boolean,
-    onChange: fetchParams,
-    config: true
-  },
-  {
-    name: "PreRollChecks",
     scope: "world",
     default: false,
     type: Boolean,

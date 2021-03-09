@@ -2,6 +2,7 @@ import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, addChatDamage
  import { configSettings } from "../settings"
 import { warn, i18n, error, debug, gameStats } from "../../midi-qol";
 import { RollStats } from "../RollStats";
+import { installedModules } from "../setupModules";
 export class ConfigPanel extends FormApplication {
   
   static get defaultOptions() {
@@ -50,6 +51,7 @@ export class ConfigPanel extends FormApplication {
       customSoundsPlaylistOptions: game.playlists.entries.reduce((acc, e) =>{acc[e._id]= e.name; return acc}, {}),
       customSoundOptions: game.playlists.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) =>{acc[s._id]= s.name; return acc}, {"none": ""}),
       rollSoundOptions: CONFIG.sounds,
+      isBetterRolls: installedModules.get("betterrolls5e"),
       keys: {
         "altKey": "alt",
         "ctrlKey": "ctrl|cmd",

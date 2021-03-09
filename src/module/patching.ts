@@ -82,12 +82,20 @@ function mapSpeedKeys(event) {
       var advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
       var disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
     }
-    const fastFowrd = advKey && disKey;
-    if (fastFowrd) event = fastforwardEvent;
-    else if (disKey) event = disadvantageEvent;
-    else if (advKey) event = advantageEvent;
-    else event = baseEvent;
-  }
+  } else {
+    var advKey = event.altKey;
+    var disKey = event.ctrlKey;
+  };
+  if (advKey && disKey && autoFastForwardAbilityRolls)
+    event = baseEvent;
+  else if (advKey && disKey)
+    event = fastforwardEvent;
+  else if (disKey) event = disadvantageEvent;
+  else if (advKey) event = advantageEvent;
+  else if (autoFastForwardAbilityRolls)
+    event = fastforwardEvent;
+  else
+   event = baseEvent;
   return event;
 }
 
@@ -143,11 +151,6 @@ function rollDeathSave(wrapped, ...args) {
 function doAbilityRoll(wrapped, ...args) {
   const [ abilityId, options={event} ] = args;
   warn("roll ", options.event)
-  if (autoFastForwardAbilityRolls && (!options?.event || noKeySet(options.event))) {
-    //@ts-ignore
-    // options.event = mergeObject(options.event, {shiftKey: true}, {overwrite: true, inplace: true})
-    options.event = fastforwardEvent;
-  }
   return wrapped(...args);
 }
 
@@ -195,7 +198,7 @@ function procAdvantage(actor, rollType, abilityId, options) {
   const advantage = midiFlags.advantage ?? {};
   const disadvantage = midiFlags.disadvantage ?? {};
   var withAdvantage = options.event?.altKey;
-  var withDisadvantage = options.event?.ctrlKey || options.event?.metaKey;;
+  var withDisadvantage = options.event?.ctrlKey || options.event?.metaKey;
   if (advantage.ability || advantage.all) {
     const rollFlags = (advantage.ability && advantage.ability[rollType]) ?? {};
     withAdvantage = withAdvantage || advantage.all || advantage.ability.all || rollFlags.all || rollFlags[abilityId];

@@ -405,7 +405,6 @@ export function untargetDeadTokens() {
       if (t.actor?.data.data.attributes.hp.value <= 0) {
         //@ts-ignore
         t.setTarget(false, { releaseOthers: false });
-        game.user.targets.delete(t)
       }
     });
   }
@@ -420,7 +419,6 @@ export function untargetAllTokens(...args) {
         //@ts-ignore
         t.setTarget(false, { releaseOthers: false });
     });
-    game.user.targets.clear()
   }
 }
 

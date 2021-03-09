@@ -166,6 +166,15 @@
             configSettings.autoItemEffects}} />
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.AutoEffects.Hint"}}</div>
+
+        {{#if isBetterRolls}}
+        <div class="form-group">
+          <label>{{localize "midi-qol.ItemRollStartWorkflow.Name"}}</label>
+          <input type="checkbox" name="itemRollStartWorkflow" data-dtype="Boolean" {{checked
+            configSettings.itemRollStartWorkflow}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.ItemRollStartWorkflow.Hint"}}</div>
+        {{/if}}
       </div>
 
       <!-- Hits-->

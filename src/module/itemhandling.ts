@@ -5,7 +5,7 @@ import { addConcentration, checkRange, getAutoRollAttack, getAutoRollDamage, get
 import { installedModules } from "./setupModules";
 import { setupSheetQol } from "./sheetQOL";
 
-export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, versatile: false, resetAdvantage: false}) {
+export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, versatile: false, resetAdvantage: false, chatMessage: false}) {
   let workflow: Workflow = Workflow.getWorkflow(this.uuid);
   debug("Entering item attack roll ", event, workflow, Workflow._workflows);
   if (!workflow && installedModules.get("betterrolls5e")) {
@@ -51,11 +51,14 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
     //@ts-ignore
     options.disadvantage = workflow.rollOptions.disadvantage;
   }
+  
   if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
+  let displayChat = !configSettings.mergeCard;
+  if (workflow.workflowType === "DummyWorkflow") displayChat = options.chatMessage;
    let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
     disadvantage: workflow.rollOptions.disadvantage,
-    chatMessage: !configSettings.mergeCard && !(installedModules.get("betterrolls5e")),
+    chatMessage: displayChat,
     //event: {shiftKey: workflow.rollOptions.fastForward},
     fastForward: workflow.rollOptions.fastForward,
     "data.default": defaultOption
@@ -242,8 +245,9 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   let createWorkflow = options?.createWorkflow ?? true;
   let versatile = options?.versatile ?? false;
   let configureDialog = options?.configureDialog ?? true;
-  if (!enableWorkflow || createWorkflow === false) {
-    return await wrapped({configureDialog:true, rollMode:null, createMessage:true});
+  if (!enableWorkflow || createWorkflow === false || 
+    (installedModules.get("betterrolls5e") && !configSettings.itemRollStartWorkflow)) {
+    return await wrapped(options);
   }
   let shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
                           || (game.user.targets.size > 0) // there are some target selected
@@ -256,7 +260,7 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9099) ?? 9999
   let speaker = ChatMessage.getSpeaker({actor: this.actor});
   // do pre roll checks
-  if (configSettings.preRollChecks || checkRule("checkRange")) {
+  if (checkRule("checkRange")) {
     if (speaker.token && checkRange(this.actor, this, speaker.token, game.user.targets) === "fail") 
         return;
   }
@@ -318,7 +322,7 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   //@ts-ignore
   debug("doItemRoll ", event?.shiftKey, event?.ctrlKey, event?.altKey);
 
-  if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
+  if (installedModules.get("betterrolls5e") && !configSettings.itemRollStartWorkflow) { // better rolls will handle the item roll
     return wrapped({configureDialog:true, rollMode:null, createMessage:false});
   }
   let baseItem = this.actor.getOwnedItem(this.id) ?? this;
@@ -593,8 +597,8 @@ export function selectTargets(scene, data, options) {
   this.templateId = data._id;
 
   // if the item specifies a range of "self" don't target the caster.
-  let selfTarget = (item?.data.data.range?.units !== "any") ? this.tokenId : null;
 
+  let selfTarget = (item?.data.data.range?.units === "spec") ? this.tokenId : null;
   setTimeout(() => {
     getTargetedTokens(scene, data, selfTarget)
     // Assumes area affect do not have a to hit roll

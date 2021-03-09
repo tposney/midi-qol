@@ -431,7 +431,7 @@ export class Workflow {
 
       case WORKFLOWSTATES.VALIDATEROLL:
         // do pre roll checks
-        if (configSettings.preRollChecks || checkRule("checkRange")) {
+        if (checkRule("checkRange")) {
           switch ( checkRange(this.actor, this.item, this.tokenId, this.targets)) {
             case "fail": return this.next(WORKFLOWSTATES.ROLLFINISHED);
             case "dis": this.disadvantage = true;
@@ -572,7 +572,6 @@ export class Workflow {
           await this.rollBonusDamage(damageBonusMacro);
         }
         // TODO Need to do DSN stuff
-//        if (this.otherDamageRoll && configSettings.rollOtherDamage)
         if (this.otherDamageRoll)
           this.otherDamageDetail = createDamageList(this.otherDamageRoll, null, this.defaultDamageType);
 
@@ -686,7 +685,7 @@ export class Workflow {
         warn('Inside workflow.rollFINISHED');
         const hasConcentration = this.item?.data.data.components?.concentration;
         const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
-        if (hasConcentration && checkConcentration) {
+        if (hasConcentration && checkConcentration && this.applicationTargets) {
           let targets = [];
           for (let hit of this.applicationTargets) 
             targets.push({tokenId: hit.id, actorId: hit.actor.id});

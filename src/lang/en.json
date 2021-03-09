@@ -221,5 +221,7 @@
     "midi-qol.SaveStatsEvery.Hint": "Save statistics every N rolls. Each attack and damage counts as a roll. Suggest 10-20 or greater",
     "midi-qol.PlayerStatsOnly.Name": "Player statistics only",
     "midi-qol.PlayerStatsOnly.Hint": "Only keep statistics for player owned actors",
-    "midi-qol.ShowStats": "Show Statistics Window"
+    "midi-qol.ShowStats": "Show Statistics Window",
+    "midi-qol.ItemRollStartWorkflow.Name": "Always start workflow (BetterRolls5e",
+    "midi-qol.ItemRollStartWorkflow.Hint": "If enabled Magic Items spells will behave correctly, but better rolls item buttons will not. If disabled magic items spells will not work and but better rolls buttos will work. You can't have both"
 }
