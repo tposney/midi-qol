@@ -83,8 +83,8 @@ function mapSpeedKeys(event) {
       var disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
     }
   } else {
-    var advKey = event.altKey;
-    var disKey = event.ctrlKey;
+    var advKey = event?.altKey;
+    var disKey = event?.ctrlKey;
   };
   if (advKey && disKey && autoFastForwardAbilityRolls)
     event = baseEvent;
