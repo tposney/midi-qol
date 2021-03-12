@@ -223,5 +223,7 @@
     "midi-qol.PlayerStatsOnly.Hint": "Only keep statistics for player owned actors",
     "midi-qol.ShowStats": "Show Statistics Window",
     "midi-qol.ItemRollStartWorkflow.Name": "Always start workflow (BetterRolls5e",
-    "midi-qol.ItemRollStartWorkflow.Hint": "If enabled Magic Items spells will behave correctly, but better rolls item buttons will not. If disabled magic items spells will not work and but better rolls buttos will work. You can't have both"
+    "midi-qol.ItemRollStartWorkflow.Hint": "If enabled Magic Items spells will behave correctly, but better rolls item buttons will not. If disabled magic items spells will not work and but better rolls buttos will work. You can't have both",
+    "midi-qol.DefaultSaveMult.Name": "Default saving throw multiplier",
+    "midi-qol.DefaultSaveMult.Hint": " If there are no other modifiers a saving throw will do this fraction of the damage of the origianl attack. Default 0.5, half damage on save. You should only change this if you know how multipliers work"
 }

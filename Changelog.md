@@ -7,7 +7,7 @@
 * Updated midi-qol to use libWrapper shim. Using libWrapper is strongly recommended and is the configuration that is tested.
 * fix for gm sees all messages bug.
 * Fix for passing an event to item.roll() being ignored.
-* For for hits display being always shown when not using the merge card.
+* Fix for for hits display being always shown when not using the merge card.
 * Removed the special case better rolls flag. Item Cards and magic items will both work with midi + better rolls with no special flags after better rolls 1.4. Until then magic items will just roll to the chat.
 
 [BREAKING] Saving throw multipliers has been reviewed and **some changes were made**.
