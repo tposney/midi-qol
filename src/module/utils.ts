@@ -1,9 +1,10 @@
 import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats } from "../midi-qol";
-import { itemRollButtons, configSettings, checkBetterRolls, autoRemoveTargets, checkRule } from "./settings";
+import { itemRollButtons, configSettings, checkBetterRolls, autoRemoveTargets } from "./settings";
 import { log } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
+import { baseEvent } from "./patching";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -183,7 +184,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
   let damageList = [];
   let targetNames = [];
   let appliedDamage;
-  let workflow = (Workflow.workflows && Workflow._workflows[item?.uuid]) || {};
+  let workflow = (Workflow.workflows && Workflow._workflows[item?.id]) || {};
   warn("Apply token damage ", damageDetailArr, totalDamageArr, theTargets, item, savesArr, workflow)
 
   if (!theTargets || theTargets.size === 0) {
@@ -207,7 +208,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
           //let mult = 1;
           let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
           if (superSavers.has(t)) {
-            mult = saves.has(t) ? 0 : 0.5;
+            mult = saves.has(t) ? 0 : mult;
           }
           if (!type) type = MQdefaultDamageType;
           mult = mult * getTraitMult(a, type, item);
@@ -290,12 +291,13 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       });
     
     } else {
+      let savesToUse = workflow.otherDamageRoll ? new Set() : workflow.saves;
       appliedDamage = applyTokenDamageMany(
         [workflow.damageDetail, workflow.bonusDamageDetail ?? []], 
         [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
          theTargets,
          item, 
-         [new Set(), workflow.saves], 
+         [savesToUse, savesToUse], 
          {existingDamage: [], 
          superSavers: [workflow.superSavers, workflow.superSavers]
       });
@@ -334,12 +336,12 @@ export let getSaveMultiplierForItem = item => {
     return 0.0;
   } 
   
-  if (!configSettings.checkSaveText) return 0.5;
+  if (!configSettings.checkSaveText) return configSettings.defaultSaveMult;
   if (description?.includes(i18n("midi-qol.halfDamage")) || description?.includes(i18n("midi-qol.halfDamageAlt"))) {
     return 0.5;
   }
   //  Think about this. if (checkSavesText true && item.hasSave) return 0; // A save is specified but the half-damage is not specified.
-  return 0;
+  return configSettings.defaultSaveMult;
   };
 
 export function requestPCSave(ability, rollType, player, actorId, advantage, flavor, dc, requestId) {
@@ -493,7 +495,7 @@ export function checkRange(actor, item, tokenId, targets) {
     if (target === token) continue;
     // check the range
     
-    let distance = getDistance(token, target, configSettings.autoTarget === "wallsBlock"); // assume 2.5 width for each token
+    let distance = getDistance(token, target, true);
     if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
       console.log(`minor-qol | ${target.name} is too far ${distance} from your character you cannot hit`)
       ui.notifications.warn(`${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`)
@@ -509,7 +511,7 @@ export function checkRange(actor, item, tokenId, targets) {
   return "normal";
 }
 
-export function testKey(keyString, event) {
+export function testKey(keyString, event: typeof baseEvent | undefined | null): boolean {
   if (!event) return false;
   switch (keyString) {
     case "altKey":
@@ -650,13 +652,26 @@ export function hasCondition(token, condition: string) {
   if (!token) return false;
   const localCondition = i18n(`midi-qol.${condition}`);
   if (getProperty((token.actor.data.flags), `conditional-visibility.${condition}`)) return true;
-  if (installedModules.get("combat-utility-belt")) {
+  if (installedModules.get("combat-utility-belt") && game.cub.getCondition(localCondition)) {
     return game.cub.hasCondition(localCondition, [token], {warn: false}); 
   }  
   return false;
 }
 
-export async function removeCondition(token, condition: string) {
+export async function removeHiddenInvis() {
+  const token = canvas.tokens.get(this.tokenId);
+  removeTokenCondition(token, "hidden").then( () => {
+    removeTokenCondition(token, "invisible");
+  });
+  log(`Hidden/Invisibility removed for ${this.actor.name} due to attack`)
+}
+
+export async function removeCondition(condition) {
+  const token = canvas.tokens.get(this.tokenId);
+  removeTokenCondition(token, condition);
+}
+
+export async function removeTokenCondition(token, condition: string) {
   if (!token) return;
   //@ts-ignore
   const CV = window.ConditionalVisibility;
@@ -664,8 +679,7 @@ export async function removeCondition(token, condition: string) {
   if (condition === "hidden") {
     CV?.unHide([token]);
   } else CV?.setCondition([token], condition, false);
-  if (installedModules.get("combat-utility-belt")) {
-    game.cub.removeCondition(localCondition, token, {warn: false}); 
+  if (installedModules.get("combat-utility-belt") && game.cub.getCondition(localCondition)) {
+      game.cub.removeCondition(localCondition, token, {warn: false}); 
   }
 }
-

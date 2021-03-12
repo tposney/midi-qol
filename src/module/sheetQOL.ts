@@ -170,77 +170,81 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
 function addTidy5eItemSheetButtons(app, html, data) {
   let actor = app.object;
 
-  $('.tidy5e-sheet .inventory-list:not(favorites) .item').each(function(){
+  $('.tidy5e-sheet .inventory-list:not(favorites) .item').each(function () {
 
-      let buttonContainer = $(this).find(".item-controls");
-      // adding an event for when the description is shown
-      let item = app.object.getOwnedItem($(this).attr("data-item-id"));
-      if (!item)
-          return;
-      let chatData = item.getChatData();
-      let buttonTarget = buttonContainer.find(".item-buttons");
-      if (buttonTarget.length > 0)
-          return; // already added buttons
-      let buttonsWereAdded = false;
-      // Create the buttons
-      let buttons = $(`<div class="item-buttons"></div>`);
-      switch (item.data.type) {
-          case "weapon":
-          case "spell":
-          case "feat":
-              buttons.append(`<a class="button" data-action="basicRoll" title="${i18n("midi-qol.buttons.roll")}"><i class="fas fa-comment-alt"></i> ${i18n("midi-qol.buttons.roll")}</a>`);
-              if (item.hasAttack)
-                  buttons.append(`<a class="button" data-action="attack" title="Roll standard/advantage/disadvantage ${i18n("midi-qol.buttons.attack")}"><i class="fas fa-dice-d20"></i> ${i18n("midi-qol.buttons.attack")}</a>`);
-              if (itemHasDamage(item))
-                  buttons.append(`<a class="button" data-action="damage" title="Roll ${i18n("midi-qol.buttons.damage")}"><i class="fas fa-dice-six"></i> ${i18n("midi-qol.buttons.damage")}</a>`);
-              if (itemIsVersatile(item))
-                  buttons.append(`<a class="button" data-action="versatileDamage" title="Roll ${i18n("midi-qol.buttons.versatileDamage")}"><i class="fas fa-dice-six"></i> ${i18n("midi-qol.buttons.versatileDamage")}</a>`);
-              buttonsWereAdded = true;
-              break;
-          case "consumable":
-              if (chatData.hasCharges)
-                  buttons.append(`<a class="button" data-action="consume" title="${i18n("midi-qol.buttons.itemUse")} ${item.name}"><i class="fas fa-wine-bottle"></i> ${i18n("midi-qol.buttons.itemUse")} ${item.name}</a>`);
-              buttonsWereAdded = true;
-              break;
-          case "tool":
-              buttons.append(`<a class="button" data-action="toolCheck" data-ability="${chatData.ability.value}" title="${i18n("midi-qol.buttons.itemUse")} ${item.name}"><i class="fas fa-hammer"></i>  ${i18n("midi-qol.buttons.itemUse")} ${item.name}</a>`);
-              buttonsWereAdded = true;
-              break;
-      }
-      buttons.append(`<a class="button" data-action="info" title="${i18n("midi-qol.buttons.info")}"><i class="fas fa-info-circle"></i> ${i18n("midi-qol.buttons.info")}</a>`);
-      buttonsWereAdded = true;
-      if (buttonsWereAdded) {
-          // adding the buttons to the sheet
-          buttonContainer.prepend(buttons);
-          buttons.find(".button").click({ app, data, html }, async (ev) => {
-              ev.preventDefault();
-              ev.stopPropagation();
-              debug("roll handler ", ev.target.dataset.action);
-              let event = { shiftKey: ev.shiftKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, altKey: ev.altKey };
-              // If speed rolls are off
-              switch (ev.target.dataset.action) {
-                  case "attack":
-                      await item.rollAttack({ event, versatile: false });
-                      break;
-                  case "damage":
-                      await item.rollDamage({ event, versatile: false });
-                      break;
-                  case "versatileDamage":
-                      await item.rollDamage({ event, versatile: true });
-                      break;
-                  case "consume":
-                      await item.roll({ event });
-                      break;
-                  case "toolCheck":
-                      await item.rollToolCheck({ event });
-                      break;
-                  case "basicRoll":
-                      await item.roll({ showFullCard: true, event });
-                      break;
-                  case "info":
-                      await showItemInfo.bind(item)();
-              }
-          });
-      }
+    let buttonContainer;
+    if (isNewerVersion(game.modules.get("tidy5e-sheet").data.version, "0.4.7"))
+      buttonContainer = $(this).find(".mod-roll-buttons");
+    else
+      buttonContainer = $(this).find(".item-controls");
+    // adding an event for when the description is shown
+    let item = app.object.getOwnedItem($(this).attr("data-item-id"));
+    if (!item)
+      return;
+    let chatData = item.getChatData();
+    let buttonTarget = buttonContainer.find(".item-buttons");
+    if (buttonTarget.length > 0)
+      return; // already added buttons
+    let buttonsWereAdded = false;
+    // Create the buttons
+    let buttons = $(`<div class="item-buttons"></div>`);
+    switch (item.data.type) {
+      case "weapon":
+      case "spell":
+      case "feat":
+        buttons.append(`<a class="button" data-action="basicRoll" title="${i18n("midi-qol.buttons.roll")}"><i class="fas fa-comment-alt"></i> ${i18n("midi-qol.buttons.roll")}</a>`);
+        if (item.hasAttack)
+          buttons.append(`<a class="button" data-action="attack" title="Roll standard/advantage/disadvantage ${i18n("midi-qol.buttons.attack")}"><i class="fas fa-dice-d20"></i> ${i18n("midi-qol.buttons.attack")}</a>`);
+        if (itemHasDamage(item))
+          buttons.append(`<a class="button" data-action="damage" title="Roll ${i18n("midi-qol.buttons.damage")}"><i class="fas fa-dice-six"></i> ${i18n("midi-qol.buttons.damage")}</a>`);
+        if (itemIsVersatile(item))
+          buttons.append(`<a class="button" data-action="versatileDamage" title="Roll ${i18n("midi-qol.buttons.versatileDamage")}"><i class="fas fa-dice-six"></i> ${i18n("midi-qol.buttons.versatileDamage")}</a>`);
+        buttonsWereAdded = true;
+        break;
+      case "consumable":
+        if (chatData.hasCharges)
+          buttons.append(`<a class="button" data-action="consume" title="${i18n("midi-qol.buttons.itemUse")} ${item.name}"><i class="fas fa-wine-bottle"></i> ${i18n("midi-qol.buttons.itemUse")} ${item.name}</a>`);
+        buttonsWereAdded = true;
+        break;
+      case "tool":
+        buttons.append(`<a class="button" data-action="toolCheck" data-ability="${chatData.ability.value}" title="${i18n("midi-qol.buttons.itemUse")} ${item.name}"><i class="fas fa-hammer"></i>  ${i18n("midi-qol.buttons.itemUse")} ${item.name}</a>`);
+        buttonsWereAdded = true;
+        break;
+    }
+    buttons.append(`<a class="button" data-action="info" title="${i18n("midi-qol.buttons.info")}"><i class="fas fa-info-circle"></i> ${i18n("midi-qol.buttons.info")}</a>`);
+    buttonsWereAdded = true;
+    if (buttonsWereAdded) {
+      // adding the buttons to the sheet
+      buttonContainer.prepend(buttons);
+      buttons.find(".button").click({ app, data, html }, async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        debug("roll handler ", ev.target.dataset.action);
+        let event = { shiftKey: ev.shiftKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, altKey: ev.altKey };
+        // If speed rolls are off
+        switch (ev.target.dataset.action) {
+          case "attack":
+            await item.rollAttack({ event, versatile: false });
+            break;
+          case "damage":
+            await item.rollDamage({ event, versatile: false });
+            break;
+          case "versatileDamage":
+            await item.rollDamage({ event, versatile: true });
+            break;
+          case "consume":
+            await item.roll({ event });
+            break;
+          case "toolCheck":
+            await item.rollToolCheck({ event });
+            break;
+          case "basicRoll":
+            await item.roll({ showFullCard: true, event });
+            break;
+          case "info":
+            await showItemInfo.bind(item)();
+        }
+      });
+    }
   });
 }

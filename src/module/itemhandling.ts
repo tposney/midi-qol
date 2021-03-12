@@ -6,17 +6,10 @@ import { installedModules } from "./setupModules";
 import { setupSheetQol } from "./sheetQOL";
 
 export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, altKey: false, ctrlKey: false, metaKey:false}, versatile: false, resetAdvantage: false, chatMessage: false}) {
-  let workflow: Workflow = Workflow.getWorkflow(this.uuid);
+  let workflow: Workflow | undefined = Workflow.getWorkflow(this.id);
   debug("Entering item attack roll ", event, workflow, Workflow._workflows);
-  if (!workflow && installedModules.get("betterrolls5e")) {
-    // TODO remove this if and when better rolls goes through item.roll
-    // Better rolls bypasses item.roll() so mock up a workflow to process advantage etc
-    let targets = (this?.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : new Set(game.user.targets);
-    workflow = new DummyWorkflow(this.actor, this, ChatMessage.getSpeaker({actor: this.actor}), targets, options);
-  }
-
   if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
-    if (enableWorkflow) warn("Roll Attack: No workflow for item ", this.name, this.uuid, event);
+    if (enableWorkflow) warn("Roll Attack: No workflow for item ", this.name, this.id, event);
     const roll = await wrapped(options);
     // if (configSettings.keepRollStats) gameStats.addAttackRoll(roll, this);
     return roll;
@@ -24,12 +17,11 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
 
   if (workflow.workflowType === "Workflow") {
     workflow.targets = (this.data.data.target?.type === "self") ? new Set(await getSelfTargetSet(this.actor)) : new Set(game.user.targets);
-  }
-  if (workflow.attackRoll) { // we are re-rolling the attack.
-    workflow.damageRoll = undefined;
-    Workflow.removeAttackDamageButtons(this.uuid)
-    workflow.itemCardId = (await showItemCard.bind(this)(false, workflow, false)).id;
-
+    if (workflow.attackRoll) { // we are re-rolling the attack.
+      workflow.damageRoll = undefined;
+      Workflow.removeAttackDamageButtons(this.id)
+      workflow.itemCardId = (await showItemCard.bind(this)(false, workflow, false)).id;
+    }
   }
   if (options.resetAdvantage) {
     workflow.advantage = false;
@@ -54,7 +46,7 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   
   if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
   let displayChat = !configSettings.mergeCard;
-  if (workflow.workflowType === "DummyWorkflow") displayChat = options.chatMessage;
+  if (workflow.workflowType === "BetterRollsWorkflow") displayChat = options.chatMessage;
    let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
     disadvantage: workflow.rollOptions.disadvantage,
@@ -65,9 +57,8 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   });
 
 
-  if(workflow.workflowType === "DummyWorkflow") {
+  if(workflow.workflowType === "BetterRollsWorkflow") {
     // we are rolling this for better rolls
-    Workflow.removeWorkflow(this.uuid)
     return result;
   }
 
@@ -102,13 +93,12 @@ export async function doAttackRoll(wrapped, options = {event: {shiftKey: false, 
   }
   workflow.attackRoll = result;
   workflow.attackRollHTML = await result.render();
-
   workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
   return result;
 }
 
 export async function doDamageRoll(wrapped, {event = null, spellLevel = null, versatile = null} = {}) {
-  let workflow = Workflow.getWorkflow(this.uuid);
+  let workflow = Workflow.getWorkflow(this.id);
   if (!enableWorkflow || !workflow) {
     if (!workflow)
       warn("Roll Damage: No workflow for item ", this.name);
@@ -144,7 +134,7 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
       content = content.replace(searchRe, replaceString);
     }
     if (data) {
-      Workflow.removeAttackDamageButtons(this.uuid);
+      Workflow.removeAttackDamageButtons(this.id);
       workflow.itemCardId = (await ChatMessage.create(data)).id;
     }
   }
@@ -184,7 +174,9 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   ) {
     if (workflow.item.data.data.formula !== "")
       otherResult = new Roll(workflow.item.data.data.formula, workflow.actor?.getRollData()).roll();
-    else if (this.isVersatile) otherResult = await wrapped({
+    else if (this.isVersatile && !this.data.data.properties.ver) otherResult = await wrapped({
+      // roll the versatile damage if there is a versatile damage field and the weapn is not marked versatile
+      // TODO review this is the SRD monsters change the way extra damage is represented
       critical: false,
       spellLevel: workflow.rollOptions.spellLevel, 
       versatile: true,
@@ -240,13 +232,12 @@ export async function doDamageRoll(wrapped, {event = null, spellLevel = null, ve
   return result;
 }
 
-export async function doItemRoll(wrapped, options = {showFullCard:false, createWorkflow:true, versatile:false, configureDialog:true}) {
+export async function doItemRoll(wrapped, options = {showFullCard:false, createWorkflow:true, versatile:false, configureDialog:true, event: {}}) {
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
   let versatile = options?.versatile ?? false;
   let configureDialog = options?.configureDialog ?? true;
-  if (!enableWorkflow || createWorkflow === false || 
-    (installedModules.get("betterrolls5e") && !configSettings.itemRollStartWorkflow)) {
+  if (!enableWorkflow || createWorkflow === false) {
     return await wrapped(options);
   }
   let shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
@@ -256,6 +247,7 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
                           || (configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type)) // rangetarget
                           || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
 
+  if (this.data.data.target?.type === "creature" && game.user.targets.size === 0) shouldAllowRoll = false;
   // only allow weapon attacks against at most the specified number of targets
   let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9099) ?? 9999
   let speaker = ChatMessage.getSpeaker({actor: this.actor});
@@ -281,19 +273,19 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
       //TODO Consider how to disable this check for Damageonly workflowa and trap workflowss
       if (midiFlags?.fail?.spell?.all) {
       ui.notifications.warn("You are unable to cast the spell");
-      return;
+      return null;
     }
     if (midiFlags?.fail?.spell?.vocal && needsVocal) {
       ui.notifications.warn("You make no sound and the spell fails");
-      return;
+      return null;
     }
     if (midiFlags?.fail?.spell?.somatic && needsSomatic) {
       ui.notifications.warn("You can't make the gestures and the spell fails");
-      return;
+      return null;
     }
     if (midiFlags?.fail?.spell?.material && needsMaterial) {
       ui.notifications.warn("You can't use the material component and the spell fails");
-      return;
+      return null;
     }
 
     const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
@@ -319,19 +311,16 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
     warn(`${game.user.name} attempted to roll with no targets selected`)
     return;
   }
-  //@ts-ignore
-  debug("doItemRoll ", event?.shiftKey, event?.ctrlKey, event?.altKey);
-
-  if (installedModules.get("betterrolls5e") && !configSettings.itemRollStartWorkflow) { // better rolls will handle the item roll
-    return wrapped({configureDialog:true, rollMode:null, createMessage:false});
-  }
   let baseItem = this.actor.getOwnedItem(this.id) ?? this;
   const targets = (baseItem?.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : new Set(game.user.targets);
 
-  let workflow: Workflow = new Workflow(this.actor, baseItem, speaker, targets, event);
-  //@ts-ignore event .type not defined
+  let workflow : Workflow;
+  if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
+    workflow = new BetterRollsWorkflow(this.actor, baseItem, speaker, targets, options.event || event);
+    return wrapped(options);
+  }
+  workflow = new Workflow(this.actor, baseItem, speaker, targets, {event: event || options.event});
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile;
-  // workflow.versatile = versatile;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = showFullCard;
   workflow.noAutoAttack = showFullCard;
@@ -339,7 +328,7 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
   /* need to get spell level from the html returned in result */
   if(!result) {
     //TODO find the right way to clean this up
-    // Workflow.removeWorkflow(workflow.id);
+    // Workflow.removeWorkflow(workflow.id); ?
     return null;
   }
   workflow.itemLevel = this.data.data.level;
@@ -369,9 +358,9 @@ export async function doItemRoll(wrapped, options = {showFullCard:false, createW
     //@ts-ignore - 
     var itemCard: ChatMessage = await showItemCard.bind(item)(showFullCard, workflow)
     workflow.itemCardId = itemCard.id;
-    debug("Item Roll: showing card", itemCard, workflow)
+    debug("Item Roll: showing card", itemCard, workflow);
+    workflow.next(WORKFLOWSTATES.NONE);
   };
-  workflow.next(WORKFLOWSTATES.NONE);
   return itemCard ?? result;
 }
 
@@ -494,7 +483,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
         actor: workflow.actor.id, 
         sound: theSound,
         type: MESSAGETYPES.ITEM, 
-        itemUUId: workflow.itemUUId
+        itemId: workflow.itemId
       },
     "core": {"canPopout": true}
   }

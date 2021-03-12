@@ -106,9 +106,11 @@ For ability check/save/skill there are two setting you need to look at. The firs
     * The item is found in a module default list of no-damage spells, SRD cantrips plus SRD spells Disintegrate etc. These are search for by the name of the item being cast, so if you change the name of the spell it will go back to 1/2 damage.
     * The item has the exact text "no damage on save" in its description in which case there is no damage on save. 
 If you want to use saving throws to control the application of dynamic effects or calling macros etc, but to not affect the damage applied, think of a weapon that does damage and requires a saving throw or be poisoned. To support those set **Check Spell Text** to true. The behaviour becomes.
-  * A saving throw has no effect on damage caused **unless** the item has the exact text "half as much damage" (used in the SRD) or "half damage" in the spell description.
+  * A saving throw has no effect on damage caused **unless** the item has the exact text "half as much damage" (used in the SRD) or "half damage" in the spell description. The text is localised if there is a language translation in midi-qol, so check the lang directory in the module directory to check the specific text looked for in your local language.
   * The item has the exact text "no damage on save" in its description in which case there is no damage on save.   
-For weapons the weapon properties (if set) take precedence over the description fields.
+For weapons the weapon properties (if set) take precedence over the description fields. 
+
+There is an additional feature in midi-qol which you can use instead of the above, if the **weapon** has a saving throw and a formula in the Other or Versatile field and you set "Roll Other Damage on failed save" set to true, the base damage will always be full damage and the saving throw will apply to the "Other" damage. Think of a giant spider which does a bite and on a failed save posion damage (formula in Other or Versatile field). If the roll other flag is set the bite damage will always be full damage and the save will apply full-1/2 poison damage on a save. You can change how the save behaves via the weapon properties full dam/half dam/no dam save.
 
 ### Hits ###
 You can enable auto checking of hits. Funbles automatically miss and criticals automatically hit. As GM you can mouse over the name of the hit target to highlight the token and click to select it. This is useful if you are not auto applying damage, since you can do all the damage application from the chat log, by clicking on the targets name, the clicking on the appropriate damage button.

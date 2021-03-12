@@ -167,7 +167,7 @@
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.AutoEffects.Hint"}}</div>
 
-        {{#if isBetterRolls}}
+        {{#if false}}
         <div class="form-group">
           <label>{{localize "midi-qol.ItemRollStartWorkflow.Name"}}</label>
           <input type="checkbox" name="itemRollStartWorkflow" data-dtype="Boolean" {{checked
@@ -217,6 +217,13 @@
           <input type="checkbox" name="checkSaveText" data-dtype="Boolean" {{checked configSettings.checkSaveText}} />
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.CheckSaveText.Hint"}}</div>
+
+        <div class="form-group flexrow">
+          <label style="width:100%; flex-grow:10;">{{localize "midi-qol.DefaultSaveMult.Name"}}</label>
+          <input style="width:10%; flex-shrink:20;" type="Number" name="defaultSaveMult" value="{{configSettings.defaultSaveMult}}"
+            data-dtype="Number" />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.DefaultSaveMult.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol.PlayerRollSaves.Name"}}</label>

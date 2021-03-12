@@ -40,6 +40,7 @@ export var configSettings = {
   hideRollDetails: "none",
   displaySaveDC: true,
   checkSaveText: null,
+  defaultSaveMult: 0.5,
   autoRollDamage: "none",
   autoApplyDamage: "none",
   damageImmunities: "none",
@@ -112,11 +113,13 @@ export let fetchParams = (silent = false) => {
       removeHiddenInvis: false
     }
   }
+  configSettings.itemRollStartWorkflow = false;
   //@ts-ignore typeLabels
   const itemList = Object.keys(CONFIG.Item?.typeLabels ?? {});
   if (!configSettings.itemTypeList && itemList.length > 0) {
     configSettings.itemTypeList = itemList;
   }
+  if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;
 
   enableWorkflow = game.settings.get("midi-qol", "EnableWorkflow");
   warn("Fetch Params Loading", configSettings);

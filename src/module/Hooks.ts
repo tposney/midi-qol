@@ -70,8 +70,13 @@ export let readyHooks = async () => {
         const ownedItem = Item.createOwned(itemData, token.actor)
         ownedItem.data.data.save.dc = saveDC;
         try {
-          //@ts-ignore
-          ownedItem.roll({showFullCard:false, createWorkflow:true, versatile:false, configureDialog:false})
+          if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e").data.version, "1.3.10")) { // better rolls breaks the normal roll process
+            //@ts-ignore
+            await BetterRolls.rollItem(ownedItem, {adv:0, disadv:0, midiSaveDC: saveDC}).toMessage();
+          } else {
+            //@ts-ignore
+            ownedItem.roll({showFullCard:false, createWorkflow:true, versatile:false, configureDialog:false})
+          }
         } finally {
           game.user.targets = saveTargets;
         }
@@ -82,7 +87,7 @@ export let readyHooks = async () => {
 
   // Concentration Check is rolled as an item roll so we need an item.
   // A temporary item would be good, but users would need create item permission which is a bit sily for just this
-  // Any GM that logs in lookds for the item and either creates/updates the item using the canned data at the end.
+  // Any GM that logs in looks for the item and either creates/updates the item using the canned data at the end.
   // When the check is rolled the name of the Item is changed.
   if (installedModules.get("combat-utility-belt")) {
     if (game.user.isGM) {
@@ -102,6 +107,7 @@ export let initHooks = () => {
     debug("preCreateChatMessage entering", data, options, user)
     recalcCriticalDamage(data, options);
     processpreCreateBetterRollsMessage(data, options, user);
+    nsaMessageHandler(data, options, user);
     return true;
   })
 
@@ -126,12 +132,12 @@ export let initHooks = () => {
   
   Hooks.on("renderChatMessage", (message, html, data) => {
     debug("render message hook ", message.id, message, html, data);
+
     hideStuffHandler(message, html, data);
     chatDamageButtons(message, html, data);
     processUndoDamageCard(message, html, data);
     diceSoNiceHandler(message, html, data);
     colorChatMessageHandler(message, html, data);
-    nsaMessageHandler(message, html, data);
     hideRollRender(message, html, data);
     betterRollsButtons(message, html, data);
   })
@@ -267,7 +273,8 @@ const itemJSONData = {
       "two": false,
       "ver": false,
       "nodam": false,
-      "fulldam": false
+      "fulldam": false,
+      "halfdam": true
     },
     "proficient": false,
     "attributes": {

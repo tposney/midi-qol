@@ -24,7 +24,7 @@ export class RollStatsDisplay extends FormApplication {
       id: "midi-qol-statistics",
       width: "500",
       height: "auto",
-      resizeable: true,
+      resizable: true,
       scrollY: [".tab.stats"],
       tabs: [{ navSelector: ".tabs", contentSelector: ".content", initial: "stats" }]
     })

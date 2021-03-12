@@ -111,6 +111,7 @@ Hooks.once('setup', function() {
   allDamageTypes = mergeObject(CONFIG.DND5E.damageTypes, CONFIG.DND5E.healingTypes, {inplace:false});
 
   if (configSettings.allowUseMacro) {
+    /*
     CONFIG.DND5E.characterFlags["AttackBonusMacro"] = {
       hint: i18n("midi-qol.AttackMacro.Hint"),
       name: i18n("midi-qol.AttackMacro.Name"),
@@ -118,6 +119,7 @@ Hooks.once('setup', function() {
       section: i18n("midi-qol.DAEMidiQOL"),
       type: String
     };
+    */
     CONFIG.DND5E.characterFlags["DamageBonusMacro"] = {
       hint: i18n("midi-qol.DamageMacro.Hint"),
       name: i18n("midi-qol.DamageMacro.Name"),

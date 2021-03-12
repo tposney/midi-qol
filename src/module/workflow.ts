@@ -3,12 +3,12 @@ import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
 import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 //@ts-ignore
-import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, allDamageTypes, debugEnabled, timelog, CV, allAttackTypes } from "../midi-qol";
+import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, allDamageTypes, debugEnabled, timelog } from "../midi-qol";
 import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
 import { configSettings, checkBetterRolls, autoRemoveTargets, checkRule } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance } from "./utils"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis } from "./utils"
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey)}
@@ -60,7 +60,7 @@ export class Workflow {
   showCard: boolean;
   get id() { return this._id}
   itemId: string;
-  itemUUId: string;
+  uuid: string;
   itemLevel: number;
   currentState: number;
 
@@ -123,6 +123,7 @@ export class Workflow {
   }
 
   public processAttackEventOptions(event) {
+    //TODO see if this can be simplified. Problem is we don't know when the event is injected
     let advKey = this.rollOptions.advKey || event?.altKey;
     let disKey = this.rollOptions.disKey || event?.ctrlKey || event?.metaKey;
 
@@ -163,8 +164,6 @@ export class Workflow {
       const token = canvas.tokens.get(this.tokenId);
       if (token) {
         const hidden = hasCondition(token, "hidden");
-        // const hidden = this.actor.data.effects.find(ef=>ef.label === "Hidden");
-        // const invisible = this.actor.data.effects.find(ef=>ef.label === "Invisible");
         const invisible = hasCondition(token, "invisible");
         this.advantage = this.advantage || hidden || invisible;
         if (hidden || invisible) log(`Advantage given to ${this.actor.name} due to hidden/invisible`)
@@ -276,6 +275,7 @@ export class Workflow {
     if (checkRule("nearbyAllyRanged") && ["rwak", "rsak", "rpak"].includes(actionType)) {
       if (firstTarget.data.width * firstTarget.data.height < checkRule("nearbyAllyRanged")) {
         const nearbyAlly = checkNearby(-1, firstTarget, 5); // targets near a friend that is not too big
+        // TODO include thrown weapons in check
         if (nearbyAlly) {
           warn("ranged attack with disadvantage because target is near a friend");
           log(`Ranged attack by ${this.actor.name} at disadvantage due to nearvy ally`)
@@ -301,13 +301,13 @@ export class Workflow {
     this.item = item;
     if (!this.item) {
       this.itemId = randomID();
-      this.itemUUId = this.itemId;
+      this.uuid = this.itemId
     } else {
-      this.itemId = item?.uuid;
-      this.itemUUId = item?.uuid;
+      this.itemId = item.id;
+      this.uuid = item.uuid;
     }
-    if (Workflow.getWorkflow(this.itemUUId)) {
-      Workflow.removeWorkflow(this.itemUUId);
+    if (Workflow.getWorkflow(this.itemId)) {
+      Workflow.removeWorkflow(this.itemId);
     }
     
     this.tokenId = speaker.token;
@@ -342,7 +342,7 @@ export class Workflow {
     this.otherDamageDetail = [];
     this.hideTags = new Array();
     this.displayHookId = null;
-    Workflow._workflows[this.itemUUId] = this;
+    Workflow._workflows[this.itemId] = this;
   }
 
   public someEventKeySet() {
@@ -384,7 +384,7 @@ export class Workflow {
 
   async next(nextState: number) {
     setTimeout(() => this._next(nextState), 0); // give the rest of queued things a chance to happen
-    // this._next(nextState);
+    // return this._next(nextState);
   }
 
   async _next(newState: number) {
@@ -489,13 +489,8 @@ export class Workflow {
           this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === "blindroll" || rollMode === "gmroll";
           await this.displayHits(this.whisperAttackCard, configSettings.mergeCard);
         }
-        if (checkRule("removeHiddenInvis")) {
-          const token = canvas.tokens.get(this.tokenId);
-          removeCondition(token, "hidden").then( () => {
-            removeCondition(token, "invisible");
-          });
-          log(`Hidden/Invisibility removed for ${this.actor.name} due to attack`)
-        }
+        if (checkRule("removeHiddenInvis")) removeHiddenInvis.bind(this)();
+
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
         Hooks.callAll("midi-qol.AttackRollComplete", this);
         if ((getAutoRollDamage() === "onHit" && this.hitTargets.size === 0 && this.targets.size !== 0) ||
@@ -793,7 +788,8 @@ export class Workflow {
       advantage: this.advantage,
       disadvantage: this.disadvantage,
       event: this.event,
-      uuid: this.item.uuid,
+      id: this.item.id,
+      uuid: this.uuid,
       rollData: this.actor.getRollData(),
       tag,
       concentrationData: getProperty(this.actor.data.flags, "midi-qol.concentration-data")
@@ -1131,7 +1127,7 @@ export class Workflow {
         {
           chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active);
           chatData.user = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
-          if (rollMode === "blindroll" ) {
+          if (rollMode === "blindroll") {
             chatData["blind"] = true;
           }
 
@@ -1351,8 +1347,6 @@ export class Workflow {
     }
     debug("check saves: requests are ", this.saveRequests)
     var results = await Promise.all(promises);
-    for (let result of results) {
-    }
     this.saveResults = results;
     let i = 0;
     for (let target of this.hitTargets) {
@@ -1765,7 +1759,6 @@ export class TrapWorkflow extends Workflow {
             game.user.targets.add(t)
           })
         }
-
         return super._next(WORKFLOWSTATES.ROLLFINISHED);
 
       default:
@@ -1788,7 +1781,6 @@ export class BetterRollsWorkflow extends Workflow {
     switch (newState) {
 
       case WORKFLOWSTATES.WAITFORATTACKROLL:
-        const hasEffects = this.hasDAE && this.item.data.effects.find(ae=> !ae.transfer);
           // since this is better rolls as soon as we are ready for the attack roll we have both the attack roll and damage
         if (!this.item.hasAttack) {
           return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
@@ -1796,6 +1788,8 @@ export class BetterRollsWorkflow extends Workflow {
         return this.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
 
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
+        this.effectsAlreadyExpired = [];
+        if (checkRule("removeHiddenInvis")) removeHiddenInvis.bind(this)();
         debug(this.attackRollHTML)
         if (configSettings.autoCheckHit !== "none") {
           await this.checkHits();
@@ -1856,7 +1850,8 @@ export class BetterRollsWorkflow extends Workflow {
 
         case WORKFLOWSTATES.ROLLFINISHED:
           super._next(WORKFLOWSTATES.ROLLFINISHED);
-          Workflow.removeWorkflow(this.item.uuid)
+          // should remove the apply effects button.
+          Workflow.removeWorkflow(this.item.id)
           return;
       
       default: 
@@ -1875,6 +1870,6 @@ export class DummyWorkflow extends BetterRollsWorkflow {
   }
   
   async _next(newState) {
-    Workflow.removeWorkflow(this.item.uuid)
+    Workflow.removeWorkflow(this.item.id)
   }
 }

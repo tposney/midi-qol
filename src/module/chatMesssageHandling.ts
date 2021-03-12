@@ -40,10 +40,12 @@ export function mergeCardSoundPlayer(message, update, options, user) {
 }
 
 export function processcreateBetterRollMessage(message, options, user) {
+  const brFlags = message.data.flags?.betterrolls5e;
+  if (!brFlags) return true;
   const flags = message.data.flags;
   if (!flags) return true;
-  const uuid = flags["midi-qol"]?.uuid;
-  let workflow = BetterRollsWorkflow.get(uuid);
+  const itemId = flags["midi-qol"]?.itemId;
+  let workflow = BetterRollsWorkflow.get(itemId);
   if (!workflow) return true;
   workflow.itemCardId = message.id;
   workflow.next(WORKFLOWSTATES.NONE);
@@ -52,7 +54,7 @@ export function processcreateBetterRollMessage(message, options, user) {
 
 export let processpreCreateBetterRollsMessage = (data: any, options:any, user: any) => {
   const brFlags = data.flags?.betterrolls5e;
-  if (installedModules["betterrolls5e"] || !brFlags) return true;
+  if (!brFlags) return true;
   debug("process precratebetteerrollscard ", data, options, installedModules["betterrolls5e"], data.content?.startsWith('<div class="dnd5e red-full chat-card"') )
   
   let speaker;
@@ -65,12 +67,17 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
     speaker = ChatMessage.getSpeaker({actor})
     token = canvas.tokens.get(speaker.token);
   } else speaker = data.speaker;
-  let item: Item5e = actor.items.get(brFlags.itemId);
-  if (!item) item = game.items.get(brFlags.itemId);
-  if (item && brFlags.params?.midiSaveDC) { // TODO this a nasty hack should be fixed
-    item.data.data.save.dc = brFlags.params.midiSaveDC;
+  let workflow = BetterRollsWorkflow.get(brFlags.itemId);
+  let item;
+  if (!workflow) { // not doing the item.roll() TODO remove this when version .13 is out
+    item = actor.items.get(brFlags.itemId);
+    if (!item) item = game.items.get(brFlags.itemId);
+    if (item && brFlags.params?.midiSaveDC) { // TODO this a nasty hack should be fixed
+      item.data.data.save.dc = brFlags.params.midiSaveDC;
+    }
+  } else {
+    item = workflow.item;
   }
-
   if (!item) return;
   // Try and help name hider
   if (!data.speaker.scene) data.speaker.scene = canvas.scene.id;
@@ -102,10 +109,10 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
       criticalThreshold = entry.critThreshold;
     }
   }
-  BetterRollsWorkflow.removeWorkflow(item.uuid);
-  setProperty(data, "flags.midi-qol.uuid", item.uuid);
+  // BetterRollsWorkflow.removeWorkflow(item.id);
+  setProperty(data, "flags.midi-qol.itemId", item.id);
   const targets = (item?.data.data.target?.type === "self") ? new Set([token]) : new Set(game.user.targets);
-  let workflow = new BetterRollsWorkflow(actor, item, speaker, targets, null);
+  if (!workflow) workflow = new BetterRollsWorkflow(actor, item, speaker, targets, null);
   workflow.isCritical = diceRoll >= criticalThreshold;
   workflow.isFumble = diceRoll === 1;
   workflow.attackTotal = attackTotal;
@@ -243,8 +250,8 @@ export let colorChatMessageHandler = (message, html, data) => {
  return true;
 }
 
-export let nsaMessageHandler = (message, html, data) => {
-  if (!nsaFlag || !data.whisper  || data.whisper.length === 0) return true;
+export let nsaMessageHandler = (data, ...args) => {
+  if (!nsaFlag || !data.whisper  /*|| data.whisper.length === 0*/) return true;
   let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active).map(u=>u.id);
   let currentIds = data.whisper.map(u=>typeof(u) === "string" ? u : u.id);
   gmIds = gmIds.filter(id => !currentIds.includes(id));
@@ -354,18 +361,18 @@ export let hideStuffHandler = (message, html, data) => {
 
   if (configSettings.autoCheckHit === "whisper" || message.data.blind) {
     if (configSettings.mergeCard) {
-      $(html).find(".midi-qol-hits-display").hide();
+      html.find(".midi-qol-hits-display").hide();
     } else {
-      if ($(html).find(".midi-qol-hits-display").length === 1) {
+      if (html.find(".midi-qol-single-hit-card").length === 1) {
         html.hide();
       }
     }
   }
   if (configSettings.autoCheckSaves === "whisper" || message.data.blind) {
     if (configSettings.mergeCard) {
-      $(html).find(".midi-qol-saves-display").hide();
+      html.find(".midi-qol-saves-display").hide();
     } else {
-      if ($(html).find(".midi-qol-nobox .midi-qol-saves-display").length === 1) {
+      if (html.find(".midi-qol-saves-display").length === 1) {
         html.hide();
       }
     }
@@ -455,8 +462,7 @@ export function betterRollsButtons(message, html, data) {
   if (!message.data.flags.betterrolls5e) return;
   //@ts-ignore speaker
   const betterRollsFlags = message.data.flags.betterrolls5e;
-  const uuid =  `Actor.${betterRollsFlags.actorId}.OwnedItem.${betterRollsFlags.itemId}`
-  if (!Workflow.getWorkflow(uuid)) {
+  if (!Workflow.getWorkflow(betterRollsFlags.itemId)) {
     html.find('.card-buttons-midi-br').remove();
   } else {
     html.find('.card-buttons-midi-br').off("click", 'button');
@@ -597,12 +603,12 @@ export async function onChatCardAction(event) {
     // Get the Item from stored flag data or by the item ID on the Actor
     const storedData = message.getFlag("dnd5e", "itemData");
     item = storedData ? this.createOwned(storedData, actor) : actor.getOwnedItem(card.dataset.itemId);
-    if ( !item ) {
-      return ui.notifications.error(game.i18n.format("DND5E.ActionWarningNoItem", {item: card.dataset.itemId, name: actor.name}))
+    if ( !item ) { // TODO investigate why this is occuring
+      // return ui.notifications.error(game.i18n.format("DND5E.ActionWarningNoItem", {item: card.dataset.itemId, name: actor.name}))
     }
   }
   if (!actor || !item) return;
-  let workflow = Workflow.getWorkflow(item.uuid);
+  let workflow = Workflow.getWorkflow(item.id);
   const hasDAE = installedModules.get("dae") && (item?.effects?.entries.some(ef => ef.data.transfer === false));
   if (hasDAE) {
     //@ts-ignore

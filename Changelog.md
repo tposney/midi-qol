@@ -1,3 +1,29 @@
+0.3.83
+* updated sneak attack item
+* Fix for ability saves/checks/skill use advantage settings.
+* Updated midi-qol to use libWrapper shim. Using libWrapper is strongly recommended and is the configuration that is tested.
+* fix for gm sees all messages bug.
+* Fix for passing an event to item.roll() being ignored.
+* For for hits display being always shown when not using the merge card.
+* Removed the special case better rolls flag. Item Cards and magic items will both work with midi + better rolls with no special flags after better rolls 1.4. Until then magic items will just roll to the chat.
+
+[BREAKING] Saving throw multipliers has been reviewed and **some changes were made**.
+* TL;DR if you don't know about save multipliers, just ignore this section, the default works like it used to and is pretty much what you'd expect.
+  * There is a new config setting, default save multipler (defaults to 0.5). If there are no special overrides then a saving throw will do damage * defaultSaveMultiplier damage. When set to 0.5 saving will do 1/2 dmaage, like most cases for dnd.
+  * There are a number of ways to overide the default multiplier.
+  * If the item description includes the text "no damage on save" (or the localized equivalent) then a save will do no damage.
+  * If the setting "search spell description" is set, items with the text "half as much damage" (or the localized equivalent) will do 1/2 damage on a save ignoring the defalt multiplier. If the text is not found the save will use the defaultSaveMultiplier.
+  * For weapons (only) there are weapon properties for 1/2, full or no damage saves. These properties override any other settings. If not present the save multiplier will be worked out as above. 
+  * For weapons (only) the save multiplier appplies to the whole damage roll **UNLESS**...
+    * You have enabled "Roll other damage on mwak/rwak" (which is intended sepcifically to support attacks that have base damage + extra damage with a save). If the weapon has a save specified **AND** the weapon has an Other Damage formula, the saving throw multiplier applies to the Other damage and the base damage is applied as full damage.
+    * Because of the way the SRD monsters have been setup, (i.e. extra damage as versatile damage and the the versatile property not set) the versatile formula will be treated as Other Damage if there is no Other Damage formula and the weapon property "versatile" is not set. 
+    * For BetterRolls you have to enter the damage into the Other field and enable roll Other in the better rolls settings. Midi will pick up this damage and apply the saving throw result against it.
+    
+If you are just using standard items you can just leave things at the defualt and most saves will do 1/2 damage as you'd expect, monsters (like a giant spider) will (if Roll Other Damage is enabled) do base weapon damage and have a save applied to the bonus damage.
+
+For those who have a lot of weapons set up with a save and want the default damage on save to be full damage (which is what a pervious version enabled when search spell description was enabled) just edit the items and set the save to full damage save (preferred) or set the default save multiplier to 1;
+
+0.3.82 fix for saves nto working if speed rolls not enabled.
 0.3.81
 * Clean up keyboard hadling for saves/checks/skill rolls to align with the rest of the midi key settings. See the readme.md for more details.
 * catch a couple of edge cases that were throwing some errors.
