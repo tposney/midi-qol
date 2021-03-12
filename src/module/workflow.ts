@@ -560,7 +560,7 @@ export class Workflow {
         // done here cause not needed for betterrolls workflow
 
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
-        if (this.item?.data.data.actionType === "heal") this.defaultDamageType = "healing"; 
+        if (this.item?.data.data.actionType === "heal" && !Object.keys(CONFIG.DND5E.healingTypes).includes(this.defaultDamageType)) this.defaultDamageType = "healing"; 
         this.damageDetail = createDamageList(this.damageRoll, this.item, this.defaultDamageType);
         const damageBonusMacro = getProperty(this.actor.data.flags, "dnd5e.DamageBonusMacro");
         if (damageBonusMacro && this.workflowType === "Workflow") {

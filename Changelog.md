@@ -1,3 +1,6 @@
+0.3.84
+* Fix for error in tidy sheet version checking.
+* Fix for tempHp and spell scaling
 0.3.83
 * updated sneak attack item
 * Fix for ability saves/checks/skill use advantage settings.

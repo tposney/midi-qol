@@ -173,7 +173,7 @@ function addTidy5eItemSheetButtons(app, html, data) {
   $('.tidy5e-sheet .inventory-list:not(favorites) .item').each(function () {
 
     let buttonContainer;
-    if (isNewerVersion(game.modules.get("tidy5e-sheet").data.version, "0.4.7"))
+    if (isNewerVersion(game.modules.get("tidy5e-sheet").data.version, "0.4.17"))
       buttonContainer = $(this).find(".mod-roll-buttons");
     else
       buttonContainer = $(this).find(".item-controls");
