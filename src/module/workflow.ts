@@ -1078,18 +1078,11 @@ export class Workflow {
       // TODO test if we are doing better rolls rolls for the new chat cards and damageonlyworkflow
       switch (this.workflowType) {
         case "BetterRollsWorkflow":
-          searchString =  '<footer class="card-footer">';
-          replaceString = `<div class="midi-qol-hits-display">${hitContent}</div><footer class="card-footer">`;
-          content = content.replace(searchString, replaceString);
-          await chatMessage.update({
-            "content": content, 
-            "flags.midi-qol.playSound": false,
-            "flags.midi-qol.type": MESSAGETYPES.HITS,
-            type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-            "flags.midi-qol.waitForDiceSoNice": false,
-            "flags.midi-qol.hideTag": "",
-            "flags.midi-qol.displayId": this.displayId
-          });
+          // TODO: Move to a place that can also catch a better rolls being edited
+          // The BetterRollsWorkflow class should in general be handling this
+          const roll = this.roll;
+          const html = `<div class="midi-qol-hits-display">${hitContent}</div>`;
+          await roll.entries.push({ type: "raw", html, source: "midi" });
           break;
         case "Workflow":
         case "TrapWorkflow":
@@ -1769,8 +1762,23 @@ export class TrapWorkflow extends Workflow {
 
 export class BetterRollsWorkflow extends Workflow {
   betterRollsHookId: number;
+  _roll: any;
+
   static get(id:string):BetterRollsWorkflow {
     return Workflow._workflows[id];
+  }
+
+  /**
+   * Retrieves the BetterRolls CustomItemRoll object from the related chat message 
+   */
+  get roll() {
+    if (this._roll) return this._roll;
+
+    const message = game.messages.get(this.itemCardId) as object;
+    if ("BetterRollsCardBinding" in message) {
+      this._roll = message["BetterRollsCardBinding"].roll;
+      return this._roll;
+    }
   }
 
   async _next(newState) {
@@ -1779,7 +1787,6 @@ export class BetterRollsWorkflow extends Workflow {
     warn("betterRolls workflow.next ", state, configSettings.speedItemRolls, this)
 
     switch (newState) {
-
       case WORKFLOWSTATES.WAITFORATTACKROLL:
           // since this is better rolls as soon as we are ready for the attack roll we have both the attack roll and damage
         if (!this.item.hasAttack) {
@@ -1799,15 +1806,21 @@ export class BetterRollsWorkflow extends Workflow {
         return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMAGEROLL:
-        // better rolls always have damage rolled
+        // better rolls always have damage rolled, but we might have to show it
+        // todo: shouldRollDamage is somewhat common and should probably be a property on the workflow base class
+        let shouldRollDamage = getAutoRollDamage() === "always" 
+          || (getAutoRollDamage() !== "none" && !this.item.hasAttack)
+          || (getAutoRollDamage() === "onHit" && (this.hitTargets.size > 0 || this.targets.size === 0));
+        if (shouldRollDamage) {
+          this.roll?.rollDamage();
+        }
+
         if (!itemHasDamage(this.item)) return this.next(WORKFLOWSTATES.WAITFORSAVES);
         else return this.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
         if (this.critflagSet || this.nocritFlagSet) {
-          if (this.critFlagSet) {
-            // TODO:  somehow call forceCrit
-          }
+          this.roll?.forceCrit();
         }
         const damageBonusMacro = getProperty(this.actor.data.flags, "dnd5e.DamageBonusMacro");
         if (damageBonusMacro) {
@@ -1848,14 +1861,29 @@ export class BetterRollsWorkflow extends Workflow {
         Hooks.callAll("midi-qol.DamageRollComplete", this)
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
 
-        case WORKFLOWSTATES.ROLLFINISHED:
-          super._next(WORKFLOWSTATES.ROLLFINISHED);
-          // should remove the apply effects button.
-          Workflow.removeWorkflow(this.item.id)
-          return;
+      case WORKFLOWSTATES.ROLLFINISHED:
+      case WORKFLOWSTATES.ALLROLLSCOMPLETE:
+        await this.complete();
+        super._next(WORKFLOWSTATES.ROLLFINISHED);
+        // should remove the apply effects button.
+        Workflow.removeWorkflow(this.item.id)
+        return;
       
       default: 
         return await super._next(newState);
+    }
+  }
+
+  async complete() {
+    if (this._roll) {
+      await this._roll.update({
+        "flags.midi-qol.playSound": false,
+        "flags.midi-qol.type": MESSAGETYPES.HITS,
+        "flags.midi-qol.waitForDiceSoNice": false,
+        "flags.midi-qol.hideTag": "",
+        "flags.midi-qol.displayId": this.displayId
+      });
+      this._roll = null;
     }
   }
 }

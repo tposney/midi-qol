@@ -82,31 +82,32 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
   // Try and help name hider
   if (!data.speaker.scene) data.speaker.scene = canvas.scene.id;
   if (!data.speaker.token) data.speaker.token = token?.id;
-  let attackTotal = -1;
   let diceRoll;
 
   let damageList = [];
   let otherDamageList = [];
-  let criticalThreshold = -1;
-  let advantage;
-  let disadvantage;
+
+  // Get attack roll info
+  const attackEntry = brFlags.entries?.find((e) => e.type === "multiroll" && e.rollType === "attack");
+  let attackTotal = attackEntry?.entries?.find((e) => !e.ignored)?.total ?? -1;
+  let advantage = attackEntry ? attackEntry.rollState === "highest" : undefined;
+  let disadvantage = attackEntry ? attackEntry.rollState === "lowest" : undefined;
+  let criticalThreshold = attackEntry?.criticalThreshold ?? -1;
+
   for (let entry of brFlags.entries) {
-    if (entry.type === "damage") {
-      let damage = entry.baseRoll.total;
-      let type = entry.damageType;
-      if (diceRoll >= criticalThreshold && entry.critRoll) damage += entry.critRoll.total;
-      // Check for versatile and flag set. TODO damageIndex !== other looks like nonsense.
-      if (entry.damageIndex !== "other")
-        damageList.push({type, damage});
-      else if(configSettings.rollOtherDamage)
-        otherDamageList.push({type, damage});
-    } else if (entry.type === "multiroll" && entry.rollType === "attack") {
-      const index = entry.entries[0].ignored ? 1 : 0;
-      attackTotal = entry.entries[index].total;
-      diceRoll = attackTotal - entry.bonus.total;
-      advantage = entry.rollState === "highest";
-      disadvantage = entry.rollState === "lowest";
-      criticalThreshold = entry.critThreshold;
+    if (entry.type === "damage-group") {
+      for (const subEntry of entry.entries) {
+        let damage = subEntry.baseRoll?.total ?? 0;
+        let type = subEntry.damageType;
+        if ((entry.isCrit || subEntry.revealed) && subEntry.critRoll)
+          damage += subEntry.critRoll.total;
+
+        // Check for versatile and flag set. TODO damageIndex !== other looks like nonsense.
+        if (subEntry.damageIndex !== "other")
+          damageList.push({ type, damage });
+        else if (configSettings.rollOtherDamage)
+          otherDamageList.push({ type, damage });
+      }
     }
   }
   // BetterRollsWorkflow.removeWorkflow(item.id);
