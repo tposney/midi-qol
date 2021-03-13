@@ -120,6 +120,21 @@ You can enable auto checking of hits. Funbles automatically miss and criticals a
   * Yes, means that damage is auto applied to targeted tokens (**or self if self target is specified**) who were hit or did not save, or who waved and take half damage.
   * "+ damage card". If included a chat card is sent to the GM which includes each target that had damage applied with details of the damge, any immunities/resitances and 6 buttons. The set the target hit points based on the calculation displaed. The first the hp back they way they were before the roll and the second sets them as displayed in the calculation (an undo/redo). The next 4 are the standard DND apply damage buttons but **do not** take into account resitance/immunity.
 
+### Saving throws
+  * There is a config setting, default save multipler (defaults to 0.5). If there are no special overrides then a saving throw will do damage * defaultSaveMultiplier damage. When set to 0.5 saving will do 1/2 dmaage, like most cases for dnd.
+  * There are a number of ways to overide the default multiplier.
+  * If the item description includes the text "no damage on save" (or the localized equivalent) then a save will do no damage.
+  * If the setting "search spell description" is set, items with the text "half as much damage" (or the localized equivalent) will do 1/2 damage on a save ignoring the defalt multiplier. If the text is not found the save will use the defaultSaveMultiplier.
+  * For weapons (only) there are weapon properties for 1/2, full or no damage saves. These properties override any other settings. If not present the save multiplier will be worked out as above. 
+  * For weapons (only) the save multiplier appplies to the whole damage roll **UNLESS**...
+    * You have enabled "Roll other damage on mwak/rwak" (which is intended sepcifically to support attacks that have base damage + extra damage with a save). If the weapon has a save specified **AND** the weapon has an Other Damage formula, the saving throw multiplier applies to the Other damage and the base damage is applied as full damage.
+    * Because of the way the SRD monsters have been setup, (i.e. extra damage as versatile damage and the the versatile property not set) the versatile formula will be treated as Other Damage if there is no Other Damage formula and the weapon property "versatile" is not set. 
+    * For BetterRolls you have to enter the damage into the Other field and enable roll Other in the better rolls settings. Midi will pick up this damage and apply the saving throw result against it.
+    
+If you are just using standard items you can just leave things at the defualt and most saves will do 1/2 damage as you'd expect, monsters (like a giant spider) will (if Roll Other Damage is enabled) do base weapon damage and have a save applied to the bonus damage.
+
+For those who have a lot of weapons set up with a save and want the default damage on save to be full damage (which is what a pervious version enabled when search spell description was enabled) just edit the items and set the save to full damage save (preferred) or set the default save multiplier to 1.
+
 * **Roll Other Damge**
 A feature for action types rwak/mwak that have a saving throw. The "Other" formula will be rolled as additional damage. This is useful for attacks that do additional damage if the target fails its save.  Often posion damage, e.g. Giant Spiders.
 * Default is 1/2 damage on save, but you can set the noDamSave or FullDamSave flags to modify the behaviour.  

@@ -92,8 +92,16 @@ function mapSpeedKeys(event) {
   return event;
 }
 
+interface Options {
+  event: any, 
+  advantage: boolean | undefined, 
+  disadvantage: boolean | undefined, 
+  fastForward: boolean | undefined, 
+  parts: [] | undefined
+};
+
 function doRollSkill(wrapped, ...args) {
-  const [ skillId, options={event: {}, parts: []} ] = args;
+  const [ skillId, options = {event: {}, parts: [], avantage: false, disadvantage: false} ] = args;
   options.event = mapSpeedKeys(options.event);
   let procOptions = procAdvantage(this, "check", this.data.data.skills[skillId].ability, options)
   procOptions = procAdvantageSkill(this, skillId, procOptions)
@@ -152,7 +160,7 @@ function rollAbilitySave(wrapped, ...args)  {
   return result;
 }
 
-function procAutoFail(actor, rollType, abilityId) {
+function procAutoFail(actor, rollType: string, abilityId: string): boolean {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const fail = midiFlags.fail ?? {};
   if (fail.ability || fail.all) {
@@ -163,7 +171,7 @@ function procAutoFail(actor, rollType, abilityId) {
   return false;
 }
 
-function procAutoFailSkill(actor, skillId) {
+function procAutoFailSkill(actor, skillId): boolean {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const fail = midiFlags.fail ?? {};
   if (fail.skill || fail.all) {
@@ -174,13 +182,13 @@ function procAutoFailSkill(actor, skillId) {
   return false;
 }
 
-function procAdvantage(actor, rollType, abilityId, options): {} {
+function procAdvantage(actor, rollType, abilityId, options: Options): Options {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const advantage = midiFlags.advantage ?? {};
   const disadvantage = midiFlags.disadvantage ?? {};
   var withAdvantage = options.event?.altKey || options.advantage;
   var withDisadvantage = options.event?.ctrlKey || options.event?.metaKey || options.disadvantage;
-  options.fastForward = autoFastForwardAbilityRolls ? !options.event.fastKey : options.event.fastKey;
+  options.fastForward = options.fastForward || (autoFastForwardAbilityRolls ? !options.event.fastKey : options.event.fastKey);
   if (advantage.ability || advantage.all) {
     const rollFlags = (advantage.ability && advantage.ability[rollType]) ?? {};
     withAdvantage = withAdvantage || advantage.all || advantage.ability.all || rollFlags.all || rollFlags[abilityId];
@@ -195,7 +203,7 @@ function procAdvantage(actor, rollType, abilityId, options): {} {
   return options;
 }
 
-function procAdvantageSkill(actor, skillId, options) {
+function procAdvantageSkill(actor, skillId, options: Options): Options {
   const midiFlags = actor.data.flags["midi-qol"];
   const advantage = midiFlags?.advantage;
   const disadvantage = midiFlags?.disadvantage;

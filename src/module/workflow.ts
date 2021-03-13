@@ -453,12 +453,13 @@ export class Workflow {
         if (this.noAutoAttack) return;
         let shouldRoll = this.someEventKeySet() || getAutoRollAttack();
         // this.processAttackEventOptions(event);
-        if (getAutoRollAttack() && this.rollOptions.fastForwardKey) shouldRoll = false;
+        if (getAutoRollAttack() && isAutoFastAttack() &&  this.rollOptions.fastForwardKey) shouldRoll = false;
 
   //      if (configSettings.mergeCard) {
         {
           const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
-          if (chatMessage && !shouldRoll) {
+          const isFastRoll = isAutoFastAttack() || (!isAutoFastAttack() && this.rollOptions.fastForwardKey);
+          if (chatMessage && (!shouldRoll || !isFastRoll)) {
             // provide a hint as to the type of roll expected.
             //@ts-ignore
             let content = chatMessage && duplicate(chatMessage.data.content)
@@ -466,7 +467,7 @@ export class Workflow {
             const hasAdvantage = this.advantage && !this.disadvantage;
             const hasDisadvantage = this.disadvantage && !this.advantage;
             let attackString = hasAdvantage ? i18n("DND5E.Advantage") : hasDisadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
-            if (isAutoFastAttack() || (!isAutoFastAttack() && this.rollOptions.fastForwardKey)) attackString += ` ${i18n("midi-qol.fastForward")}`;
+            if (isFastRoll) attackString += ` ${i18n("midi-qol.fastForward")}`;
             let replaceString = `<button data-action="attack">${attackString}</button>`
             content = content.replace(searchRe, replaceString);
             await chatMessage?.update({"content": content});
@@ -1819,7 +1820,7 @@ export class BetterRollsWorkflow extends Workflow {
         else return this.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
-        if (this.critflagSet || this.nocritFlagSet) {
+        if (this.critflagSet) {
           this.roll?.forceCrit();
         }
         const damageBonusMacro = getProperty(this.actor.data.flags, "dnd5e.DamageBonusMacro");
@@ -1857,12 +1858,8 @@ export class BetterRollsWorkflow extends Workflow {
         }
         if (this.item.hasSave) return this.next(WORKFLOWSTATES.WAITFORSAVES);
         return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE)
-        processDamageRoll(this, "psychic");
-        Hooks.callAll("midi-qol.DamageRollComplete", this)
-        return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
 
       case WORKFLOWSTATES.ROLLFINISHED:
-      case WORKFLOWSTATES.ALLROLLSCOMPLETE:
         await this.complete();
         super._next(WORKFLOWSTATES.ROLLFINISHED);
         // should remove the apply effects button.

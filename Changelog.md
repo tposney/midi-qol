@@ -1,3 +1,7 @@
+0.3.86
+support for better rolls 1.4. If you are using better rolls and have updated to 1.4 you need to upgrade midi-qol
+0.3.85 
+updated en.json
 0.3.84
 * Fix for error in tidy sheet version checking.
 * Fix for tempHp and spell scaling
