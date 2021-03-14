@@ -1,12 +1,12 @@
 0.3.88
-Fixed a bug that failed to roll an item if you are not displaying the chat card, not using the merge card but were attempting to fast forward rolls.
+Fixed a bug that failed to roll an item if you are not displaying the chat card, not using the merge card but were attempting to fast forward rolls.  
 0.3.87
-Fix for failing 0 targets when creature target specified and require targets not set.
-Added DamageDealt special duration, expires when the actor does damage.
-Fix for midi & better rolls 1.4.0 not displaying critical hits correctly, damage dealt was correct.
-Fix for mid & better rolls 1.4.0 not displaying saving throw results on merge card.
+Fix for failing 0 targets when creature target specified and require targets not set.  
+Added DamageDealt special duration, expires when the actor does damage.  
+Fix for midi & better rolls 1.4.0 not displaying critical hits correctly, damage dealt was correct.  
+Fix for mid & better rolls 1.4.0 not displaying saving throw results on merge card.  
 0.3.86
-support for better rolls 1.4. If you are using better rolls and have updated to 1.4 you need to upgrade midi-qol
+support for better rolls 1.4. If you are using better rolls and have updated to 1.4 you need to upgrade midi-qol  
 0.3.85 
 updated en.json
 0.3.84
