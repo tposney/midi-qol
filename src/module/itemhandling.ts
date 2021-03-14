@@ -339,8 +339,8 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     workflow.checkAttackAdvantage();
     const needAttckButton = !workflow.someEventKeySet() && !getAutoRollAttack();
     workflow.showCard = configSettings.mergeCard || (configSettings.showItemDetails !== "none") || (
-      (baseItem.isHealing && configSettings.autoRollDamage === "none") || // not rolling damage
-      (itemHasDamage(baseItem) && configSettings.autoRollDamage === "none") ||
+      (baseItem.isHealing && getAutoRollDamage() === "none") || // not rolling damage
+      (itemHasDamage(baseItem) && getAutoRollDamage() === "none") ||
       (baseItem.hasSave && configSettings.autoCheckSaves === "none") ||
       (baseItem.hasAttack && needAttckButton)) ||
       (!baseItem.hasAttack && !itemHasDamage(baseItem) && !baseItem.hasSave);
@@ -354,8 +354,8 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       var itemCard: ChatMessage = await showItemCard.bind(item)(showFullCard, workflow)
       workflow.itemCardId = itemCard.id;
       debug("Item Roll: showing card", itemCard, workflow);
-      workflow.next(WORKFLOWSTATES.NONE);
-    };
+    }
+    workflow.next(WORKFLOWSTATES.NONE);
     return itemCard ?? result;
   }
 

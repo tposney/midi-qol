@@ -26,7 +26,7 @@ import { RollStats } from './module/RollStats';
 
 export let debugEnabled = 0;
 // 0 = none, warnings = 1, debug = 2, all = 3
-export let debug = (...args) => {if (debugEnabled > 1) console.log("DEBUG: midi-qol | ", ...args)};
+export let debug = (...args) => {if (debugEnabled > 1) console.warn("DEBUG: midi-qol | ", ...args)};
 export let log = (...args) => console.log("midi-qol | ", ...args);
 export let warn = (...args) => {if (debugEnabled > 0) console.warn("midi-qol | ", ...args)};
 export let error = (...args) => console.error("midi-qol | ", ...args);
