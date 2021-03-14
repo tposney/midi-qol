@@ -82,7 +82,6 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
   // Try and help name hider
   if (!data.speaker.scene) data.speaker.scene = canvas.scene.id;
   if (!data.speaker.token) data.speaker.token = token?.id;
-  let diceRoll;
 
   let damageList = [];
   let otherDamageList = [];
@@ -92,16 +91,18 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
   let attackTotal = attackEntry?.entries?.find((e) => !e.ignored)?.total ?? -1;
   let advantage = attackEntry ? attackEntry.rollState === "highest" : undefined;
   let disadvantage = attackEntry ? attackEntry.rollState === "lowest" : undefined;
-  let criticalThreshold = attackEntry?.criticalThreshold ?? -1;
+  let diceRoll = attackEntry ? attackEntry.entries?.find((e) => !e.ignored)?.roll.results[0] : -1;
+  let isCritical = false;
 
   for (let entry of brFlags.entries) {
     if (entry.type === "damage-group") {
       for (const subEntry of entry.entries) {
         let damage = subEntry.baseRoll?.total ?? 0;
         let type = subEntry.damageType;
-        if ((entry.isCrit || subEntry.revealed) && subEntry.critRoll)
+        if ((entry.isCrit || subEntry.revealed) && subEntry.critRoll) {
           damage += subEntry.critRoll.total;
-
+          isCritical = true;
+        }
         // Check for versatile and flag set. TODO damageIndex !== other looks like nonsense.
         if (subEntry.damageIndex !== "other")
           damageList.push({ type, damage });
@@ -114,11 +115,10 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
   setProperty(data, "flags.midi-qol.itemId", item.id);
   const targets = (item?.data.data.target?.type === "self") ? new Set([token]) : new Set(game.user.targets);
   if (!workflow) workflow = new BetterRollsWorkflow(actor, item, speaker, targets, null);
-  workflow.isCritical = diceRoll >= criticalThreshold;
+  workflow.isCritical = isCritical;
   workflow.isFumble = diceRoll === 1;
   workflow.attackTotal = attackTotal;
   workflow.attackRoll = new Roll(`${attackTotal}`).roll();
-
   if (configSettings.keepRollStats && item.hasAttack) {
     gameStats.addAttackRoll({rawRoll: diceRoll, total: attackTotal, fumble: workflow.isFumble, critical: workflow.isCritical}, item);
   }

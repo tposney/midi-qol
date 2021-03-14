@@ -244,7 +244,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       || (configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type)) // rangetarget
       || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
 
-    if (this.data.data.target?.type === "creature" && game.user.targets.size === 0) shouldAllowRoll = false;
+    if (configSettings.requireTargets && this.data.data.target?.type === "creature" && game.user.targets.size === 0) shouldAllowRoll = false;
     // only allow weapon attacks against at most the specified number of targets
     let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9099) ?? 9999
     let speaker = ChatMessage.getSpeaker({ actor: this.actor });

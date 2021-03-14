@@ -275,7 +275,12 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   
   let theTargets = workflow.hitTargets;
   if (item?.data.data.target?.type === "self") theTargets = await getSelfTargetSet(actor) || theTargets;
-  if (theTargets.size > 0 && item?.hasAttack) workflow.expireMyEffects(["1Hit"]);
+  let effectsToExpire = [];
+  if (theTargets.size > 0 && item?.hasAttack) effectsToExpire.push("1Hit");
+  if (theTargets.size > 0 && item?.hasDamage) effectsToExpire.push("DamageDealt");
+  if (effectsToExpire.length > 0) {
+    workflow.expireMyEffects(effectsToExpire);
+  }
 
   // Don't check for critical - RAW say these don't get critical damage
   if (["rwak", "mwak"].includes(item?.data.data.actionType) && configSettings.rollOtherDamage) {

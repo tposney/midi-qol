@@ -869,8 +869,9 @@ export class Workflow {
     const expireHit = effectsToExpire.includes("1Hit") && !this.effectsAlreadyExpired.includes("1Hit");
     const expireAction = effectsToExpire.includes("1Action") && !this.effectsAlreadyExpired.includes("1Action");
     const expireAttack = effectsToExpire.includes("1Attack") && !this.effectsAlreadyExpired.includes("1Attack");
-    // expire any effects on the actor that require it
+    const expireDamage = effectsToExpire.includes("DamageDealt") && !this.effectsAlreadyExpired.includes("DamageDealt");
 
+    // expire any effects on the actor that require it
     if (debugEnabled && false) {
       const test = this.actor.effects.map(ef => {
         const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
@@ -885,7 +886,8 @@ export class Workflow {
       if (!specialDuration) return false;
       return (expireAction && specialDuration.includes("1Action")) ||
       (expireAttack && specialDuration.includes("1Attack") && this.item?.hasAttack) ||
-      (expireHit && this.item?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.size > 0)
+      (expireHit && this.item?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.size > 0) ||
+      (expireDamage && this.item?.hasDamage && specialDuration.includes("DamageDealt"))
     }).map(ef=>ef.id);
     debug("expire my effects", myExpiredEffects, expireAction, expireAttack, expireHit);
     this.effectsAlreadyExpired = this.effectsAlreadyExpired.concat(effectsToExpire);
@@ -1065,7 +1067,7 @@ export class Workflow {
       hits: this.hitDisplayData,
       isCritical: this.isCritical, 
       isGM: game.user.isGM,
-    }
+    };
     warn("displayHits ", templateData, whisper, doMerge);
     const hitContent = await renderTemplate("modules/midi-qol/templates/hits.html", templateData) || "No Targets";
     const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
@@ -1161,17 +1163,10 @@ export class Workflow {
         if (!!!game.dice3d?.messageHookDisabled) this.hideTags = [".midi-qol-saves-display"];
         switch (this.workflowType) {
           case "BetterRollsWorkflow":
-            searchString =  '<footer class="card-footer">';
-            replaceString = `<div data-item-id="${this.item._id}"></div><div class="midi-qol-saves-display">${saveHTML}${saveContent}</div><footer class="card-footer">`
-            content = content.replace(searchString, replaceString);
-            await chatMessage.update({
-              content, 
-              type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-              "flags.midi-qol.type": MESSAGETYPES.SAVES,
-              "flags.midi-qol.hideTag": this.hideTags
-            });
-            //@ts-ignore
-            chatMessage.data.content = content;
+            const html = `<div data-item-id="${this.item._id}"></div><div class="midi-qol-saves-display">${saveHTML}${saveContent}</div><footer class="card-footer">`
+            const roll = this.roll;
+            await roll.entries.push({ type: "raw", html, source: "midi" });
+            return;
           break;
         case "Workflow":
         case "TrapWorkflow":

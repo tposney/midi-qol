@@ -1,3 +1,8 @@
+0.3.87
+Fix for failing 0 targets when creature target specified and require targets not set.
+Added DamageDealt special durtion, expires when the actor does damage.
+Fix for midi & better rolls 1.4.0 not displaying critical hits correctly, damage dealt was correct.
+Fix for mid & better rolls 1.4.0 not displaying saving throw results on merge card.
 0.3.86
 support for better rolls 1.4. If you are using better rolls and have updated to 1.4 you need to upgrade midi-qol
 0.3.85 
@@ -30,15 +35,15 @@ If you are just using standard items you can just leave things at the defualt an
 
 For those who have a lot of weapons set up with a save and want the default damage on save to be full damage (which is what a pervious version enabled when search spell description was enabled) just edit the items and set the save to full damage save (preferred) or set the default save multiplier to 1;
 
-0.3.82 fix for saves nto working if speed rolls not enabled.
+0.3.82 fix for saves not working if speed rolls not enabled.
 0.3.81
 * Clean up keyboard hadling for saves/checks/skill rolls to align with the rest of the midi key settings. See the readme.md for more details.
 * catch a couple of edge cases that were throwing some errors.
-* [BREAKING] If better rolls is enabled there is a new workflow option. Item roll starts workflow, which if enabled will allow MagicItems spells to work as normal, applying damage etc BUT better rolls item buttons (standard roll etc) will not work as intended. If disabled better rolls item buttons will work as intended but MagicItems spells will not do any auto rolls but better rolls buttons will function as intended. You can't have both, default is disabled.
+[removed] [BREAKING] If better rolls is enabled there is a new workflow option. Item roll starts workflow, which if enabled will allow MagicItems spells to work as normal, applying damage etc BUT better rolls item buttons (standard roll etc) will not work as intended. If disabled better rolls item buttons will work as intended but MagicItems spells will not do any auto rolls but better rolls buttons will function as intended. You can't have both, default is disabled.
 * [BREAKING] Removed preRollChecks setting. All features of that setting can be enabled from the optional rules settings page.
 * [UNBREAKING] for AoE spells (measured template placed) default behaviour is that caster WILL be targeted. Only if the range units field is set to "Special" will the caster be ignored. This means items from the SRD will work as written.
 0.3.80
-[BREAKING] Measured templates now target the caster ONLY if range has type "any", othewise the csater won't be targeted by the AoE template.
+[removed] [BREAKING] Measured templates now target the caster ONLY if range has type "any", othewise the csater won't be targeted by the AoE template.
 * Added special durations for specific daamage type, expires if the target takes damage of the specific type.  
 * Added special duration isSave. Effect expires if the character makes a saving throw in response to an item usage against it. Also added ability type specific expiry on save.  
 Not really sure how useful the ability/dagmage type expriry options but at least 1 person has asked for them both.  requires latest DAE to work.
