@@ -221,5 +221,9 @@
     "midi-qol.SaveStatsEvery.Hint": "n回のロールごとに統計の保存を行います。各攻撃とダメージがロールにカウントされます。推奨は10～20、もしくはそれ以上です。",
     "midi-qol.PlayerStatsOnly.Name": "プレイヤー統計のみ",
     "midi-qol.PlayerStatsOnly.Hint": "保存される統計はプレイヤーが所有するアクターのみになります。",
-    "midi-qol.ShowStats": "統計ウィンドウの表示"
+    "midi-qol.ShowStats": "統計ウィンドウの表示",
+    "midi-qol.ItemRollStartWorkflow.Name": "常にワークフローを開始する（BetterRolls5e）",
+    "midi-qol.ItemRollStartWorkflow.Hint": "有効にした場合、Magic Itemsの呪文は正しく動作しますが、BetterRollのアイテムボタンは機能しません。無効にすると、Magic Itemsの呪文は正しく動作しませんが、BetterRollのアイテムボタンが機能します。両立はできません。",
+    "midi-qol.DefaultSaveMult.Name": "標準のセーヴィング・スロー倍率",
+    "midi-qol.DefaultSaveMult.Hint": "セーヴを伴う攻撃おいて、その成功時に元のダメージにかかる基本の減少倍率を指定します。デフォルトは0.5で、つまりセーヴ成功時は半減ダメージとなります。変更はこれら倍率の仕組みについて理解のうえで行ってください。"
 }

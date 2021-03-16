@@ -14,7 +14,7 @@
 import { registerSettings, fetchParams, configSettings } from './module/settings';
 import { preloadTemplates } from './module/preloadTemplates';
 import { installedModules, setupModules } from './module/setupModules';
-import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY } from './module/patching';
+import { itemPatching, visionPatching, actorAbilityRollPatching } from './module/patching';
 import { initHooks, readyHooks } from './module/Hooks';
 import { initGMActionSetup } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
@@ -26,7 +26,7 @@ import { RollStats } from './module/RollStats';
 
 export let debugEnabled = 0;
 // 0 = none, warnings = 1, debug = 2, all = 3
-export let debug = (...args) => {if (debugEnabled > 1) console.warn("DEBUG: midi-qol | ", ...args)};
+export let debug = (...args) => {if (debugEnabled > 1) console.log("DEBUG: midi-qol | ", ...args)};
 export let log = (...args) => console.log("midi-qol | ", ...args);
 export let warn = (...args) => {if (debugEnabled > 0) console.warn("midi-qol | ", ...args)};
 export let error = (...args) => console.error("midi-qol | ", ...args);
@@ -96,7 +96,6 @@ Hooks.once('setup', function() {
   itemPatching();
   visionPatching();
   setupModules();
-  patchLMRTFY();
   registerSettings();
   initGMActionSetup();
   undoDamageText = i18n("midi-qol.undoDamageFrom");
@@ -325,6 +324,8 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.fail.ability.check.all");
   midiFlags.push("flags.midi-qol.fail.ability.save.all");
   midiFlags.push("flags.midi-qol.superSaver.all");
+  midiFlags.push("flags.midi-qol.MR.ability.save.all");
+
 
   Object.keys(CONFIG.DND5E.abilities).forEach(abl => {
     midiFlags.push(`flags.midi-qol.advantage.ability.check.${abl}`);
@@ -334,6 +335,8 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.fail.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.fail.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.superSaver.${abl}`);
+    midiFlags.push(`flags.midi-qol.MR.ability.save.${abl}`);
+
   })
   midiFlags.push(`flags.midi-qol.advantage.skill.all`);
   midiFlags.push(`flags.midi-qol.disadvantage.skill.all`);

@@ -78,7 +78,8 @@ export var configSettings = {
     nearbyFoe: true,
     nearbyAllyRanged: 4,
     incapacitated: true,
-    removeHiddenInvis: true
+    removeHiddenInvis: true,
+    maxDRValue: false
   },
   keepRollStats: false,
   saveStatsEvery: 20,
@@ -105,12 +106,13 @@ export let fetchParams = (silent = false) => {
 
   if (!configSettings.optionalRules) {
     configSettings.optionalRules = {
-      invisAdvantage: false,
-      checkRange: false,
-      nearbyFoe: false,
-      nearbyAllyRanged: 0,
-      incapacitated: false,
-      removeHiddenInvis: false
+      invisAdvantage: true,
+      checkRange: true,
+      nearbyFoe: true,
+      nearbyAllyRanged: 4,
+      incapacitated: true,
+      removeHiddenInvis: true,
+      maxDRValue: false
     }
   }
   configSettings.itemRollStartWorkflow = false;

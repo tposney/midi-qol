@@ -8,7 +8,7 @@ import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
 import { configSettings, checkBetterRolls, autoRemoveTargets, checkRule } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis } from "./utils"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects } from "./utils"
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey)}
@@ -342,6 +342,7 @@ export class Workflow {
     this.otherDamageDetail = [];
     this.hideTags = new Array();
     this.displayHookId = null;
+    this.onUseCalled = false;
     Workflow._workflows[this.itemId] = this;
   }
 
@@ -496,7 +497,7 @@ export class Workflow {
         Hooks.callAll("midi-qol.AttackRollComplete", this);
         if ((getAutoRollDamage() === "onHit" && this.hitTargets.size === 0 && this.targets.size !== 0) ||
              getAutoRollDamage() === "none" && (this.hitTargets.size === 0 ||this.targets.size === 0)) {
-          this.expireMyEffects(["1Attack", "1Action"])
+          expireMyEffects.bind(this)(["1Attack", "1Action"])
           return this.next(WORKFLOWSTATES.ROLLFINISHED);
         }
         return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
@@ -506,7 +507,7 @@ export class Workflow {
         if (!itemHasDamage(this.item)) return this.next(WORKFLOWSTATES.WAITFORSAVES);
         if (this.isFumble && configSettings.autoRollDamage !== "none") {
           // Auto rolling damage but we fumbled - we failed - skip everything.
-          this.expireMyEffects(["1Attack", "1Action"])
+          expireMyEffects.bind(this)(["1Attack", "1Action"])
           return this.next(WORKFLOWSTATES.ROLLFINISHED);
         } 
         if (this.noAutoDamage) return; // we are emulating the standard card specially.
@@ -568,15 +569,16 @@ export class Workflow {
           await this.rollBonusDamage(damageBonusMacro);
         }
         // TODO Need to do DSN stuff
-        if (this.otherDamageRoll)
+        if (this.otherDamageRoll) {
           this.otherDamageDetail = createDamageList(this.otherDamageRoll, null, this.defaultDamageType);
-
-          await this.displayDamageRoll(configSettings.mergeCard);
+        }
+        await this.displayDamageRoll(configSettings.mergeCard);
+        Hooks.callAll("midi-qol.DamageRollComplete", this)
         if (this.isFumble) {
           this.expireMyEffects(["1Action", "1Attack"]);
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
         }
-        this.expireMyEffects(["1Action", "1Attack", "1Hit"]);
+        expireMyEffects.bind(this)(["1Action", "1Attack", "1Hit"]);
         return this.next(WORKFLOWSTATES.WAITFORSAVES);
 
       case WORKFLOWSTATES.WAITFORSAVES:
@@ -610,7 +612,7 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.SAVESCOMPLETE);
 
       case WORKFLOWSTATES.SAVESCOMPLETE:
-        this.expireMyEffects(["1Action"]);
+        expireMyEffects.bind(this)(["1Action"]);
         return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
   
       case WORKFLOWSTATES.ALLROLLSCOMPLETE:
@@ -621,6 +623,32 @@ export class Workflow {
         if (this.item.hasSave) this.applicationTargets = this.failedSaves;
         else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
         else this.applicationTargets = this.targets;
+ 
+        return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
+
+      case WORKFLOWSTATES.APPLYDYNAMICEFFECTS:
+        expireMyEffects.bind(this)(["1Action"]);
+        if (configSettings.allowUseMacro && !this.onuseMacroCalled) {
+          this.onUseMacroCalled = true;
+          const results = await this.callMacros(getProperty(this.item, "data.flags.midi-qol.onUseMacroName"), "OnUse");
+          // Special check for return of {haltEffectsApplication: true} from item macro
+          if (results.some(r => r?.haltEffectsApplication))
+            return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        }
+
+        // no item, not auto effects or not module skip
+        if (!this.item || !configSettings.autoItemEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        this.applicationTargets = new Set();
+        if (this.item.hasSave) this.applicationTargets = this.failedSaves;
+        else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
+        else this.applicationTargets = this.targets;
+        if (this.hasDAE) {
+          this.dae.doEffects(this.item, true, this.applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId})
+          await this.removeEffectsButton();
+        }
+        return this.next(WORKFLOWSTATES.ROLLFINISHED);
+
+      case WORKFLOWSTATES.ROLLFINISHED:
         for (let target of this.targets) {
           //@ts-ignore effects
           const expiredEffects = target.actor?.effects?.filter(ef => {
@@ -631,11 +659,9 @@ export class Workflow {
             if ((specialDuration.includes("isAttacked") && wasAttacked) ||
               (specialDuration.includes("isDamaged") && wasDamaged))
               return true;
-            if (this.item.hasSave && specialDuration.includes("isSave")) return true;
             if (this.item.hasSave && specialDuration.includes(`isSaveSuccess`) && this.saves.has(target)) return true;
             if (this.item.hasSave && specialDuration.includes(`isSaveFailure`) && !this.saves.has(target)) return true;
             const abl = this.item.data.data.save.ability;
-            if (this.item.hasSave && specialDuration.includes(`isSave.${abl}`)) return true;
             if (this.item.hasSave && specialDuration.includes(`isSaveSuccsss.${abl}`) && this.saves.has(target)) return true;
             if (this.item.hasSave && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) return true;
             for (let dt of this.damageDetail) {
@@ -657,27 +683,7 @@ export class Workflow {
               intendedFor: intendedGM.id
             });
           } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
-       }
-        Hooks.callAll("midi-qol.DamageRollComplete", this)
-        return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
-
-      case WORKFLOWSTATES.APPLYDYNAMICEFFECTS:
-        this.expireMyEffects(["1Action"]);
-        // no item, not auto effects or not module skip
-        if (!this.item || !configSettings.autoItemEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED);
-        // no dynamiceffects skip
-        this.applicationTargets = new Set();
-        if (this.item.hasSave) this.applicationTargets = this.failedSaves;
-        else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
-        else this.applicationTargets = this.targets;
-        if (this.hasDAE) {
-          this.dae.doEffects(this.item, true, this.applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId})
         }
-        if (configSettings.autoItemEffects)
-          await this.removeEffectsButton();
-        return this.next(WORKFLOWSTATES.ROLLFINISHED);
-
-      case WORKFLOWSTATES.ROLLFINISHED:
         warn('Inside workflow.rollFINISHED');
         const hasConcentration = this.item?.data.data.components?.concentration;
         const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
@@ -690,7 +696,8 @@ export class Workflow {
             await game.cub.addCondition(game.settings.get("combat-utility-belt", "concentratorConditionName"), [this.token])
           }
         }
-        if (configSettings.allowUseMacro) {
+        if (configSettings.allowUseMacro && !this.onuseMacroCalled) {
+          // A hack so that onUse macros only called once, but for most cases it is evaluated in APPLYDYNAMICEFFECTS
           await this.callMacros(getProperty(this.item, "data.flags.midi-qol.onUseMacroName"), "OnUse");
         }
 
@@ -793,7 +800,8 @@ export class Workflow {
       uuid: this.uuid,
       rollData: this.actor.getRollData(),
       tag,
-      concentrationData: getProperty(this.actor.data.flags, "midi-qol.concentration-data")
+      concentrationData: getProperty(this.actor.data.flags, "midi-qol.concentration-data"),
+      templateId: this.templateId
     };
     warn("macro data ", macroData)
 
@@ -865,35 +873,7 @@ export class Workflow {
     }
   }
 
-  async expireMyEffects(effectsToExpire: string[]) {
-    const expireHit = effectsToExpire.includes("1Hit") && !this.effectsAlreadyExpired.includes("1Hit");
-    const expireAction = effectsToExpire.includes("1Action") && !this.effectsAlreadyExpired.includes("1Action");
-    const expireAttack = effectsToExpire.includes("1Attack") && !this.effectsAlreadyExpired.includes("1Attack");
-    const expireDamage = effectsToExpire.includes("DamageDealt") && !this.effectsAlreadyExpired.includes("DamageDealt");
-
-    // expire any effects on the actor that require it
-    if (debugEnabled && false) {
-      const test = this.actor.effects.map(ef => {
-        const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
-        return [(expireAction && specialDuration?.includes("1Action")),
-        (expireAttack && specialDuration?.includes("1Attack") && this.item?.hasAttack),
-        (expireHit && this.item?.hasAttack && specialDuration?.includes("1Hit") && this.hitTargets.size > 0)]
-      })
-      debug("expiry map is ", test)
-    }
-    const myExpiredEffects = this.actor.effects.filter(ef => {
-      const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
-      if (!specialDuration) return false;
-      return (expireAction && specialDuration.includes("1Action")) ||
-      (expireAttack && specialDuration.includes("1Attack") && this.item?.hasAttack) ||
-      (expireHit && this.item?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.size > 0) ||
-      (expireDamage && this.item?.hasDamage && specialDuration.includes("DamageDealt"))
-    }).map(ef=>ef.id);
-    debug("expire my effects", myExpiredEffects, expireAction, expireAttack, expireHit);
-    this.effectsAlreadyExpired = this.effectsAlreadyExpired.concat(effectsToExpire);
-    if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
-  }
-
+ 
   async displayAttackRoll(doMerge) {
     const chatMessage: ChatMessage = game.messages.get(this.itemCardId);
     //@ts-ignore content not definted
@@ -1617,6 +1597,7 @@ export class TrapWorkflow extends Workflow {
     switch (newState) {
       case WORKFLOWSTATES.NONE:
         this.effectsAlreadyExpired = [];
+        this.onuseMacroCalled = false;
         this.itemCardId = (await showItemCard.bind(this.item)(false, this, true))?.id;
         //@ts-ignore
         if (this.trapSound) AudioHelper.play({src: this.trapSound}, false)
@@ -1694,7 +1675,7 @@ export class TrapWorkflow extends Workflow {
          if (!this.item.hasAttack) { // no attack roll so everyone is hit
           this.hitTargets = new Set(this.targets)
           warn(" damage roll complete for non auto target area effects spells", this)
-        } else  this.expireMyEffects(["1Action", "1Attack", "1Hit"]);
+        } else  expireMyEffects.bind(this)(["1Action", "1Attack", "1Hit"]);
 
         // apply damage to targets plus saves plus immunities
         await this.displayDamageRoll(configSettings.mergeCard)
@@ -1840,7 +1821,7 @@ export class BetterRollsWorkflow extends Workflow {
           setProperty(messageData, "flags.dnd5e.roll.type", "damage");
           this.bonusDamageRoll.toMessage(messageData);
         }
-        this.expireMyEffects(["1Attack", "1Action"]);
+        expireMyEffects.bind(this)(["1Attack", "1Action"]);
 
         if (configSettings.autoTarget === "none" && this.item.hasAreaTarget && !this.item.hasAttack) { 
           // we are not auto targeting so for area effect attacks, without hits (e.g. fireball)

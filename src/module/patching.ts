@@ -2,7 +2,7 @@ import { log, warn, debug, i18n, error } from "../midi-qol";
 import { Workflow, noKeySet } from "./workflow";
 import { doItemRoll, doAttackRoll, doDamageRoll } from "./itemhandling";
 import { configSettings, autoFastForwardAbilityRolls } from "./settings.js";
-import { testKey } from "./utils";
+import { expireRollEffect, testKey } from "./utils";
 import { installedModules } from "./setupModules";
 import { libWrapper } from "./lib/shim.js";
 
@@ -110,7 +110,9 @@ function doRollSkill(wrapped, ...args) {
     options.parts = ["-100"];
   }
   options.event = {};
-  return wrapped(skillId, procOptions);
+  let result =  wrapped.call(this, skillId, procOptions);
+  expireRollEffect.bind(this)("Skill", skillId);
+  return result;
 }
 
 function rollDeathSave(wrapped, ...args) {
@@ -130,13 +132,7 @@ function rollDeathSave(wrapped, ...args) {
   if (options.advantage && options.disadvantage) {
     options.advantage = options.disadvantage = false;
   }
-  return wrapped(...args);
-}
-
-function doAbilityRoll(wrapped, ...args) {
-  const [ abilityId, options={event} ] = args;
-  warn("roll ", options.event)
-  return wrapped(...args);
+  return wrapped.call(this, ...args);
 }
 
 function rollAbilityTest(wrapped, ...args)  {
@@ -145,19 +141,33 @@ function rollAbilityTest(wrapped, ...args)  {
   options.event = mapSpeedKeys(options.event);
   let procOptions = procAdvantage(this, "check", abilityId, options);
   options.event = {};
-  return doAbilityRoll.call(this, wrapped, abilityId, procOptions);
+  const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
+  const minimumRoll = (flags.check && (flags.check.all|| flags.save[abilityId])) ?? 0;
+  let result = wrapped.call(this, abilityId, procOptions)
+  expireRollEffect.bind(this)("Check", abilityId);
+  return result;
 }
 
 function rollAbilitySave(wrapped, ...args)  {
-  const [ abilityId, options={event: {}, parts: []} ] = args;
+  const [ abilityId, options={event: {}, parts: [],} ] = args;
   if (procAutoFail(this, "save", abilityId)) {
     options.parts = ["-100"];
   }
   options.event = mapSpeedKeys(options.event);
   let procOptions = procAdvantage(this, "save", abilityId, options);
   //@ts-ignore
-  let result = doAbilityRoll.call(this, wrapped, abilityId, procOptions);
+  const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
+  const minimumRoll = (flags.save && (flags.save.all|| flags.save[abilityId])) ?? 0;
+  let result = wrapped.call(this, abilityId, procOptions);
+  expireRollEffect.bind(this)("Save", abilityId);
   return result;
+  /* TODO work out how to do minimum rolls properly
+  return wrapped.call(this, wrapped, abilityId, procOptions).then(roll => {
+    console.error("mini check save", roll.total, minimumRoll, roll.total < minimumRoll, (new Roll(`${minimumRoll}`)).roll())
+    if (roll.total < minimumRoll) return (new Roll(`${minimumRoll}`)).roll()
+    else return roll
+  });
+  */
 }
 
 function procAutoFail(actor, rollType: string, abilityId: string): boolean {
@@ -281,39 +291,4 @@ export let actorAbilityRollPatching = () => {
 
   log("Patching rollDeathSave");
   libWrapper.register("midi-qol", "CONFIG.Actor.entityClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
-}
-
-export function patchLMRTFY() {
-  if (installedModules.get("lmrtfy") && !isNewerVersion(game.modules.get("lmrtfy").data.version, "0.1.7")) {
-      log("Patching rollAbilitySave")
-      libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "OVERRIDE");
-  }
-}
-
-export function _makeRoll(event, rollMethod, ...args) {
-  let options;
-  switch(this.advantage) {
-      case -1: 
-        options = {disadvantage: true};
-        break;
-      case 0:
-        options = {fastforward: true};
-        break;
-      case 1:
-        options = {advantage: true};
-        break;
-      case 2: 
-        options = {event: event}
-        break;
-  }
-  const rollMode = game.settings.get("core", "rollMode");
-  game.settings.set("core", "rollMode", this.mode || CONST.DICE_ROLL_MODES);
-  for (let actor of this.actors) {
-      Hooks.once("preCreateChatMessage", this._tagMessage.bind(this));
-          actor[rollMethod].call(actor, ...args, options);                        
-  }
-  game.settings.set("core", "rollMode", rollMode);
-  event.currentTarget.disabled = true;
-  if (this.element.find("button").filter((i, e) => !e.disabled).length === 0)
-      this.close();
 }

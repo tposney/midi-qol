@@ -193,7 +193,7 @@
     "midi-qol.DamageMacro.Hint": "Comma separated list of macros to call when calculating damage which will be applied when calculating damage to targets",
     "midi-qol.DAEMidiQOL": "DAE/Midi-QOL specific",
     "midi-qol.Optional": "Optional",
-    "midi-qol.OptionalRules.Name": "(EXPERIMENTAL) Optional Game Rules - Don't work for Better Rolls",
+    "midi-qol.OptionalRules.Name": "(EXPERIMENTAL) Optional Game Rules Work with better rolls, but triggers a libWrapper warning",
     "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable. Generally don't work with better rolls.",
     "midi-qol.InvisAdvantage.Name": "Hidden/Invisible attackers have advantage on attacks (requires CUB or CV)",
     "midi-qol.CheckRange.Name": "Check weapon range when attacking",
@@ -202,6 +202,7 @@
     "midi-qol.NearbyAllyRanged.Hint": "Ranged Attacks with allies nearby (5 feet) to the target have disadvantage for targets smaller than this (w*h). 0 disables",
     "midi-qol.Incapacitated.Name": "Incapacitated actors can't make attacks",
     "midi-qol.RemoveHiddenInvis.Name": "Attacking removes hidden/invisible (requires Conditional Visibility or CUB)",
+    "midi-qol.MaxDRValue.Name": "(House rule) Enabling this means that only the most effective Damage Reduction will apply. Off means DR accumulates",
     "midi-qol.invisible": "Invisible",
     "midi-qol.hidden": "Hidden",
     "midi-qol.DamageCardMultHeader": "Mult",
@@ -222,8 +223,6 @@
     "midi-qol.PlayerStatsOnly.Name": "Player statistics only",
     "midi-qol.PlayerStatsOnly.Hint": "Only keep statistics for player owned actors",
     "midi-qol.ShowStats": "Show Statistics Window",
-    "midi-qol.ItemRollStartWorkflow.Name": "Always start workflow (BetterRolls5e",
-    "midi-qol.ItemRollStartWorkflow.Hint": "If enabled Magic Items spells will behave correctly, but better rolls item buttons will not. If disabled magic items spells will not work and but better rolls buttos will work. You can't have both",
     "midi-qol.DefaultSaveMult.Name": "Default saving throw multiplier",
     "midi-qol.DefaultSaveMult.Hint": " If there are no other modifiers a saving throw will do this fraction of the damage of the origianl attack. Default 0.5, half damage on save. You should only change this if you know how multipliers work"
 }

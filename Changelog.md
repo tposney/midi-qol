@@ -1,3 +1,11 @@
+0.3.89
+* New optional rule to only choose the best Damage Reduction instead of adding all damage reductions together when applying damage.
+* Optional rules work with better rolls. There is a "problem" that if a rule blocks a roll you will get a libWrapper warning. This has no impact on the result, but can be annoying.
+* Expanded special durations to includes skill checks and ability tests. All of these trigger when the roll is made, whether you are attacked or not. Save Success and Save Failure only trigger is you are attacked and need to make a save as a consequnce of that.
+* Fix for isAttacked special duration not triggering on missed attacks.
+* Call midi-qol.DamageRollComplete as soon as the damage roll has been done, rather than waiting for saves.
+* Added option for onUseMacros to return {haltEffectsAppication: true} to prevent active effects being applied.
+* Added templateId to arguments passed to onUse/DamageBonus macros in case they want to do something with it.
 0.3.88
 Fixed a bug that failed to roll an item if you are not displaying the chat card, not using the merge card but were attempting to fast forward rolls.  
 0.3.87

@@ -1,5 +1,5 @@
-import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats } from "../midi-qol";
-import { itemRollButtons, configSettings, checkBetterRolls, autoRemoveTargets } from "./settings";
+import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled } from "../midi-qol";
+import { itemRollButtons, configSettings, checkBetterRolls, autoRemoveTargets, checkRule } from "./settings";
 import { log } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
 import { broadcastData } from "./GMAction";
@@ -192,6 +192,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
     // probably called from refresh - don't do anything
     return [];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
   }
+  const highestOnlyDR = false;
   let totalDamage = totalDamageArr.reduce((a,b) => (a??0)+b)
   let totalAppliedDamage = 0;
   for (let t of theTargets) {
@@ -199,6 +200,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
       if (!a) continue;
       appliedDamage = 0;
       const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
+      let DRTotal = 0;
 
       for (let i = 0; i < totalDamageArr.length; i++) {
         let damageDetail = damageDetailArr[i];
@@ -212,23 +214,30 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
           }
           if (!type) type = MQdefaultDamageType;
           mult = mult * getTraitMult(a, type, item);
-          appliedDamage += Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
+          let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
           var dmgType = type.toLowerCase();
           //         let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
           let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).roll().total;
-          appliedDamage -= DRType;
           if (["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
-            DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"))).roll().total;
+            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"))).roll().total);
             //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
-            appliedDamage -= DRType;
           }
-          // consider mwak damage redution
+          appliedDamage += typeDamage
+          DRType = Math.clamped(0, typeDamage, DRType);
+          if (checkRule("maxDRValue"))
+            DRTotal = Math.max(DRTotal, DRType)
+          else 
+            DRTotal +=  DRType;
+          // TODO: consider mwak damage redution
         }
       }
-      const DR = (new Roll((getProperty(t.actor.data, "flags.midi-qol.DR.all") || "0"), a.getRollData())).roll().total;
+      const DR = Math.clamped(0, appliedDamage, (new Roll((getProperty(t.actor.data, "flags.midi-qol.DR.all") || "0"), a.getRollData())).roll().total);
 //      const DR = parseInt(getProperty(t.actor.data, "flags.midi-qol.DR.all")) || 0;
-      appliedDamage -= DR;
-
+      if (checkRule("maxDRValue"))
+        DRTotal = Math.max(DRTotal, DR)
+      else 
+        DRTotal = Math.clamped(0, appliedDamage, DR + DRTotal);
+      appliedDamage -= DRTotal;
 
       if (!Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType)) {
         totalDamage = Math.max(totalDamage, 0);
@@ -279,7 +288,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   if (theTargets.size > 0 && item?.hasAttack) effectsToExpire.push("1Hit");
   if (theTargets.size > 0 && item?.hasDamage) effectsToExpire.push("DamageDealt");
   if (effectsToExpire.length > 0) {
-    workflow.expireMyEffects(effectsToExpire);
+    expireMyEffects.bind(workflow)(effectsToExpire);
   }
 
   // Don't check for critical - RAW say these don't get critical damage
@@ -687,4 +696,59 @@ export async function removeTokenCondition(token, condition: string) {
   if (installedModules.get("combat-utility-belt") && game.cub.getCondition(localCondition)) {
       game.cub.removeCondition(localCondition, token, {warn: false}); 
   }
+}
+
+// this = {actor, item, myExpiredEffects}
+export async function expireMyEffects(effectsToExpire: string[]) {
+  const expireHit = effectsToExpire.includes("1Hit") && !this.effectsAlreadyExpired.includes("1Hit");
+  const expireAction = effectsToExpire.includes("1Action") && !this.effectsAlreadyExpired.includes("1Action");
+  const expireAttack = effectsToExpire.includes("1Attack") && !this.effectsAlreadyExpired.includes("1Attack");
+  const expireDamage = effectsToExpire.includes("DamageDealt") && !this.effectsAlreadyExpired.includes("DamageDealt");
+
+  // expire any effects on the actor that require it
+  if (debugEnabled && false) {
+    const test = this.actor.effects.map(ef => {
+      const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
+      return [(expireAction && specialDuration?.includes("1Action")),
+      (expireAttack && specialDuration?.includes("1Attack") && this.item?.hasAttack),
+      (expireHit && this.item?.hasAttack && specialDuration?.includes("1Hit") && this.hitTargets.size > 0)]
+    })
+    debug("expiry map is ", test)
+  }
+  const myExpiredEffects = this.actor.effects.filter(ef => {
+    const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
+    if (!specialDuration) return false;
+    return (expireAction && specialDuration.includes("1Action")) ||
+    (expireAttack && specialDuration.includes("1Attack") && this.item?.hasAttack) ||
+    (expireHit && this.item?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.size > 0) ||
+    (expireDamage && this.item?.hasDamage && specialDuration.includes("DamageDealt"))
+  }).map(ef=>ef.id);
+  debug("expire my effects", myExpiredEffects, expireAction, expireAttack, expireHit);
+  this.effectsAlreadyExpired = this.effectsAlreadyExpired.concat(effectsToExpire);
+  if (this.myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
+}
+
+// this = actor
+export function expireRollEffect(rollType: string, abilityId: string) {
+  const expiredEffects = this.effects?.filter(ef => {
+    const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
+    if (!specialDuration) return false;
+    if (specialDuration.includes(`is${rollType}`)) return true;
+    if (specialDuration.includes(`is${rollType}.${abilityId}`)) return true;
+    return false;
+  }).map(ef=> ef.id);
+  if (expiredEffects?.length > 0) {
+    const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
+    if (!intendedGM) {
+      ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
+      error("No GM user connected - cannot remove effects");
+      return;
+    }
+    broadcastData({
+      action: "removeEffects",
+      tokenId: ChatMessage.getSpeaker({actor: this}).token,
+      effects: expiredEffects,
+      intendedFor: intendedGM.id
+    });
+  } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
 }
