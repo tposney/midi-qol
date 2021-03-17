@@ -725,7 +725,7 @@ export async function expireMyEffects(effectsToExpire: string[]) {
   }).map(ef=>ef.id);
   debug("expire my effects", myExpiredEffects, expireAction, expireAttack, expireHit);
   this.effectsAlreadyExpired = this.effectsAlreadyExpired.concat(effectsToExpire);
-  if (this.myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
+  if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
 }
 
 // this = actor
