@@ -628,7 +628,7 @@ export class Workflow {
 
       case WORKFLOWSTATES.APPLYDYNAMICEFFECTS:
         expireMyEffects.bind(this)(["1Action"]);
-        if (configSettings.allowUseMacro && !this.onuseMacroCalled) {
+        if (configSettings.allowUseMacro && !this.onUseMacroCalled) {
           this.onUseMacroCalled = true;
           const results = await this.callMacros(getProperty(this.item, "data.flags.midi-qol.onUseMacroName"), "OnUse");
           // Special check for return of {haltEffectsApplication: true} from item macro
@@ -696,7 +696,8 @@ export class Workflow {
             await game.cub.addCondition(game.settings.get("combat-utility-belt", "concentratorConditionName"), [this.token])
           }
         }
-        if (configSettings.allowUseMacro && !this.onuseMacroCalled) {
+        if (configSettings.allowUseMacro && !this.onUseMacroCalled) {
+          this.onUseMacroCalled = true;
           // A hack so that onUse macros only called once, but for most cases it is evaluated in APPLYDYNAMICEFFECTS
           await this.callMacros(getProperty(this.item, "data.flags.midi-qol.onUseMacroName"), "OnUse");
         }
@@ -1597,7 +1598,7 @@ export class TrapWorkflow extends Workflow {
     switch (newState) {
       case WORKFLOWSTATES.NONE:
         this.effectsAlreadyExpired = [];
-        this.onuseMacroCalled = false;
+        this.onUseMacroCalled = false;
         this.itemCardId = (await showItemCard.bind(this.item)(false, this, true))?.id;
         //@ts-ignore
         if (this.trapSound) AudioHelper.play({src: this.trapSound}, false)

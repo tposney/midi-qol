@@ -21,7 +21,7 @@ import { setupSheetQol } from './module/sheetQOL';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
 import { applyTokenDamage, checkNearby, findNearby, getDistance, getTraitMult } from './module/utils';
 import { ConfigPanel } from './module/apps/ConfigPanel';
-import { doCritModify } from './module/itemhandling';
+import { doCritModify, showItemCard, showItemInfo } from './module/itemhandling';
 import { RollStats } from './module/RollStats';
 
 export let debugEnabled = 0;
@@ -180,6 +180,8 @@ function setupMinorQolCompatibility() {
     warn,
     findNearby: findNearby,
     checkNearby: checkNearby,
+    showItemInfo: showItemInfo,
+    showItemCard: showItemCard,
     gameStats
   }
 }

@@ -1,3 +1,8 @@
+0.3.91
+Fix for onUseMacros being caled twice.
+Export of showItemCard and showItemInfo methods for macro writers.
+0.3.90
+* Fix for special durations not working
 0.3.89
 * New optional rule to only choose the best Damage Reduction instead of adding all damage reductions together when applying damage.
 * Optional rules work with better rolls. There is a "problem" that if a rule blocks a roll you will get a libWrapper warning. This has no impact on the result, but can be annoying.
@@ -6,6 +11,7 @@
 * Call midi-qol.DamageRollComplete as soon as the damage roll has been done, rather than waiting for saves.
 * Added option for onUseMacros to return {haltEffectsAppication: true} to prevent active effects being applied.
 * Added templateId to arguments passed to onUse/DamageBonus macros in case they want to do something with it.
+* updated ja.json - thanks @Brother Sharp
 0.3.88
 Fixed a bug that failed to roll an item if you are not displaying the chat card, not using the merge card but were attempting to fast forward rolls.  
 0.3.87
