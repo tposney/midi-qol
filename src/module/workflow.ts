@@ -685,15 +685,15 @@ export class Workflow {
           } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
         }
         warn('Inside workflow.rollFINISHED');
-        const hasConcentration = this.item?.data.data.components?.concentration;
+        const hasConcentration = this.item?.data.data.components?.concentration || this.item.data.data.activation?.condition?.includes("Concentration");
         const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
         if (hasConcentration && checkConcentration && this.applicationTargets) {
           let targets = [];
           for (let hit of this.applicationTargets) 
             targets.push({tokenId: hit.id, actorId: hit.actor.id});
           await this.actor.setFlag("midi-qol", "concentration-data", {uuid: this.item.uuid, targets, templates: this.templateId ? [this.templateId] : []})
-          if (this.token) {
-            await game.cub.addCondition(game.settings.get("combat-utility-belt", "concentratorConditionName"), [this.token])
+          if (this.tokenId) {
+            await game.cub.addCondition(game.settings.get("combat-utility-belt", "concentratorConditionName"), [canvas.tokens.get(this.tokenId)])
           }
         }
         if (configSettings.allowUseMacro && !this.onUseMacroCalled) {

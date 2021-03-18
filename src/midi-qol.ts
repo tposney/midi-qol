@@ -372,7 +372,3 @@ function setupMidiFlags() {
   */
   midiFlags.sort()
 }
-
-
-
-

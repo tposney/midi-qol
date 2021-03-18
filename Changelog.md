@@ -1,6 +1,8 @@
+0.3.92
+* Support for concentration for non-seplls. Put "Concentration" in the activation conditions field and using the item will cause concentration to be added to the caster and any active effects applied by the item.  
 0.3.91
-Fix for onUseMacros being caled twice.
-Export of showItemCard and showItemInfo methods for macro writers.
+* Fix for onUseMacros being called twice.
+* Export of showItemCard and showItemInfo methods for macro writers.
 0.3.90
 * Fix for special durations not working
 0.3.89
@@ -185,55 +187,50 @@ Added advantage/disadvantage to data passed to onUse/Damage bonus macros.
 * Why? If you are using automaation, effects like hunter's mark which require conditional bonuses to be applied in the event you are hitting the marked target can't be handled well. If you are not automating, you just need to remember to add 1d6, but when the roll is being auto calculated/applied you don't get the option. So either you need to always prompt for a bonus (and hope you remember) or the bonus damage needs to be calculated for you.
 * Most information about the attack/damage rolled so far is available, so you can customise critical damage beyond the extra dice allowed in the bonus critical dice field.
 
-* Here is a sample hunter's mark damage macro: (If you are not familiar with args[0].value, please see the readme). 
-```
-// macro - HuntersMarkDamage
-// only weapon attacks
-if (!["mwak","rwak"].includes(args[0].item.data.actionType)) return {};
-// only on the marked target
-let targetId = args[0].hitTargets[0]?._id;
-if (targetId !== getProperty(args[0].actor.flags, "midi-qol.huntersMark")) return {};
-// get the weapon damage type - this is not really required since it is the same as the weapon damage - the default.
-let damageType = args[0].item.data.damage.parts[0][1];
-return {damageRoll: `1d6[${damageType}]`, flavor: "Hunters Mark Damage"}
-```
-The macro checks an actor flag "midi-qol.huntersMark" to get the tokenId of the marked target. 
+* Here is a sample hunter's mark onUse and damageBonus macro: (If you are not familiar with args[0].value, please see the readme).  The onUse part sets up the active effects required and the damageBOnus part calculates the additonal damage.
 
-The flag midi-qol.huntersMark has to be set via the Hunter's Mark spell. The onUse macro to setup the mark looks like this:
+The macro checks an actor flag "midi-qol.huntersMark" to get the tokenId of the marked target. 
+The flag midi-qol.huntersMark has to be set via the Hunter's Mark spell. The combined macro looks like this:
 ```
 // Sample Hunters mark onUse macro
-let target = args[0].hitTargets[0]._id;
-let actorId = args[0].actor._id; // actor who cast the spell
-actor = game.actors.get(actorId);
-if (!actor || !target) {
-  console.error("Hunter's Mark: no actor/target selected");
-  return;
+if (args[0].hitTargets.length === 0) return;
+if (args[0].tag === "OnUse") {
+    // Sample Hunters mark
+    let target = args[0].hitTargets[0]._id;
+    let actorId = args[0].actor._id; // actor who cast the spell
+    actor = game.actors.get(actorId);
+    if (!actor || !target) {
+      console.error("Hunter's Mark: no token/target selected");
+      return;
+    }
+    
+    // create an active effect, 
+    //  one change showing the hunter's mark icon on the caster
+    //  the second setting the flag for the macro to be called when damaging an opponent
+    const effectData = {
+      changes: [
+        {key: "flags.midi-qol.huntersMark", mode: 5, value: target, priority: 20}, // who is marked
+        {key: "flags.dnd5e.DamageBonusMacro", mode: 0, value: `ItemMacro.${args[0].item.name}`, priority: 20}, // macro to apply the damage
+        {key: "flags.midi-qol.concentration-data.targets", mode: 2, value: {"actorId":  actorId, "tokenId": args[0].tokenId}, priority: 20}
+      ],
+      origin: args[0].uuid, //flag the effect as associated to the spell being cast
+      disabled: false,
+      duration: args[0].item.effects[0].duration,
+      icon: args[0].item.img,
+      label: args[0].item.name
+    }
+    await actor.createEmbeddedEntity("ActiveEffect", effectData);
+} else if (args[0].tag === "DamageBonus") {
+    // only weapon attacks
+    if (!["mwak","rwak"].includes(args[0].item.data.actionType)) return {};
+    let targetId = args[0].hitTargets[0]._id;
+    // only on the marked target
+    if (targetId !== getProperty(args[0].actor.flags, "midi-qol.huntersMark")) return {};
+    let damageType = args[0].item.data.damage.parts[0][1];
+    return {damageRoll: `1d6[${damageType}]`, flavor: "Hunters Mark Damage"}
 }
-
-// create an active effect, with 3 changes, on the caster
-//  one change showing the hunter's mark icon on the caster
-//  the second setting the flag for the macro to be called when damaging an opponent
-//  the third registering the effect as being part of the spells concntration so it will be deleted if we lose concentration
-const effectData = {
-  changes: [
-// This records who is marked
-    {key: "flags.midi-qol.huntersMark", mode: 5, value: target, priority: 20}, 
-// Add HuntersMarkDamage to the bonus damage macro list, mode 0 so that the list is a nice comma separated one
-    {key: "flags.dnd5e.DamageBonusMacro", mode: 0, value: "HuntersMarkDamage", priority: 20},
-// Add this effect as removed on losing concentration - mode 2 to append to the existing concentration data.
-    {key: "flags.midi-qol.concentration-data.targets", mode: 2, value: {"actorId":  actorId, "tokenId": args[0].tokenId}, priority: 20}
-  ],
-  //flag the effect as associated to the spell being cast
-  origin: args[0].uuid, 
-  disabled: false,
-  // use the same duration as the spell so it will expire when the spell expires
-  duration: args[0].item.effects[0].duration, 
-  icon: args[0].item.img,
-  label: args[0].item.name
-}
-await actor.createEmbeddedEntity("ActiveEffect", effectData);
 ```
-The two macros above are sufficient to implement all of the features of hunter's mark. To change targets simply cast again, but don't consume a spell slot.
+The macro above are sufficient to implement all of the features of hunter's mark. To change targets simply cast again, but don't consume a spell slot.
 0.3.66
 Put back config option to roll Other/Versatile damage on failed save for rwak/mwak.
 0.3.65
