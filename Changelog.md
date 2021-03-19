@@ -1,5 +1,5 @@
 0.3.92
-* Support for concentration for non-seplls. Put "Concentration" in the activation conditions field and using the item will cause concentration to be added to the caster and any active effects applied by the item.  
+* Support for concentration for non-spells. Put "Concentration" in the activation conditions field and using the item will cause concentration to be added to the caster and any active effects applied by the item will be linked to concentration.  
 0.3.91
 * Fix for onUseMacros being called twice.
 * Export of showItemCard and showItemInfo methods for macro writers.

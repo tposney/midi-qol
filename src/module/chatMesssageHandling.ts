@@ -8,6 +8,7 @@ import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
 import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow } from "./settings";
 import { createDamageList, getTraitMult, calculateDamage, getSelfTargetSet, getSelfTarget, addConcentration } from "./utils";
+import { setupSheetQol } from "./sheetQOL";
 
 export const MAESTRO_MODULE_NAME = "maestro";
 
@@ -344,19 +345,36 @@ export let hideStuffHandler = (message, html, data) => {
     ui.chat.scrollBottom
     return;
   }
+/*
+  <div class="midi-qol-attack-roll">
+  <div class="end-midi-qol-attack-roll"></div>
+</div>
+<div class="midi-qol-damage-roll">
+  <div class="end-midi-qol-damage-roll"></div>
+</div>
 
-  if (
-    (message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails === "all")
-     || message.data.blind) {
-    html.find(".dice-roll").replaceWith(i18n("midi-qol.DiceRolled"));
-  } else if (message.user?.isGM && !game.user.isGM && ["details", "d20Only"].includes(configSettings.hideRollDetails)) {
-    html.find(".dice-tooltip").remove();
-    html.find(".dice-formula").remove();
-  } 
-  if (message.user?.isGM && !game.user.isGM && ["d20Only"].includes(configSettings.hideRollDetails)) {
+    "midi-qol.hideRollDetailsOptions": {"none": "None", "details": "Roll Formula", "d20OnlyDamage": "Show attack D20 + Damage total", "d20Only": "Show attack D20 Only", "all": "Entire Roll"},
+
+*/
+  if (message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails !== "none") {
     const d20AttackRoll = getProperty(message.data.flags, "midi-qol.d20AttackRoll");
-    if (d20AttackRoll) {
+    if (d20AttackRoll && configSettings.hideRollDetails === "d20AttackOnly") {
+      html.find(".dice-tooltip").remove();
+      html.find(".dice-formula").remove();
       html.find(".midi-qol-attack-roll .dice-total").text(`(d20) ${d20AttackRoll}`);
+      html.find(".midi-qol-damage-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      html.find(".midi-qol-other-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      html.find(".midi-qol-bonus-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+    } else if (d20AttackRoll && configSettings.hideRollDetails === "d20Only") {
+        html.find(".midi-qol-attack-roll .dice-total").text(`(d20) ${d20AttackRoll}`);
+      html.find(".dice-tooltip").remove();
+      html.find(".dice-formula").remove();
+    } else if (configSettings.hideRollDetails === "all" || message.data.blind) {
+      html.find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      //TODO this should probably just check formula
+    } else if (configSettings.hideRollDetails === "details") {
+      html.find(".dice-tooltip").remove();
+      html.find(".dice-formula").remove();
     }
   }
 
