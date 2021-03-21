@@ -1,4 +1,4 @@
-import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, addChatDamageButtons,  checkBetterRolls, autoFastForwardAbilityRolls } from "../settings"
+import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls } from "../settings"
  import { configSettings } from "../settings"
 import { warn, i18n, error, debug, gameStats } from "../../midi-qol";
 import { RollStats } from "../RollStats";
@@ -44,7 +44,6 @@ export class ConfigPanel extends FormApplication {
       hideRollDetailsOptions: i18n("midi-qol.hideRollDetailsOptions"),
       nsaFlag,
       coloredBorders,
-      checkBetterRolls,
       playerRollSavesOptions: autoFastForwardAbilityRolls ? i18n("midi-qol.playerRollSavesOptionsReduced") : i18n("midi-qol.playerRollSavesOptions") ,
       rollNPCSavesOptions: i18n("midi-qol.rollNPCSavesOptions"),
       //@ts-ignore .map undefined

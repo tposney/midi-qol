@@ -1,5 +1,5 @@
 import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled } from "../midi-qol";
-import { itemRollButtons, configSettings, checkBetterRolls, autoRemoveTargets, checkRule } from "./settings";
+import { itemRollButtons, configSettings, autoRemoveTargets, checkRule } from "./settings";
 import { log } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
 import { broadcastData } from "./GMAction";
@@ -96,18 +96,6 @@ export async function getSelfTargetSet(actor) {
   return new Set([await getSelfTarget(actor)])
 }
 
-export let getParams = () => {
-  return ` 
-    itemRollButtons: ${itemRollButtons} <br>
-    configSettings.speedItemRolls: ${configSettings.speedItemRolls} <br>
-    configSettings.autoTarget: ${configSettings.autoTarget} <br>
-    configSettings.autoCheckHit: ${configSettings.autoCheckHit} <br>
-    configSettings.autoCheckSaves: ${configSettings.autoCheckSaves} <br>
-    configSettings.autoApplyDamage: ${configSettings.autoApplyDamage} <br>
-    configSettings.autoRollDamage: ${configSettings.autoRollDamage} <br>
-    configSettings.playerRollSaves: ${configSettings.playerRollSaves} <br>
-    checkBetterRolls: ${checkBetterRolls} `
-}
 // Calculate the hp/tempHP lost for an amount of damage of type
 export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, existingDamage=[]) {
   debug("calculate damage ", a, appliedDamage, t, totalDamage, dmgType)
@@ -260,7 +248,6 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
       sender: game.user.name,
       intendedFor: intendedGM.id,
       damageList: damageList,
-      settings: getParams(),
       targetNames,
       chatCardId: workflow.itemCardId
     });
@@ -717,9 +704,10 @@ export async function expireMyEffects(effectsToExpire: string[]) {
   }
   const myExpiredEffects = this.actor.effects.filter(ef => {
     const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
-    if (!specialDuration) return false;
+    if (!specialDuration || !specialDuration?.length) return false;
     return (expireAction && specialDuration.includes("1Action")) ||
-    (expireAttack && specialDuration.includes("1Attack") && this.item?.hasAttack) ||
+    (expireAttack && this.item?.hasAttack && specialDuration.includes("1Attack")) ||
+    (expireAttack && this.item?.hasAttack && specialDuration.includes(`1Attack:${this.item.data.data.actionType}`)) ||
     (expireHit && this.item?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.size > 0) ||
     (expireDamage && this.item?.hasDamage && specialDuration.includes("DamageDealt"))
   }).map(ef=>ef.id);

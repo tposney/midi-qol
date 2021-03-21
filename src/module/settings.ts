@@ -6,7 +6,6 @@ export var criticalDamage: string;
 export var itemDeleteCheck: boolean;
 export var nsaFlag: boolean;
 export var coloredBorders: string;
-export var checkBetterRolls: boolean;
 export var saveRequests = {};
 export var saveTimeouts = {};
 export var addChatDamageButtons: boolean;

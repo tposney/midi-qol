@@ -150,6 +150,7 @@ Hooks.once('ready', function() {
   }
   checkCubInstalled();
   checkConcentrationSettings();
+
   readyHooks();
 });
 

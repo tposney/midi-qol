@@ -1,3 +1,7 @@
+0.3.93
+* Added check for concentration wehn using a non-spell that requires concentration.
+* Fix for better rolls saving throws not being processed as saves.
+* Added addtional d20 mode to ONLY show the d20 attack roll, all other roll details are hidden.
 0.3.92
 * Support for concentration for non-spells. Put "Concentration" in the activation conditions field and using the item will cause concentration to be added to the caster and any active effects applied by the item will be linked to concentration.  
 0.3.91
@@ -8,7 +12,7 @@
 0.3.89
 * New optional rule to only choose the best Damage Reduction instead of adding all damage reductions together when applying damage.
 * Optional rules work with better rolls. There is a "problem" that if a rule blocks a roll you will get a libWrapper warning. This has no impact on the result, but can be annoying.
-* Expanded special durations to includes skill checks and ability tests. All of these trigger when the roll is made, whether you are attacked or not. Save Success and Save Failure only trigger is you are attacked and need to make a save as a consequnce of that.
+* Expanded special durations  to includes skill checks and ability tests. All of these trigger when the roll is made, whether you are attacked or not. Save Success and Save Failure only trigger is you are attacked and need to make a save as a consequnce of that.
 * Fix for isAttacked special duration not triggering on missed attacks.
 * Call midi-qol.DamageRollComplete as soon as the damage roll has been done, rather than waiting for saves.
 * Added option for onUseMacros to return {haltEffectsAppication: true} to prevent active effects being applied.

@@ -6,8 +6,8 @@ import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 
 import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
-import { nsaFlag, coloredBorders, criticalDamage, saveRequests, saveTimeouts, checkBetterRolls, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow } from "./settings";
-import { createDamageList, getTraitMult, calculateDamage, getSelfTargetSet, getSelfTarget, addConcentration } from "./utils";
+import { nsaFlag, coloredBorders, criticalDamage, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow, checkRule } from "./settings";
+import { createDamageList, getTraitMult, calculateDamage, addConcentration } from "./utils";
 import { setupSheetQol } from "./sheetQOL";
 
 export const MAESTRO_MODULE_NAME = "maestro";
@@ -163,21 +163,6 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
   // Workflow will be advanced when the better rolls card is displayed.
   return true;
 }
-
-var DSNHandlers;
-
-/*
-let showHandler = (hideTags, displayId, html, header, message, id) => {
-  debug("Show Handler:", header, hideTags, displayId, html, id, message)
-  if (id !== displayId) return;
-  if (hideTags) hideTags.forEach(hideTag => html.find(hideTag).show()); 
-  //@ts-ignore
-  let li = ui.chat.element.find(`.message[data-message-id="${message.id}"]`);
-  li.replaceWith(html);
-  //@ts-ignore
-  ui.chat.scrollBottom()
-};
-*/
 
 export let diceSoNiceHandler = async (message, html, data) => {
   if (!game.dice3d || !installedModules.get("dice-so-nice") || game.dice3d.messageHookDisabled || !game.dice3d.isEnabled()) return;
@@ -457,23 +442,6 @@ export let recalcCriticalDamage = (data, ...args) => {
       }
     }
   }
-  return true;
-}
-
-export let processBetterRollsChatCard = (message, html, data) => {
-  if (!checkBetterRolls && message?.data?.content?.startsWith('<div class="dnd5e red-full chat-card"'))  return;
-  debug("processBetterRollsChatCard", message. html, data)
-  const requestId = message.data.speaker.actor;
-  if (!saveRequests[requestId]) return true;
-  const title = html.find(".item-name")[0]?.innerHTML
-  if (!title) return true;
-  if (!title.includes("Save")) return true;
-  const formula = "1d20";
-  const total = html.find(".dice-total")[0]?.innerHTML;
-  clearTimeout(saveTimeouts[requestId]);
-  saveRequests[requestId]({total, formula, terms: []})
-  delete saveRequests[requestId];
-  delete saveTimeouts[requestId];
   return true;
 }
 

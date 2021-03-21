@@ -174,7 +174,7 @@
     "midi-qol.spell-damage": "Spell Damage",
     "midi-qol.RemoveButtons.Name": "Remove chat card buttons after roll",
     "midi-qol.ActiveConcentrationSpell.Title": "Active Concentration Spell",
-    "midi-qol.ActiveConcentrationSpell.Content": "You are already concentrating on a spell. End current spell and continue casting?",
+    "midi-qol.ActiveConcentrationSpell.Content": "You are already concentrating. End concentration and continue?",
     "midi-qol.ConcentrationAutomation.Name": "Enable Concentration Automation",
     "midi-qol.ConcentrationAutomation.Hint": "If enabled will handle concentration management via midi-qol. Will disable CUB concentration management",
     "midi-qol.SingleConcentrationRoll.Name": "Single Concentration Check",

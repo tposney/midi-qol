@@ -7,7 +7,7 @@ import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, allDa
 import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
-import { configSettings, checkBetterRolls, autoRemoveTargets, checkRule } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule } from "./settings.js";
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects } from "./utils"
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
@@ -1390,19 +1390,21 @@ export class Workflow {
   }
 
   processBetterRollsChatCard (message, html, data) {
-    if (!checkBetterRolls && message?.data?.content?.startsWith('<div class="dnd5e red-full chat-card"'))  return;
+    const brFlags = message.data.flags?.betterrolls5e;
+    if (!brFlags) return true;
     debug("processBetterRollsChatCard", message. html, data)
     const requestId = message.data.speaker.actor;
     if (!this.saveRequests[requestId]) return true;
-    const title = html.find(".item-name")[0]?.innerHTML
-    if (!title) return true;
-    if (!title.includes("Save")) return true;
     const formula = "1d20";
-    const total = html.find(".dice-total")[0]?.innerHTML;
+    const rollEntry = brFlags.entries?.find((e) => e.type === "multiroll" && e.rollType === "save");
+    if (!rollEntry) return true;
+    let total = rollEntry?.entries?.find((e) => !e.ignored)?.total ?? -1;
+    let advantage = rollEntry ? rollEntry.rollState === "highest" : undefined;
+    let disadvantage = rollEntry ? rollEntry.rollState === "lowest" : undefined;
     clearTimeout(this.saveTimeouts[requestId]);
-    this.saveRequests[requestId]({total, formula})
+    this.saveRequests[requestId]({total, formula, terms: [{options: {advantage, disadvantage}}]});
     delete this.saveRequests[requestId];
-    delete this.aveTimeouts[requestId];
+    delete this.saveTimeouts[requestId];
     return true;
   }
 
