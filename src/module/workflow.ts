@@ -685,7 +685,7 @@ export class Workflow {
           } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
         }
         warn('Inside workflow.rollFINISHED');
-        const hasConcentration = this.item?.data.data.components?.concentration || this.item.data.data.activation?.condition?.includes("Concentration");
+        const hasConcentration = this.item?.data.data.components?.concentration || this.item?.data.data.activation?.condition?.includes("Concentration");
         const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
         if (hasConcentration && checkConcentration && this.applicationTargets) {
           let targets = [];
