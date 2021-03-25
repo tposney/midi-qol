@@ -105,7 +105,7 @@ export let initHooks = () => {
   warn("Init Hooks processing");
   Hooks.on("preCreateChatMessage", (data, options, user) => {
     debug("preCreateChatMessage entering", data, options, user)
-    recalcCriticalDamage(data, options);
+    // recalcCriticalDamage(data, options);
     processpreCreateBetterRollsMessage(data, options, user);
     nsaMessageHandler(data, options, user);
     return true;

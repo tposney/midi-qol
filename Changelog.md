@@ -1,7 +1,19 @@
+0.3.94
+* Fix for accelerator keys not working with better rolls and midi-qol.
+* Fix for LMRTFY and speed rolls.
+* Fix for sw5e powers/scaling.
+* Updates to it.json and support upper case in special text strings.
+* Fix for super savers not taking 1/2 damage on failed save.
+* Fix for flags.midi-qol.fail.spell.verbal [BREAKING] this is a change from flags.midi-qol.fail.spell.vocal
+* Fix for re-rolling damage being whispered.
+* FIx for items that do healing AND temphealing at the same time.
+* Removed support for modifying critical damage if workflow automation not enabled.
+* Fix for custom damage types not being displayed on damage rolls.
+* Updated ja.json - thanks @Brother Sharp
 0.3.93
-* Added check for concentration wehn using a non-spell that requires concentration.
+* Added check for concentration when using a non-spell that requires concentration.
 * Fix for better rolls saving throws not being processed as saves.
-* Added addtional d20 mode to ONLY show the d20 attack roll, all other roll details are hidden.
+* Added additional d20 mode to ONLY show the d20 attack roll, all other roll details are hidden.
 0.3.92
 * Support for concentration for non-spells. Put "Concentration" in the activation conditions field and using the item will cause concentration to be added to the caster and any active effects applied by the item will be linked to concentration.  
 0.3.91

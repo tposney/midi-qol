@@ -6,7 +6,7 @@
     "midi-qol.SpeedItemRolls.Name": "Enable Speed Item Rolls",
     "midi-qol.SpeedItemRolls.Hint": "Midi-qol will use the (ctrl|cmd)/(alt)/shift keys.",
     "midi-qol.SpeedAbilityRolls.Name": "Enable Speed Ability (save/check/skill) Rolls",
-    "midi-qol.SpeedItemRolls.Blurb": "You can assign (ctrl|cmd)/alt/shift mouse click modifiers how you want. Double up Advantage/Disadvantage/Versatile at your peril. Default: Adv = Alt, Disadv = Ctl, Versatile = Shift, Crit = Alt. Note pressing Advantage+Disdvantage when clicking will fast forward a normal roll",
+    "midi-qol.SpeedItemRolls.Blurb": "You can assign (ctrl|cmd)/alt/shift mouse click modifiers how you want. Double up Advantage/Disadvantage/Versatile at your peril. Default: Adv = Alt, Disadv = Ctl, Versatile = Shift, Crit = Alt. Note pressing Advantage+Disdvantage when clicking will fast forward a normal roll. (Does not work with Better Rolls)",
     "midi-qol.ShowItemDetails.Name": "Show Item details in chat card",
     "midi-qol.ShowItemDetails.Hint": "If set the item details will be displayed in the chat card. You can use the DND5E system setting to auto hide the description",
     "midi-qol.AutoRollAttack.Name": "When item is rolled, automatically roll the attack if there is one",

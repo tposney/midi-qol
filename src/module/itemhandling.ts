@@ -19,7 +19,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     workflow.targets = (this.data.data.target?.type === "self") ? new Set(await getSelfTargetSet(this.actor)) : new Set(game.user.targets);
     if (workflow.attackRoll) { // we are re-rolling the attack.
       workflow.damageRoll = undefined;
-      Workflow.removeAttackDamageButtons(this.id)
+      await Workflow.removeAttackDamageButtons(this.id)
       workflow.itemCardId = (await showItemCard.bind(this)(false, workflow, false)).id;
     }
   }
@@ -132,7 +132,8 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, v
       content = content.replace(searchRe, replaceString);
     }
     if (data) {
-      Workflow.removeAttackDamageButtons(this.id);
+      await Workflow.removeAttackDamageButtons(this.id);
+      delete data._id;
       workflow.itemCardId = (await ChatMessage.create(data)).id;
     }
   }
@@ -160,7 +161,7 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, v
   // If the roll was a critical or the user selected crtical
   //@ts-ignore
   if (result.terms[0].options?.critical)
-    result = doCritModify(result);
+    result = doCritModify.bind(this)(result);
   else if (workflow.rollOptions.maxDamage)
     //@ts-ignore .evaluate not defined.
     result = (new Roll(result.formula)).evaluate({ maximize: true });
@@ -229,7 +230,7 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, v
   return result;
 }
 
-export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, event: {} }) {
+export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, event}) {
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
   let versatile = options?.versatile ?? false;
@@ -261,7 +262,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
   if (this.type === "spell" && shouldAllowRoll) {
     const midiFlags = this.actor.data.flags["midi-qol"];
-    const needsVocal = this.data.data.components?.vocal;
+    const needsVerbal = this.data.data.components?.vocal;
     const needsSomatic = this.data.data.components?.somatic;
     const needsMaterial = this.data.data.components?.material;
 
@@ -271,7 +272,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       ui.notifications.warn("You are unable to cast the spell");
       return null;
     }
-    if (midiFlags?.fail?.spell?.vocal && needsVocal) {
+    if (midiFlags?.fail?.spell?.verbal && needsVerbal) {
       ui.notifications.warn("You make no sound and the spell fails");
       return null;
     }
@@ -308,49 +309,55 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     warn(`${game.user.name} attempted to roll with no targets selected`)
     return;
   }
-  let baseItem = this.actor.getOwnedItem(this.id) ?? this;
-  const targets = (baseItem?.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : new Set(game.user.targets);
+
+  const targets = (this?.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : new Set(game.user.targets);
 
   let workflow: Workflow;
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
-    workflow = new BetterRollsWorkflow(this.actor, baseItem, speaker, targets, event || options.event);
+    workflow = new BetterRollsWorkflow(this.actor, this, speaker, targets, event || options.event);
     return wrapped(options);
   }
-  workflow = new Workflow(this.actor, baseItem, speaker, targets, { event: options.event || event });
+  workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event });
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = showFullCard;
   workflow.noAutoAttack = showFullCard;
   let result = await wrapped({ configureDialog, rollMode: null, createMessage: false });
-  /* need to get spell level from the html returned in result */
   if (!result) {
     //TODO find the right way to clean this up
     // Workflow.removeWorkflow(workflow.id); ?
     return null;
   }
-  workflow.itemLevel = this.data.data.level;
+  /* need to get spell level from the html returned in result */
   if (this.type === "spell") {
     //TODO look to use returned data when available
     let spellStuff = result.content?.match(/.*data-spell-level="(.*)">/);
     workflow.itemLevel = parseInt(spellStuff[1]) || this.data.data.level;
     if (needsConcentration) addConcentration({ workflow })
   }
+  if (this.type === "power") {
+    //TODO look to use returned data when available
+    let spellStuff = result.content?.match(/.*data-power-level="(.*)">/);
+    workflow.itemLevel = parseInt(spellStuff[1]) || this.data.data.level;
+    if (needsConcentration) addConcentration({ workflow })
+  }
+
   workflow.processAttackEventOptions(event);
   workflow.checkAttackAdvantage();
   const needAttckButton = !workflow.someEventKeySet() && !getAutoRollAttack();
   workflow.showCard = configSettings.mergeCard || (configSettings.showItemDetails !== "none") || (
-    (baseItem.isHealing && getAutoRollDamage() === "none") || // not rolling damage
-    (itemHasDamage(baseItem) && getAutoRollDamage() === "none") ||
-    (baseItem.hasSave && configSettings.autoCheckSaves === "none") ||
-    (baseItem.hasAttack && needAttckButton)) ||
-    (!baseItem.hasAttack && !itemHasDamage(baseItem) && !baseItem.hasSave);
-  let item = this;
-  if (this.data.data.level !== workflow.itemLevel) {
-    const upcastData = mergeObject(this.data, { "data.level": workflow.itemLevel }, { inplace: false });
-    item = this.constructor.createOwned(upcastData, this.actor);  // Replace the item with an upcast version
-  }
+    (this.isHealing && getAutoRollDamage() === "none") || // not rolling damage
+    (itemHasDamage(this) && getAutoRollDamage() === "none") ||
+    (this.hasSave && configSettings.autoCheckSaves === "none") ||
+    (this.hasAttack && needAttckButton)) ||
+    (!this.hasAttack && !itemHasDamage(this) && !this.hasSave);
+
   if (workflow.showCard) {
-    //@ts-ignore - 
+    let item = this;
+    if (workflow.itemLevel !== this.data.data.level) {
+      const upcastData = mergeObject(this.data, {"data.level": workflow.itemLevel}, {inplace: false});
+      item = this.constructor.createOwned(upcastData, this.actor);  // Replace the item with an upcast version
+    }
     var itemCard: ChatMessage = await showItemCard.bind(item)(showFullCard, workflow)
     workflow.itemCardId = itemCard.id;
     debug("Item Roll: showing card", itemCard, workflow);
@@ -375,6 +382,7 @@ export async function showItemInfo() {
     hasDamage: false,
     isVersatile: false,
     isSpell: this.type === "spell",
+    isPower: this.type === "power",
     hasSave: false,
     hasAreaTarget: false,
     hasAttackRoll: false,
@@ -443,6 +451,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     hasDamage: needDamagebutton,
     isVersatile: needVersatileButton,
     isSpell: this.type === "spell",
+    isPower: this.type === "power",
     hasSave: !minimalCard && this.hasSave && (showFullCard || configSettings.autoCheckSaves === "none"),
     hasAreaTarget: !minimalCard && this.hasAreaTarget,
     hasAttackRoll: !minimalCard && this.hasAttack,
@@ -460,7 +469,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   debug(" Show Item Card ", configSettings.useTokenNames, (configSettings.useTokenNames && token) ? token?.data?.name : this.actor.name, token, token?.data.name, this.actor.name)
   let theSound = configSettings.itemUseSound;
   if (this.type === "weapon") theSound = configSettings.weaponUseSound;
-  else if (this.type === "spell") theSound = configSettings.spellUseSound;
+  else if (["spell", "power"].includes(this.type)) theSound = configSettings.spellUseSound;
   else if (this.type === "consumable" && this.name.toLowerCase().includes(i18n("midi-qol.potion").toLowerCase())) theSound = configSettings.potionUseSound;
   const chatData = {
     user: game.user,

@@ -14,7 +14,7 @@
 import { registerSettings, fetchParams, configSettings } from './module/settings';
 import { preloadTemplates } from './module/preloadTemplates';
 import { installedModules, setupModules } from './module/setupModules';
-import { itemPatching, visionPatching, actorAbilityRollPatching } from './module/patching';
+import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY } from './module/patching';
 import { initHooks, readyHooks } from './module/Hooks';
 import { initGMActionSetup } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
@@ -50,7 +50,6 @@ export let undoDamageText;
 export let savingThrowText;
 export let savingThrowTextAlt;
 export let MQdefaultDamageType;
-export let allDamageTypes;
 export let midiFlags = [];
 export let allAttackTypes = []
 export let gameStats: RollStats;
@@ -98,6 +97,7 @@ Hooks.once('setup', function() {
   setupModules();
   registerSettings();
   initGMActionSetup();
+  patchLMRTFY();
   undoDamageText = i18n("midi-qol.undoDamageFrom");
   savingThrowText = i18n("midi-qol.savingThrowText");
   savingThrowTextAlt = i18n("midi-qol.savingThrowTextAlt");
@@ -106,8 +106,8 @@ Hooks.once('setup', function() {
   CONFIG.DND5E.weaponProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
   CONFIG.DND5E.weaponProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp")
   CONFIG.DND5E.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
-  CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
-  allDamageTypes = mergeObject(CONFIG.DND5E.damageTypes, CONFIG.DND5E.healingTypes, {inplace:false});
+  if (game.system.id === "dnd5e")
+    CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
 
   if (configSettings.allowUseMacro) {
     /*

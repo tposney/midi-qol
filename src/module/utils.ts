@@ -80,7 +80,6 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
   }
   const damageList = Object.entries(damageParts).map(([type, damage]) => {return {damage, type}})
   debug("CreateDamageList: Final damage list is ", damageList)
-  //TODO remove this eventually
   return damageList;
 } 
 
@@ -156,6 +155,7 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
     for (let {type, mult}  of [{type: "di", mult: 0}, {type:"dr", mult: 0.5}, {type: "dv", mult: 2}]) {
       let trait = actor.data.data.traits[type].value;
       if (item?.type === "spell" && trait.includes("spell")) return mult;
+      if (item?.type === "power" && trait.includes("power")) return mult;
       if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
       if (trait.includes(dmgTypeString)) return mult;
     }
@@ -183,10 +183,12 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
   const highestOnlyDR = false;
   let totalDamage = totalDamageArr.reduce((a,b) => (a??0)+b)
   let totalAppliedDamage = 0;
+  let appliedTempHP = 0;
   for (let t of theTargets) {
       let a = t?.actor;
       if (!a) continue;
       appliedDamage = 0;
+      appliedTempHP = 0;
       const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
       let DRTotal = 0;
 
@@ -194,28 +196,34 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
         let damageDetail = damageDetailArr[i];
         let saves = savesArr[i] ?? new Set();
         let superSavers = options.superSavers[i] ?? new Set();
+        var dmgType;
+
         for (let { damage, type } of damageDetail) {
           //let mult = 1;
           let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
           if (superSavers.has(t)) {
-            mult = saves.has(t) ? 0 : mult;
+            mult = saves.has(t) ? 0 : getSaveMultiplierForItem(item);
           }
           if (!type) type = MQdefaultDamageType;
           mult = mult * getTraitMult(a, type, item);
           let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
-          var dmgType = type.toLowerCase();
+          if (type.toLowerCase() !== "temphp") dmgType = type.toLowerCase();
           //         let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
           let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).roll().total;
           if (["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
             DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"))).roll().total);
             //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
           }
-          appliedDamage += typeDamage
-          DRType = Math.clamped(0, typeDamage, DRType);
-          if (checkRule("maxDRValue"))
-            DRTotal = Math.max(DRTotal, DRType)
-          else 
-            DRTotal +=  DRType;
+          if (type.includes("temphp")) {
+            appliedTempHP += typeDamage
+          } else {
+            appliedDamage += typeDamage
+            DRType = Math.clamped(0, typeDamage, DRType);
+            if (checkRule("maxDRValue"))
+              DRTotal = Math.max(DRTotal, DRType)
+            else 
+              DRTotal +=  DRType;
+          }
           // TODO: consider mwak damage redution
         }
       }
@@ -232,7 +240,15 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
         appliedDamage = Math.max(appliedDamage, 0);
       }
       totalAppliedDamage += appliedDamage;
-      damageList.push(calculateDamage(a, appliedDamage, t, totalDamage, dmgType, options.existingDamage));
+      let ditem = calculateDamage(a, appliedDamage, t, totalDamage, dmgType, options.existingDamage);
+      ditem.tempDamage = ditem.tempDamage + appliedTempHP;
+      if (appliedTempHP <= 0) { // tmphealing applied to actor does not add only gets the max
+        ditem.newTempHP = Math.max(ditem.newTempHP, -appliedTempHP);
+
+      } else {
+        ditem.newTempHP = Math.max(0, ditem.newTempHP - appliedTempHP)
+      }
+      damageList.push(ditem);
       targetNames.push(t.name)
   }
   if (theTargets.size > 0) {
@@ -333,12 +349,12 @@ export let getSaveMultiplierForItem = item => {
   if (noDamageSaves?.includes(cleanSpellName(item.name))) return 0;
   //@ts-ignore decodeHTML
   let description = TextEditor.decodeHTML((item.data.data.description?.value || "")).toLocaleLowerCase();
-  if (description?.includes(i18n("midi-qol.noDamageText"))) {
+  if (description?.includes(i18n("midi-qol.noDamageText").toLocaleLowerCase())) {
     return 0.0;
   } 
   
   if (!configSettings.checkSaveText) return configSettings.defaultSaveMult;
-  if (description?.includes(i18n("midi-qol.halfDamage")) || description?.includes(i18n("midi-qol.halfDamageAlt"))) {
+  if (description?.includes(i18n("midi-qol.halfDamage").toLocaleLowerCase()) || description?.includes(i18n("midi-qol.halfDamageAlt").toLocaleLowerCase())) {
     return 0.5;
   }
   //  Think about this. if (checkSavesText true && item.hasSave) return 0; // A save is specified but the half-damage is not specified.

@@ -238,7 +238,7 @@ export let colorChatMessageHandler = (message, html, data) => {
 }
 
 export let nsaMessageHandler = (data, ...args) => {
-  if (!nsaFlag || !data.whisper  /*|| data.whisper.length === 0*/) return true;
+  if (!nsaFlag || !data.whisper || data.whisper.length === 0) return true;
   let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active).map(u=>u.id);
   let currentIds = data.whisper.map(u=>typeof(u) === "string" ? u : u.id);
   gmIds = gmIds.filter(id => !currentIds.includes(id));

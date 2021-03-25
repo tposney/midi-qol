@@ -1,5 +1,4 @@
 import { log, warn, debug, i18n, error } from "../midi-qol";
-import { Workflow, noKeySet } from "./workflow";
 import { doItemRoll, doAttackRoll, doDamageRoll } from "./itemhandling";
 import { configSettings, autoFastForwardAbilityRolls } from "./settings.js";
 import { expireRollEffect, testKey } from "./utils";
@@ -291,4 +290,39 @@ export let actorAbilityRollPatching = () => {
 
   log("Patching rollDeathSave");
   libWrapper.register("midi-qol", "CONFIG.Actor.entityClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
+}
+
+export function patchLMRTFY() {
+  if (installedModules.get("lmrtfy")) {
+      log("Patching rollAbilitySave")
+      libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "OVERRIDE");
+  }
+}
+
+export function _makeRoll(event, rollMethod, ...args) {
+  let options;
+  switch(this.advantage) {
+      case -1: 
+        options = {disadvantage: true};
+        break;
+      case 0:
+        options = {fastforward: true};
+        break;
+      case 1:
+        options = {advantage: true};
+        break;
+      case 2: 
+        options = {event: event}
+        break;
+  }
+  const rollMode = game.settings.get("core", "rollMode");
+  game.settings.set("core", "rollMode", this.mode || CONST.DICE_ROLL_MODES);
+  for (let actor of this.actors) {
+      Hooks.once("preCreateChatMessage", this._tagMessage.bind(this));
+          actor[rollMethod].call(actor, ...args, options);                        
+  }
+  game.settings.set("core", "rollMode", rollMode);
+  event.currentTarget.disabled = true;
+  if (this.element.find("button").filter((i, e) => !e.disabled).length === 0)
+      this.close();
 }

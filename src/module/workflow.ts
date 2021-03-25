@@ -3,7 +3,7 @@ import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
 import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 //@ts-ignore
-import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, allDamageTypes, debugEnabled, timelog } from "../midi-qol";
+import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, debugEnabled, timelog } from "../midi-qol";
 import { selectTargets, showItemCard } from "./itemhandling";
 import { broadcastData } from "./GMAction";
 import { installedModules } from "./setupModules";
@@ -12,6 +12,7 @@ import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultipl
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey)}
+export let allDamageTypes;
 
 export const WORKFLOWSTATES = {
   NONE : 0,
@@ -350,7 +351,7 @@ export class Workflow {
     return this.event?.shiftKey || this.event?.altKey || this.event?.ctrlKey || this.event?.metaKey;
   }
 
-  static removeAttackDamageButtons(id) {
+  static async removeAttackDamageButtons(id) {
     let workflow = Workflow.getWorkflow(id)
     if (!workflow) return;
     let chatMessage: ChatMessage = game.messages.get(workflow.itemCardId);
@@ -939,6 +940,7 @@ export class Workflow {
   }
 
   get damageFlavor() {
+    allDamageTypes = mergeObject(CONFIG.DND5E.damageTypes, CONFIG.DND5E.healingTypes, {inplace:false});
     return `(${this.item?.data.data.damage.parts
     .map(a=>(allDamageTypes[a[1]] || allDamageTypes[this.defaultDamageType] || MQdefaultDamageType)).join(",") 
       || this.defaultDamageType || MQdefaultDamageType})`;
