@@ -1,3 +1,6 @@
+0.3.95
+* Fix for rollstats causing player does not have permission to update setting error. Thanks @KephalosThoth
+* Show saving throw DC to GM even if display DC is disabled.
 0.3.94
 * Fix for accelerator keys not working with better rolls and midi-qol.
 * Fix for LMRTFY and speed rolls.
@@ -13,7 +16,7 @@
 0.3.93
 * Added check for concentration when using a non-spell that requires concentration.
 * Fix for better rolls saving throws not being processed as saves.
-* Added additional d20 mode to ONLY show the d20 attack roll, all other roll details are hidden.
+* Added additional d20 mode to ONLY show the d20 attack roll, all other roll details are hidden. Only works with merge card enabled.
 0.3.92
 * Support for concentration for non-spells. Put "Concentration" in the activation conditions field and using the item will cause concentration to be added to the caster and any active effects applied by the item will be linked to concentration.  
 0.3.91

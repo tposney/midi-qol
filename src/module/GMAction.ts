@@ -22,8 +22,10 @@ let processAction = async data => {
     case "GMRollSave": 
     // This needs to roll the save, with prompt and send back the data with the correct id
     case "updateActorStats":
+      if (!game.user.isGM || data?.intendedFor !== game.user.id) break;
       return gameStats.GMupdateActor(data);
     case "removeStatsForActorId":
+      if (!game.user.isGM || data?.intendedFor !== game.user.id) break;
       return gameStats.GMremoveActorStats(data.actorId);
   }
 };

@@ -330,17 +330,10 @@ export let hideStuffHandler = (message, html, data) => {
     ui.chat.scrollBottom
     return;
   }
-/*
-  <div class="midi-qol-attack-roll">
-  <div class="end-midi-qol-attack-roll"></div>
-</div>
-<div class="midi-qol-damage-roll">
-  <div class="end-midi-qol-damage-roll"></div>
-</div>
 
-    "midi-qol.hideRollDetailsOptions": {"none": "None", "details": "Roll Formula", "d20OnlyDamage": "Show attack D20 + Damage total", "d20Only": "Show attack D20 Only", "all": "Entire Roll"},
-
-*/
+  if (!game.user.isGM && !configSettings.displaySaveDC) {
+    html.find(".midi-qol-saveDC").hide();
+  }
   if (message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails !== "none") {
     const d20AttackRoll = getProperty(message.data.flags, "midi-qol.d20AttackRoll");
     if (d20AttackRoll && configSettings.hideRollDetails === "d20AttackOnly") {
