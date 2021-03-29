@@ -289,7 +289,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.critical.all`);
-  midiFlags.push(`flags.midi-qol.grants.noCritical.all`);
+  midiFlags.push(`flags.midi-qol.fail.critical.all`);
   midiFlags.push(`flags.midi-qol.maxDamage.all`);
   midiFlags.push(`flags.midi-qol.grants.maxDamage.all`);
   midiFlags.push(`flags.midi-qol.advantage.concentration`)
@@ -311,8 +311,8 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.noCritical.${at}`);
     midiFlags.push(`flags.midi-qol.grants.advantage.attack.${at}`);
     midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.${at}`);
-    midiFlags.push(`flags.midi-qol.grants.critical.damage.${at}`);
-    midiFlags.push(`flags.midi-qol.grants.noCritical.attack.${at}`);
+    midiFlags.push(`flags.midi-qol.grants.critical.${at}`);
+    midiFlags.push(`flags.midi-qol.fail.critical.${at}`);
     midiFlags.push(`flags.midi-qol.maxDamage.${at}`);
 
   

@@ -238,14 +238,16 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (!enableWorkflow || createWorkflow === false) {
     return await wrapped(options);
   }
+  const isRangeSpell = configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
+  const isAoESpell = this.hasAreaTarget && configSettings.autoTarget;
   let shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
     || (game.user.targets.size > 0) // there are some target selected
     || (this.data.data.target?.type === "self") // self target
-    || (this.hasAreaTarget && configSettings.autoTarget) // area effectspell and we will auto target
-    || (configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type)) // rangetarget
+    || isAoESpell // area effectspell and we will auto target
+    || isRangeSpell // rangetarget and will autotarget
     || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
 
-  if (configSettings.requireTargets && this.data.data.target?.type === "creature" && game.user.targets.size === 0) shouldAllowRoll = false;
+  if (configSettings.requireTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && game.user.targets.size === 0) shouldAllowRoll = false;
   // only allow weapon attacks against at most the specified number of targets
   let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9099) ?? 9999
   let speaker = ChatMessage.getSpeaker({ actor: this.actor });

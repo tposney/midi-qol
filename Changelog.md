@@ -1,3 +1,9 @@
+0.3.96
+* Fix for ammo consumption on drag/drop targeting.
+* Fix for temphp ONLY spells not applying temphp healing.
+* Support for DR + DV to the same damage type. Damage immunity takes precedence over the others.
+* Fix for flags.midi-qol.fail.critical.all/flags.midi-qol.fail.critical.mwak/rwak.... auto complete text
+* Fix for ranged AoE not working with type creature when require targets is set.
 0.3.95
 * Fix for rollstats causing player does not have permission to update setting error. Thanks @KephalosThoth
 * Show saving throw DC to GM even if display DC is disabled.

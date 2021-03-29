@@ -172,7 +172,11 @@ export let initHooks = () => {
         width: grid_size
     });
 
-    const actor = game.actors.get(dropData.actorId);
+    let actor = game.actors.get(dropData.actorId);
+    if (dropData.tokenId) {
+      let token = canvas.tokens.get(dropData.tokenId)
+      if (token) actor = token.actor;
+    }
     const item = actor && actor.items.get(dropData.data._id);
     if (!actor || !item) error("actor / item broke ", actor, item);
       //@ts-ignore

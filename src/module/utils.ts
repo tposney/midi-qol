@@ -149,17 +149,19 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   dmgTypeString = dmgTypeString.toLowerCase()
   if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) return -1;
   if (dmgTypeString.includes("midi-none")) return 0;
+  let totalMult = 1;
   if (configSettings.damageImmunities !== "none" && dmgTypeString !== "") {
     // if not checking all damage counts as magical
     const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
     for (let {type, mult}  of [{type: "di", mult: 0}, {type:"dr", mult: 0.5}, {type: "dv", mult: 2}]) {
       let trait = actor.data.data.traits[type].value;
-      if (item?.type === "spell" && trait.includes("spell")) return mult;
-      if (item?.type === "power" && trait.includes("power")) return mult;
+      if (item?.type === "spell" && trait.includes("spell")) totalMult = totalMult * mult;
+      if (item?.type === "power" && trait.includes("power")) totalMult = totalMult * mult;;
       if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
-      if (trait.includes(dmgTypeString)) return mult;
+      if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
     }
   }
+  return totalMult;
   // Check the custom immunities
   return 1;
 };
@@ -240,6 +242,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
         appliedDamage = Math.max(appliedDamage, 0);
       }
       totalAppliedDamage += appliedDamage;
+      if (!dmgType) dmgType = "temphp";
       let ditem = calculateDamage(a, appliedDamage, t, totalDamage, dmgType, options.existingDamage);
       ditem.tempDamage = ditem.tempDamage + appliedTempHP;
       if (appliedTempHP <= 0) { // tmphealing applied to actor does not add only gets the max
