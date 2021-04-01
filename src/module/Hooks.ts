@@ -103,15 +103,15 @@ export let readyHooks = async () => {
 }
 export let initHooks = () => {
   warn("Init Hooks processing");
-  Hooks.on("preCreateChatMessage", (data, options, user) => {
-    debug("preCreateChatMessage entering", data, options, user)
+  Hooks.on("preCreateChatMessage", (message: ChatMessage, data, options, user) => {
+    debug("preCreateChatMessage entering", message, data, options, user)
     // recalcCriticalDamage(data, options);
-    processpreCreateBetterRollsMessage(data, options, user);
-    nsaMessageHandler(data, options, user);
+    processpreCreateBetterRollsMessage(message, data, options, user);
+    nsaMessageHandler(message, data, options, user);
     return true;
   })
 
-  Hooks.on("createChatMessage", (message, options, user) => {
+  Hooks.on("createChatMessage", (message: ChatMessage, options, user) => {
     debug("Create Chat Meesage ", message.id, message, options, user)
     processcreateBetterRollMessage(message, options, user);
     processItemCardCreation(message, options, user);
@@ -125,8 +125,8 @@ export let initHooks = () => {
     ui.chat.scrollBottom();
   })
 
-  Hooks.on("updateCombat", (...args) => {
-    untargetAllTokens(...args);
+  Hooks.on("updateCombat", (combat, data, options, user) => {
+    untargetAllTokens(combat, data. options, user);
     untargetDeadTokens();
   })
   

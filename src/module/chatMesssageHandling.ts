@@ -22,7 +22,7 @@ export function mergeCardSoundPlayer(message, update, options, user) {
   const midiqolFlags = mergeObject(getProperty(message.data, "flags.midi-qol") || {}, updateFlags, { inplace: false, overwrite: true })
   if (midiqolFlags.playSound && configSettings.useCustomSounds) {
     const playlist = game.playlists.get(configSettings.customSoundsPlaylist);
-    const sound = playlist?.sounds.find(s=>s._id === midiqolFlags.sound)
+    const sound = playlist?.sounds.find(s=>s.id === midiqolFlags.sound)
     const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
     const delay = (dice3dActive && midiqolFlags?.waitForDiceSoNice && [MESSAGETYPES.HITS].includes(midiqolFlags.type)) ? 500 : 0;
     debug("mergeCardsound player ", update, playlist, sound, sound?'playing sound':'not palying sound', delay)
@@ -53,7 +53,7 @@ export function processcreateBetterRollMessage(message, options, user) {
   return true;
 }
 
-export let processpreCreateBetterRollsMessage = (data: any, options:any, user: any) => {
+export let processpreCreateBetterRollsMessage = (message: ChatMessage, data: any, options:any, user: any) => {
   const brFlags = data.flags?.betterrolls5e;
   if (!brFlags) return true;
   debug("process precratebetteerrollscard ", data, options, installedModules["betterrolls5e"], data.content?.startsWith('<div class="dnd5e red-full chat-card"') )
@@ -94,6 +94,7 @@ export let processpreCreateBetterRollsMessage = (data: any, options:any, user: a
   let disadvantage = attackEntry ? attackEntry.rollState === "lowest" : undefined;
   let diceRoll = attackEntry ? attackEntry.entries?.find((e) => !e.ignored)?.roll.results[0] : -1;
   let isCritical = false;
+  console.error("better rolls roll ", workflow)
 
   for (let entry of brFlags.entries) {
     if (entry.type === "damage-group") {
@@ -541,7 +542,7 @@ export function processItemCardCreation(message, options, user) {
   debug("Doing item card creation", configSettings.useCustomSounds, configSettings.itemUseSound, midiqolFlags?.type)
   if (configSettings.useCustomSounds && midiqolFlags?.type === MESSAGETYPES.ITEM) {
     const playlist = game.playlists.get(configSettings.customSoundsPlaylist);
-    const sound = playlist?.sounds.find(s=>s._id === midiqolFlags?.sound);
+    const sound = playlist?.sounds.find(s=>s.id === midiqolFlags?.sound);
     const delay = 0;
     if (sound) {
       setTimeout(() => {

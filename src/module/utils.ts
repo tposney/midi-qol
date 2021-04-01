@@ -26,7 +26,8 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
       //@ts-ignore replaceFromulaData - blank out @field
       let formula = Roll.replaceFormulaData(spec, rollData || {}, {missing: "0", warn: false});
       // get rid of any remaining @fields
-      var rollSpec: Roll = new Roll(formula, rollData || {}).roll();
+      //@ts-ignore evaluate
+      var rollSpec: Roll = new Roll(formula, rollData || {}).evaluate({async: false});
     }
     debug("CreateDamageList: rollSpec is ", spec, rollSpec)
 
@@ -46,7 +47,8 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
       }
       partPos += 1;
     }
-    let damage = new Roll(evalString).roll().total;
+    //@ts-ignore evaluate
+    let damage = new Roll(evalString).evaluate({async: false}).total;
     debug("CreateDamageList: Damage is ", damage, type, evalString)
     damageParts[type] = (damageParts[type] || 0) + damage;
     negatedTerm = rollTerms[partPos] === "-";
@@ -211,9 +213,11 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
           let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
           if (type.toLowerCase() !== "temphp") dmgType = type.toLowerCase();
           //         let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
-          let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).roll().total;
+          //@ts-ignore evaluate
+          let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).evaluate({async: false}).total;
           if (["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
-            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"))).roll().total);
+            //@ts-ignore evaluate
+            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"))).evaluate({async:false}).total);
             //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
           }
           if (type.includes("temphp")) {
@@ -229,7 +233,8 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
           // TODO: consider mwak damage redution
         }
       }
-      const DR = Math.clamped(0, appliedDamage, (new Roll((getProperty(t.actor.data, "flags.midi-qol.DR.all") || "0"), a.getRollData())).roll().total);
+      //@ts-ignore evaluate
+      const DR = Math.clamped(0, appliedDamage, (new Roll((getProperty(t.actor.data, "flags.midi-qol.DR.all") || "0"), a.getRollData())).evaluate({async: false}).total);
 //      const DR = parseInt(getProperty(t.actor.data, "flags.midi-qol.DR.all")) || 0;
       if (checkRule("maxDRValue"))
         DRTotal = Math.max(DRTotal, DR)

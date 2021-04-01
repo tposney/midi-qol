@@ -731,7 +731,8 @@ export class Workflow {
     }
     if (formula === "")  return;
     try {
-      const roll = new Roll(formula, this.actor.getRollData()).roll();
+      //@ts-ignore evaluate
+      const roll = await (new Roll(formula, this.actor.getRollData()).evaluate({async: true}));
       this.bonusDamageRoll = roll;
       this.bonusDamageTotal = roll.total;
       this.bonusDamageHTML = await roll.render();
@@ -1410,8 +1411,6 @@ export class Workflow {
   }
 
   processAttackRoll() {
-    //@ts-ignore
-    this.diceRoll = this.attackRoll.results[0];
     //@ts-ignore
     this.diceRoll = this.attackRoll.terms[0].results.find(d => d.active).result;
     //@ts-ignore .terms undefined

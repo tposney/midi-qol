@@ -273,23 +273,23 @@ export let visionPatching = () => {
 }
 
 export let itemPatching = () => {
-  libWrapper.register("midi-qol", "CONFIG.Item.entityClass.prototype.roll", doItemRoll, "MIXED");
-  libWrapper.register("midi-qol", "CONFIG.Item.entityClass.prototype.rollAttack", doAttackRoll, "MIXED");
-  libWrapper.register("midi-qol", "CONFIG.Item.entityClass.prototype.rollDamage", doDamageRoll, "MIXED");
+  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.roll", doItemRoll, "MIXED");
+  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
+  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
 };
 
 export let actorAbilityRollPatching = () => {
   log("Patching rollAbilitySave")
-  libWrapper.register("midi-qol", "CONFIG.Actor.entityClass.prototype.rollAbilitySave", rollAbilitySave, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollAbilitySave", rollAbilitySave, "WRAPPER");
 
   log("Patching rollAbilityTest")
-  libWrapper.register("midi-qol", "CONFIG.Actor.entityClass.prototype.rollAbilityTest", rollAbilityTest, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollAbilityTest", rollAbilityTest, "WRAPPER");
 
   log("Patching rollSkill");
-  libWrapper.register("midi-qol", "CONFIG.Actor.entityClass.prototype.rollSkill", doRollSkill, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollSkill", doRollSkill, "WRAPPER");
 
   log("Patching rollDeathSave");
-  libWrapper.register("midi-qol", "CONFIG.Actor.entityClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
 }
 
 export function patchLMRTFY() {
