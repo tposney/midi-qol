@@ -358,7 +358,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     let item = this;
     if (this.data.data.level && (workflow.itemLevel !== this.data.data.level)) {
       item = this.clone({"data.level": workflow.itemLevel});
-      item.data._id = item.id;
+      item.data.update({_id: this.id});
     }
     var itemCard: ChatMessage = await showItemCard.bind(item)(showFullCard, workflow)
     workflow.itemCardId = itemCard.id;
