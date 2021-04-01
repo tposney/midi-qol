@@ -368,10 +368,8 @@ export function requestPCSave(ability, rollType, player, actorId, advantage, fla
   const playerLetme = !player?.isGM && ["letme", "letmeQuery"].includes(configSettings.playerRollSaves);
   const gmLetme  = player.isGM && ["letme", "letmeQuery"].includes(configSettings.rollNPCSaves);
   if (player && installedModules.get("lmrtfy") && (playerLetme || gmLetme)) {
-    if (configSettings.speedAbilityRolls || (configSettings.playerRollSaves === "letmeQuery") || (configSettings.rollNPCSaves === "letme")) {
-/* TODO - if LMRTFY passes the actual event then change to 
-      if ((configSettings.playerRollSaves === "letmeQuery")) {
-*/        
+    if ((configSettings.playerRollSaves === "letmeQuery")) {
+    // TODO - reinstated the LMRTFY patch so that the event is properly passed to the roll
         advantage = 2;
     } else {
       advantage = (advantage ? 1 : 0);

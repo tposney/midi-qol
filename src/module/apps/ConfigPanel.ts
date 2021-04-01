@@ -22,8 +22,6 @@ export class ConfigPanel extends FormApplication {
     return i18n("midi-qol.ConfigTitle")
   }
   getData() {
-    if (autoFastForwardAbilityRolls && configSettings.playerRollSaves === "letmeQuery")
-      configSettings.playerRollSaves = "letme";
 //@ts-ignore
     let data = {
       configSettings,
@@ -44,7 +42,7 @@ export class ConfigPanel extends FormApplication {
       hideRollDetailsOptions: i18n("midi-qol.hideRollDetailsOptions"),
       nsaFlag,
       coloredBorders,
-      playerRollSavesOptions: autoFastForwardAbilityRolls ? i18n("midi-qol.playerRollSavesOptionsReduced") : i18n("midi-qol.playerRollSavesOptions") ,
+      playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? i18n("midi-qol.playerRollSavesOptionsReduced") : i18n("midi-qol.playerRollSavesOptions") ,
       rollNPCSavesOptions: i18n("midi-qol.rollNPCSavesOptions"),
       //@ts-ignore .map undefined
       customSoundsPlaylistOptions: game.playlists.entries.reduce((acc, e) =>{acc[e._id]= e.name; return acc}, {}),

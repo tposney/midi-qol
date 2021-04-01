@@ -183,12 +183,14 @@ export let diceSoNiceHandler = async (message, html, data) => {
   html.hide();
   Hooks.once("diceSoNiceRollComplete", (id) => {
     let savesDisplay = $(html).find(".midi-qol-saves-display").length === 1;
-    let hitsDisplay = $(html).find(".midi-qol-hits-display").length == 1;
+    let hitsDisplay = configSettings.mergeCard ?
+       $(html).find(".midi-qol-hits-display").length === 1
+       : $(html).find(".midi-qol-single-hit-card").length === 1;
     if (savesDisplay) {
-      if (configSettings.autoCheckHit !== "whisper" && !message.data.blind) 
+      if (game.user.isGM || (configSettings.autoCheckSaves !== "whisper" && !message.data.blind)) 
         html.show()
     } else if (hitsDisplay) {
-      if (configSettings.autoCheckSaves !== "whisper" && !message.data.blind) 
+      if (game.user.isGM || (configSettings.autoCheckHit !== "whisper" && !message.data.blind)) 
         html.show()
     }
     else {
@@ -207,7 +209,6 @@ export let diceSoNiceHandler = async (message, html, data) => {
 }
 
 export let colorChatMessageHandler = (message, html, data) => {
-
   if (coloredBorders === "none") return true;
   let actorId = message.data.speaker.actor;
   let userId = message.data.user;
