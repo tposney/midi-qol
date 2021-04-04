@@ -220,11 +220,11 @@ function procAdvantageSkill(actor, skillId, options: Options): Options {
   var withDisadvantage = options.disadvantage;
   if (advantage?.skill) {
     const rollFlags = advantage.skill
-    withAdvantage = advantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId]);
+    withAdvantage = withAdvantage || advantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId]);
   }
   if (disadvantage?.skill) {
     const rollFlags = disadvantage.skill
-    withDisadvantage = disadvantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId])
+    withDisadvantage = withDisadvantage || disadvantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId])
   }
   options.advantage = withAdvantage && !withDisadvantage;
   options.disadvantage = withDisadvantage && ! withAdvantage;

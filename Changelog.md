@@ -1,6 +1,12 @@
+## 0.3.98
+* Fix a TrapWorkflow bug that would loop if there was a save with no damage.
+* Fix untargetAll at end of turn to untarget at the end of the turn instead of the start of your turn.
+* Fix for spped keys in skill rolls when flags.midi-qol set for some skill.
+* Moved the check for expired special duration effects (isAttacked/isDamaged) to before dynamic effects are applied. This should stop effects applied via an attack and expiring when attacked from expiring immediately on application.
+
 ## 0.3.97
 * Fix for LMRTFY and advantage for player rolls.
-* If LMRTFY + query is set and auto fast forward ability rolls is set the LMRTFY adv/dis dialog will not be displayed, but accelerator keys will be processed.
+* If LMRTFY + query is set and auto fast forward ability rolls is set the LMRTFY adv/dis dialog will not bSe displayed, but accelerator keys will be processed.
 * Fix edge case for saves card not being displayed to GM.
 * Updated es.json - thanks @WallaceMcGregor
 * Updated ja.json - thanks @Brother Sharp

@@ -18,6 +18,7 @@ https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
 ## (In)Compatibilities? ##
 Any module that overloads item.roll is potentially incompatible.  
 
+**Furnace** If you intend to make use of any of the macro features in midi-qol you will need to install the Furnace module and enable advanced macros (which is the feature you need/should enable).
 **Better Rolls** If you are using Better Rolls (which is a great module), midi-qol takes over once the hit/damage card is placed by Better Rolls. This means that resource consumption, template placement, critical/fumble, and  advantage/disadvantage determination are **all** handled by Better Rolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage, and calls active effects.  In particular, Better Rolls does not use any of the flags.midi-qol....   
 **Magic Items** (Thanks to @simone for his help) Midi-qol is fully compatible with magic-items. The only issue is that spell templates for spells in a magic item are not auto-placed on casting. Once placed everything works as expected. Spells/features that can be rolled will work. However, items that create changes by being present in the characters inventory won't behave as expected since they are actually held in the characters inventory, this includes transfer active effects.
 **Mess** Midi-qol and Mess dnd5e effects are not compatible. Template effects and the other features of that excellent module should work. If you want Mess attack/damage cards don't use midi-qol.  
@@ -350,6 +351,8 @@ The args[0].itemCardId passes the id of the item card that caused the macro to b
 You can use this feature to roll custom damage via a macro for any item - just leave the item damage blank and roll the damage in a macro and then pass the itemCardId to the DamageOnlyWorkflow.
 
 ### OnUse Macro Item detail field
+
+
 This field lets you specify a macro to call after the item roll is complete. It is ALWAYS called whether the attack hit/missed and is passed the following data as args[0]. The field should contain ONLY the macro name and recognizes the exact text ItemMacro to mean calling the items itemMacro if any.
 ```
   actor = actor.data (the actor using the item)

@@ -625,31 +625,6 @@ export class Workflow {
         else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
         else this.applicationTargets = this.targets;
  
-        return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
-
-      case WORKFLOWSTATES.APPLYDYNAMICEFFECTS:
-        expireMyEffects.bind(this)(["1Action"]);
-        if (configSettings.allowUseMacro && !this.onUseMacroCalled) {
-          this.onUseMacroCalled = true;
-          const results = await this.callMacros(getProperty(this.item, "data.flags.midi-qol.onUseMacroName"), "OnUse");
-          // Special check for return of {haltEffectsApplication: true} from item macro
-          if (results.some(r => r?.haltEffectsApplication))
-            return this.next(WORKFLOWSTATES.ROLLFINISHED);
-        }
-
-        // no item, not auto effects or not module skip
-        if (!this.item || !configSettings.autoItemEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED);
-        this.applicationTargets = new Set();
-        if (this.item.hasSave) this.applicationTargets = this.failedSaves;
-        else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
-        else this.applicationTargets = this.targets;
-        if (this.hasDAE) {
-          this.dae.doEffects(this.item, true, this.applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId})
-          await this.removeEffectsButton();
-        }
-        return this.next(WORKFLOWSTATES.ROLLFINISHED);
-
-      case WORKFLOWSTATES.ROLLFINISHED:
         for (let target of this.targets) {
           //@ts-ignore effects
           const expiredEffects = target.actor?.effects?.filter(ef => {
@@ -657,6 +632,7 @@ export class Workflow {
             const wasDamaged = itemHasDamage(this.item) && this.applicationTargets?.has(target);
             const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
             if (!specialDuration) return false;
+            //TODO this is going to grab all the special damage types as well which is no good.
             if ((specialDuration.includes("isAttacked") && wasAttacked) ||
               (specialDuration.includes("isDamaged") && wasDamaged))
               return true;
@@ -685,6 +661,32 @@ export class Workflow {
             });
           } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
         }
+        return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
+
+      case WORKFLOWSTATES.APPLYDYNAMICEFFECTS:
+        expireMyEffects.bind(this)(["1Action"]);
+        if (configSettings.allowUseMacro && !this.onUseMacroCalled) {
+          this.onUseMacroCalled = true;
+          const results = await this.callMacros(getProperty(this.item, "data.flags.midi-qol.onUseMacroName"), "OnUse");
+          // Special check for return of {haltEffectsApplication: true} from item macro
+          if (results.some(r => r?.haltEffectsApplication))
+            return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        }
+
+        // no item, not auto effects or not module skip
+        if (!this.item || !configSettings.autoItemEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        this.applicationTargets = new Set();
+        if (this.item.hasSave) this.applicationTargets = this.failedSaves;
+        else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
+        else this.applicationTargets = this.targets;
+        if (this.hasDAE) {
+          this.dae.doEffects(this.item, true, this.applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId})
+          await this.removeEffectsButton();
+        }
+        return this.next(WORKFLOWSTATES.ROLLFINISHED);
+
+      case WORKFLOWSTATES.ROLLFINISHED:
+       
         warn('Inside workflow.rollFINISHED');
         const hasConcentration = this.item?.data.data.components?.concentration || this.item?.data.data.activation?.condition?.includes("Concentration");
         const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
@@ -815,49 +817,41 @@ export class Workflow {
   }
 
   async callMacro(macroName: string, macroData: {}) {
-    let macroCommand;
-    let macro = macroName.trim();
+    const name = macroName?.trim();
+    if (!name) return;
     try {
-      if (macro) {
-        if (macro.startsWith("ItemMacro")) { // special short circuit eval for itemMacro
-          var itemMacro;
-          if (macro === "ItemMacro") {
-            itemMacro = getProperty(this.item.data.flags, "itemacro.macro");
-          } else {
-            const parts = macro.split(".");
-            macro = parts[1];
-            let item = this.actor.items.find(i=>i.name === macro && getProperty(i.data.flags, "itemacro.macro"))
-            if (item) itemMacro = getProperty(item.data.flags, "itemacro.macro")
-            else return {};
-          }
-          const speaker = this.speaker;
-          const actor = this.actor;
-          const token = canvas.tokens.get(this.tokenId);
-          const character = game.user.character;
-          const args = [macroData];
-          try {
-            // const asyncFunction = itemMacro.data.command.includes("await") ? "async" : "";
-            return (new Function(`"use strict";
-                return (async function ({speaker, actor, token, character, args}={}) {
-                    ${itemMacro.data.command}
-                    });`))().call(this, {speaker, actor, token, character, args});
-          } catch (err) {
-            ui.notifications.error(`There was an error in your macro syntax. See the console (F12) for details`);
-            console.error(err);
-          }
+      if (name.startsWith("ItemMacro")) { // special short circuit eval for itemMacro since it can be execute as GM
+        var itemMacro;
+        if (name === "ItemMacro") {
+          itemMacro = getProperty(this.item.data.flags, "itemacro.macro");
+        } else {
+          const parts = name.split(".");
+          const itemName = parts[1];
+          let item = this.actor.items.find(i => i.name === itemName && getProperty(i.data.flags, "itemacro.macro"))
+          if (item) itemMacro = getProperty(item.data.flags, "itemacro.macro")
+          else return {};
         }
-        else macroCommand = game.macros.getName(macro);
-      }
-      if (macroCommand) {
-        try {
+        const speaker = this.speaker;
+        const actor = this.actor;
+        const token = canvas.tokens.get(this.tokenId);
+        const character = game.user.character;
+        const args = [macroData];
+
+        // const asyncFunction = itemMacro.data.command.includes("await") ? "async" : "";
+        return (new Function(`"use strict";
+              return (async function ({speaker, actor, token, character, args}={}) {
+                  ${itemMacro.data.command}
+                  });`))().call(this, { speaker, actor, token, character, args });
+      } else {
+        const macroCommand = game.macros.getName(name);
+        if (macroCommand) {
           //@ts-ignore -uses furnace macros which support arguments
           return macroCommand.execute(macroData) || {};
-        } catch(err) {
-          console.warn("midi-qol | macro call failed in callMacros: ", err)
         }
       }
     } catch (err) {
-      console.warn("Macro execution failed ", err);
+      ui.notifications.error(`There was an error in your macro. See the console (F12) for details`);
+      error("Error evaluating macro ", err)
     }
     return {};
   }
@@ -1662,35 +1656,6 @@ export class TrapWorkflow extends Workflow {
         await this.displayHits(whisperCard, configSettings.mergeCard);
         return this.next(WORKFLOWSTATES.WAITFORSAVES);
 
-      case WORKFLOWSTATES.WAITFORDAMAGEROLL:
-        if (!itemHasDamage(this.item)) return this.next(WORKFLOWSTATES.WAITFORSAVES);
-        if (this.isFumble) {
-          // fumble means no trap damage/effects
-          return this.next(WORKFLOWSTATES.ROLLFINISHED);
-        } 
-        this.rollOptions.critical = this.isCritical;
-        debug("TrapWorkflow: Rolling damage ", this.event, this.itemLevel, this.rollOptions.versatile, this.targets, this.hitTargets);
-        this.rollOptions.critical = this.isCritical;
-        this.rollOptions.fastForward = true;
-        this.item.rollDamage(this.rollOptions);
-        return; // wait for a damage roll to advance the state.
-
-      case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
-         if (!this.item.hasAttack) { // no attack roll so everyone is hit
-          this.hitTargets = new Set(this.targets)
-          warn(" damage roll complete for non auto target area effects spells", this)
-        } else  expireMyEffects.bind(this)(["1Action", "1Attack", "1Hit"]);
-
-        // apply damage to targets plus saves plus immunities
-        await this.displayDamageRoll(configSettings.mergeCard)
-        if (this.isFumble) {
-          return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
-        }
-        // If the item does damage, use the same damage type as the item
-        let defaultDamageType = this.item?.data.data.damage?.parts[0][1] || this.defaultDamageType;
-        this.damageDetail = createDamageList(this.damageRoll, this.item, defaultDamageType);
-        return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
-
       case WORKFLOWSTATES.WAITFORSAVES:
         if (!this.item.hasSave) {
           this.saves = new Set(); // no saving throw, so no-one saves
@@ -1714,15 +1679,44 @@ export class TrapWorkflow extends Workflow {
 
       case WORKFLOWSTATES.SAVESCOMPLETE:
         return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
-  
+       
+      case WORKFLOWSTATES.WAITFORDAMAGEROLL:
+        if (!itemHasDamage(this.item)) return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
+        if (this.isFumble) {
+          // fumble means no trap damage/effects
+          return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        } 
+        this.rollOptions.critical = this.isCritical;
+        debug("TrapWorkflow: Rolling damage ", this.event, this.itemLevel, this.rollOptions.versatile, this.targets, this.hitTargets);
+        this.rollOptions.critical = this.isCritical;
+        this.rollOptions.fastForward = true;
+        this.item.rollDamage(this.rollOptions);
+        return; // wait for a damage roll to advance the state.
+
+      case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
+         if (!this.item.hasAttack) { // no attack roll so everyone is hit
+          this.hitTargets = new Set(this.targets)
+          warn(" damage roll complete for non auto target area effects spells", this)
+        }
+
+        // apply damage to targets plus saves plus immunities
+        await this.displayDamageRoll(configSettings.mergeCard)
+        if (this.isFumble) {
+          return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
+        }
+        // If the item does damage, use the same damage type as the item
+        let defaultDamageType = this.item?.data.data.damage?.parts[0][1] || this.defaultDamageType;
+        this.damageDetail = createDamageList(this.damageRoll, this.item, defaultDamageType);
+        return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
+
       case WORKFLOWSTATES.ALLROLLSCOMPLETE:
         debug("all rolls complete ", this.damageDetail)
         if (this.damageDetail.length) processDamageRoll(this, this.damageDetail[0].type)
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
-
+    
       case WORKFLOWSTATES.ROLLFINISHED:
-      // area effect trap, put back the targets the way they were
-      if (this.saveTargets && this.item.hasAreaTarget) {
+        // area effect trap, put back the targets the way they were
+        if (this.saveTargets && this.item.hasAreaTarget) {
           game.user.targets.forEach(t => {
             //@ts-ignore
             t.setTarget(false, { releaseOthers: false });

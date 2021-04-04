@@ -432,8 +432,14 @@ export function untargetDeadTokens() {
 
 export function untargetAllTokens(...args) {
   let combat: Combat = args[0];
+  //@ts-ignore current
+  let prevTurn = combat.current.turn -1;
+  if (prevTurn === -1) 
+    prevTurn =  combat.turns.length - 1;
+
+  const previous = combat.turns[prevTurn];
   //@ts-ignore
-  if ((game.user.isGM && ["allGM","all"].includes(autoRemoveTargets)) || (autoRemoveTargets === "all" && canvas.tokens.controlled.find(t=>t.id === combat.previous?.tokenId))) {
+  if ((game.user.isGM && ["allGM","all"].includes(autoRemoveTargets)) || (autoRemoveTargets === "all" && canvas.tokens.controlled.find(t=>t.id === previous.tokenId))) {
     // release current targets
     game.user.targets.forEach(t => {
         //@ts-ignore
