@@ -6,7 +6,7 @@
 * New Setting, remove concentration on failed save when concentration automation enabled. When taking damage and failing a save concentration will be removed, if unset the save is still rolled and reported, but concentration will not be automatically removed.
 * [BREAKING] Changed MidiQOL.configSettings to a function that returns the current settings, i.e. MidiQOL.configSettings(). 
 * Fix for sw5e power scaling.
-* Fix for crtical damage modification when there are additional critical damage dice.
+* Fix for critical damage modification when there are additional critical damage dice.
 
 ## 0.3.98
 * Fix a TrapWorkflow bug that would loop if there was a save with no damage.
