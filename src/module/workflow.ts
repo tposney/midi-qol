@@ -686,7 +686,6 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
       case WORKFLOWSTATES.ROLLFINISHED:
-       
         warn('Inside workflow.rollFINISHED');
         const hasConcentration = this.item?.data.data.components?.concentration || this.item?.data.data.activation?.condition?.includes("Concentration");
         const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
@@ -790,6 +789,7 @@ export class Workflow {
       isCritical: this.rollOptions.critical || this.isCritical,
       isFumble: this.isFumble,
       spellLevel: this.itemLevel,
+      powerLevel: this.itemLevel,
       damageTotal: this.damageTotal,
       damageDetail: this.damageDetail,
       damageList: this.damageList,
@@ -1261,7 +1261,7 @@ export class Workflow {
         }
         if (this.item.data.flags["midi-qol"]?.isConcentrationCheck) {
           if (getProperty(target.actor.data.flags, "midi-qol.advantage.concentration")) {
-             advantage = true;
+            advantage = true;
             this.advantageSaves.add(target);
           }
         }

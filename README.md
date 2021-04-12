@@ -282,7 +282,7 @@ Gives the attacker advantage on attacks made against the target. Midi-qol only c
 
 * flags.midi-qol.critical.all
 * flags.midi-qol.critical.mwak/rwak/msak/rsak/other
-* flags.midi-qol.noCritical.all
+* flags.midi-qol.noCritical.allgulp 
 * flags.midi-qol.noCritical.mwak/rwak/msak/rsak/other
 * flags.midi-qol.grants.critical.all (applies when targeted)
 * flags.midi-qol.grants.critical.mwak/rwak/msak/rsak/other (applies when targeted)
@@ -299,8 +299,10 @@ Gives the attacker advantage on attacks made against the target. Midi-qol only c
 * etc  
 These flags can be used to grant damage reduction to a character and can be set by active effects and are evaluated after derived fields are calculated, so things like dex.mod etc are available.  
 flags.midi-qol.DR.all CUSTOM 3, will give 3 points of damage reduction to all incoming damage.
+Negative DR is not supported (i.e. to increase damage taken).  
 
-flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver will take 0.5/0 damage on failed/successful save, compared to the normal 1/0.5. Useful for things like rogue's evasion class feature.
+flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver will take 0.5/0 damage on failed/successful save, compared to the normal 1/0.5. Useful for things like rogue's evasion class feature.  
+
 ## Bugs
 probably many however....
 * Language translations are not up to date.

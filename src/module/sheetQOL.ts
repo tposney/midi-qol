@@ -108,6 +108,7 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
       switch (item.data.type) {
           case "weapon":
           case "spell":
+          case "power":
           case "feat":
               buttons.append(`<span class="tag"><button data-action="basicRoll">${i18n("midi-qol.buttons.roll")}</button></span>`);
               if (item.hasAttack)
@@ -191,6 +192,7 @@ function addTidy5eItemSheetButtons(app, html, data) {
     switch (item.data.type) {
       case "weapon":
       case "spell":
+      case "power":
       case "feat":
         buttons.append(`<a class="button" data-action="basicRoll" title="${i18n("midi-qol.buttons.roll")}"><i class="fas fa-comment-alt"></i> ${i18n("midi-qol.buttons.roll")}</a>`);
         if (item.hasAttack)

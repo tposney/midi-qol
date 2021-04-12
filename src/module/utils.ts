@@ -152,7 +152,9 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   let totalMult = 1;
   if (configSettings.damageImmunities !== "none" && dmgTypeString !== "") {
     // if not checking all damage counts as magical
-    const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
+    const magicalDamage = (item?.type !== "weapon" 
+      || (item?.data.data.attackBonus > 0 && !configSettings.requireMagical) 
+      || item.data.data.properties["mgc"]);
     for (let {type, mult}  of [{type: "di", mult: 0}, {type:"dr", mult: 0.5}, {type: "dv", mult: 2}]) {
       let trait = actor.data.data.traits[type].value;
       if (item?.type === "spell" && trait.includes("spell")) totalMult = totalMult * mult;
@@ -247,7 +249,6 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
       ditem.tempDamage = ditem.tempDamage + appliedTempHP;
       if (appliedTempHP <= 0) { // tmphealing applied to actor does not add only gets the max
         ditem.newTempHP = Math.max(ditem.newTempHP, -appliedTempHP);
-
       } else {
         ditem.newTempHP = Math.max(0, ditem.newTempHP - appliedTempHP)
       }

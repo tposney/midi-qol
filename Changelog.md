@@ -1,7 +1,17 @@
+## 0.3.99
+* [BREAKING] requires DAE 0.2.61
+* Fix for temp healing adding instead of being max of current and new.
+* Fix for non-merge card display of item damage/healing roll.
+* New setting, if set, requires the magical property of a weapon to be set for damage to be considered magical even if the weapon has a bonus to hit.
+* New Setting, remove concentration on failed save when concentration automation enabled. When taking damage and failing a save concentration will be removed, if unset the save is still rolled and reported, but concentration will not be automatically removed.
+* [BREAKING] Changed MidiQOL.configSettings to a function that returns the current settings, i.e. MidiQOL.configSettings(). 
+* Fix for sw5e power scaling.
+* Fix for crtical damage modification when there are additional critical damage dice.
+
 ## 0.3.98
 * Fix a TrapWorkflow bug that would loop if there was a save with no damage.
 * Fix untargetAll at end of turn to untarget at the end of the turn instead of the start of your turn.
-* Fix for spped keys in skill rolls when flags.midi-qol set for some skill.
+* Fix for speed keys in skill rolls when flags.midi-qol set for some skill.
 * Moved the check for expired special duration effects (isAttacked/isDamaged) to before dynamic effects are applied. This should stop effects applied via an attack and expiring when attacked from expiring immediately on application.
 
 ## 0.3.97

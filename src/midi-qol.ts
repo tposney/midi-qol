@@ -146,7 +146,7 @@ Hooks.once('ready', function() {
   setupMinorQolCompatibility();
 
   if (game.user.isGM && !installedModules.get("dae")) {
-    ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.2.43 or many automation effects won't work");
+    ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.2.61 or many automation effects won't work");
   }
   checkCubInstalled();
   checkConcentrationSettings();
@@ -170,7 +170,7 @@ function setupMinorQolCompatibility() {
     TrapWorkflow,
     DamageOnlyWorkflow,
     Workflow,
-    configSettings,
+    configSettings: () => {return configSettings},
     ConfigPanel: ConfigPanel,
     getTraitMult: getTraitMult,
     doCritModify: doCritModify,

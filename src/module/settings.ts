@@ -43,6 +43,7 @@ export var configSettings = {
   autoRollDamage: "none",
   autoApplyDamage: "none",
   damageImmunities: "none",
+  requireMagical: false,
   autoItemEffects: null,
   rangeTarget: null,
   playerRollSaves: "none",
@@ -69,6 +70,7 @@ export var configSettings = {
   gmRemoveButtons: "all", 
   concentrationAutomation: false,
   singleConcentrationRoll: true,
+  removeConcentration: true,
   optionalRulesEnabled: false,
   itemRollStartWorkflow: false,
   optionalRules: {

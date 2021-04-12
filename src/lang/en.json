@@ -2,7 +2,7 @@
     "midi-qol.ItemDeleteCheck.Name": "Item Delete Check",
     "midi-qol.ItemDeleteCheck.Hint": "Open a confirmation dialog when trying to delete items from character sheet",
     "midi-qol.DamageImmunities.Name": "Apply Damage immunities",
-    "midi-qol.DamageImmunities.Hint": "When using midi-qol damage buttons or auto applying damage apply target's damage immunities/vulnerabilities/resistances. All damage types are checked. Saves - check text is selected check the spell description for special strings indicating 1/2 damage",
+    "midi-qol.DamageImmunities.Hint": "When using midi-qol damage buttons or auto applying damage apply target's damage immunities/vulnerabilities/resistances. All damage types are checked.",
     "midi-qol.SpeedItemRolls.Name": "Enable Speed Item Rolls",
     "midi-qol.SpeedItemRolls.Hint": "Midi-qol will use the (ctrl|cmd)/(alt)/shift keys.",
     "midi-qol.SpeedAbilityRolls.Name": "Enable Speed Ability (save/check/skill) Rolls",
@@ -90,7 +90,7 @@
     "midi-qol.UseTokenNames.Name": "Chat cards use token name",
     "midi-qol.UseTokenNames.Hint": "Chat card titles and target names use the token name rather than the actor name",
     "midi-qol.CriticalDamage.Name" : "Choose how to roll critical damage",
-    "midi-qol.CriticalDamage.Hint" : "requires foundry 0.7.0 or later. DND5e Default - standard dnd5e critical roll, base max only - base weapon dice only but all maximised, max critical dice - critical dice maximised, max all dice - wepon + critical dice maximised",
+    "midi-qol.CriticalDamage.Hint" : "requires foundry 0.7.0 or later. DND5e Default - standard dnd5e critical roll, base max only - base weapon dice only (no critical dice) but all maximised, max critical dice - critical dice maximised, max all dice - wepon + critical dice maximised",
     "midi-qol.MergeCard.Name": "Merge Rolls to one card",
     "midi-qol.MergeCard.Hint": "Merge Attack, Hits, Damage, Saves to a single chat card",
     "midi-qol.MergeCardCondensed.Name": "Condense Attack/Damage Rolls",
@@ -224,5 +224,9 @@
     "midi-qol.PlayerStatsOnly.Hint": "Only keep statistics for player owned actors",
     "midi-qol.ShowStats": "Show Statistics Window",
     "midi-qol.DefaultSaveMult.Name": "Default saving throw multiplier",
-    "midi-qol.DefaultSaveMult.Hint": " If there are no other modifiers a saving throw will do this fraction of the damage of the origianl attack. Default 0.5, half damage on save. You should only change this if you know how multipliers work"
+    "midi-qol.DefaultSaveMult.Hint": "If there are no other modifiers a saving throw will do this fraction of the damage of the origianl attack. Default 0.5, half damage on save. You should only change this if you know how multipliers work",
+    "midi-qol.RequireMagical.Name": "Require 'Magical' property",
+    "midi-qol.RequireMagical.Hint": "If enabled, only weapons with 'Magical' property set do magical damage",
+    "midi-qol.RemoveConcentration.Name": "Remove concentration on failed save",
+    "midi-qol.RemoveConcentration.Hint": "If enabled concentration will be removed on a failed save when damage taken otherwise must be removed manually"
 }

@@ -303,13 +303,13 @@ export function _makeRoll(event, rollMethod, ...args) {
   let options;
   switch(this.advantage) {
       case -1: 
-        options = {disadvantage: true};
+        options = {disadvantage: true, fastForward: true};
         break;
       case 0:
-        options = {fastforward: true};
+        options = {fastForward: true};
         break;
       case 1:
-        options = {advantage: true};
+        options = {advantage: true, fastForward: true};
         break;
       case 2: 
         options = {event: event}

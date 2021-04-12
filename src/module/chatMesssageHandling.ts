@@ -379,66 +379,6 @@ export let hideStuffHandler = (message, html, data) => {
   setTimeout( () => ui.chat.scrollBottom(), 0);
 }
 
-export let recalcCriticalDamage = (data, ...args) => {
-  if (enableWorkflow) return true;
-  if (data.flags?.dnd5e?.roll.type === "damage") {
-    debug("recalcCriticalDamage ", data.flags?.dnd5e?.roll.type, data, ...args)
-    let actor: Actor5e = game.actors.tokens[data.speaker.token];
-    if (!actor) game.actors.tokens[data.speaker.token]?.actor;
-    if (!actor) actor = game.actors.get(data.speaker.actor);
-    let item: Item5e = actor?.items.get((data.flags.dnd5e.roll.itemId));
-    if (!item) return true;
-    if (data.flags.dnd5e.roll.critical) {
-      //TODO look at item to get correct damage roll
-      if (criticalDamage === "default") return;
-      let r = Roll.fromJSON(data.roll);
-      let rollBase = new Roll(r.formula);
-      if (criticalDamage === "maxDamage") {
-        //@ts-ignore .terms not defined
-        rollBase.terms = rollBase.terms.map(t => {
-          if (t?.number) t.number = Math.floor(t.number/2);
-          return t;
-        });
-        //@ts-ignore .evaluate not defined
-        rollBase.evaluate({maximize: true});
-        rollBase._formula = rollBase.formula;
-        data.roll = JSON.stringify(rollBase);
-        data.content = `${rollBase.total}`;
-      } else if (criticalDamage === "maxCrit") {
-        //TODO validate #crit dice from item details
-        let rollCrit = new Roll(r.formula);
-        //@ts-ignore .terms not defined
-        rollCrit.terms = rollCrit.terms.map(t => {
-          if (t?.number) t.number = Math.ceil(t.number/2);
-          if (typeof t === "number") t = 0;
-          return t;
-        });
-        //@ts-ignore .terms not defined
-        rollBase.terms = rollBase.terms.map(t => {
-          if (t?.number) t.number = Math.floor(t.number/2);
-          return t;
-        });
-        //@ts-ignore .evaluate not defined
-        rollCrit.evaluate({maximize: true});
-        //@ts-ignore.terms not defined
-        rollBase.terms.push("+")
-        //@ts-ignore .terms not defined
-        rollBase.terms.push(rollCrit.total)
-        rollBase._formula = rollBase.formula;
-        rollBase.roll();
-        data.total = rollBase.total;
-        data.roll = JSON.stringify(rollBase);
-      } else if (criticalDamage === "maxAll") {
-        //@ts-ignore .evaluate not defined
-        rollBase.evaluate({maximize: true});
-        data.roll = JSON.stringify(rollBase);
-        data.content = `${rollBase.total}`;
-      }
-    }
-  }
-  return true;
-}
-
 export function betterRollsButtons(message, html, data) {
   if (!message.data.flags.betterrolls5e) return;
   //@ts-ignore speaker

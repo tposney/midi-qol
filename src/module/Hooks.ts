@@ -1,5 +1,5 @@
 import { warn, error, debug, i18n } from "../midi-qol";
-import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, recalcCriticalDamage, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons } from "./chatMesssageHandling";
+import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons } from "./chatMesssageHandling";
 import { processUndoDamageCard } from "./GMAction";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet } from "./utils";
 import { configSettings, dragDropTargeting } from "./settings";
@@ -105,7 +105,6 @@ export let initHooks = () => {
   warn("Init Hooks processing");
   Hooks.on("preCreateChatMessage", (data, options, user) => {
     debug("preCreateChatMessage entering", data, options, user)
-    // recalcCriticalDamage(data, options);
     processpreCreateBetterRollsMessage(data, options, user);
     nsaMessageHandler(data, options, user);
     return true;
@@ -297,14 +296,14 @@ const itemJSONData = {
           "name": "Concentration Check - Midi QOL",
           "type": "script",
           "scope": "global",
-          "command": "for (let targetData of args[0].targets) {\n let target = canvas.tokens.get(targetData._id);\n if (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id))\ngame.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), target,  {warn: false});\n}",
+          "command": "for (let targetData of args[0].targets) {\n let target = canvas.tokens.get(targetData._id);\n if (MidiQOL.configSettings().removeConcentration && (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id)))\ngame.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), target,  {warn: false});\n}",
           "author": "devnIbfBHb74U9Zv"
         },
         "data": {
           "name": "Concentration Check - Midi QOL",
           "type": "script",
           "scope": "global",
-          "command": "for (let targetData of args[0].targets) {\n let target = canvas.tokens.get(targetData._id);\n if (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id))\ngame.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), target,  {warn: false});\n}",
+          "command": "for (let targetData of args[0].targets) {\n let target = canvas.tokens.get(targetData._id);\n if (MidiQOL.configSettings().removeConcentration && (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id)))\ngame.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), target,  {warn: false});\n}",
           "author": "devnIbfBHb74U9Zv"
         },
         "options": {},

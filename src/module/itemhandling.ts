@@ -146,6 +146,7 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, v
   let result: Roll = await wrapped({
     critical: workflow.rollOptions.critical,
     spellLevel: workflow.rollOptions.spellLevel,
+    powerLevel: workflow.rollOptions.spellLevel,
     versatile: workflow.rollOptions.versatile || versatile,
     fastForward: workflow.rollOptions.fastForward,
     // TODO enable this when possible via options "data.default": (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal",
@@ -176,6 +177,7 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, v
       // roll the versatile damage if there is a versatile damage field and the weapn is not marked versatile
       // TODO review this is the SRD monsters change the way extra damage is represented
       critical: false,
+      powerLevel: workflow.rollOptions.spellLevel,
       spellLevel: workflow.rollOptions.spellLevel,
       versatile: true,
       fastForward: true,
@@ -187,7 +189,14 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, v
     });
   }
   if (!configSettings.mergeCard) {
-    const title = `${this.name} - ${game.i18n.localize("DND5E.DamageRoll")}`;
+    let actionFlavor;
+    if (game.system.id === "dnd5e") {
+      actionFlavor = game.i18n.localize(this.data.data.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
+    } else {
+      const actionFlavor = game.i18n.localize(this.data.data.actionType === "heal" ? "SW5E.Healing" : "SW5E.DamageRoll");
+    }
+
+    const title = `${this.name} - ${actionFlavor}`;
     const speaker = ChatMessage.getSpeaker({ actor: this.actor });
     let messageData = mergeObject({
       title,
@@ -609,7 +618,10 @@ export function selectTargets(scene, data, options) {
 export function doCritModify(result: Roll, criticalModify = criticalDamage) {
   if (criticalModify === "default") return result;
   let rollBase = new Roll(result.formula);
+  const bonusDice = this.actor.data.flags.dnd5e?.meleeCriticalDamageDice ?? 0;
   if (criticalModify === "maxDamage") {// max base damage
+    //@ts-ignore .terms not defined
+    if (rollBase.terms[0].number) rollBase.terms[0].number = rollBase.terms[0].number - bonusDice;
     //@ts-ignore .terms not defined
     rollBase.terms = rollBase.terms.map(t => {
       if (t?.number) t.number = Math.floor(t.number / 2);
@@ -622,11 +634,17 @@ export function doCritModify(result: Roll, criticalModify = criticalDamage) {
   } else if (criticalModify === "maxCrit") { // see about maximising one dice out of the two
     let rollCrit = new Roll(result.formula);
     //@ts-ignore .terms not defined
+    if (rollCrit.terms[0].number) rollCrit.terms[0].number = rollCrit.terms[0].number - bonusDice;
+    //@ts-ignore .terms not defined
+    if (rollBase.terms[0].number) rollBase.terms[0].number = rollBase.terms[0].number - bonusDice;
+    //@ts-ignore .terms not defined
     rollCrit.terms = rollCrit.terms.map(t => {
       if (t?.number) t.number = Math.ceil(t.number / 2);
       if (typeof t === "number") t = 0;
       return t;
     });
+    //@ts-ignore .terms not defined
+    if (rollCrit.terms[0].number) rollCrit.terms[0].number = rollCrit.terms[0].number + bonusDice;
     //@ts-ignore .terms not defined
     rollBase.terms = rollBase.terms.map(t => {
       if (t?.number) t.number = Math.floor(t.number / 2);
