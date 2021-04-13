@@ -90,7 +90,7 @@
     "midi-qol.UseTokenNames.Name": "Chat cards use token name",
     "midi-qol.UseTokenNames.Hint": "Chat card titles and target names use the token name rather than the actor name",
     "midi-qol.CriticalDamage.Name" : "Choose how to roll critical damage",
-    "midi-qol.CriticalDamage.Hint" : "requires foundry 0.7.0 or later. DND5e Default - standard dnd5e critical roll, base max only - base weapon dice only (no critical dice) but all maximised, max critical dice - critical dice maximised, max all dice - wepon + critical dice maximised",
+    "midi-qol.CriticalDamage.Hint" : "requires foundry 0.7.0 or later. DND5e Default - standard dnd5e critical roll, base max only - base weapon dice only (no critical dice) but all maximised, max critical dice - critical dice maximised, max all dice - wepon + critical dice maximised, double dice value - result of dice x2",
     "midi-qol.MergeCard.Name": "Merge Rolls to one card",
     "midi-qol.MergeCard.Hint": "Merge Attack, Hits, Damage, Saves to a single chat card",
     "midi-qol.MergeCardCondensed.Name": "Condense Attack/Damage Rolls",

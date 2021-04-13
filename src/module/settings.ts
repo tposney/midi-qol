@@ -212,7 +212,7 @@ const settings = [
   {
     name: "CriticalDamage",
     scope: "world",
-    choices: {default: "DND5e default", maxDamage:  "base max only", maxCrit: "max critical dice", maxAll: "max all dice"},
+    choices: {default: "DND5e default", maxDamage:  "base max only", maxCrit: "max critical dice", maxAll: "max all dice", doubleDice: "double dice value"},
     default: "default",
     type: String,
     onChange: fetchParams
