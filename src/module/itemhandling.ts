@@ -664,5 +664,18 @@ export function doCritModify(result: Roll, criticalModify = criticalDamage) {
     //@ts-ignore .evaluate not defined
     result.evaluate({ maximize: true });
     return result;
+  } else if (criticalModify === "doubleDice") {
+    //@ts-ignore .evaluate not defined
+    rollBase.terms = rollBase.terms.map(t => {
+        if (t?.number)
+            t.number = Math.floor(t.number / 2);
+        return t;
+    });
+    let splitedFormula = rollBase.formula.split(' ');
+    splitedFormula[0] = '(' + splitedFormula[0] + ' * 2)';
+    splitedFormula = splitedFormula.join(' ');
+    rollBase = new Roll(splitedFormula);
+    rollBase.roll();
+    return rollBase;
   }
 }
