@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, log, MESSAGETYPES, i18nFormat, midiFlags, allAttackTypes, gameStats } from "../midi-qol";
 import { BetterRollsWorkflow, defaultRollOptions, DummyWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
 import { configSettings, itemDeleteCheck, enableWorkflow, criticalDamage, autoFastForwardAbilityRolls, checkRule } from "./settings";
-import { addConcentration, checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, untargetAllTokens } from "./utils";
+import { addConcentration, checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, untargetAllTokens, validTargetTokens } from "./utils";
 import { installedModules } from "./setupModules";
 import { setupSheetQol } from "./sheetQOL";
 
@@ -16,7 +16,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
 
   if (workflow.workflowType === "Workflow") {
-    workflow.targets = (this.data.data.target?.type === "self") ? new Set(await getSelfTargetSet(this.actor)) : new Set(game.user.targets);
+    workflow.targets = (this.data.data.target?.type === "self") ? new Set(await getSelfTargetSet(this.actor)) : validTargetTokens(game.user.targets);
     if (workflow.attackRoll) { // we are re-rolling the attack.
       workflow.damageRoll = undefined;
       await Workflow.removeAttackDamageButtons(this.id)
@@ -82,7 +82,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
 
   if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
-    workflow.targets = new Set(game.user.targets);
+    workflow.targets = validTargetTokens(game.user.targets);
   }
   if (!result) { // attack roll failed.
     error("Itemhandling rollAttack failed")
@@ -250,22 +250,22 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const isRangeSpell = configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget && configSettings.autoTarget;
   let shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
-    || (game.user.targets.size > 0) // there are some target selected
+    || (validTargetTokens(game.user.targets).size > 0) // there are some target selected
     || (this.data.data.target?.type === "self") // self target
     || isAoESpell // area effectspell and we will auto target
     || isRangeSpell // rangetarget and will autotarget
     || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
 
-  if (configSettings.requireTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && game.user.targets.size === 0) shouldAllowRoll = false;
+  if (configSettings.requireTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && validTargetTokens(game.user.targets).size === 0) shouldAllowRoll = false;
   // only allow weapon attacks against at most the specified number of targets
   let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9099) ?? 9999
   let speaker = ChatMessage.getSpeaker({ actor: this.actor });
   // do pre roll checks
   if (checkRule("checkRange")) {
-    if (speaker.token && checkRange(this.actor, this, speaker.token, game.user.targets) === "fail")
+    if (speaker.token && checkRange(this.actor, this, speaker.token, validTargetTokens(game.user.targets)) === "fail")
       return;
   }
-  if (game.system.id === "dnd5e" && configSettings.requireTargets && game.user.targets.size > allowedTargets) {
+  if (game.system.id === "dnd5e" && configSettings.requireTargets && validTargetTokens(game.user.targets)> allowedTargets) {
     shouldAllowRoll = false;
     ui.notifications.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
     warn(`${game.user.name} ${i18nFormat("midi-qol.midi-qol.wrongNumberTargets", { allowedTargets })}`)
@@ -321,7 +321,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return;
   }
 
-  const targets = (this?.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : new Set(game.user.targets);
+  const targets = (this?.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : validTargetTokens(game.user.targets);
 
   let workflow: Workflow;
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
@@ -595,7 +595,7 @@ export function selectTargets(scene, data, options) {
     return true;
   }
   if (targeting === "none") { // this is no good
-    Hooks.callAll("midi-qol-targeted", game.user.targets);
+    Hooks.callAll("midi-qol-targeted", validTargetTokens(game.user.targets));
     return true;
   }
   if (!data) return true;
@@ -608,8 +608,8 @@ export function selectTargets(scene, data, options) {
     getTargetedTokens(scene, data, selfTarget)
     // Assumes area affect do not have a to hit roll
     this.saves = new Set();
-    this.targets = new Set(game.user.targets);
-    this.hitTargets = new Set(game.user.targets);
+    this.targets = validTargetTokens(game.user.targets);
+    this.hitTargets = validTargetTokens(game.user.targets);
     this.templateData = data;
     return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
   }, 250);
@@ -665,6 +665,8 @@ export function doCritModify(result: Roll, criticalModify = criticalDamage) {
     result.evaluate({ maximize: true });
     return result;
   } else if (criticalModify === "doubleDice") {
+    //@ts-ignore
+    if (rollBase.terms[0].number) rollBase.terms[0].number = rollBase.terms[0].number - bonusDice;
     //@ts-ignore .evaluate not defined
     rollBase.terms = rollBase.terms.map(t => {
         if (t?.number)
@@ -673,8 +675,8 @@ export function doCritModify(result: Roll, criticalModify = criticalDamage) {
     });
     let splitedFormula = rollBase.formula.split(' ');
     splitedFormula[0] = '(' + splitedFormula[0] + ' * 2)';
-    splitedFormula = splitedFormula.join(' ');
-    rollBase = new Roll(splitedFormula);
+    let formula = splitedFormula.join(' ');
+    rollBase = new Roll(formula);
     rollBase.roll();
     return rollBase;
   }

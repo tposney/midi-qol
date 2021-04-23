@@ -73,10 +73,11 @@ export var configSettings = {
   removeConcentration: true,
   optionalRulesEnabled: false,
   itemRollStartWorkflow: false,
+  usePlayerPortrait: false,
   optionalRules: {
     invisAdvantage: true,
     checkRange: true,
-    nearbyFoe: true,
+    nearbyFoe: 5,
     nearbyAllyRanged: 4,
     incapacitated: true,
     removeHiddenInvis: true,
@@ -109,12 +110,19 @@ export let fetchParams = (silent = false) => {
     configSettings.optionalRules = {
       invisAdvantage: true,
       checkRange: true,
-      nearbyFoe: true,
+      nearbyFoe: 5,
       nearbyAllyRanged: 4,
       incapacitated: true,
       removeHiddenInvis: true,
       maxDRValue: false
     }
+  }
+  if (typeof configSettings.optionalRules.nearbyFoe !== "number") {
+    if (configSettings.optionalRules)
+      configSettings.optionalRules.nearbyFoe = 5;
+    else
+      configSettings.optionalRules.nearbyFoe = 0;
+
   }
   configSettings.itemRollStartWorkflow = false;
   //@ts-ignore typeLabels

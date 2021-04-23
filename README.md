@@ -28,6 +28,12 @@ Any module that overloads item.roll is potentially incompatible.
 **Ez-Roller** The send to chat log feature of ez-roller will disable combo cards in midi-qol.  
 **Combat Utility Belt** CUB concentrator and midi-qol concentration automation are incompatible. Choose one or the other.
 **Maestro** Maestro looks for the attack roll chat card in the chat log to play its critical/attack/fumble sounds. If you are using the merge card then the attack roll card is never created and Maestro can't play its sounds. You can use the midi-qol custom sounds instead.
+**Item Macro**  
+You can create itemMacro macros with the **itemmacro** module and call them from midi's onUse/DamageBonus macro fields.
+If you have installed itemmacro please make sure you disable the ItemMacro config settings:
+* "character sheet hook" else when you use the item the macro will get called bypassing midi-qol/dae completely and none of the arguments will get populated.
+* "override default macro execution"  If this is enabled the hotbar hooks will directly call the item macro and won't work as expected for dae/midi.  
+The settings are per player so each player needs to change the setting to disabled.  
 
 **Roll Statistics**
   * Most of the time when an attack roll is made or a spell is cast that does damage, the actual attack and damage rolls are recorded. This is recorded for every unique actor, on both a session and lifetime basis, as well as recording the same data for each item used by the actor on a session basis. So you might be able to answer questions like "is my longsword better than my dagger given the foes we are fighting?" The data kept is

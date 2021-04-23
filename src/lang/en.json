@@ -191,13 +191,15 @@
     "midi-qol.concentrationCheckName": "Concentration",
     "midi-qol.DamageMacro.Name": "Bonus Damage Macros",
     "midi-qol.DamageMacro.Hint": "Comma separated list of macros to call when calculating damage which will be applied when calculating damage to targets",
+    "midi-qol.AttackMacro.Name": "Attack Bonus Macros",
+    "midi-qol.AttackMacro.Hint": "Comma separated list of macros to call when calculating attack roll which will be applied when checking if the attack hit the targets",
     "midi-qol.DAEMidiQOL": "DAE/Midi-QOL specific",
     "midi-qol.Optional": "Optional",
     "midi-qol.OptionalRules.Name": "(EXPERIMENTAL) Optional Game Rules Work with better rolls, but triggers a libWrapper warning",
     "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable. Generally don't work with better rolls.",
     "midi-qol.InvisAdvantage.Name": "Hidden/Invisible attackers have advantage on attacks (requires CUB or CV)",
     "midi-qol.CheckRange.Name": "Check weapon range when attacking",
-    "midi-qol.NearbyFoe.Name": "Ranged attacks when a foe is within 5ft of the attacker have disadvantage",
+    "midi-qol.NearbyFoe.Name": "Ranged attacks when a foe is closer than this have disadvantage. 0 disables",
     "midi-qol.NearbyAllyRanged.Name": "(House Rule) Ranged Attacks at foes near allies have disadvantage.",
     "midi-qol.NearbyAllyRanged.Hint": "Ranged Attacks with allies nearby (5 feet) to the target have disadvantage for targets smaller than this (w*h). 0 disables",
     "midi-qol.Incapacitated.Name": "Incapacitated actors can't make attacks",
@@ -228,5 +230,7 @@
     "midi-qol.RequireMagical.Name": "Require 'Magical' property",
     "midi-qol.RequireMagical.Hint": "If enabled, only weapons with 'Magical' property set do magical damage",
     "midi-qol.RemoveConcentration.Name": "Remove concentration on failed save",
-    "midi-qol.RemoveConcentration.Hint": "If enabled concentration will be removed on a failed save when damage taken otherwise must be removed manually"
+    "midi-qol.RemoveConcentration.Hint": "If enabled concentration will be removed on a failed save when damage taken otherwise must be removed manually",
+    "midi-qol.UsePlayerPortrait.Name": "Use Actor portrait in chat cards",
+    "midi-qol.UsePlayerPortrait.Hint": "For Actors of type charactrer use the actor portrait instead of the token image in midi-qol chat cards"
 }

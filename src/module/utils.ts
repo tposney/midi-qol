@@ -1,10 +1,12 @@
-import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled } from "../midi-qol";
+import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, midiFlags } from "../midi-qol";
 import { itemRollButtons, configSettings, autoRemoveTargets, checkRule } from "./settings";
 import { log } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
-import { broadcastData } from "./GMAction";
+// import { broadcastData } from "./GMAction";
+import { socketlibSocket } from  "./GMAction" ;
 import { installedModules } from "./setupModules";
 import { baseEvent } from "./patching";
+import { setupSheetQol } from "./sheetQOL";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -139,6 +141,7 @@ Uncanny Dodge
 : improved saves/adv override abilitySave/Check and set event before rolling
 : damage mult for dex save?
 */
+
 /** 
  * Work out the appropriate multiplier for DamageTypeString on actor
  * If configSettings.damageImmunities are not being checked always return 1
@@ -157,10 +160,10 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
       || item.data.data.properties["mgc"]);
     for (let {type, mult}  of [{type: "di", mult: 0}, {type:"dr", mult: 0.5}, {type: "dv", mult: 2}]) {
       let trait = actor.data.data.traits[type].value;
-      if (item?.type === "spell" && trait.includes("spell")) totalMult = totalMult * mult;
-      if (item?.type === "power" && trait.includes("power")) totalMult = totalMult * mult;;
       if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
-      if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
+      if (item?.type === "spell" && trait.includes("spell")) totalMult = totalMult * mult;
+      else if (item?.type === "power" && trait.includes("power")) totalMult = totalMult * mult;
+      else if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
     }
   }
   return totalMult;
@@ -217,7 +220,10 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
           if (["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
             DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"))).roll().total);
             //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
+          } else if (!["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`)) {
+            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`) || "0"))).roll().total);
           }
+
           if (type.includes("temphp")) {
             appliedTempHP += typeDamage
           } else {
@@ -256,12 +262,22 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
       targetNames.push(t.name)
   }
   if (theTargets.size > 0) {
+    socketlibSocket.executeAsGM("createReverseDamageCard", {
+      autoApplyDamage: configSettings.autoApplyDamage,
+      sender: game.user.name,
+      damageList: damageList,
+      targetNames,
+      chatCardId: workflow.itemCardId
+    })
+    /* TODO remove this when socketlib 100% solid
     let intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
     if (!intendedGM) {
       ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
       error("No GM user connected - cannot apply damage");
       return;
     }
+
+    
     broadcastData({
       action: "reverseDamageCard",
       autoApplyDamage: configSettings.autoApplyDamage,
@@ -271,6 +287,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
       targetNames,
       chatCardId: workflow.itemCardId
     });
+    */
   }
   if (configSettings.keepRollStats) {
     gameStats.addDamage(totalAppliedDamage, totalDamage, theTargets.size, item)
@@ -284,6 +301,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   let appliedDamage = [];
   const actor = workflow.actor;
   let item = workflow.item;
+
   // const re = /.*\((.*)\)/;
   // const defaultDamageType = message.data.flavor && message.data.flavor.match(re);
 
@@ -340,7 +358,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       superSavers: [workflow.superSavers, workflow.superSavers]
     });
   }
-workflow.damageList = appliedDamage;
+  workflow.damageList = appliedDamage;
   debug("process damage roll: ", configSettings.autoApplyDamage, workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves)
 }
 
@@ -750,17 +768,29 @@ export function expireRollEffect(rollType: string, abilityId: string) {
     return false;
   }).map(ef=> ef.id);
   if (expiredEffects?.length > 0) {
+    socketlibSocket.executeAsGM("removeEffects", {
+      tokenId: ChatMessage.getSpeaker({actor: this}).token,
+      effects: expiredEffects,
+    })
+
+/* TODO remove this when socketlib 100% solid
     const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
     if (!intendedGM) {
       ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
       error("No GM user connected - cannot remove effects");
       return;
     }
+
     broadcastData({
       action: "removeEffects",
       tokenId: ChatMessage.getSpeaker({actor: this}).token,
       effects: expiredEffects,
       intendedFor: intendedGM.id
     });
+    */
   } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
+}
+
+export function validTargetTokens(tokenSet: Set<Token>): Set<Token> {
+  return new Set([...game.user.targets].filter(a=>a.actor))
 }

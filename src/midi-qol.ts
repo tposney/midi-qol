@@ -16,7 +16,7 @@ import { preloadTemplates } from './module/preloadTemplates';
 import { installedModules, setupModules } from './module/setupModules';
 import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY } from './module/patching';
 import { initHooks, readyHooks } from './module/Hooks';
-import { initGMActionSetup } from './module/GMAction';
+import { initGMActionSetup, setupSocket } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
 import { applyTokenDamage, checkNearby, findNearby, getDistance, getTraitMult } from './module/utils';
@@ -70,6 +70,7 @@ export let cleanSpellName = (name) => {
 
 Hooks.once('init', async function() {
   console.log('midi-qol | Initializing midi-qol');
+  setupSocket();
   initHooks();
 	// Assign custom classes and constants here
 	
@@ -110,6 +111,7 @@ Hooks.once('setup', function() {
     CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
 
   if (configSettings.allowUseMacro) {
+    
     /*
     CONFIG.DND5E.characterFlags["AttackBonusMacro"] = {
       hint: i18n("midi-qol.AttackMacro.Hint"),
@@ -358,7 +360,8 @@ function setupMidiFlags() {
     });
     midiFlags.push(`flags.midi-qol.DR.all`);
     midiFlags.push(`flags.midi-qol.DR.non-magical`);
-    Object.keys(CONFIG.DND5E.damageTypes).forEach(dt => {
+    midiFlags.push(`flags.midi-qol.DR.non-physical`);
+    Object.keys(CONFIG.DND5E.damageResistanceTypes).forEach(dt => {
       midiFlags.push(`flags.midi-qol.DR.${dt}`);  
     })
   }

@@ -351,6 +351,13 @@
           <input type="checkbox" name="useTokenNames" data-dtype="Boolean" {{checked configSettings.useTokenNames}} />
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.UseTokenNames.Hint"}}</div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.UsePlayerPortrait.Name"}}</label>
+          <input type="checkbox" name="usePlayerPortrait" data-dtype="Boolean" {{checked configSettings.usePlayerPortrait}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.UsePlayerPortrait.Hint"}}</div>
+
       </div>
       <div class="midi-qol-box">
         <div class="form-group">
@@ -551,12 +558,14 @@
               configSettings.optionalRules.checkRange}} />
           </div>
 
-          <div class="form-group">
-            <label style>{{localize "midi-qol.NearbyFoe.Name"}}</label>
-            <input type="checkbox" name="optionalRules.nearbyFoe" data-dtype="Boolean" {{checked
-              configSettings.optionalRules.nearbyFoe}} />
-          </div>
 
+          <div class="form-group">
+            <span>
+              <label>{{localize "midi-qol.NearbyFoe.Name"}}</label>
+              <input type="Number" style="width:40px;" name="optionalRules.nearbyFoe"
+                value="{{configSettings.optionalRules.nearbyFoe}}" data-dtype="Number" />
+            </span>
+          </div>
 
           <div class="form-group">
             <label style>{{localize "midi-qol.MaxDRValue.Name"}}</label>

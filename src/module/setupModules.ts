@@ -11,7 +11,8 @@ let modules = {"about-time": "0.0",
               "combat-utility-belt": "1.3.8",
               "times-up": "0.1.2",
               "conditional-visibility": "0.0",
-              "monks-tokenbar": "0.0"
+              "monks-tokenbar": "0.0",
+              "socketlib": "0.0"
             };
 export let installedModules = new Map();
 

@@ -1,6 +1,20 @@
+## 0.3.100
+* Fix for data.traits.dr.all double counting resistance to spells.
+* Added flags.midi-qol.DR.non-physical damage reduction, for damage which is not bludgeoning,slasing or piercing.
+* [BREAKING] added dependency on socketlib
+* fix for damage card not displaying webm icons.
+* Updated DamageOnlyWorkflow to support damage types in the roll passed, i.e.  
+```
+2d10[radiant] + 1d10[fire]  
+```
+will pick up the correct damage types. Any terms that have no damage attached will be treated as the default damage type.
+* Check nearby foe setting now accepts a distance in scene units, rather than a check box. Intended for those playing metric unit worlds. Defaults to 5 units if previously enabled. 0 disables.
+* Updated rakish audacity in compendium to align with a midi-qol change. Also add cha modifier to initiative rolls as an active effect.
+* Added option to use character portrait in chat log messages instead of token image. Applies to actors of type "character" only.
+
 ## 0.3.99
 * [BREAKING] requires DAE 0.2.61
-* Fix for temp healing adding instead of being max of current and new.
+* Fix for temp healing adding to temphp instead of being max of current and new.
 * Fix for non-merge card display of item damage/healing roll.
 * New setting, if set, requires the magical property of a weapon to be set for damage to be considered magical even if the weapon has a bonus to hit.
 * New Setting, remove concentration on failed save when concentration automation enabled. When taking damage and failing a save concentration will be removed, if unset the save is still rolled and reported, but concentration will not be automatically removed.

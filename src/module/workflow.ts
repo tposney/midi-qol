@@ -5,10 +5,11 @@ import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 //@ts-ignore
 import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, debugEnabled, timelog } from "../midi-qol";
 import { selectTargets, showItemCard } from "./itemhandling";
-import { broadcastData } from "./GMAction";
+// import { broadcastData } from "./GMAction";
+import { socketlibSocket } from "./GMAction";
 import { installedModules } from "./setupModules";
 import { configSettings, autoRemoveTargets, checkRule } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects } from "./utils"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens } from "./utils"
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey)}
@@ -172,12 +173,12 @@ export class Workflow {
     }
     // Neaarby foe gives disadvantage on ranged attacks
     if (checkRule("nearbyFoe") && (["rwak", "rsak", "rpak"].includes(actType) || this.item.data.data.properties?.thr)) { // Check if there is a foe near me when doing ranged attack
-      let nearbyFoe = checkNearby(-1, canvas.tokens.get(this.tokenId), 5);
+      let nearbyFoe = checkNearby(-1, canvas.tokens.get(this.tokenId), configSettings.optionalRules.nearbyFoe);
       // special case check for thrown weapons within 5 feet (players will forget to set the property)
       if (this.item.data.data.properties?.thr) {
         const firstTarget = this.targets.values().next().value;
         const me = canvas.tokens.get(this.tokenId);
-        if (firstTarget && me && getDistance(me, firstTarget, false) <= 5) nearbyFoe = false;
+        if (firstTarget && me && getDistance(me, firstTarget, false) <= configSettings.optionalRules.nearbyFoe) nearbyFoe = false;
       }
       if (nearbyFoe) {
         log(`Ranged attack by ${this.actor.name} at disadvantage due to neabye foe`);
@@ -275,7 +276,7 @@ export class Workflow {
     const firstTarget = this.targets.values().next().value;
     if (checkRule("nearbyAllyRanged") && ["rwak", "rsak", "rpak"].includes(actionType)) {
       if (firstTarget.data.width * firstTarget.data.height < checkRule("nearbyAllyRanged")) {
-        const nearbyAlly = checkNearby(-1, firstTarget, 5); // targets near a friend that is not too big
+        const nearbyAlly = checkNearby(-1, firstTarget, configSettings.optionalRules.nearbyFoe); // targets near a friend that is not too big
         // TODO include thrown weapons in check
         if (nearbyAlly) {
           warn("ranged attack with disadvantage because target is near a friend");
@@ -485,6 +486,11 @@ export class Workflow {
 
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
         this.processAttackRoll();
+        const attackBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.AttackBonusMacro`);
+        if (configSettings.allowUseMacro && attackBonusMacro) {
+          await this.rollAttackBonus(attackBonusMacro);
+
+        }
         await this.displayAttackRoll(configSettings.mergeCard);
         if (configSettings.autoCheckHit !== "none") {
           await this.checkHits();
@@ -554,8 +560,8 @@ export class Workflow {
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
          if (configSettings.autoTarget === "none" && this.item.hasAreaTarget && !this.item.hasAttack) { 
            // we are not auto targeting so for area effect attacks, without hits (e.g. fireball)
-          this.targets = new Set(game.user.targets);
-          this.hitTargets = new Set(game.user.targets);
+          this.targets = validTargetTokens(game.user.targets);
+          this.hitTargets = validTargetTokens(game.user.targets);
           warn(" damage roll complete for non auto target area effects spells", this)
         }
         Hooks.callAll("midi-qol.preDamageRollComplete", this)
@@ -565,7 +571,7 @@ export class Workflow {
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
         if (this.item?.data.data.actionType === "heal" && !Object.keys(CONFIG.DND5E.healingTypes).includes(this.defaultDamageType)) this.defaultDamageType = "healing"; 
         this.damageDetail = createDamageList(this.damageRoll, this.item, this.defaultDamageType);
-        const damageBonusMacro = getProperty(this.actor.data.flags, "dnd5e.DamageBonusMacro");
+        const damageBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.DamageBonusMacro`);
         if (damageBonusMacro && this.workflowType === "Workflow") {
           await this.rollBonusDamage(damageBonusMacro);
         }
@@ -647,18 +653,27 @@ export class Workflow {
             return false;
           }).map(ef=> ef.id);
           if (expiredEffects?.length > 0) {
+            socketlibSocket.executeAsGM("removeEffects", {
+              tokenId: target.id,
+              effects: expiredEffects,
+            });
+
+/*            TODO remove this when socketlib 100% solid
             const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
             if (!intendedGM) {
               ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
               error("No GM user connected - cannot remove effects");
               return;
             }
+
+
             broadcastData({
               action: "removeEffects",
               tokenId: target.id,
               effects: expiredEffects,
               intendedFor: intendedGM.id
             });
+            */
           } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
         }
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
@@ -822,12 +837,13 @@ export class Workflow {
     try {
       if (name.startsWith("ItemMacro")) { // special short circuit eval for itemMacro since it can be execute as GM
         var itemMacro;
+        var item = this.item;
         if (name === "ItemMacro") {
           itemMacro = getProperty(this.item.data.flags, "itemacro.macro");
         } else {
           const parts = name.split(".");
           const itemName = parts[1];
-          let item = this.actor.items.find(i => i.name === itemName && getProperty(i.data.flags, "itemacro.macro"))
+          item = this.actor.items.find(i => i.name === itemName && getProperty(i.data.flags, "itemacro.macro"))
           if (item) itemMacro = getProperty(item.data.flags, "itemacro.macro")
           else return {};
         }
@@ -839,9 +855,9 @@ export class Workflow {
 
         // const asyncFunction = itemMacro.data.command.includes("await") ? "async" : "";
         return (new Function(`"use strict";
-              return (async function ({speaker, actor, token, character, args}={}) {
+              return (async function ({speaker, actor, token, character, item, args}={}) {
                   ${itemMacro.data.command}
-                  });`))().call(this, { speaker, actor, token, character, args });
+                  });`))().call(this, { speaker, actor, token, character, item, args });
       } else {
         const macroCommand = game.macros.getName(name);
         if (macroCommand) {
@@ -934,7 +950,10 @@ export class Workflow {
   }
 
   get damageFlavor() {
-    allDamageTypes = mergeObject(CONFIG.DND5E.damageTypes, CONFIG.DND5E.healingTypes, {inplace:false});
+    if (game.system.id === "dnd5e")
+      allDamageTypes = mergeObject(CONFIG.DND5E.damageTypes, CONFIG.DND5E.healingTypes, {inplace:false});
+    else
+      allDamageTypes = mergeObject(CONFIG.SW5E.damageTypes, CONFIG.SW5E.healingTypes, {inplace:false});
     return `(${this.item?.data.data.damage.parts
     .map(a=>(allDamageTypes[a[1]] || allDamageTypes[this.defaultDamageType] || MQdefaultDamageType)).join(",") 
       || this.defaultDamageType || MQdefaultDamageType})`;
@@ -1031,6 +1050,7 @@ export class Workflow {
         speaker: this.speaker
       }
       setProperty(messageData, "flags.dnd5e.roll.type", "damage");
+      setProperty(messageData, "flags.sw5e.roll.type", "damage");
       this.bonusDamageRoll.toMessage(messageData);
     }
     
@@ -1088,7 +1108,7 @@ export class Workflow {
       let speaker = duplicate(this.speaker);
       speaker.alias = (configSettings.useTokenNames && speaker.token) ? canvas.tokens.get(speaker.token).name : speaker.alias;
       speaker.scene = canvas?.scene?.id
-      if (game.user.targets.size > 0) {
+      if (validTargetTokens(game.user.targets).size > 0) {
         let chatData: any = {
           user: game.user,
           speaker,
@@ -1331,7 +1351,15 @@ export class Workflow {
       let saveString = i18n(saved ? "midi-qol.save-success" : "midi-qol.save-failure");
       let adv = this.advantageSaves.has(target) ? `(${i18n("DND5E.Advantage")})` : "";
       if (this.disadvantageSaves.has(target)) adv = `(${i18n("DND5E.Disadvantage")})`;
+      if (game.system.id === "sw5e") {
+        adv = this.advantageSaves.has(target) ? `(${i18n("SW5E.Advantage")})` : "";
+        if (this.disadvantageSaves.has(target)) adv = `(${i18n("SW5E.Disadvantage")})`;
+      }
       let img = target.data.img || target.actor.img;
+      //@ts-ignore
+      if (configSettings.usePlayerPortrait && target.actor.data.type === "character")
+        img = target.actor?.img || target.data.img;
+
       if ( VideoHelper.hasVideoExtension(img) ) {
         //@ts-ignore - createThumbnail not defined
         img = await game.video.createThumbnail(img, {width: 100, height: 100});
@@ -1410,7 +1438,6 @@ export class Workflow {
     this.diceRoll = this.attackRoll.terms[0].results.find(d => d.active).result;
     //@ts-ignore .terms undefined
     this.isCritical = this.diceRoll  >= this.attackRoll.terms[0].options.critical;
-    //@ts-ignore
     //@ts-ignore .terms undefined
     this.isFumble = this.diceRoll <= this.attackRoll.terms[0].options.fumble;
     this.attackTotal = this.attackRoll.total;
@@ -1451,6 +1478,9 @@ export class Workflow {
       let attackType = ""; //item?.name ? i18n(item.name) : "Attack";
       let hitString = this.isCritical ? i18n("midi-qol.criticals") : this.isFumble? i18n("midi-qol.fumbles") : isHit ? i18n("midi-qol.hits") : i18n("midi-qol.misses");
       let img = targetToken.data?.img || targetToken.actor.img;
+      //@ts-ignore
+      if (configSettings.usePlayerPortrait && targetToken.actor.data.type === "character")
+        img = targetToken.actor?.img || targetToken.data.img;
       if ( VideoHelper.hasVideoExtension(img) ) {
         //@ts-ignore
         img = await game.video.createThumbnail(img, {width: 100, height: 100});
@@ -1491,7 +1521,7 @@ export class Workflow {
     ).forEach(token=> {
         token.setTarget(true, { user: game.user, releaseOthers: false });
     });
-    this.targets = new Set(game.user.targets);
+    this.targets = validTargetTokens(game.user.targets);
     this.saves = new Set();
     this.failedSaves = new Set(this.targets)
     this.hitTargets = new Set(this.targets);
@@ -1503,10 +1533,13 @@ export class DamageOnlyWorkflow extends Workflow {
         options: {flavor: string, itemCardId: string, damageList: [], useOther: boolean, itemData: {}}) {
           super(actor, null, ChatMessage.getSpeaker({token}), new Set(targets), shiftOnlyEvent)
     this.itemData = options.itemData;
+    if (this.itemData && actor)
+      this.item = Item.createOwned(this.itemData, this.actor);
+    else this.item = null;
 
-    this.damageTotal = damageTotal;
-    this.damageDetail = [{type: damageType,  damage: damageTotal}];
     this.damageRoll = roll;
+    this.damageDetail = createDamageList(this.damageRoll, this.item, damageType);
+    this.damageTotal = damageTotal;
     this.flavor = options.flavor;
     this.defaultDamageType = CONFIG.DND5E.damageTypes[damageType] || damageType;
     this.damageList = options.damageList;
@@ -1583,7 +1616,7 @@ export class TrapWorkflow extends Workflow {
     if (!this.event) this.event = duplicate(shiftOnlyEvent);
     this.trapSound = trapSound;
     this.templateLocation = templateLocation;
-    this.saveTargets = new Set(game.user.targets);
+    this.saveTargets = validTargetTokens(game.user.targets);
     this.next(WORKFLOWSTATES.NONE)
     this.rollOptions.fastForward = true;
   }
@@ -1823,8 +1856,8 @@ export class BetterRollsWorkflow extends Workflow {
 
         if (configSettings.autoTarget === "none" && this.item.hasAreaTarget && !this.item.hasAttack) { 
           // we are not auto targeting so for area effect attacks, without hits (e.g. fireball)
-          this.targets = new Set(game.user.targets);
-          this.hitTargets = new Set(game.user.targets);
+          this.targets = validTargetTokens(game.user.targets);
+          this.hitTargets = validTargetTokens(game.user.targets);
        }
         // apply damage to targets plus saves plus immunities
         if (this.isFumble) { //TODO: Is this right?

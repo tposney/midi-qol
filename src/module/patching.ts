@@ -5,6 +5,7 @@ import { expireRollEffect, testKey } from "./utils";
 import { installedModules } from "./setupModules";
 import { libWrapper } from "./lib/shim.js";
 
+var d20Roll;
 
 function restrictVisibility() {
   // Tokens
@@ -290,6 +291,34 @@ export let actorAbilityRollPatching = () => {
 
   log("Patching rollDeathSave");
   libWrapper.register("midi-qol", "CONFIG.Actor.entityClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
+
+  // log("Patching d20Roll")
+  // libwrapper did not work
+  /* TODO revisit this later to allow inserting data into d20 rolls.
+  if (game.system.id === "dnd5e") {
+    // libWrapper.register("midi-qol", "game.dnd5e.dice.d20Roll", myd20Roll, "WRAPPER");
+    d20Roll = game.dnd5e.dice.d20Roll
+    // game.dnd5e.dice.d20Roll = myd20Roll;
+    var tempMod = {};
+    for (let i in game.dnd5e.dice) tempMod[i] = game.dnd5e.dice[i];
+    tempMod["d20Roll"] = myd20Roll;
+    game.dnd5e.dice = tempMod;
+  } else {
+    libWrapper.register("midi-qol", "game.sw5e.dice.d20Roll", myd20Roll, "WRAPPER");
+    d20Roll = game.sw5e.dice.d20Roll
+    game.sw5e.dice.d20Roll = myd20Roll;
+  }
+  */
+}
+
+export async function myd20Roll(options: any) {
+  let {parts=[], data={}, event={}, rollMode=null, template=null, title=null, speaker=null,
+  flavor=null, fastForward=null, dialogOptions,
+  advantage=null, disadvantage=null, critical=20, fumble=1, targetValue=null,
+  elvenAccuracy=false, halflingLucky=false, reliableTalent=false,
+  chatMessage=true, messageData={}} = options;
+console.error("In my d20 roll");
+  return d20Roll(options)
 }
 
 export function patchLMRTFY() {
