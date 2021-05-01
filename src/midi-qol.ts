@@ -16,7 +16,7 @@ import { preloadTemplates } from './module/preloadTemplates';
 import { installedModules, setupModules } from './module/setupModules';
 import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY } from './module/patching';
 import { initHooks, readyHooks } from './module/Hooks';
-import { initGMActionSetup } from './module/GMAction';
+import { initGMActionSetup, setupSocket } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
 import { applyTokenDamage, checkNearby, findNearby, getDistance, getTraitMult } from './module/utils';
@@ -70,6 +70,7 @@ export let cleanSpellName = (name) => {
 
 Hooks.once('init', async function() {
   console.log('midi-qol | Initializing midi-qol');
+  setupSocket();
   initHooks();
 	// Assign custom classes and constants here
 	
@@ -110,6 +111,7 @@ Hooks.once('setup', function() {
     CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
 
   if (configSettings.allowUseMacro) {
+    
     /*
     CONFIG.DND5E.characterFlags["AttackBonusMacro"] = {
       hint: i18n("midi-qol.AttackMacro.Hint"),
@@ -146,8 +148,9 @@ Hooks.once('ready', function() {
   setupMinorQolCompatibility();
 
   if (game.user.isGM && !installedModules.get("dae")) {
-    ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.2.43 or many automation effects won't work");
+    ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.2.61 or many automation effects won't work");
   }
+  checkSocketLibInstalled();
   checkCubInstalled();
   checkConcentrationSettings();
 
@@ -170,7 +173,7 @@ function setupMinorQolCompatibility() {
     TrapWorkflow,
     DamageOnlyWorkflow,
     Workflow,
-    configSettings,
+    configSettings: () => {return configSettings},
     ConfigPanel: ConfigPanel,
     getTraitMult: getTraitMult,
     doCritModify: doCritModify,
@@ -187,12 +190,19 @@ function setupMinorQolCompatibility() {
   }
 }
 
+export function checkSocketLibInstalled() {
+  if (game.user?.isGM && !installedModules.get("socketlib")) {
+    //@ts-ignore expected one argument but got 2
+    ui.notifications.error(i18n("midi-qol.NoSocketLib"), {permanent: true});
+  }
+}
+
 export function checkCubInstalled() {
   if (game.user?.isGM && configSettings.concentrationAutomation && !installedModules.get("combat-utility-belt")) {
     let d = new Dialog({
       // localize this text
-      title: i18n("dae.confirm"),
-      content: `<p>You have enabled midi-qol concentration automation. This requires that you install and activate Combat Utility Belt as well. Concentration Automation will be disalbed</p>`,
+      title: i18n("midi-qol.confirm"),
+      content: i18n("midi-qol.NoCubInstalled"), 
       buttons: {
           one: {
               icon: '<i class="fas fa-check"></i>',
@@ -358,7 +368,8 @@ function setupMidiFlags() {
     });
     midiFlags.push(`flags.midi-qol.DR.all`);
     midiFlags.push(`flags.midi-qol.DR.non-magical`);
-    Object.keys(CONFIG.DND5E.damageTypes).forEach(dt => {
+    midiFlags.push(`flags.midi-qol.DR.non-physical`);
+    Object.keys(CONFIG.DND5E.damageResistanceTypes).forEach(dt => {
       midiFlags.push(`flags.midi-qol.DR.${dt}`);  
     })
   }

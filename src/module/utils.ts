@@ -1,10 +1,12 @@
-import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled } from "../midi-qol";
+import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, midiFlags } from "../midi-qol";
 import { itemRollButtons, configSettings, autoRemoveTargets, checkRule } from "./settings";
 import { log } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
-import { broadcastData } from "./GMAction";
+// import { broadcastData } from "./GMAction";
+import { socketlibSocket } from  "./GMAction" ;
 import { installedModules } from "./setupModules";
 import { baseEvent } from "./patching";
+import { setupSheetQol } from "./sheetQOL";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -93,7 +95,7 @@ export async function getSelfTarget(actor) {
   return await Token.fromActor(actor);
 }
 
-export async function getSelfTargetSet(actor) {
+export async function getSelfTargetSet(actor): Promise<Set<Token>> {
   return new Set([await getSelfTarget(actor)])
 }
 
@@ -119,12 +121,17 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, exist
     var newTemp = tmp - dt;
     var newHP: number = Math.clamped(oldHP - (value - dt), 0, hp.max + (parseInt(hp.tempmax)|| 0));
   }
+  const altScene = getProperty(t.data.flags, "multilevel-tokens.sscene");
+  let sceneId = altScene ?? t.scene.id;
+  const altTokenId= getProperty(t.data.flags, "multilevel-tokens.stoken");
+  let tokenId = altTokenId ?? t.id;
 
   debug("calculateDamage: results are ", newTemp, newHP, appliedDamage, totalDamage)
   if (game.user.isGM) 
       log(`${a.name} ${oldHP} takes ${value} reduced from ${totalDamage} Temp HP ${newTemp} HP ${newHP} `);
-  return {tokenId: t.id, actorID: a._id, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
-          oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value};
+  // TODO change tokenId, actorId to tokenUuid and actor.uuid
+  return {tokenId, actorID: a._id, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
+          oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value, sceneId};
 }
 
 /* How to create additional flags 
@@ -141,6 +148,7 @@ Uncanny Dodge
 : improved saves/adv override abilitySave/Check and set event before rolling
 : damage mult for dex save?
 */
+
 /** 
  * Work out the appropriate multiplier for DamageTypeString on actor
  * If configSettings.damageImmunities are not being checked always return 1
@@ -154,13 +162,15 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   let totalMult = 1;
   if (configSettings.damageImmunities !== "none" && dmgTypeString !== "") {
     // if not checking all damage counts as magical
-    const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
+    const magicalDamage = (item?.type !== "weapon" 
+      || (item?.data.data.attackBonus > 0 && !configSettings.requireMagical) 
+      || item.data.data.properties["mgc"]);
     for (let {type, mult}  of [{type: "di", mult: 0}, {type:"dr", mult: 0.5}, {type: "dv", mult: 2}]) {
       let trait = actor.data.data.traits[type].value;
-      if (item?.type === "spell" && trait.includes("spell")) totalMult = totalMult * mult;
-      if (item?.type === "power" && trait.includes("power")) totalMult = totalMult * mult;;
       if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
-      if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
+      if (item?.type === "spell" && trait.includes("spell")) totalMult = totalMult * mult;
+      else if (item?.type === "power" && trait.includes("power")) totalMult = totalMult * mult;
+      else if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
     }
   }
   return totalMult;
@@ -205,21 +215,25 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
         for (let { damage, type } of damageDetail) {
           //let mult = 1;
           let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
-          if (superSavers.has(t)) {
-            mult = saves.has(t) ? 0 : getSaveMultiplierForItem(item);
-          }
+          if (superSavers.has(t) && getSaveMultiplierForItem(item) === 0.5) {
+            mult = saves.has(t) ? 0 : 0.5;
+          } 
           if (!type) type = MQdefaultDamageType;
           mult = mult * getTraitMult(a, type, item);
           let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
           if (type.toLowerCase() !== "temphp") dmgType = type.toLowerCase();
           //         let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
-          //@ts-ignore evaluate
-          let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).evaluate({async: false}).total;
-          if (["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
-            //@ts-ignore evaluate
-            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"))).evaluate({async:false}).total);
+          let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).roll().total;
+          if (DRType === 0 && ["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
+            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"), t.actor.getRollData())).roll().total);
             //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
+          } else if (DRType === 0 && ["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(t.actor.data, `flags.midi-qol.DR.physical`)) {
+            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.physical`) || "0"), t.actor.getRollData())).roll().total);
+            //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
+          } else if (DRType === 0 && !["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`), t.actor.getRollData()) {
+            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`) || "0"), t.actor.getRollData())).roll().total);
           }
+
           if (type.includes("temphp")) {
             appliedTempHP += typeDamage
           } else {
@@ -252,7 +266,6 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
       ditem.tempDamage = ditem.tempDamage + appliedTempHP;
       if (appliedTempHP <= 0) { // tmphealing applied to actor does not add only gets the max
         ditem.newTempHP = Math.max(ditem.newTempHP, -appliedTempHP);
-
       } else {
         ditem.newTempHP = Math.max(0, ditem.newTempHP - appliedTempHP)
       }
@@ -260,12 +273,22 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
       targetNames.push(t.name)
   }
   if (theTargets.size > 0) {
+    socketlibSocket.executeAsGM("createReverseDamageCard", {
+      autoApplyDamage: configSettings.autoApplyDamage,
+      sender: game.user.name,
+      damageList: damageList,
+      targetNames,
+      chatCardId: workflow.itemCardId,
+    })
+    /* TODO remove this when socketlib 100% solid
     let intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
     if (!intendedGM) {
       ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
       error("No GM user connected - cannot apply damage");
       return;
     }
+
+    
     broadcastData({
       action: "reverseDamageCard",
       autoApplyDamage: configSettings.autoApplyDamage,
@@ -275,6 +298,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
       targetNames,
       chatCardId: workflow.itemCardId
     });
+    */
   }
   if (configSettings.keepRollStats) {
     gameStats.addDamage(totalAppliedDamage, totalDamage, theTargets.size, item)
@@ -288,6 +312,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   let appliedDamage = [];
   const actor = workflow.actor;
   let item = workflow.item;
+
   // const re = /.*\((.*)\)/;
   // const defaultDamageType = message.data.flavor && message.data.flavor.match(re);
 
@@ -344,7 +369,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       superSavers: [workflow.superSavers, workflow.superSavers]
     });
   }
-workflow.damageList = appliedDamage;
+  workflow.damageList = appliedDamage;
   debug("process damage roll: ", configSettings.autoApplyDamage, workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves)
 }
 
@@ -373,10 +398,8 @@ export function requestPCSave(ability, rollType, player, actorId, advantage, fla
   const playerLetme = !player?.isGM && ["letme", "letmeQuery"].includes(configSettings.playerRollSaves);
   const gmLetme  = player.isGM && ["letme", "letmeQuery"].includes(configSettings.rollNPCSaves);
   if (player && installedModules.get("lmrtfy") && (playerLetme || gmLetme)) {
-    if (configSettings.speedAbilityRolls || (configSettings.playerRollSaves === "letmeQuery") || (configSettings.rollNPCSaves === "letme")) {
-/* TODO - if LMRTFY passes the actual event then change to 
-      if ((configSettings.playerRollSaves === "letmeQuery")) {
-*/        
+    if ((configSettings.playerRollSaves === "letmeQuery")) {
+    // TODO - reinstated the LMRTFY patch so that the event is properly passed to the roll
         advantage = 2;
     } else {
       advantage = (advantage ? 1 : 0);
@@ -439,8 +462,14 @@ export function untargetDeadTokens() {
 
 export function untargetAllTokens(...args) {
   let combat: Combat = args[0];
+  //@ts-ignore current
+  let prevTurn = combat.current.turn -1;
+  if (prevTurn === -1) 
+    prevTurn =  combat.turns.length - 1;
+
+  const previous = combat.turns[prevTurn];
   //@ts-ignore
-  if ((game.user.isGM && ["allGM","all"].includes(autoRemoveTargets)) || (autoRemoveTargets === "all" && canvas.tokens.controlled.find(t=>t.id === combat.previous?.tokenId))) {
+  if ((game.user.isGM && ["allGM","all"].includes(autoRemoveTargets)) || (autoRemoveTargets === "all" && canvas.tokens.controlled.find(t=>t.id === previous.tokenId))) {
     // release current targets
     game.user.targets.forEach(t => {
         //@ts-ignore
@@ -468,10 +497,10 @@ export function getDistance (t1, t2, wallblocking = false) {
   var x, x1, y, y1, d, r, segments=[], rdistance, distance;
   for (x = 0; x < t1.data.width; x++) {
     for (y = 0; y < t1.data.height; y++) {
-      const origin = new PIXI.Point(...canvas.grid.getCenter(t1.data.x + (canvas.dimensions.size * x), t1.data.y + (canvas.dimensions.size * y)));
+      const origin = new PIXI.Point(...canvas.grid.getCenter(Math.round(t1.data.x + (canvas.dimensions.size * x)), Math.round(t1.data.y + (canvas.dimensions.size * y))));
       for (x1 = 0; x1 < t2.data.width; x1++) {
           for (y1 = 0; y1 < t2.data.height; y1++){
-          const dest = new PIXI.Point(...canvas.grid.getCenter(t2.data.x + (canvas.dimensions.size * x1), t2.data.y + (canvas.dimensions.size * y1)));
+          const dest = new PIXI.Point(...canvas.grid.getCenter(Math.round(t2.data.x + (canvas.dimensions.size * x1)), Math.round(t2.data.y + (canvas.dimensions.size * y1))));
           const r = new Ray(origin, dest)
           if (wallblocking && canvas.walls.checkCollision(r)) {
             //Log(`ray ${r} blocked due to walls`);
@@ -490,6 +519,14 @@ export function getDistance (t1, t2, wallblocking = false) {
   rdistance = canvas.grid.measureDistances(segments, {gridSpaces:true});
   distance = rdistance[0];
   rdistance.forEach(d=> {if (d < distance) distance = d;});
+  if (configSettings.optionalRules.distanceIncludesHeight) {
+    let height = Math.abs((t1.data.elevation || 0) - (t2.data.elevation || 0))
+    if (canvas.grid.diagonalRule === "555") {
+      let nd = Math.min(distance, height);
+      let ns = Math.abs(distance - height);
+      distance = nd + ns;
+    } else distance = Math.sqrt(height * height + distance * distance);
+  }
   return distance;
 };
 
@@ -750,17 +787,55 @@ export function expireRollEffect(rollType: string, abilityId: string) {
     return false;
   }).map(ef=> ef.id);
   if (expiredEffects?.length > 0) {
+    socketlibSocket.executeAsGM("removeEffects", {
+      tokenId: ChatMessage.getSpeaker({actor: this}).token,
+      effects: expiredEffects,
+    })
+
+/* TODO remove this when socketlib 100% solid
     const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
     if (!intendedGM) {
       ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
       error("No GM user connected - cannot remove effects");
       return;
     }
+
     broadcastData({
       action: "removeEffects",
       tokenId: ChatMessage.getSpeaker({actor: this}).token,
       effects: expiredEffects,
       intendedFor: intendedGM.id
     });
+    */
   } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
+}
+
+export async function validTargetTokens(tokenSet: Set<Token>): Promise<Set<Token>> {
+  const multiLevelTokens = [...tokenSet].filter(t=>getProperty(t.data, "flags.multilevel-tokens"));
+  const nonLocalTokens = multiLevelTokens.filter(t => !canvas.tokens.get(t.data.flags["multilevel-tokens"].stoken))
+  let normalTokens =  [...tokenSet].filter(a=>a.actor);
+  // return new Set(normalTokens);
+  let tokenData;
+  let synthTokens = nonLocalTokens.map(t => {
+    const mlFlags = t.data.flags["multilevel-tokens"];
+    const scene = game.scenes.get(mlFlags.sscene);
+    //@ts-ignore .tokens not defined
+    const tData = scene.data.tokens.find(tdata => tdata._id === mlFlags.stoken);
+    if (tData) {
+      let baseActor = game.actors.get(tData.actorId);
+      let actorData = mergeObject(baseActor.data, t.data.actorData, {inplace: false})
+      t.actor = new Actor(actorData, {token: t});
+      // delete tokenData.flags["multilevel-tokens"];
+      // return new Token(tokenData, scene)
+      //const token = Token.create(tokenData, {temporary: true});
+      return t;
+    }
+    ui.notifications.error("Could not find ml source token")
+    return t;
+  });
+  // const testToken = await Token.create(tokenData, {temporary: true});
+
+  // const synthTokens = await Promise.all(synthTokenPromises);
+  //@ts-ignore synthTokens is of type Placeable[], not Token
+  return new Set(normalTokens.concat(synthTokens));
 }

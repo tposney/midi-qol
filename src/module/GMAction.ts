@@ -1,8 +1,11 @@
 import { configSettings } from "./settings";
 import { i18n, debug, error, log, undoDamageText, warn, gameStats } from "../midi-qol";
+import { installedModules } from "./setupModules";
 
+export var socketlibSocket = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
 
+/* TODO remove this when socketlib 100% solid
 const moduleSocket = "module.midi-qol";
 let processAction = async data => {
   switch (data.action) {
@@ -29,14 +32,40 @@ let processAction = async data => {
       return gameStats.GMremoveActorStats(data.actorId);
   }
 };
+*/
+export function removeEffects(data) {
+  const token = canvas.tokens.get(data.tokenId);
+  if (token) {
+    token.actor?.deleteEmbeddedEntity("ActiveEffect", data.effects)
+  }
+}
+
+export function removeActorStats(data) {
+  return gameStats.GMremoveActorStats(data.actorId)
+}
+
+export function GMupdateActor(data) {
+  return gameStats.GMupdateActor(data)
+}
 
 export let setupSocket = () => {
+  Hooks.once("socketlib.ready", () => {
+    //@ts-ignore
+    socketlibSocket = socketlib.registerModule("midi-qol");
+    socketlibSocket.register("createReverseDamageCard", createReverseDamageCard);
+    socketlibSocket.register("removeEffects", removeEffects);
+    socketlibSocket.register("updateActorStats", GMupdateActor)
+    socketlibSocket.register("removeActorStatsForActorId", removeActorStats);
+  });
+  
   //@ts-ignore
-  game.socket.on(moduleSocket, data => {
+/*  game.socket.on(moduleSocket, data => {
     processAction(data);
   });
+  */
 };
 
+/* TODO remove this once socketlib is 100%
 export function broadcastData(data) {
   data.sceneId = canvas.scene.id;
   // if not a gm broadcast the message to a gm who can apply the damage
@@ -47,14 +76,15 @@ export function broadcastData(data) {
     processAction(data);
   }
 }
-
+*/
 export function initGMActionSetup() {
   traitList.di = i18n("DND5E.DamImm");
   traitList.dr = i18n("DND5E.DamRes");
   traitList.dv = i18n("DND5E.DamVuln");
-  setupSocket();
 }
 
+//TODO change token ID to token.uuid
+// Fetch the token, then use the tokenData.actor.id
 let createReverseDamageCard = async (data) => {
   let whisperText = "";
   const damageList = data.damageList;
@@ -68,32 +98,28 @@ let createReverseDamageCard = async (data) => {
     damageList: [] ,
     needsButtonAll: false
   };
-  for (let { tokenId, actorID, oldHP, oldTempHP, tempDamage, hpDamage, totalDamage, appliedDamage } of damageList) {
+  for (let { tokenId, actorID, oldHP, oldTempHP, newTempHP, tempDamage, hpDamage, totalDamage, appliedDamage, sceneId } of damageList) {
     let scene = canvas.scene;
     token = canvas.tokens.get(tokenId);
+    let tokenData;
     if (!token) { //Token does not exist on this scene, find it in on referenced scene.
-      scene = game.scenes.get(data.sceneId);
+      scene = game.scenes.get(sceneId);
       //@ts-ignore .tokens not defined
-      const tokenData = scene.data.tokens.find(t=>t._id === tokenId);
+      tokenData = scene.data.tokens.find(t=>t._id === tokenId);
       if (!tokenData) {
         // we really should be able to fine the token
         error(`GMAction: could not find token ${tokenId} in scene ${scene?.name || data.sceneId}`);
         continue;
       }
-      token = await Token.create(tokenData); // create a temp token for calcs
+      // token = await Token.create(tokenData, {temporary: true}); // create a temp token for calcs
     }
-    actor = token.actor;
-    const hp = actor.data.data.attributes.hp;
+    actor = token?.actor;
+    // const hp = actor.data.data.attributes.hp;
  
-    if (tempDamage > oldTempHP) {
-      var newTempHP = 0;
-      hpDamage += (tempDamage - oldTempHP)
-    } else {
-      var newTempHP = oldTempHP - tempDamage;
-    }
     let newHP = Math.max(0, oldHP - hpDamage);
-    if (data.intendedFor === game.user.id && ["yes", "yesCard"].includes(data.autoApplyDamage)) {
-      if (token.data.actorLink || canvas.scene.id === scene.id) {
+    // removed intended for check
+    if (["yes", "yesCard"].includes(data.autoApplyDamage)) {
+      if (token?.data.actorLink || canvas.scene.id === scene.id) {
         if (newHP !== oldHP || newTempHP !== oldTempHP)  {
           promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damgeApplied": appliedDamage}));
         }
@@ -116,29 +142,37 @@ let createReverseDamageCard = async (data) => {
     }
     
     tokenIdList.push({ tokenId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP});
-
+    let img = token?.data.img || token?.actor.img || tokenData.img;
+    //@ts-ignore
+    if (configSettings.usePlayerPortrait && token?.actor.data.type === "character")
+      img = token.actor?.img || token?.data.img || tokenData.img;
+    if ( VideoHelper.hasVideoExtension(img) ) {
+      //@ts-ignore - createThumbnail not defined
+      img = await game.video.createThumbnail(img, {width: 100, height: 100});
+    }
+    
     let listItem = {
       tokenId: tokenId,
-      tokenImg: token.data.img,
+      tokenImg: img,
       hpDamage,
-      tempDamage,
+      tempDamage: newTempHP - oldTempHP,
       totalDamage: Math.abs(totalDamage),
       halfDamage: Math.abs(Math.floor(totalDamage / 2)),
       doubleDamage: Math.abs(totalDamage * 2),
       appliedDamage,
       absDamage: Math.abs(appliedDamage),
-      tokenName: token.name && configSettings.useTokenNames ? token.name : token.actor.name,
+      tokenName: token?.name && configSettings.useTokenNames ? token.name : (token?.actor.name || tokenData.name),
       dmgSign: appliedDamage < 0 ? "+" : "-", // negative damage is added to hit points
       newHP,
       newTempHP,
       oldTempHP,
       oldHP,
-      buttonId: token.id
+      buttonId: tokenId
     };
 
     ["di", "dv", "dr"].forEach(trait => {
-      const traits = actor.data.data.traits[trait]
-      if (traits.custom || traits.value.length > 0) {
+      const traits = actor?.data.data.traits[trait]
+      if (traits?.custom || traits?.value.length > 0) {
         listItem[trait] = (`${traitList[trait]}: ${traits.value.map(t => CONFIG.DND5E.damageResistanceTypes[t]).join(",").concat(" " + traits?.custom)}`);
       }
     });

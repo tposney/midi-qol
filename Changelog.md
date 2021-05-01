@@ -1,13 +1,66 @@
-0.3.96
+## 0.3.102
+* Updated ja.json - thanks @Brother Sharpo
+
+## 0.3.101
+* Fix for super savers and cantrips.
+* Implement height difference as optional rule in distance calculations. Does not work for AoE templates.
+* Rakish Audacity add cha modifier to initiative rolls as an active effect.
+* Fix for fr.json having the wrong text for "no damage on save" which meant lots of spells could end up being no damage on save spells erroneously.
+* Fix for critical flag processing.
+* Added @lookups for flags.midi-qol.DR (i.e. @prof etc)
+* Added support for attacks against multi-level tokens whose source token is on another scene. Only damage works, no effects application. If the original token is also present on the scene the attack will fail. Also CUB breaks when applying statuses to multi-level
+* Fix override of item.damageRoll snaffling the options parameter.
+
+## 0.3.100
+* Fix for data.traits.dr.all double counting resistance to spells.
+* Added flags.midi-qol.DR.non-physical damage reduction, for damage which is not bludgeoning,slasing or piercing.
+* [BREAKING] added dependency on socketlib
+* fix for damage card not displaying webm icons.
+* Updated DamageOnlyWorkflow to support damage types in the roll passed, i.e.  
+```
+2d10[radiant] + 1d10[fire]  
+```
+will pick up the correct damage types. Any terms that have no damage attached will be treated as the default damage type.
+* Check nearby foe setting now accepts a distance in scene units, rather than a check box. Intended for those playing metric unit worlds. Defaults to 5 units if previously enabled. 0 disables.
+* Updated rakish audacity in compendium to align with a midi-qol change. 
+* Added option to use character portrait in chat log messages instead of token image. Applies to actors of type "character" only.
+
+## 0.3.99
+* [BREAKING] requires DAE 0.2.61
+* Fix for temp healing adding to temphp instead of being max of current and new.
+* Fix for non-merge card display of item damage/healing roll.
+* New setting, if set, requires the magical property of a weapon to be set for damage to be considered magical even if the weapon has a bonus to hit.
+* New Setting, remove concentration on failed save when concentration automation enabled. When taking damage and failing a save concentration will be removed, if unset the save is still rolled and reported, but concentration will not be automatically removed.
+* [BREAKING] Changed MidiQOL.configSettings to a function that returns the current settings, i.e. MidiQOL.configSettings(). 
+* Fix for sw5e power scaling.
+* Fix for critical damage modification when there are additional critical damage dice.
+
+## 0.3.98
+* Fix a TrapWorkflow bug that would loop if there was a save with no damage.
+* Fix untargetAll at end of turn to untarget at the end of the turn instead of the start of your turn.
+* Fix for speed keys in skill rolls when flags.midi-qol set for some skill.
+* Moved the check for expired special duration effects (isAttacked/isDamaged) to before dynamic effects are applied. This should stop effects applied via an attack and expiring when attacked from expiring immediately on application.
+
+## 0.3.97
+* Fix for LMRTFY and advantage for player rolls.
+* If LMRTFY + query is set and auto fast forward ability rolls is set the LMRTFY adv/dis dialog will not bSe displayed, but accelerator keys will be processed.
+* Fix edge case for saves card not being displayed to GM.
+* Updated es.json - thanks @WallaceMcGregor
+* Updated ja.json - thanks @Brother Sharp
+* Tidied Changelog - thanks José Joaquín Bocanegra
+
+## 0.3.96
 * Fix for ammo consumption on drag/drop targeting.
 * Fix for temphp ONLY spells not applying temphp healing.
 * Support for DR + DV to the same damage type. Damage immunity takes precedence over the others.
 * Fix for flags.midi-qol.fail.critical.all/flags.midi-qol.fail.critical.mwak/rwak.... auto complete text
 * Fix for ranged AoE not working with type creature when require targets is set.
-0.3.95
+
+## 0.3.95
 * Fix for rollstats causing player does not have permission to update setting error. Thanks @KephalosThoth
 * Show saving throw DC to GM even if display DC is disabled.
-0.3.94
+
+## 0.3.94
 * Fix for accelerator keys not working with better rolls and midi-qol.
 * Fix for LMRTFY and speed rolls.
 * Fix for sw5e powers/scaling.
@@ -19,18 +72,23 @@
 * Removed support for modifying critical damage if workflow automation not enabled.
 * Fix for custom damage types not being displayed on damage rolls.
 * Updated ja.json - thanks @Brother Sharp
-0.3.93
+
+## 0.3.93
 * Added check for concentration when using a non-spell that requires concentration.
 * Fix for better rolls saving throws not being processed as saves.
 * Added additional d20 mode to ONLY show the d20 attack roll, all other roll details are hidden. Only works with merge card enabled.
-0.3.92
+
+## 0.3.92
 * Support for concentration for non-spells. Put "Concentration" in the activation conditions field and using the item will cause concentration to be added to the caster and any active effects applied by the item will be linked to concentration.  
-0.3.91
+
+## 0.3.91
 * Fix for onUseMacros being called twice.
 * Export of showItemCard and showItemInfo methods for macro writers.
-0.3.90
+
+## 0.3.90
 * Fix for special durations not working
-0.3.89
+
+## 0.3.89
 * New optional rule to only choose the best Damage Reduction instead of adding all damage reductions together when applying damage.
 * Optional rules work with better rolls. There is a "problem" that if a rule blocks a roll you will get a libWrapper warning. This has no impact on the result, but can be annoying.
 * Expanded special durations  to includes skill checks and ability tests. All of these trigger when the roll is made, whether you are attacked or not. Save Success and Save Failure only trigger is you are attacked and need to make a save as a consequnce of that.
@@ -39,21 +97,27 @@
 * Added option for onUseMacros to return {haltEffectsAppication: true} to prevent active effects being applied.
 * Added templateId to arguments passed to onUse/DamageBonus macros in case they want to do something with it.
 * updated ja.json - thanks @Brother Sharp
-0.3.88
+
+## 0.3.88
 Fixed a bug that failed to roll an item if you are not displaying the chat card, not using the merge card but were attempting to fast forward rolls.  
-0.3.87
+
+## 0.3.87
 Fix for failing 0 targets when creature target specified and require targets not set.  
 Added DamageDealt special duration, expires when the actor does damage.  
 Fix for midi & better rolls 1.4.0 not displaying critical hits correctly, damage dealt was correct.  
 Fix for mid & better rolls 1.4.0 not displaying saving throw results on merge card.  
-0.3.86
+
+## 0.3.86
 support for better rolls 1.4. If you are using better rolls and have updated to 1.4 you need to upgrade midi-qol  
-0.3.85  
+
+## 0.3.85  
 updated en.json  
-0.3.84  
+
+## 0.3.84  
 * Fix for error in tidy sheet version checking.  
 * Fix for tempHp and spell scaling
-0.3.83
+
+## 0.3.83
 * updated sneak attack item
 * Fix for ability saves/checks/skill use advantage settings.
 * Updated midi-qol to use libWrapper shim. Using libWrapper is strongly recommended and is the configuration that is tested.
@@ -78,14 +142,17 @@ If you are just using standard items you can just leave things at the defualt an
 
 For those who have a lot of weapons set up with a save and want the default damage on save to be full damage (which is what a pervious version enabled when search spell description was enabled) just edit the items and set the save to full damage save (preferred) or set the default save multiplier to 1;
 
-0.3.82 fix for saves not working if speed rolls not enabled.
-0.3.81
+
+## 0.3.82 fix for saves not working if speed rolls not enabled.
+
+## 0.3.81
 * Clean up keyboard hadling for saves/checks/skill rolls to align with the rest of the midi key settings. See the readme.md for more details.
 * catch a couple of edge cases that were throwing some errors.
 [removed] [BREAKING] If better rolls is enabled there is a new workflow option. Item roll starts workflow, which if enabled will allow MagicItems spells to work as normal, applying damage etc BUT better rolls item buttons (standard roll etc) will not work as intended. If disabled better rolls item buttons will work as intended but MagicItems spells will not do any auto rolls but better rolls buttons will function as intended. You can't have both, default is disabled.
 * [BREAKING] Removed preRollChecks setting. All features of that setting can be enabled from the optional rules settings page.
 * [UNBREAKING] for AoE spells (measured template placed) default behaviour is that caster WILL be targeted. Only if the range units field is set to "Special" will the caster be ignored. This means items from the SRD will work as written.
-0.3.80
+
+## 0.3.80
 [removed] [BREAKING] Measured templates now target the caster ONLY if range has type "any", othewise the csater won't be targeted by the AoE template.
 * Added special durations for specific daamage type, expires if the target takes damage of the specific type.  
 * Added special duration isSave. Effect expires if the character makes a saving throw in response to an item usage against it. Also added ability type specific expiry on save.  
@@ -97,10 +164,13 @@ Not really sure how useful the ability/dagmage type expriry options but at least
 * Force set on Use Macro when concentration automation is enabled so that the checks will actually do something.
 * Support for better rolls 5e 1.3.11. Quite a lot changed under the hood. midi-qol advantage/disadvantage flags and optional rules should work with better rolls now. If you don't update to this version of midi-qol then concentration automation fails with 1.3.11.
 
-0.3.78/79 Better rolls compatibility fixes
-0.3.77
+
+## 0.3.78/79 Better rolls compatibility fixes
+
+## 0.3.77
 * Tweak to nearby foes disadvantage check. If using a thrown weapon within 5ft of the target, assume that the weapon is not thrown.
-0.3.76
+
+## 0.3.76
 * updated cn.json thanks Mitch Hwang
 * Fixed a bug I could have sworn I already fixed in TrapWorkflow not getting the right token for spell casting purposes. Resulted in AOE spells not targeting the token that triggered the trap.
 * Cleaned up better rolls button handling to avoid fetching the item/actor when rendering the chat card.
@@ -127,19 +197,23 @@ As well as x,y position and direction you can now specify a delay in real time s
   * See the Readme.md for more details.
 * Slight tweak to Sneak Attack. Added a feature "auto sneak attack" which causes the sneak attack feature to get rolled as soon as possible without showing a dialog. Requires you to load the updated sneak attack. If the auto sneak attack feature is removed, or the effect disabled, the dialog will show prompting to use sneak attack.
 
-0.3.75
+
+## 0.3.75
 remove accidental debug left in.
 
-0.3.74
+
+## 0.3.74
 * More work on range checking when casting. Range checks now occur before consuming a spell slot/rolling item card.
 * Localisation Support for new text strings in damage card.
 
-0.3.73
+
+## 0.3.73
 updated cn.json, thanks Mitch Hwang.
 updated ja.json, thanks to Brother Sharp and @louge
 * Fix for reapplying midi-qol calculated values - oops.
 * change to chat damage buttons, hopefully more readable.
-0.3.72 
+
+## 0.3.72 
 * Fix for better rolls processing of criticals, was deciding critical when it shouldn't.
 * Fix for disavantage due to nearby foes on ranged attacks.
 * Added advantage/disadvantage display for all saving throws, not just magic resistant ones.
@@ -158,7 +232,8 @@ updated ja.json, thanks to Brother Sharp and @louge
 So if the damage was 18 hit points and resistances reduced that to 9, the MQoL multiplier will apply 9 points, the 1X 18, the 2X 36 and the heal will heal the character of 18 points of damage.
 * **Many thanks to @Engranado for providing this.**
 
-0.3.71
+
+## 0.3.71
 * bugfix in sneak attack damage application.
 * Cleaned up range check when attacking, returns disadvantage when above short range and shorter than long range.
 * Added a handful of optional rules on a new options tab, mainly for automated advantage/disadvantage. Consider them experimental. And more will come.
@@ -168,7 +243,8 @@ So if the damage was 18 hit points and resistances reduced that to 9, the MQoL m
 * Added additional parameter (tag) to onUse and damageBonus macros args[0] data, which is "OnUse" when called via onUse macro fields and "DamageBonus" when called via damageBonusMacro.
 * update ko.json, thanks @KLO
 
-0.3.70
+
+## 0.3.70
 * Cleaned up display when re-rolling dmage from an existing card. No longer displays old damage on the card while waiting for the roll.
 * Provided support for having both bonus damage and rollOtherDamage for things like bite poison damage. If on the merge card both will appear as separate lines, otherwise separate cards.
 * Fixed hit and save display ignorind show to gm/player settings for non-merged card rolls.
@@ -188,13 +264,16 @@ So if the damage was 18 hit points and resistances reduced that to 9, the MQoL m
   * Support for damageBonusMacro. Damage will appear as a spearate card.
   * Critical hit, advantage and disadvantage are populated from the Better Rolls card so whould more accurately represent the better rolls data.
 
-0.3.69
+
+## 0.3.69
 Added advantage/disadvantage to data passed to onUse/Damage bonus macros.
-0.3.68
+
+## 0.3.68
 * A small rearrangement of the onuse/damagebonus macro calling.
 * export of midi-qol.getDistance(t1, t2, wallsBlock: boolean). Which will return the straight line distance between two tokens allowing for tokens larger than size 1.
 * "Fix" for placing rectangular templates and auto targeting, now treats the origin of the template as the center of the template for checking blocking walls. Fixes and incompatibility with dnd5e helpers that replaces circle templates with equivlently size rectangular templates.
-0.3.67
+
+## 0.3.67
 * Checking you have tokens targeted now checks the number of tokens targeted.A target type of creature will use the number specified in the spell details and defaults to unlimitted if not specified.
 * An addition to TrapWorkflow. Instead of taking {x: xpos, y: ypos}, it will now accept {x: xpos, y: ypos, direciton: rotation_angle_degrees} for placed templates. Previously direction was hard coded to 0 degrees.
 * search spell description is now a case insensitive check and handles "&" escaped utf-8 characters in the description.
@@ -256,12 +335,15 @@ if (args[0].tag === "OnUse") {
 }
 ```
 The macro above are sufficient to implement all of the features of hunter's mark. To change targets simply cast again, but don't consume a spell slot.
-0.3.66
+
+## 0.3.66
 Put back config option to roll Other/Versatile damage on failed save for rwak/mwak.
-0.3.65
+
+## 0.3.65
 update ja.json thanks @louge
 Fix for TrapWorkflow targets not being set
-0.3.64
+
+## 0.3.64
 * Added flags.midi-qol.superSaver.all/dex/str etc. If set, then saves against the specified ability do 0/0.5 damage instead of 0.5/1 times the damage. Meant for things like rogues evasion. Apply with an active effect and it will apply, failed save+effect = 1/2 damage, save+effect = 0 damage.
 * Fixed a bug in concentration check that 0 damage Other/Versatile damage caused a second concentration check.
 * Allowed GM to decide if spider bite, (piercing damage + save against poison damage) causes 1 or 2 concentration checks.
@@ -271,7 +353,8 @@ Fix for TrapWorkflow targets not being set
 * Re-organised the config settings into a different disorganised layout.
 Please update DAE as well.
 
-0.3.63
+
+## 0.3.63
 * A couple of fixes for sw5e.
 * Updated ja.json thanks @louge
 * A new option for hiding DM attck rolls (only works with the merged card). "Show Attack D20", players will only see the d20 result, not the roll total, so they get a feel of how good the monster is. This simulates what the players could see at the table (i.e. see the dice roll) but not know what the total is. Otherwise this option behaves the same as Hide Rol Fomula.
@@ -313,12 +396,14 @@ Features: (see the full change log for more details).
 * Better rolls support is limited (and possibly buggy). There is no query for existing concentration, existing concentration is simply removed.
 * For the name replacement on midi hit/save cards I have implemented what I guess the funcitonality to be. But I have created the behaviour from scratch so might have missed something.
 
-0.3.62
+
+## 0.3.62
 * Fix bug for over zealously removing damage buttons. 
 * Fix for damage only workflow so that useOther defaults to true.
 * Fix for BetterRolls self targeted spells not working.
 * Fix for BetterRolls not checking isAttacked/isDamaged expiry
-0.3.61
+
+## 0.3.61
 * Fix bug not displaying tool item details.
 * Fix bug for over zealously removing damage buttons.
 * Fix bug in applying damage on auto rolled other damage not including base damage in calculation.
@@ -330,7 +415,8 @@ Features: (see the full change log for more details).
 * Fix for rolling items if no scene exists in the world.
 * Fix for not displaing damage total when 0 damage was rolled.
 
-0.3.60
+
+## 0.3.60
 * Now requires dnd5e/sw5e 1.2.3 or later.
 * Fix for critical key not being detected for some damage rolls.
 * Fix with perfect-vision to not infinte loop.
@@ -340,17 +426,22 @@ Features: (see the full change log for more details).
 * startNextTurn/endNextTurn expiry moved to times-up.
 * Implement 5/5/5 distance calcs for ranged area trgeting.
 
-0.3.59
+
+## 0.3.59
 Fix for rwak/mwak and applying Other/versatile damage always rolling something even if no Other or versatile damage (it would roll the weapon damage again)
-0.3.58
+
+## 0.3.58
 Fix for 0.3.57 release bug.
 Fix for trap worfklow not fastforwarding.
-0.3.57
+
+## 0.3.57
 Fix for self targeted attack/action/hit durations. This required quite a few changes in the workflow so it's possible some cases are not covered so be warned.
-0.3.56
+
+## 0.3.56
 * Extended the rwak/mwak + saving throw functionality. If the item has "Other" filled in, midi will roll that for the save damage, otherwise it will roll the versatile damage. This change means it should work out of the box with SRD monsters.
 * Fix for damage buttons on the item card.
-0.3.55 Bugfix release
+
+## 0.3.55 Bugfix release
 * fix for LMRTFY override to fix libWrapper problem.
 * fix for Other rolls sometimes not displaying saving throws.
 * [BREAKING] Change to remove buttons settings to configure attack/damage buttons for GM/Player. You need to reset the settings.
@@ -364,7 +455,8 @@ Fix for self targeted attack/action/hit durations. This required quite a few cha
 ```
   new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "piercing", [target], damageRoll, {flavor: "Giant Slayer bonus damage", damageList: args[0].damageList, itemCardId: args[0].itemCardId});
 ```
-0.3.54 Some big QOL changes in this release. Some significant changes under the hood, so DO NOT UPGRADE on game day.
+
+## 0.3.54 Some big QOL changes in this release. Some significant changes under the hood, so DO NOT UPGRADE on game day.
 * fix for advantage from flags.midi-qol.advantage.attack.str/dex on weapons with default ability settings.  Will now check finesse property if ability set to default.  
 * Added an apply dynamic effects button which will apply effects to the targeted tokens when pressed.
 
@@ -386,16 +478,19 @@ One obvious use case is that if you auto roll everything, adv-dis the roll to ge
 
 * Support for "Spell Damage" resistance type (resistance/immunity/vulnberability). Any damage from an item of type "spell" will be checked against this resistance/immmunity/vulnerability and if present will change the damage by a factor of 0.5/0/2. You can only get one such multiplier per category, so resistance to "Spell Damage" and Fire will result in a single 0.5 multiplier. The is useful for things like Aura of Warding.  
 This is separate to the existing magic resistance support, which gives advantage on saving throws, which remains unchanged.
-0.3.53
+
+## 0.3.53
 * Improve/Fix advantage/disadvantage on roll buttons when you have flags that set both advantage and disadvantage. Once you have something that sets advantage and disadvantage the roll will always be done as a normal roll.
 * Fix for LMRTFY always rolling with advantage if you change the speed roll settings.
 * Fix for LMRTFY to recognise adv/dis keys if you request a LMRTFY+Query roll.
 * Improve critical damage display on buttons. The hit/miss card will display the raw result of the roll and the button will display the expected critical status after any flags are applied. So they may not be the same.
 * If you want to override the critical button you need to bring up the dialog and choose critical/normal from the dialog, i.e. not fast forward roll.
 * Small fix for onUseMacro to pass through critical key status in args[0].isCritical
-0.3.52
+
+## 0.3.52
 Fix for versatile button MIA.
-0.3.51
+
+## 0.3.51
 * Fix for error being thrown for items that do not have a damage roll.  
 [BREAKING] If the action type for an item is blank (so that the damage rolls are not displayed when edited) then no damage button will be displayed/rolled.  
 * Yet more advantage/disadvantage/critical changes/improvements (sorry, but hopefully this is the last one).  
@@ -415,7 +510,8 @@ If you do not auto roll an attack or damage roll the fast forward status will be
 
 I'm sure there will be some workflow that someone uses for whom the changes are utterly unbearable, so feel free to let me know (they work for me).
 
-0.3.50
+
+## 0.3.50
 * Fix for damage buttons not being added for non-merge card damage cards.
 * Fix some cases of errors being thrown when first loading and canvas not initialised.
 * Fix for versatile damage button being displayed when not required.
@@ -423,13 +519,15 @@ I'm sure there will be some workflow that someone uses for whom the changes are 
 * Fix for incorrectly displaying advantage/disadvantage on chat card if user selects something else from the damage dialog.
 * Fix for blind rolls being completely hidden forever.
 * Fix for GM rollNPCSaves set to LMRTFY and player set to auto roll not causing roll to not be completed.
-0.3.49
+
+## 0.3.49
 * Revamped DM roll flags (again), due to the various interactions that people had with the workflow settings. There are now 4 gm settings:
   * GM Auto Roll Attack: If true the attack roll will be auto rolled for the GM if set.
   * GM Auto fast forward attack rolls: If true the GM attack rolls will be auto fastforarded. Key modifiers are supported.
   * GM Auto Roll Damage. Options are never, attack hits, always.
   * GM Auto Fast Forward damage: If true roll will be auto fast forwarded. Will pick up whether the attack was critical or not and will recongnise critical and No critical keys if the roll was not auto rolled.
-0.3.48
+
+## 0.3.48
 * More tinkering with dadmage critical rolls. If an attack is critical and damage rolls are auto fastforwarded it will use the critical status from the attack roll.
 * If not auto rolling damage rolls and auto fast forwarding damage rolls pressing the disadvantage key (ctrl by default) will force the roll to be a normal roll.  
 As always there are likely to be some workflow behaviours that I have not tested so ping me if there are any problems.
@@ -438,13 +536,15 @@ As always there are likely to be some workflow behaviours that I have not tested
 * [BREAKING] removal of the midi-qol created magical flag for weapons - it is now created by default in dnd5e 1.2.1. It appears the properties have the same id so it should mvoe across seamlessly.
 * release of dnd5e 1.2.1 fixed an issue when rolling critical damage via the standard damage dialog. The roll will correctly be rolled as critical if selected. This should fix the issue with modifying critical damage according to the midi-qol settings.
 * Support for GM LMRTFY save option, which does a LMRTFY + query for NPC saves to the GM. This allows the GM to specify advantage/disadvantage if not auto fastforwarding saves. 
-0.3.47
+
+## 0.3.47
 * Added it.json thanks @Simone [UTC +1]#6710   
 * Fix for flags.midi-qol advantage and speed keys being selected.
 * Set spellLevel in rollDamage() call correctly.
 * support for tidysheet-5e new version config setting
 * private rolls by GM no longer show the dice to the players.
-0.3.46
+
+## 0.3.46
 * Removed Formula + DSN option from hide roll details. Hiding the roll formula will disable DSN dice on non-gm clients.
 * Fix for not displaying hit details on non-combo cards  
 First implementation of critical damage flags.  
@@ -467,47 +567,58 @@ If there is a single target (which has the effect) and the attack hit, upgrade t
 * flags.midi-qol.fail.critical.mwak/rwak/msak/rsak/other   
 Cause attack on the target to not be critical. (Think adamanitne armor)  
 
-0.3.45  
+
+## 0.3.45  
 DSN fix (I hope).  
 Support for new tidysheet5e (0.4.0+)  
-0.3.44  
+
+## 0.3.44  
 Fix for some libwrapper incompatibilities.
 Fix for multilevel tokens throwing an error
 
-0.3.43  
+
+## 0.3.43  
 * Fix for spell scaling not working if not auto rolling damage.  
 * Fix for AOE magic items spells throwing an error.   
 * Fix for ammo damage after libwrapper installed.
 * Included merge request to refrain from deleting non-special duration effects at combat end. Thanks @DangereosrDan.  
 The first 2 fixes required a change to how keyboard event processing is done. As far as I can tell there are no problems, but there are too many workflow variations for me to test them all, so a bug (or many) is possible.  
 Don't update just before game time.
-0.3.42  
+
+## 0.3.42  
 fix for versatile shortcut being ignored.  
-0.3.41  
+
+## 0.3.41  
 fix for spell scaling not working  
 fix for item roll errors when initially rolling - broken universe etc (I hope)  
-0.3.40  
+
+## 0.3.40  
 * Fix for trapworkflow calling onUse macro twice.  
 * Some more clean up of crtical/advantage settings in workflows. Dont pass an event, use optins values  
 * Fix for modifying critical damage on all workflow paths  
 Fix for perfect vision incompatibility thanks to the module author for the fix.
 Deprecation notice: The player controls invisible tokens setting will be removed in a subsequent release since the "conditional visibility" module does a much better job.  
-0.3.39  
+
+## 0.3.39  
 * updated ja.json thanks @touge  
 * fix for auto fast forward ability rolls setting being ignored.  
-0.3.38
+
+## 0.3.38
 * fix for sw5e and saving throws  
 * Add flavor text in item card.  
-0.3.37
+
+## 0.3.37
 * fix for breaking token-action-hud  
-0.3.36
+
+## 0.3.36
 * added flags.midi-qol.advantage.deathSave, added flags.midi-qol.disadvantage.deathSave, and death saves also look at flags.midi-qol.(dis)advantage.all
 * fix for LMRTFY and speed item roll mappings.
 * fix for change from actor.useSpell changes and upscaling of spells.
 * use new item.getSaveDC() for spell saves.
 * added a new paramter to item.roll({createWorkflow: true}). If you se this to false when calling item.roll a workflow will not be initiated - useful if you have macros that do a complete roll and you don't want midi-qol to start automation for the item roll.
 
-0.3.35
+
+## 0.3.35
 * fixed a bug with speed rolls/auto check saves that caused the attacking player to be prompted for the save type for NPCs.
 * added support for configurable list of items that have item details displayed
 * added current token's tokenId as argument to onUseMacro data.
@@ -525,7 +636,8 @@ Example: Guiding Bolt. Start wi th the SRD guiding bolt spell
 ```
   * Now when you cast the spell at a target and hit, the effect will be applied that grants advantage on the next attack.
 
-0.3.34
+
+## 0.3.34
 * Slight fix to self targets, should now work without targeting self
 * added flags.midi-qol.advantage.attack.dex/str/wis etc to give advantage on dex/str/wis etc mwak/rwak
 * added flags.midi-qol.disadvantage.attack.dex/str/wis etc to give disadvantage on dex/str/wis etc mwak/rwak
@@ -549,7 +661,8 @@ Example: Guiding Bolt. Start wi th the SRD guiding bolt spell
 * Know Bugs: critical roll modifications do not preserve damage types from bonuses.
 
 
-0.3.33
+
+## 0.3.33
 * Added a new flags.midi-qol.DR which implements damage reduction, i.e. reduce incoming damage by a fixed amount
 flags.midi-qol.DR.all - all incoming damage
 flags.midi-qol.DR.non-magical - non-magical bludgeoning/slashing/piercing
@@ -567,7 +680,8 @@ These flags can be set by active effects and are evaluated after derived fields 
 * Added Hooks.callAll("midi-qol.DamageRollComplete", workflow) after damage has been applied.
 * updated de.json thanks @acd-jake
 
-0.3.32
+
+## 0.3.32
 Add damage all/restore all buttons to damage card.
 Hightlight/select enabled for damage card as well as hits card.
 Fix for trap workflow not fastforwarding damage rolls
@@ -575,8 +689,10 @@ Don't error if target token has no actor data.
 Added a "No Damage" damage type for spells like sleep where the applied damage is always 0.
 Fix for crit-key = shift causing all spells without an attack to roll crit damage
 Process events passed to item.roll({event}), which got dropped by mistake
-0.3.31
-0.3.30
+
+## 0.3.31
+
+## 0.3.30
 * Fix bug in critical damage roll handling of "max base damage".
 * Improve, but not completely fix, case of odd number of dice in critical rolls and max crit damage. 
 * Correctly pass critical key to feats/spells that do not have an attack roll.
@@ -600,13 +716,16 @@ let damageRoll = new Roll(`${numDice}d8`).roll();
 if (args[0].isCritical) damageRoll = MidiQOL.doCritModify(damageRoll);
 new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[0].itemCardId})
 ```
-0.3.29
+
+## 0.3.29
 Fix bug for trap workflow and better rolls workflow when no event passed to constructor.
-0.3.28
+
+## 0.3.28
 * Fixed a bug in damage processing with negative modifiers (i.e. bonus/situational bonus) when applying damage. (negative mods turn positive)
 * Fixed a bug in chat damage buttons (similar to above)
 * Ensure that damage dealt can never be negative and end up incorrectly healing the target.
-0.3.27
+
+## 0.3.27
 * Auto fail on ability check flows through to skill rolls for dependent skills.
 * Fix for altKey undefined on skill checks and no speedRolls.
 * Fix for saves prompting user for adv/disadv/normal when no speed rolls enabled.
@@ -616,23 +735,27 @@ Fix bug for trap workflow and better rolls workflow when no event passed to cons
   flags.midi-qol.fail.spell.vocal fail casting of spells with vocal components (intended for silenced characters0)
   flags.midi-qol.fail.spell.somatic - perhaps useful for restratined characters or some such.
   flags.midi-qol.fail.spell.material (Can't think when this might be used but added it for completeness)
-0.3.26
+
+## 0.3.26
 Fix for consuming last of a consumable when not using automation.
 Fix for rejecting spell cast when no target selected even if there is nothing to target.
 Added speedAbilityRolls flag which applies your speed item rolls settings to ability rolls and skill rolls.
 Added info button to inventory buttons - just shows item info.
-0.3.25
+
+## 0.3.25
 * Ability check advantage/disadvantage now apply to skills based on the ability as well. (I'm told that's how it should be)
 * added ability to give attack advantage/disadvantage on attacks (only works for midi-qol generated attacks - not better rolls)
  flags.midi-qol.grants.advantage.all  
  flags.midi-qol.grants.advantage.attack,all
  flags.midi-qol.grants.advantage.attack.mwak/rwak/msak/rsak
  and similarly for disadvantage.
-0.3.24
+
+## 0.3.24
 * added flags.midi-qol.fail.skill..... support
 * corrected behaviour so that having both advantage and disadvantage for a roll will cancel out to be a normal roll.
 * updated ko.json thanks @KLO
-0.3.23
+
+## 0.3.23
 * Support settings config permissions from user permissions, i.e. trusted players instead of only GM ussers.
 * Blind rolls no longer show the hits card except to the GM.
 * Don't prompt for critical/normal damage in TrapWorkflow.
@@ -662,14 +785,18 @@ flags.midi-qol.fail.ability.save.dex fail dex saves
 flags.midi-qol.fail.ability.check.dex fail dex check  
 Currently no named field support in DAE, but any active effect can set the flag (i.e. CUB/DAE/Macro or can be permanent on the actor via actor.setFlag). 
   
-0.3.22
+
+## 0.3.22
 * Added option for GM to auto fastword rolls always, ignoring the rest of the module settings. Intended for GMs who want their players to hit the various roll buttons but skip for their rolls. 
 * updated ko.json thans @KLO
-0.3.21
+
+## 0.3.21
 * Fix for ignoring speed keys when not auto fast-forwarding rolls.
-0.3.19/3.20
+
+## 0.3.19/3.20
 Fix for broken saving throws
-0.3.18
+
+## 0.3.18
 * Added drag and drop targeting. If you drag a spell/weapon to a target token the token will be targeted and the attack rolled, as if you had targeted and rolled from the character sheet. Thanks to @grape
 * Hopefully fix the chat log scroll problem?
 * Really hide rolls no longer hides legitimate whisper messages.
@@ -689,24 +816,32 @@ Fix for broken saving throws
                 damageTotal: the total damage applied
                 damageDetail: an array of the damage detail, amount and type
 This should make adding special weapon/spell effects actions much easier.
-0.3.17
+
+## 0.3.17
 * Fix for merge cards and dice so nice immediately display card.
 * See owned hidden tokens. When token is hidden does not emit light - this is on purpose and contrary to dnd5e spell. Give them a torch token if you want to.
 * Some changes to support times-up
-0.3.15/0.3.16 oops
+
+## 0.3.15/0.3.16 oops
+
 ## 0.3.14
 * reinstate token vision for invisible tokens - EXPERIMENTAL.
 * Some more error checking for "impossible" situations
+
 ## 0.3.13
 Fix for a bad bug in application of DAE effects when dynamic effects not installed.
+
 ## 0.3.12
 Yet another fix for speed mappings. Should finally squash the ctrlKey error and any saved data problems.
+
 ## 0.3.11
 * Fix for broken key mapping editing and aligned control|Cmd since on some mac keyboards ctrl-click does not work, use CMD click instead.
 * Fix for saving throws beind displayed even if you asked them not to be.
+
 ## 0.3.10
 Fix for bug with better rolls and ctl/alt etc handling.
 Include updated cn.json
+
 ## 0.3.9
 * Rework of ctl/alt/shift keys:
 If speed rolls are off, all of the ctl|cmd/alt/shift keys and roll behaviour behave the same as in core. There is one additional feature, if you click on a damage button in chat, CTRL+ALT click will use the critical/normal hit status from the midi-qol roll data.
@@ -733,6 +868,7 @@ will pass the target token id, the spell cast level, and the item card id to the
 new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target], damageRoll, {itemCardId: args[3]})
 ```
 
+
 ## 0.3.8
 * Fix thrown error in chatMessage handling when looking at author.
 * Some changes to make midi-qol work with SW5e.
@@ -743,21 +879,26 @@ new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [targe
 Known Bugs:
 Player control invisible tokens not working. **DO NOT USE**
 
+
 ## 0.3.7
 * Fix for dice so nice 3d dice rolling and combo card message display.
 * Support iten.roll({versatile: boolean}) as an option for midi-qol to roll versatile attacks, useful for macro writers who want to trigger a midi-qol workflow.
 * Allow midi-qol combo cards to be popped out from chat. Only the first attack/damage for the card will trigger a workflow with auto rolls and damage application, so damage application will require you to use the chat damage buttons for subsequent rolls.
 * Change the default damage type to "none" instead of healing. Healing spells seem to be correct now, so it might be safe to go back to none. If your healing spells start doing damage, check the damage type specified (not the action type since midi-qol only looks at the damage type)
 
+
 ## 0.3.6
 clean up some debug messaging
 fixed a bug in critical roll changes (0.7.0+) for default critical damage
+
 ## 0.3.5
 * Order settings into non-alphabetical order (for 0.7.3+). Slight rearrangement of settings.
 * Add enable workflow toggle for those who just want features from the main module settings. If disabled none of the settings on the workflow config page will be active.
 * Enable critical hit calculation in 0.7.2+ for combo cards and auto apply damage.
+
 ## 0.3.4
 a few little bug fixes
+
 ## 0.3.3
 * It turns out there is a bug in midi-qol and better rolls for hidden/blind/private rolls when using the combo card. There are 2 solutions,
 1. Don't use the combo card
@@ -767,12 +908,15 @@ a few little bug fixes
 * If you are hiding roll details from the players and using dice-so-nice 3d dice a smart player can examine the dice rolled and deduce the aggregate pluses from the dice rolled compared to the dice total displayed. In 0.3.3 if roll details are to be hidden then the dice rolled on the players screen will be random meaning they cannot deduce the actual pluses from the 3d dice. This may confuse some players who see a d20 roll of 6 but it is reported as a critical. I'll take feedback on this feature to see if it is generally useful.
 * Added getTraitMult as an export to midi-qol.
 * removed default debug level of warn, it is now set by the module settings.
+
 ## 0.3.2
 very little bug fix release for damage-only workflows
+
 ## 0.3.1
 Port minor-qol pre-roll chakecs to midi-qol. Checks for attack range and incapacity.
 Fix auto targeting for ranged spells/attacks.
 Fix for temporary hp healing.
+
 ## 0.3.0
 * fix for better rolls and hiding cards incorrectly.
 * re-organize trap workflow to request saves before rolling damage

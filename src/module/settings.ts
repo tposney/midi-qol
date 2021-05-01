@@ -43,6 +43,7 @@ export var configSettings = {
   autoRollDamage: "none",
   autoApplyDamage: "none",
   damageImmunities: "none",
+  requireMagical: false,
   autoItemEffects: null,
   rangeTarget: null,
   playerRollSaves: "none",
@@ -69,16 +70,19 @@ export var configSettings = {
   gmRemoveButtons: "all", 
   concentrationAutomation: false,
   singleConcentrationRoll: true,
+  removeConcentration: true,
   optionalRulesEnabled: false,
   itemRollStartWorkflow: false,
+  usePlayerPortrait: false,
   optionalRules: {
     invisAdvantage: true,
     checkRange: true,
-    nearbyFoe: true,
+    nearbyFoe: 5,
     nearbyAllyRanged: 4,
     incapacitated: true,
     removeHiddenInvis: true,
-    maxDRValue: false
+    maxDRValue: false,
+    distanceIncludesHeight: false
   },
   keepRollStats: false,
   saveStatsEvery: 20,
@@ -107,12 +111,20 @@ export let fetchParams = (silent = false) => {
     configSettings.optionalRules = {
       invisAdvantage: true,
       checkRange: true,
-      nearbyFoe: true,
+      nearbyFoe: 5,
       nearbyAllyRanged: 4,
       incapacitated: true,
       removeHiddenInvis: true,
-      maxDRValue: false
+      maxDRValue: false,
+      distanceIncludesHeight: false
     }
+  }
+  if (typeof configSettings.optionalRules.nearbyFoe !== "number") {
+    if (configSettings.optionalRules)
+      configSettings.optionalRules.nearbyFoe = 5;
+    else
+      configSettings.optionalRules.nearbyFoe = 0;
+
   }
   configSettings.itemRollStartWorkflow = false;
   //@ts-ignore typeLabels
@@ -210,7 +222,7 @@ const settings = [
   {
     name: "CriticalDamage",
     scope: "world",
-    choices: {default: "DND5e default", maxDamage:  "base max only", maxCrit: "max critical dice", maxAll: "max all dice"},
+    choices: {default: "DND5e default", maxDamage:  "base max only", maxCrit: "max critical dice", maxAll: "max all dice", doubleDice: "double dice value"},
     default: "default",
     type: String,
     onChange: fetchParams

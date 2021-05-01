@@ -1,6 +1,7 @@
 import { error, gameStats, i18n } from "../midi-qol";
 import { RollStatsDisplay } from "./apps/RollStatsDisplay";
-import { broadcastData } from "./GMAction";
+// import { broadcastData } from "./GMAction";
+import { socketlibSocket } from "./GMAction";
 import { configSettings } from "./settings";
 
 function fetchStats() {
@@ -138,6 +139,10 @@ export class RollStats {
     await game.settings.set("midi-qol", "RollStats", {})
   }
   async clearActorStats(actorId: string) {
+    socketlibSocket.executeAsGM("removeStatsForActorId", {
+      actorId: actorId,
+    })
+/* TODO remove this when socketlib 100% solid
     const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
     if (!intendedGM) {
       ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
@@ -149,6 +154,7 @@ export class RollStats {
       actorId: actorId,
       intendedFor: intendedGM.id
     });
+*/
   }
 
   GMremoveActorStats(actorId) {
@@ -207,18 +213,26 @@ export class RollStats {
   }
 
   public updateActor({actorId}) {
+    socketlibSocket.executeAsGM("updateActorStats", {
+      actorId: actorId,
+      currentStats: gameStats.currentStats[actorId],
+    })
+
+/* TODO remove this when socketlib 100% solid
     const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
     if (!intendedGM) {
       ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
       error("No GM user connected - cannot update roll stats");
       return;
     }
+
     broadcastData({
       action: "updateActorStats",
       actorId: actorId,
       currentStats: gameStats.currentStats[actorId],
       intendedFor: intendedGM.id
     });
+    */
   }
 
   public async GMupdateActor({actorId, currentStats}) {

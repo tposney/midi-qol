@@ -5,6 +5,7 @@ import { expireRollEffect, testKey } from "./utils";
 import { installedModules } from "./setupModules";
 import { libWrapper } from "./lib/shim.js";
 
+var d20Roll;
 
 function restrictVisibility() {
   // Tokens
@@ -220,11 +221,11 @@ function procAdvantageSkill(actor, skillId, options: Options): Options {
   var withDisadvantage = options.disadvantage;
   if (advantage?.skill) {
     const rollFlags = advantage.skill
-    withAdvantage = advantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId]);
+    withAdvantage = withAdvantage || advantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId]);
   }
   if (disadvantage?.skill) {
     const rollFlags = disadvantage.skill
-    withDisadvantage = disadvantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId])
+    withDisadvantage = withDisadvantage || disadvantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId])
   }
   options.advantage = withAdvantage && !withDisadvantage;
   options.disadvantage = withDisadvantage && ! withAdvantage;
@@ -303,13 +304,13 @@ export function _makeRoll(event, rollMethod, ...args) {
   let options;
   switch(this.advantage) {
       case -1: 
-        options = {disadvantage: true};
+        options = {disadvantage: true, fastForward: true};
         break;
       case 0:
-        options = {fastforward: true};
+        options = {fastForward: true};
         break;
       case 1:
-        options = {advantage: true};
+        options = {advantage: true, fastForward: true};
         break;
       case 2: 
         options = {event: event}
