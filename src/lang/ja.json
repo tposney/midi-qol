@@ -2,7 +2,7 @@
     "midi-qol.ItemDeleteCheck.Name": "アイテム削除時に確認を行う",
     "midi-qol.ItemDeleteCheck.Hint": "キャラクターシートからなにかを削除しようとしたときに確認画面が表示されるようになります。",
     "midi-qol.DamageImmunities.Name": "ダメージ耐性を適用する",
-    "midi-qol.DamageImmunities.Hint": "上記のダメージボタンを使用したときや、ダメージの自動処理が行われるとき、対象の耐性・脆弱性・抵抗を確認し、適切なダメージを適用します。すべてのダメージ種別が対象となります。「呪文の説明文を検索する」がオンの場合、呪文の説明文を参照してセーヴ時の半減ダメージを適用します。",
+    "midi-qol.DamageImmunities.Hint": "上記のダメージボタンを使用したときや、ダメージの自動処理が行われるとき、対象の耐性・脆弱性・抵抗を確認し、適切なダメージを適用します。すべてのダメージ種別が対象となります。",
     "midi-qol.SpeedItemRolls.Name": "一括ロールを使用する（攻撃/ダメージ）",
     "midi-qol.SpeedItemRolls.Hint": "攻撃・ダメージ・セーヴなどのロールを自動化します。これによりCtrl（Cmd）/ Alt / Shiftの各修飾キーに機能が割り当てられます。自動化の範囲はワークフロー設定でカスタマイズできます。",
     "midi-qol.SpeedAbilityRolls.Name": "一括ロールを使用する（セーヴ/スキル/能力値判定）",
@@ -226,5 +226,9 @@
     "midi-qol.ItemRollStartWorkflow.Name": "常にワークフローを開始する（BetterRolls5e）",
     "midi-qol.ItemRollStartWorkflow.Hint": "有効にした場合、Magic Itemsの呪文は正しく動作しますが、BetterRollsのアイテムボタンは機能しません。無効にすると、Magic Itemsの呪文は正しく動作しませんが、BetterRollsのアイテムボタンが機能します。両立はできません。",
     "midi-qol.DefaultSaveMult.Name": "標準のセーヴィング・スロー倍率",
-    "midi-qol.DefaultSaveMult.Hint": "セーヴを伴う攻撃おいて、その成功時に元のダメージにかかる基本の減少倍率を指定します。デフォルトは0.5で、つまりセーヴ成功時は半減ダメージとなります。変更はこれら倍率の仕組みについて理解のうえで行ってください。"
+    "midi-qol.DefaultSaveMult.Hint": "セーヴを伴う攻撃おいて、その成功時に元のダメージにかかる基本の減少倍率を指定します。デフォルトは0.5で、つまりセーヴ成功時は半減ダメージとなります。変更はこれら倍率の仕組みについて理解のうえで行ってください。",
+    "midi-qol.RequireMagical.Name": "魔法ダメージには“魔法的”プロパティが必要",
+    "midi-qol.RequireMagical.Hint": "有効にすると、“魔法的”プロパティが設定された武器のみが魔法ダメージを与えるようになります。",
+    "midi-qol.RemoveConcentration.Name": "セーヴ失敗時の集中自動解除",
+    "midi-qol.RemoveConcentration.Hint": "被ダメージ時のセーヴに失敗すると、精神集中状態が自動で解除されます。"
 }

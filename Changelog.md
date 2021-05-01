@@ -1,3 +1,6 @@
+## 0.3.102
+* Updated ja.json - thanks @Brother Sharpo
+
 ## 0.3.101
 * Fix for super savers and cantrips.
 * Implement height difference as optional rule in distance calculations. Does not work for AoE templates.
@@ -5,7 +8,7 @@
 * Fix for fr.json having the wrong text for "no damage on save" which meant lots of spells could end up being no damage on save spells erroneously.
 * Fix for critical flag processing.
 * Added @lookups for flags.midi-qol.DR (i.e. @prof etc)
-* Added support for attacks against multi-level tokens whose source token is on another scene. Only damage works, no effects application. If the original token is also present on the scene the attack will fail. Also CUB breaks when applying statuses to multi-level tokens.
+* Added support for attacks against multi-level tokens whose source token is on another scene. Only damage works, no effects application. If the original token is also present on the scene the attack will fail. Also CUB breaks when applying statuses to multi-level
 * Fix override of item.damageRoll snaffling the options parameter.
 
 ## 0.3.100
