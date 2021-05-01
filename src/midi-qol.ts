@@ -150,6 +150,7 @@ Hooks.once('ready', function() {
   if (game.user.isGM && !installedModules.get("dae")) {
     ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.2.61 or many automation effects won't work");
   }
+  checkSocketLibInstalled();
   checkCubInstalled();
   checkConcentrationSettings();
 
@@ -189,12 +190,19 @@ function setupMinorQolCompatibility() {
   }
 }
 
+export function checkSocketLibInstalled() {
+  if (game.user?.isGM && !installedModules.get("socketlib")) {
+    //@ts-ignore expected one argument but got 2
+    ui.notifications.error(i18n("midi-qol.NoSocketLib"), {permanent: true});
+  }
+}
+
 export function checkCubInstalled() {
   if (game.user?.isGM && configSettings.concentrationAutomation && !installedModules.get("combat-utility-belt")) {
     let d = new Dialog({
       // localize this text
-      title: i18n("dae.confirm"),
-      content: `<p>You have enabled midi-qol concentration automation. This requires that you install and activate Combat Utility Belt as well. Concentration Automation will be disalbed</p>`,
+      title: i18n("midi-qol.confirm"),
+      content: i18n("midi-qol.NoCubInstalled"), 
       buttons: {
           one: {
               icon: '<i class="fas fa-check"></i>',

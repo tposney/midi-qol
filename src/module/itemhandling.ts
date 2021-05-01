@@ -16,7 +16,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
 
   if (workflow.workflowType === "Workflow") {
-    workflow.targets = (this.data.data.target?.type === "self") ? new Set(await getSelfTargetSet(this.actor)) : validTargetTokens(game.user.targets);
+    workflow.targets = (this.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : await validTargetTokens(game.user.targets);
     if (workflow.attackRoll) { // we are re-rolling the attack.
       workflow.damageRoll = undefined;
       await Workflow.removeAttackDamageButtons(this.id)
@@ -82,7 +82,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
 
   if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
-    workflow.targets = validTargetTokens(game.user.targets);
+    workflow.targets = await validTargetTokens(game.user.targets);
   }
   if (!result) { // attack roll failed.
     error("Itemhandling rollAttack failed")
@@ -95,12 +95,12 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   return result;
 }
 
-export async function doDamageRoll(wrapped, { event = null, spellLevel = null, versatile = null } = {}) {
+export async function doDamageRoll(wrapped, { event = null, spellLevel = null, powerLevel = null, versatile = null, options = {} } = {}) {
   let workflow = Workflow.getWorkflow(this.id);
   if (!enableWorkflow || !workflow) {
     if (!workflow)
       warn("Roll Damage: No workflow for item ", this.name);
-    return await wrapped({ event, versatile })
+    return await wrapped({ event, versatile, options })
   }
   const midiFlags = workflow.actor.data.flags["midi-qol"]
   if (workflow.currentState !== WORKFLOWSTATES.WAITFORDAMAGEROLL) {
@@ -140,6 +140,7 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, v
   workflow.processDamageEventOptions(event);
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
+  if (powerLevel) workflow.rollOptions.spellLevel = powerLevel;
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
   warn("rolling damage  ", this.name, this);
 
@@ -193,7 +194,7 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, v
     if (game.system.id === "dnd5e") {
       actionFlavor = game.i18n.localize(this.data.data.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
     } else {
-      const actionFlavor = game.i18n.localize(this.data.data.actionType === "heal" ? "SW5E.Healing" : "SW5E.DamageRoll");
+      actionFlavor = game.i18n.localize(this.data.data.actionType === "heal" ? "SW5E.Healing" : "SW5E.DamageRoll");
     }
 
     const title = `${this.name} - ${actionFlavor}`;
@@ -249,23 +250,24 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
   const isRangeSpell = configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget && configSettings.autoTarget;
+  const myTargets = await await validTargetTokens(game.user.targets);
   let shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
-    || (validTargetTokens(game.user.targets).size > 0) // there are some target selected
+    || (myTargets.size > 0) // there are some target selected
     || (this.data.data.target?.type === "self") // self target
     || isAoESpell // area effectspell and we will auto target
     || isRangeSpell // rangetarget and will autotarget
     || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
 
-  if (configSettings.requireTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && validTargetTokens(game.user.targets).size === 0) shouldAllowRoll = false;
+  if (configSettings.requireTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && myTargets.size === 0) shouldAllowRoll = false;
   // only allow weapon attacks against at most the specified number of targets
   let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9099) ?? 9999
   let speaker = ChatMessage.getSpeaker({ actor: this.actor });
   // do pre roll checks
   if (checkRule("checkRange")) {
-    if (speaker.token && checkRange(this.actor, this, speaker.token, validTargetTokens(game.user.targets)) === "fail")
+    if (speaker.token && checkRange(this.actor, this, speaker.token, myTargets) === "fail")
       return;
   }
-  if (game.system.id === "dnd5e" && configSettings.requireTargets && validTargetTokens(game.user.targets)> allowedTargets) {
+  if (game.system.id === "dnd5e" && configSettings.requireTargets && myTargets.size > allowedTargets) {
     shouldAllowRoll = false;
     ui.notifications.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
     warn(`${game.user.name} ${i18nFormat("midi-qol.midi-qol.wrongNumberTargets", { allowedTargets })}`)
@@ -321,7 +323,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return;
   }
 
-  const targets = (this?.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : validTargetTokens(game.user.targets);
+  const targets = (this?.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : myTargets;
 
   let workflow: Workflow;
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
@@ -551,11 +553,11 @@ export function getTargetedTokens(scene, data, selfTarget) {
       shape = templateDetails._getRayShape(direction, distance, width);
   }
   return canvas.tokens.placeables.filter(t => {
-    if (!t.actor) return false;
+    if (!t.actor && !getProperty(t.data.flags, "multilevel-tokens")) return false;
     if (selfTarget === t.id) return false;
     t = canvas.tokens.get(t.id);
     // skip special tokens with a race of trigger
-    if (t.actor.data?.data.details.race === "trigger") return false;
+    if (t.actor?.data?.data.details.race === "trigger") return false;
     const w = t.width >= 1 ? 0.5 : t.data.width / 2;
     const h = t.height >= 1 ? 0.5 : t.data.height / 2;
     const gridSize = canvas.scene.data.grid;
@@ -595,7 +597,7 @@ export function selectTargets(scene, data, options) {
     return true;
   }
   if (targeting === "none") { // this is no good
-    Hooks.callAll("midi-qol-targeted", validTargetTokens(game.user.targets));
+    Hooks.callAll("midi-qol-targeted", this.targets);
     return true;
   }
   if (!data) return true;
@@ -608,8 +610,8 @@ export function selectTargets(scene, data, options) {
     getTargetedTokens(scene, data, selfTarget)
     // Assumes area affect do not have a to hit roll
     this.saves = new Set();
-    this.targets = validTargetTokens(game.user.targets);
-    this.hitTargets = validTargetTokens(game.user.targets);
+    this.targets = game.user.targets;
+    this.hitTargets = game.user.targets;
     this.templateData = data;
     return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
   }, 250);

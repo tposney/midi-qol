@@ -1,3 +1,13 @@
+## 0.3.101
+* Fix for super savers and cantrips.
+* Implement height difference as optional rule in distance calculations. Does not work for AoE templates.
+* Rakish Audacity add cha modifier to initiative rolls as an active effect.
+* Fix for fr.json having the wrong text for "no damage on save" which meant lots of spells could end up being no damage on save spells erroneously.
+* Fix for critical flag processing.
+* Added @lookups for flags.midi-qol.DR (i.e. @prof etc)
+* Added support for attacks against multi-level tokens whose source token is on another scene. Only damage works, no effects application. If the original token is also present on the scene the attack will fail. Also CUB breaks when applying statuses to multi-level tokens.
+* Fix override of item.damageRoll snaffling the options parameter.
+
 ## 0.3.100
 * Fix for data.traits.dr.all double counting resistance to spells.
 * Added flags.midi-qol.DR.non-physical damage reduction, for damage which is not bludgeoning,slasing or piercing.
@@ -9,7 +19,7 @@
 ```
 will pick up the correct damage types. Any terms that have no damage attached will be treated as the default damage type.
 * Check nearby foe setting now accepts a distance in scene units, rather than a check box. Intended for those playing metric unit worlds. Defaults to 5 units if previously enabled. 0 disables.
-* Updated rakish audacity in compendium to align with a midi-qol change. Also add cha modifier to initiative rolls as an active effect.
+* Updated rakish audacity in compendium to align with a midi-qol change. 
 * Added option to use character portrait in chat log messages instead of token image. Applies to actors of type "character" only.
 
 ## 0.3.99

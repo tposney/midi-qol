@@ -83,6 +83,8 @@ export function initGMActionSetup() {
   traitList.dv = i18n("DND5E.DamVuln");
 }
 
+//TODO change token ID to token.uuid
+// Fetch the token, then use the tokenData.actor.id
 let createReverseDamageCard = async (data) => {
   let whisperText = "";
   const damageList = data.damageList;
@@ -96,27 +98,28 @@ let createReverseDamageCard = async (data) => {
     damageList: [] ,
     needsButtonAll: false
   };
-  for (let { tokenId, actorID, oldHP, oldTempHP, newTempHP, tempDamage, hpDamage, totalDamage, appliedDamage } of damageList) {
+  for (let { tokenId, actorID, oldHP, oldTempHP, newTempHP, tempDamage, hpDamage, totalDamage, appliedDamage, sceneId } of damageList) {
     let scene = canvas.scene;
     token = canvas.tokens.get(tokenId);
+    let tokenData;
     if (!token) { //Token does not exist on this scene, find it in on referenced scene.
-      scene = game.scenes.get(data.sceneId);
+      scene = game.scenes.get(sceneId);
       //@ts-ignore .tokens not defined
-      const tokenData = scene.data.tokens.find(t=>t._id === tokenId);
+      tokenData = scene.data.tokens.find(t=>t._id === tokenId);
       if (!tokenData) {
         // we really should be able to fine the token
         error(`GMAction: could not find token ${tokenId} in scene ${scene?.name || data.sceneId}`);
         continue;
       }
-      token = await Token.create(tokenData); // create a temp token for calcs
+      // token = await Token.create(tokenData, {temporary: true}); // create a temp token for calcs
     }
-    actor = token.actor;
-    const hp = actor.data.data.attributes.hp;
+    actor = token?.actor;
+    // const hp = actor.data.data.attributes.hp;
  
     let newHP = Math.max(0, oldHP - hpDamage);
     // removed intended for check
     if (["yes", "yesCard"].includes(data.autoApplyDamage)) {
-      if (token.data.actorLink || canvas.scene.id === scene.id) {
+      if (token?.data.actorLink || canvas.scene.id === scene.id) {
         if (newHP !== oldHP || newTempHP !== oldTempHP)  {
           promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damgeApplied": appliedDamage}));
         }
@@ -139,10 +142,10 @@ let createReverseDamageCard = async (data) => {
     }
     
     tokenIdList.push({ tokenId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP});
-    let img = token.data.img || token.actor.img;
+    let img = token?.data.img || token?.actor.img || tokenData.img;
     //@ts-ignore
-    if (configSettings.usePlayerPortrait && token.actor.data.type === "character")
-      img = token.actor?.img || token.data.img;
+    if (configSettings.usePlayerPortrait && token?.actor.data.type === "character")
+      img = token.actor?.img || token?.data.img || tokenData.img;
     if ( VideoHelper.hasVideoExtension(img) ) {
       //@ts-ignore - createThumbnail not defined
       img = await game.video.createThumbnail(img, {width: 100, height: 100});
@@ -158,18 +161,18 @@ let createReverseDamageCard = async (data) => {
       doubleDamage: Math.abs(totalDamage * 2),
       appliedDamage,
       absDamage: Math.abs(appliedDamage),
-      tokenName: token.name && configSettings.useTokenNames ? token.name : token.actor.name,
+      tokenName: token?.name && configSettings.useTokenNames ? token.name : (token?.actor.name || tokenData.name),
       dmgSign: appliedDamage < 0 ? "+" : "-", // negative damage is added to hit points
       newHP,
       newTempHP,
       oldTempHP,
       oldHP,
-      buttonId: token.id
+      buttonId: tokenId
     };
 
     ["di", "dv", "dr"].forEach(trait => {
-      const traits = actor.data.data.traits[trait]
-      if (traits.custom || traits.value.length > 0) {
+      const traits = actor?.data.data.traits[trait]
+      if (traits?.custom || traits?.value.length > 0) {
         listItem[trait] = (`${traitList[trait]}: ${traits.value.map(t => CONFIG.DND5E.damageResistanceTypes[t]).join(",").concat(" " + traits?.custom)}`);
       }
     });

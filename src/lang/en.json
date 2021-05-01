@@ -130,7 +130,7 @@
     "midi-qol.autoRollDamageOptions": {"none": "Never", "always":  "Always", "onHit": "Attack Hits"},
     "midi-qol.autoApplyDamageOptions": {"none": "No", "noCard": "No + damage card", "yes": "Yes", "yesCard": "Yes + damage card"},
     "midi-qol.removeButtonsOptions": {"off": "Off", "attack": "Attack Only", "damage": "Damage Only", "all": "Attack and Damage"},
-    "midi-qol.damageImmunitiesOptions": {"none": "Never", "immunityDefult": "apply immuniites", "immunityPhysical": "apply immunities + physical"},
+    "midi-qol.damageImmunitiesOptions": {"none": "Never", "immunityDefault": "apply immunities", "immunityPhysical": "apply immunities + physical"},
     "midi-qol.showItemDetailsOptions": {"none": "None", "cardOnly": "Card Only", "pc": "Card + Details: PC Only", "all": "Card + Details: NPC + PC"},
     "midi-qol.rollNPCSavesOptions": {"auto": "Auto",  "letme": "Let Me Roll That For You"},
     "midi-qol.playerRollSavesOptions": {"none": "None",  "letme": "Let Me Roll That For You", "letmeQuery": "LMRTFY + Query", "chat": "Chat Message"},
@@ -232,5 +232,10 @@
     "midi-qol.RemoveConcentration.Name": "Remove concentration on failed save",
     "midi-qol.RemoveConcentration.Hint": "If enabled concentration will be removed on a failed save when damage taken otherwise must be removed manually",
     "midi-qol.UsePlayerPortrait.Name": "Use Actor portrait in chat cards",
-    "midi-qol.UsePlayerPortrait.Hint": "For Actors of type charactrer use the actor portrait instead of the token image in midi-qol chat cards"
+    "midi-qol.UsePlayerPortrait.Hint": "For Actors of type charactrer use the actor portrait instead of the token image in midi-qol chat cards",
+    "midi-qol.DistanceIncludesHeight.Name": "Include height difference in distance calcs",
+    "midi-qol.NoSocketLib": "Midi-qol requires socketlib installed and enabled",
+    "midi-qol.NoCubInstalled": "You have enabled midi-qol concentration automation. This requires that you install and activate Combat Utility Belt as well. Concentration Automation will be disalbed.",
+    "midi-qol.confirm": "Confirmation Dialog"
+
 }

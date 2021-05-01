@@ -93,7 +93,7 @@ export async function getSelfTarget(actor) {
   return await Token.fromActor(actor);
 }
 
-export async function getSelfTargetSet(actor) {
+export async function getSelfTargetSet(actor): Promise<Set<Token>> {
   return new Set([await getSelfTarget(actor)])
 }
 
@@ -119,12 +119,17 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, exist
     var newTemp = tmp - dt;
     var newHP: number = Math.clamped(oldHP - (value - dt), 0, hp.max + (parseInt(hp.tempmax)|| 0));
   }
+  const altScene = getProperty(t.data.flags, "multilevel-tokens.sscene");
+  let sceneId = altScene ?? t.scene.id;
+  const altTokenId= getProperty(t.data.flags, "multilevel-tokens.stoken");
+  let tokenId = altTokenId ?? t.id;
 
   debug("calculateDamage: results are ", newTemp, newHP, appliedDamage, totalDamage)
   if (game.user.isGM) 
       log(`${a.name} ${oldHP} takes ${value} reduced from ${totalDamage} Temp HP ${newTemp} HP ${newHP} `);
-  return {tokenId: t.id, actorID: a._id, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
-          oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value};
+  // TODO change tokenId, actorId to tokenUuid and actor.uuid
+  return {tokenId, actorID: a._id, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
+          oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value, sceneId};
 }
 
 /* How to create additional flags 
@@ -208,20 +213,23 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
         for (let { damage, type } of damageDetail) {
           //let mult = 1;
           let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
-          if (superSavers.has(t)) {
-            mult = saves.has(t) ? 0 : getSaveMultiplierForItem(item);
-          }
+          if (superSavers.has(t) && getSaveMultiplierForItem(item) === 0.5) {
+            mult = saves.has(t) ? 0 : 0.5;
+          } 
           if (!type) type = MQdefaultDamageType;
           mult = mult * getTraitMult(a, type, item);
           let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
           if (type.toLowerCase() !== "temphp") dmgType = type.toLowerCase();
           //         let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
           let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).roll().total;
-          if (["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
-            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"))).roll().total);
+          if (DRType === 0 && ["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
+            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"), t.actor.getRollData())).roll().total);
             //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
-          } else if (!["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`)) {
-            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`) || "0"))).roll().total);
+          } else if (DRType === 0 && ["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(t.actor.data, `flags.midi-qol.DR.physical`)) {
+            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.physical`) || "0"), t.actor.getRollData())).roll().total);
+            //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
+          } else if (DRType === 0 && !["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`), t.actor.getRollData()) {
+            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`) || "0"), t.actor.getRollData())).roll().total);
           }
 
           if (type.includes("temphp")) {
@@ -237,7 +245,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
           // TODO: consider mwak damage redution
         }
       }
-      const DR = Math.clamped(0, appliedDamage, (new Roll((getProperty(t.actor.data, "flags.midi-qol.DR.all") || "0"), a.getRollData())).roll().total);
+      const DR = Math.clamped(0, appliedDamage, (new Roll((getProperty(t.actor.data, "flags.midi-qol.DR.all") || "0"), t.actor.getRollData())).roll().total);
 //      const DR = parseInt(getProperty(t.actor.data, "flags.midi-qol.DR.all")) || 0;
       if (checkRule("maxDRValue"))
         DRTotal = Math.max(DRTotal, DR)
@@ -267,7 +275,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
       sender: game.user.name,
       damageList: damageList,
       targetNames,
-      chatCardId: workflow.itemCardId
+      chatCardId: workflow.itemCardId,
     })
     /* TODO remove this when socketlib 100% solid
     let intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
@@ -486,10 +494,10 @@ export function getDistance (t1, t2, wallblocking = false) {
   var x, x1, y, y1, d, r, segments=[], rdistance, distance;
   for (x = 0; x < t1.data.width; x++) {
     for (y = 0; y < t1.data.height; y++) {
-      const origin = new PIXI.Point(...canvas.grid.getCenter(t1.data.x + (canvas.dimensions.size * x), t1.data.y + (canvas.dimensions.size * y)));
+      const origin = new PIXI.Point(...canvas.grid.getCenter(Math.round(t1.data.x + (canvas.dimensions.size * x)), Math.round(t1.data.y + (canvas.dimensions.size * y))));
       for (x1 = 0; x1 < t2.data.width; x1++) {
           for (y1 = 0; y1 < t2.data.height; y1++){
-          const dest = new PIXI.Point(...canvas.grid.getCenter(t2.data.x + (canvas.dimensions.size * x1), t2.data.y + (canvas.dimensions.size * y1)));
+          const dest = new PIXI.Point(...canvas.grid.getCenter(Math.round(t2.data.x + (canvas.dimensions.size * x1)), Math.round(t2.data.y + (canvas.dimensions.size * y1))));
           const r = new Ray(origin, dest)
           if (wallblocking && canvas.walls.checkCollision(r)) {
             //Log(`ray ${r} blocked due to walls`);
@@ -508,6 +516,14 @@ export function getDistance (t1, t2, wallblocking = false) {
   rdistance = canvas.grid.measureDistances(segments, {gridSpaces:true});
   distance = rdistance[0];
   rdistance.forEach(d=> {if (d < distance) distance = d;});
+  if (configSettings.optionalRules.distanceIncludesHeight) {
+    let height = Math.abs((t1.data.elevation || 0) - (t2.data.elevation || 0))
+    if (canvas.grid.diagonalRule === "555") {
+      let nd = Math.min(distance, height);
+      let ns = Math.abs(distance - height);
+      distance = nd + ns;
+    } else distance = Math.sqrt(height * height + distance * distance);
+  }
   return distance;
 };
 
@@ -791,6 +807,32 @@ export function expireRollEffect(rollType: string, abilityId: string) {
   } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
 }
 
-export function validTargetTokens(tokenSet: Set<Token>): Set<Token> {
-  return new Set([...game.user.targets].filter(a=>a.actor))
+export async function validTargetTokens(tokenSet: Set<Token>): Promise<Set<Token>> {
+  const multiLevelTokens = [...tokenSet].filter(t=>getProperty(t.data, "flags.multilevel-tokens"));
+  const nonLocalTokens = multiLevelTokens.filter(t => !canvas.tokens.get(t.data.flags["multilevel-tokens"].stoken))
+  let normalTokens =  [...tokenSet].filter(a=>a.actor);
+  // return new Set(normalTokens);
+  let tokenData;
+  let synthTokens = nonLocalTokens.map(t => {
+    const mlFlags = t.data.flags["multilevel-tokens"];
+    const scene = game.scenes.get(mlFlags.sscene);
+    //@ts-ignore .tokens not defined
+    const tData = scene.data.tokens.find(tdata => tdata._id === mlFlags.stoken);
+    if (tData) {
+      let baseActor = game.actors.get(tData.actorId);
+      let actorData = mergeObject(baseActor.data, t.data.actorData, {inplace: false})
+      t.actor = new Actor(actorData, {token: t});
+      // delete tokenData.flags["multilevel-tokens"];
+      // return new Token(tokenData, scene)
+      //const token = Token.create(tokenData, {temporary: true});
+      return t;
+    }
+    ui.notifications.error("Could not find ml source token")
+    return t;
+  });
+  // const testToken = await Token.create(tokenData, {temporary: true});
+
+  // const synthTokens = await Promise.all(synthTokenPromises);
+  //@ts-ignore synthTokens is of type Placeable[], not Token
+  return new Set(normalTokens.concat(synthTokens));
 }
