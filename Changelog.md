@@ -1,9 +1,5 @@
-## 0.8.0
-First implementation for 0.8.3 and dnd 1.3.0 both required.
-* [BREAKING] token.uuid and actor.uuid are used almost everywhere and passed to macros.
-* New function MidiQOL.MQfromActorUuid(tokenUuid | actorUuid) which returns the actor for the specified Uuid (actor or token). Works across scenes and returns the synthetic actor if required.
-* Attacks/Damage and active effect application work even if the GM is not on the same scene as the player.
-* [BREAKING] OnUse/Damage bonus macros receive TokenDocuments, rather than token.data, which means you can fetch the Uuid.
+## 0.8.1
+
 * Updated Hunter's mark spell showing some of the way things can/should be done now.
 Until Itemacro is updated for 0.8.x the OnUse macro needs to call a global macro. Here is the macro text for the script macro Hunter's Mark
 ```
@@ -54,7 +50,6 @@ if (args[0].tag === "OnUse") {
 }
 ```
 
-* Updated range targeting to support walls block option.
 Issues:
 * multilevel tokens not 0.8.3 compatible so no testing of mirrored actor targeting.
 * CUB not 0.8.3 compatible so no testing of CUB
@@ -62,6 +57,16 @@ Issues:
 * Better Rolls not tested.
 * Added temporary patch for LMRTFY problem in 0.8.x - works with patch.
 
+
+## 0.8.0
+First implementation for 0.8.3 and dnd 1.3.0 both required.
+* [BREAKING] token.uuid and actor.uuid are used almost everywhere and passed to macros.
+* New function MidiQOL.MQfromActorUuid(tokenUuid | actorUuid) which returns the actor for the specified Uuid (actor or token). Works across scenes and returns the synthetic actor if required.
+* Attacks/Damage and active effect application work even if the GM is not on the same scene as the player.
+* [BREAKING] OnUse/Damage bonus macros receive TokenDocuments, rather than token.data, which means you can fetch the Uuid.
+* ~~Updated Hunter's mark spell showing some of the way things can/should be done now.~~
+
+* Updated range targeting to support walls block option.
 
 ## 0.3.102
 * Updated ja.json - thanks @Brother Sharp
