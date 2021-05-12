@@ -8,7 +8,7 @@ import { selectTargets, showItemCard } from "./itemhandling";
 // import { broadcastData } from "./GMAction";
 import { socketlibSocket } from "./GMAction";
 import { installedModules } from "./setupModules";
-import { configSettings, autoRemoveTargets, checkRule } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens } from "./utils"
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
@@ -40,6 +40,10 @@ export const defaultRollOptions = {
   fastForward: false
 };
 
+class TokenDocument {
+  uuid: string;
+  actor: Actor;
+};
 export class Workflow {
   [x: string]: any;
   static _actions: {};
@@ -53,7 +57,7 @@ export class Workflow {
   event: {shiftKey: boolean, altKey: boolean, ctrlKey: boolean, metaKey: boolean, type: string};
   capsLock: boolean;
   speaker: any;
-  tokenId: string;  // TODO change tokenId to tokenUuid
+  tokenUuid: string;  // TODO change tokenId to tokenUuid
   targets: Set<Token>;
   placeTemlateHookId: number;
 
@@ -62,6 +66,7 @@ export class Workflow {
   showCard: boolean;
   get id() { return this._id}
   itemId: string;
+  itemUuid: string;
   uuid: string;
   itemLevel: number;
   currentState: number;
@@ -113,7 +118,7 @@ export class Workflow {
 
   get hasDAE() {
     if (this._hasDAE === undefined) {
-      this._hasDAE = installedModules.get("dae") && (this.item?.effects?.entries.some(ef => ef.data.transfer === false));
+      this._hasDAE = installedModules.get("dae") && (this.item?.effects?.some(ef => ef.data.transfer === false));
       //@ts-ignore
       if (this._hasDAE) this.dae = window.DAE;
     }
@@ -176,7 +181,7 @@ export class Workflow {
       let nearbyFoe = checkNearby(-1, canvas.tokens.get(this.tokenId), configSettings.optionalRules.nearbyFoe);
       // special case check for thrown weapons within 5 feet (players will forget to set the property)
       if (this.item.data.data.properties?.thr) {
-        const firstTarget = this.targets.values().next().value;
+        const firstTarget: Token = this.targets.values().next().value;
         const me = canvas.tokens.get(this.tokenId);
         if (firstTarget && me && getDistance(me, firstTarget, false) <= configSettings.optionalRules.nearbyFoe) nearbyFoe = false;
       }
@@ -254,9 +259,10 @@ export class Workflow {
 
     // check target critical/nocritical
     if (this.targets.size !== 1) return;
+    // Change this to TokenDocument
     const firstTarget = this.targets.values().next().value;
-    const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants?.critical ?? {};
-    const fails = firstTarget.actor?.data.flags["midi-qol"]?.fail?.critical ?? {};
+    const grants = firstTarget.document.actor?.data.flags["midi-qol"]?.grants?.critical ?? {};
+    const fails = firstTarget.document.actor?.data.flags["midi-qol"]?.fail?.critical ?? {};
     if (grants?.all || grants[attackType]) this.critFlagSet = true;
     if (fails?.all || fails[attackType]) this.noCritFlagSet = true;
   }
@@ -276,6 +282,7 @@ export class Workflow {
     const firstTarget = this.targets.values().next().value;
     if (checkRule("nearbyAllyRanged") && ["rwak", "rsak", "rpak"].includes(actionType)) {
       if (firstTarget.data.width * firstTarget.data.height < checkRule("nearbyAllyRanged")) {
+        //TODO change this to TokenDocument
         const nearbyAlly = checkNearby(-1, firstTarget, configSettings.optionalRules.nearbyFoe); // targets near a friend that is not too big
         // TODO include thrown weapons in check
         if (nearbyAlly) {
@@ -285,7 +292,7 @@ export class Workflow {
         this.disadvantage = this.disadvantage || nearbyAlly
       }
     }
-    const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants;
+    const grants = firstTarget.document.actor?.data.flags["midi-qol"]?.grants;
     if (!grants) return;
     if (!["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) return;
 
@@ -306,13 +313,15 @@ export class Workflow {
       this.uuid = this.itemId
     } else {
       this.itemId = item.id;
+      this.itemUuid = item.uuid;
       this.uuid = item.uuid;
     }
-    if (Workflow.getWorkflow(this.itemId)) {
-      Workflow.removeWorkflow(this.itemId);
+    if (Workflow.getWorkflow(this.item.uuid)) {
+      Workflow.removeWorkflow(this.item.uuid);
     }
     
     this.tokenId = speaker.token;
+    this.tokenUuid = this.tokenId ? canvas.tokens.get(this.tokenId).uuid : undefined; // TODO see if this could be better
     this.speaker = speaker;
     if (this.speaker.scene) this.speaker.scene = canvas?.scene?.id;
     this.targets = targets; 
@@ -335,6 +344,7 @@ export class Workflow {
     if (this.item && !this.item.hasAttack) this.processDamageEventOptions(options?.event);
     else this.processAttackEventOptions(options?.event);
     this.templateId = null;
+    this.templateUuid = null;
 
     this.saveRequests = {};
     this.saveTimeouts = {};
@@ -345,7 +355,8 @@ export class Workflow {
     this.hideTags = new Array();
     this.displayHookId = null;
     this.onUseCalled = false;
-    Workflow._workflows[this.itemId] = this;
+    this.effectsAlreadyExpired = [];
+    Workflow._workflows[this.item.uuid] = this;
   }
 
   public someEventKeySet() {
@@ -402,7 +413,7 @@ export class Workflow {
           return this.next(WORKFLOWSTATES.AWAITTEMPLATE);
         }
         const targetDetails = this.item.data.data.target;
-        if (configSettings.rangeTarget && targetDetails?.units === "ft" && ["creature", "ally", "enemy"].includes(targetDetails?.type)) {
+        if (configSettings.rangeTarget !== "none" && targetDetails?.units === "ft" && ["creature", "ally", "enemy"].includes(targetDetails?.type)) {
           this.setRangedTargets(targetDetails);
           this.failedSaves = new Set(this.targets)
           this.hitTargets = new Set(this.targets);
@@ -659,7 +670,7 @@ export class Workflow {
           }).map(ef=> ef.id);
           if (expiredEffects?.length > 0) {
             socketlibSocket.executeAsGM("removeEffects", {
-              tokenId: target.id,
+              actorUuid: target.actor.uuid,
               effects: expiredEffects,
             });
 
@@ -708,14 +719,17 @@ export class Workflow {
       case WORKFLOWSTATES.ROLLFINISHED:
         warn('Inside workflow.rollFINISHED');
         const hasConcentration = this.item?.data.data.components?.concentration || this.item?.data.data.activation?.condition?.includes("Concentration");
-        const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
+        const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
         if (hasConcentration && checkConcentration && this.applicationTargets) {
           let targets = [];
           for (let hit of this.applicationTargets) 
-            targets.push({tokenId: hit.id, actorId: hit.actor.id});
-          await this.actor.setFlag("midi-qol", "concentration-data", {uuid: this.item.uuid, targets, templates: this.templateId ? [this.templateId] : []})
+            targets.push({tokenUuid: hit.uuid, actorUuid: hit.actor.uuid});
+          await this.actor.setFlag("midi-qol", "concentration-data", {uuid: this.item.uuid, targets, templates: this.templateUuid ? [this.templateUuid] : []})
           if (this.tokenId) {
-            await game.cub.addCondition(game.settings.get("combat-utility-belt", "concentratorConditionName"), [canvas.tokens.get(this.tokenId)])
+            if (installedModules.get("combat-utility-belt")) {
+            // TODO work out how to do add condition for TokenDocument
+              await game.cub.addCondition(game.settings.get("combat-utility-belt", "concentratorConditionName"), [canvas.tokens.get(this.tokenId)])
+            }
           }
         }
         if (configSettings.allowUseMacro && !this.onUseMacroCalled) {
@@ -789,15 +803,23 @@ export class Workflow {
     let hitTargets = [];
     let saves = [];
     let superSavers = [];
-    for (let target of this.targets) targets.push(target.data);
-    for (let save of this.saves) saves.push(save.data);
-    for (let hit of this.hitTargets) hitTargets.push(hit.data);
-    for (let failed of this.failedSaves) failedSaves.push(failed.data);
-    for (let save of this.superSavers) superSavers.push(save.data);
+    //@ts-ignore
+    for (let target of this.targets) targets.push(target.document);
+    //@ts-ignore
+    for (let save of this.saves) saves.push(save.document);
+    //@ts-ignore
+    for (let hit of this.hitTargets) hitTargets.push(hit.document);
+    //@ts-ignore
+    for (let failed of this.failedSaves) failedSaves.push(failed.document);
+    //@ts-ignore
+    for (let save of this.superSavers) superSavers.push(save.document);
     const macroData = {
       actor: this.actor.data,
+      actorUuid: this.actor.uuid,
       tokenId: this.tokenId,
-      item: this.item.data,
+      tokenUuid: this.tokenUuid,
+      item: this.item?.data,
+      itemUuid: this.item?.uuid,
       targets,
       hitTargets,
       saves,
@@ -826,7 +848,8 @@ export class Workflow {
       rollData: this.actor.getRollData(),
       tag,
       concentrationData: getProperty(this.actor.data.flags, "midi-qol.concentration-data"),
-      templateId: this.templateId
+      templateId: this.templateId, // deprecated
+      templateUuid: this.templateUuid
     };
     warn("macro data ", macroData)
 
@@ -839,11 +862,12 @@ export class Workflow {
 
   async callMacro(macroName: string, macroData: {}) {
     const name = macroName?.trim();
+    var item;
     if (!name) return;
     try {
       if (name.startsWith("ItemMacro")) { // special short circuit eval for itemMacro since it can be execute as GM
         var itemMacro;
-        var item = this.item;
+        item = this.item;
         if (name === "ItemMacro") {
           itemMacro = getProperty(this.item.data.flags, "itemacro.macro");
         } else {
@@ -1250,12 +1274,12 @@ export class Workflow {
   
     let promises = [];
     //@ts-ignore actor.rollAbilitySave
-    var rollAction = CONFIG.Actor.entityClass.prototype.rollAbilitySave;
+    var rollAction = CONFIG.Actor.documentClass.prototype.rollAbilitySave;
     var rollType = "save"
     if (this.item.data.data.actionType === "abil") {
       rollType = "abil"
       //@ts-ignore actor.rollAbilitySave
-      rollAction = CONFIG.Actor.entityClass.prototype.rollAbilityTest;
+      rollAction = CONFIG.Actor.documentClass.prototype.rollAbilityTest;
     }
     // make sure saving throws are renabled.
 
@@ -1517,14 +1541,17 @@ export class Workflow {
     // min dist is the number of grid squares away.
     let minDist = targetDetails.value;
  
-    canvas.tokens.placeables.filter(target => 
-      target.actor && target.actor.data.data.details.race !== "trigger"
+    for (let target of canvas.tokens.placeables) {
+      const ray = new Ray(target.center, token.center);
+      let inRange = target.actor && target.actor.data.data.details.race !== "trigger"
       && target.actor.id !== token.actor.id
       && dispositions.includes(target.data.disposition) 
-      && (canvas.grid.measureDistances([{ray:new Ray(target.center, token.center)}], {gridSpaces: true})[0] <= minDist)
-    ).forEach(token=> {
-        token.setTarget(true, { user: game.user, releaseOthers: false });
-    });
+      && (canvas.grid.measureDistances([{ray}], {gridSpaces: true})[0] <= minDist)
+      if (configSettings.rangeTarget === "wallsBlock") {
+        inRange = inRange && !canvas.walls.checkCollision(ray);
+      }
+      if (inRange) target.setTarget(true, { user: game.user, releaseOthers: false });
+    }
     this.targets = game.user.targets;
     this.saves = new Set();
     this.failedSaves = new Set(this.targets)
@@ -1643,7 +1670,7 @@ export class TrapWorkflow extends Workflow {
 
       case WORKFLOWSTATES.AWAITTEMPLATE:
         const targetDetails = this.item.data.data.target;
-        if (configSettings.rangeTarget && targetDetails?.units === "ft" && ["creature", "ally", "enemy"].includes(targetDetails?.type)) {
+        if (configSettings.rangeTarget !== "none" && targetDetails?.units === "ft" && ["creature", "ally", "enemy"].includes(targetDetails?.type)) {
           this.setRangedTargets(targetDetails);
           this.targets = await validTargetTokens(this.targets);
           this.failedSaves = new Set(this.targets)

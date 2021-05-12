@@ -1,12 +1,12 @@
-import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, midiFlags } from "../midi-qol";
-import { itemRollButtons, configSettings, autoRemoveTargets, checkRule } from "./settings";
+import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled } from "../midi-qol";
+import { configSettings, autoRemoveTargets, checkRule } from "./settings";
 import { log } from "../midi-qol";
 import { Workflow, WORKFLOWSTATES } from "./workflow";
 // import { broadcastData } from "./GMAction";
 import { socketlibSocket } from  "./GMAction" ;
 import { installedModules } from "./setupModules";
 import { baseEvent } from "./patching";
-import { setupSheetQol } from "./sheetQOL";
+import { concentrationCheckItemName } from "./Hooks";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -110,7 +110,7 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, exist
     tmp = prevDamage.newTempHP;
   } else {
     oldHP = hp.value;
-    tmp = parseInt(hp.temp) || 0;    
+    tmp = parseInt(hp.temp) || 0;
   }
   let value = Math.floor(appliedDamage);
   if (dmgType.includes("temphp")) { // only relavent for healing of tmp HP
@@ -121,33 +121,20 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, exist
     var newTemp = tmp - dt;
     var newHP: number = Math.clamped(oldHP - (value - dt), 0, hp.max + (parseInt(hp.tempmax)|| 0));
   }
-  const altScene = getProperty(t.data.flags, "multilevel-tokens.sscene");
-  let sceneId = altScene ?? t.scene.id;
+  const altSceneId = getProperty(t.data.flags, "multilevel-tokens.sscene");
+  let sceneId = altSceneId ?? t.scene.id;
   const altTokenId= getProperty(t.data.flags, "multilevel-tokens.stoken");
   let tokenId = altTokenId ?? t.id;
+  const altTokenUuid = (altTokenId && altSceneId) ? `Scene.${altSceneId}.Token.${altTokenId}` : undefined;
+  const tokenUuid = altTokenUuid ?? t.document.uuid;
 
   debug("calculateDamage: results are ", newTemp, newHP, appliedDamage, totalDamage)
   if (game.user.isGM) 
       log(`${a.name} ${oldHP} takes ${value} reduced from ${totalDamage} Temp HP ${newTemp} HP ${newHP} `);
   // TODO change tokenId, actorId to tokenUuid and actor.uuid
-  return {tokenId, actorID: a._id, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
+  return {tokenId, tokenUuid, actorID: a._id, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
           oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value, sceneId};
 }
-
-/* How to create additional flags 
-CONFIG.DND5E.characterFlags["Test"]=
-{
-  name: "test", 
-  hint: "test hint", 
-  section: "Feats", 
-  type: Boolean
-}
-Options
-Danger Sense
-Uncanny Dodge
-: improved saves/adv override abilitySave/Check and set event before rolling
-: damage mult for dex save?
-*/
 
 /** 
  * Work out the appropriate multiplier for DamageTypeString on actor
@@ -186,7 +173,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
   let damageList = [];
   let targetNames = [];
   let appliedDamage;
-  let workflow = (Workflow.workflows && Workflow._workflows[item?.id]) || {};
+  let workflow = (Workflow.workflows && Workflow._workflows[item?.uuid]) || {};
   warn("Apply token damage ", damageDetailArr, totalDamageArr, theTargets, item, savesArr, workflow)
 
   if (!theTargets || theTargets.size === 0) {
@@ -244,7 +231,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
             else 
               DRTotal +=  DRType;
           }
-          // TODO: consider mwak damage redution
+          // TODO: consider mwak damage reduCtion
         }
       }
       //@ts-ignore evaluate
@@ -491,7 +478,8 @@ export function checkIncapcitated(actor, item, event) {
 *** gets the shortest distance betwen two tokens taking into account both tokens size
 *** if wallblocking is set then wall are checked
 **/
-export function getDistance (t1, t2, wallblocking = false) {
+//TODO change this to TokenData
+export function getDistance (t1: Token, t2:Token, wallblocking = false) {
   if (!t1 || !t2) return 0;
   //Log("get distance callsed");
   var x, x1, y, y1, d, r, segments=[], rdistance, distance;
@@ -666,7 +654,7 @@ export async function addConcentration(options: {workflow: Workflow}) {
       const ae = duplicate(selfTarget.actor.data.effects.find(ae => ae.label === concentrationName));
       if (ae) {
         //@ts-ignore
-        const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.data._id));
+        const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.id));
         const convertedDuration = options.workflow.dae.convertDuration(itemDuration, inCombat);
         if (convertedDuration.type === "seconds") {
           ae.duration.seconds = convertedDuration.seconds;
@@ -680,8 +668,41 @@ export async function addConcentration(options: {workflow: Workflow}) {
         await selfTarget.actor.updateEmbeddedEntity("ActiveEffect", ae)
       }
     }
+  } else if (configSettings.concentrationAutomation) {
+    let actor = options.workflow.actor;
+    let selfTarget = await getSelfTarget(item.actor);
+    if (!selfTarget) return;
+    let concentrationName = i18n("midi-qol.Concentrating");
+
+    //@ts-ignore tokenId
+    const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.id));
+    //@ts-ignore DAE
+    const convertedDuration = window.DAE?.convertDuration(item.data.data.duration, inCombat);
+    const currentItem = game.items.getName(concentrationCheckItemName)
+
+    const effectData = {
+      changes: [],
+      origin: item.uuid, //flag the effect as associated to the spell being cast
+      disabled: false,
+      icon: currentItem.img,
+      label: concentrationName,
+      duration: undefined
+    }
+    if (convertedDuration.type === "seconds") {
+      effectData.duration = {seconds: convertedDuration.seconds, startTime: game.time.worldTime}
+    } else if (convertedDuration.type === "turns") {
+      effectData.duration = {
+        rounds: convertedDuration.rounds,
+        turns: convertedDuration.turns,
+        startRound: game.combat?.round,
+        startTurn: game.combat?.turn
+      }
+    }
+    actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
   }
 }
+
+ //  the second setting the flag for the macro to be called when damaging an opponent
 
 /** 
  * Find tokens nearby
@@ -788,7 +809,7 @@ export function expireRollEffect(rollType: string, abilityId: string) {
   }).map(ef=> ef.id);
   if (expiredEffects?.length > 0) {
     socketlibSocket.executeAsGM("removeEffects", {
-      tokenId: ChatMessage.getSpeaker({actor: this}).token,
+      actorUuid: this.uuid,
       effects: expiredEffects,
     })
 
@@ -839,3 +860,43 @@ export async function validTargetTokens(tokenSet: Set<Token>): Promise<Set<Token
   //@ts-ignore synthTokens is of type Placeable[], not Token
   return new Set(normalTokens.concat(synthTokens));
 }
+
+export function MQfromUuid(uuid) {
+  let parts = uuid.split(".");
+  let doc;
+
+ 
+  const [docName, docId] = parts.slice(0, 2);
+  parts = parts.slice(2);
+  const collection = CONFIG[docName].collection.instance;
+  doc = collection.get(docId);
+ 
+  // Embedded Documents
+  while ( parts.length > 1 ) {
+    const [embeddedName, embeddedId] = parts.slice(0, 2);
+    doc = doc.getEmbeddedDocument(embeddedName, embeddedId);
+    parts = parts.slice(2);
+  }
+  return doc || null;
+}
+
+export function MQfromActorUuid(uuid) {
+  let parts = uuid.split(".");
+  let doc;
+
+  const [docName, docId] = parts.slice(0, 2);
+  parts = parts.slice(2);
+  const collection = CONFIG[docName].collection.instance;
+  doc = collection.get(docId);
+
+  // Embedded Documents
+  while ( parts.length > 1 ) {
+    const [embeddedName, embeddedId] = parts.slice(0, 2);
+    doc = doc.getEmbeddedDocument(embeddedName, embeddedId);
+    parts = parts.slice(2);
+  }
+
+  if (doc instanceof CONFIG.Token.documentClass) doc = doc.actor;
+  return doc || null;
+}
+

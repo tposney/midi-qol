@@ -45,7 +45,7 @@ export var configSettings = {
   damageImmunities: "none",
   requireMagical: false,
   autoItemEffects: null,
-  rangeTarget: null,
+  rangeTarget: "none",
   playerRollSaves: "none",
   playerSaveTimeout: 0,
   rollNPCSaves: "auto",

@@ -19,7 +19,7 @@ import { initHooks, readyHooks } from './module/Hooks';
 import { initGMActionSetup, setupSocket } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
-import { applyTokenDamage, checkNearby, findNearby, getDistance, getTraitMult } from './module/utils';
+import { applyTokenDamage, checkNearby, findNearby, getDistance, getTraitMult, MQfromActorUuid, MQfromUuid } from './module/utils';
 import { ConfigPanel } from './module/apps/ConfigPanel';
 import { doCritModify, showItemCard, showItemInfo } from './module/itemhandling';
 import { RollStats } from './module/RollStats';
@@ -148,7 +148,7 @@ Hooks.once('ready', function() {
   setupMinorQolCompatibility();
 
   if (game.user.isGM && !installedModules.get("dae")) {
-    ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.2.61 or many automation effects won't work");
+    ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.8.0 or many automation effects won't work");
   }
   checkSocketLibInstalled();
   checkCubInstalled();
@@ -186,7 +186,9 @@ function setupMinorQolCompatibility() {
     checkNearby: checkNearby,
     showItemInfo: showItemInfo,
     showItemCard: showItemCard,
-    gameStats
+    gameStats,
+    MQFromUuid: MQfromUuid,
+    MQfromActorUuid: MQfromActorUuid
   }
 }
 
@@ -198,6 +200,7 @@ export function checkSocketLibInstalled() {
 }
 
 export function checkCubInstalled() {
+  return;
   if (game.user?.isGM && configSettings.concentrationAutomation && !installedModules.get("combat-utility-belt")) {
     let d = new Dialog({
       // localize this text
@@ -219,6 +222,7 @@ export function checkCubInstalled() {
 }
 
 export function checkConcentrationSettings() {
+  return;
   const needToUpdateCubSettings = installedModules.get("combat-utility-belt") && (
     game.settings.get("combat-utility-belt", "enableConcentrator")
     // game.settings.get("combat-utility-belt", "autoConcentrate") ||

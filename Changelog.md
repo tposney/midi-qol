@@ -1,5 +1,14 @@
+## 0.8.0
+First implementation for 0.8.2 and dnd 1.3.0 both required.
+* [BREAKING] token.uuid and actor.uuid are used almost everywhere and passed to macros.
+* New function MidiQOL.MQfromActorUuid(tokenUuid | actorUuid) which returns the actor for the specified Uuid (actor or token). Works across scenes and returns the synthetic actor if required.
+* Attacks/Damage and active effect application work even if the GM is not on the same scene as the player.
+* [BREAKING] OnUse/Damage bonus macros receive TokenDocuments, rather than token.data, which means you can fetch the Uuid.
+* Updated Hunter's mark spell showing some of the way things can/should be done now.
+* Updated range targeting to support walls block option.
+
 ## 0.3.102
-* Updated ja.json - thanks @Brother Sharpo
+* Updated ja.json - thanks @Brother Sharp
 
 ## 0.3.101
 * Fix for super savers and cantrips.

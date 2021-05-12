@@ -6,7 +6,6 @@
 			"ES6",
 			"ES2020"
     ],
-    
-		"types": ["foundry-pc-types"]
-	}
+    "types": ["foundry-pc-types"]
+  }
 }

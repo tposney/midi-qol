@@ -237,7 +237,7 @@ export let visionPatching = () => {
   if (patchVision) {
     // ui.notifications.warn("This setting is deprecated please switch to Conditional Visibility")
     console.warn("midi-qol | Player controls tokens setting is deprecated please switch to Conditional Visibility")
-    if (game.modules.get("lib-wrapper")?.active) {
+
       log("Patching SightLayer._restrictVisibility")
       libWrapper.register("midi-qol", "SightLayer.prototype.restrictVisibility", restrictVisibility, "OVERRIDE");
 
@@ -246,29 +246,6 @@ export let visionPatching = () => {
 
       log("Patching Token.isVisible")
       libWrapper.register("midi-qol", "Token.prototype.isVisible", isVisible, "OVERRIDE");
-
-    } else {
-      log("Patching SightLayer._restrictVisibility")
-      //@ts-ignore
-      let restrictVisibilityProxy = new Proxy(SightLayer.prototype.restrictVisibility, {
-        apply: (target, thisvalue, args) =>
-            restrictVisibility.bind(thisvalue)(...args)
-      })
-      //@ts-ignore
-      SightLayer.prototype.restrictVisibility = restrictVisibilityProxy;
-
-      log("Patching Token._isVisionSource")
-      //@ts-ignore
-      let _isVisionSourceProxy = new Proxy(Token.prototype._isVisionSource, {
-        apply: (target, thisvalue, args) =>
-        _isVisionSource.bind(thisvalue)(...args)
-      })
-      //@ts-ignore
-      Token.prototype._isVisionSource = _isVisionSourceProxy;
-
-      log("Patching Token.isVisible")
-      Object.defineProperty(Token.prototype, "isVisible", { get: isVisible });
-    }
   }
   log("Vision patching - ", patchVision ? "enabled" : "disabled")
 }
@@ -312,7 +289,7 @@ export function _makeRoll(event, rollMethod, ...args) {
       case 1:
         options = {advantage: true, fastForward: true};
         break;
-      case 2: 
+       case 2: 
         options = {event: event}
         break;
   }

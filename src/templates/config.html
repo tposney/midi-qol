@@ -128,7 +128,13 @@
 
         <div class="form-group">
           <label>{{localize "midi-qol.RangeTarget.Name"}}</label>
-          <input type="checkbox" name="rangeTarget" data-dtype="Boolean" {{checked configSettings.rangeTarget}} />
+          <select name="rangeTarget" data-dtype="String">
+            {{#select configSettings.rangeTarget}}
+            {{#each rangeTargetOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.RangeTarget.Hint"}}</div>
 

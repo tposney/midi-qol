@@ -5,25 +5,34 @@ import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget,
 import { configSettings, dragDropTargeting } from "./settings";
 import { installedModules } from "./setupModules";
 
-const concentrationCheckItemName = "Concentration Check - Midi QOL";
+export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
 
 
 export let readyHooks = async () => {
   //  const item = game.items.getName("Concentration Check")
-  concentrationCheckItemDisplayName = i18n("midi-qol.concentrationCheckName");
-  if (installedModules.get("combat-utility-belt")) {
-    Hooks.on("preUpdateActor", (actor, update, diff) => {
-      if (!configSettings.concentrationAutomation) return true;
-      const hpUpdate = getProperty(update, "data.attributes.hp.value");
-      if (hpUpdate === undefined) return true;
-      const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
-      if (!game.cub?.hasCondition(concentrationName, actor)) return true;
+
+
+  Hooks.on("preUpdateActor", (actor, update, diff) => {
+    concentrationCheckItemDisplayName = i18n("midi-qol.concentrationCheckName");
+    let concentrationName;
+    if (installedModules.get("combat-utility-belt")) {
+      concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
+    } else {
+      concentrationName = i18n("midi-qol.Concentrating");
+    }
+    if (!configSettings.concentrationAutomation) return true;
+    const hpUpdate = getProperty(update, "data.attributes.hp.value");
+    if (hpUpdate === undefined) return true;
+    if (game.cub && !game.cub?.hasCondition(concentrationName, actor)) return true;
+    let concentrationEffect = !game.cub && actor.effects.find(e=>e.data.label === concentrationName);
+    if (!game.cub && !concentrationEffect) return;
       const hpDiff = actor.data.data.attributes.hp.value - hpUpdate;
       if (hpDiff <= 0) return true;
       Hooks.once("updateActor", async (updatedActor, ...args) => {
         if (updatedActor.data.data.attributes.hp.value === 0) {
-          await game.cub.removeCondition(concentrationName, updatedActor, {warn: false})
+          if (game.cub) await game.cub.removeCondition(concentrationName, updatedActor, {warn: false})
+          else concentrationEffect.delete();
         } else {
           const item = game.items.getName(concentrationCheckItemName);
           const itemData = duplicate(item.data);
@@ -50,56 +59,25 @@ export let readyHooks = async () => {
       return true;
     })
 
-    Hooks.on("preUpdateToken", (scene, tokenData, update, diff) => {
-      if (!configSettings.concentrationAutomation) return true;
-      const hpUpdate = getProperty(update, "actorData.data.attributes.hp.value");
-      if (hpUpdate === undefined) return true;
-      const token = canvas.tokens.get(tokenData._id);
-      const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
-      if (!game.cub?.hasCondition(concentrationName, token)) return true;
-       const hpDiff = token.actor.data.data.attributes.hp.value - hpUpdate;
-      if (hpDiff <= 0) return true;
-      Hooks.once("updateToken", async (scene, updatedTokenData, update) => {
-        const item = game.items.getName(concentrationCheckItemName);
-        const itemData = duplicate(item.data);
-        itemData.name = concentrationCheckItemDisplayName;
-        // actor took damage and is concentrating....
-        const saveDC = Math.max(10, Math.floor(hpDiff/2));
-        const saveTargets = game.user.targets;
-        game.user.targets = new Set([token]);
-        const ownedItem = Item.createOwned(itemData, token.actor)
-        ownedItem.data.data.save.dc = saveDC;
-        try {
-          if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e").data.version, "1.3.10")) { // better rolls breaks the normal roll process
-            //@ts-ignore
-            await BetterRolls.rollItem(ownedItem, {adv:0, disadv:0, midiSaveDC: saveDC}).toMessage();
-          } else {
-            //@ts-ignore
-            ownedItem.roll({showFullCard:false, createWorkflow:true, versatile:false, configureDialog:false})
-          }
-        } finally {
-          game.user.targets = saveTargets;
-        }
-      })
-      return true;
-    })
-  }
-
   // Concentration Check is rolled as an item roll so we need an item.
   // A temporary item would be good, but users would need create item permission which is a bit sily for just this
   // Any GM that logs in looks for the item and either creates/updates the item using the canned data at the end.
   // When the check is rolled the name of the Item is changed.
-  if (installedModules.get("combat-utility-belt")) {
-    if (game.user.isGM) {
+  if (game.user.isGM) {
+    if (installedModules.get("combat-utility-belt")) {
       const concentrationCondition = game.cub.getCondition(game.settings.get("combat-utility-belt", "concentratorConditionName"))
       itemJSONData.name = concentrationCheckItemName
       itemJSONData.img = concentrationCondition.icon;
-      const currentItem = game.items.getName(concentrationCheckItemName)
-      if (!currentItem)
-        await Item.create(itemJSONData)
-      else  await currentItem.update(itemJSONData, {});
+    } else {
+      itemJSONData.name = concentrationCheckItemName;
     }
+    const currentItem = game.items.getName(concentrationCheckItemName)
+    if (!currentItem)
+      await Item.create(itemJSONData)
+    else  
+      await currentItem.update(itemJSONData, {});
   }
+
 }
 export let initHooks = () => {
   warn("Init Hooks processing");
@@ -333,6 +311,6 @@ const itemJSONData = {
       "sorting": "l"
     }
   },
-  "img": "modules/combat-utility-belt/icons/concentrating.svg",
+  "img": "modules/midi-qol/icons/concentrate.png",
   "effects": []
 }

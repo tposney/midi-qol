@@ -6,7 +6,7 @@ import { installedModules } from "./setupModules";
 import { setupSheetQol } from "./sheetQOL";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: false }) {
-  let workflow: Workflow | undefined = Workflow.getWorkflow(this.id);
+  let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
   debug("Entering item attack roll ", event, workflow, Workflow._workflows);
   if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
     if (enableWorkflow) warn("Roll Attack: No workflow for item ", this.name, this.id, event);
@@ -95,8 +95,8 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   return result;
 }
 
-export async function doDamageRoll(wrapped, { event = null, spellLevel = null, powerLevel = null, versatile = null, options = {} } = {}) {
-  let workflow = Workflow.getWorkflow(this.id);
+export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, powerLevel = null, versatile = null, options = {} } = {}) {
+  let workflow = Workflow.getWorkflow(this.uuid);
   if (!enableWorkflow || !workflow) {
     if (!workflow)
       warn("Roll Damage: No workflow for item ", this.name);
@@ -132,7 +132,7 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, p
       content = content.replace(searchRe, replaceString);
     }
     if (data) {
-      await Workflow.removeAttackDamageButtons(this.id);
+      await Workflow.removeAttackDamageButtons(this.uuid);
       delete data._id;
       workflow.itemCardId = (await ChatMessage.create(data)).id;
     }
@@ -150,6 +150,7 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, p
     powerLevel: workflow.rollOptions.spellLevel,
     versatile: workflow.rollOptions.versatile || versatile,
     fastForward: workflow.rollOptions.fastForward,
+    event: {},
     // TODO enable this when possible via options "data.default": (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal",
     options: {
       fastForward: workflow.rollOptions.fastForward,
@@ -182,6 +183,7 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, p
       spellLevel: workflow.rollOptions.spellLevel,
       versatile: true,
       fastForward: true,
+      event: {},
       // "data.default": (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal",
       options: {
         fastForward: true,
@@ -204,21 +206,21 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, p
       flavor: this.labels.damageTypes.length ? `${title} (${this.labels.damageTypes})` : title,
       speaker,
     }, { "flags.dnd5e.roll": { type: "damage", itemId: this.id } });
-    result.toMessage(messageData, game.settings.get("core", "rollMode"))
+    result.toMessage(messageData, {rollMode: game.settings.get("core", "rollMode")});
     if (otherResult) {
       messageData = mergeObject({
         title,
         flavor: title,
         speaker,
       }, { "flags.dnd5e.roll": { type: "other", itemId: this.id } });
-      otherResult.toMessage(messageData, game.settings.get("core", "rollMode"))
+      otherResult.toMessage(messageData, {rollMode: game.settings.get("core", "rollMode")})
     }
   }
   const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
   if (dice3dActive && configSettings.mergeCard) {
     let whisperIds = null;
     const rollMode = game.settings.get("core", "rollMode");
-    if ((configSettings.hideRollDetails !== "none" && game.user.isGM) || rollMode === "blindroll") {
+    if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user.isGM) || rollMode === "blindroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM")
     } else if (rollMode === "selfroll" || rollMode === "gmroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
@@ -299,17 +301,21 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     }
   }
   const needsConcentration = this.data.data.components?.concentration || this.data.data.activation?.condition?.includes("Concentration");
-  const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
+  const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
   if (needsConcentration && checkConcentration) {
-    const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
-    const concentrationCheck = this.actor.data.effects.find(i => i.label === concentrationName);
+    const concentrationName = game.cub 
+      ? game.settings.get("combat-utility-belt", "concentratorConditionName")
+      : i18n("midi-qol.Concentrating");
+    let concentrationCheck = this.actor.effects.contents.find(i => i.data.label === concentrationName);
 
     if (concentrationCheck) {
       let d = await Dialog.confirm({
         title: i18n("midi-qol.ActiveConcentrationSpell.Title"),
         content: i18n("midi-qol.ActiveConcentrationSpell.Content"),
         yes: async () => {
-          game.cub.removeCondition(concentrationName, [await getSelfTarget(this.actor)], { warn: false });
+          if (game.cub)
+            game.cub.removeCondition(concentrationName, [await getSelfTarget(this.actor)], { warn: false });
+          else concentrationCheck.delete();
         },
         no: () => { shouldAllowRoll = false; }
       });
@@ -365,11 +371,12 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     (this.hasAttack && needAttckButton)) ||
     (!this.hasAttack && !itemHasDamage(this) && !this.hasSave);
 
-  if (workflow.showCard) {
+  if (workflow.showCard) { //TODO check this against dnd5e 1.30
     let item = this;
     if (this.data.data.level && (workflow.itemLevel !== this.data.data.level)) {
-      item = this.clone({"data.level": workflow.itemLevel});
+      item = this.clone({"data.level": workflow.itemLevel}, {keepId: true});
       item.data.update({_id: this.id});
+      item.prepareFinalAttributes();
     }
     var itemCard: ChatMessage = await showItemCard.bind(item)(showFullCard, workflow)
     workflow.itemCardId = itemCard.id;
@@ -381,11 +388,11 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
 export async function showItemInfo() {
   const token = this.actor.token;
-  const sceneId = token?.scene && token.scene._id || canvas.scene._id;
+  const sceneId = token?.scene && token.scene.id || canvas.scene.id;
 
   const templateData = {
     actor: this.actor,
-    tokenId: token ? `${sceneId}.${token.id}` : null,
+    tokenId: token ? `Scene.${sceneId}.Token.${token.id}` : null, //TODO come back and fix? this
     item: this.data,
     data: this.getChatData(),
     labels: this.labels,
@@ -410,12 +417,12 @@ export async function showItemInfo() {
   const html = await renderTemplate(template, templateData);
 
   const chatData = {
-    user: game.user,
+    user: game.user.id,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     content: html,
     speaker: {
-      actor: this.actor._id,
-      token: this.actor.token,
+      actor: this.actor.id,
+      token: this.actor.token?.id,
       alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name,
       scene: canvas?.scene?.id
     },
@@ -441,7 +448,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   needAttackButton = needAttackButton || (getAutoRollAttack() && workflow.rollOptions.fastForwardKey)
   const needDamagebutton = itemHasDamage(this) && (getAutoRollDamage() === "none" || !getRemoveDamageButtons() || showFullCard);
   const needVersatileButton = itemIsVersatile(this) && (showFullCard || getAutoRollDamage() === "none");
-  const sceneId = token?.scene && token.scene._id || canvas.scene?._id;
+  const sceneId = token?.scene && token.scene.id || canvas.scene?.id;
   let isPlayerOwned = this.actor.hasPlayerOwner;
 
   if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = this.actor.isPC
@@ -454,7 +461,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   if (isAutoFastDamage()) versaBtnText += `${i18n("DND5E.Versatile")} ${i18n("midi-qol.fastForward")}`;
   const templateData = {
     actor: this.actor,
-    tokenId: token ? `${sceneId}.${token.id}` : null,
+    tokenId: token ? `Scene.${sceneId}.Token.${token.id}` : null, //TODO come back and fix? this
     item: this.data,
     data: this.getChatData(),
     labels: this.labels,
@@ -485,20 +492,20 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   else if (["spell", "power"].includes(this.type)) theSound = configSettings.spellUseSound;
   else if (this.type === "consumable" && this.name.toLowerCase().includes(i18n("midi-qol.potion").toLowerCase())) theSound = configSettings.potionUseSound;
   const chatData = {
-    user: game.user,
+    user: game.user.id,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     content: html,
     flavor: this.data.data.chatFlavor || this.name,
     speaker: {
-      actor: this.actor,
-      token: this.actor.token,
+      actor: this.actor?.id,
+      token: this.actor?.token?.id,
       alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name,
       scene: canvas?.scene?.id
     },
     flags: {
       "midi-qol": {
-        item: workflow.item.id,
-        actor: workflow.actor.id,
+        itemUuid: workflow.item.uuid,
+        actorUuid: workflow.actor.uuid,
         sound: theSound,
         type: MESSAGETYPES.ITEM,
         itemId: workflow.itemId
@@ -518,8 +525,9 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   return ChatMessage.create(chatData);
 }
 
-export function getTargetedTokens(scene, data, selfTarget) {
+export function getTargetedTokens(templateDocument, selfTarget) {
   let targeting = configSettings.autoTarget;
+  let templateData = templateDocument.data;
   // release current targets
   game.user.targets.forEach(t => {
     //@ts-ignore
@@ -528,29 +536,29 @@ export function getTargetedTokens(scene, data, selfTarget) {
   game.user.targets.clear();
 
   let wallsBlockTargeting = targeting === "wallsBlock";
-  let templateDetails = canvas.templates.get(data._id);
-  let tdx = data.x;
-  let tdy = data.y;
+  let tdx = templateData.x;
+  let tdy = templateData.y;
   // Extract and prepare data
-  let { direction, distance, angle, width } = data;
+  let { direction, distance, angle, width } = templateData;
   distance *= canvas.scene.data.grid / canvas.scene.data.gridDistance;
   width *= canvas.scene.data.grid / canvas.scene.data.gridDistance;
-  direction = toRadians(direction);
+  //@ts-ignore toRadians
+  direction = Math.toRadians(direction);
 
   var shape
   // Get the Template shape
-  switch (data.t) {
+  switch (templateData.t) {
     case "circle":
-      shape = templateDetails._getCircleShape(distance);
+      shape = templateDocument._object._getCircleShape(distance);
       break;
     case "cone":
-      shape = templateDetails._getConeShape(direction, angle, distance);
+      shape = templateDocument._object._getConeShape(direction, angle, distance);
       break;
     case "rect":
-      shape = templateDetails._getRectShape(direction, distance);
+      shape = templateDocument._object._getRectShape(direction, distance);
       break;
     case "ray":
-      shape = templateDetails._getRayShape(direction, distance, width);
+      shape = templateDocument._object._getRayShape(direction, distance, width);
   }
   return canvas.tokens.placeables.filter(t => {
     if (!t.actor && !getProperty(t.data.flags, "multilevel-tokens")) return false;
@@ -571,14 +579,14 @@ export function getTargetedTokens(scene, data, selfTarget) {
           if (!wallsBlockTargeting) {
             contained = true;
           } else {
-            if (data.t === "rect") {
+            if (templateData.t === "rect") {
               // for rectangles the origin is top left, so measure from the centre instaed.
-              let template_x = templateDetails.x + shape.width / 2;
-              let template_y = templateDetails.y + shape.height / 2;
+              let template_x = templateData.x + shape.width / 2;
+              let template_y = templateData.y + shape.height / 2;
               const r = new Ray({ x: tx, y: ty }, { x: template_x, y: template_y });
               contained = !canvas.walls.checkCollision(r);
             } else {
-              const r = new Ray({ x: tx, y: ty }, templateDetails.data);
+              const r = new Ray({ x: tx, y: ty }, templateData);
               contained = !canvas.walls.checkCollision(r);
             }
           }
@@ -590,29 +598,30 @@ export function getTargetedTokens(scene, data, selfTarget) {
   });
 }
 
-export function selectTargets(scene, data, options) {
+export function selectTargets(templateDocument, data, user) {
   let item = this.item;
   let targeting = configSettings.autoTarget;
-  if (data.user !== game.user._id) {
+  if (user !== game.user.id) {
     return true;
   }
   if (targeting === "none") { // this is no good
     Hooks.callAll("midi-qol-targeted", this.targets);
     return true;
   }
-  if (!data) return true;
-  this.templateId = data._id;
+  if (!templateDocument.data) return true;
+  this.templateId = templateDocument.id;
+  this.templateUuid = templateDocument.uuid;
 
   // if the item specifies a range of "self" don't target the caster.
 
-  let selfTarget = (item?.data.data.range?.units === "spec") ? this.tokenId : null;
+  let selfTarget = (item?.data.data.range?.units === "spec") ? this.tokenUuid : null;
   setTimeout(() => {
-    getTargetedTokens(scene, data, selfTarget)
+    getTargetedTokens(templateDocument, selfTarget)
     // Assumes area affect do not have a to hit roll
     this.saves = new Set();
     this.targets = game.user.targets;
     this.hitTargets = game.user.targets;
-    this.templateData = data;
+    this.templateData = templateDocument.data;
     return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
   }, 250);
 };

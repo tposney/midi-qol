@@ -7,7 +7,7 @@ import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
 import { nsaFlag, coloredBorders, criticalDamage, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow, checkRule } from "./settings";
-import { createDamageList, getTraitMult, calculateDamage, addConcentration } from "./utils";
+import { createDamageList, getTraitMult, calculateDamage, addConcentration, MQfromUuid } from "./utils";
 import { setupSheetQol } from "./sheetQOL";
 
 export const MAESTRO_MODULE_NAME = "maestro";
@@ -29,7 +29,7 @@ export function mergeCardSoundPlayer(message, update, options, user) {
 
     if (sound) {
       setTimeout(() => {
-       sound.playing = true;
+       // sound.playing = true;
         playlist.playSound(sound);
       }, delay)
     }
@@ -352,7 +352,7 @@ export let hideStuffHandler = (message, html, data) => {
     } else if (configSettings.hideRollDetails === "all" || message.data.blind) {
       html.find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       //TODO this should probably just check formula
-    } else if (configSettings.hideRollDetails === "details") {
+    } else if (["details", "detailsDSN"].includes(configSettings.hideRollDetails)) {
       html.find(".dice-tooltip").remove();
       html.find(".dice-formula").remove();
     }
@@ -409,23 +409,24 @@ export let chatDamageButtons = (message, html, data) => {
         return;
       }
     }
+    let itemUuid = `Actor.${actorId}.Item.${itemId}`;
     // find the item => workflow => damageList, totalDamage
     const defaultDamageType = (item?.data.data.damage.parts[0] && item?.data.data.damage?.parts[0][1]) ?? "bludgeoning";
     const damageList = createDamageList(message.roll, item, defaultDamageType);
     const totalDamage = message.roll.total;
-    addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemId, "damage", ".dice-total", "position:relative; top:5px; color:blue");
+    addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemUuid, "damage", ".dice-total", "position:relative; top:5px; color:blue");
   } else if (getProperty(message.data, "flags.midi-qol.damageDetail")) {
     let midiFlags = getProperty(message.data, "flags.midi-qol");
-    addChatDamageButtonsToHTML(midiFlags.damageTotal, midiFlags.damageDetail, html, midiFlags.actor, midiFlags.item, "damage", ".midi-qol-damage-roll .dice-total");
-    addChatDamageButtonsToHTML(midiFlags.otherDamageTotal, midiFlags.otherDamageDetail, html, midiFlags.actor, midiFlags.item, "other", ".midi-qol-other-roll .dice-total");
-    addChatDamageButtonsToHTML(midiFlags.bonusDamageTotal, midiFlags.bonusDamageDetail, html, midiFlags.actor, midiFlags.item, "other", ".midi-qol-bonus-roll .dice-total");
+    addChatDamageButtonsToHTML(midiFlags.damageTotal, midiFlags.damageDetail, html, midiFlags.actorUuid, midiFlags.itemUuid, "damage", ".midi-qol-damage-roll .dice-total");
+    addChatDamageButtonsToHTML(midiFlags.otherDamageTotal, midiFlags.otherDamageDetail, html, midiFlags.actorUuid, midiFlags.itemUuid, "other", ".midi-qol-other-roll .dice-total");
+    addChatDamageButtonsToHTML(midiFlags.bonusDamageTotal, midiFlags.bonusDamageDetail, html, midiFlags.actorUuid, midiFlags.itemUuid, "other", ".midi-qol-bonus-roll .dice-total");
   }
   return true;
 }
 
-export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemId, tag="damage",toMatch=".dice-total", style="margin: 0px;") {
+export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemUuid, tag="damage",toMatch=".dice-total", style="margin: 0px;") {
 
-  debug("addChatDamageButtons", totalDamage, damageList, html, actorId, itemId, toMatch, html.find(toMatch))
+  debug("addChatDamageButtons", totalDamage, damageList, html, actorId, itemUuid, toMatch, html.find(toMatch))
   const btnContainer = $('<span class="dmgBtn-container-mqol"></span>');
   let btnStylinggreen = `width: 20%; height:90%; background-color:lightgreen; line-height:1px; ${style}`;
   let btnStylingred =   `width: 20%; height:90%; background-color:red; line-height:1px; ${style}`;
@@ -445,7 +446,8 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
       button.off("click");
       button.click(async (ev) => {
           ev.stopPropagation();
-          const item = game.actors.get(actorId).items.get(itemId);
+          // const item = game.actors.get(actorId).items.get(itemId);
+          const item = MQfromUuid(itemUuid)
           // find solution for non-magic weapons
           let promises = [];
           for (let t of canvas.tokens.controlled) {
@@ -487,7 +489,7 @@ export function processItemCardCreation(message, options, user) {
     const delay = 0;
     if (sound) {
       setTimeout(() => {
-      sound.playing = true;
+      // sound.playing = true;
         playlist.playSound(sound);
       }, delay)
     }
