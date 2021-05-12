@@ -1,11 +1,67 @@
 ## 0.8.0
-First implementation for 0.8.2 and dnd 1.3.0 both required.
+First implementation for 0.8.3 and dnd 1.3.0 both required.
 * [BREAKING] token.uuid and actor.uuid are used almost everywhere and passed to macros.
 * New function MidiQOL.MQfromActorUuid(tokenUuid | actorUuid) which returns the actor for the specified Uuid (actor or token). Works across scenes and returns the synthetic actor if required.
 * Attacks/Damage and active effect application work even if the GM is not on the same scene as the player.
 * [BREAKING] OnUse/Damage bonus macros receive TokenDocuments, rather than token.data, which means you can fetch the Uuid.
 * Updated Hunter's mark spell showing some of the way things can/should be done now.
+Until Itemacro is updated for 0.8.x the OnUse macro needs to call a global macro. Here is the macro text for the script macro Hunter's Mark
+```
+// Sample Hunters mark onUse macro
+console.error(args[0])
+if (args[0].hitTargets.length === 0) return;
+if (args[0].tag === "OnUse") {
+    // Sample Hunters mark
+    let targetUuid = args[0].hitTargets[0].uuid;
+    let actor = await MidiQOL.MQfromActorUuid(args[0].actorUuid); // actor who cast the spell
+    if (!actor || !targetUuid) {
+      console.error("Hunter's Mark: no token/target selected");
+      return;
+    }
+    
+    // create an active effect, 
+    //  one change showing the hunter's mark icon on the caster
+    //  the second setting the flag for the macro to be called when damaging an opponent
+    const effectData = {
+      changes: [
+        {key: "flags.midi-qol.huntersMark", mode: 5, value: targetUuid, priority: 20}, // who is marked
+        // {key: "flags.dnd5e.DamageBonusMacro", mode: 0, value: `ItemMacro.${args[0].item.name}`, priority: 20} // macro to apply the damage
+        {key: "flags.dnd5e.DamageBonusMacro", mode: 0, value: `${args[0].item.name}`, priority: 20} // macro to apply the damage
+      ],
+
+      origin: args[0].itemUuid, //flag the effect as associated to the spell being cast
+      disabled: false,
+      duration: args[0].item.effects.contents[0].data.duration,
+      icon: args[0].item.img,
+      label: args[0].item.name
+    }
+    Hooks.once("midi-qol.RollComplete", workflow => {
+      let cd = getProperty(actor.data, "flags.midi-qol.concentration-data");
+      let targets = duplicate(cd.targets || [])
+      targets.push({"actorUuid": args[0].actorUuid, "tokenUuid": args[0].tokenUuid});
+      actor.setFlag("midi-qol", "concentration-data.targets", targets);
+    });
+    await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+} else if (args[0].tag === "DamageBonus") {
+    // only weapon attacks
+    if (!["mwak","rwak"].includes(args[0].item.data.actionType)) return {};
+    let targetUuid = args[0].hitTargets[0].uuid;
+    // only on the marked target
+    if (targetUuid !== getProperty(args[0].actor.flags, "midi-qol.huntersMark")) return {};
+    let damageType = args[0].item.data.damage.parts[0][1];
+    const diceMult = args[0].isCritical ? 2: 1;
+    return {damageRoll: `${diceMult}d6[${damageType}]`, flavor: "Hunters Mark Damage"}
+}
+```
+
 * Updated range targeting to support walls block option.
+Issues:
+* multilevel tokens not 0.8.3 compatible so no testing of mirrored actor targeting.
+* CUB not 0.8.3 compatible so no testing of CUB
+* Conditional visibility not 0.8.x compatible so no testing.
+* Better Rolls not tested.
+* Added temporary patch for LMRTFY problem in 0.8.x - works with patch.
+
 
 ## 0.3.102
 * Updated ja.json - thanks @Brother Sharp

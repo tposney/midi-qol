@@ -321,7 +321,7 @@ export class Workflow {
     }
     
     this.tokenId = speaker.token;
-    this.tokenUuid = this.tokenId ? canvas.tokens.get(this.tokenId).uuid : undefined; // TODO see if this could be better
+    this.tokenUuid = this.tokenId ? canvas.tokens.get(this.tokenId).document.uuid : undefined; // TODO see if this could be better
     this.speaker = speaker;
     if (this.speaker.scene) this.speaker.scene = canvas?.scene?.id;
     this.targets = targets; 
@@ -673,24 +673,7 @@ export class Workflow {
               actorUuid: target.actor.uuid,
               effects: expiredEffects,
             });
-
-/*            TODO remove this when socketlib 100% solid
-            const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
-            if (!intendedGM) {
-              ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
-              error("No GM user connected - cannot remove effects");
-              return;
-            }
-
-
-            broadcastData({
-              action: "removeEffects",
-              tokenId: target.id,
-              effects: expiredEffects,
-              intendedFor: intendedGM.id
-            });
-            */
-          } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
+          }
         }
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
 
@@ -723,7 +706,7 @@ export class Workflow {
         if (hasConcentration && checkConcentration && this.applicationTargets) {
           let targets = [];
           for (let hit of this.applicationTargets) 
-            targets.push({tokenUuid: hit.uuid, actorUuid: hit.actor.uuid});
+            targets.push({tokenUuid: hit.document.uuid, actorUuid: hit.actor.uuid});
           await this.actor.setFlag("midi-qol", "concentration-data", {uuid: this.item.uuid, targets, templates: this.templateUuid ? [this.templateUuid] : []})
           if (this.tokenId) {
             if (installedModules.get("combat-utility-belt")) {

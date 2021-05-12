@@ -3,7 +3,7 @@
   "title": "Midi QOL",
   "description": "replacement for minor-qol that automates rolling weapon/spell attacks",
   "systems": ["dnd5e", "sw5e"],
-  "version": "0.8.0",
+  "version": "0.8.1",
   "author": "tposney",
   "socket": true,
   "scripts": [],
@@ -73,5 +73,5 @@
   "allowBugReporter": true,
   "url": "https://gitlab.com/tposney/midi-qol",
   "manifest": "https://gitlab.com/tposney/midi-qol/raw/08x/package/module.json",
-  "download": "https://gitlab.com/tposney/midi-qol/raw/08x/package/midi-qol-v0.8.0.zip"
+  "download": "https://gitlab.com/tposney/midi-qol/raw/08x/package/midi-qol-v0.8.1.zip"
 }

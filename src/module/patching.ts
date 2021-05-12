@@ -274,7 +274,13 @@ export function patchLMRTFY() {
   if (installedModules.get("lmrtfy")) {
       log("Patching rollAbilitySave")
       libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "OVERRIDE");
+      libWrapper.register("midi-qol", "LMRTFYRoller.prototype._tagMessage", _tagMessage, "OVERRIDE");
+
   }
+}
+
+export function _tagMessage(candidate, data, options) {
+  setProperty(data, "flags.lmrtfy", {"message": this.data.message, "data": this.data.attach});
 }
 
 export function _makeRoll(event, rollMethod, ...args) {

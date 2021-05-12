@@ -132,7 +132,7 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, exist
   if (game.user.isGM) 
       log(`${a.name} ${oldHP} takes ${value} reduced from ${totalDamage} Temp HP ${newTemp} HP ${newHP} `);
   // TODO change tokenId, actorId to tokenUuid and actor.uuid
-  return {tokenId, tokenUuid, actorID: a._id, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
+  return {tokenId, tokenUuid, actorID: a.id, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
           oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value, sceneId};
 }
 
@@ -210,15 +210,19 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
           let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
           if (type.toLowerCase() !== "temphp") dmgType = type.toLowerCase();
           //         let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
-          let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).roll().total;
+          //@ts-ignore evaluate
+          let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).evaluate({async: false}).total;
           if (DRType === 0 && ["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
-            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"), t.actor.getRollData())).roll().total);
+            //@ts-ignore evaluate
+            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"), t.actor.getRollData())).evaluate({async: false}).total);
             //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
           } else if (DRType === 0 && ["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(t.actor.data, `flags.midi-qol.DR.physical`)) {
-            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.physical`) || "0"), t.actor.getRollData())).roll().total);
+            //@ts-ignore evaluate
+            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.physical`) || "0"), t.actor.getRollData())).evaluate({async: false}).total);
             //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
           } else if (DRType === 0 && !["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`), t.actor.getRollData()) {
-            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`) || "0"), t.actor.getRollData())).roll().total);
+            //@ts-ignore evaluate
+            DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`) || "0"), t.actor.getRollData())).evaluate({async: false}).total);
           }
 
           if (type.includes("temphp")) {
@@ -812,23 +816,7 @@ export function expireRollEffect(rollType: string, abilityId: string) {
       actorUuid: this.uuid,
       effects: expiredEffects,
     })
-
-/* TODO remove this when socketlib 100% solid
-    const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
-    if (!intendedGM) {
-      ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
-      error("No GM user connected - cannot remove effects");
-      return;
-    }
-
-    broadcastData({
-      action: "removeEffects",
-      tokenId: ChatMessage.getSpeaker({actor: this}).token,
-      effects: expiredEffects,
-      intendedFor: intendedGM.id
-    });
-    */
-  } // target.actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects);
+  }
 }
 
 export async function validTargetTokens(tokenSet: Set<Token>): Promise<Set<Token>> {
