@@ -525,7 +525,50 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   return ChatMessage.create(chatData);
 }
 
+function isTokenInside(token, wallsBlockTargeting) {
+  const grid = canvas.scene.data.grid,
+		templatePos = { x: this.data.x, y: this.data.y };
+	// Check for center of  each square the token uses.
+	// e.g. for large tokens all 4 squares
+	const startX = token.width >= 1 ? 0.5 : token.width / 2;
+	const startY = token.height >= 1 ? 0.5 : token.height / 2;
+  // console.error(grid, templatePos, startX, startY, token.width, token.height, token)
+	for (let x = startX; x < token.width; x++) {
+		for (let y = startY; y < token.height; y++) {
+			const currGrid = {
+				x: token.x + x * grid - templatePos.x,
+				y: token.y + y * grid - templatePos.y,
+			};
+			let contains = this.shape?.contains(currGrid.x, currGrid.y);
+			if (contains && wallsBlockTargeting) {
+        const r = new Ray({x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y}, templatePos);
+        contains = !canvas.walls.checkCollision(r);
+      }
+      if (contains) return true;
+		}
+	}
+	return false;
+}
+
+export function templateTokens(template) {
+  if (configSettings.autoTarget === "none") return;
+  const wallsBlockTargeting = configSettings.autoTarget === "wallsBlock";
+	const tokens = canvas.tokens.placeables.map(t=>t.data)
+  let targets = [];
+  let tokenInside = isTokenInside.bind(template)
+  for (const tokenData of tokens) {
+    if (tokenInside(tokenData, wallsBlockTargeting)) {
+      targets.push(tokenData._id);
+    }
+  }
+  // console.error("targets", targets)
+  game.user.updateTokenTargets(targets);
+}
+
+/*
 export function getTargetedTokens(templateDocument, selfTarget) {
+
+  console.error("get targeted ", templateDocument.data, selfTarget)
   let targeting = configSettings.autoTarget;
   let templateData = templateDocument.data;
   // release current targets
@@ -594,27 +637,40 @@ export function getTargetedTokens(templateDocument, selfTarget) {
       }
     }
     if (contained) t.setTarget(true, { user: game.user, releaseOthers: false });
+    console.error("Contained ", contained);
     return contained;
   });
 }
-
+*/
 export function selectTargets(templateDocument, data, user) {
-  let item = this.item;
+  let item = this?.item;
   let targeting = configSettings.autoTarget;
   if (user !== game.user.id) {
     return true;
   }
+  this.templateId = templateDocument?.id;
+  this.templateUuid = templateDocument?.uuid;
   if (targeting === "none") { // this is no good
     Hooks.callAll("midi-qol-targeted", this.targets);
     return true;
   }
   if (!templateDocument.data) return true;
-  this.templateId = templateDocument.id;
-  this.templateUuid = templateDocument.uuid;
+
 
   // if the item specifies a range of "self" don't target the caster.
 
-  let selfTarget = (item?.data.data.range?.units === "spec") ? this.tokenUuid : null;
+  let selfTarget = (item?.data.data.range?.units === "spec") ? canvas.tokens.get(this.tokenId) : null;
+  if (selfTarget && game.user.targets.has(selfTarget)) {
+    // we are targeted and should not be
+    selfTarget.setTarget(false, {user: game.user, releaseOther: false})
+    game.user.targets.delete(selfTarget)
+  }
+  this.saves = new Set();
+  this.targets = game.user.targets;
+  this.hitTargets = game.user.targets;
+  this.templateData = templateDocument.data;
+  return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
+/*
   setTimeout(() => {
     getTargetedTokens(templateDocument, selfTarget)
     // Assumes area affect do not have a to hit roll
@@ -623,7 +679,8 @@ export function selectTargets(templateDocument, data, user) {
     this.hitTargets = game.user.targets;
     this.templateData = templateDocument.data;
     return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
-  }, 250);
+  }, 50);
+  */
 };
 
 export function doCritModify(result: Roll, criticalModify = criticalDamage) {

@@ -1,5 +1,5 @@
 import { log, warn, debug, i18n, error } from "../midi-qol";
-import { doItemRoll, doAttackRoll, doDamageRoll } from "./itemhandling";
+import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling";
 import { configSettings, autoFastForwardAbilityRolls } from "./settings.js";
 import { expireRollEffect, testKey } from "./utils";
 import { installedModules } from "./setupModules";
@@ -232,6 +232,15 @@ function procAdvantageSkill(actor, skillId, options: Options): Options {
   return options;
 }
 
+function midiATRefresh(wrapped)  {
+  templateTokens(this)
+  return wrapped();
+}
+
+export function readyPatching() {
+  libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER")
+}
+
 export let visionPatching = () => {
   const patchVision = isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
   if (patchVision) {
@@ -268,6 +277,7 @@ export let actorAbilityRollPatching = () => {
 
   log("Patching rollDeathSave");
   libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
+
 }
 
 export function patchLMRTFY() {
@@ -303,7 +313,7 @@ export function _makeRoll(event, rollMethod, ...args) {
   game.settings.set("core", "rollMode", this.mode || CONST.DICE_ROLL_MODES);
   for (let actor of this.actors) {
       Hooks.once("preCreateChatMessage", this._tagMessage.bind(this));
-          actor[rollMethod].call(actor, ...args, options);                        
+      actor[rollMethod].call(actor, ...args, options);                        
   }
   game.settings.set("core", "rollMode", rollMode);
   event.currentTarget.disabled = true;

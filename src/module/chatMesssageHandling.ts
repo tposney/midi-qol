@@ -239,13 +239,14 @@ export let colorChatMessageHandler = (message, html, data) => {
  return true;
 }
 
-export let nsaMessageHandler = (data, ...args) => {
+export let nsaMessageHandler = (message, data, ...args) => {
   if (!nsaFlag || !data.whisper || data.whisper.length === 0) return true;
   let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active).map(u=>u.id);
   let currentIds = data.whisper.map(u=>typeof(u) === "string" ? u : u.id);
   gmIds = gmIds.filter(id => !currentIds.includes(id));
   debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmids ", gmIds)
-  data.whisper = data.whisper.concat(gmIds);
+  message.update({"whisper": data.whisper.concat(gmIds)});
+  // TODO check this data.whisper = data.whisper.concat(gmIds);
   return true;
 }
 

@@ -1,5 +1,12 @@
-## 0.8.1
+## 0.8.2
+Auto targeting now shows targeted tokens while previewing the template (i.e. before final placement).
+updated for 0.8.4 compatibility.
+auto-fastforward on tool rolls.
 
+## 0.8.1
+* Needs to be sideloaded from:  
+ https://gitlab.com/tposney/midi-qol/raw/08x/package/module.json  
+* Cleaned up the deprecation warnings
 * Updated Hunter's mark spell showing some of the way things can/should be done now.
 Until Itemacro is updated for 0.8.x the OnUse macro needs to call a global macro. Here is the macro text for the script macro Hunter's Mark
 ```

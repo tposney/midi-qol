@@ -14,7 +14,7 @@
 import { registerSettings, fetchParams, configSettings } from './module/settings';
 import { preloadTemplates } from './module/preloadTemplates';
 import { installedModules, setupModules } from './module/setupModules';
-import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY } from './module/patching';
+import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, readyPatching } from './module/patching';
 import { initHooks, readyHooks } from './module/Hooks';
 import { initGMActionSetup, setupSocket } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
@@ -153,8 +153,8 @@ Hooks.once('ready', function() {
   checkSocketLibInstalled();
   checkCubInstalled();
   checkConcentrationSettings();
-
   readyHooks();
+  readyPatching();
 });
 
 // Add any additional hooks if necessary
