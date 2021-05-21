@@ -1,3 +1,5 @@
+## 0.8.3
+Fix for error when displaying player character avatar image in damage card.
 ## 0.8.2
 Auto targeting now shows targeted tokens while previewing the template (i.e. before final placement).
 updated for 0.8.4 compatibility.
