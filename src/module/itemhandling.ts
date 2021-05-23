@@ -150,6 +150,7 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, p
     powerLevel: workflow.rollOptions.spellLevel,
     versatile: workflow.rollOptions.versatile || versatile,
     fastForward: workflow.rollOptions.fastForward,
+    event: {},
     // TODO enable this when possible via options "data.default": (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal",
     options: {
       fastForward: workflow.rollOptions.fastForward,
@@ -182,6 +183,7 @@ export async function doDamageRoll(wrapped, { event = null, spellLevel = null, p
       spellLevel: workflow.rollOptions.spellLevel,
       versatile: true,
       fastForward: true,
+      event: {},
       // "data.default": (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal",
       options: {
         fastForward: true,
@@ -365,7 +367,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     (this.hasAttack && needAttckButton)) ||
     (!this.hasAttack && !itemHasDamage(this) && !this.hasSave);
 
-  if (workflow.showCard) {
+  if (workflow.showCard) { //TODO check this against dnd5e 1.30
     let item = this;
     if (workflow.itemLevel !== this.data.data.level) {
       const upcastData = mergeObject(this.data, {"data.level": workflow.itemLevel}, {inplace: false});
@@ -381,7 +383,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
 export async function showItemInfo() {
   const token = this.actor.token;
-  const sceneId = token?.scene && token.scene._id || canvas.scene._id;
+  const sceneId = token?.scene && token.scene.id || canvas.scene.id;
 
   const templateData = {
     actor: this.actor,
@@ -410,12 +412,12 @@ export async function showItemInfo() {
   const html = await renderTemplate(template, templateData);
 
   const chatData = {
-    user: game.user,
+    user: game.user.id,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     content: html,
     speaker: {
-      actor: this.actor._id,
-      token: this.actor.token,
+      actor: this.actor.id,
+      token: this.actor.token?.id,
       alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name,
       scene: canvas?.scene?.id
     },
@@ -441,7 +443,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   needAttackButton = needAttackButton || (getAutoRollAttack() && workflow.rollOptions.fastForwardKey)
   const needDamagebutton = itemHasDamage(this) && (getAutoRollDamage() === "none" || !getRemoveDamageButtons() || showFullCard);
   const needVersatileButton = itemIsVersatile(this) && (showFullCard || getAutoRollDamage() === "none");
-  const sceneId = token?.scene && token.scene._id || canvas.scene?._id;
+  const sceneId = token?.scene && token.scene.id || canvas.scene?.id;
   let isPlayerOwned = this.actor.hasPlayerOwner;
 
   if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = this.actor.isPC
@@ -485,13 +487,13 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   else if (["spell", "power"].includes(this.type)) theSound = configSettings.spellUseSound;
   else if (this.type === "consumable" && this.name.toLowerCase().includes(i18n("midi-qol.potion").toLowerCase())) theSound = configSettings.potionUseSound;
   const chatData = {
-    user: game.user,
+    user: game.user.id,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     content: html,
     flavor: this.data.data.chatFlavor || this.name,
     speaker: {
-      actor: this.actor,
-      token: this.actor.token,
+      actor: this.actor?.id,
+      token: this.actor?.token?.id,
       alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name,
       scene: canvas?.scene?.id
     },
@@ -593,7 +595,7 @@ export function getTargetedTokens(scene, data, selfTarget) {
 export function selectTargets(scene, data, options) {
   let item = this.item;
   let targeting = configSettings.autoTarget;
-  if (data.user !== game.user._id) {
+  if (data.user !== game.user.id) {
     return true;
   }
   if (targeting === "none") { // this is no good

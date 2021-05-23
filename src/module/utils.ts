@@ -108,7 +108,7 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, exist
     tmp = prevDamage.newTempHP;
   } else {
     oldHP = hp.value;
-    tmp = parseInt(hp.temp) || 0;    
+    tmp = parseInt(hp.temp) || 0;
   }
   let value = Math.floor(appliedDamage);
   if (dmgType.includes("temphp")) { // only relavent for healing of tmp HP
@@ -663,7 +663,7 @@ export async function addConcentration(options: {workflow: Workflow}) {
       const ae = duplicate(selfTarget.actor.data.effects.find(ae => ae.label === concentrationName));
       if (ae) {
         //@ts-ignore
-        const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.data._id));
+        const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.id));
         const convertedDuration = options.workflow.dae.convertDuration(itemDuration, inCombat);
         if (convertedDuration.type === "seconds") {
           ae.duration.seconds = convertedDuration.seconds;

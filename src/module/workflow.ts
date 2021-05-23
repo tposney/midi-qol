@@ -8,7 +8,7 @@ import { selectTargets, showItemCard } from "./itemhandling";
 // import { broadcastData } from "./GMAction";
 import { socketlibSocket } from "./GMAction";
 import { installedModules } from "./setupModules";
-import { configSettings, autoRemoveTargets, checkRule } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens } from "./utils"
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
@@ -455,6 +455,10 @@ export class Workflow {
         break;
 
       case WORKFLOWSTATES.WAITFORATTACKROLL:
+        if (this.item.data.type === "tool" && autoFastForwardAbilityRolls) {
+          this.item.rollToolCheck({fastForward: this.rollOptions.fastForward, advantage: this.rollOptions.advantage, disadvantage: this.rollOptions.disadvantage})  
+          return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
+        }
         if (!this.item.hasAttack) {
           return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
         }
@@ -796,7 +800,7 @@ export class Workflow {
     const macroData = {
       actor: this.actor.data,
       tokenId: this.tokenId,
-      item: this.item.data,
+      item: this.item?.data,
       targets,
       hitTargets,
       saves,
@@ -1164,7 +1168,7 @@ export class Workflow {
         if (!!!game.dice3d?.messageHookDisabled) this.hideTags = [".midi-qol-saves-display"];
         switch (this.workflowType) {
           case "BetterRollsWorkflow":
-            const html = `<div data-item-id="${this.item._id}"></div><div class="midi-qol-saves-display">${saveHTML}${saveContent}</div><footer class="card-footer">`
+            const html = `<div data-item-id="${this.item.id}"></div><div class="midi-qol-saves-display">${saveHTML}${saveContent}</div><footer class="card-footer">`
             const roll = this.roll;
             await roll.entries.push({ type: "raw", html, source: "midi" });
             return;
@@ -1172,8 +1176,8 @@ export class Workflow {
         case "Workflow":
         case "TrapWorkflow":
             searchString =  /<div class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
-            // replaceString = `<div data-item-id="${this.item._id}"></div><div class="midi-qol-saves-display"><div class="midi-qol-nobox midi-qol-bigger-text">${saveFlavor}</div>${saveContent}</div>`
-            replaceString = `<div class="midi-qol-saves-display"><div data-item-id="${this.item._id}">${saveHTML}${saveContent}</div><div class="end-midi-qol-saves-display">`
+            // replaceString = `<div data-item-id="${this.item.id}"></div><div class="midi-qol-saves-display"><div class="midi-qol-nobox midi-qol-bigger-text">${saveFlavor}</div>${saveContent}</div>`
+            replaceString = `<div class="midi-qol-saves-display"><div data-item-id="${this.item.id}">${saveHTML}${saveContent}</div><div class="end-midi-qol-saves-display">`
             content = content.replace(searchString, replaceString);
             await chatMessage.update({
               content, 
@@ -1193,7 +1197,7 @@ export class Workflow {
       chatData = {
         user: gmUser._id,
         speaker,
-        content: `<div data-item-id="${this.item._id}"></div> ${saveContent}`,
+        content: `<div data-item-id="${this.item.id}"></div> ${saveContent}`,
         flavor: `<h4>${this.saveDisplayFlavor}</h4>`, 
         type: CONST.CHAT_MESSAGE_TYPES.OTHER,
         flags: { "midi-qol": {type: MESSAGETYPES.SAVES, waitForDiceSoNice: waitForDSN}}
