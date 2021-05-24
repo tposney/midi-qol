@@ -7,24 +7,6 @@ import { libWrapper } from "./lib/shim.js";
 
 var d20Roll;
 
-function restrictVisibility() {
-  // Tokens
-  for ( let t of canvas.tokens.placeables ) {
-    // ** TP  t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible;
-    // t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible;
-    // t.visalbe = t.visible || (t.data.stealth && t.actor?.hasPerm(game.user, "OBSERVER"));
-    t.visible = ( !this.tokenVision && !t.data.hidden ) || t.isVisible || (t.actor?.hasPerm(game.user, "OWNER"));
-  }
-
-  // Door Icons
-  for ( let d of canvas.controls.doors.children ) {
-    d.visible = !this.tokenVision || d.isVisible;
-  }
-
-  // Dispatch a hook that modules can use
-  Hooks.callAll("sightRefresh", this);
-}
-
 function _isVisionSource() {
   // log("proxy _isVisionSource", this);
 
@@ -247,10 +229,7 @@ export let visionPatching = () => {
     // ui.notifications.warn("This setting is deprecated please switch to Conditional Visibility")
     console.warn("midi-qol | Player controls tokens setting is deprecated please switch to Conditional Visibility")
 
-      log("Patching SightLayer._restrictVisibility")
-      libWrapper.register("midi-qol", "SightLayer.prototype.restrictVisibility", restrictVisibility, "OVERRIDE");
-
-      log("Patching Token._isVisionSource")
+    log("Patching Token._isVisionSource")
       libWrapper.register("midi-qol", "Token.prototype._isVisionSource", _isVisionSource, "OVERRIDE");
 
       log("Patching Token.isVisible")
@@ -282,7 +261,7 @@ export let actorAbilityRollPatching = () => {
 
 export function patchLMRTFY() {
   if (installedModules.get("lmrtfy")) {
-      log("Patching rollAbilitySave")
+      log("Patching lmrtfy")
       libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "OVERRIDE");
       libWrapper.register("midi-qol", "LMRTFYRoller.prototype._tagMessage", _tagMessage, "OVERRIDE");
 
@@ -290,7 +269,8 @@ export function patchLMRTFY() {
 }
 
 export function _tagMessage(candidate, data, options) {
-  setProperty(data, "flags.lmrtfy", {"message": this.data.message, "data": this.data.attach});
+  let update = {flags: {lmrtfy: {"message": this.data.message, "data": this.data.attach}}};
+  candidate.data.update(update);
 }
 
 export function _makeRoll(event, rollMethod, ...args) {

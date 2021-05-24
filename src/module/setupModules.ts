@@ -12,7 +12,8 @@ let modules = {"about-time": "0.0",
               "times-up": "0.1.2",
               "conditional-visibility": "0.0",
               "monks-tokenbar": "0.0",
-              "socketlib": "0.0"
+              "socketlib": "0.0",
+              "advanced-macros": "1.0"
             };
 export let installedModules = new Map();
 

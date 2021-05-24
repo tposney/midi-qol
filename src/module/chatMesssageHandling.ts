@@ -7,7 +7,7 @@ import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
 import { nsaFlag, coloredBorders, criticalDamage, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow, checkRule } from "./settings";
-import { createDamageList, getTraitMult, calculateDamage, addConcentration, MQfromUuid } from "./utils";
+import { createDamageList, getTraitMult, calculateDamage, addConcentration, MQfromUuid, getSelfTarget } from "./utils";
 import { setupSheetQol } from "./sheetQOL";
 
 export const MAESTRO_MODULE_NAME = "maestro";
@@ -45,8 +45,8 @@ export function processcreateBetterRollMessage(message, options, user) {
   if (!brFlags) return true;
   const flags = message.data.flags;
   if (!flags) return true;
-  const itemId = flags["midi-qol"]?.itemId;
-  let workflow = BetterRollsWorkflow.get(itemId);
+  const itemUuid = flags["midi-qol"]?.itemId;
+  let workflow = BetterRollsWorkflow.get(itemUuid);
   if (!workflow) return true;
   workflow.itemCardId = message.id;
   workflow.next(WORKFLOWSTATES.NONE);
@@ -59,30 +59,27 @@ export let processpreCreateBetterRollsMessage = (message: ChatMessage, data: any
   debug("process precratebetteerrollscard ", data, options, installedModules["betterrolls5e"], data.content?.startsWith('<div class="dnd5e red-full chat-card"') )
   
   let speaker;
-  let actorId = data.speaker?.actor;
-  let tokenId = data.speaker?.token;
-  let token: Token = canvas.tokens.get(tokenId)
-  let actor: Actor5e = token?.actor;
-  if (!actor) {
-    actor = game.actors.get(actorId);
-    speaker = ChatMessage.getSpeaker({actor})
-    token = canvas.tokens.get(speaker.token);
-  } else speaker = data.speaker;
-  let workflow = BetterRollsWorkflow.get(brFlags.itemId);
-  let item;
-  if (!workflow) { // not doing the item.roll() TODO remove this when version .13 is out
-    item = actor.items.get(brFlags.itemId);
-    if (!item) item = game.items.get(brFlags.itemId);
-    if (item && brFlags.params?.midiSaveDC) { // TODO this a nasty hack should be fixed
-      item.data.data.save.dc = brFlags.params.midiSaveDC;
-    }
-  } else {
-    item = workflow.item;
+  let actorId = brFlags.actorId;
+  let tokenId = brFlags.tokenId;
+  if (tokenId && !tokenId.startsWith("Scene")) { // remove when BR passes a uuid instead of constructed id.
+    const parts = tokenId.split(".");
+    tokenId = `Scene.${parts[0]}.Token.${parts[1]}`
   }
+  let token: Token = tokenId && MQfromUuid(tokenId)
+
+  let actor;
+  if (token) actor = token.actor;
+  else actor = game.actors.get(actorId);
+  const item = actor.items.get(brFlags.itemId);
   if (!item) return;
   // Try and help name hider
-  if (!data.speaker.scene) data.speaker.scene = canvas.scene.id;
-  if (!data.speaker.token) data.speaker.token = token?.id;
+    //@ts-ignore speaker
+    if (message.data.speaker) {
+    //@ts-ignore speaker, update
+    if (!message.data.speaker?.scene) message.data.update({"speaker.scene":canvas.scene.id});
+    //@ts-ignore speaker, update
+    if (!message.data.speaker?.token && tokenId) message.data.update({"speaker.token": tokenId});
+  }
 
   let damageList = [];
   let otherDamageList = [];
@@ -92,9 +89,8 @@ export let processpreCreateBetterRollsMessage = (message: ChatMessage, data: any
   let attackTotal = attackEntry?.entries?.find((e) => !e.ignored)?.total ?? -1;
   let advantage = attackEntry ? attackEntry.rollState === "highest" : undefined;
   let disadvantage = attackEntry ? attackEntry.rollState === "lowest" : undefined;
-  let diceRoll = attackEntry ? attackEntry.entries?.find((e) => !e.ignored)?.roll.results[0] : -1;
+  let diceRoll = attackEntry ? attackEntry.entries?.find((e) => !e.ignored)?.roll.terms[0].total : -1;
   let isCritical = false;
-  console.error("better rolls roll ", workflow)
 
   for (let entry of brFlags.entries) {
     if (entry.type === "damage-group") {
@@ -114,13 +110,16 @@ export let processpreCreateBetterRollsMessage = (message: ChatMessage, data: any
     }
   }
   // BetterRollsWorkflow.removeWorkflow(item.id);
-  setProperty(data, "flags.midi-qol.itemId", item.id);
+  //@ts-ignore udpate
+  message.data.update({"flags.midi-qol.itemId": item.uuid});
   const targets = (item?.data.data.target?.type === "self") ? new Set([token]) : new Set(game.user.targets);
+  let workflow = BetterRollsWorkflow.getWorkflow(item.uuid);
   if (!workflow) workflow = new BetterRollsWorkflow(actor, item, speaker, targets, null);
   workflow.isCritical = isCritical;
   workflow.isFumble = diceRoll === 1;
   workflow.attackTotal = attackTotal;
-  workflow.attackRoll = new Roll(`${attackTotal}`).roll();
+  //@ts-ignore evaluate
+  workflow.attackRoll = new Roll(`${attackTotal}`).evaluate({async: false});
   if (configSettings.keepRollStats && item.hasAttack) {
     gameStats.addAttackRoll({rawRoll: diceRoll, total: attackTotal, fumble: workflow.isFumble, critical: workflow.isCritical}, item);
   }
@@ -129,7 +128,8 @@ export let processpreCreateBetterRollsMessage = (message: ChatMessage, data: any
 
   if (otherDamageList.length > 0) {
     workflow.otherDamageTotal = otherDamageList.reduce((acc, a) => a.damage + acc, 0);
-    workflow.otherDamageRoll = new Roll(`${workflow.otherDamageTotal}`).roll();
+    //@ts-ignore evaluate
+    workflow.otherDamageRoll = new Roll(`${workflow.otherDamageTotal}`).evaluate({async: false});
   }
   workflow.itemLevel = brFlags.params.slotLevel ?? 0;
   workflow.itemCardData = data;
@@ -138,13 +138,17 @@ export let processpreCreateBetterRollsMessage = (message: ChatMessage, data: any
   if (!workflow.tokenId) workflow.tokenId = token?.id;
   if (configSettings.concentrationAutomation) {
     let doConcentration = async () => {
-      const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
-      const needsConcentration = workflow.item.data.data.components?.concentration;
-      const checkConcentration = installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
+      const concentrationName = installedModules.get("combat-utility-belt")
+        ? game.settings.get("combat-utility-belt", "concentratorConditionName")
+        : i18n("midi-qol.Concentrating");
+      const needsConcentration = workflow.item?.data.data.components?.concentration || workflow.item?.data.data.activation?.condition?.includes("Concentration");
+      const checkConcentration = configSettings.concentrationAutomation;
       if (needsConcentration && checkConcentration) {
         const concentrationCheck = item.actor.data.effects.find(i => i.label === concentrationName);
         if (concentrationCheck) {
-          await game.cub.removeCondition(concentrationName, [token], {warn: false});
+          if (installedModules.get("combat-utility-belt"))
+            game.cub.removeCondition(concentrationName, [await getSelfTarget(workflow.item.actor)], { warn: false });
+          else concentrationCheck.delete();
           // await item.actor.unsetFlag("midi-qol", "concentration-data");
         }
         if (needsConcentration)
@@ -526,7 +530,7 @@ export async function onChatCardAction(event) {
     if ( !actor ) return;
 
     // Get the Item from stored flag data or by the item ID on the Actor
-    const storedData = message.getFlag("dnd5e", "itemData");
+    const storedData = message.getFlag(game.system.id, "itemData");
     item = storedData ? this.createOwned(storedData, actor) : actor.getOwnedItem(card.dataset.itemId);
     if ( !item ) { // TODO investigate why this is occuring
       // return ui.notifications.error(game.i18n.format("DND5E.ActionWarningNoItem", {item: card.dataset.itemId, name: actor.name}))

@@ -46,6 +46,9 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
   let displayChat = !configSettings.mergeCard;
   if (workflow.workflowType === "BetterRollsWorkflow") displayChat = options.chatMessage;
+  if (!Hooks.call("midi-qol.preAttackRoll", this, workflow)) {
+    console.warn("midi-qol | attack roll blocked by pre hook");
+  }
   let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
     disadvantage: workflow.rollOptions.disadvantage,
@@ -144,6 +147,10 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
   warn("rolling damage  ", this.name, this);
 
+  if (!Hooks.call("midi-qol.preDamageRoll", this, workflow)) {
+    console.warn("midi-qol | Damaage roll blocked via pre-hook");
+    return;
+  }
   let result: Roll = await wrapped({
     critical: workflow.rollOptions.critical,
     spellLevel: workflow.rollOptions.spellLevel,
@@ -303,17 +310,17 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const needsConcentration = this.data.data.components?.concentration || this.data.data.activation?.condition?.includes("Concentration");
   const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
   if (needsConcentration && checkConcentration) {
-    const concentrationName = game.cub 
+    const concentrationName = installedModules.get("combat-utility-belt")
       ? game.settings.get("combat-utility-belt", "concentratorConditionName")
       : i18n("midi-qol.Concentrating");
-    let concentrationCheck = this.actor.effects.contents.find(i => i.data.label === concentrationName);
+    const concentrationCheck = this.actor.effects.contents.find(i => i.data.label === concentrationName);
 
     if (concentrationCheck) {
       let d = await Dialog.confirm({
         title: i18n("midi-qol.ActiveConcentrationSpell.Title"),
         content: i18n("midi-qol.ActiveConcentrationSpell.Content"),
         yes: async () => {
-          if (game.cub)
+          if (installedModules.get("combat-utility-belt"))
             game.cub.removeCondition(concentrationName, [await getSelfTarget(this.actor)], { warn: false });
           else concentrationCheck.delete();
         },

@@ -89,7 +89,7 @@ export let initHooks = () => {
     return true;
   })
 
-  Hooks.on("createChatMessage", (message: ChatMessage, options, user) => {
+  Hooks.on("createChatMessage", (message: ChatMessage, data, options, user) => {
     debug("Create Chat Meesage ", message.id, message, options, user)
     processcreateBetterRollMessage(message, options, user);
     processItemCardCreation(message, options, user);

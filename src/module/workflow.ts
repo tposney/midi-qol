@@ -859,7 +859,7 @@ export class Workflow {
           itemMacro = getProperty(this.item.data.flags, "itemacro.macro");
         } else {
           const parts = name.split(".");
-          const itemName = parts[1];
+          const itemName = parts.slice(1).join(".");;
           item = this.actor.items.find(i => i.name === itemName && getProperty(i.data.flags, "itemacro.macro"))
           if (item) itemMacro = getProperty(item.data.flags, "itemacro.macro")
           else return {};
@@ -1821,6 +1821,7 @@ export class BetterRollsWorkflow extends Workflow {
         if (!this.item.hasAttack) {
           return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
         }
+        Hooks.callAll("midi-qol.preAttackRollComplete", this);
         return this.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
 
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:

@@ -1,5 +1,13 @@
 ## 0.8.3
-Fix for error when displaying player character avatar image in damage card.
+* 0.8.5 compatible and becomes the main branch for midi-qol.
+* Fix for error when displaying player character avatar image in damage card.
+* Added two hooks, midi-qol.preAttackRoll and midi-qol.preDamageRoll, which are called just before the call to item.rollAttack and item.rollDamage. They are passed the item and the workflow, both as "live" objects so changes will affect the roll that is about to be done. return true for the roll to continue and false for the toll to be aborted. 
+* Compatability with BetterRolls 1.1.14-beta seems to work, but only limited testing.
+* Players control invisible tokens seems to be working. The player vision set is the union of all their owned tokens and they can see invisble tokens they own.
+* Update lmrtfy patch so that the current version works with midi-qol.
+* Fix for calling item macros where the macro name includes "." characters.
+* Verified midi works with advanced-macros (instead of/as well as furnace).
+
 ## 0.8.2
 Auto targeting now shows targeted tokens while previewing the template (i.e. before final placement).
 updated for 0.8.4 compatibility.

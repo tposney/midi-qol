@@ -68,8 +68,8 @@ let createReverseDamageCard = async (data) => {
     let img = tokenDocument?.data.img || tokenDocument?.actor.img;
 
     //@ts-ignore
-    if (configSettings.usePlayerPortrait && token?.actor.data.type === "character")
-    img = tokenDocument?.actor?.img || tokenDocument.data.img;
+    if (configSettings.usePlayerPortrait && tokenDocument?.actor.type === "character")
+      img = tokenDocument?.actor?.img || tokenDocument.data.img;
     //      img = token.actor?.img || token?.data.img || tokenDocument.img;
     if ( VideoHelper.hasVideoExtension(img) ) {
       //@ts-ignore - createThumbnail not defined
