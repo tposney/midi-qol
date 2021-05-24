@@ -73,6 +73,6 @@
   "allowBugReporter": true,
   "dependencies": [{"name": "socketlib"}],
   "url": "https://gitlab.com/tposney/midi-qol",
-  "manifest": "https://gitlab.com/tposney/midi-qol/raw/master/package/module.json",
-  "download": "https://gitlab.com/tposney/midi-qol/raw/master/package/midi-qol-v0.3.104.zip"
+  "manifest": "https://gitlab.com/tposney/midi-qol/raw/079/package/module.json",
+  "download": "https://gitlab.com/tposney/midi-qol/raw/079/package/midi-qol-v0.3.104.zip"
 }
