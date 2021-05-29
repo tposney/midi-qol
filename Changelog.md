@@ -2,6 +2,8 @@
 * Fix for DF Manual Rolls - no longer request roll to be entered twice. Requires ciritical damage to be dnd5e default (fix pending for critical damage).
 * Fix for token tooltip showing dmaage resistance/immunity/vulnerabilty not being dislayed on damage card.
 * [BRAKING] Setting saving throw roll time out to 0 means that the system will NEVER auto roll the save for the player. If saves are not rolled (either auto or by request) they will never be resolved. This will help in the some cases where players incorrectly place templates.
+* Added support for Monks Token Bar saving throws. Can be for players or NPCs. There is no timeout supported for this. The GM can always click on the roll if they get tired of waiting.
+* Fix for DamageOnlyWorkflow error when initialising with no item.
 
 ## 0.8.3
 * 0.8.5 compatible and becomes the main branch for midi-qol.
