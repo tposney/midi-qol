@@ -16,7 +16,7 @@ function _isVisionSource() {
   const isGM = game.user.isGM;
   // TP insert
   // console.error("is vision source ", this.actor?.name, this.actor?.hasPerm(game.user, "OWNER"))
-  if (this.data.hidden && !(isGM || this.actor?.hasPerm(game.user, "OWNER"))) return false;
+  if (this.data.hidden && !(isGM || this.actor?.testUserPermission(game.user, "OWNER"))) return false;
 
   // Always display controlled tokens which have vision
   if ( this._controlled ) return true;
@@ -24,9 +24,9 @@ function _isVisionSource() {
   // Otherwise vision is ignored for GM users
   if ( isGM ) return false;
 
-  if (this.actor?.hasPerm(game.user, "OWNER")) return true;
+  if (this.actor?.testUserPermission(game.user, "OBSERVER")) return true;
   // If a non-GM user controls no other tokens with sight, display sight anyways
-  const canObserve = this.actor && this.actor.hasPerm(game.user, "OBSERVER");
+  const canObserve = this.actor && this.actor.testUserPermission(game.user, "OWNER");
   if ( !canObserve ) return false;
   const others = canvas.tokens.controlled.filter(t => t.hasSight);
 //TP ** const others = this.layer.controlled.filter(t => !t.data.hidden && t.hasSight);
@@ -36,11 +36,11 @@ function _isVisionSource() {
 function isVisible() {
   // console.error("Doing my isVisible")
   const gm = game.user.isGM;
-  if (this.actor?.hasPerm(game.user, "OWNER")) {
+  if (this.actor?.testUserPermission(game.user, "OWNER")) {
 //     this.data.hidden = false;
     return true;
   } 
-  if ( this.data.hidden ) return gm || this.actor?.hasPerm(game.user, "OWNER");
+  if ( this.data.hidden ) return gm || this.actor?.testUserPermission(game.user, "OWNER");
   if (!canvas.sight.tokenVision) return true;
   if ( this._controlled ) return true;
   const tolerance = Math.min(this.w, this.h) / 4;
@@ -256,7 +256,6 @@ export let actorAbilityRollPatching = () => {
 
   log("Patching rollDeathSave");
   libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
-
 }
 
 export function patchLMRTFY() {

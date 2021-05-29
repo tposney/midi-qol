@@ -1,4 +1,6 @@
-<div class="dnd5e chat-card item-card midi-qol-item-card" data-actor-id="{{actor.id}}" data-item-id="{{item._id}}"
+<div class="dnd5e chat-card item-card midi-qol-item-card" 
+  data-actor-id="{{actor.id}}" data-item-id="{{item.id}}"
+  data-actor-uuid="{{actor.uuid}}" data-item-uuid="{{item.uuid}}"
   {{#if tokenId}}data-token-id="{{tokenId}}" {{/if}} 
   {{#if isSpell}}data-spell-level="{{item.data.level}}" {{/if}}
   {{#if isPower}}data-power-level="{{item.data.level}}" {{/if}}>

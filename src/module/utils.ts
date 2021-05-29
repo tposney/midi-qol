@@ -29,7 +29,7 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
       let formula = Roll.replaceFormulaData(spec, rollData || {}, {missing: "0", warn: false});
       // get rid of any remaining @fields
       //@ts-ignore evaluate
-      var rollSpec: Roll = new Roll(formula, rollData || {}).evaluate({async: false});
+      var rollSpec: Roll = new Roll(formula, rollData || {});//.evaluate({async: false});
     }
     debug("CreateDamageList: rollSpec is ", spec, rollSpec)
 

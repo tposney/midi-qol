@@ -98,7 +98,7 @@ export let initHooks = () => {
   
   Hooks.on("updateChatMessage", (message, update, options, user) => {
     mergeCardSoundPlayer(message, update, options, user);
-    hideRollUpdate(message, update, options, user)
+    hideRollUpdate(message, update, options, user);
     //@ts-ignore
     ui.chat.scrollBottom();
   })
@@ -110,7 +110,6 @@ export let initHooks = () => {
   
   Hooks.on("renderChatMessage", (message, html, data) => {
     debug("render message hook ", message.id, message, html, data);
-
     hideStuffHandler(message, html, data);
     chatDamageButtons(message, html, data);
     processUndoDamageCard(message, html, data);

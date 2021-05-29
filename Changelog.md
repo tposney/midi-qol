@@ -1,3 +1,8 @@
+## 0.8.4
+* Fix for DF Manual Rolls - no longer request roll to be entered twice. Requires ciritical damage to be dnd5e default (fix pending for critical damage).
+* Fix for token tooltip showing dmaage resistance/immunity/vulnerabilty not being dislayed on damage card.
+* [BRAKING] Setting saving throw roll time out to 0 means that the system will NEVER auto roll the save for the player. If saves are not rolled (either auto or by request) they will never be resolved. This will help in the some cases where players incorrectly place templates.
+
 ## 0.8.3
 * 0.8.5 compatible and becomes the main branch for midi-qol.
 * Fix for error when displaying player character avatar image in damage card.
@@ -7,6 +12,7 @@
 * Update lmrtfy patch so that the current version works with midi-qol.
 * Fix for calling item macros where the macro name includes "." characters.
 * Verified midi works with advanced-macros (instead of/as well as furnace).
+* Alternate concentration system which works even if CUB is not installed. Midi will still use cub conditions if available.
 
 ## 0.8.2
 Auto targeting now shows targeted tokens while previewing the template (i.e. before final placement).

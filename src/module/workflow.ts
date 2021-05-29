@@ -316,8 +316,8 @@ export class Workflow {
       this.itemUuid = item.uuid;
       this.uuid = item.uuid;
     }
-    if (Workflow.getWorkflow(this.item.uuid)) {
-      Workflow.removeWorkflow(this.item.uuid);
+    if (Workflow.getWorkflow(this.uuid)) {
+      Workflow.removeWorkflow(this.uuid);
     }
     
     this.tokenId = speaker.token;
@@ -356,7 +356,7 @@ export class Workflow {
     this.displayHookId = null;
     this.onUseCalled = false;
     this.effectsAlreadyExpired = [];
-    Workflow._workflows[this.item.uuid] = this;
+    Workflow._workflows[this.uuid] = this;
   }
 
   public someEventKeySet() {
@@ -405,7 +405,7 @@ export class Workflow {
     timelog("next state ", newState, Date.now())
     this.currentState = newState;
     let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===newState)[0];
-    warn("workflow.next ", state, this._id, this)
+    warn("workflow.next ", state, this.id, this)
     switch (newState) {
       case WORKFLOWSTATES.NONE:
         debug(" workflow.next ", state, configSettings.autoTarget, this.item.hasAreaTarget);
@@ -620,6 +620,7 @@ export class Workflow {
           // setup to process saving throws as generated
           let hookId = Hooks.on("renderChatMessage", this.processSaveRoll.bind(this));
           let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
+          let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
           try {
             await this.checkSaves(true);
           } finally {
@@ -627,6 +628,8 @@ export class Workflow {
             Hooks.off("renderChatMessage", hookId);
             //@ts-ignore does not support ids
             Hooks.off("renderChatMessage", brHookId);
+            //@ts-ignore does not support ids
+            Hooks.off("updateChatMessage", monksId);
           }
           debug("Check Saves: ", this.saveRequests, this.saveTimeouts, this.saves);
 
@@ -735,8 +738,6 @@ export class Workflow {
         return;
     }
   }
-
-
 
   async rollBonusDamage(damageBonusMacro) {
     let formula = "";
@@ -857,12 +858,17 @@ export class Workflow {
         item = this.item;
         if (name === "ItemMacro") {
           itemMacro = getProperty(this.item.data.flags, "itemacro.macro");
+          //@ts-ignore
+          macroData.sourceItemUuid = this.item?.uuid;
         } else {
           const parts = name.split(".");
           const itemName = parts.slice(1).join(".");;
           item = this.actor.items.find(i => i.name === itemName && getProperty(i.data.flags, "itemacro.macro"))
-          if (item) itemMacro = getProperty(item.data.flags, "itemacro.macro")
-          else return {};
+          if (item) {
+            itemMacro = getProperty(item.data.flags, "itemacro.macro");
+            //@ts-ignore
+            macroData.sourceItemUuid = item.uuid;
+          } else return {};
         }
         const speaker = this.speaker;
         const actor = this.actor;
@@ -870,7 +876,10 @@ export class Workflow {
         const character = game.user.character;
         const args = [macroData];
 
-        // const asyncFunction = itemMacro.data.command.includes("await") ? "async" : "";
+        if (!itemMacro?.data?.command) {
+          warn(`could not find item macro ${name}`);
+          return {};
+        }
         return (new Function(`"use strict";
               return (async function ({speaker, actor, token, character, item, args}={}) {
                   ${itemMacro.data.command}
@@ -1052,15 +1061,6 @@ export class Workflow {
         }
       }, {overwrite: true, inplace: false});
     }
-    /*
-    if (!doMerge && this.otherDamageRoll) {
-      const messageData = {
-        flavor: this.otherFlavor,
-        speaker: this.speaker
-      }
-      setProperty(messageData, "flags.dnd5e.roll.type", "damage");
-      this.otherDamageRoll.toMessage(messageData);
-    } */
     if (!doMerge && this.bonusDamageRoll) {
       const messageData = {
         flavor: this.bonusDamageFlavor,
@@ -1202,7 +1202,7 @@ export class Workflow {
       const waitForDSN = configSettings.playerRollSaves !== "none" && this.saveDisplayData.some(data => data.isPC);
       speaker.scene = canvas?.scene?.id;
       chatData = {
-        user: gmUser._id,
+        user: gmUser.id,
         speaker,
         content: `<div data-item-id="${this.item.id}"></div> ${saveContent}`,
         flavor: `<h4>${this.saveDisplayFlavor}</h4>`, 
@@ -1227,10 +1227,10 @@ export class Workflow {
 
   playerFor(target: Token) {
     // find the controlling player
-    let player = game.users.players.find(p => p.character?._id === target.actor._id);
+    let player = game.users.players.find(p => p.character?.id === target.actor.id);
     if (!player?.active) { // no controller - find the first owner who is active
       //@ts-ignore permissions not defined
-      player = game.users.players.find(p => p.active && target.actor.data.permission[p._id] === CONST.ENTITY_PERMISSIONS.OWNER)
+      player = game.users.players.find(p => p.active && target.actor.data.permission[p.id] === CONST.ENTITY_PERMISSIONS.OWNER)
       //@ts-ignore permissions not defined
       if (!player) player = game.users.players.find(p => p.active && target.actor.data.permission.default === CONST.ENTITY_PERMISSIONS.OWNER)
     }
@@ -1269,18 +1269,10 @@ export class Workflow {
     }
     // make sure saving throws are renabled.
 
+    const playerMonksTB = installedModules.get("monks-tokenbar") && configSettings.playerRollSaves === "mtb";
+    const gmMondsTB = installedModules.get("monks-tokenbar") && configSettings.rollNPCSaves === "mtb";
+    let monkRequests = [];
 
-    /*
-    if (installedModules.get("monks-tokenbar")) {
-      game.MonksTokenBar.requestRoll(
-        Array.from(this.hitTargets), 
-        {
-          request:`save:${this.item.data.data.save.ability}`, 
-          silent: true, 
-          rollMode: "gmroll"
-      });
-    }
-    */
     try {
       for (let target of this.hitTargets) {
         if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
@@ -1306,12 +1298,19 @@ export class Workflow {
         //@ts-ignore
         if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u=>u.active);
         const promptPlayer = (!player?.isGM && configSettings.playerRollSaves !== "none") || (player?.isGM && configSettings.rollNPCSaves !== "auto");
-        if (promptPlayer && player?.active) { 
+        if ((!player.isGM && playerMonksTB) || (player.isGM && gmMondsTB)) {
+          promises.push(new Promise((resolve) => {
+            let requestId = target.id;
+            this.saveRequests[requestId] = resolve;
+          }));
+          // record the targes to save.
+          monkRequests.push(target)
+        } else if (promptPlayer && player?.active) { 
           warn(`Player ${player?.name} controls actor ${target.actor.name} - requesting ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save`);
           promises.push(new Promise((resolve) => {
             const advantageToUse = advantage;
             let requestId = target.actor.id;
-            const playerId = player._id;
+            const playerId = player.id;
             if (["letme", "letmeQuery"].includes(configSettings.playerRollSaves) && installedModules.get("lmrtfy")) requestId = randomID();
             if (["letme", "letmeQuery"].includes(configSettings.rollNPCSaves) && installedModules.get("lmrtfy")) requestId = randomID();
 
@@ -1320,14 +1319,16 @@ export class Workflow {
             requestPCSave(this.item.data.data.save.ability, rollType, player, target.actor.id, advantage, this.item.name, rollDC, requestId)
 
             // set a timeout for taking over the roll
-            this.saveTimeouts[requestId] = setTimeout(async () => {
-              if (this.saveRequests[requestId]) {
-                  delete this.saveRequests[requestId];
-                  delete this.saveTimeouts[requestId];
-                  let result = await rollAction.bind(target.actor)(this.item.data.data.save.ability, {messageData: { user: playerId }, advantage: advantageToUse, fastForward: true});
-                  resolve(result);
-              }
-            }, (configSettings.playerSaveTimeout || 1) * 1000);
+            if (configSettings.playerSaveTimeout > 0 ) {
+              this.saveTimeouts[requestId] = setTimeout(async () => {
+                if (this.saveRequests[requestId]) {
+                    delete this.saveRequests[requestId];
+                    delete this.saveTimeouts[requestId];
+                    let result = await rollAction.bind(target.actor)(this.item.data.data.save.ability, {messageData: { user: playerId }, advantage: advantageToUse, fastForward: true});
+                    resolve(result);
+                }
+              }, (configSettings.playerSaveTimeout || 1) * 1000);
+            }
           }))
         } else {  // GM to roll save
           let showRoll = configSettings.autoCheckSaves === "allShow";
@@ -1339,13 +1340,22 @@ export class Workflow {
           // Fall back to rolling as the current user
           if (!owner) owner = game.user;
           //@ts-ignore actor.rollAbilitySave
-          promises.push(rollAction.bind(target.actor)(this.item.data.data.save.ability, { messageData: {user: owner._id}, chatMessage: showRoll,  mapKeys: false, advantage, fastForward: true}));
+          promises.push(rollAction.bind(target.actor)(this.item.data.data.save.ability, { messageData: {user: owner.id}, chatMessage: showRoll,  mapKeys: false, advantage, fastForward: true}));
         }
       }
     } catch (err) {
         console.warn(err)
     } finally {
     }
+    if (monkRequests.length > 0) {
+      game.MonksTokenBar.requestRoll(
+        Array.from(monkRequests), 
+        {
+          request:`save:${this.item.data.data.save.ability}`, 
+          silent: true, 
+          rollMode: "gmroll"
+      });
+    };
     debug("check saves: requests are ", this.saveRequests)
     var results = await Promise.all(promises);
     this.saveResults = results;
@@ -1401,7 +1411,17 @@ export class Workflow {
     else
       this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">DC ${rollDC}</label> ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(this.hitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:`;
   }
-
+   monksSavingCheck(message, update, options, user) {
+    if (!update.flags && !update.flags["monks-tokenbar"]) return true;
+    const mflags = update.flags["monks-tokenbar"];
+    for (let key of Object.keys(mflags)) {
+      if (!key.startsWith("token")) continue;
+      const requestId = key.replace("token", "");
+      this.saveRequests[requestId](mflags[key].roll)
+      delete this.saveRequests[requestId];
+    }
+    
+  }
   processSaveRoll(message) {
     const isLMRTFY = (installedModules.get("lmrtfy") && message.data.flags?.lmrtfy?.data);
     if (!isLMRTFY && message.data.flags?.dnd5e?.roll?.type !== "save") return true;
@@ -1543,6 +1563,24 @@ export class Workflow {
     this.failedSaves = new Set(this.targets)
     this.hitTargets = new Set(this.targets);
   }
+
+  async removeActiveEffects(effectIds: string | [string]) {
+    if (!Array.isArray(effectIds)) effectIds = [effectIds];
+    this.actor.deleteEmbeddedDocuments("ActiveEffect", effectIds);
+  }
+
+  async removeItemEffects(uuid: Item | string = this.item?.uuid)  {
+    if (!uuid) {
+      console.error("Cannot remove effects when no item specified")
+      return;
+    }
+    if (uuid instanceof Item) uuid = uuid.uuid;
+    const filtered = this.actor.effects.reduce((filtered, ef) => {
+      if (ef.data.origin === uuid) filtered.push(ef.id);
+      return filtered;
+    }, []);
+    if (filtered.length > 0) this.removeActiveEffects(filtered);
+  }
 }
 
 export class DamageOnlyWorkflow extends Workflow {
@@ -1614,7 +1652,9 @@ export class DamageOnlyWorkflow extends Workflow {
         this.hitTargets = new Set(this.targets);
         this.applicationTargets = new Set(this.targets);
         this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, this.item, new Set(), {existingDamage: this.damageList, superSavers: new Set()})
-        return super._next(WORKFLOWSTATES.ROLLFINISHED);
+        await super._next(WORKFLOWSTATES.ROLLFINISHED);
+        Workflow.removeWorkflow(this.uuid);
+        return;
 
       default: return super.next(newState);
     }
@@ -1641,7 +1681,7 @@ export class TrapWorkflow extends Workflow {
   async _next(newState: number) {
     this.currentState = newState;
     let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===newState)[0];
-    warn("attack workflow.next ", state, this._id, this.targets)
+    warn("attack workflow.next ", state, this.uuid, this.targets)
     switch (newState) {
       case WORKFLOWSTATES.NONE:
         this.saveTargets = await validTargetTokens(game.user.targets);
@@ -1677,7 +1717,7 @@ export class TrapWorkflow extends Workflow {
         // Create the template
         canvas.scene.createEmbeddedEntity("MeasuredTemplate", template.data).then((data) => {
           if (this.templateLocation.removeDelay) {
-            setTimeout(() => canvas.scene.deleteEmbeddedEntity("MeasuredTemplate", data._id), this.templateLocation.removeDelay * 1000);
+            setTimeout(() => canvas.scene.deleteEmbeddedDocuments("MeasuredTemplate", [data._id]), this.templateLocation.removeDelay * 1000);
           }
         });
         return;
@@ -1718,6 +1758,7 @@ export class TrapWorkflow extends Workflow {
         }
         let hookId = Hooks.on("renderChatMessage", this.processSaveRoll.bind(this));
         let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
+        let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
         try {
           await this.checkSaves(true);
         } finally {
@@ -1725,6 +1766,8 @@ export class TrapWorkflow extends Workflow {
           Hooks.off("renderChatMessage", hookId);
           //@ts-ignore does not support ids
           Hooks.off("renderChatMessage", brHookId);
+          //@ts-ignore does not support ids
+          Hooks.off("updateChatMessage", monksId)
         }
         //@ts-ignore ._hooks not defined
         debug("Check Saves: renderChat message hooks length ", Hooks._hooks["renderChatMessage"]?.length)
@@ -1927,3 +1970,5 @@ export class DummyWorkflow extends BetterRollsWorkflow {
     Workflow.removeWorkflow(this.item.id)
   }
 }
+
+

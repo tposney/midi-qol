@@ -96,7 +96,7 @@ let createReverseDamageCard = async (data) => {
     };
 
     ["di", "dv", "dr"].forEach(trait => {
-      const traits = actor?.data.data.traits[trait]
+      const traits = tokenDocument.actor?.data.data.traits[trait]
       if (traits?.custom || traits?.value.length > 0) {
         listItem[trait] = (`${traitList[trait]}: ${traits.value.map(t => CONFIG.DND5E.damageResistanceTypes[t]).join(",").concat(" " + traits?.custom)}`);
       }
