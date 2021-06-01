@@ -14,73 +14,89 @@ import { concentrationCheckItemName } from "./Hooks";
 export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) => {
   let damageParts = {};
   const rollTerms = roll.terms;
-  let partPos = 0;
-  let evalString;
+  let evalString = "";
   let damageSpec = item ? item.data.data.damage : {parts: []};
+  // create data for a synthetic roll
+  let rollData = item ? item.getRollData() : {};
+  rollData.mod = 0;
   debug("CreateDamageList: Passed roll is ", roll)
   debug("CreateDamageList: Damage spec is ", damageSpec)
-  let negatedTerm = false;
-  for (let [spec, type] of damageSpec.parts) {
+  let partPos = 0;
+
+  // If we have an item we can use it to work out each of the damage lines that are being rolled
+  for (let [spec, type] of damageSpec.parts) { // each spec,type is one of the damage lines
+    // TODO look at replacing this with a map/reduce
     debug("CreateDamageList: single Spec is ", spec, type, item)
-    if (item) {
-      let rollData = item?.getRollData();
-      rollData.mod = 0;
-      //@ts-ignore replaceFromulaData - blank out @field
-      let formula = Roll.replaceFormulaData(spec, rollData || {}, {missing: "0", warn: false});
-      // get rid of any remaining @fields
-      //@ts-ignore evaluate
-      var rollSpec: Roll = new Roll(formula, rollData || {});//.evaluate({async: false});
-    }
-    debug("CreateDamageList: rollSpec is ", spec, rollSpec)
-
-    //@ts-ignore
-    let specLength = rollSpec.terms.length;
-    evalString = "";
-
-    //@ts-ignore
-    debug("CreateDamageList: Spec Length ", specLength, rollSpec.terms)
-    for (let i = 0; i < specLength && partPos < rollTerms.length; i++) {
-      if (typeof rollTerms[partPos] !== "object") {
-        evalString += rollTerms[partPos];
-      } else {
-        debug("CreateDamageList: roll parts ", rollTerms[partPos])
-        let total = rollTerms[partPos].total;
-        evalString += total;
-      }
+    //@ts-ignore replaceFromulaData - blank out @field - do this to avoid @XXXX not found
+    let formula = Roll.replaceFormulaData(spec, rollData || {}, {missing: "0", warn: false});
+    //@ts-ignore evaluate
+    const dmgSpec: Roll = new Roll(formula, rollData || {});//.evaluate({async: false});
+    // dmgSpec is now a roll with the right terms (but nonsense value) to pick off the right terms from the passed roll
+    //@ts-ignore length
+    for (let i = 0; i < dmgSpec.terms.length; i++) { // grab all the terms for the current damage line
+      evalString += rollTerms[partPos].total;
       partPos += 1;
     }
-    //@ts-ignore evaluate
-    let damage = new Roll(evalString).evaluate({async: false}).total;
-    debug("CreateDamageList: Damage is ", damage, type, evalString)
-    damageParts[type] = (damageParts[type] || 0) + damage;
-    negatedTerm = rollTerms[partPos] === "-";
-    partPos += 1; // skip the plus/minus
+    // Each damage line is added together and we can skip the operator term
+    partPos += 1; 
+    if (evalString) {
+      //@ts-ignore sfeEval
+      let result = Roll.safeEval(evalString)
+      damageParts[type || defaultType] = (damageParts[type || defaultType] || 0) + result;
+      evalString = "";
+    }
   }
-  debug(partPos, damageParts);
-  partPos -= 1
+  // We now have all of the item's damage lines (or none if no item)
+  // Now just add up the other terms - using any flavor types for the rolls we get
+  // we stepped one term too far so step back one
+  partPos -= 1;
 
-  // process any damage items not in the item spec
+  // process the rest of the roll as a sequence of terms.
+  // Each might have a damage flavour so we do them expression by expression
   const validTypes = Object.entries(CONFIG.DND5E.damageTypes).deepFlatten().concat(Object.entries(CONFIG.DND5E.healingTypes).deepFlatten())
-  while (partPos < rollTerms.length -1) {
-    const sign = rollTerms[partPos] === "-" ? -1 : 1
+  
+  evalString = "";
+  let damageType = "";
+  let numberTermFound = false; // We won't evaluate until at least 1 numeric term is found
+  while (partPos < rollTerms.length) {
+    // Accumulate the text for each of the terms until we have enough to eval
+    const evalTerm = rollTerms[partPos];
     partPos += 1;
-    var type = defaultType;
-    debug(rollTerms[partPos])
-    if (typeof rollTerms[partPos] === "object") {
-      const total = rollTerms[partPos].total;
-      let flavor = rollTerms[partPos].options?.flavor;
-      const flavorIndex = validTypes.indexOf(flavor)
-      if (flavorIndex !== -1) {
-        if (!CONFIG.DND5E.damageTypes[flavor] && !CONFIG.DND5E.healingTypes[flavor]) {
-          // need to look up the internal flavor type from the validTypes
-          flavor = validTypes[flavorIndex - 1];
+    if (evalTerm instanceof CONFIG.Dice.termTypes.DiceTerm) {
+      // this is a dice roll
+      evalString += evalTerm.total;
+      damageType = evalTerm.options.flavor;
+      numberTermFound = true;
+    } else if (evalTerm instanceof CONFIG.Dice.termTypes.NumericTerm) {
+      evalString += evalTerm.total;
+      damageType = evalTerm.options.flavor || damageType; // record this if we get it
+      numberTermFound = true;
+    } if (evalTerm instanceof CONFIG.Dice.termTypes.OperatorTerm) {
+      if (["*","/"].includes(evalTerm.operator)) {
+        // multiply or divide keep going keep going
+        evalString += evalTerm.total
+      } else if (["-", "+"].includes(evalTerm.operator)) {
+        if (numberTermFound) { // we have a number and a +/- so we can eval the term (do it greedily so we get the right damage type)
+          //@ts-ignore safeEval
+          let result = Roll.safeEval(evalString);
+          damageParts[damageType || defaultType] = (damageParts[damageType || defaultType] || 0) + result;
+          // reset for the next term - we don't know how many there will be
+          evalString = ""; 
+          damageType = "";
+          numberTermFound = false;
+          evalString = evalTerm.total;
+        } else { // what to do with parenthetical term or others?
+          evalString += evalTerm.total;
         }
-        type = flavor
       }
-      var term = rollTerms[partPos].total * sign;
-    } else var term = Number(rollTerms[partPos]) * sign;
-    damageParts[type] = (damageParts[type] || 0) + term;
-    partPos += 1;
+    }
+  }
+  // evalString contains the terms we have not yet evaluated so do them now
+  if (evalString) {
+    //@ts-ignore
+    const damage = Roll.safeEval(evalString);
+    // we can always add since the +/- will be recorded in the evalString
+    damageParts[damageType || defaultType] = (damageParts[damageType || defaultType] || 0) + damage;
   }
   const damageList = Object.entries(damageParts).map(([type, damage]) => {return {damage, type}})
   debug("CreateDamageList: Final damage list is ", damageList)

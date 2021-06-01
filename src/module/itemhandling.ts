@@ -391,7 +391,7 @@ export async function showItemInfo() {
 
   const templateData = {
     actor: this.actor,
-    tokenId: token ? `Scene.${sceneId}.Token.${token.id}` : null, //TODO come back and fix? this
+    tokenId: token?.uuid || null, //TODO come back and fix? this
     item: this.data,
     itemUuid: this.uuid,
     data: this.getChatData(),
@@ -430,6 +430,7 @@ export async function showItemInfo() {
       "core": { "canPopout": true }
     }
   };
+
   // Toggle default roll mode
   let rollMode = game.settings.get("core", "rollMode");
   if (["gmroll", "blindroll"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
@@ -439,6 +440,8 @@ export async function showItemInfo() {
   // Create the chat message
   return ChatMessage.create(chatData);
 }
+
+
 export async function showItemCard(showFullCard: boolean, workflow: Workflow, minimalCard = false) {
   warn("show item card ", this, this.actor, this.actor.token, showFullCard, workflow);
 
@@ -463,6 +466,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     actor: this.actor,
     tokenId: token?.uuid || null, //TODO come back and fix? this
     item: this.data,
+    itemUuid: this.uuid,
     data: this.getChatData(),
     labels: this.labels,
     condensed: this.hasAttack && configSettings.mergeCardCondensed,
