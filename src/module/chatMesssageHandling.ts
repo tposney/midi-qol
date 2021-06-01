@@ -27,15 +27,11 @@ export function mergeCardSoundPlayer(message, update, options, user) {
     const delay = (dice3dActive && midiqolFlags?.waitForDiceSoNice && [MESSAGETYPES.HITS].includes(midiqolFlags.type)) ? 500 : 0;
     debug("mergeCardsound player ", update, playlist, sound, sound?'playing sound':'not palying sound', delay)
 
-    if (sound) {
+    if (sound && game.user.isGM) {
       setTimeout(() => {
-       // sound.playing = true;
         playlist.playSound(sound);
       }, delay)
     }
-
-    //@ts-ignore
-    // AudioHelper.play({ src: update.sound || midiqolFlags.sound }, true);
     return true;
   }
 }
@@ -492,7 +488,7 @@ export function processItemCardCreation(message, options, user) {
     const playlist = game.playlists.get(configSettings.customSoundsPlaylist);
     const sound = playlist?.sounds.find(s=>s.id === midiqolFlags?.sound);
     const delay = 0;
-    if (sound) {
+    if (sound && game.user.isGM) {
       setTimeout(() => {
       // sound.playing = true;
         playlist.playSound(sound);

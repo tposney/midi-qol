@@ -1,3 +1,12 @@
+
+## 0.8.5
+* Fix for player lacks permission to update sounds error when using custom
+* Cleaned up critical hit handling.
+* Fix for player no longer has item message for damage buttons.
+* Fix for Divine Smite item to reflect the new typed "creature type".
+* Added auto complete for flags.midi-qol.advantage.attack.str/etc
+
+
 ## 0.8.4
 * Fix for DF Manual Rolls - no longer request roll to be entered twice. Requires ciritical damage to be dnd5e default (fix pending for critical damage).
 * Fix for token tooltip showing dmaage resistance/immunity/vulnerabilty not being dislayed on damage card.

@@ -271,25 +271,6 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
       targetNames,
       chatCardId: workflow.itemCardId,
     })
-    /* TODO remove this when socketlib 100% solid
-    let intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
-    if (!intendedGM) {
-      ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
-      error("No GM user connected - cannot apply damage");
-      return;
-    }
-
-    
-    broadcastData({
-      action: "reverseDamageCard",
-      autoApplyDamage: configSettings.autoApplyDamage,
-      sender: game.user.name,
-      intendedFor: intendedGM.id,
-      damageList: damageList,
-      targetNames,
-      chatCardId: workflow.itemCardId
-    });
-    */
   }
   if (configSettings.keepRollStats) {
     gameStats.addDamage(totalAppliedDamage, totalDamage, theTargets.size, item)
@@ -860,7 +841,7 @@ export function MQfromUuid(uuid) {
   doc = collection.get(docId);
  
   // Embedded Documents
-  while ( parts.length > 1 ) {
+  while ( doc && parts.length > 1 ) {
     const [embeddedName, embeddedId] = parts.slice(0, 2);
     doc = doc.getEmbeddedDocument(embeddedName, embeddedId);
     parts = parts.slice(2);
@@ -869,21 +850,7 @@ export function MQfromUuid(uuid) {
 }
 
 export function MQfromActorUuid(uuid) {
-  let parts = uuid.split(".");
-  let doc;
-
-  const [docName, docId] = parts.slice(0, 2);
-  parts = parts.slice(2);
-  const collection = CONFIG[docName].collection.instance;
-  doc = collection.get(docId);
-
-  // Embedded Documents
-  while ( parts.length > 1 ) {
-    const [embeddedName, embeddedId] = parts.slice(0, 2);
-    doc = doc.getEmbeddedDocument(embeddedName, embeddedId);
-    parts = parts.slice(2);
-  }
-
+  let doc = MQfromUuid(uuid);
   if (doc instanceof CONFIG.Token.documentClass) doc = doc.actor;
   return doc || null;
 }

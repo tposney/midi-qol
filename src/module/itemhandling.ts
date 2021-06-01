@@ -167,14 +167,6 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   if (!result) { // user backed out of damage roll or roll failed
     return;
   }
-
-  // If the roll was a critical or the user selected crtical
-  //@ts-ignore
-  if (result.terms[0].options?.critical)
-    result = doCritModify.bind(this)(result);
-  else if (workflow.rollOptions.maxDamage)
-    //@ts-ignore .evaluate not defined.
-    result = (new Roll(result.formula)).evaluate({ maximize: true });
   let otherResult = undefined;
   if (
     configSettings.rollOtherDamage &&
@@ -401,6 +393,7 @@ export async function showItemInfo() {
     actor: this.actor,
     tokenId: token ? `Scene.${sceneId}.Token.${token.id}` : null, //TODO come back and fix? this
     item: this.data,
+    itemUuid: this.uuid,
     data: this.getChatData(),
     labels: this.labels,
     condensed: false,
@@ -468,7 +461,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   if (isAutoFastDamage()) versaBtnText += `${i18n("DND5E.Versatile")} ${i18n("midi-qol.fastForward")}`;
   const templateData = {
     actor: this.actor,
-    tokenId: token ? `Scene.${sceneId}.Token.${token.id}` : null, //TODO come back and fix? this
+    tokenId: token?.uuid || null, //TODO come back and fix? this
     item: this.data,
     data: this.getChatData(),
     labels: this.labels,
@@ -572,83 +565,6 @@ export function templateTokens(template) {
   game.user.updateTokenTargets(targets);
 }
 
-/*
-export function getTargetedTokens(templateDocument, selfTarget) {
-
-  console.error("get targeted ", templateDocument.data, selfTarget)
-  let targeting = configSettings.autoTarget;
-  let templateData = templateDocument.data;
-  // release current targets
-  game.user.targets.forEach(t => {
-    //@ts-ignore
-    t.setTarget(false, { releaseOthers: false });
-  });
-  game.user.targets.clear();
-
-  let wallsBlockTargeting = targeting === "wallsBlock";
-  let tdx = templateData.x;
-  let tdy = templateData.y;
-  // Extract and prepare data
-  let { direction, distance, angle, width } = templateData;
-  distance *= canvas.scene.data.grid / canvas.scene.data.gridDistance;
-  width *= canvas.scene.data.grid / canvas.scene.data.gridDistance;
-  //@ts-ignore toRadians
-  direction = Math.toRadians(direction);
-
-  var shape
-  // Get the Template shape
-  switch (templateData.t) {
-    case "circle":
-      shape = templateDocument._object._getCircleShape(distance);
-      break;
-    case "cone":
-      shape = templateDocument._object._getConeShape(direction, angle, distance);
-      break;
-    case "rect":
-      shape = templateDocument._object._getRectShape(direction, distance);
-      break;
-    case "ray":
-      shape = templateDocument._object._getRayShape(direction, distance, width);
-  }
-  return canvas.tokens.placeables.filter(t => {
-    if (!t.actor && !getProperty(t.data.flags, "multilevel-tokens")) return false;
-    if (selfTarget === t.id) return false;
-    t = canvas.tokens.get(t.id);
-    // skip special tokens with a race of trigger
-    if (t.actor?.data?.data.details.race === "trigger") return false;
-    const w = t.width >= 1 ? 0.5 : t.data.width / 2;
-    const h = t.height >= 1 ? 0.5 : t.data.height / 2;
-    const gridSize = canvas.scene.data.grid;
-    let contained = false;
-    for (let xstep = w; xstep <= t.data.width && !contained; xstep++) {
-      for (let ystep = h; ystep <= t.data.height && !contained; ystep++) {
-        const tx = t.x + xstep * gridSize;
-        const ty = t.y + ystep * gridSize;
-
-        if (shape.contains(tx - tdx, ty - tdy)) {
-          if (!wallsBlockTargeting) {
-            contained = true;
-          } else {
-            if (templateData.t === "rect") {
-              // for rectangles the origin is top left, so measure from the centre instaed.
-              let template_x = templateData.x + shape.width / 2;
-              let template_y = templateData.y + shape.height / 2;
-              const r = new Ray({ x: tx, y: ty }, { x: template_x, y: template_y });
-              contained = !canvas.walls.checkCollision(r);
-            } else {
-              const r = new Ray({ x: tx, y: ty }, templateData);
-              contained = !canvas.walls.checkCollision(r);
-            }
-          }
-        }
-      }
-    }
-    if (contained) t.setTarget(true, { user: game.user, releaseOthers: false });
-    console.error("Contained ", contained);
-    return contained;
-  });
-}
-*/
 export function selectTargets(templateDocument, data, user) {
   let item = this?.item;
   let targeting = configSettings.autoTarget;
@@ -663,9 +579,7 @@ export function selectTargets(templateDocument, data, user) {
   }
   if (!templateDocument.data) return true;
 
-
   // if the item specifies a range of "self" don't target the caster.
-
   let selfTarget = (item?.data.data.range?.units === "spec") ? canvas.tokens.get(this.tokenId) : null;
   if (selfTarget && game.user.targets.has(selfTarget)) {
     // we are targeted and should not be
@@ -677,82 +591,4 @@ export function selectTargets(templateDocument, data, user) {
   this.hitTargets = game.user.targets;
   this.templateData = templateDocument.data;
   return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
-/*
-  setTimeout(() => {
-    getTargetedTokens(templateDocument, selfTarget)
-    // Assumes area affect do not have a to hit roll
-    this.saves = new Set();
-    this.targets = game.user.targets;
-    this.hitTargets = game.user.targets;
-    this.templateData = templateDocument.data;
-    return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
-  }, 50);
-  */
 };
-
-export function doCritModify(result: Roll, criticalModify = criticalDamage) {
-  if (criticalModify === "default") return result;
-  let rollBase = new Roll(result.formula);
-  const bonusDice = this.actor.data.flags.dnd5e?.meleeCriticalDamageDice ?? 0;
-  if (criticalModify === "maxDamage") {// max base damage
-    //@ts-ignore .terms not defined
-    if (rollBase.terms[0].number) rollBase.terms[0].number = rollBase.terms[0].number - bonusDice;
-    //@ts-ignore .terms not defined
-    rollBase.terms = rollBase.terms.map(t => {
-      if (t?.number) t.number = Math.floor(t.number / 2);
-      return t;
-    });
-    rollBase = new Roll(rollBase.formula);
-    //@ts-ignore .evaluate not defined
-    rollBase.evaluate({ maximize: true });
-    return rollBase;
-  } else if (criticalModify === "maxCrit") { // see about maximising one dice out of the two
-    let rollCrit = new Roll(result.formula);
-    //@ts-ignore .terms not defined
-    if (rollCrit.terms[0].number) rollCrit.terms[0].number = rollCrit.terms[0].number - bonusDice;
-    //@ts-ignore .terms not defined
-    if (rollBase.terms[0].number) rollBase.terms[0].number = rollBase.terms[0].number - bonusDice;
-    //@ts-ignore .terms not defined
-    rollCrit.terms = rollCrit.terms.map(t => {
-      if (t?.number) t.number = Math.ceil(t.number / 2);
-      if (typeof t === "number") t = 0;
-      return t;
-    });
-    //@ts-ignore .terms not defined
-    if (rollCrit.terms[0].number) rollCrit.terms[0].number = rollCrit.terms[0].number + bonusDice;
-    //@ts-ignore .terms not defined
-    rollBase.terms = rollBase.terms.map(t => {
-      if (t?.number) t.number = Math.floor(t.number / 2);
-      return t;
-    });
-    //@ts-ignore .evaluate not defined
-    rollCrit.evaluate({ maximize: true });
-    //@ts-ignore.terms not defined
-    rollBase.terms.push("+")
-    //@ts-ignore .terms not defined
-    rollBase.terms.push(rollCrit.total)
-    rollBase._formula = rollBase.formula;
-    rollBase.roll();
-    return rollBase;
-  } else if (criticalModify === "maxAll") {
-    result = new Roll(result.formula);
-    //@ts-ignore .evaluate not defined
-    result.evaluate({ maximize: true });
-    return result;
-  } else if (criticalModify === "doubleDice") {
-    //@ts-ignore
-    if (rollBase.terms[0].number) rollBase.terms[0].number = rollBase.terms[0].number - bonusDice;
-    //@ts-ignore .evaluate not defined
-    rollBase.terms = rollBase.terms.map(t => {
-        if (t?.number)
-            t.number = Math.floor(t.number / 2);
-        return t;
-    });
-    let splitedFormula = rollBase.formula.split(' ');
-    splitedFormula[0] = '(' + splitedFormula[0] + ' * 2)';
-    let formula = splitedFormula.join(' ');
-    rollBase = new Roll(formula);
-    rollBase.roll();
-    return rollBase;
-  }
-}

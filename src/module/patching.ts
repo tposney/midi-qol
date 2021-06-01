@@ -1,6 +1,6 @@
 import { log, warn, debug, i18n, error } from "../midi-qol";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling";
-import { configSettings, autoFastForwardAbilityRolls } from "./settings.js";
+import { configSettings, autoFastForwardAbilityRolls, criticalDamage } from "./settings.js";
 import { expireRollEffect, testKey } from "./utils";
 import { installedModules } from "./setupModules";
 import { libWrapper } from "./lib/shim.js";
@@ -116,7 +116,72 @@ function rollDeathSave(wrapped, ...args) {
   }
   return wrapped.call(this, ...args);
 }
+function configureDamage(wrapped) {
+  if (!this.isCritical || criticalDamage === "default") return wrapped();
+  let flatBonus = 0;
+  if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
+  for ( let [i, term] of this.terms.entries() ) {
+    // Multiply dice terms
+    if ( term instanceof CONFIG.Dice.termTypes.DiceTerm ) {
+      term.options.baseNumber = term.options.baseNumber ?? term.number; // Reset back
+      term.number = term.options.baseNumber;
+      let cm = this.options.criticalMultiplier ?? 2;
+      let cb = (this.options.criticalBonusDice && (i === 0)) ? this.options.criticalBonusDice : 0;
+      // {default: "DND5e default", maxDamage:  "base max only", maxCrit: "max critical dice", maxAll: "max all dice", doubleDice: "double dice value"},
+      switch (criticalDamage) {
+        case "maxDamage":
+          term.modifiers.push(`min${term.faces}`)
+          cm = 1;
+          flatBonus = 0;
+          break;
+        case "maxCrit":
+          flatBonus += (term.number + cb) * term.faces;
+          cm = Math.max(1, cm-1);
+          term.alter(cm, cb);
+          break;
+        case "maxAll":
+          term.modifiers.push(`min${term.faces}`);
+          term.alter(cm, cb);
+          flatBonus = 0;
+          break;
+        case "doubleDice":
+          cm = 1;
+          break;
 
+      }
+      term.options.critical = true;
+    }
+
+    // Multiply numeric terms
+    else if ( this.options.multiplyNumeric && (term instanceof CONFIG.Dice.termTypes.NumericTerm)  ) {
+      term.options.baseNumber = term.options.baseNumber ?? term.number; // Reset back
+      term.number = term.options.baseNumber;
+      if ( this.isCritical ) {
+        term.number *= (this.options.criticalMultiplier ?? 2);
+        term.options.critical = true;
+      }
+    }
+  }
+
+  // Add powerful critical bonus
+  if ( flatBonus > 0 ) {
+    this.terms.push(new CONFIG.Dice.termTypes.OperatorTerm({operator: "+"}));
+    this.terms.push(new CONFIG.Dice.termTypes.NumericTerm({number: flatBonus}, {flavor: game.i18n.localize("DND5E.PowerfulCritical")}));
+  }
+  if (criticalDamage === "doubleDice") {
+    let newTerms = [];
+    for (let term of this.terms) {
+      if (term instanceof CONFIG.Dice.termTypes.DiceTerm) {
+        newTerms.push(new CONFIG.Dice.termTypes.ParentheticalTerm({term: `2*${term.formula}`}))
+      } else 
+        newTerms.push(term);
+    }
+    this.terms = newTerms;
+  }
+
+  // Re-compile the underlying formula
+  this._formula = this.constructor.getFormula(this.terms);
+}
 function rollAbilityTest(wrapped, ...args)  {
   const [ abilityId, options={event: {}, parts: []} ] = args;
   if (procAutoFail(this, "check", abilityId)) options.parts = ["-100"];
@@ -242,6 +307,7 @@ export let itemPatching = () => {
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.roll", doItemRoll, "MIXED");
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
+  libWrapper.register("midi-qol", "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
 };
 
 export let actorAbilityRollPatching = () => {

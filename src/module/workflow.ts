@@ -1349,7 +1349,7 @@ export class Workflow {
     }
     if (monkRequests.length > 0) {
       game.MonksTokenBar.requestRoll(
-        Array.from(monkRequests), 
+        monkRequests, 
         {
           request:`save:${this.item.data.data.save.ability}`, 
           silent: true, 

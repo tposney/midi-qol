@@ -21,7 +21,7 @@ import { setupSheetQol } from './module/sheetQOL';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
 import { applyTokenDamage, checkNearby, findNearby, getDistance, getTraitMult, MQfromActorUuid, MQfromUuid } from './module/utils';
 import { ConfigPanel } from './module/apps/ConfigPanel';
-import { doCritModify, showItemCard, showItemInfo } from './module/itemhandling';
+import { showItemCard, showItemInfo } from './module/itemhandling';
 import { RollStats } from './module/RollStats';
 
 export let debugEnabled = 0;
@@ -176,7 +176,6 @@ function setupMinorQolCompatibility() {
     configSettings: () => {return configSettings},
     ConfigPanel: ConfigPanel,
     getTraitMult: getTraitMult,
-    doCritModify: doCritModify,
     getDistance: getDistance,
     midiFlags,
     debug,
@@ -349,6 +348,8 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.disadvantage.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.advantage.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.disadvantage.ability.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.advantage.attack.${abl}`);
+    midiFlags.push(`flags.midi-qol.disadvantage.attack.${abl}`);
     midiFlags.push(`flags.midi-qol.fail.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.fail.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.superSaver.${abl}`);

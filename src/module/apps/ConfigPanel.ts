@@ -47,8 +47,8 @@ export class ConfigPanel extends FormApplication {
       playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? i18n("midi-qol.playerRollSavesOptionsReduced") : i18n("midi-qol.playerRollSavesOptions") ,
       rollNPCSavesOptions: i18n("midi-qol.rollNPCSavesOptions"),
       //@ts-ignore .map undefined
-      customSoundsPlaylistOptions: game.playlists.contents.reduce((acc, e) =>{acc[e._id]= e.name; return acc}, {}) || {},
-      customSoundOptions: game.playlists.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) =>{acc[s._id]= s.name; return acc}, {"none": ""}),
+      customSoundsPlaylistOptions: game.playlists.contents.reduce((acc, e) =>{acc[e.id]= e.name; return acc}, {}) || {},
+      customSoundOptions: game.playlists.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) =>{acc[s.id]= s.name; return acc}, {"none": ""}),
       rollSoundOptions: CONFIG.sounds,
       isBetterRolls: installedModules.get("betterrolls5e"),
       keys: {
