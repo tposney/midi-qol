@@ -252,14 +252,15 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const isRangeSpell = configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget && configSettings.autoTarget;
   const myTargets = await await validTargetTokens(game.user.targets);
-  let shouldAllowRoll = !configSettings.requireTargets // we don't care about targets
+  const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" &&  game.combat);
+  let shouldAllowRoll = !requiresTargets // we don't care about targets
     || (myTargets.size > 0) // there are some target selected
     || (this.data.data.target?.type === "self") // self target
     || isAoESpell // area effectspell and we will auto target
     || isRangeSpell // rangetarget and will autotarget
     || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
 
-  if (configSettings.requireTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && myTargets.size === 0) shouldAllowRoll = false;
+  if (requiresTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && myTargets.size === 0) shouldAllowRoll = false;
   // only allow weapon attacks against at most the specified number of targets
   let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9099) ?? 9999
   let speaker = ChatMessage.getSpeaker({ actor: this.actor });
@@ -268,7 +269,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     if (speaker.token && checkRange(this.actor, this, speaker.token, myTargets) === "fail")
       return;
   }
-  if (game.system.id === "dnd5e" && configSettings.requireTargets && myTargets.size > allowedTargets) {
+  if (game.system.id === "dnd5e" && requiresTargets && myTargets.size > allowedTargets) {
     shouldAllowRoll = false;
     ui.notifications.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
     warn(`${game.user.name} ${i18nFormat("midi-qol.midi-qol.wrongNumberTargets", { allowedTargets })}`)

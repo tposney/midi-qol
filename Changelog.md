@@ -1,4 +1,12 @@
 
+## 0.8.7
+* Fix a typo/bug in show Gm all whispered messages.
+* Fix a bug not allowing you to set the default save modifieer.
+* Changed Requires Targets to accept never (never require targets), "in combat" (only required if in combat), "always" (you must always have a target select when rolling something that requires targets).
+
+## 0.8.6
+* Fix for a bug in damage handling that means midi would fail to calculate damage (either returning NaN or throwing an error) when there were any extra damage items in the damage roll, like bonuses and so on. (There might still be error cases).
+
 ## 0.8.5
 * Fix for player lacks permission to update sounds error when using custom
 * Cleaned up critical hit handling.

@@ -245,7 +245,7 @@ export let nsaMessageHandler = (message, data, ...args) => {
   let currentIds = data.whisper.map(u=>typeof(u) === "string" ? u : u.id);
   gmIds = gmIds.filter(id => !currentIds.includes(id));
   debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmids ", gmIds)
-  message.update({"whisper": data.whisper.concat(gmIds)});
+  message.data.update({"whisper": data.whisper.concat(gmIds)});
   // TODO check this data.whisper = data.whisper.concat(gmIds);
   return true;
 }

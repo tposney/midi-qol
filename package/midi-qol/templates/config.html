@@ -139,17 +139,9 @@
         <div class="midi-qol-faint">{{localize "midi-qol.RangeTarget.Hint"}}</div>
 
         <div class="form-group">
-          <label>{{localize "midi-qol.RequiresTargets.Name"}}</label>
-          <select name="requiresTargets" data-dtype="String">
-            {{#select configSettings.requiresTargets}}
-            {{#each requiresTargetsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
-          </select>
+          <label>{{localize "midi-qol.RequireTargets.Name"}}</label>
+          <input type="checkbox" name="requireTargets" data-dtype="Boolean" {{checked configSettings.requireTargets}} />
         </div>
-        <div class="midi-qol-faint">{{localize "midi-qol.RequiresTargets.Hint"}}</div>
-
       </div>
       <!-- Specials -->
       <div class="midi-qol-box"> {{ localize "midi-qol.Special"}}
@@ -221,10 +213,9 @@
 
         <div class="form-group flexrow">
           <label style="width:100%; flex-grow:10;">{{localize "midi-qol.DefaultSaveMult.Name"}}</label>
-          <input style="width:10%; flex-shrink:20;" type="number" step="any" name="defaultSaveMult"
+          <input style="width:10%; flex-shrink:20;" type="Number" name="defaultSaveMult"
             value="{{configSettings.defaultSaveMult}}" data-dtype="Number" />
         </div>
-
         <div class="midi-qol-faint">{{localize "midi-qol.DefaultSaveMult.Hint"}}</div>
         <div class="form-group">
           <label>{{localize "midi-qol.PlayerRollSaves.Name"}}</label>
@@ -369,8 +360,7 @@
 
         <div class="form-group">
           <label>{{localize "midi-qol.UsePlayerPortrait.Name"}}</label>
-          <input type="checkbox" name="usePlayerPortrait" data-dtype="Boolean" {{checked
-            configSettings.usePlayerPortrait}} />
+          <input type="checkbox" name="usePlayerPortrait" data-dtype="Boolean" {{checked configSettings.usePlayerPortrait}} />
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.UsePlayerPortrait.Hint"}}</div>
 
@@ -573,11 +563,11 @@
             <input type="checkbox" name="optionalRules.checkRange" data-dtype="Boolean" {{checked
               configSettings.optionalRules.checkRange}} />
           </div>
-
+          
           <div class="form-group">
-            <label>{{localize "midi-qol.DistanceIncludesHeight.Name"}}</label>
-            <input type="checkbox" name="optionalRules.distanceIncludesHeight" data-dtype="Boolean" {{checked
-              configSettings.optionalRules.distanceIncludesHeight}} />
+              <label>{{localize "midi-qol.DistanceIncludesHeight.Name"}}</label>
+              <input type="checkbox" name="optionalRules.distanceIncludesHeight" data-dtype="Boolean" {{checked
+                configSettings.optionalRules.distanceIncludesHeight}} />
           </div>
 
           <div class="form-group">

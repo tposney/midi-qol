@@ -93,7 +93,7 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
       let li = $(event.currentTarget).parents(".item");
       if (!li.hasClass("expanded"))
           return;
-      let item = app.object.getOwnedItem(li.attr("data-item-id"));
+      let item = app.object.items.get(li.attr("data-item-id"));
       if (!item)
           return;
       let actor = app.object;
@@ -179,7 +179,7 @@ function addTidy5eItemSheetButtons(app, html, data) {
     else
       buttonContainer = $(this).find(".item-controls");
     // adding an event for when the description is shown
-    let item = app.object.getOwnedItem($(this).attr("data-item-id"));
+    let item = app.object.items.get($(this).attr("data-item-id"));
     if (!item)
       return;
     let chatData = item.getChatData();

@@ -52,7 +52,7 @@ export var configSettings = {
   mergeCard: false,
   mergeCardCondensed: false,
   useTokenNames: false,
-  requireTargets: false,
+  requiresTargets: "none",
   fumbleSound: "",
   diceSound: "",
   criticalSound: "",
@@ -107,6 +107,7 @@ export let fetchParams = (silent = false) => {
       configSettings.keyMapping = defaultKeyMapping;
   }
 
+  if (typeof configSettings.requiresTargets !== "string") configSettings.requiresTargets = "none";
   if (!configSettings.optionalRules) {
     configSettings.optionalRules = {
       invisAdvantage: true,

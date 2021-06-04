@@ -30,7 +30,7 @@ export class ConfigPanel extends FormApplication {
       clickOptions: i18n("midi-qol.clickOptions"),
       autoTargetOptions: i18n("midi-qol.autoTargetOptions"),
       rangeTargetOptions: i18n("midi-qol.rangeTargetOptions"),
-
+      requiresTargetsOptions: i18n("midi-qol.requiresTargetsOptions"),
       autoCheckSavesOptions: i18n("midi-qol.autoCheckSavesOptions"),
       autoRollDamageOptions: i18n("midi-qol.autoRollDamageOptions"),
       removeButtonsOptions: i18n("midi-qol.removeButtonsOptions"),

@@ -701,7 +701,7 @@ export class Workflow {
         else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
         else this.applicationTargets = this.targets;
         if (this.hasDAE) {
-          this.dae.doEffects(this.item, true, this.applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId})
+          await this.dae.doEffects(this.item, true, this.applicationTargets, {whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId})
           await this.removeEffectsButton();
         }
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
@@ -1619,7 +1619,7 @@ export class DamageOnlyWorkflow extends Workflow {
         this.effectsAlreadyExpired = [];
         if (this.itemData) {
           //@ts-ignore
-          this.item = Item.createOwned(this.itemData, this.actor);
+          this.item = Item.createOwned(this.itemData, this.actor); //TODO fix this to not do createOwned
           setProperty(this.item, "data.flags.midi-qol.onUseMacroName", null);
         } else this.item = null;
         if (this.itemCardId === "new" && this.itemData) { // create a new chat card for the item
