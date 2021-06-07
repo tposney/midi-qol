@@ -1,3 +1,5 @@
+## 0.8.10
+* Fix for replaceAll errors when starting up with an old chatlog
 
 ## 0.8.9
 * Some internal cleanup of damage application card

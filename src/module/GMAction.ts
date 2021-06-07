@@ -163,7 +163,8 @@ export let processUndoDamageCard = async(message, html, data) => {
 
   button.click((ev) => {
     message.data.flags.midiqol.undoDamage.forEach(async ({actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP}) => {
-    let actor = MQfromActorUuid(actorUuid);
+      if (!actorUuid) return;
+      let actor = MQfromActorUuid(actorUuid);
       log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
       await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP });
       ev.stopPropagation();
@@ -173,6 +174,7 @@ export let processUndoDamageCard = async(message, html, data) => {
   button = html.find("#all-apply");
   button.click((ev) => {
     message.data.flags.midiqol.undoDamage.forEach(async ({actorUuid, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
+    if (!actorUuid) return;
     let actor = MQfromActorUuid(actorUuid);
       log(`Setting HP to ${newTempHP} and ${newHP}`);
       await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP });
@@ -181,6 +183,7 @@ export let processUndoDamageCard = async(message, html, data) => {
   })
 
   message.data.flags.midiqol.undoDamage.forEach(({actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP}) => {
+    if (!actorUuid) return;
     // ids should not have "." in the or it's id.class
     let button = html.find(`#reverse-${actorUuid.replaceAll(".", "")}`);
     button.click(async (ev) => {
