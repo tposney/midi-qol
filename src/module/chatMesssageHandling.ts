@@ -280,7 +280,7 @@ let _onTargetSelect = (event) => {
   event.preventDefault();
   if ( !canvas?.scene?.data.active ) return;
   const token = canvas.tokens.get(event.currentTarget.id);
-  token.control({ multiSelect: false, releaseOthers: true });
+  token?.control({ multiSelect: false, releaseOthers: true });
 };
 
 export let hideRollRender = (msg, html, data) => {

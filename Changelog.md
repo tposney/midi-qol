@@ -1,4 +1,17 @@
 
+## 0.8.9
+* Some internal cleanup of damage application card
+* Some more changes for rolling actors that have no token on the canvas.
+* Reinstate support for (ceil(expr))d6 damage rolls. (Sneak attack via dnd beyond import).
+* Ranged attacks against self are always normal, never out of range.
+* Fix for monks token bar saves by non-gm clients.
+* Updated compendium with Hunter's mark/Divine smite/Rage - names have MQ0.8.9 appended to distinguish them. You are free to call them whatever you want.
+
+
+## 0.8.8
+* Improved behaviour when trying to roll a character that has no token on the canvas.
+* Fixed a bug in ignoring self in area templates.
+
 ## 0.8.7
 * Fix a typo/bug in show Gm all whispered messages.
 * Fix a bug not allowing you to set the default save modifieer.

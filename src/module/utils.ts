@@ -29,8 +29,9 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
     debug("CreateDamageList: single Spec is ", spec, type, item)
     //@ts-ignore replaceFromulaData - blank out @field - do this to avoid @XXXX not found
     let formula = Roll.replaceFormulaData(spec, rollData || {}, {missing: "0", warn: false});
-    //@ts-ignore evaluate
-    const dmgSpec: Roll = new Roll(formula, rollData || {});//.evaluate({async: false});
+    //@ts-ignore evaluate - TODO - need to do the .evaluate else the expression is not useful 
+    // However will be a problem longer term when async not supported?? What to do
+    const dmgSpec: Roll = new Roll(formula, rollData || {}).evaluate({async: false});
     // dmgSpec is now a roll with the right terms (but nonsense value) to pick off the right terms from the passed roll
     //@ts-ignore length
     for (let i = 0; i < dmgSpec.terms.length; i++) { // grab all the terms for the current damage line
@@ -103,16 +104,16 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
   return damageList;
 } 
 
-export async function getSelfTarget(actor) {
+export function getSelfTarget(actor): Token {
   if (actor.token) return actor.token;
   const speaker = ChatMessage.getSpeaker({actor})
   if (speaker.token) return canvas.tokens.get(speaker.token);
-  //@ts-ignore
-  return await Token.fromActor(actor);
+  //@ts-ignore this is a token document not a token ??
+  return new TokenDocument(actor.getTokenData(), {actor});
 }
 
-export async function getSelfTargetSet(actor): Promise<Set<Token>> {
-  return new Set([await getSelfTarget(actor)])
+export function getSelfTargetSet(actor): Set<Token> {
+  return new Set([getSelfTarget(actor)])
 }
 
 // Calculate the hp/tempHP lost for an amount of damage of type
@@ -137,18 +138,20 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, exist
     var newTemp = tmp - dt;
     var newHP: number = Math.clamped(oldHP - (value - dt), 0, hp.max + (parseInt(hp.tempmax)|| 0));
   }
+  // Stumble around trying to find the actual token that corresponds to the multi level token TODO make this sane
   const altSceneId = getProperty(t.data.flags, "multilevel-tokens.sscene");
-  let sceneId = altSceneId ?? t.scene.id;
+  let sceneId = altSceneId ?? t.scene?.id;
   const altTokenId= getProperty(t.data.flags, "multilevel-tokens.stoken");
   let tokenId = altTokenId ?? t.id;
   const altTokenUuid = (altTokenId && altSceneId) ? `Scene.${altSceneId}.Token.${altTokenId}` : undefined;
-  const tokenUuid = altTokenUuid ?? t.document.uuid;
+  let tokenUuid = altTokenUuid; // TODO this is nasty fix it.
+  if (!tokenUuid && t.document) tokenUuid = t.uuid;
 
   debug("calculateDamage: results are ", newTemp, newHP, appliedDamage, totalDamage)
   if (game.user.isGM) 
       log(`${a.name} ${oldHP} takes ${value} reduced from ${totalDamage} Temp HP ${newTemp} HP ${newHP} `);
   // TODO change tokenId, actorId to tokenUuid and actor.uuid
-  return {tokenId, tokenUuid, actorID: a.id, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
+  return {tokenId, tokenUuid, actorId: a.id, actorUuid: a.uuid, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
           oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value, sceneId};
 }
 
@@ -307,7 +310,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   // Show damage buttons if enabled, but only for the applicable user and the GM
   
   let theTargets = workflow.hitTargets;
-  if (item?.data.data.target?.type === "self") theTargets = await getSelfTargetSet(actor) || theTargets;
+  if (item?.data.data.target?.type === "self") theTargets = getSelfTargetSet(actor) || theTargets;
   let effectsToExpire = [];
   if (theTargets.size > 0 && item?.hasAttack) effectsToExpire.push("1Hit");
   if (theTargets.size > 0 && item?.hasDamage) effectsToExpire.push("DamageDealt");
@@ -525,6 +528,7 @@ export function checkRange(actor, item, tokenId, targets) {
   // check that a range is specified at all
   if (!itemData.range) return;
   if (!itemData.range.value && !itemData.range.long && itemData.range.units !== "touch" ) return "normal";
+  if (itemData.target?.type === "self") return "normal";
   // skip non mwak/rwak/rsak/msak types that do not specify a target type
   if (!allAttackTypes.includes(itemData.actionType) && !["creature", "ally", "enemy"].includes(itemData.target?.type)) return "normal";
 
@@ -643,7 +647,7 @@ export async function addConcentration(options: {workflow: Workflow}) {
   const item = options.workflow.item;
   await item.actor.unsetFlag("midi-qol", "concentration-data");
   if (installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation) {
-    let selfTarget = await getSelfTarget(item.actor);
+    let selfTarget = getSelfTarget(item.actor);
     if (!selfTarget) return;
     const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
     const itemDuration = item.data.data.duration;
@@ -652,6 +656,7 @@ export async function addConcentration(options: {workflow: Workflow}) {
 
     // Update the duration of the concentration effect - TODO remove it CUB supports a duration
     if (options.workflow.hasDAE) {
+      //@ts-ignore data.effects
       const ae = duplicate(selfTarget.actor.data.effects.find(ae => ae.label === concentrationName));
       if (ae) {
         //@ts-ignore
@@ -671,7 +676,7 @@ export async function addConcentration(options: {workflow: Workflow}) {
     }
   } else if (configSettings.concentrationAutomation) {
     let actor = options.workflow.actor;
-    let selfTarget = await getSelfTarget(item.actor);
+    let selfTarget = getSelfTarget(item.actor);
     if (!selfTarget) return;
     let concentrationName = i18n("midi-qol.Concentrating");
 

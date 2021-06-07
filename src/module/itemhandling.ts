@@ -16,7 +16,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
 
   if (workflow.workflowType === "Workflow") {
-    workflow.targets = (this.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : await validTargetTokens(game.user.targets);
+    workflow.targets = (this.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : await validTargetTokens(game.user.targets);
     if (workflow.attackRoll) { // we are re-rolling the attack.
       workflow.damageRoll = undefined;
       await Workflow.removeAttackDamageButtons(this.id)
@@ -314,7 +314,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
         content: i18n("midi-qol.ActiveConcentrationSpell.Content"),
         yes: async () => {
           if (installedModules.get("combat-utility-belt"))
-            game.cub.removeCondition(concentrationName, [await getSelfTarget(this.actor)], { warn: false });
+            game.cub.removeCondition(concentrationName, [getSelfTarget(this.actor)], { warn: false });
           else concentrationCheck.delete();
         },
         no: () => { shouldAllowRoll = false; }
@@ -329,7 +329,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return;
   }
 
-  const targets = (this?.data.data.target?.type === "self") ? await getSelfTargetSet(this.actor) : myTargets;
+  const targets = (this?.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : myTargets;
 
   let workflow: Workflow;
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
@@ -584,16 +584,15 @@ export function selectTargets(templateDocument, data, user) {
   }
   if (!templateDocument.data) return true;
 
-  // if the item specifies a range of "self" don't target the caster.
+  // if the item specifies a range of "special" don't target the caster.
   let selfTarget = (item?.data.data.range?.units === "spec") ? canvas.tokens.get(this.tokenId) : null;
   if (selfTarget && game.user.targets.has(selfTarget)) {
     // we are targeted and should not be
-    selfTarget.setTarget(false, {user: game.user, releaseOther: false})
-    game.user.targets.delete(selfTarget)
+    selfTarget.setTarget(false, {user: game.user, releaseOthers: false})
   }
   this.saves = new Set();
-  this.targets = game.user.targets;
-  this.hitTargets = game.user.targets;
+  this.targets = new Set(game.user.targets);
+  this.hitTargets = new Set(game.user.targets);
   this.templateData = templateDocument.data;
   return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
 };

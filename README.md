@@ -1,3 +1,6 @@
+# Bug reports
+**Please Please Please*  include the version numbers of midi-qol/foundry (dae/better rolls if used) that you are using when posting bug reports. It is impossible for me to guess and the code base has changed vastly from foundry 0.7.9 to 08.x.
+
 # midi-qol
 Midi-qol is a replacement for minor-qol and you should not have both modules active at the same time.  (Both can be INTSALLED at the same time, but only one should be ACTIVATED.)  Because there are some subtle differences in the way the midi-qol works compared to minor-qol you will need to experiment with the settings.
 

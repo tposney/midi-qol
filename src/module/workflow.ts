@@ -9,7 +9,7 @@ import { selectTargets, showItemCard } from "./itemhandling";
 import { socketlibSocket } from "./GMAction";
 import { installedModules } from "./setupModules";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens } from "./utils"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet } from "./utils"
 
 export const shiftOnlyEvent = {shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: ""};
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey)}
@@ -261,8 +261,8 @@ export class Workflow {
     if (this.targets.size !== 1) return;
     // Change this to TokenDocument
     const firstTarget = this.targets.values().next().value;
-    const grants = firstTarget.document.actor?.data.flags["midi-qol"]?.grants?.critical ?? {};
-    const fails = firstTarget.document.actor?.data.flags["midi-qol"]?.fail?.critical ?? {};
+    const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants?.critical ?? {};
+    const fails = firstTarget.actor?.data.flags["midi-qol"]?.fail?.critical ?? {};
     if (grants?.all || grants[attackType]) this.critFlagSet = true;
     if (fails?.all || fails[attackType]) this.noCritFlagSet = true;
   }
@@ -292,7 +292,7 @@ export class Workflow {
         this.disadvantage = this.disadvantage || nearbyAlly
       }
     }
-    const grants = firstTarget.document.actor?.data.flags["midi-qol"]?.grants;
+    const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants;
     if (!grants) return;
     if (!["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) return;
 
@@ -321,7 +321,7 @@ export class Workflow {
     }
     
     this.tokenId = speaker.token;
-    this.tokenUuid = this.tokenId ? canvas.tokens.get(this.tokenId).document.uuid : undefined; // TODO see if this could be better
+    this.tokenUuid = this.tokenId ? canvas.tokens.get(this.tokenId).uuid : undefined; // TODO see if this could be better
     this.speaker = speaker;
     if (this.speaker.scene) this.speaker.scene = canvas?.scene?.id;
     this.targets = targets; 
@@ -713,7 +713,7 @@ export class Workflow {
         if (hasConcentration && checkConcentration) {
           let targets = [];
           for (let hit of this.applicationTargets) 
-            targets.push({tokenUuid: hit.document.uuid, actorUuid: hit.actor.uuid});
+            targets.push({tokenUuid: hit.uuid, actorUuid: hit.actor.uuid});
           await this.actor.setFlag("midi-qol", "concentration-data", {uuid: this.item.uuid, targets, templates: this.templateUuid ? [this.templateUuid] : []})
           if (this.tokenId) {
             if (installedModules.get("combat-utility-belt")) {
@@ -792,15 +792,15 @@ export class Workflow {
     let saves = [];
     let superSavers = [];
     //@ts-ignore
-    for (let target of this.targets) targets.push(target.document);
+    for (let target of this.targets) targets.push(target.document ?? target);
     //@ts-ignore
-    for (let save of this.saves) saves.push(save.document);
+    for (let save of this.saves) saves.push(save.document ?? target);
     //@ts-ignore
-    for (let hit of this.hitTargets) hitTargets.push(hit.document);
+    for (let hit of this.hitTargets) hitTargets.push(hit.document ?? target);
     //@ts-ignore
-    for (let failed of this.failedSaves) failedSaves.push(failed.document);
+    for (let failed of this.failedSaves) failedSaves.push(failed.document ?? target);
     //@ts-ignore
-    for (let save of this.superSavers) superSavers.push(save.document);
+    for (let save of this.superSavers) superSavers.push(save.document ?? target);
     const macroData = {
       actor: this.actor.data,
       actorUuid: this.actor.uuid,
@@ -1348,13 +1348,12 @@ export class Workflow {
     } finally {
     }
     if (monkRequests.length > 0) {
-      game.MonksTokenBar.requestRoll(
-        monkRequests, 
-        {
-          request:`save:${this.item.data.data.save.ability}`, 
-          silent: true, 
-          rollMode: "gmroll"
-      });
+      socketlibSocket.executeAsGM("monksTokenBarSaves", {
+        tokens: monkRequests.map(t=>t.uuid),
+        request: `save:${this.item.data.data.save.ability}`,
+        silent: true,
+        rollMode: "gmroll"
+      });    
     };
     debug("check saves: requests are ", this.saveRequests)
     var results = await Promise.all(promises);
@@ -1412,7 +1411,7 @@ export class Workflow {
       this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">DC ${rollDC}</label> ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(this.hitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:`;
   }
    monksSavingCheck(message, update, options, user) {
-    if (!update.flags && !update.flags["monks-tokenbar"]) return true;
+    if (!update.flags || !update.flags["monks-tokenbar"]) return true;
     const mflags = update.flags["monks-tokenbar"];
     for (let key of Object.keys(mflags)) {
       if (!key.startsWith("token")) continue;
@@ -1488,11 +1487,9 @@ export class Workflow {
     this.hitDisplayData = [];
   
     if (item?.data.data.target?.type === "self") {
-      this.processCriticalFlags();
-      this.targets = new Set([canvas.tokens.get(this.tokenId)]); //TODO check this is right
-      debug("Check hits - self target")
-
-    } else for (let targetToken of this.targets) {
+      this.targets = getSelfTargetSet(this.actor);
+    } 
+    for (let targetToken of this.targets) {
       isHit = false;
       let targetName = configSettings.useTokenNames && targetToken.name ? targetToken.name : targetToken.actor?.name;
       let targetActor = targetToken.actor;
@@ -1583,15 +1580,55 @@ export class Workflow {
   }
 }
 
+export class DamageOnlyWorkflow08 extends Workflow { // WIP don't use
+  constructor(actor: Actor5e, token: Token, damageParts: [], targets: [Token], options = { 
+      itemCardId: 0, itemData: null, data: {}, 
+      critical:false, criticalBonusDice: 0, criticalMultiplier: 2, multiplyNumeric: 0, powerfulCritical: false, 
+    fastForward: false, allowCritical: true, template: null, title: null, dialogOptions: {}, // Dialog configuration
+    chatMessage: true, messageData: {}, rollMode: null, speaker: null, flavor: null}
+  ) {
+    super(actor, null, ChatMessage.getSpeaker({ token }), new Set(targets), shiftOnlyEvent);
+    // const isFF = options.fastForward;
+    const formula = damageParts.join(" + ");
+    // const isCritical = options.
+    let rollData;
+    if (this.item) rollData = this.item.getRollData();
+    else if (this.actor) rollData = this.actor.getRollData;
+    if (options.data) rollData = rollData.mergeObject(rollData, options.data, {overwrite: true})
+    this.roll = new CONFIG.Dice.DamageRoll(formula, rollData, {
+      flavor: options.flavor || options.title,
+      critical: options.critical,
+      criticalBonusDice: options.criticalBonusDice,
+      multiplyNumeric: options.multiplyNumeric,
+      criticalMultiplier: options.criticalMultiplier,
+      powerfulCritical: options.powerfulCritical
+    });
+    this.options = options;
+  }
+
+  async _next(newState) {
+    this.currentState = newState;
+    warn("Newstate is ", newState)
+    // let state = Object.entries(WORKFLOWSTATES).find(a=>a[1]===this.currentState)[0];
+    switch(newState) {
+      case WORKFLOWSTATES.NONE:
+        if (!this.options.fastForward) {
+          const configured = await this.roll.configureDialog
+        } 
+    }
+  } 
+}
+
 export class DamageOnlyWorkflow extends Workflow {
   constructor(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll, 
         options: {flavor: string, itemCardId: string, damageList: [], useOther: boolean, itemData: {}}) {
           super(actor, null, ChatMessage.getSpeaker({token}), new Set(targets), shiftOnlyEvent)
     this.itemData = options.itemData;
     if (this.itemData && actor)
-      this.item = Item.createOwned(this.itemData, this.actor);
+      //@ts-ignore
+      this.item = new CONFIG.Item.documentClass(this.itemData, {parent: this.actor});
     else this.item = null;
-
+    // Do the supplied damageRoll
     this.damageRoll = roll;
     this.damageDetail = createDamageList(this.damageRoll, this.item, damageType);
     this.damageTotal = damageTotal;
