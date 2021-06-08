@@ -26,7 +26,10 @@ export let setupSocket = () => {
     socketlibSocket.register("removeEffects", removeEffects);
     socketlibSocket.register("updateActorStats", GMupdateActor)
     socketlibSocket.register("removeActorStatsForActorId", removeActorStats);
-    socketlibSocket.register("monksTokenBarSaves", monksTokenBarSaves)
+    socketlibSocket.register("monksTokenBarSaves", monksTokenBarSaves);
+    socketlibSocket.register("rollAbility", rollAbility);
+    socketlibSocket.register("createChatMessage", createChatMessage);
+
   });
 };
 
@@ -36,11 +39,28 @@ export function initGMActionSetup() {
   traitList.dv = i18n("DND5E.DamVuln");
 }
 
+export async function createChatMessage(data) {
+  return await ChatMessage.create(data.chatData);
+}
+
+export function rollAbility(data) {
+  //@ts-ignore
+  const rollAction = data.request === "abil" ?
+            //@ts-ignore
+            rollAction = CONFIG.Actor.documentClass.prototype.rollAbilityTest : 
+            //@ts-ignore
+            CONFIG.Actor.documentClass.prototype.rollAbilitySave;
+  const actor = MQfromActorUuid(data.targetUuid);
+  const result = rollAction.bind(actor)(data.ability, data.options);
+  return result;
+}
+
 export function monksTokenBarSaves(data) {
   let tokens = data.tokens.map(tuuid => {
     return new Token(MQfromUuid(tuuid));
   });
 
+  // TODO come back and see what things can be passed to this.
   game.MonksTokenBar.requestRoll(
     tokens,
     {

@@ -48,6 +48,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   if (workflow.workflowType === "BetterRollsWorkflow") displayChat = options.chatMessage;
   if (!Hooks.call("midi-qol.preAttackRoll", this, workflow)) {
     console.warn("midi-qol | attack roll blocked by pre hook");
+    return;
   }
   let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,

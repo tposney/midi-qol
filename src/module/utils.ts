@@ -28,13 +28,24 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
     // TODO look at replacing this with a map/reduce
     debug("CreateDamageList: single Spec is ", spec, type, item)
     //@ts-ignore replaceFromulaData - blank out @field - do this to avoid @XXXX not found
-    let formula = Roll.replaceFormulaData(spec, rollData || {}, {missing: "0", warn: false});
+    let formula = Roll.replaceFormulaData(spec, rollData, {missing: "0", warn: false});
     //@ts-ignore evaluate - TODO - need to do the .evaluate else the expression is not useful 
     // However will be a problem longer term when async not supported?? What to do
-    const dmgSpec: Roll = new Roll(formula, rollData || {}).evaluate({async: false});
+    const dmgSpec: Roll = new Roll(formula, rollData).evaluate({async: false});
     // dmgSpec is now a roll with the right terms (but nonsense value) to pick off the right terms from the passed roll
+    // Because damage spec is rolled it drops the leading operator terms, so do that as well
     //@ts-ignore length
     for (let i = 0; i < dmgSpec.terms.length; i++) { // grab all the terms for the current damage line
+      // rolls can have extra operator terms if mods are negative so test is
+      // if the current roll term is an operator but the next damage spec term is not 
+      // add the operator term to the eval string and advance the roll term counter
+      // evemtually rollTerms[partPos] will become undefined so it can't run forever
+      while (rollTerms[partPos] instanceof CONFIG.Dice.termTypes.OperatorTerm  && 
+          //@ts-ignore spec.terms
+          !(dmgSpec.terms[i] instanceof CONFIG.Dice.termTypes.OperatorTerm)) {
+        evalString += rollTerms[partPos].total;
+        partPos += 1;
+      }
       evalString += rollTerms[partPos].total;
       partPos += 1;
     }
@@ -74,10 +85,10 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
       numberTermFound = true;
     } if (evalTerm instanceof CONFIG.Dice.termTypes.OperatorTerm) {
       if (["*","/"].includes(evalTerm.operator)) {
-        // multiply or divide keep going keep going
+        // multiply or divide keep going
         evalString += evalTerm.total
       } else if (["-", "+"].includes(evalTerm.operator)) {
-        if (numberTermFound) { // we have a number and a +/- so we can eval the term (do it greedily so we get the right damage type)
+        if (numberTermFound) { // we have a number and a +/- so we can eval the term (do it straight away so we get the right damage type)
           //@ts-ignore safeEval
           let result = Roll.safeEval(evalString);
           damageParts[damageType || defaultType] = (damageParts[damageType || defaultType] || 0) + result;
@@ -85,7 +96,7 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
           evalString = ""; 
           damageType = "";
           numberTermFound = false;
-          evalString = evalTerm.total;
+          evalString = evalTerm.operator; 
         } else { // what to do with parenthetical term or others?
           evalString += evalTerm.total;
         }

@@ -1,3 +1,9 @@
+## 0.8.11
+* Fix for players receiving "User does not have permission to create chat message" when not using the merge card. There is a small overhead when usning the non-merge card or shwoing non-pc rolls.
+* Yet another fix for damage rolls with lots of plusses and minuses in them confusing midi-qol.
+* Fix for supplied Hunter's Mark which relied on a non-existent macro. If you use hunter's mark please use this one.
+* Fix for preAttackRoll not respecting the return status of the hook.
+
 ## 0.8.10
 * Fix for replaceAll errors when starting up with an old chatlog
 
