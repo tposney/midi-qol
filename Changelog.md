@@ -1,3 +1,11 @@
+## 0.8.12
+* Fix for concentration throwing an error.
+* Fix for tool rolls not rolling.
+* Small change to concentration application, so that caster is included in concentration targets
+* fix for hunter's mark MQ0.8.12 so that effect does not immediately expire.
+* Little tidy up to reverse damage card tooltips for damage resistance.
+
+
 ## 0.8.11
 * Fix for players receiving "User does not have permission to create chat message" when not using the merge card. There is a small overhead when using the non-merge card or showing non-pc rolls.
 * Yet another fix for damage rolls with lots of pluses and minuses in them confusing midi-qol.

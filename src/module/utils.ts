@@ -149,6 +149,7 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, exist
     var newTemp = tmp - dt;
     var newHP: number = Math.clamped(oldHP - (value - dt), 0, hp.max + (parseInt(hp.tempmax)|| 0));
   }
+  //TODO review this awfulness
   // Stumble around trying to find the actual token that corresponds to the multi level token TODO make this sane
   const altSceneId = getProperty(t.data.flags, "multilevel-tokens.sscene");
   let sceneId = altSceneId ?? t.scene?.id;
@@ -156,7 +157,7 @@ export function calculateDamage(a, appliedDamage, t, totalDamage, dmgType, exist
   let tokenId = altTokenId ?? t.id;
   const altTokenUuid = (altTokenId && altSceneId) ? `Scene.${altSceneId}.Token.${altTokenId}` : undefined;
   let tokenUuid = altTokenUuid; // TODO this is nasty fix it.
-  if (!tokenUuid && t.document) tokenUuid = t.uuid;
+  if (!tokenUuid && t.document) tokenUuid = t.document.uuid;
 
   debug("calculateDamage: results are ", newTemp, newHP, appliedDamage, totalDamage)
   if (game.user.isGM) 
@@ -655,9 +656,10 @@ export function getTokenPlayerName(token: Token) {
 
 // Add the concentration marker to the character and update the duration if possible
 export async function addConcentration(options: {workflow: Workflow}) {
+  if (!configSettings.concentrationAutomation) return;
   const item = options.workflow.item;
   await item.actor.unsetFlag("midi-qol", "concentration-data");
-  if (installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation) {
+  if (installedModules.get("combat-utility-belt")) {
     let selfTarget = getSelfTarget(item.actor);
     if (!selfTarget) return;
     const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
@@ -668,24 +670,26 @@ export async function addConcentration(options: {workflow: Workflow}) {
     // Update the duration of the concentration effect - TODO remove it CUB supports a duration
     if (options.workflow.hasDAE) {
       //@ts-ignore data.effects
-      const ae = duplicate(selfTarget.actor.data.effects.find(ae => ae.label === concentrationName));
+      const ae = selfTarget.actor.data.effects.find(ae => ae.label === concentrationName);
       if (ae) {
+        const aeData = duplicate(ae.data)
         //@ts-ignore
         const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.id));
         const convertedDuration = options.workflow.dae.convertDuration(itemDuration, inCombat);
         if (convertedDuration.type === "seconds") {
-          ae.duration.seconds = convertedDuration.seconds;
-          ae.duration.startTime = game.time.worldTime;
+          aeData.duration.seconds = convertedDuration.seconds;
+          aeData.duration.startTime = game.time.worldTime;
         } else if (convertedDuration.type === "turns") {
-          ae.duration.rounds = convertedDuration.rounds;
-          ae.duration.turns = convertedDuration.turns;
-          ae.duration.startRound = game.combat?.round;
-          ae.duration.startTurn = game.combat?.turn;
+          aeData.duration.rounds = convertedDuration.rounds;
+          aeData.duration.turns = convertedDuration.turns;
+          aeData.duration.startRound = game.combat?.round;
+          aeData.duration.startTurn = game.combat?.turn;
         }
-        await selfTarget.actor.updateEmbeddedEntity("ActiveEffect", ae)
+        //@ts-ignore updateEmbeddedDcouments
+        await selfTarget.actor.updateEmbeddedDocuments("ActiveEffect", [aeData])
       }
     }
-  } else if (configSettings.concentrationAutomation) {
+  } else {
     let actor = options.workflow.actor;
     let selfTarget = getSelfTarget(item.actor);
     if (!selfTarget) return;

@@ -713,8 +713,14 @@ export class Workflow {
         const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
         if (hasConcentration && checkConcentration) {
           let targets = [];
-          for (let hit of this.applicationTargets)
-            targets.push({ tokenUuid: hit.uuid, actorUuid: hit.actor.uuid });
+          for (let hit of this.applicationTargets) {
+            let hitUuid;
+            if (hit instanceof CONFIG.Token.documentClass) hitUuid = hit.uuid;
+            else hitUuid = hit.document.uuid;
+            targets.push({ tokenUuid: hitUuid, actorUuid: hit.actor.uuid });
+          }
+          if (this.actor)
+            targets.push({tokenUuid: this.tokenUuid, actorUuid: this.actor.uuid})
           await this.actor.setFlag("midi-qol", "concentration-data", { uuid: this.item.uuid, targets, templates: this.templateUuid ? [this.templateUuid] : [] })
           if (this.tokenId) {
             if (installedModules.get("combat-utility-belt")) {

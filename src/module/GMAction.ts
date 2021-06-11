@@ -37,6 +37,9 @@ export function initGMActionSetup() {
   traitList.di = i18n("DND5E.DamImm");
   traitList.dr = i18n("DND5E.DamRes");
   traitList.dv = i18n("DND5E.DamVuln");
+  traitList.di = "di";
+  traitList.dr = "dr";
+  traitList.dv = "dv";
 }
 
 export async function createChatMessage(data) {
