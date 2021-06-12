@@ -801,13 +801,13 @@ export class Workflow {
     //@ts-ignore
     for (let target of this.targets) targets.push(target.document ?? target);
     //@ts-ignore
-    for (let save of this.saves) saves.push(save.document ?? target);
+    for (let save of this.saves) saves.push(save.document ?? save);
     //@ts-ignore
-    for (let hit of this.hitTargets) hitTargets.push(hit.document ?? target);
+    for (let hit of this.hitTargets) hitTargets.push(hit.document ?? hit);
     //@ts-ignore
-    for (let failed of this.failedSaves) failedSaves.push(failed.document ?? target);
+    for (let failed of this.failedSaves) failedSaves.push(failed.document ?? failed);
     //@ts-ignore
-    for (let save of this.superSavers) superSavers.push(save.document ?? target);
+    for (let save of this.superSavers) superSavers.push(save.document ?? save);
     const macroData = {
       actor: this.actor.data,
       actorUuid: this.actor.uuid,

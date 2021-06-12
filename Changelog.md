@@ -1,3 +1,6 @@
+## 0.8.13
+* Fix for concentration with cub installed not setting duration correctly.
+
 ## 0.8.12
 * Fix for concentration throwing an error.
 * Fix for tool rolls not rolling.

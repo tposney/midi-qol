@@ -670,7 +670,7 @@ export async function addConcentration(options: {workflow: Workflow}) {
     // Update the duration of the concentration effect - TODO remove it CUB supports a duration
     if (options.workflow.hasDAE) {
       //@ts-ignore data.effects
-      const ae = selfTarget.actor.data.effects.find(ae => ae.label === concentrationName);
+      const ae = selfTarget.actor.data.effects.find(ae => ae.data.label === concentrationName);
       if (ae) {
         const aeData = duplicate(ae.data)
         //@ts-ignore
