@@ -813,7 +813,7 @@ export class Workflow {
       actorUuid: this.actor.uuid,
       tokenId: this.tokenId,
       tokenUuid: this.tokenUuid,
-      item: this.item?.data,
+      item: duplicate(this.item?.data || []),
       itemUuid: this.item?.uuid,
       targets,
       hitTargets,
@@ -1156,7 +1156,10 @@ export class Workflow {
           setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", false);
           // setProperty(chatData, "flags.midi-qol.hideTag", "")
         }
-        ChatMessage.create(chatData);
+        if (chatData.user.isGM)
+          socketlibSocket.executeAsGM("createChatMessage", {chatData});
+        else
+          ChatMessage.create(chatData);
       }
     }
   }
@@ -1658,10 +1661,6 @@ export class DamageOnlyWorkflow extends Workflow {
     options: { flavor: string, itemCardId: string, damageList: [], useOther: boolean, itemData: {} }) {
     super(actor, null, ChatMessage.getSpeaker({ token }), new Set(targets), shiftOnlyEvent)
     this.itemData = options.itemData;
-    if (this.itemData && actor)
-      //@ts-ignore
-      this.item = new CONFIG.Item.documentClass(this.itemData, { parent: this.actor });
-    else this.item = null;
     // Do the supplied damageRoll
     this.damageRoll = roll;
     this.damageDetail = createDamageList(this.damageRoll, this.item, damageType);
@@ -1690,15 +1689,16 @@ export class DamageOnlyWorkflow extends Workflow {
         this.effectsAlreadyExpired = [];
         if (this.itemData) {
           //@ts-ignore
-          this.item = Item.createOwned(this.itemData, this.actor); //TODO fix this to not do createOwned
-          setProperty(this.item, "data.flags.midi-qol.onUseMacroName", null);
+          this.itemData.effects = this.itemData.effects.map(e=> e.toJSON())
+          //@ts-ignore
+          this.item = new CONFIG.Item.documentClass(this.itemData, { parent: this.actor });          setProperty(this.item, "data.flags.midi-qol.onUseMacroName", null);
         } else this.item = null;
         if (this.itemCardId === "new" && this.itemData) { // create a new chat card for the item
           this.createCount += 1;
 
           this.itemCard = await showItemCard.bind(this.item)(false, this, true);
           this.itemCardId = this.itemCard.id;
-          // Since this could to be the same item don't roll the on use macro, since this could loop forever
+          // Since this could to be the same itfem don't roll the on use macro, since this could loop forever
         }
 
         // Need to pretend there was an attack roll so that hits can be residtered and the correct string created

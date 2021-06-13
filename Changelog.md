@@ -1,5 +1,10 @@
+## 0.8.14 
+* Fix for displaying hits when attacking, not using merge cards, and only showing gm the results which would generate a player does not have permission to create chat messsage.
+* Fix for DamageOnlyWorkflow passed itemData with active effects in place.
+
 ## 0.8.13
 * Fix for concentration with cub installed not setting duration correctly.
+* Fix for incorrect data passed to OnUse/DamageBonus macros for saves, failed saves, hits - which broke a couple of sample items.
 
 ## 0.8.12
 * Fix for concentration throwing an error.
