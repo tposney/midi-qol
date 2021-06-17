@@ -1,3 +1,6 @@
+## 0.8.15
+* Fix for Hunter's Nark/onUseMacro
+* Fix for edge case on OnUseMacro
 ## 0.8.14 
 * Fix for displaying hits when attacking, not using merge cards, and only showing gm the results which would generate a player does not have permission to create chat messsage.
 * Fix for DamageOnlyWorkflow passed itemData with active effects in place.

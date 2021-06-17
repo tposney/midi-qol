@@ -687,7 +687,7 @@ export class Workflow {
 
       case WORKFLOWSTATES.APPLYDYNAMICEFFECTS:
         expireMyEffects.bind(this)(["1Action"]);
-        if (configSettings.allowUseMacro && !this.onUseMacroCalled) {
+        if (configSettings.allowUseMacro && !this.onUseMacroCalled && this.item?.data.flags) {
           this.onUseMacroCalled = true;
           const results = await this.callMacros(getProperty(this.item, "data.flags.midi-qol.onUseMacroName"), "OnUse");
           // Special check for return of {haltEffectsApplication: true} from item macro
@@ -813,7 +813,7 @@ export class Workflow {
       actorUuid: this.actor.uuid,
       tokenId: this.tokenId,
       tokenUuid: this.tokenUuid,
-      item: duplicate(this.item?.data || []),
+      item: this.item?.data,
       itemUuid: this.item?.uuid,
       targets,
       hitTargets,
