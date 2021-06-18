@@ -86,16 +86,16 @@ export let processpreCreateBetterRollsMessage = (message: ChatMessage, data: any
   let advantage = attackEntry ? attackEntry.rollState === "highest" : undefined;
   let disadvantage = attackEntry ? attackEntry.rollState === "lowest" : undefined;
   let diceRoll = attackEntry ? attackEntry.entries?.find((e) => !e.ignored)?.roll.terms[0].total : -1;
-  let isCritical = false;
+  let isCritical = attackEntry ? attackEntry.entries?.find((e) => !e.ignored)?.isCrit : false;
 
   for (let entry of brFlags.entries) {
     if (entry.type === "damage-group") {
       for (const subEntry of entry.entries) {
         let damage = subEntry.baseRoll?.total ?? 0;
         let type = subEntry.damageType;
-        if ((entry.isCrit || subEntry.revealed) && subEntry.critRoll) {
+        if (isCritical && subEntry.critRoll) {
           damage += subEntry.critRoll.total;
-          isCritical = true;
+          // isCritical = true;
         }
         // Check for versatile and flag set. TODO damageIndex !== other looks like nonsense.
         if (subEntry.damageIndex !== "other")
@@ -245,7 +245,7 @@ export let nsaMessageHandler = (message, data, ...args) => {
   let currentIds = data.whisper.map(u=>typeof(u) === "string" ? u : u.id);
   gmIds = gmIds.filter(id => !currentIds.includes(id));
   debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmids ", gmIds)
-  message.data.update({"whisper": data.whisper.concat(gmIds)});
+  message.data.update({"whisper": currentIds.concat(gmIds)});
   // TODO check this data.whisper = data.whisper.concat(gmIds);
   return true;
 }

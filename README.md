@@ -29,7 +29,7 @@ Any module that overloads item.roll is potentially incompatible.
 **Cautious GM** Midi-qol breaks the blind chats by hidden GM feature of cautious GM.  
 **Chat Portraits** If using Chat Portraits, the changes made by midi-qol to the token/actor name in chat cards are overwritten/lost. Choose which sort of highlighting you want - only one will work. Otherwise, all seems to work.
 **Ez-Roller** The send to chat log feature of ez-roller will disable combo cards in midi-qol.  
-**Combat Utility Belt** CUB concentrator and midi-qol concentration automation are incompatible. Choose one or the other.
+**Combat Utility Belt** CUB concentrator and midi-qol concentration automation are incompatible. Choose one or the other. If you want concentration to expire at the end of the spell you need to install times-up.
 **Maestro** Maestro looks for the attack roll chat card in the chat log to play its critical/attack/fumble sounds. If you are using the merge card then the attack roll card is never created and Maestro can't play its sounds. You can use the midi-qol custom sounds instead.
 **Item Macro**  
 You can create itemMacro macros with the **itemmacro** module and call them from midi's onUse/DamageBonus macro fields.
@@ -282,7 +282,7 @@ Advantage/disadvantage on checks for an ability check also grants advantage on t
 flags.midi-qol.fail.all/ability.all/ability.check.all/ability.save.all/skill.all etc to auto fail a given roll.  
 
 * flags.midi-qol.fail.spell.all
-* flags.midi-qol.fail.spell.vocal/somatic/material  
+* flags.midi-qol.fail.spell.vocal|verbal/somatic/material  
 Fails attempts to cast spells with the specified components (or all).
 
 * flags.midi-qol.grants.advantage.attack.all

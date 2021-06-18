@@ -288,7 +288,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       ui.notifications.warn("You are unable to cast the spell");
       return null;
     }
-    if (midiFlags?.fail?.spell?.verbal && needsVerbal) {
+    if ((midiFlags?.fail?.spell?.verbal || midiFlags?.fail?.spell?.vocal) && needsVerbal) {
       ui.notifications.warn("You make no sound and the spell fails");
       return null;
     }

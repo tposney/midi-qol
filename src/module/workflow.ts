@@ -1689,7 +1689,7 @@ export class DamageOnlyWorkflow extends Workflow {
         this.effectsAlreadyExpired = [];
         if (this.itemData) {
           //@ts-ignore
-          this.itemData.effects = this.itemData.effects.map(e=> e.toJSON())
+          this.itemData.effects = this.itemData.effects.map(e=> duplicate(e))
           //@ts-ignore
           this.item = new CONFIG.Item.documentClass(this.itemData, { parent: this.actor });          setProperty(this.item, "data.flags.midi-qol.onUseMacroName", null);
         } else this.item = null;
