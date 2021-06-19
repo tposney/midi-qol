@@ -1,5 +1,10 @@
+## 0.8,17
+* Fix for itemData passed via macro calls.
+
 ## 0.8.16
 * Support both flags.midi-qol.fail.spell.vocal and flags.midi-qol.fail.spell.verbal
+* Fix for better rolls and critical damage.
+
 ## 0.8.15
 * Fix for Hunter's Nark/onUseMacro
 * Fix for edge case on OnUseMacro

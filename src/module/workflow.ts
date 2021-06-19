@@ -813,8 +813,8 @@ export class Workflow {
       actorUuid: this.actor.uuid,
       tokenId: this.tokenId,
       tokenUuid: this.tokenUuid,
-      item: this.item?.data,
       itemUuid: this.item?.uuid,
+      item: this.item?.data.toOjbect(false),
       targets,
       hitTargets,
       saves,
@@ -846,6 +846,7 @@ export class Workflow {
       templateId: this.templateId, // deprecated
       templateUuid: this.templateUuid
     };
+
     warn("macro data ", macroData)
 
     for (let macro of macroNames) {
