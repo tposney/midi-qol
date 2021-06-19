@@ -814,7 +814,7 @@ export class Workflow {
       tokenId: this.tokenId,
       tokenUuid: this.tokenUuid,
       itemUuid: this.item?.uuid,
-      item: this.item?.data.toOjbect(false),
+      item: this.item?.data.toObject(false),
       targets,
       hitTargets,
       saves,
