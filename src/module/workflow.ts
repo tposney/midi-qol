@@ -1135,15 +1135,18 @@ export class Workflow {
       speaker.scene = canvas?.scene?.id
       if ((await validTargetTokens(game.user.targets)).size > 0) {
         let chatData: any = {
-          user: game.user,
-          speaker,
+          messageData: {
+            speaker,
+            user: game.user.id
+          },
           content: hitContent || "No Targets",
           type: CONST.CHAT_MESSAGE_TYPES.OTHER,
         }
         const rollMode = game.settings.get("core", "rollMode");
         if (whisper || rollMode !== "roll") {
-          chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
-          chatData.user = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
+          chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u => u.active).map(u=>u.id);
+          if (!game.user.isGM && rollMode !== "blind") chatData.whisper.push(game.user.id); // message is going to be created by GM add self
+          chatData.messageData.user = ChatMessage.getWhisperRecipients("GM").find(u => u.active)?.id;
           if (rollMode === "blindroll") {
             chatData["blind"] = true;
           }
@@ -1157,7 +1160,7 @@ export class Workflow {
           setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", false);
           // setProperty(chatData, "flags.midi-qol.hideTag", "")
         }
-        if (chatData.user.isGM)
+        if (game.users.get(chatData.messageData.user).isGM)
           socketlibSocket.executeAsGM("createChatMessage", {chatData});
         else
           ChatMessage.create(chatData);
@@ -1186,7 +1189,7 @@ export class Workflow {
       if (!!!game.dice3d?.messageHookDisabled) this.hideTags = [".midi-qol-saves-display"];
       switch (this.workflowType) {
         case "BetterRollsWorkflow":
-          const html = `<div data-item-id="${this.item.id}"></div><div class="midi-qol-saves-display">${saveHTML}${saveContent}</div><footer class="card-footer">`
+          const html = `<div data-item-id="${this.item.id}"></div><div class="midi-qol-saves-display">${saveHTML}${saveContent}</div>`
           const roll = this.roll;
           await roll.entries.push({ type: "raw", html, source: "midi" });
           return;
@@ -1212,8 +1215,10 @@ export class Workflow {
       const waitForDSN = configSettings.playerRollSaves !== "none" && this.saveDisplayData.some(data => data.isPC);
       speaker.scene = canvas?.scene?.id;
       chatData = {
-        user: game.user, //gmUser - save results will come from the user now, not the GM
-        messageData: {speaker},
+        messageData: {
+          user: game.user.id, //gmUser - save results will come from the user now, not the GM
+          speaker
+        },
         content: `<div data-item-id="${this.item.id}"></div> ${saveContent}`,
         flavor: `<h4>${this.saveDisplayFlavor}</h4>`,
         type: CONST.CHAT_MESSAGE_TYPES.OTHER,
@@ -1223,7 +1228,7 @@ export class Workflow {
       const rollMode = game.settings.get("core", "rollMode");
       if (configSettings.autoCheckSaves === "whisper" || whisper || rollMode !== "roll") {
         chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
-        chatData.user = game.user; // ChatMessage.getWhisperRecipients("GM").find(u => u.active);
+        chatData.messageData.user = game.user.id; // ChatMessage.getWhisperRecipients("GM").find(u => u.active);
         if (rollMode === "blindroll") {
           chatData["blind"] = true;
         }

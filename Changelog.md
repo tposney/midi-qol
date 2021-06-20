@@ -1,5 +1,13 @@
+## 0.8.19
+* Fix for rolling magic item spells when not auto rolling attack/damage.
+* Added import/export midi-qol settings.
+* Fixed really hide private rolls and GM sees all hidden rolls.
+* If GM sees all hidden rolls is enabled the "privately rolled some dice" message will have it's contents dispayed to the GM. Really hid private/hidden rolls will disable the "privately rolled some dice" messages from being shown
+
+**As of version 0.8.19** you can export your midi-qol settings to a json file. When posting a midi-qol bug report please export your settings and add the json file to the report.
+
 ## 0.8.18
-Fix for typo in 0.8.17
+* Fix for typo in 0.8.17
 
 ## 0.8,17
 * Fix for itemData passed via macro calls.

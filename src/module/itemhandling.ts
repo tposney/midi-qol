@@ -242,7 +242,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   return result;
 }
 
-export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, event}) {
+export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: false, event}) {
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
   let versatile = options?.versatile ?? false;
@@ -268,13 +268,13 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   // do pre roll checks
   if (checkRule("checkRange")) {
     if (speaker.token && checkRange(this.actor, this, speaker.token, myTargets) === "fail")
-      return;
+      return null;
   }
   if (game.system.id === "dnd5e" && requiresTargets && myTargets.size > allowedTargets) {
     shouldAllowRoll = false;
     ui.notifications.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
     warn(`${game.user.name} ${i18nFormat("midi-qol.midi-qol.wrongNumberTargets", { allowedTargets })}`)
-    return;
+    return null;
   }
   if (this.type === "spell" && shouldAllowRoll) {
     const midiFlags = this.actor.data.flags["midi-qol"];
@@ -384,7 +384,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     debug("Item Roll: showing card", itemCard, workflow);
   }
   workflow.next(WORKFLOWSTATES.NONE);
-  return itemCard ?? result;
+  return options.createMessage ? (itemCard ?? result) : result;
 }
 
 export async function showItemInfo() {

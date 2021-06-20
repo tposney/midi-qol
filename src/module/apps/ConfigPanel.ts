@@ -1,8 +1,9 @@
-import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls } from "../settings"
+import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, itemRollButtons, saveRequests, forceHideRoll, enableWorkflow, dragDropTargeting, importSettingsFromJSON, exportSettingsToJSON } from "../settings"
  import { configSettings } from "../settings"
 import { warn, i18n, error, debug, gameStats } from "../../midi-qol";
 import { RollStats } from "../RollStats";
 import { installedModules } from "../setupModules";
+import { addChatDamageButtonsToHTML } from "../chatMesssageHandling";
 export class ConfigPanel extends FormApplication {
   
   static get defaultOptions() {
@@ -59,7 +60,6 @@ export class ConfigPanel extends FormApplication {
     };
     warn("Config Panel: getdata ", data)
     return data;
-
   }
 
   activateListeners(html) {
@@ -86,6 +86,14 @@ export class ConfigPanel extends FormApplication {
     html.find("#midi-qol-show-stats").on("click", event => {
       gameStats.showStats();
     })
+
+    html.find("#midi-qol-export-config").on("click", exportSettingsToJSON)
+    html.find("#midi-qol-import-config").on("click", async () => {
+      if (await importFromJSONDialog()) {
+        this.close();
+      }
+    });
+
   }
 
   async _playList(event) {
@@ -177,7 +185,6 @@ export class IemTypeSelector extends FormApplication {
   //@ts-ignore
   _updateObject(event, formData) {
     const updateData = {};
-
     // Obtain choices
     const chosen = [];
     for ( let [k, v] of Object.entries(formData) ) {
@@ -185,4 +192,37 @@ export class IemTypeSelector extends FormApplication {
     }
     configSettings.itemTypeList = chosen;
   }
+}
+async function importFromJSONDialog() {
+  const content = await renderTemplate("templates/apps/import-data.html", {entity: "midi-qol", name: "settings"});
+  let dialog =  new Promise((resolve, reject) => {
+    new Dialog({
+      title: `Import midi-qol settings`,
+      content: content,
+      buttons: {
+        import: {
+          icon: '<i class="fas fa-file-import"></i>',
+          label: "Import",
+          callback: html => {
+            //@ts-ignore
+            const form = html.find("form")[0];
+            if ( !form.data.files.length ) return ui.notifications.error("You did not upload a data file!");
+            readTextFromFile(form.data.files[0]).then(json => {
+              importSettingsFromJSON(json)
+              resolve(true);
+            });
+          }
+        },
+        no: {
+          icon: '<i class="fas fa-times"></i>',
+          label: "Cancel",
+          callback: html => resolve(false)
+        }
+      },
+      default: "import"
+    }, {
+      width: 400
+    }).render(true);
+  });
+  return await dialog;
 }

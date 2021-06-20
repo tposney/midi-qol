@@ -240,12 +240,12 @@ export let colorChatMessageHandler = (message, html, data) => {
 }
 
 export let nsaMessageHandler = (message, data, ...args) => {
-  if (!nsaFlag || !data.whisper || data.whisper.length === 0) return true;
+  if (!nsaFlag || !message.data.whisper || message.data.whisper.length === 0) return true;
   let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u=>u.active).map(u=>u.id);
   let currentIds = data.whisper.map(u=>typeof(u) === "string" ? u : u.id);
   gmIds = gmIds.filter(id => !currentIds.includes(id));
   debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmids ", gmIds)
-  message.data.update({"whisper": currentIds.concat(gmIds)});
+  if (gmIds.length > 0) message.data.update({"whisper": currentIds.concat(gmIds)});
   // TODO check this data.whisper = data.whisper.concat(gmIds);
   return true;
 }
@@ -307,6 +307,17 @@ export let hideRollUpdate = (message, data, diff, id) => {
 export let hideStuffHandler = (message, html, data) => {
   debug("hideStuffHandler message: ", message.id, message)
 
+  if ((forceHideRoll || configSettings.mergeCard) && message.data.blind && !game.user.isGM) {
+    html.hide();
+    return;
+  }
+  if (forceHideRoll 
+      && !game.user.isGM 
+      && message.data.whisper.length > 0 && !message.data.whisper.includes(game.user.id) 
+      && !message.isAuthor) {
+    html.hide();
+    return;
+  }
   const midiqolFlags = getProperty(message.data, "flags.midi-qol");
   let ids = html.find(".midi-qol-target-name")
   // const actor = game.actors.get(message?.speaker.actor)

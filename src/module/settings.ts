@@ -94,6 +94,58 @@ export function checkRule(rule: string) {
   return configSettings.optionalRulesEnabled && configSettings.optionalRules[rule];
 }
 
+export function exportSettingsToJSON() {
+  const data = {
+    configSettings,
+    itemRollButtons,
+    criticalDamage,
+    itemDeleteCheck,
+    nsaFlag,
+    coloredBorders,
+    addChatDamageButtons,
+    autoFastForwardAbilityRolls,
+    autoRemoveTargets,
+    forceHideRoll,
+    enableWorkflow,
+    dragDropTargeting,
+    flags: {}
+  };
+  data.flags["exportSource"] = {
+    world: game.world.id,
+    system: game.system.id,
+    coreVersion: game.data.version,
+    systemVersion: game.system.data.version
+  }
+  data.flags["modules"] = {
+    daeVersion: game.modules.get("dae")?.data.version,
+    betterRollsVersion: game.modules.get("betterrolls5e")?.data.version,
+    abouttimeVersion: game.modules.get("about-time")?.data.version,
+    timesUpVersion: game.modules.get("times-up")?.data.version,
+    simpleCalendarVersion: game.modules.get("foundryvtt-simple-calendar")?.data.version,
+    midiQolVerson: game.modules.get("midi-qol").data.version
+  };
+  const filename = `fvtt-midi-qol-settings.json`;
+  saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
+}
+
+export async function importSettingsFromJSON(json) {
+  const data = JSON.parse(json);
+  console.error("Import data ", data);
+  console.log("midi-qol - import settings ", data.flags.exportSource, data.flags.modules)
+  game.settings.set("midi-qol", "ConfigSettings", data.configSettings);
+  game.settings.set("midi-qol", "ItemRollButtons", data.itemRollButtons);
+  game.settings.set("midi-qol", "CriticalDamage", data.criticalDamage);
+  game.settings.set("midi-qol", "ItemDeleteCheck", data.itemDeleteCheck);
+  game.settings.set("midi-qol", "showGM", data.nsaFlag);
+  game.settings.set("midi-qol", "ColoredBorders", data.coloredBorders);
+  game.settings.set("midi-qol", "AddChatDamageButtons", data.addChatDamageButtons);
+  game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", data.autoFastForwardAbilityRolls);
+  game.settings.set("midi-qol", "AutoRemoveTargets", data.autoRemoveTargets);
+  game.settings.set("midi-qol", "ForceHideRoll", data.forceHideRoll);
+  game.settings.set("midi-qol", "EnableWorkflow", data.enableWorkflow);
+  game.settings.set("midi-qol", "DragDropTarget", data.dragDropTargeting);
+}
+
 export let fetchParams = (silent = false) => {
   debug("Fetch Params Loading");
   configSettings = game.settings.get("midi-qol", "ConfigSettings");
@@ -154,7 +206,7 @@ export let fetchParams = (silent = false) => {
   if (configSettings.concentrationAutomation) {
     // Force on use macro to true
     if (!configSettings.allowUseMacro) {
-      console.warn("Concentration required On Use Macro to be enabled. Enabling")
+      console.warn("Concentration requires On Use Macro to be enabled. Enabling")
       configSettings.allowUseMacro = true;
     }
     checkCubInstalled();
