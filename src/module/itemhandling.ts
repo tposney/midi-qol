@@ -335,6 +335,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   let workflow: Workflow;
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
     workflow = new BetterRollsWorkflow(this.actor, this, speaker, targets, event || options.event);
+    options.createMessage = true;
     return wrapped(options);
   }
   workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event });

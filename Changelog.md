@@ -1,3 +1,6 @@
+## 0.8.20
+* Fix for accidentally breaking better rolls
+
 ## 0.8.19
 * Fix for rolling magic item spells when not auto rolling attack/damage.
 * Added import/export midi-qol settings.
