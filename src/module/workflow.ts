@@ -9,7 +9,7 @@ import { selectTargets, showItemCard } from "./itemhandling";
 import { socketlibSocket } from "./GMAction";
 import { installedModules } from "./setupModules";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet } from "./utils"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, processAttackRollBonusFlags } from "./utils"
 
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
@@ -506,12 +506,11 @@ export class Workflow {
         return;
 
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
-        this.processAttackRoll();
         const attackBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.AttackBonusMacro`);
         if (configSettings.allowUseMacro && attackBonusMacro) {
           await this.rollAttackBonus(attackBonusMacro);
-
         }
+        this.processAttackRoll();
         await this.displayAttackRoll(configSettings.mergeCard);
         if (configSettings.autoCheckHit !== "none") {
           await this.checkHits();
@@ -720,7 +719,7 @@ export class Workflow {
             targets.push({ tokenUuid: hitUuid, actorUuid: hit.actor.uuid });
           }
           if (this.actor)
-            targets.push({tokenUuid: this.tokenUuid, actorUuid: this.actor.uuid})
+            targets.push({ tokenUuid: this.tokenUuid, actorUuid: this.actor.uuid })
           await this.actor.setFlag("midi-qol", "concentration-data", { uuid: this.item.uuid, targets, templates: this.templateUuid ? [this.templateUuid] : [] })
           if (this.tokenId) {
             if (installedModules.get("combat-utility-belt")) {
@@ -1085,6 +1084,7 @@ export class Workflow {
   async displayHits(whisper = false, doMerge) {
     const templateData = {
       attackType: this.item?.name ?? "",
+      attackTotal: this.attackTotal,
       oneCard: configSettings.mergeCard,
       hits: this.hitDisplayData,
       isCritical: this.isCritical,
@@ -1144,7 +1144,7 @@ export class Workflow {
         }
         const rollMode = game.settings.get("core", "rollMode");
         if (whisper || rollMode !== "roll") {
-          chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u => u.active).map(u=>u.id);
+          chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u => u.active).map(u => u.id);
           if (!game.user.isGM && rollMode !== "blind") chatData.whisper.push(game.user.id); // message is going to be created by GM add self
           chatData.messageData.user = ChatMessage.getWhisperRecipients("GM").find(u => u.active)?.id;
           if (rollMode === "blindroll") {
@@ -1161,7 +1161,7 @@ export class Workflow {
           // setProperty(chatData, "flags.midi-qol.hideTag", "")
         }
         if (game.users.get(chatData.messageData.user).isGM)
-          socketlibSocket.executeAsGM("createChatMessage", {chatData});
+          socketlibSocket.executeAsGM("createChatMessage", { chatData });
         else
           ChatMessage.create(chatData);
       }
@@ -1286,7 +1286,7 @@ export class Workflow {
     // make sure saving throws are renabled.
 
     const playerMonksTB = installedModules.get("monks-tokenbar") && configSettings.playerRollSaves === "mtb";
-    const gmMondsTB = installedModules.get("monks-tokenbar") && configSettings.rollNPCSaves === "mtb";
+    const gmMonksTB = installedModules.get("monks-tokenbar") && configSettings.rollNPCSaves === "mtb";
     let monkRequests = [];
     let showRoll = configSettings.autoCheckSaves === "allShow";
     try {
@@ -1314,7 +1314,7 @@ export class Workflow {
         //@ts-ignore
         if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
         const promptPlayer = (!player?.isGM && configSettings.playerRollSaves !== "none") || (player?.isGM && configSettings.rollNPCSaves !== "auto");
-        if ((!player.isGM && playerMonksTB) || (player.isGM && gmMondsTB)) {
+        if ((!player.isGM && playerMonksTB) || (player.isGM && gmMonksTB)) {
           promises.push(new Promise((resolve) => {
             let requestId = target.id;
             this.saveRequests[requestId] = resolve;
@@ -1332,7 +1332,7 @@ export class Workflow {
 
             this.saveRequests[requestId] = resolve;
 
-            requestPCSave(this.item.data.data.save.ability, rollType, player, target.actor.id, advantage, this.item.name, rollDC, requestId)
+            requestPCSave(this.item.data.data.save.ability, rollType, player, target.actor, advantage, this.item.name, rollDC, requestId)
 
             // set a timeout for taking over the roll
             if (configSettings.playerSaveTimeout > 0) {
@@ -1351,7 +1351,7 @@ export class Workflow {
                       options: { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage, fastForward: true },
                     });
                   } else {
-                    result = rollAction.bind(target.actor)(this.item.data.data.save.ability, { messageData: {user: playerId}, chatMessage: showRoll,  mapKeys: false, advantage, fastForward: true});
+                    result = rollAction.bind(target.actor)(this.item.data.data.save.ability, { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage, fastForward: true });
                   }
                   // let result = await rollAction.bind(target.actor)(this.item.data.data.save.ability, { messageData: { user: playerId }, advantage: advantageToUse, fastForward: true });
                   resolve(result);
@@ -1368,19 +1368,13 @@ export class Workflow {
           if (!owner) owner = game.users.find((u: User) => u.isGM && u.active);
           // Fall back to rolling as the current user
           if (!owner) owner = game.user;
-          if (!game.user.isGM && configSettings.autoCheckSaves === "allShow") {
-            // non-gm users don't have permission to create chat cards impersonating the GM.
-            promises.push(socketlibSocket.executeAsGM("rollAbility", {
-              targetUuid: target.actor.uuid,
-              request: rollType,
-              ability: this.item.data.data.save.ability,
-              showRoll,
-              options: { messageData: { user: owner.id }, chatMessage: showRoll, mapKeys: false, advantage, fastForward: true },
-            }));
-          } else {
-            //@ts-ignore actor.rollAbilitySave
-            promises.push(rollAction.bind(target.actor)(this.item.data.data.save.ability, { messageData: {user: owner.id}, chatMessage: showRoll,  mapKeys: false, advantage, fastForward: true}));
-          }
+          promises.push(socketlibSocket.executeAsUser("rollAbility", owner.id, {
+            targetUuid: target.actor.uuid,
+            request: rollType,
+            ability: this.item.data.data.save.ability,
+            showRoll,
+            options: { messageData: { user: owner.id }, chatMessage: showRoll, mapKeys: false, advantage, fastForward: true },
+          }));
         }
 
       }
@@ -1510,7 +1504,12 @@ export class Workflow {
 
   processAttackRoll() {
     //@ts-ignore
-    this.diceRoll = this.attackRoll.terms[0].results.find(d => d.active).result;
+    const terms = this.attackRoll.terms;
+    if (terms[0] instanceof CONFIG.Dice.termTypes.NumericTerm) {
+      this.diceRoll = terms[0].total;
+    } else {
+      this.diceRoll = terms[0].results.find(d => d.active).result;
+    }
     //@ts-ignore .terms undefined
     this.isCritical = this.diceRoll >= this.attackRoll.terms[0].options.critical;
     //@ts-ignore .terms undefined
@@ -1591,8 +1590,9 @@ export class Workflow {
       let inRange = target.actor && target.actor.data.data.details.race !== "trigger"
         && target.actor.id !== token.actor.id
         && dispositions.includes(target.data.disposition)
-        && (canvas.grid.measureDistances([{ ray }], { gridSpaces: true })[0] <= minDist)
-      if (configSettings.rangeTarget === "wallsBlock") {
+        && (canvas.grid.measureDistances([{ ray }], { gridSpaces: true })[0] <= minDist
+          && (["always", "wallsBlock"].includes(configSettings.rangeTarget) || target.actor?.data.data.attributes.hp.value > 0))
+      if (inRange && ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.rangeTarget)) {
         inRange = inRange && !canvas.walls.checkCollision(ray);
       }
       if (inRange) target.setTarget(true, { user: game.user, releaseOthers: false });
@@ -1695,9 +1695,9 @@ export class DamageOnlyWorkflow extends Workflow {
         this.effectsAlreadyExpired = [];
         if (this.itemData) {
           //@ts-ignore
-          this.itemData.effects = this.itemData.effects.map(e=> duplicate(e))
+          this.itemData.effects = this.itemData.effects.map(e => duplicate(e))
           //@ts-ignore
-          this.item = new CONFIG.Item.documentClass(this.itemData, { parent: this.actor });          setProperty(this.item, "data.flags.midi-qol.onUseMacroName", null);
+          this.item = new CONFIG.Item.documentClass(this.itemData, { parent: this.actor }); setProperty(this.item, "data.flags.midi-qol.onUseMacroName", null);
         } else this.item = null;
         if (this.itemCardId === "new" && this.itemData) { // create a new chat card for the item
           this.createCount += 1;
@@ -2047,5 +2047,4 @@ export class DummyWorkflow extends BetterRollsWorkflow {
     Workflow.removeWorkflow(this.item.id)
   }
 }
-
 

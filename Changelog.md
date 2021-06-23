@@ -1,3 +1,45 @@
+## 0.8.21
+* Fix for applying active effects via manual effect button.
+* Added option for auto targeting to ignore targets with 0 or less HP (i.e. defeated).
+* Fixed  hunter's mark (again).
+* Fir asynch LMRTFY _makeRoll patching.
+* I needed GM inspiration in my game so created an Item (GM Inspiration) that the GM can drop onto an actors character sheet. When the item is used it grants advantage on the next roll and removes the item from the actors inventory. (Does work with better rolls)
+* First cut solution for Bardic Inspiration and others, such as Lucky,
+
+* **Experimental** bonus effects applied after the roll but before the roll is applied. This release includes a framework for creating such effects and includes example Bardic Inspiration and Lucky feats.
+  - A dialog is displayed after the attack/save/check roll is made, but before it is applied, allowing the player to decide to apply a bonus or not. (click on the button to apply, click close or press esc/enter to continue).
+  - Multiple effects are supported and each will have a button displayed for the player to choose, when all uses of the bonus are exhausted the button is removed.
+  - The value of the bonus is either a roll expression (1d4, @abilities.cha.mod, 10) or the word reroll, which will reroll the entire roll (for the lucky feat).
+
+* Bonus effects can be created by giving the actor an active effect with the following flags (Name is just for grouping name and does not matter)
+  - flags.midi-qol.optional.Name.attack - the bonus is added after the attack roll
+  - flags.midi-qol.optional.Name.save - the bonus is added after the save roll. Requires auto fast forward 
+  - flags.midi-qol.optional.Name.check - the bonus is added after the ability check roll
+  - flags.midi-qol.optional.Name.label - label to use in the dialog
+  - flags.midi-qol.optional.Name.count - how many uses the effect has (think lukcy which has 3), if absent the bonus will be single use (bardic inspiration)
+
+This should be regarded as experimental since there are certain to be changes over time.
+Known Issues:
+* Does not work with better rolls - yet. Not sure if it's possible but will investigate.
+* The dice roll does not display the inital dice roll with dice so nice, so with dice so nice only the last bonus roll will be displayed. Will be fixed in a later release.
+* Pending a change to LMRTFY, unlinked tokens only apply optional effects if they are present on the base actor. Monks token bar and auto rolls take the bonus into account for unlinked tokens.
+
+* Sample Bardic Inspiration and Lucky feats are included in the "MidiQOL Sample Items" compendium included with the module.
+* How to use "Bardic Inspiration"
+  - Add the "Bardic Inspiration" feature to the bard, and set the number of charges per long rest according to the Bard's level.
+  - Inspire someone by targeting the recipient of inspiration and rolling the Bardic Inspiration feature, which will add the Inspiration effect to the target.
+  - When Inspiration is present the recipient will be prompted with a dialog to add the bardic inspiration roll on attack/save/check rolls. 
+  - The inspiration dice correctly reflect the bards level when applying the effect. A little  fancy footwork was required to get that to work - see the Bardic Inspiration Dice passive effect for how to do that. You need dae for this to work.
+  - If you don't use dae then use Bardic Inspirtion (No DAE) and modify the dice settings yourself.
+  - Once used, the Inspiration effeect is removed from the target character and no more prompts are shown.
+  
+  * How to use Lucky. 
+  - Currently you muse "use" the feature at the start of the day - a later release will fix this to reapply after a long rest.
+  - Using Lucky gives you 3 options to re-roll an attack/saving/ability check roll before the roll is applied.
+
+Possible Issues:
+* To ensure that the right player gets the optional bonus dialog, saving throws/ability checks have been "massaged" to run on the right client, rather than sometimes having the GM just do the roll (auto roll saves). I have seen no issues with this but there might be edge cases.
+
 ## 0.8.20
 * Fix for accidentally breaking better rolls
 

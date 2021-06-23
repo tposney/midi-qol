@@ -1,7 +1,7 @@
 import { log, warn, debug, i18n, error } from "../midi-qol";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage } from "./settings.js";
-import { expireRollEffect, testKey } from "./utils";
+import { bonusDialog, expireRollEffect, testKey } from "./utils";
 import { installedModules } from "./setupModules";
 import { libWrapper } from "./lib/shim.js";
 
@@ -10,7 +10,7 @@ var d20Roll;
 function _isVisionSource() {
   // log("proxy _isVisionSource", this);
 
-  if ( !canvas.sight.tokenVision || !this.hasSight ) return false;
+  if (!canvas.sight.tokenVision || !this.hasSight) return false;
 
   // Only display hidden tokens for the GM
   const isGM = game.user.isGM;
@@ -19,17 +19,17 @@ function _isVisionSource() {
   if (this.data.hidden && !(isGM || this.actor?.testUserPermission(game.user, "OWNER"))) return false;
 
   // Always display controlled tokens which have vision
-  if ( this._controlled ) return true;
+  if (this._controlled) return true;
 
   // Otherwise vision is ignored for GM users
-  if ( isGM ) return false;
+  if (isGM) return false;
 
   if (this.actor?.testUserPermission(game.user, "OBSERVER")) return true;
   // If a non-GM user controls no other tokens with sight, display sight anyways
   const canObserve = this.actor && this.actor.testUserPermission(game.user, "OWNER");
-  if ( !canObserve ) return false;
+  if (!canObserve) return false;
   const others = canvas.tokens.controlled.filter(t => t.hasSight);
-//TP ** const others = this.layer.controlled.filter(t => !t.data.hidden && t.hasSight);
+  //TP ** const others = this.layer.controlled.filter(t => !t.data.hidden && t.hasSight);
   return !others.length;
 }
 
@@ -37,24 +37,24 @@ function isVisible() {
   // console.error("Doing my isVisible")
   const gm = game.user.isGM;
   if (this.actor?.testUserPermission(game.user, "OWNER")) {
-//     this.data.hidden = false;
+    //     this.data.hidden = false;
     return true;
-  } 
-  if ( this.data.hidden ) return gm || this.actor?.testUserPermission(game.user, "OWNER");
+  }
+  if (this.data.hidden) return gm || this.actor?.testUserPermission(game.user, "OWNER");
   if (!canvas.sight.tokenVision) return true;
-  if ( this._controlled ) return true;
+  if (this._controlled) return true;
   const tolerance = Math.min(this.w, this.h) / 4;
-  return canvas.sight.testVisibility(this.center, {tolerance});
+  return canvas.sight.testVisibility(this.center, { tolerance });
 }
 
-export const advantageEvent = {shiftKey: false, altKey: true, ctrlKey: false, metaKey: false, fastKey: false};
-export const disadvantageEvent = {shiftKey: false, altKey:false, ctrlKey: true, metaKey: true, fastKey: false};
-export const fastforwardEvent = {shiftKey: false, altKey:false, ctrlKey: false, metaKey: false, fastKey: true};
-export const baseEvent = {shiftKey: false, altKey:false, ctrlKey: false, metaKey: false, fastKey: false};
+export const advantageEvent = { shiftKey: false, altKey: true, ctrlKey: false, metaKey: false, fastKey: false };
+export const disadvantageEvent = { shiftKey: false, altKey: false, ctrlKey: true, metaKey: true, fastKey: false };
+export const fastforwardEvent = { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false, fastKey: true };
+export const baseEvent = { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false, fastKey: false };
 
 function mapSpeedKeys(event) {
   if (configSettings.speedItemRolls && configSettings.speedAbilityRolls && !installedModules.get("betterrolls5e")) {
-    if (game.system.id === "sw5e")  {
+    if (game.system.id === "sw5e") {
       var advKey = testKey(configSettings.keyMapping["SW5E.Advantage"], event);
       var disKey = testKey(configSettings.keyMapping["SW5E.Disadvantage"], event);
     } else {
@@ -70,35 +70,34 @@ function mapSpeedKeys(event) {
   else if (disKey) event = disadvantageEvent;
   else if (advKey) event = advantageEvent;
   else
-   event = baseEvent;
+    event = baseEvent;
   return event;
 }
 
 interface Options {
-  event: any, 
-  advantage: boolean | undefined, 
-  disadvantage: boolean | undefined, 
-  fastForward: boolean | undefined, 
+  event: any,
+  advantage: boolean | undefined,
+  disadvantage: boolean | undefined,
+  fastForward: boolean | undefined,
   parts: [] | undefined
 };
 
 function doRollSkill(wrapped, ...args) {
-  const [ skillId, options = {event: {}, parts: [], avantage: false, disadvantage: false} ] = args;
+  const [skillId, options = { event: {}, parts: [], avantage: false, disadvantage: false }] = args;
   options.event = mapSpeedKeys(options.event);
   let procOptions = procAdvantage(this, "check", this.data.data.skills[skillId].ability, options)
   procOptions = procAdvantageSkill(this, skillId, procOptions)
-   if (procAutoFailSkill(this, skillId) || procAutoFail(this, "check", this.data.data.skills[skillId].ability))
-  {
+  if (procAutoFailSkill(this, skillId) || procAutoFail(this, "check", this.data.data.skills[skillId].ability)) {
     options.parts = ["-100"];
   }
   options.event = {};
-  let result =  wrapped.call(this, skillId, procOptions);
+  let result = wrapped.call(this, skillId, procOptions);
   expireRollEffect.bind(this)("Skill", skillId);
   return result;
 }
 
 function rollDeathSave(wrapped, ...args) {
-  const [ options ] = args;
+  const [options] = args;
   const event = mapSpeedKeys(options.event);
   const advFlags = getProperty(this.data.flags, "midi-qol")?.advantage ?? {};
   const disFlags = getProperty(this.data.flags, "midi-qol")?.disadvantage ?? {};
@@ -108,9 +107,9 @@ function rollDeathSave(wrapped, ...args) {
   withAdvantage = advFlags.deathSave || advFlags.all;
   withDisadvantage = disFlags.deathSave || disFlags.all;
   options.advantage = withAdvantage && !withDisadvantage;
-  options.disadvantage = withDisadvantage && ! withAdvantage;
+  options.disadvantage = withDisadvantage && !withAdvantage;
   options.event = {};
-  
+
   if (options.advantage && options.disadvantage) {
     options.advantage = options.disadvantage = false;
   }
@@ -120,9 +119,9 @@ function configureDamage(wrapped) {
   if (!this.isCritical || criticalDamage === "default") return wrapped();
   let flatBonus = 0;
   if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
-  for ( let [i, term] of this.terms.entries() ) {
+  for (let [i, term] of this.terms.entries()) {
     // Multiply dice terms
-    if ( term instanceof CONFIG.Dice.termTypes.DiceTerm ) {
+    if (term instanceof CONFIG.Dice.termTypes.DiceTerm) {
       term.options.baseNumber = term.options.baseNumber ?? term.number; // Reset back
       term.number = term.options.baseNumber;
       let cm = this.options.criticalMultiplier ?? 2;
@@ -136,7 +135,7 @@ function configureDamage(wrapped) {
           break;
         case "maxCrit":
           flatBonus += (term.number + cb) * term.faces;
-          cm = Math.max(1, cm-1);
+          cm = Math.max(1, cm - 1);
           term.alter(cm, cb);
           break;
         case "maxAll":
@@ -153,10 +152,10 @@ function configureDamage(wrapped) {
     }
 
     // Multiply numeric terms
-    else if ( this.options.multiplyNumeric && (term instanceof CONFIG.Dice.termTypes.NumericTerm)  ) {
+    else if (this.options.multiplyNumeric && (term instanceof CONFIG.Dice.termTypes.NumericTerm)) {
       term.options.baseNumber = term.options.baseNumber ?? term.number; // Reset back
       term.number = term.options.baseNumber;
-      if ( this.isCritical ) {
+      if (this.isCritical) {
         term.number *= (this.options.criticalMultiplier ?? 2);
         term.options.critical = true;
       }
@@ -164,16 +163,16 @@ function configureDamage(wrapped) {
   }
 
   // Add powerful critical bonus
-  if ( flatBonus > 0 ) {
-    this.terms.push(new CONFIG.Dice.termTypes.OperatorTerm({operator: "+"}));
-    this.terms.push(new CONFIG.Dice.termTypes.NumericTerm({number: flatBonus}, {flavor: game.i18n.localize("DND5E.PowerfulCritical")}));
+  if (flatBonus > 0) {
+    this.terms.push(new CONFIG.Dice.termTypes.OperatorTerm({ operator: "+" }));
+    this.terms.push(new CONFIG.Dice.termTypes.NumericTerm({ number: flatBonus }, { flavor: game.i18n.localize("DND5E.PowerfulCritical") }));
   }
   if (criticalDamage === "doubleDice") {
     let newTerms = [];
     for (let term of this.terms) {
       if (term instanceof CONFIG.Dice.termTypes.DiceTerm) {
-        newTerms.push(new CONFIG.Dice.termTypes.ParentheticalTerm({term: `2*${term.formula}`}))
-      } else 
+        newTerms.push(new CONFIG.Dice.termTypes.ParentheticalTerm({ term: `2*${term.formula}` }))
+      } else
         newTerms.push(term);
     }
     this.terms = newTerms;
@@ -182,30 +181,69 @@ function configureDamage(wrapped) {
   // Re-compile the underlying formula
   this._formula = this.constructor.getFormula(this.terms);
 }
-function rollAbilityTest(wrapped, ...args)  {
-  const [ abilityId, options={event: {}, parts: []} ] = args;
+async function rollAbilityTest(wrapped, ...args) {
+  const [abilityId, options = { event: {}, parts: [], chatMessage: undefined }] = args;
+  const chatMessage = options.chatMessage;
   if (procAutoFail(this, "check", abilityId)) options.parts = ["-100"];
   options.event = mapSpeedKeys(options.event);
   let procOptions = procAdvantage(this, "check", abilityId, options);
   options.event = {};
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
-  const minimumRoll = (flags.check && (flags.check.all|| flags.save[abilityId])) ?? 0;
-  let result = wrapped.call(this, abilityId, procOptions)
+  const minimumRoll = (flags.check && (flags.check.all || flags.save[abilityId])) ?? 0;
+
+  //@ts-ignore
+  procOptions.chatMessage = false;
+  let result = await wrapped(abilityId, procOptions);
+  if (!installedModules.get("betterrolls5e")) {
+    const bonusFlags = Object.keys(this.data.flags["midi-qol"]?.optional ?? [])
+      .filter(flag => this.data.flags["midi-qol"].optional[flag].check)
+      .map(flag => `flags.midi-qol.optional.${flag}`);
+    if (bonusFlags.length > 0) {
+      const data = {
+        actor: this,
+        roll: result,
+        rollHTML: await result.render(),
+        rollTotal: result.total,
+      }
+      await bonusDialog.bind(data)(bonusFlags, "check", true, `${this.name} - ${i18n("midi-qol.ability-check")}`, "roll", "rollTotal", "rollHTML", this.displayAttackRoll)
+      result = data.roll;
+    }
+  }
+  if (chatMessage !== false) result.toMessage();
   expireRollEffect.bind(this)("Check", abilityId);
   return result;
 }
 
-function rollAbilitySave(wrapped, ...args)  {
-  const [ abilityId, options={event: {}, parts: [],} ] = args;
+async function rollAbilitySave(wrapped, ...args) {
+  const [abilityId, options = { event: {}, parts: [], chatMessage: undefined }] = args;
   if (procAutoFail(this, "save", abilityId)) {
     options.parts = ["-100"];
   }
+  const chatMessage = options.chatMessage;
   options.event = mapSpeedKeys(options.event);
   let procOptions = procAdvantage(this, "save", abilityId, options);
-  //@ts-ignore
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
-  const minimumRoll = (flags.save && (flags.save.all|| flags.save[abilityId])) ?? 0;
-  let result = wrapped.call(this, abilityId, procOptions);
+  const minimumRoll = (flags.save && (flags.save.all || flags.save[abilityId])) ?? 0;
+  //@ts-ignore
+  procOptions.chatMessage = false;
+  let result = await wrapped(abilityId, procOptions);
+  if (!installedModules.get("betterrolls5e")) {
+    const bonusFlags = Object.keys(this.data.flags["midi-qol"]?.optional ?? [])
+      .filter(flag => this.data.flags["midi-qol"].optional[flag].save)
+      .map(flag => `flags.midi-qol.optional.${flag}`);
+
+    if (bonusFlags.length > 0) {
+      const data = {
+        actor: this,
+        roll: result,
+        rollHTML: await result.render(),
+        rollTotal: result.total,
+      }
+      await bonusDialog.bind(data)(bonusFlags, "save", true, `${this.name} - ${i18n("midi-qol.saving-throw")}`, "roll", "rollTotal", "rollHTML", this.displayAttackRoll)
+      result = data.roll;
+    }
+  }
+  if (chatMessage !== false) result.toMessage();
   expireRollEffect.bind(this)("Save", abilityId);
   return result;
   /* TODO work out how to do minimum rolls properly
@@ -255,7 +293,7 @@ function procAdvantage(actor, rollType, abilityId, options: Options): Options {
     withDisadvantage = withDisadvantage || disadvantage.all || disadvantage.ability.all || rollFlags.all || rollFlags[abilityId];
   }
   options.advantage = withAdvantage && !withDisadvantage;
-  options.disadvantage = withDisadvantage && ! withAdvantage;
+  options.disadvantage = withDisadvantage && !withAdvantage;
   options.event = {};
   return options;
 }
@@ -275,11 +313,11 @@ function procAdvantageSkill(actor, skillId, options: Options): Options {
     withDisadvantage = withDisadvantage || disadvantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId])
   }
   options.advantage = withAdvantage && !withDisadvantage;
-  options.disadvantage = withDisadvantage && ! withAdvantage;
+  options.disadvantage = withDisadvantage && !withAdvantage;
   return options;
 }
 
-function midiATRefresh(wrapped)  {
+function midiATRefresh(wrapped) {
   templateTokens(this)
   return wrapped();
 }
@@ -295,10 +333,10 @@ export let visionPatching = () => {
     console.warn("midi-qol | Player controls tokens setting is deprecated please switch to Conditional Visibility")
 
     log("Patching Token._isVisionSource")
-      libWrapper.register("midi-qol", "Token.prototype._isVisionSource", _isVisionSource, "OVERRIDE");
+    libWrapper.register("midi-qol", "Token.prototype._isVisionSource", _isVisionSource, "OVERRIDE");
 
-      log("Patching Token.isVisible")
-      libWrapper.register("midi-qol", "Token.prototype.isVisible", isVisible, "OVERRIDE");
+    log("Patching Token.isVisible")
+    libWrapper.register("midi-qol", "Token.prototype.isVisible", isVisible, "OVERRIDE");
   }
   log("Vision patching - ", patchVision ? "enabled" : "disabled")
 }
@@ -326,42 +364,42 @@ export let actorAbilityRollPatching = () => {
 
 export function patchLMRTFY() {
   if (installedModules.get("lmrtfy")) {
-      log("Patching lmrtfy")
-      libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "OVERRIDE");
-      libWrapper.register("midi-qol", "LMRTFYRoller.prototype._tagMessage", _tagMessage, "OVERRIDE");
+    log("Patching lmrtfy")
+    libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "OVERRIDE");
+    libWrapper.register("midi-qol", "LMRTFYRoller.prototype._tagMessage", _tagMessage, "OVERRIDE");
 
   }
 }
 
 export function _tagMessage(candidate, data, options) {
-  let update = {flags: {lmrtfy: {"message": this.data.message, "data": this.data.attach}}};
+  let update = { flags: { lmrtfy: { "message": this.data.message, "data": this.data.attach } } };
   candidate.data.update(update);
 }
 
-export function _makeRoll(event, rollMethod, ...args) {
+export async function _makeRoll(event, rollMethod, ...args) {
   let options;
-  switch(this.advantage) {
-      case -1: 
-        options = {disadvantage: true, fastForward: true};
-        break;
-      case 0:
-        options = {fastForward: true};
-        break;
-      case 1:
-        options = {advantage: true, fastForward: true};
-        break;
-       case 2: 
-        options = {event: event}
-        break;
+  switch (this.advantage) {
+    case -1:
+      options = { disadvantage: true, fastForward: true };
+      break;
+    case 0:
+      options = { fastForward: true };
+      break;
+    case 1:
+      options = { advantage: true, fastForward: true };
+      break;
+    case 2:
+      options = { event: event }
+      break;
   }
   const rollMode = game.settings.get("core", "rollMode");
   game.settings.set("core", "rollMode", this.mode || CONST.DICE_ROLL_MODES);
   for (let actor of this.actors) {
-      Hooks.once("preCreateChatMessage", this._tagMessage.bind(this));
-      actor[rollMethod].call(actor, ...args, options);                        
+    Hooks.once("preCreateChatMessage", this._tagMessage.bind(this));
+    await actor[rollMethod].call(actor, ...args, options);
   }
   game.settings.set("core", "rollMode", rollMode);
   event.currentTarget.disabled = true;
   if (this.element.find("button").filter((i, e) => !e.disabled).length === 0)
-      this.close();
+    this.close();
 }

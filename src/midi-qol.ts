@@ -91,7 +91,6 @@ Hooks.once('setup', function() {
 	// Do anything after initialization but before
   // ready
 
-  setupMidiFlags();
   fetchParams();
   itemPatching();
   visionPatching();
@@ -99,6 +98,7 @@ Hooks.once('setup', function() {
   registerSettings();
   initGMActionSetup();
   patchLMRTFY();
+  setupMidiFlags();
   undoDamageText = i18n("midi-qol.undoDamageFrom");
   savingThrowText = i18n("midi-qol.savingThrowText");
   savingThrowTextAlt = i18n("midi-qol.savingThrowTextAlt");
@@ -148,7 +148,7 @@ Hooks.once('ready', function() {
   setupMinorQolCompatibility();
 
   if (game.user.isGM && !installedModules.get("dae")) {
-    ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.8.0 or many automation effects won't work");
+    ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.8.18 or many automation effects won't work");
   }
   checkSocketLibInstalled();
   checkCubInstalled();
@@ -379,6 +379,12 @@ function setupMidiFlags() {
     })
   }
   
+  midiFlags.push(`flags.midi-qol.optional.NAME.attack`)
+  midiFlags.push(`flags.midi-qol.optional.NAME.check`)
+  midiFlags.push(`flags.midi-qol.optional.NAME.save`)
+  midiFlags.push(`flags.midi-qol.optional.NAME.label`)
+  midiFlags.push(`flags.midi-qol.optional.NAME.count`)
+
   /*
   midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
@@ -387,5 +393,8 @@ function setupMidiFlags() {
   midiFlags.push(``);
   midiFlags.push(``);
   */
-  midiFlags.sort()
+  if (installedModules.get("dae")) {
+    //@ts-ignore
+    window.DAE.addAutoFields(midiFlags);
+  }
 }

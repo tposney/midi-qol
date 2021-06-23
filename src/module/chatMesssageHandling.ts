@@ -6,7 +6,7 @@ import Item5e  from "../../../systems/dnd5e/module/item/entity.js"
 
 import { installedModules } from "./setupModules";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
-import { nsaFlag, coloredBorders, criticalDamage, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow, checkRule } from "./settings";
+import { nsaFlag, coloredBorders, criticalDamage, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow, checkRule, autoRemoveTargets } from "./settings";
 import { createDamageList, getTraitMult, calculateDamage, addConcentration, MQfromUuid, getSelfTarget } from "./utils";
 import { setupSheetQol } from "./sheetQOL";
 
@@ -533,19 +533,21 @@ export async function onChatCardAction(event) {
   } else {
     // Recover the actor for the chat card
     //@ts-ignore
-    actor = CONFIG.Item.entityClass._getChatCardActor(card);
+    actor = await CONFIG.Item.entityClass._getChatCardActor(card);
     if ( !actor ) return;
 
     // Get the Item from stored flag data or by the item ID on the Actor
     const storedData = message.getFlag(game.system.id, "itemData");
-    item = storedData ? this.createOwned(storedData, actor) : actor.getOwnedItem(card.dataset.itemId);
+    //@ts-ignore
+    item = storedData ? new CONFIG.Item.documentClass(storedData, { parent: actor }) : actor.items.get(card.dataset.itemId);   
+    // item = storedData ? this.createOwned(storedData, actor) : actor.getOwnedItem(card.dataset.itemId);
     if ( !item ) { // TODO investigate why this is occuring
       // return ui.notifications.error(game.i18n.format("DND5E.ActionWarningNoItem", {item: card.dataset.itemId, name: actor.name}))
     }
   }
   if (!actor || !item) return;
-  let workflow = Workflow.getWorkflow(item.id);
-  const hasDAE = installedModules.get("dae") && (item?.effects?.entries.some(ef => ef.data.transfer === false));
+  let workflow = Workflow.getWorkflow(item.uuid);
+  const hasDAE = installedModules.get("dae") && (item?.effects?.contents.some(ef => ef.data.transfer === false));
   if (hasDAE) {
     //@ts-ignore
     let dae = window.DAE;

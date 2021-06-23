@@ -59,9 +59,7 @@ export function rollAbility(data) {
 }
 
 export function monksTokenBarSaves(data) {
-  let tokens = data.tokens.map(tuuid => {
-    return new Token(MQfromUuid(tuuid));
-  });
+  let tokens = data.tokens.map(tuuid => new Token(MQfromUuid(tuuid)));
 
   // TODO come back and see what things can be passed to this.
   game.MonksTokenBar.requestRoll(

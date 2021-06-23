@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, log, MESSAGETYPES, i18nFormat, midiFlags, allAttackTypes, gameStats } from "../midi-qol";
 import { BetterRollsWorkflow, defaultRollOptions, DummyWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
 import { configSettings, itemDeleteCheck, enableWorkflow, criticalDamage, autoFastForwardAbilityRolls, checkRule } from "./settings";
-import { addConcentration, checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, untargetAllTokens, validTargetTokens } from "./utils";
+import { addConcentration, checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, untargetAllTokens, validTargetTokens } from "./utils";
 import { installedModules } from "./setupModules";
 import { setupSheetQol } from "./sheetQOL";
 
@@ -44,8 +44,6 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
 
   if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
-  let displayChat = !configSettings.mergeCard;
-  if (workflow.workflowType === "BetterRollsWorkflow") displayChat = options.chatMessage;
   if (!Hooks.call("midi-qol.preAttackRoll", this, workflow)) {
     console.warn("midi-qol | attack roll blocked by pre hook");
     return;
@@ -53,7 +51,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
     disadvantage: workflow.rollOptions.disadvantage,
-    chatMessage: displayChat,
+    chatMessage: workflow.workflowType === "BetterRollsWorkflow",
     fastForward: workflow.rollOptions.fastForward,
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
   });
@@ -64,6 +62,9 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     return result;
   }
 
+  workflow.attackRoll = result;
+  result = await processAttackRollBonusFlags.bind(workflow)();
+  if (!configSettings.mergeCard) result.toMessage();
   if (configSettings.keepRollStats) {
     //@ts-ignore
     const terms = result.terms;
@@ -82,7 +83,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     } else if (rollMode === "selfroll" || rollMode === "gmroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
     }
-    await game.dice3d.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+    await game.dice3d.showForRoll(workflow.attackRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
   }
 
   if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
@@ -93,7 +94,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     return;
     // workflow._next(WORKFLOWSTATES.ROLLFINISHED);
   }
-  workflow.attackRoll = result;
+  // workflow.attackRoll = result; already set
   workflow.attackRollHTML = await result.render();
   workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
   return result;
@@ -252,7 +253,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
   const isRangeSpell = configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget && configSettings.autoTarget;
-  const myTargets = await await validTargetTokens(game.user.targets);
+  const myTargets = await validTargetTokens(game.user.targets);
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" &&  game.combat);
   let shouldAllowRoll = !requiresTargets // we don't care about targets
     || (myTargets.size > 0) // there are some target selected
@@ -559,13 +560,14 @@ function isTokenInside(token, wallsBlockTargeting) {
 
 export function templateTokens(template) {
   if (configSettings.autoTarget === "none") return;
-  const wallsBlockTargeting = configSettings.autoTarget === "wallsBlock";
-	const tokens = canvas.tokens.placeables.map(t=>t.data)
+  const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget);
+	const tokens = canvas.tokens.placeables; //.map(t=>t.data)
   let targets = [];
   let tokenInside = isTokenInside.bind(template)
-  for (const tokenData of tokens) {
-    if (tokenInside(tokenData, wallsBlockTargeting)) {
-      targets.push(tokenData._id);
+  for (const token of tokens) {
+    if (token.actor && tokenInside(token.data, wallsBlockTargeting)) {
+      if (["wallsBlock", "always"].includes(configSettings.autoTarget) || token.actor?.data.data.attributes.hp.value > 0)
+      targets.push(token.data._id);
     }
   }
   // console.error("targets", targets)

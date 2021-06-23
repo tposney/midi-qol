@@ -124,6 +124,9 @@ export function exportSettingsToJSON() {
     simpleCalendarVersion: game.modules.get("foundryvtt-simple-calendar")?.data.version,
     midiQolVerson: game.modules.get("midi-qol").data.version
   };
+  data.flags["all-modules"] = 
+  //@ts-ignore
+    (new Collection(game.modules).filter(m=>m.active))
   const filename = `fvtt-midi-qol-settings.json`;
   saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
 }
