@@ -1,3 +1,7 @@
+## 0.8.22
+* Fix for concentration effect origin not being set.
+* Remove outdated spiritual weapon from compendium - use the one from DAE SRD
+
 ## 0.8.21
 * Fix for applying active effects via manual effect button.
 * Added option for auto targeting to ignore targets with 0 or less HP (i.e. defeated).

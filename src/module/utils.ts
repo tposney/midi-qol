@@ -681,7 +681,7 @@ export async function addConcentration(options: { workflow: Workflow }) {
       //@ts-ignore data.effects
       const ae = selfTarget.actor.data.effects.find(ae => ae.data.label === concentrationName);
       if (ae) {
-        const aeData = duplicate(ae.data)
+        const aeData = ae.toObject();
         //@ts-ignore
         const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.id));
         const convertedDuration = options.workflow.dae.convertDuration(itemDuration, inCombat);
@@ -694,6 +694,8 @@ export async function addConcentration(options: { workflow: Workflow }) {
           aeData.duration.startRound = game.combat?.round;
           aeData.duration.startTurn = game.combat?.turn;
         }
+        aeData.origin = item?.uuid
+        setProperty(aeData.flags, "midi-qol.isConcentration", aeData.origin);
         //@ts-ignore updateEmbeddedDcouments
         await selfTarget.actor.updateEmbeddedDocuments("ActiveEffect", [aeData])
       }
@@ -716,7 +718,8 @@ export async function addConcentration(options: { workflow: Workflow }) {
       disabled: false,
       icon: currentItem.img,
       label: concentrationName,
-      duration: undefined
+      duration: undefined,
+      flags: {"midi-qol": {isConcentration: item?.uuid}}
     }
     if (convertedDuration.type === "seconds") {
       effectData.duration = { seconds: convertedDuration.seconds, startTime: game.time.worldTime }
