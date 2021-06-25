@@ -51,7 +51,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
     disadvantage: workflow.rollOptions.disadvantage,
-    chatMessage: options.chatMessage,
+    chatMessage: (["TrapWorkflow", "Workflow"].includes(workflow.workflowType)) ? false : options.chatMessage,
     fastForward: workflow.rollOptions.fastForward,
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
   });
