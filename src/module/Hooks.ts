@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n } from "../midi-qol";
 import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons } from "./chatMesssageHandling";
 import { processUndoDamageCard } from "./GMAction";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet } from "./utils";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating } from "./utils";
 import { configSettings, dragDropTargeting } from "./settings";
 import { installedModules } from "./setupModules";
 
@@ -13,7 +13,8 @@ export let readyHooks = async () => {
   //  const item = game.items.getName("Concentration Check")
 
 
-  Hooks.on("preUpdateActor", (actor, update, diff) => {
+  // Have to trigger on preUpdate to check the HP before the update occured.
+  Hooks.on("preUpdateActor", (actor, update, diff, user) => {
     concentrationCheckItemDisplayName = i18n("midi-qol.concentrationCheckName");
     let concentrationName;
     if (installedModules.get("combat-utility-belt")) {
@@ -24,40 +25,40 @@ export let readyHooks = async () => {
     if (!configSettings.concentrationAutomation) return true;
     const hpUpdate = getProperty(update, "data.attributes.hp.value");
     if (hpUpdate === undefined) return true;
-    if (game.cub && !game.cub?.hasCondition(concentrationName, actor)) return true;
-    let concentrationEffect = !game.cub && actor.effects.find(e=>e.data.label === concentrationName);
-    if (!game.cub && !concentrationEffect) return;
-      const hpDiff = actor.data.data.attributes.hp.value - hpUpdate;
-      if (hpDiff <= 0) return true;
-      Hooks.once("updateActor", async (updatedActor, ...args) => {
-        if (updatedActor.data.data.attributes.hp.value === 0) {
-          if (game.cub) await game.cub.removeCondition(concentrationName, updatedActor, {warn: false})
-          else concentrationEffect.delete();
-        } else {
-          const item = game.items.getName(concentrationCheckItemName);
-          const itemData = duplicate(item.data);
-          itemData.name = concentrationCheckItemDisplayName;
-          // actor took damage and is concentrating....
-          const saveDC = Math.max(10, Math.floor(hpDiff/2));
-          const saveTargets = game.user.targets;
-          game.user.targets = await getSelfTargetSet(actor);
-          const ownedItem = Item.createOwned(itemData, actor)
-          ownedItem.data.data.save.dc = saveDC;
-          try {
-            if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e").data.version, "1.3.10")) { // better rolls breaks the normal roll process
-              //@ts-ignore
-              await BetterRolls.rollItem(ownedItem, {adv:0, disadv:0, midiSaveDC: saveDC}).toMessage();
-            } else {
-              //@ts-ignore
-              ownedItem.roll({showFullCard:false, createWorkflow:true, versatile:false, configureDialog:false})
-            }
-          } finally {
-            game.user.targets = saveTargets;
+    const hpDiff = actor.data.data.attributes.hp.value - hpUpdate;
+    if (hpDiff <= 0) return true;
+    const concentrationEffect = isConcentrating(actor)
+    if (!concentrationEffect) return true;
+    Hooks.once("updateActor", async (updatedActor, ...args) => {
+      if (updatedActor.data.data.attributes.hp.value === 0) {
+        if (game.cub) await game.cub.removeCondition(concentrationName, updatedActor, { warn: false })
+        //@ts-ignore .delete because of type of concentration effect return
+        else concentrationEffect.delete();
+      } else {
+        const item = game.items.getName(concentrationCheckItemName);
+        const itemData = duplicate(item.data);
+        itemData.name = concentrationCheckItemDisplayName;
+        // actor took damage and is concentrating....
+        const saveDC = Math.max(10, Math.floor(hpDiff / 2));
+        const saveTargets = game.user.targets;
+        game.user.targets = await getSelfTargetSet(actor);
+        const ownedItem = Item.createOwned(itemData, actor)
+        ownedItem.data.data.save.dc = saveDC;
+        try {
+          if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e").data.version, "1.3.10")) { // better rolls breaks the normal roll process
+            //@ts-ignore
+            await BetterRolls.rollItem(ownedItem, { adv: 0, disadv: 0, midiSaveDC: saveDC }).toMessage();
+          } else {
+            //@ts-ignore
+            ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false })
           }
+        } finally {
+          game.user.targets = saveTargets;
         }
-      })
-      return true;
+      }
     })
+    return true;
+  })
 
   // Concentration Check is rolled as an item roll so we need an item.
   // A temporary item would be good, but users would need create item permission which is a bit sily for just this
@@ -74,7 +75,7 @@ export let readyHooks = async () => {
     const currentItem = game.items.getName(concentrationCheckItemName)
     if (!currentItem)
       await Item.create(itemJSONData)
-    else  
+    else
       await currentItem.update(itemJSONData, {});
   }
 
@@ -95,7 +96,7 @@ export let initHooks = () => {
     processItemCardCreation(message, options, user);
     return true;
   })
-  
+
   Hooks.on("updateChatMessage", (message, update, options, user) => {
     mergeCardSoundPlayer(message, update, options, user);
     hideRollUpdate(message, update, options, user);
@@ -104,10 +105,10 @@ export let initHooks = () => {
   })
 
   Hooks.on("updateCombat", (combat, data, options, user) => {
-    untargetAllTokens(combat, data. options, user);
+    untargetAllTokens(combat, data.options, user);
     untargetDeadTokens();
   })
-  
+
   Hooks.on("renderChatMessage", (message, html, data) => {
     debug("render message hook ", message.id, message, html, data);
     hideStuffHandler(message, html, data);
@@ -119,7 +120,7 @@ export let initHooks = () => {
     betterRollsButtons(message, html, data);
   })
 
-  Hooks.on("applyActiveEffect", midiCustomEffect); 
+  Hooks.on("applyActiveEffect", midiCustomEffect);
 
   Hooks.on("renderItemSheet", (app, html, data) => {
     if (configSettings.allowUseMacro) {
@@ -137,16 +138,16 @@ export let initHooks = () => {
 
   Hooks.on("renderChatLog", (app, html, data) => _chatListeners(html));
 
-  Hooks.on('dropCanvasData', function(canvas, dropData) {
+  Hooks.on('dropCanvasData', function (canvas, dropData) {
     if (!dragDropTargeting) return true;
     if (dropData.type !== "Item") return true;;
     let grid_size = canvas.scene.data.grid
 
     canvas.tokens.targetObjects({
-        x: dropData.x-grid_size/2,
-        y: dropData.y-grid_size/2,
-        height: grid_size,
-        width: grid_size
+      x: dropData.x - grid_size / 2,
+      y: dropData.y - grid_size / 2,
+      height: grid_size,
+      width: grid_size
     });
 
     let actor = game.actors.get(dropData.actorId);
@@ -156,8 +157,8 @@ export let initHooks = () => {
     }
     const item = actor && actor.items.get(dropData.data._id);
     if (!actor || !item) error("actor / item broke ", actor, item);
-      //@ts-ignore
-      item.roll();
+    //@ts-ignore
+    item.roll();
   })
 }
 
@@ -266,7 +267,7 @@ const itemJSONData = {
   "flags": {
     "midi-qol": {
       "onUseMacroName": "ItemMacro",
-      "isConcentrationCheck":  true
+      "isConcentrationCheck": true
     },
     "itemacro": {
       "macro": {

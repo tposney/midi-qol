@@ -406,7 +406,12 @@ export function betterRollsButtons(message, html, data) {
 
 export let chatDamageButtons = (message, html, data) => {
   debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll?.type, message.data.flags)
-  if (!addChatDamageButtons) {
+  const shouldAddButtons = !addChatDamageButtons
+                          || addChatDamageButtons === "both"
+                          || (addChatDamageButtons === "gm" && game.user.isGM)
+                          || (addChatDamageButtons === "pc" && !game.user.isGM);
+
+  if (!shouldAddButtons) {
     return true;
   }
   if (["other", "damage"].includes(message.data.flags?.dnd5e?.roll?.type)) {

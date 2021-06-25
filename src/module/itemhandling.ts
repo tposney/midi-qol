@@ -5,7 +5,7 @@ import { addConcentration, checkRange, getAutoRollAttack, getAutoRollDamage, get
 import { installedModules } from "./setupModules";
 import { setupSheetQol } from "./sheetQOL";
 
-export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: false }) {
+export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
   debug("Entering item attack roll ", event, workflow, Workflow._workflows);
   if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
@@ -51,7 +51,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
     disadvantage: workflow.rollOptions.disadvantage,
-    chatMessage: workflow.workflowType === "BetterRollsWorkflow",
+    chatMessage: options.chatMessage,
     fastForward: workflow.rollOptions.fastForward,
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
   });
@@ -243,7 +243,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   return result;
 }
 
-export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: false, event}) {
+export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event}) {
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
   let versatile = options?.versatile ?? false;

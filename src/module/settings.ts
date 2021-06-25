@@ -8,7 +8,7 @@ export var nsaFlag: boolean;
 export var coloredBorders: string;
 export var saveRequests = {};
 export var saveTimeouts = {};
-export var addChatDamageButtons: boolean;
+export var addChatDamageButtons: string;
 export var autoFastForwardAbilityRolls: boolean;
 export var autoRemoveTargets: string;
 export var forceHideRoll: boolean;
@@ -243,14 +243,6 @@ const settings = [
     onChange: fetchParams
   },
   {
-    name: "AddChatDamageButtons",
-    scope: "world",
-    default: true,
-    type: Boolean,
-    config: true,
-    onChange: fetchParams
-  },
-  {
     name: "showGM",
     scope: "world",
     default: false,
@@ -321,6 +313,17 @@ export const registerSettings = function() {
     game.settings.register("midi-qol", setting.name, options);
   });
 
+  game.settings.register("midi-qol","AddChatDamageButtons", {
+    name: "midi-qol.AddChatDamageButtons.Name",
+    hint: "midi-qol.AddChatDamageButtons.Hint",
+    scope: "world",
+    default: "none",
+    type: String,
+    config: true,
+    choices: i18n("midi-qol.AddChatDamageButtonsOptions"),
+    onChange: fetchParams
+  });
+
   game.settings.register("midi-qol", "ColoredBorders", 
   {
     name: "midi-qol.ColoredBorders.Name",
@@ -376,5 +379,7 @@ export const registerSettings = function() {
     choices: {none: "None", warn: "warnings", debug: "debug", all: "all"},
     onChange: fetchParams
   });
+
+
 }
 

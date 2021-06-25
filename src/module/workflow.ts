@@ -654,34 +654,7 @@ export class Workflow {
         else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
         else this.applicationTargets = this.targets;
 
-        for (let target of this.targets) {
-          //@ts-ignore effects
-          const expiredEffects = target.actor?.effects?.filter(ef => {
-            const wasAttacked = this.item?.hasAttack;
-            const wasDamaged = itemHasDamage(this.item) && this.applicationTargets?.has(target);
-            const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
-            if (!specialDuration) return false;
-            //TODO this is going to grab all the special damage types as well which is no good.
-            if ((specialDuration.includes("isAttacked") && wasAttacked) ||
-              (specialDuration.includes("isDamaged") && wasDamaged))
-              return true;
-            if (this.item.hasSave && specialDuration.includes(`isSaveSuccess`) && this.saves.has(target)) return true;
-            if (this.item.hasSave && specialDuration.includes(`isSaveFailure`) && !this.saves.has(target)) return true;
-            const abl = this.item.data.data.save.ability;
-            if (this.item.hasSave && specialDuration.includes(`isSaveSuccsss.${abl}`) && this.saves.has(target)) return true;
-            if (this.item.hasSave && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) return true;
-            for (let dt of this.damageDetail) {
-              if (specialDuration.includes(`isDamaged.${dt.type}`)) return true;
-            }
-            return false;
-          }).map(ef => ef.id);
-          if (expiredEffects?.length > 0) {
-            socketlibSocket.executeAsGM("removeEffects", {
-              actorUuid: target.actor.uuid,
-              effects: expiredEffects,
-            });
-          }
-        }
+
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
 
       case WORKFLOWSTATES.APPLYDYNAMICEFFECTS:
@@ -708,6 +681,34 @@ export class Workflow {
 
       case WORKFLOWSTATES.ROLLFINISHED:
         warn('Inside workflow.rollFINISHED');
+        for (let target of this.targets) {
+          //@ts-ignore effects
+          const expiredEffects = target.actor?.effects?.filter(ef => {
+            const wasAttacked = this.item?.hasAttack;
+            const wasDamaged = itemHasDamage(this.item) && this.applicationTargets?.has(target);
+            const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
+            if (!specialDuration) return false;
+            //TODO this is going to grab all the special damage types as well which is no good.
+            if ((specialDuration.includes("isAttacked") && wasAttacked) ||
+              (specialDuration.includes("isDamaged") && wasDamaged))
+              return true;
+            if (this.item.hasSave && specialDuration.includes(`isSaveSuccess`) && this.saves.has(target)) return true;
+            if (this.item.hasSave && specialDuration.includes(`isSaveFailure`) && !this.saves.has(target)) return true;
+            const abl = this.item.data.data.save.ability;
+            if (this.item.hasSave && specialDuration.includes(`isSaveSuccsss.${abl}`) && this.saves.has(target)) return true;
+            if (this.item.hasSave && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) return true;
+            for (let dt of this.damageDetail) {
+              if (wasDamaged && specialDuration.includes(`isDamaged.${dt.type}`)) return true;
+            }
+            return false;
+          }).map(ef => ef.id);
+          if (expiredEffects?.length > 0) {
+            socketlibSocket.executeAsGM("removeEffects", {
+              actorUuid: target.actor.uuid,
+              effects: expiredEffects,
+            });
+          }
+        }
         const hasConcentration = this.item?.data.data.components?.concentration || this.item?.data.data.activation?.condition?.includes("Concentration");
         const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
         if (hasConcentration && checkConcentration) {

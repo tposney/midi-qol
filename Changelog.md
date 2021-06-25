@@ -1,3 +1,11 @@
+
+## 0.8.23
+* Modifed Add Chat Damage Buttons setting to allow none/GM/Players/All rather than just on or off. You will need to set this setting after upgrade.
+* Fix for isAttacked special expiry.
+* Fix for forcing better rolls to roll attacks twice.
+* Added a half-baked emboldening bond feature (that only works in combat).
+* Fix for rolls not displaying if roll automation is turned off.
+
 ## 0.8.22
 * Fix for concentration effect origin not being set.
 * Remove outdated spiritual weapon from compendium - use the one from DAE SRD

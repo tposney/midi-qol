@@ -1077,3 +1077,10 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
 export function hasEffectGranting(actor: Actor5e, changeKey: string) {
   return actor.effects.find(ef => ef.data.changes.some(c => c.key === changeKey))
 }
+
+export function isConcentrating(actor: Actor5e): undefined | {} /* TODO ActiveEffect */{
+  const concentrationName = installedModules.get("combat-utility-belt")
+  ? game.settings.get("combat-utility-belt", "concentratorConditionName")
+  : i18n("midi-qol.Concentrating");
+  return actor.effects.contents.find(i => i.data.label === concentrationName);
+}
