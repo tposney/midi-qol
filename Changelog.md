@@ -1,9 +1,12 @@
 
+## 0.8.26
+* Maybe fix for not picking the correct d20 roll when rolled with advantage on reaction processing.
+
 ## 0.8.25
 * Added dice formula and roll as tooltips for saving throws on the save chat card. Only displayed for GM.
 * Added new data.flags.midi-qol.uncanny-dodge which halves damage applied if set.
 
-* First cut release for reactions. [EXPERIMENTAL]
+* First cut release for reaction automation. [EXPERIMENTAL]
   - Requires dae 0.8.24 for 1Reaction special duration. 
   - Works with better rolls, but you always know the attack roll since it is sent to chat before midi can intervene.
 

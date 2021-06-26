@@ -1093,7 +1093,6 @@ export function isConcentrating(actor: Actor5e): undefined | {} /* TODO ActiveEf
 export async function doReactions(target: Token, attackRoll: Roll): Promise<{name: string, uuid:string}> {
   let player = playerFor(target);
   if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
-  configSettings.reactionTimeout = 120;
   if (getReactionSetting(player) === "none") return {name: undefined, uuid: undefined};
   let reactionItems = target.actor.items.filter(item => item.data.data.activation?.type === "reaction");
   if (reactionItems.length === 0) return {name: undefined, uuid: undefined};
@@ -1155,8 +1154,11 @@ export async function reactionDialog(actor: Actor5e, reactionItems: any[], attac
     switch (configSettings.showReactionAttackRoll) {
       //@ts-ignore
       case "all" : content =  `<h4>${rollOptions.all} ${attackRoll.total}</h4>`; break;
-      //@ts-ignore
-      case "d20" : content = `<h4>${rollOptions.d20} ${attackRoll.terms[0].number}</h4>`; break;
+      case "d20" : 
+      //@ts-ignore terms
+      const theRoll = attackRoll.terms[0].results.find(r=>r.active).result;
+      //@ts-ignore d20
+      content = `<h4>${rollOptions.d20} ${theRoll}</h4>`; break;
       //@ts-ignore
       default: content = rollOptions.none;
     }
