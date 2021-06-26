@@ -191,7 +191,49 @@
           </select>
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.AutoCheckHit.Hint"}}</div>
+
+        {{localize "Reactions"}}
+        <div class="midi-qol-faint">{{localize "midi-qol.DoReactions.Hint"}}</div>
+        <div class="form-group">
+          <label>{{localize "midi-qol.DoReactions.Name"}}</label>
+          <select name="doReactions" data-dtype="String">
+            {{#select configSettings.doReactions}}
+            {{#each doReactionsOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.GMDoReactions.Name"}}</label>
+          <select name="gmDoReactions" data-dtype="String">
+            {{#select configSettings.gmDoReactions}}
+            {{#each gmDoReactionsOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.ReactionTimeout.Name"}}</label>
+          <input type="Number" name="reactionTimeout" value="{{configSettings.reactionTimeout}}" data-dtype="Number" />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.ReactionTimeout.Hint"}}</div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.ShowReactionAttackRoll.Name"}}</label>
+          <select name="showReactionAttackRoll" data-dtype="String">
+            {{#select configSettings.showReactionAttackRoll}}
+            {{#each showReactionAttackRollOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
       </div>
+
 
       <!-- Saves-->
       <div class="midi-qol-box"> {{localize "midi-qol.Saves"}}

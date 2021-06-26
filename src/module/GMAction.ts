@@ -1,6 +1,6 @@
 import { configSettings } from "./settings";
 import { i18n, log, warn, gameStats } from "../midi-qol";
-import { MQfromActorUuid, MQfromUuid } from "./utils";
+import { MQfromActorUuid, MQfromUuid, promptReactions } from "./utils";
 
 export var socketlibSocket = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
@@ -10,6 +10,10 @@ export function removeEffects(data) {
   actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects)
 }
 
+export function createEffects(data) {
+  const actor = MQfromActorUuid(data.actorUuid);
+  actor?.createEmbeddedDocuments("ActiveEffect", data.effects)
+}
 export function removeActorStats(data) {
   return gameStats.GMremoveActorStats(data.actorId)
 }
@@ -24,14 +28,23 @@ export let setupSocket = () => {
     socketlibSocket = socketlib.registerModule("midi-qol");
     socketlibSocket.register("createReverseDamageCard", createReverseDamageCard);
     socketlibSocket.register("removeEffects", removeEffects);
+    socketlibSocket.register("createEffects", createEffects);
     socketlibSocket.register("updateActorStats", GMupdateActor)
     socketlibSocket.register("removeActorStatsForActorId", removeActorStats);
     socketlibSocket.register("monksTokenBarSaves", monksTokenBarSaves);
     socketlibSocket.register("rollAbility", rollAbility);
     socketlibSocket.register("createChatMessage", createChatMessage);
+    socketlibSocket.register("chooseReactions", localDoReactions);
+
+
 
   });
 };
+
+async function localDoReactions(data) {
+  const result =  await promptReactions(data.tokenUuid, JSON.parse(data.attackRoll))
+  return result;
+}
 
 export function initGMActionSetup() {
   traitList.di = i18n("DND5E.DamImm");

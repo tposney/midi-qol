@@ -48,6 +48,10 @@ export var configSettings = {
   rangeTarget: "none",
   playerRollSaves: "none",
   playerSaveTimeout: 0,
+  reactionTimeout: 10,
+  gmDoReactions: "all",
+  doReactions: "all",
+  showReactionAttackRoll: "all",
   rollNPCSaves: "auto",
   mergeCard: false,
   mergeCardCondensed: false,
@@ -155,6 +159,11 @@ export let fetchParams = (silent = false) => {
   if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["dice"];
   if (!configSettings.criticalSound) configSettings.criticalSound = CONFIG.sounds["dice"];
   if (!configSettings.diceSound) configSettings.diceSound = CONFIG.sounds["dice"];
+  if (!configSettings.doReactions) configSettings.doReactions = "none";
+  if (!configSettings.gmDoReactions) configSettings.gmDoReactions = "none";
+  if (configSettings.reactionTimeout === undefined) configSettings.reactionTimeout = 0;
+  if (!configSettings.showReactionAttackRoll === undefined) configSettings.showReactionAttackRoll = "all";
+
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
     || !configSettings.keyMapping["DND5E.Disadvantage"]

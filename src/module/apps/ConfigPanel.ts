@@ -39,6 +39,9 @@ export class ConfigPanel extends FormApplication {
       autoApplyDamageOptions: i18n("midi-qol.autoApplyDamageOptions"),
       damageImmunitiesOptions: i18n("midi-qol.damageImmunitiesOptions"),
       showItemDetailsOptions: i18n("midi-qol.showItemDetailsOptions"),
+      doReactionsOptions: i18n("midi-qol.DoReactionsOptions"),
+      gmDoReactionsOptions: i18n("midi-qol.GMDoReactionsOptions"),
+      showReactionAttackRollOptions: i18n("midi-qol.ShowReactionAttackRollOptions"),
       //@ts-ignore
       itemTypeLabels: CONFIG.Item.typeLabels,
       itemDeleteCheck,

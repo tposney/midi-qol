@@ -299,6 +299,12 @@ export let hideRollUpdate = (message, data, diff, id) => {
       let messageLi = $(`.message[data-message-id=${data._id}]`);
       warn("hideRollUpdate: Hiding ", message.data.whisper, messageLi)
       messageLi.hide();
+      //@ts-ignore
+      if (window.ui.sidebar.popouts.chat) {
+        //@ts-ignore
+        let popoutLi = window.ui.sidebar.popouts.chat.element.find(`.message[data-message-id=${data._id}]`)
+        popoutLi.hide();
+      }
     }
   }
   return true;
@@ -327,6 +333,9 @@ export let hideStuffHandler = (message, html, data) => {
     ids.click(_onTargetSelect);
   }
 
+  if (!game.user.isGM) {
+    html.find(".midi-qol-save-tooltip").hide()
+  }
   if (game.user.isGM) {
     html.find(".midi-qol-target-npc-Player").hide();
   } else {

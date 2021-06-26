@@ -240,6 +240,10 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
         if (superSavers.has(t) && getSaveMultiplierForItem(item) === 0.5) {
           mult = saves.has(t) ? 0 : 0.5;
         }
+        // TODO this should end up getting removed when the prepare data is done.
+        if (getProperty(t.actor, "data.flags.midi-qol.uncanny-dodge") && mult >= 0) {
+          mult = mult / 2;
+        }
         if (!type) type = MQdefaultDamageType;
         mult = mult * getTraitMult(a, type, item);
         let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
@@ -638,6 +642,9 @@ export function getRemoveDamageButtons() {
     ["all", "damage"].includes(configSettings.removeButtons);
 }
 
+export function getReactionSetting(player: User) {
+  return player.isGM ? configSettings.gmDoReactions : configSettings.doReactions;
+}
 
 export function getTokenPlayerName(token: Token) {
   if (!token) return game.user.name;
@@ -668,9 +675,9 @@ export async function addConcentration(options: { workflow: Workflow }) {
   if (!configSettings.concentrationAutomation) return;
   const item = options.workflow.item;
   await item.actor.unsetFlag("midi-qol", "concentration-data");
+  let selfTarget = getSelfTarget(item.actor);
+  if (!selfTarget) return;
   if (installedModules.get("combat-utility-belt")) {
-    let selfTarget = getSelfTarget(item.actor);
-    if (!selfTarget) return;
     const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
     const itemDuration = item.data.data.duration;
     // set the token as concentrating
@@ -702,8 +709,6 @@ export async function addConcentration(options: { workflow: Workflow }) {
     }
   } else {
     let actor = options.workflow.actor;
-    let selfTarget = getSelfTarget(item.actor);
-    if (!selfTarget) return;
     let concentrationName = i18n("midi-qol.Concentrating");
 
     //@ts-ignore tokenId
@@ -719,7 +724,7 @@ export async function addConcentration(options: { workflow: Workflow }) {
       icon: currentItem.img,
       label: concentrationName,
       duration: undefined,
-      flags: {"midi-qol": {isConcentration: item?.uuid}}
+      flags: { "midi-qol": { isConcentration: item?.uuid } }
     }
     if (convertedDuration.type === "seconds") {
       effectData.duration = { seconds: convertedDuration.seconds, startTime: game.time.worldTime }
@@ -1069,18 +1074,199 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
   if (!count || count.value <= 1) {
     return actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id])
   } else {
-      count.value -= 1;
-      actor.updateEmbeddedDocuments("ActiveEffect", [effectData])
-    }
+    count.value -= 1;
+    actor.updateEmbeddedDocuments("ActiveEffect", [effectData])
+  }
 }
 
 export function hasEffectGranting(actor: Actor5e, changeKey: string) {
   return actor.effects.find(ef => ef.data.changes.some(c => c.key === changeKey))
 }
 
-export function isConcentrating(actor: Actor5e): undefined | {} /* TODO ActiveEffect */{
+export function isConcentrating(actor: Actor5e): undefined | {} /* TODO ActiveEffect */ {
   const concentrationName = installedModules.get("combat-utility-belt")
-  ? game.settings.get("combat-utility-belt", "concentratorConditionName")
-  : i18n("midi-qol.Concentrating");
+    ? game.settings.get("combat-utility-belt", "concentratorConditionName")
+    : i18n("midi-qol.Concentrating");
   return actor.effects.contents.find(i => i.data.label === concentrationName);
+}
+
+export async function doReactions(target: Token, attackRoll: Roll): Promise<{name: string, uuid:string}> {
+  let player = playerFor(target);
+  if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
+  configSettings.reactionTimeout = 120;
+  if (getReactionSetting(player) === "none") return {name: undefined, uuid: undefined};
+  let reactionItems = target.actor.items.filter(item => item.data.data.activation?.type === "reaction");
+  if (reactionItems.length === 0) return {name: undefined, uuid: undefined};
+  return new Promise((resolve) => {
+    // set a timeout for taking over the roll
+    setTimeout(() => {
+      resolve({name: undefined, uuid: undefined});
+    }, (configSettings.reactionTimeout || 30) * 1000);
+    requestReactions(target, player, attackRoll, resolve)
+  })
+}
+
+export async function requestReactions(target: Token, player: User, attackRoll: Roll, resolve: ({}) => void) {
+  const result = (await socketlibSocket.executeAsUser("chooseReactions", player.id, {
+    //@ts-ignore .document
+    tokenUuid: target.document.uuid,
+    attackRoll: JSON.stringify(attackRoll.toJSON())
+  }));
+  resolve(result);
+} 
+
+export async function promptReactions(tokenUuid: string, attackRoll: Roll) {
+  const target: Token = MQfromUuid(tokenUuid);
+  const actor = target.actor;
+  let reactionItems = actor.items.filter(item => item.data.data.activation?.type === "reaction");
+  if (reactionItems.length > 0) {
+    return await reactionDialog(actor, reactionItems, attackRoll)
+  }
+  return {name: "None"};
+}
+
+export function playerFor(target: Token) {
+  // find the controlling player
+  let player = game.users.players.find(p => p.character?.id === target.actor.id);
+  if (!player?.active) { // no controller - find the first owner who is active
+    //@ts-ignore permissions not defined
+    player = game.users.players.find(p => p.active && target.actor.data.permission[p.id] === CONST.ENTITY_PERMISSIONS.OWNER)
+    //@ts-ignore permissions not defined
+    if (!player) player = game.users.players.find(p => p.active && target.actor.data.permission.default === CONST.ENTITY_PERMISSIONS.OWNER)
+  }
+  return player;
+}
+
+export async function reactionDialog(actor: Actor5e, reactionItems: any[], attackRoll: Roll) {
+
+  return new Promise((resolve, reject) => {
+    const callback = async (dialog, button) => {
+      const item = reactionItems.find(i=> i.id === button.key);
+      Hooks.once("midi-qol.RollComplete", () => {
+        resolve({name: item.name, uuid: item.uuid})
+      });
+      await item.roll();
+    }
+
+    const rollOptions = i18n("midi-qol.ShowReactionAttackRollOptions");
+    // {"none": "Attack Hit", "d20": "d20 roll only", "all": "Whole Attack Roll"},
+
+    let content;
+    switch (configSettings.showReactionAttackRoll) {
+      //@ts-ignore
+      case "all" : content =  `<h4>${rollOptions.all} ${attackRoll.total}</h4>`; break;
+      //@ts-ignore
+      case "d20" : content = `<h4>${rollOptions.d20} ${attackRoll.terms[0].number}</h4>`; break;
+      //@ts-ignore
+      default: content = rollOptions.none;
+    }
+
+    const dialog = new ReactionDialog(
+      {
+        actor,
+        targetObject: this,
+        title: `${actor.name}`,
+        items: reactionItems,
+        content,
+        callback,
+        close: resolve
+      }, {
+      width: 400
+    }).render(true);
+  });
+}
+
+
+class ReactionDialog extends Application {
+  data: {
+    actor: Actor5e,
+    items: Item[],
+    title: string,
+    content: HTMLElement | JQuery<HTMLElement>,
+    callback: () => {},
+    close: () => {},
+    buttons: any,
+    completed: boolean
+  }
+
+  constructor(data, options) {
+    super(options);
+    this.data = data;
+    this.data.completed = false
+  }
+
+  static get defaultOptions() {
+    return mergeObject(super.defaultOptions, {
+      template: "templates/hud/dialog.html",
+      classes: ["dialog"],
+      width: 400,
+      jQuery: true
+    });
+  }
+  get title() {
+    return this.data.title || "Dialog";
+  }
+
+  async getData(options) {
+   this.data.buttons = this.data.items.reduce((acc: {}, item: Item) => {
+      acc[randomID()] = {
+        icon: '<i class="fas fa-dice-d20"></i>',
+        label: item.name,
+        value: item.name,
+        key: item.id,
+        callback: this.data.callback,
+      }
+      return acc;
+    }, {})
+    return {
+      content: this.data.content,
+      buttons: this.data.buttons
+    }
+  }
+
+  activateListeners(html) {
+    html.find(".dialog-button").click(this._onClickButton.bind(this));
+    $(document).on('keydown.chooseDefault', this._onKeyDown.bind(this));
+    // if ( this.data.render instanceof Function ) this.data.render(this.options.jQuery ? html : html[0]);
+  }
+
+  _onClickButton(event) {
+    const id = event.currentTarget.dataset.button;
+    const button = this.data.buttons[id];
+    this.submit(button);
+  }
+
+  _onKeyDown(event) {
+    // Close dialog
+    if (event.key === "Escape" || event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+      //@ts-ignore
+      if (this.data.close) this.data.close({name: "keydown", uuid: undefined});
+      this.close();
+    }
+  }
+
+  async submit(button) {
+    try {
+      if (button.callback) {
+        this.data.completed = true;
+        await button.callback(this, button)
+        this.close();
+        // this.close();
+      }
+    } catch (err) {
+      ui.notifications.error(err);
+      console.error(err);
+      this.data.completed = true;
+      this.close()
+    }
+  }
+
+  async close() {
+    //@ts-ignore
+    if (!this.data.completed && this.data.close) this.data.close({name: "Close", uuid: undefined});
+    $(document).off('keydown.chooseDefault');
+    return super.close();
+  }
 }

@@ -384,6 +384,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.optional.NAME.save`)
   midiFlags.push(`flags.midi-qol.optional.NAME.label`)
   midiFlags.push(`flags.midi-qol.optional.NAME.count`)
+  midiFlags.push(`flags.midi-qol.uncanny-dodge`);
 
   /*
   midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);

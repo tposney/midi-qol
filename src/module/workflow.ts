@@ -3,13 +3,13 @@ import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
 import Item5e from "../../../systems/dnd5e/module/item/entity.js"
 //@ts-ignore
-import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, debugEnabled, timelog } from "../midi-qol";
+import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, debugEnabled, timelog, checkConcentrationSettings } from "../midi-qol";
 import { selectTargets, showItemCard } from "./itemhandling";
 // import { broadcastData } from "./GMAction";
 import { socketlibSocket } from "./GMAction";
 import { installedModules } from "./setupModules";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, processAttackRollBonusFlags } from "./utils"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, processAttackRollBonusFlags, doReactions, playerFor } from "./utils"
 
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
@@ -104,6 +104,7 @@ export class Workflow {
   chatMessage: ChatMessage;
   hideTags: string[];
   displayId: string;
+  reactionUpdates: Set<Actor5e>;
 
   static eventHack: any;
 
@@ -356,6 +357,7 @@ export class Workflow {
     this.displayHookId = null;
     this.onUseCalled = false;
     this.effectsAlreadyExpired = [];
+    this.reactionUpdates = new Set();
     Workflow._workflows[this.uuid] = this;
   }
 
@@ -511,12 +513,15 @@ export class Workflow {
           await this.rollAttackBonus(attackBonusMacro);
         }
         this.processAttackRoll();
-        await this.displayAttackRoll(configSettings.mergeCard);
         if (configSettings.autoCheckHit !== "none") {
           await this.checkHits();
+          await this.displayAttackRoll(configSettings.mergeCard);
+
           const rollMode = game.settings.get("core", "rollMode");
           this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === "blindroll" || rollMode === "gmroll";
           await this.displayHits(this.whisperAttackCard, configSettings.mergeCard);
+        } else {
+          await this.displayAttackRoll(configSettings.mergeCard);
         }
         if (checkRule("removeHiddenInvis")) removeHiddenInvis.bind(this)();
 
@@ -692,6 +697,7 @@ export class Workflow {
             if ((specialDuration.includes("isAttacked") && wasAttacked) ||
               (specialDuration.includes("isDamaged") && wasDamaged))
               return true;
+            if ((specialDuration.includes("1Reaction")) && target.actor.uuid !== this.actor.uuid) return true;
             if (this.item.hasSave && specialDuration.includes(`isSaveSuccess`) && this.saves.has(target)) return true;
             if (this.item.hasSave && specialDuration.includes(`isSaveFailure`) && !this.saves.has(target)) return true;
             const abl = this.item.data.data.save.ability;
@@ -1242,18 +1248,6 @@ export class Workflow {
     };
   }
 
-  playerFor(target: Token) {
-    // find the controlling player
-    let player = game.users.players.find(p => p.character?.id === target.actor.id);
-    if (!player?.active) { // no controller - find the first owner who is active
-      //@ts-ignore permissions not defined
-      player = game.users.players.find(p => p.active && target.actor.data.permission[p.id] === CONST.ENTITY_PERMISSIONS.OWNER)
-      //@ts-ignore permissions not defined
-      if (!player) player = game.users.players.find(p => p.active && target.actor.data.permission.default === CONST.ENTITY_PERMISSIONS.OWNER)
-    }
-    return player;
-  }
-
   /**
    * update this.saves to be a Set of successful saves from the set of tokens this.hitTargets and failed saves to be the complement
    */
@@ -1311,7 +1305,7 @@ export class Workflow {
           }
         }
 
-        var player = this.playerFor(target);
+        var player = playerFor(target);
         //@ts-ignore
         if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
         const promptPlayer = (!player?.isGM && configSettings.playerRollSaves !== "none") || (player?.isGM && configSettings.rollNPCSaves !== "auto");
@@ -1363,7 +1357,7 @@ export class Workflow {
         } else {  // GM to roll save
 
           // Find a player owner for the roll if possible
-          let owner = this.playerFor(target);
+          let owner = playerFor(target);
           if (owner) showRoll = true; // Always show player save rolls
           // If no player owns the token, find an active GM
           if (!owner) owner = game.users.find((u: User) => u.isGM && u.active);
@@ -1401,6 +1395,7 @@ export class Workflow {
       if (!results[i]) error("Token ", target, "could not roll save/check assuming 0");
       const result = results[i];
       let rollTotal = results[i]?.total || 0;
+      let rollDetail = results[i];
       if (result?.terms[0]?.options?.advantage) this.advantageSaves.add(target);
       if (result?.terms[0]?.options?.disadvantage) this.disadvantageSaves.add(target);
       let saved = rollTotal >= rollDC;
@@ -1436,6 +1431,7 @@ export class Workflow {
         target,
         saveString,
         rollTotal,
+        rollDetail,
         id: target.id,
         adv
       });
@@ -1534,14 +1530,21 @@ export class Workflow {
     for (let targetToken of this.targets) {
       isHit = false;
       let targetName = configSettings.useTokenNames && targetToken.name ? targetToken.name : targetToken.actor?.name;
-      let targetActor = targetToken.actor;
+      let targetActor: Actor5e = targetToken.actor;
       if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
       let targetAC = targetActor.data.data.attributes.ac.value;
-      if (!this.isFumble && !this.isCritical) {
+      if (!this.isFumble) {
         // check to see if the roll hit the target
         // let targetAC = targetActor.data.data.attributes.ac.value;
         isHit = this.attackTotal >= targetAC;
+        if (isHit || this.iscritical) {
+          let updates: { name: string, uuid: string } = await doReactions(targetToken, this.attackRoll);
+          targetActor.prepareData();
+          let targetAC = targetActor.data.data.attributes.ac.value;
+          isHit = this.attackTotal >= targetAC || this.isCritical;
+        }
       }
+
       if (this.isCritical) isHit = true;
       if (isHit || this.isCritical) this.processCriticalFlags();
 
@@ -1620,6 +1623,10 @@ export class Workflow {
       return filtered;
     }, []);
     if (filtered.length > 0) this.removeActiveEffects(filtered);
+  }
+
+  async doReactions(target) {
+    let reactionItems = target.actor.items.filter(item => item.data.data.activation.type === "reaction");
   }
 }
 

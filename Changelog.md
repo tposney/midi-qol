@@ -1,9 +1,35 @@
 
+## 0.8.25
+* Added dice formula and roll as tooltips for saving throws on the save chat card. Only displayed for GM.
+* Added new data.flags.midi-qol.uncanny-dodge which halves damage applied if set.
+
+* First cut release for reactions. [EXPERIMENTAL]
+  - Requires dae 0.8.24 for 1Reaction special duration. 
+  - Works with better rolls, but you always know the attack roll since it is sent to chat before midi can intervene.
+
+ You actually don't have to do much for this to work.
+1. Configure reactions settings from the config panel for GM/Players
+2. Set a timeout for the reactions check to timeout, 0 = 30 seconds.
+3. Choose how much of the attack roll to show to the one being attacked
+
+In this first release reactions are ONLY checked when a target is hit, but before the attack roll is displayed (better rolls always displays the attack roll). The code searches the target's items for those with an activation of "reaction" and displays a dialog allowing you to choose one to use which is then rolled.
+
+For example:
+* Hellish rebuke the player doing the attack, target whoever hit the player and choose hellsih rebuke from the dialog. (TODO auto target the attacker)
+* Shield spell and your AC will be updated BEFORE the to hit check is finalised. So a hit can be turned into a miss.
+* Reactions that only apply for the duration of the attack, require a little bit of setup (for example uncanny dodge included in the sample items compendium). Reactions are active effects with the special duration of "1 reaction". 
+* Such effects expire at the end of the roll that triggered the reaction. You set these up like any other effect, making sure the item target is self, create the effects you want and give them the special duration (make sure they are NOT transfer effects).
+
+Notes: If you are not using reaction automation, but players manually roll reactions before the attack roll is complete (i.e. you manually roll damage after they do their reaction) effects with a duration of 1 reaction will be removed after the damage roll is completed.
+
+## 0.8.24
+Fix release for duplicate attack roll cards being shown.
+
 ## 0.8.23
-* Modifed Add Chat Damage Buttons setting to allow none/GM/Players/All rather than just on or off. You will need to set this setting after upgrade.
+* Modified Add Chat Damage Buttons setting to allow none/GM/Players/All rather than just on or off. You will need to set this setting after upgrade.
 * Fix for isAttacked special expiry.
 * Fix for forcing better rolls to roll attacks twice.
-* Added a half-baked emboldening bond feature (that only works in combat).
+* Added a half-baked emboldening bond feature in the sample items compendium (that only works in combat).
 * Fix for rolls not displaying if roll automation is turned off.
 
 ## 0.8.22
