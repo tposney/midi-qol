@@ -1,7 +1,11 @@
+## 0.8.28
+Forgot to push changes to concentration check item. Updated.
+
 ## 0.8.27
 * 1st stage refactor of better rolls processing, should reduce some odd race conditions (but not all).
 * Slight rejig of concentration handling.
 * Some timing fixes for reaction rolls.
+* Fix for checking reactions on worflows without an attack roll - i.e. DamageOnlyWorkflows.
 
 ## 0.8.26
 * Maybe fix for not picking the correct d20 roll when rolled with advantage on reaction processing.

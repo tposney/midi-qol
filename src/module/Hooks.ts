@@ -163,9 +163,9 @@ export let initHooks = () => {
 }
 
 const itemJSONData = {
-  "_id": "GtxZ0ytuyom2EKgY",
   "name": "Concentration Check - Midi QOL",
   "type": "weapon",
+  "img": "modules/combat-utility-belt/icons/concentrating.svg",
   "data": {
     "description": {
       "value": "",
@@ -263,7 +263,8 @@ const itemJSONData = {
       "spelldc": 10
     }
   },
-  "sort": 23700000,
+  "effects": [],
+  "sort": 0,
   "flags": {
     "midi-qol": {
       "onUseMacroName": "ItemMacro",
@@ -271,30 +272,28 @@ const itemJSONData = {
     },
     "itemacro": {
       "macro": {
-        "_data": {
-          "name": "Concentration Check - Midi QOL",
-          "type": "script",
-          "scope": "global",
-          "command": "for (let targetData of args[0].targets) {\n let target = canvas.tokens.get(targetData._id);\n if (MidiQOL.configSettings().removeConcentration && (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id)))\ngame.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), target,  {warn: false});\n}",
-          "author": "devnIbfBHb74U9Zv"
-        },
         "data": {
+          "_id": null,
           "name": "Concentration Check - Midi QOL",
           "type": "script",
+          "author": "devnIbfBHb74U9Zv",
+          "img": "icons/svg/dice-target.svg",
           "scope": "global",
-          "command": "for (let targetData of args[0].targets) {\n let target = canvas.tokens.get(targetData._id);\n if (MidiQOL.configSettings().removeConcentration && (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id)))\ngame.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), target,  {warn: false});\n}",
-          "author": "devnIbfBHb74U9Zv"
-        },
-        "options": {},
-        "apps": {},
-        "compendium": null
+          "command": "for (let targetData of args[0].targets) {\n   let target = canvas.tokens.get(targetData._id);\n   if (MidiQOL.configSettings().removeConcentration && (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id))) {\n     const concentrationLabel = game.cub?.active ? game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\") : \"Concentrating\";\n   \n    const concentrationEffect = target.actor.effects.find(effect => effect.data.label === concentrationLabel);\n    if (concentrationEffect) await concentrationEffect.delete();\n    // game.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), target,  {warn: false});\n  }\n}",
+          "folder": null,
+          "sort": 0,
+          "permission": {
+            "default": 0
+          },
+          "flags": {}
+        }
       }
     },
     "exportSource": {
       "world": "testWorld",
       "system": "dnd5e",
-      "coreVersion": "0.7.9",
-      "systemVersion": "1.2.4"
+      "coreVersion": "0.8.8",
+      "systemVersion": "1.3.6"
     },
     "magicitems": {
       "enabled": false,
@@ -309,8 +308,99 @@ const itemJSONData = {
       "rechargeType": "t1",
       "rechargeUnit": "r1",
       "sorting": "l"
+    },
+    "betterRolls5e": {
+      "quickOther": {
+        "context": "",
+        "value": true,
+        "altValue": true,
+        "type": "Boolean"
+      },
+      "critRange": {
+        "value": null,
+        "type": "String"
+      },
+      "critDamage": {
+        "value": "",
+        "type": "String"
+      },
+      "quickDesc": {
+        "value": false,
+        "altValue": false,
+        "type": "Boolean"
+      },
+      "quickSave": {
+        "value": true,
+        "altValue": true,
+        "type": "Boolean"
+      },
+      "quickProperties": {
+        "value": true,
+        "altValue": true,
+        "type": "Boolean"
+      },
+      "quickVersatile": {
+        "value": false,
+        "altValue": false,
+        "type": "Boolean"
+      },
+      "quickFlavor": {
+        "value": true,
+        "altValue": true,
+        "type": "Boolean"
+      },
+      "quickCharges": {
+        "value": {
+          "quantity": false,
+          "use": false,
+          "resource": true
+        },
+        "altValue": {
+          "quantity": false,
+          "use": false,
+          "resource": true
+        },
+        "type": "Boolean"
+      },
+      "quickAttack": {
+        "type": "Boolean",
+        "value": true,
+        "altValue": true
+      },
+      "quickDamage": {
+        "type": "Array",
+        "value": [],
+        "altValue": [],
+        "context": []
+      },
+      "quickTemplate": {
+        "type": "Boolean",
+        "value": true,
+        "altValue": true
+      },
+      "quickPrompt": {
+        "type": "Boolean",
+        "value": false,
+        "altValue": false
+      }
+    },
+    "autoanimations": {
+      "killAnim": false,
+      "override": false,
+      "animType": "t1",
+      "animName": "",
+      "color": "n1",
+      "dtvar": "dt1",
+      "explosion": false,
+      "explodeVariant": "ev1",
+      "explodeColor": "ec1",
+      "explodeRadius": "0",
+      "explodeLoop": "1",
+      "hmAnim": "a1",
+      "selfRadius": "5",
+      "animTint": "#ffffff",
+      "auraOpacity": 0.75,
+      "ctaOption": false
     }
-  },
-  "img": "modules/midi-qol/icons/concentrate.png",
-  "effects": []
+  }
 }
