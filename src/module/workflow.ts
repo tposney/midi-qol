@@ -9,7 +9,7 @@ import { selectTargets, showItemCard } from "./itemhandling";
 import { socketlibSocket } from "./GMAction";
 import { installedModules } from "./setupModules";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, processAttackRollBonusFlags, doReactions, playerFor } from "./utils"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, processAttackRollBonusFlags, doReactions, playerFor, addConcentration } from "./utils"
 
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
@@ -399,7 +399,8 @@ export class Workflow {
   }
 
   async next(nextState: number) {
-    setTimeout(() => this._next(nextState), 0); // give the rest of queued things a chance to happen
+    return await this._next(nextState);
+    setTimeout(() => this._next(nextState), 5); // give the rest of queued things a chance to happen
     // return this._next(nextState);
   }
 
@@ -686,6 +687,7 @@ export class Workflow {
 
       case WORKFLOWSTATES.ROLLFINISHED:
         warn('Inside workflow.rollFINISHED');
+        // Do special expiries
         for (let target of this.targets) {
           //@ts-ignore effects
           const expiredEffects = target.actor?.effects?.filter(ef => {
@@ -715,9 +717,11 @@ export class Workflow {
             });
           }
         }
+        // Add concentration data if required
         const hasConcentration = this.item?.data.data.components?.concentration || this.item?.data.data.activation?.condition?.includes("Concentration");
         const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
         if (hasConcentration && checkConcentration) {
+          await addConcentration({workflow: this});
           let targets = [];
           for (let hit of this.applicationTargets) {
             let hitUuid;
@@ -728,13 +732,10 @@ export class Workflow {
           if (this.actor)
             targets.push({ tokenUuid: this.tokenUuid, actorUuid: this.actor.uuid })
           await this.actor.setFlag("midi-qol", "concentration-data", { uuid: this.item.uuid, targets, templates: this.templateUuid ? [this.templateUuid] : [] })
-          if (this.tokenId) {
-            if (installedModules.get("combat-utility-belt")) {
-              // TODO work out how to do add condition for TokenDocument
-              await game.cub.addCondition(game.settings.get("combat-utility-belt", "concentratorConditionName"), [canvas.tokens.get(this.tokenId)])
-            }
-          }
+
         }
+
+        // Call onUseMacro if not already called
         if (configSettings.allowUseMacro && !this.onUseMacroCalled) {
           this.onUseMacroCalled = true;
           // A hack so that onUse macros only called once, but for most cases it is evaluated in APPLYDYNAMICEFFECTS
@@ -1537,10 +1538,10 @@ export class Workflow {
         // check to see if the roll hit the target
         // let targetAC = targetActor.data.data.attributes.ac.value;
         isHit = this.attackTotal >= targetAC;
-        if (isHit || this.iscritical) {
-          let updates: { name: string, uuid: string } = await doReactions(targetToken, this.attackRoll);
+        if ((isHit || this.iscritical) && this.attackRoll) {
+          const result = await doReactions(targetToken, this.attackRoll);
           targetActor.prepareData();
-          let targetAC = targetActor.data.data.attributes.ac.value;
+          targetAC = targetActor.data.data.attributes.ac.value;
           isHit = this.attackTotal >= targetAC || this.isCritical;
         }
       }
@@ -1624,12 +1625,9 @@ export class Workflow {
     }, []);
     if (filtered.length > 0) this.removeActiveEffects(filtered);
   }
-
-  async doReactions(target) {
-    let reactionItems = target.actor.items.filter(item => item.data.data.activation.type === "reaction");
-  }
 }
 
+/* 
 export class DamageOnlyWorkflow08 extends Workflow { // WIP don't use
   constructor(actor: Actor5e, token: Token, damageParts: [], targets: [Token], options = {
     itemCardId: 0, itemData: null, data: {},
@@ -1669,7 +1667,7 @@ export class DamageOnlyWorkflow08 extends Workflow { // WIP don't use
     }
   }
 }
-
+*/
 export class DamageOnlyWorkflow extends Workflow {
   constructor(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll,
     options: { flavor: string, itemCardId: string, damageList: [], useOther: boolean, itemData: {} }) {
@@ -2051,8 +2049,9 @@ export class DummyWorkflow extends BetterRollsWorkflow {
     this.rollOptions.fastForwardKey = options?.fastFowrd;
   }
 
-  async _next(newState) {
-    Workflow.removeWorkflow(this.item.id)
+  async _next(newState: number) {
+   Workflow.removeWorkflow(this.item.id);
+   return await 0;
   }
 }
 

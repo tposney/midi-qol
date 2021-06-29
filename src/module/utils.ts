@@ -674,15 +674,14 @@ export function getTokenPlayerName(token: Token) {
 export async function addConcentration(options: { workflow: Workflow }) {
   if (!configSettings.concentrationAutomation) return;
   const item = options.workflow.item;
-  await item.actor.unsetFlag("midi-qol", "concentration-data");
+  // await item.actor.unsetFlag("midi-qol", "concentration-data");
   let selfTarget = getSelfTarget(item.actor);
   if (!selfTarget) return;
-  if (installedModules.get("combat-utility-belt")) {
+  if (installedModules.get("combat-utility-belt") && false) {
     const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
     const itemDuration = item.data.data.duration;
     // set the token as concentrating
     await game.cub.addCondition(concentrationName, [selfTarget], { warn: false });
-
     // Update the duration of the concentration effect - TODO remove it CUB supports a duration
     if (options.workflow.hasDAE) {
       //@ts-ignore data.effects
@@ -736,7 +735,7 @@ export async function addConcentration(options: { workflow: Workflow }) {
         startTurn: game.combat?.turn
       }
     }
-    actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+    const result = await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
   }
 }
 
@@ -800,7 +799,7 @@ export async function removeTokenCondition(token, condition: string) {
   if (condition === "hidden") {
     CV?.unHide([token]);
   } else CV?.setCondition([token], condition, false);
-  if (installedModules.get("combat-utility-belt") && game.cub.getCondition(localCondition)) {
+  if (installedModules.get("combat-utility-belt")) {// && game.cub.getCondition(localCondition)) {
     game.cub.removeCondition(localCondition, token, { warn: false });
   }
 }
@@ -1142,7 +1141,10 @@ export async function reactionDialog(actor: Actor5e, reactionItems: any[], attac
     const callback = async (dialog, button) => {
       const item = reactionItems.find(i=> i.id === button.key);
       Hooks.once("midi-qol.RollComplete", () => {
-        resolve({name: item.name, uuid: item.uuid})
+        setTimeout(() => {
+          actor.prepareData();
+          resolve({name: item.name, uuid: item.uuid})
+        }, 50);
       });
       await item.roll();
     }
@@ -1243,6 +1245,7 @@ class ReactionDialog extends Application {
     if (event.key === "Escape" || event.key === "Enter") {
       event.preventDefault();
       event.stopPropagation();
+      this.data.completed = true;
       //@ts-ignore
       if (this.data.close) this.data.close({name: "keydown", uuid: undefined});
       this.close();
@@ -1260,14 +1263,16 @@ class ReactionDialog extends Application {
     } catch (err) {
       ui.notifications.error(err);
       console.error(err);
-      this.data.completed = true;
+      this.data.completed = false;
       this.close()
     }
   }
 
   async close() {
-    //@ts-ignore
-    if (!this.data.completed && this.data.close) this.data.close({name: "Close", uuid: undefined});
+    if (!this.data.completed && this.data.close) {
+      //@ts-ignore
+      this.data.close({name: "Close", uuid: undefined});
+    }
     $(document).off('keydown.chooseDefault');
     return super.close();
   }

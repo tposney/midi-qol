@@ -314,15 +314,12 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       let d = await Dialog.confirm({
         title: i18n("midi-qol.ActiveConcentrationSpell.Title"),
         content: i18n("midi-qol.ActiveConcentrationSpell.Content"),
-        yes: async () => {
-          if (installedModules.get("combat-utility-belt"))
-            game.cub.removeCondition(concentrationName, [getSelfTarget(this.actor)], { warn: false });
-          else concentrationCheck.delete();
-        },
+        yes: () => {},
         no: () => { shouldAllowRoll = false; }
       });
+      if (!shouldAllowRoll) return; // user aborted spell
+      await concentrationCheck.delete();
     }
-    if (!shouldAllowRoll) return; // user aborted spell
   }
 
   if (!shouldAllowRoll) {
@@ -355,13 +352,13 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     //TODO look to use returned data when available
     let spellStuff = result.content?.match(/.*data-spell-level="(.*)">/);
     workflow.itemLevel = parseInt(spellStuff[1]) || this.data.data.level;
-    if (needsConcentration) addConcentration({ workflow })
+    // if (needsConcentration) addConcentration({ workflow })
   }
   if (this.type === "power") {
     //TODO look to use returned data when available
     let spellStuff = result.content?.match(/.*data-power-level="(.*)">/);
     workflow.itemLevel = parseInt(spellStuff[1]) || this.data.data.level;
-    if (needsConcentration) addConcentration({ workflow })
+    // if (needsConcentration) addConcentration({ workflow })
   }
 
   workflow.processAttackEventOptions(event);

@@ -1,5 +1,5 @@
 import { warn, error, debug, i18n } from "../midi-qol";
-import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons } from "./chatMesssageHandling";
+import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling";
 import { processUndoDamageCard } from "./GMAction";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating } from "./utils";
 import { configSettings, dragDropTargeting } from "./settings";
@@ -85,15 +85,15 @@ export let initHooks = () => {
   Hooks.on("preCreateChatMessage", (message: ChatMessage, data, options, user) => {
     debug("preCreateChatMessage entering", message, data, options, user)
     // recalcCriticalDamage(data, options);
-    processpreCreateBetterRollsMessage(message, data, options, user);
+    // processpreCreateBetterRollsMessage(message, data, options, user);
     nsaMessageHandler(message, data, options, user);
     return true;
   })
 
-  Hooks.on("createChatMessage", (message: ChatMessage, data, options, user) => {
+  Hooks.on("createChatMessage", (message: ChatMessage, options, user) => {
     debug("Create Chat Meesage ", message.id, message, options, user)
-    processcreateBetterRollMessage(message, options, user);
-    processItemCardCreation(message, options, user);
+    processCreateBetterRollsMessage(message, user);
+    processItemCardCreation(message, user);
     return true;
   })
 
