@@ -56,7 +56,11 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   let actor;
   if (token) actor = token.actor;
   else actor = game.actors.get(actorId);
-  const item = actor.items.get(brFlags.itemId);
+  // Get the Item from stored flag data or by the item ID on the Actor
+  const storedData = message.getFlag("dnd5e", "itemData");
+  //@ts-ignored ocumentClass
+  const item = storedData ? new CONFIG.Item.documentClass(storedData, {parent: actor}) : actor.items.get(brFlags.itemId);
+  // const item = actor.items.get(brFlags.itemId);
   if (!item) return;
   // Try and help name hider
   //@ts-ignore speaker
@@ -490,11 +494,18 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
 }
 
 export function processItemCardCreation(message, user) {
-  const midiqolFlags = message.data.flags["midi-qol"];
-  debug("Doing item card creation", configSettings.useCustomSounds, configSettings.itemUseSound, midiqolFlags?.type)
-  if (configSettings.useCustomSounds && midiqolFlags?.type === MESSAGETYPES.ITEM) {
+  const midiFlags = message.data.flags["midi-qol"];
+  if (user === game.user.id && midiFlags?.workflowId) { // check to see if it is a workflow
+    const workflow = Workflow.getWorkflow(midiFlags.workflowId);
+    if (!workflow.itemCardId) {
+      workflow.itemCardId = message.id;
+      workflow.next(WORKFLOWSTATES.NONE);
+    }
+  }
+  debug("Doing item card creation", configSettings.useCustomSounds, configSettings.itemUseSound, midiFlags?.type)
+  if (configSettings.useCustomSounds && midiFlags?.type === MESSAGETYPES.ITEM) {
     const playlist = game.playlists.get(configSettings.customSoundsPlaylist);
-    const sound = playlist?.sounds.find(s => s.id === midiqolFlags?.sound);
+    const sound = playlist?.sounds.find(s => s.id === midiFlags?.sound);
     const delay = 0;
     if (sound && game.user.isGM) {
       setTimeout(() => {
@@ -537,7 +548,6 @@ export async function onChatCardAction(event) {
     const storedData = message.getFlag(game.system.id, "itemData");
     //@ts-ignore
     item = storedData ? new CONFIG.Item.documentClass(storedData, { parent: actor }) : actor.items.get(card.dataset.itemId);
-    // item = storedData ? this.createOwned(storedData, actor) : actor.getOwnedItem(card.dataset.itemId);
     if (!item) { // TODO investigate why this is occuring
       // return ui.notifications.error(game.i18n.format("DND5E.ActionWarningNoItem", {item: card.dataset.itemId, name: actor.name}))
     }

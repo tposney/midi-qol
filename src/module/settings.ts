@@ -137,8 +137,7 @@ export function exportSettingsToJSON() {
 
 export async function importSettingsFromJSON(json) {
   const data = JSON.parse(json);
-  console.error("Import data ", data);
-  console.log("midi-qol - import settings ", data.flags.exportSource, data.flags.modules)
+  console.warn("midi-qol | Import settings ", data);
   game.settings.set("midi-qol", "ConfigSettings", data.configSettings);
   game.settings.set("midi-qol", "ItemRollButtons", data.itemRollButtons);
   game.settings.set("midi-qol", "CriticalDamage", data.criticalDamage);
@@ -279,7 +278,7 @@ const settings = [
   {
     name: "CriticalDamage",
     scope: "world",
-    choices: {default: "DND5e default", maxDamage:  "max normal damage", maxCrit: "max critical dice", maxAll: "max all dice", doubleDice: "double rolled damage"},
+    choices: {default: "DND5e default", maxDamage:  "max normal damage", maxCrit: "max critical dice", maxAll: "max all dice", doubleDice: "double rolled damage", baseDamage: "no bonus"},
     default: "default",
     type: String,
     onChange: fetchParams

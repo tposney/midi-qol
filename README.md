@@ -10,6 +10,9 @@ If you've just updated midi-qol and it disappears from your in-game list of modu
 ## I just upgraded and nothing works anymore. 
 I've seen a couple of cases where after migration of foundry versions the per player setting "enaable workflow automation" gets set to off. This flag being unset causes midi to do nothing with rolls (hence the nothing works). Also not that this is a per player setting, so each user needsd to make sure it is on.
 
+## Midi works for some players and not for others....
+Same problem as above - check workflow automation is enabled on all clients. You can use the module SocketSettings to force set the setting on all clients.
+
 ### Changes in midi-qol:
 * Speed item rolls has only a single function now to enable ctrl/shift/alt when clicking on the item icon.  All other workflow features are configured separately. See **speed item rolls** below.
 * There is support for a merged chat card containing attack/damage/hits/saves. (The merged card does not yet support Better Rolls). You can disable the merge card to restore the same operation as in minor-qol.

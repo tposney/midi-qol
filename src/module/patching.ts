@@ -119,6 +119,7 @@ function configureDamage(wrapped) {
   if (!this.isCritical || criticalDamage === "default") return wrapped();
   let flatBonus = 0;
   if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
+  if (criticalDamage === "baseDamage") this.options.criticalMultiplier = 1;
   for (let [i, term] of this.terms.entries()) {
     // Multiply dice terms
     if (term instanceof CONFIG.Dice.termTypes.DiceTerm) {
@@ -128,6 +129,7 @@ function configureDamage(wrapped) {
       let cb = (this.options.criticalBonusDice && (i === 0)) ? this.options.criticalBonusDice : 0;
       // {default: "DND5e default", maxDamage:  "base max only", maxCrit: "max critical dice", maxAll: "max all dice", doubleDice: "double dice value"},
       switch (criticalDamage) {
+
         case "maxDamage":
           term.modifiers.push(`min${term.faces}`)
           cm = 1;
@@ -146,7 +148,7 @@ function configureDamage(wrapped) {
         case "doubleDice":
           cm = 1;
           break;
-
+        default: break;
       }
       term.options.critical = true;
     }

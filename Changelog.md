@@ -1,3 +1,11 @@
+## 0.8.29
+* Fix for saving throw button disabled on chat card.
+* Shift socketlib initialisaiton into setup rather than init.
+* Significant reworking of chat message handling to fix double item card rolls with magic items. All seems to be working (merge card/non-merge card, damage only workflow, better rolls and magic items all seem to roll correctly), but this change affects lots of workflow processing so please don't upgrade 5 minutes before gametime.
+* Put back support for concentration token hud toggle if cub active.
+* Added option for critical hits to only do normal damage.
+* Updated ko.json thanks @drdwing
+
 ## 0.8.28
 Forgot to push changes to concentration check item. Updated.
 

@@ -20,7 +20,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     if (workflow.attackRoll) { // we are re-rolling the attack.
       workflow.damageRoll = undefined;
       await Workflow.removeAttackDamageButtons(this.id)
-      workflow.itemCardId = (await showItemCard.bind(this)(false, workflow, false)).id;
+      workflow.itemCardId = (await showItemCard.bind(this)(false, workflow, false, true)).id;
     }
   }
   if (options.resetAdvantage) {
@@ -283,7 +283,6 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     const needsSomatic = this.data.data.components?.somatic;
     const needsMaterial = this.data.data.components?.material;
 
-
     //TODO Consider how to disable this check for Damageonly workflowa and trap workflowss
     if (midiFlags?.fail?.spell?.all) {
       ui.notifications.warn("You are unable to cast the spell");
@@ -333,7 +332,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   let workflow: Workflow;
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
     workflow = new BetterRollsWorkflow(this.actor, this, speaker, targets, event || options.event);
-    options.createMessage = true;
+    // options.createMessage = true;
     return wrapped(options);
   }
   workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event });
@@ -364,26 +363,31 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   workflow.processAttackEventOptions(event);
   workflow.checkAttackAdvantage();
   const needAttckButton = !workflow.someEventKeySet() && !getAutoRollAttack();
-  workflow.showCard = configSettings.mergeCard || (configSettings.showItemDetails !== "none") || (
+  workflow.showCard = true;
+  /*configSettings.mergeCard || (configSettings.showItemDetails !== "none") || (
     (this.isHealing && getAutoRollDamage() === "none") || // not rolling damage
     (itemHasDamage(this) && getAutoRollDamage() === "none") ||
     (this.hasSave && configSettings.autoCheckSaves === "none") ||
     (this.hasAttack && needAttckButton)) ||
     (!this.hasAttack && !itemHasDamage(this) && !this.hasSave);
-
-  if (workflow.showCard) { //TODO check this against dnd5e 1.30
+*/
+  if (workflow.showCard) { 
     let item = this;
     if (this.data.data.level && (workflow.itemLevel !== this.data.data.level)) {
       item = this.clone({"data.level": workflow.itemLevel}, {keepId: true});
       item.data.update({_id: this.id});
       item.prepareFinalAttributes();
     }
-    var itemCard: ChatMessage = await showItemCard.bind(item)(showFullCard, workflow)
-    workflow.itemCardId = itemCard.id;
-    debug("Item Roll: showing card", itemCard, workflow);
+    result = await showItemCard.bind(item)(showFullCard, workflow, false, options.createMessage)
+    /*
+    if (options.createMessage !== false) {
+      workflow.itemCardId = result.id;
+      workflow.next(WORKFLOWSTATES.NONE);
+    } 
+    */
+    debug("Item Roll: showing card", result, workflow);
   }
-  workflow.next(WORKFLOWSTATES.NONE);
-  return options.createMessage ? (itemCard ?? result) : result;
+  return result;
 }
 
 export async function showItemInfo() {
@@ -443,7 +447,7 @@ export async function showItemInfo() {
 }
 
 
-export async function showItemCard(showFullCard: boolean, workflow: Workflow, minimalCard = false) {
+export async function showItemCard(showFullCard: boolean, workflow: Workflow, minimalCard = false, createMessage = true) {
   warn("show item card ", this, this.actor, this.actor.token, showFullCard, workflow);
 
   const token = this.actor.token;
@@ -513,7 +517,8 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
         actorUuid: workflow.actor.uuid,
         sound: theSound,
         type: MESSAGETYPES.ITEM,
-        itemId: workflow.itemId
+        itemId: workflow.itemId,
+        workflowId: workflow.item.uuid
       },
       "core": { "canPopout": true }
     }
@@ -526,8 +531,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   if (["gmroll", "blindroll"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM");
   if (rollMode === "blindroll") chatData["blind"] = true;
   if (rollMode === "selfroll") chatData["whisper"] = [game.user.id];
-  // Create the chat message
-  return ChatMessage.create(chatData);
+  return createMessage ? ChatMessage.create(chatData) : chatData;
 }
 
 function isTokenInside(token, wallsBlockTargeting) {

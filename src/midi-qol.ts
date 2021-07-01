@@ -70,7 +70,6 @@ export let cleanSpellName = (name) => {
 
 Hooks.once('init', async function() {
   console.log('midi-qol | Initializing midi-qol');
-  setupSocket();
   initHooks();
 	// Assign custom classes and constants here
 	
@@ -90,6 +89,7 @@ Hooks.once('init', async function() {
 Hooks.once('setup', function() {
 	// Do anything after initialization but before
   // ready
+  setupSocket();
 
   fetchParams();
   itemPatching();
@@ -145,7 +145,7 @@ Hooks.once('ready', function() {
 
   // Do anything once the module is ready
   actorAbilityRollPatching();
-  setupMinorQolCompatibility();
+  setupMidiQOLApi();
 
   if (game.user.isGM && !installedModules.get("dae")) {
     ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.8.18 or many automation effects won't work");
@@ -160,7 +160,7 @@ Hooks.once('ready', function() {
 // Add any additional hooks if necessary
 
 // Backwards compatability
-function setupMinorQolCompatibility() {
+function setupMidiQOLApi() {
 
   //@ts-ignore
   window.MinorQOL = {

@@ -42,7 +42,9 @@ export let readyHooks = async () => {
         const saveDC = Math.max(10, Math.floor(hpDiff / 2));
         const saveTargets = game.user.targets;
         game.user.targets = await getSelfTargetSet(actor);
-        const ownedItem = Item.createOwned(itemData, actor)
+        // const ownedItem = Item.createOwned(itemData, actor)
+        //@ts-ignore
+        const ownedItem = new CONFIG.Item.documentClass(itemData, { parent: actor })
         ownedItem.data.data.save.dc = saveDC;
         try {
           if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e").data.version, "1.3.10")) { // better rolls breaks the normal roll process

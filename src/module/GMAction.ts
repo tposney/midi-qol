@@ -23,6 +23,7 @@ export function GMupdateActor(data) {
 }
 
 export let setupSocket = () => {
+  /*
   Hooks.once("socketlib.ready", () => {
     //@ts-ignore
     socketlibSocket = socketlib.registerModule("midi-qol");
@@ -35,10 +36,20 @@ export let setupSocket = () => {
     socketlibSocket.register("rollAbility", rollAbility);
     socketlibSocket.register("createChatMessage", createChatMessage);
     socketlibSocket.register("chooseReactions", localDoReactions);
-
-
-
   });
+  */
+ //@ts-ignore
+  socketlibSocket = window.socketlib.registerModule("midi-qol");
+  socketlibSocket.register("createReverseDamageCard", createReverseDamageCard);
+  socketlibSocket.register("removeEffects", removeEffects);
+  socketlibSocket.register("createEffects", createEffects);
+  socketlibSocket.register("updateActorStats", GMupdateActor)
+  socketlibSocket.register("removeActorStatsForActorId", removeActorStats);
+  socketlibSocket.register("monksTokenBarSaves", monksTokenBarSaves);
+  socketlibSocket.register("rollAbility", rollAbility);
+  socketlibSocket.register("createChatMessage", createChatMessage);
+  socketlibSocket.register("chooseReactions", localDoReactions);
+
 };
 
 async function localDoReactions(data) {

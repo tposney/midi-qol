@@ -325,7 +325,7 @@ export class Workflow {
     this.tokenUuid = this.tokenId ? canvas.tokens.get(this.tokenId).document.uuid : undefined; // TODO see if this could be better
     this.speaker = speaker;
     if (this.speaker.scene) this.speaker.scene = canvas?.scene?.id;
-    this.targets = targets;
+    this.targets = new Set(targets);
     this.saves = new Set();
     this.superSavers = new Set();
     this.failedSaves = new Set(this.targets)
@@ -680,8 +680,8 @@ export class Workflow {
         else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
         else this.applicationTargets = this.targets;
         if (this.hasDAE) {
-          await this.dae.doEffects(this.item, true, this.applicationTargets, { whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId })
-          await this.removeEffectsButton();
+          this.dae.doEffects(this.item, true, this.applicationTargets, { whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId })
+          this.removeEffectsButton();
         }
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
@@ -732,7 +732,6 @@ export class Workflow {
           if (this.actor)
             targets.push({ tokenUuid: this.tokenUuid, actorUuid: this.actor.uuid })
           await this.actor.setFlag("midi-qol", "concentration-data", { uuid: this.item.uuid, targets, templates: this.templateUuid ? [this.templateUuid] : [] })
-
         }
 
         // Call onUseMacro if not already called
@@ -1713,7 +1712,7 @@ export class DamageOnlyWorkflow extends Workflow {
           // Since this could to be the same itfem don't roll the on use macro, since this could loop forever
         }
 
-        // Need to pretend there was an attack roll so that hits can be residtered and the correct string created
+        // Need to pretend there was an attack roll so that hits can be registered and the correct string created
         // TODO separate the checkHit()/create hit display Data and displayHits() into 3 spearate functions so we don't have to pretend there was a hit to get the display
         this.isCritical = false;
         this.isFumble = false;

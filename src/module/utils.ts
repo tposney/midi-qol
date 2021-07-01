@@ -677,35 +677,36 @@ export async function addConcentration(options: { workflow: Workflow }) {
   // await item.actor.unsetFlag("midi-qol", "concentration-data");
   let selfTarget = getSelfTarget(item.actor);
   if (!selfTarget) return;
-  if (installedModules.get("combat-utility-belt") && false) {
+  if (installedModules.get("combat-utility-belt")) {
     const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
     const itemDuration = item.data.data.duration;
+    //@ts-ignore TODO fixup the definition of status effect
+    let statusEffect: any = CONFIG.statusEffects.find(se => se.label === concentrationName);
+    if (!statusEffect) return;
+    statusEffect = duplicate(statusEffect);
     // set the token as concentrating
-    await game.cub.addCondition(concentrationName, [selfTarget], { warn: false });
+    // await game.cub.addCondition(concentrationName, [selfTarget], { warn: false });
     // Update the duration of the concentration effect - TODO remove it CUB supports a duration
     if (options.workflow.hasDAE) {
-      //@ts-ignore data.effects
-      const ae = selfTarget.actor.data.effects.find(ae => ae.data.label === concentrationName);
-      if (ae) {
-        const aeData = ae.toObject();
-        //@ts-ignore
-        const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.id));
-        const convertedDuration = options.workflow.dae.convertDuration(itemDuration, inCombat);
-        if (convertedDuration.type === "seconds") {
-          aeData.duration.seconds = convertedDuration.seconds;
-          aeData.duration.startTime = game.time.worldTime;
-        } else if (convertedDuration.type === "turns") {
-          aeData.duration.rounds = convertedDuration.rounds;
-          aeData.duration.turns = convertedDuration.turns;
-          aeData.duration.startRound = game.combat?.round;
-          aeData.duration.startTurn = game.combat?.turn;
-        }
-        aeData.origin = item?.uuid
-        setProperty(aeData.flags, "midi-qol.isConcentration", aeData.origin);
-        //@ts-ignore updateEmbeddedDcouments
-        await selfTarget.actor.updateEmbeddedDocuments("ActiveEffect", [aeData])
+      //@ts-ignore
+      const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.id));
+      const convertedDuration = options.workflow.dae.convertDuration(itemDuration, inCombat);
+      if (convertedDuration.type === "seconds") {
+        statusEffect.duration.seconds = convertedDuration.seconds;
+        statusEffect.duration.startTime = game.time.worldTime;
+      } else if (convertedDuration.type === "turns") {
+        statusEffect.duration.rounds = convertedDuration.rounds;
+        statusEffect.duration.turns = convertedDuration.turns;
+        statusEffect.duration.startRound = game.combat?.round;
+        statusEffect.duration.startTurn = game.combat?.turn;
       }
+      statusEffect.origin = item?.uuid
+      setProperty(statusEffect.flags, "midi-qol.isConcentration", statusEffect.origin);
+      //@ts-ignore updateEmbeddedDcouments
+      // await selfTarget.actor.updateEmbeddedDocuments("ActiveEffect", [aeData])
     }
+    //@ts-ignore
+    return selfTarget.toggleEffect(statusEffect, { active: true })
   } else {
     let actor = options.workflow.actor;
     let concentrationName = i18n("midi-qol.Concentrating");
@@ -735,7 +736,7 @@ export async function addConcentration(options: { workflow: Workflow }) {
         startTurn: game.combat?.turn
       }
     }
-    const result = await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+    return actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
   }
 }
 
@@ -1027,6 +1028,9 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       var newRoll;
       if (button.value === "reroll") {
         newRoll = await this[rollId].reroll({ async: true });
+      } if (button.value === "success") {
+        //@ts-ignore
+        newRoll = await new Roll("99").evaluate({ async: true })
       } else {
         newRoll = new Roll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData());
         await newRoll.evaluate({ async: true })
@@ -1069,12 +1073,26 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
   const effectData = effect.toObject();
 
   const count = effectData.changes.find(c => c.key.includes(changeKey) && c.key.endsWith(".count"));
-
-  if (!count || count.value <= 1) {
+  if (!count) {
     return actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id])
-  } else {
-    count.value -= 1;
-    actor.updateEmbeddedDocuments("ActiveEffect", [effectData])
+    //@ts-ignore
+  } else if (Number.isNumeric(count.value)) {
+    if (count.value <= 1)
+      return actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id])
+    else {
+      count.value -= 1;
+      actor.updateEmbeddedDocuments("ActiveEffect", [effectData])
+    }
+  } else if (count.value.startsWith("@")) {
+    const key = count.value.slice(1);
+    // we have a @field to consume
+    let charges = getProperty(actor.data, key)
+    if (charges) {
+      charges -= 1;
+      const update = {};
+      update[key] = charges;
+      return actor.update(update);
+    }
   }
 }
 
@@ -1089,29 +1107,29 @@ export function isConcentrating(actor: Actor5e): undefined | {} /* TODO ActiveEf
   return actor.effects.contents.find(i => i.data.label === concentrationName);
 }
 
-export async function doReactions(target: Token, attackRoll: Roll): Promise<{name: string, uuid:string}> {
+export async function doReactions(target: Token, attackRoll: Roll): Promise<{ name: string, uuid: string }> {
   let player = playerFor(target);
   if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
-  if (getReactionSetting(player) === "none") return {name: undefined, uuid: undefined};
+  if (getReactionSetting(player) === "none") return { name: undefined, uuid: undefined };
   let reactionItems = target.actor.items.filter(item => item.data.data.activation?.type === "reaction");
-  if (reactionItems.length === 0) return {name: undefined, uuid: undefined};
+  if (reactionItems.length === 0) return { name: undefined, uuid: undefined };
   return new Promise((resolve) => {
     // set a timeout for taking over the roll
     setTimeout(() => {
-      resolve({name: undefined, uuid: undefined});
+      resolve({ name: undefined, uuid: undefined });
     }, (configSettings.reactionTimeout || 30) * 1000);
     requestReactions(target, player, attackRoll, resolve)
   })
 }
 
-export async function requestReactions(target: Token, player: User, attackRoll: Roll, resolve: ({}) => void) {
+export async function requestReactions(target: Token, player: User, attackRoll: Roll, resolve: ({ }) => void) {
   const result = (await socketlibSocket.executeAsUser("chooseReactions", player.id, {
     //@ts-ignore .document
     tokenUuid: target.document.uuid,
     attackRoll: JSON.stringify(attackRoll.toJSON())
   }));
   resolve(result);
-} 
+}
 
 export async function promptReactions(tokenUuid: string, attackRoll: Roll) {
   const target: Token = MQfromUuid(tokenUuid);
@@ -1120,7 +1138,7 @@ export async function promptReactions(tokenUuid: string, attackRoll: Roll) {
   if (reactionItems.length > 0) {
     return await reactionDialog(actor, reactionItems, attackRoll)
   }
-  return {name: "None"};
+  return { name: "None" };
 }
 
 export function playerFor(target: Token) {
@@ -1139,11 +1157,11 @@ export async function reactionDialog(actor: Actor5e, reactionItems: any[], attac
 
   return new Promise((resolve, reject) => {
     const callback = async (dialog, button) => {
-      const item = reactionItems.find(i=> i.id === button.key);
+      const item = reactionItems.find(i => i.id === button.key);
       Hooks.once("midi-qol.RollComplete", () => {
         setTimeout(() => {
           actor.prepareData();
-          resolve({name: item.name, uuid: item.uuid})
+          resolve({ name: item.name, uuid: item.uuid })
         }, 50);
       });
       await item.roll();
@@ -1155,12 +1173,12 @@ export async function reactionDialog(actor: Actor5e, reactionItems: any[], attac
     let content;
     switch (configSettings.showReactionAttackRoll) {
       //@ts-ignore
-      case "all" : content =  `<h4>${rollOptions.all} ${attackRoll.total}</h4>`; break;
-      case "d20" : 
-      //@ts-ignore terms
-      const theRoll = attackRoll.terms[0].results.find(r=>r.active).result;
-      //@ts-ignore d20
-      content = `<h4>${rollOptions.d20} ${theRoll}</h4>`; break;
+      case "all": content = `<h4>${rollOptions.all} ${attackRoll.total}</h4>`; break;
+      case "d20":
+        //@ts-ignore terms
+        const theRoll = attackRoll.terms[0].results.find(r => r.active).result;
+        //@ts-ignore d20
+        content = `<h4>${rollOptions.d20} ${theRoll}</h4>`; break;
       //@ts-ignore
       default: content = rollOptions.none;
     }
@@ -1212,7 +1230,7 @@ class ReactionDialog extends Application {
   }
 
   async getData(options) {
-   this.data.buttons = this.data.items.reduce((acc: {}, item: Item) => {
+    this.data.buttons = this.data.items.reduce((acc: {}, item: Item) => {
       acc[randomID()] = {
         icon: '<i class="fas fa-dice-d20"></i>',
         label: item.name,
@@ -1247,7 +1265,7 @@ class ReactionDialog extends Application {
       event.stopPropagation();
       this.data.completed = true;
       //@ts-ignore
-      if (this.data.close) this.data.close({name: "keydown", uuid: undefined});
+      if (this.data.close) this.data.close({ name: "keydown", uuid: undefined });
       this.close();
     }
   }
@@ -1271,7 +1289,7 @@ class ReactionDialog extends Application {
   async close() {
     if (!this.data.completed && this.data.close) {
       //@ts-ignore
-      this.data.close({name: "Close", uuid: undefined});
+      this.data.close({ name: "Close", uuid: undefined });
     }
     $(document).off('keydown.chooseDefault');
     return super.close();
