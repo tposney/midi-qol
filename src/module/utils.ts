@@ -643,6 +643,7 @@ export function getRemoveDamageButtons() {
 }
 
 export function getReactionSetting(player: User) {
+  if (!player) return "none";
   return player.isGM ? configSettings.gmDoReactions : configSettings.doReactions;
 }
 
@@ -675,7 +676,7 @@ export async function addConcentration(options: { workflow: Workflow }) {
   if (!configSettings.concentrationAutomation) return;
   const item = options.workflow.item;
   // await item.actor.unsetFlag("midi-qol", "concentration-data");
-  let selfTarget = getSelfTarget(item.actor);
+  let selfTarget = item.actor.token? item.actor.token.object : getSelfTarget(item.actor);
   if (!selfTarget) return;
   if (installedModules.get("combat-utility-belt")) {
     const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
@@ -736,7 +737,7 @@ export async function addConcentration(options: { workflow: Workflow }) {
         startTurn: game.combat?.turn
       }
     }
-    return actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+    return await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
   }
 }
 
@@ -829,6 +830,7 @@ export async function expireMyEffects(effectsToExpire: string[]) {
       (expireAttack && this.item?.hasAttack && specialDuration.includes("1Attack")) ||
       (expireAttack && this.item?.hasAttack && specialDuration.includes(`1Attack:${this.item.data.data.actionType}`)) ||
       (expireHit && this.item?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.size > 0) ||
+      (expireHit && this.item?.hasAttack && specialDuration.includes(`1Hit:${this.item.data.data.actionType}`) && this.hitTargets.size > 0) ||
       (expireDamage && this.item?.hasDamage && specialDuration.includes("DamageDealt"))
   }).map(ef => ef.id);
   debug("expire my effects", myExpiredEffects, expireAction, expireAttack, expireHit);
@@ -944,9 +946,11 @@ class RollModifyDialog extends Application {
   }
 
   async getData(options) {
-    this.data.flags = this.data.flags.filter(flagName =>
-      getProperty(this.data.actor.data, flagName)
-    );
+    this.data.flags = this.data.flags.filter(flagName => {
+      if (getOptionalCountRemaining(this.data.actor, `${flagName}.count`) < 1) return false;
+      return getProperty(this.data.actor.data, flagName)
+    });
+    if (this.data.flags.length === 0) this.close();
     this.data.buttons = this.data.flags.reduce((obj, flag) => {
       const flagData = getProperty(this.data.actor.data, flag);
       obj[randomID()] = {
@@ -1011,7 +1015,11 @@ class RollModifyDialog extends Application {
 export async function processAttackRollBonusFlags() { // bound to workflow
   // const bonusFlags = ["flags.midi-qol.bardicInspiration"];
   const bonusFlags = Object.keys(this.actor.data.flags["midi-qol"]?.optional ?? [])
-    .filter(flag => this.actor.data.flags["midi-qol"].optional[flag].attack)
+    .filter(flag => {
+      if (!this.actor.data.flags["midi-qol"].optional[flag].attack) return false;
+      if (!this.actor.data.flags["midi-qol"].optional[flag].count) return true;
+      return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
+    })
     .map(flag => `flags.midi-qol.optional.${flag}`);
   if (bonusFlags.length > 0) {
     this.attackRollHTML = await this.attackRoll.render();
@@ -1028,7 +1036,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       var newRoll;
       if (button.value === "reroll") {
         newRoll = await this[rollId].reroll({ async: true });
-      } if (button.value === "success") {
+      } else if (button.value === "success") {
         //@ts-ignore
         newRoll = await new Roll("99").evaluate({ async: true })
       } else {
@@ -1065,6 +1073,21 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
   });
 }
 
+export function getOptionalCountRemainingShortFlag(actor: Actor5e, flag: string) {
+  return getOptionalCountRemaining(actor, `flags.midi-qol.optional.${flag}.count`)
+}
+export function getOptionalCountRemaining(actor: Actor5e, flag: string) {
+  const countValue = getProperty(actor.data, flag);
+  if (!countValue) return 1;
+  //@ts-ignore
+  if (Number.isNumeric(countValue)) return countValue;
+  if (countValue.startsWith("@")) {
+    let result = getProperty(actor.data.data, countValue.slice(1))
+    return result;
+  }
+  return 1; //?? TODO is this sensible?
+}
+
 export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
   // TODO implement charges rather than single value
 
@@ -1084,13 +1107,14 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
       actor.updateEmbeddedDocuments("ActiveEffect", [effectData])
     }
   } else if (count.value.startsWith("@")) {
-    const key = count.value.slice(1);
+    let key = count.value.slice(1);
+    if (key.startsWith("data.")) key = key.replace("data.", "")
     // we have a @field to consume
-    let charges = getProperty(actor.data, key)
+    let charges = getProperty(actor.data.data, key)
     if (charges) {
       charges -= 1;
       const update = {};
-      update[key] = charges;
+      update[`data.${key}`] = charges;
       return actor.update(update);
     }
   }

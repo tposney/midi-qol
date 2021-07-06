@@ -680,7 +680,7 @@ export class Workflow {
         else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
         else this.applicationTargets = this.targets;
         if (this.hasDAE) {
-          this.dae.doEffects(this.item, true, this.applicationTargets, { whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId })
+          await this.dae.doEffects(this.item, true, this.applicationTargets, { whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId })
           this.removeEffectsButton();
         }
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
@@ -800,20 +800,40 @@ export class Workflow {
     let values = [];
     const macroNames = macros.split(",");
     let targets = [];
+    let targetUuids = []
     let failedSaves = [];
+    let failedSaveUuids = [];
     let hitTargets = [];
+    let hitTargetUuids = [];
     let saves = [];
+    let saveUuids = [];
     let superSavers = [];
-    //@ts-ignore
-    for (let target of this.targets) targets.push(target.document ?? target);
-    //@ts-ignore
-    for (let save of this.saves) saves.push(save.document ?? save);
-    //@ts-ignore
-    for (let hit of this.hitTargets) hitTargets.push(hit.document ?? hit);
-    //@ts-ignore
-    for (let failed of this.failedSaves) failedSaves.push(failed.document ?? failed);
-    //@ts-ignore
-    for (let save of this.superSavers) superSavers.push(save.document ?? save);
+    let superSaverUuids = [];
+    for (let target of this.targets) {
+      //@ts-ignore document
+      targets.push(target.document ?? target);
+      targetUuids.push(target.uuid);
+    }
+    for (let save of this.saves) {
+      //@ts-ignore document
+      saves.push(save.document ?? save);
+      saveUuids.push(save.uuid);
+    }
+    for (let hit of this.hitTargets) {
+      //@ts-ignore
+      hitTargets.push(hit.document ?? hit);
+      hitTargetUuids.push(hit.uuid)
+    }
+    for (let failed of this.failedSaves) {
+      //@ts-ignore
+      failedSaves.push(failed.document ?? failed);
+      failedSaveUuids.push(failed.uuid);
+    }
+    for (let save of this.superSavers) {
+      //@ts-ignore
+      superSavers.push(save.document ?? save);
+      superSaverUuids.push(save.uuid);
+    };
     const macroData = {
       actor: this.actor.data,
       actorUuid: this.actor.uuid,
@@ -822,10 +842,15 @@ export class Workflow {
       itemUuid: this.item?.uuid,
       item: this.item?.data.toObject(false),
       targets,
+      targetUuids,
       hitTargets,
+      hitTargetUuids,
       saves,
+      saveUuids,
       superSavers,
+      superSaverUuids,
       failedSaves,
+      failedSaveUuids,
       damageRoll: this.damageRoll,
       attackRoll: this.attackRoll,
       attackTotal: this.attackTotal,

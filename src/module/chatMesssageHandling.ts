@@ -497,6 +497,7 @@ export function processItemCardCreation(message, user) {
   const midiFlags = message.data.flags["midi-qol"];
   if (user === game.user.id && midiFlags?.workflowId) { // check to see if it is a workflow
     const workflow = Workflow.getWorkflow(midiFlags.workflowId);
+    if (!workflow) return;
     if (!workflow.itemCardId) {
       workflow.itemCardId = message.id;
       workflow.next(WORKFLOWSTATES.NONE);
@@ -564,3 +565,4 @@ export async function onChatCardAction(event) {
   // Re-enable the button
   button.disabled = false;
 }
+

@@ -5,14 +5,14 @@ import { MQfromActorUuid, MQfromUuid, promptReactions } from "./utils";
 export var socketlibSocket = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
 
-export function removeEffects(data) {
+export async function removeEffects(data) {
   const actor = MQfromActorUuid(data.actorUuid);
-  actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects)
+  await actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects)
 }
 
-export function createEffects(data) {
+export async function createEffects(data) {
   const actor = MQfromActorUuid(data.actorUuid);
-  actor?.createEmbeddedDocuments("ActiveEffect", data.effects)
+  await actor?.createEmbeddedDocuments("ActiveEffect", data.effects)
 }
 export function removeActorStats(data) {
   return gameStats.GMremoveActorStats(data.actorId)
@@ -23,21 +23,6 @@ export function GMupdateActor(data) {
 }
 
 export let setupSocket = () => {
-  /*
-  Hooks.once("socketlib.ready", () => {
-    //@ts-ignore
-    socketlibSocket = socketlib.registerModule("midi-qol");
-    socketlibSocket.register("createReverseDamageCard", createReverseDamageCard);
-    socketlibSocket.register("removeEffects", removeEffects);
-    socketlibSocket.register("createEffects", createEffects);
-    socketlibSocket.register("updateActorStats", GMupdateActor)
-    socketlibSocket.register("removeActorStatsForActorId", removeActorStats);
-    socketlibSocket.register("monksTokenBarSaves", monksTokenBarSaves);
-    socketlibSocket.register("rollAbility", rollAbility);
-    socketlibSocket.register("createChatMessage", createChatMessage);
-    socketlibSocket.register("chooseReactions", localDoReactions);
-  });
-  */
  //@ts-ignore
   socketlibSocket = window.socketlib.registerModule("midi-qol");
   socketlibSocket.register("createReverseDamageCard", createReverseDamageCard);
@@ -49,7 +34,6 @@ export let setupSocket = () => {
   socketlibSocket.register("rollAbility", rollAbility);
   socketlibSocket.register("createChatMessage", createChatMessage);
   socketlibSocket.register("chooseReactions", localDoReactions);
-
 };
 
 async function localDoReactions(data) {

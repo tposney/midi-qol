@@ -1,7 +1,7 @@
 import { log, warn, debug, i18n, error } from "../midi-qol";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage } from "./settings.js";
-import { bonusDialog, expireRollEffect, testKey } from "./utils";
+import { bonusDialog, expireRollEffect, getOptionalCountRemaining, getOptionalCountRemainingShortFlag, testKey } from "./utils";
 import { installedModules } from "./setupModules";
 import { libWrapper } from "./lib/shim.js";
 
@@ -231,7 +231,11 @@ async function rollAbilitySave(wrapped, ...args) {
   let result = await wrapped(abilityId, procOptions);
   if (!installedModules.get("betterrolls5e")) {
     const bonusFlags = Object.keys(this.data.flags["midi-qol"]?.optional ?? [])
-      .filter(flag => this.data.flags["midi-qol"].optional[flag].save)
+      .filter(flag => {
+        if (!this.data.flags["midi-qol"].optional[flag].save) return false;
+        if (!this.data.flags["midi-qol"].optional[flag].count) return true;
+        return getOptionalCountRemainingShortFlag(this, flag) > 0;
+      })
       .map(flag => `flags.midi-qol.optional.${flag}`);
 
     if (bonusFlags.length > 0) {

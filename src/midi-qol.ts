@@ -16,7 +16,7 @@ import { preloadTemplates } from './module/preloadTemplates';
 import { installedModules, setupModules } from './module/setupModules';
 import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, readyPatching } from './module/patching';
 import { initHooks, readyHooks } from './module/Hooks';
-import { initGMActionSetup, setupSocket } from './module/GMAction';
+import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
 import { applyTokenDamage, checkNearby, findNearby, getDistance, getTraitMult, MQfromActorUuid, MQfromUuid } from './module/utils';
@@ -187,7 +187,8 @@ function setupMidiQOLApi() {
     showItemCard: showItemCard,
     gameStats,
     MQFromUuid: MQfromUuid,
-    MQfromActorUuid: MQfromActorUuid
+    MQfromActorUuid: MQfromActorUuid,
+    socket: () => {return socketlibSocket}
   }
 }
 

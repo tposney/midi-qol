@@ -1,8 +1,25 @@
+## 0.8.30
+* Fix for failing to appply concentration to non-linked tokens.
+* Slight tweak for appication of self effects interacting with CUB.
+* Fix for reaction checks cuasing an error when no GM is connected.
+* Fix for DamageOnly workflow throwing an error on item card creation.
+* Added support for special durations 1Hit.mwak/rwak/msak/rsak to expire when a hit with a particular type of attack is made. Useful for some of the various paladin smites.
+* Added targetUuids, hitTargetUuis, saveUuids, superSaverUuids and failedSaveUUids to the args[0] argument to onUse/DamageMacro macro calls.
+* Ability bonus effects (bardic inspiration etc) can now specify an effect of success which means the roll will bet set to 99 - useful for effects that turn a failure into a save.
+* flags.midi-qol.options.NAME.count now support @fields, so you can consume a resource, like legendary resistance (@resources.legres.value). Sample legendary resistance included.
+* Added a different Lucky feature "Luck (Recharge)" which consumes resource points (tertiary in the sample). Resource details are updated by the active effect so luck reacharges on a long rest. Just drag the Lucky (Recharge) item to the character and Luck should just work, recharging on a long rest.
+* Added Sample Branding Smite (requires DamageBonus/onUse macros enabled plus Active Token Lighting for the dim light effect), that implements the damage bonus, removes invisibility and adds Dim Light to the target when hit and expires after a successful hit.
+* Added sample dragon slayer longsword which does bonus damage against dragons and knows about critical hits (assumes double dice for the critical hit).
+* Added sample sword of wounding which applies damage each round until the target saves.
+* Added sample devil's glaive that causes infernal wounds which bleed each round in combat and count how many applications.
+
+* Conditional visibility is definitely still causing midi/dae problems, both as an active effect and in general use, so be warned.
+
 ## 0.8.29
 * Fix for saving throw button disabled on chat card.
-* Shift socketlib initialisaiton into setup rather than init.
+* Shift socketlib initialisation into setup rather than init.
 * Significant reworking of chat message handling to fix double item card rolls with magic items. All seems to be working (merge card/non-merge card, damage only workflow, better rolls and magic items all seem to roll correctly), but this change affects lots of workflow processing so please don't upgrade 5 minutes before gametime.
-* Put back support for concentration token hud toggle if cub active.
+* Put back support for concentration token hud toggle if CUB active.
 * Added option for critical hits to only do normal damage.
 * Updated ko.json thanks @drdwing
 
