@@ -1,63 +1,88 @@
 import { configSettings } from "./settings";
-import { i18n, debug, error, log, undoDamageText, warn, gameStats } from "../midi-qol";
+import { i18n, log, warn, gameStats } from "../midi-qol";
+import { MQfromActorUuid, MQfromUuid, promptReactions } from "./utils";
 
+export var socketlibSocket = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
 
-const moduleSocket = "module.midi-qol";
-let processAction = async data => {
-  switch (data.action) {
-    case "reverseDamageCard":
-      if (!game.user.isGM || data?.intendedFor !== game.user.id)
-        break;
-      if (data.autoApplyDamage === "none")
-        break;
-      await createReverseDamageCard(data);
-      break;
-    case "removeEffects":
-      const token = canvas.tokens.get(data.tokenId);
-      if (token) {
-        token.actor?.deleteEmbeddedEntity("ActiveEffect", data.effects)
-      }
-      break;
-    case "GMRollSave": 
-    // This needs to roll the save, with prompt and send back the data with the correct id
-    case "updateActorStats":
-      return gameStats.GMupdateActor(data);
-    case "removeStatsForActorId":
-      return gameStats.GMremoveActorStats(data.actorId);
-  }
-};
+export async function removeEffects(data) {
+  const actor = MQfromActorUuid(data.actorUuid);
+  await actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects)
+}
+
+export async function createEffects(data) {
+  const actor = MQfromActorUuid(data.actorUuid);
+  await actor?.createEmbeddedDocuments("ActiveEffect", data.effects)
+}
+export function removeActorStats(data) {
+  return gameStats.GMremoveActorStats(data.actorId)
+}
+
+export function GMupdateActor(data) {
+  return gameStats.GMupdateActor(data)
+}
 
 export let setupSocket = () => {
-  //@ts-ignore
-  game.socket.on(moduleSocket, data => {
-    processAction(data);
-  });
+ //@ts-ignore
+  socketlibSocket = window.socketlib.registerModule("midi-qol");
+  socketlibSocket.register("createReverseDamageCard", createReverseDamageCard);
+  socketlibSocket.register("removeEffects", removeEffects);
+  socketlibSocket.register("createEffects", createEffects);
+  socketlibSocket.register("updateActorStats", GMupdateActor)
+  socketlibSocket.register("removeActorStatsForActorId", removeActorStats);
+  socketlibSocket.register("monksTokenBarSaves", monksTokenBarSaves);
+  socketlibSocket.register("rollAbility", rollAbility);
+  socketlibSocket.register("createChatMessage", createChatMessage);
+  socketlibSocket.register("chooseReactions", localDoReactions);
 };
 
-export function broadcastData(data) {
-  data.sceneId = canvas.scene.id;
-  // if not a gm broadcast the message to a gm who can apply the damage
-  if (!game.user.isGM) {
-    //@ts-ignore
-    game.socket.emit(moduleSocket, data, resp => { });
-  } else {
-    processAction(data);
-  }
+async function localDoReactions(data) {
+  const result =  await promptReactions(data.tokenUuid, JSON.parse(data.attackRoll))
+  return result;
 }
 
 export function initGMActionSetup() {
   traitList.di = i18n("DND5E.DamImm");
   traitList.dr = i18n("DND5E.DamRes");
   traitList.dv = i18n("DND5E.DamVuln");
-  setupSocket();
+  traitList.di = "di";
+  traitList.dr = "dr";
+  traitList.dv = "dv";
 }
 
+export async function createChatMessage(data) {
+  return await ChatMessage.create(data.chatData);
+}
+
+export function rollAbility(data) {
+  //@ts-ignore
+  const rollAction = data.request === "abil" ?
+            //@ts-ignore
+            rollAction = CONFIG.Actor.documentClass.prototype.rollAbilityTest : 
+            //@ts-ignore
+            CONFIG.Actor.documentClass.prototype.rollAbilitySave;
+  const actor = MQfromActorUuid(data.targetUuid);
+  const result = rollAction.bind(actor)(data.ability, data.options);
+  return result;
+}
+
+export function monksTokenBarSaves(data) {
+  let tokens = data.tokens.map(tuuid => new Token(MQfromUuid(tuuid)));
+
+  // TODO come back and see what things can be passed to this.
+  game.MonksTokenBar.requestRoll(
+    tokens,
+    {
+      request: data.request,
+      silent: data.silent,
+      rollMode: data.rollMode
+  });
+}
+
+// Fetch the token, then use the tokenData.actor.id
 let createReverseDamageCard = async (data) => {
-  let whisperText = "";
   const damageList = data.damageList;
-  const btnStyling = "width: 22px; height:22px; font-size:10px;line-height:1px";
-  let token, actor;
+  let actor;
   const timestamp = Date.now();
   let promises = [];
   let tokenIdList = [];
@@ -66,77 +91,62 @@ let createReverseDamageCard = async (data) => {
     damageList: [] ,
     needsButtonAll: false
   };
-  for (let { tokenId, actorID, oldHP, oldTempHP, tempDamage, hpDamage, totalDamage, appliedDamage } of damageList) {
-    let scene = canvas.scene;
-    token = canvas.tokens.get(tokenId);
-    if (!token) { //Token does not exist on this scene, find it in on referenced scene.
-      scene = game.scenes.get(data.sceneId);
-      //@ts-ignore .tokens not defined
-      const tokenData = scene.data.tokens.find(t=>t._id === tokenId);
-      if (!tokenData) {
-        // we really should be able to fine the token
-        error(`GMAction: could not find token ${tokenId} in scene ${scene?.name || data.sceneId}`);
-        continue;
-      }
-      token = await Token.create(tokenData); // create a temp token for calcs
+  for (let { tokenId, tokenUuid, actorId, actorUuid, oldHP, oldTempHP, newTempHP, tempDamage, hpDamage, totalDamage, appliedDamage, sceneId } of damageList) {
+
+    let tokenDocument;
+    if (tokenUuid) {
+      tokenDocument = MQfromUuid(tokenUuid);
+      actor = tokenDocument.actor;
     }
-    actor = token.actor;
-    const hp = actor.data.data.attributes.hp;
- 
-    if (tempDamage > oldTempHP) {
-      var newTempHP = 0;
-      hpDamage += (tempDamage - oldTempHP)
-    } else {
-      var newTempHP = oldTempHP - tempDamage;
+    else
+      actor = MQfromActorUuid(actorUuid)
+
+    if (!actor) {
+      warn(`GMAction: reverse damage card could not find actor to update HP tokenUuid ${tokenUuid} actorUuid ${actorUuid}`);
+      continue;
     }
     let newHP = Math.max(0, oldHP - hpDamage);
-    if (data.intendedFor === game.user.id && ["yes", "yesCard"].includes(data.autoApplyDamage)) {
-      if (token.data.actorLink || canvas.scene.id === scene.id) {
-        if (newHP !== oldHP || newTempHP !== oldTempHP)  {
-          promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damgeApplied": appliedDamage}));
-        }
-      }
-      else {
-        debug("doing remote scene update")
-        if (newHP !== oldHP || newTempHP !== oldTempHP)  {
-          if (scene) {
-            promises.push(scene.updateEmbeddedEntity("Token", { // need to deal with the case that the token might be on another scene
-            "_id": tokenId, //use the original ID not the one from the potentially temp token
-            "actorData.data.attributes.hp.temp": newTempHP, 
-            "actorData.data.attributes.hp.value": newHP,
-            "flags.dae.damgeApplied": appliedDamage
-            }))
-          } else {
-            console.warn(`Could not apply damage to ${tokenId} on ${data.sceneId}`)
-          }
-        }
+    // removed intended for check
+    if (["yes", "yesCard"].includes(data.autoApplyDamage)) {
+      if (newHP !== oldHP || newTempHP !== oldTempHP)  {
+        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damgeApplied": appliedDamage}));
       }
     }
-    
-    tokenIdList.push({ tokenId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP});
+    tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP});
+
+    let img = tokenDocument?.data.img || actor.img;
+    if (configSettings.usePlayerPortrait && actor.type === "character")
+      img = actor?.img || tokenDocument?.data.img;
+    if ( VideoHelper.hasVideoExtension(img) ) {
+      //@ts-ignore - createThumbnail not defined
+      img = await game.video.createThumbnail(img, {width: 100, height: 100});
+    }
 
     let listItem = {
-      tokenId: tokenId,
-      tokenImg: token.data.img,
+      actorUuid,
+      tokenId: tokenId ?? "none",
+      displayUuid: actorUuid.replaceAll(".", ""),
+      tokenUuid,
+      tokenImg: img,
       hpDamage,
-      tempDamage,
+      tempDamage: newTempHP - oldTempHP,
       totalDamage: Math.abs(totalDamage),
       halfDamage: Math.abs(Math.floor(totalDamage / 2)),
       doubleDamage: Math.abs(totalDamage * 2),
       appliedDamage,
       absDamage: Math.abs(appliedDamage),
-      tokenName: token.name && configSettings.useTokenNames ? token.name : token.actor.name,
+      tokenName: (tokenDocument?.name && configSettings.useTokenNames) ? tokenDocument.name : actor.name,
       dmgSign: appliedDamage < 0 ? "+" : "-", // negative damage is added to hit points
       newHP,
       newTempHP,
       oldTempHP,
       oldHP,
-      buttonId: token.id
+      buttonId: tokenUuid
     };
 
     ["di", "dv", "dr"].forEach(trait => {
-      const traits = actor.data.data.traits[trait]
-      if (traits.custom || traits.value.length > 0) {
+      const traits = actor?.data.data.traits[trait]
+      if (traits?.custom || traits?.value.length > 0) {
         listItem[trait] = (`${traitList[trait]}: ${traits.value.map(t => CONFIG.DND5E.damageResistanceTypes[t]).join(",").concat(" " + traits?.custom)}`);
       }
     });
@@ -152,10 +162,10 @@ let createReverseDamageCard = async (data) => {
     const speaker = ChatMessage.getSpeaker();
     speaker.alias = game.user.name;
     let chatData = {
-      user: game.user._id,
+      user: game.user.id,
       speaker: {scene: canvas.scene.id, alias: game.user.name, user: game.user.id},
       content: content,
-      whisper: ChatMessage.getWhisperRecipients("GM").filter(u => u.active),
+      whisper: ChatMessage.getWhisperRecipients("GM").filter(u => u.active).map(u=>u.id),
       type: CONST.CHAT_MESSAGE_TYPES.OTHER,
       flags: { "midiqol": {"undoDamage": tokenIdList }}
     };
@@ -163,26 +173,15 @@ let createReverseDamageCard = async (data) => {
   }
 }
 
-async function doClick(event, tokenId, totalDamage, mult) {
-  let token = canvas.tokens.get(tokenId);
-  if (!token?.actor) {
-    ui.notifications.warn("Token not found in scene")
-    console.warn(`Process damage button: Actor for token ${tokenId} not found`);
-    return;
-  }
-  let actor = token.actor;
+async function doClick(event, actorUuid, totalDamage, mult) {
+ let actor = MQfromActorUuid(actorUuid);
   log(`Applying ${totalDamage} mult ${mult} HP to ${actor.name}`);
   await actor.applyDamage(totalDamage, mult);
   event.stopPropagation();
 }
 
-async function doMidiClick(ev, tokenId, newTempHP, newHP) {
-  let token = canvas.tokens.get(tokenId);
-  if (!token?.actor) {
-    warn(`Process damage button: Actor for token ${tokenId} not found`);
-    return;
-  }
-  let actor = token.actor;
+async function doMidiClick(ev, actorUuid, newTempHP, newHP) {
+ let actor = MQfromActorUuid(actorUuid);
   log(`Setting HP to ${newTempHP} and ${newHP}`);
   await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP });
 }
@@ -190,15 +189,11 @@ async function doMidiClick(ev, tokenId, newTempHP, newHP) {
 export let processUndoDamageCard = async(message, html, data) => {
   if (!message.data.flags?.midiqol?.undoDamage) return true;
   let button = html.find("#all-reverse");
+
   button.click((ev) => {
-    message.data.flags.midiqol.undoDamage.forEach(async ({tokenId, oldTempHP, oldHP, totalDamage, newHP, newTempHP}) => {
-      let token = canvas.tokens.get(tokenId);
-      if (!token?.actor) {
-        ui.notifications.warn("Token not found in scene")
-        console.warn(`Process damage button: Actor for token ${tokenId} not found`);
-        return;
-      }
-      let actor = token.actor;
+    message.data.flags.midiqol.undoDamage.forEach(async ({actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP}) => {
+      if (!actorUuid) return;
+      let actor = MQfromActorUuid(actorUuid);
       log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
       await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP });
       ev.stopPropagation();
@@ -207,81 +202,46 @@ export let processUndoDamageCard = async(message, html, data) => {
 
   button = html.find("#all-apply");
   button.click((ev) => {
-    message.data.flags.midiqol.undoDamage.forEach(async ({tokenId, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
-      let token = canvas.tokens.get(tokenId);
-      if (!token?.actor) {
-        ui.notifications.warn("Token not found in scene")
-        console.warn(`Process damage button: Actor for token ${tokenId} not found`);
-        return;
-      }
-      let actor = token.actor;
+    message.data.flags.midiqol.undoDamage.forEach(async ({actorUuid, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
+    if (!actorUuid) return;
+    let actor = MQfromActorUuid(actorUuid);
       log(`Setting HP to ${newTempHP} and ${newHP}`);
       await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP });
       ev.stopPropagation();
     })
   })
 
-  message.data.flags.midiqol.undoDamage.forEach(({tokenId, oldTempHP, oldHP, totalDamage, newHP, newTempHP}) => {
-    let button = html.find(`#reverse-${tokenId}`);
-    //TODO clean this up - one handler with
+  message.data.flags.midiqol.undoDamage.forEach(({actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP}) => {
+    if (!actorUuid) return;
+    // ids should not have "." in the or it's id.class
+    let button = html.find(`#reverse-${actorUuid.replaceAll(".", "")}`);
     button.click(async (ev) => {
-      let token = canvas.tokens.get(tokenId);
-      if (!token?.actor) {
-        ui.notifications.warn("Token not found in scene")
-        console.warn(`Process damage button: Actor for token ${tokenId} not found`);
-        return;
-      }
-      let actor = token.actor;
-
+      let actor = MQfromActorUuid(actorUuid);
       log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
       await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP });
       ev.stopPropagation();
     });
 
     // Default action of button is to do midi damage
-    button = html.find(`#apply-${tokenId}`);
+    button = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
     button.click(async (ev) => {
-      let token = canvas.tokens.get(tokenId);
-      if (!token?.actor) {
-        warn(`Process damage button: Actor for token ${tokenId} not found`);
-        return;
-      }
-      let actor = token.actor;
+      let actor = MQfromActorUuid(actorUuid);
       log(`Setting HP to ${newTempHP} and ${newHP}`);
       await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP });
       ev.stopPropagation();
     });
 
-    let select = html.find(`#dmg-multiplier-${tokenId}`);
+    let select = html.find(`#dmg-multiplier-${actorUuid.replaceAll(".", "")}`);
     select.change(async (ev) => {
-      let multiplier = html.find(`#dmg-multiplier-${tokenId}`).val();
-      button = html.find(`#apply-${tokenId}`);
+      let multiplier = html.find(`#dmg-multiplier-${actorUuid.replaceAll(".", "")}`).val();
+      button = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
       button.off('click');
-      switch (multiplier) {
-        case "Calc":
-          button.click(async (ev) => doMidiClick(ev, tokenId, newTempHP, newHP));
-          break;
-        case "Heal": {
-          button.click(async (ev) => doClick(ev, tokenId, totalDamage, -1));
-          break;
-        }
-        case "x1": {
-          button.click(async (ev) => doClick(ev, tokenId, totalDamage, 1));
-          break;
-        }
-        case "x1/4": {
-          button.click(async (ev) => doClick(ev, tokenId, totalDamage, 0.25));
-          break;
-        }
-        case "x1/2": {
-          button.click(async (ev) => doClick(ev, tokenId, totalDamage, 0.5));
-          break;
-        }
-        case "x2": {
-          button.click(async (ev) => doClick(ev, tokenId, totalDamage, 2));
-          break;
-        }
-      }
+
+      const mults = {"Heal": -1, "x1": 1, "x1/4": 0.25, "x1/2": 0.5, "x2": 2};
+      if (multiplier === "Calc")
+        button.click(async (ev) => doMidiClick(ev, actorUuid, newTempHP, newHP));
+      else if (mults[multiplier]) 
+        button.click(async (ev) => doClick(ev, actorUuid, totalDamage, mults[multiplier]));
     });
   })
 }

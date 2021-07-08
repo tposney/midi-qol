@@ -93,7 +93,7 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
       let li = $(event.currentTarget).parents(".item");
       if (!li.hasClass("expanded"))
           return;
-      let item = app.object.getOwnedItem(li.attr("data-item-id"));
+      let item = app.object.items.get(li.attr("data-item-id"));
       if (!item)
           return;
       let actor = app.object;
@@ -108,6 +108,7 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
       switch (item.data.type) {
           case "weapon":
           case "spell":
+          case "power":
           case "feat":
               buttons.append(`<span class="tag"><button data-action="basicRoll">${i18n("midi-qol.buttons.roll")}</button></span>`);
               if (item.hasAttack)
@@ -178,7 +179,7 @@ function addTidy5eItemSheetButtons(app, html, data) {
     else
       buttonContainer = $(this).find(".item-controls");
     // adding an event for when the description is shown
-    let item = app.object.getOwnedItem($(this).attr("data-item-id"));
+    let item = app.object.items.get($(this).attr("data-item-id"));
     if (!item)
       return;
     let chatData = item.getChatData();
@@ -191,6 +192,7 @@ function addTidy5eItemSheetButtons(app, html, data) {
     switch (item.data.type) {
       case "weapon":
       case "spell":
+      case "power":
       case "feat":
         buttons.append(`<a class="button" data-action="basicRoll" title="${i18n("midi-qol.buttons.roll")}"><i class="fas fa-comment-alt"></i> ${i18n("midi-qol.buttons.roll")}</a>`);
         if (item.hasAttack)

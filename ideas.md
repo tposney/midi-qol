@@ -1,2 +1,5 @@
-TODO pickup advantage flags for LMRTFY display (will pick them up on roll anyway)
-TODO batch card updates to improve performance.
+Add identifying info to monks token bar to disambiguate return rolls. - plus check args that are passed.
+find solution to bardic inspiration
+Fix maxDamaage flag to work again
+get token magic working again.
+create sample of reurring event item.

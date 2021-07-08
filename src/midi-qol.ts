@@ -14,14 +14,14 @@
 import { registerSettings, fetchParams, configSettings } from './module/settings';
 import { preloadTemplates } from './module/preloadTemplates';
 import { installedModules, setupModules } from './module/setupModules';
-import { itemPatching, visionPatching, actorAbilityRollPatching } from './module/patching';
+import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, readyPatching } from './module/patching';
 import { initHooks, readyHooks } from './module/Hooks';
-import { initGMActionSetup } from './module/GMAction';
+import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction';
 import { setupSheetQol } from './module/sheetQOL';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow';
-import { applyTokenDamage, checkNearby, findNearby, getDistance, getTraitMult } from './module/utils';
+import { applyTokenDamage, checkNearby, findNearby, getDistance, getTraitMult, MQfromActorUuid, MQfromUuid } from './module/utils';
 import { ConfigPanel } from './module/apps/ConfigPanel';
-import { doCritModify, showItemCard, showItemInfo } from './module/itemhandling';
+import { showItemCard, showItemInfo } from './module/itemhandling';
 import { RollStats } from './module/RollStats';
 
 export let debugEnabled = 0;
@@ -50,7 +50,6 @@ export let undoDamageText;
 export let savingThrowText;
 export let savingThrowTextAlt;
 export let MQdefaultDamageType;
-export let allDamageTypes;
 export let midiFlags = [];
 export let allAttackTypes = []
 export let gameStats: RollStats;
@@ -90,14 +89,16 @@ Hooks.once('init', async function() {
 Hooks.once('setup', function() {
 	// Do anything after initialization but before
   // ready
+  setupSocket();
 
-  setupMidiFlags();
   fetchParams();
   itemPatching();
   visionPatching();
   setupModules();
   registerSettings();
   initGMActionSetup();
+  patchLMRTFY();
+  setupMidiFlags();
   undoDamageText = i18n("midi-qol.undoDamageFrom");
   savingThrowText = i18n("midi-qol.savingThrowText");
   savingThrowTextAlt = i18n("midi-qol.savingThrowTextAlt");
@@ -106,10 +107,11 @@ Hooks.once('setup', function() {
   CONFIG.DND5E.weaponProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
   CONFIG.DND5E.weaponProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp")
   CONFIG.DND5E.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
-  CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
-  allDamageTypes = mergeObject(CONFIG.DND5E.damageTypes, CONFIG.DND5E.healingTypes, {inplace:false});
+  if (game.system.id === "dnd5e")
+    CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
 
   if (configSettings.allowUseMacro) {
+    
     /*
     CONFIG.DND5E.characterFlags["AttackBonusMacro"] = {
       hint: i18n("midi-qol.AttackMacro.Hint"),
@@ -143,21 +145,22 @@ Hooks.once('ready', function() {
 
   // Do anything once the module is ready
   actorAbilityRollPatching();
-  setupMinorQolCompatibility();
+  setupMidiQOLApi();
 
   if (game.user.isGM && !installedModules.get("dae")) {
-    ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.2.43 or many automation effects won't work");
+    ui.notifications.warn("Midi-qol requires DAE to be installed and at least version 0.8.18 or many automation effects won't work");
   }
+  checkSocketLibInstalled();
   checkCubInstalled();
   checkConcentrationSettings();
-
   readyHooks();
+  readyPatching();
 });
 
 // Add any additional hooks if necessary
 
 // Backwards compatability
-function setupMinorQolCompatibility() {
+function setupMidiQOLApi() {
 
   //@ts-ignore
   window.MinorQOL = {
@@ -170,10 +173,9 @@ function setupMinorQolCompatibility() {
     TrapWorkflow,
     DamageOnlyWorkflow,
     Workflow,
-    configSettings,
+    configSettings: () => {return configSettings},
     ConfigPanel: ConfigPanel,
     getTraitMult: getTraitMult,
-    doCritModify: doCritModify,
     getDistance: getDistance,
     midiFlags,
     debug,
@@ -183,16 +185,27 @@ function setupMinorQolCompatibility() {
     checkNearby: checkNearby,
     showItemInfo: showItemInfo,
     showItemCard: showItemCard,
-    gameStats
+    gameStats,
+    MQFromUuid: MQfromUuid,
+    MQfromActorUuid: MQfromActorUuid,
+    socket: () => {return socketlibSocket}
+  }
+}
+
+export function checkSocketLibInstalled() {
+  if (game.user?.isGM && !installedModules.get("socketlib")) {
+    //@ts-ignore expected one argument but got 2
+    ui.notifications.error(i18n("midi-qol.NoSocketLib"), {permanent: true});
   }
 }
 
 export function checkCubInstalled() {
+  return;
   if (game.user?.isGM && configSettings.concentrationAutomation && !installedModules.get("combat-utility-belt")) {
     let d = new Dialog({
       // localize this text
-      title: i18n("dae.confirm"),
-      content: `<p>You have enabled midi-qol concentration automation. This requires that you install and activate Combat Utility Belt as well. Concentration Automation will be disalbed</p>`,
+      title: i18n("midi-qol.confirm"),
+      content: i18n("midi-qol.NoCubInstalled"), 
       buttons: {
           one: {
               icon: '<i class="fas fa-check"></i>',
@@ -209,6 +222,7 @@ export function checkCubInstalled() {
 }
 
 export function checkConcentrationSettings() {
+  return;
   const needToUpdateCubSettings = installedModules.get("combat-utility-belt") && (
     game.settings.get("combat-utility-belt", "enableConcentrator")
     // game.settings.get("combat-utility-belt", "autoConcentrate") ||
@@ -289,7 +303,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.critical.all`);
-  midiFlags.push(`flags.midi-qol.grants.noCritical.all`);
+  midiFlags.push(`flags.midi-qol.fail.critical.all`);
   midiFlags.push(`flags.midi-qol.maxDamage.all`);
   midiFlags.push(`flags.midi-qol.grants.maxDamage.all`);
   midiFlags.push(`flags.midi-qol.advantage.concentration`)
@@ -311,8 +325,8 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.noCritical.${at}`);
     midiFlags.push(`flags.midi-qol.grants.advantage.attack.${at}`);
     midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.${at}`);
-    midiFlags.push(`flags.midi-qol.grants.critical.damage.${at}`);
-    midiFlags.push(`flags.midi-qol.grants.noCritical.attack.${at}`);
+    midiFlags.push(`flags.midi-qol.grants.critical.${at}`);
+    midiFlags.push(`flags.midi-qol.fail.critical.${at}`);
     midiFlags.push(`flags.midi-qol.maxDamage.${at}`);
 
   
@@ -335,6 +349,8 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.disadvantage.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.advantage.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.disadvantage.ability.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.advantage.attack.${abl}`);
+    midiFlags.push(`flags.midi-qol.disadvantage.attack.${abl}`);
     midiFlags.push(`flags.midi-qol.fail.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.fail.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.superSaver.${abl}`);
@@ -358,11 +374,19 @@ function setupMidiFlags() {
     });
     midiFlags.push(`flags.midi-qol.DR.all`);
     midiFlags.push(`flags.midi-qol.DR.non-magical`);
-    Object.keys(CONFIG.DND5E.damageTypes).forEach(dt => {
+    midiFlags.push(`flags.midi-qol.DR.non-physical`);
+    Object.keys(CONFIG.DND5E.damageResistanceTypes).forEach(dt => {
       midiFlags.push(`flags.midi-qol.DR.${dt}`);  
     })
   }
   
+  midiFlags.push(`flags.midi-qol.optional.NAME.attack`)
+  midiFlags.push(`flags.midi-qol.optional.NAME.check`)
+  midiFlags.push(`flags.midi-qol.optional.NAME.save`)
+  midiFlags.push(`flags.midi-qol.optional.NAME.label`)
+  midiFlags.push(`flags.midi-qol.optional.NAME.count`)
+  midiFlags.push(`flags.midi-qol.uncanny-dodge`);
+
   /*
   midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
@@ -371,5 +395,8 @@ function setupMidiFlags() {
   midiFlags.push(``);
   midiFlags.push(``);
   */
-  midiFlags.sort()
+  if (installedModules.get("dae")) {
+    //@ts-ignore
+    window.DAE.addAutoFields(midiFlags);
+  }
 }

@@ -1,8 +1,9 @@
-import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls } from "../settings"
+import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, itemRollButtons, saveRequests, forceHideRoll, enableWorkflow, dragDropTargeting, importSettingsFromJSON, exportSettingsToJSON } from "../settings"
  import { configSettings } from "../settings"
 import { warn, i18n, error, debug, gameStats } from "../../midi-qol";
 import { RollStats } from "../RollStats";
 import { installedModules } from "../setupModules";
+import { addChatDamageButtonsToHTML } from "../chatMesssageHandling";
 export class ConfigPanel extends FormApplication {
   
   static get defaultOptions() {
@@ -22,8 +23,6 @@ export class ConfigPanel extends FormApplication {
     return i18n("midi-qol.ConfigTitle")
   }
   getData() {
-    if (autoFastForwardAbilityRolls && configSettings.playerRollSaves === "letmeQuery")
-      configSettings.playerRollSaves = "letme";
 //@ts-ignore
     let data = {
       configSettings,
@@ -31,6 +30,8 @@ export class ConfigPanel extends FormApplication {
       autoCheckHitOptions: i18n("midi-qol.autoCheckHitOptions"),
       clickOptions: i18n("midi-qol.clickOptions"),
       autoTargetOptions: i18n("midi-qol.autoTargetOptions"),
+      rangeTargetOptions: i18n("midi-qol.rangeTargetOptions"),
+      requiresTargetsOptions: i18n("midi-qol.requiresTargetsOptions"),
       autoCheckSavesOptions: i18n("midi-qol.autoCheckSavesOptions"),
       autoRollDamageOptions: i18n("midi-qol.autoRollDamageOptions"),
       removeButtonsOptions: i18n("midi-qol.removeButtonsOptions"),
@@ -38,17 +39,20 @@ export class ConfigPanel extends FormApplication {
       autoApplyDamageOptions: i18n("midi-qol.autoApplyDamageOptions"),
       damageImmunitiesOptions: i18n("midi-qol.damageImmunitiesOptions"),
       showItemDetailsOptions: i18n("midi-qol.showItemDetailsOptions"),
+      doReactionsOptions: i18n("midi-qol.DoReactionsOptions"),
+      gmDoReactionsOptions: i18n("midi-qol.GMDoReactionsOptions"),
+      showReactionAttackRollOptions: i18n("midi-qol.ShowReactionAttackRollOptions"),
       //@ts-ignore
       itemTypeLabels: CONFIG.Item.typeLabels,
       itemDeleteCheck,
       hideRollDetailsOptions: i18n("midi-qol.hideRollDetailsOptions"),
       nsaFlag,
       coloredBorders,
-      playerRollSavesOptions: autoFastForwardAbilityRolls ? i18n("midi-qol.playerRollSavesOptionsReduced") : i18n("midi-qol.playerRollSavesOptions") ,
+      playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? i18n("midi-qol.playerRollSavesOptionsReduced") : i18n("midi-qol.playerRollSavesOptions") ,
       rollNPCSavesOptions: i18n("midi-qol.rollNPCSavesOptions"),
       //@ts-ignore .map undefined
-      customSoundsPlaylistOptions: game.playlists.entries.reduce((acc, e) =>{acc[e._id]= e.name; return acc}, {}),
-      customSoundOptions: game.playlists.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) =>{acc[s._id]= s.name; return acc}, {"none": ""}),
+      customSoundsPlaylistOptions: game.playlists.contents.reduce((acc, e) =>{acc[e.id]= e.name; return acc}, {}) || {},
+      customSoundOptions: game.playlists.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) =>{acc[s.id]= s.name; return acc}, {"none": ""}),
       rollSoundOptions: CONFIG.sounds,
       isBetterRolls: installedModules.get("betterrolls5e"),
       keys: {
@@ -59,7 +63,6 @@ export class ConfigPanel extends FormApplication {
     };
     warn("Config Panel: getdata ", data)
     return data;
-
   }
 
   activateListeners(html) {
@@ -86,6 +89,14 @@ export class ConfigPanel extends FormApplication {
     html.find("#midi-qol-show-stats").on("click", event => {
       gameStats.showStats();
     })
+
+    html.find("#midi-qol-export-config").on("click", exportSettingsToJSON)
+    html.find("#midi-qol-import-config").on("click", async () => {
+      if (await importFromJSONDialog()) {
+        this.close();
+      }
+    });
+
   }
 
   async _playList(event) {
@@ -177,7 +188,6 @@ export class IemTypeSelector extends FormApplication {
   //@ts-ignore
   _updateObject(event, formData) {
     const updateData = {};
-
     // Obtain choices
     const chosen = [];
     for ( let [k, v] of Object.entries(formData) ) {
@@ -185,4 +195,37 @@ export class IemTypeSelector extends FormApplication {
     }
     configSettings.itemTypeList = chosen;
   }
+}
+async function importFromJSONDialog() {
+  const content = await renderTemplate("templates/apps/import-data.html", {entity: "midi-qol", name: "settings"});
+  let dialog =  new Promise((resolve, reject) => {
+    new Dialog({
+      title: `Import midi-qol settings`,
+      content: content,
+      buttons: {
+        import: {
+          icon: '<i class="fas fa-file-import"></i>',
+          label: "Import",
+          callback: html => {
+            //@ts-ignore
+            const form = html.find("form")[0];
+            if ( !form.data.files.length ) return ui.notifications.error("You did not upload a data file!");
+            readTextFromFile(form.data.files[0]).then(json => {
+              importSettingsFromJSON(json)
+              resolve(true);
+            });
+          }
+        },
+        no: {
+          icon: '<i class="fas fa-times"></i>',
+          label: "Cancel",
+          callback: html => resolve(false)
+        }
+      },
+      default: "import"
+    }, {
+      width: 400
+    }).render(true);
+  });
+  return await dialog;
 }

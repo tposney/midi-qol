@@ -84,7 +84,7 @@
   "midi-qol.MagicResistanceFeat": "Résistance à la magie",
   "midi-qol.halfDamage": "les dégâts sont réduits de moitié",
   "midi-qol.halfDamageAlt": "moitié de ces dégâts",
-  "midi-qol.noDamageText": " sans quoi elle subit ",
+  "midi-qol.noDamageText": "aucun dommage en cas de sauvegarde réussie",
   "midi-qol.PreRollChecks.Name": "Expérimental: Vérifications avant jets rapides",
   "midi-qol.PreRollChecks.Hint": "Expérimental: Vérifications avant de faire un jet : cible à portée et PV du lanceur > 0",
   "midi-qol.speedItemRollsOptions": {"off": "Off", "on": "On", "onCard": "On + Show Item Card"},

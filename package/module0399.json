@@ -1,0 +1,84 @@
+{
+  "name": "midi-qol",
+  "title": "Midi QOL",
+  "description": "replacement for minor-qol that automates rolling weapon/spell attacks",
+  "systems": ["dnd5e", "sw5e"],
+  "version": "0.3.99",
+  "author": "tposney",
+  "socket": true,
+  "authors": [
+    {
+      "name": "",
+      "email": "",
+      "url": ""
+    }
+  ],
+  "scripts": [],
+  "esmodules": ["midi-qol.js"],
+  "styles": ["css/styles.css"],
+  "packs": [
+    {
+      "name": "midiqol-sample-items",
+      "label": "MidiQOL Sample Items",
+      "path": "./packs/sampleitems.db",
+      "module": "world",
+      "entity": "Item",
+      "lang": ["en", "de"]
+    }
+  ],
+  "languages": [
+      {
+          "lang": "en",
+          "name": "English",
+          "path": "lang/en.json"
+      },
+      {
+          "lang": "ja",
+          "name": " 日本語",
+          "path": "lang/ja.json"
+      },
+      {
+          "lang": "ko",
+          "name": "Korean",
+          "path": "lang/ko.json"
+      },
+      {
+          "lang": "cn",
+          "name": "中文",
+          "path": "lang/cn.json"
+      },
+      {
+          "lang": "fr",
+          "name": "Français",
+          "path": "lang/fr.json"
+      },
+      {
+          "lang": "pt-BR",
+          "name": "Português (Brasil)",
+          "path": "lang/pt-BR.json"
+      },
+      {
+          "lang": "es",
+          "name": "Spanish",
+          "path": "lang/es.json"
+      },
+      {
+          "lang": "de",
+          "name": "Deutsch",
+          "path": "lang/de.json"
+      },
+      {
+          "lang": "it",
+          "name": "Italian",
+          "path": "lang/it.json"
+      }
+  ],
+  "minimumCoreVersion": "0.7.6",
+  "compatibleCoreVersion": "0.7.9",
+  "minimumSystemVersion": "1.2.3",
+  "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",
+  "allowBugReporter": true,
+  "url": "https://gitlab.com/tposney/midi-qol",
+  "manifest": "https://gitlab.com/tposney/midi-qol/raw/master/package/module.json",
+  "download": "https://gitlab.com/tposney/midi-qol/raw/master/package/midi-qol-v0.3.99.zip"
+}

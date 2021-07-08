@@ -8,7 +8,7 @@ export var nsaFlag: boolean;
 export var coloredBorders: string;
 export var saveRequests = {};
 export var saveTimeouts = {};
-export var addChatDamageButtons: boolean;
+export var addChatDamageButtons: string;
 export var autoFastForwardAbilityRolls: boolean;
 export var autoRemoveTargets: string;
 export var forceHideRoll: boolean;
@@ -43,15 +43,20 @@ export var configSettings = {
   autoRollDamage: "none",
   autoApplyDamage: "none",
   damageImmunities: "none",
+  requireMagical: false,
   autoItemEffects: null,
-  rangeTarget: null,
+  rangeTarget: "none",
   playerRollSaves: "none",
   playerSaveTimeout: 0,
+  reactionTimeout: 10,
+  gmDoReactions: "all",
+  doReactions: "all",
+  showReactionAttackRoll: "all",
   rollNPCSaves: "auto",
   mergeCard: false,
   mergeCardCondensed: false,
   useTokenNames: false,
-  requireTargets: false,
+  requiresTargets: "none",
   fumbleSound: "",
   diceSound: "",
   criticalSound: "",
@@ -69,16 +74,19 @@ export var configSettings = {
   gmRemoveButtons: "all", 
   concentrationAutomation: false,
   singleConcentrationRoll: true,
+  removeConcentration: true,
   optionalRulesEnabled: false,
   itemRollStartWorkflow: false,
+  usePlayerPortrait: false,
   optionalRules: {
     invisAdvantage: true,
     checkRange: true,
-    nearbyFoe: true,
+    nearbyFoe: 5,
     nearbyAllyRanged: 4,
     incapacitated: true,
     removeHiddenInvis: true,
-    maxDRValue: false
+    maxDRValue: false,
+    distanceIncludesHeight: false
   },
   keepRollStats: false,
   saveStatsEvery: 20,
@@ -90,12 +98,71 @@ export function checkRule(rule: string) {
   return configSettings.optionalRulesEnabled && configSettings.optionalRules[rule];
 }
 
+export function exportSettingsToJSON() {
+  const data = {
+    configSettings,
+    itemRollButtons,
+    criticalDamage,
+    itemDeleteCheck,
+    nsaFlag,
+    coloredBorders,
+    addChatDamageButtons,
+    autoFastForwardAbilityRolls,
+    autoRemoveTargets,
+    forceHideRoll,
+    enableWorkflow,
+    dragDropTargeting,
+    flags: {}
+  };
+  data.flags["exportSource"] = {
+    world: game.world.id,
+    system: game.system.id,
+    coreVersion: game.data.version,
+    systemVersion: game.system.data.version
+  }
+  data.flags["modules"] = {
+    daeVersion: game.modules.get("dae")?.data.version,
+    betterRollsVersion: game.modules.get("betterrolls5e")?.data.version,
+    abouttimeVersion: game.modules.get("about-time")?.data.version,
+    timesUpVersion: game.modules.get("times-up")?.data.version,
+    simpleCalendarVersion: game.modules.get("foundryvtt-simple-calendar")?.data.version,
+    midiQolVerson: game.modules.get("midi-qol").data.version
+  };
+  data.flags["all-modules"] = 
+  //@ts-ignore
+    (new Collection(game.modules).filter(m=>m.active))
+  const filename = `fvtt-midi-qol-settings.json`;
+  saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
+}
+
+export async function importSettingsFromJSON(json) {
+  const data = JSON.parse(json);
+  console.warn("midi-qol | Import settings ", data);
+  game.settings.set("midi-qol", "ConfigSettings", data.configSettings);
+  game.settings.set("midi-qol", "ItemRollButtons", data.itemRollButtons);
+  game.settings.set("midi-qol", "CriticalDamage", data.criticalDamage);
+  game.settings.set("midi-qol", "ItemDeleteCheck", data.itemDeleteCheck);
+  game.settings.set("midi-qol", "showGM", data.nsaFlag);
+  game.settings.set("midi-qol", "ColoredBorders", data.coloredBorders);
+  game.settings.set("midi-qol", "AddChatDamageButtons", data.addChatDamageButtons);
+  game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", data.autoFastForwardAbilityRolls);
+  game.settings.set("midi-qol", "AutoRemoveTargets", data.autoRemoveTargets);
+  game.settings.set("midi-qol", "ForceHideRoll", data.forceHideRoll);
+  game.settings.set("midi-qol", "EnableWorkflow", data.enableWorkflow);
+  game.settings.set("midi-qol", "DragDropTarget", data.dragDropTargeting);
+}
+
 export let fetchParams = (silent = false) => {
   debug("Fetch Params Loading");
   configSettings = game.settings.get("midi-qol", "ConfigSettings");
   if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["dice"];
   if (!configSettings.criticalSound) configSettings.criticalSound = CONFIG.sounds["dice"];
   if (!configSettings.diceSound) configSettings.diceSound = CONFIG.sounds["dice"];
+  if (!configSettings.doReactions) configSettings.doReactions = "none";
+  if (!configSettings.gmDoReactions) configSettings.gmDoReactions = "none";
+  if (configSettings.reactionTimeout === undefined) configSettings.reactionTimeout = 0;
+  if (!configSettings.showReactionAttackRoll === undefined) configSettings.showReactionAttackRoll = "all";
+
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
     || !configSettings.keyMapping["DND5E.Disadvantage"]
@@ -103,16 +170,25 @@ export let fetchParams = (silent = false) => {
       configSettings.keyMapping = defaultKeyMapping;
   }
 
+  if (typeof configSettings.requiresTargets !== "string") configSettings.requiresTargets = "none";
   if (!configSettings.optionalRules) {
     configSettings.optionalRules = {
       invisAdvantage: true,
       checkRange: true,
-      nearbyFoe: true,
+      nearbyFoe: 5,
       nearbyAllyRanged: 4,
       incapacitated: true,
       removeHiddenInvis: true,
-      maxDRValue: false
+      maxDRValue: false,
+      distanceIncludesHeight: false
     }
+  }
+  if (typeof configSettings.optionalRules.nearbyFoe !== "number") {
+    if (configSettings.optionalRules)
+      configSettings.optionalRules.nearbyFoe = 5;
+    else
+      configSettings.optionalRules.nearbyFoe = 0;
+
   }
   configSettings.itemRollStartWorkflow = false;
   //@ts-ignore typeLabels
@@ -141,7 +217,7 @@ export let fetchParams = (silent = false) => {
   if (configSettings.concentrationAutomation) {
     // Force on use macro to true
     if (!configSettings.allowUseMacro) {
-      console.warn("Concentration required On Use Macro to be enabled. Enabling")
+      console.warn("Concentration requires On Use Macro to be enabled. Enabling")
       configSettings.allowUseMacro = true;
     }
     checkCubInstalled();
@@ -175,14 +251,6 @@ const settings = [
     onChange: fetchParams
   },
   {
-    name: "AddChatDamageButtons",
-    scope: "world",
-    default: true,
-    type: Boolean,
-    config: true,
-    onChange: fetchParams
-  },
-  {
     name: "showGM",
     scope: "world",
     default: false,
@@ -210,7 +278,7 @@ const settings = [
   {
     name: "CriticalDamage",
     scope: "world",
-    choices: {default: "DND5e default", maxDamage:  "base max only", maxCrit: "max critical dice", maxAll: "max all dice"},
+    choices: {default: "DND5e default", maxDamage:  "max normal damage", maxCrit: "max critical dice", maxAll: "max all dice", doubleDice: "double rolled damage", baseDamage: "no bonus"},
     default: "default",
     type: String,
     onChange: fetchParams
@@ -251,6 +319,17 @@ export const registerSettings = function() {
     //@ts-ignore
     if (setting.choices) options.choices = setting.choices;
     game.settings.register("midi-qol", setting.name, options);
+  });
+
+  game.settings.register("midi-qol","AddChatDamageButtons", {
+    name: "midi-qol.AddChatDamageButtons.Name",
+    hint: "midi-qol.AddChatDamageButtons.Hint",
+    scope: "world",
+    default: "none",
+    type: String,
+    config: true,
+    choices: i18n("midi-qol.AddChatDamageButtonsOptions"),
+    onChange: fetchParams
   });
 
   game.settings.register("midi-qol", "ColoredBorders", 
@@ -308,5 +387,7 @@ export const registerSettings = function() {
     choices: {none: "None", warn: "warnings", debug: "debug", all: "all"},
     onChange: fetchParams
   });
+
+
 }
 

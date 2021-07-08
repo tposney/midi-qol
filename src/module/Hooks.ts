@@ -1,138 +1,118 @@
 import { warn, error, debug, i18n } from "../midi-qol";
-import { processpreCreateBetterRollsMessage, colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processcreateBetterRollMessage, mergeCardSoundPlayer, recalcCriticalDamage, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons } from "./chatMesssageHandling";
+import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling";
 import { processUndoDamageCard } from "./GMAction";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet } from "./utils";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating } from "./utils";
 import { configSettings, dragDropTargeting } from "./settings";
 import { installedModules } from "./setupModules";
 
-const concentrationCheckItemName = "Concentration Check - Midi QOL";
+export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
 
 
 export let readyHooks = async () => {
   //  const item = game.items.getName("Concentration Check")
-  concentrationCheckItemDisplayName = i18n("midi-qol.concentrationCheckName");
-  if (installedModules.get("combat-utility-belt")) {
-    Hooks.on("preUpdateActor", (actor, update, diff) => {
-      if (!configSettings.concentrationAutomation) return true;
-      const hpUpdate = getProperty(update, "data.attributes.hp.value");
-      if (hpUpdate === undefined) return true;
-      const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
-      if (!game.cub?.hasCondition(concentrationName, actor)) return true;
-      const hpDiff = actor.data.data.attributes.hp.value - hpUpdate;
-      if (hpDiff <= 0) return true;
-      Hooks.once("updateActor", async (updatedActor, ...args) => {
-        if (updatedActor.data.data.attributes.hp.value === 0) {
-          await game.cub.removeCondition(concentrationName, updatedActor, {warn: false})
-        } else {
-          const item = game.items.getName(concentrationCheckItemName);
-          const itemData = duplicate(item.data);
-          itemData.name = concentrationCheckItemDisplayName;
-          // actor took damage and is concentrating....
-          const saveDC = Math.max(10, Math.floor(hpDiff/2));
-          const saveTargets = game.user.targets;
-          game.user.targets = await getSelfTargetSet(actor);
-          const ownedItem = Item.createOwned(itemData, actor)
-          ownedItem.data.data.save.dc = saveDC;
-          try {
-            if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e").data.version, "1.3.10")) { // better rolls breaks the normal roll process
-              //@ts-ignore
-              await BetterRolls.rollItem(ownedItem, {adv:0, disadv:0, midiSaveDC: saveDC}).toMessage();
-            } else {
-              //@ts-ignore
-              ownedItem.roll({showFullCard:false, createWorkflow:true, versatile:false, configureDialog:false})
-            }
-          } finally {
-            game.user.targets = saveTargets;
-          }
-        }
-      })
-      return true;
-    })
 
-    Hooks.on("preUpdateToken", (scene, tokenData, update, diff) => {
-      if (!configSettings.concentrationAutomation) return true;
-      const hpUpdate = getProperty(update, "actorData.data.attributes.hp.value");
-      if (hpUpdate === undefined) return true;
-      const token = canvas.tokens.get(tokenData._id);
-      const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
-      if (!game.cub?.hasCondition(concentrationName, token)) return true;
-       const hpDiff = token.actor.data.data.attributes.hp.value - hpUpdate;
-      if (hpDiff <= 0) return true;
-      Hooks.once("updateToken", async (scene, updatedTokenData, update) => {
+
+  // Have to trigger on preUpdate to check the HP before the update occured.
+  Hooks.on("preUpdateActor", (actor, update, diff, user) => {
+    concentrationCheckItemDisplayName = i18n("midi-qol.concentrationCheckName");
+    let concentrationName;
+    if (installedModules.get("combat-utility-belt")) {
+      concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
+    } else {
+      concentrationName = i18n("midi-qol.Concentrating");
+    }
+    if (!configSettings.concentrationAutomation) return true;
+    const hpUpdate = getProperty(update, "data.attributes.hp.value");
+    if (hpUpdate === undefined) return true;
+    const hpDiff = actor.data.data.attributes.hp.value - hpUpdate;
+    if (hpDiff <= 0) return true;
+    const concentrationEffect = isConcentrating(actor)
+    if (!concentrationEffect) return true;
+    Hooks.once("updateActor", async (updatedActor, ...args) => {
+      if (updatedActor.data.data.attributes.hp.value === 0) {
+        if (game.cub) await game.cub.removeCondition(concentrationName, updatedActor, { warn: false })
+        //@ts-ignore .delete because of type of concentration effect return
+        else concentrationEffect.delete();
+      } else {
         const item = game.items.getName(concentrationCheckItemName);
         const itemData = duplicate(item.data);
         itemData.name = concentrationCheckItemDisplayName;
         // actor took damage and is concentrating....
-        const saveDC = Math.max(10, Math.floor(hpDiff/2));
+        const saveDC = Math.max(10, Math.floor(hpDiff / 2));
         const saveTargets = game.user.targets;
-        game.user.targets = new Set([token]);
-        const ownedItem = Item.createOwned(itemData, token.actor)
+        game.user.targets = await getSelfTargetSet(actor);
+        // const ownedItem = Item.createOwned(itemData, actor)
+        //@ts-ignore
+        const ownedItem = new CONFIG.Item.documentClass(itemData, { parent: actor })
         ownedItem.data.data.save.dc = saveDC;
         try {
           if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e").data.version, "1.3.10")) { // better rolls breaks the normal roll process
             //@ts-ignore
-            await BetterRolls.rollItem(ownedItem, {adv:0, disadv:0, midiSaveDC: saveDC}).toMessage();
+            await BetterRolls.rollItem(ownedItem, { adv: 0, disadv: 0, midiSaveDC: saveDC }).toMessage();
           } else {
             //@ts-ignore
-            ownedItem.roll({showFullCard:false, createWorkflow:true, versatile:false, configureDialog:false})
+            ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false })
           }
         } finally {
           game.user.targets = saveTargets;
         }
-      })
-      return true;
+      }
     })
-  }
+    return true;
+  })
 
   // Concentration Check is rolled as an item roll so we need an item.
   // A temporary item would be good, but users would need create item permission which is a bit sily for just this
   // Any GM that logs in looks for the item and either creates/updates the item using the canned data at the end.
   // When the check is rolled the name of the Item is changed.
-  if (installedModules.get("combat-utility-belt")) {
-    if (game.user.isGM) {
+  if (game.user.isGM) {
+    if (installedModules.get("combat-utility-belt")) {
       const concentrationCondition = game.cub.getCondition(game.settings.get("combat-utility-belt", "concentratorConditionName"))
       itemJSONData.name = concentrationCheckItemName
       itemJSONData.img = concentrationCondition.icon;
-      const currentItem = game.items.getName(concentrationCheckItemName)
-      if (!currentItem)
-        await Item.create(itemJSONData)
-      else  await currentItem.update(itemJSONData, {});
+    } else {
+      itemJSONData.name = concentrationCheckItemName;
     }
+    const currentItem = game.items.getName(concentrationCheckItemName)
+    if (!currentItem)
+      await Item.create(itemJSONData)
+    else
+      await currentItem.update(itemJSONData, {});
   }
+
 }
 export let initHooks = () => {
   warn("Init Hooks processing");
-  Hooks.on("preCreateChatMessage", (data, options, user) => {
-    debug("preCreateChatMessage entering", data, options, user)
-    recalcCriticalDamage(data, options);
-    processpreCreateBetterRollsMessage(data, options, user);
-    nsaMessageHandler(data, options, user);
+  Hooks.on("preCreateChatMessage", (message: ChatMessage, data, options, user) => {
+    debug("preCreateChatMessage entering", message, data, options, user)
+    // recalcCriticalDamage(data, options);
+    // processpreCreateBetterRollsMessage(message, data, options, user);
+    nsaMessageHandler(message, data, options, user);
     return true;
   })
 
-  Hooks.on("createChatMessage", (message, options, user) => {
+  Hooks.on("createChatMessage", (message: ChatMessage, options, user) => {
     debug("Create Chat Meesage ", message.id, message, options, user)
-    processcreateBetterRollMessage(message, options, user);
-    processItemCardCreation(message, options, user);
+    processCreateBetterRollsMessage(message, user);
+    processItemCardCreation(message, user);
     return true;
   })
-  
+
   Hooks.on("updateChatMessage", (message, update, options, user) => {
     mergeCardSoundPlayer(message, update, options, user);
-    hideRollUpdate(message, update, options, user)
+    hideRollUpdate(message, update, options, user);
     //@ts-ignore
     ui.chat.scrollBottom();
   })
 
-  Hooks.on("updateCombat", (...args) => {
-    untargetAllTokens(...args);
+  Hooks.on("updateCombat", (combat, data, options, user) => {
+    untargetAllTokens(combat, data.options, user);
     untargetDeadTokens();
   })
-  
+
   Hooks.on("renderChatMessage", (message, html, data) => {
     debug("render message hook ", message.id, message, html, data);
-
     hideStuffHandler(message, html, data);
     chatDamageButtons(message, html, data);
     processUndoDamageCard(message, html, data);
@@ -142,7 +122,7 @@ export let initHooks = () => {
     betterRollsButtons(message, html, data);
   })
 
-  Hooks.on("applyActiveEffect", midiCustomEffect); 
+  Hooks.on("applyActiveEffect", midiCustomEffect);
 
   Hooks.on("renderItemSheet", (app, html, data) => {
     if (configSettings.allowUseMacro) {
@@ -160,30 +140,34 @@ export let initHooks = () => {
 
   Hooks.on("renderChatLog", (app, html, data) => _chatListeners(html));
 
-  Hooks.on('dropCanvasData', function(canvas, dropData) {
+  Hooks.on('dropCanvasData', function (canvas, dropData) {
     if (!dragDropTargeting) return true;
     if (dropData.type !== "Item") return true;;
     let grid_size = canvas.scene.data.grid
 
     canvas.tokens.targetObjects({
-        x: dropData.x-grid_size/2,
-        y: dropData.y-grid_size/2,
-        height: grid_size,
-        width: grid_size
+      x: dropData.x - grid_size / 2,
+      y: dropData.y - grid_size / 2,
+      height: grid_size,
+      width: grid_size
     });
 
-    const actor = game.actors.get(dropData.actorId);
+    let actor = game.actors.get(dropData.actorId);
+    if (dropData.tokenId) {
+      let token = canvas.tokens.get(dropData.tokenId)
+      if (token) actor = token.actor;
+    }
     const item = actor && actor.items.get(dropData.data._id);
     if (!actor || !item) error("actor / item broke ", actor, item);
-      //@ts-ignore
-      item.roll();
+    //@ts-ignore
+    item.roll();
   })
 }
 
 const itemJSONData = {
-  "_id": "GtxZ0ytuyom2EKgY",
   "name": "Concentration Check - Midi QOL",
   "type": "weapon",
+  "img": "modules/combat-utility-belt/icons/concentrating.svg",
   "data": {
     "description": {
       "value": "",
@@ -281,38 +265,37 @@ const itemJSONData = {
       "spelldc": 10
     }
   },
-  "sort": 23700000,
+  "effects": [],
+  "sort": 0,
   "flags": {
     "midi-qol": {
       "onUseMacroName": "ItemMacro",
-      "isConcentrationCheck":  true
+      "isConcentrationCheck": true
     },
     "itemacro": {
       "macro": {
-        "_data": {
-          "name": "Concentration Check - Midi QOL",
-          "type": "script",
-          "scope": "global",
-          "command": "for (let targetData of args[0].targets) {\n let target = canvas.tokens.get(targetData._id);\n if (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id))\ngame.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), target,  {warn: false});\n}",
-          "author": "devnIbfBHb74U9Zv"
-        },
         "data": {
+          "_id": null,
           "name": "Concentration Check - Midi QOL",
           "type": "script",
+          "author": "devnIbfBHb74U9Zv",
+          "img": "icons/svg/dice-target.svg",
           "scope": "global",
-          "command": "for (let targetData of args[0].targets) {\n let target = canvas.tokens.get(targetData._id);\n if (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id))\ngame.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), target,  {warn: false});\n}",
-          "author": "devnIbfBHb74U9Zv"
-        },
-        "options": {},
-        "apps": {},
-        "compendium": null
+          "command": "for (let targetData of args[0].targets) {\n   let target = canvas.tokens.get(targetData._id);\n   if (MidiQOL.configSettings().removeConcentration && (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id))) {\n     const concentrationLabel = game.cub?.active ? game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\") : \"Concentrating\";\n   \n    const concentrationEffect = target.actor.effects.find(effect => effect.data.label === concentrationLabel);\n    if (concentrationEffect) await concentrationEffect.delete();\n    // game.cub.removeCondition(game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\"), target,  {warn: false});\n  }\n}",
+          "folder": null,
+          "sort": 0,
+          "permission": {
+            "default": 0
+          },
+          "flags": {}
+        }
       }
     },
     "exportSource": {
       "world": "testWorld",
       "system": "dnd5e",
-      "coreVersion": "0.7.9",
-      "systemVersion": "1.2.4"
+      "coreVersion": "0.8.8",
+      "systemVersion": "1.3.6"
     },
     "magicitems": {
       "enabled": false,
@@ -327,8 +310,99 @@ const itemJSONData = {
       "rechargeType": "t1",
       "rechargeUnit": "r1",
       "sorting": "l"
+    },
+    "betterRolls5e": {
+      "quickOther": {
+        "context": "",
+        "value": true,
+        "altValue": true,
+        "type": "Boolean"
+      },
+      "critRange": {
+        "value": null,
+        "type": "String"
+      },
+      "critDamage": {
+        "value": "",
+        "type": "String"
+      },
+      "quickDesc": {
+        "value": false,
+        "altValue": false,
+        "type": "Boolean"
+      },
+      "quickSave": {
+        "value": true,
+        "altValue": true,
+        "type": "Boolean"
+      },
+      "quickProperties": {
+        "value": true,
+        "altValue": true,
+        "type": "Boolean"
+      },
+      "quickVersatile": {
+        "value": false,
+        "altValue": false,
+        "type": "Boolean"
+      },
+      "quickFlavor": {
+        "value": true,
+        "altValue": true,
+        "type": "Boolean"
+      },
+      "quickCharges": {
+        "value": {
+          "quantity": false,
+          "use": false,
+          "resource": true
+        },
+        "altValue": {
+          "quantity": false,
+          "use": false,
+          "resource": true
+        },
+        "type": "Boolean"
+      },
+      "quickAttack": {
+        "type": "Boolean",
+        "value": true,
+        "altValue": true
+      },
+      "quickDamage": {
+        "type": "Array",
+        "value": [],
+        "altValue": [],
+        "context": []
+      },
+      "quickTemplate": {
+        "type": "Boolean",
+        "value": true,
+        "altValue": true
+      },
+      "quickPrompt": {
+        "type": "Boolean",
+        "value": false,
+        "altValue": false
+      }
+    },
+    "autoanimations": {
+      "killAnim": false,
+      "override": false,
+      "animType": "t1",
+      "animName": "",
+      "color": "n1",
+      "dtvar": "dt1",
+      "explosion": false,
+      "explodeVariant": "ev1",
+      "explodeColor": "ec1",
+      "explodeRadius": "0",
+      "explodeLoop": "1",
+      "hmAnim": "a1",
+      "selfRadius": "5",
+      "animTint": "#ffffff",
+      "auraOpacity": 0.75,
+      "ctaOption": false
     }
-  },
-  "img": "modules/combat-utility-belt/icons/concentrating.svg",
-  "effects": []
+  }
 }

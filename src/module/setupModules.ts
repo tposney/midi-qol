@@ -7,11 +7,13 @@ let modules = {"about-time": "0.0",
               "itemacro": "1.0.0", 
               "lmrtfy": "0.9",
               "lib-wrapper": "1.3.5",
-              "dae": "0.2.43",
+              "dae": "0.8.18",
               "combat-utility-belt": "1.3.8",
               "times-up": "0.1.2",
               "conditional-visibility": "0.0",
-              "monks-tokenbar": "0.0"
+              "monks-tokenbar": "0.0",
+              "socketlib": "0.0",
+              "advanced-macros": "1.0"
             };
 export let installedModules = new Map();
 

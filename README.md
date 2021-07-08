@@ -1,8 +1,17 @@
+# Bug reports
+**As of version 0.8.19** you can export your midi-qol settings to a json file. When posting a midi-qol bug report export your settings and add the json file to the issue. I won't look at issues without this information.
+
 # midi-qol
 Midi-qol is a replacement for minor-qol and you should not have both modules active at the same time.  (Both can be INTSALLED at the same time, but only one should be ACTIVATED.)  Because there are some subtle differences in the way the midi-qol works compared to minor-qol you will need to experiment with the settings.
 
 ## HELP! My midi-qol disappeared.
 If you've just updated midi-qol and it disappears from your in-game list of modules you probably need to update your dnd5e system to the latest one.
+
+## I just upgraded and nothing works anymore. 
+I've seen a couple of cases where after migration of foundry versions the per player setting "enaable workflow automation" gets set to off. This flag being unset causes midi to do nothing with rolls (hence the nothing works). Also not that this is a per player setting, so each user needsd to make sure it is on.
+
+## Midi works for some players and not for others....
+Same problem as above - check workflow automation is enabled on all clients. You can use the module SocketSettings to force set the setting on all clients.
 
 ### Changes in midi-qol:
 * Speed item rolls has only a single function now to enable ctrl/shift/alt when clicking on the item icon.  All other workflow features are configured separately. See **speed item rolls** below.
@@ -18,15 +27,22 @@ https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
 ## (In)Compatibilities? ##
 Any module that overloads item.roll is potentially incompatible.  
 
+**Furnace** If you intend to make use of any of the macro features in midi-qol you will need to install the Furnace module and enable advanced macros (which is the feature you need/should enable).
 **Better Rolls** If you are using Better Rolls (which is a great module), midi-qol takes over once the hit/damage card is placed by Better Rolls. This means that resource consumption, template placement, critical/fumble, and  advantage/disadvantage determination are **all** handled by Better Rolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage, and calls active effects.  In particular, Better Rolls does not use any of the flags.midi-qol....   
-**Magic Items** (Thanks to @simone for his help) Midi-qol is fully compatible with magic-items. The only issue is that spell templates for spells in a magic item are not auto-placed on casting. Once placed everything works as expected.   
+**Magic Items** (Thanks to @simone for his help) Midi-qol is fully compatible with magic-items. The only issue is that spell templates for spells in a magic item are not auto-placed on casting. Once placed everything works as expected. Spells/features that can be rolled will work. However, items that create changes by being present in the characters inventory won't behave as expected since they are actually held in the characters inventory, this includes transfer active effects.
 **Mess** Midi-qol and Mess dnd5e effects are not compatible. Template effects and the other features of that excellent module should work. If you want Mess attack/damage cards don't use midi-qol.  
 **Cozy player** Minor-qol was not compatible with cozy-player, with targets being lost before attack/damage rolls were made. I have done only limited testing but it seems that there are no problems with cozy-player and midi-qol.  
 **Cautious GM** Midi-qol breaks the blind chats by hidden GM feature of cautious GM.  
 **Chat Portraits** If using Chat Portraits, the changes made by midi-qol to the token/actor name in chat cards are overwritten/lost. Choose which sort of highlighting you want - only one will work. Otherwise, all seems to work.
 **Ez-Roller** The send to chat log feature of ez-roller will disable combo cards in midi-qol.  
-**Combat Utility Belt** CUB concentrator and midi-qol concentration automation are incompatible. Choose one or the other.
+**Combat Utility Belt** CUB concentrator and midi-qol concentration automation are incompatible. Choose one or the other. If you want concentration to expire at the end of the spell you need to install times-up.
 **Maestro** Maestro looks for the attack roll chat card in the chat log to play its critical/attack/fumble sounds. If you are using the merge card then the attack roll card is never created and Maestro can't play its sounds. You can use the midi-qol custom sounds instead.
+**Item Macro**  
+You can create itemMacro macros with the **itemmacro** module and call them from midi's onUse/DamageBonus macro fields.
+If you have installed itemmacro please make sure you disable the ItemMacro config settings:
+* "character sheet hook" else when you use the item the macro will get called bypassing midi-qol/dae completely and none of the arguments will get populated.
+* "override default macro execution"  If this is enabled the hotbar hooks will directly call the item macro and won't work as expected for dae/midi.  
+The settings are per player so each player needs to change the setting to disabled.  
 
 **Roll Statistics**
   * Most of the time when an attack roll is made or a spell is cast that does damage, the actual attack and damage rolls are recorded. This is recorded for every unique actor, on both a session and lifetime basis, as well as recording the same data for each item used by the actor on a session basis. So you might be able to answer questions like "is my longsword better than my dagger given the foes we are fighting?" The data kept is
@@ -66,6 +82,7 @@ If you assign a key multiple meanings the behaviour is going to be confusing at 
 * **Show Item details in chat card**. You can configure whether the item details are included in the chat card. If disabled, the item description is not added to the card. If enabled, you can use the dnd5e setting to choose if it is expanded or hidden when displayed. 
 * **Chat cards use token names**. If the field is blank actual actor/token names will be used in the chat card, hits/saves display for non-GMs. If set to a string the actual names will be replaced in the chat cards with the string. This feature is not a replacement for Combat Utility Belts hide names feature, rather it addresses those fields that CUB does not know about. For full hiding of names on cards and the tracker you need to use CUB in conjunction with midi-qol.
 * **Chat cards use token name** By default chat cards are sent with the name of the actor (i.e. "Orc"). If enabled, the name of the token will be used instead (i.e. "Orc with a terrible limp").
+* **Hide Roll Details** There are 4 settings, hide roll formula, hide all details, d20Attack + hide roll formula, show d20 attack roll only. The last two options ONLY work with the merge card.
 
 ### Targeting ###
 * **Auto target on template draw** If a spell/feature has an area effect template then enabling this setting will auto target (for later damage application) all tokens inside the template once placed. Also, the roll will not progress (i.e. roll saves or apply damage) until the template is placed. If "walls-block" is selected then any wall between the template origin and the token will block the targeting.
@@ -78,10 +95,11 @@ If you assign a key multiple meanings the behaviour is going to be confusing at 
   * Save - all see results. Saves are rolled and who saved/failed to save is visible to all users.
   * Save - only GM sees. Saves are rolled and the save/fail display is only visible to the GM.
   * Save - All see results + Rolls. Normally the NPC rolls are hidden; this option shows the roll chat cards to all players.
-* **Prompt Players to Roll Saves** If "None" set the module will automatically roll all saves.  If set to another value, the system will prompt the player to roll their save and wait up to **Delay before rolling** seconds before auto rolling the save for them.
+* **Prompt Players to Roll Saves** If "None" set the module will automatically roll all saves.  If set to another value, the system will prompt the player to roll their save and wait up to **Delay before rolling** seconds before auto rolling the save for them. You can also specify Monks Token Bar for saves.
   * Chat Message. If selected, an impacted player will receive a whisper in chat prompting them to roll a saving throw.  The module will assume that the next saving throw in the chat stream from this player was the requested roll and evaluate it.  
   * Let Me Roll That For You.  If selected (and LMRTFY is installed and enabled), midi-qol while use LMRTFY to prompt the player who controls the target (or, if there is none, a randomly chosen player with ownership rights to the target) to make the roll.  The specific roll details are passed to LMRTFY and multiple rolled (i.e. more than one spell requiring a save) will be correctly allocated.
-* **Prompt GM to Roll Saves** Set this to “Auto” to have midi-qol automatically roll and evaluate NPC saving throws on behalf of the GM.  Set to “Let Me Roll That For You” to instead have the LMRTFY module prompt the GM for NPC saving throws.
+  * Monks Token Bar. If selected (and monks-tokenbar is installed and active) characters with a logged in player owner will be added to a monks token bar savng thow dialog. Completing the roll from the dialog will be used as the save.
+* **Prompt GM to Roll Saves** Set this to “Auto” to have midi-qol automatically roll and evaluate NPC saving throws on behalf of the GM.  Set to “Let Me Roll That For You” to instead have the LMRTFY module prompt the GM for NPC saving throws. You can also use Monks Token Bar saving throws.
 * **Display Saving throw DC**. Determines if the saving throw DC is displayed to the players and on the chat cards. If unchecked, saving throws will display on the chat card with the value replaced by “??”. 
 
 **Saving Throw Multiplier**
@@ -270,7 +288,7 @@ Advantage/disadvantage on checks for an ability check also grants advantage on t
 flags.midi-qol.fail.all/ability.all/ability.check.all/ability.save.all/skill.all etc to auto fail a given roll.  
 
 * flags.midi-qol.fail.spell.all
-* flags.midi-qol.fail.spell.vocal/somatic/material  
+* flags.midi-qol.fail.spell.vocal|verbal/somatic/material  
 Fails attempts to cast spells with the specified components (or all).
 
 * flags.midi-qol.grants.advantage.attack.all
@@ -297,8 +315,10 @@ Gives the attacker advantage on attacks made against the target. Midi-qol only c
 * etc  
 These flags can be used to grant damage reduction to a character and can be set by active effects and are evaluated after derived fields are calculated, so things like dex.mod etc are available.  
 flags.midi-qol.DR.all CUSTOM 3, will give 3 points of damage reduction to all incoming damage.
+Negative DR is not supported (i.e. to increase damage taken).  
 
-flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver will take 0.5/0 damage on failed/successful save, compared to the normal 1/0.5. Useful for things like rogue's evasion class feature.
+flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver will take 0.5/0 damage on failed/successful save, compared to the normal 1/0.5. Useful for things like rogue's evasion class feature.  
+
 ## Bugs
 probably many however....
 * Language translations are not up to date.
@@ -311,7 +331,17 @@ event.shiftKey: true => auto roll the attack roll
 
 * MinorQOL.doRoll and MinorQOL.applyTokenDamage remain supported.
 * MidiQOL.applyTokenDamage is exported.
-* If you have macros that depend on being called when the roll is complete, that is still supported, both "minor-qol.RollComplete" and "midi-qol.RollComplete" are called when the roll is finished. The passed data has changed, it is a copy of the workflow which contains a big superset of the data passed in the minor-qol version, but some of the field names have changed. See also the onUse macro field which can be used to achieve similar results.
+* If you have macros that depend on being called when the roll is complete, that is still supported, both "minor-qol.RollComplete" and "midi-qol.RollComplete" are called when the roll is finished. See also the onUse macro field which can be used to achieve similar results.
+
+* ## Midi-qol called Hooks
+Item and workflow are "live" so changes will affect subsequent actions. In particular preAttackRoll and preDamageRoll will affect the roll about to be done.  
+
+  * Hooks.call("midi-qol.preAttackRoll", item, workflow) - called immediately before the item attack roll is made. If the hook returns false, the roll is aborted. 
+  Hooks.callAll("midi-qol.AttackRollComplete", this) - Called after the attack roll is made and hits are checked, but before damage is rolled.
+  *  Hooks.call("midi-qol.preDamageRoll", item, workflow) - called immediately before the item damage roll is made. If the hook returns false, the roll is aborted.
+  * Hooks.callAll("midi-qol.preDamageRollComplete", this) - called before the damage roll processing starts        
+  * Hooks.callAll("midi-qol.damageRollComplete", this) - called after damage application is complete. The targets may not have their hit points updated when this call is made since the hit point update is farmed off to a gm client
+  *  Hooks.callAll("midi-qol.RollComplete", this);
 
 * midi-qol supports a TrapWorkflow, triggered by
 ```
@@ -328,7 +358,7 @@ Sample DoTrapAttack replacement:
   ```
 
 * midi-qol supports a DamageOnlyWorkflow to support items/spells with special damage rolls. Divine Smite is a good example, the damage depends on whether the target is a fiend/undead. This is my implementation, which assumes it is activated via midi-qol's onUse macro field.
-I have created a spell called "Divine Smite", with no saving throw or damage or attack, (although you can have such things) which has an onUse macro set to Divine Smite. (see the onUse macro details below)
+I have created a spell called "Divine Smite", with no saving throw or damage or attack, (although you can have such things) which has an onUse macro set to Divine Smite. (see the onUse macro details below). The total damage field passed in is only used in the final display on the apply damage card, the individual damage elements are all taken from the damageRoll.
 
 ```
 if (args[0].hitTargets.size === 0) {
@@ -349,6 +379,8 @@ The args[0].itemCardId passes the id of the item card that caused the macro to b
 You can use this feature to roll custom damage via a macro for any item - just leave the item damage blank and roll the damage in a macro and then pass the itemCardId to the DamageOnlyWorkflow.
 
 ### OnUse Macro Item detail field
+
+
 This field lets you specify a macro to call after the item roll is complete. It is ALWAYS called whether the attack hit/missed and is passed the following data as args[0]. The field should contain ONLY the macro name and recognizes the exact text ItemMacro to mean calling the items itemMacro if any.
 ```
   actor = actor.data (the actor using the item)
@@ -396,6 +428,8 @@ content = content.replace(searchString, replaceString);
 chatMessage.update({content: content});
 ```
 hitContent is just html, so you could insert whatever you want in any of the divs above.
+
+
 
 ## Sample Chat Logs
 ![No Combo Card](pictures/nocombo.png) ![Combo Card](pictures/combo.png)

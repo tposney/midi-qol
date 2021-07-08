@@ -54,6 +54,7 @@
   position: relative;
   display: inline-block;
   border-bottom: 1px dotted black;
+  text-align: left;
 }
 
 .midi-qol-tooltip .midi-qol-tooltiptext {
@@ -61,7 +62,7 @@
   width: max-content;
   background-color: black;
   color: #ffffff;
-  text-align: center;
+  text-align: left;
   border-radius: 6px;
   padding: 3px;
 

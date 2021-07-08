@@ -18,7 +18,7 @@
                   <img src="{{damage.tokenImg}}" id="{{damage.tokenId}}" class="midi-qol-target-name" height="25"
                     style="border:0px">
                 </div>
-                <div class="midi-qol-tooltiptext">
+                <div class="midi-qol-tooltiptext" style="text-align: left;">
                   <div>{{damage.di}}</div>
                   <div>{{damage.dr}}</div>
                   <div>{{damage.dv}}</div>
@@ -32,13 +32,13 @@
               <div class="midi-qol-tooltip">
                 <span>
                   <div style="vertical-align: middle;text-align: right;">
-                      {{#if damage.newTempHP}}
-                      {{damage.oldHP}}[{{damage.oldTempHP}}]{{damage.dmgSign}}{{damage.absDamage}}[{{damage.tempDamage}}]={{damage.newHP}}[{{damage.newTempHP}}]
-                    </div>
-                    <span
-                      class="midi-qol-tooltiptext midi-qol-tooltip-top">{{damage.oldHP}}[{{damage.oldTempHP}}]{{damage.dmgSign}}{{damage.hpDamage}}[{{damage.tempDamage}}]={{damage.newHP}}[{{damage.newTempHP}}]</span>
-                    {{else}}
-                    <div>{{damage.oldHP}}{{damage.dmgSign}}{{damage.hpDamage}}({{damage.totalDamage}})={{damage.newHP}}
+                    {{#if damage.newTempHP}}
+                    {{damage.oldHP}}[{{damage.oldTempHP}}]{{damage.dmgSign}}{{damage.absDamage}}[{{damage.tempDamage}}]={{damage.newHP}}[{{damage.newTempHP}}]
+                  </div>
+                  <span
+                    class="midi-qol-tooltiptext midi-qol-tooltip-top">{{damage.oldHP}}[{{damage.oldTempHP}}]{{damage.dmgSign}}{{damage.hpDamage}}[{{damage.tempDamage}}]={{damage.newHP}}[{{damage.newTempHP}}]</span>
+                  {{else}}
+                  <div>{{damage.oldHP}}{{damage.dmgSign}}{{damage.hpDamage}}({{damage.totalDamage}})={{damage.newHP}}
                     <span
                       class="midi-qol-tooltiptext midi-qol-tooltip-top">{{damage.oldHP}}{{damage.dmgSign}}{{absDamage}}[{{damage.totalDamage}}]={{damage.newHP}}</span>
                     {{/if}}
@@ -47,7 +47,7 @@
             </td>
 
             <td style="text-align:center;">
-              <select id="dmg-multiplier-{{damage.tokenId}}" title="Choose the multipler for the damage."">
+              <select id="dmg-multiplier-{{damage.displayUuid}}" title="Choose the multipler for the damage."">
                 <option value=" mq" selected>{{localize "midi-qol.DamageCardCalc"}}</option>
                 <option value="1">x1</option>
                 <option value="x0.5">x1/2</option>
@@ -57,7 +57,7 @@
               </select>
             </td>
             <td style="text-align:center">
-              <button id="apply-{{damage.tokenId}}" style="
+              <button id="apply-{{damage.displayUuid}}" style="
           width: 22px;
           height: 22px;
           font-size: 10px;
@@ -68,7 +68,7 @@
               </button>
             </td>
             <td style="text-align:center">
-              <button id="reverse-{{damage.tokenId}}" aria-label="Click to undo damage." style="
+              <button id="reverse-{{damage.displayUuid}}" aria-label="Click to undo damage." style="
           width: 22px;
           height: 22px;
           font-size: 10px;
