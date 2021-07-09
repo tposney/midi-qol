@@ -671,6 +671,15 @@ export function getTokenPlayerName(token: Token) {
   return token.name;
 }
 
+export function getSpeaker(actor) {
+  const speaker = ChatMessage.getSpeaker({actor});
+  if (!configSettings.useTokenNames) return speaker;
+  let token = actor.token;
+  if (!token) token = actor.getActiveTokens()[0];
+  if (token) speaker.alias = token.name;
+  return speaker
+}
+
 // Add the concentration marker to the character and update the duration if possible
 export async function addConcentration(options: { workflow: Workflow }) {
   if (!configSettings.concentrationAutomation) return;
@@ -693,13 +702,14 @@ export async function addConcentration(options: { workflow: Workflow }) {
       const inCombat = (game.combat?.turns.some(turnData => turnData.tokenId === selfTarget.id));
       const convertedDuration = options.workflow.dae.convertDuration(itemDuration, inCombat);
       if (convertedDuration.type === "seconds") {
-        statusEffect.duration.seconds = convertedDuration.seconds;
-        statusEffect.duration.startTime = game.time.worldTime;
+        statusEffect.duration = { seconds: convertedDuration.seconds, startTime: game.time.worldTime }
       } else if (convertedDuration.type === "turns") {
-        statusEffect.duration.rounds = convertedDuration.rounds;
-        statusEffect.duration.turns = convertedDuration.turns;
-        statusEffect.duration.startRound = game.combat?.round;
-        statusEffect.duration.startTurn = game.combat?.turn;
+        statusEffect.duration = {
+          rounds: convertedDuration.rounds,
+          turns: convertedDuration.turns,
+          startRound: game.combat?.round,
+          startTurn: game.combat?.turn
+        }
       }
       statusEffect.origin = item?.uuid
       setProperty(statusEffect.flags, "midi-qol.isConcentration", statusEffect.origin);
@@ -1029,10 +1039,9 @@ export async function processAttackRollBonusFlags() { // bound to workflow
 }
 
 export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rollId: string, rollTotalId: string, rollHTMLId: string) {
-
   return new Promise((resolve, reject) => {
     const callback = async (dialog, button) => {
-      if (!hasEffectGranting(this.actor, `${button.key}.${flagSelector}`)) return;
+      if (!hasEffectGranting(this.actor, button.key, flagSelector)) return;
       var newRoll;
       if (button.value === "reroll") {
         newRoll = await this[rollId].reroll({ async: true });
@@ -1120,8 +1129,9 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
   }
 }
 
-export function hasEffectGranting(actor: Actor5e, changeKey: string) {
-  return actor.effects.find(ef => ef.data.changes.some(c => c.key === changeKey))
+export function hasEffectGranting(actor: Actor5e, key: string, selector: string) {
+  const changeKey = `${key}.${selector}`;
+  return actor.effects.find(ef => ef.data.changes.some(c => c.key === changeKey) &&  getOptionalCountRemainingShortFlag(actor, key) > 0)
 }
 
 export function isConcentrating(actor: Actor5e): undefined | {} /* TODO ActiveEffect */ {

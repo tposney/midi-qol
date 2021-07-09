@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, log, MESSAGETYPES, i18nFormat, midiFlags, allAttackTypes, gameStats } from "../midi-qol";
 import { BetterRollsWorkflow, defaultRollOptions, DummyWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
 import { configSettings, itemDeleteCheck, enableWorkflow, criticalDamage, autoFastForwardAbilityRolls, checkRule } from "./settings";
-import { addConcentration, checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, untargetAllTokens, validTargetTokens } from "./utils";
+import { addConcentration, checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, untargetAllTokens, validTargetTokens } from "./utils";
 import { installedModules } from "./setupModules";
 import { setupSheetQol } from "./sheetQOL";
 
@@ -53,6 +53,9 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     disadvantage: workflow.rollOptions.disadvantage,
     chatMessage: (["TrapWorkflow", "Workflow"].includes(workflow.workflowType)) ? false : options.chatMessage,
     fastForward: workflow.rollOptions.fastForward,
+    messageData: {
+      speaker: getSpeaker(this.actor)
+    }
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
   });
 
@@ -64,7 +67,9 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
 
   workflow.attackRoll = result;
   result = await processAttackRollBonusFlags.bind(workflow)();
-  if (!configSettings.mergeCard) result.toMessage();
+  if (!configSettings.mergeCard) result.toMessage({
+    speaker: getSpeaker(this.actor)
+  });
   if (configSettings.keepRollStats) {
     //@ts-ignore
     const terms = result.terms;
@@ -164,7 +169,8 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     options: {
       fastForward: workflow.rollOptions.fastForward,
       chatMessage: false //!configSettings.mergeCard
-    }
+    },
+
   })
   if (!result) { // user backed out of damage roll or roll failed
     return;
@@ -201,7 +207,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     }
 
     const title = `${this.name} - ${actionFlavor}`;
-    const speaker = ChatMessage.getSpeaker({ actor: this.actor });
+    const speaker = getSpeaker(this.actor)
     let messageData = mergeObject({
       title,
       flavor: this.labels.damageTypes.length ? `${title} (${this.labels.damageTypes})` : title,
@@ -265,7 +271,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (requiresTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && myTargets.size === 0) shouldAllowRoll = false;
   // only allow weapon attacks against at most the specified number of targets
   let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9099) ?? 9999
-  let speaker = ChatMessage.getSpeaker({ actor: this.actor });
+  let speaker = getSpeaker(this.actor);
   // do pre roll checks
   if (checkRule("checkRange")) {
     if (speaker.token && checkRange(this.actor, this, speaker.token, myTargets) === "fail")
@@ -425,12 +431,7 @@ export async function showItemInfo() {
     user: game.user.id,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     content: html,
-    speaker: {
-      actor: this.actor.id,
-      token: this.actor.token?.id,
-      alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name,
-      scene: canvas?.scene?.id
-    },
+    speaker: getSpeaker(this.actor),
     flags: {
       "core": { "canPopout": true }
     }
@@ -450,7 +451,8 @@ export async function showItemInfo() {
 export async function showItemCard(showFullCard: boolean, workflow: Workflow, minimalCard = false, createMessage = true) {
   warn("show item card ", this, this.actor, this.actor.token, showFullCard, workflow);
 
-  const token = this.actor.token;
+  let token = this.actor.token;
+  if (!token) token = this.actor.getActiveTokens()[0];
   let needAttackButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
   needAttackButton = true || needAttackButton || !getAutoRollAttack();
   needAttackButton = needAttackButton || (getAutoRollAttack() && workflow.rollOptions.fastForwardKey)
@@ -505,12 +507,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     content: html,
     flavor: this.data.data.chatFlavor || this.name,
-    speaker: {
-      actor: this.actor?.id,
-      token: this.actor?.token?.id,
-      alias: (configSettings.useTokenNames && token) ? token.data.name : this.actor.name,
-      scene: canvas?.scene?.id
-    },
+    speaker: getSpeaker(this.actor),
     flags: {
       "midi-qol": {
         itemUuid: workflow.item.uuid,

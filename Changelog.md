@@ -1,15 +1,26 @@
+## 0.8.31
+* Fix for not using token/actor names in skill checks/ability saves/ability check rolls.
+* Put back test for only one concentration automation solution, cub or midi.
+* Make "Use Token Names" work for linked tokens work again.
+* Fix for damage multipliers in damage card not working.
+* Added flags.midi-qol.optional.NAME.skill to allow  pre-roll bonus checks to affect skill rolls. 
+* Stopped bonus checks from firing when there are no available charges for a bonus (e.g. lucky with recharge).
+* Support for adv/dis/fast forward of skill/ability checks & saves when auto-fastforward disabled.
+
+Known issues: An attack that removes concentration that also should marks the target as wounded creates a race condition with CUB - either the adding wounded or concentration removal may fail to apply properly, seems to affect unlinked tokens.
+
 ## 0.8.30
-* Fix for failing to appply concentration to non-linked tokens.
-* Slight tweak for appication of self effects interacting with CUB.
-* Fix for reaction checks cuasing an error when no GM is connected.
+* Fix for failing to apply concentration to non-linked tokens.
+* Slight tweak for application of self effects interacting with CUB.
+* Fix for reaction checks causing an error when no GM is connected.
 * Fix for DamageOnly workflow throwing an error on item card creation.
-* Added support for special durations 1Hit.mwak/rwak/msak/rsak to expire when a hit with a particular type of attack is made. Useful for some of the various paladin smites.
+* Added support for special duration 1Hit.mwak/rwak/msak/rsak to expire when a hit with a particular type of attack is made. Useful for some of the various paladin smites.
 * Added targetUuids, hitTargetUuis, saveUuids, superSaverUuids and failedSaveUUids to the args[0] argument to onUse/DamageMacro macro calls.
 * Ability bonus effects (bardic inspiration etc) can now specify an effect of success which means the roll will bet set to 99 - useful for effects that turn a failure into a save.
 * flags.midi-qol.options.NAME.count now support @fields, so you can consume a resource, like legendary resistance (@resources.legres.value). Sample legendary resistance included.
-* Added a different Lucky feature "Luck (Recharge)" which consumes resource points (tertiary in the sample). Resource details are updated by the active effect so luck reacharges on a long rest. Just drag the Lucky (Recharge) item to the character and Luck should just work, recharging on a long rest.
+* Added a different Lucky feature "Luck (Recharge)" which consumes resource points (tertiary in the sample). Resource details are updated by the active effect so luck recharges on a long rest. Just drag the Lucky (Recharge) item to the character and Luck should just work, recharging on a long rest.
 * Added Sample Branding Smite (requires DamageBonus/onUse macros enabled plus Active Token Lighting for the dim light effect), that implements the damage bonus, removes invisibility and adds Dim Light to the target when hit and expires after a successful hit.
-* Added sample dragon slayer longsword which does bonus damage against dragons and knows about critical hits (assumes double dice for the critical hit).
+* Added sample dragon slayer long sword which does bonus damage against dragons and knows about critical hits (assumes double dice for the critical hit).
 * Added sample sword of wounding which applies damage each round until the target saves.
 * Added sample devil's glaive that causes infernal wounds which bleed each round in combat and count how many applications.
 

@@ -222,12 +222,8 @@ export function checkCubInstalled() {
 }
 
 export function checkConcentrationSettings() {
-  return;
   const needToUpdateCubSettings = installedModules.get("combat-utility-belt") && (
     game.settings.get("combat-utility-belt", "enableConcentrator")
-    // game.settings.get("combat-utility-belt", "autoConcentrate") ||
-    // game.settings.get("combat-utility-belt", "concentratorPromptPlayer")
-    // game.settings.get("combat-utility-belt", "concentratorOutputToChat")
   );
   if (game.user?.isGM && configSettings.concentrationAutomation && needToUpdateCubSettings) {
     let d = new Dialog({
@@ -239,10 +235,7 @@ export function checkConcentrationSettings() {
             icon: '<i class="fas fa-cross"></i>',
             label: "Disable CUB",
             callback: ()=>{
-              game.settings.set("combat-utility-belt", "enableConcentrator", false)
-              // game.settings.set("combat-utility-belt", "autoConcentrate", false);
-              // game.settings.set("combat-utility-belt", "concentratorPromptPlayer", false);
-              // game.settings.set("combat-utility-belt", "concentratorOutputToChat", false);
+              game.settings.set("combat-utility-belt", "enableConcentrator", false);
             }
         },
         two: {
@@ -384,6 +377,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.optional.NAME.check`)
   midiFlags.push(`flags.midi-qol.optional.NAME.save`)
   midiFlags.push(`flags.midi-qol.optional.NAME.label`)
+  midiFlags.push(`flags.midi-qol.optional.NAME.skill`)
   midiFlags.push(`flags.midi-qol.optional.NAME.count`)
   midiFlags.push(`flags.midi-qol.uncanny-dodge`);
 

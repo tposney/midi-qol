@@ -1,7 +1,7 @@
 import { log, warn, debug, i18n, error } from "../midi-qol";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage } from "./settings.js";
-import { bonusDialog, expireRollEffect, getOptionalCountRemaining, getOptionalCountRemainingShortFlag, testKey } from "./utils";
+import { bonusDialog, expireRollEffect, getOptionalCountRemaining, getOptionalCountRemainingShortFlag, getSpeaker, testKey } from "./utils";
 import { installedModules } from "./setupModules";
 import { libWrapper } from "./lib/shim.js";
 
@@ -82,16 +82,47 @@ interface Options {
   parts: [] | undefined
 };
 
-function doRollSkill(wrapped, ...args) {
+async function bonusCheck(actor, result: Roll, checkName) : Promise<Roll> {
+  if (!installedModules.get("betterrolls5e")) {
+    const bonusFlags = Object.keys(actor.data.flags["midi-qol"]?.optional ?? [])
+      .filter(flag => {
+        if (!actor.data.flags["midi-qol"].optional[flag][checkName]) return false;
+        if (!actor.data.flags["midi-qol"].optional[flag].count) return true;
+        return getOptionalCountRemainingShortFlag(actor, flag) > 0;
+      })
+      .map(flag => `flags.midi-qol.optional.${flag}`);
+    if (bonusFlags.length > 0) {
+      const data = {
+        actor,
+        roll: result,
+        rollHTML: await result.render(),
+        rollTotal: result.total,
+      }
+      await bonusDialog.bind(data)(bonusFlags, checkName, true, `${actor.name} - ${i18n("midi-qol.ability-check")}`, "roll", "rollTotal", "rollHTML")
+      result = data.roll;
+    }
+  }
+  return result;
+}
+
+async function doRollSkill(wrapped, ...args) {
   const [skillId, options = { event: {}, parts: [], avantage: false, disadvantage: false }] = args;
+  const chatMessage = options.chatMessage;
   options.event = mapSpeedKeys(options.event);
+  if (options.event === advantageEvent || options.event === disadvantageEvent)
+    options.fastForward = true;
   let procOptions = procAdvantage(this, "check", this.data.data.skills[skillId].ability, options)
   procOptions = procAdvantageSkill(this, skillId, procOptions)
   if (procAutoFailSkill(this, skillId) || procAutoFail(this, "check", this.data.data.skills[skillId].ability)) {
     options.parts = ["-100"];
   }
+  
   options.event = {};
-  let result = wrapped.call(this, skillId, procOptions);
+  //@ts-ignore
+  procOptions.chatMessage = false;
+  let result = await wrapped.call(this, skillId, procOptions);
+  result = await bonusCheck(this, result, "skill")
+  if (chatMessage !== false) result.toMessage({speaker: getSpeaker(this)});
   expireRollEffect.bind(this)("Skill", skillId);
   return result;
 }
@@ -188,7 +219,10 @@ async function rollAbilityTest(wrapped, ...args) {
   const chatMessage = options.chatMessage;
   if (procAutoFail(this, "check", abilityId)) options.parts = ["-100"];
   options.event = mapSpeedKeys(options.event);
+  if (options.event === advantageEvent || options.event === disadvantageEvent)
+    options.fastForward = true;
   let procOptions = procAdvantage(this, "check", abilityId, options);
+
   options.event = {};
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.check && (flags.check.all || flags.save[abilityId])) ?? 0;
@@ -196,22 +230,8 @@ async function rollAbilityTest(wrapped, ...args) {
   //@ts-ignore
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
-  if (!installedModules.get("betterrolls5e")) {
-    const bonusFlags = Object.keys(this.data.flags["midi-qol"]?.optional ?? [])
-      .filter(flag => this.data.flags["midi-qol"].optional[flag].check)
-      .map(flag => `flags.midi-qol.optional.${flag}`);
-    if (bonusFlags.length > 0) {
-      const data = {
-        actor: this,
-        roll: result,
-        rollHTML: await result.render(),
-        rollTotal: result.total,
-      }
-      await bonusDialog.bind(data)(bonusFlags, "check", true, `${this.name} - ${i18n("midi-qol.ability-check")}`, "roll", "rollTotal", "rollHTML", this.displayAttackRoll)
-      result = data.roll;
-    }
-  }
-  if (chatMessage !== false) result.toMessage();
+  result = await bonusCheck(this, result, "check")
+  if (chatMessage !== false) result.toMessage({speaker: getSpeaker(this)});
   expireRollEffect.bind(this)("Check", abilityId);
   return result;
 }
@@ -223,33 +243,16 @@ async function rollAbilitySave(wrapped, ...args) {
   }
   const chatMessage = options.chatMessage;
   options.event = mapSpeedKeys(options.event);
+  if (options.event === advantageEvent || options.event === disadvantageEvent)
+    options.fastForward = true;
   let procOptions = procAdvantage(this, "save", abilityId, options);
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.save && (flags.save.all || flags.save[abilityId])) ?? 0;
   //@ts-ignore
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
-  if (!installedModules.get("betterrolls5e")) {
-    const bonusFlags = Object.keys(this.data.flags["midi-qol"]?.optional ?? [])
-      .filter(flag => {
-        if (!this.data.flags["midi-qol"].optional[flag].save) return false;
-        if (!this.data.flags["midi-qol"].optional[flag].count) return true;
-        return getOptionalCountRemainingShortFlag(this, flag) > 0;
-      })
-      .map(flag => `flags.midi-qol.optional.${flag}`);
-
-    if (bonusFlags.length > 0) {
-      const data = {
-        actor: this,
-        roll: result,
-        rollHTML: await result.render(),
-        rollTotal: result.total,
-      }
-      await bonusDialog.bind(data)(bonusFlags, "save", true, `${this.name} - ${i18n("midi-qol.saving-throw")}`, "roll", "rollTotal", "rollHTML", this.displayAttackRoll)
-      result = data.roll;
-    }
-  }
-  if (chatMessage !== false) result.toMessage();
+  result = await bonusCheck(this, result, "save")
+  if (chatMessage !== false) result.toMessage({speaker: getSpeaker(this)});
   expireRollEffect.bind(this)("Save", abilityId);
   return result;
   /* TODO work out how to do minimum rolls properly
@@ -289,6 +292,7 @@ function procAdvantage(actor, rollType, abilityId, options: Options): Options {
   const disadvantage = midiFlags.disadvantage ?? {};
   var withAdvantage = options.event?.altKey || options.advantage;
   var withDisadvantage = options.event?.ctrlKey || options.event?.metaKey || options.disadvantage;
+
   options.fastForward = options.fastForward || (autoFastForwardAbilityRolls ? !options.event.fastKey : options.event.fastKey);
   if (advantage.ability || advantage.all) {
     const rollFlags = (advantage.ability && advantage.ability[rollType]) ?? {};
@@ -335,8 +339,8 @@ export function readyPatching() {
 export let visionPatching = () => {
   const patchVision = isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
   if (patchVision) {
-    // ui.notifications.warn("This setting is deprecated please switch to Conditional Visibility")
-    console.warn("midi-qol | Player controls tokens setting is deprecated please switch to Conditional Visibility")
+    ui.notifications.warn("Player control vision is deprecated please use the module Your Tokens Visible")
+    console.warn("midi-qol | Player control vision is deprecated please use the module Your Tokens Visible")
 
     log("Patching Token._isVisionSource")
     libWrapper.register("midi-qol", "Token.prototype._isVisionSource", _isVisionSource, "OVERRIDE");

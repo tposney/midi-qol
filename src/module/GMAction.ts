@@ -237,8 +237,8 @@ export let processUndoDamageCard = async(message, html, data) => {
       button = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
       button.off('click');
 
-      const mults = {"Heal": -1, "x1": 1, "x1/4": 0.25, "x1/2": 0.5, "x2": 2};
-      if (multiplier === "Calc")
+      const mults = {"-1": -1, "x1": 1, "x0.25": 0.25, "x0.5": 0.5, "x2": 2};
+      if (multiplier === "calc")
         button.click(async (ev) => doMidiClick(ev, actorUuid, newTempHP, newHP));
       else if (mults[multiplier]) 
         button.click(async (ev) => doClick(ev, actorUuid, totalDamage, mults[multiplier]));
