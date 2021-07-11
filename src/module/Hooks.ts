@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n } from "../midi-qol";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling";
 import { processUndoDamageCard } from "./GMAction";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating } from "./utils";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating, expireMyEffects } from "./utils";
 import { configSettings, dragDropTargeting } from "./settings";
 import { installedModules } from "./setupModules";
 
@@ -17,6 +17,18 @@ export let readyHooks = async () => {
     const hpDiff = actor.data.data.attributes.hp.value - hpUpdate;
     actor.data.update({"flags.midi-qol.concentration-damage": hpDiff})
     return true;
+  })
+
+  // Handle removing effects when the token is moved.
+  Hooks.on("updateToken", (tokenDocument, update, diff, userId) => {
+    if (game.user.id !== userId) return;
+    if ((update.x ?? update.y) === undefined) return;
+    const actor = tokenDocument.actor;
+    const expiredEffects = actor.effects.filter(ef => {
+      const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
+      return specialDuration?.includes("isMoved");
+    });
+    if (expiredEffects.length > 0) actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects.map(ef=>ef.id));
   })
 
   // Have to trigger on preUpdate to check the HP before the update occured.

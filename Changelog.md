@@ -1,3 +1,9 @@
+## 0.8.32 
+* updated es.json
+* Added special duration "isMoved" - the effect will expire if the token is moved. Requires DAE 0.8.31
+* Fix for player sees invisible tokens warning - which caused lots of warnings about socketlib/libwrapper.
+* Fix for DamagaeOnlyWorflows without a passed item causing errors.
+
 ## 0.8.31
 * Fix for not using token/actor names in skill checks/ability saves/ability check rolls.
 * Put back test for only one concentration automation solution, cub or midi.

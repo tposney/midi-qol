@@ -692,7 +692,7 @@ export class Workflow {
           //@ts-ignore effects
           const expiredEffects = target.actor?.effects?.filter(ef => {
             const wasAttacked = this.item?.hasAttack;
-            const wasDamaged = itemHasDamage(this.item) && this.applicationTargets?.has(target);
+            const wasDamaged = itemHasDamage(this.item) && this.applicationTargets?.has(target); //TODO this test will fail for damage only workflows - need to check the damage rolled instaed
             const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
             if (!specialDuration) return false;
             //TODO this is going to grab all the special damage types as well which is no good.
@@ -700,11 +700,11 @@ export class Workflow {
               (specialDuration.includes("isDamaged") && wasDamaged))
               return true;
             if ((specialDuration.includes("1Reaction")) && target.actor.uuid !== this.actor.uuid) return true;
-            if (this.item.hasSave && specialDuration.includes(`isSaveSuccess`) && this.saves.has(target)) return true;
-            if (this.item.hasSave && specialDuration.includes(`isSaveFailure`) && !this.saves.has(target)) return true;
+            if (this.item?.hasSave && specialDuration.includes(`isSaveSuccess`) && this.saves.has(target)) return true;
+            if (this.item?.hasSave && specialDuration.includes(`isSaveFailure`) && !this.saves.has(target)) return true;
             const abl = this.item.data.data.save.ability;
-            if (this.item.hasSave && specialDuration.includes(`isSaveSuccsss.${abl}`) && this.saves.has(target)) return true;
-            if (this.item.hasSave && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) return true;
+            if (this.item?.hasSave && specialDuration.includes(`isSaveSuccsss.${abl}`) && this.saves.has(target)) return true;
+            if (this.item?.hasSave && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) return true;
             for (let dt of this.damageDetail) {
               if (wasDamaged && specialDuration.includes(`isDamaged.${dt.type}`)) return true;
             }
