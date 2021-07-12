@@ -151,6 +151,7 @@ function configureDamage(wrapped) {
   let flatBonus = 0;
   if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
   if (criticalDamage === "baseDamage") this.options.criticalMultiplier = 1;
+  this.terms = this.terms.filter(term=> !term.options.critOnly)
   for (let [i, term] of this.terms.entries()) {
     // Multiply dice terms
     if (term instanceof CONFIG.Dice.termTypes.DiceTerm) {
@@ -195,22 +196,20 @@ function configureDamage(wrapped) {
     }
   }
 
-  // Add powerful critical bonus
   if (flatBonus > 0) {
-    this.terms.push(new CONFIG.Dice.termTypes.OperatorTerm({ operator: "+" }));
-    this.terms.push(new CONFIG.Dice.termTypes.NumericTerm({ number: flatBonus }, { flavor: game.i18n.localize("DND5E.PowerfulCritical") }));
+    this.terms.push(new CONFIG.Dice.termTypes.OperatorTerm({ operator: "+" , options: {critOnly: true}}));
+    this.terms.push(new CONFIG.Dice.termTypes.NumericTerm({ number: flatBonus, options: { critOnly: true}}));
   }
   if (criticalDamage === "doubleDice") {
     let newTerms = [];
     for (let term of this.terms) {
       if (term instanceof CONFIG.Dice.termTypes.DiceTerm) {
         newTerms.push(new CONFIG.Dice.termTypes.ParentheticalTerm({ term: `2*${term.formula}` }))
-      } else
+      } else if( !term)
         newTerms.push(term);
     }
     this.terms = newTerms;
   }
-
   // Re-compile the underlying formula
   this._formula = this.constructor.getFormula(this.terms);
 }

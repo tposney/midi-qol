@@ -59,7 +59,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   // Get the Item from stored flag data or by the item ID on the Actor
   const storedData = message.getFlag("dnd5e", "itemData");
   //@ts-ignored ocumentClass
-  const item = storedData ? new CONFIG.Item.documentClass(storedData, {parent: actor}) : actor.items.get(brFlags.itemId);
+  const item = storedData ? new CONFIG.Item.documentClass(storedData, { parent: actor }) : actor.items.get(brFlags.itemId);
   // const item = actor.items.get(brFlags.itemId);
   if (!item) return;
   // Try and help name hider
@@ -320,27 +320,33 @@ export let hideStuffHandler = (message, html, data) => {
     ids.click(_onTargetSelect);
   }
 
+  // Hide saving throw tool tips to non-gms
   if (!game.user.isGM) {
     html.find(".midi-qol-save-tooltip").hide()
+  }
+  // Hide saving throws if not rolled by me.
+  if (!game.user.isGM && ["all", "whisper"].includes(configSettings.autoCheckSaves) && message.isRoll &&
+    (message.data.flavor.includes(i18n("DND5E.ActionSave")) || message.data.flavor.includes(i18n("DND5E.ActionAbil")))) {
+    if (game.user.id !== message.user.id) {
+      html.hide();
+      return;
+    }
   }
   if (game.user.isGM) {
     html.find(".midi-qol-target-npc-Player").hide();
   } else {
     html.find(".midi-qol-target-npc-GM").hide();
   }
-  if (game.user.isGM) {
+  if (game.user.isGM && $(html).find(".midi-qol-hits-display").length) {
     if (configSettings.mergeCard) {
       $(html).find(".midi-qol-hits-display").show();
     } else {
-      if ($(html).find(".midi-qol-hits-display").length === 1) {
-        html.show();
-      }
+      html.show();
     }
     //@ts-ignore
     ui.chat.scrollBottom
     return;
   }
-
   if (!game.user.isGM && !configSettings.displaySaveDC) {
     html.find(".midi-qol-saveDC").hide();
   }
@@ -366,7 +372,7 @@ export let hideStuffHandler = (message, html, data) => {
     }
   }
 
-  if (configSettings.autoCheckHit === "whisper" || message.data.blind) {
+  if (!game.user.isGM && (configSettings.autoCheckHit === "whisper" || message.data.blind)) {
     if (configSettings.mergeCard) {
       html.find(".midi-qol-hits-display").hide();
     } else {
@@ -375,7 +381,7 @@ export let hideStuffHandler = (message, html, data) => {
       }
     }
   }
-  if (configSettings.autoCheckSaves === "whisper" || message.data.blind) {
+  if (!game.user.isGM && (configSettings.autoCheckSaves === "whisper" || message.data.blind)) {
     if (configSettings.mergeCard) {
       html.find(".midi-qol-saves-display").hide();
     } else {
@@ -498,7 +504,7 @@ export function processItemCardCreation(message, user) {
   if (user === game.user.id && midiFlags?.workflowId) { // check to see if it is a workflow
     const workflow = Workflow.getWorkflow(midiFlags.workflowId);
     if (!workflow) return;
-    if (!workflow.itemCardId) {
+    if (!workflow.itemCardId && !["TrapWorkflow"].includes(workflow.workflowType)) {
       workflow.itemCardId = message.id;
       workflow.next(WORKFLOWSTATES.NONE);
     }

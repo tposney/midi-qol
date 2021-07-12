@@ -1479,7 +1479,7 @@ export class Workflow {
     }
 
   }
-  processSaveRoll(message) {
+  processSaveRoll(message, html, data) {
     const isLMRTFY = (installedModules.get("lmrtfy") && message.data.flags?.lmrtfy?.data);
     if (!isLMRTFY && message.data.flags?.dnd5e?.roll?.type !== "save") return true;
     const requestId = isLMRTFY ? message.data.flags.lmrtfy.data : message.data?.speaker?.actor;
@@ -1493,6 +1493,7 @@ export class Workflow {
       delete this.saveRequests[requestId];
       delete this.saveTimeouts[requestId];
     }
+    if (game.user.id !== message.user.id && ["whisper", "all"].includes(configSettings.autoCheckSaves)) html.hide();
     return true;
   }
 
@@ -1521,6 +1522,7 @@ export class Workflow {
     this.saveRequests[requestId]({ total, formula, terms: [{ options: { advantage, disadvantage } }] });
     delete this.saveRequests[requestId];
     delete this.saveTimeouts[requestId];
+    if (game.user.id !== message.user.id && ["whisper", "all"].includes(configSettings.autoCheckSaves)) html.hide();
     return true;
   }
 
@@ -1559,13 +1561,12 @@ export class Workflow {
       if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
       let targetAC = targetActor.data.data.attributes.ac.value;
       if (!this.isFumble) {
-        // check to see if the roll hit the target
-        // let targetAC = targetActor.data.data.attributes.ac.value;
         isHit = this.attackTotal >= targetAC;
+        // check to see if the roll hit the target
         if ((isHit || this.iscritical) && this.attackRoll) {
           const result = await doReactions(targetToken, this.attackRoll);
-          targetActor.prepareData();
-          targetAC = targetActor.data.data.attributes.ac.value;
+          targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
+          if (result.ac) targetAC = result.ac; // deal with bonus ac if any.
           isHit = this.attackTotal >= targetAC || this.isCritical;
         }
       }

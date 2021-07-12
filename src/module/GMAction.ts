@@ -58,7 +58,7 @@ export function rollAbility(data) {
   //@ts-ignore
   const rollAction = data.request === "abil" ?
             //@ts-ignore
-            rollAction = CONFIG.Actor.documentClass.prototype.rollAbilityTest : 
+            CONFIG.Actor.documentClass.prototype.rollAbilityTest : 
             //@ts-ignore
             CONFIG.Actor.documentClass.prototype.rollAbilitySave;
   const actor = MQfromActorUuid(data.targetUuid);

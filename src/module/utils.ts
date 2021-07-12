@@ -122,7 +122,7 @@ export function getSelfTarget(actor): Token {
   const speaker = ChatMessage.getSpeaker({ actor })
   if (speaker.token) return canvas.tokens.get(speaker.token);
   //@ts-ignore this is a token document not a token ??
-  return new TokenDocument(actor.getTokenData(), { actor });
+  return new CONFIG.Token.documentClass(actor.getTokenData(), { actor });
 }
 
 export function getSelfTargetSet(actor): Set<Token> {
@@ -538,7 +538,7 @@ export function getDistance(t1: Token, t2: Token, wallblocking = false) {
   rdistance.forEach(d => { if (d < distance) distance = d; });
   if (configSettings.optionalRules.distanceIncludesHeight) {
     let height = Math.abs((t1.data.elevation || 0) - (t2.data.elevation || 0))
-    if (canvas.grid.diagonalRule === "555") {
+    if (["555", "5105"].includes(canvas.grid.diagonalRule)) {
       let nd = Math.min(distance, height);
       let ns = Math.abs(distance - height);
       distance = nd + ns;
@@ -1033,9 +1033,24 @@ export async function processAttackRollBonusFlags() { // bound to workflow
     .map(flag => `flags.midi-qol.optional.${flag}`);
   if (bonusFlags.length > 0) {
     this.attackRollHTML = await this.attackRoll.render();
-    await bonusDialog.bind(this)(bonusFlags, "attack", false, `${this.actor.name} - ${i18n("midi-qol.AttackRoll")}`, "attackRoll", "attackTotal", "attackRollHTML")
+    await bonusDialog.bind(this)(bonusFlags, "attack", false, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, "attackRoll", "attackTotal", "attackRollHTML")
   }
   return this.attackRoll;
+}
+
+export async function processDamageRollBonusFlags() { // bound to a workflow
+  const bonusFlags = Object.keys(this.actor.data.flags["midi-qol"]?.optional ?? [])
+    .filter(flag => {
+      if (!this.actor.data.flags["midi-qol"].optional[flag].damage) return false;
+      if (!this.actor.data.flags["midi-qol"].optional[flag].count) return true;
+      return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
+    })
+    .map(flag => `flags.midi-qol.optional.${flag}`);
+  if (bonusFlags.length > 0) {
+    this.damageRollHTML = await this.damageRoll.render();
+    await bonusDialog.bind(this)(bonusFlags, "damage", false, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, "damageRoll", "damageTotal", "damageRollHTML")
+  }
+  return this.damageRoll;
 }
 
 export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rollId: string, rollTotalId: string, rollHTMLId: string) {
@@ -1141,16 +1156,23 @@ export function isConcentrating(actor: Actor5e): undefined | {} /* TODO ActiveEf
   return actor.effects.contents.find(i => i.data.label === concentrationName);
 }
 
-export async function doReactions(target: Token, attackRoll: Roll): Promise<{ name: string, uuid: string }> {
+export async function doReactions(target: Token, attackRoll: Roll): Promise<{ name: string, uuid: string, ac: number }> {
+  const noResult = { name: undefined, uuid: undefined, ac: undefined };
   let player = playerFor(target);
   if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
-  if (getReactionSetting(player) === "none") return { name: undefined, uuid: undefined };
-  let reactionItems = target.actor.items.filter(item => item.data.data.activation?.type === "reaction");
-  if (reactionItems.length === 0) return { name: undefined, uuid: undefined };
+  if (getReactionSetting(player) === "none") return noResult;
+  let reactions = target.actor.items.filter(item => item.data.data.activation?.type === "reaction").length;
+  reactions = reactions + Object.keys(target.actor.data.flags["midi-qol"]?.optional ?? [])
+  .filter(flag => {
+      if (!target.actor.data.flags["midi-qol"].optional[flag].ac) return false;
+      if (!target.actor.data.flags["midi-qol"].optional[flag].count) return true;
+      return getOptionalCountRemainingShortFlag(target.actor, flag) > 0;
+  }).length
+  if (reactions <= 0) return noResult;
   return new Promise((resolve) => {
     // set a timeout for taking over the roll
     setTimeout(() => {
-      resolve({ name: undefined, uuid: undefined });
+      resolve(noResult);
     }, (configSettings.reactionTimeout || 30) * 1000);
     requestReactions(target, player, attackRoll, resolve)
   })
@@ -1168,9 +1190,29 @@ export async function requestReactions(target: Token, player: User, attackRoll: 
 export async function promptReactions(tokenUuid: string, attackRoll: Roll) {
   const target: Token = MQfromUuid(tokenUuid);
   const actor = target.actor;
+  let result;
   let reactionItems = actor.items.filter(item => item.data.data.activation?.type === "reaction");
   if (reactionItems.length > 0) {
-    return await reactionDialog(actor, reactionItems, attackRoll)
+    result = await reactionDialog(actor, reactionItems, attackRoll)
+    if (result.uuid) return result;
+  }
+  const bonusFlags = Object.keys(actor.data.flags["midi-qol"]?.optional ?? [])
+          .filter(flag => {
+              if (!actor.data.flags["midi-qol"].optional[flag].ac) return false;
+              if (!actor.data.flags["midi-qol"].optional[flag].count) return true;
+              return getOptionalCountRemainingShortFlag(actor, flag) > 0;
+          }).map(flag => `flags.midi-qol.optional.${flag}`);
+  if (bonusFlags.length > 0) {
+    let acRoll = new Roll(`${actor.data.data.attributes.ac.value}`).roll();
+    const data = {
+      actor,
+      roll: acRoll,
+      //@ts-ignore
+      rollHTML: "D20 - " + attackRoll.terms[0].results.find(r => r.active).result,
+      rollTotal: acRoll.total,
+    }
+    await bonusDialog.bind(data)(bonusFlags, "ac", true, `${actor.name} - ${i18n("DND5E.AC")} ${actor.data.data.attributes.ac.value}`, "roll", "rollTotal", "rollHTML")
+    return {name: actor.name, uuid: actor.uuid, ac: data.roll.total};
   }
   return { name: "None" };
 }

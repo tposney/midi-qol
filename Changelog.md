@@ -1,3 +1,11 @@
+## 0.8.33
+* Added flags.midi-qol.optional.NAME.damage which allows bonus dice to be added to damage rolls (i.e. Bard College of valour)
+* Added flags.midi-qol.optional.NAME.ac, which allows adding bonus dice to AC when attack hits (i.e. Bard College of valour).
+* Fix for GMActtion rollAbility
+* Fix for TrapWorkflow rolling the attack twice.
+* Fix for midi-qol adding critical damage twice when not fast forwarding damage rolls.
+* Change to check saving throw behaviour. If set to only GM sees or All see, players will only see the dice rolls for their own saves as separate chat cards, all other saving throw rolls will be hidden, this includes for the GM. The GM can always check the save results card which has the player roll details available as tooltip text. This is intended to reduce the clutter in the chat log when many saves are performed.
+
 ## 0.8.32 
 * updated es.json
 * Added special duration "isMoved" - the effect will expire if the token is moved. Requires DAE 0.8.31

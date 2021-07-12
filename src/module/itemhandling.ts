@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, log, MESSAGETYPES, i18nFormat, midiFlags, allAttackTypes, gameStats } from "../midi-qol";
 import { BetterRollsWorkflow, defaultRollOptions, DummyWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
 import { configSettings, itemDeleteCheck, enableWorkflow, criticalDamage, autoFastForwardAbilityRolls, checkRule } from "./settings";
-import { addConcentration, checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, untargetAllTokens, validTargetTokens } from "./utils";
+import { addConcentration, checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, untargetAllTokens, validTargetTokens } from "./utils";
 import { installedModules } from "./setupModules";
 import { setupSheetQol } from "./sheetQOL";
 
@@ -169,12 +169,19 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     options: {
       fastForward: workflow.rollOptions.fastForward,
       chatMessage: false //!configSettings.mergeCard
-    },
-
+    }
   })
   if (!result) { // user backed out of damage roll or roll failed
     return;
   }
+  workflow.damageRoll = result;
+  workflow.damageTotal = result.total;
+  workflow.damageRollHTML = await result.render();
+  result = await processDamageRollBonusFlags.bind(workflow)();
+  if (!configSettings.mergeCard) result.toMessage({
+    speaker: getSpeaker(this.actor)
+  });
+
   let otherResult = undefined;
   if (
     configSettings.rollOtherDamage &&
@@ -237,9 +244,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       await game.dice3d.showForRoll(otherResult, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
   }
 
-  workflow.damageRoll = result;
-  workflow.damageTotal = result.total;
-  workflow.damageRollHTML = await result.render();
+
   workflow.otherDamageRoll = otherResult;
   workflow.otherDamageTotal = otherResult?.total;
   workflow.otherDamageHTML = await otherResult?.render();
