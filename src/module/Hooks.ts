@@ -1,13 +1,12 @@
-import { warn, error, debug, i18n } from "../midi-qol";
-import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling";
-import { processUndoDamageCard } from "./GMAction";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating, expireMyEffects } from "./utils";
-import { configSettings, dragDropTargeting } from "./settings";
-import { installedModules } from "./setupModules";
+import { warn, error, debug, i18n } from "../midi-qol.js";
+import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling.js";
+import { processUndoDamageCard } from "./GMAction.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating } from "./utils.js";
+import { configSettings, dragDropTargeting } from "./settings.js";
+import { installedModules } from "./setupModules.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
-
 
 export let readyHooks = async () => {
   // need to record the damage done since it is not available in the update actor hook
@@ -21,7 +20,7 @@ export let readyHooks = async () => {
 
   // Handle removing effects when the token is moved.
   Hooks.on("updateToken", (tokenDocument, update, diff, userId) => {
-    if (game.user.id !== userId) return;
+    if (game.user?.id !== userId) return;
     if ((update.x ?? update.y) === undefined) return;
     const actor = tokenDocument.actor;
     const expiredEffects = actor.effects.filter(ef => {
@@ -45,23 +44,23 @@ export let readyHooks = async () => {
     } else {
       concentrationName = i18n("midi-qol.Concentrating");
     }
-    const concentrationEffect = isConcentrating(actor)
+    const concentrationEffect: ActiveEffect | undefined = isConcentrating(actor)
     if (!concentrationEffect) return true;
     if (actor.data.data.attributes.hp.value === 0) {
-      //@ts-ignore .delete because of type of concentration effect return
       concentrationEffect.delete();
     } else {
       const itemData = duplicate(itemJSONData);
       itemData.name = concentrationCheckItemDisplayName;
       // actor took damage and is concentrating....
       const saveDC = Math.max(10, Math.floor(hpDiff / 2));
-      const saveTargets = game.user.targets;
-      game.user.targets = await getSelfTargetSet(actor);
-      //@ts-ignore
-      const ownedItem = new CONFIG.Item.documentClass(itemData, { parent: actor })
+      const saveTargets = game.user?.targets;
+      const theTarget = getSelfTarget(actor)?.document.id;
+      if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
+      let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor })
+      //@ts-ignore save
       ownedItem.data.data.save.dc = saveDC;
       try {
-        if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e").data.version, "1.3.10")) { // better rolls breaks the normal roll process
+        if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
           //@ts-ignore
           await BetterRolls.rollItem(ownedItem, { adv: 0, disadv: 0, midiSaveDC: saveDC }).toMessage();
         } else {
@@ -69,7 +68,7 @@ export let readyHooks = async () => {
           await ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false })
         }
       } finally {
-        game.user.targets = saveTargets;
+        if (saveTargets && game.user) game.user.targets = saveTargets;
       }
     }
     return true;
@@ -77,6 +76,7 @@ export let readyHooks = async () => {
 
   // Concentration Check is rolled as an item roll so we need an item.
   if (installedModules.get("combat-utility-belt")) {
+    //@ts-ignore game.cub
     const concentrationCondition = game.cub.getCondition(game.settings.get("combat-utility-belt", "concentratorConditionName"))
     itemJSONData.name = concentrationCheckItemName
     itemJSONData.img = concentrationCondition.icon;
@@ -106,8 +106,8 @@ export let initHooks = () => {
   Hooks.on("updateChatMessage", (message, update, options, user) => {
     mergeCardSoundPlayer(message, update, options, user);
     hideRollUpdate(message, update, options, user);
-    //@ts-ignore
-    ui.chat.scrollBottom();
+    //@ts-ignore scrollBottom
+    ui.chat?.scrollBottom();
   })
 
   Hooks.on("updateCombat", (combat, data, options, user) => {
@@ -144,27 +144,28 @@ export let initHooks = () => {
 
   Hooks.on("renderChatLog", (app, html, data) => _chatListeners(html));
 
-  Hooks.on('dropCanvasData', function (canvas, dropData) {
+  Hooks.on('dropCanvasData', function (canvas: Canvas, dropData:any) {
     if (!dragDropTargeting) return true;
     if (dropData.type !== "Item") return true;;
-    let grid_size = canvas.scene.data.grid
+    let grid_size = canvas.scene?.data.grid
 
-    canvas.tokens.targetObjects({
+    canvas.tokens?.targetObjects({
       x: dropData.x - grid_size / 2,
       y: dropData.y - grid_size / 2,
       height: grid_size,
       width: grid_size
     });
 
-    let actor = game.actors.get(dropData.actorId);
+    let actor: Actor | undefined | null = game.actors?.get(dropData.actorId);
     if (dropData.tokenId) {
-      let token = canvas.tokens.get(dropData.tokenId)
+      let token = canvas.tokens?.get(dropData.tokenId)
       if (token) actor = token.actor;
     }
     const item = actor && actor.items.get(dropData.data._id);
     if (!actor || !item) error("actor / item broke ", actor, item);
-    //@ts-ignore
-    item.roll();
+    //@ts-ignore roll
+    item?.roll();
+    return true;
   })
 }
 

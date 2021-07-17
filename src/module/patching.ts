@@ -1,8 +1,8 @@
-import { log, warn, debug, i18n, error } from "../midi-qol";
-import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling";
+import { log, warn, debug, i18n, error, getCanvas } from "../midi-qol.js";
+import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage } from "./settings.js";
-import { bonusDialog, expireRollEffect, getOptionalCountRemaining, getOptionalCountRemainingShortFlag, getSpeaker, testKey } from "./utils";
-import { installedModules } from "./setupModules";
+import { bonusDialog, expireRollEffect, getOptionalCountRemainingShortFlag, getSpeaker, testKey } from "./utils.js";
+import { installedModules } from "./setupModules.js";
 import { libWrapper } from "./lib/shim.js";
 
 var d20Roll;
@@ -10,10 +10,10 @@ var d20Roll;
 function _isVisionSource() {
   // log("proxy _isVisionSource", this);
 
-  if (!canvas.sight.tokenVision || !this.hasSight) return false;
+  if (!getCanvas().sight?.tokenVision || !this.hasSight) return false;
 
   // Only display hidden tokens for the GM
-  const isGM = game.user.isGM;
+  const isGM = game.user?.isGM;
   // TP insert
   // console.error("is vision source ", this.actor?.name, this.actor?.hasPerm(game.user, "OWNER"))
   if (this.data.hidden && !(isGM || this.actor?.testUserPermission(game.user, "OWNER"))) return false;
@@ -28,23 +28,23 @@ function _isVisionSource() {
   // If a non-GM user controls no other tokens with sight, display sight anyways
   const canObserve = this.actor && this.actor.testUserPermission(game.user, "OWNER");
   if (!canObserve) return false;
-  const others = canvas.tokens.controlled.filter(t => t.hasSight);
+  const others = getCanvas().tokens?.controlled.filter(t => t.hasSight);
   //TP ** const others = this.layer.controlled.filter(t => !t.data.hidden && t.hasSight);
-  return !others.length;
+  return !others?.length;
 }
 
 function isVisible() {
   // console.error("Doing my isVisible")
-  const gm = game.user.isGM;
+  const gm = game.user?.isGM;
   if (this.actor?.testUserPermission(game.user, "OWNER")) {
     //     this.data.hidden = false;
     return true;
   }
   if (this.data.hidden) return gm || this.actor?.testUserPermission(game.user, "OWNER");
-  if (!canvas.sight.tokenVision) return true;
+  if (!getCanvas().sight?.tokenVision) return true;
   if (this._controlled) return true;
   const tolerance = Math.min(this.w, this.h) / 4;
-  return canvas.sight.testVisibility(this.center, { tolerance });
+  return getCanvas().sight?.testVisibility(this.center, { tolerance });
 }
 
 export const advantageEvent = { shiftKey: false, altKey: true, ctrlKey: false, metaKey: false, fastKey: false };
@@ -79,7 +79,8 @@ interface Options {
   advantage: boolean | undefined,
   disadvantage: boolean | undefined,
   fastForward: boolean | undefined,
-  parts: [] | undefined
+  parts: [] | undefined,
+  chatMessage: boolean | undefined
 };
 
 async function bonusCheck(actor, result: Roll, checkName) : Promise<Roll> {
@@ -111,18 +112,17 @@ async function doRollSkill(wrapped, ...args) {
   options.event = mapSpeedKeys(options.event);
   if (options.event === advantageEvent || options.event === disadvantageEvent)
     options.fastForward = true;
-  let procOptions = procAdvantage(this, "check", this.data.data.skills[skillId].ability, options)
+  let procOptions: Options = procAdvantage(this, "check", this.data.data.skills[skillId].ability, options)
   procOptions = procAdvantageSkill(this, skillId, procOptions)
   if (procAutoFailSkill(this, skillId) || procAutoFail(this, "check", this.data.data.skills[skillId].ability)) {
     options.parts = ["-100"];
   }
   
   options.event = {};
-  //@ts-ignore
   procOptions.chatMessage = false;
   let result = await wrapped.call(this, skillId, procOptions);
   result = await bonusCheck(this, result, "skill")
-  if (chatMessage !== false) result.toMessage({speaker: getSpeaker(this)});
+  if (chatMessage !== false) result.toMessage({speaker: getSpeaker(this), "flags.dnd5e.roll": {type: "skill", skillId }});
   expireRollEffect.bind(this)("Skill", skillId);
   return result;
 }
@@ -146,6 +146,7 @@ function rollDeathSave(wrapped, ...args) {
   }
   return wrapped.call(this, ...args);
 }
+
 function configureDamage(wrapped) {
   if (!this.isCritical || criticalDamage === "default") return wrapped();
   let flatBonus = 0;
@@ -154,14 +155,14 @@ function configureDamage(wrapped) {
   this.terms = this.terms.filter(term=> !term.options.critOnly)
   for (let [i, term] of this.terms.entries()) {
     // Multiply dice terms
-    if (term instanceof CONFIG.Dice.termTypes.DiceTerm) {
-      term.options.baseNumber = term.options.baseNumber ?? term.number; // Reset back
-      term.number = term.options.baseNumber;
+    if (term instanceof DiceTerm) {
+      const termOptions: any = term.options;
+      termOptions.baseNumber = termOptions.baseNumber ?? term.number; // Reset back
+      term.number = termOptions.baseNumber;
       let cm = this.options.criticalMultiplier ?? 2;
       let cb = (this.options.criticalBonusDice && (i === 0)) ? this.options.criticalBonusDice : 0;
       // {default: "DND5e default", maxDamage:  "base max only", maxCrit: "max critical dice", maxAll: "max all dice", doubleDice: "double dice value"},
       switch (criticalDamage) {
-
         case "maxDamage":
           term.modifiers.push(`min${term.faces}`)
           cm = 1;
@@ -182,16 +183,17 @@ function configureDamage(wrapped) {
           break;
         default: break;
       }
-      term.options.critical = true;
+      termOptions.critical = true;
     }
 
     // Multiply numeric terms
-    else if (this.options.multiplyNumeric && (term instanceof CONFIG.Dice.termTypes.NumericTerm)) {
-      term.options.baseNumber = term.options.baseNumber ?? term.number; // Reset back
-      term.number = term.options.baseNumber;
+    else if (this.options.multiplyNumeric && (term instanceof NumericTerm)) {
+      const termOptions: any = term.options;
+      termOptions.baseNumber = termOptions.baseNumber ?? term.number; // Reset back
+      term.number = termOptions.baseNumber;
       if (this.isCritical) {
         term.number *= (this.options.criticalMultiplier ?? 2);
-        term.options.critical = true;
+        termOptions.critical = true;
       }
     }
   }
@@ -201,10 +203,11 @@ function configureDamage(wrapped) {
     this.terms.push(new CONFIG.Dice.termTypes.NumericTerm({ number: flatBonus, options: { critOnly: true}}));
   }
   if (criticalDamage === "doubleDice") {
-    let newTerms = [];
+    let newTerms: RollTerm[] = [];
     for (let term of this.terms) {
-      if (term instanceof CONFIG.Dice.termTypes.DiceTerm) {
-        newTerms.push(new CONFIG.Dice.termTypes.ParentheticalTerm({ term: `2*${term.formula}` }))
+      if (term instanceof DiceTerm) {
+        //@ts-ignore types don't allow for optional roll in constructor
+        newTerms.push(new ParentheticalTerm({ term: `2*${term.formula}`, options: {} }))
       } else if( !term)
         newTerms.push(term);
     }
@@ -226,11 +229,10 @@ async function rollAbilityTest(wrapped, ...args) {
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.check && (flags.check.all || flags.save[abilityId])) ?? 0;
 
-  //@ts-ignore
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
   result = await bonusCheck(this, result, "check")
-  if (chatMessage !== false) result.toMessage({speaker: getSpeaker(this)});
+  if (chatMessage !== false) result.toMessage({speaker: getSpeaker(this), "flags.dnd5e.roll": {type: "ability", abilityId }});
   expireRollEffect.bind(this)("Check", abilityId);
   return result;
 }
@@ -247,11 +249,10 @@ async function rollAbilitySave(wrapped, ...args) {
   let procOptions = procAdvantage(this, "save", abilityId, options);
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.save && (flags.save.all || flags.save[abilityId])) ?? 0;
-  //@ts-ignore
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
   result = await bonusCheck(this, result, "save")
-  if (chatMessage !== false) result.toMessage({speaker: getSpeaker(this)});
+  if (chatMessage !== false) result.toMessage({speaker: getSpeaker(this),  "flags.dnd5e.roll": {type: "save", abilityId }});
   expireRollEffect.bind(this)("Save", abilityId);
   return result;
   /* TODO work out how to do minimum rolls properly
@@ -327,7 +328,7 @@ function procAdvantageSkill(actor, skillId, options: Options): Options {
 }
 
 function midiATRefresh(wrapped) {
-  templateTokens(this)
+  templateTokens({x: this.data.x, y: this.data.y, shape: this.shape})
   return wrapped();
 }
 

@@ -1,12 +1,10 @@
-import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, itemRollButtons, saveRequests, forceHideRoll, enableWorkflow, dragDropTargeting, importSettingsFromJSON, exportSettingsToJSON } from "../settings"
- import { configSettings } from "../settings"
-import { warn, i18n, error, debug, gameStats } from "../../midi-qol";
-import { RollStats } from "../RollStats";
-import { installedModules } from "../setupModules";
-import { addChatDamageButtonsToHTML } from "../chatMesssageHandling";
+import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON } from "../settings.js"
+ import { configSettings } from "../settings.js"
+import { warn, i18n, error, debug, gameStats } from "../../midi-qol.js";
+import { installedModules } from "../setupModules.js";
 export class ConfigPanel extends FormApplication {
   
-  static get defaultOptions() {
+  static get defaultOptions(): any {
     return mergeObject(super.defaultOptions, {
       title: game.i18n.localize("midi-qol.ConfigTitle"),
       template: "modules/midi-qol/templates/config.html",
@@ -22,7 +20,7 @@ export class ConfigPanel extends FormApplication {
   get title() {
     return i18n("midi-qol.ConfigTitle")
   }
-  getData() {
+  async getData(options: any) : Promise<any> {
 //@ts-ignore
     let data = {
       configSettings,
@@ -52,7 +50,8 @@ export class ConfigPanel extends FormApplication {
       rollNPCSavesOptions: i18n("midi-qol.rollNPCSavesOptions"),
       //@ts-ignore .map undefined
       customSoundsPlaylistOptions: game.playlists.contents.reduce((acc, e) =>{acc[e.id]= e.name; return acc}, {}) || {},
-      customSoundOptions: game.playlists.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) =>{acc[s.id]= s.name; return acc}, {"none": ""}),
+      //@ts-ignore .sounds
+      customSoundOptions: game.playlists?.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) =>{acc[s.id]= s.name; return acc}, {"none": ""}),
       rollSoundOptions: CONFIG.sounds,
       isBetterRolls: installedModules.get("betterrolls5e"),
       keys: {
@@ -124,7 +123,7 @@ export class ConfigPanel extends FormApplication {
     formData.keyMapping = keyMapping;
     let newSettings = mergeObject(configSettings, formData, {overwrite:true, inplace:false})
     // const newSettings = mergeObject(configSettings, expand, {overwrite: true})
-    if (game.user.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", newSettings);
+    if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", newSettings);
   }
 }
 
@@ -153,20 +152,21 @@ export class IemTypeSelector extends FormApplication {
    * @type {String}
    */
   get attribute() {
+    //@ts-ignore .name
 	  return this.options.name;
   }
 
   /* -------------------------------------------- */
 
   /** @override */
-  getData() {
+  getData() : any {
 
     // Get current values
     configSettings.itemTypeList;
 
     // Populate choices
     //@ts-ignore
-    const choices = duplicate(CONFIG.Item.typeLabels);
+    const choices: {} = duplicate(CONFIG.Item.typeLabels);
     for ( let [k, v] of Object.entries(choices) ) {
       choices[k] = {
         label: i18n(v),
@@ -189,7 +189,7 @@ export class IemTypeSelector extends FormApplication {
   _updateObject(event, formData) {
     const updateData = {};
     // Obtain choices
-    const chosen = [];
+    const chosen : any[] = [];
     for ( let [k, v] of Object.entries(formData) ) {
       if ( v ) chosen.push(k);
     }
@@ -209,7 +209,7 @@ async function importFromJSONDialog() {
           callback: html => {
             //@ts-ignore
             const form = html.find("form")[0];
-            if ( !form.data.files.length ) return ui.notifications.error("You did not upload a data file!");
+            if ( !form.data.files.length ) return ui.notifications?.error("You did not upload a data file!");
             readTextFromFile(form.data.files[0]).then(json => {
               importSettingsFromJSON(json)
               resolve(true);

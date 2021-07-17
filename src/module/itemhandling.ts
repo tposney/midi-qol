@@ -1,9 +1,9 @@
-import { warn, debug, error, i18n, log, MESSAGETYPES, i18nFormat, midiFlags, allAttackTypes, gameStats } from "../midi-qol";
-import { BetterRollsWorkflow, defaultRollOptions, DummyWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
-import { configSettings, itemDeleteCheck, enableWorkflow, criticalDamage, autoFastForwardAbilityRolls, checkRule } from "./settings";
-import { addConcentration, checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, untargetAllTokens, validTargetTokens } from "./utils";
-import { installedModules } from "./setupModules";
-import { setupSheetQol } from "./sheetQOL";
+import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas } from "../midi-qol.js";
+import { BetterRollsWorkflow, defaultRollOptions, Workflow, WORKFLOWSTATES } from "./workflow.js";
+import { configSettings, enableWorkflow, checkRule } from "./settings.js";
+import { checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
+import { installedModules } from "./setupModules.js";
+import { collapseTextChangeRangesAcrossMultipleVersions } from "typescript";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
@@ -16,7 +16,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
 
   if (workflow.workflowType === "Workflow") {
-    workflow.targets = (this.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : await validTargetTokens(game.user.targets);
+    workflow.targets = (this.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : await validTargetTokens(game.user?.targets);
     if (workflow.attackRoll) { // we are re-rolling the attack.
       workflow.damageRoll = undefined;
       await Workflow.removeAttackDamageButtons(this.id)
@@ -71,28 +71,32 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     speaker: getSpeaker(this.actor)
   });
   if (configSettings.keepRollStats) {
-    //@ts-ignore
     const terms = result.terms;
-    const rawRoll = terms[0].total;
+    const rawRoll = Number(terms[0].total);
     const total = result.total;
-    const fumble = rawRoll <= terms[0].options.fumble;
-    const critical = rawRoll >= terms[0].options.critical;
+    const options: any = terms[0].options
+    const fumble = rawRoll <= options.fumble;
+    const critical = rawRoll >= options.critical;
     gameStats.addAttackRoll({ rawRoll, total, fumble, critical }, this);
   }
+  //@ts-ignore game.dice3d
   const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
   if (dice3dActive && configSettings.mergeCard) {
-    let whisperIds = null;
+    let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
-    if ((["details", "all"].includes(configSettings.hideRollDetails) && game.user.isGM) || rollMode === "blindroll") {
+    if ((["details", "all"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM")
     } else if (rollMode === "selfroll" || rollMode === "gmroll") {
-      whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
+      whisperIds = ChatMessage.getWhisperRecipients("GM")
+      if (game.user) whisperIds.concat(game.user);
     }
+
+    //@ts-ignore game.dice3d
     await game.dice3d.showForRoll(workflow.attackRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
   }
 
   if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
-    workflow.targets = await validTargetTokens(game.user.targets);
+    workflow.targets = await validTargetTokens(game.user?.targets);
   }
   if (!result) { // attack roll failed.
     error("Itemhandling rollAttack failed")
@@ -116,21 +120,19 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   if (workflow.currentState !== WORKFLOWSTATES.WAITFORDAMAGEROLL) {
     switch (workflow?.currentState) {
       case WORKFLOWSTATES.AWAITTEMPLATE:
-        return ui.notifications.warn(i18n("midi-qol.noTemplateSeen"));
+        return ui.notifications?.warn(i18n("midi-qol.noTemplateSeen"));
       case WORKFLOWSTATES.WAITFORATTACKROLL:
-        return ui.notifications.warn(i18n("midi-qol.noAttackRoll"));
+        return ui.notifications?.warn(i18n("midi-qol.noAttackRoll"));
     }
   }
 
   if (workflow.damageRoll) { // we are re-rolling the damage. redisplay the item card but remove the damage
-    let chatMessage = game.messages.get(workflow.itemCardId);
-    //@ts-ignore
-    let content = chatMessage && chatMessage.data.content;
+    let chatMessage = game.messages?.get(workflow.itemCardId ?? "");
+    let content = (chatMessage && chatMessage.data.content) ?? "";
     let data;
     if (content) {
-      data = duplicate(chatMessage.data);
-      //@ts-ignore
-      content = data.content;
+      data = duplicate(chatMessage?.data);
+      content = data.content || "";
       let searchRe = /<div class="midi-qol-damage-roll">[\s\S\n\r]*<div class="end-midi-qol-damage-roll">/;
       let replaceString = `<div class="midi-qol-damage-roll"><div class="end-midi-qol-damage-roll">`
       content = content.replace(searchRe, replaceString);
@@ -144,7 +146,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     if (data) {
       await Workflow.removeAttackDamageButtons(this.uuid);
       delete data._id;
-      workflow.itemCardId = (await ChatMessage.create(data)).id;
+      workflow.itemCardId = (await ChatMessage.create(data))?.id;
     }
   }
   workflow.processDamageEventOptions(event);
@@ -175,14 +177,10 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     return;
   }
   workflow.damageRoll = result;
-  workflow.damageTotal = result.total;
+  workflow.damageTotal = Number(result.total);
   workflow.damageRollHTML = await result.render();
   result = await processDamageRollBonusFlags.bind(workflow)();
-  if (!configSettings.mergeCard) result.toMessage({
-    speaker: getSpeaker(this.actor)
-  });
-
-  let otherResult = undefined;
+  let otherResult: Roll | undefined = undefined;
   if (
     configSettings.rollOtherDamage &&
     workflow.item.hasSave && ["rwak", "mwak"].includes(workflow.item.data.data.actionType)
@@ -230,18 +228,22 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       otherResult.toMessage(messageData, {rollMode: game.settings.get("core", "rollMode")})
     }
   }
+  //@ts-ignore game.dice3d
   const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
   if (dice3dActive && configSettings.mergeCard) {
-    let whisperIds = null;
+    let whisperIds: User[] = [];
     const rollMode = game.settings.get("core", "rollMode");
-    if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user.isGM) || rollMode === "blindroll") {
-      whisperIds = ChatMessage.getWhisperRecipients("GM")
+    if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
+      whisperIds = ChatMessage.getWhisperRecipients("GM");
     } else if (rollMode === "selfroll" || rollMode === "gmroll") {
-      whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
+      whisperIds = ChatMessage.getWhisperRecipients("GM");
+      if (game.user) whisperIds.concat(game.user);
     }
+    //@ts-ignore game.dice3d
     await game.dice3d.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
     if (configSettings.rollOtherDamage && otherResult)
-      await game.dice3d.showForRoll(otherResult, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+    //@ts-ignore game.dice3d
+    await game.dice3d.showForRoll(otherResult, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
   }
 
 
@@ -264,16 +266,16 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
   const isRangeSpell = configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget && configSettings.autoTarget;
-  const myTargets = await validTargetTokens(game.user.targets);
+  const myTargets = game.user?.targets && await validTargetTokens(game.user?.targets);
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" &&  game.combat);
   let shouldAllowRoll = !requiresTargets // we don't care about targets
-    || (myTargets.size > 0) // there are some target selected
+    || ((myTargets?.size || 0) > 0) // there are some target selected
     || (this.data.data.target?.type === "self") // self target
     || isAoESpell // area effectspell and we will auto target
     || isRangeSpell // rangetarget and will autotarget
     || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
 
-  if (requiresTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && myTargets.size === 0) shouldAllowRoll = false;
+  if (requiresTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && (myTargets?.size || 0) === 0) shouldAllowRoll = false;
   // only allow weapon attacks against at most the specified number of targets
   let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9099) ?? 9999
   let speaker = getSpeaker(this.actor);
@@ -282,10 +284,10 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     if (speaker.token && checkRange(this.actor, this, speaker.token, myTargets) === "fail")
       return null;
   }
-  if (game.system.id === "dnd5e" && requiresTargets && myTargets.size > allowedTargets) {
+  if (game.system.id === "dnd5e" && requiresTargets && myTargets && myTargets.size > allowedTargets) {
     shouldAllowRoll = false;
-    ui.notifications.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
-    warn(`${game.user.name} ${i18nFormat("midi-qol.midi-qol.wrongNumberTargets", { allowedTargets })}`)
+    ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
+    warn(`${game.user?.name} ${i18nFormat("midi-qol.midi-qol.wrongNumberTargets", { allowedTargets })}`)
     return null;
   }
   if (this.type === "spell" && shouldAllowRoll) {
@@ -296,19 +298,19 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
     //TODO Consider how to disable this check for Damageonly workflowa and trap workflowss
     if (midiFlags?.fail?.spell?.all) {
-      ui.notifications.warn("You are unable to cast the spell");
+      ui.notifications?.warn("You are unable to cast the spell");
       return null;
     }
     if ((midiFlags?.fail?.spell?.verbal || midiFlags?.fail?.spell?.vocal) && needsVerbal) {
-      ui.notifications.warn("You make no sound and the spell fails");
+      ui.notifications?.warn("You make no sound and the spell fails");
       return null;
     }
     if (midiFlags?.fail?.spell?.somatic && needsSomatic) {
-      ui.notifications.warn("You can't make the gestures and the spell fails");
+      ui.notifications?.warn("You can't make the gestures and the spell fails");
       return null;
     }
     if (midiFlags?.fail?.spell?.material && needsMaterial) {
-      ui.notifications.warn("You can't use the material component and the spell fails");
+      ui.notifications?.warn("You can't use the material component and the spell fails");
       return null;
     }
   }
@@ -333,8 +335,8 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
 
   if (!shouldAllowRoll) {
-    ui.notifications.warn(i18n("midi-qol.noTargets"));
-    warn(`${game.user.name} attempted to roll with no targets selected`)
+    ui.notifications?.warn(i18n("midi-qol.noTargets"));
+    warn(`${game.user?.name} attempted to roll with no targets selected`)
     return;
   }
 
@@ -403,7 +405,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
 export async function showItemInfo() {
   const token = this.actor.token;
-  const sceneId = token?.scene && token.scene.id || canvas.scene.id;
+  const sceneId = token?.scene && token.scene.id || getCanvas().scene?.id;
 
   const templateData = {
     actor: this.actor,
@@ -433,7 +435,7 @@ export async function showItemInfo() {
   const html = await renderTemplate(template, templateData);
 
   const chatData = {
-    user: game.user.id,
+    user: game.user?.id,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     content: html,
     speaker: getSpeaker(this.actor),
@@ -446,7 +448,7 @@ export async function showItemInfo() {
   let rollMode = game.settings.get("core", "rollMode");
   if (["gmroll", "blindroll"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
   if (rollMode === "blindroll") chatData["blind"] = true;
-  if (rollMode === "selfroll") chatData["whisper"] = [game.user.id];
+  if (rollMode === "selfroll") chatData["whisper"] = [game.user?.id];
 
   // Create the chat message
   return ChatMessage.create(chatData);
@@ -463,7 +465,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   needAttackButton = needAttackButton || (getAutoRollAttack() && workflow.rollOptions.fastForwardKey)
   const needDamagebutton = itemHasDamage(this) && (getAutoRollDamage() === "none" || !getRemoveDamageButtons() || showFullCard);
   const needVersatileButton = itemIsVersatile(this) && (showFullCard || getAutoRollDamage() === "none");
-  const sceneId = token?.scene && token.scene.id || canvas.scene?.id;
+  const sceneId = token?.scene && token.scene.id || getCanvas().scene?.id;
   let isPlayerOwned = this.actor.hasPlayerOwner;
 
   if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = this.actor.isPC
@@ -508,7 +510,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   else if (["spell", "power"].includes(this.type)) theSound = configSettings.spellUseSound;
   else if (this.type === "consumable" && this.name.toLowerCase().includes(i18n("midi-qol.potion").toLowerCase())) theSound = configSettings.potionUseSound;
   const chatData = {
-    user: game.user.id,
+    user: game.user?.id,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     content: html,
     flavor: this.data.data.chatFlavor || this.name,
@@ -532,13 +534,14 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   let rollMode = game.settings.get("core", "rollMode");
   if (["gmroll", "blindroll"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM");
   if (rollMode === "blindroll") chatData["blind"] = true;
-  if (rollMode === "selfroll") chatData["whisper"] = [game.user.id];
+  if (rollMode === "selfroll") chatData["whisper"] = [game.user?.id];
   return createMessage ? ChatMessage.create(chatData) : chatData;
 }
 
-function isTokenInside(token, wallsBlockTargeting) {
-  const grid = canvas.scene.data.grid,
-		templatePos = { x: this.data.x, y: this.data.y };
+function isTokenInside(templateDetails: {x: number, y: number, shape: any}, token, wallsBlockTargeting) {
+  const grid = getCanvas().scene?.data.grid;
+  const templatePos = { x: templateDetails.x, y: templateDetails.y };
+
 	// Check for center of  each square the token uses.
 	// e.g. for large tokens all 4 squares
 	const startX = token.width >= 1 ? 0.5 : token.width / 2;
@@ -550,10 +553,10 @@ function isTokenInside(token, wallsBlockTargeting) {
 				x: token.x + x * grid - templatePos.x,
 				y: token.y + y * grid - templatePos.y,
 			};
-			let contains = this.shape?.contains(currGrid.x, currGrid.y);
+			let contains = templateDetails.shape?.contains(currGrid.x, currGrid.y);
 			if (contains && wallsBlockTargeting) {
         const r = new Ray({x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y}, templatePos);
-        contains = !canvas.walls.checkCollision(r);
+        contains = !getCanvas().walls?.checkCollision(r);
       }
       if (contains) return true;
 		}
@@ -561,28 +564,29 @@ function isTokenInside(token, wallsBlockTargeting) {
 	return false;
 }
 
-export function templateTokens(template) {
+export function templateTokens(templateDetails: {x: number, y: number, shape: any}) {
   if (configSettings.autoTarget === "none") return;
   const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget);
-	const tokens = canvas.tokens.placeables; //.map(t=>t.data)
-  let targets = [];
-  let tokenInside = isTokenInside.bind(template)
+	const tokens = getCanvas().tokens?.placeables || []; //.map(t=>t.data)
+  let targets: string[] = [];
   for (const token of tokens) {
-    if (token.actor && tokenInside(token.data, wallsBlockTargeting)) {
-      if (["wallsBlock", "always"].includes(configSettings.autoTarget) || token.actor?.data.data.attributes.hp.value > 0)
-      targets.push(token.data._id);
+    if (token.actor && isTokenInside(templateDetails, token.data, wallsBlockTargeting)) {
+      const actorData: any = token.actor?.data;
+      if (actorData?.data.details.type?.custom === "NoTarget") continue;
+      if (["wallsBlock", "always"].includes(configSettings.autoTarget) || actorData?.data.attributes.hp.value > 0) {
+        if (token.document.id) targets.push(token.document.id);
+      }
     }
   }
-  // console.error("targets", targets)
-  game.user.updateTokenTargets(targets);
+  game.user?.updateTokenTargets(targets);
 }
 
-export function selectTargets(templateDocument, data, user) {
-  let item = this?.item;
-  let targeting = configSettings.autoTarget;
-  if (user !== game.user.id) {
+export function selectTargets(templateDocument: MeasuredTemplateDocument, data, user) {
+  if (user !== game.user?.id) {
     return true;
   }
+  let item = this?.item;
+  let targeting = configSettings.autoTarget;
   this.templateId = templateDocument?.id;
   this.templateUuid = templateDocument?.uuid;
   if (targeting === "none") { // this is no good
@@ -590,16 +594,38 @@ export function selectTargets(templateDocument, data, user) {
     return true;
   }
   if (!templateDocument.data) return true;
+  let {direction, distance, angle, width} = templateDocument.data;
+  const dimensions = getCanvas().dimensions || {size: 1, distance: 1};
+  distance *= dimensions.size  / dimensions.distance;
+  let shape: any;
+  switch ( templateDocument.data.t ) {
+    case "circle":
+      shape = new PIXI.Circle(0, 0, distance);
+      break;
+    case "cone":
+      //@ts-ignore
+      shape = templateDocument._object._getConeShape(direction, angle, distance);
+      break;
+    case "rect":
+      //@ts-ignore
+      shape = templateDocument._object._getRectShape(direction, distance);
+      break;
+    case "ray":
+      //@ts-ignore
+      shape = templateDocument._object._getRayShape(direction, distance, width);
+  }
+  templateTokens({x: templateDocument.data.x, y: templateDocument.data.y, shape});
 
   // if the item specifies a range of "special" don't target the caster.
-  let selfTarget = (item?.data.data.range?.units === "spec") ? canvas.tokens.get(this.tokenId) : null;
-  if (selfTarget && game.user.targets.has(selfTarget)) {
+  let selfTarget = (item?.data.data.range?.units === "spec") ? getCanvas().tokens?.get(this.tokenId) : null;
+  if (selfTarget && game.user?.targets.has(selfTarget)) {
     // we are targeted and should not be
     selfTarget.setTarget(false, {user: game.user, releaseOthers: false})
   }
   this.saves = new Set();
-  this.targets = new Set(game.user.targets);
-  this.hitTargets = new Set(game.user.targets);
+  const userTargets = game.user?.targets;
+  this.targets = new Set(userTargets);
+  this.hitTargets = new Set(userTargets);
   this.templateData = templateDocument.data;
   return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
 };

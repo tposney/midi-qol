@@ -1,8 +1,7 @@
-import { error, gameStats, i18n } from "../midi-qol";
-import { RollStatsDisplay } from "./apps/RollStatsDisplay";
-// import { broadcastData } from "./GMAction";
-import { socketlibSocket } from "./GMAction";
-import { configSettings } from "./settings";
+import { error, gameStats, i18n } from "../midi-qol.js";
+import { RollStatsDisplay } from "./apps/RollStatsDisplay.js";
+import { socketlibSocket } from "./GMAction.js";
+import { configSettings } from "./settings.js";
 
 function fetchStats() {
   gameStats.fetchStats();
@@ -55,7 +54,7 @@ export class RollStats {
         damageApplied: number,
         damageTotal: number,
       },
-      itemStats: {}
+      itemStats: any,
     }
   };
 
@@ -65,11 +64,10 @@ export class RollStats {
 
   getActorStats(actorId) {
     if (!this.currentStats[actorId]) {
-      const actor = game.actors.get(actorId);
-      //@ts-ignore
+      const actor = game.actors?.get(actorId);
       if (!actor || (configSettings.playerStatsOnly && !actor.hasPlayerOwner)) return null;
       this.currentStats[actorId] = duplicate(blankStats);
-      this.currentStats[actorId].name = game.actors.get(actorId)?.name;
+      this.currentStats[actorId].name = game.actors?.get(actorId)?.name;
     } else {
       this.currentStats[actorId] = mergeObject(this.currentStats[actorId], blankStats, 
         {overwrite: false, inplace: true, insertKeys: true, insertValues: true});
@@ -121,12 +119,13 @@ export class RollStats {
       config: false,
       onChange: fetchStats
     });
+    //@ts-ignore
     this.currentStats = game.settings.get("midi-qol", "RollStats");
     this.rollCount = 0;
   }
 
   async endSession() {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
     Object.keys(this.currentStats).forEach(actorId => {
       this.currentStats[actorId].session = duplicate(blankStat);
       this.currentStats[actorId].itemStats = {};
@@ -135,30 +134,17 @@ export class RollStats {
   }
 
   async clearStats() {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
     await game.settings.set("midi-qol", "RollStats", {})
   }
   async clearActorStats(actorId: string) {
     socketlibSocket.executeAsGM("removeStatsForActorId", {
       actorId: actorId,
     })
-/* TODO remove this when socketlib 100% solid
-    const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
-    if (!intendedGM) {
-      ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
-      error("No GM user connected - cannot update roll stats");
-      return;
-    }
-    broadcastData({
-      action: "removeStatsForActorId",
-      actorId: actorId,
-      intendedFor: intendedGM.id
-    });
-*/
   }
 
   GMremoveActorStats(actorId) {
-    if (!game.user.isGM) return;
+    if (!game.user?.isGM) return;
     delete this.currentStats[actorId];
     game.settings.set("midi-qol", "RollStats", this.currentStats)
   }
@@ -173,6 +159,7 @@ export class RollStats {
   }
   
   public fetchStats() {
+    //@ts-ignore
     this.currentStats = game.settings.get("midi-qol", "RollStats");
   }
 
@@ -217,22 +204,29 @@ export class RollStats {
       actorId: actorId,
       currentStats: gameStats.currentStats[actorId],
     })
-
-/* TODO remove this when socketlib 100% solid
-    const intendedGM = game.user.isGM ? game.user : game.users.entities.find(u => u.isGM && u.active);
-    if (!intendedGM) {
-      ui.notifications.error(`${game.user.name} ${i18n("midi-qol.noGM")}`);
-      error("No GM user connected - cannot update roll stats");
-      return;
+  }
+  public exportToJSON() {
+    const data = this.currentStats;
+    const filename = `fvtt-midi-qol-stats.json`;
+    saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
+  }
+  
+  public headerLine: string = `"Actor", "Item Name", "#Attacks", "# Nat20", "#Fumbles", "#Critical", "Attack Roll Dice Total", "Attack Roll Total", "DamageZ Rolls", "Total Damage Applied", "Damage Total"`;
+  dumpStatLine(actorName: string, itemName: string, stats: any): string {
+    return `${actorName},${itemName}, ${stats.numAttacks|| 0}, ${stats.numAttack20|| 0}, ${stats.numAttackFumble|| 0}, ${stats.numAttackCritical|| 0}, ${stats.attackRollsDiceTotal|| 0}, ${stats.attackRollTotal|| 0}, ${stats.numDamageRolls|| 0}, ${stats.damageApplied|| 0}, ${stats.damageTotal|| 0}`
+  }
+  public exportToCSV() {
+    let csvText: string = duplicate(this.headerLine) + "\n";
+    for (let actorStats of Object.values(this.currentStats)) {
+      csvText += this.dumpStatLine(actorStats.name, "life time",  actorStats.lifetime) + "\n";
+      csvText += this.dumpStatLine(actorStats.name, "Session",  actorStats.session) + "\n";
+      for (let itemStat of Object.values(actorStats.itemStats)) {
+        const theStats: any = itemStat;
+        csvText += this.dumpStatLine(actorStats.name, theStats.name, theStats.session) + "\n";
+      }
     }
-
-    broadcastData({
-      action: "updateActorStats",
-      actorId: actorId,
-      currentStats: gameStats.currentStats[actorId],
-      intendedFor: intendedGM.id
-    });
-    */
+    const filename = `fvtt-midi-qol-stats.csv`;
+    saveDataToFile(csvText, "text/json", filename);
   }
 
   public async GMupdateActor({actorId, currentStats}) {

@@ -1,7 +1,18 @@
+## 0.8.34
+* Major clean up to work with foundry league of developers types.
+* Fix for displaying both GM only and PC obscured names in hit result cards.
+* Fix for Damage Reduction not working with physical DR.
+* Fix for duplicate damage rolls being displayed when not using merge card.
+* Fix for TrapWorkflow and spells that require a template.
+* Fix for not picking up player saving throws when using prompt player chatMessage, rather than auto or LMRTFY/MonksTokenBar.
+* Fix for duplicate concentration application removing concentration.
+* Added special duration 1Spell
+* Added export roll stats to json/csv. This is the raw data so you'll need to do some arithmetic.
+
 ## 0.8.33
 * Added flags.midi-qol.optional.NAME.damage which allows bonus dice to be added to damage rolls (i.e. Bard College of valour)
 * Added flags.midi-qol.optional.NAME.ac, which allows adding bonus dice to AC when attack hits (i.e. Bard College of valour).
-* Fix for GMActtion rollAbility
+* Fix for GMAction rollAbility
 * Fix for TrapWorkflow rolling the attack twice.
 * Fix for midi-qol adding critical damage twice when not fast forwarding damage rolls.
 * Change to check saving throw behaviour. If set to only GM sees or All see, players will only see the dice rolls for their own saves as separate chat cards, all other saving throw rolls will be hidden, this includes for the GM. The GM can always check the save results card which has the player roll details available as tooltip text. This is intended to reduce the clutter in the chat log when many saves are performed.

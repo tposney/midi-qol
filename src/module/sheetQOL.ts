@@ -1,8 +1,7 @@
-import { itemDeleteCheck, itemRollButtons } from "./settings";
-import { i18n, debug, log, warn } from "../midi-qol";
-import { Workflow, noKeySet, shiftOnlyEvent } from "./workflow";
-import { showItemInfo } from "./itemhandling";
-import { itemHasDamage, itemIsVersatile } from "./utils";
+import { itemDeleteCheck, itemRollButtons } from "./settings.js";
+import { i18n, debug, log, warn } from "../midi-qol.js";
+import { showItemInfo } from "./itemhandling.js";
+import { itemHasDamage, itemIsVersatile } from "./utils.js";
 
 
 const knownSheets = {
@@ -40,8 +39,8 @@ let enableSheetQOL = (app, html, data) => {
   let rollTag = knownSheets[app.constructor.name] ? knownSheets[app.constructor.name] : defaultTag;
   if (itemRollButtons)
       if (["Tidy5eSheet", "Tidy5eNPC"].includes(app.constructor.name)) {
-        if (game.modules.get("tidy5e-sheet").active && 
-        isNewerVersion(game.modules.get("tidy5e-sheet").data.version, "0.4.0") &&
+        if (game.modules.get("tidy5e-sheet")?.active && 
+        isNewerVersion(game.modules.get("tidy5e-sheet")?.data.version ?? "", "0.4.0") &&
         game.settings.get("tidy5e-sheet", "contextRollButtons")) {
           addTidy5eItemSheetButtons(app, html, data);
         } else {
@@ -53,7 +52,7 @@ let enableSheetQOL = (app, html, data) => {
   return true;
 };
 let itemDeleteHandler = ev => {
-  let actor = game.actors.get(ev.data.data.actor._id);
+  let actor = game.actors?.get(ev.data.data.actor._id);
   let d = new Dialog({
       // localize this text
       title: i18n("midi-qol.reallyDelete"),
@@ -174,7 +173,7 @@ function addTidy5eItemSheetButtons(app, html, data) {
   $('.tidy5e-sheet .inventory-list:not(favorites) .item').each(function () {
 
     let buttonContainer;
-    if (isNewerVersion(game.modules.get("tidy5e-sheet").data.version, "0.4.17"))
+    if (isNewerVersion(game.modules.get("tidy5e-sheet")?.data.version ?? "", "0.4.17"))
       buttonContainer = $(this).find(".mod-roll-buttons");
     else
       buttonContainer = $(this).find(".item-controls");

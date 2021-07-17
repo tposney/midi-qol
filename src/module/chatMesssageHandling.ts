@@ -1,45 +1,41 @@
-import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats } from "../midi-qol";
-//@ts-ignore
-import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
-//@ts-ignore
-import Item5e from "../../../systems/dnd5e/module/item/entity.js"
-
-import { installedModules } from "./setupModules";
-import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow";
-import { nsaFlag, coloredBorders, criticalDamage, addChatDamageButtons, configSettings, forceHideRoll, enableWorkflow, checkRule, autoRemoveTargets } from "./settings";
-import { createDamageList, getTraitMult, calculateDamage, addConcentration, MQfromUuid, getSelfTarget } from "./utils";
-import { setupSheetQol } from "./sheetQOL";
-
+import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats } from "../midi-qol.js";
+import { installedModules } from "./setupModules.js";
+import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
+import { nsaFlag, coloredBorders,  addChatDamageButtons, configSettings, forceHideRoll } from "./settings.js";
+import { createDamageList, getTraitMult, calculateDamage,  MQfromUuid } from "./utils.js";
 export const MAESTRO_MODULE_NAME = "maestro";
-
 export const MODULE_LABEL = "Maestro";
 
 export function mergeCardSoundPlayer(message, update, options, user) {
   debug("Merge card sound player ", message.data, getProperty(update, "flags.midi-qol.playSound"), message.data.sound)
   const firstGM = game.user; //game.users.find(u=> u.isGM && u.active);
-  if (game.user !== firstGM) return;
+  if (game.user !== firstGM) return true;
   const updateFlags = getProperty(update, "flags.midi-qol") || {};
   const midiqolFlags = mergeObject(getProperty(message.data, "flags.midi-qol") || {}, updateFlags, { inplace: false, overwrite: true })
   if (midiqolFlags.playSound && configSettings.useCustomSounds) {
-    const playlist = game.playlists.get(configSettings.customSoundsPlaylist);
+    const playlist = game.playlists?.get(configSettings.customSoundsPlaylist);
+    //@ts-ignore .sounds
     const sound = playlist?.sounds.find(s => s.id === midiqolFlags.sound)
+    //@ts-ignore dice3d
     const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
     const delay = (dice3dActive && midiqolFlags?.waitForDiceSoNice && [MESSAGETYPES.HITS].includes(midiqolFlags.type)) ? 500 : 0;
     debug("mergeCardsound player ", update, playlist, sound, sound ? 'playing sound' : 'not palying sound', delay)
 
-    if (sound && game.user.isGM) {
+    if (sound && game.user?.isGM) {
       setTimeout(() => {
-        playlist.playSound(sound);
+        //@ts-ignore playSound
+        playlist?.playSound(sound);
       }, delay)
     }
     return true;
   }
+  return true;
 }
 
 export let processCreateBetterRollsMessage = (message: ChatMessage, user: string) => {
-  if (game.user.id !== user) return true;
+  if (game.user?.id !== user) return true;
   const flags = message.data.flags;
-  const brFlags = flags?.betterrolls5e;
+  const brFlags: any = flags?.betterrolls5e;
   if (!brFlags) return true;
   //@ts-ignore
   debug("process precratebetteerrollscard ", message.data, installedModules["betterrolls5e"], message.data.content?.startsWith('<div class="dnd5e red-full chat-card"'))
@@ -55,7 +51,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
 
   let actor;
   if (token) actor = token.actor;
-  else actor = game.actors.get(actorId);
+  else actor = game.actors?.get(actorId);
   // Get the Item from stored flag data or by the item ID on the Actor
   const storedData = message.getFlag("dnd5e", "itemData");
   //@ts-ignored ocumentClass
@@ -71,8 +67,8 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
     if (!message.data.speaker?.token && tokenId) message.data.update({ "speaker.token": tokenId });
   }
 
-  let damageList = [];
-  let otherDamageList = [];
+  let damageList: any[] = [];
+  let otherDamageList: any[] = [];
 
   // Get attack roll info
   const attackEntry = brFlags.entries?.find((e) => e.type === "multiroll" && e.rollType === "attack");
@@ -100,7 +96,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
     }
   }
   //@ts-ignore udpate
-  const targets = (item?.data.data.target?.type === "self") ? new Set([token]) : new Set(game.user.targets);
+  const targets = (item?.data.data.target?.type === "self") ? new Set([token]) : new Set(game.user?.targets);
   let workflow = BetterRollsWorkflow.getWorkflow(item.uuid);
   if (!workflow) workflow = new BetterRollsWorkflow(actor, item, speaker, targets, null);
   workflow.isCritical = isCritical;
@@ -153,11 +149,12 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
 }
 
 export let diceSoNiceHandler = async (message, html, data) => {
-  if (!game.dice3d || !installedModules.get("dice-so-nice") || game.dice3d.messageHookDisabled || !game.dice3d.isEnabled()) return;
+  //@ts-ignore game.dice3d
+  if (!game.dice3d || !installedModules.get("dice-so-nice") || game.dice3d?.messageHookDisabled || !game.dice3d.isEnabled()) return;
   debug("Dice so nice handler ", message, html, data);
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
-  let rollDice = game.user.isGM ||
-    (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user.id)));
+  let rollDice = game.user?.isGM ||
+    (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user?.id)));
   if (!rollDice) {
     return;
   }
@@ -175,10 +172,10 @@ export let diceSoNiceHandler = async (message, html, data) => {
       $(html).find(".midi-qol-hits-display").length === 1
       : $(html).find(".midi-qol-single-hit-card").length === 1;
     if (savesDisplay) {
-      if (game.user.isGM || (configSettings.autoCheckSaves !== "whisper" && !message.data.blind))
+      if (game.user?.isGM || (configSettings.autoCheckSaves !== "whisper" && !message.data.blind))
         html.show()
     } else if (hitsDisplay) {
-      if (game.user.isGM || (configSettings.autoCheckHit !== "whisper" && !message.data.blind))
+      if (game.user?.isGM || (configSettings.autoCheckHit !== "whisper" && !message.data.blind))
         html.show()
     }
     else {
@@ -200,12 +197,12 @@ export let colorChatMessageHandler = (message, html, data) => {
   if (coloredBorders === "none") return true;
   let actorId = message.data.speaker.actor;
   let userId = message.data.user;
-  let actor = game.actors.get(actorId);
-  let user = game.users.get(userId);
+  let actor = game.actors?.get(actorId);
+  let user = game.users?.get(userId);
   if (!user || !actor) return true;
   //@ts-ignore permission is actually not a boolean
   if (actor.data.permission[userId] !== CONST.ENTITY_PERMISSIONS.OWNER && !actor.data.permission["default"] !== CONST.ENTITY_PERMISSIONS.OWNER && !user.isGM) {
-    user = game.users.find(p => p.isGM && p.active)
+    user = game.users?.find(p => p.isGM && p.active)
     if (!user) return true;
   }
 
@@ -237,15 +234,16 @@ export let nsaMessageHandler = (message, data, ...args) => {
   return true;
 }
 
-let _highlighted = null;
+let _highlighted: Token | null = null;
 
 let _onTargetHover = (event) => {
 
   event.preventDefault();
   if (!canvas?.scene?.data.active) return;
-  const token = canvas.tokens.get(event.currentTarget.id);
+  const token: Token | undefined= canvas.tokens?.get(event.currentTarget.id);
   if (token?.isVisible) {
-    if (!token._controlled) token._onHoverIn(event);
+    //@ts-ignore _controlled, _onHoverIn
+    if (!token?._controlled) token._onHoverIn(event);
     _highlighted = token;
   }
 }
@@ -259,6 +257,7 @@ let _onTargetHover = (event) => {
 let _onTargetHoverOut = (event) => {
   event.preventDefault();
   if (!canvas?.scene?.data.active) return;
+  //@ts-ignore onHoverOut
   if (_highlighted) _highlighted._onHoverOut(event);
   _highlighted = null;
 }
@@ -266,13 +265,14 @@ let _onTargetHoverOut = (event) => {
 let _onTargetSelect = (event) => {
   event.preventDefault();
   if (!canvas?.scene?.data.active) return;
-  const token = canvas.tokens.get(event.currentTarget.id);
+  const token = canvas.tokens?.get(event.currentTarget.id);
+  //@ts-ignore multiSelect
   token?.control({ multiSelect: false, releaseOthers: true });
 };
 
 export let hideRollRender = (msg, html, data) => {
   if (forceHideRoll && (msg.data.whisper.length > 0 || msg.data?.blind)) {
-    if (!game.user.isGM && !msg.isAuthor && msg.data.whisper.indexOf(game.user.id) === -1) {
+    if (!game.user?.isGM && !msg.isAuthor && msg.data.whisper.indexOf(game.user?.id) === -1) {
       warn("hideRollRender | hiding message", msg.data.whisper)
       html.hide();
     }
@@ -282,7 +282,7 @@ export let hideRollRender = (msg, html, data) => {
 
 export let hideRollUpdate = (message, data, diff, id) => {
   if (forceHideRoll && message.data.whisper.length > 0 || message.data.blind) {
-    if (!game.user.isGM && ((!message.isAuthor && (message.data.whisper.indexOf(game.user.id) === -1) || message.data.blind))) {
+    if (!game.user?.isGM && ((!message.isAuthor && (message.data.whisper.indexOf(game.user?.id) === -1) || message.data.blind))) {
       let messageLi = $(`.message[data-message-id=${data._id}]`);
       warn("hideRollUpdate: Hiding ", message.data.whisper, messageLi)
       messageLi.hide();
@@ -300,13 +300,13 @@ export let hideRollUpdate = (message, data, diff, id) => {
 export let hideStuffHandler = (message, html, data) => {
   debug("hideStuffHandler message: ", message.id, message)
 
-  if ((forceHideRoll || configSettings.mergeCard) && message.data.blind && !game.user.isGM) {
+  if ((forceHideRoll || configSettings.mergeCard) && message.data.blind && !game.user?.isGM) {
     html.hide();
     return;
   }
   if (forceHideRoll
-    && !game.user.isGM
-    && message.data.whisper.length > 0 && !message.data.whisper.includes(game.user.id)
+    && !game.user?.isGM
+    && message.data.whisper.length > 0 && !message.data.whisper.includes(game.user?.id)
     && !message.isAuthor) {
     html.hide();
     return;
@@ -316,41 +316,43 @@ export let hideStuffHandler = (message, html, data) => {
   // const actor = game.actors.get(message?.speaker.actor)
   // let buttonTargets = html.getElementsByClassName("minor-qol-target-npc");
   ids.hover(_onTargetHover, _onTargetHoverOut)
-  if (game.user.isGM) {
+  if (game.user?.isGM) {
     ids.click(_onTargetSelect);
   }
 
   // Hide saving throw tool tips to non-gms
-  if (!game.user.isGM) {
-    html.find(".midi-qol-save-tooltip").hide()
+  if (!game.user?.isGM) {
+    html.find(".midi-qol-save-tooltip").hide();
   }
   // Hide saving throws if not rolled by me.
-  if (!game.user.isGM && ["all", "whisper"].includes(configSettings.autoCheckSaves) && message.isRoll &&
-    (message.data.flavor.includes(i18n("DND5E.ActionSave")) || message.data.flavor.includes(i18n("DND5E.ActionAbil")))) {
-    if (game.user.id !== message.user.id) {
+  if (!game.user?.isGM && ["all", "whisper"].includes(configSettings.autoCheckSaves) && message.isRoll &&
+    (message.data.flavor?.includes(i18n("DND5E.ActionSave")) || message.data.flavor?.includes(i18n("DND5E.ActionAbil")))) {
+    if (game.user?.id !== message.user.id) {
       html.hide();
       return;
     }
   }
-  if (game.user.isGM) {
-    html.find(".midi-qol-target-npc-Player").hide();
-  } else {
-    html.find(".midi-qol-target-npc-GM").hide();
-  }
-  if (game.user.isGM && $(html).find(".midi-qol-hits-display").length) {
+
+  if (game.user?.isGM && $(html).find(".midi-qol-hits-display").length) {
     if (configSettings.mergeCard) {
       $(html).find(".midi-qol-hits-display").show();
     } else {
       html.show();
     }
+    html.find(".midi-qol-target-npc-Player").hide();
     //@ts-ignore
     ui.chat.scrollBottom
     return;
   }
-  if (!game.user.isGM && !configSettings.displaySaveDC) {
+  if (game.user?.isGM) {
+    html.find(".midi-qol-target-npc-Player").hide();
+  } else {
+    html.find(".midi-qol-target-npc-GM").hide();
+  }
+  if (!game.user?.isGM && !configSettings.displaySaveDC) {
     html.find(".midi-qol-saveDC").hide();
   }
-  if (message.user?.isGM && !game.user.isGM && configSettings.hideRollDetails !== "none") {
+  if (message.user?.isGM && !game.user?.isGM && configSettings.hideRollDetails !== "none") {
     const d20AttackRoll = getProperty(message.data.flags, "midi-qol.d20AttackRoll");
     if (d20AttackRoll && configSettings.hideRollDetails === "d20AttackOnly") {
       html.find(".dice-tooltip").remove();
@@ -372,7 +374,7 @@ export let hideStuffHandler = (message, html, data) => {
     }
   }
 
-  if (!game.user.isGM && (configSettings.autoCheckHit === "whisper" || message.data.blind)) {
+  if (!game.user?.isGM && (configSettings.autoCheckHit === "whisper" || message.data.blind)) {
     if (configSettings.mergeCard) {
       html.find(".midi-qol-hits-display").hide();
     } else {
@@ -381,7 +383,7 @@ export let hideStuffHandler = (message, html, data) => {
       }
     }
   }
-  if (!game.user.isGM && (configSettings.autoCheckSaves === "whisper" || message.data.blind)) {
+  if (!game.user?.isGM && (configSettings.autoCheckSaves === "whisper" || message.data.blind)) {
     if (configSettings.mergeCard) {
       html.find(".midi-qol-saves-display").hide();
     } else {
@@ -410,8 +412,8 @@ export let chatDamageButtons = (message, html, data) => {
   debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll?.type, message.data.flags)
   const shouldAddButtons = !addChatDamageButtons
     || addChatDamageButtons === "both"
-    || (addChatDamageButtons === "gm" && game.user.isGM)
-    || (addChatDamageButtons === "pc" && !game.user.isGM);
+    || (addChatDamageButtons === "gm" && game.user?.isGM)
+    || (addChatDamageButtons === "pc" && !game.user?.isGM);
 
   if (!shouldAddButtons) {
     return true;
@@ -422,7 +424,7 @@ export let chatDamageButtons = (message, html, data) => {
     let actorId = message.data.speaker.actor;
     if (message.data.flags?.dnd5e?.roll?.type === "damage") {
       itemId = message.data.flags.dnd5e.roll.itemId;
-      item = game.actors.get(actorId).items.get(itemId);
+      item = game.actors?.get(actorId)?.items.get(itemId);
       if (!item) {
         warn("Damage roll for non item");
         return;
@@ -468,15 +470,16 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
       // const item = game.actors.get(actorId).items.get(itemId);
       const item = MQfromUuid(itemUuid)
       // find solution for non-magic weapons
-      let promises = [];
-      for (let t of canvas.tokens.controlled) {
-        let a = t.actor;
+      let promises: Promise<any>[] = [];
+      if (canvas?.tokens) for (let t of canvas.tokens.controlled) {
+        let a: Actor | null = t.actor;
+        if (!a) continue;
         let appliedDamage = 0;
         for (let { damage, type } of damageList) {
           appliedDamage += Math.floor(damage * getTraitMult(a, type, item));
         }
         appliedDamage = Math.floor(Math.abs(appliedDamage)) * mult;
-        let damageItem = calculateDamage(a, appliedDamage, t, totalDamage, "");
+        let damageItem = calculateDamage(a, appliedDamage, t, totalDamage, "", null);
         promises.push(a.update({ "data.attributes.hp.temp": damageItem.newTempHP, "data.attributes.hp.value": damageItem.newHP }));
       }
       let retval = await Promise.all(promises);
@@ -490,7 +493,7 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
   // logic to only show the buttons when the mouse is within the chatcard and a token is selected
   html.find('.dmgBtn-container-mqol').hide();
   $(html).hover(evIn => {
-    if (canvas?.tokens.controlled.length > 0) {
+    if (canvas?.tokens?.controlled && canvas.tokens.controlled.length > 0) {
       html.find('.dmgBtn-container-mqol').show();
     }
   }, evOut => {
@@ -501,7 +504,7 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
 
 export function processItemCardCreation(message, user) {
   const midiFlags = message.data.flags["midi-qol"];
-  if (user === game.user.id && midiFlags?.workflowId) { // check to see if it is a workflow
+  if (user === game.user?.id && midiFlags?.workflowId) { // check to see if it is a workflow
     const workflow = Workflow.getWorkflow(midiFlags.workflowId);
     if (!workflow) return;
     if (!workflow.itemCardId && !["TrapWorkflow"].includes(workflow.workflowType)) {
@@ -511,13 +514,15 @@ export function processItemCardCreation(message, user) {
   }
   debug("Doing item card creation", configSettings.useCustomSounds, configSettings.itemUseSound, midiFlags?.type)
   if (configSettings.useCustomSounds && midiFlags?.type === MESSAGETYPES.ITEM) {
-    const playlist = game.playlists.get(configSettings.customSoundsPlaylist);
+    const playlist = game.playlists?.get(configSettings.customSoundsPlaylist);
+    //@ts-ignore playlist.sounds
     const sound = playlist?.sounds.find(s => s.id === midiFlags?.sound);
     const delay = 0;
-    if (sound && game.user.isGM) {
+    if (sound && game.user?.isGM) {
       setTimeout(() => {
         // sound.playing = true;
-        playlist.playSound(sound);
+        //@ts-ignore playSound
+        playlist?.playSound(sound);
       }, delay)
     }
   }
@@ -530,20 +535,20 @@ export async function onChatCardAction(event) {
   button.disabled = true;
   const card = button.closest(".chat-card");
   const messageId = card.closest(".message").dataset.messageId;
-  const message = game.messages.get(messageId);
+  const message = game.messages?.get(messageId);
   const action = button.dataset.action;
-  let targets = game.user.targets;
+  let targets = game.user?.targets;
 
   // Validate permission to proceed with the roll
-  if (!(game.user.isGM || message.isAuthor)) return;
-  if (!(targets?.size > 0)) return; // cope with targets undefined
+  if (!(game.user?.isGM || message?.isAuthor)) return;
+  if (!(targets && targets.size > 0)) return; // cope with targets undefined
   if (action !== "applyEffects") return;
 
   //@ts-ignore speaker
-  const betterRollsFlags = message.data.flags.betterrolls5e;
+  const betterRollsFlags: any = message.data.flags.betterrolls5e;
   var actor, item;
   if (betterRollsFlags) {
-    actor = game.actors.get(betterRollsFlags.actorId);
+    actor = game.actors?.get(betterRollsFlags.actorId);
     item = actor.items.get(betterRollsFlags.itemId);
   } else {
     // Recover the actor for the chat card
@@ -552,7 +557,7 @@ export async function onChatCardAction(event) {
     if (!actor) return;
 
     // Get the Item from stored flag data or by the item ID on the Actor
-    const storedData = message.getFlag(game.system.id, "itemData");
+    const storedData = message?.getFlag(game.system.id, "itemData");
     //@ts-ignore
     item = storedData ? new CONFIG.Item.documentClass(storedData, { parent: actor }) : actor.items.get(card.dataset.itemId);
     if (!item) { // TODO investigate why this is occuring
@@ -565,7 +570,7 @@ export async function onChatCardAction(event) {
   if (hasDAE) {
     //@ts-ignore
     let dae = window.DAE;
-    dae.doEffects(item, true, game.user.targets, { whisper: false, spellLevel: workflow?.itemLevel, damageTotal: workflow?.damageTotal, critical: workflow?.isCritical, fumble: workflow?.isFumble, itemCardId: workflow?.itemCardId })
+    dae.doEffects(item, true, game.user?.targets, { whisper: false, spellLevel: workflow?.itemLevel, damageTotal: workflow?.damageTotal, critical: workflow?.isCritical, fumble: workflow?.isFumble, itemCardId: workflow?.itemCardId })
   }
 
   // Re-enable the button

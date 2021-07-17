@@ -1,13 +1,14 @@
-import { warn, i18n, error, debug } from "../../midi-qol";
-import { RollStats } from "../RollStats";
+import { warn, i18n, error, debug } from "../../midi-qol.js";
+import { RollStats } from "../RollStats.js";
 export class RollStatsDisplay extends FormApplication {
 
   statsHookId: number;
   playersOnly: boolean;
+  object: RollStats;
   expanded: {};
-  constructor(object, options) {
+  constructor(object: any, options) {
     super(object, options);
-    this.playersOnly = options.playersOnly || !game.user.isGM || false;
+    this.playersOnly = options.playersOnly || !game.user?.isGM || false;
     this.expanded = {};
     Object.keys(this.object.currentStats).forEach(aid => {
       this.expanded[aid] = this.playersOnly;
@@ -16,6 +17,8 @@ export class RollStatsDisplay extends FormApplication {
       this.render();
     })
   }
+
+  async _updateObject() {};
 
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
@@ -42,13 +45,13 @@ export class RollStatsDisplay extends FormApplication {
   }
 
   getData() {
-    let data = super.getData();
+    let data: any = super.getData();
     data.stats = this.object.prepareStats();
     Object.keys(data.stats).forEach(aid => {
-      if (this.playersOnly && !game.actors.get(aid)?.hasPerm(game.user, "OWNER", true))
+      if (this.playersOnly && game.user && !game.actors?.get(aid)?.hasPerm(game.user, "OWNER", true))
         delete data.stats[aid];
     })
-    data.isGM = game.user.isGM;
+    data.isGM = game.user?.isGM;
     return data;
   }
 
@@ -73,6 +76,13 @@ export class RollStatsDisplay extends FormApplication {
 
       html.find(`#clear-stats`).on("click", (e) => {
         this.object.clearStats();
+      })
+
+      html.find(`#export-stats-json`).on("click", (e) => {
+        this.object.exportToJSON();
+      })
+      html.find(`#export-stats-csv`).on("click", (e) => {
+        this.object.exportToCSV();
       })
 
       html.find(`#end-session`).on("click", (e) => {

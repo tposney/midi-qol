@@ -1,504 +1,209 @@
 const gulp = require('gulp');
-const fs = require('fs-extra');
 const path = require('path');
-const chalk = require('chalk');
-const archiver = require('archiver');
-const stringify = require('json-stringify-pretty-compact');
-const typescript = require('typescript');
-
+var fs = require('fs')
+const del = require('del');
 const ts = require('gulp-typescript');
-const less = require('gulp-less');
-const sass = require('gulp-sass');
-const git = require('gulp-git');
+const sm = require('gulp-sourcemaps');
+const zip = require('gulp-zip');
+const rename = require('gulp-rename');
+const minify = require('gulp-minify');
+const tabify = require('gulp-tabify');
+const stringify = require('json-stringify-pretty-compact');
 
-const argv = require('yargs').argv;
+const GLOB = '**/*';
+const DIST = 'dist/';
+const BUNDLE = 'package/';
+const SOURCE = 'src/';
+const LANG = 'lang/';
+const TEMPLATES = 'templates/';
+const CSS = 'css/';
+const ICON = "icons/";
+const PACK = "packs/";
+const SOUND = "sounds/";
 
-sass.compiler = require('sass');
+var PACKAGE = JSON.parse(fs.readFileSync('package.json'));
+function reloadPackage(cb) { PACKAGE = JSON.parse(fs.readFileSync('package.json')); cb(); }
+function DEV_DIST() { return path.join(PACKAGE.devDir, PACKAGE.name) + '/'; }
 
-function getConfig() {
-	const configPath = path.resolve(process.cwd(), 'foundryconfig.json');
-	let config;
+String.prototype.replaceAll = function (pattern, replace) { return this.split(pattern).join(replace); }
+function pdel(patterns, options) { return () => { return del(patterns, options); }; }
+function plog(message) { return (cb) => { console.log(message); cb() }; }
 
-	if (fs.existsSync(configPath)) {
-		config = fs.readJSONSync(configPath);
-		return config;
-	} else {
-		return;
-	}
-}
-
-function getManifest() {
-	const json = {};
-
-	if (fs.existsSync('src')) {
-		json.root = 'src';
-	} else {
-		json.root = 'dist';
-	}
-
-	const modulePath = path.join(json.root, 'module.json');
-	const systemPath = path.join(json.root, 'system.json');
-
-	if (fs.existsSync(modulePath)) {
-		json.file = fs.readJSONSync(modulePath);
-		json.name = 'module.json';
-	} else if (fs.existsSync(systemPath)) {
-		json.file = fs.readJSONSync(systemPath);
-		json.name = 'system.json';
-	} else {
-		return;
-	}
-
-	return json;
-}
 
 /**
- * TypeScript transformers
- * @returns {typescript.TransformerFactory<typescript.SourceFile>}
+ * Compile the source code into the distribution directory
+ * @param {Boolean} keepSources Include the TypeScript SourceMaps
  */
-function createTransformer() {
-	/**
-	 * @param {typescript.Node} node
-	 */
-	function shouldMutateModuleSpecifier(node) {
-		if (
-			!typescript.isImportDeclaration(node) &&
-			!typescript.isExportDeclaration(node)
-		)
-			return false;
-		if (node.moduleSpecifier === undefined) return false;
-		if (!typescript.isStringLiteral(node.moduleSpecifier)) return false;
-		if (
-			!node.moduleSpecifier.text.startsWith('./') &&
-			!node.moduleSpecifier.text.startsWith('../')
-		)
-			return false;
-		if (path.extname(node.moduleSpecifier.text) !== '') return false;
-		return true;
-	}
-
-	/**
-	 * Transforms import/export declarations to append `.js` extension
-	 * @param {typescript.TransformationContext} context
-	 */
-	function importTransformer(context) {
-		return (node) => {
-			/**
-			 * @param {typescript.Node} node
-			 */
-			function visitor(node) {
-				if (shouldMutateModuleSpecifier(node)) {
-					if (typescript.isImportDeclaration(node)) {
-						const newModuleSpecifier = typescript.createLiteral(
-							`${node.moduleSpecifier.text}.js`
-						);
-						return typescript.updateImportDeclaration(
-							node,
-							node.decorators,
-							node.modifiers,
-							node.importClause,
-							newModuleSpecifier
-						);
-					} else if (typescript.isExportDeclaration(node)) {
-						const newModuleSpecifier = typescript.createLiteral(
-							`${node.moduleSpecifier.text}.js`
-						);
-						return typescript.updateExportDeclaration(
-							node,
-							node.decorators,
-							node.modifiers,
-							node.exportClause,
-							newModuleSpecifier
-						);
-					}
-				}
-				return typescript.visitEachChild(node, visitor, context);
-			}
-
-			return typescript.visitNode(node, visitor);
-		};
-	}
-
-	return importTransformer;
-}
-
-const tsConfig = ts.createProject('tsconfig.json', {
-	getCustomTransformers: (_program) => ({
-		after: [createTransformer()],
-	}),
-});
-
-/********************/
-/*		BUILD		*/
-/********************/
-
-/**
- * Build TypeScript
- */
-function buildTS() {
-	return gulp.src('src/**/*.ts').pipe(tsConfig()).pipe(gulp.dest('dist'));
-}
-
-/**
- * Build Less
- */
-function buildLess() {
-	return gulp.src('src/*.less').pipe(less()).pipe(gulp.dest('dist'));
-}
-
-/**
- * Build SASS
- */
-function buildSASS() {
-	return gulp
-		.src('src/*.scss')
-		.pipe(sass().on('error', sass.logError))
-		.pipe(gulp.dest('dist'));
-}
-
-/**
- * Copy static files
- */
-async function copyFiles() {
-	const statics = [
-		'lang',
-		'fonts',
-		'assets',
-		'templates',
-		'module.json',
-		'system.json',
-		'template.json',
-	];
-	try {
-		for (const file of statics) {
-			if (fs.existsSync(path.join('src', file))) {
-				await fs.copy(path.join('src', file), path.join('dist', file));
-			}
-		}
-		return Promise.resolve();
-	} catch (err) {
-		Promise.reject(err);
+function buildSource(keepSources, minifySources = false, output = null) {
+	return () => {
+		var stream = gulp.src(SOURCE + GLOB);
+		// if (keepSources) stream = stream.pipe(sm.init())
+		stream = stream.pipe(ts.createProject("tsconfig.json")())
+		// if (keepSources) stream = stream.pipe(sm.write())
+		if (minifySources) stream = stream.pipe(minify({
+			ext: { min: '.js' },
+			mangle: false,
+			noSource: true
+		}));
+		else stream = stream.pipe(tabify(4, false));
+		return stream.pipe(gulp.dest((output || DIST) + SOURCE));
 	}
 }
+exports.step_buildSourceDev = buildSource(false);
+exports.step_buildSource = buildSource(false);
+exports.step_buildSourceMin = buildSource(false, true);
 
 /**
- * Watch for changes for each build step
+ * Builds the module manifest based on the package, sources, and css.
  */
-function buildWatch() {
-	gulp.watch('src/**/*.ts', { ignoreInitial: false }, buildTS);
-	gulp.watch('src/**/*.less', { ignoreInitial: false }, buildLess);
-	gulp.watch('src/**/*.scss', { ignoreInitial: false }, buildSASS);
-	gulp.watch(
-		['src/fonts', 'src/lang', 'src/templates', 'src/*.json'],
-		{ ignoreInitial: false },
-		copyFiles
-	);
-}
-
-/********************/
-/*		CLEAN		*/
-/********************/
-
-/**
- * Remove built files from `dist` folder
- * while ignoring source files
- */
-async function clean() {
-	const name = path.basename(path.resolve('.'));
-	const files = [];
-
-	// If the project uses TypeScript
-	if (fs.existsSync(path.join('src', `${name}.ts`))) {
-		files.push(
-			'lang',
-			'templates',
-			'assets',
-			'module',
-			`${name}.js`,
-			'module.json',
-			'system.json',
-			'template.json'
-		);
-	}
-
-	// If the project uses Less or SASS
-	if (
-		fs.existsSync(path.join('src', `${name}.less`)) ||
-		fs.existsSync(path.join('src', `${name}.scss`))
-	) {
-		files.push('fonts', `${name}.css`);
-	}
-
-	console.log(' ', chalk.yellow('Files to clean:'));
-	console.log('   ', chalk.blueBright(files.join('\n    ')));
-
-	// Attempt to remove the files
-	try {
-		for (const filePath of files) {
-			await fs.remove(path.join('dist', filePath));
-		}
-		return Promise.resolve();
-	} catch (err) {
-		Promise.reject(err);
-	}
-}
-
-/********************/
-/*		LINK		*/
-/********************/
-
-/**
- * Link build to User Data folder
- */
-async function linkUserData() {
-	const name = path.basename(path.resolve('.'));
-	const config = fs.readJSONSync('foundryconfig.json');
-
-	let destDir;
-	try {
-		if (
-			fs.existsSync(path.resolve('.', 'dist', 'module.json')) ||
-			fs.existsSync(path.resolve('.', 'src', 'module.json'))
-		) {
-			destDir = 'modules';
-		} else if (
-			fs.existsSync(path.resolve('.', 'dist', 'system.json')) ||
-			fs.existsSync(path.resolve('.', 'src', 'system.json'))
-		) {
-			destDir = 'systems';
-		} else {
-			throw Error(
-				`Could not find ${chalk.blueBright(
-					'module.json'
-				)} or ${chalk.blueBright('system.json')}`
-			);
-		}
-
-		let linkDir;
-		if (config.dataPath) {
-			if (!fs.existsSync(path.join(config.dataPath, 'Data')))
-				throw Error('User Data path invalid, no Data directory found');
-
-			linkDir = path.join(config.dataPath, 'Data', destDir, name);
-		} else {
-			throw Error('No User Data path defined in foundryconfig.json');
-		}
-
-		if (argv.clean || argv.c) {
-			console.log(
-				chalk.yellow(`Removing build in ${chalk.blueBright(linkDir)}`)
-			);
-
-			await fs.remove(linkDir);
-		} else if (!fs.existsSync(linkDir)) {
-			console.log(
-				chalk.green(`Copying build to ${chalk.blueBright(linkDir)}`)
-			);
-			await fs.symlink(path.resolve('./dist'), linkDir);
-		}
-		return Promise.resolve();
-	} catch (err) {
-		Promise.reject(err);
-	}
-}
-
-/*********************/
-/*		PACKAGE		 */
-/*********************/
-
-/**
- * Package build
- */
-async function packageBuild() {
-	const manifest = getManifest();
-
-	return new Promise((resolve, reject) => {
-		try {
-			// Remove the package dir without doing anything else
-			if (argv.clean || argv.c) {
-				console.log(chalk.yellow('Removing all packaged files'));
-				fs.removeSync('package');
-				return;
-			}
-
-			// Ensure there is a directory to hold all the packaged versions
-			fs.ensureDirSync('package');
-
-			// Initialize the zip file
-			const zipName = `${manifest.file.name}-v${manifest.file.version}.zip`;
-			const zipFile = fs.createWriteStream(path.join('package', zipName));
-			const zip = archiver('zip', { zlib: { level: 9 } });
-
-			zipFile.on('close', () => {
-				console.log(chalk.green(zip.pointer() + ' total bytes'));
-				console.log(
-					chalk.green(`Zip file ${zipName} has been written`)
-				);
-				return resolve();
+function buildManifest(output = null) {
+	const files = []; // Collector for all the file paths
+	return (cb) => gulp.src(PACKAGE.main) // collect the source files
+		.pipe(rename({ extname: '.js' })) // rename their extensions to `.js`
+		.pipe(gulp.src(CSS + GLOB)) // grab all the CSS files
+		.on('data', file => files.push(path.relative(file.cwd, file.path))) // Collect all the file paths
+		.on('end', () => { // output the filepaths to the module.json
+			if (files.length == 0)
+				throw Error('No files found in ' + SOURCE + GLOB + " or " + CSS + GLOB);
+			const js = files.filter(e => e.endsWith('js')); // split the CSS and JS files
+			const css = files.filter(e => e.endsWith('css'));
+			fs.readFile('module.json', (err, data) => {
+				const module = data.toString() // Inject the data into the module.json
+					.replaceAll('{{name}}', PACKAGE.name)
+					.replaceAll('{{title}}', PACKAGE.title)
+					.replaceAll('{{version}}', PACKAGE.version)
+					.replaceAll('{{description}}', PACKAGE.description)
+					.replace('"{{sources}}"', stringify(js, null, '\t').replaceAll('\n', '\n\t'))
+					.replace('"{{css}}"', stringify(css, null, '\t').replaceAll('\n', '\n\t'));
+				fs.writeFile((output || DIST) + 'module.json', module, cb); // save the module to the distribution directory
 			});
-
-			zip.on('error', (err) => {
-				throw err;
-			});
-
-			zip.pipe(zipFile);
-
-			// Add the directory with the final code
-			zip.directory('dist/', manifest.file.name);
-
-			zip.finalize();
-		} catch (err) {
-			return reject(err);
-		}
-	});
-}
-
-/*********************/
-/*		PACKAGE		 */
-/*********************/
-
-/**
- * Update version and URLs in the manifest JSON
- */
-function updateManifest(cb) {
-	const packageJson = fs.readJSONSync('package.json');
-	const config = getConfig(),
-		manifest = getManifest(),
-		rawURL = config.rawURL,
-		repoURL = config.repository,
-		manifestRoot = manifest.root;
-
-	if (!config) cb(Error(chalk.red('foundryconfig.json not found')));
-	if (!manifest) cb(Error(chalk.red('Manifest JSON not found')));
-	if (!rawURL || !repoURL)
-		cb(
-			Error(
-				chalk.red(
-					'Repository URLs not configured in foundryconfig.json'
-				)
-			)
-		);
-
-	try {
-		const version = argv.update || argv.u;
-
-		/* Update version */
-
-		const versionMatch = /^(\d{1,}).(\d{1,}).(\d{1,})$/;
-		const currentVersion = manifest.file.version;
-		let targetVersion = '';
-
-		if (!version) {
-			cb(Error('Missing version number'));
-		}
-
-		if (versionMatch.test(version)) {
-			targetVersion = version;
-		} else {
-			targetVersion = currentVersion.replace(
-				versionMatch,
-				(substring, major, minor, patch) => {
-					console.log(
-						substring,
-						Number(major) + 1,
-						Number(minor) + 1,
-						Number(patch) + 1
-					);
-					if (version === 'major') {
-						return `${Number(major) + 1}.0.0`;
-					} else if (version === 'minor') {
-						return `${major}.${Number(minor) + 1}.0`;
-					} else if (version === 'patch') {
-						return `${major}.${minor}.${Number(patch) + 1}`;
-					} else {
-						return '';
-					}
-				}
-			);
-		}
-
-		if (targetVersion === '') {
-			return cb(Error(chalk.red('Error: Incorrect version arguments.')));
-		}
-
-		if (targetVersion === currentVersion) {
-			return cb(
-				Error(
-					chalk.red(
-						'Error: Target version is identical to current version.'
-					)
-				)
-			);
-		}
-		console.log(`Updating version number to '${targetVersion}'`);
-
-		packageJson.version = targetVersion;
-		manifest.file.version = targetVersion;
-
-		/* Update URLs */
-
-		const result = `${rawURL}/v${manifest.file.version}/package/${manifest.file.name}-v${manifest.file.version}.zip`;
-
-		manifest.file.url = repoURL;
-		manifest.file.manifest = `${rawURL}/master/${manifestRoot}/${manifest.name}`;
-		manifest.file.download = result;
-
-		const prettyProjectJson = stringify(manifest.file, {
-			maxLength: 35,
-			indent: '\t',
 		});
-
-		fs.writeJSONSync('package.json', packageJson, { spaces: '\t' });
-		fs.writeFileSync(
-			path.join(manifest.root, manifest.name),
-			prettyProjectJson,
-			'utf8'
-		);
-
-		return cb();
-	} catch (err) {
-		cb(err);
-	}
 }
+exports.step_buildManifest = buildManifest();
 
-function gitAdd() {
-	return gulp.src('package').pipe(git.add({ args: '--no-all' }));
-}
+function outputLanguages(output = null) { return () => gulp.src(LANG + GLOB).pipe(gulp.dest((output || DIST) + LANG)); }
+function outputTemplates(output = null) { return () => gulp.src(TEMPLATES + GLOB).pipe(gulp.dest((output || DIST) + TEMPLATES)); }
+function outputStylesCSS(output = null) { return () => gulp.src(CSS + GLOB).pipe(gulp.dest((output || DIST) + CSS)); }
+function outputMetaFiles(output = null) { return () => gulp.src(['LICENSE', 'README.md', 'Changelog.md']).pipe(gulp.dest((output || DIST))); }
+function outputIconFiles(output = null) { return () => gulp.src(ICON + GLOB).pipe(gulp.dest((output || DIST) + ICON));}
+function outputPackFiles(output = null) { return () => gulp.src(PACK + GLOB).pipe(gulp.dest((output || DIST) + PACK));}
+function outputSoundFiles(output = null) { return () => gulp.src(SOUND + GLOB).pipe(gulp.dest((output || DIST) + SOUND));}
 
-function gitCommit() {
-	return gulp.src('./*').pipe(
-		git.commit(`v${getManifest().file.version}`, {
-			args: '-a',
-			disableAppendPaths: true,
-		})
+
+
+
+/**
+ * Copy files to module named directory and then compress that folder into a zip
+ */
+function compressDistribution() {
+	return gulp.series(
+		// Copy files to folder with module's name
+		() => gulp.src(DIST + GLOB)
+			.pipe(gulp.dest(DIST + `${PACKAGE.name}/${PACKAGE.name}`))
+		// Compress the new folder into a ZIP and save it to the `bundle` folder
+		, () => gulp.src(DIST + PACKAGE.name + '/' + GLOB)
+			.pipe(zip(PACKAGE.name + `-v` + PACKAGE.version +  '.zip'))
+			.pipe(gulp.dest(BUNDLE))
+		// Copy the module.json to the bundle directory
+		, () => gulp.src(DIST + '/module.json')
+			.pipe(gulp.dest(BUNDLE))
+		// Cleanup by deleting the intermediate module named folder
+		, pdel(DIST + PACKAGE.name)
 	);
 }
+exports.step_compressDistribution = compressDistribution();
 
-function gitTag() {
-	const manifest = getManifest();
-	return git.tag(
-		`v${manifest.file.version}`,
-		`Updated to ${manifest.file.version}`,
-		(err) => {
-			if (err) throw err;
-		}
-	);
-}
-
-const execGit = gulp.series(gitAdd, gitCommit, gitTag);
-
-const execBuild = gulp.parallel(buildTS, buildLess, buildSASS, copyFiles);
-
-exports.build = gulp.series(clean, execBuild);
-exports.watch = buildWatch;
-exports.clean = clean;
-exports.link = linkUserData;
-exports.package = packageBuild;
-exports.update = updateManifest;
-exports.publish = gulp.series(
-	clean,
-	updateManifest,
-	execBuild,
-	packageBuild,
-	execGit
+/**
+ * Simple clean command
+ */
+exports.clean = pdel([DIST, BUNDLE]);
+exports.devClean = pdel([DEV_DIST()]);
+/**
+ * Default Build operation
+ */
+exports.default = gulp.series(
+	pdel([DIST])
+	, gulp.parallel(
+		buildSource(true, false)
+		, buildManifest()
+		, outputLanguages()
+		, outputTemplates()
+		, outputStylesCSS()
+		, outputMetaFiles()
+    , outputIconFiles()
+    , outputPackFiles()
+    , outputSoundFiles()
+  )
 );
+/**
+ * Extends the default build task by copying the result to the Development Environment
+ */
+exports.dev = gulp.series(
+	pdel([DEV_DIST() + GLOB], { force: true }),
+	gulp.parallel(
+		buildSource(true, false, DEV_DIST())
+		, buildManifest(DEV_DIST())
+		, outputLanguages(DEV_DIST())
+		, outputTemplates(DEV_DIST())
+		, outputStylesCSS(DEV_DIST())
+		, outputMetaFiles(DEV_DIST())
+    , outputIconFiles(DEV_DIST())
+    , outputPackFiles(DEV_DIST())
+    , outputSoundFiles(DEV_DIST())
+
+	)
+);
+/**
+ * Performs a default build and then zips the result into a bundle
+ */
+exports.zip = gulp.series(
+	pdel([DIST])
+	, gulp.parallel(
+		buildSource(false, false)
+		, buildManifest()
+		, outputLanguages()
+		, outputTemplates()
+		, outputStylesCSS()
+		, outputMetaFiles()
+    , outputIconFiles()
+    , outputPackFiles()
+    , outputSoundFiles()
+
+	)
+	, compressDistribution()
+	, pdel([DIST])
+);
+/**
+ * Sets up a file watch on the project to detect any file changes and automatically rebuild those components.
+ */
+exports.watch = function () {
+	exports.default();
+	gulp.watch(SOURCE + GLOB, gulp.series(pdel(DIST + SOURCE), buildSource(true, false)));
+	gulp.watch([CSS + GLOB, 'module.json', 'package.json'], buildManifest());
+	gulp.watch(LANG + GLOB, gulp.series(pdel(DIST + LANG), outputLanguages()));
+	gulp.watch(TEMPLATES + GLOB, gulp.series(pdel(DIST + TEMPLATES), outputTemplates()));
+	gulp.watch(CSS + GLOB, gulp.series(pdel(DIST + CSS), outputStylesCSS()));
+	gulp.watch(['LICENSE', 'README.md', 'Changelog.md'], outputMetaFiles());
+  gulp.watch(ICON + GLOB, gulp.series(pdel(DIST + ICON), outputIconFiles()));
+  gulp.watch(PACK + GLOB, gulp.series(pdel(DIST + PACK), outputPackFiles()));
+  gulp.watch(SOUND + GLOB, gulp.series(pdel(DIST + SOUND), outputPackFiles()));
+
+
+}
+/**
+ * Sets up a file watch on the project to detect any file changes and automatically rebuild those components, and then copy them to the Development Environment.
+ */
+exports.devWatch = function () {
+const devDist = DEV_DIST();
+exports.dev();
+gulp.watch(SOURCE + GLOB, gulp.series(plog('deleting: ' + devDist + SOURCE + GLOB), pdel(devDist + SOURCE + GLOB, { force: true }), buildSource(true, false, devDist), plog('sources done.')));
+gulp.watch([CSS + GLOB, 'module.json', 'package.json'], gulp.series(reloadPackage, buildManifest(devDist), plog('manifest done.')));
+gulp.watch(LANG + GLOB, gulp.series(pdel(devDist + LANG + GLOB, { force: true }), outputLanguages(devDist), plog('langs done.')));
+gulp.watch(TEMPLATES + GLOB, gulp.series(pdel(devDist + TEMPLATES + GLOB, { force: true }), outputTemplates(devDist), plog('templates done.')));
+gulp.watch(CSS + GLOB, gulp.series(pdel(devDist + CSS + GLOB, { force: true }), outputStylesCSS(devDist), plog('css done.')));
+gulp.watch(['LICENSE', 'README.md', 'CHANGELOG.md'], gulp.series(outputMetaFiles(devDist), plog('metas done.')));
+gulp.watch(ICON + GLOB, gulp.series(pdel(devDist + ICON + GLOB, { force: true }), outputIconFiles(devDist), plog('icon done.')));
+gulp.watch(PACK + GLOB, gulp.series(pdel(devDist + PACK + GLOB, { force: true }), outputPackFiles(devDist), plog('packs done.')));
+gulp.watch(SOUND + GLOB, gulp.series(pdel(devDist + SOUND + GLOB, { force: true }), outputSoundFiles(devDist), plog('sounds done.')));
+
+}

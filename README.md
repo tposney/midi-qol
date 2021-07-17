@@ -13,6 +13,9 @@ I've seen a couple of cases where after migration of foundry versions the per pl
 ## Midi works for some players and not for others....
 Same problem as above - check workflow automation is enabled on all clients. You can use the module SocketSettings to force set the setting on all clients.
 
+## Items I bring in from the sample compendium don't work. 
+Some of the items require creating a DamageBonusMacro, make sure that is enabled in the midi settings. Also, if the damage bonus macro effect runs an ItemMacro.ItemName, the name of the feature needs to match the name of the item macro being run. For example Rage MQ0.8.9, will have to be renamed Rage when equipped on a character or the damage bonus macro won't run. I know this is not ideal, but I wanted to make clear when the version of the items changed.
+
 ### Changes in midi-qol:
 * Speed item rolls has only a single function now to enable ctrl/shift/alt when clicking on the item icon.  All other workflow features are configured separately. See **speed item rolls** below.
 * There is support for a merged chat card containing attack/damage/hits/saves. (The merged card does not yet support Better Rolls). You can disable the merge card to restore the same operation as in minor-qol.
@@ -351,26 +354,34 @@ Which will roll the atack/and or damage and apply to the passed targets. If the 
 
 Sample DoTrapAttack replacement:
 ```
-  let tactor = game.actors.entities.find(a => a.name === args[0])
-  let item = tactor.items.find(i=>  i.name === args[1])
-  let trapToken = canvas.tokens.placeables.find(t=>t.name === args[2])
-  new MidiQOL.TrapWorkflow(tactor, item, [token], trapToken.center)
-  ```
+// @Token[Fireball]@Trigger[click]@ChatMessage[/DoTrapAttack _Traps Fireball Fireball 2]
+
+let tactor = game.actors.getName(args[0])
+if (!tactor) return console.error(`DoTrap: Target token ${args[0]} not found`);
+let item = tactor.items.getName(args[1])
+if (!item) return console.error(`DoTrap: Item ${args[1]} not found`)
+let trapToken = canvas.tokens.placeables.find(t=>t.name === args[2]);
+const templateLocation = trapToken.center;
+templateLocation.removeDelay = parseInt(args[3]) || 2;
+new MidiQOL.TrapWorkflow(tactor, item, [token], templateLocation)
+if (trapToken) await trapToken.update({"hidden" : true});
+```
 
 * midi-qol supports a DamageOnlyWorkflow to support items/spells with special damage rolls. Divine Smite is a good example, the damage depends on whether the target is a fiend/undead. This is my implementation, which assumes it is activated via midi-qol's onUse macro field.
 I have created a spell called "Divine Smite", with no saving throw or damage or attack, (although you can have such things) which has an onUse macro set to Divine Smite. (see the onUse macro details below). The total damage field passed in is only used in the final display on the apply damage card, the individual damage elements are all taken from the damageRoll.
 
 ```
-if (args[0].hitTargets.size === 0) {
-console.error("no target selected");
-return
-}
-let target = canvas.tokens.get(args[0].hitTargets[0]._id)
-let numDice = 1 + (Number(args[2]) || 1)
-let undead = ["undead", "fiend"].some(type => (target.actor.data.data.details.type || "").toLowerCase().includes(type));
+let target = canvas.tokens.get(args[0].hitTargets[0]?._id);
+let improvedDivineSmite = args[0].actor.items.find(i=> i.name ==="Improved Divine Smite");
+let numDice = 1 + args[0].spellLevel;
+if (numDice > 6) numDice = 6;
+if (improvedDivineSmite) numDice += 1;
+let undead = ["undead", "fiend"].some(type => (target?.actor.data.data.details.type?.value || "").toLowerCase().includes(type));
 if (undead) numDice += 1;
+if (args[0].isCritical) numDice = numDice * 2;
 let damageRoll = new Roll(`${numDice}d8`).roll();
-new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[0].itemCardId})
+if (args[0].isCritical) damageRoll = MidiQOL.doCritModify(damageRoll)
+new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", target ? [target] : [], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[0].itemCardId})
 ```
 
 Flavor is only used if you are not using combo cards.  

@@ -1,5 +1,5 @@
-import { debug, error, debugEnabled } from "../midi-qol";
-import { log } from "../midi-qol";
+import { debug, error, debugEnabled } from "../midi-qol.js";
+import { log } from "../midi-qol.js";
 
 let modules = {"about-time": "0.0", 
               "betterrolls5e": "1.1.0", 
@@ -25,7 +25,7 @@ export let setupModules = () => {
     installedModules.set(name, game.modules.get(name)?.active && isValidVersion) 
     if (!installedModules.get(name)) {
       if (game.modules.get(name)?.active)
-        error(`midi-qol requires ${name} to be of version ${modules[name]} or later, but it is version ${game.modules.get(name).data.version}`);
+        error(`midi-qol requires ${name} to be of version ${modules[name]} or later, but it is version ${game.modules.get(name)?.data.version}`);
       else console.warn(`module ${name} not active - some features disabled`)
     }
   }

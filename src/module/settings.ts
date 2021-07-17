@@ -1,5 +1,5 @@
-import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, checkCubInstalled } from "../midi-qol";
-import { ConfigPanel} from "./apps/ConfigPanel"
+import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, checkCubInstalled } from "../midi-qol.js";
+import { ConfigPanel} from "./apps/ConfigPanel.js"
 
 export var itemRollButtons: boolean;
 export var criticalDamage: string;
@@ -22,6 +22,79 @@ const defaultKeyMapping = {
   "DND5E.Versatile": "shiftKey"
 };
 
+class ConfigSettings {
+  gmAutoAttack: boolean = false;
+  gmAutoFastForwardAttack: boolean = false;
+  gmAutoDamage: string = "none";
+  gmAutoFastForwardDamage: boolean =  false;
+  speedItemRolls: boolean = false;
+  speedAbilityRolls: boolean = false;
+  showItemDetails: string = "";
+  itemTypeList: any = null;
+  autoRollAttack: boolean = false;
+  autoFastForward: string = "off";
+  autoTarget: string = "none";
+  autoCheckHit: string = "none";
+  autoCheckSaves: string = "none";
+  hideRollDetails: string = "none";
+  displaySaveDC: boolean = true;
+  checkSaveText: boolean = false;
+  defaultSaveMult: number = 0.5;
+  autoRollDamage: string = "none";
+  autoApplyDamage: string = "none";
+  damageImmunities: string = "none";
+  requireMagical: boolean = false;
+  autoItemEffects: null;
+  rangeTarget: string = "none";
+  playerRollSaves: string = "none";
+  playerSaveTimeout: number = 0;
+  reactionTimeout: number = 10;
+  gmDoReactions: string = "all";
+  doReactions: string = "all";
+  showReactionAttackRoll: string = "all";
+  rollNPCSaves: string = "auto";
+  mergeCard: boolean = false;
+  mergeCardCondensed: boolean = false;
+  useTokenNames: boolean = false;
+  requiresTargets: string = "none";
+  fumbleSound: string = "";
+  diceSound: string = "";
+  criticalSound: string = "";
+  itemUseSound: string = "";
+  spellUseSound: string = "";
+  weaponUseSound: string = "";
+  potionUseSound: string = "";
+  fullAuto: boolean = false;
+  useCustomSounds: boolean = true;
+  customSoundsPlaylist: string = "none";
+  keyMapping = defaultKeyMapping;
+  allowUseMacro: boolean = false;
+  rollOtherDamage: boolean = false;
+  removeButtons: string = "all";
+  gmRemoveButtons: string = "all"; 
+  concentrationAutomation: boolean = false;
+  singleConcentrationRoll: boolean = true;
+  removeConcentration: boolean = true;
+  optionalRulesEnabled: boolean = false;
+  itemRollStartWorkflow: boolean = false;
+  usePlayerPortrait: boolean = false;
+  optionalRules: any = {
+    invisAdvantage: true,
+    checkRange: true,
+    nearbyFoe: 5,
+    nearbyAllyRanged: 4,
+    incapacitated: true,
+    removeHiddenInvis: true,
+    maxDRValue: false,
+    distanceIncludesHeight: false
+  };
+  keepRollStats: boolean = false;
+  saveStatsEvery: number = 20;
+  playerStatsOnly: boolean = false
+}
+
+export var configSettings = new ConfigSettings();
+/*
 export var configSettings = {
   gmAutoAttack: false,
   gmAutoFastForwardAttack: false,
@@ -92,7 +165,7 @@ export var configSettings = {
   saveStatsEvery: 20,
   playerStatsOnly: false
 }
-
+*/
 
 export function checkRule(rule: string) {
   return configSettings.optionalRulesEnabled && configSettings.optionalRules[rule];
@@ -126,7 +199,7 @@ export function exportSettingsToJSON() {
     abouttimeVersion: game.modules.get("about-time")?.data.version,
     timesUpVersion: game.modules.get("times-up")?.data.version,
     simpleCalendarVersion: game.modules.get("foundryvtt-simple-calendar")?.data.version,
-    midiQolVerson: game.modules.get("midi-qol").data.version
+    midiQolVerson: game.modules.get("midi-qol")?.data.version
   };
   data.flags["all-modules"] = 
   //@ts-ignore
@@ -152,8 +225,9 @@ export async function importSettingsFromJSON(json) {
   game.settings.set("midi-qol", "DragDropTarget", data.dragDropTargeting);
 }
 
-export let fetchParams = (silent = false) => {
+export let fetchParams = () => {
   debug("Fetch Params Loading");
+  //@ts-ignore
   configSettings = game.settings.get("midi-qol", "ConfigSettings");
   if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["dice"];
   if (!configSettings.criticalSound) configSettings.criticalSound = CONFIG.sounds["dice"];
@@ -184,34 +258,33 @@ export let fetchParams = (silent = false) => {
     }
   }
   if (typeof configSettings.optionalRules.nearbyFoe !== "number") {
-    if (configSettings.optionalRules)
+    if (configSettings.optionalRulesEnabled)
       configSettings.optionalRules.nearbyFoe = 5;
     else
       configSettings.optionalRules.nearbyFoe = 0;
 
   }
   configSettings.itemRollStartWorkflow = false;
-  //@ts-ignore typeLabels
-  const itemList = Object.keys(CONFIG.Item?.typeLabels ?? {});
+  const itemList = Object.keys(CONFIG.Item.typeLabels);
   if (!configSettings.itemTypeList && itemList.length > 0) {
     configSettings.itemTypeList = itemList;
   }
   if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;
 
-  enableWorkflow = game.settings.get("midi-qol", "EnableWorkflow");
+  enableWorkflow = Boolean(game.settings.get("midi-qol", "EnableWorkflow"));
   warn("Fetch Params Loading", configSettings);
   
-  criticalDamage = game.settings.get("midi-qol", "CriticalDamage");
-  itemDeleteCheck = game.settings.get("midi-qol", "ItemDeleteCheck");
-  nsaFlag = game.settings.get("midi-qol", "showGM");
-  coloredBorders = game.settings.get("midi-qol", "ColoredBorders");
-  itemRollButtons = game.settings.get("midi-qol", "ItemRollButtons");
-  addChatDamageButtons = game.settings.get("midi-qol", "AddChatDamageButtons")
-  autoFastForwardAbilityRolls = game.settings.get("midi-qol", "AutoFastForwardAbilityRolls")
-  autoRemoveTargets = game.settings.get("midi-qol", "AutoRemoveTargets");
-  let debugText = game.settings.get("midi-qol", "Debug");
-  forceHideRoll = game.settings.get("midi-qol", "ForceHideRoll")
-  dragDropTargeting = game.settings.get("midi-qol", "DragDropTarget")
+  criticalDamage = String(game.settings.get("midi-qol", "CriticalDamage"));
+  itemDeleteCheck = Boolean(game.settings.get("midi-qol", "ItemDeleteCheck"));
+  nsaFlag = Boolean(game.settings.get("midi-qol", "showGM"));
+  coloredBorders = String(game.settings.get("midi-qol", "ColoredBorders"));
+  itemRollButtons = Boolean(game.settings.get("midi-qol", "ItemRollButtons"));
+  addChatDamageButtons = String(game.settings.get("midi-qol", "AddChatDamageButtons"))
+  autoFastForwardAbilityRolls = Boolean(game.settings.get("midi-qol", "AutoFastForwardAbilityRolls"));
+  autoRemoveTargets = String(game.settings.get("midi-qol", "AutoRemoveTargets"));
+  let debugText: string = String(game.settings.get("midi-qol", "Debug"));
+  forceHideRoll = Boolean(game.settings.get("midi-qol", "ForceHideRoll"));
+  dragDropTargeting = Boolean(game.settings.get("midi-qol", "DragDropTarget"));
 
   setDebugLevel(debugText);
   if (configSettings.concentrationAutomation) {
@@ -316,7 +389,7 @@ export const registerSettings = function() {
         type: setting.type,
         onChange: setting.onChange
     };
-    //@ts-ignore
+    //@ts-ignore - too tedious to define undefined in each of the settings defs
     if (setting.choices) options.choices = setting.choices;
     game.settings.register("midi-qol", setting.name, options);
   });
@@ -328,7 +401,7 @@ export const registerSettings = function() {
     default: "none",
     type: String,
     config: true,
-    choices: i18n("midi-qol.AddChatDamageButtonsOptions"),
+    choices: Object(i18n("midi-qol.AddChatDamageButtonsOptions")),
     onChange: fetchParams
   });
 
@@ -340,7 +413,7 @@ export const registerSettings = function() {
     default: "None",
     type: String,
     config: true,
-    choices: i18n("midi-qol.ColoredBordersOptions"),
+    choices: Object(i18n("midi-qol.ColoredBordersOptions")),
     onChange: fetchParams
   });
 
@@ -351,7 +424,7 @@ export const registerSettings = function() {
     default: "dead",
     type: String,
     config: true,
-    choices: i18n("midi-qol.AutoRemoveTargetsOptions"),
+    choices: Object(i18n("midi-qol.AutoRemoveTargetsOptions")),
     onChange: fetchParams
   });
 
@@ -360,7 +433,6 @@ export const registerSettings = function() {
     label: "midi-qol.WorkflowSettings",
     hint: i18n("midi-qol.Hint"),
     icon: "fas fa-dice-d20",
-    scope: "world",
     type: ConfigPanel,
     restricted: true
   });
@@ -387,7 +459,5 @@ export const registerSettings = function() {
     choices: {none: "None", warn: "warnings", debug: "debug", all: "all"},
     onChange: fetchParams
   });
-
-
 }
 
