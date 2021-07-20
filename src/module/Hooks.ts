@@ -23,10 +23,10 @@ export let readyHooks = async () => {
     if (game.user?.id !== userId) return;
     if ((update.x ?? update.y) === undefined) return;
     const actor = tokenDocument.actor;
-    const expiredEffects = actor.effects.filter(ef => {
+    const expiredEffects = actor?.effects.filter(ef => {
       const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
       return specialDuration?.includes("isMoved");
-    });
+    }) ?? [];
     if (expiredEffects.length > 0) actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects.map(ef=>ef.id));
   })
 
@@ -172,7 +172,7 @@ export let initHooks = () => {
 export const itemJSONData = {
   "name": "Concentration Check - Midi QOL",
   "type": "weapon",
-  "img": "modules/combat-utility-belt/icons/concentrating.svg",
+  "img": "modules/midi-qol/icons/concentrate.png",
   "data": {
     "description": {
       "value": "",

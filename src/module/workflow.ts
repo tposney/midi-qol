@@ -191,7 +191,7 @@ export class Workflow {
       if (this.item.data.data.properties?.thr) {
         const firstTarget: Token = this.targets.values().next().value;
         const me = getCanvas().tokens?.get(this.tokenId);
-        if (firstTarget && me && getDistance(me, firstTarget, false) <= configSettings.optionalRules.nearbyFoe) nearbyFoe = false;
+        if (firstTarget && me && getDistance(me, firstTarget, false).distance <= configSettings.optionalRules.nearbyFoe) nearbyFoe = false;
       }
       if (nearbyFoe) {
         log(`Ranged attack by ${this.actor.name} at disadvantage due to neabye foe`);
@@ -1559,14 +1559,16 @@ export class Workflow {
       let targetActor: Actor5e = targetToken.actor;
       if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
       let targetAC = targetActor.data.data.attributes.ac.value;
+      const bonusAC = getProperty(targetActor.data, "flags.midi-qol.acBonus") || 0;
+      targetAC += bonusAC;
       if (!this.isFumble) {
         isHit = this.attackTotal >= targetAC;
         // check to see if the roll hit the target
         if ((isHit || this.iscritical) && this.attackRoll) {
           const result = await doReactions(targetToken, this.attackRoll);
           targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
-          targetAC = targetActor.data.data.attributes.ac.value;
-          if (result.ac) targetAC = result.ac; // deal with bonus ac if any.
+          targetAC = targetActor.data.data.attributes.ac.value + bonusAC;
+          if (result.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
           isHit = this.attackTotal >= targetAC || this.isCritical;
         }
       }

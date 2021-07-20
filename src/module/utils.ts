@@ -5,7 +5,7 @@ import { Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { socketlibSocket } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { actorAbilityRollPatching, baseEvent } from "./patching.js";
-import { concentrationCheckItemName } from "./Hooks.js";
+import { concentrationCheckItemName, itemJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 
@@ -129,7 +129,7 @@ export function getSelfTargetSet(actor): Set<Token> {
 // Calculate the hp/tempHP lost for an amount of damage of type
 export function calculateDamage(a: Actor, appliedDamage, t: Token, totalDamage, dmgType, existingDamage) {
   debug("calculate damage ", a, appliedDamage, t, totalDamage, dmgType)
-  let prevDamage = existingDamage.find(ed => ed?.tokenId === t.id);
+  let prevDamage = existingDamage?.find(ed => ed?.tokenId === t.id);
   //@ts-ignore attributes
   var hp = a.data.data.attributes.hp;
   var oldHP, tmp;
@@ -505,23 +505,46 @@ export function checkIncapcitated(actor: Actor, item: Item, event) {
 *** if wallblocking is set then wall are checked
 **/
 //TODO change this to TokenData
-export function getDistance(t1: Token, t2: Token, wallblocking = false) {
+export function getDistance(t1: Token, t2: Token, wallblocking = false): {distance: number, acBonus: number | undefined} {
   const canvas = getCanvas();
-  if (!canvas.grid || !canvas.dimensions) 0;
-  if (!t1 || !t2) return 0;
-  if (!canvas || !canvas.grid || !canvas.dimensions) return 0;
+  let coverACBonus = 0;
+  let tokenTileACBonus = 0;
+  const noResult = {distance: -1, acBonus: undefined}
+  if (!canvas.grid || !canvas.dimensions) noResult;
+  if (!t1 || !t2) return noResult
+  if (!canvas || !canvas.grid || !canvas.dimensions) return noResult;
+  coverACBonus = configSettings.optionalRules.wallsBlockRange === "4pointAC" ? 5 : 0;
   //Log("get distance callsed");
   var x, x1, y, y1, d, r, segments: { ray: Ray }[] = [], rdistance, distance;
-  for (x = 0; x < t1.data.width; x++) {
-    for (y = 0; y < t1.data.height; y++) {
+  for (x = 0.5; x <= t1.data.width; x++) {
+    for (y = 0.5; y <= t1.data.height; y++) {
       const origin = new PIXI.Point(...canvas.grid.getCenter(Math.round(t1.data.x + (canvas.dimensions.size * x)), Math.round(t1.data.y + (canvas.dimensions.size * y))));
-      for (x1 = 0; x1 < t2.data.width; x1++) {
-        for (y1 = 0; y1 < t2.data.height; y1++) {
+      for (x1 = 0.5; x1 <= t2.data.width; x1++) {
+        for (y1 = 0.5; y1 <= t2.data.height; y1++) {
           const dest = new PIXI.Point(...canvas.grid.getCenter(Math.round(t2.data.x + (canvas.dimensions.size * x1)), Math.round(t2.data.y + (canvas.dimensions.size * y1))));
           const r = new Ray(origin, dest)
-          if (wallblocking && canvas.walls?.checkCollision(r)) {
-            //Log(`ray ${r} blocked due to walls`);
-            continue;
+          if (wallblocking) {
+            // TODO use four point rule and work out cover
+            switch (configSettings.optionalRules.wallsBlockRange) {
+              case "center":
+                  if (canvas.walls?.checkCollision(r)) continue; break;
+              case "4point":
+              case "4pointAC":
+                //@ts-ignore 
+                if (installedModules.get("dnd5e-helpers") && window.CoverCalculator) {
+                  //@ts-ignore
+                  const coverData = CoverCalculator.Cover(t1, t2)
+                  if (coverData.data.results.cover === 3) continue;
+                  if (configSettings.optionalRules.wallsBlockRange === "4pointAC") coverACBonus = -coverData.data.results.value;
+                } else {
+                  pointWarn();
+                  // ui.notifications?.warn("4 Point LOS check selected but dnd5e-helpers not installed")
+                  if (canvas.walls?.checkCollision(r)) continue;
+                }
+                break;
+              case "none":
+              default:
+            }
           }
           segments.push({ ray: r });
         }
@@ -530,8 +553,7 @@ export function getDistance(t1: Token, t2: Token, wallblocking = false) {
   }
   // console.log(segments);
   if (segments.length === 0) {
-    //Log(`${t2.data.name} full blocked by walls`);
-    return -1;
+    return noResult;
   }
   rdistance = canvas.grid.measureDistances(segments, { gridSpaces: true });
   distance = rdistance[0];
@@ -545,9 +567,12 @@ export function getDistance(t1: Token, t2: Token, wallblocking = false) {
       distance = nd + ns;
     } else distance = Math.sqrt(height * height + distance * distance);
   }
-  return distance;
+  return {distance, acBonus: coverACBonus + tokenTileACBonus}; // TODO update this with ac bonus
 };
 
+let pointWarn = debounce(() => {
+  ui.notifications?.warn("4 Point LOS check selected but dnd5e-helpers not installed")
+}, 100)
 export function checkRange(actor, item, tokenId, targets) {
   let itemData = item.data.data;
 
@@ -575,8 +600,11 @@ export function checkRange(actor, item, tokenId, targets) {
   for (let target of targets) {
     if (target === token) continue;
     // check the range
-
-    let distance = getDistance(token, target, true);
+    if (target.actor) setProperty(target.actor.data, "flags.midi-qol.acBonus", 0);
+    const distanceDetails = getDistance(token, target, true);
+    let distance = distanceDetails.distance;
+    if (target.actor && distanceDetails.acBonus)
+      setProperty(target.actor.data, "flags.midi-qol.acBonus", distanceDetails.acBonus);
     if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
       console.log(`minor-qol | ${target.name} is too far ${distance} from your character you cannot hit`)
       ui.notifications?.warn(`${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`)
@@ -700,9 +728,9 @@ export async function addConcentration(options: { workflow: Workflow }) {
     if (options.workflow.hasDAE) {
       const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
       const convertedDuration = options.workflow.dae.convertDuration(itemDuration, inCombat);
-      if (convertedDuration.type === "seconds") {
+      if (convertedDuration?.type === "seconds") {
         statusEffect.duration = { seconds: convertedDuration.seconds, startTime: game.time.worldTime }
-      } else if (convertedDuration.type === "turns") {
+      } else if (convertedDuration?.type === "turns") {
         statusEffect.duration = {
           rounds: convertedDuration.rounds,
           turns: convertedDuration.turns,
@@ -711,13 +739,13 @@ export async function addConcentration(options: { workflow: Workflow }) {
         }
       }
       statusEffect.origin = item?.uuid
+      statusEffect.img = "modules/combat-utility-belt/icons/concentrating.svg"
       setProperty(statusEffect.flags, "midi-qol.isConcentration", statusEffect.origin);
       //@ts-ignore updateEmbeddedDcouments
       // await selfTarget.actor.updateEmbeddedDocuments("ActiveEffect", [aeData])
     }
     const existing = selfTarget.actor?.effects.find(e => e.getFlag("core", "statusId") === statusEffect.id);
     if (!existing) {
-      console.error("Setting concentration");
       return await selfTarget.toggleEffect(statusEffect, { active: true })
     }
     return true;
@@ -728,20 +756,21 @@ export async function addConcentration(options: { workflow: Workflow }) {
     const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
     //@ts-ignore DAE
     const convertedDuration = window.DAE?.convertDuration(item.data.data.duration, inCombat);
-    const currentItem = game.items?.getName(concentrationCheckItemName)
+    const itemData = duplicate(itemJSONData);
+    const currentItem: Item = new CONFIG.Item.documentClass(itemData)
 
     const effectData = {
       changes: [],
       origin: item.uuid, //flag the effect as associated to the spell being cast
       disabled: false,
-      icon: currentItem?.img,
+      icon: currentItem.data.img,
       label: concentrationName,
       duration: {},
       flags: { "midi-qol": { isConcentration: item?.uuid } }
     }
-    if (convertedDuration.type === "seconds") {
+    if (convertedDuration?.type === "seconds") {
       effectData.duration = { seconds: convertedDuration.seconds, startTime: game.time.worldTime }
-    } else if (convertedDuration.type === "turns") {
+    } else if (convertedDuration?.type === "turns") {
       effectData.duration = {
         rounds: convertedDuration.rounds,
         turns: convertedDuration.turns,
@@ -772,7 +801,7 @@ export function findNearby(disposition: number | null, token: Token | undefined,
       //@ts-ignore attributes
       t.actor.data.data.attributes?.hp?.value > 0 && // not incapacitated
       (disposition === null || t.data.disposition === targetDisposition)) {
-      const tokenDistance = getDistance(t, token, true)
+      const tokenDistance = getDistance(t, token, true).distance;
       return 0 < tokenDistance && tokenDistance <= distance
     } else return false;
   });

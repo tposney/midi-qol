@@ -320,9 +320,16 @@ export let hideStuffHandler = (message, html, data) => {
     ids.click(_onTargetSelect);
   }
 
+  /*
+  <div class="midi-qol-tooltip midi-qol-save-total">
+  <div class="midi-qol-tooltiptext midi-qol-save-tooltip" style="text-align: left;">
+*/
+
   // Hide saving throw tool tips to non-gms
   if (!game.user?.isGM) {
     html.find(".midi-qol-save-tooltip").hide();
+    if (configSettings.autoCheckSaves === "allNoRoll")
+      html.find(".midi-qol-save-total").hide();
   }
   // Hide saving throws if not rolled by me.
   if (!game.user?.isGM && ["all", "whisper"].includes(configSettings.autoCheckSaves) && message.isRoll &&

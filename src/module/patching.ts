@@ -7,44 +7,22 @@ import { libWrapper } from "./lib/shim.js";
 
 var d20Roll;
 
-function _isVisionSource() {
-  // log("proxy _isVisionSource", this);
-
-  if (!getCanvas().sight?.tokenVision || !this.hasSight) return false;
-
-  // Only display hidden tokens for the GM
-  const isGM = game.user?.isGM;
-  // TP insert
-  // console.error("is vision source ", this.actor?.name, this.actor?.hasPerm(game.user, "OWNER"))
-  if (this.data.hidden && !(isGM || this.actor?.testUserPermission(game.user, "OWNER"))) return false;
-
-  // Always display controlled tokens which have vision
-  if (this._controlled) return true;
-
-  // Otherwise vision is ignored for GM users
-  if (isGM) return false;
-
-  if (this.actor?.testUserPermission(game.user, "OBSERVER")) return true;
-  // If a non-GM user controls no other tokens with sight, display sight anyways
-  const canObserve = this.actor && this.actor.testUserPermission(game.user, "OWNER");
-  if (!canObserve) return false;
-  const others = getCanvas().tokens?.controlled.filter(t => t.hasSight);
-  //TP ** const others = this.layer.controlled.filter(t => !t.data.hidden && t.hasSight);
-  return !others?.length;
-}
-
-function isVisible() {
-  // console.error("Doing my isVisible")
-  const gm = game.user?.isGM;
-  if (this.actor?.testUserPermission(game.user, "OWNER")) {
-    //     this.data.hidden = false;
+function _isVisionSource(wrapped) {
+  const isVisionSource = wrapped();
+  //@ts-ignore
+  if (this.data.hidden && (game.user.isGM || this.actor?.testUserPermission(game.user, "OWNER"))) {
+    console.error("Setting as vision source");
     return true;
   }
-  if (this.data.hidden) return gm || this.actor?.testUserPermission(game.user, "OWNER");
-  if (!getCanvas().sight?.tokenVision) return true;
-  if (this._controlled) return true;
-  const tolerance = Math.min(this.w, this.h) / 4;
-  return getCanvas().sight?.testVisibility(this.center, { tolerance });
+  return isVisionSource;
+}
+
+function isVisible(wrapped) {
+  const isVisible = wrapped();
+  if (this.actor?.testUserPermission(game.user, "OWNER")) {
+    return true;
+  }
+  return isVisible;
 }
 
 export const advantageEvent = { shiftKey: false, altKey: true, ctrlKey: false, metaKey: false, fastKey: false };
@@ -339,14 +317,14 @@ export function readyPatching() {
 export let visionPatching = () => {
   const patchVision = isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
   if (patchVision) {
-    // ui.notifications.warn("Player control vision is deprecated please use the module Your Tokens Visible")
+    ui.notifications?.warn("Player control vision is deprecated please use the module Your Tokens Visible")
     console.warn("midi-qol | Player control vision is deprecated please use the module Your Tokens Visible")
 
     log("Patching Token._isVisionSource")
-    libWrapper.register("midi-qol", "Token.prototype._isVisionSource", _isVisionSource, "OVERRIDE");
+    libWrapper.register("midi-qol", "Token.prototype._isVisionSource", _isVisionSource, "WRAPPER");
 
     log("Patching Token.isVisible")
-    libWrapper.register("midi-qol", "Token.prototype.isVisible", isVisible, "OVERRIDE");
+    libWrapper.register("midi-qol", "Token.prototype.isVisible", isVisible, "WRAPPER");
   }
   log("Vision patching - ", patchVision ? "enabled" : "disabled")
 }

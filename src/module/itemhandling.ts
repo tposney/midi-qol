@@ -228,10 +228,11 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       otherResult.toMessage(messageData, {rollMode: game.settings.get("core", "rollMode")})
     }
   }
+  
   //@ts-ignore game.dice3d
   const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
   if (dice3dActive && configSettings.mergeCard) {
-    let whisperIds: User[] = [];
+    let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM");
@@ -277,7 +278,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
   if (requiresTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && (myTargets?.size || 0) === 0) shouldAllowRoll = false;
   // only allow weapon attacks against at most the specified number of targets
-  let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9099) ?? 9999
+  let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9999) ?? 9999
   let speaker = getSpeaker(this.actor);
   // do pre roll checks
   if (checkRule("checkRange")) {
@@ -409,7 +410,7 @@ export async function showItemInfo() {
 
   const templateData = {
     actor: this.actor,
-    tokenId: token?.uuid || null, //TODO come back and fix? this
+    tokenId: token?.document.uuid || null, //TODO come back and fix? this
     item: this.data,
     itemUuid: this.uuid,
     data: this.getChatData(),
@@ -464,7 +465,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   needAttackButton = true || needAttackButton || !getAutoRollAttack();
   needAttackButton = needAttackButton || (getAutoRollAttack() && workflow.rollOptions.fastForwardKey)
   const needDamagebutton = itemHasDamage(this) && (getAutoRollDamage() === "none" || !getRemoveDamageButtons() || showFullCard);
-  const needVersatileButton = itemIsVersatile(this) && (showFullCard || getAutoRollDamage() === "none");
+  const needVersatileButton = itemIsVersatile(this) && (showFullCard || getAutoRollDamage() === "none" || !getRemoveDamageButtons());
   const sceneId = token?.scene && token.scene.id || getCanvas().scene?.id;
   let isPlayerOwned = this.actor.hasPlayerOwner;
 
@@ -546,7 +547,6 @@ function isTokenInside(templateDetails: {x: number, y: number, shape: any}, toke
 	// e.g. for large tokens all 4 squares
 	const startX = token.width >= 1 ? 0.5 : token.width / 2;
 	const startY = token.height >= 1 ? 0.5 : token.height / 2;
-  // console.error(grid, templatePos, startX, startY, token.width, token.height, token)
 	for (let x = startX; x < token.width; x++) {
 		for (let y = startY; y < token.height; y++) {
 			const currGrid = {
@@ -597,6 +597,8 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   let {direction, distance, angle, width} = templateDocument.data;
   const dimensions = getCanvas().dimensions || {size: 1, distance: 1};
   distance *= dimensions.size  / dimensions.distance;
+  width *= dimensions.size  / dimensions.distance;
+  direction = Math.toRadians(direction);
   let shape: any;
   switch ( templateDocument.data.t ) {
     case "circle":
@@ -614,6 +616,7 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
       //@ts-ignore
       shape = templateDocument._object._getRayShape(direction, distance, width);
   }
+
   templateTokens({x: templateDocument.data.x, y: templateDocument.data.y, shape});
 
   // if the item specifies a range of "special" don't target the caster.

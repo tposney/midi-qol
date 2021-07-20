@@ -13,7 +13,8 @@ let modules = {"about-time": "0.0",
               "conditional-visibility": "0.0",
               "monks-tokenbar": "0.0",
               "socketlib": "0.0",
-              "advanced-macros": "1.0"
+              "advanced-macros": "1.0",
+              "dnd5e-helpers":  "2.0.5"
             };
 export let installedModules = new Map();
 

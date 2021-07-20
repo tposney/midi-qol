@@ -40,6 +40,7 @@ export class ConfigPanel extends FormApplication {
       doReactionsOptions: i18n("midi-qol.DoReactionsOptions"),
       gmDoReactionsOptions: i18n("midi-qol.GMDoReactionsOptions"),
       showReactionAttackRollOptions: i18n("midi-qol.ShowReactionAttackRollOptions"),
+      wallsBlockRangeOptions: i18n("midi-qol.WallsBlockRangeOptions"),
       //@ts-ignore
       itemTypeLabels: CONFIG.Item.typeLabels,
       itemDeleteCheck,

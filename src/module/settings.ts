@@ -81,6 +81,7 @@ class ConfigSettings {
   optionalRules: any = {
     invisAdvantage: true,
     checkRange: true,
+    wallsBlockRange: "center",
     nearbyFoe: 5,
     nearbyAllyRanged: 4,
     incapacitated: true,
@@ -94,78 +95,6 @@ class ConfigSettings {
 }
 
 export var configSettings = new ConfigSettings();
-/*
-export var configSettings = {
-  gmAutoAttack: false,
-  gmAutoFastForwardAttack: false,
-  gmAutoDamage: "none",
-  gmAutoFastForwardDamage: false,
-  speedItemRolls: false,
-  speedAbilityRolls: false,
-  showItemDetails: "",
-  itemTypeList: null,
-  autoRollAttack: false,
-  autoFastForward: "off",
-  autoTarget: "none",
-  autoCheckHit: "none",
-  autoCheckSaves: "none",
-  hideRollDetails: "none",
-  displaySaveDC: true,
-  checkSaveText: null,
-  defaultSaveMult: 0.5,
-  autoRollDamage: "none",
-  autoApplyDamage: "none",
-  damageImmunities: "none",
-  requireMagical: false,
-  autoItemEffects: null,
-  rangeTarget: "none",
-  playerRollSaves: "none",
-  playerSaveTimeout: 0,
-  reactionTimeout: 10,
-  gmDoReactions: "all",
-  doReactions: "all",
-  showReactionAttackRoll: "all",
-  rollNPCSaves: "auto",
-  mergeCard: false,
-  mergeCardCondensed: false,
-  useTokenNames: false,
-  requiresTargets: "none",
-  fumbleSound: "",
-  diceSound: "",
-  criticalSound: "",
-  itemUseSound: "",
-  spellUseSound: "",
-  weaponUseSound: "",
-  potionUseSound: "",
-  fullAuto: false,
-  useCustomSounds: true,
-  customSoundsPlaylist: "none",
-  keyMapping: defaultKeyMapping,
-  allowUseMacro: false,
-  rollOtherDamage: false,
-  removeButtons: "all",
-  gmRemoveButtons: "all", 
-  concentrationAutomation: false,
-  singleConcentrationRoll: true,
-  removeConcentration: true,
-  optionalRulesEnabled: false,
-  itemRollStartWorkflow: false,
-  usePlayerPortrait: false,
-  optionalRules: {
-    invisAdvantage: true,
-    checkRange: true,
-    nearbyFoe: 5,
-    nearbyAllyRanged: 4,
-    incapacitated: true,
-    removeHiddenInvis: true,
-    maxDRValue: false,
-    distanceIncludesHeight: false
-  },
-  keepRollStats: false,
-  saveStatsEvery: 20,
-  playerStatsOnly: false
-}
-*/
 
 export function checkRule(rule: string) {
   return configSettings.optionalRulesEnabled && configSettings.optionalRules[rule];
@@ -249,6 +178,7 @@ export let fetchParams = () => {
     configSettings.optionalRules = {
       invisAdvantage: true,
       checkRange: true,
+      wallsBlockRange: "center",
       nearbyFoe: 5,
       nearbyAllyRanged: 4,
       incapacitated: true,
@@ -257,6 +187,7 @@ export let fetchParams = () => {
       distanceIncludesHeight: false
     }
   }
+  if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
   if (typeof configSettings.optionalRules.nearbyFoe !== "number") {
     if (configSettings.optionalRulesEnabled)
       configSettings.optionalRules.nearbyFoe = 5;
