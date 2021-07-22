@@ -214,6 +214,10 @@
     "midi-qol.InvisAdvantage.Name": "은신/투명한 공격자가 공격에 유리함을 받음 (CUB or CV 필요)",
     "midi-qol.CheckRange.Name": "원거리 공격 시 범위 확인",
     "midi-qol.NearbyFoe.Name": "적이 해당 수치보다 가까이 있을 때 원거리 공격에 불리함을 받는다. 0은 비활성화이다.",
+    "midi-qol.WallsBlockRange.Name": "벽이 원거리 공격 차단",
+    "midi-qol.WallsBlockRange.Hint": "벽이 원거리 공격을 차단함(4점 체크에는 DND Helpers 모듈 필요)\n none = 효과 없음, center = 중앙과 중앙 선 검사, 4 point check = 모서리가 보이지 않으면 차단, 4점 체크는 엄폐에 따라 AC가 조정된다.",
+    "midi-qol.WallsBlockRangeOptionsNew": {"none": "하지 않음", "center": "중앙 검사", "4point": "4점 검사", "4pointAC": "4점 AC 검사"},
+    "midi-qol.WallsBlockRangeOptions": {"none": "없음", "center": "중앙 검사"},
     "midi-qol.NearbyAllyRanged.Name": "(House Rule) Ranged Attacks at foes near allies have disadvantage.",
     "midi-qol.NearbyAllyRanged.Hint": "Ranged Attacks with allies nearby (5 feet) to the target have disadvantage for targets smaller than this (w*h). 0 disables",
     "midi-qol.Incapacitated.Name": "무력화된 액터들의 공격 불가",
@@ -253,5 +257,7 @@
     "midi-qol.confirm": "확인 대화상자",
     "midi-qol.ExportConfig": "midi-qol 설정을 json file로 내보내기",
     "midi-qol.ImportConfig": "midi-qol 설정을 json file로부터 가져오기",
-    "midi-qol.flags.midi-qol.bardicInspiration": "바드의 고양감"
+    "midi-qol.flags.midi-qol.bardicInspiration": "바드의 고양감",
+    "midi-qol.ExportJSon": "굴림 통계를 Json 파일로 내보내기",
+    "midi-qol.ExportCSV": "굴림 통계를 CSV 파일로 내보내기"
 }
