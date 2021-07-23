@@ -58,7 +58,7 @@ Known issues: An attack that removes concentration that also should marks the ta
 * Added support for special duration 1Hit.mwak/rwak/msak/rsak to expire when a hit with a particular type of attack is made. Useful for some of the various paladin smites.
 * Added targetUuids, hitTargetUuis, saveUuids, superSaverUuids and failedSaveUUids to the args[0] argument to onUse/DamageMacro macro calls.
 * Ability bonus effects (bardic inspiration etc) can now specify an effect of success which means the roll will bet set to 99 - useful for effects that turn a failure into a save.
-* flags.midi-qol.options.NAME.count now support @fields, so you can consume a resource, like legendary resistance (@resources.legres.value). Sample legendary resistance included.
+* flags.midi-qol.optional.NAME.count now support @fields, so you can consume a resource, like legendary resistance (@resources.legres.value). Sample legendary resistance included.
 * Added a different Lucky feature "Luck (Recharge)" which consumes resource points (tertiary in the sample). Resource details are updated by the active effect so luck recharges on a long rest. Just drag the Lucky (Recharge) item to the character and Luck should just work, recharging on a long rest.
 * Added Sample Branding Smite (requires DamageBonus/onUse macros enabled plus Active Token Lighting for the dim light effect), that implements the damage bonus, removes invisibility and adds Dim Light to the target when hit and expires after a successful hit.
 * Added sample dragon slayer long sword which does bonus damage against dragons and knows about critical hits (assumes double dice for the critical hit).

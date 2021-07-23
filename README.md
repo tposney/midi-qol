@@ -395,11 +395,19 @@ You can use this feature to roll custom damage via a macro for any item - just l
 This field lets you specify a macro to call after the item roll is complete. It is ALWAYS called whether the attack hit/missed and is passed the following data as args[0]. The field should contain ONLY the macro name and recognizes the exact text ItemMacro to mean calling the items itemMacro if any.
 ```
   actor = actor.data (the actor using the item)
+  actorUuid = actor.uuid
+  tokenId
+  tokenUuid
   item = item.data (the item, i.e. spell/weapon/feat)
+  itemUuid the item uuid
   targets = [token.data] (an array of token data taken from game.user.targets)
+  targetUuids = [uuid]
   hitTargets = [token.data] (an array of token data taken from targets that were hit)
+  hitTargetUuids [uuid]
   saves= [token.data] (an array of token data taken from targets that made a save)
+  saveUuids = [uuid]
   failedSaves = [token.data] (an array of token data taken from targets that failed the save)
+  failedSaveUuids = [uuid]
   damageRoll = the Roll object for the damage roll (if any)
   attackRoll = the Roll object for the attack roll (if any)
   itemCardId = the id of the chat message item card (see below)
@@ -417,6 +425,8 @@ This field lets you specify a macro to call after the item roll is complete. It 
   rollData: this.actor.getRollData(),
   tag: either "OnUse" or "DamageBonus" indicating where in the workflow it was called. You can use this to allow the same macro to be used in both cases
   templateId: the template.id field for the placed measured template (if any)
+  concentrationData: getProperty(this.actor.data.flags, "midi-qol.concentration-data"),
+  templateUuid - preferred over templateId
 ```
 You can use the various target details to work out which tokens to apply the effect to, for example hitTargets is only those targets that the item roll "hit" if any.
 
