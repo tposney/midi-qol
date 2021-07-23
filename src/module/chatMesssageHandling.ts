@@ -40,7 +40,6 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   //@ts-ignore
   debug("process precratebetteerrollscard ", message.data, installedModules["betterrolls5e"], message.data.content?.startsWith('<div class="dnd5e red-full chat-card"'))
 
-  let speaker;
   let actorId = brFlags.actorId;
   let tokenId = brFlags.tokenId;
   if (tokenId && !tokenId.startsWith("Scene")) { // remove when BR passes a uuid instead of constructed id.
@@ -56,7 +55,6 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   const storedData = message.getFlag("dnd5e", "itemData");
   //@ts-ignored ocumentClass
   const item = storedData ? new CONFIG.Item.documentClass(storedData, { parent: actor }) : actor.items.get(brFlags.itemId);
-  // const item = actor.items.get(brFlags.itemId);
   if (!item) return;
   // Try and help name hider
   //@ts-ignore speaker
@@ -77,7 +75,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   let disadvantage = attackEntry ? attackEntry.rollState === "lowest" : undefined;
   let diceRoll = attackEntry ? attackEntry.entries?.find((e) => !e.ignored)?.roll.terms[0].total : -1;
   let isCritical = attackEntry ? attackEntry.entries?.find((e) => !e.ignored)?.isCrit : false;
-
+  let otherDamageRoll;
   for (let entry of brFlags.entries) {
     if (entry.type === "damage-group") {
       for (const subEntry of entry.entries) {
@@ -90,15 +88,17 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
         // Check for versatile and flag set. TODO damageIndex !== other looks like nonsense.
         if (subEntry.damageIndex !== "other")
           damageList.push({ type, damage });
-        else if (configSettings.rollOtherDamage)
+        else if (configSettings.rollOtherDamage) {
           otherDamageList.push({ type, damage });
+          otherDamageRoll = subEntry.baseRoll;
+        }
       }
     }
   }
   //@ts-ignore udpate
   const targets = (item?.data.data.target?.type === "self") ? new Set([token]) : new Set(game.user?.targets);
   let workflow = BetterRollsWorkflow.getWorkflow(item.uuid);
-  if (!workflow) workflow = new BetterRollsWorkflow(actor, item, speaker, targets, null);
+  if (!workflow) workflow = new BetterRollsWorkflow(actor, item, message.data.speaker, targets, null);
   workflow.isCritical = isCritical;
   workflow.isFumble = diceRoll === 1;
   workflow.attackTotal = attackTotal;
@@ -114,7 +114,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   if (otherDamageList.length > 0) {
     workflow.otherDamageTotal = otherDamageList.reduce((acc, a) => a.damage + acc, 0);
     //@ts-ignore evaluate
-    workflow.otherDamageRoll = new Roll(`${workflow.otherDamageTotal}`).evaluate({ async: false });
+    workflow.otherDamageRoll = otherDamageRoll;
   }
   workflow.itemLevel = brFlags.params.slotLevel ?? 0;
   workflow.itemCardData = message.data;
@@ -143,7 +143,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
     message.update({ "content": message.data.content.replace(searchString, replaceString) });
   }
   // Workflow will be advanced when the better rolls card is displayed.
-  Workflow.removeWorkflow(workflow.uuid);
+  // Workflow.removeWorkflow(workflow.uuid);
   workflow.next(WORKFLOWSTATES.NONE);
   return true;
 }
@@ -319,11 +319,6 @@ export let hideStuffHandler = (message, html, data) => {
   if (game.user?.isGM) {
     ids.click(_onTargetSelect);
   }
-
-  /*
-  <div class="midi-qol-tooltip midi-qol-save-total">
-  <div class="midi-qol-tooltiptext midi-qol-save-tooltip" style="text-align: left;">
-*/
 
   // Hide saving throw tool tips to non-gms
   if (!game.user?.isGM) {

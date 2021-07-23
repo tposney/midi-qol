@@ -1,3 +1,5 @@
+import { MacroData } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/data.mjs";
+import { _mergeUpdate } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/utils/helpers.mjs";
 import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, checkCubInstalled } from "../midi-qol.js";
 import { ConfigPanel} from "./apps/ConfigPanel.js"
 
@@ -117,22 +119,45 @@ export function exportSettingsToJSON() {
     flags: {}
   };
   data.flags["exportSource"] = {
-    world: game.world.id,
     system: game.system.id,
     coreVersion: game.data.version,
     systemVersion: game.system.data.version
-  }
+  };
   data.flags["modules"] = {
-    daeVersion: game.modules.get("dae")?.data.version,
-    betterRollsVersion: game.modules.get("betterrolls5e")?.data.version,
     abouttimeVersion: game.modules.get("about-time")?.data.version,
-    timesUpVersion: game.modules.get("times-up")?.data.version,
+    betterRollsVersion: game.modules.get("betterrolls5e")?.data.version,
+    cubVersion: game.modules.get("combat-utility-belt")?.data.version,
+    condvisVersion: game.modules.get("confitional-visibility")?.data.version,
+    daeVersion: game.modules.get("dae")?.data.version,
+    DSNversion: game.modules.get("dice-so-nice")?.data.version,
+    dndhelpersVersions: game.modules.get("dnd5e-helpers")?.data.version,
+    itemMacroVersion: game.modules.get("itemacro")?.data.version,
+    lmrtfyVersion: game.modules.get("lmrtfy")?.data.version,
+    midiQolVerson: game.modules.get("midi-qol")?.data.version,
+    monksVersion: game.modules.get("monks-tokenbar")?.data.version,
+    socketlibVersion: game.modules.get("socketlib")?.data.version,
     simpleCalendarVersion: game.modules.get("foundryvtt-simple-calendar")?.data.version,
-    midiQolVerson: game.modules.get("midi-qol")?.data.version
+    timesUpVersion: game.modules.get("times-up")?.data.version
   };
   data.flags["all-modules"] = 
   //@ts-ignore
-    (new Collection(game.modules).filter(m=>m.active))
+    (new Collection(game.modules).filter(m=>m.active)).map(m => {
+      //@ts-ignore
+      const mdata: any = duplicate(m.data);
+      return {
+        name: mdata.name,
+        title: mdata.title,
+        description: mdata.description,
+        url: mdata.url,
+        version: mdata.version,
+        minimumCoreVersion: mdata.minimumCoreVersion,
+        compatibleCoreVersion: mdata.compatibleCoreVersion,
+        scripts: mdata.scripts,
+        esmodules: mdata.esmodules,
+        socket: mdata.socket
+
+      }
+    });
   const filename = `fvtt-midi-qol-settings.json`;
   saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
 }

@@ -1,3 +1,11 @@
+## 0.8.36
+* Fix for versatile damage rolls
+* Fix for better rolls no speaker defined.
+* Fix for damage rolls when single concentration check not set.
+* Fix for players control visible tokens for the GM. 
+* Fix for measuring distance using 5/10/5 scheme.
+* Remove any world identifying data from settings export.
+
 ## 0.8.35
 * Fix for not displaying versatile button.
 * Fix for players control visible tokens conflict with other modules. (the conflict with levels will go away, but players control visible tokens will not function with levels).

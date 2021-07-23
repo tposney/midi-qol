@@ -10,8 +10,7 @@ var d20Roll;
 function _isVisionSource(wrapped) {
   const isVisionSource = wrapped();
   //@ts-ignore
-  if (this.data.hidden && (game.user.isGM || this.actor?.testUserPermission(game.user, "OWNER"))) {
-    console.error("Setting as vision source");
+  if (this.data.hidden && !game.user.isGM && this.actor?.testUserPermission(game.user, "OWNER")) {
     return true;
   }
   return isVisionSource;
@@ -19,7 +18,8 @@ function _isVisionSource(wrapped) {
 
 function isVisible(wrapped) {
   const isVisible = wrapped();
-  if (this.actor?.testUserPermission(game.user, "OWNER")) {
+  //@ts-ignore
+  if (!game.user.isGM && this.actor?.testUserPermission(game.user, "OWNER")) {
     return true;
   }
   return isVisible;

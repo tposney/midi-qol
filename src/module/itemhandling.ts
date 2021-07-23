@@ -476,7 +476,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   let dmgBtnText = (this.data?.data?.actionType === "heal") ? i18n("DND5E.Healing") : i18n("DND5E.Damage");
   if (isAutoFastDamage()) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
   let versaBtnText = i18n("DND5E.Versatile");
-  if (isAutoFastDamage()) versaBtnText += `${i18n("DND5E.Versatile")} ${i18n("midi-qol.fastForward")}`;
+  if (isAutoFastDamage()) versaBtnText += ` ${i18n("midi-qol.fastForward")}`;
   const templateData = {
     actor: this.actor,
     tokenId: token?.uuid || null, //TODO come back and fix? this

@@ -1062,7 +1062,7 @@ export class Workflow {
       } else {
         if (this.otherDamageHTML) {
           const otherSearchRe = /<div class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
-          const otherReplaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center"></div>${this.otherDamageHTML || ""}<div class="end-midi-qol-damge-roll">`
+          const otherReplaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center"></div>${this.otherDamageHTML || ""}<div class="end-midi-qol-damage-roll">`
           content = content.replace(otherSearchRe, otherReplaceString);
         }
         if (this.bonusDamageRoll) {

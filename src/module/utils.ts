@@ -26,6 +26,7 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
 
   // If we have an item we can use it to work out each of the damage lines that are being rolled
   for (let [spec, type] of damageSpec.parts) { // each spec,type is one of the damage lines
+    if (partPos >= rollTerms.length) continue;
     // TODO look at replacing this with a map/reduce
     debug("CreateDamageList: single Spec is ", spec, type, item)
     //@ts-ignore replaceFromulaData - blank out @field - do this to avoid @XXXX not found
@@ -129,7 +130,7 @@ export function getSelfTargetSet(actor): Set<Token> {
 // Calculate the hp/tempHP lost for an amount of damage of type
 export function calculateDamage(a: Actor, appliedDamage, t: Token, totalDamage, dmgType, existingDamage) {
   debug("calculate damage ", a, appliedDamage, t, totalDamage, dmgType)
-  let prevDamage = existingDamage?.find(ed => ed?.tokenId === t.id);
+  let prevDamage = existingDamage?.find(ed => ed.tokenId === t.id);
   //@ts-ignore attributes
   var hp = a.data.data.attributes.hp;
   var oldHP, tmp;
@@ -199,7 +200,7 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
 };
 
 export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any> } = { existingDamage: [], superSavers: new Set() }): any[] => {
-  return applyTokenDamageMany([damageDetail], [totalDamage], theTargets, item, [saves], { existingDamage: [options.existingDamage], superSavers: [options.superSavers] });
+  return applyTokenDamageMany([damageDetail], [totalDamage], theTargets, item, [saves], { existingDamage: options.existingDamage, superSavers: [options.superSavers] });
 }
 
 export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[] } = { existingDamage: [], superSavers: [] }): any[] => {
@@ -364,7 +365,14 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       //      appliedDamage = await applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, new Set(), {existingDamage: [], superSavers: new Set()});
       if (workflow.otherDamageRoll) {
         // assume pervious damage applied and then calc extra damage
-        appliedDamage = await applyTokenDamage(workflow.otherDamageDetail, workflow.otherDamageTotal, theTargets, item, workflow.saves, { existingDamage: appliedDamage, superSavers: workflow.superSavers });
+        appliedDamage = applyTokenDamage(
+          workflow.otherDamageDetail, 
+          workflow.otherDamageTotal, 
+          theTargets, 
+          item, 
+          workflow.saves, 
+          { existingDamage: appliedDamage, superSavers: workflow.superSavers }
+        );
       }
     }
   } else {
@@ -516,11 +524,11 @@ export function getDistance(t1: Token, t2: Token, wallblocking = false): {distan
   coverACBonus = configSettings.optionalRules.wallsBlockRange === "4pointAC" ? 5 : 0;
   //Log("get distance callsed");
   var x, x1, y, y1, d, r, segments: { ray: Ray }[] = [], rdistance, distance;
-  for (x = 0.5; x <= t1.data.width; x++) {
-    for (y = 0.5; y <= t1.data.height; y++) {
+  for (x = 0.5; x < t1.data.width; x++) {
+    for (y = 0.5; y < t1.data.height; y++) {
       const origin = new PIXI.Point(...canvas.grid.getCenter(Math.round(t1.data.x + (canvas.dimensions.size * x)), Math.round(t1.data.y + (canvas.dimensions.size * y))));
-      for (x1 = 0.5; x1 <= t2.data.width; x1++) {
-        for (y1 = 0.5; y1 <= t2.data.height; y1++) {
+      for (x1 = 0.5; x1 < t2.data.width; x1++) {
+        for (y1 = 0.5; y1 < t2.data.height; y1++) {
           const dest = new PIXI.Point(...canvas.grid.getCenter(Math.round(t2.data.x + (canvas.dimensions.size * x1)), Math.round(t2.data.y + (canvas.dimensions.size * y1))));
           const r = new Ray(origin, dest)
           if (wallblocking) {
@@ -555,7 +563,8 @@ export function getDistance(t1: Token, t2: Token, wallblocking = false): {distan
   if (segments.length === 0) {
     return noResult;
   }
-  rdistance = canvas.grid.measureDistances(segments, { gridSpaces: true });
+  //@ts-ignore
+  rdistance = segments.map(ray => getCanvas()?.grid.measureDistances([ray], {gridSpaces: true})[0]);
   distance = rdistance[0];
   rdistance.forEach(d => { if (d < distance) distance = d; });
   if (configSettings.optionalRules.distanceIncludesHeight) {
@@ -741,12 +750,15 @@ export async function addConcentration(options: { workflow: Workflow }) {
       statusEffect.origin = item?.uuid
       statusEffect.img = "modules/combat-utility-belt/icons/concentrating.svg"
       setProperty(statusEffect.flags, "midi-qol.isConcentration", statusEffect.origin);
-      //@ts-ignore updateEmbeddedDcouments
-      // await selfTarget.actor.updateEmbeddedDocuments("ActiveEffect", [aeData])
+
     }
     const existing = selfTarget.actor?.effects.find(e => e.getFlag("core", "statusId") === statusEffect.id);
     if (!existing) {
-      return await selfTarget.toggleEffect(statusEffect, { active: true })
+      setTimeout(
+        () => {
+          selfTarget.toggleEffect(statusEffect, { active: true })
+      }, 100);
+      // return await selfTarget.toggleEffect(statusEffect, { active: true })
     }
     return true;
   } else {
@@ -778,7 +790,12 @@ export async function addConcentration(options: { workflow: Workflow }) {
         startTurn: game.combat?.turn
       }
     }
-    return await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+    setTimeout(
+      () => {
+        actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+    }, 100);
+    return true;
+    // return await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
   }
 }
 
