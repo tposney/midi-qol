@@ -1,3 +1,7 @@
+## 0.8.37
+* Don't check conditional visibility flags if the module is disabled since they won't be removed.
+* Fix for broken sneak attack introduced in 0.8.36
+
 ## 0.8.36
 * Fix for versatile damage rolls
 * Fix for better rolls no speaker defined.

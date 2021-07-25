@@ -99,7 +99,7 @@ export class Workflow {
   noAutoDamage: boolean; // override damage roll for damage rolls
 
   saves: Set<Token>;
-  superSaveers: Set<Token>;
+  superSavers: Set<Token>;
   failedSaves: Set<Token>
   advantageSaves: Set<Token>;
   saveRequests: any;
@@ -817,23 +817,23 @@ export class Workflow {
     let superSaverUuids: string[] = [];
     for (let target of this.targets) {
       targets.push(target.document ?? target);
-      targetUuids.push(target.uuid);
+      targetUuids.push(target.document.uuid);
     }
     for (let save of this.saves) {
       saves.push(save.document ?? save);
-      saveUuids.push(save.uuid);
+      saveUuids.push(save.document?.uuid ?? save.uuid);
     }
     for (let hit of this.hitTargets) {
       hitTargets.push(hit.document ?? hit);
-      hitTargetUuids.push(hit.uuid)
+      hitTargetUuids.push(hit.document?.uuid ?? hit.uuid)
     }
     for (let failed of this.failedSaves) {
       failedSaves.push(failed.document ?? failed);
-      failedSaveUuids.push(failed.uuid);
+      failedSaveUuids.push(failed.document?.uuid ?? failed.uuid);
     }
     for (let save of this.superSavers) {
       superSavers.push(save.document ?? save);
-      superSaverUuids.push(save.uuid);
+      superSaverUuids.push(save.document?.uuid ?? save.uuid);
     };
     const macroData = {
       actor: this.actor.data,

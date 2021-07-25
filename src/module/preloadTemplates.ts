@@ -1,4 +1,4 @@
-export const preloadTemplates = async function() {
+export async function preloadTemplates() {
   const templatePaths = [
     // Add paths to "modules/midi-qol/templates" - TODO check these
     "modules/midi-qol/templates/saves.html",

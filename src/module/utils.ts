@@ -508,6 +508,9 @@ export function checkIncapcitated(actor: Actor, item: Item, event) {
   return false;
 }
 
+export function getDistanceSimple(t1: Token, t2: Token, wallBlocking = false) {
+  return getDistance(t1, t2, wallBlocking).distance;
+}
 /** takes two tokens of any size and calculates the distance between them
 *** gets the shortest distance betwen two tokens taking into account both tokens size
 *** if wallblocking is set then wall are checked
@@ -832,7 +835,7 @@ export function checkNearby(disposition: number | null, token: Token | undefined
 export function hasCondition(token, condition: string) {
   if (!token) return false;
   const localCondition = i18n(`midi-qol.${condition}`);
-  if (getProperty((token.actor.data.flags), `conditional-visibility.${condition}`)) return true;
+  if (installedModules.get("conditional-visibility") && getProperty((token.actor.data.flags), `conditional-visibility.${condition}`)) return true;
   //@ts-ignore game.cub
   if (installedModules.get("combat-utility-belt") && game.cub.getCondition(localCondition)) {
     //@ts-ignore game.cub
@@ -843,9 +846,8 @@ export function hasCondition(token, condition: string) {
 
 export async function removeHiddenInvis() {
   const token: Token | undefined = getCanvas().tokens?.get(this.tokenId);
-  removeTokenCondition(token, "hidden").then(() => {
-    removeTokenCondition(token, "invisible");
-  });
+  await removeTokenCondition(token, "hidden");
+  await removeTokenCondition(token, "invisible");
   log(`Hidden/Invisibility removed for ${this.actor.name} due to attack`)
 }
 
