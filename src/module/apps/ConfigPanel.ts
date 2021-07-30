@@ -43,6 +43,7 @@ export class ConfigPanel extends FormApplication {
       wallsBlockRangeOptions: i18n("midi-qol.WallsBlockRangeOptions"),
       //@ts-ignore
       itemTypeLabels: CONFIG.Item.typeLabels,
+      hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),
       itemDeleteCheck,
       hideRollDetailsOptions: i18n("midi-qol.hideRollDetailsOptions"),
       nsaFlag,

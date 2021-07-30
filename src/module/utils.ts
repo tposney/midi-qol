@@ -423,7 +423,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
       // TODO - reinstated the LMRTFY patch so that the event is properly passed to the roll
       advantage = 2;
     } else {
-      advantage = (advantage ? 1 : 0);
+      advantage = (advantage === true ? 1 : advantage === false ? -1: 0);
     }
     let mode = "roll";
     if (player.isGM && configSettings.autoCheckSaves !== "allShow") {
@@ -521,11 +521,16 @@ export function getDistance(t1: Token, t2: Token, wallblocking = false): {distan
   let coverACBonus = 0;
   let tokenTileACBonus = 0;
   const noResult = {distance: -1, acBonus: undefined}
+  let coverData;
   if (!canvas.grid || !canvas.dimensions) noResult;
   if (!t1 || !t2) return noResult
   if (!canvas || !canvas.grid || !canvas.dimensions) return noResult;
-  coverACBonus = configSettings.optionalRules.wallsBlockRange === "4pointAC" ? 5 : 0;
-  //Log("get distance callsed");
+  //@ts-ignore
+  if (installedModules.get("dnd5e-helpers") && window.CoverCalculator) {
+    //@ts-ignore TODO this is being called in the wrong spot (should not do the loops if using this)
+    coverData = CoverCalculator.Cover(t1, t2)
+  }
+  // TODO refactor this so that if 4point ac don't go through the whole loop
   var x, x1, y, y1, d, r, segments: { ray: Ray }[] = [], rdistance, distance;
   for (x = 0.5; x < t1.data.width; x++) {
     for (y = 0.5; y < t1.data.height; y++) {
@@ -538,13 +543,13 @@ export function getDistance(t1: Token, t2: Token, wallblocking = false): {distan
             // TODO use four point rule and work out cover
             switch (configSettings.optionalRules.wallsBlockRange) {
               case "center":
-                  if (canvas.walls?.checkCollision(r)) continue; break;
+                  if (canvas.walls?.checkCollision(r)) continue; 
+                  break;
               case "4point":
               case "4pointAC":
                 //@ts-ignore 
                 if (installedModules.get("dnd5e-helpers") && window.CoverCalculator) {
-                  //@ts-ignore
-                  const coverData = CoverCalculator.Cover(t1, t2)
+                  //@ts-ignore TODO this is being called in the wrong spot (should not do the loops if using this)
                   if (coverData.data.results.cover === 3) continue;
                   if (configSettings.optionalRules.wallsBlockRange === "4pointAC") coverACBonus = -coverData.data.results.value;
                 } else {
@@ -585,6 +590,7 @@ export function getDistance(t1: Token, t2: Token, wallblocking = false): {distan
 let pointWarn = debounce(() => {
   ui.notifications?.warn("4 Point LOS check selected but dnd5e-helpers not installed")
 }, 100)
+
 export function checkRange(actor, item, tokenId, targets) {
   let itemData = item.data.data;
 
@@ -728,7 +734,9 @@ export async function addConcentration(options: { workflow: Workflow }) {
   // await item.actor.unsetFlag("midi-qol", "concentration-data");
   let selfTarget = item.actor.token ? item.actor.token.object : getSelfTarget(item.actor);
   if (!selfTarget) return;
-  if (installedModules.get("combat-utility-belt")) {
+  if (false && installedModules.get("dfreds-convenient-effects")) {
+
+  } else if (installedModules.get("combat-utility-belt")) {
     const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
     const itemDuration = item.data.data.duration;
     let statusEffect: any = CONFIG.statusEffects.find(se => se.label === concentrationName);

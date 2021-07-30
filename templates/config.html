@@ -168,6 +168,15 @@
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.AutoEffects.Hint"}}</div>
 
+        {{#if hasConvenientEffects}}
+        <div class="form-group">
+          <label>{{localize "midi-qol.AutoCEEffects.Name"}}</label>
+          <input type="checkbox" name="autoCEEffects" data-dtype="Boolean" {{checked
+            configSettings.autoCEEffects}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.AutoCEEffects.Hint"}}</div>
+        {{/if}}
+
         {{#if false}}
         <div class="form-group">
           <label>{{localize "midi-qol.ItemRollStartWorkflow.Name"}}</label>

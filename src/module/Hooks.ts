@@ -54,7 +54,8 @@ export let readyHooks = async () => {
       // actor took damage and is concentrating....
       const saveDC = Math.max(10, Math.floor(hpDiff / 2));
       const saveTargets = game.user?.targets;
-      const theTarget = getSelfTarget(actor)?.document.id;
+      const theTargetToken = getSelfTarget(actor);
+      const theTarget = theTargetToken?.document ? theTargetToken?.document.id : theTargetToken?.id;
       if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
       let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor })
       //@ts-ignore save
@@ -135,6 +136,13 @@ export let initHooks = () => {
       const currentMacro = getProperty(app.object.data, "flags.midi-qol.onUseMacroName") ?? "";
       const macroField = `<div class="form-group"><label>${labelText}</label><input type="text" name="flags.midi-qol.onUseMacroName" value="${currentMacro}"/> </div>`;
       element.append(macroField)
+    }
+    if (!installedModules.get("betterrolls5e")) {
+      const element2 = html.find('input[name="data.attackBonus"]').parent().parent();
+      const labelText2 = i18n('midi-qol.criticalThreshold');
+      const criticalThreshold = getProperty(app.object.data, "flags.midi-qol.criticalThreshold") ?? 20;
+      const criticalField = `<div class="form-group"><label>${labelText2}</label><div class="form-fields"><input type="text" name="flags.midi-qol.criticalThreshold" value="${criticalThreshold}"/></div></div>`;
+      element2.append(criticalField);
     }
   })
 

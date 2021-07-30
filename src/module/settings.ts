@@ -47,6 +47,7 @@ class ConfigSettings {
   damageImmunities: string = "none";
   requireMagical: boolean = false;
   autoItemEffects: null;
+  autoCEEffects: boolean = false;
   rangeTarget: string = "none";
   playerRollSaves: string = "none";
   playerSaveTimeout: number = 0;

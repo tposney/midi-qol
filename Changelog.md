@@ -1,3 +1,12 @@
+## 0.8.38
+* Fix for trailing + signs in damage rolls.
+* Fix for re-rolls in better rolls not picking up new targets.
+* Added critical threshold per item. Can be set as item.data.flags.midi-qol.criticalThreshold or from the item sheet. Will override the actor critical threshold if lower. Disabled for better rolls.
+* Fix for concentration check on unlinked tokens.
+* Fix for special duration isDamage.damageType not expiring when taking dmaage if saved.
+* Fix for double damage critical damage setting.
+* Added option for convenient effects module support. If enabled midi-qol will search for a "convenient effect" with the same name as the item rolled and apply any effects to the targets. (Experimental)
+
 ## 0.8.37
 * Don't check conditional visibility flags if the module is disabled since they won't be removed.
 * Fix for broken sneak attack introduced in 0.8.36

@@ -186,7 +186,7 @@ function configureDamage(wrapped) {
       if (term instanceof DiceTerm) {
         //@ts-ignore types don't allow for optional roll in constructor
         newTerms.push(new ParentheticalTerm({ term: `2*${term.formula}`, options: {} }))
-      } else if( !term)
+      } else
         newTerms.push(term);
     }
     this.terms = newTerms;
@@ -333,7 +333,8 @@ export let itemPatching = () => {
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.roll", doItemRoll, "MIXED");
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
-  libWrapper.register("midi-qol", "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
+  if (game.system.id === "dnd5e")
+    libWrapper.register("midi-qol", "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
 };
 
 export let actorAbilityRollPatching = () => {

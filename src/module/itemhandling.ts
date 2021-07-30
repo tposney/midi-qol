@@ -60,6 +60,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   });
 
   if (!result) return result;
+  result = Roll.fromJSON(JSON.stringify(result.toJSON()))
   if (workflow.workflowType === "BetterRollsWorkflow") {
     // we are rolling this for better rolls
     return result;
@@ -176,6 +177,8 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   if (!result) { // user backed out of damage roll or roll failed
     return;
   }
+  // need to do this nonsense since the returned roll _formula has a trailing + for ammo
+  result = Roll.fromJSON(JSON.stringify(result.toJSON()))
   workflow.damageRoll = result;
   workflow.damageTotal = Number(result.total);
   workflow.damageRollHTML = await result.render();
@@ -410,7 +413,9 @@ export async function showItemInfo() {
 
   const templateData = {
     actor: this.actor,
-    tokenId: token?.document.uuid || null, //TODO come back and fix? this
+    // tokenId: token?.id,
+    tokenId: (token.document ? token?.document.uuid  : token.uuid) || null, 
+    tokenUuid: (token.dcoument ? token?.document.uuid : token.uuid) || null,
     item: this.data,
     itemUuid: this.uuid,
     data: this.getChatData(),
@@ -479,7 +484,9 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   if (isAutoFastDamage()) versaBtnText += ` ${i18n("midi-qol.fastForward")}`;
   const templateData = {
     actor: this.actor,
-    tokenId: token?.uuid || null, //TODO come back and fix? this
+    // tokenId: token?.id,
+    tokenId: (token.document ? token?.document.uuid  : token.uuid) || null, //TODO come back and fix? this
+    tokenUuid: (token.dcoument ? token?.document.uuid : token.uuid) || null, //TODO come back and fix? this
     item: this.data,
     itemUuid: this.uuid,
     data: this.getChatData(),

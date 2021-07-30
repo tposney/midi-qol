@@ -9,6 +9,7 @@ import { socketlibSocket } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration } from "./utils.js"
+import { isThisTypeNode } from "typescript";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -513,6 +514,7 @@ export class Workflow {
         return;
 
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
+        Hooks.callAll("midi-qol.preAttackRollComplete", this);
         const attackBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.AttackBonusMacro`);
         if (configSettings.allowUseMacro && attackBonusMacro) {
           await this.rollAttackBonus(attackBonusMacro);
@@ -684,6 +686,16 @@ export class Workflow {
           await this.dae.doEffects(this.item, true, this.applicationTargets, { whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId })
           this.removeEffectsButton();
         }
+        if (installedModules.get("dfreds-convenient-effects") && this.item && configSettings.autoCEEffects) {
+          const effectName = this.item.name;
+          //@ts-ignore
+          if (game.dfreds.effects.all.find(e => e.name === effectName)) {
+            for (let token of this.applicationTargets) {
+              //@ts-ignore
+              game.dfreds.effectHandler.addEffect({effectName, actor: token.actor, origin: this.item?.uuid});
+            }
+          }
+        }
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
       case WORKFLOWSTATES.ROLLFINISHED:
@@ -692,7 +704,7 @@ export class Workflow {
         for (let target of this.targets) {
           const expiredEffects: (string | null)[] | undefined = target.actor?.effects?.filter(ef => {
             const wasAttacked = this.item?.hasAttack;
-            const wasDamaged = itemHasDamage(this.item) && this.applicationTargets?.has(target); //TODO this test will fail for damage only workflows - need to check the damage rolled instaed
+            const wasDamaged = itemHasDamage(this.item) && this.hitTargets?.has(target); //TODO this test will fail for damage only workflows - need to check the damage rolled instaed
             const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
             if (!specialDuration) return false;
             //TODO this is going to grab all the special damage types as well which is no good.
@@ -1325,6 +1337,10 @@ export class Workflow {
             advantage = true;
             this.advantageSaves.add(target);
           }
+          if (getProperty(target.actor.data.flags, "midi-qol.disadvantage.concentration")) {
+            advantage = false;
+            this.disadvantageSaves.add(target);
+          }
         }
 
         var player = playerFor(target);
@@ -1535,6 +1551,9 @@ export class Workflow {
     }
     //@ts-ignore .critical undefined
     this.isCritical = this.diceRoll >= this.attackRoll.terms[0].options.critical;
+    if (getProperty(this,"item.data.flags.midi-qol.criticalThreshold") ?? 20 < 20) {
+      this.isCritical = this.isCritical || this.diceRoll >= getProperty(this,"item.data.flags.midi-qol.criticalThreshold");
+    }
     //@ts-ignore .fumble undefined
     this.isFumble = this.diceRoll <= this.attackRoll.terms[0].options.fumble;
     this.attackTotal = this.attackRoll.total ?? 0;
@@ -2043,7 +2062,7 @@ export class BetterRollsWorkflow extends Workflow {
         await this.complete();
         super._next(WORKFLOWSTATES.ROLLFINISHED);
         // should remove the apply effects button.
-        Workflow.removeWorkflow(this.item.id)
+        Workflow.removeWorkflow(this.item.uuid)
         return;
 
       default:

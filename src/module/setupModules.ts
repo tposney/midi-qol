@@ -14,7 +14,8 @@ let modules = {"about-time": "0.0",
               "monks-tokenbar": "0.0",
               "socketlib": "0.0",
               "advanced-macros": "1.0",
-              "dnd5e-helpers":  "2.0.5"
+              "dnd5e-helpers":  "2.0.5",
+              "dfreds-convenient-effects": "1.6.3"
             };
 export let installedModules = new Map();
 
