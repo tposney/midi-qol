@@ -322,6 +322,23 @@ Negative DR is not supported (i.e. to increase damage taken).
 
 flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver will take 0.5/0 damage on failed/successful save, compared to the normal 1/0.5. Useful for things like rogue's evasion class feature.  
 
+**Optional Bonus Effects**	
+Optional flags cause a dialog to be raised when an opportunity to apply the effect comes up. So an optional attack bonus prompts the attacker after the attack roll is made, but before the attack is adjudicated, givin the attacker the option to modify the roll. Effects last for one application unless the count flag is set.
+
+flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target		
+flags.midi-qol.optional.Name.damage	bonus to apply to damage done		
+flags.midi-qol.optional.Name.skill	bonus to apply to skill rolls		
+flags.midi-qol.optional.Name.attack	the bonus is added after the attack roll		
+flags.midi-qol.optional.Name.save	the bonus is added after the save roll. Requires auto fast forward		
+flags.midi-qol.optional.Name.check	the bonus is added after the ability check roll		
+flags.midi-qol.optional.Name.label	label to use in the dialog		
+flags.midi-qol.optional.Name.count	how many uses the effect has (think lukcy which has 3), if absent the bonus will be single use (bardic inspiration)		
+
+Values for the optional roll bonus flags include a dice expression, a number, reroll (rerolling the roll completely) or success which changes the roll to 99 ensuring success.
+
+## Reactions
+If the config settings for reaction checks is enabled midi will check a target that is hit by an attack for any items/feautres/spells that have an activation type of reaction and prompt the target if they want to use any of their reactions, which will then initiate a midi workflow for that item/feature/spell targeting the attacker.
+
 ## Bugs
 probably many however....
 * Language translations are not up to date.
@@ -391,7 +408,6 @@ You can use this feature to roll custom damage via a macro for any item - just l
 
 ### OnUse Macro Item detail field
 
-
 This field lets you specify a macro to call after the item roll is complete. It is ALWAYS called whether the attack hit/missed and is passed the following data as args[0]. The field should contain ONLY the macro name and recognizes the exact text ItemMacro to mean calling the items itemMacro if any.
 ```
   actor = actor.data (the actor using the item)
@@ -450,7 +466,8 @@ chatMessage.update({content: content});
 ```
 hitContent is just html, so you could insert whatever you want in any of the divs above.
 
-
+### Weapon Critical Threshold
+An additional field is added to the weapon item sheet, **Critical Threshold**, which changes the critical threshold for attacks made with that weapon. The value used for the attack crtical threshold is the lower of the actors critical threshold (from the special traits page) and the weapon critical threshold.
 
 ## Sample Chat Logs
 ![No Combo Card](pictures/nocombo.png) ![Combo Card](pictures/combo.png)

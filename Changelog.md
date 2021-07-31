@@ -1,3 +1,6 @@
+## 0.8.39
+* Fix for failed rolls/info when no token present for actor.
+
 ## 0.8.38
 * Fix for trailing + signs in damage rolls.
 * Fix for re-rolls in better rolls not picking up new targets.
