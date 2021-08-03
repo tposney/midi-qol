@@ -100,8 +100,10 @@ async function doRollSkill(wrapped, ...args) {
   procOptions.chatMessage = false;
   let result = await wrapped.call(this, skillId, procOptions);
   result = await bonusCheck(this, result, "skill")
-  if (chatMessage !== false) result.toMessage({speaker: getSpeaker(this), "flags.dnd5e.roll": {type: "skill", skillId }});
-  expireRollEffect.bind(this)("Skill", skillId);
+  if (chatMessage !== false && result) {
+    result.toMessage({speaker: getSpeaker(this), "flags.dnd5e.roll": {type: "skill", skillId }});
+    expireRollEffect.bind(this)("Skill", skillId);
+  }
   return result;
 }
 
@@ -210,8 +212,10 @@ async function rollAbilityTest(wrapped, ...args) {
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
   result = await bonusCheck(this, result, "check")
-  if (chatMessage !== false) result.toMessage({speaker: getSpeaker(this), "flags.dnd5e.roll": {type: "ability", abilityId }});
-  expireRollEffect.bind(this)("Check", abilityId);
+  if (chatMessage !== false && result) {
+    result.toMessage({speaker: getSpeaker(this), "flags.dnd5e.roll": {type: "ability", abilityId }});
+    expireRollEffect.bind(this)("Check", abilityId);
+  }
   return result;
 }
 
@@ -230,8 +234,10 @@ async function rollAbilitySave(wrapped, ...args) {
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
   result = await bonusCheck(this, result, "save")
-  if (chatMessage !== false) result.toMessage({speaker: getSpeaker(this),  "flags.dnd5e.roll": {type: "save", abilityId }});
-  expireRollEffect.bind(this)("Save", abilityId);
+  if (chatMessage !== false && result) {
+    result.toMessage({speaker: getSpeaker(this),  "flags.dnd5e.roll": {type: "save", abilityId }});
+    expireRollEffect.bind(this)("Save", abilityId);
+  }
   return result;
   /* TODO work out how to do minimum rolls properly
   return wrapped.call(this, wrapped, abilityId, procOptions).then(roll => {

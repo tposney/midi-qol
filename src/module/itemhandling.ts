@@ -414,8 +414,8 @@ export async function showItemInfo() {
   const templateData = {
     actor: this.actor,
     // tokenId: token?.id,
-    tokenId: (token && (token.document ? token?.document.uuid  : token.uuid)) || null, 
-    tokenUuid: (token && (token.dcoument ? token?.document.uuid : token.uuid)) || null,
+    tokenId: token?.document?.uuid ?? token?.uuid, 
+    tokenUuid: token?.document?.uuid ?? token?.uuid,
     item: this.data,
     itemUuid: this.uuid,
     data: this.getChatData(),
@@ -485,8 +485,8 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const templateData = {
     actor: this.actor,
     // tokenId: token?.id,
-    tokenId: (token && (token.document ? token?.document.uuid  : token.uuid)) || null, //TODO come back and fix? this
-    tokenUuid: (token && (token.dcoument ? token?.document.uuid : token.uuid)) || null, //TODO come back and fix? this
+    tokenId: token?.document?.uuid ?? token?.uuid, 
+    tokenUuid: token?.document?.uuid ?? token?.uuid,
     item: this.data,
     itemUuid: this.uuid,
     data: this.getChatData(),

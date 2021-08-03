@@ -1250,6 +1250,10 @@ export async function promptReactions(tokenUuid: string, attackRoll: Roll) {
   //@ts-ignore activation
   let reactionItems = actor.items.filter(item => item.data.data.activation?.type === "reaction");
   if (reactionItems.length > 0) {
+    if (!Hooks.call("midi-qol.ReactionFilter", reactionItems)) {
+      console.warn("Reaction processing cancelled by Hook");
+      return { name: "Filter"};
+    }
     result = await reactionDialog(actor, reactionItems, attackRoll)
     if (result.uuid) return result;
   }
@@ -1310,7 +1314,8 @@ export async function reactionDialog(actor: Actor5e, reactionItems: any[], attac
         content = `<h4>${rollOptions.all} ${attackRoll.total}</h4>`;
         break;
       case "d20":
-        const theRoll = attackRoll.terms[0].total;
+        //@ts-ignore
+        const theRoll = attackRoll.terms[0].results[0].result;
         content = `<h4>${rollOptions.d20} ${theRoll}</h4>`; break;
       default:
         content = rollOptions.none;

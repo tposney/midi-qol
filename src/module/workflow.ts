@@ -1321,7 +1321,7 @@ export class Workflow {
     try {
       for (let target of this.hitTargets) {
         if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
-        let advantage = false;
+        let advantage: Boolean | undefined = undefined;
         // If spell, check for magic resistance
         if (this.item.data.type === "spell") {
           // check magic resistance in custom damage reduction traits
@@ -1329,7 +1329,9 @@ export class Workflow {
           advantage = (target?.actor?.data.data.traits?.dr?.custom || "").includes(i18n("midi-qol.MagicResistant"));
           // check magic resistance as a feature (based on the SRD name as provided by the DnD5e system)
           advantage = advantage || target?.actor?.data.items.find(a => a.type === "feat" && a.name === i18n("midi-qol.MagicResistanceFeat")) !== undefined;
+
           if (advantage) this.advantageSaves.add(target);
+          else advantage = undefined;
           debug(`${target.actor.name} resistant to magic : ${advantage}`);
         }
         if (this.item.data.flags["midi-qol"]?.isConcentrationCheck) {
@@ -1357,7 +1359,6 @@ export class Workflow {
           //@ts-ignore CONFIG.DND5E
           warn(`Player ${player?.name} controls actor ${target.actor.name} - requesting ${CONFIG.DND5E.abilities[this.item.data.data.save.ability]} save`);
           promises.push(new Promise((resolve) => {
-            const advantageToUse = advantage;
             let requestId = target.actor?.id ?? randomID();
             const playerId = player?.id;
             if (["letme", "letmeQuery"].includes(configSettings.playerRollSaves) && installedModules.get("lmrtfy")) requestId = randomID();
@@ -1386,7 +1387,6 @@ export class Workflow {
                   } else {
                     result = rollAction.bind(target.actor)(this.item.data.data.save.ability, { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage, fastForward: true });
                   }
-                  // let result = await rollAction.bind(target.actor)(this.item.data.data.save.ability, { messageData: { user: playerId }, advantage: advantageToUse, fastForward: true });
                   resolve(result);
                 }
               }, (configSettings.playerSaveTimeout || 1) * 1000);

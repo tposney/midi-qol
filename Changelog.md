@@ -1,5 +1,13 @@
 ## 0.8.39
 * Fix for failed rolls/info when no token present for actor.
+* Fix for LMRTFY always rolling with disadvantage.
+* Fix for error thrown when cancelling a skill/save/check roll.
+* Fix for concentration automation and non-english installs. Requires dae 0.8.36
+* Added 
+```
+Hooks.call("midi-qol.ReactionFilter", (itemlist) => {})
+```
+ when checking for reactions. Return false to abort reaction processing, you can remove items from the list via ```delete itemList[i]```
 
 ## 0.8.38
 * Fix for trailing + signs in damage rolls.
