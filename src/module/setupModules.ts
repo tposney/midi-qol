@@ -3,7 +3,7 @@ import { log } from "../midi-qol.js";
 
 let modules = {"about-time": "0.0", 
               "betterrolls5e": "1.1.0", 
-              "dice-so-nice": "0.0", 
+              "dice-so-nice": "4.1.1", 
               "itemacro": "1.0.0", 
               "lmrtfy": "0.9",
               "lib-wrapper": "1.3.5",
@@ -15,7 +15,7 @@ let modules = {"about-time": "0.0",
               "socketlib": "0.0",
               "advanced-macros": "1.0",
               "dnd5e-helpers":  "2.0.5",
-              "dfreds-convenient-effects": "1.6.3"
+              "dfreds-convenient-effects": "1.8.0"
             };
 export let installedModules = new Map();
 
@@ -33,4 +33,9 @@ export let setupModules = () => {
   }
   if (debugEnabled > 0)
     for (let module of installedModules.keys()) log(`module ${module} has valid version ${installedModules.get(module)}`)
+}
+
+export function dice3dEnabled() {
+  //@ts-ignore
+  return installedModules.get("dice-so-nice") && game.dice3d.isEnabled();
 }

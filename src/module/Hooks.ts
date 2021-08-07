@@ -50,20 +50,21 @@ export let readyHooks = async () => {
       concentrationEffect.delete();
     } else {
       const itemData = duplicate(itemJSONData);
+      const saveDC = Math.max(10, Math.floor(hpDiff / 2));
+      itemData.data.save.dc = saveDC;
       itemData.name = concentrationCheckItemDisplayName;
       // actor took damage and is concentrating....
-      const saveDC = Math.max(10, Math.floor(hpDiff / 2));
       const saveTargets = game.user?.targets;
       const theTargetToken = getSelfTarget(actor);
       const theTarget = theTargetToken?.document ? theTargetToken?.document.id : theTargetToken?.id;
       if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
       let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor })
       //@ts-ignore save
-      ownedItem.data.data.save.dc = saveDC;
       try {
         if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
           //@ts-ignore
-          await BetterRolls.rollItem(ownedItem, { adv: 0, disadv: 0, midiSaveDC: saveDC }).toMessage();
+          // await ownedItem.roll({ vanilla: false, showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false })
+          await globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC }).toMessage();
         } else {
           //@ts-ignore
           await ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false })
@@ -73,6 +74,11 @@ export let readyHooks = async () => {
       }
     }
     return true;
+  })
+
+  Hooks.on("renderChatMessage", (message, html, data) => {
+    debug("render message hook ", message.id, message, html, data);
+    diceSoNiceHandler(message, html, data);
   })
 
   // Concentration Check is rolled as an item roll so we need an item.
@@ -121,7 +127,6 @@ export let initHooks = () => {
     hideStuffHandler(message, html, data);
     chatDamageButtons(message, html, data);
     processUndoDamageCard(message, html, data);
-    diceSoNiceHandler(message, html, data);
     colorChatMessageHandler(message, html, data);
     hideRollRender(message, html, data);
     betterRollsButtons(message, html, data);

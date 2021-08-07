@@ -2,8 +2,7 @@ import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanva
 import { BetterRollsWorkflow, defaultRollOptions, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
 import { checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
-import { installedModules } from "./setupModules.js";
-import { collapseTextChangeRangesAcrossMultipleVersions } from "typescript";
+import { dice3dEnabled, installedModules } from "./setupModules.js";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
@@ -80,9 +79,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     const critical = rawRoll >= options.critical;
     gameStats.addAttackRoll({ rawRoll, total, fumble, critical }, this);
   }
-  //@ts-ignore game.dice3d
-  const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
-  if (dice3dActive && configSettings.mergeCard) {
+  if (dice3dEnabled() && configSettings.mergeCard) {
     let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((["details", "all"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
@@ -149,7 +146,8 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       delete data._id;
       workflow.itemCardId = (await ChatMessage.create(data))?.id;
     }
-  }
+  };
+
   workflow.processDamageEventOptions(event);
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
@@ -232,9 +230,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     }
   }
   
-  //@ts-ignore game.dice3d
-  const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
-  if (dice3dActive && configSettings.mergeCard) {
+    if (dice3dEnabled() && configSettings.mergeCard) {
     let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
@@ -348,9 +344,11 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
   let workflow: Workflow;
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
+    if (!this.id) this.data._id  = randomID();
     workflow = new BetterRollsWorkflow(this.actor, this, speaker, targets, event || options.event);
     // options.createMessage = true;
-    return wrapped(options);
+    const result = await  wrapped(options);
+    return result;
   }
   workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event });
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile;
@@ -571,7 +569,7 @@ function isTokenInside(templateDetails: {x: number, y: number, shape: any}, toke
 	return false;
 }
 
-export function templateTokens(templateDetails: {x: number, y: number, shape: any}) {
+export function templateTokens(templateDetails: {x: number, y: number, shape: any} | MeasuredTemplate) {
   if (configSettings.autoTarget === "none") return;
   const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget);
 	const tokens = getCanvas().tokens?.placeables || []; //.map(t=>t.data)
@@ -586,9 +584,11 @@ export function templateTokens(templateDetails: {x: number, y: number, shape: an
     }
   }
   game.user?.updateTokenTargets(targets);
+  game.user?.broadcastActivity({targets});
 }
 
 export function selectTargets(templateDocument: MeasuredTemplateDocument, data, user) {
+  //@ts-ignore .shapre
   if (user !== game.user?.id) {
     return true;
   }
@@ -600,31 +600,13 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
     Hooks.callAll("midi-qol-targeted", this.targets);
     return true;
   }
-  if (!templateDocument.data) return true;
-  let {direction, distance, angle, width} = templateDocument.data;
-  const dimensions = getCanvas().dimensions || {size: 1, distance: 1};
-  distance *= dimensions.size  / dimensions.distance;
-  width *= dimensions.size  / dimensions.distance;
-  direction = Math.toRadians(direction);
-  let shape: any;
-  switch ( templateDocument.data.t ) {
-    case "circle":
-      shape = new PIXI.Circle(0, 0, distance);
-      break;
-    case "cone":
-      //@ts-ignore
-      shape = templateDocument._object._getConeShape(direction, angle, distance);
-      break;
-    case "rect":
-      //@ts-ignore
-      shape = templateDocument._object._getRectShape(direction, distance);
-      break;
-    case "ray":
-      //@ts-ignore
-      shape = templateDocument._object._getRayShape(direction, distance, width);
-  }
 
-  templateTokens({x: templateDocument.data.x, y: templateDocument.data.y, shape});
+  if (!templateDocument.object) {
+    console.error("Template Document does not have embedded template")
+    return true;
+  }
+  //@ts-ignore
+  templateTokens(templateDocument.object);
 
   // if the item specifies a range of "special" don't target the caster.
   let selfTarget = (item?.data.data.range?.units === "spec") ? getCanvas().tokens?.get(this.tokenId) : null;

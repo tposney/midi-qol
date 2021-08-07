@@ -1,5 +1,5 @@
 import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats } from "../midi-qol.js";
-import { installedModules } from "./setupModules.js";
+import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { nsaFlag, coloredBorders,  addChatDamageButtons, configSettings, forceHideRoll } from "./settings.js";
 import { createDamageList, getTraitMult, calculateDamage,  MQfromUuid } from "./utils.js";
@@ -16,9 +16,7 @@ export function mergeCardSoundPlayer(message, update, options, user) {
     const playlist = game.playlists?.get(configSettings.customSoundsPlaylist);
     //@ts-ignore .sounds
     const sound = playlist?.sounds.find(s => s.id === midiqolFlags.sound)
-    //@ts-ignore dice3d
-    const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
-    const delay = (dice3dActive && midiqolFlags?.waitForDiceSoNice && [MESSAGETYPES.HITS].includes(midiqolFlags.type)) ? 500 : 0;
+    const delay = (dice3dEnabled() && midiqolFlags?.waitForDiceSoNice && [MESSAGETYPES.HITS].includes(midiqolFlags.type)) ? 500 : 0;
     debug("mergeCardsound player ", update, playlist, sound, sound ? 'playing sound' : 'not palying sound', delay)
 
     if (sound && game.user?.isGM) {
@@ -52,7 +50,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   if (token) actor = token.actor;
   else actor = game.actors?.get(actorId);
   // Get the Item from stored flag data or by the item ID on the Actor
-  const storedData = message.getFlag("dnd5e", "itemData");
+  const storedData = message.getFlag("dnd5e", "itemData") ?? brFlags.params.itemData;
   //@ts-ignored ocumentClass
   const item = storedData ? new CONFIG.Item.documentClass(storedData, { parent: actor }) : actor.items.get(brFlags.itemId);
   if (!item) return;
@@ -150,7 +148,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
 
 export let diceSoNiceHandler = async (message, html, data) => {
   //@ts-ignore game.dice3d
-  if (!game.dice3d || !installedModules.get("dice-so-nice") || game.dice3d?.messageHookDisabled || !game.dice3d.isEnabled()) return;
+  if (!dice3dEnabled() || game.dice3d?.messageHookDisabled) return;
   debug("Dice so nice handler ", message, html, data);
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
   let rollDice = game.user?.isGM ||

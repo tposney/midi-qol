@@ -34,7 +34,16 @@ export let setupSocket = () => {
   socketlibSocket.register("rollAbility", rollAbility);
   socketlibSocket.register("createChatMessage", createChatMessage);
   socketlibSocket.register("chooseReactions", localDoReactions);
+  socketlibSocket.register("addConvenientEffect", addConcentientEffect);
 };
+
+async function addConcentientEffect(options) {
+  let {effectName, actorUuid, origin} = options;
+  const actorToken: any = await fromUuid(actorUuid);
+  const actor = actorToken?.actor ?? actorToken;
+  //@ts-ignore
+  game.dfreds.effectHandler.addEffect({effectName, actor, origin});
+}
 
 async function localDoReactions(data: { tokenUuid: string; attackRoll: string; }) {
   const result =  await promptReactions(data.tokenUuid, JSON.parse(data.attackRoll))

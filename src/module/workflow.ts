@@ -143,7 +143,8 @@ export class Workflow {
     let advKey = this.rollOptions.advKey || event?.altKey;
     let disKey = this.rollOptions.disKey || event?.ctrlKey || event?.metaKey;
 
-    if (configSettings.speedItemRolls && this.workflowType !== "BetterRollsWorkflow") {
+    if (this.workflowType !== "BetterRollsWorkflow") return;
+    if (configSettings.speedItemRolls) {
       advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
       disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
       this.rollOptions.versaKey = this.rollOptions.versaKey || testKey(configSettings.keyMapping["DND5E.Versatile"], event);
@@ -559,6 +560,12 @@ export class Workflow {
         }
         if (shouldRollDamage) {
           warn(" about to roll damage ", this.event, configSettings.autoRollAttack, configSettings.autoFastForward)
+          //@ts-ignore
+          const storedData: any = game.messages?.get(this.itemCardId).getFlag("dnd5e", "itemData");
+          if (storedData) { // It magic items is being used it fiddles the roll to include the item data
+            this.item = new CONFIG.Item.documentClass(storedData, {parent: this.actor})
+          }
+        
           this.rollOptions.spellLevel = this.itemLevel;
           this.item.rollDamage(this.rollOptions);
           return;
@@ -692,7 +699,13 @@ export class Workflow {
           if (game.dfreds.effects.all.find(e => e.name === effectName)) {
             for (let token of this.applicationTargets) {
               //@ts-ignore
-              game.dfreds.effectHandler.addEffect({effectName, actor: token.actor, origin: this.item?.uuid});
+              if (game.dfreds.effectInterface) {
+                //@ts-ignore
+                game.dfreds.effectInterface.addEffect(effectName, token.actor.uuid, this.item?.uuid);
+              } else {
+                //@ts-ignore
+                game.dfreds.effectHandler.addEffect({effectName, actor: token.actor, origin: this.item?.uuid});
+              }
             }
           }
         }
@@ -736,15 +749,18 @@ export class Workflow {
         if (hasConcentration && checkConcentration) {
           await addConcentration({workflow: this});
 
-          if (this.actor) {
+          if (this.actor && this.applicationTargets) {
             let targets: {tokenUuid: string | undefined, actorUuid: string | undefined}[] = [];
+            const selfTargetUuid = this.actor.uuid;
+            let selfTargeted = false;
             for (let hit of this.applicationTargets) {
-              let hitUuid;
-              if (hit instanceof CONFIG.Token.documentClass) hitUuid = hit.uuid;
-              else hitUuid = hit.document.uuid;
-              targets.push({ tokenUuid: hitUuid, actorUuid: hit.actor.uuid });
+              const hitUuid = hit.document?.uuid ?? hit.uuid;
+              const actorUuid = hit.actor.uuid;
+              targets.push({ tokenUuid: hitUuid, actorUuid });
+              if (selfTargetUuid === actorUuid) selfTargeted = true;
             }
-            targets.push({ tokenUuid: this.tokenUuid, actorUuid: this.actor.uuid })
+            
+            if (!selfTargeted) targets.push({ tokenUuid: this.tokenUuid, actorUuid: this.actor.uuid })
             let templates = this.templateUuid ? [this.templateUuid] : [];
             await this.actor.setFlag("midi-qol", "concentration-data", { uuid: this.item.uuid, targets: targets, templates: templates})
           }
@@ -1630,6 +1646,7 @@ export class Workflow {
     // min dist is the number of grid squares away.
     let minDist = targetDetails.value;
     const canvas = getCanvas();
+    const targetIds: string[] = [];
     if (canvas.tokens?.placeables && canvas.grid) {
       for (let target of canvas.tokens.placeables) {
         const ray = new Ray(target.center, token.center);
@@ -1645,11 +1662,14 @@ export class Workflow {
           inRange = inRange && !getCanvas().walls?.checkCollision(ray);
         }
         if (inRange) target.setTarget(true, { user: game.user, releaseOthers: false });
+        if (target.document.id) targetIds.push(target.document.id);
       }
       this.targets = game.user?.targets ?? new Set();
       this.saves = new Set();
       this.failedSaves = new Set(this.targets)
       this.hitTargets = new Set(this.targets);
+      // game.user?.broadcastActivity({targets: targetIds});
+
     }
     return true;
   }

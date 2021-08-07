@@ -1,3 +1,15 @@
+## 0.8.40
+* Added MidiQOL.selectTargetsForTemplate(MeasuredTemplate). If you have a MesasuredTemplateDocument you need to pass templateDocument.object.
+* Fix for scaling MagicItems
+* Fix for concentration checks not removing concentration with better rolls eneabled.
+* FIx for concentration application when nothing hits.
+* Fix for distance measuring when token is < 1 square wide or high
+* Fix for skill/save/check rolls with better rolls enabled not rolling dual dice. As a side effect of this change flags.midi-qol.optional.Name.save/check/skill will have no effect when using better rolls.
+* Fix for midi-qol overriding better rolls accelerator keys.
+* Fix for dice not showing with latest dice-so-nice release.
+* Fix for targets not being updated on other clients with AoE targeting.
+
+
 ## 0.8.39
 * Fix for failed rolls/info when no token present for actor.
 * Fix for LMRTFY always rolling with disadvantage.

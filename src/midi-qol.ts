@@ -21,7 +21,7 @@ import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
 import { applyTokenDamage, checkNearby, findNearby, getDistance, getDistanceSimple, getTraitMult, MQfromActorUuid, MQfromUuid } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
-import { showItemCard, showItemInfo } from './module/itemhandling.js';
+import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
 
 export let debugEnabled = 0;
@@ -204,6 +204,7 @@ function setupMidiQOLApi() {
     gameStats,
     MQFromUuid: MQfromUuid,
     MQfromActorUuid: MQfromActorUuid,
+    selectTargetsForTemplate: templateTokens,
     socket: () => {return socketlibSocket}
   }
 }

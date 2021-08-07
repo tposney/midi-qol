@@ -530,13 +530,17 @@ export function getDistance(t1: Token, t2: Token, wallblocking = false): {distan
     //@ts-ignore TODO this is being called in the wrong spot (should not do the loops if using this)
     coverData = CoverCalculator.Cover(t1, t2)
   }
+  const t1StartX = t1.data.width >= 1 ? 0.5 : t1.data.width / 2;
+	const t1StartY = t1.data.height >= 1 ? 0.5 : t1.data.height / 2;
+  const t2StartX = t2.data.width >= 1 ? 0.5 : t2.data.width / 2;
+	const t2StartY = t2.data.height >= 1 ? 0.5 : t2.data.height / 2;
   // TODO refactor this so that if 4point ac don't go through the whole loop
   var x, x1, y, y1, d, r, segments: { ray: Ray }[] = [], rdistance, distance;
-  for (x = 0.5; x < t1.data.width; x++) {
-    for (y = 0.5; y < t1.data.height; y++) {
+  for (x = t1StartX; x < t1.data.width; x++) {
+    for (y = t1StartY; y < t1.data.height; y++) {
       const origin = new PIXI.Point(...canvas.grid.getCenter(Math.round(t1.data.x + (canvas.dimensions.size * x)), Math.round(t1.data.y + (canvas.dimensions.size * y))));
-      for (x1 = 0.5; x1 < t2.data.width; x1++) {
-        for (y1 = 0.5; y1 < t2.data.height; y1++) {
+      for (x1 = t2StartX; x1 < t2.data.width; x1++) {
+        for (y1 = t2StartY; y1 < t2.data.height; y1++) {
           const dest = new PIXI.Point(...canvas.grid.getCenter(Math.round(t2.data.x + (canvas.dimensions.size * x1)), Math.round(t2.data.y + (canvas.dimensions.size * y1))));
           const r = new Ray(origin, dest)
           if (wallblocking) {

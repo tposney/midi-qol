@@ -31,7 +31,8 @@ export const fastforwardEvent = { shiftKey: false, altKey: false, ctrlKey: false
 export const baseEvent = { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false, fastKey: false };
 
 function mapSpeedKeys(event) {
-  if (configSettings.speedItemRolls && configSettings.speedAbilityRolls && !installedModules.get("betterrolls5e")) {
+  if (installedModules.get("betterrolls5e")) return event;
+  if (configSettings.speedItemRolls && configSettings.speedAbilityRolls) {
     if (game.system.id === "sw5e") {
       var advKey = testKey(configSettings.keyMapping["SW5E.Advantage"], event);
       var disKey = testKey(configSettings.keyMapping["SW5E.Disadvantage"], event);
@@ -97,6 +98,9 @@ async function doRollSkill(wrapped, ...args) {
   }
   
   options.event = {};
+  if (installedModules.get("betterrolls5e")) {
+    return wrapped.call(this, skillId, procOptions);
+  }
   procOptions.chatMessage = false;
   let result = await wrapped.call(this, skillId, procOptions);
   result = await bonusCheck(this, result, "skill")
@@ -208,7 +212,9 @@ async function rollAbilityTest(wrapped, ...args) {
   options.event = {};
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.check && (flags.check.all || flags.save[abilityId])) ?? 0;
-
+  if (installedModules.get("betterrolls5e")) {
+    return wrapped(abilityId, procOptions);
+  }
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
   result = await bonusCheck(this, result, "check")
@@ -231,6 +237,9 @@ async function rollAbilitySave(wrapped, ...args) {
   let procOptions = procAdvantage(this, "save", abilityId, options);
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.save && (flags.save.all || flags.save[abilityId])) ?? 0;
+  if (installedModules.get("betterrolls5e")) {
+    return wrapped(abilityId, procOptions);
+  }
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
   result = await bonusCheck(this, result, "save")
