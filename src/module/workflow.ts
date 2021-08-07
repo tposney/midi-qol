@@ -143,7 +143,7 @@ export class Workflow {
     let advKey = this.rollOptions.advKey || event?.altKey;
     let disKey = this.rollOptions.disKey || event?.ctrlKey || event?.metaKey;
 
-    if (this.workflowType !== "BetterRollsWorkflow") return;
+    if (this.workflowType === "BetterRollsWorkflow") return;
     if (configSettings.speedItemRolls) {
       advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
       disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
@@ -1401,7 +1401,7 @@ export class Workflow {
                       options: { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage, fastForward: true },
                     });
                   } else {
-                    result = rollAction.bind(target.actor)(this.item.data.data.save.ability, { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage, fastForward: true });
+                    result = await rollAction.bind(target.actor)(this.item.data.data.save.ability, { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage, fastForward: true });
                   }
                   resolve(result);
                 }

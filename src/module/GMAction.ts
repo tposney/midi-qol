@@ -63,15 +63,11 @@ export async function createChatMessage(data: { chatData: any; }) {
   return await ChatMessage.create(data.chatData);
 }
 
-export function rollAbility(data: { request: string; targetUuid: any; ability: any; options: any; }) {
-  //@ts-ignore
-  const rollAction = data.request === "abil" ?
-            //@ts-ignore
-            CONFIG.Actor.documentClass.prototype.rollAbilityTest : 
-            //@ts-ignore
-            CONFIG.Actor.documentClass.prototype.rollAbilitySave;
+export async function rollAbility(data: { request: string; targetUuid: any; ability: any; options: any; }) {
   const actor = MQfromActorUuid(data.targetUuid);
-  const result = rollAction.bind(actor)(data.ability, data.options);
+  let result;
+  if (data.request === "abil") result = await actor.rollAbilitySave(data.ability, data.options)
+  else result = await actor.rollAbilityTest(data.ability, data.options);
   return result;
 }
 

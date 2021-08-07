@@ -1,3 +1,7 @@
+## 0.8.41
+* Fix for speed keys not working.
+* Revers better rolls skill/save/check changes - until I can find a beter solution
+
 ## 0.8.40
 * Added MidiQOL.selectTargetsForTemplate(MeasuredTemplate). If you have a MesasuredTemplateDocument you need to pass templateDocument.object.
 * Fix for scaling MagicItems

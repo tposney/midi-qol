@@ -98,7 +98,7 @@ async function doRollSkill(wrapped, ...args) {
   }
   
   options.event = {};
-  if (installedModules.get("betterrolls5e")) {
+  if (false && installedModules.get("betterrolls5e")) {
     return wrapped.call(this, skillId, procOptions);
   }
   procOptions.chatMessage = false;
@@ -118,7 +118,7 @@ function rollDeathSave(wrapped, ...args) {
   const disFlags = getProperty(this.data.flags, "midi-qol")?.disadvantage ?? {};
   var withAdvantage = options.event?.altKey || options.advantage;
   var withDisadvantage = options.event?.ctrlKey || options.event?.metaKey || options.disadvantage;
-  options.fastForward = autoFastForwardAbilityRolls ? !options.event.fastKey : options.event.fastKey;
+  options.fastForward = autoFastForwardAbilityRolls ? !options.event?.fastKey : options.event?.fastKey;
   withAdvantage = advFlags.deathSave || advFlags.all;
   withDisadvantage = disFlags.deathSave || disFlags.all;
   options.advantage = withAdvantage && !withDisadvantage;
@@ -212,7 +212,7 @@ async function rollAbilityTest(wrapped, ...args) {
   options.event = {};
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.check && (flags.check.all || flags.save[abilityId])) ?? 0;
-  if (installedModules.get("betterrolls5e")) {
+  if (false && installedModules.get("betterrolls5e")) {
     return wrapped(abilityId, procOptions);
   }
   procOptions.chatMessage = false;
@@ -230,6 +230,7 @@ async function rollAbilitySave(wrapped, ...args) {
   if (procAutoFail(this, "save", abilityId)) {
     options.parts = ["-100"];
   }
+
   const chatMessage = options.chatMessage;
   options.event = mapSpeedKeys(options.event);
   if (options.event === advantageEvent || options.event === disadvantageEvent)
@@ -237,8 +238,9 @@ async function rollAbilitySave(wrapped, ...args) {
   let procOptions = procAdvantage(this, "save", abilityId, options);
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.save && (flags.save.all || flags.save[abilityId])) ?? 0;
-  if (installedModules.get("betterrolls5e")) {
-    return wrapped(abilityId, procOptions);
+  if (false && installedModules.get("betterrolls5e")) {
+    const result =  await wrapped(abilityId, procOptions);
+    return result.BetterRoll.fields[1][1];
   }
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
@@ -286,7 +288,7 @@ function procAdvantage(actor, rollType, abilityId, options: Options): Options {
   var withAdvantage = options.event?.altKey || options.advantage;
   var withDisadvantage = options.event?.ctrlKey || options.event?.metaKey || options.disadvantage;
 
-  options.fastForward = options.fastForward || (autoFastForwardAbilityRolls ? !options.event.fastKey : options.event.fastKey);
+  options.fastForward = options.fastForward || (autoFastForwardAbilityRolls ? !options.event?.fastKey : options.event?.fastKey);
   if (advantage.ability || advantage.all) {
     const rollFlags = (advantage.ability && advantage.ability[rollType]) ?? {};
     withAdvantage = withAdvantage || advantage.all || advantage.ability.all || rollFlags.all || rollFlags[abilityId];
