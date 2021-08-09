@@ -601,12 +601,35 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
     return true;
   }
 
-  if (!templateDocument.object) {
-    console.error("Template Document does not have embedded template")
-    return true;
-  }
+
   //@ts-ignore
-  templateTokens(templateDocument.object);
+  if (templateDocument.object?.shape) templateTokens(templateDocument.object);
+  else {
+    let {direction, distance, angle, width} = templateDocument.data;
+    const dimensions = getCanvas().dimensions || {size: 1, distance: 1};
+    distance *= dimensions.size  / dimensions.distance;
+    width *= dimensions.size  / dimensions.distance;
+    direction = Math.toRadians(direction);
+    let shape: any;
+    switch ( templateDocument.data.t ) {
+      case "circle":
+        shape = new PIXI.Circle(0, 0, distance);
+        break;
+      case "cone":
+        //@ts-ignore
+        shape = templateDocument._object._getConeShape(direction, angle, distance);
+        break;
+      case "rect":
+        //@ts-ignore
+        shape = templateDocument._object._getRectShape(direction, distance);
+        break;
+      case "ray":
+        //@ts-ignore
+        shape = templateDocument._object._getRayShape(direction, distance, width);
+        templateTokens({x: templateDocument.data.x, y: templateDocument.data.y, shape});
+
+    }
+  }
 
   // if the item specifies a range of "special" don't target the caster.
   let selfTarget = (item?.data.data.range?.units === "spec") ? getCanvas().tokens?.get(this.tokenId) : null;

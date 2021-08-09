@@ -1,3 +1,6 @@
+## 0.8.42
+* Fix for template targeting with token magic fx.
+
 ## 0.8.41
 * Fix for speed keys not working.
 * Revers better rolls skill/save/check changes - until I can find a beter solution
