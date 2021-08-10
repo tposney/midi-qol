@@ -738,13 +738,16 @@ export async function addConcentration(options: { workflow: Workflow }) {
   // await item.actor.unsetFlag("midi-qol", "concentration-data");
   let selfTarget = item.actor.token ? item.actor.token.object : getSelfTarget(item.actor);
   if (!selfTarget) return;
-  if (false && installedModules.get("dfreds-convenient-effects")) {
-
-  } else if (installedModules.get("combat-utility-belt")) {
-    const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
-    const itemDuration = item.data.data.duration;
-    let statusEffect: any = CONFIG.statusEffects.find(se => se.label === concentrationName);
+    "Convenient Effect: Concentrating"
+  if (installedModules.get("combat-utility-belt") || installedModules.get("dfreds-convenient-effects")) {
+    let concentrationId =  "Convenient Effect: Concentrating";
+    let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
+    if (!statusEffect) {
+      const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
+      statusEffect = CONFIG.statusEffects.find(se => se.label === concentrationName);
+    }
     if (!statusEffect) return;
+    const itemDuration = item.data.data.duration;
     statusEffect = duplicate(statusEffect);
     // set the token as concentrating
     // await game.cub.addCondition(concentrationName, [selfTarget], { warn: false });

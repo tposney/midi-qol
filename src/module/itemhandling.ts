@@ -265,7 +265,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return await wrapped(options);
   }
   const isRangeSpell = configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
-  const isAoESpell = this.hasAreaTarget && configSettings.autoTarget;
+  const isAoESpell = (this.hasAreaTarget && configSettings.autoTarget);
   const myTargets = game.user?.targets && await validTargetTokens(game.user?.targets);
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" &&  game.combat);
   let shouldAllowRoll = !requiresTargets // we don't care about targets
@@ -280,7 +280,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9999) ?? 9999
   let speaker = getSpeaker(this.actor);
   // do pre roll checks
-  if (checkRule("checkRange")) {
+  if (checkRule("checkRange") && !isAoESpell && !isRangeSpell) {
     if (speaker.token && checkRange(this.actor, this, speaker.token, myTargets) === "fail")
       return null;
   }

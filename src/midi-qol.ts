@@ -166,6 +166,9 @@ Hooks.once('ready', function() {
   if (game.user?.isGM && !installedModules.get("dae")) {
     ui.notifications?.warn("Midi-qol requires DAE to be installed and at least version 0.8.18 or many automation effects won't work");
   }
+  if (game.user?.isGM && game.modules.get("betterrolls5e")?.active && !installedModules.get("betterrolls5e")) {
+    ui.notifications?.warn("Midi QOL requires better rolls to be version 1.6.6 or later");
+  }
   checkSocketLibInstalled();
   checkCubInstalled();
   checkConcentrationSettings();

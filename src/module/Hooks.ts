@@ -86,7 +86,7 @@ export let readyHooks = async () => {
     //@ts-ignore game.cub
     const concentrationCondition = game.cub.getCondition(game.settings.get("combat-utility-belt", "concentratorConditionName"))
     itemJSONData.name = concentrationCheckItemName
-    itemJSONData.img = concentrationCondition.icon;
+    itemJSONData.img = concentrationCondition?.icon;
   } else {
     itemJSONData.name = concentrationCheckItemName;
   }

@@ -98,8 +98,13 @@ async function doRollSkill(wrapped, ...args) {
   }
   
   options.event = {};
-  if (false && installedModules.get("betterrolls5e")) {
-    return wrapped.call(this, skillId, procOptions);
+  if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
+    let event = {};
+    if (procOptions.advantage) event = {shiftKey: true};
+    if (procOptions.disadvantage) event = {ctrlKey: true};
+    procOptions.event = event;
+    const result =  await wrapped(skillId, procOptions);
+    return createRollResultFromCustomRoll(result)
   }
   procOptions.chatMessage = false;
   let result = await wrapped.call(this, skillId, procOptions);
@@ -212,8 +217,13 @@ async function rollAbilityTest(wrapped, ...args) {
   options.event = {};
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.check && (flags.check.all || flags.save[abilityId])) ?? 0;
-  if (false && installedModules.get("betterrolls5e")) {
-    return wrapped(abilityId, procOptions);
+  if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
+    let event = {};
+    if (procOptions.advantage) event = {shiftKey: true};
+    if (procOptions.disadvantage) event = {ctrlKey: true};
+    procOptions.event = event;
+    const result =  await wrapped(abilityId, procOptions);
+    return createRollResultFromCustomRoll(result)
   }
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
@@ -230,7 +240,6 @@ async function rollAbilitySave(wrapped, ...args) {
   if (procAutoFail(this, "save", abilityId)) {
     options.parts = ["-100"];
   }
-
   const chatMessage = options.chatMessage;
   options.event = mapSpeedKeys(options.event);
   if (options.event === advantageEvent || options.event === disadvantageEvent)
@@ -238,9 +247,14 @@ async function rollAbilitySave(wrapped, ...args) {
   let procOptions = procAdvantage(this, "save", abilityId, options);
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.save && (flags.save.all || flags.save[abilityId])) ?? 0;
-  if (false && installedModules.get("betterrolls5e")) {
+
+  if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
+    let event = {};
+    if (procOptions.advantage) event = {shiftKey: true};
+    if (procOptions.disadvantage) event = {ctrlKey: true};
+    procOptions.event = event;
     const result =  await wrapped(abilityId, procOptions);
-    return result.BetterRoll.fields[1][1];
+    return createRollResultFromCustomRoll(result)
   }
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
@@ -408,4 +422,19 @@ export async function _makeRoll(event, rollMethod, ...args) {
   event.currentTarget.disabled = true;
   if (this.element.find("button").filter((i, e) => !e.disabled).length === 0)
     this.close();
+}
+
+
+export async function createRollResultFromCustomRoll(customRoll: any) {
+  const saveEntry = customRoll.entries?.find((e) => e.type === "multiroll");
+  let saveTotal = saveEntry?.entries?.find((e) => !e.ignored)?.total ?? -1;
+  let advantage = saveEntry ? saveEntry.rollState === "highest" : undefined;
+  let disadvantage = saveEntry ? saveEntry.rollState === "lowest" : undefined;
+  let diceRoll = saveEntry ? saveEntry.entries?.find((e) => !e.ignored)?.roll.terms[0].total : -1;
+  let isCritical = saveEntry ? saveEntry.entries?.find((e) => !e.ignored)?.isCrit : false;
+  //@ts-ignore
+  const result = await new Roll(`${saveTotal}`).evaluate({aysnc: true});
+  setProperty(result.terms[0].options, "advantage", advantage)
+  setProperty(result.terms[0].options, "disadvantage", disadvantage)
+  return result;
 }

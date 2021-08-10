@@ -66,7 +66,7 @@ export async function createChatMessage(data: { chatData: any; }) {
 export async function rollAbility(data: { request: string; targetUuid: any; ability: any; options: any; }) {
   const actor = MQfromActorUuid(data.targetUuid);
   let result;
-  if (data.request === "abil") result = await actor.rollAbilitySave(data.ability, data.options)
+  if (data.request === "save") result = await actor.rollAbilitySave(data.ability, data.options)
   else result = await actor.rollAbilityTest(data.ability, data.options);
   return result;
 }

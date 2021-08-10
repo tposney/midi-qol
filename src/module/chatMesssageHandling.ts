@@ -365,6 +365,17 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-attack-roll .dice-total").text(`(d20) ${d20AttackRoll}`);
       html.find(".dice-tooltip").remove();
       html.find(".dice-formula").remove();
+      html.find(".midi-qol-damage-roll").find(".dice-tooltip").remove()
+      html.find(".midi-qol-damage-roll").find(".dice-formula").remove()
+      html.find(".midi-qol-other-roll").find(".dice-tooltip").remove()
+      html.find(".midi-qol-other-roll").find(".dice-formula").remove()
+      html.find(".midi-qol-bonus-roll").find(".dice-tooltip").remove()
+      html.find(".midi-qol-bonus-roll").find(".dice-formula").remove()
+/*
+      html.find(".midi-qol-damge-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      html.find(".midi-qol-other-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      html.find(".midi-qol-bonus-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+*/
     } else if (configSettings.hideRollDetails === "all" || message.data.blind) {
       html.find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       //TODO this should probably just check formula
