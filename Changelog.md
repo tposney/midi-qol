@@ -1,8 +1,18 @@
+## 0.8.44
+* Include damage bonus macro damage/roll results in arguments to onUsemacros.
+* Support ability specific save success/failure special durations.
+* Added new attack display option hit/miss + damage total
+* Fix for DR (damage reduction) for specific damage types not supporting field lookups.
+* Fix for concentration origin/duration not being set for spells with no active effects.
+* Fix for concentration settings when automation is not completed (not check saves etc)
+* Moved removeConcentration from DAE to midi-qol
+* midi-qol requires dae 0.8.43 and if 0.8.42 is installed concentration removal will throw errors.
+
 ## 0.8.43
 * Support better rolls rolls for saves/test/skills - requires better rolls 1.6.6. (Finally)
 * Fixed a bug introduced in 0.8.42 that swapped ability save/checks when auto rolling a save for a actor.
 * Fixed a bug for earlier versions of CUB that did not include an effect icon for concentration.
-* If Convenient Effects is enabld use the status effect from Convenient Effects preferentially to other choices.
+* If Convenient Effects is enabled use the concentration status effect from Convenient Effects preferentially to other choices.
 * Fix for spells with a range area effect to measure all squares covered by the potential target token.
 * Fix for special duration effects being removed as a result of the attack that created the effect (i.e. isAttacked etc).
 * Fix for missing targets with a lower AC than the hit roll. Some actors are being created with a string in ac.value, rather than a number, which was confusing midi-qol.

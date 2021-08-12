@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling.js";
-import { processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating } from "./utils.js";
+import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating, MQfromUuid } from "./utils.js";
 import { configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 
@@ -81,6 +81,21 @@ export let readyHooks = async () => {
     diceSoNiceHandler(message, html, data);
   })
 
+  Hooks.on("deleteActiveEffect", (...args) => {
+    let [effect, option, userId] = args;
+    if (game.user?.id !== userId) return true;
+      //@ts-ignore documentClass
+    if (!(effect.parent instanceof CONFIG.Actor.documentClass)) return true;
+    const actor = effect.parent;
+    const token = actor.token ? actor.token : actor.getActiveTokens()[0];
+    const checkConcentration = globalThis.MidiQOL?.configSettings()?.concentrationAutomation;
+    if (checkConcentration) {
+      /// result = await wrapped(...args);
+      handleRemoveConcentration(effect, [token]);
+    }
+    return true;
+  });
+
   // Concentration Check is rolled as an item roll so we need an item.
   if (installedModules.get("combat-utility-belt")) {
     //@ts-ignore game.cub
@@ -90,9 +105,44 @@ export let readyHooks = async () => {
   } else {
     itemJSONData.name = concentrationCheckItemName;
   }
-
-
 }
+
+async function handleRemoveConcentration(effect, tokens) {
+  // TODO fix this to be localised
+  let actor = effect.parent;
+  let concentrationLabel: any = "Concentrating";
+  if (installedModules.get("dfreds-convenient-effects")) {
+    let concentrationId =  "Convenient Effect: Concentrating";
+    let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
+    if (statusEffect) concentrationLabel = statusEffect.label;
+  } else if (installedModules.get("combat-utility-belt")) {
+    concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName") 
+  }
+  // Change this to 
+  let isConcentration = effect.data.label === concentrationLabel;
+  if (!isConcentration) return false;
+
+  // If concentration has expired and times-up installed - leave it to TU.
+  if (installedModules.get("times-up")) {
+    const worldTime = game.time.worldTime
+    let expired = effect.data.duration?.seconds && (game.time.worldTime - effect.data.duration.startTime) >= effect.data.duration.seconds;
+    const duration = effect.duration;
+    expired = expired || (duration && duration.remaining <= 0 && duration.type === "turns");
+    if (expired) return true;
+  }
+  const concentrationData = actor.getFlag("midi-qol", "concentration-data");
+  if (!concentrationData) return false;
+  try {
+    await actor.unsetFlag("midi-qol", "concentration-data")
+    concentrationData.templates?.forEach(templateUuid => MQfromUuid(templateUuid).delete());
+    socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
+
+  } catch (err) {
+    console.warn("dae | error deleteing concentration effects: ", err)
+  }
+  return true;
+}
+
 export let initHooks = () => {
   warn("Init Hooks processing");
   Hooks.on("preCreateChatMessage", (message: ChatMessage, data, options, user) => {

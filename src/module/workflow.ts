@@ -630,9 +630,9 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.WAITFORSAVES);
 
       case WORKFLOWSTATES.WAITFORSAVES:
+        this.saves = new Set(); // not auto checking assume no saves
+        this.failedSaves = new Set(this.hitTargets);
         if (!this.item.hasSave) {
-          this.saves = new Set(); // not auto checking assume no saves
-          this.failedSaves = new Set(this.hitTargets);
           return this.next(WORKFLOWSTATES.SAVESCOMPLETE);
         }
         if (configSettings.autoCheckSaves !== "none") {
@@ -656,6 +656,7 @@ export class Workflow {
           await this.displaySaves(configSettings.autoCheckSaves === "whisper", configSettings.mergeCard);
         } else {// has saves but we are not checking so do nothing with the damage
           await this.expireTargetEffects(["isAttacked"])
+          this.applicationTargets = this.failedSaves;
           return this.next(WORKFLOWSTATES.ROLLFINISHED)
         }
         return this.next(WORKFLOWSTATES.SAVESCOMPLETE);
@@ -682,9 +683,6 @@ export class Workflow {
           "isDamaged",
           "1Reaction",
           "isSaveSuccess",
-          "isSaveFailure",
-          "isSaveSuccsss",
-          "isSaveSuccsss",
           "isSaveFailure"
         ];
         await this.expireTargetEffects(specialExpiries)
@@ -791,8 +789,8 @@ export class Workflow {
         if (this.item.hasSave && expireList.includes("isSaveSuccess") && specialDuration.includes(`isSaveSuccess`) && this.saves.has(target)) return true;
         if (this.item.hasSave && expireList.includes("isSaveFailure") && specialDuration.includes(`isSaveFailure`) && !this.saves.has(target)) return true;
         const abl = this.item?.data.data.save?.ability;
-        if (this.item.hasSave && expireList.includes(`isSaveSuccsss.${abl}`) && specialDuration.includes(`isSaveSuccsss.${abl}`) && this.saves.has(target)) return true;
-        if (this.item.hasSave && expireList.includes(`isSaveFailure.${abl}`) && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) return true;
+        if (this.item.hasSave && expireList.includes(`isSaveSuccess`) && specialDuration.includes(`isSaveSuccess.${abl}`) && this.saves.has(target)) return true;
+        if (this.item.hasSave && expireList.includes(`isSaveFailure`) && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) return true;
         return false;
       }).map(ef => ef.id);
       if (expiredEffects?.length ?? 0 > 0) {
@@ -913,6 +911,11 @@ export class Workflow {
       otherDamageTotal: this.otherDamageTotal,
       otherDamageDetail: this.otherDamageDetail,
       otherDamageList: this.otherDamageList,
+      bonusDamageTotal: this.bonusDamageTotal,
+      bonusDamgeDetail: this.bonusDamageDetail,
+      bonusDamageRoll: this.bonusDamageRoll,
+      bonusDamageFlavor: this.bonusDamageFlavor,
+      bonusDamageHTML: this.bonusDamageHTML,
       rollOptions: this.rollOptions,
       advantage: this.advantage,
       disadvantage: this.disadvantage,
@@ -1048,7 +1051,7 @@ export class Workflow {
           displayId: this.displayId,
           isCritical: this.isCritical,
           isFumble: this.isFumble,
-          isHit: this.isHit,
+          isHit: this.hitTargets.size > 0,
           sound: rollSound,
           d20AttackRoll: this.d20AttackRoll
         }

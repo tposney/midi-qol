@@ -1,5 +1,5 @@
 import { configSettings } from "./settings.js";
-import { i18n, log, warn, gameStats, getCanvas } from "../midi-qol.js";
+import { i18n, log, warn, gameStats, getCanvas, error } from "../midi-qol.js";
 import { MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 
 export var socketlibSocket: any = undefined;
@@ -35,8 +35,29 @@ export let setupSocket = () => {
   socketlibSocket.register("createChatMessage", createChatMessage);
   socketlibSocket.register("chooseReactions", localDoReactions);
   socketlibSocket.register("addConvenientEffect", addConcentientEffect);
+  socketlibSocket.register("deleteItemEffects", deleteItemEffects);
 };
 
+
+let deleteItemEffects = async (data: {targets, origin: string, ignore: string[]}) => {
+  let {targets, origin, ignore} = data;
+  for (let idData of targets) {
+    let actor = idData.tokenUuid ? MQfromActorUuid(idData.tokenUuid) : idData.actorUuid ? MQfromUuid(idData.actorUuid) : undefined;
+    if (actor.actor) actor = actor.actor;
+    if (!actor) {
+      error("could not find actor for ", idData);
+    }
+    const effectsToDelete = actor?.effects?.filter(ef => ef.data.origin === origin && !ignore.includes(ef.uuid));
+    if (effectsToDelete?.length > 0) {
+      try {
+        await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToDelete.map(ef => ef.id));
+      } catch (err) {
+        warn("delete effects failed ", err)
+        // TODO can get thrown since more than one thing tries to delete an effect
+      };
+    }
+  }
+}
 async function addConcentientEffect(options) {
   let {effectName, actorUuid, origin} = options;
   const actorToken: any = await fromUuid(actorUuid);

@@ -59,6 +59,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   });
 
   if (!result) return result;
+  console.warn("Advantage/Disadvantage sources: ", advDisadvAttribution(this.actor));
   result = Roll.fromJSON(JSON.stringify(result.toJSON()))
   if (workflow.workflowType === "BetterRollsWorkflow") {
     // we are rolling this for better rolls
@@ -317,10 +318,16 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const needsConcentration = this.data.data.components?.concentration || this.data.data.activation?.condition?.includes("Concentration");
   const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
   if (needsConcentration && checkConcentration) {
-    const concentrationName = installedModules.get("combat-utility-belt")
-      ? game.settings.get("combat-utility-belt", "concentratorConditionName")
-      : i18n("midi-qol.Concentrating");
-    const concentrationCheck = this.actor.effects.contents.find(i => i.data.label === concentrationName);
+    let concentrationLabel: any = "Concentrating";
+    if (game.modules.get("dfreds-convenient-effects")?.active) {
+      let concentrationId =  "Convenient Effect: Concentrating";
+      let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
+      if (statusEffect) concentrationLabel = statusEffect.label;
+    } else if (game.modules.get("combat-utility-belt")?.active) {
+      
+      concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName") 
+    }
+    const concentrationCheck = this.actor.effects.contents.find(i => i.data.label === concentrationLabel);
 
     if (concentrationCheck) {
       let d = await Dialog.confirm({
@@ -644,3 +651,21 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   this.templateData = templateDocument.data;
   return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
 };
+
+export function advDisadvAttribution(actor) {
+  const attributions: any[] = [];
+  if (!actor.data.effects) return attributions;
+  for (let effect of actor.data.effects) {
+    for (let change of effect.data.changes) {
+      if (change.key.includes("advantage") && !effect.data.disabled) {
+        attributions.push({
+          label: effect.data.label,
+          key: change.key,
+          mode: change.mode,
+          value: change.value
+        })
+      }
+    }
+  }
+  return attributions;
+}

@@ -248,7 +248,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
         let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
         if (type.toLowerCase() !== "temphp") dmgType = type.toLowerCase();
         //         let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
-        let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"))).evaluate({ async: false }).total ?? 0;
+        let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0;
         if (DRType === 0 && ["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
           DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0);
           //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
@@ -332,7 +332,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   if (theTargets.size > 0 && item?.hasAttack) effectsToExpire.push("1Hit");
   if (theTargets.size > 0 && item?.hasDamage) effectsToExpire.push("DamageDealt");
   if (effectsToExpire.length > 0) {
-    expireMyEffects.bind(workflow)(effectsToExpire);
+    await expireMyEffects.bind(workflow)(effectsToExpire);
   }
 
   // Don't check for critical - RAW say these don't get critical damage
@@ -752,9 +752,9 @@ export async function addConcentration(options: { workflow: Workflow }) {
     // set the token as concentrating
     // await game.cub.addCondition(concentrationName, [selfTarget], { warn: false });
     // Update the duration of the concentration effect - TODO remove it CUB supports a duration
-    if (options.workflow.hasDAE) {
+    if (installedModules.get("dae")) {
       const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
-      const convertedDuration = options.workflow.dae.convertDuration(itemDuration, inCombat);
+      const convertedDuration = globalThis.DAE.convertDuration(itemDuration, inCombat);
       if (convertedDuration?.type === "seconds") {
         statusEffect.duration = { seconds: convertedDuration.seconds, startTime: game.time.worldTime }
       } else if (convertedDuration?.type === "turns") {
@@ -765,11 +765,11 @@ export async function addConcentration(options: { workflow: Workflow }) {
           startTurn: game.combat?.turn
         }
       }
-      statusEffect.origin = item?.uuid
-      statusEffect.img = "modules/combat-utility-belt/icons/concentrating.svg"
-      setProperty(statusEffect.flags, "midi-qol.isConcentration", statusEffect.origin);
-
     }
+    statusEffect.origin = item?.uuid
+    statusEffect.img = "modules/combat-utility-belt/icons/concentrating.svg"
+    setProperty(statusEffect.flags, "midi-qol.isConcentration", statusEffect.origin);
+
     const existing = selfTarget.actor?.effects.find(e => e.getFlag("core", "statusId") === statusEffect.id);
     if (!existing) {
       setTimeout(
@@ -784,28 +784,28 @@ export async function addConcentration(options: { workflow: Workflow }) {
     let concentrationName = i18n("midi-qol.Concentrating");
 
     const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
-    //@ts-ignore DAE
-    const convertedDuration = window.DAE?.convertDuration(item.data.data.duration, inCombat);
-    const itemData = duplicate(itemJSONData);
-    const currentItem: Item = new CONFIG.Item.documentClass(itemData)
-
+    //const itemData = duplicate(itemJSONData);
+    // const currentItem: Item = new CONFIG.Item.documentClass(itemData)
     const effectData = {
       changes: [],
       origin: item.uuid, //flag the effect as associated to the spell being cast
       disabled: false,
-      icon: currentItem.data.img,
+      icon: itemJSONData.img,
       label: concentrationName,
       duration: {},
       flags: { "midi-qol": { isConcentration: item?.uuid } }
     }
-    if (convertedDuration?.type === "seconds") {
-      effectData.duration = { seconds: convertedDuration.seconds, startTime: game.time.worldTime }
-    } else if (convertedDuration?.type === "turns") {
-      effectData.duration = {
-        rounds: convertedDuration.rounds,
-        turns: convertedDuration.turns,
-        startRound: game.combat?.round,
-        startTurn: game.combat?.turn
+    if (installedModules.get("dae")) {
+      const convertedDuration = globalThis.DAE.convertDuration(item.data.data.duration, inCombat);
+      if (convertedDuration?.type === "seconds") {
+        effectData.duration = { seconds: convertedDuration.seconds, startTime: game.time.worldTime }
+      } else if (convertedDuration?.type === "turns") {
+        effectData.duration = {
+          rounds: convertedDuration.rounds,
+          turns: convertedDuration.turns,
+          startRound: game.combat?.round,
+          startTurn: game.combat?.turn
+        }
       }
     }
     setTimeout(
