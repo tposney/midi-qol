@@ -46,6 +46,7 @@ export class ConfigPanel extends FormApplication {
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),
       itemDeleteCheck,
       hideRollDetailsOptions: i18n("midi-qol.hideRollDetailsOptions"),
+      hideRollDetailsHint: i18n("midi-qol.HideRollDetails.HintLong"),
       nsaFlag,
       coloredBorders,
       playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? i18n("midi-qol.playerRollSavesOptionsReduced") : i18n("midi-qol.playerRollSavesOptions") ,
@@ -62,6 +63,7 @@ export class ConfigPanel extends FormApplication {
         "shiftKey": "shift"
       }
     };
+
     warn("Config Panel: getdata ", data)
     return data;
   }

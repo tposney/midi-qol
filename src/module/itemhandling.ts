@@ -330,11 +330,11 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     const concentrationCheck = this.actor.effects.contents.find(i => i.data.label === concentrationLabel);
 
     if (concentrationCheck) {
+      shouldAllowRoll = false;
       let d = await Dialog.confirm({
         title: i18n("midi-qol.ActiveConcentrationSpell.Title"),
         content: i18n("midi-qol.ActiveConcentrationSpell.Content"),
-        yes: () => {},
-        no: () => { shouldAllowRoll = false; }
+        yes: () => {shouldAllowRoll = true},
       });
       if (!shouldAllowRoll) return; // user aborted spell
       await concentrationCheck.delete();
@@ -477,9 +477,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const needDamagebutton = itemHasDamage(this) && (getAutoRollDamage() === "none" || !getRemoveDamageButtons() || showFullCard);
   const needVersatileButton = itemIsVersatile(this) && (showFullCard || getAutoRollDamage() === "none" || !getRemoveDamageButtons());
   const sceneId = token?.scene && token.scene.id || getCanvas().scene?.id;
-  let isPlayerOwned = this.actor.hasPlayerOwner;
-
-  if (isNewerVersion("0.6.9", game.data.version)) isPlayerOwned = this.actor.isPC
+  const isPlayerOwned = this.actor.hasPlayerOwner;
   const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned))
     || !configSettings.itemTypeList.includes(this.type);
   const hasEffects = workflow.hasDAE && workflow.workflowType === "Workflow" && this.data.effects.find(ae => !ae.transfer);

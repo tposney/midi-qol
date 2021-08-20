@@ -52,6 +52,18 @@ class TokenDocument {
   uuid: string;
   actor: Actor;
 };
+
+class workflowSate {
+  constructor(state, undoData) {
+    this._state = state;
+    this._undoData = undoData
+    this._stateLabel = stateToLabel(state);
+  }
+  _state: number;
+  _undoData: any;
+  _stateLabel: string;
+}
+
 export class Workflow {
   [x: string]: any;
   static _actions: {};
@@ -113,6 +125,7 @@ export class Workflow {
   hideTags: string[];
   displayId: string;
   reactionUpdates: Set<Actor5e>;
+  stateList: workflowSate[];
 
   static eventHack: any;
 
@@ -126,12 +139,7 @@ export class Workflow {
   get workflowType() { return this.__proto__.constructor.name };
 
   get hasDAE() {
-    if (this._hasDAE === undefined) {
-      this._hasDAE = installedModules.get("dae") && (this.item?.effects?.some(ef => ef.data.transfer === false));
-      //@ts-ignore
-      if (this._hasDAE) this.dae = window.DAE;
-    }
-    return this._hasDAE
+    return installedModules.get("dae") && (this.item?.effects?.some(ef => ef.data.transfer === false));
   }
 
   static initActions(actions: {}) {
@@ -162,157 +170,6 @@ export class Workflow {
     this.disadvantage = this.disadvantage || this.rollOptions.disKey;
   }
 
-  public checkAttackAdvantage() {
-    const midiFlags = this.actor?.data.flags["midi-qol"];
-    const advantage = midiFlags?.advantage;
-    const disadvantage = midiFlags?.disadvantage;
-    const actType = this.item?.data.data?.actionType || "none"
-
-    if (advantage) {
-      const withAdvantage = advantage.all || advantage.attack?.all || (advantage.attack && advantage.attack[actType]);
-      this.advantage = this.advantage || withAdvantage;
-    }
-    if (disadvantage) {
-      const withDisadvantage = disadvantage.all || disadvantage.attack?.all || (disadvantage.attack && disadvantage.attack[actType]);
-      this.disadvantage = this.disadvantage || withDisadvantage;
-    }
-    // TODO Hidden should check the target to see if they notice them?
-    if (checkRule("invisAdvantage")) {
-      const token = getCanvas().tokens?.get(this.tokenId);
-      if (token) {
-        const hidden = hasCondition(token, "hidden");
-        const invisible = hasCondition(token, "invisible");
-        this.advantage = this.advantage || hidden || invisible;
-        if (hidden || invisible) log(`Advantage given to ${this.actor.name} due to hidden/invisible`)
-      }
-    }
-    // Neaarby foe gives disadvantage on ranged attacks
-    if (checkRule("nearbyFoe") && (["rwak", "rsak", "rpak"].includes(actType) || this.item.data.data.properties?.thr)) { // Check if there is a foe near me when doing ranged attack
-      let nearbyFoe = checkNearby(-1, getCanvas().tokens?.get(this.tokenId), configSettings.optionalRules.nearbyFoe);
-      // special case check for thrown weapons within 5 feet (players will forget to set the property)
-      if (this.item.data.data.properties?.thr) {
-        const firstTarget: Token = this.targets.values().next().value;
-        const me = getCanvas().tokens?.get(this.tokenId);
-        if (firstTarget && me && getDistance(me, firstTarget, false).distance <= configSettings.optionalRules.nearbyFoe) nearbyFoe = false;
-      }
-      if (nearbyFoe) {
-        log(`Ranged attack by ${this.actor.name} at disadvantage due to neabye foe`);
-        warn("Ranged attack at disadvantage due to nearvy foe");
-      }
-      this.disadvantage = this.disadvantage || nearbyFoe;
-    }
-    this.checkAbilityAdvantage();
-    this.checkTargetAdvantage();
-  }
-
-  public processDamageEventOptions(event) {
-    this.rollOptions.fastForward = this.workflowType === "TrapWorkflow" ? true : isAutoFastDamage();
-    // if (!game.user.isGM && ["all", "damage"].includes(configSettings.autoFastForward)) this.rollOptions.fastForward = true;
-    // if (game.user.isGM && configSettings.gmAutoFastForwardDamage) this.rollOptions.fastForward = true;
-    // if we have an event here it means they clicked on the damage button?
-    var critKey;
-    var disKey;
-    var advKey;
-    var fastForwardKey;
-    var noCritKey;
-    if (configSettings.speedItemRolls && this.workflowType !== "BetterRollsWorkflow") {
-      disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
-      critKey = testKey(configSettings.keyMapping["DND5E.Critical"], event);
-      advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
-      this.rollOptions.versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
-      noCritKey = disKey;
-      fastForwardKey = (advKey && disKey) || this.capsLock;
-    } else { // use default behaviour
-      critKey = event?.altKey || event?.metaKey;
-      noCritKey = event?.ctrlKey;
-      fastForwardKey = (critKey && noCritKey);
-      this.rollOptions.versaKey = false;
-    }
-    this.rollOptions.critical = undefined;
-    this.processCriticalFlags();
-    if (fastForwardKey) {
-      critKey = false;
-      noCritKey = false;
-    }
-    if (this.noCritFlagSet || noCritKey) this.rollOptions.critical = false;
-    else if (this.isCritical || critKey || this.critFlagSet) {
-      this.rollOptions.critical = true;
-      this.isCritical = this.rollOptions.critical;
-    }
-    this.rollOptions.fastForward = fastForwardKey ? !isAutoFastDamage() : isAutoFastDamage();
-    this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || noCritKey;
-    // trap workflows are fastforward by default.
-    if (this.workflowType === "TrapWorkflow")
-      this.rollOptions.fastForward = true;
-  }
-
-  processCriticalFlags() {
-    if (!this.actor) return; // in case a damage only workflow caused this.
-    /*
-    * flags.midi-qol.critical.all
-    * flags.midi-qol.critical.mwak/rwak/msak/rsak/other
-    * flags.midi-qol.noCritical.all
-    * flags.midi-qol.noCritical.mwak/rwak/msak/rsak/other
-    */
-    // check actor force critical/noCritical
-    const criticalFlags = getProperty(this.actor.data, `flags.midi-qol.critical`) ?? {};
-    const noCriticalFlags = getProperty(this.actor.data, `flags.midi-qol.noCritical`) ?? {};
-    const attackType = this.item?.data.data.actionType;
-    this.critFlagSet = false;
-    this.noCritFlagSet = false;
-    this.critFlagSet = criticalFlags.all || criticalFlags[attackType];
-    this.noCritFlagSet = noCriticalFlags.all || noCriticalFlags[attackType];
-
-    // check max roll
-    const maxFlags = getProperty(this.actor.data, `flags.midi-qol.maxDamage`) ?? {};
-    this.rollOptions.maxDamage = (maxFlags.all || maxFlags[attackType]) ?? false;
-
-    // check target critical/nocritical
-    if (this.targets.size !== 1) return;
-    // Change this to TokenDocument
-    const firstTarget = this.targets.values().next().value;
-    const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants?.critical ?? {};
-    const fails = firstTarget.actor?.data.flags["midi-qol"]?.fail?.critical ?? {};
-    if (grants?.all || grants[attackType]) this.critFlagSet = true;
-    if (fails?.all || fails[attackType]) this.noCritFlagSet = true;
-  }
-
-  checkAbilityAdvantage() {
-    if (!["mwak", "rwak"].includes(this.item?.data.data.actionType)) return;
-    let ability = this.item?.data.data.ability;
-    if (ability === "") ability = this.item?.data.data.properties?.fin ? "dex" : "str";
-    this.advantage = this.advantage || getProperty(this.actor.data, `flags.midi-qol.advantage.attack.${ability}`);
-    this.disadvantage = this.disadvantage || getProperty(this.actor.data, `flags.midi-qol.disadvantage.attack.${ability}`);
-  }
-
-  checkTargetAdvantage() {
-    if (!this.item) return;
-    if (!this.targets?.size) return;
-    const actionType = this.item.data.data.actionType;
-    const firstTarget = this.targets.values().next().value;
-    if (checkRule("nearbyAllyRanged") && ["rwak", "rsak", "rpak"].includes(actionType)) {
-      if (firstTarget.data.width * firstTarget.data.height < checkRule("nearbyAllyRanged")) {
-        //TODO change this to TokenDocument
-        const nearbyAlly = checkNearby(-1, firstTarget, configSettings.optionalRules.nearbyFoe); // targets near a friend that is not too big
-        // TODO include thrown weapons in check
-        if (nearbyAlly) {
-          warn("ranged attack with disadvantage because target is near a friend");
-          log(`Ranged attack by ${this.actor.name} at disadvantage due to nearvy ally`)
-        }
-        this.disadvantage = this.disadvantage || nearbyAlly
-      }
-    }
-    const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants;
-    if (!grants) return;
-    if (!["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) return;
-
-    const attackAdvantage = grants.advantage?.attack || {};
-    const grantsAdvantage = grants.all || attackAdvantage.all || attackAdvantage[actionType]
-    const attackDisadvantage = grants.disadvantage?.attack || {};
-    const grantsDisadvantage = grants.all || attackDisadvantage.all || attackDisadvantage[actionType]
-    this.advantage = this.advantage || grantsAdvantage;
-    this.disadvantage = this.disadvantage || grantsDisadvantage;
-  }
 
   constructor(actor: Actor5e, item: Item5e, speaker, targets, options: any) {
     this.rollOptions = duplicate(defaultRollOptions);
@@ -368,6 +225,7 @@ export class Workflow {
     this.effectsAlreadyExpired = [];
     this.reactionUpdates = new Set();
     Workflow._workflows[this.uuid] = this;
+    this.stateList = [];
   }
 
   public someEventKeySet() {
@@ -413,11 +271,13 @@ export class Workflow {
     return nextState;
   }
 
-  async _next(newState: number) {
+  async _next(newState: number, undoData: any = {}) {
     timelog("next state ", newState, Date.now())
     this.currentState = newState;
     let state = stateToLabel(newState)
-    warn("workflow.next ", state, this.id, this)
+    warn("workflow.next ", state, this.id, this);
+    this.stateList.push(new workflowSate(newState, undoData));
+    // console.error(this.stateList);
     switch (newState) {
       case WORKFLOWSTATES.NONE:
         debug(" workflow.next ", state, configSettings.autoTarget, this.item.hasAreaTarget);
@@ -702,7 +562,7 @@ export class Workflow {
         else if (this.item.hasAttack) this.applicationTargets = this.hitTargets;
         else this.applicationTargets = this.targets;
         if (this.hasDAE) {
-          await this.dae.doEffects(this.item, true, this.applicationTargets, { whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId })
+          await globalThis.DAE.doEffects(this.item, true, this.applicationTargets, { whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId })
           this.removeEffectsButton();
         }
         if (installedModules.get("dfreds-convenient-effects") && this.item && configSettings.autoCEEffects) {
@@ -768,6 +628,157 @@ export class Workflow {
           console.error("invalid state in workflow")
           return undefined;
     }
+  }
+  public checkAttackAdvantage() {
+    const midiFlags = this.actor?.data.flags["midi-qol"];
+    const advantage = midiFlags?.advantage;
+    const disadvantage = midiFlags?.disadvantage;
+    const actType = this.item?.data.data?.actionType || "none"
+
+    if (advantage) {
+      const withAdvantage = advantage.all || advantage.attack?.all || (advantage.attack && advantage.attack[actType]);
+      this.advantage = this.advantage || withAdvantage;
+    }
+    if (disadvantage) {
+      const withDisadvantage = disadvantage.all || disadvantage.attack?.all || (disadvantage.attack && disadvantage.attack[actType]);
+      this.disadvantage = this.disadvantage || withDisadvantage;
+    }
+    // TODO Hidden should check the target to see if they notice them?
+    if (checkRule("invisAdvantage")) {
+      const token = getCanvas().tokens?.get(this.tokenId);
+      if (token) {
+        const hidden = hasCondition(token, "hidden");
+        const invisible = hasCondition(token, "invisible");
+        this.advantage = this.advantage || hidden || invisible;
+        if (hidden || invisible) log(`Advantage given to ${this.actor.name} due to hidden/invisible`)
+      }
+    }
+    // Neaarby foe gives disadvantage on ranged attacks
+    if (checkRule("nearbyFoe") && (["rwak", "rsak", "rpak"].includes(actType) || this.item.data.data.properties?.thr)) { // Check if there is a foe near me when doing ranged attack
+      let nearbyFoe = checkNearby(-1, getCanvas().tokens?.get(this.tokenId), configSettings.optionalRules.nearbyFoe);
+      // special case check for thrown weapons within 5 feet (players will forget to set the property)
+      if (this.item.data.data.properties?.thr) {
+        const firstTarget: Token = this.targets.values().next().value;
+        const me = getCanvas().tokens?.get(this.tokenId);
+        if (firstTarget && me && getDistance(me, firstTarget, false).distance <= configSettings.optionalRules.nearbyFoe) nearbyFoe = false;
+      }
+      if (nearbyFoe) {
+        log(`Ranged attack by ${this.actor.name} at disadvantage due to neabye foe`);
+        warn("Ranged attack at disadvantage due to nearvy foe");
+      }
+      this.disadvantage = this.disadvantage || nearbyFoe;
+    }
+    this.checkAbilityAdvantage();
+    this.checkTargetAdvantage();
+  }
+
+  public processDamageEventOptions(event) {
+    this.rollOptions.fastForward = this.workflowType === "TrapWorkflow" ? true : isAutoFastDamage();
+    // if (!game.user.isGM && ["all", "damage"].includes(configSettings.autoFastForward)) this.rollOptions.fastForward = true;
+    // if (game.user.isGM && configSettings.gmAutoFastForwardDamage) this.rollOptions.fastForward = true;
+    // if we have an event here it means they clicked on the damage button?
+    var critKey;
+    var disKey;
+    var advKey;
+    var fastForwardKey;
+    var noCritKey;
+    if (configSettings.speedItemRolls && this.workflowType !== "BetterRollsWorkflow") {
+      disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
+      critKey = testKey(configSettings.keyMapping["DND5E.Critical"], event);
+      advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
+      this.rollOptions.versaKey = testKey(configSettings.keyMapping["DND5E.Versatile"], event);
+      noCritKey = disKey;
+      fastForwardKey = (advKey && disKey) || this.capsLock;
+    } else { // use default behaviour
+      critKey = event?.altKey || event?.metaKey;
+      noCritKey = event?.ctrlKey;
+      fastForwardKey = (critKey && noCritKey);
+      this.rollOptions.versaKey = false;
+    }
+    this.rollOptions.critical = undefined;
+    this.processCriticalFlags();
+    if (fastForwardKey) {
+      critKey = false;
+      noCritKey = false;
+    }
+    if (this.noCritFlagSet || noCritKey) this.rollOptions.critical = false;
+    else if (this.isCritical || critKey || this.critFlagSet) {
+      this.rollOptions.critical = true;
+      this.isCritical = this.rollOptions.critical;
+    }
+    this.rollOptions.fastForward = fastForwardKey ? !isAutoFastDamage() : isAutoFastDamage();
+    this.rollOptions.fastForward = this.rollOptions.fastForward || critKey || noCritKey;
+    // trap workflows are fastforward by default.
+    if (this.workflowType === "TrapWorkflow")
+      this.rollOptions.fastForward = true;
+  }
+
+  processCriticalFlags() {
+    if (!this.actor) return; // in case a damage only workflow caused this.
+    /*
+    * flags.midi-qol.critical.all
+    * flags.midi-qol.critical.mwak/rwak/msak/rsak/other
+    * flags.midi-qol.noCritical.all
+    * flags.midi-qol.noCritical.mwak/rwak/msak/rsak/other
+    */
+    // check actor force critical/noCritical
+    const criticalFlags = getProperty(this.actor.data, `flags.midi-qol.critical`) ?? {};
+    const noCriticalFlags = getProperty(this.actor.data, `flags.midi-qol.noCritical`) ?? {};
+    const attackType = this.item?.data.data.actionType;
+    this.critFlagSet = false;
+    this.noCritFlagSet = false;
+    this.critFlagSet = criticalFlags.all || criticalFlags[attackType];
+    this.noCritFlagSet = noCriticalFlags.all || noCriticalFlags[attackType];
+
+    // check max roll
+    const maxFlags = getProperty(this.actor.data, `flags.midi-qol.maxDamage`) ?? {};
+    this.rollOptions.maxDamage = (maxFlags.all || maxFlags[attackType]) ?? false;
+
+    // check target critical/nocritical
+    if (this.targets.size !== 1) return;
+    // Change this to TokenDocument
+    const firstTarget = this.targets.values().next().value;
+    const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants?.critical ?? {};
+    const fails = firstTarget.actor?.data.flags["midi-qol"]?.fail?.critical ?? {};
+    if (grants?.all || grants[attackType]) this.critFlagSet = true;
+    if (fails?.all || fails[attackType]) this.noCritFlagSet = true;
+  }
+
+  checkAbilityAdvantage() {
+    if (!["mwak", "rwak"].includes(this.item?.data.data.actionType)) return;
+    let ability = this.item?.data.data.ability;
+    if (ability === "") ability = this.item?.data.data.properties?.fin ? "dex" : "str";
+    this.advantage = this.advantage || getProperty(this.actor.data, `flags.midi-qol.advantage.attack.${ability}`);
+    this.disadvantage = this.disadvantage || getProperty(this.actor.data, `flags.midi-qol.disadvantage.attack.${ability}`);
+  }
+
+  checkTargetAdvantage() {
+    if (!this.item) return;
+    if (!this.targets?.size) return;
+    const actionType = this.item.data.data.actionType;
+    const firstTarget = this.targets.values().next().value;
+    if (checkRule("nearbyAllyRanged") && ["rwak", "rsak", "rpak"].includes(actionType)) {
+      if (firstTarget.data.width * firstTarget.data.height < checkRule("nearbyAllyRanged")) {
+        //TODO change this to TokenDocument
+        const nearbyAlly = checkNearby(-1, firstTarget, configSettings.optionalRules.nearbyFoe); // targets near a friend that is not too big
+        // TODO include thrown weapons in check
+        if (nearbyAlly) {
+          warn("ranged attack with disadvantage because target is near a friend");
+          log(`Ranged attack by ${this.actor.name} at disadvantage due to nearvy ally`)
+        }
+        this.disadvantage = this.disadvantage || nearbyAlly
+      }
+    }
+    const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants;
+    if (!grants) return;
+    if (!["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) return;
+
+    const attackAdvantage = grants.advantage?.attack || {};
+    const grantsAdvantage = grants.all || attackAdvantage.all || attackAdvantage[actionType]
+    const attackDisadvantage = grants.disadvantage?.attack || {};
+    const grantsDisadvantage = grants.all || attackDisadvantage.all || attackDisadvantage[actionType]
+    this.advantage = this.advantage || grantsAdvantage;
+    this.disadvantage = this.disadvantage || grantsDisadvantage;
   }
 
   async expireTargetEffects(expireList: string[]) {
@@ -1692,7 +1703,7 @@ export class Workflow {
           && target.actor.id !== token.actor?.id
           && dispositions.includes(target.data.disposition)
           //@ts-ignore attributes
-          && (["always", "wallsBlock"].includes(configSettings.rangeTarget || target.actor?.data.data.attributes.hp.value > 0))
+          && (["always", "wallsBlock"].includes(configSettings.rangeTarget) || target.actor?.data.data.attributes.hp.value > 0)
           if (inRange) {
             const distance = getDistanceSimple(target, token, wallsBlocking);
             inRange = inRange && distance > 0 && distance <= minDist

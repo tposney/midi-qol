@@ -33,7 +33,15 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
     let formula = Roll.replaceFormulaData(spec, rollData, { missing: "0", warn: false });
     // TODO - need to do the .evaluate else the expression is not useful 
     // However will be a problem longer term when async not supported?? What to do
-    const dmgSpec: Roll = new Roll(formula, rollData).evaluate({ async: false });
+    let dmgSpec: Roll | undefined;
+    try {
+      dmgSpec = new Roll(formula, rollData).evaluate({ async: false });
+    } catch (err) {
+      console.warn("Dmg spec not valid", formula)
+      dmgSpec = undefined;
+      break;
+    }
+    if (!dmgSpec || dmgSpec.terms?.length < 1) break;
     // dmgSpec is now a roll with the right terms (but nonsense value) to pick off the right terms from the passed roll
     // Because damage spec is rolled it drops the leading operator terms, so do that as well
     for (let i = 0; i < dmgSpec.terms.length; i++) { // grab all the terms for the current damage line
@@ -60,7 +68,7 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
   // We now have all of the item's damage lines (or none if no item)
   // Now just add up the other terms - using any flavor types for the rolls we get
   // we stepped one term too far so step back one
-  partPos -= 1;
+  partPos = Math.max(0, partPos -1);
 
   // process the rest of the roll as a sequence of terms.
   // Each might have a damage flavour so we do them expression by expression
@@ -918,7 +926,7 @@ export async function expireMyEffects(effectsToExpire: string[]) {
   }).map(ef => ef.id);
   debug("expire my effects", myExpiredEffects, expireAction, expireAttack, expireHit);
   this.effectsAlreadyExpired = this.effectsAlreadyExpired.concat(effectsToExpire);
-  if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedEntity("ActiveEffect", myExpiredEffects);
+  if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects);
 }
 
 // this = actor

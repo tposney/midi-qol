@@ -1,5 +1,15 @@
+
+## 0.8.45
+* Changed "close window" behaviour on concentration effect to mean don't remove concentration
+* Fixed check for conditional visibility installed - will impact advantage check when CV hidden or invisible is set.
+* Removed a reference to deleteEmbeddedEntity
+* Fix for applying active effects on some items.
+* Added special duration expiries of, short rest, long rest and new day. It appears that dnd5e only sets new day if the rest is a long rest. So short rests specified as new day won't trigger the new day effect expiry. Requires DAE 0.8.44
+* Fix for ranged targets on spells.
+* Fix for an incompatibility with Giffyglyph's 5e Monster Maker
+
 ## 0.8.44
-* Include damage bonus macro damage/roll results in arguments to onUsemacros.
+* Include damage bonus macro damage/r oll results in arguments to onUsemacros.
 * Support ability specific save success/failure special durations.
 * Added new attack display option hit/miss + damage total
 * Fix for DR (damage reduction) for specific damage types not supporting field lookups.

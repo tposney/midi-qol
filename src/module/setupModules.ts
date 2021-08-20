@@ -15,7 +15,8 @@ let modules = {"about-time": "0.0",
               "socketlib": "0.0",
               "advanced-macros": "1.0",
               "dnd5e-helpers":  "2.0.5",
-              "dfreds-convenient-effects": "1.8.0"
+              "dfreds-convenient-effects": "1.8.0",
+              "levels": "1.7.0"
             };
 export let installedModules = new Map();
 

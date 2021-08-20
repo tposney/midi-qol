@@ -61,7 +61,12 @@
             {{/select}}
           </select>
         </div>
-        <div class="midi-qol-faint">{{localize "midi-qol.HideRollDetails.Hint"}}</div>
+        <div >{{localize "midi-qol.HideRollDetails.Hint"}}</div>
+        <ul>
+        {{#each hideRollDetailsHint as |label val|}}
+        <li><div class="midi-qol-faint">{{label}}</div></li>
+        {{/each}}
+        </ul>
       </div>
 
     </div>

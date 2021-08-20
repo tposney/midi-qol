@@ -128,7 +128,7 @@ export function exportSettingsToJSON() {
     abouttimeVersion: game.modules.get("about-time")?.data.version,
     betterRollsVersion: game.modules.get("betterrolls5e")?.data.version,
     cubVersion: game.modules.get("combat-utility-belt")?.data.version,
-    condvisVersion: game.modules.get("confitional-visibility")?.data.version,
+    condvisVersion: game.modules.get("conditional-visibility")?.data.version,
     daeVersion: game.modules.get("dae")?.data.version,
     DSNversion: game.modules.get("dice-so-nice")?.data.version,
     dndhelpersVersions: game.modules.get("dnd5e-helpers")?.data.version,

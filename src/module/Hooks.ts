@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling.js";
 import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating, MQfromUuid } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating, MQfromUuid, expireRollEffect } from "./utils.js";
 import { configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 
@@ -14,7 +14,7 @@ export let readyHooks = async () => {
     const hpUpdate = getProperty(update, "data.attributes.hp.value");
     if (hpUpdate === undefined) return true;
     const hpDiff = actor.data.data.attributes.hp.value - hpUpdate;
-    actor.data.update({"flags.midi-qol.concentration-damage": hpDiff})
+    actor.data.update({ "flags.midi-qol.concentration-damage": hpDiff })
     return true;
   })
 
@@ -27,7 +27,7 @@ export let readyHooks = async () => {
       const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
       return specialDuration?.includes("isMoved");
     }) ?? [];
-    if (expiredEffects.length > 0) actor?.deleteEmbeddedEntity("ActiveEffect", expiredEffects.map(ef=>ef.id));
+    if (expiredEffects.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", expiredEffects.map(ef => ef.id));
   })
 
   // Have to trigger on preUpdate to check the HP before the update occured.
@@ -37,6 +37,7 @@ export let readyHooks = async () => {
     if (hpUpdate === undefined) return true;
     const hpDiff = getProperty(actor.data, "flags.midi-qol.concentration-damage")
     if (!hpDiff || hpDiff <= 0) return true;
+    // expireRollEffect.bind(actor)("Damaged", ""); - not this simple - need to think about specific damage types
     concentrationCheckItemDisplayName = i18n("midi-qol.concentrationCheckName");
     let concentrationName;
     if (installedModules.get("combat-utility-belt")) {
@@ -81,10 +82,12 @@ export let readyHooks = async () => {
     diceSoNiceHandler(message, html, data);
   })
 
+  Hooks.on("restCompleted", restManager);
+
   Hooks.on("deleteActiveEffect", (...args) => {
     let [effect, option, userId] = args;
     if (game.user?.id !== userId) return true;
-      //@ts-ignore documentClass
+    //@ts-ignore documentClass
     if (!(effect.parent instanceof CONFIG.Actor.documentClass)) return true;
     const actor = effect.parent;
     const token = actor.token ? actor.token : actor.getActiveTokens()[0];
@@ -107,16 +110,27 @@ export let readyHooks = async () => {
   }
 }
 
+export function restManager(actor, result) {
+  if (!actor || !result) return;
+  const myExpiredEffects = actor.effects.filter(ef => {
+    const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
+    return (result.longRest && specialDuration.includes(`longRest`))
+      || (result.newDay && specialDuration.includes(`newDay`))
+      || (specialDuration.includes(`shortRest`));
+  }).map(ef => ef.id);;
+  if (myExpiredEffects?.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects);
+}
+
 async function handleRemoveConcentration(effect, tokens) {
   // TODO fix this to be localised
   let actor = effect.parent;
   let concentrationLabel: any = "Concentrating";
   if (installedModules.get("dfreds-convenient-effects")) {
-    let concentrationId =  "Convenient Effect: Concentrating";
+    let concentrationId = "Convenient Effect: Concentrating";
     let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
     if (statusEffect) concentrationLabel = statusEffect.label;
   } else if (installedModules.get("combat-utility-belt")) {
-    concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName") 
+    concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
   }
   // Change this to 
   let isConcentration = effect.data.label === concentrationLabel;
@@ -134,9 +148,12 @@ async function handleRemoveConcentration(effect, tokens) {
   if (!concentrationData) return false;
   try {
     await actor.unsetFlag("midi-qol", "concentration-data")
-    concentrationData.templates?.forEach(templateUuid => MQfromUuid(templateUuid).delete());
+    if (concentrationData.templates) {
+      for (let templateUuid of concentrationData.templates) {
+        await MQfromUuid(templateUuid).delete();
+      }
+    }
     socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
-
   } catch (err) {
     console.warn("dae | error deleteing concentration effects: ", err)
   }
@@ -207,7 +224,7 @@ export let initHooks = () => {
 
   Hooks.on("renderChatLog", (app, html, data) => _chatListeners(html));
 
-  Hooks.on('dropCanvasData', function (canvas: Canvas, dropData:any) {
+  Hooks.on('dropCanvasData', function (canvas: Canvas, dropData: any) {
     if (!dragDropTargeting) return true;
     if (dropData.type !== "Item") return true;;
     let grid_size = canvas.scene?.data.grid
