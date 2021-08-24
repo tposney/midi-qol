@@ -538,9 +538,12 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
       "core": { "canPopout": true }
     }
   };
-  if ((this.data.type === "consumable") && !this.actor.items.has(this.id)) {
-    chatData.flags["dnd5e.itemData"] = this.data;
+  
+  // Temp items (id undefined) or consumables that were removed need itemdata set.
+  if (!this.id || (this.data.type === "consumable" && !this.actor.items.has(this.id))) {
+    chatData.flags[`${game.system.id}.itemData`] = this.data;
   }
+
   // Toggle default roll mode
   let rollMode = game.settings.get("core", "rollMode");
   if (["gmroll", "blindroll"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM");

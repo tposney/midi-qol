@@ -276,7 +276,7 @@ export class Workflow {
     this.currentState = newState;
     let state = stateToLabel(newState)
     warn("workflow.next ", state, this.id, this);
-    this.stateList.push(new workflowSate(newState, undoData));
+    // this.stateList.push(new workflowSate(newState, undoData));
     // console.error(this.stateList);
     switch (newState) {
       case WORKFLOWSTATES.NONE:
@@ -471,7 +471,8 @@ export class Workflow {
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
         //@ts-ignore CONFIG.DND5E
         if (this.item?.data.data.actionType === "heal" && !Object.keys(CONFIG.DND5E.healingTypes).includes(this.defaultDamageType)) this.defaultDamageType = "healing";
-        this.damageDetail = createDamageList(this.damageRoll, this.item, this.defaultDamageType);
+
+        this.damageDetail = createDamageList(this.damageRoll, this.rollOptions.versatile ? null : this.item, this.defaultDamageType);
         const damageBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.DamageBonusMacro`);
         if (damageBonusMacro && this.workflowType === "Workflow") {
           await this.rollBonusDamage(damageBonusMacro);
@@ -786,11 +787,13 @@ export class Workflow {
       const expiredEffects: (string | null)[] | undefined = target.actor?.effects?.filter(ef => {
         const wasAttacked = this.item?.hasAttack;
         const wasDamaged = itemHasDamage(this.item) && this.hitTargets?.has(target); //TODO this test will fail for damage only workflows - need to check the damage rolled instaed
+        const wasHit = this.HitTargets?.has(target);
         const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
         if (!specialDuration) return false;
         //TODO this is going to grab all the special damage types as well which is no good.
-        if ((expireList.includes("isAttacked") && specialDuration.includes("isAttacked") && wasAttacked) ||
-          (expireList.includes("isDamaged") && specialDuration.includes("isDamaged") && wasDamaged))
+        if ((expireList.includes("isAttacked") && specialDuration.includes("isAttacked") && wasAttacked)
+          || (expireList.includes("isDamaged") && specialDuration.includes("isDamaged") && wasDamaged)
+          || (expireList.includes("isHit") && specialDuration.includes("isHit") && wasHit))
           return true;
         if ((expireList.includes("1Reaction") && specialDuration.includes("1Reaction")) && target.actor?.uuid !== this.actor.uuid) return true;
         for (let dt of this.damageDetail) {
@@ -873,7 +876,7 @@ export class Workflow {
     let superSaverUuids: string[] = [];
     for (let target of this.targets) {
       targets.push(target.document ?? target);
-      targetUuids.push(target.document.uuid);
+      targetUuids.push(target.document?.uuid ?? target.uuid);
     }
     for (let save of this.saves) {
       saves.push(save.document ?? save);
@@ -1789,7 +1792,7 @@ export class DamageOnlyWorkflow extends Workflow {
     this.itemData = options.itemData;
     // Do the supplied damageRoll
     this.damageRoll = roll;
-    this.damageDetail = createDamageList(this.damageRoll, this.item, damageType);
+    this.damageDetail = createDamageList(this.damageRoll, this.rollOptions.versatile ? null : this.item, damageType);
     this.damageTotal = damageTotal;
     this.flavor = options.flavor;
     //@ts-ignore CONFIG.DND5E
@@ -1999,7 +2002,7 @@ export class TrapWorkflow extends Workflow {
         }
         // If the item does damage, use the same damage type as the item
         let defaultDamageType = this.item?.data.data.damage?.parts[0][1] || this.defaultDamageType;
-        this.damageDetail = createDamageList(this.damageRoll, this.item, defaultDamageType);
+        this.damageDetail = createDamageList(this.damageRoll, this.rollOptions.versatile ? null : this.item, defaultDamageType);
         return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
 
       case WORKFLOWSTATES.ALLROLLSCOMPLETE:
@@ -2082,7 +2085,7 @@ export class BetterRollsWorkflow extends Workflow {
         if (shouldRollDamage) {
           this.roll?.rollDamage();
         }
-
+        this.failedSaves = new Set(this.hitTargets);
         if (!itemHasDamage(this.item)) return this.next(WORKFLOWSTATES.WAITFORSAVES);
         else return this.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
 

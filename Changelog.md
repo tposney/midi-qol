@@ -1,3 +1,12 @@
+## 0.8.46
+* Fix for error thrown in long rest checking.
+* Fix for incorrectly hiding monks token bar saving throws when hide all details is set.
+* Fix for versatile damage not working.
+* Fix for GM Sees all chat messages and some instances of private rolls.
+* Fix for "double" disadvantage on skill rolls overriding advantage.
+* Fix for self target items with no token on the canvas calling an onUse macro.
+* Fix for better rolls other damage rolls.
+* Added support for isHit special duration.
 
 ## 0.8.45
 * Changed "close window" behaviour on concentration effect to mean don't remove concentration

@@ -21,7 +21,7 @@ export let readyHooks = async () => {
   // Handle removing effects when the token is moved.
   Hooks.on("updateToken", (tokenDocument, update, diff, userId) => {
     if (game.user?.id !== userId) return;
-    if ((update.x ?? update.y) === undefined) return;
+    if ((update.x || update.y) === undefined) return;
     const actor = tokenDocument.actor;
     const expiredEffects = actor?.effects.filter(ef => {
       const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
@@ -53,6 +53,8 @@ export let readyHooks = async () => {
       const itemData = duplicate(itemJSONData);
       const saveDC = Math.max(10, Math.floor(hpDiff / 2));
       itemData.data.save.dc = saveDC;
+      itemData.data.save.ability = "con";
+      itemData.data.save.scaling = "flat";
       itemData.name = concentrationCheckItemDisplayName;
       // actor took damage and is concentrating....
       const saveTargets = game.user?.targets;
@@ -60,7 +62,10 @@ export let readyHooks = async () => {
       const theTarget = theTargetToken?.document ? theTargetToken?.document.id : theTargetToken?.id;
       if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
       let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor })
-      //@ts-ignore save
+      if (configSettings.displaySaveDC) {
+        //@ts-ignore 
+        ownedItem.getSaveDC()
+      }
       try {
         if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
           //@ts-ignore
@@ -114,9 +119,9 @@ export function restManager(actor, result) {
   if (!actor || !result) return;
   const myExpiredEffects = actor.effects.filter(ef => {
     const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
-    return (result.longRest && specialDuration.includes(`longRest`))
+    return specialDuration && ((result.longRest && specialDuration.includes(`longRest`))
       || (result.newDay && specialDuration.includes(`newDay`))
-      || (specialDuration.includes(`shortRest`));
+      || specialDuration.includes(`shortRest`));
   }).map(ef => ef.id);;
   if (myExpiredEffects?.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects);
 }
@@ -366,7 +371,7 @@ export const itemJSONData = {
           "author": "devnIbfBHb74U9Zv",
           "img": "icons/svg/dice-target.svg",
           "scope": "global",
-          "command": "for (let targetData of args[0].targets) {\ let target = canvas.tokens.get(targetData._id);\n   if (MidiQOL.configSettings().removeConcentration && (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id))) {\n     const concentrationLabel = game.modules.get('combat-utility-belt')?.active ? game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\") : \"Concentrating\";\n   \n    const concentrationEffect = target.actor.effects.find(effect => effect.data.label === concentrationLabel);\n    if (concentrationEffect) await concentrationEffect.delete();\n}\n}",
+          "command": "if (MidiQOL.configSettings().autoCheckSaves === 'none') return;\n for (let targetData of args[0].targets) {\ let target = canvas.tokens.get(targetData._id);\n   if (MidiQOL.configSettings().removeConcentration && (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id))) {\n     const concentrationLabel = game.modules.get('combat-utility-belt')?.active ? game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\") : \"Concentrating\";\n   \n    const concentrationEffect = target.actor.effects.find(effect => effect.data.label === concentrationLabel);\n    if (concentrationEffect) await concentrationEffect.delete();\n}\n}",
           "folder": null,
           "sort": 0,
           "permission": {

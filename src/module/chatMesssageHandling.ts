@@ -81,14 +81,14 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
         let type = subEntry.damageType;
         if (isCritical && subEntry.critRoll) {
           damage += subEntry.critRoll.total;
-          // isCritical = true;
         }
         // Check for versatile and flag set. TODO damageIndex !== other looks like nonsense.
         if (subEntry.damageIndex !== "other")
           damageList.push({ type, damage });
         else if (configSettings.rollOtherDamage) {
           otherDamageList.push({ type, damage });
-          otherDamageRoll = subEntry.baseRoll;
+          if (subEntry.baseRoll instanceof Roll) otherDamageRoll = subEntry.baseRoll;
+          else otherDamageRoll = Roll.fromData(subEntry.baseRoll);
         }
       }
     }
@@ -223,8 +223,8 @@ export let colorChatMessageHandler = (message, html, data) => {
 
 export let nsaMessageHandler = (message, data, ...args) => {
   if (!nsaFlag || !message.data.whisper || message.data.whisper.length === 0) return true;
-  let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u => u.active).map(u => u.id);
-  let currentIds = data.whisper.map(u => typeof (u) === "string" ? u : u.id);
+  let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u => u.active)?.map(u => u.id);
+  let currentIds = message.data.whisper.map(u => typeof (u) === "string" ? u : u.id);
   gmIds = gmIds.filter(id => !currentIds.includes(id));
   debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmids ", gmIds)
   if (gmIds.length > 0) message.data.update({ "whisper": currentIds.concat(gmIds) });
@@ -365,12 +365,12 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-attack-roll .dice-total").text(`(d20) ${d20AttackRoll}`);
       html.find(".dice-tooltip").remove();
       html.find(".dice-formula").remove();
-      html.find(".midi-qol-damage-roll").find(".dice-tooltip").remove()
-      html.find(".midi-qol-damage-roll").find(".dice-formula").remove()
-      html.find(".midi-qol-other-roll").find(".dice-tooltip").remove()
-      html.find(".midi-qol-other-roll").find(".dice-formula").remove()
-      html.find(".midi-qol-bonus-roll").find(".dice-tooltip").remove()
-      html.find(".midi-qol-bonus-roll").find(".dice-formula").remove()
+      html.find(".midi-qol-damage-roll").find(".dice-tooltip").remove();
+      html.find(".midi-qol-damage-roll").find(".dice-formula").remove();
+      html.find(".midi-qol-other-roll").find(".dice-tooltip").remove();
+      html.find(".midi-qol-other-roll").find(".dice-formula").remove();
+      html.find(".midi-qol-bonus-roll").find(".dice-tooltip").remove();
+      html.find(".midi-qol-bonus-roll").find(".dice-formula").remove();
 /* TODO remove this pending feedback
       html.find(".midi-qol-damge-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       html.find(".midi-qol-other-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
@@ -382,14 +382,19 @@ export let hideStuffHandler = (message, html, data) => {
         html.find(".midi-qol-attack-roll .dice-total").text(`${hitString}`);
         html.find(".dice-tooltip").remove();
         html.find(".dice-formula").remove();
-        html.find(".midi-qol-damage-roll").find(".dice-tooltip").remove()
-        html.find(".midi-qol-damage-roll").find(".dice-formula").remove()
-        html.find(".midi-qol-other-roll").find(".dice-tooltip").remove()
-        html.find(".midi-qol-other-roll").find(".dice-formula").remove()
-        html.find(".midi-qol-bonus-roll").find(".dice-tooltip").remove()
-        html.find(".midi-qol-bonus-roll").find(".dice-formula").remove()
+        html.find(".midi-qol-damage-roll").find(".dice-tooltip").remove();
+        html.find(".midi-qol-damage-roll").find(".dice-formula").remove();
+        html.find(".midi-qol-other-roll").find(".dice-tooltip").remove();
+        html.find(".midi-qol-other-roll").find(".dice-formula").remove();
+        html.find(".midi-qol-bonus-roll").find(".dice-tooltip").remove();
+        html.find(".midi-qol-bonus-roll").find(".dice-formula").remove();
     } else if (configSettings.hideRollDetails === "all" || message.data.blind) {
-      html.find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      // html.find(".midi-qol-attack-roll .dice-total").text(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      html.find(".midi-qol-attack-roll .dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      html.find(".midi-qol-damage-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      html.find(".midi-qol-other-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      html.find(".midi-qol-bonus-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      // html.find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       //TODO this should probably just check formula
     } else if (["details", "detailsDSN"].includes(configSettings.hideRollDetails)) {
       html.find(".dice-tooltip").remove();

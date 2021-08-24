@@ -92,7 +92,11 @@ async function doRollSkill(wrapped, ...args) {
   if (options.event === advantageEvent || options.event === disadvantageEvent)
     options.fastForward = true;
   let procOptions: Options = procAdvantage(this, "check", this.data.data.skills[skillId].ability, options)
-  procOptions = procAdvantageSkill(this, skillId, procOptions)
+  procOptions = procAdvantageSkill(this, skillId, procOptions);
+  if (procOptions.advantage && procOptions.disadvantage) {
+    procOptions.advantage = false;
+    procOptions.disadvantage = false;
+  }
   if (procAutoFailSkill(this, skillId) || procAutoFail(this, "check", this.data.data.skills[skillId].ability)) {
     options.parts = ["-100"];
   }
@@ -245,6 +249,11 @@ async function rollAbilitySave(wrapped, ...args) {
   if (options.event === advantageEvent || options.event === disadvantageEvent)
     options.fastForward = true;
   let procOptions = procAdvantage(this, "save", abilityId, options);
+  if (procOptions.advantage && procOptions.disadvantage) {
+    procOptions.advantage = false;
+    procOptions.disadvantage = false;
+  }
+
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.save && (flags.save.all || flags.save[abilityId])) ?? 0;
 
@@ -311,8 +320,8 @@ function procAdvantage(actor, rollType, abilityId, options: Options): Options {
     const rollFlags = (disadvantage.ability && disadvantage.ability[rollType]) ?? {};
     withDisadvantage = withDisadvantage || disadvantage.all || disadvantage.ability.all || rollFlags.all || rollFlags[abilityId];
   }
-  options.advantage = withAdvantage && !withDisadvantage;
-  options.disadvantage = withDisadvantage && !withAdvantage;
+  options.advantage = withAdvantage;
+  options.disadvantage = withDisadvantage;
   options.event = {};
   return options;
 }
@@ -331,8 +340,8 @@ function procAdvantageSkill(actor, skillId, options: Options): Options {
     const rollFlags = disadvantage.skill
     withDisadvantage = withDisadvantage || disadvantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId])
   }
-  options.advantage = withAdvantage && !withDisadvantage;
-  options.disadvantage = withDisadvantage && !withAdvantage;
+  options.advantage = withAdvantage;
+  options.disadvantage = withDisadvantage;
   return options;
 }
 

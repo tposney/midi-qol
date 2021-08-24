@@ -87,6 +87,10 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
       evalString += evalTerm.total;
       damageType = evalTerm.options.flavor;
       numberTermFound = true;
+    } else if (evalTerm instanceof Die) { // special case for better rolls that does not return a proper roll
+      damageType = evalTerm.options.flavor;
+      numberTermFound = true;
+      evalString +=  evalTerm.total;
     } else if (evalTerm instanceof NumericTerm) {
       evalString += evalTerm.total;
       damageType = evalTerm.options.flavor || damageType; // record this if we get it
@@ -464,7 +468,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
     let actorName = actor.name;
     //@ts-ignore CONFIG.DND5E
     let content = ` ${actorName} ${configSettings.displaySaveDC ? "DC " + dc : ""} ${CONFIG.DND5E.abilities[ability]} ${i18n("midi-qol.saving-throw")}`;
-    content = content + (advantage ? `(${i18n("DND5E.Advantage")}` : "") + ` - ${flavor}`;
+    content = content + (advantage ? ` (${i18n("DND5E.Advantage")})` : "") + ` - ${flavor}`;
     ChatMessage.create({
       content,
       whisper: [player]
@@ -746,13 +750,12 @@ export async function addConcentration(options: { workflow: Workflow }) {
   // await item.actor.unsetFlag("midi-qol", "concentration-data");
   let selfTarget = item.actor.token ? item.actor.token.object : getSelfTarget(item.actor);
   if (!selfTarget) return;
-    "Convenient Effect: Concentrating"
   if (installedModules.get("combat-utility-belt") || installedModules.get("dfreds-convenient-effects")) {
     let concentrationId =  "Convenient Effect: Concentrating";
     let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
     if (!statusEffect) {
       const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
-      statusEffect = CONFIG.statusEffects.find(se => se.label === concentrationName);
+      statusEffect = CONFIG.statusEffects.find(se => se.id === "combat-utility-belt.concentrating");
     }
     if (!statusEffect) return;
     const itemDuration = item.data.data.duration;
@@ -1216,6 +1219,7 @@ export function hasEffectGranting(actor: Actor5e, key: string, selector: string)
   return actor.effects.find(ef => ef.data.changes.some(c => c.key === changeKey) && getOptionalCountRemainingShortFlag(actor, key) > 0)
 }
 
+//TODO fix this to search 
 export function isConcentrating(actor: Actor5e): undefined | ActiveEffect {
   const concentrationName = installedModules.get("combat-utility-belt")
     ? game.settings.get("combat-utility-belt", "concentratorConditionName")
