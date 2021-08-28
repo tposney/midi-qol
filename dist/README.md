@@ -52,6 +52,8 @@ Any module that overloads item.roll is potentially incompatible.
 
 - **Maestro.** Maestro looks for the attack roll chat card in the chat log to play its critical/attack/fumble sounds. If you are using the merge card then the attack roll card is never created and Maestro can't play its sounds. You can use the midi-qol custom sounds instead.
 
+- **Dfreds Convenient Effects** If "Apply Convenient Effects" is enabled midi-qol will check convenient effects for an effect that matches the name of the item being rolled and apply the effect as if it was an active effect on the item. So casting the "Bless" spell will apply the convenient effect Bless to the targets. Requires auto appply active effects to be enabled.
+
 - **Item Macro.**  You can create itemMacro macros with this module and call them from midi's onUse/DamageBonus macro fields by adding ItemMacro (case-sensitive) in the macro field.
 If you have installed itemmacro please make sure you disable the ItemMacro config settings:
 
@@ -274,11 +276,13 @@ Another collection of settings, designed to achieve these goals:
   * turnStart: Moved to times-up
   * turnEnd: Moved to times-up
   * isAttacked: the effect lasts until the next attack against the target.
-  * isDamaged: the effect lasts until the target takes damage.
+  * isHitL the effect lasts until the next hit against the target.
+  * isDamaged: the effect lasts until the target takes damage, i.e. from any item that causes damage.
   * isSave, isCheck, isSkill: if a character rolls one of these the effect is removed.
   * isSaveSuccess, isSaveFailure: If the character succeeded with or failed a saving throw the effect is removed.
-  * isSaveStr, IsSaveDex...., isCheckStr, isCheckDex....: If the character made one of these rolls the effect is removed.
-  * isCheckAcr, isCheckPer....: If the character made a skill check for the specified skill the effect is removed.
+    * isSaveSuccess.str, isSaveFailure.dex (etc): If the character succeeded with or failed a saving/chjeck throw of the specified ability the effect is removed.
+  * isSave.str, IsSave.dex...., isCheck.str, isCheck.dex....: If the character made one of these rolls the effect is removed.
+  * isSkill.acr, isSkill.per....: If the character made a skill check for the specified skill the effect is removed.
 All of these effects expire at the end of the combat if no other duration is specified.
 
 
@@ -341,19 +345,19 @@ flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver 
 **Optional Bonus Effects**	
 Optional flags cause a dialog to be raised when an opportunity to apply the effect comes up. So an optional attack bonus prompts the attacker after the attack roll is made, but before the attack is adjudicated, givin the attacker the option to modify the roll. Effects last for one application unless the count flag is set.
 
-flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target		
+flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)		.
 flags.midi-qol.optional.Name.damage	bonus to apply to damage done		
 flags.midi-qol.optional.Name.skill	bonus to apply to skill rolls		
 flags.midi-qol.optional.Name.attack	the bonus is added after the attack roll		
 flags.midi-qol.optional.Name.save	the bonus is added after the save roll. Requires auto fast forward		
 flags.midi-qol.optional.Name.check	the bonus is added after the ability check roll		
 flags.midi-qol.optional.Name.label	label to use in the dialog		
-flags.midi-qol.optional.Name.count	how many uses the effect has (think lukcy which has 3), if absent the bonus will be single use (bardic inspiration)		
+flags.midi-qol.optional.Name.count	how many uses the effect has (think lukcy which has 3), if absent the bonus will be single use (bardic inspiration). You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until expire (i.e. 0).
 
 Values for the optional roll bonus flags include a dice expression, a number, reroll (rerolling the roll completely) or success which changes the roll to 99 ensuring success.
 
 ## Reactions
-If the config settings for reaction checks is enabled midi will check a target that is hit by an attack for any items/feautres/spells that have an activation type of reaction and prompt the target if they want to use any of their reactions, which will then initiate a midi workflow for that item/feature/spell targeting the attacker.
+If the config settings for reaction checks is enabled midi will check a target that is hit by an attack for any items/feautres/spells that have an activation type of reaction and prompt the target if they want to use any of their reactions, which will then initiate a midi workflow for that item/feature/spell targeting the attacker. Currently does not support spells from magic items.
 
 ## Bugs
 probably many however....

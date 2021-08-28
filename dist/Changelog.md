@@ -1,3 +1,8 @@
+## 0.8.47
+* Fix for mac crit damage dice and bonus critical damage dice.
+* Fix for mook AI targets being deselected.
+
+
 ## 0.8.46
 * Fix for error thrown in long rest checking.
 * Fix for incorrectly hiding monks token bar saving throws when hide all details is set.

@@ -164,7 +164,7 @@ function configureDamage(wrapped) {
         case "maxCrit":
           flatBonus += (term.number + cb) * term.faces;
           cm = Math.max(1, cm - 1);
-          term.alter(cm, cb);
+          term.alter(cm, 0);
           break;
         case "maxAll":
           term.modifiers.push(`min${term.faces}`);
