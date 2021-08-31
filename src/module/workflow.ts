@@ -1038,7 +1038,7 @@ export class Workflow {
         const isD20 = (d.faces === 20);
         if (isD20) {
           // Highlight successes and failures
-          if (d.options.critical && (d.total >= d.options.critical)) {
+					if (d.options.critical && (d.total >= (getProperty(this, "item.data.flags.midi-qol.criticalThreshold") ?? d.options.critical))) {
             content = content.replace('dice-total', 'dice-total critical');
           }
           else if (d.options.fumble && (d.total <= d.options.fumble)) {
