@@ -21,6 +21,10 @@ export class ConfigPanel extends FormApplication {
     return i18n("midi-qol.ConfigTitle")
   }
   async getData(options: any) : Promise<any> {
+    let wallsBlockRangeOptions = i18n("midi-qol.WallsBlockRangeOptions");
+    if (installedModules.get("dnd5e-helpers"))
+      wallsBlockRangeOptions = i18n("midi-qol.WallsBlockRangeOptionsNew");
+
 //@ts-ignore
     let data = {
       configSettings,
@@ -40,7 +44,7 @@ export class ConfigPanel extends FormApplication {
       doReactionsOptions: i18n("midi-qol.DoReactionsOptions"),
       gmDoReactionsOptions: i18n("midi-qol.GMDoReactionsOptions"),
       showReactionAttackRollOptions: i18n("midi-qol.ShowReactionAttackRollOptions"),
-      wallsBlockRangeOptions: i18n("midi-qol.WallsBlockRangeOptions"),
+      wallsBlockRangeOptions,
       //@ts-ignore
       itemTypeLabels: CONFIG.Item.typeLabels,
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),

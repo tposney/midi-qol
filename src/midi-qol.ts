@@ -320,7 +320,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.maxDamage.all`);
   midiFlags.push(`flags.midi-qol.grants.maxDamage.all`);
   midiFlags.push(`flags.midi-qol.advantage.concentration`)
-  // midiFlags.push(`flags.midi-qol.disadvantage.concentration`)
+  midiFlags.push(`flags.midi-qol.disadvantage.concentration`)
 
 
 

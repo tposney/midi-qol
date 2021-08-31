@@ -1,7 +1,11 @@
+## 0.8.48
+* Fix for sneak attack not correctly recording that a sneak attack has been made in the current round. Seems to have broken in 0.8.9+
+* Reaction item rolls will now target the attacker if the reaction item has an appropriate target type, e.g. hellish rebuke. For the caster the target will be set when casting so they can see who they hit.
+* If dnd-helpers 3.0.0 or later is installed, there are 2 new options for walls blocking ranged attacks, 4points - an attack will be possible if any of the corners of the target token are visible, 4point+AC - target AC will be modified by the cover that the target has. You can disable the dnd-helpers apply AC setting, it will be automatically included by midi-qol when calculating an rwak/mwak/rsak/rsak. The rest of the dnd5e-helpers settings will be used when calculating cover including wall and tile settings. The to hit card will show any armor plusses due to cover. This should be regarded as experimental.
+
 ## 0.8.47
 * Fix for mac crit damage dice and bonus critical damage dice.
 * Fix for mook AI targets being deselected.
-
 
 ## 0.8.46
 * Fix for error thrown in long rest checking.

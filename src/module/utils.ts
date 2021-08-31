@@ -520,15 +520,15 @@ export function checkIncapcitated(actor: Actor, item: Item, event) {
   return false;
 }
 
-export function getDistanceSimple(t1: Token, t2: Token, wallBlocking = false) {
-  return getDistance(t1, t2, wallBlocking).distance;
+export function getDistanceSimple(t1: Token, t2: Token, includeCover, wallBlocking = false) {
+  return getDistance(t1, t2, includeCover, wallBlocking).distance;
 }
 /** takes two tokens of any size and calculates the distance between them
 *** gets the shortest distance betwen two tokens taking into account both tokens size
 *** if wallblocking is set then wall are checked
 **/
 //TODO change this to TokenData
-export function getDistance(t1: Token, t2: Token, wallblocking = false): {distance: number, acBonus: number | undefined} {
+export function getDistance(t1: Token, t2: Token, includeCover, wallblocking = false): {distance: number, acBonus: number | undefined} {
   const canvas = getCanvas();
   let coverACBonus = 0;
   let tokenTileACBonus = 0;
@@ -538,15 +538,16 @@ export function getDistance(t1: Token, t2: Token, wallblocking = false): {distan
   if (!t1 || !t2) return noResult
   if (!canvas || !canvas.grid || !canvas.dimensions) return noResult;
   //@ts-ignore
-  if (installedModules.get("dnd5e-helpers") && window.CoverCalculator) {
+  if (window.CoverCalculator && includeCover && ["dnd5eHelpers", "dnd5eHelpersAC"].includes(configSettings.optionalRules.wallsBlockRange)) {
     //@ts-ignore TODO this is being called in the wrong spot (should not do the loops if using this)
-    coverData = CoverCalculator.Cover(t1, t2)
+    coverData = CoverCalculator.Cover(t1, t2);
+    if (coverData?.data.results.cover === 3) return noResult;
   }
+
   const t1StartX = t1.data.width >= 1 ? 0.5 : t1.data.width / 2;
 	const t1StartY = t1.data.height >= 1 ? 0.5 : t1.data.height / 2;
   const t2StartX = t2.data.width >= 1 ? 0.5 : t2.data.width / 2;
 	const t2StartY = t2.data.height >= 1 ? 0.5 : t2.data.height / 2;
-  // TODO refactor this so that if 4point ac don't go through the whole loop
   var x, x1, y, y1, d, r, segments: { ray: Ray }[] = [], rdistance, distance;
   for (x = t1StartX; x < t1.data.width; x++) {
     for (y = t1StartY; y < t1.data.height; y++) {
@@ -561,16 +562,19 @@ export function getDistance(t1: Token, t2: Token, wallblocking = false): {distan
               case "center":
                   if (canvas.walls?.checkCollision(r)) continue; 
                   break;
-              case "4point":
-              case "4pointAC":
+              case "dnd5eHelpers":
+              case "dnd5eHelpersAC":
+                if (!includeCover) {
+                  if (canvas.walls?.checkCollision(r)) continue; 
+                }
                 //@ts-ignore 
-                if (installedModules.get("dnd5e-helpers") && window.CoverCalculator) {
+                else if (installedModules.get("dnd5e-helpers") && window.CoverCalculator) {
                   //@ts-ignore TODO this is being called in the wrong spot (should not do the loops if using this)
                   if (coverData.data.results.cover === 3) continue;
-                  if (configSettings.optionalRules.wallsBlockRange === "4pointAC") coverACBonus = -coverData.data.results.value;
+                  if (configSettings.optionalRules.wallsBlockRange === "dnd5eHelpersAC") coverACBonus = -coverData.data.results.value;
                 } else {
                   pointWarn();
-                  // ui.notifications?.warn("4 Point LOS check selected but dnd5e-helpers not installed")
+                  // ui.notifications?.warn("dnd5e helpers LOS check selected but dnd5e-helpers not installed")
                   if (canvas.walls?.checkCollision(r)) continue;
                 }
                 break;
@@ -635,7 +639,7 @@ export function checkRange(actor, item, tokenId, targets) {
     if (target === token) continue;
     // check the range
     if (target.actor) setProperty(target.actor.data, "flags.midi-qol.acBonus", 0);
-    const distanceDetails = getDistance(token, target, true);
+    const distanceDetails = getDistance(token, target, true, true);
     let distance = distanceDetails.distance;
     if (target.actor && distanceDetails.acBonus)
       setProperty(target.actor.data, "flags.midi-qol.acBonus", distanceDetails.acBonus);
@@ -847,7 +851,7 @@ export function findNearby(disposition: number | null, token: Token | undefined,
       //@ts-ignore attributes
       t.actor.data.data.attributes?.hp?.value > 0 && // not incapacitated
       (disposition === null || t.data.disposition === targetDisposition)) {
-      const tokenDistance = getDistance(t, token, true).distance;
+      const tokenDistance = getDistance(t, token, false, true).distance;
       return 0 < tokenDistance && tokenDistance <= distance
     } else return false;
   });
@@ -1227,7 +1231,7 @@ export function isConcentrating(actor: Actor5e): undefined | ActiveEffect {
   return actor.effects.contents.find(i => i.data.label === concentrationName);
 }
 
-export async function doReactions(target: Token, attackRoll: Roll): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
+export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
   const noResult = { name: undefined, uuid: undefined, ac: undefined };
   if (!target.actor || !target.actor.data.flags || !target.actor.data.flags["midi-qol"]) return noResult;
   let player = playerFor(target) || ChatMessage.getWhisperRecipients("GM").find(u => u.active);
@@ -1249,19 +1253,20 @@ export async function doReactions(target: Token, attackRoll: Roll): Promise<{ na
       resolve(noResult);
     }, (configSettings.reactionTimeout || 30) * 1000);
     // Complier does not realise player can't be undefined to get here
-    player && requestReactions(target, player, attackRoll, resolve)
+    player && requestReactions(target, player, triggerTokenUuid, attackRoll, resolve)
   })
 }
 
-export async function requestReactions(target: Token, player: User, attackRoll: Roll, resolve: ({ }) => void) {
+export async function requestReactions(target: Token, player: User, triggerTokenUuid: string | undefined, attackRoll: Roll, resolve: ({ }) => void) {
   const result = (await socketlibSocket.executeAsUser("chooseReactions", player.id, {
     tokenUuid: target.document.uuid,
-    attackRoll: JSON.stringify(attackRoll.toJSON())
+    attackRoll: JSON.stringify(attackRoll.toJSON()),
+    triggerTokenUuid
   }));
   resolve(result);
 }
 
-export async function promptReactions(tokenUuid: string, attackRoll: Roll) {
+export async function promptReactions(tokenUuid: string, triggerTokenUuid: string | undefined, attackRoll: Roll) {
   const target: Token = MQfromUuid(tokenUuid);
   const actor: Actor | null = target.actor;
   if (!actor) return;
@@ -1273,7 +1278,7 @@ export async function promptReactions(tokenUuid: string, attackRoll: Roll) {
       console.warn("Reaction processing cancelled by Hook");
       return { name: "Filter"};
     }
-    result = await reactionDialog(actor, reactionItems, attackRoll)
+    result = await reactionDialog(actor, triggerTokenUuid, reactionItems, attackRoll)
     if (result.uuid) return result;
   }
   const midiFlags: any = actor.data.flags["midi-qol"];
@@ -1310,7 +1315,7 @@ export function playerFor(target: Token): User | undefined {
   return player;
 }
 
-export async function reactionDialog(actor: Actor5e, reactionItems: any[], attackRoll: Roll) {
+export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | undefined, reactionItems: any[], attackRoll: Roll) {
 
   return new Promise((resolve, reject) => {
     const callback = async (dialog, button) => {
@@ -1321,6 +1326,13 @@ export async function reactionDialog(actor: Actor5e, reactionItems: any[], attac
           resolve({ name: item.name, uuid: item.uuid })
         }, 50);
       });
+      if (item.data.data.target?.type === "creature" && triggerTokenUuid) {
+        const [dummy1, sceneId, dummy2, tokenId] = triggerTokenUuid.split(".");
+        // TODO change this when token targets take uuids instead of ids.
+        if (sceneId === canvas?.scene?.id) {
+          game.user?.updateTokenTargets([tokenId]);
+        }
+      }
       await item.roll();
     }
 

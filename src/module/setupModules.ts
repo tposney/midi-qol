@@ -14,7 +14,7 @@ let modules = {"about-time": "0.0",
               "monks-tokenbar": "0.0",
               "socketlib": "0.0",
               "advanced-macros": "1.0",
-              "dnd5e-helpers":  "2.0.5",
+              "dnd5e-helpers":  "3.0.0",
               "dfreds-convenient-effects": "1.8.0",
               "levels": "1.7.0"
             };
@@ -33,7 +33,8 @@ export let setupModules = () => {
     }
   }
   if (debugEnabled > 0)
-    for (let module of installedModules.keys()) log(`module ${module} has valid version ${installedModules.get(module)}`)
+  for (let module of installedModules.keys()) 
+    log(`module ${module} has valid version ${installedModules.get(module)}`);
 }
 
 export function dice3dEnabled() {

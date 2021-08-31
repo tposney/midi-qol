@@ -5,7 +5,7 @@ import { MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 export var socketlibSocket: any = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
 
-export async function removeEffects(data: { actorUuid: any; effects: any; }) {
+export async function removeEffects(data: { actorUuid: any; effects: string[]; }) {
   const actor = MQfromActorUuid(data.actorUuid);
   await actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects)
 }
@@ -66,8 +66,8 @@ async function addConcentientEffect(options) {
   game.dfreds.effectHandler.addEffect({effectName, actor, origin});
 }
 
-async function localDoReactions(data: { tokenUuid: string; attackRoll: string; }) {
-  const result =  await promptReactions(data.tokenUuid, JSON.parse(data.attackRoll))
+async function localDoReactions(data: { tokenUuid: string; triggerTokenUuid: string, attackRoll: string; }) {
+  const result =  await promptReactions(data.tokenUuid, data.triggerTokenUuid, JSON.parse(data.attackRoll))
   return result;
 }
 

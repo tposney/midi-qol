@@ -661,11 +661,11 @@ export class Workflow {
       if (this.item.data.data.properties?.thr) {
         const firstTarget: Token = this.targets.values().next().value;
         const me = getCanvas().tokens?.get(this.tokenId);
-        if (firstTarget && me && getDistance(me, firstTarget, false).distance <= configSettings.optionalRules.nearbyFoe) nearbyFoe = false;
+        if (firstTarget && me && getDistance(me, firstTarget, false, false).distance <= configSettings.optionalRules.nearbyFoe) nearbyFoe = false;
       }
       if (nearbyFoe) {
         log(`Ranged attack by ${this.actor.name} at disadvantage due to neabye foe`);
-        warn("Ranged attack at disadvantage due to nearvy foe");
+        warn(`Ranged attack by ${this.actor.name} at disadvantage due to neabye foe`);
       }
       this.disadvantage = this.disadvantage || nearbyFoe;
     }
@@ -765,7 +765,7 @@ export class Workflow {
         // TODO include thrown weapons in check
         if (nearbyAlly) {
           warn("ranged attack with disadvantage because target is near a friend");
-          log(`Ranged attack by ${this.actor.name} at disadvantage due to nearvy ally`)
+          log(`Ranged attack by ${this.actor.name} at disadvantage due to nearby ally`)
         }
         this.disadvantage = this.disadvantage || nearbyAlly
       }
@@ -1434,10 +1434,10 @@ export class Workflow {
                       request: rollType,
                       ability: this.item.data.data.save.ability,
                       showRoll,
-                      options: { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage, fastForward: true },
+                      options: { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true },
                     });
                   } else {
-                    result = await rollAction.bind(target.actor)(this.item.data.data.save.ability, { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage, fastForward: true });
+                    result = await rollAction.bind(target.actor)(this.item.data.data.save.ability, { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true });
                   }
                   resolve(result);
                 }
@@ -1458,7 +1458,7 @@ export class Workflow {
             request: rollType,
             ability: this.item.data.data.save.ability,
             showRoll,
-            options: { messageData: { user: owner?.id }, chatMessage: showRoll, mapKeys: false, advantage, fastForward: true },
+            options: { messageData: { user: owner?.id }, chatMessage: showRoll, mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true },
           }));
         }
 
@@ -1649,7 +1649,7 @@ export class Workflow {
         isHit = this.attackTotal >= targetAC;
         // check to see if the roll hit the target
         if ((isHit || this.iscritical) && this.attackRoll) {
-          const result = await doReactions(targetToken, this.attackRoll);
+          const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll);
           targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
           targetAC = Number.parseInt(targetActor.data.data.attributes.ac.value) + bonusAC;
           if (result.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
@@ -1659,7 +1659,7 @@ export class Workflow {
 
       if (this.isCritical) isHit = true;
       if (isHit || this.isCritical) this.processCriticalFlags();
-
+      setProperty(targetActor.data, "flags.midi-qol.acBonus", 0);
 
       if (game.user?.isGM) log(`${this.speaker.alias} Rolled a ${this.attackTotal} to hit ${targetName}'s AC of ${targetAC} ${(isHit || this.isCritical) ? "hitting" : "missing"}`);
       // Log the hit on the target
@@ -1671,7 +1671,7 @@ export class Workflow {
       if (VideoHelper.hasVideoExtension(img ?? "")) {
         img = await game.video.createThumbnail(img ?? "", { width: 100, height: 100 });
       }
-      this.hitDisplayData.push({ isPC: targetToken.actor?.hasPlayerOwner, target: targetToken, hitString, attackType, img, gmName: targetToken.name, playerName: getTokenPlayerName(targetToken) });
+      this.hitDisplayData.push({ isPC: targetToken.actor?.hasPlayerOwner, target: targetToken, hitString, attackType, img, gmName: targetToken.name, playerName: getTokenPlayerName(targetToken), bonusAC });
 
       // If we hit and we have targets and we are applying damage say so.
       if (isHit || this.isCritical) this.hitTargets.add(targetToken);
@@ -1707,8 +1707,9 @@ export class Workflow {
           && dispositions.includes(target.data.disposition)
           //@ts-ignore attributes
           && (["always", "wallsBlock"].includes(configSettings.rangeTarget) || target.actor?.data.data.attributes.hp.value > 0)
+          // && (["always", "wallsBlock"].includes(configSettings.rangeTarget) || target.actor?.data.data.attributes.hp.value > 0)
           if (inRange) {
-            const distance = getDistanceSimple(target, token, wallsBlocking);
+            const distance = getDistanceSimple(target, token, false, wallsBlocking);
             inRange = inRange && distance > 0 && distance <= minDist
           }
           if (inRange) {
