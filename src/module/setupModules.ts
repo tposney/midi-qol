@@ -16,7 +16,8 @@ let modules = {"about-time": "0.0",
               "advanced-macros": "1.0",
               "dnd5e-helpers":  "3.0.0",
               "dfreds-convenient-effects": "1.8.0",
-              "levels": "1.7.0"
+              "levels": "1.7.0",
+              "levelsvolumetrictemplates": "0.0.0"
             };
 export let installedModules = new Map();
 

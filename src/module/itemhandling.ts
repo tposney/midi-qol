@@ -223,18 +223,18 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       flavor: this.labels.damageTypes.length ? `${title} (${this.labels.damageTypes})` : title,
       speaker,
     }, { "flags.dnd5e.roll": { type: "damage", itemId: this.id } });
-    result.toMessage(messageData, {rollMode: game.settings.get("core", "rollMode")});
+    result.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
     if (otherResult) {
       messageData = mergeObject({
         title,
         flavor: title,
         speaker,
       }, { "flags.dnd5e.roll": { type: "other", itemId: this.id } });
-      otherResult.toMessage(messageData, {rollMode: game.settings.get("core", "rollMode")})
+      otherResult.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") })
     }
   }
-  
-    if (dice3dEnabled() && configSettings.mergeCard) {
+
+  if (dice3dEnabled() && configSettings.mergeCard) {
     let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
@@ -246,8 +246,8 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     //@ts-ignore game.dice3d
     await game.dice3d.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
     if (configSettings.rollOtherDamage && otherResult)
-    //@ts-ignore game.dice3d
-    await game.dice3d.showForRoll(otherResult, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+      //@ts-ignore game.dice3d
+      await game.dice3d.showForRoll(otherResult, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
   }
 
 
@@ -260,7 +260,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   return result;
 }
 
-export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event}) {
+export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event }) {
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
   let versatile = options?.versatile ?? false;
@@ -268,10 +268,10 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (!enableWorkflow || createWorkflow === false) {
     return await wrapped(options);
   }
-  const isRangeSpell = configSettings.rangeTarget && this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
-  const isAoESpell = (this.hasAreaTarget && configSettings.autoTarget);
+  const isRangeSpell = this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
+  const isAoESpell = this.hasAreaTarget;
   const myTargets = game.user?.targets && await validTargetTokens(game.user?.targets);
-  const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" &&  game.combat);
+  const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
   let shouldAllowRoll = !requiresTargets // we don't care about targets
     || ((myTargets?.size || 0) > 0) // there are some target selected
     || (this.data.data.target?.type === "self") // self target
@@ -323,12 +323,12 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (needsConcentration && checkConcentration) {
     let concentrationLabel: any = "Concentrating";
     if (game.modules.get("dfreds-convenient-effects")?.active) {
-      let concentrationId =  "Convenient Effect: Concentrating";
+      let concentrationId = "Convenient Effect: Concentrating";
       let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
       if (statusEffect) concentrationLabel = statusEffect.label;
     } else if (game.modules.get("combat-utility-belt")?.active) {
-      
-      concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName") 
+
+      concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
     }
     const concentrationCheck = this.actor.effects.contents.find(i => i.data.label === concentrationLabel);
 
@@ -337,7 +337,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       let d = await Dialog.confirm({
         title: i18n("midi-qol.ActiveConcentrationSpell.Title"),
         content: i18n("midi-qol.ActiveConcentrationSpell.Content"),
-        yes: () => {shouldAllowRoll = true},
+        yes: () => { shouldAllowRoll = true },
       });
       if (!shouldAllowRoll) return; // user aborted spell
       await concentrationCheck.delete();
@@ -354,13 +354,15 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
   let workflow: Workflow;
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
-    if (!this.id) this.data._id  = randomID();
+    if (!this.id) this.data._id = randomID();
     workflow = new BetterRollsWorkflow(this.actor, this, speaker, targets, event || options.event);
+    if (game.user) setProperty(game.user, "data.flags.midi-qol.elevation", workflow.elevation)
     // options.createMessage = true;
-    const result = await  wrapped(options);
+    const result = await wrapped(options);
     return result;
   }
   workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event });
+  if (game.user) setProperty(game.user, "data.flags.midi-qol.elevation", workflow.elevation)
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = showFullCard;
@@ -396,11 +398,11 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     (this.hasAttack && needAttckButton)) ||
     (!this.hasAttack && !itemHasDamage(this) && !this.hasSave);
 */
-  if (workflow.showCard) { 
+  if (workflow.showCard) {
     let item = this;
     if (this.data.data.level && (workflow.itemLevel !== this.data.data.level)) {
-      item = this.clone({"data.level": workflow.itemLevel}, {keepId: true});
-      item.data.update({_id: this.id});
+      item = this.clone({ "data.level": workflow.itemLevel }, { keepId: true });
+      item.data.update({ _id: this.id });
       item.prepareFinalAttributes();
     }
     result = await showItemCard.bind(item)(showFullCard, workflow, false, options.createMessage)
@@ -422,7 +424,7 @@ export async function showItemInfo() {
   const templateData = {
     actor: this.actor,
     // tokenId: token?.id,
-    tokenId: token?.document?.uuid ?? token?.uuid, 
+    tokenId: token?.document?.uuid ?? token?.uuid,
     tokenUuid: token?.document?.uuid ?? token?.uuid,
     item: this.data,
     itemUuid: this.uuid,
@@ -491,7 +493,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const templateData = {
     actor: this.actor,
     // tokenId: token?.id,
-    tokenId: token?.document?.uuid ?? token?.uuid, 
+    tokenId: token?.document?.uuid ?? token?.uuid,
     tokenUuid: token?.document?.uuid ?? token?.uuid,
     item: this.data,
     itemUuid: this.uuid,
@@ -541,7 +543,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
       "core": { "canPopout": true }
     }
   };
-  
+
   // Temp items (id undefined) or consumables that were removed need itemdata set.
   if (!this.id || (this.data.type === "consumable" && !this.actor.items.has(this.id))) {
     chatData.flags[`${game.system.id}.itemData`] = this.data;
@@ -555,38 +557,60 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   return createMessage ? ChatMessage.create(chatData) : chatData;
 }
 
-function isTokenInside(templateDetails: {x: number, y: number, shape: any}, token, wallsBlockTargeting) {
+function isTokenInside(templateDetails: { x: number, y: number, shape: any }, token, wallsBlockTargeting) {
   const grid = getCanvas().scene?.data.grid;
   const templatePos = { x: templateDetails.x, y: templateDetails.y };
 
-	// Check for center of  each square the token uses.
-	// e.g. for large tokens all 4 squares
-	const startX = token.width >= 1 ? 0.5 : token.width / 2;
-	const startY = token.height >= 1 ? 0.5 : token.height / 2;
-	for (let x = startX; x < token.width; x++) {
-		for (let y = startY; y < token.height; y++) {
-			const currGrid = {
-				x: token.x + x * grid - templatePos.x,
-				y: token.y + y * grid - templatePos.y,
-			};
-			let contains = templateDetails.shape?.contains(currGrid.x, currGrid.y);
-			if (contains && wallsBlockTargeting) {
-        const r = new Ray({x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y}, templatePos);
-        contains = !getCanvas().walls?.checkCollision(r);
+  // Check for center of  each square the token uses.
+  // e.g. for large tokens all 4 squares
+  const startX = token.data.width >= 1 ? 0.5 : token.width / 2;
+  const startY = token.data.height >= 1 ? 0.5 : token.height / 2;
+  for (let x = startX; x < token.data.width; x++) {
+    for (let y = startY; y < token.data.height; y++) {
+      const currGrid = {
+        x: token.data.x + x * grid - templatePos.x,
+        y: token.data.y + y * grid - templatePos.y,
+      };
+      let contains = templateDetails.shape?.contains(currGrid.x, currGrid.y);
+      if (contains && wallsBlockTargeting) {
+        let tx = templatePos.x;
+        let ty = templatePos.y;
+        if (templateDetails.shape.type === 1) { // A rectangle
+          tx = tx + templateDetails.shape.width / 2;
+          ty = ty + templateDetails.shape.height / 2;
+        }
+
+        const r = new Ray({ x: currGrid.x + tx, y: currGrid.y + ty }, { x: tx, y: ty });
+        if (configSettings.optionalRules.wallsBlockRange === "centerLevels" && installedModules.get("levels")) {
+          let p1 = {
+            x: currGrid.x + tx, y: currGrid.y + ty,
+            //@ts-ignore
+            z: _levels.getTokenLOSheight(token)
+          }
+          let p2 = {x: tx, y: ty,
+            //@ts-ignore
+            z: getProperty(game.user, "data.flags.midi-qol.elevation") ?? 0
+          }
+          //@ts-ignore
+          contains = !_levels.testCollision(p1, p2, "sight");
+        } else {
+          contains = !getCanvas().walls?.checkCollision(r);
+        }
       }
+      // Check the distance from origin.
       if (contains) return true;
-		}
-	}
-	return false;
+    }
+  }
+  return false;
 }
 
-export function templateTokens(templateDetails: {x: number, y: number, shape: any} | MeasuredTemplate) {
+export function templateTokens(templateDetails: { x: number, y: number, shape: any } | MeasuredTemplate) {
   if (configSettings.autoTarget === "none") return;
   const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget);
-	const tokens = getCanvas().tokens?.placeables || []; //.map(t=>t.data)
+  const tokens = getCanvas().tokens?.placeables || []; //.map(t=>t.data)
   let targets: string[] = [];
   for (const token of tokens) {
-    if (token.actor && isTokenInside(templateDetails, token.data, wallsBlockTargeting)) {
+    if (token.actor && isTokenInside(templateDetails, token, wallsBlockTargeting)) {
       const actorData: any = token.actor?.data;
       if (actorData?.data.details.type?.custom === "NoTarget") continue;
       if (["wallsBlock", "always"].includes(configSettings.autoTarget) || actorData?.data.attributes.hp.value > 0) {
@@ -595,7 +619,7 @@ export function templateTokens(templateDetails: {x: number, y: number, shape: an
     }
   }
   game.user?.updateTokenTargets(targets);
-  game.user?.broadcastActivity({targets});
+  game.user?.broadcastActivity({ targets });
 }
 
 export function selectTargets(templateDocument: MeasuredTemplateDocument, data, user) {
@@ -612,33 +636,36 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
     return true;
   }
 
-
-  //@ts-ignore
-  if (templateDocument.object?.shape) templateTokens(templateDocument.object);
-  else {
-    let {direction, distance, angle, width} = templateDocument.data;
-    const dimensions = getCanvas().dimensions || {size: 1, distance: 1};
-    distance *= dimensions.size  / dimensions.distance;
-    width *= dimensions.size  / dimensions.distance;
-    direction = Math.toRadians(direction);
-    let shape: any;
-    switch ( templateDocument.data.t ) {
-      case "circle":
-        shape = new PIXI.Circle(0, 0, distance);
-        break;
-      case "cone":
-        //@ts-ignore
-        shape = templateDocument._object._getConeShape(direction, angle, distance);
-        break;
-      case "rect":
-        //@ts-ignore
-        shape = templateDocument._object._getRectShape(direction, distance);
-        break;
-      case "ray":
-        //@ts-ignore
-        shape = templateDocument._object._getRayShape(direction, distance, width);
-        templateTokens({x: templateDocument.data.x, y: templateDocument.data.y, shape});
-
+  if (installedModules.get("levelsvolumetrictemplates")) {
+    //@ts-ignore
+    VolumetricTemplates.compute3Dtemplate(templateDocument)
+  } else {
+    //@ts-ignore
+    if (templateDocument.object?.shape) templateTokens(templateDocument.object);
+    else {
+      let { direction, distance, angle, width } = templateDocument.data;
+      const dimensions = getCanvas().dimensions || { size: 1, distance: 1 };
+      distance *= dimensions.size / dimensions.distance;
+      width *= dimensions.size / dimensions.distance;
+      direction = Math.toRadians(direction);
+      let shape: any;
+      switch (templateDocument.data.t) {
+        case "circle":
+          shape = new PIXI.Circle(0, 0, distance);
+          break;
+        case "cone":
+          //@ts-ignore
+          shape = templateDocument._object._getConeShape(direction, angle, distance);
+          break;
+        case "rect":
+          //@ts-ignore
+          shape = templateDocument._object._getRectShape(direction, distance);
+          break;
+        case "ray":
+          //@ts-ignore
+          shape = templateDocument._object._getRayShape(direction, distance, width);
+      }
+      templateTokens({ x: templateDocument.data.x, y: templateDocument.data.y, shape });
     }
   }
 
@@ -646,7 +673,7 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   let selfTarget = (item?.data.data.range?.units === "spec") ? getCanvas().tokens?.get(this.tokenId) : null;
   if (selfTarget && game.user?.targets.has(selfTarget)) {
     // we are targeted and should not be
-    selfTarget.setTarget(false, {user: game.user, releaseOthers: false})
+    selfTarget.setTarget(false, { user: game.user, releaseOthers: false })
   }
   this.saves = new Set();
   const userTargets = game.user?.targets;

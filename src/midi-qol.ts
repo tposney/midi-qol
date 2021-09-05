@@ -11,7 +11,7 @@
  */
 
 // Import TypeScript modules
-import { registerSettings, fetchParams, configSettings } from './module/settings.js';
+import { registerSettings, fetchParams, configSettings, checkRule } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { installedModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, readyPatching } from './module/patching.js';
@@ -208,7 +208,8 @@ function setupMidiQOLApi() {
     MQFromUuid: MQfromUuid,
     MQfromActorUuid: MQfromActorUuid,
     selectTargetsForTemplate: templateTokens,
-    socket: () => {return socketlibSocket}
+    socket: () => {return socketlibSocket},
+    checkRule: checkRule
   }
 }
 
@@ -321,8 +322,8 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.grants.maxDamage.all`);
   midiFlags.push(`flags.midi-qol.advantage.concentration`)
   midiFlags.push(`flags.midi-qol.disadvantage.concentration`)
-
-
+  midiFlags.push("flags.midi-qol.ignoreNearbyFoes");
+  midiFlags.push(`flags.midi-qol.concentrationSaveBonus`);
 
   allAttackTypes = ["rwak","mwak","rsak", "msak"];
   if (game.system.id === "sw5e")

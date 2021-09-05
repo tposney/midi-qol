@@ -56,6 +56,7 @@ class ConfigSettings {
   doReactions: string = "all";
   showReactionAttackRoll: string = "all";
   rollNPCSaves: string = "auto";
+  rollNPCLinkedSaves: string = "auto";
   mergeCard: boolean = false;
   mergeCardCondensed: boolean = false;
   useTokenNames: boolean = false;

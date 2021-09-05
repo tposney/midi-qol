@@ -425,11 +425,11 @@ export let getSaveMultiplierForItem = (item: Item) => {
   return configSettings.defaultSaveMult;
 };
 
-export function requestPCSave(ability, rollType, player, actor, advantage, flavor, dc, requestId) {
+export function requestPCSave(ability, rollType, player, actor, advantage, flavor, dc, requestId, GMprompt) {
   const useUuid = false;
   const actorId = useUuid ? actor.uuid : actor.id;
   const playerLetme = !player?.isGM && ["letme", "letmeQuery"].includes(configSettings.playerRollSaves);
-  const gmLetme = player.isGM && ["letme", "letmeQuery"].includes(configSettings.rollNPCSaves);
+  const gmLetme = player.isGM && ["letme", "letmeQuery"].includes(GMprompt);
   if (player && installedModules.get("lmrtfy") && (playerLetme || gmLetme)) {
     if ((configSettings.playerRollSaves === "letmeQuery")) {
       // TODO - reinstated the LMRTFY patch so that the event is properly passed to the roll
@@ -556,10 +556,26 @@ export function getDistance(t1: Token, t2: Token, includeCover, wallblocking = f
         for (y1 = t2StartY; y1 < t2.data.height; y1++) {
           const dest = new PIXI.Point(...canvas.grid.getCenter(Math.round(t2.data.x + (canvas.dimensions.size * x1)), Math.round(t2.data.y + (canvas.dimensions.size * y1))));
           const r = new Ray(origin, dest)
-          if (wallblocking) {
+          if (wallblocking && configSettings.optionalRules.wallsBlockRange === "centerLevels" && installedModules.get("levels")) { 
+            let p1 = {
+              x: origin.x,
+              y: origin.y,
+              //@ts-ignore
+              z: _levels.getTokenLOSheight(t1)
+            }
+            let p2 = {
+              x: dest.x,
+              y: dest.y,
+              //@ts-ignore
+              z: _levels.getTokenLOSheight(t2)
+            }
+            //@ts-ignore
+            if (_levels.testCollision(p1, p2, "sight")) continue;
+          } else if (wallblocking) {
             // TODO use four point rule and work out cover
             switch (configSettings.optionalRules.wallsBlockRange) {
               case "center":
+              case "centerLevels":
                   if (canvas.walls?.checkCollision(r)) continue; 
                   break;
               case "dnd5eHelpers":
@@ -598,10 +614,14 @@ export function getDistance(t1: Token, t2: Token, includeCover, wallblocking = f
   if (configSettings.optionalRules.distanceIncludesHeight) {
     let height = Math.abs((t1.data.elevation || 0) - (t2.data.elevation || 0))
     //@ts-ignore diagonalRule from DND5E
-    if (["555", "5105"].includes(getCanvas().grid?.diagonalRule)) {
+    const rule = getCanvas().grid?.diagonalRule
+    if (["555", "5105"].includes(rule)) {
       let nd = Math.min(distance, height);
       let ns = Math.abs(distance - height);
       distance = nd + ns;
+      let dimension = canvas?.dimensions?.distance ?? 5;
+      if (rule === "5105") distance = distance + Math.floor(nd / 2 / dimension) * dimension;
+
     } else distance = Math.sqrt(height * height + distance * distance);
   }
   return {distance, acBonus: coverACBonus + tokenTileACBonus}; // TODO update this with ac bonus
@@ -631,7 +651,7 @@ export function checkRange(actor, item, tokenId, targets) {
   let range = itemData.range?.value || 0;
   let longRange = itemData.range?.long || 0;
   if (itemData.range.units === "touch") {
-    range = 5;
+    range = canvas?.dimensions?.distance ?? 5;
     longRange = 0;
   }
   if (["mwak", "msak", "mpak"].includes(itemData.actionType) && !itemData.properties?.thr) longRange = 0;
@@ -754,18 +774,17 @@ export async function addConcentration(options: { workflow: Workflow }) {
   // await item.actor.unsetFlag("midi-qol", "concentration-data");
   let selfTarget = item.actor.token ? item.actor.token.object : getSelfTarget(item.actor);
   if (!selfTarget) return;
-  if (installedModules.get("combat-utility-belt") || installedModules.get("dfreds-convenient-effects")) {
-    let concentrationId =  "Convenient Effect: Concentrating";
-    let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
-    if (!statusEffect) {
-      const concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
-      statusEffect = CONFIG.statusEffects.find(se => se.id === "combat-utility-belt.concentrating");
-    }
-    if (!statusEffect) return;
+  let statusEffect;
+  if (installedModules.get("dfreds-convenient-effects")) {
+    statusEffect = CONFIG.statusEffects.find(se => se.id === "Convenient Effect: Concentrating");
+  }
+  if (!statusEffect && installedModules.get("combat-utility-belt")) {
+    statusEffect = CONFIG.statusEffects.find(se => se.id === "combat-utility-belt.concentration");
+  }
+  if (statusEffect) { // found a cub or convenient status effect.
     const itemDuration = item.data.data.duration;
     statusEffect = duplicate(statusEffect);
     // set the token as concentrating
-    // await game.cub.addCondition(concentrationName, [selfTarget], { warn: false });
     // Update the duration of the concentration effect - TODO remove it CUB supports a duration
     if (installedModules.get("dae")) {
       const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
@@ -797,7 +816,6 @@ export async function addConcentration(options: { workflow: Workflow }) {
   } else {
     let actor = options.workflow.actor;
     let concentrationName = i18n("midi-qol.Concentrating");
-
     const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
     //const itemData = duplicate(itemJSONData);
     // const currentItem: Item = new CONFIG.Item.documentClass(itemData)
@@ -924,7 +942,7 @@ export async function expireMyEffects(effectsToExpire: string[]) {
     if (!specialDuration || !specialDuration?.length) return false;
     return (expireAction && specialDuration.includes("1Action")) ||
       (expireAttack && this.item?.hasAttack && specialDuration.includes("1Attack")) ||
-      (expireAttack && this.item?.type === "spell" &&  specialDuration.includes("1Spell")) ||
+      (expireSpell && this.item?.type === "spell" &&  specialDuration.includes("1Spell")) ||
       (expireAttack && this.item?.hasAttack && specialDuration.includes(`1Attack:${this.item.data.data.actionType}`)) ||
       (expireHit && this.item?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.size > 0) ||
       (expireHit && this.item?.hasAttack && specialDuration.includes(`1Hit:${this.item.data.data.actionType}`) && this.hitTargets.size > 0) ||

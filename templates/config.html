@@ -304,6 +304,17 @@
             {{/select}}
           </select>
         </div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.rollNPCLinkedSaves.Name"}}</label>
+          <select name="rollNPCLinkedSaves" data-dtype="String">
+            {{#select configSettings.rollNPCLinkedSaves}}
+            {{#each rollNPCSavesOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
         <div class="midi-qol-faint">{{localize "midi-qol.rollNPCSaves.Hint"}}</div>
         <div class="form-group">
           <label>{{localize "midi-qol.PlayerSaveTimeout.Name"}}</label>

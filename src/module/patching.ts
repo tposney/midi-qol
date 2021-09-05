@@ -345,8 +345,21 @@ function procAdvantageSkill(actor, skillId, options: Options): Options {
   return options;
 }
 
+let _midiATRefresh = debounce(__midiATIRefresh, 20);
+
+function __midiATIRefresh(template) {
+  if (game.user && !template.data.flags?.levels?.elevation) 
+    setProperty(template.data.flags, "levels.elevation", getProperty(game.user, "data.flags.midi-qol.elevation") ?? 0)
+  if (installedModules.get("levelsvolumetrictemplates")) {
+    //@ts-ignore
+    VolumetricTemplates.compute3Dtemplate(template)
+  } else {
+    templateTokens({x: template.data.x, y: template.data.y, shape: template.shape});
+  }
+}
+
 function midiATRefresh(wrapped) {
-  templateTokens({x: this.data.x, y: this.data.y, shape: this.shape})
+  _midiATRefresh(this);
   return wrapped();
 }
 

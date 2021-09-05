@@ -188,7 +188,12 @@ export class Workflow {
     }
 
     this.tokenId = speaker.token;
-    this.tokenUuid = this.tokenId ? getCanvas().tokens?.get(this.tokenId)?.document.uuid : undefined; // TODO see if this could be better
+    const token = getCanvas().tokens?.get(this.tokenId);
+    this.tokenUuid = this.tokenId ? token?.document.uuid : undefined; // TODO see if this could be better
+    if (installedModules.get("levels") && token) {
+      //@ts-ignore
+      this.elevation = _levels.getTokenLOSheight(token)
+    }
     this.speaker = speaker;
     if (this.speaker.scene) this.speaker.scene = canvas?.scene?.id;
     this.targets = new Set(targets);
@@ -655,7 +660,7 @@ export class Workflow {
       }
     }
     // Neaarby foe gives disadvantage on ranged attacks
-    if (checkRule("nearbyFoe") && (["rwak", "rsak", "rpak"].includes(actType) || this.item.data.data.properties?.thr)) { // Check if there is a foe near me when doing ranged attack
+    if (checkRule("nearbyFoe") && !getProperty(this.actor, "data.flags.midi-qol.ignoreNearbyFoes") && (["rwak", "rsak", "rpak"].includes(actType) || this.item.data.data.properties?.thr)) { // Check if there is a foe near me when doing ranged attack
       let nearbyFoe = checkNearby(-1, getCanvas().tokens?.get(this.tokenId), configSettings.optionalRules.nearbyFoe);
       // special case check for thrown weapons within 5 feet (players will forget to set the property)
       if (this.item.data.data.properties?.thr) {
@@ -797,7 +802,7 @@ export class Workflow {
           return true;
         if ((expireList.includes("1Reaction") && specialDuration.includes("1Reaction")) && target.actor?.uuid !== this.actor.uuid) return true;
         for (let dt of this.damageDetail) {
-          if (expireList.includes(`isDamaged.${dt.type}`) && wasDamaged && specialDuration.includes(`isDamaged.${dt.type}`)) return true;
+          if (expireList.includes(`isDamaged`) && wasDamaged && specialDuration.includes(`isDamaged.${dt.type}`)) return true;
         }
         if (!this.item) return false;
         if (this.item.hasSave && expireList.includes("isSaveSuccess") && specialDuration.includes(`isSaveSuccess`) && this.saves.has(target)) return true;
@@ -1367,10 +1372,10 @@ export class Workflow {
     // make sure saving throws are renabled.
 
     const playerMonksTB = installedModules.get("monks-tokenbar") && configSettings.playerRollSaves === "mtb";
-    const gmMonksTB = installedModules.get("monks-tokenbar") && configSettings.rollNPCSaves === "mtb";
     let monkRequests: Token[] = [];
     let showRoll = configSettings.autoCheckSaves === "allShow";
     try {
+
       for (let target of this.hitTargets) {
         if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
         let advantage: Boolean | undefined = undefined;
@@ -1397,9 +1402,17 @@ export class Workflow {
           }
         }
 
-        var player = playerFor(target);
+        var player = playerFor(target); 
         if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
-        const promptPlayer = (!player?.isGM && configSettings.playerRollSaves !== "none") || (player?.isGM && configSettings.rollNPCSaves !== "auto");
+        let promptPlayer = (!player?.isGM && configSettings.playerRollSaves !== "none"); 
+        let GMprompt;
+        let gmMonksTB;
+        if (player?.isGM) {
+          const monksTBSetting = target.document.isLinked ? configSettings.rollNPCLinkedSaves === "mtb" : configSettings.rollNPCSaves === "mtb"
+          gmMonksTB = installedModules.get("monks-tokenbar") && monksTBSetting;
+          GMprompt = (target.document.isLinked ? configSettings.rollNPCLinkedSaves : configSettings.rollNPCSaves);
+          promptPlayer = GMprompt !== "auto";
+        }
         if ((!player?.isGM && playerMonksTB) || (player?.isGM && gmMonksTB)) {
           promises.push(new Promise((resolve) => {
             let requestId = target.id;
@@ -1414,11 +1427,11 @@ export class Workflow {
             let requestId = target.actor?.id ?? randomID();
             const playerId = player?.id;
             if (["letme", "letmeQuery"].includes(configSettings.playerRollSaves) && installedModules.get("lmrtfy")) requestId = randomID();
-            if (["letme", "letmeQuery"].includes(configSettings.rollNPCSaves) && installedModules.get("lmrtfy")) requestId = randomID();
+            if (["letme", "letmeQuery"].includes(GMprompt) && installedModules.get("lmrtfy")) requestId = randomID();
 
             this.saveRequests[requestId] = resolve;
 
-            requestPCSave(this.item.data.data.save.ability, rollType, player, target.actor, advantage, this.item.name, rollDC, requestId)
+            requestPCSave(this.item.data.data.save.ability, rollType, player, target.actor, advantage, this.item.name, rollDC, requestId, GMprompt)
 
             // set a timeout for taking over the roll
             if (configSettings.playerSaveTimeout > 0) {
@@ -1491,6 +1504,15 @@ export class Workflow {
       let saved = rollTotal >= rollDC;
       if (this.checkSuperSaver(target.actor, this.item.data.data.save.ability))
         this.superSavers.add(target);
+      if (this.item.data.flags["midi-qol"]?.isConcentrationCheck) {
+        const checkBonus = getProperty(target, "actor.data.flags.midi-qol.concentrationSaveBonus");
+        if (checkBonus) {
+          const rollBonus = (await new Roll(checkBonus, target.actor?.getRollData()).evaluate({async: true})).total;
+          rollTotal += rollBonus;
+          rollDetail.formula += ` + ${checkBonus}`
+        }
+      }
+
       if (rollTotal >= rollDC) this.saves.add(target);
       else this.failedSaves.add(target);
 

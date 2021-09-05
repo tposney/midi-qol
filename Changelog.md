@@ -1,7 +1,23 @@
+## 0.8.49
+* Added additional option for GM saves. You can specify auto/prompted rolls for linked/unlinked tokens separately. So boss tokens (which might be linked) will can get special treatment for saving throws.
+* Added flags.midi-qol.ignoreNearbyFoes which, when set, means disadvantage from nearby foes wont affect the actor.
+* Fall back to midi-qol internal concentration when convenient effects/cub not setup as expected.
+* Added support for the levels moudle collision checking (which incorporates wall height/floors etc) - in walls block settings (optional rules - center + Levels). This works for templates and range checking. If levelsvolumetrictemplates is installed it will take over the template checking.
+* Support for levels-autocover (choose check + levels in option rules).
+* Support for levelsvolumetrictemplates when auto-targeting templates.
+* Added flags.midi-qol.concentrationSaveBonus, a roll expression, which is added to any midi-qol rolled concentration saves (auto, letme, monks, prompted). The roll will display without the bonus on roll card, but the save result display will reflect the bonus. The revised saving throw formula is available in the tooltip on the save results card.
+* Fix for concentration, when convenient effects not setup as expected, throwing an error.
+* Fix for special duration 1Spell and non attack/damage spells.
+* Fix for distance measuring including height when 5105 measuring set.
+* Fix for isDamaged.damageType special duration, e.g. isDamaged.fire.
+* Fix for rectangular measured templates - walls blocking measured from the center of the template instead of the corner.
+
+Notes: When calculating walls blocking and cover you can either use levels-autocover (which is center to center) or dnd5e-helpers which does not support walls/floors from levels, but not both.
+
 ## 0.8.48
 * Fix for sneak attack not correctly recording that a sneak attack has been made in the current round. Seems to have broken in 0.8.9+
 * Reaction item rolls will now target the attacker if the reaction item has an appropriate target type, e.g. hellish rebuke. For the caster the target will be set when casting so they can see who they hit.
-* If dnd-helpers 3.0.0 or later is installed, there are 2 new options for walls blocking ranged attacks, 4points - an attack will be possible if any of the corners of the target token are visible, 4point+AC - target AC will be modified by the cover that the target has. You can disable the dnd-helpers apply AC setting, it will be automatically included by midi-qol when calculating an rwak/mwak/rsak/rsak. The rest of the dnd5e-helpers settings will be used when calculating cover including wall and tile settings. The to hit card will show any armor plusses due to cover. This should be regarded as experimental.
+* If dnd-helpers 3.0.0 or later is installed, there are 2 new options for walls blocking ranged attacks, dnd5e-helpers - an attack will be possible if any of the corners of the target token are visible, dnd5eHelpers+AC - target AC will be modified by the cover that the target has. You can disable the dnd-helpers apply AC setting, it will be automatically included by midi-qol when calculating an rwak/mwak/rsak/rsak. The rest of the dnd5e-helpers settings will be used when calculating cover including wall and tile settings. The to hit card will show any armor plusses due to cover. This should be regarded as experimental.
 
 ## 0.8.47
 * Fix for mac crit damage dice and bonus critical damage dice.

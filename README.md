@@ -309,9 +309,11 @@ flags.midi-qol...... need to be set via **CUSTOM** (preferred) or **OVERRIDE**. 
 * flags.midi-qol.advantage.deathSave - gives advantage on death saves
 Similarly for disadvantage.  
 Advantage/disadvantage on checks for an ability check also grants advantage on the corresponding skill rolls.  
+* flags.midi-qol.advantage.concentration/midi-qol.disadvantage.concentration: advantage/disadvantage on cocentration saves
+* flags.midi-qol.concentrationSaveBonus, a roll expression, which is added to concentration saves (auto, letme, monks, prompted). The roll will display without the bonus on the roll card, but the save result display will reflect the bonus. The revised saving throw formula is available in the tooltip on the save results card.
 
 flags.midi-qol.fail.all/ability.all/ability.check.all/ability.save.all/skill.all etc to auto fail a given roll.  
-
+* flags.midi-qol.ingoreNearbyFoes - when set cancels ranged attack disadvantage from a nearby enemy.
 * flags.midi-qol.fail.spell.all
 * flags.midi-qol.fail.spell.vocal|verbal/somatic/material  
 Fails attempts to cast spells with the specified components (or all).
@@ -319,7 +321,6 @@ Fails attempts to cast spells with the specified components (or all).
 * flags.midi-qol.grants.advantage.attack.all
 * flags.midi-qol.grants.advantage.attack.mwak/rwak/msak/rsak  
 Gives the attacker advantage on attacks made against the target. Midi-qol only checks the first target in the event that multiple tokens are selected.
-
 
 * flags.midi-qol.critical.all
 * flags.midi-qol.critical.mwak/rwak/msak/rsak/other
@@ -343,6 +344,8 @@ flags.midi-qol.DR.all CUSTOM 3, will give 3 points of damage reduction to all in
 Negative DR is not supported (i.e. to increase damage taken).  
 
 flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver will take 0.5/0 damage on failed/successful save, compared to the normal 1/0.5. Useful for things like rogue's evasion class feature.  
+
+flags.midi-qol.ignoreNearbyFoes which, when set, means disadvantage from nearby foes (optional rules) will not affect the actor.
 
 **Optional Bonus Effects**	
 Optional flags cause a dialog to be raised when an opportunity to apply the effect comes up. So an optional attack bonus prompts the attacker after the attack roll is made, but before the attack is adjudicated, givin the attacker the option to modify the roll. Effects last for one application unless the count flag is set.
