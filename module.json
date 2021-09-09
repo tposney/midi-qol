@@ -2,7 +2,7 @@
   "name": "{{name}}",
   "title": "{{title}}",
   "description": "{{description}}",
-  "systems": ["dnd5e", "sw5e"],
+  "system": ["dnd5e", "sw5e"],
   "version": "{{version}}",
   "author": "tposney",
   "socket": true,
