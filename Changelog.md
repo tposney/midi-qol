@@ -12,7 +12,7 @@
 
 * **New** support for Over Time effects - which only apply to actors in combat.
 ```
-flags.midi-qol.OverTime OVERRIDE <specification>
+flags.midi-qol.OverTime OVERRIDE specification
 ```
 where specification is a comma separated list of fields.
   * turn=start/end (check at the start or end of the actor's turn) The only required field.
