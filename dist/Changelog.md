@@ -1,3 +1,54 @@
+### 0.8.50
+* Fix for Combat Utility Belt concentration not toggling from status HUD.
+* Added Support for ChangeLogs module.
+* Reinstated bug reporter support.
+* Some efficiency options for latest volumetric template checking and AoE spells.
+* Fix for "isHit" special duration.
+* Fix for adv/dis keys on "tool" rolls.
+* Fix for sw5e and an inadvertent dnd5e reference.
+* Reactions updates
+  * only prepared spells are selected for reaction rolls.
+  * only 1 reaction per combat round is allowed. If not in combat you get a reaction each time.
+
+* **New** support for Over Time effects - which only apply to actors in combat.
+```
+flags.midi-qol.OverTime OVERRIDE <specification>
+```
+where specification is a comma separated list of fields.
+  * turn=start/end (check at the start or end of the actor's turn) The only required field.
+  Saving Throw: the entire active effect will be removed when the saving throw is made (or the effect duration expires)
+  * saveAbility=dex/con/etc The actor's ability to use for rolling the saving throw
+  * saveDC=number
+  * saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
+  * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is made.
+  Damage:
+  * damageRoll=roll expression, e.g. 3d6
+  * damageType=piercing/bludgeoning etc
+  If the effect is configured to be stackable with a stack count, of say 2, the damage will 3d6 + 3d6.
+  *label=string - displayed when rolling the saving throw
+
+  The most common use for this feature is damage over time effects. However you can include an OverTime effect with just a save can be used to apply any other changes (in the same active effect) until a save is made (Hold Person).
+
+    For non-transfer effects (things applied to a target) you can use @field references, e.g.
+  ```
+  saveDC=@attributes.spelldc
+  damageRoll=1d6+@abilities.str.mod
+  ```
+  Examples: 
+  * Longsword of Wounding (Should have stackable set to "each stack increases stack count by 1")
+  ```
+  flags.midi-qol.OverTime OVERRIDE turn=start,damageBeforeSave=true,label=Wounded,damageRoll=1d4,damageType=necrotic,saveDC=15,saveAbility=con
+  ```
+  * Devil's Glaive (Infernal Wound) (Should have stackable set to "each stack increases stack count by 1")
+  ```
+  flags.midi-qol.OverTime OVERRIDE turn=end,damageRoll=1d10+3,type=slashing,saveDC=12,saveAbility=con,label=Infernal Wound
+  ```
+  * Hold Person (1 effect, but 2 changes both of which get removed on save)
+  ```
+  flags.midi-qol.OverTime OVERRIDE turn=end,saveAbility=wis,saveDC=@attributes.spelldc,saveMagic=true,label=Hold Person
+  macro.CE CUSTOM Paralyzed
+  ```
+
 ## 0.8.49
 * Added additional option for GM saves. You can specify auto/prompted rolls for linked/unlinked tokens separately. So boss tokens (which might be linked) will can get special treatment for saving throws.
 * Added flags.midi-qol.ignoreNearbyFoes which, when set, means disadvantage from nearby foes wont affect the actor.

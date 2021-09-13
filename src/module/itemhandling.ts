@@ -1,4 +1,4 @@
-import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas } from "../midi-qol.js";
+import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
 import { checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
@@ -6,9 +6,9 @@ import { dice3dEnabled, installedModules } from "./setupModules.js";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
-  debug("Entering item attack roll ", event, workflow, Workflow._workflows);
+  if (debugEnabled > 1) debug("Entering item attack roll ", event, workflow, Workflow._workflows);
   if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
-    if (enableWorkflow) warn("Roll Attack: No workflow for item ", this.name, this.id, event);
+    if (enableWorkflow && debugEnabled > 0) warn("Roll Attack: No workflow for item ", this.name, this.id, event);
     const roll = await wrapped(options);
     // if (configSettings.keepRollStats) gameStats.addAttackRoll(roll, this);
     return roll;
@@ -114,8 +114,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
 export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, powerLevel = null, versatile = null, options = {} } = {}) {
   let workflow = Workflow.getWorkflow(this.uuid);
   if (!enableWorkflow || !workflow) {
-    if (!workflow)
-      warn("Roll Damage: No workflow for item ", this.name);
+    if (!workflow && debugEnabled > 0) warn("Roll Damage: No workflow for item ", this.name);
     return await wrapped({ event, versatile, options })
   }
   const midiFlags = workflow.actor.data.flags["midi-qol"]
@@ -157,7 +156,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
   if (powerLevel) workflow.rollOptions.spellLevel = powerLevel;
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
-  warn("rolling damage  ", this.name, this);
+  if (debugEnabled > 0) warn("rolling damage  ", this.name, this);
 
   if (!Hooks.call("midi-qol.preDamageRoll", this, workflow)) {
     console.warn("midi-qol | Damaage roll blocked via pre-hook");
@@ -291,7 +290,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (game.system.id === "dnd5e" && requiresTargets && myTargets && myTargets.size > allowedTargets) {
     shouldAllowRoll = false;
     ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
-    warn(`${game.user?.name} ${i18nFormat("midi-qol.midi-qol.wrongNumberTargets", { allowedTargets })}`)
+    if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat("midi-qol.midi-qol.wrongNumberTargets", { allowedTargets })}`)
     return null;
   }
   if (this.type === "spell" && shouldAllowRoll) {
@@ -346,7 +345,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
   if (!shouldAllowRoll) {
     ui.notifications?.warn(i18n("midi-qol.noTargets"));
-    warn(`${game.user?.name} attempted to roll with no targets selected`)
+    if (debugEnabled > 0) warn(`${game.user?.name} attempted to roll with no targets selected`)
     return;
   }
 
@@ -412,7 +411,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       workflow.next(WORKFLOWSTATES.NONE);
     } 
     */
-    debug("Item Roll: showing card", result, workflow);
+    if (debugEnabled > 1) debug("Item Roll: showing card", result, workflow);
   }
   return result;
 }
@@ -472,7 +471,7 @@ export async function showItemInfo() {
 
 
 export async function showItemCard(showFullCard: boolean, workflow: Workflow, minimalCard = false, createMessage = true) {
-  warn("show item card ", this, this.actor, this.actor.token, showFullCard, workflow);
+  if (debugEnabled > 0) warn("show item card ", this, this.actor, this.actor.token, showFullCard, workflow);
 
   let token = this.actor.token;
   if (!token) token = this.actor.getActiveTokens()[0];
@@ -520,7 +519,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
   const template = `modules/midi-qol/templates/${templateType}-card.html`;
   const html = await renderTemplate(template, templateData);
-  debug(" Show Item Card ", configSettings.useTokenNames, (configSettings.useTokenNames && token) ? token?.data?.name : this.actor.name, token, token?.data.name, this.actor.name)
+  if (debugEnabled > 1) debug(" Show Item Card ", configSettings.useTokenNames, (configSettings.useTokenNames && token) ? token?.data?.name : this.actor.name, token, token?.data.name, this.actor.name)
   let theSound = configSettings.itemUseSound;
   if (this.type === "weapon") theSound = configSettings.weaponUseSound;
   else if (["spell", "power"].includes(this.type)) theSound = configSettings.spellUseSound;

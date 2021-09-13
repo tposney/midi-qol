@@ -1,7 +1,7 @@
-import { warn, error, debug, i18n } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling.js";
 import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating, MQfromUuid, expireRollEffect } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating, MQfromUuid, expireRollEffect, updateReactionRounds, processOverTime } from "./utils.js";
 import { configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 
@@ -83,7 +83,7 @@ export let readyHooks = async () => {
   })
 
   Hooks.on("renderChatMessage", (message, html, data) => {
-    debug("render message hook ", message.id, message, html, data);
+    if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);
     diceSoNiceHandler(message, html, data);
   })
 
@@ -166,9 +166,9 @@ async function handleRemoveConcentration(effect, tokens) {
 }
 
 export let initHooks = () => {
-  warn("Init Hooks processing");
+  if (debugEnabled > 0) warn("Init Hooks processing");
   Hooks.on("preCreateChatMessage", (message: ChatMessage, data, options, user) => {
-    debug("preCreateChatMessage entering", message, data, options, user)
+    if (debugEnabled > 1) debug("preCreateChatMessage entering", message, data, options, user)
     // recalcCriticalDamage(data, options);
     // processpreCreateBetterRollsMessage(message, data, options, user);
     nsaMessageHandler(message, data, options, user);
@@ -176,7 +176,7 @@ export let initHooks = () => {
   })
 
   Hooks.on("createChatMessage", (message: ChatMessage, options, user) => {
-    debug("Create Chat Meesage ", message.id, message, options, user)
+    if (debugEnabled > 1) debug("Create Chat Meesage ", message.id, message, options, user)
     processCreateBetterRollsMessage(message, user);
     processItemCardCreation(message, user);
     return true;
@@ -192,10 +192,12 @@ export let initHooks = () => {
   Hooks.on("updateCombat", (combat, data, options, user) => {
     untargetAllTokens(combat, data.options, user);
     untargetDeadTokens();
+    updateReactionRounds(combat, data, options, user);
+    processOverTime(combat, data, options, user);
   })
 
   Hooks.on("renderChatMessage", (message, html, data) => {
-    debug("render message hook ", message.id, message, html, data);
+    if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);
     hideStuffHandler(message, html, data);
     chatDamageButtons(message, html, data);
     processUndoDamageCard(message, html, data);
@@ -204,6 +206,19 @@ export let initHooks = () => {
     betterRollsButtons(message, html, data);
   })
 
+  Hooks.on("midi-qol.RollComplete", (workflow) => {
+    const wfuuid = workflow.uuid;
+
+    if (overTimeEffectsToDelete[wfuuid]) {
+      if (workflow.saves.size === 1) {
+        let effectId = overTimeEffectsToDelete[wfuuid].effectId;
+        let actor = overTimeEffectsToDelete[wfuuid].actor;
+        actor.deleteEmbeddedDocuments("ActiveEffect", [effectId]);
+      }
+      delete overTimeEffectsToDelete[wfuuid];
+    }
+    if (debugEnabled > 1) debug("Finished the roll", wfuuid)
+  })
   Hooks.on("applyActiveEffect", midiCustomEffect);
 
   Hooks.on("renderItemSheet", (app, html, data) => {
@@ -254,10 +269,118 @@ export let initHooks = () => {
   })
 }
 
+export const saveJSONData = {
+  "name": "OverTime Item",
+  "type": "weapon",
+  "img": "./modules/midi-qol/icons/concentrate.png",
+  "data": {
+    "description": {
+      "value": "",
+      "chat": "",
+      "unidentified": ""
+    },
+    "source": "",
+    "quantity": 1,
+    "weight": 0,
+    "price": 0,
+    "attuned": false,
+    "attunement": 0,
+    "equipped": false,
+    "rarity": "",
+    "identified": true,
+    "activation": {
+      "type": "special",
+      "cost": 0,
+      "condition": ""
+    },
+    "duration": {
+      "value": null,
+      "units": ""
+    },
+    "target": {
+      "value": null,
+      "width": null,
+      "units": "",
+      "type": "creature"
+    },
+    "range": {
+      "value": null,
+      "long": null,
+      "units": ""
+    },
+    "uses": {
+      "value": 0,
+      "max": "0",
+      "per": ""
+    },
+    "consume": {
+      "type": "",
+      "target": "",
+      "amount": null
+    },
+    "preparation": {"mode": "atwill"},
+    "ability": "",
+    "actionType": "save",
+    "attackBonus": 0,
+    "chatFlavor": "",
+    "critical": null,
+    "damage": {
+      "parts": [],
+      "versatile": ""
+    },
+    "formula": "",
+    "save": {
+      "ability": "con",
+      "dc": 10,
+      "scaling": "flat"
+    },
+    "armor": {
+      "value": 0
+    },
+    "hp": {
+      "value": 0,
+      "max": 0,
+      "dt": null,
+      "conditions": ""
+    },
+    "weaponType": "simpleM",
+    "properties": {
+      "ada": false,
+      "amm": false,
+      "fin": false,
+      "fir": false,
+      "foc": false,
+      "hvy": false,
+      "lgt": false,
+      "lod": false,
+      "mgc": false,
+      "rch": false,
+      "rel": false,
+      "ret": false,
+      "sil": false,
+      "spc": false,
+      "thr": false,
+      "two": false,
+      "ver": false,
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false
+    },
+    "proficient": false,
+    "attributes": {
+      "spelldc": 10
+    }
+  },
+  "effects": [],
+  "sort": 0,
+  "flags": {
+  }
+};
+
 export const itemJSONData = {
   "name": "Concentration Check - Midi QOL",
   "type": "weapon",
-  "img": "modules/midi-qol/icons/concentrate.png",
+  "img": "./modules/midi-qol/icons/concentrate.png",
   "data": {
     "description": {
       "value": "",

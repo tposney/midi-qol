@@ -1,6 +1,6 @@
 import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON } from "../settings.js"
  import { configSettings } from "../settings.js"
-import { warn, i18n, error, debug, gameStats } from "../../midi-qol.js";
+import { warn, i18n, error, debug, gameStats, debugEnabled } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
 export class ConfigPanel extends FormApplication {
   
@@ -68,7 +68,7 @@ export class ConfigPanel extends FormApplication {
       }
     };
 
-    warn("Config Panel: getdata ", data)
+    if (debugEnabled > 0) warn("Config Panel: getdata ", data)
     return data;
   }
 

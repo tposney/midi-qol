@@ -1,4 +1,4 @@
-import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats } from "../midi-qol.js";
+import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats, debugEnabled } from "../midi-qol.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { nsaFlag, coloredBorders,  addChatDamageButtons, configSettings, forceHideRoll } from "./settings.js";
@@ -7,7 +7,7 @@ export const MAESTRO_MODULE_NAME = "maestro";
 export const MODULE_LABEL = "Maestro";
 
 export function mergeCardSoundPlayer(message, update, options, user) {
-  debug("Merge card sound player ", message.data, getProperty(update, "flags.midi-qol.playSound"), message.data.sound)
+  if (debugEnabled > 1) debug("Merge card sound player ", message.data, getProperty(update, "flags.midi-qol.playSound"), message.data.sound)
   const firstGM = game.user; //game.users.find(u=> u.isGM && u.active);
   if (game.user !== firstGM) return true;
   const updateFlags = getProperty(update, "flags.midi-qol") || {};
@@ -17,7 +17,7 @@ export function mergeCardSoundPlayer(message, update, options, user) {
     //@ts-ignore .sounds
     const sound = playlist?.sounds.find(s => s.id === midiqolFlags.sound)
     const delay = (dice3dEnabled() && midiqolFlags?.waitForDiceSoNice && [MESSAGETYPES.HITS].includes(midiqolFlags.type)) ? 500 : 0;
-    debug("mergeCardsound player ", update, playlist, sound, sound ? 'playing sound' : 'not palying sound', delay)
+    if (debugEnabled > 1) debug("mergeCardsound player ", update, playlist, sound, sound ? 'playing sound' : 'not palying sound', delay)
 
     if (sound && game.user?.isGM) {
       setTimeout(() => {
@@ -36,7 +36,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   const brFlags: any = flags?.betterrolls5e;
   if (!brFlags) return true;
   //@ts-ignore
-  debug("process precratebetteerrollscard ", message.data, installedModules["betterrolls5e"], message.data.content?.startsWith('<div class="dnd5e red-full chat-card"'))
+  if (debugEnabled > 1) debug("process precratebetteerrollscard ", message.data, installedModules["betterrolls5e"], message.data.content?.startsWith('<div class="dnd5e red-full chat-card"'))
 
   let actorId = brFlags.actorId;
   let tokenId = brFlags.tokenId;
@@ -149,7 +149,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
 export let diceSoNiceHandler = async (message, html, data) => {
   //@ts-ignore game.dice3d
   if (!dice3dEnabled() || game.dice3d?.messageHookDisabled) return;
-  debug("Dice so nice handler ", message, html, data);
+  if (debugEnabled > 1) debug("Dice so nice handler ", message, html, data);
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
   let rollDice = game.user?.isGM ||
     (!message.data.blind && (message.isAuthor || message.data.whisper.length === 0 || message.data.whisper?.includes(game.user?.id)));
@@ -162,7 +162,7 @@ export let diceSoNiceHandler = async (message, html, data) => {
   }
 
   if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
-  debug("dice so nice handler - non-merge card", html)
+  if (debugEnabled > 1) debug("dice so nice handler - non-merge card", html)
   html.hide();
   Hooks.once("diceSoNiceRollComplete", (id) => {
     let savesDisplay = $(html).find(".midi-qol-saves-display").length === 1;
@@ -226,7 +226,7 @@ export let nsaMessageHandler = (message, data, ...args) => {
   let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u => u.active)?.map(u => u.id);
   let currentIds = message.data.whisper.map(u => typeof (u) === "string" ? u : u.id);
   gmIds = gmIds.filter(id => !currentIds.includes(id));
-  debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmids ", gmIds)
+  if (debugEnabled > 1) debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmids ", gmIds)
   if (gmIds.length > 0) message.data.update({ "whisper": currentIds.concat(gmIds) });
   // TODO check this data.whisper = data.whisper.concat(gmIds);
   return true;
@@ -271,7 +271,7 @@ let _onTargetSelect = (event) => {
 export let hideRollRender = (msg, html, data) => {
   if (forceHideRoll && (msg.data.whisper.length > 0 || msg.data?.blind)) {
     if (!game.user?.isGM && !msg.isAuthor && msg.data.whisper.indexOf(game.user?.id) === -1) {
-      warn("hideRollRender | hiding message", msg.data.whisper)
+      if (debugEnabled > 0) warn("hideRollRender | hiding message", msg.data.whisper)
       html.hide();
     }
   }
@@ -282,7 +282,7 @@ export let hideRollUpdate = (message, data, diff, id) => {
   if (forceHideRoll && message.data.whisper.length > 0 || message.data.blind) {
     if (!game.user?.isGM && ((!message.isAuthor && (message.data.whisper.indexOf(game.user?.id) === -1) || message.data.blind))) {
       let messageLi = $(`.message[data-message-id=${data._id}]`);
-      warn("hideRollUpdate: Hiding ", message.data.whisper, messageLi)
+      if (debugEnabled > 0) warn("hideRollUpdate: Hiding ", message.data.whisper, messageLi)
       messageLi.hide();
       //@ts-ignore
       if (window.ui.sidebar.popouts.chat) {
@@ -296,7 +296,7 @@ export let hideRollUpdate = (message, data, diff, id) => {
 };
 
 export let hideStuffHandler = (message, html, data) => {
-  debug("hideStuffHandler message: ", message.id, message)
+  if (debugEnabled > 1) debug("hideStuffHandler message: ", message.id, message)
 
   if ((forceHideRoll || configSettings.mergeCard) && message.data.blind && !game.user?.isGM) {
     html.hide();
@@ -437,7 +437,7 @@ export function betterRollsButtons(message, html, data) {
 }
 
 export let chatDamageButtons = (message, html, data) => {
-  debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll?.type, message.data.flags)
+  if (debugEnabled > 1) debug("Chat Damage Buttons ", addChatDamageButtons, message, message.data.flags?.dnd5e?.roll?.type, message.data.flags)
   const shouldAddButtons = !addChatDamageButtons
     || addChatDamageButtons === "both"
     || (addChatDamageButtons === "gm" && game.user?.isGM)
@@ -454,7 +454,7 @@ export let chatDamageButtons = (message, html, data) => {
       itemId = message.data.flags.dnd5e.roll.itemId;
       item = game.actors?.get(actorId)?.items.get(itemId);
       if (!item) {
-        warn("Damage roll for non item");
+        if (debugEnabled > 0) warn("Damage roll for non item");
         return;
       }
     }
@@ -475,7 +475,7 @@ export let chatDamageButtons = (message, html, data) => {
 
 export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemUuid, tag = "damage", toMatch = ".dice-total", style = "margin: 0px;") {
 
-  debug("addChatDamageButtons", totalDamage, damageList, html, actorId, itemUuid, toMatch, html.find(toMatch))
+  if (debugEnabled > 1) debug("addChatDamageButtons", totalDamage, damageList, html, actorId, itemUuid, toMatch, html.find(toMatch))
   const btnContainer = $('<span class="dmgBtn-container-mqol"></span>');
   let btnStylinggreen = `width: 20%; height:90%; background-color:lightgreen; line-height:1px; ${style}`;
   let btnStylingred = `width: 20%; height:90%; background-color:red; line-height:1px; ${style}`;
@@ -540,7 +540,7 @@ export function processItemCardCreation(message, user) {
       workflow.next(WORKFLOWSTATES.NONE);
     }
   }
-  debug("Doing item card creation", configSettings.useCustomSounds, configSettings.itemUseSound, midiFlags?.type)
+  if (debugEnabled > 1) debug("Doing item card creation", configSettings.useCustomSounds, configSettings.itemUseSound, midiFlags?.type)
   if (configSettings.useCustomSounds && midiFlags?.type === MESSAGETYPES.ITEM) {
     const playlist = game.playlists?.get(configSettings.customSoundsPlaylist);
     //@ts-ignore playlist.sounds

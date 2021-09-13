@@ -112,7 +112,9 @@ async function doRollSkill(wrapped, ...args) {
   }
   procOptions.chatMessage = false;
   let result = await wrapped.call(this, skillId, procOptions);
-  result = await bonusCheck(this, result, "skill")
+  let newResult = await bonusCheck(this, result, "skill")
+  if (newResult === result) newResult = await bonusCheck(this, result, "check");
+  result = newResult;
   if (chatMessage !== false && result) {
     result.toMessage({speaker: getSpeaker(this), "flags.dnd5e.roll": {type: "skill", skillId }});
     expireRollEffect.bind(this)("Skill", skillId);
@@ -348,14 +350,32 @@ function procAdvantageSkill(actor, skillId, options: Options): Options {
 let _midiATRefresh = debounce(__midiATIRefresh, 20);
 
 function __midiATIRefresh(template) {
+  if (!canvas?.tokens) return;
   if (game.user && !template.data.flags?.levels?.elevation) 
     setProperty(template.data.flags, "levels.elevation", getProperty(game.user, "data.flags.midi-qol.elevation") ?? 0)
   if (installedModules.get("levelsvolumetrictemplates")) {
-    //@ts-ignore
-    VolumetricTemplates.compute3Dtemplate(template)
+    // Filter which tokens to pass
+    let distance = template.data.distance;
+    const dimensions = getCanvas().dimensions || { size: 1, distance: 1 };
+    distance *= dimensions.size / dimensions.distance;
+    const tokensToCheck = canvas.tokens.placeables?.filter(tk => {
+      const r: Ray = new Ray({x: tk.x + tk.data.width * dimensions.size, y: tk.y + tk.data.height * dimensions.size}, {x: template.data.x, y: template.data.y});
+      const maxExtension = (1 + Math.max(tk.data.width , tk.data.height)) * dimensions.size;
+      const centerDist = r.distance;
+      // console.log(tk.name, centerDist, distance, maxExtension, r)
+      if (centerDist > distance + maxExtension) return false;
+      return true;
+    })
+
+    if (tokensToCheck.length > 0) {
+      //@ts-ignore compute3Dtemplate(t, tokensToCheck = canvas.tokens.placeables)
+      VolumetricTemplates.compute3Dtemplate(template, tokensToCheck);
+    }
+
   } else {
     templateTokens({x: template.data.x, y: template.data.y, shape: template.shape});
   }
+
 }
 
 function midiATRefresh(wrapped) {

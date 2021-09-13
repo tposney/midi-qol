@@ -1,5 +1,5 @@
 import { itemDeleteCheck, itemRollButtons } from "./settings.js";
-import { i18n, debug, log, warn } from "../midi-qol.js";
+import { i18n, debug, log, warn, debugEnabled } from "../midi-qol.js";
 import { showItemInfo } from "./itemhandling.js";
 import { itemHasDamage, itemIsVersatile } from "./utils.js";
 
@@ -137,7 +137,7 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
           buttons.find("button").click({ app, data, html }, async (ev) => {
               ev.preventDefault();
               ev.stopPropagation();
-              debug("roll handler ", ev.target.dataset.action);
+              if (debugEnabled > 1) debug("roll handler ", ev.target.dataset.action);
               let event = { shiftKey: ev.shiftKey == true, ctrlKey: ev.ctrlKey === true, metaKey: ev.metaKey === true, altKey: ev.altKey === true};
               // If speed rolls are off
               switch (ev.target.dataset.action) {
@@ -220,7 +220,7 @@ function addTidy5eItemSheetButtons(app, html, data) {
       buttons.find(".button").click({ app, data, html }, async (ev) => {
         ev.preventDefault();
         ev.stopPropagation();
-        debug("roll handler ", ev.target.dataset.action);
+        if (debugEnabled > 1) debug("roll handler ", ev.target.dataset.action);
         let event = { shiftKey: ev.shiftKey, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, altKey: ev.altKey };
         // If speed rolls are off
         switch (ev.target.dataset.action) {

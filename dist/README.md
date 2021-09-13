@@ -364,6 +364,46 @@ Values for the optional roll bonus flags include a dice expression, a number, re
 ## Reactions
 If the config settings for reaction checks is enabled midi will check a target that is hit by an attack for any items/feautres/spells that have an activation type of reaction and prompt the target if they want to use any of their reactions, which will then initiate a midi workflow for that item/feature/spell targeting the attacker. Currently does not support spells from magic items.
 
+## flags.midi-qol.OverTime
+Intended for damage over time effects or until save effects
+```
+flags.midi-qol.OverTime OVERRIDE specification
+```
+where specification is a comma separated list of fields.
+  * turn=start/end (check at the start or end of the actor's turn) The only required field.
+  Saving Throw: the entire active effect will be removed when the saving throw is made (or the effect duration expires)
+  * saveAbility=dex/con/etc The actor's ability to use for rolling the saving throw
+  * saveDC=number
+  * saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
+  * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is made.
+  Damage:
+  * damageRoll=roll expression, e.g. 3d6
+  * damageType=piercing/bludgeoning etc
+  If the effect is configured to be stackable with a stack count, of say 2, the damage will 3d6 + 3d6.
+  *label=string - displayed when rolling the saving throw
+
+  The most common use for this feature is damage over time effects. However you can include an OverTime effect with just a save can be used to apply any other changes (in the same active effect) until a save is made (Hold Person).
+
+    For non-transfer effects (things applied to a target) you can use @field references, e.g.
+  ```
+  saveDC=@attributes.spelldc
+  damageRoll=1d6+@abilities.str.mod
+  ```
+  Examples: 
+  * Longsword of Wounding (Non-transfer effect, should have stackable set to "each stack increases stack count by 1")
+  ```
+  flags.midi-qol.OverTime OVERRIDE turn=start,damageBeforeSave=true,label=Wounded,damageRoll=1d4,damageType=necrotic,saveDC=15,saveAbility=con
+  ```
+  * Devil's Glaive (Infernal Wound) (Non-transfer effect, should have stackable set to "each stack increases stack count by 1")
+  ```
+  flags.midi-qol.OverTime OVERRIDE turn=end,damageRoll=1d10+3,type=slashing,saveDC=12,saveAbility=con,label=Infernal Wound
+  ```
+  * Hold Person (1 non-transfer effect, but 2 changes both of which get removed on save)
+  ```
+  flags.midi-qol.OverTime OVERRIDE turn=end,saveAbility=wis,saveDC=@attributes.spelldc,saveMagic=true,label=Hold Person
+  macro.CE CUSTOM Paralyzed
+  ```
+
 ## Bugs
 probably many however....
 * Language translations are not up to date.

@@ -11,9 +11,9 @@
  */
 
 // Import TypeScript modules
-import { registerSettings, fetchParams, configSettings, checkRule } from './module/settings.js';
+import { registerSettings, fetchParams, configSettings, checkRule, collectSettingData } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
-import { installedModules, setupModules } from './module/setupModules.js';
+import { checkModules, installedModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, readyPatching } from './module/patching.js';
 import { initHooks, readyHooks } from './module/Hooks.js';
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
@@ -63,6 +63,7 @@ export let MQdefaultDamageType;
 export let midiFlags: string[] = [];
 export let allAttackTypes: string[] = []
 export let gameStats: RollStats;
+export let overTimeEffectsToDelete = {};
 export const MESSAGETYPES = {
   HITS: 1,
   SAVES: 2,
@@ -169,8 +170,8 @@ Hooks.once('ready', function() {
   if (game.user?.isGM && game.modules.get("betterrolls5e")?.active && !installedModules.get("betterrolls5e")) {
     ui.notifications?.warn("Midi QOL requires better rolls to be version 1.6.6 or later");
   }
-  checkSocketLibInstalled();
-  checkCubInstalled();
+
+  checkModules();
   checkConcentrationSettings();
   readyHooks();
   readyPatching();
@@ -213,34 +214,6 @@ function setupMidiQOLApi() {
   }
 }
 
-export function checkSocketLibInstalled() {
-  if (game.user?.isGM && !installedModules.get("socketlib")) {
-    //@ts-ignore expected one argument but got 2
-    ui.notifications.error(i18n("midi-qol.NoSocketLib"), {permanent: true});
-  }
-}
-
-export function checkCubInstalled() {
-  return;
-  if (game.user?.isGM && configSettings.concentrationAutomation && !installedModules.get("combat-utility-belt")) {
-    let d = new Dialog({
-      // localize this text
-      title: i18n("midi-qol.confirm"),
-      content: i18n("midi-qol.NoCubInstalled"), 
-      buttons: {
-          one: {
-              icon: '<i class="fas fa-check"></i>',
-              label: "OK",
-              callback: ()=>{
-                configSettings.concentrationAutomation = false;
-              }
-          }
-      },
-      default: "one"
-    })
-    d.render(true);
-  }
-}
 
 export function checkConcentrationSettings() {
   const needToUpdateCubSettings = installedModules.get("combat-utility-belt") && (
@@ -286,7 +259,7 @@ function doRoll(event={shiftKey: false, ctrlKey: false, altKey: false, metaKey: 
     actor = game.actors?.get(speaker.actor ?? "");
   }
   if (!actor) {
-    warn("No actor found for ", speaker);
+    if (debugEnabled > 0) warn("No actor found for ", speaker);
     return;
   }
   let pEvent = {
@@ -398,14 +371,15 @@ function setupMidiFlags() {
     })
   }
   
-  midiFlags.push(`flags.midi-qol.optional.NAME.attack`)
-  midiFlags.push(`flags.midi-qol.optional.NAME.check`)
-  midiFlags.push(`flags.midi-qol.optional.NAME.save`)
-  midiFlags.push(`flags.midi-qol.optional.NAME.label`)
-  midiFlags.push(`flags.midi-qol.optional.NAME.skill`)
-  midiFlags.push(`flags.midi-qol.optional.NAME.count`)
+  midiFlags.push(`flags.midi-qol.optional.NAME.attack`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.check`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.save`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.label`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.skill`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.count`);
   midiFlags.push(`flags.midi-qol.uncanny-dodge`);
 
+  midiFlags.push(`flags.midi-qol.OverTime`);
   /*
   midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);

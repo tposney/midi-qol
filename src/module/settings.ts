@@ -1,6 +1,6 @@
 import { MacroData } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/data.mjs";
 import { _mergeUpdate } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/utils/helpers.mjs";
-import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, checkCubInstalled } from "../midi-qol.js";
+import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, debugEnabled } from "../midi-qol.js";
 import { ConfigPanel} from "./apps/ConfigPanel.js"
 
 export var itemRollButtons: boolean;
@@ -104,8 +104,8 @@ export function checkRule(rule: string) {
   return configSettings.optionalRulesEnabled && configSettings.optionalRules[rule];
 }
 
-export function exportSettingsToJSON() {
-  const data = {
+export function collectSettingData() {
+  let data = {
     configSettings,
     itemRollButtons,
     criticalDamage,
@@ -160,8 +160,11 @@ export function exportSettingsToJSON() {
 
       }
     });
+    return data;
+}
+export function exportSettingsToJSON() {
   const filename = `fvtt-midi-qol-settings.json`;
-  saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
+  saveDataToFile(JSON.stringify(collectSettingData(), null, 2), "text/json", filename);
 }
 
 export async function importSettingsFromJSON(json) {
@@ -182,7 +185,7 @@ export async function importSettingsFromJSON(json) {
 }
 
 export let fetchParams = () => {
-  debug("Fetch Params Loading");
+  if (debugEnabled > 1) debug("Fetch Params Loading");
   //@ts-ignore
   configSettings = game.settings.get("midi-qol", "ConfigSettings");
   if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["dice"];
@@ -230,7 +233,7 @@ export let fetchParams = () => {
   if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;
 
   enableWorkflow = Boolean(game.settings.get("midi-qol", "EnableWorkflow"));
-  warn("Fetch Params Loading", configSettings);
+  if (debugEnabled > 0) warn("Fetch Params Loading", configSettings);
   
   criticalDamage = String(game.settings.get("midi-qol", "CriticalDamage"));
   itemDeleteCheck = Boolean(game.settings.get("midi-qol", "ItemDeleteCheck"));
@@ -251,7 +254,6 @@ export let fetchParams = () => {
       console.warn("Concentration requires On Use Macro to be enabled. Enabling")
       configSettings.allowUseMacro = true;
     }
-    checkCubInstalled();
     checkConcentrationSettings();
   }
 }
@@ -331,8 +333,7 @@ const settings = [
     onChange: fetchParams,
     config: false
   }
-]
-
+];
 
 export const registerSettings = function() {
   // Register any custom module settings here

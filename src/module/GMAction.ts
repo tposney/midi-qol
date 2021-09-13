@@ -1,5 +1,5 @@
 import { configSettings } from "./settings.js";
-import { i18n, log, warn, gameStats, getCanvas, error } from "../midi-qol.js";
+import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled } from "../midi-qol.js";
 import { MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 
 export var socketlibSocket: any = undefined;
@@ -52,7 +52,7 @@ let deleteItemEffects = async (data: {targets, origin: string, ignore: string[]}
       try {
         await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToDelete.map(ef => ef.id));
       } catch (err) {
-        warn("delete effects failed ", err)
+        if (debugEnabled > 0) warn("delete effects failed ", err)
         // TODO can get thrown since more than one thing tries to delete an effect
       };
     }
@@ -129,7 +129,7 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
       actor = MQfromActorUuid(actorUuid)
 
     if (!actor) {
-      warn(`GMAction: reverse damage card could not find actor to update HP tokenUuid ${tokenUuid} actorUuid ${actorUuid}`);
+      if (debugEnabled > 0) warn(`GMAction: reverse damage card could not find actor to update HP tokenUuid ${tokenUuid} actorUuid ${actorUuid}`);
       continue;
     }
     let newHP = Math.max(0, oldHP - hpDamage);
@@ -185,7 +185,7 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
 
   //@ts-ignore
   const results = await Promise.allSettled(promises);
-  warn("GM action results are ", results)
+  if (debugEnabled > 0) warn("GM action results are ", results)
   if (["yesCard", "noCard"].includes(data.autoApplyDamage)) {
     const content = await renderTemplate("modules/midi-qol/templates/damage-results.html", templateData);
     const speaker: any = ChatMessage.getSpeaker();
