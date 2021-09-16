@@ -1,9 +1,14 @@
+### 0.8.53
+* Fix for Damage Reduction being applied to healing
+* Added condition=expression to midi-qol OverTime, the rest of the overtime effects are only processed if condition evaluates to true. e.g. @attributes.hp.value > 0. You can use any actor fields in the expression, but not dice rolls. Undefined fields (e.g. flags) will evaluate to 0.
+ Added sample Regeneration Item that checks for HP > 0 before applying.
+
 ### 0.8.52
 * Allow flags.midi-qol.OverTime.NAME (name optional) will allow multiple effects to be recorded on the actor (with or without NAME the effects will still be processed - this is just cosmetic).
 * Support rollType = check (default is save) in OverTime speicifcation, roll an ability check instead of an ability save.
 * Clarification:
   * "healing" and "temphp" work as damage types doing the obvious - healing damage is a way to implment regeneration. 
-  * @field replacement on active effects only works if DAE is enabled.
+  * @field replacement on overtime active effects only works if DAE is enabled.
 * Fix for longsword of wounding doing an unnecessary saving throw. Fix for Hold Person not being removed on a save.
 * Addition of regeneration feature which adds HP at the start of the turn. If the optional rule for incapacited targets is enabled HP will be regenerated only if the actor has at least 1 HP.
 * The ability to do a reaction now resets at the start of an actors next turn.

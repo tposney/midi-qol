@@ -4,7 +4,7 @@ import { log } from "../midi-qol.js";
 import { Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { socketlibSocket } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { actorAbilityRollPatching, baseEvent } from "./patching.js";
+import { actorAbilityRollPatching, baseEvent, readyPatching } from "./patching.js";
 import { concentrationCheckItemName, itemJSONData, saveJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
@@ -311,7 +311,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
         const resMult = getTraitMult(a, type, item);
         mult = mult * resMult;
         damageDetailItem.damageMultiplier = mult;
-        damage -= DR;
+        if (!["healing", "temphp"].includes(type)) damage -= DR; // Damage reduction does not apply to healing
         let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
 
         if (type.includes("temphp")) {
@@ -525,6 +525,24 @@ export function untargetDeadTokens() {
   }
 }
 
+function replaceAtFields(value, context, options: { blankValue: string | number, maxIterations: number } = { blankValue: "", maxIterations: 4 }) {
+  if (typeof value !== "string") return value;
+  let count = 0;
+  if (!value.includes("@")) return value;
+  let re = /@[\w\.]+/g
+  let result = duplicate(value);
+  result = result.replace("@item.level", "@itemLevel") // fix for outdate item.level
+  result = result.replace("@flags.midi-qol", "@flags.midiqol");
+  // Remove @data references allow a little bit of recursive lookup
+  do {
+    count += 1;
+    for (let match of result.match(re) || []) {
+      result = result.replace(match.replace("@data.", "@"), getProperty(context, match.slice(1)) ?? options.blankValue)
+    }
+  } while (count < options.maxIterations && result.includes("@"));
+  return result;
+}
+
 export function processOverTime(combat, data, options, user) {
   const prev = (combat.previous.round ?? 0) * 100 + (combat.previous.turn ?? 0);
   let testTurn = combat.previous.turn ?? 0;
@@ -558,8 +576,25 @@ export function processOverTime(combat, data, options, user) {
         let details: any = {};
         for (let part of parts) {
           const p = part.split("=");
-          details[p[0]] = p[1]
+          details[p[0]] = p.slice(1).join("=");
         }
+        if (details.turn === undefined) details.turn = "start";
+        if (details.condition) {
+          // const rollData = actor.getRollData();
+          // rollData.flags = actor.data.flags;
+          let rollData = actor.getRollData();
+          rollData.flags.midiqol = rollData.flags["midi-qol"];
+          let value = replaceAtFields(details.condition, rollData, { blankValue: 0, maxIterations: 3 });
+          let result;
+          try {
+            result = Roll.safeEval(value);
+          } catch(err) {
+            console.warn("midi-qol | error when evaluating overtime condition - assuming true", value, err)
+            result = true;
+          }
+          if (!result) continue;
+        }
+
         const changeTurnStart = details.turn === "start" ?? false;
         const changeTurnEnd = details.turn === "end" ?? false;
         if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart)) {
