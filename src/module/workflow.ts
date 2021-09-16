@@ -343,6 +343,7 @@ export class Workflow {
 
       case WORKFLOWSTATES.WAITFORATTACKROLL:
         if (this.item.data.type === "tool" && autoFastForwardAbilityRolls) {
+          this.processAttackEventOptions(this.event);
           const hasAdvantage = this.advantage && !this.disadvantage;
           const hasDisadvantage = this.disadvantage && !this.advantage;
           this.item.rollToolCheck({ fastForward: this.rollOptions.fastForward, advantage: hasAdvantage, disadvantage: hasDisadvantage })
@@ -595,7 +596,15 @@ export class Workflow {
       case WORKFLOWSTATES.ROLLFINISHED:
         if (debugEnabled > 0) warn('Inside workflow.rollFINISHED');
         // Add concentration data if required
-        const hasConcentration = this.item?.data.data.components?.concentration || this.item?.data.data.activation?.condition?.includes("Concentration");
+        let hasConcentration = this.item?.data.data.components?.concentration || this.item?.data.data.activation?.condition?.includes("Concentration");
+        hasConcentration = hasConcentration;
+        if (this.item &&
+            (
+              (this.item.hasAttack && this.hitTargets.size === 0)  // did  not hit anyone
+              || (this.item.hasSave && this.failedSaves.size === 0) // everyone saved
+            )
+          ) 
+          hasConcentration = false;
         const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
         if (hasConcentration && checkConcentration) {
           await addConcentration({workflow: this});
@@ -1675,7 +1684,8 @@ export class Workflow {
         // check to see if the roll hit the target
         if ((isHit || this.iscritical) && this.attackRoll) {
           const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll);
-          targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
+          if (result?.name)
+            targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
           targetAC = Number.parseInt(targetActor.data.data.attributes.ac.value) + bonusAC;
           if (result?.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
           isHit = this.attackTotal >= targetAC || this.isCritical;

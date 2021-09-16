@@ -378,7 +378,7 @@ where specification is a comma separated list of fields.
   * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is made.
   Damage:
   * damageRoll=roll expression, e.g. 3d6
-  * damageType=piercing/bludgeoning etc
+  * damageType=piercing/bludgeoning etc. You can specify "healing" or "temphp" which apply healing or temphp. temphp will only apply if the rolled temphp > exisiting temphp. overtime healing is a way to implement regeneration.
   If the effect is configured to be stackable with a stack count, of say 2, the damage will 3d6 + 3d6.
   *label=string - displayed when rolling the saving throw
 

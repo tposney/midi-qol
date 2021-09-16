@@ -50,8 +50,13 @@ let deleteItemEffects = async (data: {targets, origin: string, ignore: string[]}
     const effectsToDelete = actor?.effects?.filter(ef => ef.data.origin === origin && !ignore.includes(ef.uuid));
     if (effectsToDelete?.length > 0) {
       try {
-        await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToDelete.map(ef => ef.id));
+        // TODO find out why delete of multiple efects don't work
+        // await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToDelete.map(ef => ef.id));
+        for (let ef of effectsToDelete) {
+          await actor.deleteEmbeddedDocuments("ActiveEffect", [ef.id])
+        }
       } catch (err) {
+        warn("delete effects failed ", err);
         if (debugEnabled > 0) warn("delete effects failed ", err)
         // TODO can get thrown since more than one thing tries to delete an effect
       };

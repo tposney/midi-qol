@@ -95,7 +95,7 @@ class ConfigSettings {
   };
   keepRollStats: boolean = false;
   saveStatsEvery: number = 20;
-  playerStatsOnly: boolean = false
+  playerStatsOnly: boolean = false;
 }
 
 export var configSettings = new ConfigSettings();
@@ -417,6 +417,15 @@ export const registerSettings = function() {
     config: true,
     choices: {none: "None", warn: "warnings", debug: "debug", all: "all"},
     onChange: fetchParams
+  });
+
+  game.settings.register("midi-qol", "notificationVersion", {
+    name: "",
+    hint: "",
+    scope: "world",
+    default: "0.0.0",
+    type: String,
+    config: false,
   });
 }
 

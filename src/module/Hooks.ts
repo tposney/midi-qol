@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling.js";
 import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating, MQfromUuid, expireRollEffect, updateReactionRounds, processOverTime } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating, MQfromUuid, expireRollEffect, processOverTime } from "./utils.js";
 import { configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 
@@ -192,7 +192,7 @@ export let initHooks = () => {
   Hooks.on("updateCombat", (combat, data, options, user) => {
     untargetAllTokens(combat, data.options, user);
     untargetDeadTokens();
-    updateReactionRounds(combat, data, options, user);
+    // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
     processOverTime(combat, data, options, user);
   })
 
@@ -272,7 +272,7 @@ export let initHooks = () => {
 export const saveJSONData = {
   "name": "OverTime Item",
   "type": "weapon",
-  "img": "./modules/midi-qol/icons/concentrate.png",
+  "img": "icons/svg/aura.svg",
   "data": {
     "description": {
       "value": "",

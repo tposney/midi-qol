@@ -1,3 +1,24 @@
+### 0.8.52
+* Allow flags.midi-qol.OverTime.NAME (name optional) will allow multiple effects to be recorded on the actor (with or without NAME the effects will still be processed - this is just cosmetic).
+* Support rollType = check (default is save) in OverTime speicifcation, roll an ability check instead of an ability save.
+* Clarification:
+  * "healing" and "temphp" work as damage types doing the obvious - healing damage is a way to implment regeneration. 
+  * @field replacement on active effects only works if DAE is enabled.
+* Fix for longsword of wounding doing an unnecessary saving throw. Fix for Hold Person not being removed on a save.
+* Addition of regeneration feature which adds HP at the start of the turn. If the optional rule for incapacited targets is enabled HP will be regenerated only if the actor has at least 1 HP.
+* The ability to do a reaction now resets at the start of an actors next turn.
+* Rewrite of Damage Reduction. Should now do something sensible when apportioning damage reduction across attacks with multiple damage types. It is not obvious what should happen in all cases so expect some confusion on this one - don't update 2 minutes before game time. The tests I've done suggest it is doing something sensible. I've enqbled a developer console warning message detailing the DR apportionment midi has done.
+* Update for sheet buttons on Better NPC sheets, thanks @mejari (gitlab).
+* Only display ChangeLogs module warning once per midi-qol update.
+* Comcenration: If a spell/item with concentration has an attack/save only apply concentration to the attack/caster if there are hit targets or some failed saves.
+
+### 0.8.51
+* Fix for midi-qol OverTime boolean flags processing which was broken.
+* added to flags.midi-qol.OverRide saveDamage=halfdamage/nodamage/fulldamage - default nodamage
+* added to flags.midi-qol.OverRide saveRemove=true/false - remove effect on save - default true.
+* midi-qol recognises aura effects and will not apply OverTime effects if the effect is an aura and the aura has ignore self set. See included spirit guardians.
+* Added some sample items, Longsword of Wounding, Devil's Glaive, Hold Person (assumes convenient effects), Spirit Guardians (requires Active Aura's)
+
 ### 0.8.50
 * Fix for Combat Utility Belt concentration not toggling from status HUD.
 * Added Support for ChangeLogs module.
@@ -12,7 +33,7 @@
 
 * **New** support for Over Time effects - which only apply to actors in combat.
 ```
-flags.midi-qol.OverTime OVERRIDE <specification>
+flags.midi-qol.OverTime OVERRIDE specification
 ```
 where specification is a comma separated list of fields.
   * turn=start/end (check at the start or end of the actor's turn) The only required field.

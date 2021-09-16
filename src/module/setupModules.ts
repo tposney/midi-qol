@@ -50,7 +50,13 @@ export function checkModules() {
     //@ts-ignore expected one argument but got 2
     ui.notifications.error("midi-qol.NoSocketLib", {permanent: true, localize: true});
   }
-  if (game.user?.isGM && !installedModules.get("lib-changelogs")) {
+  //@ts-ignore
+  const midiVersion = game.modules.get("midi-qol").data.version;
+  const notificationVersion = game.settings.get("midi-qol", "notificationVersion");
+
+  //@ts-ignore
+  if (game.user?.isGM && !installedModules.get("lib-changelogs") && isNewerVersion(midiVersion, notificationVersion)) {
+    game.settings.set("midi-qol", "notificationVersion", midiVersion);
     //@ts-ignore expected one argument but got 2
     ui.notifications?.warn("midi-qol.NoChangelogs", {permanent: true, localize: true});
   }
@@ -82,6 +88,15 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+### 0.8.51
+* Short term patch for ATL equip/unequip
+* Fix for midi-qol OverTime boolean flags processing which was broken.
+* added to flags.midi-qol.OverRide saveDamage=halfdamage/nodamage/fulldamage - default nodamage
+* added to flags.midi-qol.OverRide saveRemove=true/false - remove effect on save - default true.
+* midi-qol recognises aura effects and will not apply OverTime effects if the effect is an aura and the aura has ignore self set. See included spirit guardians.
+* Added some sample items, Longsword of Wounding, Devil's Glaive, Hold Person (assumes convenient effects), Spirit Guardians (requires Active Aura's)
+
+### 0.8.50
   * Fix for Combat Utility Belt concentration not toggling from status HUD.
   * Added Support for ChangeLogs module.
   * Reinstated bug reporter support.
@@ -98,29 +113,29 @@ Hooks.once('libChangelogsReady', function() {
   flags.midi-qol.OverTime OVERRIDE specification
 
   where specification is a comma separated list of fields.  
-    * turn=start/end (check at the start or end of the actor's turn) The only required field.  
+  * turn=start/end (check at the start or end of the actor's turn) The only required field.  
     Saving Throw: the entire active effect will be removed when the saving throw is made (or the effect duration expires)
-    * saveAbility=dex/con/etc The actor's ability to use for rolling the saving throw  
-    * saveDC=number> 
-     saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
-    * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is made.
+  * saveAbility=dex/con/etc The actor's ability to use for rolling the saving throw  
+  * saveDC=number
+  * saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
+  * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is made.
     Damage:  
-    * damageRoll=<roll expression>, e.g. 3d6  
-    * damageType=piercing/bludgeoning etc  
-    If the effect is configured to be stackable with a stack count, of say 2, the damage will 3d6 + 3d6.  
-    *label=string - displayed when rolling the saving throw  
+  * damageRoll=<roll expression>, e.g. 3d6  
+  * damageType=piercing/bludgeoning etc  
+  If the effect is configured to be stackable with a stack count, of say 2, the damage will 3d6 + 3d6.  
+  * label=string - displayed when rolling the saving throw  
   
     The most common use for this feature is damage over time effects. However you can include an OverTime effect with just a save can be used to apply any other changes (in the same active effect) until a save is made (Hold Person).
     Examples:  
-    * Longsword of Wounding (Should have stackable set to "each stack increases stack count by 1")  
+    **Longsword of Wounding** (Should have stackable set to "each stack increases stack count by 1")  
 
     flags.midi-qol.OverTime OVERRIDE turn=start,damageBeforeSave=true,label=Wounded,damageRoll=1d4,damageType=necrotic,saveDC=15,saveAbility=con
 
-    * Devil's Glaive (Infernal Wound) (Should have stackable set to "each stack increases stack count by 1")
+    **Devil's Glaive** (Infernal Wound) (Should have stackable set to "each stack increases stack count by 1")
 
-    flags.midi-qol.OverTime OVERRIDE turn=end,damageRoll=1d10+3,type=slashing,saveDC=12,saveAbility=con,label=Infernal Wound
+    flags.midi-qol.OverTime OVERRIDE turn=end,damageRoll=1d10,type=slashing,saveDC=12,saveAbility=con,label=Infernal Wound
 
-    * Hold Person
+    **Hold Person**
 
     flags.midi-qol.OverTime OVERRIDE turn=end,saveAbility=wis,saveDC=@attributes.spelldc,saveMagic=true,label=Hold Person
     macro.CE CUSTOM Paralyzed
