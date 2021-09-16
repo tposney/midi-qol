@@ -88,6 +88,25 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+### 0.8.53
+* Fix for Damage Reduction being applied to healing
+* Added condition=expression to midi-qol OverTime, the rest of the overtime effects are only processed if condition evaluates to true. e.g. @attributes.hp.value > 0. You can use any actor fields in the expression, but not dice rolls. Undefined fields (e.g. flags) will evaluate to 0.
+ Added sample Regeneration Item that checks for HP > 0 before applying.
+
+### 0.8.52
+* Allow flags.midi-qol.OverTime.NAME (name optional) will allow multiple effects to be recorded on the actor (with or without NAME the effects will still be processed - this is just cosmetic).
+* Support rollType = check (default is save) in OverTime speicifcation, roll an ability check instead of an ability save.
+* Clarification:
+  * "healing" and "temphp" work as damage types doing the obvious - healing damage is a way to implment regeneration. 
+  * @field replacement on overtime active effects only works if DAE is enabled.
+* Fix for longsword of wounding doing an unnecessary saving throw. Fix for Hold Person not being removed on a save.
+* Addition of regeneration feature which adds HP at the start of the turn. If the optional rule for incapacited targets is enabled HP will be regenerated only if the actor has at least 1 HP.
+* The ability to do a reaction now resets at the start of an actors next turn.
+* Rewrite of Damage Reduction. Should now do something sensible when apportioning damage reduction across attacks with multiple damage types. It is not obvious what should happen in all cases so expect some confusion on this one - don't update 2 minutes before game time. The tests I've done suggest it is doing something sensible. I've enqbled a developer console warning message detailing the DR apportionment midi has done.
+* Update for sheet buttons on Better NPC sheets, thanks @mejari (gitlab).
+* Only display ChangeLogs module warning once per midi-qol update.
+* Comcenration: If a spell/item with concentration has an attack/save only apply concentration to the attack/caster if there are hit targets or some failed saves.
+
 ### 0.8.51
 * Short term patch for ATL equip/unequip
 * Fix for midi-qol OverTime boolean flags processing which was broken.
