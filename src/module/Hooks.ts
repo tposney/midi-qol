@@ -374,6 +374,9 @@ export const saveJSONData = {
   "effects": [],
   "sort": 0,
   "flags": {
+    "midi-qol": {
+      "noCE": true
+    }
   }
 };
 

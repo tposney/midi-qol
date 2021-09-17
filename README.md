@@ -371,9 +371,12 @@ flags.midi-qol.OverTime OVERRIDE specification
 ```
 where specification is a comma separated list of fields.
   * turn=start/end (check at the start or end of the actor's turn) The only required field.
+  * condition=expression, if present must evaluate to true or rest of the processing will be aborted.
+  e.g. condition=@attributes.hp.value > 0 - for regeneration.
   Saving Throw: the entire active effect will be removed when the saving throw is made (or the effect duration expires)
   * saveAbility=dex/con/etc The actor's ability to use for rolling the saving throw
   * saveDC=number
+  * rollType=check/save (default save), roll an ability check or save.
   * saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
   * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is made.
   Damage:

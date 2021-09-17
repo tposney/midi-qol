@@ -575,7 +575,7 @@ export class Workflow {
           await globalThis.DAE.doEffects(this.item, true, this.applicationTargets, { whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId })
           this.removeEffectsButton();
         }
-        if (installedModules.get("dfreds-convenient-effects") && this.item && configSettings.autoCEEffects) {
+        if (installedModules.get("dfreds-convenient-effects") && this.item && configSettings.autoCEEffects && !getProperty(this.item.data.flags, "midi-qol.noCE")) {
           const effectName = this.item.name;
           //@ts-ignore
           if (game.dfreds.effects.all.find(e => e.name === effectName)) {

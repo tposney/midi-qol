@@ -238,7 +238,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
     appliedDamage = 0;
     appliedTempHP = 0;
     let DRAll = 0;
-    if (getProperty(a.data, "flags.midi-qol.DR.all") !== undefined) 
+    if (getProperty(a.data, "flags.midi-qol.DR.all") !== undefined)
       DRAll = (new Roll((getProperty(a.data, "flags.midi-qol.DR.all") || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
     const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
     let DRTotal = 0;
@@ -249,7 +249,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
       let superSavers: Set<Token> = options.superSavers[i] ?? new Set();
       var dmgType;
       // This is overall Damage Reduction
-    
+
       let maxDR = DRAll;
       let maxDRIndex = -1;
 
@@ -544,6 +544,7 @@ function replaceAtFields(value, context, options: { blankValue: string | number,
 }
 
 export function processOverTime(combat, data, options, user) {
+  if (user !== game.user?.id) return;
   const prev = (combat.previous.round ?? 0) * 100 + (combat.previous.turn ?? 0);
   let testTurn = combat.previous.turn ?? 0;
   let testRound = combat.previous.round ?? 0;
@@ -555,7 +556,7 @@ export function processOverTime(combat, data, options, user) {
     const actor = combat.turns[testTurn]?.actor;
     const endTurn = toTest < last;
     const startTurn = toTest > prev;
-    if (actor && toTest !== prev) {
+    if (actor && toTest !== prev) { // this is for reaction processing.
       const midiFlags = getProperty(actor.data.flags, "midi-qol");
       if (midiFlags?.reactionCombatRound !== undefined) {
         actor?.unsetFlag("midi-qol", "reactionCombatRound");
@@ -579,17 +580,18 @@ export function processOverTime(combat, data, options, user) {
           details[p[0]] = p.slice(1).join("=");
         }
         if (details.turn === undefined) details.turn = "start";
-        if (details.condition) {
+        if (details.appplyCondition || details.condition) {
           // const rollData = actor.getRollData();
           // rollData.flags = actor.data.flags;
+          let applyCondition = details.applyCondition ?? details.condition; // maintin support for condition
           let rollData = actor.getRollData();
           rollData.flags.midiqol = rollData.flags["midi-qol"];
-          let value = replaceAtFields(details.condition, rollData, { blankValue: 0, maxIterations: 3 });
+          let value = replaceAtFields(applyCondition, rollData, { blankValue: 0, maxIterations: 3 });
           let result;
           try {
             result = Roll.safeEval(value);
-          } catch(err) {
-            console.warn("midi-qol | error when evaluating overtime condition - assuming true", value, err)
+          } catch (err) {
+            console.warn("midi-qol | error when evaluating overtime apply condition - assuming true", value, err)
             result = true;
           }
           if (!result) continue;
@@ -656,10 +658,24 @@ export function processOverTime(combat, data, options, user) {
           } finally {
             if (saveTargets && game.user) game.user.targets = saveTargets;
           }
+          if (details.removeCondition) {
+            let rollData = actor.getRollData();
+            rollData.flags.midiqol = rollData.flags["midi-qol"];
+            let value = replaceAtFields(details.removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
+            let remove;
+            try {
+              remove = Roll.safeEval(value);
+            } catch (err) {
+              console.warn("midi-qol | error when evaluating overtime remove condition - assuming true", value, err)
+              remove = true;
+            }
+            if (remove) {
+
+            }
+          }
         }
       }
     }
-
     testTurn += 1;
     if (testTurn === combat.turns.length) {
       testTurn = 0;
