@@ -1,7 +1,7 @@
 ### 0.8.54
 * Fix for Sorcerer's Apprentice OverTime bug. If you have an overtime effect with a label equal to a convenient effect's name AND you are auto applying convenient effects the effect would be applied repeatedly, 1->2->4->8 etc.
 * Added OverTime removeCondition=expression which if true will remove the effect. (renamed condition to applyCondtion - but supports the existing condition label as well).
-* Oops - I managed to remove a check in one of the previous updates which means OverTime effects are applied for each user logged in. Fixed now.
+* Oops - I managed to remove a check in one of the previous updates which means OverTime effects are applied for each user logged in. Fixed.
 
 ### 0.8.53
 * Fix for Damage Reduction being applied to healing
