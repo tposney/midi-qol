@@ -75,7 +75,8 @@
     "midi-qol.RangeTarget.Hint": "대상 유형이 생물/적/동료일 경우 대상 유형에 대한 대상 지정을 자동으로 적용한다.",
     "midi-qol.PlayerRollSaves.Name": "플레이어에게 내성 굴림 메시지 출력",
     "midi-qol.PlayerRollSaves.Hint": "플레이어가 내성 굴림을 한다. 귓속말 혹은 설치 되었을 경우 LMRTFY 모듈을 사용할 수 있다",
-    "midi-qol.rollNPCSaves.Name": "GM에게 NPC 내성굴림 출력",
+    "midi-qol.rollNPCSaves.Name": "GM에게 내성굴림 출력 (비연결)",
+    "midi-qol.rollNPCLinkedSaves.Name": "GM에게 내성굴림 출력 (연결)",
     "midi-qol.rollNPCSaves.Hint": "자동(Auto)은 모듈이 NPC에 대한 내성굴림을 굴린다. 그 외는 GM이 LMRTFY 메시지를 받는다.",
     "midi-qol.PlayerSaveTimeout.Name": "플레이어 굴림 대기 시간",
     "midi-qol.PlayerSaveTimeout.Hint": "플레이어가 내성 굴림을 할 때 얼마나 기다리는지에 대한 시간이다(초 단위)",
@@ -154,6 +155,15 @@
     "midi-qol.potion": "포션",
     "midi-qol.HideRollDetails.Name": "굴림 상세 숨기기",
     "midi-qol.HideRollDetails.Hint": "플레이어로부터 GM 굴림을 얼마나 숨기는 지에 대해 선택한다",
+    "midi-qol.HideRollDetails.HintLong": {
+      "none": "없음: 숨기지 않음",
+      "detailsDSN": "수식에 따라 굴리지만 DSN을 표시: 수식을 숨기면서 DSN 주사위를 굴린다.",
+      "details": "굴림 수식: 굴림 수식을 숨기며 DSN 주사위를 표시하지 않음.",
+      "d20Only": "공격 d20 + 피해 총합을 표시: 공격 굴림의 d20과 피해 총합만 표시한다",
+      "hitDamage": "명중/빗나감 + 피해 총합을 표시: 명중/피해 결과와 피해 총합만 표시한다.",
+      "d20attackOnly": "공격 d20만 표시: 공격 주사위만 표시한다.",
+      "all": "전체 굴림: 플레이어로부터 모든 굴림 세부 정보를 숨긴다."
+    },
     "midi-qol.DiceRolled": "<div>굴림</div>",
     "midi-qol.ForceHideRoll.Name": "진짜 개인/블라인드/혼자 굴림 숨기기",
     "midi-qol.ForceHideRoll.Hint": "개인/블라인드/혼자 굴림에 대해 대상이 아닌 사용자에게 표시되지 않도록 한다. Thanks to felix.mueller.86@web.de",
@@ -261,6 +271,8 @@
     "midi-qol.ExportJSon": "굴림 통계를 Json 파일로 내보내기",
     "midi-qol.ExportCSV": "굴림 통계를 CSV 파일로 내보내기",
     "midi-qol.criticalThreshold": "크리티컬",
-    "midi-qol.AutoCEEffects.Name": "편리한 효과 적용",
-    "midi-qol.AutoCEEffects.Hint": "아이템 사용시 아이템 이름과 일치시키는 편리한 효과를 적용한ㄷ."
+    "midi-qol.AutoCEEffects.Name": "Convenient Effects 적용",
+    "midi-qol.AutoCEEffects.Hint": "아이템 사용시 아이템 이름과 일치시키는 Convenient Effects를 적용한다.",
+    "midi-qol.BonusACCover": "AC 엄폐",
+    "midi-qol.NoChangelogs": "Midi-Qol이 마지막 업데이트 이후 변경 사항을 표시하기 위해 Changelogs 모듈을 지원, 권장한다."
 }
