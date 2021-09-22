@@ -8,7 +8,7 @@ import { actorAbilityRollPatching, baseEvent, readyPatching } from "./patching.j
 import { concentrationCheckItemName, itemJSONData, saveJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
-import { isConstructorDeclaration } from "typescript";
+import { idText, isConstructorDeclaration } from "typescript";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -438,6 +438,12 @@ export let getSaveMultiplierForItem = (item: Item) => {
   // find a better way for this ? perhaps item property
   if (!item) return 1;
   const itemData: any = item.data;
+  //@ts-ignore
+  if (item.actor && item.type === "spell" && item.data.data.level === 0) { // cantrip
+    const midiFlags = getProperty(item.actor.data.flags, "midi-qol");
+    if (midiFlags.potentCantrip) return 0.5;
+  }
+
   const itemProperties: any = itemData.data.properties;
   if (itemProperties?.nodam) return 0;
   if (itemProperties?.fulldam) return 1;
@@ -647,17 +653,7 @@ export function processOverTime(combat, data, options, user) {
           if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
           let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
           if (saveRemove)
-            overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id }
-          try {
-            if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
-              globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC }).toMessage();
-            } else {
-              //@ts-ignore
-              ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false });
-            }
-          } finally {
-            if (saveTargets && game.user) game.user.targets = saveTargets;
-          }
+            overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id };
           if (details.removeCondition) {
             let rollData = actor.getRollData();
             rollData.flags.midiqol = rollData.flags["midi-qol"];
@@ -670,8 +666,19 @@ export function processOverTime(combat, data, options, user) {
               remove = true;
             }
             if (remove) {
-
+              overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id }
             }
+          }
+
+          try {
+            if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
+              globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC }).toMessage();
+            } else {
+              //@ts-ignore
+              ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false });
+            }
+          } finally {
+            if (saveTargets && game.user) game.user.targets = saveTargets;
           }
         }
       }
@@ -1435,7 +1442,7 @@ export function isConcentrating(actor: Actor5e): undefined | ActiveEffect {
   const concentrationName = installedModules.get("combat-utility-belt")
     ? game.settings.get("combat-utility-belt", "concentratorConditionName")
     : i18n("midi-qol.Concentrating");
-  return actor.effects.contents.find(i => i.data.label === concentrationName);
+  return actor.effects.contents.find(e => e.data.label === concentrationName && !e.data.disabled && !e.isSuppressed);
 }
 
 export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {

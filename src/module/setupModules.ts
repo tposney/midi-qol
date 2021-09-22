@@ -88,81 +88,41 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.8.55
+* If concentration is set to inactive, taking damage won't trigger a consitution saving throw. I'm not sure it really makes sense to set concentration inactive, but I don't see that it causes any problems and can be convenient when tweakingg Hit Points.
+* A fix for OverTime removeComdition which was not being evaluated correctly.
+* Added flags.midi-qol.potentCantrip, if enabled cantrip saves always do 1/2 damage instead of (possibly) no damage.
+*  Fixed a reference to deleteOwnedItem for 0.9 compatibility.
+
+* Reworked "Roll Other formula for rwak/mwak" flag to make it more flexible, you can now implement slayer items without any macros.  
+
+Roll Other Damage now has 3 options, "off": never auto roll the other damage, "ifsave": roll the other damage if a save is present (this is the same as the current roll other damage true setting) and "activation": if the activation condition evaluates to true then roll the Other damage even if no save is present. "activation" also requires that the item attunement not be "Attunement Required", i.e. dragon slayer weapons do no extra damage if they are not attuned.
+
+Most creature attacks with extra damage (poisonous bite) equate to the ifSave setting.
+Magic items that roll additional damage if a particular condition is true (slayer weapons) require the "activation" setting.
+
+midi will evaluate the activation condition as an expression, providing, the actor, item and target actor's (@target) roll data. For example:
+
+    "@target.details.type.value".includes("dragon")
+
+will only roll if the target has a type of dragon. 
+**An empty activation condition** will evaluate as true. If you don't want a specfic weapon to roll Other Damage set Activation Condition false.
+
+You can add the above conditon to the SRD slayer items to make the bonus damage automated based on target type.
+
+If the weapon rolling the attack has ammunition AND the weapon does not have it's own Other Roll defined, the Other roll and saving throw from ammunition will be used. (Arrow of Slaying).
+
+There is a new weapon property "Crit Other Roll" which if set means that the "Other Damage" roll will be rolled as critical if the base roll is critical. Previosly Other Damage would never roll critical damage. You can decide if your Arrow of Slaying can do critical damage or not.
+
+* Added a few new items to the sample compendium,
+  * Flaming Sphere, this does pretty much everything the spell is supposed to do. Requires Active Auras and DAE. (Treat it as experimental - as I have not tried it in game yet).
+  * Dragon Slayer LongSword.
+  * Arrow of Slaying (Dragon). Use it by equipping and setting the bow ammunition to arrow of slaying
 ### 0.8.54
 * Fix for Sorcerer's Apprentice OverTime bug. If you have an overtime effect with a label equal to a convenient effect's name AND you are auto applying convenient effects the effect would be applied repeatedly, 1->2->4->8 etc.
 * Added OverTime removeCondition=expression which if true will remove the effect. (renamed condition to applyCondtion - but supports the existing condition label as well).
 * Oops - I managed to remove a check in one of the previous updates which means OverTime effects are applied for each user logged in. Fixed.
 
-### 0.8.53
-* Fix for Damage Reduction being applied to healing
-* Added condition=expression to midi-qol OverTime, the rest of the overtime effects are only processed if condition evaluates to true. e.g. @attributes.hp.value > 0. You can use any actor fields in the expression, but not dice rolls. Undefined fields (e.g. flags) will evaluate to 0.
- Added sample Regeneration Item that checks for HP > 0 before applying.
-
-### 0.8.52
-* Allow flags.midi-qol.OverTime.NAME (name optional) will allow multiple effects to be recorded on the actor (with or without NAME the effects will still be processed - this is just cosmetic).
-* Support rollType = check (default is save) in OverTime speicifcation, roll an ability check instead of an ability save.
-* Clarification:
-  * "healing" and "temphp" work as damage types doing the obvious - healing damage is a way to implment regeneration. 
-  * @field replacement on overtime active effects only works if DAE is enabled.
-* Fix for longsword of wounding doing an unnecessary saving throw. Fix for Hold Person not being removed on a save.
-* Addition of regeneration feature which adds HP at the start of the turn. If the optional rule for incapacited targets is enabled HP will be regenerated only if the actor has at least 1 HP.
-* The ability to do a reaction now resets at the start of an actors next turn.
-* Rewrite of Damage Reduction. Should now do something sensible when apportioning damage reduction across attacks with multiple damage types. It is not obvious what should happen in all cases so expect some confusion on this one - don't update 2 minutes before game time. The tests I've done suggest it is doing something sensible. I've enqbled a developer console warning message detailing the DR apportionment midi has done.
-* Update for sheet buttons on Better NPC sheets, thanks @mejari (gitlab).
-* Only display ChangeLogs module warning once per midi-qol update.
-* Comcenration: If a spell/item with concentration has an attack/save only apply concentration to the attack/caster if there are hit targets or some failed saves.
-
-### 0.8.51
-* Short term patch for ATL equip/unequip
-* Fix for midi-qol OverTime boolean flags processing which was broken.
-* added to flags.midi-qol.OverRide saveDamage=halfdamage/nodamage/fulldamage - default nodamage
-* added to flags.midi-qol.OverRide saveRemove=true/false - remove effect on save - default true.
-* midi-qol recognises aura effects and will not apply OverTime effects if the effect is an aura and the aura has ignore self set. See included spirit guardians.
-* Added some sample items, Longsword of Wounding, Devil's Glaive, Hold Person (assumes convenient effects), Spirit Guardians (requires Active Aura's)
-
-### 0.8.50
-  * Fix for Combat Utility Belt concentration not toggling from status HUD.
-  * Added Support for ChangeLogs module.
-  * Reinstated bug reporter support.
-  * Some efficiency options for latest volumetric template checking and AoE spells.
-  * Fix for "isHit" special duration.
-  * Fix for adv/dis keys on "tool" rolls.
-  * Fix for sw5e and an inadvertent dnd5e reference.
-  * Reactions
-    * only prepared spells are selected for reaction rolls.
-    * only 1 reaction per combat round is allowed. If not in combat you get a reaction each time.
-  
-  * **New** support for Over Time effects - which only apply to actors in combat.
-
-  flags.midi-qol.OverTime OVERRIDE specification
-
-  where specification is a comma separated list of fields.  
-  * turn=start/end (check at the start or end of the actor's turn) The only required field.  
-    Saving Throw: the entire active effect will be removed when the saving throw is made (or the effect duration expires)
-  * saveAbility=dex/con/etc The actor's ability to use for rolling the saving throw  
-  * saveDC=number
-  * saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
-  * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is made.
-    Damage:  
-  * damageRoll=<roll expression>, e.g. 3d6  
-  * damageType=piercing/bludgeoning etc  
-  If the effect is configured to be stackable with a stack count, of say 2, the damage will 3d6 + 3d6.  
-  * label=string - displayed when rolling the saving throw  
-  
-    The most common use for this feature is damage over time effects. However you can include an OverTime effect with just a save can be used to apply any other changes (in the same active effect) until a save is made (Hold Person).
-    Examples:  
-    **Longsword of Wounding** (Should have stackable set to "each stack increases stack count by 1")  
-
-    flags.midi-qol.OverTime OVERRIDE turn=start,damageBeforeSave=true,label=Wounded,damageRoll=1d4,damageType=necrotic,saveDC=15,saveAbility=con
-
-    **Devil's Glaive** (Infernal Wound) (Should have stackable set to "each stack increases stack count by 1")
-
-    flags.midi-qol.OverTime OVERRIDE turn=end,damageRoll=1d10,type=slashing,saveDC=12,saveAbility=con,label=Infernal Wound
-
-    **Hold Person**
-
-    flags.midi-qol.OverTime OVERRIDE turn=end,saveAbility=wis,saveDC=@attributes.spelldc,saveMagic=true,label=Hold Person
-    macro.CE CUSTOM Paralyzed
 
   [Full Changelog](https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md)`,
   "major")

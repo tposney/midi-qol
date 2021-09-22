@@ -63,7 +63,7 @@ let itemDeleteHandler = ev => {
         label: "Delete",
         callback: () => {
           let li = $(ev.currentTarget).parents(".item"), itemId = li.attr("data-item-id");
-          ev.data.app.object.deleteOwnedItem(itemId);
+          ev.data.app.object.items.get(itemId).delete();
           li.slideUp(200, () => ev.data.app.render(false));
         }
       },

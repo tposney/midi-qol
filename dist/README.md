@@ -146,13 +146,25 @@ You can enable auto checking of hits. Fumbles automatically miss and criticals a
   * Yes: Damage is auto-applied to targeted tokens (**or self if self-target is specified**) that were hit or did not save, or that saved and take half damage.
   * "+ damage card": If included, a chat card is sent to the GM which includes each target that had damage applied with details of the damage, any immunities/resistances and 6 buttons. They set the target hit points based on the calculation displayed. The first sets the hp back the way they were before the roll and the second sets them as displayed in the calculation (an undo/redo). The next 4 are the standard DND apply damage buttons but **do not** take into account resistance/immunity.
 
-* **Roll Other formula on failed save for rwak/mwak**
-A feature for action types rwak/mwak that have a saving throw. The "Other" formula will be rolled as additional damage. This is useful for attacks that do additional damage if the target fails its save – a common example is an attack that can do additional poison damage on a failed save, e.g. Giant Spiders.
-* Default is 1/2 damage on save, but you can set the noDamSave or FullDamSave flags to modify the behaviour.  
-* The saving throw has no effect on base weapon damage. It always does full damage if the attack hits.  
-* You can specify the other formula as 3d6[poison] and the extra damage will be treated as poison damage when checking damage resistances/immunities/vulnerabilities.  
-* Most monsters from the SRD will require a minor edit for this to work properly. Make sure the additional damage is in the Other field and the damage type is specified, e.g. 2d6[poison], 2d8[necrotic] and so on.  
-* Due to how SRD monsters are configured, the bonus damage is in the versatile damage field and the versatile damage flag is not set; midi-will treat versatile damage as Other Damage when doing the roll, provided the versatile  property is not set.
+* **Roll Other formula for rwak/mwak**
+
+Roll Other Damage has 3 options, "off": never auto roll the other damage, "ifsave": roll the other damage if a save is present (this is the same as the earliere version of this setting) and "activation": if the item's activation condition evaluates to true then roll the Other damage even if no save is present. "activation" also requires that the item attunement not be "Attunement Required", i.e. dragon slayer weapons do no extra damage if they are not attuned.
+
+Most creature attacks with extra damage (poisonous bite) equate to the ifSave setting.
+Magic items that roll additional damage if a particular condition is true (slayer weapons) require the "activation" setting.
+
+midi will evaluate the activation condition as an expression, providing, the actor, item and target actor's (@target) roll data. For example:
+```
+    "@target.details.type.value".includes("dragon")
+```
+will only roll if the target has a type of dragon. 
+**An empty activation condition** will evaluate as true. If you don't want a specfic weapon to roll Other Damage set Activation Condition false.
+
+You can add the above conditon to the SRD slayer items to make the bonus damage automated based on target type.
+
+If the weapon rolling the attack has ammunition AND the weapon does not have it's own Other Roll defined, the Other activation condition, Other roll and saving throw from the ammunition will be used instead of the attacking weapon. (Arrow of Slaying).
+
+There is a new weapon property "Crit Other Roll" which if set means that the "Other Damage" roll will be rolled as critical if the base roll is critical. Previosly Other Damage would never roll critical damage. You can decide if your Arrow of Slaying can do critical damage or not.
 
 * **Apply Damage immunities** Midi-qol will use the target’s resistance/immunity/vulnerability settings for each type of damage in the attack and calculate how much of the damage applies. If "+physical" is set midi-qol will look at the item that did the attack to see if the damage is magical or not according to the following:
   * If the item is:
@@ -347,6 +359,8 @@ flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver 
 
 flags.midi-qol.ignoreNearbyFoes which, when set, means disadvantage from nearby foes (optional rules) will not affect the actor.
 
+flags.midi-qol.potentCantrip, if set cantrips cast by the actor will do 1/2 damage instead of no damage. Overrides any other damage multiplier settings.
+
 **Optional Bonus Effects**	
 Optional flags cause a dialog to be raised when an opportunity to apply the effect comes up. So an optional attack bonus prompts the attacker after the attack roll is made, but before the attack is adjudicated, givin the attacker the option to modify the roll. Effects last for one application unless the count flag is set.
 
@@ -371,8 +385,9 @@ flags.midi-qol.OverTime OVERRIDE specification
 ```
 where specification is a comma separated list of fields.
   * turn=start/end (check at the start or end of the actor's turn) The only required field.
-  * condition=expression, if present must evaluate to true or rest of the processing will be aborted.
+  * applyCondition=expression, if present must evaluate to true or rest of the processing will be aborted.
   e.g. condition=@attributes.hp.value > 0 - for regeneration.
+  * removeCondition=expression, if present and evaluates to true the effect is removed after the rest of the processing.
   Saving Throw: the entire active effect will be removed when the saving throw is made (or the effect duration expires)
   * saveAbility=dex/con/etc The actor's ability to use for rolling the saving throw
   * saveDC=number

@@ -85,7 +85,8 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
         // Check for versatile and flag set. TODO damageIndex !== other looks like nonsense.
         if (subEntry.damageIndex !== "other")
           damageList.push({ type, damage });
-        else if (configSettings.rollOtherDamage) {
+        else if ("ifSave" === configSettings.rollOtherDamage || "activation" === configSettings.rollOtherDamage) {
+          // TODO
           otherDamageList.push({ type, damage });
           if (subEntry.baseRoll instanceof Roll) otherDamageRoll = subEntry.baseRoll;
           else otherDamageRoll = Roll.fromData(subEntry.baseRoll);
@@ -93,6 +94,8 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
       }
     }
   }
+  // TODO find out how to set the ammo  workflow.ammo = this._ammo;
+
   //@ts-ignore udpate
   const targets = (item?.data.data.target?.type === "self") ? new Set([token]) : new Set(game.user?.targets);
   let workflow = BetterRollsWorkflow.getWorkflow(item.uuid);
@@ -101,6 +104,10 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   workflow.isFumble = diceRoll === 1;
   workflow.attackTotal = attackTotal;
   workflow.itemCardId = message.id;
+  workflow.ammo = item._ammo;
+  console.error("item ammo is ", item._ammo)
+
+  // TODO check activaiton condition to disable the roll if required.
   //@ts-ignore evaluate
   workflow.attackRoll = new Roll(`${attackTotal}`).evaluate({ async: false });
   if (configSettings.keepRollStats && item.hasAttack) {

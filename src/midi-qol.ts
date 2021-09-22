@@ -121,6 +121,8 @@ Hooks.once('setup', function() {
   //@ts-ignore CONFIG.DND5E
   CONFIG.DND5E.weaponProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp")
   //@ts-ignore CONFIG.DND5E
+  CONFIG.DND5E.weaponProperties["critOther"] = i18n("midi-qol.otherCritProp")
+  //@ts-ignore CONFIG.DND5E
   CONFIG.DND5E.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
   if (game.system.id === "dnd5e")
     //@ts-ignore CONFIG.DND5E
@@ -297,6 +299,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.disadvantage.concentration`)
   midiFlags.push("flags.midi-qol.ignoreNearbyFoes");
   midiFlags.push(`flags.midi-qol.concentrationSaveBonus`);
+  midiFlags.push(`flags.midi-qol.potentCantrip`);
 
   allAttackTypes = ["rwak","mwak","rsak", "msak"];
   if (game.system.id === "sw5e")

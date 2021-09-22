@@ -36,8 +36,12 @@ export let setupSocket = () => {
   socketlibSocket.register("chooseReactions", localDoReactions);
   socketlibSocket.register("addConvenientEffect", addConcentientEffect);
   socketlibSocket.register("deleteItemEffects", deleteItemEffects);
+  socketlibSocket.register("createActor", createActor);
 };
 
+async function createActor(data) {
+  await CONFIG.Actor.documentClass.createDocuments([data.actorData]);
+}
 
 let deleteItemEffects = async (data: {targets, origin: string, ignore: string[]}) => {
   let {targets, origin, ignore} = data;

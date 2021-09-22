@@ -73,7 +73,7 @@ class ConfigSettings {
   customSoundsPlaylist: string = "none";
   keyMapping = defaultKeyMapping;
   allowUseMacro: boolean = false;
-  rollOtherDamage: boolean = false;
+  rollOtherDamage: string | boolean = "none";
   removeButtons: string = "all";
   gmRemoveButtons: string = "all"; 
   concentrationAutomation: boolean = false;
@@ -195,6 +195,10 @@ export let fetchParams = () => {
   if (!configSettings.gmDoReactions) configSettings.gmDoReactions = "none";
   if (configSettings.reactionTimeout === undefined) configSettings.reactionTimeout = 0;
   if (!configSettings.showReactionAttackRoll === undefined) configSettings.showReactionAttackRoll = "all";
+  // deal with change of type of rollOtherDamage
+  if (configSettings.rollOtherDamage === false) configSettings.rollOtherDamage = "none";
+  if (configSettings.rollOtherDamage === true) configSettings.rollOtherDamage = "ifSave";
+  if (configSettings.rollOtherDamage === undefined) configSettings.rollOtherDamage = "none";
 
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 

@@ -43,6 +43,7 @@ export class ConfigPanel extends FormApplication {
       showItemDetailsOptions: i18n("midi-qol.showItemDetailsOptions"),
       doReactionsOptions: i18n("midi-qol.DoReactionsOptions"),
       gmDoReactionsOptions: i18n("midi-qol.GMDoReactionsOptions"),
+      rollOtherDamageOptions: i18n("midi-qol.RollOtherDamageOptions"),
       showReactionAttackRollOptions: i18n("midi-qol.ShowReactionAttackRollOptions"),
       wallsBlockRangeOptions,
       //@ts-ignore

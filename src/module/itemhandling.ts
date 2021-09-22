@@ -3,6 +3,7 @@ import { BetterRollsWorkflow, defaultRollOptions, Workflow, WORKFLOWSTATES } fro
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
 import { checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
+import { config } from "@league-of-foundry-developers/foundry-vtt-types/src/types/augments/simple-peer";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
@@ -70,6 +71,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
 
   workflow.attackRoll = result;
+  workflow.ammo = this._ammo;
   result = await processAttackRollBonusFlags.bind(workflow)();
   if (!configSettings.mergeCard) result.toMessage({
     speaker: getSpeaker(this.actor)
@@ -185,27 +187,49 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   workflow.damageRollHTML = await result.render();
   result = await processDamageRollBonusFlags.bind(workflow)();
   let otherResult: Roll | undefined = undefined;
+
+  workflow.shouldRollOtherDamage = false;
+  if (configSettings.rollOtherDamage === "ifSave" && this.hasSave) workflow.shouldRollOtherDamage = true;
+  //@ts-ignore DND5E
+  if (configSettings.rollOtherDamage === "activation") workflow.shouldRollOtherDamage = (this.data.data.attunement !== CONFIG.DND5E.attunementTypes.REQUIRED);
+  //@ts-ignore
   if (
-    configSettings.rollOtherDamage &&
-    workflow.item.hasSave && ["rwak", "mwak"].includes(workflow.item.data.data.actionType)
+    workflow.shouldRollOtherDamage && ["rwak", "mwak"].includes(workflow.item.data.data.actionType)
   ) {
-    if (workflow.item.data.data.formula !== "")
-      otherResult = new Roll(workflow.item.data.data.formula, workflow.actor?.getRollData()).roll();
-    else if (this.isVersatile && !this.data.data.properties.ver) otherResult = await wrapped({
-      // roll the versatile damage if there is a versatile damage field and the weapn is not marked versatile
-      // TODO review this is the SRD monsters change the way extra damage is represented
-      critical: false,
-      powerLevel: workflow.rollOptions.spellLevel,
-      spellLevel: workflow.rollOptions.spellLevel,
-      versatile: true,
-      fastForward: true,
-      event: {},
-      // "data.default": (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal",
-      options: {
-        fastForward: true,
-        chatMessage: false //!configSettings.mergeCard,
+    if (configSettings.rollOtherDamage === "activation") { // check the activation condition if present
+      if ((workflow.otherDamageItem?.data.data.activation?.condition ?? "") !== "") {
+        const rollData = workflow.otherDamageItem?.getRollData();
+        rollData.target = workflow.hitTargets.values().next()?.value;
+        if (rollData.target) rollData.target = rollData.target.actor.data.data;
+        let expression = workflow.otherDamageItem?.data.data.activation?.condition;
+        expression = Roll.replaceFormulaData(expression, rollData, { missing: "0" });
+        try {
+          workflow.shouldRollOtherDamage = Roll.safeEval(expression);
+        } catch (err) { console.warn(`midi-qol | activation condition (${expression}) error `, err) }
       }
-    });
+    }
+    if (workflow.shouldRollOtherDamage) {
+      if ((workflow.otherDamageFormula ?? "") !== "") {
+        //@ts-ignore
+        otherResult = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: (this.data.data.properties.critOther && workflow.isCritical) });
+        otherResult = await otherResult?.evaluate({ async: true });
+        // otherResult = new Roll(workflow.otherDamageFormula, workflow.actor?.getRollData()).roll();
+      } else if (this.isVersatile && !this.data.data.properties.ver) otherResult = await wrapped({
+        // roll the versatile damage if there is a versatile damage field and the weapn is not marked versatile
+        // TODO review this is the SRD monsters change the way extra damage is represented
+        critical: this.data.data.properties.critOther && workflow.isCritical,
+        powerLevel: workflow.rollOptions.spellLevel,
+        spellLevel: workflow.rollOptions.spellLevel,
+        versatile: true,
+        fastForward: true,
+        event: {},
+        // "data.default": (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal",
+        options: {
+          fastForward: true,
+          chatMessage: false //!configSettings.mergeCard,
+        }
+      });
+    }
   }
   if (!configSettings.mergeCard) {
     let actionFlavor;
@@ -299,7 +323,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     const needsSomatic = this.data.data.components?.somatic;
     const needsMaterial = this.data.data.components?.material;
 
-    //TODO Consider how to disable this check for Damageonly workflowa and trap workflowss
+    //TODO Consider how to disable this check for DamageOnly workflows and trap workflows
     if (midiFlags?.fail?.spell?.all) {
       ui.notifications?.warn("You are unable to cast the spell");
       return null;
@@ -390,13 +414,6 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   workflow.checkAttackAdvantage();
   const needAttckButton = !workflow.someEventKeySet() && !getAutoRollAttack();
   workflow.showCard = true;
-  /*configSettings.mergeCard || (configSettings.showItemDetails !== "none") || (
-    (this.isHealing && getAutoRollDamage() === "none") || // not rolling damage
-    (itemHasDamage(this) && getAutoRollDamage() === "none") ||
-    (this.hasSave && configSettings.autoCheckSaves === "none") ||
-    (this.hasAttack && needAttckButton)) ||
-    (!this.hasAttack && !itemHasDamage(this) && !this.hasSave);
-*/
   if (workflow.showCard) {
     let item = this;
     if (this.data.data.level && (workflow.itemLevel !== this.data.data.level)) {
@@ -586,7 +603,8 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any }, to
             //@ts-ignore
             z: _levels.getTokenLOSheight(token)
           }
-          let p2 = {x: tx, y: ty,
+          let p2 = {
+            x: tx, y: ty,
             //@ts-ignore
             z: getProperty(game.user, "data.flags.midi-qol.elevation") ?? 0
           }

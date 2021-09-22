@@ -210,7 +210,7 @@ export let initHooks = () => {
     const wfuuid = workflow.uuid;
 
     if (overTimeEffectsToDelete[wfuuid]) {
-      if (workflow.saves.size === 1) {
+      if (workflow.saves.size === 1 || !workflow.hasSave) {
         let effectId = overTimeEffectsToDelete[wfuuid].effectId;
         let actor = overTimeEffectsToDelete[wfuuid].actor;
         actor.deleteEmbeddedDocuments("ActiveEffect", [effectId]);
@@ -229,7 +229,7 @@ export let initHooks = () => {
       const macroField = `<div class="form-group"><label>${labelText}</label><input type="text" name="flags.midi-qol.onUseMacroName" value="${currentMacro}"/> </div>`;
       element.append(macroField)
     }
-    if (!installedModules.get("betterrolls5e")) {
+    if (!installedModules.get("betterrolls5e") && isNewerVersion("1.5.0", game.system.data.version)) { // 1.5.0 will include per weapon criticals
       const element2 = html.find('input[name="data.attackBonus"]').parent().parent();
       const labelText2 = i18n('midi-qol.criticalThreshold');
       const criticalThreshold = getProperty(app.object.data, "flags.midi-qol.criticalThreshold") ?? 20;
