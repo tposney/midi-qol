@@ -1,3 +1,6 @@
+### 0.8.56
+* Fix for broken configure settings dialog (oops).
+
 ### 0.8.55
 * If concentration is set to inactive, taking damage won't trigger a consitution saving throw. I'm not sure it really makes sense to set concentration inactive, but I don't see that it causes any problems and can be convenient when tweakingg Hit Points.
 * A fix for OverTime removeCondition which was not being evaluated correctly.
