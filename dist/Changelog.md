@@ -1,3 +1,6 @@
+### 0.8.57
+* Fix for incorrect failed saves calculation if there was a to hit roll as well.
+
 ### 0.8.56
 * Fix for broken configure settings dialog (oops).
 

@@ -1385,7 +1385,7 @@ export class Workflow {
    */
   async checkSaves(whisper = false) {
     this.saves = new Set();
-    this.failedSaves = new Set(this.targets);
+    this.failedSaves = this.item?.hasAttack ? new Set(this.hitTargets) : new Set(this.targets);
     this.advantageSaves = new Set();
     this.disadvantageSaves = new Set();
     this.saveDisplayData = [];
@@ -1553,8 +1553,10 @@ export class Workflow {
         }
       }
 
-      if (rollTotal >= rollDC) this.saves.add(target);
-      else this.failedSaves.add(target);
+      if (rollTotal >= rollDC) {
+        this.saves.add(target);
+        this.failedSaves.delete(target);
+      }
 
       if (game.user?.isGM) log(`Ability save/check: ${target.name} rolled ${rollTotal} vs ${rollAbility} DC ${rollDC}`);
       let saveString = i18n(saved ? "midi-qol.save-success" : "midi-qol.save-failure");
