@@ -200,11 +200,19 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       if ((workflow.otherDamageItem?.data.data.activation?.condition ?? "") !== "") {
         const rollData = workflow.otherDamageItem?.getRollData();
         rollData.target = workflow.hitTargets.values().next()?.value;
-        if (rollData.target) rollData.target = rollData.target.actor.data.data;
+        rollData.workflow = workflow;
+        if (rollData.target) {
+          console.error(rollData)
+          rollData.target = rollData.target.actor.data.data;
+          if (rollData.target.race ?? "" !== "") rollData.raceOrType = rollData.target.details.race.toLocaleLowerCase();
+          else rollData.raceOrType = rollData.target.details.type.value.toLocaleLowerCase();
+        }
+
         let expression = workflow.otherDamageItem?.data.data.activation?.condition;
         expression = Roll.replaceFormulaData(expression, rollData, { missing: "0" });
         try {
           workflow.shouldRollOtherDamage = Roll.safeEval(expression);
+          console.log("expression is ", expression, result)
         } catch (err) { console.warn(`midi-qol | activation condition (${expression}) error `, err) }
       }
     }
@@ -268,7 +276,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     }
     //@ts-ignore game.dice3d
     await game.dice3d.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
-    if (configSettings.rollOtherDamage && otherResult)
+    if (configSettings.rollOtherDamage !== "none" && otherResult)
       //@ts-ignore game.dice3d
       await game.dice3d.showForRoll(otherResult, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
   }

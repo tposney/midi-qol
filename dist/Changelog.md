@@ -1,3 +1,11 @@
+### 0.8.58
+* Added flags.midi-qol.DR.final which is damage reduction applied AFTER damage resistance/saves etc. Not RAW but useful.
+* Fixed ranged target selection to support meters. Sorry about that, and I live in a metric country - hangs head in shame.
+* Some updates to activation conditions.
+  * Since it is so common @raceOrType, will return the targets race (if there is one) or the targets type, in lowercase.
+  @worflow provides access to the midi-qol workflow that caused the roll.
+* Fix for saving throws not being rolled at all.
+
 ### 0.8.57
 * Fix for incorrect failed saves calculation if there was a to hit roll as well.
 

@@ -271,7 +271,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
           DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.physical`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0);
           //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
         }
-        if (DRType === 0 && !["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`), t.actor.getRollData()) {
+        if (DRType === 0 && !["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`)) {
           DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0);
         }
         DRType = Math.min(damage, DRType);
@@ -331,7 +331,15 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
       appliedDamage = Math.max(appliedDamage, 0);
     }
     totalAppliedDamage += appliedDamage;
+
     if (!dmgType) dmgType = "temphp";
+    if (!["healing", "temphp"].includes(dmgType) && getProperty(t.actor.data, `flags.midi-qol.DR.final`)) {
+      let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.final`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0;
+      appliedDamage = Math.max(0, appliedDamage - DRType)
+    }
+
+    // Deal with vehicle damage threshold.
+    if (appliedDamage < (t.actor.data.data.attributes.hp.dt ?? 0)) appliedDamage = 0;
     let ditem = calculateDamage(a, appliedDamage, t, totalDamage, dmgType, options.existingDamage);
     ditem.tempDamage = ditem.tempDamage + appliedTempHP;
     if (appliedTempHP <= 0) { // tmphealing applied to actor does not add only gets the max

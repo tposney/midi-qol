@@ -367,6 +367,8 @@ function setupMidiFlags() {
     });
     midiFlags.push(`flags.midi-qol.DR.all`);
     midiFlags.push(`flags.midi-qol.DR.non-magical`);
+    midiFlags.push(`flags.midi-qol.DR.final`);
+
     midiFlags.push(`flags.midi-qol.DR.non-physical`);
     //@ts-ignore CONFIG.DND5E
     Object.keys(CONFIG.DND5E.damageResistanceTypes).forEach(dt => {

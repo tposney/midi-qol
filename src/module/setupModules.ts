@@ -88,7 +88,21 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
-  0.8.55
+0.8.58
+* Added flags.midi-qol.DR.final which is damage reduction applied AFTER damage resistance/saves etc. Not RAW but useful.
+* Fixed ranged target selection to support meters. Sorry about that, and I live in a metric country - hangs head in shame.
+* Some updates to activation conditions.
+  * Since it is so common @raceOrType, will return the targets race (if there is one) or the targets type, in lowercase.
+  @worflow provides access to the midi-qol workflow that caused the roll.
+* Fix for saving throws not being rolled at all
+
+0.8.57
+* Fix for incorrect failed saves calculation if there was a to hit roll as well.
+
+0.8.56
+* Fix for broken configure settings dialog (oops)
+
+0.8.55
 * If concentration is set to inactive, taking damage won't trigger a consitution saving throw. I'm not sure it really makes sense to set concentration inactive, but I don't see that it causes any problems and can be convenient when tweakingg Hit Points.
 * A fix for OverTime removeComdition which was not being evaluated correctly.
 * Added flags.midi-qol.potentCantrip, if enabled cantrip saves always do 1/2 damage instead of (possibly) no damage.

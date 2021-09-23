@@ -139,7 +139,7 @@ export class Workflow {
   get workflowType() { return this.__proto__.constructor.name };
 
   get hasSave() {
-    if (this.item.hasSave) return this.item.hasSave && this.shouldRollOtherDamage;
+    if (this.item.hasSave) return this.item.hasSave;
     if (configSettings.rollOtherDamage && this.shouldRollOtherDamage) return this.otherDamageItem.hasSave;
     return this.item.hasSave;
   }
@@ -152,7 +152,7 @@ export class Workflow {
 
   get otherDamageItem() {
     if (this.item.data.data.formula ?? "" !== "") return this.item;
-    if (this.ammo || (this.ammo?.data.data.formula ?? "") !== "") return this.ammo;
+    if (this.ammo && (this.ammo?.data.data.formula ?? "") !== "") return this.ammo;
     return this.item;
     let item = this.item;
     if (!item.hasSave && this.ammo?.hasSave && configSettings.rollOtherDamage && this.shouldRollOtherDamage) item = this.ammo;
@@ -318,7 +318,7 @@ export class Workflow {
           return this.next(WORKFLOWSTATES.AWAITTEMPLATE);
         }
         const targetDetails = this.item.data.data.target;
-        if (configSettings.rangeTarget !== "none" && targetDetails?.units === "ft" && ["creature", "ally", "enemy"].includes(targetDetails?.type)) {
+        if (configSettings.rangeTarget !== "none" && ["ft", "m"].includes(targetDetails?.units) && ["creature", "ally", "enemy"].includes(targetDetails?.type)) {
           this.setRangedTargets(targetDetails);
           this.failedSaves = new Set(this.targets)
           this.hitTargets = new Set(this.targets);
@@ -957,6 +957,8 @@ export class Workflow {
       failedSaveUuids,
       damageRoll: this.damageRoll,
       attackRoll: this.attackRoll,
+      diceRoll: this.diceRoll,
+      attackD20: this.diceRoll,
       attackTotal: this.attackTotal,
       itemCardId: this.itemCardId,
       isCritical: this.rollOptions.critical || this.isCritical,
@@ -1965,7 +1967,7 @@ export class TrapWorkflow extends Workflow {
 
       case WORKFLOWSTATES.AWAITTEMPLATE:
         const targetDetails = this.item.data.data.target;
-        if (configSettings.rangeTarget !== "none" && targetDetails?.units === "ft" && ["creature", "ally", "enemy"].includes(targetDetails?.type)) {
+        if (configSettings.rangeTarget !== "none" && ["m", "ft"].includes(targetDetails?.units) && ["creature", "ally", "enemy"].includes(targetDetails?.type)) {
           this.setRangedTargets(targetDetails);
           this.targets = await validTargetTokens(this.targets);
           this.failedSaves = new Set(this.targets)
