@@ -339,7 +339,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
     }
 
     // Deal with vehicle damage threshold.
-    if (appliedDamage < (t.actor.data.data.attributes.hp.dt ?? 0)) appliedDamage = 0;
+    if (appliedDamage > 0 && appliedDamage < (t.actor.data.data.attributes.hp.dt ?? 0)) appliedDamage = 0;
     let ditem = calculateDamage(a, appliedDamage, t, totalDamage, dmgType, options.existingDamage);
     ditem.tempDamage = ditem.tempDamage + appliedTempHP;
     if (appliedTempHP <= 0) { // tmphealing applied to actor does not add only gets the max
@@ -589,126 +589,126 @@ export function processOverTime(combat, data, options, user) {
       }
     }
 
-    if (actor) for (let effect of actor.effects) {
-      if (effect.data.disabled) continue;
-      const auraFlags = effect.data.flags?.ActiveAuras ?? {};
-      if (auraFlags.isAura && auraFlags.ignoreSelf) continue;
-      const changes = effect.data.changes.filter(change => change.key.startsWith("flags.midi-qol.OverTime"));
-      if (changes.length > 0) for (let change of changes) {
-        // flags.midi-qol.OverTime turn=start/end, damageRoll=rollspec, damageType=string, saveDC=number, saveAbility=str/dex/etc, damageBeforeSave=true/[false], label="String"
-        let spec = change.value;
-        spec = spec.replace(/\s*=\s*/g, "=");
-        spec = spec.replace(/\s*,\s*/g, ",");
-        const parts = spec.split(",");
-        let details: any = {};
-        for (let part of parts) {
-          const p = part.split("=");
-          details[p[0]] = p.slice(1).join("=");
-        }
-        if (details.turn === undefined) details.turn = "start";
-        if (details.appplyCondition || details.condition) {
-          // const rollData = actor.getRollData();
-          // rollData.flags = actor.data.flags;
-          let applyCondition = details.applyCondition ?? details.condition; // maintin support for condition
-          let rollData = actor.getRollData();
-          rollData.flags.midiqol = rollData.flags["midi-qol"];
-          let value = replaceAtFields(applyCondition, rollData, { blankValue: 0, maxIterations: 3 });
-          let result;
-          try {
-            result = Roll.safeEval(value);
-          } catch (err) {
-            console.warn("midi-qol | error when evaluating overtime apply condition - assuming true", value, err)
-            result = true;
-          }
-          if (!result) continue;
-        }
 
-        const changeTurnStart = details.turn === "start" ?? false;
-        const changeTurnEnd = details.turn === "end" ?? false;
-        if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart)) {
-          const label = (details.label ?? "Damage Over Time").replace(/"/g, "");
-          const saveDC = Number.isNumeric(details.saveDC) ? parseInt(details.saveDC) : 10;
-          const saveAbility = details.saveAbility;
-          const saveDamage = details.saveDamage ?? "nodamage";
-          const saveMagic = JSON.parse(details.saveMagic ?? "false");
-          const damageRoll = details.damageRoll;
-          const damageType = details.damageType ?? "piercing";
-          const saveRemove = JSON.parse(details.saveRemove ?? "true");
-          const damageBeforeSave = JSON.parse(details.damageBeforeSave ?? "false");
-          const rollType = details.rollType;
-
-          if (debugEnabled > 0) warn(`Overtime provided data is `, details);
-          if (debugEnabled > 0) warn(`OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
-          const itemData = duplicate(saveJSONData);
-          itemData.img = effect.data.icon;
-          itemData.data.save.dc = saveDC;
-          itemData.data.save.ability = saveAbility;
-          itemData.data.save.scaling = "flat";
-          if (saveMagic) {
-            itemData.type = "spell";
-            itemData.data.preparation = { mode: "atwill" }
+    if (actor) {
+      let rollData = actor.getRollData();
+      rollData.flags.midiqol = rollData.flags["midi-qol"];
+      for (let effect of actor.effects) {
+        if (effect.data.disabled) continue;
+        const auraFlags = effect.data.flags?.ActiveAuras ?? {};
+        if (auraFlags.isAura && auraFlags.ignoreSelf) continue;
+        const changes = effect.data.changes.filter(change => change.key.startsWith("flags.midi-qol.OverTime"));
+        if (changes.length > 0) for (let change of changes) {
+          // flags.midi-qol.OverTime turn=start/end, damageRoll=rollspec, damageType=string, saveDC=number, saveAbility=str/dex/etc, damageBeforeSave=true/[false], label="String"
+          let spec = change.value;
+          spec = replaceAtFields(spec, rollData, { blankValue: 0, maxIterations: 3 });
+          spec = spec.replace(/\s*=\s*/g, "=");
+          spec = spec.replace(/\s*,\s*/g, ",");
+          const parts = spec.split(",");
+          let details: any = {};
+          for (let part of parts) {
+            const p = part.split("=");
+            details[p[0]] = p.slice(1).join("=");
           }
-          if (rollType === "check") {
-            itemData.data.actionType = "abil";
-          }
-          if (damageBeforeSave || !damageRoll || saveDamage === "fulldamage") {
-            itemData.data.properties.fulldam = true;
-          } else if (saveDamage === "halfdamage") {
-            itemData.data.properties.halfdam = true;
-          } else itemData.data.properties.nodam = true;
-          itemData.name = label;
-          if (damageRoll) {
-            let damageRollString = damageRoll;
-            for (let i = 1; i < (effect.data.flags.dae?.stacks ?? 1); i++)
-              damageRollString = `${damageRollString} + ${damageRoll}`;
-            //@ts-ignore
-            itemData.data.damage.parts = [[damageRollString, damageType]];
-          }
-          //@ts-ignore
-          itemData._id = randomID();
-          // roll the damage and save....
-          const saveTargets = game.user?.targets;
-          const theTargetToken = getSelfTarget(actor);
-          const theTarget = theTargetToken?.document ? theTargetToken?.document.id : theTargetToken?.id;
-          if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
-          let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
-          if (saveRemove)
-            overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id };
-          if (details.removeCondition) {
-            let rollData = actor.getRollData();
-            rollData.flags.midiqol = rollData.flags["midi-qol"];
-            let value = replaceAtFields(details.removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
-            let remove;
+          if (details.turn === undefined) details.turn = "start";
+          if (details.appplyCondition || details.condition) {
+            let applyCondition = details.applyCondition ?? details.condition; // maintin support for condition
+            let value = replaceAtFields(applyCondition, rollData, { blankValue: 0, maxIterations: 3 });
+            let result;
             try {
-              remove = Roll.safeEval(value);
+              result = Roll.safeEval(value);
             } catch (err) {
-              console.warn("midi-qol | error when evaluating overtime remove condition - assuming true", value, err)
-              remove = true;
+              console.warn("midi-qol | error when evaluating overtime apply condition - assuming true", value, err)
+              result = true;
             }
-            if (remove) {
-              overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id }
-            }
+            if (!result) continue;
           }
 
-          try {
-            if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
-              globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC }).toMessage();
-            } else {
-              //@ts-ignore
-              ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false });
+          const changeTurnStart = details.turn === "start" ?? false;
+          const changeTurnEnd = details.turn === "end" ?? false;
+          if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart)) {
+            const label = (details.label ?? "Damage Over Time").replace(/"/g, "");
+            const saveDC = Number.isNumeric(details.saveDC) ? parseInt(details.saveDC) : 10;
+            const saveAbility = details.saveAbility;
+            const saveDamage = details.saveDamage ?? "nodamage";
+            const saveMagic = JSON.parse(details.saveMagic ?? "false");
+            const damageRoll = details.damageRoll;
+            const damageType = details.damageType ?? "piercing";
+            const saveRemove = JSON.parse(details.saveRemove ?? "true");
+            const damageBeforeSave = JSON.parse(details.damageBeforeSave ?? "false");
+            const rollType = details.rollType;
+
+            if (debugEnabled > 0) warn(`Overtime provided data is `, details);
+            if (debugEnabled > 0) warn(`OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
+            const itemData = duplicate(saveJSONData);
+            itemData.img = effect.data.icon;
+            itemData.data.save.dc = saveDC;
+            itemData.data.save.ability = saveAbility;
+            itemData.data.save.scaling = "flat";
+            if (saveMagic) {
+              itemData.type = "spell";
+              itemData.data.preparation = { mode: "atwill" }
             }
-          } finally {
-            if (saveTargets && game.user) game.user.targets = saveTargets;
+            if (rollType === "check") {
+              itemData.data.actionType = "abil";
+            }
+            if (damageBeforeSave || !damageRoll || saveDamage === "fulldamage") {
+              itemData.data.properties.fulldam = true;
+            } else if (saveDamage === "halfdamage") {
+              itemData.data.properties.halfdam = true;
+            } else itemData.data.properties.nodam = true;
+            itemData.name = label;
+            if (damageRoll) {
+              let damageRollString = damageRoll;
+              for (let i = 1; i < (effect.data.flags.dae?.stacks ?? 1); i++)
+                damageRollString = `${damageRollString} + ${damageRoll}`;
+              //@ts-ignore
+              itemData.data.damage.parts = [[damageRollString, damageType]];
+            }
+            //@ts-ignore
+            itemData._id = randomID();
+            // roll the damage and save....
+            const saveTargets = game.user?.targets;
+            const theTargetToken = getSelfTarget(actor);
+            const theTarget = theTargetToken?.document ? theTargetToken?.document.id : theTargetToken?.id;
+            if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
+            let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
+            if (saveRemove)
+              overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id };
+            if (details.removeCondition) {
+              let value = replaceAtFields(details.removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
+              let remove;
+              try {
+                remove = Roll.safeEval(value);
+              } catch (err) {
+                console.warn("midi-qol | error when evaluating overtime remove condition - assuming true", value, err)
+                remove = true;
+              }
+              if (remove) {
+                overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id }
+              }
+            }
+
+            try {
+              if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
+                globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC }).toMessage();
+              } else {
+                //@ts-ignore
+                ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false });
+              }
+            } finally {
+              if (saveTargets && game.user) game.user.targets = saveTargets;
+            }
           }
         }
       }
+      testTurn += 1;
+      if (testTurn === combat.turns.length) {
+        testTurn = 0;
+        testRound += 1;
+        toTest = testRound * 100;
+      } else toTest += 1;
     }
-    testTurn += 1;
-    if (testTurn === combat.turns.length) {
-      testTurn = 0;
-      testRound += 1;
-      toTest = testRound * 100;
-    } else toTest += 1;
   }
 }
 
@@ -1459,7 +1459,7 @@ export function hasEffectGranting(actor: Actor5e, key: string, selector: string)
 
 //TODO fix this to search 
 export function isConcentrating(actor: Actor5e): undefined | ActiveEffect {
-  const concentrationName = installedModules.get("combat-utility-belt")
+  const concentrationName = installedModules.get("combat-utility-belt") && !installedModules.get("dfreds-convenient-effects")
     ? game.settings.get("combat-utility-belt", "concentratorConditionName")
     : i18n("midi-qol.Concentrating");
   return actor.effects.contents.find(e => e.data.label === concentrationName && !e.data.disabled && !e.isSuppressed);
