@@ -202,7 +202,6 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
         rollData.target = workflow.hitTargets.values().next()?.value;
         rollData.workflow = workflow;
         if (rollData.target) {
-          console.error(rollData)
           rollData.target = rollData.target.actor.data.data;
           if (rollData.target.race ?? "" !== "") rollData.raceOrType = rollData.target.details.race.toLocaleLowerCase();
           else rollData.raceOrType = rollData.target.details.type.value.toLocaleLowerCase();
@@ -212,7 +211,6 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
         expression = Roll.replaceFormulaData(expression, rollData, { missing: "0" });
         try {
           workflow.shouldRollOtherDamage = Roll.safeEval(expression);
-          console.log("expression is ", expression, result)
         } catch (err) { console.warn(`midi-qol | activation condition (${expression}) error `, err) }
       }
     }

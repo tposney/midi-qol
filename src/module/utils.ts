@@ -4,7 +4,7 @@ import { log } from "../midi-qol.js";
 import { Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { socketlibSocket } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { actorAbilityRollPatching, baseEvent, readyPatching } from "./patching.js";
+import { actorAbilityRollPatching, baseEvent, fastforwardEvent, readyPatching } from "./patching.js";
 import { concentrationCheckItemName, itemJSONData, saveJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
@@ -526,6 +526,18 @@ export function midiCustomEffect(actor, change) {
   //@ts-ignore
   const val = Number.isNumeric(change.value) ? parseInt(change.value) : 1;
   setProperty(actor.data, change.key, change.value)
+}
+
+export function checkImmunity(candidate, data, options, user) {
+  const parent: Actor | undefined = candidate.parent;
+  if (!parent || !(parent instanceof CONFIG.Actor.documentClass)) return true;
+
+  //@ts-ignore .traits
+  const ci = parent.data.data.traits?.ci?.value;
+  const statusId = (data.flags?.core?.statusId ?? "no effect").toLocaleLowerCase();
+  return !(ci.length && ci.find(c => statusId.endsWith(c)));
+  // TODO find out why returning false for pre create does not work for synthetic tokens?
+  // foundry issue 5930 - stopgap in dae to disablete effect
 }
 
 export function untargetDeadTokens() {

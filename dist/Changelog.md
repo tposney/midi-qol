@@ -1,3 +1,10 @@
+### 0.8.59
+* improve condition immunity behaviour. If you try to apply a condition whose statusId (usually name) matches a condition immunity application will be blocked. (For unlinked tokens this is not possible so the condtion is marked as disabled). Requires dae 0.8.54.
+* Fix for not apply empty effects (for tracking expiry)
+Sample Items:
+Added Longsword of sharpness.
+Added Acid Arrow.
+
 ### 0.8.58
 * Added flags.midi-qol.DR.final which is damage reduction applied AFTER damage resistance/saves etc. Not RAW but useful.
 * Fixed ranged target selection to support meters. Sorry about that, and I live in a metric country - hangs head in shame.
@@ -5,6 +12,8 @@
   * Since it is so common @raceOrType, will return the targets race (if there is one) or the targets type, in lowercase.
   @worflow provides access to the midi-qol workflow that caused the roll.
 * Fix for saving throws not being rolled at all.
+Sample items:
+Longsword of Lifestealing (has an itemMacro).
 
 ### 0.8.57
 * Fix for incorrect failed saves calculation if there was a to hit roll as well.

@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling.js";
 import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating, MQfromUuid, expireRollEffect, processOverTime } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating, MQfromUuid, expireRollEffect, processOverTime, checkImmunity } from "./utils.js";
 import { configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 
@@ -220,6 +220,7 @@ export let initHooks = () => {
     if (debugEnabled > 1) debug("Finished the roll", wfuuid)
   })
   Hooks.on("applyActiveEffect", midiCustomEffect);
+  Hooks.on("preCreateActiveEffect", checkImmunity);
 
   Hooks.on("renderItemSheet", (app, html, data) => {
     if (configSettings.allowUseMacro) {
