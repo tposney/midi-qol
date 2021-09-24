@@ -203,7 +203,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
         rollData.workflow = workflow;
         if (rollData.target) {
           rollData.target = rollData.target.actor.data.data;
-          if (rollData.target.race ?? "" !== "") rollData.raceOrType = rollData.target.details.race.toLocaleLowerCase();
+          if (rollData.target.details.race ?? "" !== "") rollData.raceOrType = rollData.target.details.race.toLocaleLowerCase();
           else rollData.raceOrType = rollData.target.details.type.value.toLocaleLowerCase();
         }
 

@@ -428,7 +428,7 @@ export function patchLMRTFY() {
   if (installedModules.get("lmrtfy")) {
     log("Patching lmrtfy")
     libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "OVERRIDE");
-    libWrapper.register("midi-qol", "LMRTFYRoller.prototype._tagMessage", _tagMessage, "OVERRIDE");
+    // the _tagMessage has been updated in LMRTFY libWrapper.register("midi-qol", "LMRTFYRoller.prototype._tagMessage", _tagMessage, "OVERRIDE");
 
   }
 }

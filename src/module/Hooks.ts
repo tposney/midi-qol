@@ -32,6 +32,8 @@ export let readyHooks = async () => {
 
   // Have to trigger on preUpdate to check the HP before the update occured.
   Hooks.on("updateActor", async (actor, update, diff, user) => {
+    //@ts-ignore
+    if (game.user.id !== user) return false;
     if (!configSettings.concentrationAutomation) return true;
     const hpUpdate = getProperty(update, "data.attributes.hp.value");
     if (hpUpdate === undefined) return true;
@@ -40,7 +42,9 @@ export let readyHooks = async () => {
     // expireRollEffect.bind(actor)("Damaged", ""); - not this simple - need to think about specific damage types
     concentrationCheckItemDisplayName = i18n("midi-qol.concentrationCheckName");
     let concentrationName;
-    if (installedModules.get("combat-utility-belt")) {
+    if (installedModules.get("dfreds-convenient-effects")) {
+      concentrationName = i18n("midi-qol.Concentrating");
+    } else if (installedModules.get("combat-utility-belt")) {
       concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
     } else {
       concentrationName = i18n("midi-qol.Concentrating");
@@ -158,7 +162,7 @@ async function handleRemoveConcentration(effect, tokens) {
         await MQfromUuid(templateUuid).delete();
       }
     }
-    socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
+    await socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
   } catch (err) {
     console.warn("dae | error deleteing concentration effects: ", err)
   }
@@ -498,7 +502,23 @@ export const itemJSONData = {
           "author": "devnIbfBHb74U9Zv",
           "img": "icons/svg/dice-target.svg",
           "scope": "global",
-          "command": "if (MidiQOL.configSettings().autoCheckSaves === 'none') return;\n for (let targetData of args[0].targets) {\ let target = canvas.tokens.get(targetData._id);\n   if (MidiQOL.configSettings().removeConcentration && (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id))) {\n     const concentrationLabel = game.modules.get('combat-utility-belt')?.active ? game.settings.get(\"combat-utility-belt\", \"concentratorConditionName\") : \"Concentrating\";\n   \n    const concentrationEffect = target.actor.effects.find(effect => effect.data.label === concentrationLabel);\n    if (concentrationEffect) await concentrationEffect.delete();\n}\n}",
+          "command": `
+              if (MidiQOL.configSettings().autoCheckSaves === 'none') return;
+              for (let targetData of args[0].targets) {
+                let target = canvas.tokens.get(targetData._id);
+                let concentrationLabel;
+                if (MidiQOL.configSettings().removeConcentration && (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id))) {
+                  if (game.modules.get("dfreds-convenient-effects")?.active) {
+                    concentrationLabel = game.i18n.localize("midi-qol.Concentrating");
+                  } else if (game.modules.get("combat-utility-belt")?.active) {
+                    concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName");
+                  } else {
+                    concentrationLabel = game.i18n.localize("midi-qol.Concentrating");
+                  }
+                  const concentrationEffect = target.actor.effects.find(effect => effect.data.label === concentrationLabel)
+                  if (concentrationEffect) await concentrationEffect.delete();
+                }
+              }`,
           "folder": null,
           "sort": 0,
           "permission": {

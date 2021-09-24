@@ -10,6 +10,7 @@ import { installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple } from "./utils.js"
 import { collapseTextChangeRangesAcrossMultipleVersions, isThisTypeNode } from "typescript";
+import { readyPatching } from "./patching.js";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -299,9 +300,6 @@ export class Workflow {
 
   async next(nextState: number) {
     return await this._next(nextState);
-    setTimeout(() => this._next(nextState), 100); // give the rest of queued things a chance to happen
-    // return this._next(nextState);
-    return nextState;
   }
 
   async _next(newState: number, undoData: any = {}) {
@@ -1543,7 +1541,16 @@ export class Workflow {
       let rollDetail = results[i];
       if (result?.terms[0]?.options?.advantage) this.advantageSaves.add(target);
       if (result?.terms[0]?.options?.disadvantage) this.disadvantageSaves.add(target);
-      let saved = rollTotal >= rollDC;
+      let isFumble = false;
+      let isCritical = false;
+      if (rollDetail.terms && checkRule("criticalSaves") && rollDetail.terms[0] instanceof DiceTerm) { // normal d20 roll/lmrtfy/monks roll
+        const dterm: DiceTerm = rollDetail.terms[0];
+        //@ts-ignore
+        isFumble = dterm.total <= (dterm.options?.fumble ?? 1)
+        //@ts-ignore
+        isCritical = dterm.total >= (dterm.options?.critical ?? 20);
+      } else if (result.isBR && checkRule("criticalSaves")) isCritical = result.isCritical;
+      let saved = (isCritical || rollTotal >= rollDC) && !isFumble;
       if (this.checkSuperSaver(target.actor, this.saveItem.data.data.save.ability))
         this.superSavers.add(target);
       if (this.item.data.flags["midi-qol"]?.isConcentrationCheck) {
@@ -1552,10 +1559,11 @@ export class Workflow {
           const rollBonus = (await new Roll(checkBonus, target.actor?.getRollData()).evaluate({ async: true })).total;
           rollTotal += rollBonus;
           rollDetail = (await new Roll(`${rollDetail.result} + ${rollBonus}`).evaluate({ async: true }));
+          saved = (isCritical || rollTotal >= rollDC) && !isFumble; //TODO see if bonus can change critical/fumble
         }
       }
 
-      if (rollTotal >= rollDC) {
+      if (saved) {
         this.saves.add(target);
         this.failedSaves.delete(target);
       }
@@ -1604,7 +1612,13 @@ export class Workflow {
     for (let key of Object.keys(mflags)) {
       if (!key.startsWith("token")) continue;
       const requestId = key.replace("token", "");
-      this.saveRequests[requestId](mflags[key].roll)
+      let roll;
+      try {
+        roll = Roll.fromJSON(JSON.stringify(mflags[key].roll));
+      } catch (err) {
+        roll = mflags[key].roll;
+      }
+      this.saveRequests[requestId](roll)
       delete this.saveRequests[requestId];
     }
     return true;
@@ -1632,7 +1646,7 @@ export class Workflow {
         let total = rollEntry?.entries?.find((e) => !e.ignored)?.total ?? -1;
         let advantage = rollEntry ? rollEntry.rollState === "highest" : undefined;
         let disadvantage = rollEntry ? rollEntry.rollState === "lowest" : undefined;
-        handler({ total, formula, terms: [{ options: { advantage, disadvantage } }] });
+        handler({ total, formula, isBR: true, isCritical: brFlags.isCrit, terms: [{ options: { advantage, disadvantage } }] });
       } else {
         handler(message._roll)
       }

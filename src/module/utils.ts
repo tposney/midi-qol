@@ -449,7 +449,7 @@ export let getSaveMultiplierForItem = (item: Item) => {
   //@ts-ignore
   if (item.actor && item.type === "spell" && item.data.data.level === 0) { // cantrip
     const midiFlags = getProperty(item.actor.data.flags, "midi-qol");
-    if (midiFlags.potentCantrip) return 0.5;
+    if (midiFlags?.potentCantrip) return 0.5;
   }
 
   const itemProperties: any = itemData.data.properties;
@@ -522,7 +522,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
 }
 
 export function midiCustomEffect(actor, change) {
-  if (!change.key.startsWith("flags.midi-qol")) return;
+  if (!change.key?.startsWith("flags.midi-qol")) return;
   //@ts-ignore
   const val = Number.isNumeric(change.value) ? parseInt(change.value) : 1;
   setProperty(actor.data, change.key, change.value)
@@ -535,9 +535,13 @@ export function checkImmunity(candidate, data, options, user) {
   //@ts-ignore .traits
   const ci = parent.data.data.traits?.ci?.value;
   const statusId = (data.flags?.core?.statusId ?? "no effect").toLocaleLowerCase();
-  return !(ci.length && ci.find(c => statusId.endsWith(c)));
-  // TODO find out why returning false for pre create does not work for synthetic tokens?
-  // foundry issue 5930 - stopgap in dae to disablete effect
+  const returnvalue = !(ci.length && ci.find(c => statusId.endsWith(c)));
+  if (!returnvalue) {
+    candidate.data.update({ "disabled": true })
+    // TODO find out why returning false for pre create does not work for synthetic tokens?
+    // foundry issue 5930 - stopgap in dae to disablete effect
+  }
+  return returnvalue;
 }
 
 export function untargetDeadTokens() {
@@ -1022,6 +1026,7 @@ export async function addConcentration(options: { workflow: Workflow }) {
 
     const existing = selfTarget.actor?.effects.find(e => e.getFlag("core", "statusId") === statusEffect.id);
     if (!existing) {
+       return await selfTarget.toggleEffect(statusEffect, { active: true })
       setTimeout(
         () => {
           selfTarget.toggleEffect(statusEffect, { active: true })
@@ -1057,6 +1062,7 @@ export async function addConcentration(options: { workflow: Workflow }) {
         }
       }
     }
+    return await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
     setTimeout(
       () => {
         actor.createEmbeddedDocuments("ActiveEffect", [effectData]);

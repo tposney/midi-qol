@@ -37,12 +37,19 @@ export let setupSocket = () => {
   socketlibSocket.register("addConvenientEffect", addConcentientEffect);
   socketlibSocket.register("deleteItemEffects", deleteItemEffects);
   socketlibSocket.register("createActor", createActor);
+  socketlibSocket.register("deleteToken", deleteToken)
 };
 
 async function createActor(data) {
   await CONFIG.Actor.documentClass.createDocuments([data.actorData]);
 }
 
+async function deleteToken(data: {tokenUuid: string}) {
+  const token = await fromUuid(data.tokenUuid);
+  if (token) { // token will be a token document.
+    token.delete();
+  }
+}
 let deleteItemEffects = async (data: {targets, origin: string, ignore: string[]}) => {
   let {targets, origin, ignore} = data;
   for (let idData of targets) {
@@ -55,12 +62,14 @@ let deleteItemEffects = async (data: {targets, origin: string, ignore: string[]}
     if (effectsToDelete?.length > 0) {
       try {
         // TODO find out why delete of multiple efects don't work
-        // await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToDelete.map(ef => ef.id));
+        await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToDelete.map(ef => ef.id));
+        /*
         for (let ef of effectsToDelete) {
           await actor.deleteEmbeddedDocuments("ActiveEffect", [ef.id])
         }
+        */
       } catch (err) {
-        warn("delete effects failed ", err);
+        console.warn("delete effects failed ", err);
         if (debugEnabled > 0) warn("delete effects failed ", err)
         // TODO can get thrown since more than one thing tries to delete an effect
       };

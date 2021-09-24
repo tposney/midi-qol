@@ -218,7 +218,8 @@ export let fetchParams = () => {
       incapacitated: true,
       removeHiddenInvis: true,
       maxDRValue: false,
-      distanceIncludesHeight: false
+      distanceIncludesHeight: false,
+      criticalSaves: false
     }
   }
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";

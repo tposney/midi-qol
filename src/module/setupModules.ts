@@ -88,6 +88,34 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.8.61
+* Various/significant concentration fixes if you have combat-utility-belt AND/OR convenient effects installed or none. Symptoms included, duplicated concentration saves required, not removing concentration, generally breaking.
+* Optional rule for saving throws auto save/fail on critical roll/fumble
+* Updated Flaming sphere. After a lot of testing, removing the item on expriy/removal of concentration was causing many bugs, which were not present in 0.9. Until then the summoned shere will not be auto deleted, everything else should work.
+
+0.8.60
+* Fixed acid arrow (which had the wrong rounds duration 1 instead of 2).
+* Fix for healing not working - oops.
+
+Clarification, overtime effects share some features with other active effects.  
+  - if an overtime effect is applied as a passive effect (think regenerate) then using @fields will evaluate in the scope of the actor that has the effect and be evaluated each turn, no processing is done when creating the effect on the actor.  
+  - if the overtime effects is applied as a non-transfer effect (i.e. the result of a failed save or an attack that hits) @fields will evaluate in the scope of the caster exactly once when the effect is applied to the target, and ##fields will apply in the scope of the target each time the effect is tested.  
+  
+  Example: a character with 50 HP with a spell, cast at level 3,  has a applied effect attacks a beast with 20 hp, then a removeCondition (for example) of 
+  @attributes.hp.value < 30 && @spellLevel > 2 will evaluate to 50 < 20 && 3 > 2 before the effect is created on the target actor and will always be false.  
+  
+  Of special usefulness is an expression like damageRoll=(@spellLevel)d4, which is evalated when applying the effect and returns an expression like (3)d4 if the spell was cast at level 3.  
+  \\#\\#attributes.hp.value < 30 will evaluate to @attributes.hp.value < 30 and will be evaluated each round until the targets hp are less than 30.  
+  
+  The ## versus @ behaviour is standard for DAE/Midi active effects.  
+
+ 0.8.59
+* improve condition immunity behaviour. If you try to apply a condition whose statusId (usually name) matches a condition immunity application will be blocked. (For unlinked tokens this is not possible so the condtion is marked as disabled).  
+* Fix for not applying empty effects (for tracking expiry).  
+Sample Items:  
+Added Longsword of sharpness.  
+Added Acid Arrow.  
+
 0.8.58
 * Added flags.midi-qol.DR.final which is damage reduction applied AFTER damage resistance/saves etc. Not RAW but useful.
 * Fixed ranged target selection to support meters. Sorry about that, and I live in a metric country - hangs head in shame.
