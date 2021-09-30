@@ -115,10 +115,10 @@ If you assign a key multiple meanings the behaviour is going to be confusing at 
   * Save - all see results. Saves are rolled and who saved/failed to save is visible to all users.
   * Save - only GM sees. Saves are rolled and the save/fail display is only visible to the GM.
   * Save - All see results + Rolls. Normally the NPC rolls are hidden; this option shows the roll chat cards to all players.
-* **Prompt Players to Roll Saves** If "None" set the module will automatically roll all saves.  If set to another value, the system will prompt the player to roll their save and wait up to **Delay before rolling** seconds before auto rolling the save for them. You can also specify Monks Token Bar for saves.
+* **Prompt Players to Roll Saves** If "None" set the module will automatically roll all saves.  If set to another value, the system will prompt the player to roll their save and wait up to **Delay before rolling** seconds before auto rolling the save for them. You can also specify Monks Token Bar for saves. Monk's token bar rolls do not support setting of advantage by midi-qol.
   * Chat Message. If selected, an impacted player will receive a whisper in chat prompting them to roll a saving throw.  The module will assume that the next saving throw in the chat stream from this player was the requested roll and evaluate it.  
   * Let Me Roll That For You.  If selected (and LMRTFY is installed and enabled), midi-qol while use LMRTFY to prompt the player who controls the target (or, if there is none, a randomly chosen player with ownership rights to the target) to make the roll.  The specific roll details are passed to LMRTFY and multiple rolled (i.e. more than one spell requiring a save) will be correctly allocated.
-  * Monks Token Bar. If selected (and monks-tokenbar is installed and active) characters with a logged in player owner will be added to a monks token bar savng thow dialog. Completing the roll from the dialog will be used as the save.
+  * Monks Token Bar. If selected (and monks-tokenbar is installed and active) characters with a logged in player owner will be added to a monks token bar savng thow dialog. Completing the roll from the dialog will be used as the save. Monk's token bar rolls do not support setting of advantage by midi-qol.
 * **Prompt GM to Roll Saves** Set this to “Auto” to have midi-qol automatically roll and evaluate NPC saving throws on behalf of the GM.  Set to “Let Me Roll That For You” to instead have the LMRTFY module prompt the GM for NPC saving throws. You can also use Monks Token Bar saving throws.
 * **Display Saving throw DC**. Determines if the saving throw DC is displayed to the players and on the chat cards. If unchecked, saving throws will display on the chat card with the value replaced by “??”. 
 
@@ -321,7 +321,7 @@ flags.midi-qol...... need to be set via **CUSTOM** (preferred) or **OVERRIDE**. 
 * flags.midi-qol.advantage.deathSave - gives advantage on death saves
 Similarly for disadvantage.  
 Advantage/disadvantage on checks for an ability check also grants advantage on the corresponding skill rolls.  
-* flags.midi-qol.advantage.concentration/midi-qol.disadvantage.concentration: advantage/disadvantage on cocentration saves
+* flags.midi-qol.advantage.concentration/midi-qol.disadvantage.concentration: advantage/disadvantage on cocentration saves. Monk's token bar rolls do not support setting of advantage by midi-qol.
 * flags.midi-qol.concentrationSaveBonus, a roll expression, which is added to concentration saves (auto, letme, monks, prompted). The roll will display without the bonus on the roll card, but the save result display will reflect the bonus. The revised saving throw formula is available in the tooltip on the save results card.
 
 flags.midi-qol.fail.all/ability.all/ability.check.all/ability.save.all/skill.all etc to auto fail a given roll.  

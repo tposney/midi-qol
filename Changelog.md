@@ -1,3 +1,21 @@
+**Changes coming in dnd5e 1.5**:
+* dnd5e 1.5 includes per weapon critical threshold and bonus critical damage dice. There is now a configuration setting to enable/disable the midi-qol field on the item sheet. Once dnd5e 1.5 is released, you are stongly encouraged to migrate to the dnd5e setting and disable the midi-qol flag, via Use Midi Critical in the configuration settings. Soon, I will remove the midi-qol field completely. You can run ```MidiQOL.reportMidiCriticalFlags()``` from the console to see which actors/tokens have the midi-qol critical setting defined.
+* Enhanced dnd5e critical damge effects. You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). You will need to experiment to cofirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
+
+
+### 0.8.62
+* Fix for ranged AOE spells using meters instead of feet.
+* Fix for error thrown when expiring effects after a fumbled roll.
+* Fix for overtime effects with no save expiring after one round.
+* Fix for overtime effects being unable to roll damage if auto rolling damage is disabled.
+* Added LMRTFY+Query mode for GM saving throws. And a reminder, if using monks token bar rolls, you cannot set advantage/disadvantage for concentration checks, you have to do it manually.
+* Added per player RollStats in addition to existing stats. Player stats cover all actors they might control and have lifetime/session/item stats.
+* Switched LMRTFY saving throws to use the actor uuid instead of id, so that for unlinked tokens the synthetic actor data is used instead of the base actor. (Make sure your LMRTFY is up to date).
+* Be a bit more aggressive about adding concentration, for spells like wall of flame, stinking cloud which are AoE but might not target anyone when cast.
+* Clarification: If a spell has concentration it will only be applied AFTER the roll is complete, which includes rolling damage if the item has damage, e.g. SRD Hunter's Mark.
+* Updated Branding Smite to remove concentration when attack is made (as well as actor effect).
+* Added MidiQOL.getConcentrationEffect(actor) which will return the concenttation active effect for the curent passed actor, suitable for MidiQOL.getConcenttrationEffect(actor)?.delete() to remove concentration from an actor.
+
 ### 0.8.61
 * Various/significant concentration fixes if you have combat-utility-belt AND/OR convenient effects installed or none. Symptoms included, duplicated concentration saves required, not removing concentration, generally breaking.
 * Optional rule for saving throws auto save/fail on critical roll/fumble
@@ -512,7 +530,7 @@ Possible Issues:
 * Fix for DF Manual Rolls - no longer request roll to be entered twice. Requires ciritical damage to be dnd5e default (fix pending for critical damage).
 * Fix for token tooltip showing dmaage resistance/immunity/vulnerabilty not being dislayed on damage card.
 * [BRAKING] Setting saving throw roll time out to 0 means that the system will NEVER auto roll the save for the player. If saves are not rolled (either auto or by request) they will never be resolved. This will help in the some cases where players incorrectly place templates.
-* Added support for Monks Token Bar saving throws. Can be for players or NPCs. There is no timeout supported for this. The GM can always click on the roll if they get tired of waiting.
+* Added support for Monks Token Bar saving throws. Can be for players or NPCs. There is no timeout supported for this. The GM can always click on the roll if they get tired of waiting. Monk's token bar rolls do not support setting of advantage by midi-qol.
 * Fix for DamageOnlyWorkflow error when initialising with no item.
 
 ## 0.8.3

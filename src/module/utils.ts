@@ -471,12 +471,14 @@ export let getSaveMultiplierForItem = (item: Item) => {
 };
 
 export function requestPCSave(ability, rollType, player, actor, advantage, flavor, dc, requestId, GMprompt) {
-  const useUuid = false;
+  const useUuid = true; // for  LMRTFY
   const actorId = useUuid ? actor.uuid : actor.id;
   const playerLetme = !player?.isGM && ["letme", "letmeQuery"].includes(configSettings.playerRollSaves);
+  const playerLetMeQuery = "letmeQuery" === configSettings.playerRollSaves;
+  const gmLetmeQuery = "letmeQuery" === GMprompt;
   const gmLetme = player.isGM && ["letme", "letmeQuery"].includes(GMprompt);
   if (player && installedModules.get("lmrtfy") && (playerLetme || gmLetme)) {
-    if ((configSettings.playerRollSaves === "letmeQuery")) {
+    if (((!player.isGM && playerLetMeQuery) || (player.isGM && gmLetmeQuery))) {
       // TODO - reinstated the LMRTFY patch so that the event is properly passed to the roll
       advantage = 2;
     } else {
@@ -496,7 +498,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
       abilities: rollType === "abil" ? [ability] : [],
       saves: rollType !== "abil" ? [ability] : [],
       skills: [],
-      advantage: player.isGM ? 2 : advantage,
+      advantage,
       mode,
       title: i18n("midi-qol.saving-throw"),
       message: `${configSettings.displaySaveDC ? "DC " + dc : ""} ${i18n("midi-qol.saving-throw")} ${flavor}`,
@@ -581,8 +583,8 @@ export function processOverTime(combat, data, options, user) {
   let toTest = prev;
   let count = 0;
   const last = (combat.current.round ?? 0) * 100 + (combat.current.turn ?? 0);
-  while (toTest <= last && count < 200) {
-    count += 1;
+  while (toTest <= last && count < 200) { // step through each turn from prev to current
+    count += 1; // make sure we don't do an infinite loop
     const actor = combat.turns[testTurn]?.actor;
     const endTurn = toTest < last;
     const startTurn = toTest > prev;
@@ -592,7 +594,6 @@ export function processOverTime(combat, data, options, user) {
         actor?.unsetFlag("midi-qol", "reactionCombatRound");
       }
     }
-
 
     if (actor) {
       let rollData = actor.getRollData();
@@ -632,10 +633,10 @@ export function processOverTime(combat, data, options, user) {
           const changeTurnEnd = details.turn === "end" ?? false;
           if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart)) {
             const label = (details.label ?? "Damage Over Time").replace(/"/g, "");
-            const saveDC = Number.isNumeric(details.saveDC) ? parseInt(details.saveDC) : 10;
+            const saveDC = Number.isNumeric(details.saveDC) ? parseInt(details.saveDC) : -1;
             const saveAbility = details.saveAbility;
             const saveDamage = details.saveDamage ?? "nodamage";
-            const saveMagic = JSON.parse(details.saveMagic ?? "false");
+            const saveMagic = JSON.parse(details.saveMagic ?? "false"); //parse the saving throw true/false
             const damageRoll = details.damageRoll;
             const damageType = details.damageType ?? "piercing";
             const saveRemove = JSON.parse(details.saveRemove ?? "true");
@@ -677,7 +678,7 @@ export function processOverTime(combat, data, options, user) {
             const theTarget = theTargetToken?.document ? theTargetToken?.document.id : theTargetToken?.id;
             if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
             let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
-            if (saveRemove)
+            if (saveRemove && saveDC > -1)
               overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id };
             if (details.removeCondition) {
               let value = replaceAtFields(details.removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
@@ -1026,7 +1027,7 @@ export async function addConcentration(options: { workflow: Workflow }) {
 
     const existing = selfTarget.actor?.effects.find(e => e.getFlag("core", "statusId") === statusEffect.id);
     if (!existing) {
-       return await selfTarget.toggleEffect(statusEffect, { active: true })
+      return await selfTarget.toggleEffect(statusEffect, { active: true })
       setTimeout(
         () => {
           selfTarget.toggleEffect(statusEffect, { active: true })
@@ -1721,3 +1722,40 @@ class ReactionDialog extends Application {
 }
 
 
+export function reportMidiCriticalFlags() {
+  let report: string[] = [];
+  if (game?.actors) for (let a of game.actors) {
+    for (let item of a.items.contents) {
+      if (!["", "20", 20].includes((getProperty(item, "data.flags.midi-qol.criticalThreshold") || ""))) {
+        report.push(`Actor ${a.name}'s Item ${item.name} has midi critical flag set ${getProperty(item, "data.flags.midi-qol.criticalThreshold")}`)
+      }
+    }
+  }
+  if (game?.scenes) for (let scene of game.scenes) {
+    for (let tokenDocument of scene.data.tokens) {
+      if (tokenDocument.actor) for (let item of tokenDocument.actor.items.contents) {
+        if (!tokenDocument.isLinked && !["", "20", 20].includes((getProperty(item, "data.flags.midi-qol.criticalThreshold") || ""))) {
+          report.push(`Scene ${scene.name}, Token Name ${tokenDocument.name}, Actor Name ${tokenDocument.actor.name}, Item ${item.name} has midi critical flag set ${getProperty(item, "data.flags.midi-qol.criticalThreshold")}`)
+        }
+      }
+    }
+  }
+  console.log("Items with midi critical flags set  are\n", ...(report.map(s => s + "\n")));
+}
+
+/**
+ * 
+ * @param actor the actor to check
+ * @returns the concentration effect if present and null otherwise
+ */
+export function getConcentrationEffect(actor): ActiveEffect | undefined {
+  let concentrationLabel: any = "Concentrating";
+  if (game.modules.get("dfreds-convenient-effects")?.active) {
+    let concentrationId = "Convenient Effect: Concentrating";
+    let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
+    if (statusEffect) concentrationLabel = statusEffect.label;
+  } else if (game.modules.get("combat-utility-belt")?.active) {
+    concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
+  }
+  return actor.effects.contents.find(i => i.data.label === concentrationLabel);
+}

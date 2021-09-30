@@ -16,6 +16,7 @@ export var autoRemoveTargets: string;
 export var forceHideRoll: boolean;
 export var enableWorkflow: boolean;
 export var dragDropTargeting: boolean;
+export var useMidiCrit: boolean = true;
 
 const defaultKeyMapping = {
   "DND5E.Advantage": "altKey", 
@@ -251,6 +252,7 @@ export let fetchParams = () => {
   let debugText: string = String(game.settings.get("midi-qol", "Debug"));
   forceHideRoll = Boolean(game.settings.get("midi-qol", "ForceHideRoll"));
   dragDropTargeting = Boolean(game.settings.get("midi-qol", "DragDropTarget"));
+  useMidiCrit = Boolean(game.settings.get("midi-qol", "UseMidiCrit"))
 
   setDebugLevel(debugText);
   if (configSettings.concentrationAutomation) {
@@ -326,6 +328,14 @@ const settings = [
     name: "DragDropTarget",
     scope: "world",
     default: false,
+    type: Boolean,
+    onChange: fetchParams,
+    config: true
+  },
+  {
+    name: "UseMidiCrit",
+    scope: "world",
+    default: true,
     type: Boolean,
     onChange: fetchParams,
     config: true

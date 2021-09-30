@@ -19,7 +19,7 @@ import { initHooks, readyHooks } from './module/Hooks.js';
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
-import { applyTokenDamage, checkNearby, findNearby, getDistance, getDistanceSimple, getTraitMult, MQfromActorUuid, MQfromUuid } from './module/utils.js';
+import { applyTokenDamage, checkNearby, findNearby, getConcentrationEffect, getDistance, getDistanceSimple, getTraitMult, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
@@ -210,9 +210,11 @@ function setupMidiQOLApi() {
     gameStats,
     MQFromUuid: MQfromUuid,
     MQfromActorUuid: MQfromActorUuid,
+    getConcentrationEffect: getConcentrationEffect,
     selectTargetsForTemplate: templateTokens,
     socket: () => {return socketlibSocket},
-    checkRule: checkRule
+    checkRule: checkRule,
+    reportMidiCriticalFlags: reportMidiCriticalFlags
   }
 }
 

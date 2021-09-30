@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, getAutoRollAttack, getAutoRollDamage, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
+import { checkRange, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { config } from "@league-of-foundry-developers/foundry-vtt-types/src/types/augments/simple-peer";
 
@@ -297,7 +297,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (!enableWorkflow || createWorkflow === false) {
     return await wrapped(options);
   }
-  const isRangeSpell = this.data.data.target?.units === "ft" && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
+  const isRangeSpell = ["ft","m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const myTargets = game.user?.targets && await validTargetTokens(game.user?.targets);
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
@@ -350,18 +350,8 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const needsConcentration = this.data.data.components?.concentration || this.data.data.activation?.condition?.includes("Concentration");
   const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
   if (needsConcentration && checkConcentration) {
-    let concentrationLabel: any = "Concentrating";
-    if (game.modules.get("dfreds-convenient-effects")?.active) {
-      let concentrationId = "Convenient Effect: Concentrating";
-      let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
-      if (statusEffect) concentrationLabel = statusEffect.label;
-    } else if (game.modules.get("combat-utility-belt")?.active) {
-
-      concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
-    }
-    const concentrationCheck = this.actor.effects.contents.find(i => i.data.label === concentrationLabel);
-
-    if (concentrationCheck) {
+    const concentrationEffect = getConcentrationEffect(this.actor);
+    if (concentrationEffect) {
       shouldAllowRoll = false;
       let d = await Dialog.confirm({
         title: i18n("midi-qol.ActiveConcentrationSpell.Title"),
@@ -369,7 +359,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
         yes: () => { shouldAllowRoll = true },
       });
       if (!shouldAllowRoll) return; // user aborted spell
-      await concentrationCheck.delete();
+      await concentrationEffect.delete();
     }
   }
 
@@ -565,7 +555,9 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
       "core": { "canPopout": true }
     }
   };
-
+  if (!this.actor.items.has(this.id) ) { // deals with using temp items in overtime effects
+    chatData.flags["dnd5e.itemData"] = this.data;
+  }
   // Temp items (id undefined) or consumables that were removed need itemdata set.
   if (!this.id || (this.data.type === "consumable" && !this.actor.items.has(this.id))) {
     chatData.flags[`${game.system.id}.itemData`] = this.data;

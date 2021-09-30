@@ -1,8 +1,8 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling.js";
 import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, getSelfTargetSet, isConcentrating, MQfromUuid, expireRollEffect, processOverTime, checkImmunity } from "./utils.js";
-import { configSettings, dragDropTargeting } from "./settings.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, expireRollEffect, processOverTime, checkImmunity, getConcentrationEffect } from "./utils.js";
+import { configSettings, dragDropTargeting, useMidiCrit } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
@@ -49,7 +49,7 @@ export let readyHooks = async () => {
     } else {
       concentrationName = i18n("midi-qol.Concentrating");
     }
-    const concentrationEffect: ActiveEffect | undefined = isConcentrating(actor)
+    const concentrationEffect: ActiveEffect | undefined = getConcentrationEffect(actor)
     if (!concentrationEffect) return true;
     if (actor.data.data.attributes.hp.value === 0) {
       concentrationEffect.delete();
@@ -234,7 +234,7 @@ export let initHooks = () => {
       const macroField = `<div class="form-group"><label>${labelText}</label><input type="text" name="flags.midi-qol.onUseMacroName" value="${currentMacro}"/> </div>`;
       element.append(macroField)
     }
-    if (!installedModules.get("betterrolls5e") && isNewerVersion("1.5.0", game.system.data.version)) { // 1.5.0 will include per weapon criticals
+    if (!installedModules.get("betterrolls5e") && isNewerVersion("1.5.0", game.system.data.version) || useMidiCrit) { // 1.5.0 will include per weapon criticals
       const element2 = html.find('input[name="data.attackBonus"]').parent().parent();
       const labelText2 = i18n('midi-qol.criticalThreshold');
       const criticalThreshold = getProperty(app.object.data, "flags.midi-qol.criticalThreshold") ?? 20;

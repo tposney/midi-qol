@@ -18,8 +18,8 @@ export function removeActorStats(data: { actorId: any; }) {
   return gameStats.GMremoveActorStats(data.actorId)
 }
 
-export function GMupdateActor(data: { actorId: any; currentStats: any; }) {
-  return gameStats.GMupdateActor(data)
+export function GMupdateEntityStats(data: { id: any; currentStats: any; }) {
+  return gameStats.GMupdateEntity(data)
 }
 
 export let setupSocket = () => {
@@ -28,7 +28,7 @@ export let setupSocket = () => {
   socketlibSocket.register("createReverseDamageCard", createReverseDamageCard);
   socketlibSocket.register("removeEffects", removeEffects);
   socketlibSocket.register("createEffects", createEffects);
-  socketlibSocket.register("updateActorStats", GMupdateActor)
+  socketlibSocket.register("updateEntityStats", GMupdateEntityStats)
   socketlibSocket.register("removeStatsForActorId", removeActorStats);
   socketlibSocket.register("monksTokenBarSaves", monksTokenBarSaves);
   socketlibSocket.register("rollAbility", rollAbility);

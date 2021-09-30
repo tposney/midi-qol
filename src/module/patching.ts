@@ -350,9 +350,16 @@ function procAdvantageSkill(actor, skillId, options: Options): Options {
 let _midiATRefresh = debounce(__midiATIRefresh, 20);
 
 function __midiATIRefresh(template) {
+  console.log("Midi ati refresh", template)
   if (!canvas?.tokens) return;
-  if (game.user && !template.data.flags?.levels?.elevation) 
+
+  /*
+  if (game.user && !template.data.flags?.levels?.elevation) {
+    console.log("Setting template ", getProperty(game.user, "data.flags.midi-qol.elevation"))
     setProperty(template.data.flags, "levels.elevation", getProperty(game.user, "data.flags.midi-qol.elevation") ?? 0)
+  }
+  */
+  console.log("Midi ati refresh", template)
   if (installedModules.get("levelsvolumetrictemplates")) {
     // Filter which tokens to pass
     let distance = template.data.distance;
@@ -367,6 +374,7 @@ function __midiATIRefresh(template) {
       return true;
     })
 
+    console.log("Tokens to check are ", tokensToCheck)
     if (tokensToCheck.length > 0) {
       //@ts-ignore compute3Dtemplate(t, tokensToCheck = canvas.tokens.placeables)
       VolumetricTemplates.compute3Dtemplate(template, tokensToCheck);

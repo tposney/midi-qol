@@ -7,7 +7,7 @@ import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, debug
 import { selectTargets, showItemCard } from "./itemhandling.js";
 import { socketlibSocket } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls, useMidiCrit } from "./settings.js";
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple } from "./utils.js"
 import { collapseTextChangeRangesAcrossMultipleVersions, isThisTypeNode } from "typescript";
 import { readyPatching } from "./patching.js";
@@ -415,6 +415,7 @@ export class Workflow {
           await this.rollAttackBonus(attackBonusMacro);
         }
         this.processAttackRoll();
+        Hooks.callAll("midi-qol.preCheckHits", this);
         if (configSettings.autoCheckHit !== "none") {
           await this.checkHits();
           await this.displayAttackRoll(configSettings.mergeCard);
@@ -517,7 +518,7 @@ export class Workflow {
         await this.displayDamageRoll(configSettings.mergeCard);
         Hooks.callAll("midi-qol.DamageRollComplete", this)
         if (this.isFumble) {
-          this.expireMyEffects(["1Action", "1Attack", "1Spell"]);
+          expireMyEffects.bind(this)(["1Action", "1Attack", "1Spell"]);
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
         }
         expireMyEffects.bind(this)(["1Action", "1Attack", "1Hit", "1Spell"]);
@@ -625,8 +626,8 @@ export class Workflow {
         hasConcentration = hasConcentration;
         if (this.item &&
           (
-            (this.item.hasAttack && this.hitTargets.size === 0)  // did  not hit anyone
-            || (this.saveItem.hasSave && this.failedSaves.size === 0) // everyone saved
+            (this.item.hasAttack && (this.targets.size > 0 && this.hitTargets.size === 0))  // did  not hit anyone
+            || (this.saveItem.hasSave && (this.targets.size > 0 && this.failedSaves.size === 0)) // everyone saved
           )
         )
           hasConcentration = false;
@@ -1082,7 +1083,7 @@ export class Workflow {
         const isD20 = (d.faces === 20);
         if (isD20) {
           // Highlight successes and failures
-          if (isNewerVersion("1.5.0", game.system.data.version)) {
+          if (isNewerVersion("1.5.0", game.system.data.version) || useMidiCrit) {
             if ((d.options.critical && (d.total >= (getProperty(this, "item.data.flags.midi-qol.criticalThreshold") ?? d.options.critical)) || this.isCritical)) {
               content = content.replace('dice-total', 'dice-total critical');
             }
@@ -1697,7 +1698,7 @@ export class Workflow {
     //@ts-ignore
     //@ts-ignore .critical undefined
     this.isCritical = this.diceRoll >= this.attackRoll.terms[0].options.critical;
-    if (isNewerVersion("1.5.0", game.system.data.version)) {
+    if (isNewerVersion("1.5.0", game.system.data.version) || useMidiCrit) {
       if (getProperty(this, "item.data.flags.midi-qol.criticalThreshold") ?? 20 < 20) {
         this.isCritical = this.isCritical || this.diceRoll >= getProperty(this, "item.data.flags.midi-qol.criticalThreshold");
       }
@@ -2152,6 +2153,7 @@ export class BetterRollsWorkflow extends Workflow {
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
         this.effectsAlreadyExpired = [];
         if (checkRule("removeHiddenInvis")) removeHiddenInvis.bind(this)();
+        Hooks.callAll("midi-qol.preCheckHits", this);
         if (debugEnabled > 1) debug(this.attackRollHTML)
         if (configSettings.autoCheckHit !== "none") {
           await this.checkHits();
