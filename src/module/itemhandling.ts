@@ -121,6 +121,10 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     return await wrapped({ event, versatile, options })
   }
   const midiFlags = workflow.actor.data.flags["midi-qol"]
+  if (workflow.currentState !== WORKFLOWSTATES.WAITFORDAMAGEROLL && workflow.noAutoAttack) {
+    // allow damage roll to go ahead if it's an ordinary roll
+    workflow.currentState = WORKFLOWSTATES.WAITFORDAMAGEROLL;
+  }
   if (workflow.currentState !== WORKFLOWSTATES.WAITFORDAMAGEROLL) {
     switch (workflow?.currentState) {
       case WORKFLOWSTATES.AWAITTEMPLATE:

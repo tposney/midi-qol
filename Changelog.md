@@ -2,6 +2,10 @@
 * dnd5e 1.5 includes per weapon critical threshold and bonus critical damage dice. There is now a configuration setting to enable/disable the midi-qol field on the item sheet. Once dnd5e 1.5 is released, you are stongly encouraged to migrate to the dnd5e setting and disable the midi-qol flag, via Use Midi Critical in the configuration settings. Soon, I will remove the midi-qol field completely. You can run ```MidiQOL.reportMidiCriticalFlags()``` from the console to see which actors/tokens have the midi-qol critical setting defined.
 * Enhanced dnd5e critical damge effects. You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). You will need to experiment to cofirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
 
+### 0.8.64
+* Added healing and temp helaing to resistance/immunity/vulnerability types so that actor can be immune to healing.
+* Fix for template placing not working.
+
 ### 0.8.63
 * Fix for OverTime effects - now supports stacking of the same effect (should be regarded as experimental).
 * Added the ability to use # instead of , to separate OverTime fields. You have to use one or the other for the whole OverTime field.
@@ -11,7 +15,7 @@
   - If using levels you can set the midi-qol optional rule setting to check + levels, which will check template overage including height and levels walls blocking for all attacks. The midi template height check is VERY naive and in addition to 2d targeting simply checks a sphere centered on the template origin and if further away it is considered out of range.
   - If you want proper volumetic templates use the levelsvolumetrictemplates module (patreon) which does a great job of working out how much of the token is in the template and midi uses the result of that calculation. This version supports walls blocking for volumetric templates and uses volumetric templates for the preview targeting.
   - Midi also supports the levels "place next template at this height" setting from the left hand hud and if not set, will cast at the tokens current LoS height.
-  - If levels is installed midi will use levels' check collsion code, which deals with wall heights.
+  - If levels is installed midi will use levels' check collision code, which deals with wall heights.
   
 
 ### 0.8.62

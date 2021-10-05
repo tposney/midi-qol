@@ -127,6 +127,10 @@ Hooks.once('setup', function() {
   if (game.system.id === "dnd5e")
     //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
+    //@ts-ignore CONFIG.DND5E
+    CONFIG.DND5E.damageResistanceTypes["healing"] = CONFIG.DND5E.healingTypes.healing;
+    //@ts-ignore CONFIG.DND5E
+    CONFIG.DND5E.damageResistanceTypes["temphp"] = CONFIG.DND5E.healingTypes.temphp;
 
   if (configSettings.allowUseMacro) {
     

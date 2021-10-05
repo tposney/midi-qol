@@ -190,10 +190,10 @@ export function calculateDamage(a: Actor, appliedDamage, t: Token, totalDamage, 
  */
 
 export let getTraitMult = (actor, dmgTypeString, item) => {
-  dmgTypeString = dmgTypeString.toLowerCase()
-  if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) return -1;
-  if (dmgTypeString.includes("midi-none")) return 0;
+  dmgTypeString = dmgTypeString.toLowerCase();
   let totalMult = 1;
+  if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) totalMult = -1;
+  if (dmgTypeString.includes("midi-none")) return 0;
   if (configSettings.damageImmunities !== "none" && dmgTypeString !== "") {
     // if not checking all damage counts as magical
     const magicalDamage = (item?.type !== "weapon"
@@ -202,9 +202,11 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
     for (let { type, mult } of [{ type: "di", mult: 0 }, { type: "dr", mult: 0.5 }, { type: "dv", mult: 2 }]) {
       let trait = actor.data.data.traits[type].value;
       if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
-      if (item?.type === "spell" && trait.includes("spell")) totalMult = totalMult * mult;
+      if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (item?.type === "power" && trait.includes("power")) totalMult = totalMult * mult;
       else if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
+      console.error(actor.data.data.traits[type].custom, actor.data.data.traits[type].custom.split(";"), dmgTypeString)
+
     }
   }
   return totalMult;
@@ -709,7 +711,7 @@ export async function processOverTime(combat, data, options, user) {
           }
         }
       }
-      // if (rollPromise) await rollPromise;
+      if (rollPromise) await rollPromise;
       testTurn += 1;
       if (testTurn === combat.turns.length) {
         testTurn = 0;

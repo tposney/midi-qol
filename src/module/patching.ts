@@ -354,8 +354,8 @@ function __midiATIRefresh(template) {
   if (configSettings.autoTarget === "none") return;
   if (game.user) { //  && !template.data.flags?.levels?.elevation) {
     //@ts-ignore
-    const elevation = getProperty(game.user, "data.flags.midi-qol.elevation") ??  _levels.nextTemplateHeight;
-    setProperty(template.data.flags, "levels.elevation", elevation)
+    const elevation = getProperty(game.user, "data.flags.midi-qol.elevation") ??  _levels?.nextTemplateHeight;
+    if (elevation) setProperty(template.data.flags, "levels.elevation", elevation)
   }
   if (installedModules.get("levelsvolumetrictemplates")) {
     // Filter which tokens to pass - not too far and not blocked by a wall.
