@@ -277,5 +277,7 @@
     "midi-qol.AutoCEEffects.Name": "Convenient Effects 적용",
     "midi-qol.AutoCEEffects.Hint": "아이템 사용시 아이템 이름과 일치시키는 Convenient Effects를 적용한다.",
     "midi-qol.BonusACCover": "AC 엄폐",
-    "midi-qol.NoChangelogs": "Midi-Qol이 마지막 업데이트 이후 변경 사항을 표시하기 위해 Changelogs 모듈을 지원, 권장한다."
+    "midi-qol.NoChangelogs": "Midi-Qol이 마지막 업데이트 이후 변경 사항을 표시하기 위해 Changelogs 모듈을 지원, 권장한다.",
+    "midi-qol.UseMidiCrit.Name": "Midi-qol 무기 치명타 임계점 사용",
+    "midi-qol.UseMidiCrit.Hint": "아이템 시트에서 Midi-qol 치명타 임계정 필드를 활성화/비활성화 한다."
 }
