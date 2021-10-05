@@ -4,6 +4,7 @@
 
 ### 0.8.64
 * Added healing and temp helaing to resistance/immunity/vulnerability types so that actor can be immune to healing.
+* Fix for template placing not working.
 
 ### 0.8.63
 * Fix for OverTime effects - now supports stacking of the same effect (should be regarded as experimental).
