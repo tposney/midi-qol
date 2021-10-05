@@ -354,7 +354,7 @@ function __midiATIRefresh(template) {
   if (configSettings.autoTarget === "none") return;
   if (game.user) { //  && !template.data.flags?.levels?.elevation) {
     //@ts-ignore
-    const elevation = getProperty(game.user, "data.flags.midi-qol.elevation") ??  _levels?.nextTemplateHeight;
+    const elevation = getProperty(game.user, "data.flags.midi-qol.elevation") ??  (_levels?.nextTemplateHeight);
     if (elevation) setProperty(template.data.flags, "levels.elevation", elevation)
   }
   if (installedModules.get("levelsvolumetrictemplates")) {
