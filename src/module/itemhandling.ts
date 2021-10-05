@@ -1,9 +1,10 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
+import { checkRange, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { config } from "@league-of-foundry-developers/foundry-vtt-types/src/types/augments/simple-peer";
+import { isTemplateMiddleOrTemplateTail } from "typescript";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
@@ -375,17 +376,22 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
     if (!this.id) this.data._id = randomID();
     workflow = new BetterRollsWorkflow(this.actor, this, speaker, targets, event || options.event);
-    if (game.user) setProperty(game.user, "data.flags.midi-qol.elevation", workflow.elevation)
     // options.createMessage = true;
     const result = await wrapped(options);
     return result;
   }
   workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event });
-  if (game.user) setProperty(game.user, "data.flags.midi-qol.elevation", workflow.elevation)
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = showFullCard;
   workflow.noAutoAttack = showFullCard;
+  if (installedModules.get("levels")) {
+    //@ts-ignore
+    _levels.nextTemplateHeight = workflow.templateElevation ?? 0;
+    //@ts-ignore
+    _levels.templateElevation = true;
+    if (game.user) setProperty(game.user, "data.flags.midi-qol.elevation", workflow.templateElevation);
+  }
   let result = await wrapped({ configureDialog, rollMode: null, createMessage: false });
   if (!result) {
     //TODO find the right way to clean this up
@@ -571,7 +577,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   return createMessage ? ChatMessage.create(chatData) : chatData;
 }
 
-function isTokenInside(templateDetails: { x: number, y: number, shape: any }, token, wallsBlockTargeting) {
+function isTokenInside(templateDetails: { x: number, y: number, shape: any, distance: number }, token: Token, wallsBlockTargeting) {
   const grid = getCanvas().scene?.data.grid;
   const templatePos = { x: templateDetails.x, y: templateDetails.y };
 
@@ -593,7 +599,6 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any }, to
           tx = tx + templateDetails.shape.width / 2;
           ty = ty + templateDetails.shape.height / 2;
         }
-
         const r = new Ray({ x: currGrid.x + tx, y: currGrid.y + ty }, { x: tx, y: ty });
         if (configSettings.optionalRules.wallsBlockRange === "centerLevels" && installedModules.get("levels")) {
           let p1 = {
@@ -604,10 +609,12 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any }, to
           let p2 = {
             x: tx, y: ty,
             //@ts-ignore
-            z: getProperty(game.user, "data.flags.midi-qol.elevation") ?? 0
+            z: _levels.nextTemplateHeight ?? 0 // TODO see if this should be gaurded on _levels.templateElevation
           }
+          contains = getUnitDist(p2.x, p2.y, p2.z, token) <= templateDetails.distance;
           //@ts-ignore
-          contains = !_levels.testCollision(p1, p2, "sight");
+          contains = contains && !_levels.testCollision(p1, p2, "sight");
+          //@ts-ignore
         } else {
           contains = !getCanvas().walls?.checkCollision(r);
         }
@@ -619,7 +626,7 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any }, to
   return false;
 }
 
-export function templateTokens(templateDetails: { x: number, y: number, shape: any } | MeasuredTemplate) {
+export function templateTokens(templateDetails: { x: number, y: number, shape: any, distance: number }) {
   if (configSettings.autoTarget === "none") return;
   const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget);
   const tokens = getCanvas().tokens?.placeables || []; //.map(t=>t.data)
@@ -652,12 +659,38 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   }
 
   if (installedModules.get("levelsvolumetrictemplates")) {
+    let distance = templateDocument.data.distance;
+    const dimensions = getCanvas().dimensions || { size: 1, distance: 1 };
+    distance *= dimensions.size / dimensions.distance;
+    const tokensToCheck = canvas?.tokens?.placeables?.filter(tk => { // filter tokens that are close and not blocked
+      const r: Ray = new Ray({x: tk.x + tk.data.width * dimensions.size, y: tk.y + tk.data.height * dimensions.size}, {x: templateDocument.data.x, y: templateDocument.data.y});
+      const maxExtension = (1 + Math.max(tk.data.width , tk.data.height)) * dimensions.size;
+      const centerDist = r.distance;
+      if (centerDist > distance + maxExtension) return false;
+
+      // Check for a wall in  the way
+      //@ts-ignore
+      if ( ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && _levels.testCollision(
+          //@ts-ignore
+          {x:tk.x, y: tk.y, z: _levels.getTokenLOSheight(tk)}, 
+          //@ts-ignore
+          {x: templateDocument.data.x, y: templateDocument.data.y, z: templateDocument.data.flags.levels.elevation ?? 0}, 
+          "sight")) {
+        return false;
+      }
+      return true;
+    });
     //@ts-ignore
-    VolumetricTemplates.compute3Dtemplate(templateDocument)
+    VolumetricTemplates.compute3Dtemplate(templateDocument, tokensToCheck)
   } else {
     //@ts-ignore
-    if (templateDocument.object?.shape) templateTokens(templateDocument.object);
-    else {
+    if (templateDocument.object?.shape) {
+      templateTokens({
+        x: templateDocument.object.x,
+        y: templateDocument.object.y,
+        shape: templateDocument.object.data.shape,
+        distance: templateDocument.object.data.discatnce})
+    } else {
       let { direction, distance, angle, width } = templateDocument.data;
       const dimensions = getCanvas().dimensions || { size: 1, distance: 1 };
       distance *= dimensions.size / dimensions.distance;
@@ -680,7 +713,7 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
           //@ts-ignore
           shape = templateDocument._object._getRayShape(direction, distance, width);
       }
-      templateTokens({ x: templateDocument.data.x, y: templateDocument.data.y, shape });
+      templateTokens({ x: templateDocument.data.x, y: templateDocument.data.y, shape, distance });
     }
   }
 

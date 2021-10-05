@@ -6,7 +6,7 @@ import Item5e from "../../../systems/dnd5e/module/item/entity.js"
 import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, debugEnabled, timelog, checkConcentrationSettings, getCanvas } from "../midi-qol.js";
 import { selectTargets, showItemCard } from "./itemhandling.js";
 import { socketlibSocket } from "./GMAction.js";
-import { installedModules } from "./setupModules.js";
+import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls, useMidiCrit } from "./settings.js";
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple } from "./utils.js"
 import { collapseTextChangeRangesAcrossMultipleVersions, isThisTypeNode } from "typescript";
@@ -74,6 +74,7 @@ export class Workflow {
   itemCardId: string | undefined | null;
   itemCardData: {};
   displayHookId: number | null;
+  templateElevation: number;
 
   event: { shiftKey: boolean, altKey: boolean, ctrlKey: boolean, metaKey: boolean, type: string };
   capsLock: boolean;
@@ -220,7 +221,13 @@ export class Workflow {
     this.tokenUuid = this.tokenId ? token?.document.uuid : undefined; // TODO see if this could be better
     if (installedModules.get("levels") && token) {
       //@ts-ignore
-      this.elevation = _levels.getTokenLOSheight(token)
+      this.templateElevation = _levels.templateElevation ? _levels.nextTemplateHeight : _levels.getTokenLOSheight(token);
+    } else if (installedModules.get("levels")) {
+      //@ts-ignore
+      this.templateElevation = _levels.templateElevation ? _levels.nextTemplateHeight : 0;
+    } else this.templateElevation = 0;
+    if (installedModules.get("levels")) {
+      if (game.user) setProperty(game.user, "data.flags.midi-qol.elevation", this.templateElevation);
     }
     this.speaker = speaker;
     if (this.speaker.scene) this.speaker.scene = canvas?.scene?.id;
@@ -328,6 +335,12 @@ export class Workflow {
       case WORKFLOWSTATES.AWAITTEMPLATE:
         if (this.item.hasAreaTarget && configSettings.autoTarget !== "none") {
           if (debugEnabled > 1) debug("Item has template registering Hook");
+          if (installedModules.get("levels")) {
+            //@ts-ignore
+            _levels.templateElevation = true;
+            //@ts-ignore
+            _levels.nextTemplateHeight = this.templateElevation;
+          }
           this.placeTemlateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
           return undefined;
         }
@@ -401,7 +414,7 @@ export class Workflow {
           } else if (!chatMessage) error("no chat message")
         }
         if (shouldRoll) {
-          this.item.rollAttack({ event: {} });
+          await this.item.rollAttack({ event: {} });
         } else if (isAutoFastAttack() && this.rollOptions.fastForwardKey) {
           this.rollOptions.fastForwardKey = false;
           this.rollOptions.fastForward = false;
@@ -464,7 +477,7 @@ export class Workflow {
           }
 
           this.rollOptions.spellLevel = this.itemLevel;
-          this.item.rollDamage(this.rollOptions);
+          await this.item.rollDamage(this.rollOptions);
           return undefined;
         }
         this.processDamageEventOptions(event);
@@ -885,9 +898,7 @@ export class Workflow {
       this.bonusDamageDetail = [];
     }
     if (this.bonusDamageRoll !== null) {
-      //@ts-ignore game.dice3d
-      const dice3dActive = game.dice3d && (game.settings.get("dice-so-nice", "settings")?.enabled)
-      if (dice3dActive && configSettings.mergeCard) {
+      if (dice3dEnabled() && configSettings.mergeCard) {
         let whisperIds: User[] = [];
         const rollMode = game.settings.get("core", "rollMode");
         if ((configSettings.hideRollDetails !== "none" && game.user?.isGM) || rollMode === "blindroll") {
@@ -2192,7 +2203,7 @@ export class BetterRollsWorkflow extends Workflow {
           //  Not required as we pick up the damage from the better rolls data this.otherDamageRoll.toMessage(messageData);
           this.otherDamageDetail = createDamageList(this.otherDamageRoll, null, this.defaultDamageType);
 
-        }
+        } else this.otherDamageDetail = [];
         if (this.bonusDamageRoll) {
           const messageData = {
             flavor: this.bonusDamageFlavor,

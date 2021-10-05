@@ -30,7 +30,23 @@ https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
 ## (In)Compatibilities? ##
 Any module that overloads item.roll is potentially incompatible.  
 
+## Dynamic Effects using Active Effects (DAE).
+- Applicaiton of effects to targets requires DAE to be installed.
+- Setting special durations (like 1hit etc) require DAE to be installed. Setting midi-flags via active effects is much simpler with DAE installed.
 
+## Convenient Effects
+- Midi supports the application of Convenient Effects spell/item effects (configuration setting - Apply Convenient Effects) and matches those by name. For example, if you cast the spell Bless midi will see if there is a convenient effect "Bless" and apply it to any targets that were hit by the spell.
+
+If you have apply convenient effects set and use items from the DAE SRD/Midi SRD modules, you will get a double up of the effect. You need to choose how you want the item to behave, if using convenient effects, delete the DAE SRD effects. The double up problem is intentional, since you might wish to augment the Concenient Effect definition with your own extra effects on the item.
+
+## levels
+- Midi-qol will use the levels wall collision detection for it's distance calculations/LOS calculations.
+
+## levelVolumeticTemplates
+- Midi-qol will use levels volumetric template target calculations if installed.
+
+## DF Quality of Life
+- Midi-qol does NOT implement the RAW Dnd5e template coverage, it uses the Foundry template coverage. DF Quality of Life implements the correct dnd5e template coverage, so you can disable midis auto area of effect targeting and use DF Quality of Life instead, but you won't get on the fly targeting.
 
 - **Furnace (deprecated for Foundry 0.8.x - Use Advanced Macros).** If you intend to make use of any of the macro features in midi-qol you will need to install the Furnace module and enable advanced macros (which is the feature you need/should enable).
 
@@ -391,6 +407,7 @@ where specification is a comma separated list of fields.
   Saving Throw: the entire active effect will be removed when the saving throw is made (or the effect duration expires)
   * saveAbility=dex/con/etc The actor's ability to use for rolling the saving throw
   * saveDC=number
+  * saveDamage=halfdamage/nodamage/fulldamage - default nodamage
   * rollType=check/save (default save), roll an ability check or save.
   * saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
   * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is made.

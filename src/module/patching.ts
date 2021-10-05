@@ -347,41 +347,48 @@ function procAdvantageSkill(actor, skillId, options: Options): Options {
   return options;
 }
 
-let _midiATRefresh = debounce(__midiATIRefresh, 20);
+let _midiATRefresh = debounce(__midiATIRefresh, 30);
 
 function __midiATIRefresh(template) {
-  console.log("Midi ati refresh", template)
   if (!canvas?.tokens) return;
-
-  /*
-  if (game.user && !template.data.flags?.levels?.elevation) {
-    console.log("Setting template ", getProperty(game.user, "data.flags.midi-qol.elevation"))
-    setProperty(template.data.flags, "levels.elevation", getProperty(game.user, "data.flags.midi-qol.elevation") ?? 0)
+  if (configSettings.autoTarget === "none") return;
+  if (game.user) { //  && !template.data.flags?.levels?.elevation) {
+    //@ts-ignore
+    const elevation = getProperty(game.user, "data.flags.midi-qol.elevation") ??  _levels.nextTemplateHeight;
+    setProperty(template.data.flags, "levels.elevation", elevation)
   }
-  */
-  console.log("Midi ati refresh", template)
   if (installedModules.get("levelsvolumetrictemplates")) {
-    // Filter which tokens to pass
+    // Filter which tokens to pass - not too far and not blocked by a wall.
     let distance = template.data.distance;
     const dimensions = getCanvas().dimensions || { size: 1, distance: 1 };
     distance *= dimensions.size / dimensions.distance;
     const tokensToCheck = canvas.tokens.placeables?.filter(tk => {
-      const r: Ray = new Ray({x: tk.x + tk.data.width * dimensions.size, y: tk.y + tk.data.height * dimensions.size}, {x: template.data.x, y: template.data.y});
+      const r: Ray = new Ray(
+        {x: tk.x + tk.data.width * dimensions.size, y: tk.y + tk.data.height * dimensions.size}, 
+        {x: template.data.x, y: template.data.y});
       const maxExtension = (1 + Math.max(tk.data.width , tk.data.height)) * dimensions.size;
       const centerDist = r.distance;
-      // console.log(tk.name, centerDist, distance, maxExtension, r)
       if (centerDist > distance + maxExtension) return false;
+      //  - check for walls collision if required.
+      //@ts-ignore
+      if ( ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && _levels.testCollision(
+        //@ts-ignore
+        {x:tk.x, y: tk.y, z: _levels.getTokenLOSheight(tk)}, 
+        {x: template.x, y: template.y, z: template.data.flags.levels.elevation ?? 0}, "sight"))
+      {
+        return false;
+      }
       return true;
     })
 
-    console.log("Tokens to check are ", tokensToCheck)
     if (tokensToCheck.length > 0) {
       //@ts-ignore compute3Dtemplate(t, tokensToCheck = canvas.tokens.placeables)
       VolumetricTemplates.compute3Dtemplate(template, tokensToCheck);
     }
 
   } else {
-    templateTokens({x: template.data.x, y: template.data.y, shape: template.shape});
+    const distance: number = template.data.distance ?? 0;
+    templateTokens({x: template.data.x, y: template.data.y, shape: template.shape, distance });
   }
 
 }

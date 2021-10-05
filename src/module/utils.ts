@@ -4,8 +4,8 @@ import { log } from "../midi-qol.js";
 import { Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { socketlibSocket } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { actorAbilityRollPatching, baseEvent, fastforwardEvent, readyPatching } from "./patching.js";
-import { concentrationCheckItemName, itemJSONData, saveJSONData } from "./Hooks.js";
+import { baseEvent } from "./patching.js";
+import { itemJSONData, saveJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import { idText, isConstructorDeclaration } from "typescript";
@@ -212,11 +212,11 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   return 1;
 };
 
-export let applyTokenDamage = (damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any> } = { existingDamage: [], superSavers: new Set() }): any[] => {
+export let applyTokenDamage = async (damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any> } = { existingDamage: [], superSavers: new Set() }): Promise<any[]> => {
   return applyTokenDamageMany([damageDetail], [totalDamage], theTargets, item, [saves], { existingDamage: options.existingDamage, superSavers: [options.superSavers] });
 }
 
-export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[] } = { existingDamage: [], superSavers: [] }): any[] => {
+export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[] } = { existingDamage: [], superSavers: [] }): Promise<any[]> => {
   let damageList: any[] = [];
   let targetNames: string[] = [];
   let appliedDamage;
@@ -351,7 +351,7 @@ export let applyTokenDamageMany = (damageDetailArr, totalDamageArr, theTargets, 
     targetNames.push(t.name)
   }
   if (theTargets.size > 0) {
-    socketlibSocket.executeAsGM("createReverseDamageCard", {
+    await socketlibSocket.executeAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
       damageList: damageList,
@@ -389,7 +389,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   // Don't check for critical - RAW say these don't get critical damage
   if (["rwak", "mwak"].includes(item?.data.data.actionType) && configSettings.rollOtherDamage) {
     if (workflow.otherDamageRoll && configSettings.singleConcentrationRoll) {
-      appliedDamage = applyTokenDamageMany(
+      appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.otherDamageDetail, workflow.bonusDamageDetail ?? []],
         [workflow.damageTotal, workflow.otherDamageTotal, workflow.bonusDamageTotal ?? 0],
         theTargets,
@@ -402,7 +402,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
 
     } else {
       let savesToUse = workflow.otherDamageRoll ? new Set() : workflow.saves;
-      appliedDamage = applyTokenDamageMany(
+      appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
         [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
         theTargets,
@@ -416,7 +416,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       //      appliedDamage = await applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, new Set(), {existingDamage: [], superSavers: new Set()});
       if (workflow.otherDamageRoll) {
         // assume pervious damage applied and then calc extra damage
-        appliedDamage = applyTokenDamage(
+        appliedDamage = await applyTokenDamage(
           workflow.otherDamageDetail,
           workflow.otherDamageTotal,
           theTargets,
@@ -427,7 +427,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       }
     }
   } else {
-    appliedDamage = applyTokenDamageMany(
+    appliedDamage = await applyTokenDamageMany(
       [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
       [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
       theTargets,
@@ -575,7 +575,7 @@ function replaceAtFields(value, context, options: { blankValue: string | number,
   return result;
 }
 
-export function processOverTime(combat, data, options, user) {
+export async function processOverTime(combat, data, options, user) {
   if (user !== game.user?.id) return;
   const prev = (combat.previous.round ?? 0) * 100 + (combat.previous.turn ?? 0);
   let testTurn = combat.previous.turn ?? 0;
@@ -596,7 +596,9 @@ export function processOverTime(combat, data, options, user) {
     }
 
     if (actor) {
+      let rollPromise: Promise<any> | undefined = undefined;
       let rollData = actor.getRollData();
+      if (!rollData.flags) rollData.flags = actor.data.flags;
       rollData.flags.midiqol = rollData.flags["midi-qol"];
       for (let effect of actor.effects) {
         if (effect.data.disabled) continue;
@@ -609,7 +611,10 @@ export function processOverTime(combat, data, options, user) {
           spec = replaceAtFields(spec, rollData, { blankValue: 0, maxIterations: 3 });
           spec = spec.replace(/\s*=\s*/g, "=");
           spec = spec.replace(/\s*,\s*/g, ",");
-          const parts = spec.split(",");
+          spec = spec.replace("\n", "");
+          let parts;
+          if (spec.includes("#")) parts = spec.split("#");
+          else parts = spec.split(",");
           let details: any = {};
           for (let part of parts) {
             const p = part.split("=");
@@ -695,18 +700,16 @@ export function processOverTime(combat, data, options, user) {
             }
 
             try {
-              if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
-                globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC }).toMessage();
-              } else {
-                //@ts-ignore
-                ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false });
-              }
+              const options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC };
+              if (!rollPromise) rollPromise = completeItemRoll(ownedItem, options)
+              else rollPromise = rollPromise.then((data) => completeItemRoll(ownedItem, options));
             } finally {
               if (saveTargets && game.user) game.user.targets = saveTargets;
             }
           }
         }
       }
+      // if (rollPromise) await rollPromise;
       testTurn += 1;
       if (testTurn === combat.turns.length) {
         testTurn = 0;
@@ -714,6 +717,24 @@ export function processOverTime(combat, data, options, user) {
         toTest = testRound * 100;
       } else toTest += 1;
     }
+  }
+}
+
+export async function completeItemRoll(item, options) {
+  if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process  
+    return new Promise((resolve) => {
+      Hooks.once("midi-qol.RollComplete", (workflow) => {
+        resolve(workflow);
+      })
+      globalThis.BetterRolls.rollItem.roll( { itemData: item.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: options.saveDC }).toMesage();
+    })
+  } else {
+    return new Promise((resolve) => {
+      Hooks.once("midi-qol.RollComplete", (workflow) => {
+        resolve(workflow);
+      })
+      item.roll(options);
+    })
   }
 }
 
@@ -741,6 +762,21 @@ export function checkIncapcitated(actor: Actor, item: Item, event) {
     return true;
   }
   return false;
+}
+export function getUnitDist(x1: number, y1: number, z1: number, token2): number {
+  if (!canvas?.dimensions) return 0;
+  const unitsToPixel = canvas.dimensions.size / canvas.dimensions.distance;
+  z1 = z1 * unitsToPixel;
+  const x2 = token2.center.x;
+  const y2 = token2.center.y;
+  //@ts-ignore
+  const z2 = _levels.getTokenLOSheight(token2) * unitsToPixel;
+
+  const d =
+    Math.sqrt(
+      Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2) + Math.pow(z2 - z1, 2)
+    ) / unitsToPixel;
+  return d;
 }
 
 export function getDistanceSimple(t1: Token, t2: Token, includeCover, wallBlocking = false) {

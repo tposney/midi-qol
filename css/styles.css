@@ -26,6 +26,20 @@
 	z-index: 1;
 }
 
+.dmgBtn-container-mqol{
+    display: flex !important;
+  opacity: 0;
+  padding: 0.1rem !important; 
+  justify-content: space-around !important; 
+  transition: opacity 0.2s ease-in-out 0.7s;
+
+}
+
+.dmgBtn-container-mqol:hover{
+  opacity: 1;
+  transition: opacity 0.2s ease-in-out 0s;
+}
+
 .xdice-total-full-damage-button,
 .xdice-total-half-damage-button,
 .xdice-total-double-damage-button,
