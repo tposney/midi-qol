@@ -205,8 +205,6 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
       if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (item?.type === "power" && trait.includes("power")) totalMult = totalMult * mult;
       else if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
-      console.error(actor.data.data.traits[type].custom, actor.data.data.traits[type].custom.split(";"), dmgTypeString)
-
     }
   }
   return totalMult;

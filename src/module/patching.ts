@@ -353,8 +353,12 @@ function __midiATIRefresh(template) {
   if (!canvas?.tokens) return;
   if (configSettings.autoTarget === "none") return;
   if (game.user) { //  && !template.data.flags?.levels?.elevation) {
+    let elevation;
+    if (installedModules.get("levels"))
     //@ts-ignore
-    const elevation = getProperty(game.user, "data.flags.midi-qol.elevation") ??  (_levels?.nextTemplateHeight);
+      elevation = getProperty(game.user, "data.flags.midi-qol.elevation") ?? (_levels?.nextTemplateHeight);
+    else
+      elevation = getProperty(game.user, "data.flags.midi-qol.elevation");
     if (elevation) setProperty(template.data.flags, "levels.elevation", elevation)
   }
   if (installedModules.get("levelsvolumetrictemplates")) {
