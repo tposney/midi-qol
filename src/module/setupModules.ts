@@ -88,47 +88,24 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
-  0.8.62
-  * Fix for ranged AOE spells using meters instead of feet.
-  * Fix for error thrown when expiring effects after a fumbled roll.
-  * Fix for overtime effects with no save expiring after one round.
-  * Fix for overtime effects being unable to roll damage if auto rolling damage is disabled.
-  * Added LMRTFY+Query mode for GM saving throws. And a reminder, if using monks token bar rolls, you cannot set advantage/disadvantage for concentration checks, you have to do it manually.
-  * Added per player RollStats in addition to existing stats. Player stats cover all actors they might control and have lifetime/session/item stats.
-  * Switched LMRTFY saving throws to use the actor uuid instead of id, so that for unlinked tokens the synthetic actor data is used instead of the base actor. (Make sure your LMRTFY is up to date).
-  * Be a bit more aggressive about adding concentration, for spells like wall of flame, stinking cloud which are AoE but might not target anyone when cast.
-  * Clarification: If a spell has concentration it will only be applied AFTER the roll is complete, which includes rolling damage if the item has damage, e.g. SRD Hunter's Mark.
-  * Updated Branding Smite to remove concentration when attack is made (as well as actor effect).
-  * Added MidiQOL.getConcentrationEffect(actor) which will return the concenttation active effect for the curent passed actor, suitable for MidiQOL.getConcenttrationEffect(actor)?.delete() to remove concentration from an actor.
+0.8.65/66/67
+* Fixes for template targeting and various module interactions. (Including the elusive bug exposed when token magic fx not installed).
 
-  0.8.61
-  * Various/significant concentration fixes if you have combat-utility-belt AND/OR convenient effects installed or none. Symptoms included, duplicated concentration saves required, not removing concentration, generally breaking.
-  * Optional rule for saving throws auto save/fail on critical roll/fumble
-  * Updated Flaming sphere. After a lot of testing, removing the item on expriy/removal of concentration was causing many bugs, which were not present in 0.9. Until then the summoned shere will not be auto deleted, everything else should work.
+0.8.64
+* Added healing and temp helaing to resistance/immunity/vulnerability types so that actor can be immune to healing.
 
-  0.8.60
-  * Fixed acid arrow (which had the wrong rounds duration 1 instead of 2).
-  * Fix for healing not working - oops.
+0.8.63
+* Fix for OverTime effects - now supports stacking of the same effect (should be regarded as experimental).
+* Added the ability to use # instead of , to separate OverTime fields. You have to use one or the other for the whole OverTime field.
+* Fix for BonusDamageRoll rolls and dice so nice not being displayed.
+* new MidiQOL.completeItemRoll function. Can use with  await MidiQOL.completeItemRoll(ownedItem, options) which will return the worfklow when the entire roll is complete and damage (if any) applied.
+* Template targeting clean up. 
+  - If using levels you can set the midi-qol optional rule setting to check + levels, which will check template overage including height and levels walls blocking for all attacks. The midi template height check is VERY naive and in addition to 2d targeting simply checks a sphere centered on the template origin and if further away it is considered out of range.
+  - If you want proper volumetic templates use the levelsvolumetrictemplates module (patreon) which does a great job of working out how much of the token is in the template and midi uses the result of that calculation. This version supports walls blocking for volumetric templates and uses volumetric templates for the preview targeting.
+  - Midi also supports the levels "place next template at this height" setting from the left hand hud and if not set, will cast at the tokens current LoS height.
+  - If levels is installed midi will use levels' check collision code, which deals with wall heights.
 
-  Clarification, overtime effects share some features with other active effects.  
-  - if an overtime effect is applied as a passive effect (think regenerate) then using @fields will evaluate in the scope of the actor that has the effect and be evaluated each turn, no processing is done when creating the effect on the actor.  
-  - if the overtime effects is applied as a non-transfer effect (i.e. the result of a failed save or an attack that hits) @fields will evaluate in the scope of the caster exactly once when the effect is applied to the target, and ##fields will apply in the scope of the target each time the effect is tested.  
   
-  Example: a character with 50 HP with a spell, cast at level 3,  has a applied effect attacks a beast with 20 hp, then a removeCondition (for example) of 
-  @attributes.hp.value < 30 && @spellLevel > 2 will evaluate to 50 < 20 && 3 > 2 before the effect is created on the target actor and will always be false.  
-  
-  Of special usefulness is an expression like damageRoll=(@spellLevel)d4, which is evalated when applying the effect and returns an expression like (3)d4 if the spell was cast at level 3.  
-  \\#\\#attributes.hp.value < 30 will evaluate to @attributes.hp.value < 30 and will be evaluated each round until the targets hp are less than 30.  
-  
-  The ## versus @ behaviour is standard for DAE/Midi active effects.  
-
- 0.8.59
-* improve condition immunity behaviour. If you try to apply a condition whose statusId (usually name) matches a condition immunity application will be blocked. (For unlinked tokens this is not possible so the condtion is marked as disabled).  
-* Fix for not applying empty effects (for tracking expiry).  
-Sample Items:  
-Added Longsword of sharpness.  
-Added Acid Arrow.  
-
   [Full Changelog](https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md)`,
   "major")
 })

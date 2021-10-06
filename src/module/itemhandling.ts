@@ -692,8 +692,10 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
       templateTokens({
         x: templateDocument.object.x,
         y: templateDocument.object.y,
-        shape: templateDocument.object.data.shape,
-        distance: templateDocument.object.data.discatnce})
+        //@ts-ignore
+        shape: templateDocument.object.shape,
+        //@ts-ignore
+        distance: templateDocument.object.data.distance})
     } else {
       let { direction, distance, angle, width } = templateDocument.data;
       const dimensions = getCanvas().dimensions || { size: 1, distance: 1 };
