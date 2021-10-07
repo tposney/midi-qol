@@ -638,7 +638,11 @@ export async function processOverTime(combat, data, options, user) {
           const changeTurnEnd = details.turn === "end" ?? false;
           if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart)) {
             const label = (details.label ?? "Damage Over Time").replace(/"/g, "");
-            const saveDC = Number.isNumeric(details.saveDC) ? parseInt(details.saveDC) : -1;
+            let saveDC;
+            try {
+              const value = replaceAtFields(details.saveDC, rollData, { blankValue: 0, maxIterations: 3 });
+              saveDC = Roll.safeEval(value);
+            } catch (err) { saveDC = -1 }
             const saveAbility = details.saveAbility;
             const saveDamage = details.saveDamage ?? "nodamage";
             const saveMagic = JSON.parse(details.saveMagic ?? "false"); //parse the saving throw true/false
@@ -721,21 +725,16 @@ export async function processOverTime(combat, data, options, user) {
 }
 
 export async function completeItemRoll(item, options) {
-  if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process  
-    return new Promise((resolve) => {
-      Hooks.once("midi-qol.RollComplete", (workflow) => {
-        resolve(workflow);
-      })
-      globalThis.BetterRolls.rollItem.roll( { itemData: item.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: options.saveDC }).toMesage();
+  return new Promise((resolve) => {
+    Hooks.once("midi-qol.RollComplete", (workflow) => {
+      resolve(workflow);
     })
-  } else {
-    return new Promise((resolve) => {
-      Hooks.once("midi-qol.RollComplete", (workflow) => {
-        resolve(workflow);
-      })
+    if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process  
+      globalThis.BetterRolls.rollItem(item, { itemData: item.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: options.saveDC }).toMessage()
+    } else {
       item.roll(options);
-    })
-  }
+    }
+  })
 }
 
 export function untargetAllTokens(...args) {
@@ -1553,7 +1552,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
   const actor: Actor | null = target.actor;
   if (!actor) return;
   const midiFlags: any = actor.data.flags["midi-qol"];
-  if (midiFlags.reactionCombatRound) return false; // already had a reaction this round
+  if (midiFlags?.reactionCombatRound) return false; // already had a reaction this round
   let result;
   //@ts-ignore activation
   let reactionItems = actor.items.filter(item => {

@@ -2,6 +2,11 @@
 * dnd5e 1.5 includes per weapon critical threshold and bonus critical damage dice. There is now a configuration setting to enable/disable the midi-qol field on the item sheet. Once dnd5e 1.5 is released, you are stongly encouraged to migrate to the dnd5e setting and disable the midi-qol flag, via Use Midi Critical in the configuration settings. Soon, I will remove the midi-qol field completely. You can run ```MidiQOL.reportMidiCriticalFlags()``` from the console to see which actors/tokens have the midi-qol critical setting defined.
 * Enhanced dnd5e critical damge effects. You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). You will need to experiment to cofirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
 
+### 08.8.68
+* Fix for betterrolls and OverTime effects not rolling damage correctly/at all.
+* Fix for bbettereolls saving throws not being detected in chat message saves workflow.
+* Overtime effects saveDC now supports expressions rather than just numbers/field lookups. No dice expressions.
+
 ### 0.8.65/66/67
 * Fixes for template targeting and various module interactions.
 

@@ -1683,8 +1683,9 @@ export class Workflow {
     const requestId = message.data.speaker.actor;
     if (!this.saveRequests[requestId]) return true;
     const formula = "1d20";
-    const rollEntry = brFlags.entries?.find((e) => e.type === "multiroll" && e.rollType === "save");
-    if (!rollEntry) return true;
+    const isSave = brFlags.fields.find(e=> e[0] === "check" );
+    if (!isSave) return true;
+    const rollEntry = brFlags.entries?.find((e) => e.type === "multiroll");
     let total = rollEntry?.entries?.find((e) => !e.ignored)?.total ?? -1;
     let advantage = rollEntry ? rollEntry.rollState === "highest" : undefined;
     let disadvantage = rollEntry ? rollEntry.rollState === "lowest" : undefined;

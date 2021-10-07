@@ -678,7 +678,7 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
           //@ts-ignore
           {x:tk.x, y: tk.y, z: _levels.getTokenLOSheight(tk)}, 
           //@ts-ignore
-          {x: templateDocument.data.x, y: templateDocument.data.y, z: templateDocument.data.flags.levels.elevation ?? 0}, 
+          {x: templateDocument.data.x, y: templateDocument.data.y, z: templateDocument.data.flags.levels?.elevation ?? 0}, 
           "sight")) {
         return false;
       }

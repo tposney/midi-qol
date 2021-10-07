@@ -105,7 +105,6 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   workflow.attackTotal = attackTotal;
   workflow.itemCardId = message.id;
   workflow.ammo = item._ammo;
-  console.error("item ammo is ", item._ammo)
 
   // TODO check activaiton condition to disable the roll if required.
   //@ts-ignore evaluate

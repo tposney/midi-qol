@@ -368,6 +368,16 @@ export const registerSettings = function() {
     game.settings.register("midi-qol", setting.name, options);
   });
 
+  game.settings.register("midi-qol", "ActiveDefense", {
+    name: "midi-qol.ActiveDefense.Name",
+    hint: "midi-qol.ActiveDefense.Hint",
+    scope: "world",
+    default: false,
+    type: Boolean,
+    config: true,
+    onChange: fetchParams
+  });
+  
   game.settings.register("midi-qol","AddChatDamageButtons", {
     name: "midi-qol.AddChatDamageButtons.Name",
     hint: "midi-qol.AddChatDamageButtons.Hint",

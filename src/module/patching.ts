@@ -359,7 +359,7 @@ function __midiATIRefresh(template) {
       elevation = getProperty(game.user, "data.flags.midi-qol.elevation") ?? (_levels?.nextTemplateHeight);
     else
       elevation = getProperty(game.user, "data.flags.midi-qol.elevation");
-    if (elevation) setProperty(template.data.flags, "levels.elevation", elevation)
+    setProperty(template.data.flags, "levels.elevation", elevation ?? 0)
   }
   if (installedModules.get("levelsvolumetrictemplates")) {
     // Filter which tokens to pass - not too far and not blocked by a wall.
@@ -378,23 +378,20 @@ function __midiATIRefresh(template) {
       if ( ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && _levels.testCollision(
         //@ts-ignore
         {x:tk.x, y: tk.y, z: _levels.getTokenLOSheight(tk)}, 
-        {x: template.x, y: template.y, z: template.data.flags.levels.elevation ?? 0}, "sight"))
+        {x: template.x, y: template.y, z: template.data.flags.levels?.elevation ?? 0}, "sight"))
       {
         return false;
       }
       return true;
     })
-
     if (tokensToCheck.length > 0) {
       //@ts-ignore compute3Dtemplate(t, tokensToCheck = canvas.tokens.placeables)
       VolumetricTemplates.compute3Dtemplate(template, tokensToCheck);
     }
-
   } else {
     const distance: number = template.data.distance ?? 0;
     templateTokens({x: template.data.x, y: template.data.y, shape: template.shape, distance });
   }
-
 }
 
 function midiATRefresh(wrapped) {
