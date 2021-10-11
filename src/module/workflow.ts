@@ -1910,7 +1910,8 @@ export class Workflow {
     return this.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
   }
   get useActiveDefence() {
-    return checkRule("activeDefence") && ["Workflow"].includes(this.workflowType) && installedModules.get("lmrtfy");
+    //@ts-ignore
+    return game.user.isGM && checkRule("activeDefence") && ["Workflow"].includes(this.workflowType) && installedModules.get("lmrtfy");
   }
   async checkActiveAttacks(attackBonus = 0, whisper = false, fumbleTarget, criticalTarget) {
     if (debugEnabled > 1) debug(`active defence : whisper ${whisper}  hit targets ${this.targets}`)

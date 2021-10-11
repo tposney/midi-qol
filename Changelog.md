@@ -1,3 +1,6 @@
+### 0.8.71
+* Fix for active defence causing a console error for non gm clients.
+
 ### 0.8.70
 * Fix for damage type none and better rolls (would always do 0 damage).
 * Fix for expiry of type isSave, isCheck, isSkill when doing auto saves/checks/skill rolls.
