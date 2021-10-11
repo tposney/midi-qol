@@ -62,7 +62,7 @@ interface Options {
   chatMessage: boolean | undefined
 };
 
-async function bonusCheck(actor, result: Roll, checkName) : Promise<Roll> {
+async function bonusCheck(actor, result: Roll, checkName): Promise<Roll> {
   if (!installedModules.get("betterrolls5e")) {
     const bonusFlags = Object.keys(actor.data.flags["midi-qol"]?.optional ?? [])
       .filter(flag => {
@@ -100,14 +100,14 @@ async function doRollSkill(wrapped, ...args) {
   if (procAutoFailSkill(this, skillId) || procAutoFail(this, "check", this.data.data.skills[skillId].ability)) {
     options.parts = ["-100"];
   }
-  
+
   options.event = {};
   if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
     let event = {};
-    if (procOptions.advantage) event = {shiftKey: true};
-    if (procOptions.disadvantage) event = {ctrlKey: true};
+    if (procOptions.advantage) event = { shiftKey: true };
+    if (procOptions.disadvantage) event = { ctrlKey: true };
     procOptions.event = event;
-    const result =  await wrapped(skillId, procOptions);
+    const result = await wrapped(skillId, procOptions);
     return createRollResultFromCustomRoll(result)
   }
   procOptions.chatMessage = false;
@@ -116,9 +116,9 @@ async function doRollSkill(wrapped, ...args) {
   if (newResult === result) newResult = await bonusCheck(this, result, "check");
   result = newResult;
   if (chatMessage !== false && result) {
-    result.toMessage({speaker: getSpeaker(this), "flags.dnd5e.roll": {type: "skill", skillId }});
-    expireRollEffect.bind(this)("Skill", skillId);
+    result.toMessage({ speaker: getSpeaker(this), "flags.dnd5e.roll": { type: "skill", skillId } });
   }
+  await expireRollEffect.bind(this)("Skill", skillId);
   return result;
 }
 
@@ -147,7 +147,7 @@ function configureDamage(wrapped) {
   let flatBonus = 0;
   if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
   if (criticalDamage === "baseDamage") this.options.criticalMultiplier = 1;
-  this.terms = this.terms.filter(term=> !term.options.critOnly)
+  this.terms = this.terms.filter(term => !term.options.critOnly)
   for (let [i, term] of this.terms.entries()) {
     // Multiply dice terms
     if (term instanceof DiceTerm) {
@@ -194,8 +194,8 @@ function configureDamage(wrapped) {
   }
 
   if (flatBonus > 0) {
-    this.terms.push(new CONFIG.Dice.termTypes.OperatorTerm({ operator: "+" , options: {critOnly: true}}));
-    this.terms.push(new CONFIG.Dice.termTypes.NumericTerm({ number: flatBonus, options: { critOnly: true}}));
+    this.terms.push(new CONFIG.Dice.termTypes.OperatorTerm({ operator: "+", options: { critOnly: true } }));
+    this.terms.push(new CONFIG.Dice.termTypes.NumericTerm({ number: flatBonus, options: { critOnly: true } }));
   }
   if (criticalDamage === "doubleDice") {
     let newTerms: RollTerm[] = [];
@@ -225,19 +225,19 @@ async function rollAbilityTest(wrapped, ...args) {
   const minimumRoll = (flags.check && (flags.check.all || flags.save[abilityId])) ?? 0;
   if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
     let event = {};
-    if (procOptions.advantage) event = {shiftKey: true};
-    if (procOptions.disadvantage) event = {ctrlKey: true};
+    if (procOptions.advantage) event = { shiftKey: true };
+    if (procOptions.disadvantage) event = { ctrlKey: true };
     procOptions.event = event;
-    const result =  await wrapped(abilityId, procOptions);
+    const result = await wrapped(abilityId, procOptions);
     return createRollResultFromCustomRoll(result)
   }
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
   result = await bonusCheck(this, result, "check")
   if (chatMessage !== false && result) {
-    result.toMessage({speaker: getSpeaker(this), "flags.dnd5e.roll": {type: "ability", abilityId }});
-    expireRollEffect.bind(this)("Check", abilityId);
+    result.toMessage({ speaker: getSpeaker(this), "flags.dnd5e.roll": { type: "ability", abilityId } });
   }
+  await expireRollEffect.bind(this)("Check", abilityId);
   return result;
 }
 
@@ -261,19 +261,19 @@ async function rollAbilitySave(wrapped, ...args) {
 
   if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
     let event = {};
-    if (procOptions.advantage) event = {shiftKey: true};
-    if (procOptions.disadvantage) event = {ctrlKey: true};
+    if (procOptions.advantage) event = { shiftKey: true };
+    if (procOptions.disadvantage) event = { ctrlKey: true };
     procOptions.event = event;
-    const result =  await wrapped(abilityId, procOptions);
+    const result = await wrapped(abilityId, procOptions);
     return createRollResultFromCustomRoll(result)
   }
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
   result = await bonusCheck(this, result, "save")
   if (chatMessage !== false && result) {
-    result.toMessage({speaker: getSpeaker(this),  "flags.dnd5e.roll": {type: "save", abilityId }});
-    expireRollEffect.bind(this)("Save", abilityId);
+    result.toMessage({ speaker: getSpeaker(this), "flags.dnd5e.roll": { type: "save", abilityId } });
   }
+  await expireRollEffect.bind(this)("Save", abilityId);
   return result;
   /* TODO work out how to do minimum rolls properly
   return wrapped.call(this, wrapped, abilityId, procOptions).then(roll => {
@@ -352,45 +352,42 @@ let _midiATRefresh = debounce(__midiATIRefresh, 30);
 function __midiATIRefresh(template) {
   if (!canvas?.tokens) return;
   if (configSettings.autoTarget === "none") return;
-  if (game.user) { //  && !template.data.flags?.levels?.elevation) {
-    let elevation;
-    if (installedModules.get("levels"))
-    //@ts-ignore
-      elevation = getProperty(game.user, "data.flags.midi-qol.elevation") ?? (_levels?.nextTemplateHeight);
-    else
-      elevation = getProperty(game.user, "data.flags.midi-qol.elevation");
-    setProperty(template.data.flags, "levels.elevation", elevation ?? 0)
-  }
   if (installedModules.get("levelsvolumetrictemplates")) {
     // Filter which tokens to pass - not too far and not blocked by a wall.
     let distance = template.data.distance;
     const dimensions = getCanvas().dimensions || { size: 1, distance: 1 };
     distance *= dimensions.size / dimensions.distance;
+    //@ts-ignore
+    // if (template.document.data.flags.levels?.elevation === undefined) setProperty(template.document.data.flags, "levels.elevation", _levels.lastTokenForTemplate.data.elevation);
     const tokensToCheck = canvas.tokens.placeables?.filter(tk => {
       const r: Ray = new Ray(
-        {x: tk.x + tk.data.width * dimensions.size, y: tk.y + tk.data.height * dimensions.size}, 
-        {x: template.data.x, y: template.data.y});
-      const maxExtension = (1 + Math.max(tk.data.width , tk.data.height)) * dimensions.size;
+        { x: tk.x + tk.data.width * dimensions.size, y: tk.y + tk.data.height * dimensions.size },
+        { x: template.data.x, y: template.data.y });
+      const maxExtension = (1 + Math.max(tk.data.width, tk.data.height)) * dimensions.size;
       const centerDist = r.distance;
       if (centerDist > distance + maxExtension) return false;
       //  - check for walls collision if required.
       //@ts-ignore
-      if ( ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && _levels.testCollision(
+      if (["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && _levels.testCollision(
         //@ts-ignore
-        {x:tk.x, y: tk.y, z: _levels.getTokenLOSheight(tk)}, 
-        {x: template.x, y: template.y, z: template.data.flags.levels?.elevation ?? 0}, "sight"))
-      {
+        { x: tk.x, y: tk.y, z: _levels.getTokenLOSheight(tk) },
+        { x: template.x, y: template.y, z: template.data.flags.levels?.elevation ?? 0 },
+        "sight")
+      ) {
         return false;
       }
       return true;
     })
+    if (template.document.data.flags.levels?.elevation === undefined) {
+      setProperty(template.data.flags, "levels.elevation", 0); //_levels.lastTokenForTemplate.data.elevation);
+    }
     if (tokensToCheck.length > 0) {
       //@ts-ignore compute3Dtemplate(t, tokensToCheck = canvas.tokens.placeables)
       VolumetricTemplates.compute3Dtemplate(template, tokensToCheck);
     }
   } else {
     const distance: number = template.data.distance ?? 0;
-    templateTokens({x: template.data.x, y: template.data.y, shape: template.shape, distance });
+    templateTokens({ x: template.data.x, y: template.data.y, shape: template.shape, distance });
   }
 }
 
@@ -491,7 +488,7 @@ export async function createRollResultFromCustomRoll(customRoll: any) {
   let diceRoll = saveEntry ? saveEntry.entries?.find((e) => !e.ignored)?.roll.terms[0].total : -1;
   let isCritical = saveEntry ? saveEntry.entries?.find((e) => !e.ignored)?.isCrit : false;
   //@ts-ignore
-  const result = await new Roll(`${saveTotal}`).evaluate({aysnc: true});
+  const result = await new Roll(`${saveTotal}`).evaluate({ aysnc: true });
   setProperty(result.terms[0].options, "advantage", advantage)
   setProperty(result.terms[0].options, "disadvantage", disadvantage)
   return result;

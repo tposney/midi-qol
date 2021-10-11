@@ -1,11 +1,28 @@
+### 0.8.70
+* Fix for damage type none and better rolls (would always do 0 damage).
+* Fix for expiry of type isSave, isCheck, isSkill when doing auto saves/checks/skill rolls.
+* Expirmental: Support for the Active Defence variant rule. Enable via optional rules setting Active Defence. Requires LIMRTFY and does **not** work with better rolls. 
+  * Active defence has attacked players roll a defence roll instead of the GM rolling an attack roll, which is meant to keep player engagement up. https://media.wizards.com/2015/downloads/dnd/UA5_VariantRules.pdf
+  - If active defence is enabled then when the GM attacks instead of rolling an attack roll for the attacker, the defender is prompted to make a defence roll. The DC of the roll is 11 + the attackers bonus and the roll formula is 1d20 + AC - 10, which means the outcome is identical to an attack roll but instead the defender rolls.
+  - As released this had identicial behaviour to the standard rolls with the exception that each player effectively has a individual attack roll made against them.
+  - Advantage/disadvantage are correctly processed with attacker advantage meaning defender disadvantage.
+  - A fumbled defence roll is a critical hit and a critical defence roll is a fumbled attack, midi checks the attacking weapon for the correct critical hit/fumble rolls.
+  - Timeout for player interaction is taken form the saving throw player timeout.
+  - Display of the defence roll DC on the defenders prompt is taken from the saving throws display DC setting.
+  - Issues: There is only one critical result supported, so if multiple targets are attacked they will all have critical damage rolled against them or none. (future might support individual results)
+  - There is only 1 advantaage/disadvantage setting applied, that of the first defender (same as current midi-qol). Future enhancement will use per character advantage/disadvantage settings.
+  - Only works for mwak/rwak/rsak/msak.
+
+### 0.8.69
 **Changes coming in dnd5e 1.5**:
 * dnd5e 1.5 includes per weapon critical threshold and bonus critical damage dice. There is now a configuration setting to enable/disable the midi-qol field on the item sheet. Once dnd5e 1.5 is released, you are stongly encouraged to migrate to the dnd5e setting and disable the midi-qol flag, via Use Midi Critical in the configuration settings. Soon, I will remove the midi-qol field completely. You can run ```MidiQOL.reportMidiCriticalFlags()``` from the console to see which actors/tokens have the midi-qol critical setting defined.
-* Enhanced dnd5e critical damge effects. You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). You will need to experiment to cofirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
+* Enhanced dnd5e critical damage effects. You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). You will need to experiment to cofirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
 
-### 08.8.68
+### 0.8.68
 * Fix for betterrolls and OverTime effects not rolling damage correctly/at all.
-* Fix for bbettereolls saving throws not being detected in chat message saves workflow.
+* Fix for bettereolls saving throws not being detected in chat message saves workflow.
 * Overtime effects saveDC now supports expressions rather than just numbers/field lookups. No dice expressions.
+* Fix for reaction checks throwing an error if no midi-qol flags are set on the actor.
 
 ### 0.8.65/66/67
 * Fixes for template targeting and various module interactions.

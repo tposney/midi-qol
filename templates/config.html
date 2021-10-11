@@ -703,6 +703,16 @@
             </span>
           </div>
           <div class="midi-qol-faint">{{localize "midi-qol.NearbyAllyRanged.Hint"}}</div>
+
+          <div class="form-fields">
+            <span>
+              <label>{{localize "midi-qol.ActiveDefence.Name"}}</label>
+              <input type="checkbox" style="width:40px;" name="optionalRules.activeDefence" data-dtype="Boolean" {{checked
+                configSettings.optionalRules.activeDefence}}
+                value="{{configSettings.optionalRules.activeDefence}}" data-dtype="Boolea n" />
+            </span>
+          </div>
+          <div class="midi-qol-faint">{{localize "midi-qol.ActiveDefence.Hint"}}</div>
           {{/if}}
         </div>
       </div>

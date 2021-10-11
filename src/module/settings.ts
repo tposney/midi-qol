@@ -92,7 +92,9 @@ class ConfigSettings {
     incapacitated: true,
     removeHiddenInvis: true,
     maxDRValue: false,
-    distanceIncludesHeight: false
+    distanceIncludesHeight: false,
+    criticalSaves: false,
+    activeDefence: false
   };
   keepRollStats: boolean = false;
   saveStatsEvery: number = 20;
@@ -220,7 +222,8 @@ export let fetchParams = () => {
       removeHiddenInvis: true,
       maxDRValue: false,
       distanceIncludesHeight: false,
-      criticalSaves: false
+      criticalSaves: false,
+      activeDefence: false
     }
   }
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
@@ -368,16 +371,6 @@ export const registerSettings = function() {
     game.settings.register("midi-qol", setting.name, options);
   });
 
-  game.settings.register("midi-qol", "ActiveDefense", {
-    name: "midi-qol.ActiveDefense.Name",
-    hint: "midi-qol.ActiveDefense.Hint",
-    scope: "world",
-    default: false,
-    type: Boolean,
-    config: true,
-    onChange: fetchParams
-  });
-  
   game.settings.register("midi-qol","AddChatDamageButtons", {
     name: "midi-qol.AddChatDamageButtons.Name",
     hint: "midi-qol.AddChatDamageButtons.Hint",

@@ -1,4 +1,4 @@
-import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats, debugEnabled } from "../midi-qol.js";
+import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats, debugEnabled, MQdefaultDamageType } from "../midi-qol.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { nsaFlag, coloredBorders,  addChatDamageButtons, configSettings, forceHideRoll } from "./settings.js";
@@ -81,6 +81,10 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
         let type = subEntry.damageType;
         if (isCritical && subEntry.critRoll) {
           damage += subEntry.critRoll.total;
+        }
+        if (type === "") {
+          type = MQdefaultDamageType;
+          if (item?.data.data.actionType === "heal") type = "healing";
         }
         // Check for versatile and flag set. TODO damageIndex !== other looks like nonsense.
         if (subEntry.damageIndex !== "other")

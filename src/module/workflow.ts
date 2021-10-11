@@ -8,7 +8,7 @@ import { selectTargets, showItemCard } from "./itemhandling.js";
 import { socketlibSocket } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls, useMidiCrit } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence } from "./utils.js"
 import { collapseTextChangeRangesAcrossMultipleVersions, isThisTypeNode } from "typescript";
 import { readyPatching } from "./patching.js";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
@@ -166,7 +166,7 @@ export class Workflow {
   }
 
 
-  
+
   get hasDAE() {
     return installedModules.get("dae") && (this.item?.effects?.some(ef => ef.data.transfer === false));
   }
@@ -254,7 +254,9 @@ export class Workflow {
     this.templateUuid = null;
 
     this.saveRequests = {};
+    this.defenceRequests = {};
     this.saveTimeouts = {};
+    this.defenceTimeouts = {}
     this.shouldRollOtherDamage = true;
 
     this.placeTemlateHookId = null;
@@ -592,6 +594,7 @@ export class Workflow {
           "1Reaction",
           "isSaveSuccess",
           "isSaveFailure",
+          "isSave",
           "isHit"
         ];
         await this.expireTargetEffects(specialExpiries)
@@ -1015,7 +1018,7 @@ export class Workflow {
     try {
       if (name.startsWith("ItemMacro")) { // special short circuit eval for itemMacro since it can be execute as GM
         var itemMacro;
-       //  item = this.item;
+        //  item = this.item;
         if (name === "ItemMacro") {
           itemMacro = getProperty(item.data.flags, "itemacro.macro");
           macroData.sourceItemUuid = item?.uuid;
@@ -1069,6 +1072,7 @@ export class Workflow {
 
 
   async displayAttackRoll(doMerge) {
+    if (game.user?.isGM && this.useActiveDefence) return;
     const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId ?? "");
     //@ts-ignore content not definted
     let content = (chatMessage && duplicate(chatMessage.data.content)) || "";
@@ -1264,6 +1268,10 @@ export class Workflow {
         case "Workflow":
         case "TrapWorkflow":
         case "DamageOnlyWorkflow":
+          if (content && getRemoveAttackButtons()) {
+            const searchRe = /<button data-action="attack">[^<]*<\/button>/;
+            content = content.replace(searchRe, "");
+          }
           searchString = /<div class="midi-qol-hits-display">[\s\S]*?<div class="end-midi-qol-hits-display">/;
           replaceString = `<div class="midi-qol-hits-display">${hitContent}<div class="end-midi-qol-hits-display">`
           content = content.replace(searchString, replaceString);
@@ -1278,7 +1286,6 @@ export class Workflow {
             "flags.midi-qol.displayId": this.displayId,
             "flags.midi-qol.sound": this.isCritical ? configSettings.criticalSound : configSettings.fumbleSound
           });
-
           break;
       }
     } else {
@@ -1636,13 +1643,45 @@ export class Workflow {
     return true;
   }
 
+  processDefenceRoll(message, html, data) {
+    if (!this.defenceRequests) return true;
+    const isLMRTFY = (installedModules.get("lmrtfy") && message.data.flags?.lmrtfy?.data);
+    if (!isLMRTFY || message.data.flags?.dnd5e?.roll?.type === "save") return true;
+    const requestId = isLMRTFY ? message.data.flags.lmrtfy.data : message.data?.speaker?.actor;
+    if (debugEnabled > 0) warn("processSaveToll", isLMRTFY, requestId, this.saveRequests)
+
+    if (!requestId) return true;
+    if (!this.defenceRequests[requestId]) return true;
+
+    clearTimeout(this.defenceTimeouts[requestId]);
+    const handler = this.defenceRequests[requestId]
+    delete this.defenceRequests[requestId];
+    delete this.defenceTimeouts[requestId];
+    const brFlags = message.data.flags?.betterrolls5e;
+    if (brFlags) {
+      const formula = "1d20";
+      const rollEntry = brFlags.entries?.find((e) => e.type === "multiroll");
+      if (!rollEntry) return true;
+      let total = rollEntry?.entries?.find((e) => !e.ignored)?.total ?? -1;
+      let advantage = rollEntry ? rollEntry.rollState === "highest" : undefined;
+      let disadvantage = rollEntry ? rollEntry.rollState === "lowest" : undefined;
+      handler({ total, formula, isBR: true, isCritical: brFlags.isCrit, terms: [{ options: { advantage, disadvantage } }] });
+    } else {
+      handler(message._roll)
+    }
+    if (game.user?.id !== message.user.id && ["whisper", "all"].includes(configSettings.autoCheckSaves)) html.hide();
+    return true;
+  }
+
   processSaveRoll(message, html, data) {
+    if (!this.saveRequests) return;
     const isLMRTFY = (installedModules.get("lmrtfy") && message.data.flags?.lmrtfy?.data);
     if (!isLMRTFY && message.data.flags?.dnd5e?.roll?.type !== "save") return true;
     const requestId = isLMRTFY ? message.data.flags.lmrtfy.data : message.data?.speaker?.actor;
     if (debugEnabled > 0) warn("processSaveToll", isLMRTFY, requestId, this.saveRequests)
 
     if (!requestId) return true;
+
     if (!this.saveRequests[requestId]) return true;
 
     if (this.saveRequests[requestId]) {
@@ -1683,7 +1722,7 @@ export class Workflow {
     const requestId = message.data.speaker.actor;
     if (!this.saveRequests[requestId]) return true;
     const formula = "1d20";
-    const isSave = brFlags.fields.find(e=> e[0] === "check" );
+    const isSave = brFlags.fields.find(e => e[0] === "check");
     if (!isSave) return true;
     const rollEntry = brFlags.entries?.find((e) => e.type === "multiroll");
     let total = rollEntry?.entries?.find((e) => !e.ignored)?.total ?? -1;
@@ -1727,37 +1766,43 @@ export class Workflow {
     let item = this.item;
 
     // check for a hit/critical/fumble
-    this.hitTargets = new Set();
-    this.hitDisplayData = [];
-
     if (item?.data.data.target?.type === "self") {
       this.targets = getSelfTargetSet(this.actor);
     }
+    if (!this.useActiveDefence) {
+      this.hitTargets = new Set();
+    };
+    this.hitDisplayData = [];
     for (let targetToken of this.targets) {
-      isHit = false;
       let targetName = configSettings.useTokenNames && targetToken.name ? targetToken.name : targetToken.actor?.name;
       let targetActor: Actor5e = targetToken.actor;
-      if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
       let targetAC = Number.parseInt(targetActor.data.data.attributes.ac.value);
       const bonusAC = getProperty(targetActor.data, "flags.midi-qol.acBonus") || 0;
-      targetAC += bonusAC;
-      if (!this.isFumble) {
-        isHit = this.attackTotal >= targetAC;
-        // check to see if the roll hit the target
-        if ((isHit || this.iscritical) && this.attackRoll) {
-          const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll);
-          if (result?.name)
-            targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
-          targetAC = Number.parseInt(targetActor.data.data.attributes.ac.value) + bonusAC;
-          if (result?.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
-          isHit = this.attackTotal >= targetAC || this.isCritical;
+
+      if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
+
+      isHit = false;
+      if (this.useActiveDefence) {
+        isHit = this.hitTargets.has(targetToken);
+      } else {
+        targetAC += bonusAC;
+        if (!this.isFumble) {
+          isHit = this.attackTotal >= targetAC;
+          // check to see if the roll hit the target
+          if ((isHit || this.iscritical) && this.attackRoll) {
+            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll);
+            if (result?.name)
+              targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
+            targetAC = Number.parseInt(targetActor.data.data.attributes.ac.value) + bonusAC;
+            if (result?.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
+            isHit = this.attackTotal >= targetAC || this.isCritical;
+          }
         }
+
+        if (this.isCritical) isHit = true;
+        if (isHit || this.isCritical) this.processCriticalFlags();
+        setProperty(targetActor.data, "flags.midi-qol.acBonus", 0);
       }
-
-      if (this.isCritical) isHit = true;
-      if (isHit || this.isCritical) this.processCriticalFlags();
-      setProperty(targetActor.data, "flags.midi-qol.acBonus", 0);
-
       if (game.user?.isGM) log(`${this.speaker.alias} Rolled a ${this.attackTotal} to hit ${targetName}'s AC of ${targetAC} ${(isHit || this.isCritical) ? "hitting" : "missing"}`);
       // Log the hit on the target
       let attackType = ""; //item?.name ? i18n(item.name) : "Attack";
@@ -1768,10 +1813,13 @@ export class Workflow {
       if (VideoHelper.hasVideoExtension(img ?? "")) {
         img = await game.video.createThumbnail(img ?? "", { width: 100, height: 100 });
       }
+      // If using active defence hitTargets are up to date already.
+      if (this.useActiveDefence) {
+        if (this.activeDefenceRolls[targetToken.document.uuid]) hitString = `(${this.activeDefenceRolls[targetToken.document.uuid]}): ${hitString}`
+      } else {
+        if (isHit || this.isCritical) this.hitTargets.add(targetToken);
+      }
       this.hitDisplayData.push({ isPC: targetToken.actor?.hasPlayerOwner, target: targetToken, hitString, attackType, img, gmName: targetToken.name, playerName: getTokenPlayerName(targetToken), bonusAC });
-
-      // If we hit and we have targets and we are applying damage say so.
-      if (isHit || this.isCritical) this.hitTargets.add(targetToken);
     }
   }
 
@@ -1840,52 +1888,117 @@ export class Workflow {
     }, []);
     if (filtered.length > 0) this.removeActiveEffects(filtered);
   }
-}
 
-/* 
-export class DamageOnlyWorkflow08 extends Workflow { // WIP don't use
-  constructor(actor: Actor5e, token: Token, damageParts: [], targets: [Token], options = {
-    itemCardId: 0, itemData: null, data: {},
-    critical: false, criticalBonusDice: 0, criticalMultiplier: 2, multiplyNumeric: 0, powerfulCritical: false,
-    fastForward: false, allowCritical: true, template: null, title: null, dialogOptions: {}, // Dialog configuration
-    chatMessage: true, messageData: {}, rollMode: null, speaker: null, flavor: null
-  }
-  ) {
-    super(actor, null, ChatMessage.getSpeaker({ token }), new Set(targets), shiftOnlyEvent);
-    // const isFF = options.fastForward;
-    const formula = damageParts.join(" + ");
-    // const isCritical = options.
-    let rollData;
-    if (this.item) rollData = this.item.getRollData();
-    else if (this.actor) rollData = this.actor.getRollData;
-    if (options.data) rollData = rollData.mergeObject(rollData, options.data, { overwrite: true })
-    this.roll = new CONFIG.Dice.DamageRoll(formula, rollData, {
-      flavor: options.flavor || options.title,
-      critical: options.critical,
-      criticalBonusDice: options.criticalBonusDice,
-      multiplyNumeric: options.multiplyNumeric,
-      criticalMultiplier: options.criticalMultiplier,
-      powerfulCritical: options.powerfulCritical
-    });
-    this.options = options;
-  }
+  async activeDefence(item, roll) {
 
-  async _next(newState) {
-    this.currentState = newState;
-    if (debugEnabled > 0) warn("Newstate is ", newState)
-    let state = stateToLabel(this.currentState);
-    switch (newState) {
-      case WORKFLOWSTATES.NONE:
-        if (!this.options.fastForward) {
-          const configured = await this.roll.configureDialog
-        }
+    // For each target do a LMRTFY custom roll DC 11 + attackers bonus - for gm tokens always auto roll
+    // Roll is d20 + AC - 10
+    let hookId = Hooks.on("renderChatMessage", this.processDefenceRoll.bind(this));
+    try {
+      this.hitTargets = new Set();
+      this.defenceRequests = {};
+      this.defenceTimeouts = {};
+      this.activeDefenceRolls = {};
+      this.isCritical = false;
+      this.isFumble = false;
+      // Get the attack bonus for the attack
+      const attackBonus = roll.total - roll.dice[0].total; // TODO see if there is a better way to work out roll pluasses
+      await this.checkActiveAttacks(attackBonus, false, 20 - (roll.options.fumble ?? 1) + 1, 20 - (roll.options.critical ?? 20) + 1);
+    } finally {
+      Hooks.off("renderChatMessage", hookId);
+    }
+    return this.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
+  }
+  get useActiveDefence() {
+    return checkRule("activeDefence") && ["Workflow"].includes(this.workflowType) && installedModules.get("lmrtfy");
+  }
+  async checkActiveAttacks(attackBonus = 0, whisper = false, fumbleTarget, criticalTarget) {
+    if (debugEnabled > 1) debug(`active defence : whisper ${whisper}  hit targets ${this.targets}`)
+    if (this.targets.size <= 0) {
+      return;
+    }
+    let rollDC = 11 + attackBonus;
+    // "title": "Make your attack Roll",
+    // "message": "",
+    // "formula": "1d20 + @attributes.ac.value",
+
+    let promises: Promise<any>[] = [];
+    //@ts-ignore actor.rollAbilitySave
+    var rollAction = CONFIG.Actor.documentClass.prototype.rollAbilitySave;
+
+    // make sure saving throws are renabled.
+
+    let showRoll = configSettings.autoCheckSaves === "allShow";
+    for (let target of this.targets) {
+      if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
+      let advantage: Boolean | undefined = undefined;
+      // If spell, check for magic resistance
+
+      //@ts-ignore
+      const formula = `1d20 + ${target.actor.data.data.attributes.ac.value = 10}`;
+      // Advantage/Disadvantage are reveresed for active defence rolls.
+      let advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.NORMAL;
+      if (this.rollOptions.advantage && !this.rollOptions.disadvantage) advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.DISADVANTAGE;
+      if (!this.rollOptions.advantaage && this.rollOptions.disadvantage) advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.ADVANTAGE;
+      var player = playerFor(target);
+      if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
+      //@ts-ignore CONFIG.DND5E
+      if (debugEnabled > 0) warn(`Player ${player?.name} controls actor ${target.actor.name} - requesting ${CONFIG.DND5E.abilities[this.saveItem.data.data.save.ability]} save`);
+      if (player && !player.isGM) {
+        promises.push(new Promise((resolve) => {
+          const requestId = target.actor?.uuid ?? randomID();
+          const playerId = player?.id;
+          this.defenceRequests[requestId] = resolve;
+          requestPCActiveDefence(player, target.actor, advantage, this.item.name, rollDC, formula, requestId)
+          // set a timeout for taking over the roll
+          if (configSettings.playerSaveTimeout > 0) {
+            this.defenceTimeouts[requestId] = setTimeout(async () => {
+              if (this.defenceRequests[requestId]) {
+                delete this.defenceRequests[requestId];
+                delete this.defenceTimeouts[requestId];
+                const result = await (new game[game.system.id].dice.D20Roll(formula, {}, { advantageMode })).roll({ aysnc: true });
+                result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}`});
+                resolve(result);
+              }
+            }, configSettings.playerSaveTimeout * 1000);
+          }
+        }));
+      } else {  // must be a GM so can do the roll direct
+        promises.push(
+          new Promise(async (resolve) => {
+            const result = await (new game[game.system.id].dice.D20Roll(formula, {}, { advantageMode })).roll({ async: true })
+            if (!player?.isGM) result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}`});
+            resolve(result);
+          })
+        );
+      }
+    }
+    if (debugEnabled > 1) debug("check saves: requests are ", this.saveRequests)
+    var results = await Promise.all(promises);
+
+    this.rollResults = results;
+    let i = 0;
+    for (let target of this.targets) {
+      if (!target.actor) continue; // these were skipped when doing the rolls so they can be skipped now
+      if (!results[i]) error("Token ", target, "could not roll active assuming 0");
+      const result = results[i];
+      let rollTotal = results[i]?.total || 0;
+      if (this.critical === undefined) this.isCritical = result.dice[0].total <= criticalTarget
+      if (this.fumble === undefined) this.isFumble = result.dice[0].total >= fumbleTarget;
+      this.activeDefenceRolls[target.document.uuid] = rollTotal;
+      let hit = this.isCritical || rollTotal < rollDC;
+      if (hit) {
+        this.hitTargets.add(target);
+      } else this.hitTargets.delete(target);
+      if (game.user?.isGM) log(`Ability active defemce: ${target.name} rolled ${rollTotal} vs attack DC ${rollDC}`);
+      i++;
     }
   }
 }
-*/
+
 export class DamageOnlyWorkflow extends Workflow {
   constructor(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll,
-    options: { flavor: string, itemCardId: string, damageList: [], useOther: boolean, itemData: {}, isCritical: boolean}) {
+    options: { flavor: string, itemCardId: string, damageList: [], useOther: boolean, itemData: {}, isCritical: boolean }) {
     super(actor, null, ChatMessage.getSpeaker({ token }), new Set(targets), shiftOnlyEvent)
     this.itemData = options.itemData;
     // Do the supplied damageRoll

@@ -523,6 +523,43 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
   }
 }
 
+export function requestPCActiveDefence(player, actor, advantage, saveItemNname, rollDC, formula, requestId) {
+  const useUuid = true; // for  LMRTFY
+  const actorId = useUuid ? actor.uuid : actor.id;
+  if (!player.isGM) {
+    // TODO - reinstated the LMRTFY patch so that the event is properly passed to the roll
+    advantage = 2;
+  } else {
+    advantage = (advantage === true ? 1 : advantage === false ? -1 : 0);
+  }
+  let mode = "roll";
+  if (player.isGM && configSettings.autoCheckSaves !== "allShow") {
+    mode = "selfroll";
+  }
+  let message = `${saveItemNname} ${configSettings.displaySaveDC ? "DC " + rollDC : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
+  // Send a message for LMRTFY to do a save.
+  const socketData = {
+    "abilities": [],
+    "saves": [],
+    "skills": [],
+    mode,
+    "title": i18n("midi-qol.ActiveDefenceString"),
+    message,
+    "tables": [],
+    user: player.id,
+    actors: [actorId],
+    advantage,
+    formula,
+    attach: requestId,
+    deathsave: false,
+    initiative: false
+  }
+  if (debugEnabled > 1) debug("process player save ", socketData)
+  game.socket?.emit('module.lmrtfy', socketData);
+  //@ts-ignore - global variable
+  LMRTFY.onMessage(socketData);
+}
+
 export function midiCustomEffect(actor, change) {
   if (!change.key?.startsWith("flags.midi-qol")) return;
   //@ts-ignore
@@ -1213,7 +1250,7 @@ export async function expireMyEffects(effectsToExpire: string[]) {
 }
 
 // this = actor
-export function expireRollEffect(rollType: string, abilityId: string) {
+export async function expireRollEffect(rollType: string, abilityId: string) {
   const expiredEffects = this.effects?.filter(ef => {
     const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
     if (!specialDuration) return false;
@@ -1222,7 +1259,7 @@ export function expireRollEffect(rollType: string, abilityId: string) {
     return false;
   }).map(ef => ef.id);
   if (expiredEffects?.length > 0) {
-    socketlibSocket.executeAsGM("removeEffects", {
+    await socketlibSocket.executeAsGM("removeEffects", {
       actorUuid: this.uuid,
       effects: expiredEffects,
     })

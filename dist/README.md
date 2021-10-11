@@ -16,6 +16,11 @@ Same problem as above - check workflow automation is enabled on all clients. You
 ## Items I bring in from the sample compendium don't work. 
 Some of the items require creating a DamageBonusMacro, make sure that is enabled in the midi settings. Also, if the damage bonus macro effect runs an ItemMacro.ItemName, the name of the feature needs to match the name of the item macro being run. For example Rage MQ0.8.9, will have to be renamed Rage when equipped on a character or the damage bonus macro won't run. I know this is not ideal, but I wanted to make clear when the version of the items changed.
 
+**Changes coming in dnd5e 1.5**:
+* dnd5e 1.5 includes per weapon critical threshold and bonus critical damage dice. There is now a configuration setting to enable/disable the midi-qol field on the item sheet. Once dnd5e 1.5 is released, you are stongly encouraged to migrate to the dnd5e setting and disable the midi-qol flag, via Use Midi Critical in the configuration settings. Soon, I will remove the midi-qol field completely. You can run ```MidiQOL.reportMidiCriticalFlags()``` from the console to see which actors/tokens have the midi-qol critical setting defined.
+* Enhanced dnd5e critical damage effects. You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). You will need to experiment to cofirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
+
+
 ### Changes in midi-qol:
 * Speed item rolls has only a single function now to enable ctrl/shift/alt when clicking on the item icon.  All other workflow features are configured separately. See **speed item rolls** below.
 * There is support for a merged chat card containing attack/damage/hits/saves. (The merged card does not yet support Better Rolls). You can disable the merge card to restore the same operation as in minor-qol.

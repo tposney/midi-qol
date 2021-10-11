@@ -1,10 +1,11 @@
-import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled } from "../midi-qol.js";
+import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled, log } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
+import { checkRange, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { config } from "@league-of-foundry-developers/foundry-vtt-types/src/types/augments/simple-peer";
 import { isTemplateMiddleOrTemplateTail } from "typescript";
+import { socketlibSocket } from "./GMAction.js";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
@@ -51,6 +52,19 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   if (!Hooks.call("midi-qol.preAttackRoll", this, workflow)) {
     console.warn("midi-qol | attack roll blocked by pre hook");
     return;
+  }
+  //@ts-ignore
+  if (game.user.isGM  && workflow.useActiveDefence) {
+    let result: Roll = await wrapped({
+      advantage: false,
+      disadvantage: workflow.rollOptions.disadvantage,
+      chatMessage: false,
+      fastForward: true,
+      messageData: {
+        speaker: getSpeaker(this.actor)
+      }
+    });
+      return workflow.activeDefence(this, result);
   }
   let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
@@ -302,7 +316,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (!enableWorkflow || createWorkflow === false) {
     return await wrapped(options);
   }
-  const isRangeSpell = ["ft","m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
+  const isRangeSpell = ["ft", "m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const myTargets = game.user?.targets && await validTargetTokens(game.user?.targets);
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
@@ -391,10 +405,11 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   workflow.noAutoAttack = showFullCard;
   if (installedModules.get("levels")) {
     //@ts-ignore
-    _levels.nextTemplateHeight = workflow.templateElevation ?? 0;
+    // _levels.lastTokenForTemplate = workflow.token;
+    // _levels.nextTemplateHeight = workflow.templateElevation ?? 0;
     //@ts-ignore
-    _levels.templateElevation = true;
-    if (game.user) setProperty(game.user, "data.flags.midi-qol.elevation", workflow.templateElevation);
+    // _levels.templateElevation = true;
+    // if (game.user) setProperty(game.user, "data.flags.midi-qol.elevation", workflow.templateElevation);
   }
   let result = await wrapped({ configureDialog, rollMode: null, createMessage: false });
   if (!result) {
@@ -565,7 +580,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
       "core": { "canPopout": true }
     }
   };
-  if (!this.actor.items.has(this.id) ) { // deals with using temp items in overtime effects
+  if (!this.actor.items.has(this.id)) { // deals with using temp items in overtime effects
     chatData.flags["dnd5e.itemData"] = this.data;
   }
   // Temp items (id undefined) or consumables that were removed need itemdata set.
@@ -617,7 +632,7 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
           }
           contains = getUnitDist(p2.x, p2.y, p2.z, token) <= templateDetails.distance;
           //@ts-ignore
-          contains = contains && !_levels.testCollision(p1, p2, "sight");
+          contains = contains && !_levels.testCollision(p1, p2, "collision");
           //@ts-ignore
         } else {
           contains = !getCanvas().walls?.checkCollision(r);
@@ -649,7 +664,6 @@ export function templateTokens(templateDetails: { x: number, y: number, shape: a
 }
 
 export function selectTargets(templateDocument: MeasuredTemplateDocument, data, user) {
-  //@ts-ignore .shapre
   if (user !== game.user?.id) {
     return true;
   }
@@ -660,67 +674,6 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   if (targeting === "none") { // this is no good
     Hooks.callAll("midi-qol-targeted", this.targets);
     return true;
-  }
-
-  if (installedModules.get("levelsvolumetrictemplates")) {
-    let distance = templateDocument.data.distance;
-    const dimensions = getCanvas().dimensions || { size: 1, distance: 1 };
-    distance *= dimensions.size / dimensions.distance;
-    const tokensToCheck = canvas?.tokens?.placeables?.filter(tk => { // filter tokens that are close and not blocked
-      const r: Ray = new Ray({x: tk.x + tk.data.width * dimensions.size, y: tk.y + tk.data.height * dimensions.size}, {x: templateDocument.data.x, y: templateDocument.data.y});
-      const maxExtension = (1 + Math.max(tk.data.width , tk.data.height)) * dimensions.size;
-      const centerDist = r.distance;
-      if (centerDist > distance + maxExtension) return false;
-
-      // Check for a wall in  the way
-      //@ts-ignore
-      if ( ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && _levels.testCollision(
-          //@ts-ignore
-          {x:tk.x, y: tk.y, z: _levels.getTokenLOSheight(tk)}, 
-          //@ts-ignore
-          {x: templateDocument.data.x, y: templateDocument.data.y, z: templateDocument.data.flags.levels?.elevation ?? 0}, 
-          "sight")) {
-        return false;
-      }
-      return true;
-    });
-    //@ts-ignore
-    VolumetricTemplates.compute3Dtemplate(templateDocument, tokensToCheck)
-  } else {
-    //@ts-ignore
-    if (templateDocument.object?.shape) {
-      templateTokens({
-        x: templateDocument.object.x,
-        y: templateDocument.object.y,
-        //@ts-ignore
-        shape: templateDocument.object.shape,
-        //@ts-ignore
-        distance: templateDocument.object.data.distance})
-    } else {
-      let { direction, distance, angle, width } = templateDocument.data;
-      const dimensions = getCanvas().dimensions || { size: 1, distance: 1 };
-      distance *= dimensions.size / dimensions.distance;
-      width *= dimensions.size / dimensions.distance;
-      direction = Math.toRadians(direction);
-      let shape: any;
-      switch (templateDocument.data.t) {
-        case "circle":
-          shape = new PIXI.Circle(0, 0, distance);
-          break;
-        case "cone":
-          //@ts-ignore
-          shape = templateDocument._object._getConeShape(direction, angle, distance);
-          break;
-        case "rect":
-          //@ts-ignore
-          shape = templateDocument._object._getRectShape(direction, distance);
-          break;
-        case "ray":
-          //@ts-ignore
-          shape = templateDocument._object._getRayShape(direction, distance, width);
-      }
-      templateTokens({ x: templateDocument.data.x, y: templateDocument.data.y, shape, distance });
-    }
   }
 
   // if the item specifies a range of "special" don't target the caster.
@@ -754,3 +707,4 @@ export function advDisadvAttribution(actor) {
   }
   return attributions;
 }
+

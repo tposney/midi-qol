@@ -234,7 +234,7 @@ export let initHooks = () => {
       const macroField = `<div class="form-group"><label>${labelText}</label><input type="text" name="flags.midi-qol.onUseMacroName" value="${currentMacro}"/> </div>`;
       element.append(macroField)
     }
-    if (!installedModules.get("betterrolls5e") && isNewerVersion("1.5.0", game.system.data.version) || useMidiCrit) { // 1.5.0 will include per weapon criticals
+    if (!installedModules.get("betterrolls5e") && isNewerVersion("1.4.9", game.system.data.version) || useMidiCrit) { // 1.5.0 will include per weapon criticals
       const element2 = html.find('input[name="data.attackBonus"]').parent().parent();
       const labelText2 = i18n('midi-qol.criticalThreshold');
       const criticalThreshold = getProperty(app.object.data, "flags.midi-qol.criticalThreshold") ?? 20;
