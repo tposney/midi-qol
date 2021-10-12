@@ -265,12 +265,13 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     }
 
     const title = `${this.name} - ${actionFlavor}`;
-    const speaker = getSpeaker(this.actor)
+    const speaker = getSpeaker(this.actor);
     let messageData = mergeObject({
       title,
       flavor: this.labels.damageTypes.length ? `${title} (${this.labels.damageTypes})` : title,
       speaker,
     }, { "flags.dnd5e.roll": { type: "damage", itemId: this.id } });
+    if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll", { type: "damage", itemId: this.id })
     result.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
     if (otherResult) {
       messageData = mergeObject({
@@ -278,6 +279,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
         flavor: title,
         speaker,
       }, { "flags.dnd5e.roll": { type: "other", itemId: this.id } });
+      if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll", { type: "other", itemId: this.id })
       otherResult.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") })
     }
   }

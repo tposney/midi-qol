@@ -985,7 +985,7 @@ export class Workflow {
       otherDamageDetail: this.otherDamageDetail,
       otherDamageList: this.otherDamageList,
       bonusDamageTotal: this.bonusDamageTotal,
-      bonusDamgeDetail: this.bonusDamageDetail,
+      bonusDamageDetail: this.bonusDamageDetail,
       bonusDamageRoll: this.bonusDamageRoll,
       bonusDamageFlavor: this.bonusDamageFlavor,
       bonusDamageHTML: this.bonusDamageHTML,
@@ -1026,10 +1026,21 @@ export class Workflow {
           const parts = name.split(".");
           const itemName = parts.slice(1).join(".");;
           item = this.actor.items.find(i => i.name === itemName && getProperty(i.data.flags, "itemacro.macro"))
-          if (item) {
-            itemMacro = getProperty(item.data.flags, "itemacro.macro");
-            macroData.sourceItemUuid = item.uuid;
-          } else return {};
+          if (!item) {
+            // Try to find a UUID refence for the macro
+            const uuid = name.replace("ItemMacro.","").replace("@", "").replace("[",".").replace("]","").replace(/{.*}/, "");
+            try {
+              item = await fromUuid(uuid);
+            } catch(err) {
+              item = undefined;
+            }
+          }
+          if (!item) {
+            console.warn("midi-qol | callMacro: No item macro for", name);
+            return {};
+          }
+          itemMacro = getProperty(item.data.flags, "itemacro.macro");
+          macroData.sourceItemUuid = item.uuid;
         }
         const speaker = this.speaker;
         const actor = this.actor;
@@ -1230,7 +1241,7 @@ export class Workflow {
         speaker: this.speaker
       }
       setProperty(messageData, "flags.dnd5e.roll.type", "damage");
-      setProperty(messageData, "flags.sw5e.roll.type", "damage");
+      if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll.type", "damage");
       this.bonusDamageRoll.toMessage(messageData);
     }
 
@@ -1936,16 +1947,16 @@ export class Workflow {
       // If spell, check for magic resistance
 
       //@ts-ignore
-      const formula = `1d20 + ${target.actor.data.data.attributes.ac.value = 10}`;
+      const formula = `1d20 + ${target.actor.data.data.attributes.ac.value - 10}`;
       // Advantage/Disadvantage are reveresed for active defence rolls.
       let advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.NORMAL;
       if (this.rollOptions.advantage && !this.rollOptions.disadvantage) advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.DISADVANTAGE;
       if (!this.rollOptions.advantaage && this.rollOptions.disadvantage) advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.ADVANTAGE;
       var player = playerFor(target);
-      if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
+      // if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
       //@ts-ignore CONFIG.DND5E
       if (debugEnabled > 0) warn(`Player ${player?.name} controls actor ${target.actor.name} - requesting ${CONFIG.DND5E.abilities[this.saveItem.data.data.save.ability]} save`);
-      if (player && !player.isGM) {
+      if (player && player.active && !player.isGM) {
         promises.push(new Promise((resolve) => {
           const requestId = target.actor?.uuid ?? randomID();
           const playerId = player?.id;
@@ -1968,7 +1979,11 @@ export class Workflow {
         promises.push(
           new Promise(async (resolve) => {
             const result = await (new game[game.system.id].dice.D20Roll(formula, {}, { advantageMode })).roll({ async: true })
-            if (!player?.isGM) result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}`});
+              //@ts-ignore
+              await game.dice3d.showForRoll(result, game.user, true, [], false)
+            if (target.actor?.type === "character") {
+              result.toMessage({ speaker: ChatMessage.getSpeaker({token: target}), flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}`});
+            }
             resolve(result);
           })
         );
@@ -2315,6 +2330,8 @@ export class BetterRollsWorkflow extends Workflow {
             speaker: this.speaker
           }
           setProperty(messageData, "flags.dnd5e.roll.type", "damage");
+          if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll.type", "damage");
+
           //  Not required as we pick up the damage from the better rolls data this.otherDamageRoll.toMessage(messageData);
           this.otherDamageDetail = createDamageList(this.otherDamageRoll, null, this.defaultDamageType);
 
@@ -2325,6 +2342,7 @@ export class BetterRollsWorkflow extends Workflow {
             speaker: this.speaker
           }
           setProperty(messageData, "flags.dnd5e.roll.type", "damage");
+          if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll.type", "damage");
           this.bonusDamageRoll.toMessage(messageData);
         }
         expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"]);

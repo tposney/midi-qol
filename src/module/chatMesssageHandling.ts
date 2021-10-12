@@ -461,7 +461,9 @@ export let chatDamageButtons = (message, html, data) => {
     let itemId;
     let actorId = message.data.speaker.actor;
     if (message.data.flags?.dnd5e?.roll?.type === "damage") {
-      itemId = message.data.flags.dnd5e.roll.itemId;
+      itemId = message.data.flags.dnd5e?.roll.itemId;
+      if (game.system.id === "sw5e" && !itemId) itemId = message.data.flags.sw5e?.roll.itemId;
+
       item = game.actors?.get(actorId)?.items.get(itemId);
       if (!item) {
         if (debugEnabled > 0) warn("Damage roll for non item");

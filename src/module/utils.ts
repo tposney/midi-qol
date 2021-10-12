@@ -1249,7 +1249,6 @@ export async function expireMyEffects(effectsToExpire: string[]) {
   if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects);
 }
 
-// this = actor
 export async function expireRollEffect(rollType: string, abilityId: string) {
   const expiredEffects = this.effects?.filter(ef => {
     const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");

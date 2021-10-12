@@ -1,3 +1,7 @@
+### 0.8.72
+* Fix for active defence error in ac defence roll calculation.
+* Added support for ItemMacro.UUID in DamageBonusMacros and OnUse macros to refernce item macros for items not in your inventory.
+
 ### 0.8.71
 * Fix for active defence causing a console error for non gm clients.
 
