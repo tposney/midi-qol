@@ -1,3 +1,7 @@
+### 0.8.73
+* A little tidying of active defence rolls so that duplicate rolls are not performed.
+* Fix for midi-qol.RollComplete firing too early in the workflow.
+* Added fumbleSaves/criticalSaves: Set<Token> to workflow, and fumbleSaves,criticalSaves,fumbleSaveUuids, criticlSaveUuids to onUse/damageBonus macro arguments.
 ### 0.8.72
 * Fix for active defence error in ac defence roll calculation.
 * Added support for ItemMacro.UUID in DamageBonusMacros and OnUse macros to refernce item macros for items not in your inventory.

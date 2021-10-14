@@ -347,6 +347,8 @@ export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTar
     } else {
       ditem.newTempHP = Math.max(0, ditem.newTempHP - appliedTempHP)
     }
+    //@ts-ignore
+    ditem.damageDetail = duplicate(damageDetailArr);
     damageList.push(ditem);
     targetNames.push(t.name)
   }
@@ -503,7 +505,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
       title: i18n("midi-qol.saving-throw"),
       message: `${configSettings.displaySaveDC ? "DC " + dc : ""} ${i18n("midi-qol.saving-throw")} ${flavor}`,
       formula: "",
-      attach: requestId,
+      attach: {requestId},
       deathsave: false,
       initiative: false
     }
@@ -542,7 +544,7 @@ export function requestPCActiveDefence(player, actor, advantage, saveItemNname, 
     "abilities": [],
     "saves": [],
     "skills": [],
-    mode,
+    mode: "selfroll",
     "title": i18n("midi-qol.ActiveDefenceString"),
     message,
     "tables": [],
@@ -550,7 +552,7 @@ export function requestPCActiveDefence(player, actor, advantage, saveItemNname, 
     actors: [actorId],
     advantage,
     formula,
-    attach: requestId,
+    attach: {requestId, disableMessage: true},
     deathsave: false,
     initiative: false
   }

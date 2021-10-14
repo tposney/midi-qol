@@ -11,6 +11,7 @@ import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRol
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence } from "./utils.js"
 import { collapseTextChangeRangesAcrossMultipleVersions, isThisTypeNode } from "typescript";
 import { readyPatching } from "./patching.js";
+import { setupSheetQol } from "./sheetQOL.js";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -576,7 +577,7 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
 
       case WORKFLOWSTATES.ALLROLLSCOMPLETE:
-        if (this.damageDetail.length) processDamageRoll(this, this.damageDetail[0].type)
+        if (this.damageDetail.length) await processDamageRoll(this, this.damageDetail[0].type)
         if (debugEnabled > 1) debug("all rolls complete ", this.damageDetail)
         // expire effects on targeted tokens as required
         this.applicationTargets = new Set();
@@ -1028,10 +1029,10 @@ export class Workflow {
           item = this.actor.items.find(i => i.name === itemName && getProperty(i.data.flags, "itemacro.macro"))
           if (!item) {
             // Try to find a UUID refence for the macro
-            const uuid = name.replace("ItemMacro.","").replace("@", "").replace("[",".").replace("]","").replace(/{.*}/, "");
+            const uuid = name.replace("ItemMacro.", "").replace("@", "").replace("[", ".").replace("]", "").replace(/{.*}/, "");
             try {
               item = await fromUuid(uuid);
-            } catch(err) {
+            } catch (err) {
               item = undefined;
             }
           }
@@ -1083,18 +1084,33 @@ export class Workflow {
 
 
   async displayAttackRoll(doMerge) {
-    if (game.user?.isGM && this.useActiveDefence) return;
     const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId ?? "");
-    //@ts-ignore content not definted
     let content = (chatMessage && duplicate(chatMessage.data.content)) || "";
-    var rollSound = configSettings.diceSound;
     const flags = chatMessage?.data.flags || {};
+    var rollSound = configSettings.diceSound;
+
     let newFlags = {};
     if (content && getRemoveAttackButtons()) {
       const searchRe = /<button data-action="attack">[^<]*<\/button>/;
       content = content.replace(searchRe, "");
     }
-    if (doMerge && chatMessage) { // display the attack roll
+    if (game.user?.isGM && this.useActiveDefence) {
+      const searchRe = /<div class="midi-qol-attack-roll">[\s\S]*?<div class="end-midi-qol-attack-roll">/
+      const attackString = `${i18n("midi-qol.ActiveDefenceString")}${configSettings.displaySaveDC ? " " + this.activeDefenceDC : "" }`;
+      const replaceString = `<div class="midi-qol-attack-roll"><div style="text-align:center" >${attackString}</div><div class="end-midi-qol-attack-roll">`
+      content = content.replace(searchRe, replaceString);
+      newFlags = mergeObject(flags, {
+        "midi-qol":
+        {
+          hideTag: this.hideTags,
+          displayId: this.displayId,
+          isCritical: this.isCritical,
+          isFumble: this.isFumble,
+          isHit: this.hitTargets.size > 0,
+        }
+      }, { overwrite: true, inplace: false });
+    }
+    else if (doMerge && chatMessage) { // display the attack roll
       //let searchRe = /<div class="midi-qol-attack-roll">.*?<\/div>/;
       let searchRe = /<div class="midi-qol-attack-roll">[\s\S]*?<div class="end-midi-qol-attack-roll">/
       let options: any = this.attackRoll?.terms[0].options;
@@ -1415,6 +1431,8 @@ export class Workflow {
    */
   async checkSaves(whisper = false) {
     this.saves = new Set();
+    this.criticalSaves = new Set();
+    this.fumbleSaves = new Set();
     this.failedSaves = this.item?.hasAttack ? new Set(this.hitTargets) : new Set(this.targets);
     this.advantageSaves = new Set();
     this.disadvantageSaves = new Set();
@@ -1573,14 +1591,22 @@ export class Workflow {
       if (result?.terms[0]?.options?.disadvantage) this.disadvantageSaves.add(target);
       let isFumble = false;
       let isCritical = false;
-      if (rollDetail.terms && checkRule("criticalSaves") && rollDetail.terms[0] instanceof DiceTerm) { // normal d20 roll/lmrtfy/monks roll
+      if (rollDetail.terms && !result.isBR && rollDetail.terms[0] instanceof DiceTerm) { // normal d20 roll/lmrtfy/monks roll
         const dterm: DiceTerm = rollDetail.terms[0];
         //@ts-ignore
         isFumble = dterm.total <= (dterm.options?.fumble ?? 1)
         //@ts-ignore
         isCritical = dterm.total >= (dterm.options?.critical ?? 20);
-      } else if (result.isBR && checkRule("criticalSaves")) isCritical = result.isCritical;
-      let saved = (isCritical || rollTotal >= rollDC) && !isFumble;
+      } else if (result.isBR ) {
+        isCritical = result.isCritical;
+        isFumble = result.isFumble;
+      }
+      let saved = rollTotal >= rollDC;
+      if (checkRule("criticalSaves")) { // normal d20 roll/lmrtfy/monks roll
+        saved = (isCritical || rollTotal >= rollDC) && !isFumble;
+      }
+      if (isCritical) this.criticalSaves.add(target);
+      if (isFumble) this.fumbleSaves.add(target);
       if (this.checkSuperSaver(target.actor, this.saveItem.data.data.save.ability))
         this.superSavers.add(target);
       if (this.item.data.flags["midi-qol"]?.isConcentrationCheck) {
@@ -1658,7 +1684,7 @@ export class Workflow {
     if (!this.defenceRequests) return true;
     const isLMRTFY = (installedModules.get("lmrtfy") && message.data.flags?.lmrtfy?.data);
     if (!isLMRTFY || message.data.flags?.dnd5e?.roll?.type === "save") return true;
-    const requestId = isLMRTFY ? message.data.flags.lmrtfy.data : message.data?.speaker?.actor;
+    const requestId = isLMRTFY ? message.data.flags.lmrtfy.data.requestId : message.data?.speaker?.actor;
     if (debugEnabled > 0) warn("processSaveToll", isLMRTFY, requestId, this.saveRequests)
 
     if (!requestId) return true;
@@ -1688,7 +1714,7 @@ export class Workflow {
     if (!this.saveRequests) return;
     const isLMRTFY = (installedModules.get("lmrtfy") && message.data.flags?.lmrtfy?.data);
     if (!isLMRTFY && message.data.flags?.dnd5e?.roll?.type !== "save") return true;
-    const requestId = isLMRTFY ? message.data.flags.lmrtfy.data : message.data?.speaker?.actor;
+    const requestId = isLMRTFY ? message.data.flags.lmrtfy.data.requestId : message.data?.speaker?.actor;
     if (debugEnabled > 0) warn("processSaveToll", isLMRTFY, requestId, this.saveRequests)
 
     if (!requestId) return true;
@@ -1768,7 +1794,7 @@ export class Workflow {
     //@ts-ignore .fumble undefined
     this.isFumble = this.diceRoll <= this.attackRoll.terms[0].options.fumble;
     this.attackTotal = this.attackRoll.total ?? 0;
-    if (debugEnabled > 1) debug("processItemRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble)
+    if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble)
   }
 
   async checkHits() {
@@ -1826,7 +1852,14 @@ export class Workflow {
       }
       // If using active defence hitTargets are up to date already.
       if (this.useActiveDefence) {
-        if (this.activeDefenceRolls[targetToken.document.uuid]) hitString = `(${this.activeDefenceRolls[targetToken.document.uuid]}): ${hitString}`
+        if (this.activeDefenceRolls[targetToken.document.uuid]) {
+          if (targetToken.actor?.type === "character") {
+            hitString = `(${this.activeDefenceRolls[targetToken.document.uuid].result}): ${hitString}`
+          } else {
+            hitString = `(${this.activeDefenceRolls[targetToken.document.uuid].total}): ${hitString}`
+          }
+        }
+
       } else {
         if (isHit || this.isCritical) this.hitTargets.add(targetToken);
       }
@@ -1929,16 +1962,11 @@ export class Workflow {
     if (this.targets.size <= 0) {
       return;
     }
-    let rollDC = 11 + attackBonus;
-    // "title": "Make your attack Roll",
-    // "message": "",
-    // "formula": "1d20 + @attributes.ac.value",
+    this.activeDefenceDC = 11 + attackBonus;
 
     let promises: Promise<any>[] = [];
     //@ts-ignore actor.rollAbilitySave
     var rollAction = CONFIG.Actor.documentClass.prototype.rollAbilitySave;
-
-    // make sure saving throws are renabled.
 
     let showRoll = configSettings.autoCheckSaves === "allShow";
     for (let target of this.targets) {
@@ -1961,7 +1989,7 @@ export class Workflow {
           const requestId = target.actor?.uuid ?? randomID();
           const playerId = player?.id;
           this.defenceRequests[requestId] = resolve;
-          requestPCActiveDefence(player, target.actor, advantage, this.item.name, rollDC, formula, requestId)
+          requestPCActiveDefence(player, target.actor, advantage, this.item.name, this.activeDefenceDC, formula, requestId)
           // set a timeout for taking over the roll
           if (configSettings.playerSaveTimeout > 0) {
             this.defenceTimeouts[requestId] = setTimeout(async () => {
@@ -1969,7 +1997,7 @@ export class Workflow {
                 delete this.defenceRequests[requestId];
                 delete this.defenceTimeouts[requestId];
                 const result = await (new game[game.system.id].dice.D20Roll(formula, {}, { advantageMode })).roll({ aysnc: true });
-                result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}`});
+                result.toMessage({ flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}` });
                 resolve(result);
               }
             }, configSettings.playerSaveTimeout * 1000);
@@ -1979,10 +2007,9 @@ export class Workflow {
         promises.push(
           new Promise(async (resolve) => {
             const result = await (new game[game.system.id].dice.D20Roll(formula, {}, { advantageMode })).roll({ async: true })
+            if (dice3dEnabled() && target.actor?.type === "character") {
               //@ts-ignore
               await game.dice3d.showForRoll(result, game.user, true, [], false)
-            if (target.actor?.type === "character") {
-              result.toMessage({ speaker: ChatMessage.getSpeaker({token: target}), flavor: `${this.item.name} ${i18n("midi-qol.ActiveDefenceString")}`});
             }
             resolve(result);
           })
@@ -1996,17 +2023,17 @@ export class Workflow {
     let i = 0;
     for (let target of this.targets) {
       if (!target.actor) continue; // these were skipped when doing the rolls so they can be skipped now
-      if (!results[i]) error("Token ", target, "could not roll active assuming 0");
+      if (!results[i]) error("Token ", target, "could not roll active defence assuming 0");
       const result = results[i];
       let rollTotal = results[i]?.total || 0;
       if (this.critical === undefined) this.isCritical = result.dice[0].total <= criticalTarget
       if (this.fumble === undefined) this.isFumble = result.dice[0].total >= fumbleTarget;
-      this.activeDefenceRolls[target.document.uuid] = rollTotal;
-      let hit = this.isCritical || rollTotal < rollDC;
+      this.activeDefenceRolls[target.document.uuid] = results[i];
+      let hit = this.isCritical || rollTotal < this.activeDefenceDC;
       if (hit) {
         this.hitTargets.add(target);
       } else this.hitTargets.delete(target);
-      if (game.user?.isGM) log(`Ability active defemce: ${target.name} rolled ${rollTotal} vs attack DC ${rollDC}`);
+      if (game.user?.isGM) log(`Ability active defemce: ${target.name} rolled ${rollTotal} vs attack DC ${this.activeDefenceDC}`);
       i++;
     }
   }
@@ -2233,7 +2260,7 @@ export class TrapWorkflow extends Workflow {
 
       case WORKFLOWSTATES.ALLROLLSCOMPLETE:
         if (debugEnabled > 1) debug("all rolls complete ", this.damageDetail)
-        if (this.damageDetail.length) processDamageRoll(this, this.damageDetail[0].type)
+        if (this.damageDetail.length) await processDamageRoll(this, this.damageDetail[0].type)
         return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
 
       case WORKFLOWSTATES.ROLLFINISHED:

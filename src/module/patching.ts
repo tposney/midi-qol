@@ -451,8 +451,16 @@ export function patchLMRTFY() {
     log("Patching lmrtfy")
     libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "OVERRIDE");
     // the _tagMessage has been updated in LMRTFY libWrapper.register("midi-qol", "LMRTFYRoller.prototype._tagMessage", _tagMessage, "OVERRIDE");
-
+    // libWrapper.register("midi-qol", "ChatMessage.create", filterChatMessageCreate, "WRAPPER")
   }
+}
+
+function filterChatMessageCreate(wrapped, data: any, context: any) {
+  if (!(data instanceof Array) ) data = [data]
+  for (let messageData of data) {
+    if (messageData.flags?.lmrtfy?.data?.disableMessage) messageData.blind = true;
+  }
+  return wrapped(data, context);
 }
 
 export function _tagMessage(candidate, data, options) {

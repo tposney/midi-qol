@@ -127,7 +127,7 @@ export function monksTokenBarSaves(data: { tokens: any[]; request: any; silent: 
 // Fetch the token, then use the tokenData.actor.id
 let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: string; }) => {
   const damageList = data.damageList;
-  let actor: { update: (arg0: { "data.attributes.hp.temp": any; "data.attributes.hp.value": number; "flags.dae.damageApplied": any; }) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
+  let actor: { update: (arg0: { "data.attributes.hp.temp": any; "data.attributes.hp.value": number; "flags.dae.damageApplied": any; damageItem: any []}) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
   const timestamp = Date.now();
   let promises: Promise<any>[] = [];
   let tokenIdList: any[] = [];
@@ -136,8 +136,8 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
     damageList: [] ,
     needsButtonAll: false
   };
-  for (let { tokenId, tokenUuid, actorId, actorUuid, oldHP, oldTempHP, newTempHP, tempDamage, hpDamage, totalDamage, appliedDamage, sceneId } of damageList) {
-
+  for (let damageItem of damageList) {
+    let { tokenId, tokenUuid, actorId, actorUuid, oldHP, oldTempHP, newTempHP, tempDamage, hpDamage, totalDamage, appliedDamage, sceneId } = damageItem;
     let tokenDocument;
     if (tokenUuid) {
       tokenDocument = MQfromUuid(tokenUuid);
@@ -154,10 +154,10 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
     // removed intended for check
     if (["yes", "yesCard"].includes(data.autoApplyDamage)) {
       if (newHP !== oldHP || newTempHP !== oldTempHP)  {
-        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage}));
+        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem}));
       }
     }
-    tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP});
+    tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP, damageItem});
 
     let img = tokenDocument?.data.img || actor.img;
     if (configSettings.usePlayerPortrait && actor.type === "character")
@@ -238,7 +238,7 @@ export let processUndoDamageCard = async(message, html, data) => {
   let button = html.find("#all-reverse");
 
   button.click((ev: { stopPropagation: () => void; }) => {
-    message.data.flags.midiqol.undoDamage.forEach(async ({actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP}) => {
+    message.data.flags.midiqol.undoDamage.forEach(async ({actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem}) => {
       if (!actorUuid) return;
       let actor = MQfromActorUuid(actorUuid);
       log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
@@ -249,16 +249,16 @@ export let processUndoDamageCard = async(message, html, data) => {
 
   button = html.find("#all-apply");
   button.click((ev: { stopPropagation: () => void; }) => {
-    message.data.flags.midiqol.undoDamage.forEach(async ({actorUuid, oldTempHP, oldHP, absDamage, newHP, newTempHP}) => {
+    message.data.flags.midiqol.undoDamage.forEach(async ({actorUuid, oldTempHP, oldHP, absDamage, newHP, newTempHP, damageItem}) => {
     if (!actorUuid) return;
     let actor = MQfromActorUuid(actorUuid);
       log(`Setting HP to ${newTempHP} and ${newHP}`);
-      await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP });
+      await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem });
       ev.stopPropagation();
     })
   })
 
-  message.data.flags.midiqol.undoDamage.forEach(({actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP}) => {
+  message.data.flags.midiqol.undoDamage.forEach(({actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem}) => {
     if (!actorUuid) return;
     // ids should not have "." in the or it's id.class
     let button = html.find(`#reverse-${actorUuid.replaceAll(".", "")}`);
@@ -274,7 +274,7 @@ export let processUndoDamageCard = async(message, html, data) => {
     button.click(async (ev: { stopPropagation: () => void; }) => {
       let actor = MQfromActorUuid(actorUuid);
       log(`Setting HP to ${newTempHP} and ${newHP}`);
-      await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP });
+      await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem });
       ev.stopPropagation();
     });
 

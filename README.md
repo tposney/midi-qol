@@ -529,6 +529,10 @@ This field lets you specify a macro to call after the item roll is complete. It 
   saveUuids = [uuid]
   failedSaves = [token.data] (an array of token data taken from targets that failed the save)
   failedSaveUuids = [uuid]
+  criticalSaves = [token.data]
+  criticalSaveUuids = [uuid]
+  fumbleSaves = [token.data]
+  fumbleSaveUuids = [uuid]
   damageRoll = the Roll object for the damage roll (if any)
   attackRoll = the Roll object for the attack roll (if any)
   itemCardId = the id of the chat message item card (see below)
@@ -571,7 +575,7 @@ chatMessage.update({content: content});
 ```
 hitContent is just html, so you could insert whatever you want in any of the divs above.
 
-### Weapon Critical Threshold
+### Weapon Critical Threshold - deprecated as of dnd5e 1.5 - do not use
 An additional field is added to the weapon item sheet, **Critical Threshold**, which changes the critical threshold for attacks made with that weapon. The value used for the attack crtical threshold is the lower of the actors critical threshold (from the special traits page) and the weapon critical threshold.
 
 ## Sample Chat Logs

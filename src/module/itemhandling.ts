@@ -64,7 +64,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
         speaker: getSpeaker(this.actor)
       }
     });
-      return workflow.activeDefence(this, result);
+    return workflow.activeDefence(this, result);
   }
   let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
