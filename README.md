@@ -371,12 +371,13 @@ Gives the attacker advantage on attacks made against the target. Midi-qol only c
 * flags.midi-qol.DR.fire
 * flags.midi-qol.DR.force
 * flags.midi-qol.DR.lightning
+* glags.midi-qol.DR.rwak/mwak/rsak/msak
 * etc  
 These flags can be used to grant damage reduction to a character and can be set by active effects and are evaluated after derived fields are calculated, so things like dex.mod etc are available.  
 flags.midi-qol.DR.all CUSTOM 3, will give 3 points of damage reduction to all incoming damage.
 Negative DR is not supported (i.e. to increase damage taken).  
 
-flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver will take 0.5/0 damage on failed/successful save, compared to the normal 1/0.5. Useful for things like rogue's evasion class feature.  
+flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver will take 0.5/0 damage on failed/successful save, compared to the normal 1/0.5. Useful for things like rogue's/monks evasion class feature.  
 
 flags.midi-qol.ignoreNearbyFoes which, when set, means disadvantage from nearby foes (optional rules) will not affect the actor.
 
@@ -410,15 +411,17 @@ where specification is a comma separated list of fields.
   e.g. condition=@attributes.hp.value > 0 - for regeneration.
   * removeCondition=expression, if present and evaluates to true the effect is removed after the rest of the processing.
   Saving Throw: the entire active effect will be removed when the saving throw is made (or the effect duration expires)
-  * saveAbility=dex/con/etc The actor's ability to use for rolling the saving throw
+  * saveAbility=dex/con/etc prc/perception etc The actor's ability/skill to use for rolling the saving throw
   * saveDC=number
   * saveDamage=halfdamage/nodamage/fulldamage - default nodamage
-  * rollType=check/save (default save), roll an ability check or save.
+  * rollType=check/save/skill (default save), roll an ability check, save or skill.
   * saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
   * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is made.
   Damage:
   * damageRoll=roll expression, e.g. 3d6
   * damageType=piercing/bludgeoning etc. You can specify "healing" or "temphp" which apply healing or temphp. temphp will only apply if the rolled temphp > exisiting temphp. overtime healing is a way to implement regeneration.
+  * macro="World Macro Name" call the macro as part of the damage application stage, where name must be a world macro, the macro is passed the results of rolling the overTime item, which will include damage done, saving throws made etc, as if it were an OnUse macro of the Overtime item roll.
+
   If the effect is configured to be stackable with a stack count, of say 2, the damage will 3d6 + 3d6.
   *label=string - displayed when rolling the saving throw
 
