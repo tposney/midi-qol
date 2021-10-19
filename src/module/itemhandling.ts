@@ -100,18 +100,25 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     const critical = rawRoll >= options.critical;
     gameStats.addAttackRoll({ rawRoll, total, fumble, critical }, this);
   }
-  if (dice3dEnabled() && configSettings.mergeCard) {
+  if (dice3dEnabled() && configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)) {
     let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
-    if ((["details", "all"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
-      whisperIds = ChatMessage.getWhisperRecipients("GM")
+    if ((["details", "hitDamage", "all"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
+      if (configSettings.ghostRolls) {
+        //@ts-ignore ghost
+        workflow.attackRoll.ghost = true;
+      } else {
+        whisperIds = ChatMessage.getWhisperRecipients("GM")
+      }
     } else if (rollMode === "selfroll" || rollMode === "gmroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM")
       if (game.user) whisperIds.concat(game.user);
     }
 
     //@ts-ignore game.dice3d
+    // await game.dice3d.showForRoll(workflow.attackRoll, game.user, true, null, rollMode === "blindroll" && !game.user.isGM)
     await game.dice3d.showForRoll(workflow.attackRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+
   }
 
   if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
@@ -284,11 +291,18 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     }
   }
 
-  if (dice3dEnabled() && configSettings.mergeCard) {
+  if (dice3dEnabled() && configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)) {
     let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
-      whisperIds = ChatMessage.getWhisperRecipients("GM");
+      if (configSettings.ghostRolls) {
+        //@ts-ignore ghost
+        result.ghost = true;
+        //@ts-ignore
+        if (otherResult) otherResult.ghost = true;
+      } else {
+        whisperIds = ChatMessage.getWhisperRecipients("GM")
+      }
     } else if (rollMode === "selfroll" || rollMode === "gmroll") {
       whisperIds = ChatMessage.getWhisperRecipients("GM");
       if (game.user) whisperIds.concat(game.user);
@@ -620,12 +634,12 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
           tx = tx + templateDetails.shape.width / 2;
           ty = ty + templateDetails.shape.height / 2;
         }
-        const r = new Ray({ x: currGrid.x + tx, y: currGrid.y + ty }, { x: tx, y: ty });
+        const r = new Ray({ x: tx, y: ty }, { x: currGrid.x + tx, y: currGrid.y + ty });
         if (configSettings.optionalRules.wallsBlockRange === "centerLevels" && installedModules.get("levels")) {
           let p1 = {
             x: currGrid.x + tx, y: currGrid.y + ty,
             //@ts-ignore
-            z: _levels.getTokenLOSheight(token)
+            z: token.data.elevation
           }
           let p2 = {
             x: tx, y: ty,

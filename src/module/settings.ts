@@ -1,7 +1,10 @@
 import { MacroData } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/data.mjs";
 import { _mergeUpdate } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/utils/helpers.mjs";
+import { config } from "simple-peer";
 import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, debugEnabled } from "../midi-qol.js";
 import { ConfigPanel} from "./apps/ConfigPanel.js"
+import { configureDamageRollDialog } from "./patching.js";
+import { isAutoFastAttack } from "./utils.js";
 
 export var itemRollButtons: boolean;
 export var criticalDamage: string;
@@ -30,6 +33,8 @@ class ConfigSettings {
   gmAutoFastForwardAttack: boolean = false;
   gmAutoDamage: string = "none";
   gmAutoFastForwardDamage: boolean =  false;
+  gmHide3dDice: boolean = false;
+  ghostRolls: boolean = false;
   speedItemRolls: boolean = false;
   speedAbilityRolls: boolean = false;
   showItemDetails: string = "";
@@ -83,6 +88,7 @@ class ConfigSettings {
   optionalRulesEnabled: boolean = false;
   itemRollStartWorkflow: boolean = false;
   usePlayerPortrait: boolean = false;
+  promptDamageRoll: boolean = false;
   optionalRules: any = {
     invisAdvantage: true,
     checkRange: true,
@@ -189,6 +195,7 @@ export async function importSettingsFromJSON(json) {
 
 export let fetchParams = () => {
   if (debugEnabled > 1) debug("Fetch Params Loading");
+  const promptDamageRoll = configSettings.promptDamageRoll ?? false;
   //@ts-ignore
   configSettings = game.settings.get("midi-qol", "ConfigSettings");
   if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["dice"];
@@ -202,6 +209,9 @@ export let fetchParams = () => {
   if (configSettings.rollOtherDamage === false) configSettings.rollOtherDamage = "none";
   if (configSettings.rollOtherDamage === true) configSettings.rollOtherDamage = "ifSave";
   if (configSettings.rollOtherDamage === undefined) configSettings.rollOtherDamage = "none";
+  if (configSettings.promptDamageRoll === undefined) configSettings.promptDamageRoll = false;
+  if (configSettings.gmHide3dDice === undefined) configSettings.gmHide3dDice = false;
+  if (configSettings.ghostRolls === undefined) configSettings.ghostRolls = false;
 
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
@@ -257,6 +267,10 @@ export let fetchParams = () => {
   dragDropTargeting = Boolean(game.settings.get("midi-qol", "DragDropTarget"));
   useMidiCrit = Boolean(game.settings.get("midi-qol", "UseMidiCrit"))
 
+  if (game.ready) {
+    configureDamageRollDialog();
+  }
+
   setDebugLevel(debugText);
   if (configSettings.concentrationAutomation) {
     // Force on use macro to true
@@ -264,7 +278,7 @@ export let fetchParams = () => {
       console.warn("Concentration requires On Use Macro to be enabled. Enabling")
       configSettings.allowUseMacro = true;
     }
-    checkConcentrationSettings();
+    if (promptDamageRoll !== configSettings.promptDamageRoll) checkConcentrationSettings();
   }
 }
 

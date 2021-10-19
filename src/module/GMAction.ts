@@ -23,8 +23,7 @@ export function GMupdateEntityStats(data: { id: any; currentStats: any; }) {
 }
 
 export let setupSocket = () => {
- //@ts-ignore
-  socketlibSocket = window.socketlib.registerModule("midi-qol");
+  socketlibSocket = globalThis.socketlib.registerModule("midi-qol");
   socketlibSocket.register("createReverseDamageCard", createReverseDamageCard);
   socketlibSocket.register("removeEffects", removeEffects);
   socketlibSocket.register("createEffects", createEffects);
@@ -106,7 +105,8 @@ export async function rollAbility(data: { request: string; targetUuid: any; abil
   const actor = MQfromActorUuid(data.targetUuid);
   let result;
   if (data.request === "save") result = await actor.rollAbilitySave(data.ability, data.options)
-  else result = await actor.rollAbilityTest(data.ability, data.options);
+  else if (data.request === "check") result = await actor.rollAbilityTest(data.ability, data.options);
+  else if (data.request === "skill") result = await actor.rollSkill(data.ability, data.options)
   return result;
 }
 
@@ -174,6 +174,7 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
       tokenUuid,
       tokenImg: img,
       hpDamage,
+      abshpDamage: Math.abs(hpDamage),
       tempDamage: newTempHP - oldTempHP,
       totalDamage: Math.abs(totalDamage),
       halfDamage: Math.abs(Math.floor(totalDamage / 2)),

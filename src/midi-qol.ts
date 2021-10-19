@@ -101,7 +101,6 @@ Hooks.once('setup', function() {
 	// Do anything after initialization but before
   // ready
   setupSocket();
-
   fetchParams();
   itemPatching();
   visionPatching();

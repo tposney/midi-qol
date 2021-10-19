@@ -222,7 +222,7 @@ export class Workflow {
     this.tokenUuid = this.tokenId ? token?.document.uuid : undefined; // TODO see if this could be better
     if (installedModules.get("levels") && token) {
       //@ts-ignore
-      this.templateElevation = _levels.templateElevation ? _levels.nextTemplateHeight : _levels.getTokenLOSheight(token);
+      this.templateElevation = _levels.templateElevation ? _levels.nextTemplateHeight : token.data.elevation;
     } else if (installedModules.get("levels")) {
       //@ts-ignore
       this.templateElevation = _levels.templateElevation ? _levels.nextTemplateHeight : 0;
@@ -237,6 +237,8 @@ export class Workflow {
     this.superSavers = new Set();
     this.failedSaves = new Set(this.targets)
     this.hitTargets = new Set(this.targets);
+    this.criticalSaves = new Set();
+    this.fumbleSaves = new Set();
     this.isCritical = false;
     this.isFumble = false;
     this.currentState = WORKFLOWSTATES.NONE;
@@ -607,7 +609,7 @@ export class Workflow {
           if (results.some(r => r?.haltEffectsApplication))
             return this.next(WORKFLOWSTATES.ROLLFINISHED);
         }
-
+        if (!Hooks.call("midi-qol.preApplyDynamicEffects", this)) return this.this.next(WORKFLOWSTATES.ROLLFINISHED);
         // no item, not auto effects or not module skip
         if (!this.item || !configSettings.autoItemEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED);
         this.applicationTargets = new Set();
@@ -868,10 +870,19 @@ export class Workflow {
         return false;
       }).map(ef => ef.id);
       if (expiredEffects?.length ?? 0 > 0) {
-        await socketlibSocket.executeAsGM("removeEffects", {
-          actorUuid: target.actor?.uuid,
-          effects: expiredEffects,
-        });
+        if (isNewerVersion("9", game.data.version)) {
+          setTimeout(() => {
+            socketlibSocket.executeAsGM("removeEffects", {
+              actorUuid: target.actor?.uuid,
+              effects: expiredEffects,
+            });
+          }, 1000)
+        } else {
+          await socketlibSocket.executeAsGM("removeEffects", {
+            actorUuid: target.actor?.uuid,
+            effects: expiredEffects,
+          });
+        }
       }
     }
   }
@@ -902,11 +913,16 @@ export class Workflow {
       this.bonusDamageDetail = [];
     }
     if (this.bonusDamageRoll !== null) {
-      if (dice3dEnabled() && configSettings.mergeCard) {
+      if (dice3dEnabled() && configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)) {
         let whisperIds: User[] = [];
         const rollMode = game.settings.get("core", "rollMode");
         if ((configSettings.hideRollDetails !== "none" && game.user?.isGM) || rollMode === "blindroll") {
-          whisperIds = ChatMessage.getWhisperRecipients("GM")
+          if (configSettings.ghostRolls) {
+            //@ts-ignore ghost
+            this.bonusDamageRoll.ghost = true;
+          } else {
+            whisperIds = ChatMessage.getWhisperRecipients("GM")
+          }
         } else if (game.user && (rollMode === "selfroll" || rollMode === "gmroll")) {
           whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
         } else whisperIds = ChatMessage.getWhisperRecipients("GM");
@@ -925,6 +941,10 @@ export class Workflow {
     let targets: any[] = [];
     let targetUuids: string[] = []
     let failedSaves: any[] = [];
+    let criticalSaves: any[] = [];
+    let criticalSaveUuids: string[] = [];
+    let fumbleSaves: any[] = [];
+    let fumbleSaveUuids: string[] = [];
     let failedSaveUuids: string[] = [];
     let hitTargets: any[] = [];
     let hitTargetUuids: string[] = [];
@@ -948,6 +968,14 @@ export class Workflow {
       failedSaves.push(failed.document ?? failed);
       failedSaveUuids.push(failed.document?.uuid ?? failed.uuid);
     }
+    for (let critical of this.criticalSaves) {
+      criticalSaves.push(critical.document ?? critical);
+      criticalSaveUuids.push(critical.document?.uuid ?? critical.uuid);
+    }
+    for (let fumble of this.fumbleSaves) {
+      fumbleSaves.push(fumble.document ?? fumble);
+      fumbleSaveUuids.push(fumble.document?.uuid ?? fumble.uuid);
+    }
     for (let save of this.superSavers) {
       superSavers.push(save.document ?? save);
       superSaverUuids.push(save.document?.uuid ?? save.uuid);
@@ -969,6 +997,10 @@ export class Workflow {
       superSaverUuids,
       failedSaves,
       failedSaveUuids,
+      criticalSaves,
+      criticalSaveUuids,
+      fumbleSaves,
+      fumbleSaveUuids,
       damageRoll: this.damageRoll,
       attackRoll: this.attackRoll,
       diceRoll: this.diceRoll,
@@ -1096,7 +1128,7 @@ export class Workflow {
     }
     if (game.user?.isGM && this.useActiveDefence) {
       const searchRe = /<div class="midi-qol-attack-roll">[\s\S]*?<div class="end-midi-qol-attack-roll">/
-      const attackString = `${i18n("midi-qol.ActiveDefenceString")}${configSettings.displaySaveDC ? " " + this.activeDefenceDC : "" }`;
+      const attackString = `${i18n("midi-qol.ActiveDefenceString")}${configSettings.displaySaveDC ? " " + this.activeDefenceDC : ""}`;
       const replaceString = `<div class="midi-qol-attack-roll"><div style="text-align:center" >${attackString}</div><div class="end-midi-qol-attack-roll">`
       content = content.replace(searchRe, replaceString);
       newFlags = mergeObject(flags, {
@@ -1141,7 +1173,7 @@ export class Workflow {
         }
       }
       //@ts-ignore game.dice3d
-      if (!!!game.dice3d?.messageHookDisabled) this.hideTags = [".midi-qol-attack-roll", "midi-qol-damage-roll"];
+      if (!!!game.dice3d?.messageHookDisabled && !(configSettings.gmHide3dDice && game.user?.isGM)) this.hideTags = [".midi-qol-attack-roll", "midi-qol-damage-roll"];
       if (debugEnabled > 0) warn("Display attack roll ", this.attackCardData, this.attackRoll)
       newFlags = mergeObject(flags, {
         "midi-qol":
@@ -1171,9 +1203,12 @@ export class Workflow {
     else
       //@ts-ignore CONFIG.SW5E
       allDamageTypes = mergeObject(CONFIG.SW5E.damageTypes, CONFIG.SW5E.healingTypes, { inplace: false });
+    return `(${this.damageDetail.filter(d=>d.damage !== 0).map(d=>allDamageTypes[d.type])})`;
+/*
     return `(${this.item?.data.data.damage.parts
       .map(a => (allDamageTypes[a[1]] || allDamageTypes[this.defaultDamageType ?? ""] || MQdefaultDamageType)).join(",")
       || this.defaultDamageType || MQdefaultDamageType})`;
+      */
   }
 
   async displayDamageRoll(doMerge) {
@@ -1225,7 +1260,7 @@ export class Workflow {
         }
       }
       //@ts-ignore game.dice3d
-      if (!!!game.dice3d?.messageHookDisabled) {
+      if (!!!game.dice3d?.messageHookDisabled && !(configSettings.gmHide3dDice && game.user?.isGM)) {
         if (getAutoRollDamage() === "none" || !isAutoFastDamage()) {
           // not auto rolling damage so hits will have been long displayed
           this.hideTags = [".midi-qol-damage-roll", ".midi-qol.other-roll"]
@@ -1282,7 +1317,7 @@ export class Workflow {
       var searchString;
       var replaceString;
       //@ts-ignore game.dice3d
-      if (!!!game.dice3d?.messageHookDisabled) this.hideTags.push(".midi-qol-hits-display");
+      if (!!!game.dice3d?.messageHookDisabled && !(configSettings.gmHide3dDice && game.user?.isGM)) this.hideTags.push(".midi-qol-hits-display");
       // TODO test if we are doing better rolls rolls for the new chat cards and damageonlyworkflow
       switch (this.workflowType) {
         case "BetterRollsWorkflow":
@@ -1372,7 +1407,7 @@ export class Workflow {
       if (this.item.data.data.type === "abil") saveType = "midi-qol.ability-checks"
       const saveHTML = `<div class="midi-qol-nobox midi-qol-bigger-text">${this.saveDisplayFlavor}</div>`;
       //@ts-ignore game.dice3d
-      if (!!!game.dice3d?.messageHookDisabled) this.hideTags = [".midi-qol-saves-display"];
+      if (!!!game.dice3d?.messageHookDisabled && !(configSettings.gmHide3dDice && game.user?.isGM)) this.hideTags = [".midi-qol-saves-display"];
       switch (this.workflowType) {
         case "BetterRollsWorkflow":
           const html = `<div data-item-id="${this.item.id}"></div><div class="midi-qol-saves-display">${saveHTML}${saveContent}</div>`
@@ -1446,7 +1481,6 @@ export class Workflow {
     if (this.saveItem.getSaveDC) {
       rollDC = this.saveItem.getSaveDC(); // TODO see if I need to do this for ammo as well
     }
-    let rollAbility = this.saveItem.data.data.save.ability;
 
     let promises: Promise<any>[] = [];
     //@ts-ignore actor.rollAbilitySave
@@ -1457,6 +1491,16 @@ export class Workflow {
       //@ts-ignore actor.rollAbilityTest
       rollAction = CONFIG.Actor.documentClass.prototype.rollAbilityTest;
     }
+    else {
+      const midiFlags = this.saveItem.data.flags ? this.saveItem.data.flags["midi-qol"] : undefined;
+      if (midiFlags?.overTimeSkillRoll) {
+        rollType = "skill"
+        //@ts-ignore actor.rollAbilityTest
+        rollAction = CONFIG.Actor.documentClass.prototype.rollSkill;
+        this.saveItem.data.data.save.ability = midiFlags.overTimeSkillRoll;
+      }
+    }
+    let rollAbility = this.saveItem.data.data.save.ability;
     // make sure saving throws are renabled.
 
     const playerMonksTB = installedModules.get("monks-tokenbar") && configSettings.playerRollSaves === "mtb";
@@ -1571,7 +1615,7 @@ export class Workflow {
     if (monkRequests.length > 0) {
       socketlibSocket.executeAsGM("monksTokenBarSaves", {
         tokens: monkRequests.map(t => t.document.uuid),
-        request: `save:${this.saveItem.data.data.save.ability}`,
+        request: `${rollType}:${this.saveItem.data.data.save.ability}`,
         silent: true,
         rollMode: "gmroll"
       });
@@ -1591,13 +1635,14 @@ export class Workflow {
       if (result?.terms[0]?.options?.disadvantage) this.disadvantageSaves.add(target);
       let isFumble = false;
       let isCritical = false;
-      if (rollDetail.terms && !result.isBR && rollDetail.terms[0] instanceof DiceTerm) { // normal d20 roll/lmrtfy/monks roll
+      if (rollDetail.terms && !result.isBR && rollDetail.terms[0]) { // normal d20 roll/lmrtfy/monks roll
         const dterm: DiceTerm = rollDetail.terms[0];
+        const diceRoll = dterm?.results?.find(result => result.active)?.result ?? (rollDetail.total);
         //@ts-ignore
-        isFumble = dterm.total <= (dterm.options?.fumble ?? 1)
+        isFumble = diceRoll <= (dterm.options?.fumble ?? 1)
         //@ts-ignore
-        isCritical = dterm.total >= (dterm.options?.critical ?? 20);
-      } else if (result.isBR ) {
+        isCritical = diceRoll >= (dterm.options?.critical ?? 20);
+      } else if (result.isBR) {
         isCritical = result.isCritical;
         isFumble = result.isFumble;
       }
@@ -1655,12 +1700,17 @@ export class Workflow {
       i++;
     }
 
-    if (this.item.data.data.actionType !== "abil")
+    if (rollType === "save")
       //@ts-ignore CONFIG.DND5E
       this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">DC ${rollDC}</label> ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(this.hitTargets.size > 1 ? "midi-qol.saving-throws" : "midi-qol.saving-throw")}:`;
-    else
+    else if (rollType === "check")
       //@ts-ignore CONFIG.DND5E
       this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">DC ${rollDC}</label> ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(this.hitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:`;
+    else if (rollType === "skill") {
+      //@ts-ignore CONFIG.DND5E
+      this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">DC ${rollDC}</label> ${CONFIG.DND5E.skills[rollAbility]} `; // ${i18n(this.hitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:
+
+    }
   }
   monksSavingCheck(message, update, options, user) {
     if (!update.flags || !update.flags["monks-tokenbar"]) return true;
@@ -1892,14 +1942,19 @@ export class Workflow {
         if (actorData?.data.details.type?.custom === "NoTarget") continue;
         const wallsBlocking = ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.rangeTarget)
         let inRange = target.actor && actorData?.data.details.race !== "trigger"
-          && target.actor.id !== token.actor?.id
+          // && target.actor.id !== token.actor?.id
           && dispositions.includes(target.data.disposition)
           //@ts-ignore attributes
           && (["always", "wallsBlock"].includes(configSettings.rangeTarget) || target.actor?.data.data.attributes.hp.value > 0)
         // && (["always", "wallsBlock"].includes(configSettings.rangeTarget) || target.actor?.data.data.attributes.hp.value > 0)
         if (inRange) {
+          // if the item specifies a range of "special" don't target the caster.
+          let selfTarget = (this.item?.data.data.range?.units === "spec") ? getCanvas().tokens?.get(this.tokenId) : null;
+          if (selfTarget === target) {
+            inRange = false;
+          }
           const distance = getDistanceSimple(target, token, false, wallsBlocking);
-          inRange = inRange && distance > 0 && distance <= minDist
+          inRange = inRange && distance >= 0 && distance <= minDist
         }
         if (inRange) {
           target.setTarget(true, { user: game.user, releaseOthers: false });
@@ -2055,8 +2110,8 @@ export class DamageOnlyWorkflow extends Workflow {
     this.itemCardId = options.itemCardId;
     this.useOther = options.useOther ?? true;
     this.isCritical = options.isCritical ?? false;
-    this.next(WORKFLOWSTATES.NONE);
-    return this;
+    return this.next(WORKFLOWSTATES.NONE);
+    //return this;
   }
 
   get workflowType() { return this.__proto__.constructor.name };
@@ -2105,8 +2160,9 @@ export class DamageOnlyWorkflow extends Workflow {
         this.applicationTargets = new Set(this.targets);
         this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, this.item, new Set(), { existingDamage: this.damageList, superSavers: new Set() })
         await super._next(WORKFLOWSTATES.ROLLFINISHED);
+
         Workflow.removeWorkflow(this.uuid);
-        return;
+        return this;
 
       default: return super.next(newState);
     }

@@ -8,7 +8,7 @@ Midi-qol is a replacement for minor-qol and you should not have both modules act
 If you've just updated midi-qol and it disappears from your in-game list of modules you probably need to update your dnd5e system to the latest one.
 
 ## I just upgraded and nothing works anymore. 
-I've seen a couple of cases where after migration of foundry versions the per player setting "enaable workflow automation" gets set to off. This flag being unset causes midi to do nothing with rolls (hence the nothing works). Also not that this is a per player setting, so each user needsd to make sure it is on.
+I've seen a couple of cases where after migration of foundry versions the per player setting "enable workflow automation" gets set to off. This flag being unset causes midi to do nothing with rolls (hence the nothing works). **Also note that this is a per player setting, so each user needsd to make sure it is on.**
 
 ## Midi works for some players and not for others....
 Same problem as above - check workflow automation is enabled on all clients. You can use the module SocketSettings to force set the setting on all clients.
@@ -19,7 +19,6 @@ Some of the items require creating a DamageBonusMacro, make sure that is enabled
 **Changes coming in dnd5e 1.5**:
 * dnd5e 1.5 includes per weapon critical threshold and bonus critical damage dice. There is now a configuration setting to enable/disable the midi-qol field on the item sheet. Once dnd5e 1.5 is released, you are stongly encouraged to migrate to the dnd5e setting and disable the midi-qol flag, via Use Midi Critical in the configuration settings. Soon, I will remove the midi-qol field completely. You can run ```MidiQOL.reportMidiCriticalFlags()``` from the console to see which actors/tokens have the midi-qol critical setting defined.
 * Enhanced dnd5e critical damage effects. You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). You will need to experiment to cofirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
-
 
 ### Changes in midi-qol:
 * Speed item rolls has only a single function now to enable ctrl/shift/alt when clicking on the item icon.  All other workflow features are configured separately. See **speed item rolls** below.
@@ -42,7 +41,7 @@ Any module that overloads item.roll is potentially incompatible.
 ## Convenient Effects
 - Midi supports the application of Convenient Effects spell/item effects (configuration setting - Apply Convenient Effects) and matches those by name. For example, if you cast the spell Bless midi will see if there is a convenient effect "Bless" and apply it to any targets that were hit by the spell.
 
-If you have apply convenient effects set and use items from the DAE SRD/Midi SRD modules, you will get a double up of the effect. You need to choose how you want the item to behave, if using convenient effects, delete the DAE SRD effects. The double up problem is intentional, since you might wish to augment the Concenient Effect definition with your own extra effects on the item.
+If you have apply convenient effects set and use items from the DAE SRD/Midi SRD modules, **you will get a double up of the effect**. You need to choose how you want the item to behave, if using convenient effects, delete the DAE SRD effects. The double up problem is intentional, since you might wish to augment the Concenient Effect definition with your own extra effects on the item.
 
 ## levels
 - Midi-qol will use the levels wall collision detection for it's distance calculations/LOS calculations.
@@ -344,6 +343,7 @@ Similarly for disadvantage.
 Advantage/disadvantage on checks for an ability check also grants advantage on the corresponding skill rolls.  
 * flags.midi-qol.advantage.concentration/midi-qol.disadvantage.concentration: advantage/disadvantage on cocentration saves. Monk's token bar rolls do not support setting of advantage by midi-qol.
 * flags.midi-qol.concentrationSaveBonus, a roll expression, which is added to concentration saves (auto, letme, monks, prompted). The roll will display without the bonus on the roll card, but the save result display will reflect the bonus. The revised saving throw formula is available in the tooltip on the save results card.
+* flags.midi-qol.uncanny-dodge which halves damage applied if set
 
 flags.midi-qol.fail.all/ability.all/ability.check.all/ability.save.all/skill.all etc to auto fail a given roll.  
 * flags.midi-qol.ingoreNearbyFoes - when set cancels ranged attack disadvantage from a nearby enemy.

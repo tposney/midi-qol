@@ -13,7 +13,8 @@ export let readyHooks = async () => {
   Hooks.on("preUpdateActor", (actor, update, diff, user) => {
     const hpUpdate = getProperty(update, "data.attributes.hp.value");
     if (hpUpdate === undefined) return true;
-    const hpDiff = actor.data.data.attributes.hp.value - hpUpdate;
+    let hpDiff = actor.data.data.attributes.hp.value - hpUpdate;
+    if (hpUpdate >= (actor.data.data.attributes.hp.tempmax ?? 0) + actor.data.data.attributes.hp.max) hpDiff = 0;
     actor.data.update({ "flags.midi-qol.concentration-damage": hpDiff })
     return true;
   })
@@ -159,12 +160,13 @@ async function handleRemoveConcentration(effect, tokens) {
     await actor.unsetFlag("midi-qol", "concentration-data")
     if (concentrationData.templates) {
       for (let templateUuid of concentrationData.templates) {
-        await MQfromUuid(templateUuid).delete();
+        const template = MQfromUuid(templateUuid);
+        if (template) await template.delete();
       }
     }
     await socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
   } catch (err) {
-    console.warn("dae | error deleteing concentration effects: ", err)
+    console.warn("midi-qol | error deleteing concentration effects: ", err)
   }
   return true;
 }
@@ -202,12 +204,12 @@ export let initHooks = () => {
 
   Hooks.on("renderChatMessage", (message, html, data) => {
     if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);
-    hideStuffHandler(message, html, data);
     chatDamageButtons(message, html, data);
     processUndoDamageCard(message, html, data);
     colorChatMessageHandler(message, html, data);
     hideRollRender(message, html, data);
     betterRollsButtons(message, html, data);
+    hideStuffHandler(message, html, data);
   })
 
   Hooks.on("midi-qol.RollComplete", (workflow) => {
@@ -323,7 +325,7 @@ export const saveJSONData = {
       "target": "",
       "amount": null
     },
-    "preparation": {"mode": "atwill"},
+    "preparation": { "mode": "atwill" },
     "ability": "",
     "actionType": "save",
     "attackBonus": 0,
@@ -643,3 +645,4 @@ export const itemJSONData = {
     }
   }
 }
+

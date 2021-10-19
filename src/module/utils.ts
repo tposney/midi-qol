@@ -8,7 +8,7 @@ import { baseEvent } from "./patching.js";
 import { itemJSONData, saveJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
-import { idText, isConstructorDeclaration } from "typescript";
+import { getConfigFileParsingDiagnostics, idText, isConstructorDeclaration } from "typescript";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -55,6 +55,7 @@ export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) =>
         evalString += rollTerms[partPos].total;
         partPos += 1;
       }
+      type = rollTerms[partPos].options?.flavor ?? type;
       evalString += rollTerms[partPos].total;
       partPos += 1;
     }
@@ -240,6 +241,9 @@ export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTar
     let DRAll = 0;
     if (getProperty(a.data, "flags.midi-qol.DR.all") !== undefined)
       DRAll = (new Roll((getProperty(a.data, "flags.midi-qol.DR.all") || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
+    if (item.hasAttack && getProperty(a.data, `flags.midi-qol.DR.${item.data.data.actionType}`)) {
+      DRAll += (new Roll((getProperty(a.data, `flags.midi-qol.DR.${item.data.data.actionType}`) || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
+    }
     const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
     let DRTotal = 0;
 
@@ -303,7 +307,7 @@ export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTar
         if (superSavers.has(t) && getSaveMultiplierForItem(item) === 0.5) {
           mult = saves.has(t) ? 0 : 0.5;
         }
-        // TODO this should end up getting removed when the prepare data is done.
+        // TODO this should end up getting removed when the prepare data is done. Currently depends on 1Reaction expiry.
         if (getProperty(t.actor, "data.flags.midi-qol.uncanny-dodge") && mult >= 0) {
           mult = mult / 2;
         }
@@ -493,17 +497,19 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
     let message = `${configSettings.displaySaveDC ? "DC " + dc : ""} ${i18n("midi-qol.saving-throw")} ${flavor}`;
     if (rollType === "abil")
       message = `${configSettings.displaySaveDC ? "DC " + dc : ""} ${i18n("midi-qol.ability-check")} ${flavor}`;
+    if (rollType === "skill") 
+      message = `${configSettings.displaySaveDC ? "DC " + dc : ""} ${flavor}`;
     // Send a message for LMRTFY to do a save.
     const socketData = {
       user: player.id,
       actors: [actorId],
       abilities: rollType === "abil" ? [ability] : [],
-      saves: rollType !== "abil" ? [ability] : [],
-      skills: [],
+      saves: rollType === "save" ? [ability] : [],
+      skills: rollType === "skill" ? [ability] : [],
       advantage,
       mode,
       title: i18n("midi-qol.saving-throw"),
-      message: `${configSettings.displaySaveDC ? "DC " + dc : ""} ${i18n("midi-qol.saving-throw")} ${flavor}`,
+      message,
       formula: "",
       attach: {requestId},
       deathsave: false,
@@ -563,10 +569,12 @@ export function requestPCActiveDefence(player, actor, advantage, saveItemNname, 
 }
 
 export function midiCustomEffect(actor, change) {
-  if (!change.key?.startsWith("flags.midi-qol")) return;
+  if (typeof change?.key !== "string") return true;
+  if (!change.key?.startsWith("flags.midi-qol")) return true;
   //@ts-ignore
   const val = Number.isNumeric(change.value) ? parseInt(change.value) : 1;
-  setProperty(actor.data, change.key, change.value)
+  setProperty(actor.data, change.key, change.value);
+  return true;
 }
 
 export function checkImmunity(candidate, data, options, user) {
@@ -660,7 +668,7 @@ export async function processOverTime(combat, data, options, user) {
             details[p[0]] = p.slice(1).join("=");
           }
           if (details.turn === undefined) details.turn = "start";
-          if (details.appplyCondition || details.condition) {
+          if (details.applyCondition || details.condition) {
             let applyCondition = details.applyCondition ?? details.condition; // maintin support for condition
             let value = replaceAtFields(applyCondition, rollData, { blankValue: 0, maxIterations: 3 });
             let result;
@@ -682,13 +690,14 @@ export async function processOverTime(combat, data, options, user) {
               const value = replaceAtFields(details.saveDC, rollData, { blankValue: 0, maxIterations: 3 });
               saveDC = Roll.safeEval(value);
             } catch (err) { saveDC = -1 }
-            const saveAbility = details.saveAbility;
+            let saveAbility = (details.saveAbility ?? "").toLocaleLowerCase();
             const saveDamage = details.saveDamage ?? "nodamage";
             const saveMagic = JSON.parse(details.saveMagic ?? "false"); //parse the saving throw true/false
             const damageRoll = details.damageRoll;
             const damageType = details.damageType ?? "piercing";
             const saveRemove = JSON.parse(details.saveRemove ?? "true");
             const damageBeforeSave = JSON.parse(details.damageBeforeSave ?? "false");
+            const macroToCall = details.macro;
             const rollType = details.rollType;
 
             if (debugEnabled > 0) warn(`Overtime provided data is `, details);
@@ -705,6 +714,21 @@ export async function processOverTime(combat, data, options, user) {
             if (rollType === "check") {
               itemData.data.actionType = "abil";
             }
+            if (rollType === "skill") { // skill checks for this is a fiddle - set a midi flag so that the midi save roll will pick it up.
+              itemData.data.actionType = "save";
+              //@ts-ignore
+              let skillId = CONFIG.DND5E.skills[saveAbility];
+              if (!skillId) {
+                // @ts-ignore
+                const hasEntry = Object.values(CONFIG.DND5E.skills).map(id=>id.toLowerCase()).includes(saveAbility)
+                if (hasEntry) {
+                  //@ts-ignore
+                  saveAbility = Object.keys(CONFIG.DND5E.skills).find(id => CONFIG.DND5E.skills[id].toLocaleLowerCase() === saveAbility)
+                }
+              }
+              setProperty(itemData, "flags.midi-qol.overTimeSkillRoll", saveAbility)
+            }
+
             if (damageBeforeSave || !damageRoll || saveDamage === "fulldamage") {
               itemData.data.properties.fulldam = true;
             } else if (saveDamage === "halfdamage") {
@@ -728,6 +752,10 @@ export async function processOverTime(combat, data, options, user) {
             let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
             if (saveRemove && saveDC > -1)
               overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id };
+            if (macroToCall) {
+              setProperty(ownedItem.data, "flags.midi-qol.onUseMacroName", macroToCall)
+            }
+            
             if (details.removeCondition) {
               let value = replaceAtFields(details.removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
               let remove;
@@ -808,7 +836,7 @@ export function getUnitDist(x1: number, y1: number, z1: number, token2): number 
   const x2 = token2.center.x;
   const y2 = token2.center.y;
   //@ts-ignore
-  const z2 = _levels.getTokenLOSheight(token2) * unitsToPixel;
+  const z2 = token2.data.elevation * unitsToPixel;
 
   const d =
     Math.sqrt(
@@ -858,13 +886,13 @@ export function getDistance(t1: Token, t2: Token, includeCover, wallblocking = f
               x: origin.x,
               y: origin.y,
               //@ts-ignore
-              z: _levels.getTokenLOSheight(t1)
+              z: t1.data.elevation
             }
             let p2 = {
               x: dest.x,
               y: dest.y,
               //@ts-ignore
-              z: _levels.getTokenLOSheight(t2)
+              z: t2.data.elevation
             }
             //@ts-ignore
             if (_levels.testCollision(p1, p2, "sight")) continue;

@@ -38,9 +38,9 @@
                   <span
                     class="midi-qol-tooltiptext midi-qol-tooltip-top">{{damage.oldHP}}[{{damage.oldTempHP}}]{{damage.dmgSign}}{{damage.hpDamage}}[{{damage.tempDamage}}]={{damage.newHP}}[{{damage.newTempHP}}]</span>
                   {{else}}
-                  <div>{{damage.oldHP}}{{damage.dmgSign}}{{damage.hpDamage}}({{damage.totalDamage}})={{damage.newHP}}
+                  <div>{{damage.oldHP}}{{damage.dmgSign}}{{damage.abshpDamage}}({{damage.totalDamage}})={{damage.newHP}}
                     <span
-                      class="midi-qol-tooltiptext midi-qol-tooltip-top">{{damage.oldHP}}{{damage.dmgSign}}{{absDamage}}[{{damage.totalDamage}}]={{damage.newHP}}</span>
+                      class="midi-qol-tooltiptext midi-qol-tooltip-top">{{damage.oldHP}}{{damage.dmgSign}}{{abshpDamage}}[{{damage.totalDamage}}]={{damage.newHP}}</span>
                     {{/if}}
                 </span>
               </div>

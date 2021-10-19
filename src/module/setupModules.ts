@@ -88,6 +88,22 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.8.74
+* OverTime effects now support a rollType="skill", saveAbility=prc/perception etc. Should work with LMRTFY/Monks TB/betterRolls.
+* Overtime effects can now call a macro as part of the overTime actions, macro=Name, where name must be a world macro, the macro is passed the results of rolling the overTime item, which will include damage done, saving throws made etc, as if it were an OnUse macro of the Overtime item roll.
+* Added hide GM 3D dice rolls option to GM settings tab - attack/damage rolls by the GM if using the merge card will not trigger a dice so nice roll. Overrides otheer show dice settings.
+* Added a display "ghost dice" setting, on the GM tab, which will display dice with "?" on the faces when a GM dice roll would otherwise be hidden. There are almost certainly cases I missed so don't enable just before game time.
+* Added an enhanced damage roll dialog (workflow tab - damage setion), that lets you choose which of the damage rolls available on the item to be rolled. Thanks @theripper93 for the code. Works when not fastForwarding damage rolls.
+* Addded flags.midi-qol.DR.mwak/rwak/msak/rsak which is Damage Reduction against attacks of the specified type.
+* Fix for walls block targeting getting the wall direction the wrong way round.
+* Fix for sign display problem on damage card when healing.
+* Attempted fix for effects with a duration of 1Reaction not always expiring, issue does not occur in 0.9
+* Fixed an obscure bug when checking concentration and updating HP > hp.max treating the update as damage.
+* **BREAKING** For ranged area of effect spells, with or without a template if range type is set to "special", the caster won't be tqargeted.
+* new DamageOnlyWorkflow() reutrns a Promise which when awaited has the completed workflow with damage applied fields filled in etc.
+* Preliminary review of 0.9.x compatibility and seems ok (famous last words). 
+* update ja.json - thanks @Brother Sharp
+
 0.8.73
 * A little tidying of active defence rolls so that duplicate rolls are not performed.
 * Fix for midi-qol.RollComplete firing too early in the workflow, leaving workflow.damageList undefined.
