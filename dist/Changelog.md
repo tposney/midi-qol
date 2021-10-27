@@ -1,15 +1,29 @@
+### 0.8.75
+* Added per item flag to override the midi-qol module "Apply Convenient Effects" setting. If the module setting is on, the per item flag will disable applying convenient effects, if the setting is off the per item flag will enable applying convenient effects for the item.  
+This means you can mix and match between convenient effects and DAE/Midi SRD or homebrew. Set the module setting to the most common use case (probably auto apply convenient effects ON) and then disable the convenient effect on those items that you want to use just the effects on the item.
+* Fix for AoE spells not targeting tokens smaller than 1 unit.
+exactly as auto applying effects does.
+* Fix for DamageOnlyWorkflow failing to apply damage.
+* For the case of using the merge card and **not** auto rolling attacks the targeted tokens will be displayed in the chat card prior to the attack roll being done. After the attack roll is made the hit/miss status will replace the target list. This can be useful if you players often fail to target correctly.
+* If using the merge card, not completing the roll and then re-rolling the item the incomplete chat card will be removed from the chat and replaced with the new item roll.
+* For items with no attack, damage or save (e.g. haste and similar) disabling auto roll attack will stop the automatic applicaiton of active effects, but leave the apply effects button enabled. I'm looking for feedback on this one. It is convenient as a way to not auto apply effects when not auto rolling attacks, but might be inconvenient otherwise.
+* Clicking the apply active effects button on the chat card will now complete the roll and expire effects as required, and other house keeping.
+* If a spell caster with **flags.midi-qol.spellSclpting** set, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 daqmage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.
+* Added MidiQOL.socket().updateEffects({actorUuid, updates}).
+* Added another hook, "midi-qol.preambleComplete" which fires after targets are set,  
+
 ### 0.8.74
 * OverTime effects now support a rollType="skill", saveAbility=prc/perception etc. Should work with LMRTFY/Monks TB/betterRolls.
 * Overtime effects can now call a macro as part of the overTime actions, macro=Name, where name must be a world macro, the macro is passed the results of rolling the overTime item, which will include damage done, saving throws made etc, as if it were an OnUse macro of the Overtime item roll.
-* Added hide GM 3D dice rolls option to GM settings tab - attack/damage rolls by the GM if using the merge card will not trigger a dice so nice roll. Overrides otheer show dice settings.
+* Added hide GM 3D dice rolls option to GM settings tab - attack/damage rolls by the GM if using the merge card will not trigger a dice so nice roll. Overrides other show dice settings.
 * Added a display "ghost dice" setting, on the GM tab, which will display dice with "?" on the faces when a GM dice roll would otherwise be hidden. There are almost certainly cases I missed so don't enable just before game time.
-* Added an enhanced damage roll dialog (workflow tab - damage setion), that lets you choose which of the damage rolls available on the item to be rolled. Thanks @theripper93 for the code. Works when not fastForwarding damage rolls.
-* Addded flags.midi-qol.DR.mwak/rwak/msak/rsak which is Damage Reduction against attacks of the specified type.
+* Added an enhanced damage roll dialog (workflow tab - damage section), that lets you choose which of the damage rolls available on the item to be rolled. Thanks @theripper93 for the code. Works when not fastForwarding damage rolls.
+* Added flags.midi-qol.DR.mwak/rwak/msak/rsak which is Damage Reduction against attacks of the specified type.
 * Fix for walls block targeting getting the wall direction the wrong way round.
 * Fix for sign display problem on damage card when healing.
 * Attempted fix for effects with a duration of 1Reaction not always expiring, issue does not occur in 0.9
 * Fixed an obscure bug when checking concentration and updating HP > hp.max treating the update as damage.
-* **BREAKING** For ranged area of effect spells, with or without a template if range type is set to "special", the caster won't be tqargeted.
+* **BREAKING** For ranged area of effect spells, with or without a template if range type is set to "special", the caster won't be targeted.
 * new DamageOnlyWorkflow() reutrns a Promise which when awaited has the completed workflow with damage applied fields filled in etc.
 * Preliminary review of 0.9.x compatibility and seems ok (famous last words). 
 * update ja.json - thanks @Brother Sharp

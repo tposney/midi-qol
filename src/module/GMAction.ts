@@ -5,16 +5,22 @@ import { MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 export var socketlibSocket: any = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
 
-export async function removeEffects(data: { actorUuid: any; effects: string[]; }) {
+export async function removeEffects(data: { actorUuid: string; effects: string[]; }) {
   const actor = MQfromActorUuid(data.actorUuid);
   await actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects)
 }
 
-export async function createEffects(data: { actorUuid: any; effects: any; }) {
+export async function createEffects(data: { actorUuid: string, effects: any[]}) {
   const actor = MQfromActorUuid(data.actorUuid);
   await actor?.createEmbeddedDocuments("ActiveEffect", data.effects)
 }
-export function removeActorStats(data: { actorId: any; }) {
+
+export async function updateEffects(data: {actorUuid: string, updates: any[]}) {
+    const actor = MQfromActorUuid(data.actorUuid);
+    await actor.updateEmbeddedDocuments(data.updates);
+}
+
+export function removeActorStats(data: { actorId: any }) {
   return gameStats.GMremoveActorStats(data.actorId)
 }
 
@@ -27,13 +33,14 @@ export let setupSocket = () => {
   socketlibSocket.register("createReverseDamageCard", createReverseDamageCard);
   socketlibSocket.register("removeEffects", removeEffects);
   socketlibSocket.register("createEffects", createEffects);
+  socketlibSocket.register("updateEffects", updateEffects);
   socketlibSocket.register("updateEntityStats", GMupdateEntityStats)
   socketlibSocket.register("removeStatsForActorId", removeActorStats);
   socketlibSocket.register("monksTokenBarSaves", monksTokenBarSaves);
   socketlibSocket.register("rollAbility", rollAbility);
   socketlibSocket.register("createChatMessage", createChatMessage);
   socketlibSocket.register("chooseReactions", localDoReactions);
-  socketlibSocket.register("addConvenientEffect", addConcentientEffect);
+  socketlibSocket.register("addConvenientEffect", addConventientEffect);
   socketlibSocket.register("deleteItemEffects", deleteItemEffects);
   socketlibSocket.register("createActor", createActor);
   socketlibSocket.register("deleteToken", deleteToken)
@@ -75,7 +82,7 @@ let deleteItemEffects = async (data: {targets, origin: string, ignore: string[]}
     }
   }
 }
-async function addConcentientEffect(options) {
+async function addConventientEffect(options) {
   let {effectName, actorUuid, origin} = options;
   const actorToken: any = await fromUuid(actorUuid);
   const actor = actorToken?.actor ?? actorToken;

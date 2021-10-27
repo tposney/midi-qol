@@ -88,54 +88,41 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
-  0.8.74
-* OverTime effects now support a rollType="skill", saveAbility=prc/perception etc. Should work with LMRTFY/Monks TB/betterRolls.
-* Overtime effects can now call a macro as part of the overTime actions, macro=Name, where name must be a world macro, the macro is passed the results of rolling the overTime item, which will include damage done, saving throws made etc, as if it were an OnUse macro of the Overtime item roll.
-* Added hide GM 3D dice rolls option to GM settings tab - attack/damage rolls by the GM if using the merge card will not trigger a dice so nice roll. Overrides otheer show dice settings.
-* Added a display "ghost dice" setting, on the GM tab, which will display dice with "?" on the faces when a GM dice roll would otherwise be hidden. There are almost certainly cases I missed so don't enable just before game time.
-* Added an enhanced damage roll dialog (workflow tab - damage setion), that lets you choose which of the damage rolls available on the item to be rolled. Thanks @theripper93 for the code. Works when not fastForwarding damage rolls.
-* Addded flags.midi-qol.DR.mwak/rwak/msak/rsak which is Damage Reduction against attacks of the specified type.
-* Fix for walls block targeting getting the wall direction the wrong way round.
-* Fix for sign display problem on damage card when healing.
-* Attempted fix for effects with a duration of 1Reaction not always expiring, issue does not occur in 0.9
-* Fixed an obscure bug when checking concentration and updating HP > hp.max treating the update as damage.
-* **BREAKING** For ranged area of effect spells, with or without a template if range type is set to "special", the caster won't be tqargeted.
-* new DamageOnlyWorkflow() reutrns a Promise which when awaited has the completed workflow with damage applied fields filled in etc.
-* Preliminary review of 0.9.x compatibility and seems ok (famous last words). 
-* update ja.json - thanks @Brother Sharp
+  0.8.75
+  * Added per item flag to override the midi-qol module "Apply Convenient Effects" setting. If the module setting is on, the per item flag will disable applying convenient effects, if the setting is off the per item flag will enable applying convenient effects for the item.  
+  This means you can mix and match between convenient effects and DAE/Midi SRD or homebrew. Set the module setting to the most common use case (probably auto apply convenient effects ON) and then disable the convenient effect on those items that you want to use just the effects on the item.
+  * Fix for AoE spells not targeting tokens smaller than 1 unit.
+  exactly as auto applying effects does.
+  * Fix for DamageOnlyWorkflow failing to apply damage.
+  * For the case of using the merge card and **not** auto rolling attacks the targeted tokens will be displayed in the chat card prior to the attack roll being done. After the attack roll is made the hit/miss status will replace the target list. This can be useful if you players often fail to target correctly.
+  * If using the merge card, not completing the roll and then re-rolling the item the incomplete chat card will be removed from the chat and replaced with the new item roll.
+  * For items with no attack, damage or save (e.g. haste and similar) disabling auto roll attack will stop the automatic applicaiton of active effects, but leave the apply effects button enabled. I'm looking for feedback on this one. It is convenient as a way to not auto apply effects when not auto rolling attacks, but might be inconvenient otherwise.
+  * Clicking the apply active effects button on the chat card will now complete the roll and expire effects as required, and other house keeping.
+  * If a spell caster with **flags.midi-qol.spellSclpting** set, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 daqmage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.
+  * Added MidiQOL.socket().updateEffects({actorUuid, updates}).
+  * Added another hook, "midi-qol.preambleComplete" which fires after targets are set,  
+  
+0.8.74
+  * OverTime effects now support a rollType="skill", saveAbility=prc/perception etc. Should work with LMRTFY/Monks TB/betterRolls.
+  * Overtime effects can now call a macro as part of the overTime actions, macro=Name, where name must be a world macro, the macro is passed the results of rolling the overTime item, which will include damage done, saving throws made etc, as if it were an OnUse macro of the Overtime item roll.
+  * Added hide GM 3D dice rolls option to GM settings tab - attack/damage rolls by the GM if using the merge card will not trigger a dice so nice roll. Overrides other show dice settings.
+  * Added a display "ghost dice" setting, on the GM tab, which will display dice with "?" on the faces when a GM dice roll would otherwise be hidden. There are almost certainly cases I missed so don't enable just before game time.
+  * Added an enhanced damage roll dialog (workflow tab - damage section), that lets you choose which of the damage rolls available on the item to be rolled. Thanks @theripper93 for the code. Works when not fastForwarding damage rolls.
+  * Added flags.midi-qol.DR.mwak/rwak/msak/rsak which is Damage Reduction against attacks of the specified type.
+  * Fix for walls block targeting getting the wall direction the wrong way round.
+  * Fix for sign display problem on damage card when healing.
+  * Attempted fix for effects with a duration of 1Reaction not always expiring, issue does not occur in 0.9
+  * Fixed an obscure bug when checking concentration and updating HP > hp.max treating the update as damage.
+  * **BREAKING** For ranged area of effect spells, with or without a template if range type is set to "special", the caster won't be targeted.
+  * new DamageOnlyWorkflow() reutrns a Promise which when awaited has the completed workflow with damage applied fields filled in etc.
+  * Preliminary review of 0.9.x compatibility and seems ok (famous last words). 
+  * update ja.json - thanks @Brother Sharp
 
 0.8.73
 * A little tidying of active defence rolls so that duplicate rolls are not performed.
 * Fix for midi-qol.RollComplete firing too early in the workflow, leaving workflow.damageList undefined.
 * Added fumbleSaves/criticalSaves: Set<Token> to workflow, and fumbleSaves,criticalSaves,fumbleSaveUuids, criticlSaveUuids to onUse/damageBonus macro arguments.
 
-0.8.72
-* Fix for active defence error in ac defence roll calculation.
-* Added support for ItemMacro.UUID in DamageBonusMacros and OnUse macros to refernce item macros for items not in your inventory.
-
-0.8.71
-* Fix for active defence causing a console error for non gm clients.
-
-0.8.70  
-  * Fix for damage type none and better rolls (would always do 0 damage).
-  * Expirmental: Support for the Active Defence variant rule. Enable via optional rules setting Active Defence. Requires LIMRTFY and does **not** work with better rolls. 
-  * Active defence has attacked players roll a defence roll instead of the GM rolling an attack roll, which is meant to keep player engagement up. https://media.wizards.com/2015/downloads/dnd/UA5_VariantRules.pdf
-    - If active defence is enabled then when the GM attacks instead of rolling an attack roll for the attacker, the defender is prompted to make a defence roll. The DC of the roll is 11 + the attackers bonus and the roll formula is 1d20 + AC - 10, which means the outcome is identical to an attack roll but instead the defender rolls.
-    - As released this had identicial behaviour to the standard rolls with the exception that each player effectively has a individual attack roll made against them.
-    - Advantage/disadvantage are correctly processed with attacker advantage meaning defender disadvantage.
-    - A fumbled defence roll is a critical hit and a critical defence roll is a fumbled attack, midi checks the attacking weapon for the correct critical hit/fumble rolls.
-    - Timeout for player interaction is taken form the saving throw player timeout.
-    - Display of the defence roll DC on the defenders prompt is taken from the saving throws display DC setting.
-    - Issues: There is only one critical result supported, so if multiple targets are attacked they will all have critical damage rolled against them or none. (future might support individual results)
-    - There is only 1 advantaage/disadvantage setting applied, that of the first defender (same as current midi-qol). Future enhancement will use per character advantage/disadvantage settings.
-    - Only works for mwak/rwak/rsak/msak.
-
-0.8.69
-**Changes coming in dnd5e 1.5**:
-* dnd5e 1.5 includes per weapon critical threshold and bonus critical damage dice. There is now a configuration setting to enable/disable the midi-qol field on the item sheet. Once dnd5e 1.5 is released, you are stongly encouraged to migrate to the dnd5e setting and disable the midi-qol flag, via Use Midi Critical in the configuration settings. Soon, I will remove the midi-qol field completely. 
-* You can run MidiQOL.reportMidiCriticalFlags() from the console to see which actors/tokens have the midi-qol critical setting defined.
-* Enhanced dnd5e critical damage effects. You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). You will need to experiment to cofirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
-  
   [Full Changelog](https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md)`,
   "major")
 })

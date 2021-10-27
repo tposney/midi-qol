@@ -5,9 +5,11 @@
   <div class="midi-qol-nobox">
     {{#each hits as |hit iid|}}
     <div class="midi-qol-flex-container">
+      {{#if ../showHits}}
       <div>
         {{hit.hitString}}
       </div>
+      {{/if}}
       <div class="midi-qol-target-npc-GM midi-qol-target-name" id={{hit.target.id}}> {{hit.gmName}}</div>
       <div class="midi-qol-target-npc-Player midi-qol-target-name" id={{hit.target.id}}> {{hit.playerName}}</div>
       <div><img src="{{hit.img}}" width="30" height="30" style="border:0px" /></div>

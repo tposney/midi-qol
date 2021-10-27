@@ -618,8 +618,8 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
 
   // Check for center of  each square the token uses.
   // e.g. for large tokens all 4 squares
-  const startX = token.data.width >= 1 ? 0.5 : token.width / 2;
-  const startY = token.data.height >= 1 ? 0.5 : token.height / 2;
+  const startX = token.data.width >= 1 ? 0.5 : (token.data.width / 2);
+  const startY = token.data.height >= 1 ? 0.5 : (token.data.height / 2);
   for (let x = startX; x < token.data.width; x++) {
     for (let y = startY; y < token.data.height; y++) {
       const currGrid = {

@@ -606,13 +606,18 @@ export async function onChatCardAction(event) {
   }
   if (!actor || !item) return;
   let workflow = Workflow.getWorkflow(item.uuid);
+  workflow.forceApplyEffects = true;
+  await workflow.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
+  /*
   const hasDAE = installedModules.get("dae") && (item?.effects?.contents.some(ef => ef.data.transfer === false));
   if (hasDAE) {
     //@ts-ignore
     let dae = window.DAE;
     dae.doEffects(item, true, game.user?.targets, { whisper: false, spellLevel: workflow?.itemLevel, damageTotal: workflow?.damageTotal, critical: workflow?.isCritical, fumble: workflow?.isFumble, itemCardId: workflow?.itemCardId })
-  }
+    if (configSettings.autoItemEffects) workflow.removeEffectsButton();
 
+  }
+  */
   // Re-enable the button
   button.disabled = false;
 }

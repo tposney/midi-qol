@@ -233,8 +233,23 @@ export let initHooks = () => {
       const element = html.find('input[name="data.chatFlavor"]').parent().parent();
       const labelText = i18n("midi-qol.onUseMacroLabel");
       const currentMacro = getProperty(app.object.data, "flags.midi-qol.onUseMacroName") ?? "";
+
       const macroField = `<div class="form-group"><label>${labelText}</label><input type="text" name="flags.midi-qol.onUseMacroName" value="${currentMacro}"/> </div>`;
       element.append(macroField)
+    }
+    if (installedModules.get("dfreds-convenient-effects")) {
+      const element = html.find('input[name="data.chatFlavor"]').parent().parent();
+      if (configSettings.autoCEEffects) {
+        const offLabel = i18n("midi-qol.convenientEffectsOff");
+        const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOff") ?? false;
+        const effect = `<div class="form-group"><label>${offLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOff" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`
+        element.append(effect)
+      } else {
+        const onLabel = i18n("midi-qol.convenientEffectsOn");
+        const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOn") ?? false;
+        const effect = `<div class="form-group"><label>${onLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOn" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`
+        element.append(effect)
+      }
     }
     if (!installedModules.get("betterrolls5e") && isNewerVersion("1.4.9", game.system.data.version) || useMidiCrit) { // 1.5.0 will include per weapon criticals
       const element2 = html.find('input[name="data.attackBonus"]').parent().parent();
@@ -243,6 +258,7 @@ export let initHooks = () => {
       const criticalField = `<div class="form-group"><label>${labelText2}</label><div class="form-fields"><input type="text" name="flags.midi-qol.criticalThreshold" value="${criticalThreshold}"/></div></div>`;
       element2.append(criticalField);
     }
+
   })
 
   function _chatListeners(html) {

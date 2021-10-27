@@ -241,7 +241,7 @@ export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTar
     let DRAll = 0;
     if (getProperty(a.data, "flags.midi-qol.DR.all") !== undefined)
       DRAll = (new Roll((getProperty(a.data, "flags.midi-qol.DR.all") || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
-    if (item.hasAttack && getProperty(a.data, `flags.midi-qol.DR.${item.data.data.actionType}`)) {
+    if (item?.hasAttack && getProperty(a.data, `flags.midi-qol.DR.${item.data.data.actionType}`)) {
       DRAll += (new Roll((getProperty(a.data, `flags.midi-qol.DR.${item.data.data.actionType}`) || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
     }
     const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
@@ -260,7 +260,6 @@ export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTar
       // Calculate the Damage Reductions for each damage type
       for (let [index, damageDetailItem] of damageDetail.entries()) {
         let { damage, type } = damageDetailItem;
-        let DRItem = damageDetailItem.DRType ?? 0;
         let DRType = 0;
         if (type.toLowerCase() !== "temphp") dmgType = type.toLowerCase();
         //         let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
@@ -326,7 +325,7 @@ export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTar
 
         // TODO: consider mwak damage reduCtion
       }
-      console.warn("midi-qol | Damage Details plus resistance/save multiplier for ", t.actor.data.name, duplicate(damageDetail))
+      if (debugEnabled > 0) console.warn("midi-qol | Damage Details plus resistance/save multiplier for ", t.actor.data.name, duplicate(damageDetail))
     }
 
     //@ts-ignore CONFIG.DND5E

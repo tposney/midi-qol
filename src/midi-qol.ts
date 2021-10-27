@@ -306,6 +306,7 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.ignoreNearbyFoes");
   midiFlags.push(`flags.midi-qol.concentrationSaveBonus`);
   midiFlags.push(`flags.midi-qol.potentCantrip`);
+  midiFlags.push(`flags.midi-qol.sculptSpells`);
 
   allAttackTypes = ["rwak","mwak","rsak", "msak"];
   if (game.system.id === "sw5e")
