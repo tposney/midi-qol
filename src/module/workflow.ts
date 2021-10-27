@@ -205,7 +205,7 @@ export class Workflow {
     this.rollOptions = duplicate(defaultRollOptions);
     this.actor = actor;
     this.item = item;
-    if (Workflow.getWorkflow(item.uuid)) {
+    if (Workflow.getWorkflow(item?.uuid)) {
       const existing = Workflow.getWorkflow(item.uuid);
       if (existing.currentState !== WORKFLOWSTATES.ROLLFINISHED && existing.itemCardId) {
         game.messages?.get(existing.itemCardId)?.delete();
