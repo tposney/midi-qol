@@ -6,11 +6,11 @@ exactly as auto applying effects does.
 * Fix for DamageOnlyWorkflow failing to apply damage.
 * For the case of using the merge card and **not** auto rolling attacks the targeted tokens will be displayed in the chat card prior to the attack roll being done. After the attack roll is made the hit/miss status will replace the target list. This can be useful if you players often fail to target correctly.
 * If using the merge card, not completing the roll and then re-rolling the item the incomplete chat card will be removed from the chat and replaced with the new item roll.
-* For items with no attack, damage or save (e.g. haste and similar) disabling auto roll attack will stop the automatic applicaiton of active effects, but leave the apply effects button enabled. I'm looking for feedback on this one. It is convenient as a way to not auto apply effects when not auto rolling attacks, but might be inconvenient otherwise.
+* For items with no attack, damage or save (e.g. haste and similar) disabling auto roll attack will stop the automatic application of active effects, but leave the apply effects button enabled. I'm looking for feedback on this one. It is convenient as a way to not auto apply effects when not auto rolling attacks, but might be inconvenient otherwise.
 * Clicking the apply active effects button on the chat card will now complete the roll and expire effects as required, and other house keeping.
-* If a spell caster with **flags.midi-qol.spellSclpting** set, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 daqmage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.
+* If a spell caster with **flags.midi-qol.spellSculpting** set, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 damage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.
 * Added MidiQOL.socket().updateEffects({actorUuid, updates}).
-* Added another hook, "midi-qol.preambleComplete" which fires after targets are set,  
+* Added another hook, "midi-qol.preambleComplete" which fires after targets are set.  
 
 ### 0.8.74
 * OverTime effects now support a rollType="skill", saveAbility=prc/perception etc. Should work with LMRTFY/Monks TB/betterRolls.
