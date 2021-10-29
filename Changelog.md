@@ -1,3 +1,7 @@
+### 0.8.77
+* Reversed the "For items with no attack, damage or save (e.g. haste and similar) disabling auto roll attack will stop the automatic application of active effects" feature 0.8.75. There has been enough negative feedback to suggest it causes more problems than it solves.
+* Small update to the force apply/don't apply checkbox for convenient effects so that the check box is ONLY displayed if there is a convenient effect that matches the item name.
+ 
 ### 0.8.76
 * Fix for broken DamageOnlyWorkflow
 

@@ -238,17 +238,21 @@ export let initHooks = () => {
       element.append(macroField)
     }
     if (installedModules.get("dfreds-convenient-effects")) {
-      const element = html.find('input[name="data.chatFlavor"]').parent().parent();
-      if (configSettings.autoCEEffects) {
-        const offLabel = i18n("midi-qol.convenientEffectsOff");
-        const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOff") ?? false;
-        const effect = `<div class="form-group"><label>${offLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOff" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`
-        element.append(effect)
-      } else {
-        const onLabel = i18n("midi-qol.convenientEffectsOn");
-        const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOn") ?? false;
-        const effect = `<div class="form-group"><label>${onLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOn" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`
-        element.append(effect)
+      //@ts-ignore dfreds
+      const ceForItem = game.dfreds.effects.all.find(e => e.name === app.object.name);
+      if (ceForItem) {
+        const element = html.find('input[name="data.chatFlavor"]').parent().parent();
+        if (configSettings.autoCEEffects) {
+          const offLabel = i18n("midi-qol.convenientEffectsOff");
+          const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOff") ?? false;
+          const effect = `<div class="form-group"><label>${offLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOff" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`
+          element.append(effect)
+        } else {
+          const onLabel = i18n("midi-qol.convenientEffectsOn");
+          const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOn") ?? false;
+          const effect = `<div class="form-group"><label>${onLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOn" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`
+          element.append(effect)
+        }
       }
     }
     if (!installedModules.get("betterrolls5e") && isNewerVersion("1.4.9", game.system.data.version) || useMidiCrit) { // 1.5.0 will include per weapon criticals
