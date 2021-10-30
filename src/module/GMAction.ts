@@ -17,7 +17,7 @@ export async function createEffects(data: { actorUuid: string, effects: any[]}) 
 
 export async function updateEffects(data: {actorUuid: string, updates: any[]}) {
     const actor = MQfromActorUuid(data.actorUuid);
-    await actor.updateEmbeddedDocuments(data.updates);
+    await actor.updateEmbeddedDocuments("ActiveEffect", data.updates);
 }
 
 export function removeActorStats(data: { actorId: any }) {
