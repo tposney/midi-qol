@@ -88,6 +88,18 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.8.79
+  * fix for overtime effects duplicating convenient effects when the name of the effect being checked matches a convenient effect.
+  * fix for TrapWorkflow not displaying the damage type list in the roll flavor.
+  * Add new config option to bypass the spell cast dialog, casting at default level and placing templates. Pressing both Advantage+Disadvantage keys will force display of the casting dialog. If you don't have a spell slot of the level of the spell the dialog will be displayed so you can choose another slot. 
+  * exported overTimeJSONData to help macros create items on the fly.  
+  FYI: if you want an overtime effect that just calls a macro each turn use  
+    flags.midi-qol.overTime OVERRIDE turn=start,macro=macro name, label=My Label  
+  The macro will be called with the normal onUse macro data for the overTime effect being rolled.
+
+  0.8.78 
+  packaging error
+
   0.8.77
   * Reversed the "For items with no attack, damage or save (e.g. haste and similar) disabling auto roll attack will stop the automatic application of active effects" feature 0.8.75. There has been enough negative feedback to suggest it causes more problems than it solves.
   * Small update to the force apply/don't apply checkbox for convenient effects so that the check box is ONLY displayed if there is a convenient effect that matches the item name.

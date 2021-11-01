@@ -1,5 +1,5 @@
 ### 0.8.79
-* fix for overtime effects duplicating covenient effects when the name of the effect being checked matches a convenient effect.
+* fix for overtime effects duplicating convenient effects when the name of the effect being checked matches a convenient effect.
 * fix for TrapWorkflow not displaying the damage type list in the roll flavor.
 * Add new config option to bypass the spell cast dialog, casting at default level and placing templates. Pressing both Advantage+Disadvantage keys will force display of the casting dialog. If you don't have a spell slot of the level of the spell the dialog will be displayed so you can choose another slot. 
 * exported overTimeJSONData to help macros create items on the fly.
