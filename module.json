@@ -41,11 +41,6 @@
           "path": "lang/ko.json"
       },
       {
-          "lang": "cn",
-          "name": "中文",
-          "path": "lang/cn.json"
-      },
-      {
           "lang": "fr",
           "name": "Français",
           "path": "lang/fr.json"
