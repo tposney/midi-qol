@@ -5,7 +5,7 @@ import { Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { socketlibSocket } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { baseEvent } from "./patching.js";
-import { itemJSONData, saveJSONData } from "./Hooks.js";
+import { itemJSONData, overTimeJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import { getConfigFileParsingDiagnostics, idText, isConstructorDeclaration } from "typescript";
@@ -701,7 +701,7 @@ export async function processOverTime(combat, data, options, user) {
 
             if (debugEnabled > 0) warn(`Overtime provided data is `, details);
             if (debugEnabled > 0) warn(`OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
-            const itemData = duplicate(saveJSONData);
+            const itemData = duplicate(overTimeJSONData);
             itemData.img = effect.data.icon;
             itemData.data.save.dc = saveDC;
             itemData.data.save.ability = saveAbility;
@@ -741,6 +741,7 @@ export async function processOverTime(combat, data, options, user) {
               //@ts-ignore
               itemData.data.damage.parts = [[damageRollString, damageType]];
             }
+            setProperty(itemData.flags, "midi-qol.forceCEOff", true);
             //@ts-ignore
             itemData._id = randomID();
             // roll the damage and save....
@@ -1024,6 +1025,10 @@ export function isAutoFastAttack(workFlow: Workflow | undefined = undefined): bo
 export function isAutoFastDamage(workFlow: Workflow | undefined = undefined): boolean {
   if (workFlow && workFlow.workflowType === "DummyWorkflow") return workFlow.rollOptions.fastForward;;
   return game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward)
+}
+
+export function isFastForwardSpells(workFlow: Workflow | undefined = undefined): boolean {
+  return game.user?.isGM ? configSettings.gmFastForwardSpells : configSettings.fastForwardSpells;
 }
 
 export function getAutoRollDamage(): string {

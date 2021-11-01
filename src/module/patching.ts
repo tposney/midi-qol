@@ -30,7 +30,7 @@ export const disadvantageEvent = { shiftKey: false, altKey: false, ctrlKey: true
 export const fastforwardEvent = { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false, fastKey: true };
 export const baseEvent = { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false, fastKey: false };
 
-function mapSpeedKeys(event) {
+export function mapSpeedKeys(event) {
   if (installedModules.get("betterrolls5e")) return event;
   if (configSettings.speedItemRolls && configSettings.speedAbilityRolls) {
     if (game.system.id === "sw5e") {

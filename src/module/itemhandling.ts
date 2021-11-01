@@ -1,11 +1,12 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled, log } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
+import { checkRange, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isFastForwardSpells, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { config } from "@league-of-foundry-developers/foundry-vtt-types/src/types/augments/simple-peer";
 import { isTemplateMiddleOrTemplateTail } from "typescript";
 import { socketlibSocket } from "./GMAction.js";
+import { mapSpeedKeys } from "./patching.js";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
@@ -54,7 +55,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     return;
   }
   //@ts-ignore
-  if (game.user.isGM  && workflow.useActiveDefence) {
+  if (game.user.isGM && workflow.useActiveDefence) {
     let result: Roll = await wrapped({
       advantage: false,
       disadvantage: workflow.rollOptions.disadvantage,
@@ -427,6 +428,24 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     // _levels.templateElevation = true;
     // if (game.user) setProperty(game.user, "data.flags.midi-qol.elevation", workflow.templateElevation);
   }
+
+  if (configureDialog) {
+    if (this.type === "spell" && isFastForwardSpells() && !mapSpeedKeys(event).fastKey) {
+      configureDialog = false;
+      // Check that there is a spell slot of the right level
+      const spells = this.actor.data.data.spells;
+      if (spells[`spell${this.data.data.level}`]?.value === 0 &&
+        (spells.pact.value === 0 || spells.pact.level < this.data.data.level)) {
+        configureDialog = true;
+      }
+    }
+    if (!configureDialog && this.hasAreaTarget && this.actor?.sheet) {
+      setTimeout(() => {
+        this.actor?.sheet.minimize();
+      }, 100)
+    }
+  }
+
   let result = await wrapped({ configureDialog, rollMode: null, createMessage: false });
   if (!result) {
     //TODO find the right way to clean this up

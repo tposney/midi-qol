@@ -400,6 +400,9 @@ Values for the optional roll bonus flags include a dice expression, a number, re
 ## Reactions
 If the config settings for reaction checks is enabled midi will check a target that is hit by an attack for any items/feautres/spells that have an activation type of reaction and prompt the target if they want to use any of their reactions, which will then initiate a midi workflow for that item/feature/spell targeting the attacker. Currently does not support spells from magic items.
 
+## Spell Sculpting: flags.midi-qol.spellSculpting
+If a spell caster with flags.midi-qol.spellSculpting set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 damage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.
+
 ## flags.midi-qol.OverTime
 Intended for damage over time effects or until save effects
 ```

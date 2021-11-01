@@ -33,6 +33,7 @@ class ConfigSettings {
   gmAutoFastForwardAttack: boolean = false;
   gmAutoDamage: string = "none";
   gmAutoFastForwardDamage: boolean =  false;
+  gmFastForwardSpells = false;
   gmHide3dDice: boolean = false;
   ghostRolls: boolean = false;
   speedItemRolls: boolean = false;
@@ -41,6 +42,7 @@ class ConfigSettings {
   itemTypeList: any = null;
   autoRollAttack: boolean = false;
   autoFastForward: string = "off";
+  fastForwardSpells: boolean = false;
   autoTarget: string = "none";
   autoCheckHit: string = "none";
   autoCheckSaves: string = "none";
@@ -212,6 +214,8 @@ export let fetchParams = () => {
   if (configSettings.promptDamageRoll === undefined) configSettings.promptDamageRoll = false;
   if (configSettings.gmHide3dDice === undefined) configSettings.gmHide3dDice = false;
   if (configSettings.ghostRolls === undefined) configSettings.ghostRolls = false;
+  if (configSettings.gmFastForwardSpells === undefined) configSettings.gmFastForwardSpells = false;
+  if (configSettings.fastForwardSpells === undefined) configSettings.fastForwardSpells = false;
 
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 

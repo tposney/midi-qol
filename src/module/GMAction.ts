@@ -108,7 +108,7 @@ export async function createChatMessage(data: { chatData: any; }) {
   return await ChatMessage.create(data.chatData);
 }
 
-export async function rollAbility(data: { request: string; targetUuid: any; ability: any; options: any; }) {
+export async function rollAbility(data: { request: string; targetUuid: string; ability: string; options: any; }) {
   const actor = MQfromActorUuid(data.targetUuid);
   let result;
   if (data.request === "save") result = await actor.rollAbilitySave(data.ability, data.options)

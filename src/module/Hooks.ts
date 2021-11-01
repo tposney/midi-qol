@@ -296,7 +296,7 @@ export let initHooks = () => {
   })
 }
 
-export const saveJSONData = {
+export const overTimeJSONData = {
   "name": "OverTime Item",
   "type": "weapon",
   "img": "icons/svg/aura.svg",

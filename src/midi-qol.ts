@@ -15,7 +15,7 @@ import { registerSettings, fetchParams, configSettings, checkRule, collectSettin
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, installedModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, readyPatching } from './module/patching.js';
-import { initHooks, readyHooks } from './module/Hooks.js';
+import { initHooks, overTimeJSONData, readyHooks } from './module/Hooks.js';
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
@@ -218,7 +218,8 @@ function setupMidiQOLApi() {
     socket: () => {return socketlibSocket},
     checkRule: checkRule,
     reportMidiCriticalFlags: reportMidiCriticalFlags,
-    completeItemRoll: completeItemRoll
+    completeItemRoll: completeItemRoll,
+    overTimeJSONData: overTimeJSONData
   }
 }
 
@@ -299,8 +300,8 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.critical.all`);
   midiFlags.push(`flags.midi-qol.fail.critical.all`);
-  midiFlags.push(`flags.midi-qol.maxDamage.all`);
-  midiFlags.push(`flags.midi-qol.grants.maxDamage.all`);
+  // midiFlags.push(`flags.midi-qol.maxDamage.all`); // TODO implement this
+  // midiFlags.push(`flags.midi-qol.grants.maxDamage.all`);
   midiFlags.push(`flags.midi-qol.advantage.concentration`)
   midiFlags.push(`flags.midi-qol.disadvantage.concentration`)
   midiFlags.push("flags.midi-qol.ignoreNearbyFoes");

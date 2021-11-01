@@ -2353,14 +2353,14 @@ export class TrapWorkflow extends Workflow {
           if (debugEnabled > 0) warn(" damage roll complete for non auto target area effects spells", this)
         }
 
+        // If the item does damage, use the same damage type as the item
+        let defaultDamageType = this.item?.data.data.damage?.parts[0][1] || this.defaultDamageType;
+        this.damageDetail = createDamageList(this.damageRoll, this.rollOptions.versatile ? null : this.item, defaultDamageType);
         // apply damage to targets plus saves plus immunities
         await this.displayDamageRoll(configSettings.mergeCard)
         if (this.isFumble) {
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
         }
-        // If the item does damage, use the same damage type as the item
-        let defaultDamageType = this.item?.data.data.damage?.parts[0][1] || this.defaultDamageType;
-        this.damageDetail = createDamageList(this.damageRoll, this.rollOptions.versatile ? null : this.item, defaultDamageType);
         return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
 
       case WORKFLOWSTATES.ALLROLLSCOMPLETE:
