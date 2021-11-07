@@ -22,11 +22,11 @@ Some of the items require creating a DamageBonusMacro, make sure that is enabled
 
 [TOC]
 
-# Changes coming in dnd5e 1.5**:
-* dnd5e 1.5 includes per weapon critical threshold and bonus critical damage dice. There is now a configuration setting to enable/disable the midi-qol field on the item sheet. Once dnd5e 1.5 is released, you are stongly encouraged to migrate to the dnd5e setting and disable the midi-qol flag, via Use Midi Critical in the configuration settings. Soon, I will remove the midi-qol field completely. You can run ```MidiQOL.reportMidiCriticalFlags()``` from the console to see which actors/tokens have the midi-qol critical setting defined.
-* Enhanced dnd5e critical damage effects. You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). You will need to experiment to cofirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
-### Weapon Critical Threshold - deprecated as of dnd5e 1.5 - do not use
-An additional field is added to the weapon item sheet, **Critical Threshold**, which changes the critical threshold for attacks made with that weapon. The value used for the attack crtical threshold is the lower of the actors critical threshold (from the special traits page) and the weapon critical threshold.
+# Changes in dnd5e 1.5:
+## Weapon Critical Threshold
+* dnd5e 1.5 includes per weapon critical threshold and bonus critical damage dice. There is now a configuration setting to enable/disable the midi-qol field on the item sheet. You are stongly encouraged to migrate to the dnd5e setting and disable the midi-qol flag, via Use Midi Critical in the configuration settings. Soon, I will remove the midi-qol field completely. You can run ```MidiQOL.reportMidiCriticalFlags()``` from the console to see which actors/tokens have the midi-qol critical setting defined.
+## Enhanced dnd5e critical damage effects. 
+You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). You will need to experiment to cofirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
 
 # Changelog
 https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
