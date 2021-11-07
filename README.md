@@ -1,3 +1,7 @@
+Midi-qol is a module designed to help automate various parts of your game, specifically rolling attacks/casting spells and applying damage/effects.
+
+It has LOTS of configuration options which can be daunting.
+
 # Bug reports
 **As of version 0.8.19** you can export your midi-qol settings to a json file. When posting a midi-qol bug report export your settings and add the json file to the issue. I won't look at issues without this information.
 
@@ -34,6 +38,15 @@ Any module that overloads item.roll is potentially incompatible.
 ### Dynamic Effects using Active Effects (DAE).
 - Applicaiton of effects to targets requires DAE to be installed.
 - Setting special durations (like 1hit etc) require DAE to be installed. Setting midi-flags via active effects is much simpler with DAE installed.
+
+### Dice So Nice
+Midi generally works with dice so nice, but the interactions are more complicated with the merge card.
+
+### Let Me Roll That For You
+Midi-qol can use Let Me Roll That For You for player/gm saving throws and is the preferred roller.
+
+### Monks Token Bar
+Midi-qol can use Monk's Token Bar to roll saves. If using Monk's token bar flags.midi-qol.(dis)advantage.concentration and magic resistance won't work.
 
 ### Convenient Effects
 Midi supports the application of Convenient Effects spell/item effects (configuration setting - Apply Convenient Effects) and matches those by name. For example, if you cast the spell Bless midi will see if there is a convenient effect "Bless" and apply it to any targets that were hit by the spell.
@@ -96,10 +109,13 @@ The settings are per player so each player needs to change the setting to disabl
 ### **Dnd5e-helpers** 
 Midi-qol has configuration options (in the optional rules section) to incorporate the AC bonus calculated by dnd5e-helpers. There are two settings dnd5e-helpers which allows an attack if any of the 4 corners of the target are visible and dnd5e-helpers+AC which will include the AC bonus from armor when calculating a hit. The bonus AC on the target will be displayed in the to hit card.
 
+## Short Guide to configuration settings
+The heading says short, but it really isn't.
 
-## Short Guide configuration settings
 ### Workflow settings
 * **Speed Item Rolls** 
+Poorly named, but historical, speed item rolls let you configure how the ctl/alt/shift keys work.
+
 If speed rolls are off, all of the ctrl/alt|meta/shift keys and roll behaviour are the same as in core. There is one additional feature: if you click on a damage button in chat, CTRL+ALT click will use the critical/normal hit status from the midi-qol roll data.
 
 If speed rolls are enabled you need to assign the keys yourself.
@@ -111,19 +127,21 @@ If you enable speed ability rolls as well, your key mappings will apply to abili
 * critical damage modifier, defaults to Alt/Meta.
 * fast-forward key (turn any attack or damage roll into a fast-forwarded or disable auto fast-forward if set) advantage+disadvantage.
 
+If you have speed item rolls enabled **Caps-Lock** behaves as if advantage & disadvantage are both pressed, which will invert the fast forward automation setting for rolls. 
+
 If you assign a key multiple meanings the behaviour is going to be confusing at best.
 
 ### Display ###
-* **Card styles** Midi-qol supports two options for item/attack/damage/save rolls. The Merge card combines all of those rolls into a single card. If Merge card is disabled you will get a separate chat card for each roll, which is the default dnd5e look and feel. The condensed Merge card simply puts attack and damage next to each other to conserve a bit more space.  
-* **Show Item details in chat card**. You can configure whether the item details are included in the chat card. If disabled, the item description is not added to the card. If enabled, you can use the dnd5e setting to choose if it is expanded or hidden when displayed. 
+* **Card styles** Midi-qol supports two options for item/attack/damage/save rolls. The Merge card combines all of those rolls into a single card. If Merge card is disabled you will get a separate chat card for each roll, which is the default dnd5e look and feel. The condensed Merge card simply puts attack and damage next to each other to conserve a bit more space. The merge card is recommended.
+* **Show Item details in chat card**. You can configure whether the item details are included in the chat card. If disabled, the item description is not added to the card, you can configure which items have the info displayed. If enabled, you can use the dnd5e setting to choose if it is expanded or hidden when displayed. 
 * **Chat cards use token names**. If the field is blank actual actor/token names will be used in the chat card, hits/saves display for non-GMs. If set to a string the actual names will be replaced in the chat cards with the string. This feature is not a replacement for Combat Utility Belts hide names feature, rather it addresses those fields that CUB does not know about. For full hiding of names on cards and the tracker you need to use CUB in conjunction with midi-qol.
 * **Chat cards use token name** By default chat cards are sent with the name of the actor (i.e. "Orc"). If enabled, the name of the token will be used instead (i.e. "Orc with a terrible limp").
-* **Hide Roll Details** There are 4 settings, hide roll formula, hide all details, d20Attack + hide roll formula, show d20 attack roll only. The last two options ONLY work with the merge card.
+* **Hide Roll Details** There are several settings, hide roll formula, hide all details, d20Attack + hide roll formula, show d20 attack roll only amongst others. Some only work with the merge card.
 
 ### Targeting ###
 * **Auto target on template draw** If a spell/feature has an area effect template then enabling this setting will auto target (for later damage application) all tokens inside the template once placed. Also, the roll will not progress (i.e. roll saves or apply damage) until the template is placed. If "walls-block" is selected then any wall between the template origin and the token will block the targeting.
 * **Auto target for ranged spells/attacks** If the item specifies a ranged target with a target type of creature/enemy/ally then all tokens within range of the caster will be auto targeted when the effect is cast. “enemy/ally” are enemies/allies of the caster. 
-* **Auto roll attack**, **Auto roll damage** and **Auto fast forward rolls**. The auto roll attack and damage settings tell midi-qol to start an attack roll or damage roll if there is one. The auto fast forward settings determine if the advantage/disadvantage and/or critical/normal dialogs are shown or suppressed. Damage can be set to “Attack Hits”, which will roll damage only if the attack roll was sufficient to hit the target.
+* **Auto roll attack**, **Auto roll damage** and **Auto fast forward rolls**. The auto roll attack and damage settings tell midi-qol to start an attack roll or damage roll if there is one. The auto fast forward settings determine if the advantage/disadvantage and/or critical/normal dialogs are shown or suppressed. Damage can be set to “Attack Hits”, which will roll damage only if the attack roll was sufficient to hit the target. These are settable on the GM/Player tabs.
 * **Require targets to be selected before rolling** It is incredibly common in my games that players forget to target before starting the roll. This setting will not allow them to roll if they have not selected a target and one is needed. (Auto-target spells - like a fireball - are not affected by this setting.)
 
 ### Saving Throws ###
@@ -139,21 +157,22 @@ If you assign a key multiple meanings the behaviour is going to be confusing at 
 * **Display Saving throw DC**. Determines if the saving throw DC is displayed to the players and on the chat cards. If unchecked, saving throws will display on the chat card with the value replaced by “??”. 
 
 **Saving Throw Multiplier**
+You can ignore this section until you find spells/weapons that don't do what you'd expect.
+TL;DR: If you are just using standard items you can just leave things at the defualt and most saves will do 1/2 damage as you'd expect, monsters (like a giant spider) will (if Roll Other Damage is enabled) do base weapon damage and have a save applied to the bonus poison damage.
   * There is a config setting, default save multipler (defaults to 0.5). If there are no special overrides then a saving throw will do 
     `rolled damage * defaultSaveMultiplier` damage. When set to 0.5 saving against the attack will do 1/2 dmaage, like most cases for dnd.
   * There are a number of ways to overide the default multiplier.
   * If the item description includes the text "no damage on save" (or the localized equivalent) then a save will do no damage.
+  * If the item description includes the text "full damage on save" (or the localized equivalent) then a save will still do full damage. You can use this for attacks that do damage, and have a save for a condition being applied, like poisoned and so on.
  *  flags.midi-qol.potentCantrip, if set cantrips cast by the actor will do 1/2 damage instead of no damage. Overrides any other damage multiplier settings.
   * If the setting "search spell description" is set, items with the text "half as much damage" (or the localized equivalent) will do 1/2 damage on a save ignoring the defalt multiplier. If the text is not found the save will use the defaultSaveMultiplier.
   * For weapons (only) there are weapon properties for 1/2, full or no damage saves. These properties override any other settings. If not present the save multiplier will be worked out as above. 
   * For weapons (only) the save multiplier appplies to the whole damage roll **UNLESS**...
-    * You have enabled "Roll other damage on mwak/rwak" (which is intended sepcifically to support attacks that have base damage + extra damage with a save -think spider bite). If the weapon has a save specified **AND** the weapon has an Other Damage formula, the saving throw multiplier applies to the Other damage and the base damage is applied as full damage.
+    * You have enabled "Roll other damage on mwak/rwak" (which is intended sepcifically to support attacks that have base damage + extra damage with a save - think spider bite). If the weapon has a save specified **AND** the weapon has an Other Damage formula, the saving throw multiplier applies to the Other damage and the base damage is applied as full damage.
     * Because of the way the SRD monsters have been setup, (i.e. extra damage as versatile damage and the the versatile property not set) the versatile formula will be treated as Other Damage if there is no Other Damage formula and the weapon property "versatile" is not set. 
     * For BetterRolls you have to enter the damage into the Other field and enable roll Other in the better rolls settings. Midi will pick up this damage and apply the saving throw result against it.
-    
-If you are just using standard items you can just leave things at the defualt and most saves will do 1/2 damage as you'd expect, monsters (like a giant spider) will (if Roll Other Damage is enabled) do base weapon damage and have a save applied to the bonus poison damage.
 
-For those who have a lot of weapons set up with a save and want the default damage on save to be full damage (which is what a pervious version enabled when search spell description was enabled) just edit the items and set the save to full damage save (preferred) or set the default save multiplier to 1.
+For those who have a lot of weapons set up with a save and want the default damage on save to be full damage (which is what a pervious version enabled when search spell description was enabled) just edit the items and set the save to full damage on save (preferred) or set the default save multiplier to 1.
 
 ### Hits
 You can enable auto checking of hits. Fumbles automatically miss and criticals automatically hit. As GM you can mouse over the name of the hit target to highlight the token and click to select it. This is useful if you are not auto applying damage, since you can do all the damage application from the chat log, by clicking on the targets name, then clicking on the appropriate damage button.
@@ -209,6 +228,29 @@ There is a new weapon property "Crit Other Roll" which if set means that the "Ot
 * **Force Hide Rolls** If enabled then private/blind/gm only rolls will only appear on the recipient’s chat log. This must be enabled if you are using Better Rolls and combo cards.  
 
 
+### Optional Rules
+Midi supports various optional rule settings that can be useful.
+**Incapacitated Actors cant make attacks.**
+If a token has 0 HP, they cannot attack
+**Invisible/Hidden Token attack with advantage**
+If a token is invisible/hidden (CUB/Condtional Visibility) it attacks with advantage.
+**Attack remvoes hidden/invisible**
+Remove invisible/hidden when making an attack
+**Check Weapon range when attacking**
+Check the range of the weapon when doing an attack. Impose disadvantage for range > short range. Fail if range is > max range.
+**Include Height in range calculation**
+Take token height differences into account when checking range.
+**Ranged attacks when Foes are closer than X have disadvantage**
+If you make a ranged attack when a foe is less than X feet/meters from you the attack is made at disadvantage.
+**House rule for Damage Reduction**
+Choose how to combine Damage Reduction
+**Critical/Fumble for saving throws**
+Critical saves always succeed, fumbled saves always fail.
+**(House Rule) Ranged attacks at foes with nearby allies have disadvantage**
+If making a ranged attack at a target whose size is less than that specified and there is an ally within 5 feet of the target the ranged attack is made with disadvantage. (You want to avoid hitting your friends but really big targets can still be hit safely).
+**Active Defence**
+If set, then attacks by the GM are converted into saving throws for the players and uses the prompting setting specified for saving throws. This means the players get to roll more often.
+
 If the above was all too tedious here are the settings I use.
 
 ## Settings for full auto mode:
@@ -230,6 +272,7 @@ If the above was all too tedious here are the settings I use.
 1. The item has a save and the save fails.
 2. The item has an attack and the attack hits.
 3. There is no attack or save.
+
 
 ## midi-qol Alternate QuickStart Settings
 **contributed by dstein766 (aka OokOok on Foundry discord)**
@@ -352,7 +395,7 @@ All of these effects expire at the end of the combat if no other duration is spe
 If the config settings for reaction checks is enabled midi will check a target that is hit by an attack for any items/feautres/spells that have an activation type of reaction and prompt the target if they want to use any of their reactions, which will then initiate a midi workflow for that item/feature/spell targeting the attacker (so hellish rebuke for example works). Currently does not support spells from magic items.
 
 
-## flags.midi-qol 
+### flags.midi-qol 
 Midi-qol supports a lot of flags values that alter how attacks/casts are rolled. They are supported by any modules that use item.rollI(), item.rollAttack(), item.rollDamage() or actor.useSpell() [the standard dnd5e rolls]. Usually you would apply these via active effects. Mostly they work with better rolls.
 
 There is a handy spreadsheet that has a table of flags plus explanation thanks to (dstein766) https://docs.google.com/spreadsheets/d/1Vze_sJhhMwLZDj1IKI5w1pvfuynUO8wxE2j8AwNbnHE/edit?usp=sharing
