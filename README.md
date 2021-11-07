@@ -21,13 +21,8 @@ Some of the items require creating a DamageBonusMacro, make sure that is enabled
 ### Changes coming in dnd5e 1.5**:
 * dnd5e 1.5 includes per weapon critical threshold and bonus critical damage dice. There is now a configuration setting to enable/disable the midi-qol field on the item sheet. Once dnd5e 1.5 is released, you are stongly encouraged to migrate to the dnd5e setting and disable the midi-qol flag, via Use Midi Critical in the configuration settings. Soon, I will remove the midi-qol field completely. You can run ```MidiQOL.reportMidiCriticalFlags()``` from the console to see which actors/tokens have the midi-qol critical setting defined.
 * Enhanced dnd5e critical damage effects. You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). You will need to experiment to cofirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
-
-### Changes in midi-qol:
-* Speed item rolls has only a single function now to enable ctrl/shift/alt when clicking on the item icon.  All other workflow features are configured separately. See **speed item rolls** below.
-* There is support for a merged chat card containing attack/damage/hits/saves. (The merged card does not yet support Better Rolls). You can disable the merge card to restore the same operation as in minor-qol.
-* midi-qol works with MagicItems, although there may be some wrinkles outstanding there.
-* Backward compatibility for the minor-qol.doRoll function.
-* Many more configuration options, accessed by a configuration screen.
+### Weapon Critical Threshold - deprecated as of dnd5e 1.5 - do not use
+An additional field is added to the weapon item sheet, **Critical Threshold**, which changes the critical threshold for attacks made with that weapon. The value used for the attack crtical threshold is the lower of the actors critical threshold (from the special traits page) and the weapon critical threshold.
 
 ## Changelog
 https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
@@ -102,7 +97,7 @@ The settings are per player so each player needs to change the setting to disabl
 Midi-qol has configuration options (in the optional rules section) to incorporate the AC bonus calculated by dnd5e-helpers. There are two settings dnd5e-helpers which allows an attack if any of the 4 corners of the target are visible and dnd5e-helpers+AC which will include the AC bonus from armor when calculating a hit. The bonus AC on the target will be displayed in the to hit card.
 
 
-## Short Guide to the settings:
+## Short Guide configuration settings
 ### Workflow settings
 * **Speed Item Rolls** 
 If speed rolls are off, all of the ctrl/alt|meta/shift keys and roll behaviour are the same as in core. There is one additional feature: if you click on a damage button in chat, CTRL+ALT click will use the critical/normal hit status from the midi-qol roll data.
@@ -160,15 +155,15 @@ If you are just using standard items you can just leave things at the defualt an
 
 For those who have a lot of weapons set up with a save and want the default damage on save to be full damage (which is what a pervious version enabled when search spell description was enabled) just edit the items and set the save to full damage save (preferred) or set the default save multiplier to 1.
 
-### Hits ###
+### Hits
 You can enable auto checking of hits. Fumbles automatically miss and criticals automatically hit. As GM you can mouse over the name of the hit target to highlight the token and click to select it. This is useful if you are not auto applying damage, since you can do all the damage application from the chat log, by clicking on the targets name, then clicking on the appropriate damage button.
 
-### Damage ###
+### Damage
 * **Auto apply damage to target**
   * Yes: Damage is auto-applied to targeted tokens (**or self if self-target is specified**) that were hit or did not save, or that saved and take half damage.
   * "+ damage card": If included, a chat card is sent to the GM which includes each target that had damage applied with details of the damage, any immunities/resistances and 6 buttons. They set the target hit points based on the calculation displayed. The first sets the hp back the way they were before the roll and the second sets them as displayed in the calculation (an undo/redo). The next 4 are the standard DND apply damage buttons but **do not** take into account resistance/immunity.
 
-* **Roll Other formula for rwak/mwak** **Roll Other formula for spells**
+### **Roll Other formula for rwak/mwak** **Roll Other formula for spells**
 
 Roll Other Damage has 3 options, "off": never auto roll the other damage, "ifsave": roll the other damage if a save is present (this is the same as the earliere version of this setting) and "activation": if the item's activation condition evaluates to true then roll the Other damage even if no save is present. "activation" also requires that the item attunement not be "Attunement Required", i.e. dragon slayer weapons do no extra damage if they are not attuned.
 
@@ -236,7 +231,8 @@ If the above was all too tedious here are the settings I use.
 2. The item has an attack and the attack hits.
 3. There is no attack or save.
 
-## midi-qol Alternate QuickStart Settings - contributed by dstein766 (aka OokOok on Foundry discord):
+## midi-qol Alternate QuickStart Settings
+**contributed by dstein766 (aka OokOok on Foundry discord)**
 Another collection of settings, designed to achieve these goals:
 * Players always roll their own attacks, damage, saves, etc.  (The computer still rolls the dice, but the player is always in charge of initiating the rolls.  The computer never rolls dice without the player’s interaction.)
 * Support automatic application of relevant dynamic active effects for the widest possible set of PCs and NPCs.
@@ -506,7 +502,7 @@ event.shiftKey: true => auto roll the attack roll
 * MidiQOL.applyTokenDamage is exported.
 * If you have macros that depend on being called when the roll is complete, that is still supported, both "minor-qol.RollComplete" and "midi-qol.RollComplete" are called when the roll is finished. See also the onUse macro field which can be used to achieve similar results.
 
-* ## Midi-qol called Hooks
+* ### Midi-qol called Hooks
 Item and workflow are "live" so changes will affect subsequent actions. In particular preAttackRoll and preDamageRoll will affect the roll about to be done.  
 
   * Hooks.call("midi-qol.preAttackRoll", item, workflow) - called immediately before the item attack roll is made. If the hook returns false, the roll is aborted. 
@@ -629,9 +625,6 @@ content = content.replace(searchString, replaceString);
 chatMessage.update({content: content});
 ```
 hitContent is just html, so you could insert whatever you want in any of the divs above.
-
-### Weapon Critical Threshold - deprecated as of dnd5e 1.5 - do not use
-An additional field is added to the weapon item sheet, **Critical Threshold**, which changes the critical threshold for attacks made with that weapon. The value used for the attack crtical threshold is the lower of the actors critical threshold (from the special traits page) and the weapon critical threshold.
 
 ## Sample Chat Logs
 ![No Combo Card](pictures/nocombo.png) ![Combo Card](pictures/combo.png)
