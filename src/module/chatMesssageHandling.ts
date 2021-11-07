@@ -102,7 +102,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
 
   //@ts-ignore udpate
   const targets = (item?.data.data.target?.type === "self") ? new Set([token]) : new Set(game.user?.targets);
-  let workflow = BetterRollsWorkflow.getWorkflow(item.uuid);
+  let workflow = Workflow.getWorkflow(item.uuid);
   if (!workflow) workflow = new BetterRollsWorkflow(actor, item, message.data.speaker, targets, null);
   workflow.isCritical = isCritical;
   workflow.isFumble = diceRoll === 1;
@@ -152,7 +152,8 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   }
   // Workflow will be advanced when the better rolls card is displayed.
   // Workflow.removeWorkflow(workflow.uuid);
-  workflow.next(WORKFLOWSTATES.NONE);
+  workflow.needItemCard = false;
+  if (!workflow.needTemplate) workflow.next(WORKFLOWSTATES.NONE);
   return true;
 }
 
@@ -173,6 +174,7 @@ export let diceSoNiceHandler = async (message, html, data) => {
 
   if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
   if (debugEnabled > 1) debug("dice so nice handler - non-merge card", html)
+
   html.hide();
   Hooks.once("diceSoNiceRollComplete", (id) => {
     let savesDisplay = $(html).find(".midi-qol-saves-display").length === 1;
@@ -473,7 +475,8 @@ export let chatDamageButtons = (message, html, data) => {
     let itemUuid = `Actor.${actorId}.Item.${itemId}`;
     // find the item => workflow => damageList, totalDamage
     const defaultDamageType = (item?.data.data.damage.parts[0] && item?.data.data.damage?.parts[0][1]) ?? "bludgeoning";
-    const damageList = createDamageList(message.roll, item, defaultDamageType);
+    // TODO fix this for versatile damage
+    const damageList = createDamageList({roll: message.roll, item, versatile: false, defaultType: defaultDamageType});
     const totalDamage = message.roll.total;
     addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemUuid, "damage", ".dice-total", "position:relative; top:5px; color:blue");
   } else if (getProperty(message.data, "flags.midi-qol.damageDetail")) {

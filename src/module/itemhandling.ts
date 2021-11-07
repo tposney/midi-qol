@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled, log } from "../midi-qol.js";
-import { BetterRollsWorkflow, defaultRollOptions, Workflow, WORKFLOWSTATES } from "./workflow.js";
+import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isFastForwardSpells, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
+import { checkRange, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isFastForwardSpells, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { config } from "@league-of-foundry-developers/foundry-vtt-types/src/types/augments/simple-peer";
 import { isTemplateMiddleOrTemplateTail } from "typescript";
@@ -216,13 +216,18 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   let otherResult: Roll | undefined = undefined;
 
   workflow.shouldRollOtherDamage = false;
-  if (configSettings.rollOtherDamage === "ifSave" && this.hasSave) workflow.shouldRollOtherDamage = true;
-  //@ts-ignore DND5E
-  if (configSettings.rollOtherDamage === "activation") workflow.shouldRollOtherDamage = (this.data.data.attunement !== CONFIG.DND5E.attunementTypes.REQUIRED);
+  if (this.data.type === "spell" &&  configSettings.rollOtherSpellDamage !== "none") {
+    workflow.shouldRollOtherDamage = (configSettings.rollOtherSpellDamage === "ifSave" && this.hasSave) 
+                                  || configSettings.rollOtherSpellDamage === "activation";
+  } else if (["rwak", "mwak"].includes(this.data.data.actionType) && configSettings.rollOtherDamage !== "none") {
+    workflow.shouldRollOtherDamage = 
+      (configSettings.rollOtherDamage === "ifSave" && this.hasSave) ||
+      //@ts-ignore DND5E
+      ((configSettings.rollOtherDamage === "activation") && (this.data.data.attunement !== CONFIG.DND5E.attunementTypes.REQUIRED));
+  }
+
   //@ts-ignore
-  if (
-    workflow.shouldRollOtherDamage && ["rwak", "mwak"].includes(workflow.item.data.data.actionType)
-  ) {
+  if (workflow.shouldRollOtherDamage) {
     if (configSettings.rollOtherDamage === "activation") { // check the activation condition if present
       if ((workflow.otherDamageItem?.data.data.activation?.condition ?? "") !== "") {
         const rollData = workflow.otherDamageItem?.getRollData();
@@ -244,7 +249,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     if (workflow.shouldRollOtherDamage) {
       if ((workflow.otherDamageFormula ?? "") !== "") {
         //@ts-ignore
-        otherResult = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: (this.data.data.properties.critOther && workflow.isCritical) });
+        otherResult = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: (this.data.data.properties?.critOther ?? true) && workflow.isCritical });
         otherResult = await otherResult?.evaluate({ async: true });
         // otherResult = new Roll(workflow.otherDamageFormula, workflow.actor?.getRollData()).roll();
       } else if (this.isVersatile && !this.data.data.properties.ver) otherResult = await wrapped({
@@ -722,6 +727,13 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   this.targets = new Set(userTargets);
   this.hitTargets = new Set(userTargets);
   this.templateData = templateDocument.data;
+  this.needTemplate = false;
+  if (this instanceof BetterRollsWorkflow) {
+    if (this.needItemCard) {
+      return;
+    } else return this.next(WORKFLOWSTATES.NONE);
+  }
+  if (this instanceof TrapWorkflow) return;
   return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
 };
 

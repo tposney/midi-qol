@@ -400,6 +400,18 @@
             {{/select}}
           </select>
         </div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.RollOtherSpellDamage.Name"}}</label>
+          <select name="rollOtherSpellDamage" data-dtype="String">
+            {{#select configSettings.rollOtherSpellDamage}}
+            {{#each rollOtherDamageOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
+
         <div class="midi-qol-faint">{{localize "midi-qol.RollOtherDamage.Hint"}}</div>
         <!-- Concentration-->
         <div class="midi-qol-box">

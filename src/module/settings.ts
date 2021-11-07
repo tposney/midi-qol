@@ -82,6 +82,7 @@ class ConfigSettings {
   keyMapping = defaultKeyMapping;
   allowUseMacro: boolean = false;
   rollOtherDamage: string | boolean = "none";
+  rollOtherSpellDamage: string | boolean = "none";
   removeButtons: string = "all";
   gmRemoveButtons: string = "all"; 
   concentrationAutomation: boolean = false;
@@ -211,6 +212,7 @@ export let fetchParams = () => {
   if (configSettings.rollOtherDamage === false) configSettings.rollOtherDamage = "none";
   if (configSettings.rollOtherDamage === true) configSettings.rollOtherDamage = "ifSave";
   if (configSettings.rollOtherDamage === undefined) configSettings.rollOtherDamage = "none";
+  if (!configSettings.rollOtherSpellDamage) configSettings.rollOtherSpellDamage = "none";
   if (configSettings.promptDamageRoll === undefined) configSettings.promptDamageRoll = false;
   if (configSettings.gmHide3dDice === undefined) configSettings.gmHide3dDice = false;
   if (configSettings.ghostRolls === undefined) configSettings.ghostRolls = false;

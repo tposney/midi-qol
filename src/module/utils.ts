@@ -13,20 +13,23 @@ import { getConfigFileParsingDiagnostics, idText, isConstructorDeclaration } fro
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
  */
-export let createDamageList = (roll, item, defaultType = MQdefaultDamageType) => {
+export let createDamageList = ({roll, item, versatile, defaultType = MQdefaultDamageType}) => {
   let damageParts = {};
   const rollTerms = roll.terms;
   let evalString = "";
-  let damageSpec = item ? item.data.data.damage : { parts: [] };
+  let parts = duplicate(item?.data.data.damage.parts ?? []);
+  if ( versatile && item?.data.data.damage.versatile ) {
+    parts[0][0] = item.data.data.damage.versatile;
+  }
   // create data for a synthetic roll
   let rollData = item ? item.getRollData() : {};
   rollData.mod = 0;
   if (debugEnabled > 1) debug("CreateDamageList: Passed roll is ", roll)
-  if (debugEnabled > 1) debug("CreateDamageList: Damage spec is ", damageSpec)
+  if (debugEnabled > 1) debug("CreateDamageList: Damage spec is ", parts)
   let partPos = 0;
 
   // If we have an item we can use it to work out each of the damage lines that are being rolled
-  for (let [spec, type] of damageSpec.parts) { // each spec,type is one of the damage lines
+  for (let [spec, type] of parts) { // each spec,type is one of the damage lines
     if (partPos >= rollTerms.length) continue;
     // TODO look at replacing this with a map/reduce
     if (debugEnabled > 1) debug("CreateDamageList: single Spec is ", spec, type, item)
@@ -461,8 +464,9 @@ export let getSaveMultiplierForItem = (item: Item) => {
   if (itemProperties?.nodam) return 0;
   if (itemProperties?.fulldam) return 1;
   if (itemProperties?.halfdam) return 0.5;
-  if (noDamageSaves.includes(cleanSpellName(itemData.name))) return 0;
   let description = TextEditor.decodeHTML((itemData.data.description?.value || "")).toLocaleLowerCase();
+  if (description.includes(i18n("midi-qol.fullDamage").toLocaleLowerCase())) return 1;
+  if (noDamageSaves.includes(cleanSpellName(itemData.name))) return 0;
   if (description?.includes(i18n("midi-qol.noDamageText").toLocaleLowerCase())) {
     return 0.0;
   }

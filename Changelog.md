@@ -1,3 +1,15 @@
+### 0.8.80
+* "full damage on save" to configure save damage for spells (like no damage on save it is always checked) - full damage on save would be used for spells that always do their damage but have contingent effects, like poisoned on a failed save.
+* Added roll other damage for spells with the same settingss as roll other damage for rwak/mwak.
+* Fix for TrapWorkflow not targeting via templates correctly.
+* Corrected tooltip for saving throw details when using better rolls (was always displaying 1d20).
+* Correction to Divine Smite sample item which was incorrectly adding the bonus damage for improved divine smite.
+* Fix for better rolls AoE spells failing if the template was placed before the damage roll completed (i.e. when dice so nice enabled).
+* Fix for midi-qol not picking up the damage types for versatile damage rolls.
+* Tidied up Readme.md
+
+* Discovered, but have not fixed that if a) using better rolls, b) not using merge card and c) using dice so nice then save results won't be displayed to the chat. So if using better rolls you should enable merge card.
+
 ### 0.8.79
 * fix for overtime effects duplicating convenient effects when the name of the effect being checked matches a convenient effect.
 * fix for TrapWorkflow not displaying the damage type list in the roll flavor.
@@ -1426,18 +1438,17 @@ Process events passed to item.roll({event}), which got dropped by mistake
 
 Example Divine smite onUse macro (assuming divine smite as a spell)
 ```
-if (args[0].hitTargets.size === 0) {
-  console.error("no target selected/hit");
-  return
-}
-let target = canvas.tokens.get(args[0].hitTargets[0]._id)
+let target = await fromUuid(args[0].hitTargetUuids[0] ?? "");
 let numDice = 1 + args[0].spellLevel;
-let undead = ["undead", "fiend"].some(type => (target.actor.data.data.details.type || "").toLowerCase().includes(type));
+if (numDice > 5) numDice = 5;
+// Apparently improved divine smite should not be added to the divine smite. Uncomment these lines if you want it to be included
+// if (improvedDivineSmite) numDice += 1;
+// let improvedDivineSmite = args[0].actor.items.find(i=> i.name ==="Improved Divine Smite");
+let undead = ["undead", "fiend"].some(type => (target?.actor.data.data.details.type?.value || "").toLowerCase().includes(type));
 if (undead) numDice += 1;
 if (args[0].isCritical) numDice = numDice * 2;
 let damageRoll = new Roll(`${numDice}d8`).roll();
-if (args[0].isCritical) damageRoll = MidiQOL.doCritModify(damageRoll);
-new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", [target], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[0].itemCardId})
+new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", target ? [target] : [], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[0].itemCardId})
 ```
 
 ## 0.3.29
