@@ -31,13 +31,41 @@ You can make most of the changes that midi-qol supports for critical hits via th
 # Changelog
 https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
 
+# Symbiotic Modules
+I don't spend a lot of time examining all of the modules that are written (and there are hundreds) so it is almost certain that other modules can substitute for the Highly Recommended/Good to Have just as well. If your favorite module is not in the list, it probably means I just don't know about it.
+
+## Required Modules
+* libwrapper
+* socketlib
+
+## Almost Required
+You can survive without these but midi pretty much assumes they are installed.
+* Advanced Macros
+* DAE
+* Times-up - for automated expiry of effects. If you don't use combat expriy then you can use about-time instead.
+* Simple calendar - to manage the game clock
+
+## Highly Recommended
+* Either LMRTFY or Monks Token Bar (or both) to manage saving throws
+* Either Convenient Effect Combat Utility Belt (or both)
+* Item Macros
+* DAE SRD/Midi SRD (lots of prebuilt items)
+* Token Magic - lets you add some spiffy graphical effects to spells.
+* libChangeLogs - will show the midi change log when it changes
+* small time to make time advancement easy.
+* Active Auras - works well with midi/dae and some of the sample items require it.
+* Automated Animations - If you have the jb2a module this will automatically add lots of animations to spell/weapon effects.
+
+## Good To Have
+* Active Token Lighting
+* levels - if you are doing anything with height.
+* levels - Volumetric Templates
+* dnd5e-helpers
+* Dice So Nice if you like 3d dice rolling. Pretty much the only choice for 3d rolls.
+* Better Rolls if you don't like the default dnd attack/damage roll cards. Better Rolls is mostly compatible with midi-qol.
 
 # (In)Compatibilities? ##
-Any module that overloads item.roll is potentially incompatible.  
-
-## Dynamic Effects using Active Effects (DAE)
-- Applicaiton of effects to targets requires DAE to be installed.
-- Setting special durations (like 1hit etc) require DAE to be installed. Setting midi-flags via active effects is much simpler with DAE installed.
+As already mentioned I don't look at lots of modules, so there will be others that do/don't work with midi. As they come to my attention I'll try and update the list.
 
 ## Dice So Nice
 Midi generally works with dice so nice, but the interactions are more complicated with the merge card.
@@ -64,13 +92,13 @@ There is an additional check box available on the item sheet, for items that hav
 ## DF Quality of Life
 - Midi-qol does NOT implement the RAW Dnd5e template coverage, it uses the Foundry template coverage. DF Quality of Life implements the correct dnd5e template coverage, so you can disable midis auto area of effect targeting and use DF Quality of Life instead, but you won't get on the fly targeting.
 
-## **Furnace (deprecated for Foundry 0.8.x - Use Advanced Macros).** 
-If you intend to make use of any of the macro features in midi-qol you will need to install the Furnace module and enable advanced macros (which is the feature you need/should enable).
+## Furnace (deprecated for Foundry 0.8.x - Use Advanced Macros)
+If you intend to make use of any of the macro features in midi-qol you will need to install the Advanced Macros module.
 
-## *Better Rolls
+## Better Rolls
 If you are using Better Rolls (which is a great module), midi-qol takes over once the hit/damage card is placed by Better Rolls. This means that resource consumption, template placement, critical/fumble, and  advantage/disadvantage determination are **all** handled by Better Rolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage, and calls active effects.  In particular, Better Rolls does not use any of the flags.midi-qol....   
 
-## **Magic Items.
+## Magic Items
 **(Thanks to @simone for his help)**
 Midi-qol is mostly compatible with magic-items. The only issue is that spell templates for spells in a magic item are not auto-placed on casting. Once placed everything works as expected. Spells/features that can be rolled will work.  
 Items that create changes by being present in the characters inventory (i.e. passive/transfer effects) won't behave as expected since they are actually held in the characters inventory, this includes transfer active effects.  
