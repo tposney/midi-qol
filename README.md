@@ -35,7 +35,7 @@ https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
 # (In)Compatibilities? ##
 Any module that overloads item.roll is potentially incompatible.  
 
-## Dynamic Effects using Active Effects (DAE).
+## Dynamic Effects using Active Effects (DAE)
 - Applicaiton of effects to targets requires DAE to be installed.
 - Setting special durations (like 1hit etc) require DAE to be installed. Setting midi-flags via active effects is much simpler with DAE installed.
 
@@ -67,36 +67,37 @@ There is an additional check box available on the item sheet, for items that hav
 ## **Furnace (deprecated for Foundry 0.8.x - Use Advanced Macros).** 
 If you intend to make use of any of the macro features in midi-qol you will need to install the Furnace module and enable advanced macros (which is the feature you need/should enable).
 
-## *Better Rolls.**
+## *Better Rolls
 If you are using Better Rolls (which is a great module), midi-qol takes over once the hit/damage card is placed by Better Rolls. This means that resource consumption, template placement, critical/fumble, and  advantage/disadvantage determination are **all** handled by Better Rolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage, and calls active effects.  In particular, Better Rolls does not use any of the flags.midi-qol....   
 
-## **Magic Items.** (Thanks to @simone for his help) 
-Midi-qol is mostly compatible with magic-items. The only issue is that spell templates for spells in a magic item are not auto-placed on casting. Once placed everything works as expected. Spells/features that can be rolled will work. 
-Items that create changes by being present in the characters inventory (i.e. passive/transfer effects) won't behave as expected since they are actually held in the characters inventory, this includes transfer active effects.
+## **Magic Items.
+**(Thanks to @simone for his help)**
+Midi-qol is mostly compatible with magic-items. The only issue is that spell templates for spells in a magic item are not auto-placed on casting. Once placed everything works as expected. Spells/features that can be rolled will work.  
+Items that create changes by being present in the characters inventory (i.e. passive/transfer effects) won't behave as expected since they are actually held in the characters inventory, this includes transfer active effects.  
 Reaction processing won't recongise Magic Item spells.
 
-## **Mess.**
+## Mess
  Midi-qol and Mess dnd5e effects are not compatible. Template effects and the other features of that excellent module should work. If you want Mess attack/damage cards don't use midi-qol.  
 
-## **Cozy player.** 
+## Cozy player
 Minor-qol was not compatible with cozy-player, with targets being lost before attack/damage rolls were made. I have done only limited testing but it seems that there are no problems with cozy-player and midi-qol.  
 
-## **Cautious GM.**
+## Cautious GM
 Midi-qol breaks the blind chats by hidden GM feature of cautious GM.  
 
-## **Chat Portraits.**
+## Chat Portraits
  If using Chat Portraits, the changes made by midi-qol to the token/actor name in chat cards are overwritten/lost. Choose which sort of highlighting you want - only one will work. Otherwise, all seems to work.
 
-## **Ez-Roller.**
+## Ez-Roller
 The send to chat log feature of ez-roller will disable combo cards in midi-qol.  
 
-## **Combat Utility Belt.** 
+## Combat Utility Belt
 CUB concentrator and midi-qol concentration automation are incompatible. Choose one or the other. If you want concentration to expire at the end of the spell you need to install times-up.
 
-## **Maestro.** 
+## Maestro
 Maestro looks for the attack roll chat card in the chat log to play its critical/attack/fumble sounds. If you are using the merge card then the attack roll card is never created and Maestro can't play its sounds. You can use the midi-qol custom sounds instead.
 
-## **Item Macro.**
+## Item Macro
  You can create itemMacro macros with this module and call them from midi's onUse/DamageBonus macro fields by adding ItemMacro (case-sensitive) in the macro field.
 
 If you have installed itemmacro please make sure you disable the ItemMacro config settings:
@@ -106,7 +107,7 @@ If you have installed itemmacro please make sure you disable the ItemMacro confi
   * "override default macro execution"  If this is enabled the hotbar hooks will directly call the item macro and won't work as expected for dae/midi.  
 The settings are per player so each player needs to change the setting to disabled.  
 
-## **Dnd5e-helpers** 
+## Dnd5e-helpers
 Midi-qol has configuration options (in the optional rules section) to incorporate the AC bonus calculated by dnd5e-helpers. There are two settings dnd5e-helpers which allows an attack if any of the 4 corners of the target are visible and dnd5e-helpers+AC which will include the AC bonus from armor when calculating a hit. The bonus AC on the target will be displayed in the to hit card.
 
 # Short Guide to configuration settings
@@ -343,7 +344,7 @@ Another collection of settings, designed to achieve these goals:
 * Advantage=alt, disadvantage=ctrl|cmd, critical=alt, versatile=shift
 * As of the time of this writing (March 8, 2021) I am using ALL the optional rules except that last one (labeled “House Rule”).
 
-# Some features
+# Some Features
 
 ## **Roll Statistics.**
   * Most of the time when an attack roll is made or a spell is cast that does damage, the actual attack and damage rolls are recorded. This is recorded for every unique actor, on both a session and lifetime basis, as well as recording the same data for each item used by the actor on a session basis. So you might be able to answer questions like "is my longsword better than my dagger given the foes we are fighting?" The data kept is
@@ -374,7 +375,7 @@ support for **concentration automation**. The is dependent on DAE being installe
   * No changes are required to any spells/effects for this to work, it keys off the concentration attribute in the spell details.
   * Support for concentration for non-spells. Put "Concentration" in the activation conditions field and using the item will cause concentration to be added to the caster and any active effects applied by the item will be linked to concentration.  
 
-## Magic resistance.
+## Magic Resistance
 If the target token has the SRD feat "Magic Resistance" or a custom damage resistance trait equal to exactly magic-resistant the auto rolled saving throws against magic effects (item type spell) with be rolled with advantage. This is really intended for NPCs with magic resistance to have their auto rolled saving throws made with advantage.    
 
 ## Special Active Effect Expiry
