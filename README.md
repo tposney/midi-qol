@@ -386,7 +386,7 @@ If the target token has the SRD feat "Magic Resistance" or a custom damage resis
   * isDamaged: the effect lasts until the target takes damage, i.e. from any item that causes damage.
   * isSave, isCheck, isSkill: if a character rolls one of these the effect is removed.
   * isSaveSuccess, isSaveFailure: If the character succeeded with or failed a saving throw the effect is removed.
-    * isSaveSuccess.str, isSaveFailure.dex (etc): If the character succeeded with or failed a saving/chjeck throw of the specified ability the effect is removed.
+  * isSaveSuccess.str, isSaveFailure.dex (etc): If the character succeeded with or failed a saving/chjeck throw of the specified ability the effect is removed.
   * isSave.str, IsSave.dex...., isCheck.str, isCheck.dex....: If the character made one of these rolls the effect is removed.
   * isSkill.acr, isSkill.per....: If the character made a skill check for the specified skill the effect is removed.
 All of these effects expire at the end of the combat if no other duration is specified.
@@ -528,10 +528,21 @@ where specification is a comma separated list of fields.
 
   There several "traps" for use of @fields. If the effect is created on the actor via transfer effects or hand editing of the effect the @ fields refer to the actor which has the effect.
 
-  **If you are applying the effect via an item use** @ fields are ambiguous, should they refer to the caster or the target. There are reasons to have both interpreations, an ongoing saving throw should refer to the caster, e.g. ```saveDC=@attributes.spelldc```. Regeneration for example has appplyCondition=@attributes.hp.value > 0, which should refer to the target.
+  **If you are applying the effect via using an item** @ fields are ambiguous, should they refer to the caster or the target? There are reasons to have both interpreations, an ongoing saving throw should refer to the caster, e.g. ```saveDC=@attributes.spelldc```. Regeneration has appplyCondition=@attributes.hp.value > 0, which should refer to the target.
 
-  Effects transferred via item usage require DAE and use it's evaluation to resolve the problem. Fields written as simpel @ fields (``@attributes.spelldc``) ALWAYS refer to the caster.  
+  Effects transferred via item usage, require DAE and use it's evaluation to resolve the problem. Fields written as simpel @ fields (``@attributes.spelldc``) ALWAYS refer to the caster.  
   If you want the @field to refer to the target that requires use of a DAE feature, ``##field`` will not be evaluated on the caster, but will be converted to an ``@field`` after the effect is applied to the target. The example ``appplyCondition=@attributes.hp.value > 0`` would be written ``appplyCondition=##attributes.hp.value > 0``.
+
+Here;s an example, if I add the following effect to a weapon, so that the effect is applied to the target when the weapon hits:
+```
+flags.midi-qol.Overtime  OVERRIDE  applyCondition=@attributes.hp.value > 0
+flags.midi-qol.Overtime  OVERRIDE  applyCondition=##attributes.hp.value > 0
+```
+will result in being created on the target (assuming the attacker has 75 hit points) 
+```
+flags.midi-qol.Overtime  OVERRIDE  applyCondition=75 > 0
+flags.midi-qol.Overtime  OVERRIDE  applyCondition=@attributes.hp.value > 0
+```
 
 ## Bugs
 probably many however....
