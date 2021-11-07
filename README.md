@@ -47,12 +47,12 @@ You can survive without these but midi pretty much assumes they are installed.
 
 ## Highly Recommended
 * Either LMRTFY or Monks Token Bar (or both) to manage saving throws
-* Either Convenient Effect Combat Utility Belt (or both)
+* Either Convenient Effects or Combat Utility Belt (or both)
 * Item Macros
-* DAE SRD/Midi SRD (lots of prebuilt items)
-* Token Magic - lets you add some spiffy graphical effects to spells.
+* DAE SRD/Midi SRD (elots of prebuilt items)
+* Token Magic - lets you add some spiffye graphical effects to spells.
 * libChangeLogs - will show the midi change log when it changes
-* small time to make time advancement easy.
+* Smalltime - to make time advancement easy.
 * Active Auras - works well with midi/dae and some of the sample items require it.
 * Automated Animations - If you have the jb2a module this will automatically add lots of animations to spell/weapon effects.
 
@@ -61,7 +61,7 @@ You can survive without these but midi pretty much assumes they are installed.
 * levels - if you are doing anything with height.
 * levels - Volumetric Templates
 * dnd5e-helpers
-* Dice So Nice if you like 3d dice rolling. Pretty much the only choice for 3d rolls.
+* Dice So Nice if you like 3d dice rolling pretty much the only choice.
 * Better Rolls if you don't like the default dnd attack/damage roll cards. Better Rolls is mostly compatible with midi-qol.
 
 # (In)Compatibilities? ##
