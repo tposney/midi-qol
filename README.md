@@ -209,7 +209,7 @@ There is a new weapon property "Crit Other Roll" which if set means that the "Ot
     * a weapon has the "Magical" property set: attacks are considered magical. (The magical property for weapons only exists if midi-qol is enabled)
 * **Auto apply item effects to target** If the item had dynamic effects which are currently active as specified and the target was hit and did not save; OR did not save; OR there are no attacks or saves: dynamic effects is called to apply the active effects to each such target. This includes self if a self target is specified.
 
-## Custom Sounds ##
+### Custom Sounds
 * Midi-qol uses whatever audio files you want for sounds, but they must all be in the same playlist. I will be extending the sound options, next will be specific sounds by damage type, then sounds per item use.
 * A tiny selection of sounds is distributed with the module and are available in Data/modules/midi-qol/sounds and can be used to setup a playlist. 
 * Attack, critical and fumble sounds are only available if using a combo card.
@@ -460,19 +460,21 @@ flags.midi-qol.ignoreNearbyFoes which, when set, means disadvantage from nearby 
 flags.midi-qol.potentCantrip, if set cantrips cast by the actor will do 1/2 damage instead of no damage. Overrides any other damage multiplier settings.
 
 ### Optional Bonus Effects
-Optional flags cause a dialog to be raised when an opportunity to apply the effect comes up. So an optional attack bonus prompts the attacker after the attack roll is made, but before the attack is adjudicated, givin the attacker the option to modify the roll. Effects last for one application unless the count flag is set.
+Optional flags cause a dialog to be raised when an opportunity to apply the effect comes up (i.e. the player is hit by an attack).
 
-flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)		.
-flags.midi-qol.optional.Name.damage	bonus to apply to damage done		
-flags.midi-qol.optional.Name.skill	bonus to apply to skill rolls		
-flags.midi-qol.optional.Name.attack	the bonus is added after the attack roll		
-flags.midi-qol.optional.Name.save	the bonus is added after the save roll. Requires auto fast forward		
-flags.midi-qol.optional.Name.check	the bonus is added after the ability check roll		
-flags.midi-qol.optional.Name.label	label to use in the dialog		
-flags.midi-qol.optional.Name.count	how many uses the effect has (think lukcy which has 3), if absent the bonus will be single use (bardic inspiration). You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.
+An optional attack bonus prompts the attacker after the attack roll is made, but before the attack is adjudicated, givin the attacker the option to modify the roll. Effects last for one application unless the count flag is set.
+
+* flags.midi-qol.optional.Name.damage	bonus to apply to damage done		
+* flags.midi-qol.optional.Name.skill	bonus to apply to skill rolls		
+* flags.midi-qol.optional.Name.attack	the bonus is added after the attack roll		
+* flags.midi-qol.optional.Name.check	the bonus is added after the ability check roll		
+* flags.midi-qol.optional.Name.label	label to use in the dialog		
+* flags.midi-qol.optional.Name.count	how many uses the effect has (think lukcy which has 3), if absent the bonus will be single use (bardic inspiration).   
+You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
+* flags.midi-qol.optional.Name.save	the bonus is added after the save roll. Requires auto fast forward		
+* flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
 
 Values for the optional roll bonus flags include a dice expression, a number, reroll (rerolling the roll completely) or success which changes the roll to 99 ensuring success.
-
 
 ### Spell Sculpting: flags.midi-qol.spellSculpting
 If a spell caster with flags.midi-qol.spellSculpting set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 damage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.
