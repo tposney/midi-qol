@@ -139,6 +139,8 @@ If you assign a key multiple meanings the behaviour is going to be confusing at 
 * **Hide Roll Details** There are several settings, hide roll formula, hide all details, d20Attack + hide roll formula, show d20 attack roll only amongst others. Some only work with the merge card.
 
 ## Targeting
+Almost everywhere midi-qol uses the **targeted** tokens to apply hits/saves/damage not **selected** tokens. Targeted tokens have 4 arrows pointing at the token and selected tokens have a box around them.
+
 * **Auto target on template draw** If a spell/feature has an area effect template then enabling this setting will auto target (for later damage application) all tokens inside the template once placed. Also, the roll will not progress (i.e. roll saves or apply damage) until the template is placed. If "walls-block" is selected then any wall between the template origin and the token will block the targeting.
 * **Auto target for ranged spells/attacks** If the item specifies a ranged target with a target type of creature/enemy/ally then all tokens within range of the caster will be auto targeted when the effect is cast. “enemy/ally” are enemies/allies of the caster. 
 * **Auto roll attack**, **Auto roll damage** and **Auto fast forward rolls**. The auto roll attack and damage settings tell midi-qol to start an attack roll or damage roll if there is one. The auto fast forward settings determine if the advantage/disadvantage and/or critical/normal dialogs are shown or suppressed. Damage can be set to “Attack Hits”, which will roll damage only if the attack roll was sufficient to hit the target. These are settable on the GM/Player tabs.
@@ -341,7 +343,7 @@ Another collection of settings, designed to achieve these goals:
 * Advantage=alt, disadvantage=ctrl|cmd, critical=alt, versatile=shift
 * As of the time of this writing (March 8, 2021) I am using ALL the optional rules except that last one (labeled “House Rule”).
 
-## Some features
+# Some features
 
 ## **Roll Statistics.**
   * Most of the time when an attack roll is made or a spell is cast that does damage, the actual attack and damage rolls are recorded. This is recorded for every unique actor, on both a session and lifetime basis, as well as recording the same data for each item used by the actor on a session basis. So you might be able to answer questions like "is my longsword better than my dagger given the foes we are fighting?" The data kept is
