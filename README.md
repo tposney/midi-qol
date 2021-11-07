@@ -101,6 +101,18 @@ The settings are per player so each player needs to change the setting to disabl
   * MidiQOL.gameStats.showStats() display a window displaying the statistics kept. Players only see their own characters.
   * MidiQOL.gameStats.statData returns the current statData (have a look and see what is stored)
 
+## Concentration Checks
+support for **concentration automation**. The is dependent on DAE being installed and of the right version and **requires** CUB concentration automation to be disabled. Midi will work with Convenient Effects, Combat Utility Belt of use it's own effect for concentration.
+  * Enabled via config setting (near auto check saves)
+  * Get user confirmation before casting a second concentration spell while the first is still active. First concentration is removed if you proceed.
+  * Taking damage causes a concentration check, failure removes concentration.
+  * If the spell that caused concentration expires concentration is removed
+  * Concentration can be removed from the token effects HUD and will work as expected.
+  * If concentration is removed any effects due to the spell on any tokens (self + targets) are removed.
+  * If concentration is removed any measured templates associated with the spell are removed.
+  * No changes are required to any spells/effects for this to work, it keys off the concentration attribute in the spell details.
+  * Support for concentration for non-spells. Put "Concentration" in the activation conditions field and using the item will cause concentration to be added to the caster and any active effects applied by the item will be linked to concentration.  
+
 ## Short Guide to the settings:
 ### Workflow settings
 * **Speed Item Rolls** 
@@ -147,6 +159,7 @@ If you assign a key multiple meanings the behaviour is going to be confusing at 
     `rolled damage * defaultSaveMultiplier` damage. When set to 0.5 saving against the attack will do 1/2 dmaage, like most cases for dnd.
   * There are a number of ways to overide the default multiplier.
   * If the item description includes the text "no damage on save" (or the localized equivalent) then a save will do no damage.
+ *  flags.midi-qol.potentCantrip, if set cantrips cast by the actor will do 1/2 damage instead of no damage. Overrides any other damage multiplier settings.
   * If the setting "search spell description" is set, items with the text "half as much damage" (or the localized equivalent) will do 1/2 damage on a save ignoring the defalt multiplier. If the text is not found the save will use the defaultSaveMultiplier.
   * For weapons (only) there are weapon properties for 1/2, full or no damage saves. These properties override any other settings. If not present the save multiplier will be worked out as above. 
   * For weapons (only) the save multiplier appplies to the whole damage roll **UNLESS**...
@@ -331,9 +344,9 @@ flags.midi-qol...... need to be set via **CUSTOM** (preferred) or **OVERRIDE**. 
 * flags.midi-qol.advantage.attack.mwak/rwak/msak/rsak
 * flags.midi-qol.advantage.attack.dex/str/wis etc advantage on rwak/rwak using the attribute
 * flags.midi-qol.advantage.attack.dex/str/wis... disadvantage on mwak/rwak using the attribute
-* flags.midi-qol.advantage.ability.all
-* flags.midi-qol.advantage.ability.check.all
-* flags.midi-qol.advantage.ability.save.all
+* flags.midi-qol.advantage.ability.all (saves,checks and skills)
+* flags.midi-qol.advantage.ability.check.all (checks & skills)
+* flags.midi-qol.advantage.ability.save.all (saves only)
 * flags.midi-qol.advantage.ability.check.str/dex/wis/cha/int/con
 * flags.midi-qol.advantage.ability.save.str/dex/wis/cha/int/con
 * flags.midi-qol.advantage.skill.all
@@ -341,12 +354,12 @@ flags.midi-qol...... need to be set via **CUSTOM** (preferred) or **OVERRIDE**. 
 * flags.midi-qol.advantage.deathSave - gives advantage on death saves
 Similarly for disadvantage.  
 Advantage/disadvantage on checks for an ability check also grants advantage on the corresponding skill rolls.  
-* flags.midi-qol.advantage.concentration/midi-qol.disadvantage.concentration: advantage/disadvantage on cocentration saves. Monk's token bar rolls do not support setting of advantage by midi-qol.
+* flags.midi-qol.advantage.concentration/midi-qol.disadvantage.concentration: advantage/disadvantage on concentration saves. Monk's token bar rolls do not support setting of advantage by midi-qol.
 * flags.midi-qol.concentrationSaveBonus, a roll expression, which is added to concentration saves (auto, letme, monks, prompted). The roll will display without the bonus on the roll card, but the save result display will reflect the bonus. The revised saving throw formula is available in the tooltip on the save results card.
 * flags.midi-qol.uncanny-dodge which halves damage applied if set
 
 flags.midi-qol.fail.all/ability.all/ability.check.all/ability.save.all/skill.all etc to auto fail a given roll.  
-* flags.midi-qol.ingoreNearbyFoes - when set cancels ranged attack disadvantage from a nearby enemy.
+* flags.midi-qol.ingoreNearbyFoes - when set cancels ranged attack disadvantage from a nearby enemy. Useful for sharpshooter feat.
 * flags.midi-qol.fail.spell.all
 * flags.midi-qol.fail.spell.vocal|verbal/somatic/material  
 Fails attempts to cast spells with the specified components (or all).
@@ -393,33 +406,33 @@ flags.midi-qol.optional.Name.attack	the bonus is added after the attack roll
 flags.midi-qol.optional.Name.save	the bonus is added after the save roll. Requires auto fast forward		
 flags.midi-qol.optional.Name.check	the bonus is added after the ability check roll		
 flags.midi-qol.optional.Name.label	label to use in the dialog		
-flags.midi-qol.optional.Name.count	how many uses the effect has (think lukcy which has 3), if absent the bonus will be single use (bardic inspiration). You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until expire (i.e. 0).
+flags.midi-qol.optional.Name.count	how many uses the effect has (think lukcy which has 3), if absent the bonus will be single use (bardic inspiration). You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.
 
 Values for the optional roll bonus flags include a dice expression, a number, reroll (rerolling the roll completely) or success which changes the roll to 99 ensuring success.
 
 ## Reactions
-If the config settings for reaction checks is enabled midi will check a target that is hit by an attack for any items/feautres/spells that have an activation type of reaction and prompt the target if they want to use any of their reactions, which will then initiate a midi workflow for that item/feature/spell targeting the attacker. Currently does not support spells from magic items.
+If the config settings for reaction checks is enabled midi will check a target that is hit by an attack for any items/feautres/spells that have an activation type of reaction and prompt the target if they want to use any of their reactions, which will then initiate a midi workflow for that item/feature/spell targeting the attacker (so hellish rebuke for example works). Currently does not support spells from magic items.
 
 ## Spell Sculpting: flags.midi-qol.spellSculpting
 If a spell caster with flags.midi-qol.spellSculpting set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 damage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.
 
 ## flags.midi-qol.OverTime
-Intended for damage over time effects or until save effects
+Intended for damage over time effects or until save effects, but can do a bunch of things.
 ```
 flags.midi-qol.OverTime OVERRIDE specification
 ```
 where specification is a comma separated list of fields.
   * turn=start/end (check at the start or end of the actor's turn) The only required field.
   * applyCondition=expression, if present must evaluate to true or rest of the processing will be aborted.
-  e.g. condition=@attributes.hp.value > 0 - for regeneration.
+  e.g. appplyCondition=@attributes.hp.value > 0 - for regeneration.
   * removeCondition=expression, if present and evaluates to true the effect is removed after the rest of the processing.
   Saving Throw: the entire active effect will be removed when the saving throw is made (or the effect duration expires)
+  * rollType=check/save/skill (default save), roll an ability check, save or skill.
   * saveAbility=dex/con/etc prc/perception etc The actor's ability/skill to use for rolling the saving throw
   * saveDC=number
   * saveDamage=halfdamage/nodamage/fulldamage - default nodamage
-  * rollType=check/save/skill (default save), roll an ability check, save or skill.
   * saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
-  * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is made.
+  * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is failed.
   Damage:
   * damageRoll=roll expression, e.g. 3d6
   * damageType=piercing/bludgeoning etc. You can specify "healing" or "temphp" which apply healing or temphp. temphp will only apply if the rolled temphp > exisiting temphp. overtime healing is a way to implement regeneration.
@@ -430,7 +443,7 @@ where specification is a comma separated list of fields.
 
   The most common use for this feature is damage over time effects. However you can include an OverTime effect with just a save can be used to apply any other changes (in the same active effect) until a save is made (Hold Person).
 
-    For non-transfer effects (things applied to a target) you can use @field references, e.g.
+  You can use @field references, e.g.
   ```
   saveDC=@attributes.spelldc
   damageRoll=1d6+@abilities.str.mod
@@ -450,12 +463,19 @@ where specification is a comma separated list of fields.
   macro.CE CUSTOM Paralyzed
   ```
 
+  There several "traps" for use of @fields. If the effect is created on the actor via transfer effects or hand editing of the effect the @ fields refer to the actor which has the effect.
+
+  **If you are applying the effect via an item use** @ fields are ambiguous, should they refer to the caster or the target. There are reasons to have both interpreations, an ongoing saving throw should refer to the caster, e.g. ```saveDC=@attributes.spelldc```. Regeneration for example has appplyCondition=@attributes.hp.value > 0, which should refer to the target.
+
+  Effects transferred via item usage require DAE and use it's evaluation to resolve the problem. Fields written as simpel @ fields (``@attributes.spelldc``) ALWAYS refer to the caster.  
+  If you want the @field to refer to the target that requires use of a DAE feature, ``##field`` will not be evaluated on the caster, but will be converted to an ``@field`` after the effect is applied to the target. The example ``appplyCondition=@attributes.hp.value > 0`` would be written ``appplyCondition=##attributes.hp.value > 0``.
+
 ## Bugs
 probably many however....
 * Language translations are not up to date.
 
 ## Notes For Macro writers
-For modules that want to call midi-qol it is easier than in minor-qol. Just call item.roll() or actor.useSpell, and if you pass an event via item.roll({event}) you can have key accelerators. (the meanings of shift/ctrl/alt will be interpreted using the speed rolls settings)
+For modules that want to call midi-qol it is easier than in minor-qol. Just call item.roll() and if you pass an event via item.roll({event}) you can have key accelerators. (the meanings of shift/ctrl/alt will be interpreted using the speed rolls settings)
 event.altKey: true => advantage roll
 event.crtlKey: true => disadvantage roll
 event.shiftKey: true => auto roll the attack roll
@@ -499,17 +519,17 @@ if (trapToken) await trapToken.update({"hidden" : true});
 I have created a spell called "Divine Smite", with no saving throw or damage or attack, (although you can have such things) which has an onUse macro set to Divine Smite. (see the onUse macro details below). The total damage field passed in is only used in the final display on the apply damage card, the individual damage elements are all taken from the damageRoll.
 
 ```
-let target = canvas.tokens.get(args[0].hitTargets[0]?._id);
-let improvedDivineSmite = args[0].actor.items.find(i=> i.name ==="Improved Divine Smite");
+let target = await fromUuid(args[0].hitTargetUuids[0] ?? "");
 let numDice = 1 + args[0].spellLevel;
-if (numDice > 6) numDice = 6;
-if (improvedDivineSmite) numDice += 1;
+if (numDice > 5) numDice = 5;
+// Apparently improved divine smite should not be added to the divine smite. Uncomment these lines if you want it to be included
+// if (improvedDivineSmite) numDice += 1;
+// let improvedDivineSmite = args[0].actor.items.find(i=> i.name ==="Improved Divine Smite");
 let undead = ["undead", "fiend"].some(type => (target?.actor.data.data.details.type?.value || "").toLowerCase().includes(type));
 if (undead) numDice += 1;
 if (args[0].isCritical) numDice = numDice * 2;
 let damageRoll = new Roll(`${numDice}d8`).roll();
-if (args[0].isCritical) damageRoll = MidiQOL.doCritModify(damageRoll)
-new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", target ? [target] : [], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[0].itemCardId})
+new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", target ? [target] : [], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[0].itemCardId})```
 ```
 
 Flavor is only used if you are not using combo cards.  
@@ -517,11 +537,17 @@ The args[0].itemCardId passes the id of the item card that caused the macro to b
 
 You can use this feature to roll custom damage via a macro for any item - just leave the item damage blank and roll the damage in a macro and then pass the itemCardId to the DamageOnlyWorkflow.
 
-### OnUse Macro Item detail field
+### OnUse Macro(per Item) and Damage Bonus Macro (actor special traits) fields
 
-This field lets you specify a macro to call after the item roll is complete. It is ALWAYS called whether the attack hit/missed and is passed the following data as args[0]. The field should contain ONLY the macro name and recognizes the exact text ItemMacro to mean calling the items itemMacro if any.
+These field lets you specify a macro to call during the roll. 
+
+**OnUse macros** are called after the item roll is complete. It is ALWAYS called whether the attack hit/missed and is passed the following data as args[0]. The field should contain ONLY the macro name and recognizes the exact text ItemMacro to mean calling the items itemMacro if any. The intention is that you can customise the behaviour of how a particular item behaves.
+
+**Damage bonus macros** are called after hits/misses/saves are adjudicated but BEFORE damage is applied, so you can specify extra damage if required, e.g. hunter's mark. The intention is support effects that are based on the character's state, rather than being related to a specific item. You can do whatever processing you want there, so could create a condition on some of the targets, do extra damage to specifc creatues/types of creatures and so on. Damage bonus macros can return an array of ``` [{damageRoll: string, flavor: string}]``` which will be added to the damage of the attack. The damage roll is a roll expression and flavor should be a damage type, e.g. fire. Damage returned via the damage bonus will NOT be increased for critical hits.
+
+Both calls supply the following data
 ```
-  actor = actor.data (the actor using the item)
+  actor = actor.data (the actor using the item - even though this says actor it is actor.data)
   actorUuid = actor.uuid
   tokenId
   tokenUuid
