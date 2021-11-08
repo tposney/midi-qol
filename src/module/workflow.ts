@@ -1009,7 +1009,7 @@ export class Workflow {
       tokenUuid: this.tokenUuid,
       itemUuid: this.item?.uuid,
       item: itemData,
-      itemData: 
+      itemData,
       targets,
       targetUuids,
       hitTargets,

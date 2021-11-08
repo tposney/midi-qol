@@ -262,30 +262,42 @@ There is a new weapon property "Crit Other Roll" which if set means that the "Ot
 
 ## Optional Rules
 Midi supports various optional rule settings that can be useful.
-**Incapacitated Actors cant make attacks.**
+* **Incapacitated Actors cant make attacks.**
 If a token has 0 HP, they cannot attack
-**Invisible/Hidden Token attack with advantage**
+* **Invisible/Hidden Token attack with advantage**
 If a token is invisible/hidden (CUB/Condtional Visibility) it attacks with advantage.
-**Attack remvoes hidden/invisible**
+* **Attack remvoes hidden/invisible**
 Remove invisible/hidden when making an attack
-**Check Weapon range when attacking**
+* **Check Weapon range when attacking**
 Check the range of the weapon when doing an attack. Impose disadvantage for range > short range. Fail if range is > max range.
-**Include Height in range calculation**
+* **Include Height in range calculation**
 Take token height differences into account when checking range.
-**Ranged attacks when Foes are closer than X have disadvantage**
+* **Ranged attacks when Foes are closer than X have disadvantage**
 If you make a ranged attack when a foe is less than X feet/meters from you the attack is made at disadvantage.
-**House rule for Damage Reduction**
+* **House rule for Damage Reduction**
 Choose how to combine Damage Reduction
-**Critical/Fumble for saving throws**
+* **Critical/Fumble for saving throws**
 Critical saves always succeed, fumbled saves always fail.
-**(House Rule) Ranged attacks at foes with nearby allies have disadvantage**
+* **(House Rule) Ranged attacks at foes with nearby allies have disadvantage**
 If making a ranged attack at a target whose size is less than that specified and there is an ally within 5 feet of the target the ranged attack is made with disadvantage. (You want to avoid hitting your friends but really big targets can still be hit safely).
-**Active Defence**
-If set, then attacks by the GM are converted into saving throws for the players and uses the prompting setting specified for saving throws. This means the players get to roll more often.
+* **Active Defence**
+Expirmental: Support for the Active Defence variant rule. Enable via optional rules setting Active Defence. 
 
-If the above was all too tedious here are the settings I use.
+Requires LIMRTFY and does **not** work with better rolls. 
+  * Active defence has attacked players roll a defence roll instead of the GM rolling an attack roll, which is meant to keep player engagement up. https://media.wizards.com/2015/downloads/dnd/UA5_VariantRules.pdf
+  - If active defence is enabled then when the GM attacks instead of rolling an attack roll for the attacker, the defender is prompted to make a defence roll. The DC of the roll is 11 + the attackers bonus and the roll formula is 1d20 + AC - 10, which means the outcome is identical to an attack roll but instead the defender rolls.
+  - As released this had identicial behaviour to the standard rolls with the exception that each player effectively has a individual attack roll made against them.
+  - Advantage/disadvantage are correctly processed with attacker advantage meaning defender disadvantage.
+  - A fumbled defence roll is a critical hit and a critical defence roll is a fumbled attack, midi checks the attacking weapon for the correct critical hit/fumble rolls.
+  - Timeout for player interaction is taken form the saving throw player timeout.
+  - Display of the defence roll DC on the defenders prompt is taken from the saving throws display DC setting.
+  - Issues: There is only one critical result supported, so if multiple targets are attacked they will all have critical damage rolled against them or none. (future might support individual results)
+  - There is only 1 advantaage/disadvantage setting applied, that of the first defender (same as current midi-qol). Future enhancement will use per character advantage/disadvantage settings.
+  - Only works for mwak/rwak/rsak/msak.
+
 
 ### Settings for full auto mode:
+If the above was discussion was all too tedious here are the settings I use.
 * Speed Item Rolls on - if you want to be able to shift/ctrl/alt click.
 * Merge to One card checked,
 * Condense attack/damage cards checked.

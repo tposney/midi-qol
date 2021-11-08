@@ -1,6 +1,9 @@
+### 0.8.81
+* Fix for bug introduced in 0.8.80 for onUse/Damage Bonus macros where targets was not set correctly. Impacted concentration not being removed automatically.
+
 ### 0.8.80
 * "full damage on save" to configure save damage for spells (like no damage on save it is always checked) - full damage on save would be used for spells that always do their damage but have contingent effects, like poisoned on a failed save.
-* Added roll other damage for spells with the same settingss as roll other damage for rwak/mwak.
+* Added roll other damage for spells with the same settings as roll other damage for rwak/mwak.
 * Fix for TrapWorkflow not targeting via templates correctly.
 * Corrected tooltip for saving throw details when using better rolls (was always displaying 1d20).
 * Correction to Divine Smite sample item which was incorrectly adding the bonus damage for improved divine smite.

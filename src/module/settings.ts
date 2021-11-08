@@ -339,15 +339,6 @@ const settings = [
     onChange: fetchParams
   },
   {
-    name: "CriticalDamage",
-    scope: "world",
-    choices: {default: "DND5e default", maxDamage:  "max normal damage", maxCrit: "max critical dice", maxAll: "max all dice", doubleDice: "double rolled damage", baseDamage: "no bonus"},
-    default: "default",
-    type: String,
-    onChange: fetchParams
-  },
-
-  {
     name: "DragDropTarget",
     scope: "world",
     default: false,
@@ -372,7 +363,18 @@ const settings = [
     config: false
   }
 ];
-
+export function registerSetupSettings() {
+  game.settings.register("midi-qol","CriticalDamage", {
+    name: "midi-qol.CriticalDamage.Name",
+    hint: "midi-qol.CriticalDamage.Hint",
+    scope: "world",
+    default: "none",
+    type: String,
+    config: true,
+    choices: Object(i18n("midi-qol.CriticalDamageChoices")),
+    onChange: fetchParams
+  });
+}
 export const registerSettings = function() {
   // Register any custom module settings here
   settings.forEach((setting, i) => {
@@ -389,6 +391,17 @@ export const registerSettings = function() {
     //@ts-ignore - too tedious to define undefined in each of the settings defs
     if (setting.choices) options.choices = setting.choices;
     game.settings.register("midi-qol", setting.name, options);
+  });
+
+  game.settings.register("midi-qol","CriticalDamage", {
+    name: "midi-qol.CriticalDamage.Name",
+    hint: "midi-qol.CriticalDamage.Hint",
+    scope: "world",
+    default: "none",
+    type: String,
+    config: true,
+    choices: Object(i18n("midi-qol.CriticalDamageChoices")),
+    onChange: fetchParams
   });
 
   game.settings.register("midi-qol","AddChatDamageButtons", {
@@ -453,7 +466,7 @@ export const registerSettings = function() {
     default: "None",
     type: String,
     config: true,
-    choices: {none: "None", warn: "warnings", debug: "debug", all: "all"},
+    choices: Object(i18n("midi-qol.DebugOptions")),
     onChange: fetchParams
   });
 
