@@ -1364,7 +1364,8 @@ export class Workflow {
           // The BetterRollsWorkflow class should in general be handling this
           const roll = this.roll;
           const html = `<div class="midi-qol-hits-display">${hitContent}</div>`;
-          await roll.entries.push({ type: "raw", html, source: "midi" });
+          // For better rolls the show targets without hits causes an empty item card to be shown that breaks the workflow.
+          if (showHits) await roll.entries.push({ type: "raw", html, source: "midi" });
           break;
         case "Workflow":
         case "TrapWorkflow":

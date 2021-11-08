@@ -1,5 +1,9 @@
+### 0.8.82
+* Fix for better rolls and merge card throwing an error.
+
 ### 0.8.81
 * Fix for bug introduced in 0.8.80 for onUse/Damage Bonus macros where targets was not set correctly. Impacted concentration not being removed automatically.
+* Added localisation support for Critical Damage Options and Debug Options
 
 ### 0.8.80
 * "full damage on save" to configure save damage for spells (like no damage on save it is always checked) - full damage on save would be used for spells that always do their damage but have contingent effects, like poisoned on a failed save.

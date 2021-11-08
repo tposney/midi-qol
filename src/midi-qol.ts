@@ -15,7 +15,7 @@ import { registerSettings, fetchParams, configSettings, checkRule, collectSettin
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, installedModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, readyPatching } from './module/patching.js';
-import { initHooks, overTimeJSONData, readyHooks } from './module/Hooks.js';
+import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Hooks.js';
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
@@ -109,6 +109,7 @@ Hooks.once('setup', function() {
   initGMActionSetup();
   patchLMRTFY();
   setupMidiFlags();
+  setupHooks();
   undoDamageText = i18n("midi-qol.undoDamageFrom");
   savingThrowText = i18n("midi-qol.savingThrowText");
   savingThrowTextAlt = i18n("midi-qol.savingThrowTextAlt");

@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling.js";
 import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, expireRollEffect, processOverTime, checkImmunity, getConcentrationEffect } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect } from "./utils.js";
 import { configSettings, dragDropTargeting, useMidiCrit } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 
@@ -171,7 +171,7 @@ async function handleRemoveConcentration(effect, tokens) {
   return true;
 }
 
-export let initHooks = () => {
+export function initHooks() {
   if (debugEnabled > 0) warn("Init Hooks processing");
   Hooks.on("preCreateChatMessage", (message: ChatMessage, data, options, user) => {
     if (debugEnabled > 1) debug("preCreateChatMessage entering", message, data, options, user)
@@ -228,6 +228,7 @@ export let initHooks = () => {
   Hooks.on("applyActiveEffect", midiCustomEffect);
   Hooks.on("preCreateActiveEffect", checkImmunity);
 
+  
   Hooks.on("renderItemSheet", (app, html, data) => {
     if (configSettings.allowUseMacro) {
       const element = html.find('input[name="data.chatFlavor"]').parent().parent();
@@ -296,6 +297,8 @@ export let initHooks = () => {
   })
 }
 
+export function setupHooks() {
+}
 export const overTimeJSONData = {
   "name": "OverTime Item",
   "type": "weapon",

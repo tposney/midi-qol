@@ -407,6 +407,14 @@ function midiATRefresh(wrapped) {
   return wrapped();
 }
 
+export function _prepareDerivedData(wrapped, ...args) {
+  wrapped(...args);
+  const ec = 0;
+}
+
+export function initPatching() {
+  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
+}
 export function readyPatching() {
   libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER")
 }
