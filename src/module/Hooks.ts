@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling.js";
 import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage } from "./utils.js";
 import { configSettings, dragDropTargeting, useMidiCrit } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 
@@ -42,14 +42,6 @@ export let readyHooks = async () => {
     if (!hpDiff || hpDiff <= 0) return true;
     // expireRollEffect.bind(actor)("Damaged", ""); - not this simple - need to think about specific damage types
     concentrationCheckItemDisplayName = i18n("midi-qol.concentrationCheckName");
-    let concentrationName;
-    if (installedModules.get("dfreds-convenient-effects")) {
-      concentrationName = i18n("midi-qol.Concentrating");
-    } else if (installedModules.get("combat-utility-belt")) {
-      concentrationName = game.settings.get("combat-utility-belt", "concentratorConditionName");
-    } else {
-      concentrationName = i18n("midi-qol.Concentrating");
-    }
     const concentrationEffect: ActiveEffect | undefined = getConcentrationEffect(actor)
     if (!concentrationEffect) return true;
     if (actor.data.data.attributes.hp.value === 0) {
@@ -91,7 +83,14 @@ export let readyHooks = async () => {
     if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);
     diceSoNiceHandler(message, html, data);
   })
-
+  Hooks.on("renderActorArmorConfig", (app, html, data) => {
+    if (configSettings.optionalRules.challengeModeArmor) {
+      const ac = data.ac;
+      const element = html.find(".stacked"); // TODO do this better
+      let ARHtml = $(`<div>EC: ${ac.EC}</div><div>AR: ${ac.AR}</div>`);
+      element.append(ARHtml);
+    }
+  });
   Hooks.on("restCompleted", restManager);
 
   Hooks.on("deleteActiveEffect", (...args) => {
@@ -134,7 +133,7 @@ export function restManager(actor, result) {
 async function handleRemoveConcentration(effect, tokens) {
   // TODO fix this to be localised
   let actor = effect.parent;
-  let concentrationLabel: any = "Concentrating";
+  let concentrationLabel: any = i18n("midi-qol.Concentrating");
   if (installedModules.get("dfreds-convenient-effects")) {
     let concentrationId = "Convenient Effect: Concentrating";
     let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
@@ -148,7 +147,6 @@ async function handleRemoveConcentration(effect, tokens) {
 
   // If concentration has expired and times-up installed - leave it to TU.
   if (installedModules.get("times-up")) {
-    const worldTime = game.time.worldTime
     let expired = effect.data.duration?.seconds && (game.time.worldTime - effect.data.duration.startTime) >= effect.data.duration.seconds;
     const duration = effect.duration;
     expired = expired || (duration && duration.remaining <= 0 && duration.type === "turns");
@@ -228,16 +226,24 @@ export function initHooks() {
   Hooks.on("applyActiveEffect", midiCustomEffect);
   Hooks.on("preCreateActiveEffect", checkImmunity);
 
-  
+
   Hooks.on("renderItemSheet", (app, html, data) => {
+    const element = html.find('input[name="data.chatFlavor"]').parent().parent();
     if (configSettings.allowUseMacro) {
-      const element = html.find('input[name="data.chatFlavor"]').parent().parent();
       const labelText = i18n("midi-qol.onUseMacroLabel");
       const currentMacro = getProperty(app.object.data, "flags.midi-qol.onUseMacroName") ?? "";
 
       const macroField = `<div class="form-group"><label>${labelText}</label><input type="text" name="flags.midi-qol.onUseMacroName" value="${currentMacro}"/> </div>`;
       element.append(macroField)
     }
+    const labelText = i18n("midi-qol.EffectActivation");
+    let currentEffectActivation = getProperty(app.object.data, "flags.midi-qol.effectActivation") ?? "";
+    // currentEffectActivation = currentEffectActivation.replaceAll('"', "'");
+    //    const activationField = `<div class="form-group"><label>${labelText}</label><input type="text" name="flags.midi-qol.effectActivation" value=${currentEffectActivation}/> </div>`;
+    const activationField = `<div class="form-group"><label>${labelText}</label><input type="checkbox" name="flags.midi-qol.effectActivation" ${currentEffectActivation ? "checked" : ""}/> </div>`;
+
+    element.append(activationField);
+
     if (installedModules.get("dfreds-convenient-effects")) {
       //@ts-ignore dfreds
       const ceForItem = game.dfreds.effects.all.find(e => e.name === app.object.name);
@@ -529,19 +535,12 @@ export const itemJSONData = {
           "scope": "global",
           "command": `
               if (MidiQOL.configSettings().autoCheckSaves === 'none') return;
-              for (let targetData of args[0].targets) {
-                let target = canvas.tokens.get(targetData._id);
-                let concentrationLabel;
-                if (MidiQOL.configSettings().removeConcentration && (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaves.find(tData => tData._id === target.id))) {
-                  if (game.modules.get("dfreds-convenient-effects")?.active) {
-                    concentrationLabel = game.i18n.localize("midi-qol.Concentrating");
-                  } else if (game.modules.get("combat-utility-belt")?.active) {
-                    concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName");
-                  } else {
-                    concentrationLabel = game.i18n.localize("midi-qol.Concentrating");
-                  }
-                  const concentrationEffect = target.actor.effects.find(effect => effect.data.label === concentrationLabel)
-                  if (concentrationEffect) await concentrationEffect.delete();
+              for (let targetUuid of args[0].targetUuids) {
+                let target = await fromUuid(targetUuid);
+                if (MidiQOL.configSettings().removeConcentration 
+                  && (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaveUuids.find(uuid => uuid === targetUuid))) {
+                const concentrationEffect = MidiQOL.getConcentrationEffect(target.actor);
+                if (concentrationEffect) await concentrationEffect.delete();
                 }
               }`,
           "folder": null,
@@ -559,113 +558,6 @@ export const itemJSONData = {
       "coreVersion": "0.8.8",
       "systemVersion": "1.3.6"
     },
-    "magicitems": {
-      "enabled": false,
-      "equipped": false,
-      "attuned": false,
-      "charges": "0",
-      "chargeType": "c1",
-      "destroy": false,
-      "destroyFlavorText": "reaches 0 charges: it crumbles into ashes and is destroyed.",
-      "rechargeable": false,
-      "recharge": "0",
-      "rechargeType": "t1",
-      "rechargeUnit": "r1",
-      "sorting": "l"
-    },
-    "betterRolls5e": {
-      "quickOther": {
-        "context": "",
-        "value": true,
-        "altValue": true,
-        "type": "Boolean"
-      },
-      "critRange": {
-        "value": null,
-        "type": "String"
-      },
-      "critDamage": {
-        "value": "",
-        "type": "String"
-      },
-      "quickDesc": {
-        "value": false,
-        "altValue": false,
-        "type": "Boolean"
-      },
-      "quickSave": {
-        "value": true,
-        "altValue": true,
-        "type": "Boolean"
-      },
-      "quickProperties": {
-        "value": true,
-        "altValue": true,
-        "type": "Boolean"
-      },
-      "quickVersatile": {
-        "value": false,
-        "altValue": false,
-        "type": "Boolean"
-      },
-      "quickFlavor": {
-        "value": true,
-        "altValue": true,
-        "type": "Boolean"
-      },
-      "quickCharges": {
-        "value": {
-          "quantity": false,
-          "use": false,
-          "resource": true
-        },
-        "altValue": {
-          "quantity": false,
-          "use": false,
-          "resource": true
-        },
-        "type": "Boolean"
-      },
-      "quickAttack": {
-        "type": "Boolean",
-        "value": true,
-        "altValue": true
-      },
-      "quickDamage": {
-        "type": "Array",
-        "value": [],
-        "altValue": [],
-        "context": []
-      },
-      "quickTemplate": {
-        "type": "Boolean",
-        "value": true,
-        "altValue": true
-      },
-      "quickPrompt": {
-        "type": "Boolean",
-        "value": false,
-        "altValue": false
-      }
-    },
-    "autoanimations": {
-      "killAnim": false,
-      "override": false,
-      "animType": "t1",
-      "animName": "",
-      "color": "n1",
-      "dtvar": "dt1",
-      "explosion": false,
-      "explodeVariant": "ev1",
-      "explodeColor": "ec1",
-      "explodeRadius": "0",
-      "explodeLoop": "1",
-      "hmAnim": "a1",
-      "selfRadius": "5",
-      "animTint": "#ffffff",
-      "auraOpacity": 0.75,
-      "ctaOption": false
-    }
   }
 }
 

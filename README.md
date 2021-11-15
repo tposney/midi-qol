@@ -294,6 +294,15 @@ Requires LIMRTFY and does **not** work with better rolls.
   - Issues: There is only one critical result supported, so if multiple targets are attacked they will all have critical damage rolled against them or none. (future might support individual results)
   - There is only 1 advantaage/disadvantage setting applied, that of the first defender (same as current midi-qol). Future enhancement will use per character advantage/disadvantage settings.
   - Only works for mwak/rwak/rsak/msak.
+* Challenge Mode Armor Class.
+  * Implements the Challenge Mode AC rules, characters have an Evasion Class (EC)) and an Armor Resistance (AR)). In the base mode your EC is 10 + the dex mod appied to your AC (based on armor type used) + any shield AC you have.  
+  If an attack roll:
+    * is < your EC the attack misses.
+    * is >= your EC and <= your AC, it is a hit, but it did not penetrate your armor, so the damage you take is reduced by your armor resistance. 
+    * > your AC the attack hits normally.  
+  Your AR is equal to your AC - applied dex mod, i.e. the part of your AC that is not nimbleness
+  This means that tanks, high armor class but weighed down take more glancing damage, but that damage is mitigated by your AR. The logic of the system is that part of hitting is having the blow land  on the targget, which is measured by the EC which rewards nimble characters and secondly damage reduction done when a glancing blow does not get "through the armor" and so the damage is reduced by the Armor Resistance.
+  * Some informal testing suggests this is badly weighted against tank classes once they reach a high enough level to be fighting tough opponents doing high levels of damage, since many of the EC hits will get through the AR but there is no compensation for taking this extra damage.
 
 
 ### Settings for full auto mode:
@@ -413,7 +422,12 @@ support for **concentration automation**. The is dependent on DAE being installe
   * If concentration is removed any effects due to the spell on any tokens (self + targets) are removed.
   * If concentration is removed any measured templates associated with the spell are removed.
   * No changes are required to any spells/effects for this to work, it keys off the concentration attribute in the spell details.
-  * Support for concentration for non-spells. Put "Concentration" in the activation conditions field and using the item will cause concentration to be added to the caster and any active effects applied by the item will be linked to concentration.  
+  * Support for concentration for non-spells. Put "Concentration" (or the localised equivalent) in the activation conditions field and using the item will cause concentration to be added to the caster and any active effects applied by the item will be linked to concentration.  
+
+Midi-qol will attempt to use Convenient Effects, then Combat Uiltiy Belt, then an internal concentration effect (in that order) when applying and removing concentration.  
+* Convenient Effects: No Additional configuration is required.
+* Combat utility belt. Since in CUB you need to identify which of the conditions (in condition lab) is the concentration effect (and midi uses that mapping), you need to make sure that the concentration name is set correctly in CUB's concentrator to match the concentration effect in codition lab.
+* For the internal effect no additional configuration is required.
 
 ## Magic Resistance
 If the target token has the SRD feat "Magic Resistance" or a custom damage resistance trait equal to exactly magic-resistant the auto rolled saving throws against magic effects (item type spell) with be rolled with advantage. This is really intended for NPCs with magic resistance to have their auto rolled saving throws made with advantage.    
@@ -520,10 +534,10 @@ You can specify a resource to consume in the count field, e.g. @resources.tertia
 
 Values for the optional roll bonus flags include a dice expression, a number, reroll (rerolling the roll completely) or success which changes the roll to 99 ensuring success.
 
-## Spell Sculpting: flags.midi-qol.spellSculpting
-If a spell caster with flags.midi-qol.spellSculpting set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 damage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.
+## Spell Sculpting: flags.midi-qol.sculptSpell
+If a spell caster with flags.midi-qol.sculptSpell set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 damage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.
 
-## flags.midi-qol.OverTime
+## flags.midi-qol.OverTime (Overtime effects)
 Intended for damage over time effects or until save effects, but can do a bunch of things.
 ```
 flags.midi-qol.OverTime OVERRIDE specification
@@ -548,7 +562,7 @@ where specification is a comma separated list of fields.
   If the effect is configured to be stackable with a stack count, of say 2, the damage will 3d6 + 3d6.
   *label=string - displayed when rolling the saving throw
 
-  The most common use for this feature is damage over time effects. However you can include an OverTime effect with just a save can be used to apply any other changes (in the same active effect) until a save is made (Hold Person).
+  The most common use for overtime effects is damage over time effects. However you can include an OverTime effect with just a save can be used to apply any other changes (in the same active effect) until a save is made (Hold Person).
 
   You can use @field references, e.g.
   ```
@@ -572,21 +586,27 @@ where specification is a comma separated list of fields.
 
   There several "traps" for use of @fields. If the effect is created on the actor via transfer effects or hand editing of the effect the @ fields refer to the actor which has the effect.
 
+  It turns out that overtime effects have lots of applications. One that is not obvious is that you can use the overtime effect as a switch to turn on and off other effects. If you have one effect with multiple changes, one of which is an OverTime effect, they will ALL be applied and ALL removed on a save. Here's a Hold Person, which has an overtime effect for the save and a payload of applying the paralyzed status effect to a target.  
+
+![Hold Person](pictures/HoldPerson.png)
+
   **If you are applying the effect via using an item** @ fields are ambiguous, should they refer to the caster or the target? There are reasons to have both interpreations, an ongoing saving throw should refer to the caster, e.g. ```saveDC=@attributes.spelldc```. Regeneration has appplyCondition=@attributes.hp.value > 0, which should refer to the target.
 
   Effects transferred via item usage, require DAE and use it's evaluation to resolve the problem. Fields written as simple @ fields (``@attributes.spelldc``) ALWAYS refer to the caster.  
   If you want the @field to refer to the target that requires use of a DAE feature, ``##field`` will not be evaluated on the caster, but will be converted to an ``@field`` after the effect is applied to the target. The example ``appplyCondition=@attributes.hp.value > 0`` would be written ``appplyCondition=##attributes.hp.value > 0``.
 
-Here's an example, if I add the following effect to a weapon, so that the effect is applied to the target when the weapon hits:
-```
-flags.midi-qol.Overtime  OVERRIDE  applyCondition=@attributes.hp.value > 0
-flags.midi-qol.Overtime  OVERRIDE  applyCondition=##attributes.hp.value > 0
-```
-will result in being created on the target (assuming the attacker has 75 hit points) 
-```
-flags.midi-qol.Overtime  OVERRIDE  applyCondition=75 > 0
-flags.midi-qol.Overtime  OVERRIDE  applyCondition=@attributes.hp.value > 0
-```
+  Here's an example, if I add the following effect to a weapon, so that the effect is applied to the target when the weapon hits:
+  ```
+  flags.midi-qol.Overtime  OVERRIDE  applyCondition=@attributes.hp.value > 0
+  flags.midi-qol.Overtime  OVERRIDE  applyCondition=##attributes.hp.value > 0
+  ```
+  will result in an effect being created on the target (assuming the attacker has 75 hit points) 
+  ```
+  flags.midi-qol.Overtime  OVERRIDE  applyCondition=75 > 0
+  flags.midi-qol.Overtime  OVERRIDE  applyCondition=@attributes.hp.value > 0
+  ```
+### Overtime effects and macros. 
+  There are two ways to have a macro effect applied to a target when using Overtime effects. The first is to have the macro as an additional change in an active effect (macro.execute/macro.ItemMacro). The second is as part of the overtime effect with macro="world macro name". The macro as an additional change is called once when the effect is applied and once when it is removed (with args[0]==="on"/"off" respectively - the normal macro.execute/macro.itemMacro behaviour). The macro="" macro is called each turn with the results of the save/targets etc (see OnUse Macro data for details).
 
 # Bugs
 probably many however....
@@ -739,8 +759,6 @@ Set full damage save (on a weapon it's a property on anything else the text "ful
 * The activation condition setting on Roll Other damage... makes implementing special condition items pretty easy, like slayer weapns - use the condition to check the target type and the "Other" damage will get rolled if it matches. "@raceOrType".includes("dragon") is a simple sample condtion for dragon slaying.
 
 * Active Auras can be very useful for proximity effects. If you make the aura effect a midi-qol OverTime effect, the tricky while within 10 feet of X take damage on the start of your turn (with or without a save) are very easy to implement. The effect will be removed when the target moves away from the aura generating token but the damage will only get rolled at the right time. Flaming Sphere (in the midi-qol sample items uses this trick) and also summons a token for the sphere with the aura effect on the sphere.
-
-* Overtime effects. It turns out that this has lots of applications. One that is not obvious is that you can use the overtime effect as a switch to turn on and off other effects. If you have one effect with multiple changes, one of which is an OverTime effect, they will ALL be applied and ALL removed on a save. Here's a screen shot of Hold Person, which has an overtime effect for the save and a payload of applying the paralyzed status effect to a target.
 
 * How to set the special duration of an effect. There are lots of various ways to expire a condition (too many to list here) but one common problem is setting an effect to expire at the start of the targets next turn/next attack by the caster. If you don't specify a seconds/rounds/turns duration as well, then the default of 1 round will apply, which may be before the special duration expires. So if putting a special duration make sure to set the duration of the effect to be larger than the special duration will take to happen. If the item generating the effect has a duration that will get used if there is no time based duration specified.
 

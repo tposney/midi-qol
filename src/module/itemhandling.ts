@@ -1,14 +1,14 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled, log } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isFastForwardSpells, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
+import { checkRange, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isFastForwardSpells, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { config } from "@league-of-foundry-developers/foundry-vtt-types/src/types/augments/simple-peer";
 import { isTemplateMiddleOrTemplateTail } from "typescript";
 import { socketlibSocket } from "./GMAction.js";
 import { mapSpeedKeys } from "./patching.js";
 
-export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined }) {
+export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
   if (debugEnabled > 1) debug("Entering item attack roll ", event, workflow, Workflow._workflows);
   if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
@@ -34,13 +34,24 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     workflow.disadvantage = false;
     workflow.rollOptions = duplicate(defaultRollOptions);
   }
+
   workflow.processAttackEventOptions(options?.event);
   workflow.checkAttackAdvantage();
+
   workflow.rollOptions.fastForward = workflow.rollOptions.fastForwardKey ? !isAutoFastAttack(workflow) : isAutoFastAttack(workflow);
   if (!workflow.rollOptions.fastForwardKey && (workflow.rollOptions.advKey || workflow.rollOptions.disKey))
     workflow.rollOptions.fastForward = true;
   workflow.rollOptions.advantage = workflow.disadvantage ? false : workflow.advantage;
   workflow.rollOptions.disadvantage = workflow.advantage ? false : workflow.disadvantage;
+
+  if (configSettings.accelKeysOverride) {
+    options.event = mapSpeedKeys(options.event);
+    if (options.event.altKey || options.event.ctrlKey) {
+      workflow.rollOptions.advantage = options.event.altKey;
+      workflow.rollOptions.disadvantage = options.event.ctrlKey;
+    }
+  }
+  
   const defaultOption = workflow.rollOptions.advantage ? "advantage" : workflow.rollOptions.disadvantage ? "disadvantage" : "normal";
   {
     //@ts-ignore
@@ -48,7 +59,6 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     //@ts-ignore
     options.disadvantage = workflow.rollOptions.disadvantage;
   }
-
   if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
   if (!Hooks.call("midi-qol.preAttackRoll", this, workflow)) {
     console.warn("midi-qol | attack roll blocked by pre hook");
@@ -215,59 +225,29 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   result = await processDamageRollBonusFlags.bind(workflow)();
   let otherResult: Roll | undefined = undefined;
 
-  workflow.shouldRollOtherDamage = false;
-  if (this.data.type === "spell" &&  configSettings.rollOtherSpellDamage !== "none") {
-    workflow.shouldRollOtherDamage = (configSettings.rollOtherSpellDamage === "ifSave" && this.hasSave) 
-                                  || configSettings.rollOtherSpellDamage === "activation";
-  } else if (["rwak", "mwak"].includes(this.data.data.actionType) && configSettings.rollOtherDamage !== "none") {
-    workflow.shouldRollOtherDamage = 
-      (configSettings.rollOtherDamage === "ifSave" && this.hasSave) ||
-      //@ts-ignore DND5E
-      ((configSettings.rollOtherDamage === "activation") && (this.data.data.attunement !== CONFIG.DND5E.attunementTypes.REQUIRED));
-  }
+  workflow.shouldRollOtherDamage = shouldRollOtherDamage.bind(this)(workflow, configSettings.rollOtherDamage, configSettings.rollOtherSpellDamage);
 
-  //@ts-ignore
   if (workflow.shouldRollOtherDamage) {
-    if (configSettings.rollOtherDamage === "activation") { // check the activation condition if present
-      if ((workflow.otherDamageItem?.data.data.activation?.condition ?? "") !== "") {
-        const rollData = workflow.otherDamageItem?.getRollData();
-        rollData.target = workflow.hitTargets.values().next()?.value;
-        rollData.workflow = workflow;
-        if (rollData.target) {
-          rollData.target = rollData.target.actor.data.data;
-          if (rollData.target.details.race ?? "" !== "") rollData.raceOrType = rollData.target.details.race.toLocaleLowerCase();
-          else rollData.raceOrType = rollData.target.details.type.value.toLocaleLowerCase();
-        }
-
-        let expression = workflow.otherDamageItem?.data.data.activation?.condition;
-        expression = Roll.replaceFormulaData(expression, rollData, { missing: "0" });
-        try {
-          workflow.shouldRollOtherDamage = Roll.safeEval(expression);
-        } catch (err) { console.warn(`midi-qol | activation condition (${expression}) error `, err) }
-      }
-    }
-    if (workflow.shouldRollOtherDamage) {
-      if ((workflow.otherDamageFormula ?? "") !== "") {
-        //@ts-ignore
-        otherResult = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: (this.data.data.properties?.critOther ?? true) && workflow.isCritical });
-        otherResult = await otherResult?.evaluate({ async: true });
-        // otherResult = new Roll(workflow.otherDamageFormula, workflow.actor?.getRollData()).roll();
-      } else if (this.isVersatile && !this.data.data.properties.ver) otherResult = await wrapped({
-        // roll the versatile damage if there is a versatile damage field and the weapn is not marked versatile
-        // TODO review this is the SRD monsters change the way extra damage is represented
-        critical: this.data.data.properties.critOther && workflow.isCritical,
-        powerLevel: workflow.rollOptions.spellLevel,
-        spellLevel: workflow.rollOptions.spellLevel,
-        versatile: true,
+    if ((workflow.otherDamageFormula ?? "") !== "") {
+      //@ts-ignore
+      otherResult = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: (this.data.data.properties?.critOther ?? true) && workflow.isCritical });
+      otherResult = await otherResult?.evaluate({ async: true });
+      // otherResult = new Roll(workflow.otherDamageFormula, workflow.actor?.getRollData()).roll();
+    } else if (this.isVersatile && !this.data.data.properties.ver) otherResult = await wrapped({
+      // roll the versatile damage if there is a versatile damage field and the weapn is not marked versatile
+      // TODO review this is the SRD monsters change the way extra damage is represented
+      critical: this.data.data.properties.critOther && workflow.isCritical,
+      powerLevel: workflow.rollOptions.spellLevel,
+      spellLevel: workflow.rollOptions.spellLevel,
+      versatile: true,
+      fastForward: true,
+      event: {},
+      // "data.default": (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal",
+      options: {
         fastForward: true,
-        event: {},
-        // "data.default": (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal",
-        options: {
-          fastForward: true,
-          chatMessage: false //!configSettings.mergeCard,
-        }
-      });
-    }
+        chatMessage: false //!configSettings.mergeCard,
+      }
+    });
   }
   if (!configSettings.mergeCard) {
     let actionFlavor;
@@ -755,3 +735,27 @@ export function advDisadvAttribution(actor) {
   return attributions;
 }
 
+export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: string, conditionFlagSpell: string) {
+  let rollOtherDamage = false;
+  let conditionToUse: string | undefined = undefined;
+  let conditionFlagToUse: string | undefined = undefined;
+  if (this.data.type === "spell" && conditionFlagSpell !== "none") {
+    rollOtherDamage = (conditionFlagSpell === "ifSave" && this.hasSave)
+      || conditionFlagSpell === "activation";
+    conditionFlagToUse = conditionFlagSpell;
+    conditionToUse = workflow.otherDamageItem?.data.data.activation?.condition
+  } else if (["rwak", "mwak"].includes(this.data.data.actionType) && conditionFlagWeapon !== "none") {
+    rollOtherDamage =
+      (conditionFlagWeapon === "ifSave" && this.hasSave) ||
+      //@ts-ignore DND5E
+      ((conditionFlagWeapon === "activation") && (this.data.data.attunement !== CONFIG.DND5E.attunementTypes.REQUIRED));
+    conditionFlagToUse = conditionFlagWeapon;
+    conditionToUse = workflow.otherDamageItem?.data.data.activation?.condition
+  }
+
+  //@ts-ignore
+  if (rollOtherDamage && conditionFlagToUse === "activation") {
+    rollOtherDamage = evalActivationCondition(workflow, conditionToUse)
+  }
+  return rollOtherDamage;
+}

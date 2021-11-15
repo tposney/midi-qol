@@ -1,6 +1,6 @@
 import { log, warn, debug, i18n, error, getCanvas } from "../midi-qol.js";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling.js";
-import { configSettings, autoFastForwardAbilityRolls, criticalDamage } from "./settings.js";
+import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
 import { bonusDialog, expireRollEffect, getOptionalCountRemainingShortFlag, getSpeaker, testKey } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { libWrapper } from "./lib/shim.js";
@@ -116,9 +116,9 @@ async function doRollSkill(wrapped, ...args) {
   if (newResult === result) newResult = await bonusCheck(this, result, "check");
   result = newResult;
   if (chatMessage !== false && result) {
-    const args = {"speaker": getSpeaker(this)};
+    const args = { "speaker": getSpeaker(this) };
     setProperty(args, "flags.dnd5e.roll", { type: "skill", skillId });
-    if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "skill", skillId})
+    if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "skill", skillId })
     result.toMessage(args);
   }
   await expireRollEffect.bind(this)("Skill", skillId);
@@ -239,9 +239,9 @@ async function rollAbilityTest(wrapped, ...args) {
   let result = await wrapped(abilityId, procOptions);
   result = await bonusCheck(this, result, "check")
   if (chatMessage !== false && result) {
-    const args = {"speaker": getSpeaker(this)};
+    const args = { "speaker": getSpeaker(this) };
     setProperty(args, "flags.dnd5e.roll", { type: "ability", abilityId });
-    if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "ability", abilityId})
+    if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "ability", abilityId })
     result.toMessage(args);
   }
   await expireRollEffect.bind(this)("Check", abilityId);
@@ -278,9 +278,9 @@ async function rollAbilitySave(wrapped, ...args) {
   let result = await wrapped(abilityId, procOptions);
   result = await bonusCheck(this, result, "save")
   if (chatMessage !== false && result) {
-    const args = {"speaker": getSpeaker(this)};
+    const args = { "speaker": getSpeaker(this) };
     setProperty(args, "flags.dnd5e.roll", { type: "save", abilityId });
-    if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "save", abilityId})
+    if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "save", abilityId })
     result.toMessage(args);
   }
   await expireRollEffect.bind(this)("Save", abilityId);
@@ -373,7 +373,7 @@ function __midiATIRefresh(template) {
       const r: Ray = new Ray(
         { x: template.data.x, y: template.data.y },
         { x: tk.x + tk.data.width * dimensions.size, y: tk.y + tk.data.height * dimensions.size }
-  );
+      );
       const maxExtension = (1 + Math.max(tk.data.width, tk.data.height)) * dimensions.size;
       const centerDist = r.distance;
       if (centerDist > distance + maxExtension) return false;
@@ -407,13 +407,47 @@ function midiATRefresh(wrapped) {
   return wrapped();
 }
 
-export function _prepareDerivedData(wrapped, ...args) {
+export function _prepareData(wrapped, ...args) {
   wrapped(...args);
-  const ec = 0;
+
+  if (checkRule("challengeModeArmor")) {
+    const armorDetails = this.data.data.attributes.ac ?? {};
+    const ac = armorDetails?.value ?? 10;
+    const equippedArmor = armorDetails.equippedArmor;
+    let armorAC = equippedArmor?.data.data.armor.value ?? 10;
+    const equippedShield = armorDetails.equippedShield;
+    const shieldAC = equippedShield?.data.data.armor.value ?? 0;
+
+    if (checkRule("challengeModeArrmorScale")) {
+      switch (armorDetails.calc) {
+        case 'flat':
+            armorAC = (ac.flat ?? 10) - this.data.data.abilities.dex.mod;
+          break;
+        case 'draconic': armorAC = 13; break;
+        case 'natural': armorAC = (armorDetails.value ?? 10) - this.data.data.abilities.dex.mod; break;
+        case 'custom': armorAC = equippedArmor?.data.data.armor.value ?? 10; break;
+        case 'mage': armorAC = 13; break; // perhaps this should be 10 if mage armor is magic bonus
+        case 'unarmoredMonk': armorAC = 10; break;
+        case 'unarmoredBarb': armorAC = 10; break;
+        default:
+        case 'default': armorAC = armorDetails.equippedArmor?.data.data.armor.value ?? 10; break;
+      };
+      const armorReduction = armorAC - 10 + shieldAC;
+      const ec = ac - armorReduction;
+      this.data.data.attributes.ac.EC = ec;
+      this.data.data.attributes.ac.AR = armorReduction;;
+    } else {
+      let dexMod = this.data.data.abilities.dex.mod;
+      if (equippedArmor?.data.data.armor.type === "heavy") dexMod = 0;
+      if (equippedArmor?.data.data.armor.type === "medium") dexMod = Math.min(dexMod, 2)
+      this.data.data.attributes.ac.EC = 10 + dexMod + shieldAC;
+      this.data.data.attributes.ac.AR = ac - 10 - dexMod;
+    }
+  }
 }
 
 export function initPatching() {
-  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareData", _prepareData, "WRAPPER");
 }
 export function readyPatching() {
   libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER")
@@ -440,7 +474,7 @@ export function configureDamageRollDialog() {
     else {
       libWrapper.unregister("midi-qol", "game.dnd5e.dice.DamageRoll.prototype.configureDialog");
     }
-  } catch(err) {}
+  } catch (err) { }
 }
 
 export let itemPatching = () => {
@@ -476,7 +510,7 @@ export function patchLMRTFY() {
 }
 
 function filterChatMessageCreate(wrapped, data: any, context: any) {
-  if (!(data instanceof Array) ) data = [data]
+  if (!(data instanceof Array)) data = [data]
   for (let messageData of data) {
     if (messageData.flags?.lmrtfy?.data?.disableMessage) messageData.blind = true;
   }
@@ -536,7 +570,7 @@ class CustomizeDamageFormula {
   static async configureDialog(wrapped, args) {
     // If the option is not enabled, return the original function - as an alternative register\unregister would be possible
     if (false) return wrapped(...args);
-    const {title, defaultRollMode, defaultCritical, template, allowCritical, options} = args;
+    const { title, defaultRollMode, defaultCritical, template, allowCritical, options } = args;
     // Render the Dialog inner HTML
     const content = await renderTemplate(
       //@ts-ignore
@@ -556,8 +590,8 @@ class CustomizeDamageFormula {
           content,
           buttons: {
             critical: {
-            //@ts-ignore
-            condition: allowCritical,
+              //@ts-ignore
+              condition: allowCritical,
               label: game.i18n.localize("DND5E.CriticalHit"),
               //@ts-ignore
               callback: (html) => resolve(this._onDialogSubmit(html, true)),
@@ -572,7 +606,7 @@ class CustomizeDamageFormula {
           },
           default: defaultCritical ? "critical" : "normal",
           // Inject the formula customizer - this is the only line that differs from the original
-          render: (html) => {try{CustomizeDamageFormula.injectFormulaCustomizer(this, html)}catch(e){console.error(e)}},
+          render: (html) => { try { CustomizeDamageFormula.injectFormulaCustomizer(this, html) } catch (e) { console.error(e) } },
           close: () => resolve(null),
         },
         options
@@ -586,7 +620,7 @@ class CustomizeDamageFormula {
       default: damageRoll.formula,
       versatileDamage: item.damage.versatile,
       otherDamage: item.formula,
-      parts : item.damage.parts,
+      parts: item.damage.parts,
     }
     const customizerSelect = CustomizeDamageFormula.buildSelect(damageOptions, damageRoll);
     const fg = $(html).find(`input[name="formula"]`).closest(".form-group");
@@ -594,37 +628,37 @@ class CustomizeDamageFormula {
     CustomizeDamageFormula.activateListeners(html, damageRoll);
   }
 
-  static updateFormula(damageRoll, data){
+  static updateFormula(damageRoll, data) {
     //@ts-ignore
     const newDiceRoll = new CONFIG.Dice.DamageRoll(data.formula, damageRoll.data, damageRoll.options);
     CustomizeDamageFormula.updateFlavor(damageRoll, data);
     damageRoll.terms = newDiceRoll.terms;
   }
 
-  static updateFlavor(damageRoll, data){
+  static updateFlavor(damageRoll, data) {
     const itemName = damageRoll.options.flavor.split(" - ")[0];
     const damageType = CustomizeDamageFormula.keyToText(data.damageType);
     const special = CustomizeDamageFormula.keyToText(data.key) === damageType ? "" : CustomizeDamageFormula.keyToText(data.key);
     const newFlavor = `${itemName} - ${special} ${CustomizeDamageFormula.keyToText("damageRoll")} ${damageType ? `(${damageType.replace(" - ", "")})` : ""}`;
-    Hooks.once("preCreateChatMessage", (message)=>{
-      message.data.update({flavor: newFlavor});
+    Hooks.once("preCreateChatMessage", (message) => {
+      message.data.update({ flavor: newFlavor });
     });
   }
 
-  static buildSelect(damageOptions, damageRoll){
+  static buildSelect(damageOptions, damageRoll) {
     const select = $(`<select id="customize-damage-formula"></select>`);
-    for(let [k, v] of Object.entries(damageOptions)){
-      if(k === "parts"){
+    for (let [k, v] of Object.entries(damageOptions)) {
+      if (k === "parts") {
         //@ts-ignore
-        for(let part of v){
+        for (let part of v) {
           //@ts-ignore
           const index = v.indexOf(part);
           const adjustedFormula = CustomizeDamageFormula.adjustFormula(part, damageRoll);
           select.append(CustomizeDamageFormula.createOption(part[1], part, index));
         }
-      }else{
+      } else {
         //@ts-ignore
-        if(v) select.append(CustomizeDamageFormula.createOption(k,v));
+        if (v) select.append(CustomizeDamageFormula.createOption(k, v));
       }
     }
     const fg = $(`<div class="form-group"><label>${CustomizeDamageFormula.keyToText("customizeFormula")}</label></div>`)
@@ -632,25 +666,25 @@ class CustomizeDamageFormula {
     return fg;
   }
 
-  static createOption(key, data, index){
+  static createOption(key, data, index) {
     const title = CustomizeDamageFormula.keyToText(key)
-    if(typeof data === "string"){
+    if (typeof data === "string") {
       return $(`<option data-damagetype="" data-key="${key}" data-index="" value="${data}">${title + data}</option>`);
-    }else{
+    } else {
       return $(`<option data-damagetype="${data[1]}" data-key="${key}" data-index="${index}" value="${data[0]}">${title + data[0]}</option>`);
     }
   }
 
-  static adjustFormula(part, damageRoll){
-    if(damageRoll.data.item.level){
+  static adjustFormula(part, damageRoll) {
+    if (damageRoll.data.item.level) {
       //adjust for level scaling
     }
     return part;
   }
 
-  static keyToText(key){
+  static keyToText(key) {
     //localize stuff
-    switch(key){
+    switch (key) {
       case "damageRoll":
         return "Damage Roll";
       case "customizeFormula":
@@ -665,11 +699,11 @@ class CustomizeDamageFormula {
     return key.charAt(0).toUpperCase() + key.slice(1) + " - ";
   }
 
-  static activateListeners(html, damageRoll){
+  static activateListeners(html, damageRoll) {
     $(html).find(`select[id="customize-damage-formula"]`).on("change", (e) => {
       const selected = $(e.currentTarget).find(":selected");
       $(html).find(`input[name="formula"]`).val(selected.val() + " + @bonus");
-      CustomizeDamageFormula.updateFormula(damageRoll, {formula: selected.val() + " + @bonus", key : selected.data("key"), damageType: selected.data("damagetype"), partsIndex: selected.data("index")});
+      CustomizeDamageFormula.updateFormula(damageRoll, { formula: selected.val() + " + @bonus", key: selected.data("key"), damageType: selected.data("damagetype"), partsIndex: selected.data("index") });
     })
   }
 

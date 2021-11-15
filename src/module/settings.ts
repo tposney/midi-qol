@@ -4,7 +4,7 @@ import { config } from "simple-peer";
 import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, debugEnabled } from "../midi-qol.js";
 import { ConfigPanel} from "./apps/ConfigPanel.js"
 import { configureDamageRollDialog } from "./patching.js";
-import { isAutoFastAttack } from "./utils.js";
+import { isAutoFastAttack, reportMidiCriticalFlags } from "./utils.js";
 
 export var itemRollButtons: boolean;
 export var criticalDamage: string;
@@ -92,6 +92,8 @@ class ConfigSettings {
   itemRollStartWorkflow: boolean = false;
   usePlayerPortrait: boolean = false;
   promptDamageRoll: boolean = false;
+  accelKeysOverride: boolean = false;
+  effectActivation: boolean = false;
   optionalRules: any = {
     invisAdvantage: true,
     checkRange: true,
@@ -103,7 +105,8 @@ class ConfigSettings {
     maxDRValue: false,
     distanceIncludesHeight: false,
     criticalSaves: false,
-    activeDefence: false
+    activeDefence: false,
+    challengModeArmor: false
   };
   keepRollStats: boolean = false;
   saveStatsEvery: number = 20;
@@ -218,6 +221,7 @@ export let fetchParams = () => {
   if (configSettings.ghostRolls === undefined) configSettings.ghostRolls = false;
   if (configSettings.gmFastForwardSpells === undefined) configSettings.gmFastForwardSpells = false;
   if (configSettings.fastForwardSpells === undefined) configSettings.fastForwardSpells = false;
+  if (configSettings.accelKeysOverride === undefined) configSettings.accelKeysOverride = false;
 
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
@@ -239,7 +243,9 @@ export let fetchParams = () => {
       maxDRValue: false,
       distanceIncludesHeight: false,
       criticalSaves: false,
-      activeDefence: false
+      activeDefence: false,
+      challengeModeArmor: false,
+      challengeModeArmorScale: false
     }
   }
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
@@ -248,7 +254,6 @@ export let fetchParams = () => {
       configSettings.optionalRules.nearbyFoe = 5;
     else
       configSettings.optionalRules.nearbyFoe = 0;
-
   }
   configSettings.itemRollStartWorkflow = false;
   const itemList = Object.keys(CONFIG.Item.typeLabels);
@@ -261,6 +266,7 @@ export let fetchParams = () => {
   if (debugEnabled > 0) warn("Fetch Params Loading", configSettings);
   
   criticalDamage = String(game.settings.get("midi-qol", "CriticalDamage"));
+  if (criticalDamage === "none") criticalDamage = "default";
   itemDeleteCheck = Boolean(game.settings.get("midi-qol", "ItemDeleteCheck"));
   nsaFlag = Boolean(game.settings.get("midi-qol", "showGM"));
   coloredBorders = String(game.settings.get("midi-qol", "ColoredBorders"));
@@ -368,7 +374,7 @@ export function registerSetupSettings() {
     name: "midi-qol.CriticalDamage.Name",
     hint: "midi-qol.CriticalDamage.Hint",
     scope: "world",
-    default: "none",
+    default: "default",
     type: String,
     config: true,
     choices: Object(i18n("midi-qol.CriticalDamageChoices")),

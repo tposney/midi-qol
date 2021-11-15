@@ -1,3 +1,21 @@
+### 0.8.83
+
+* Fix for better rolls activation condition processing.
+* Added non magical silver physical damage resistance/immunity/vulnerability, which is bypassed by magical and silvered weapons.
+* Fix for removing cocnentration effects when one of the target tokens has been removed from the scene.
+* Monk's token bar saves now displays the DC based on the midi midi show DC setting.
+* Fix for bug introduced in 0.8.81 with critical damage configuration - if you have Default DND5e as you setting, midi would incorrectly interpret that as no damage bonus.
+* Fix for 1Reaction effects not expiring on a missed attack.
+* Fix for localisation problem if using midi's concentration effect (i.e. no CUB/Convenient Effects).
+* Addition to reactions. As well as triggering on attacks, reactions can trigger on damage application. Midi uses the activation condition of the item to work out which one is applicable.  
+Most feats/spells have a blank activation conditon and midi will treat those as attack triggered reactions, or if the localised string attacked is in the activation condition.  
+
+Hellish Rebuke, for example, has "Which you take in response to being **damaged** by a creature within 60 feet of you that you can see", and midi will tirgger those with the word damage in the activation conditon when a character is damage. (Hellish rebuke is a special one since it triggers only if you took damage).
+
+* Added new item field "Active Effect Condtion". If set the activation condition must evaluate to true for the active effect to be applied. The saving throw if any must also be failed for the effect to be applied. For example, the included mace of disruption does additional damage to undead and if an undead fails it's save it is frightened. By setting the Activation Condition and Active Effect Activation Condition to checked only undead will suffer extra damage and be set frightened if they fail the save.
+
+* Implemented Optional Rule: Challenge Mode Armor. See the readme.md for more information. My testing indicates that this is extremly unfavourable to higher level tank characters, dramatically increasing the amount of damage they take. I have implemented a modified version that, 1) scales the damage from an EC hit and 2) Armor provides damage reduction equal to the AR for all hits.
+
 ### 0.8.82
 * Fix for better rolls and merge card throwing an error.
 

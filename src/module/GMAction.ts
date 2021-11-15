@@ -60,9 +60,10 @@ let deleteItemEffects = async (data: {targets, origin: string, ignore: string[]}
   let {targets, origin, ignore} = data;
   for (let idData of targets) {
     let actor = idData.tokenUuid ? MQfromActorUuid(idData.tokenUuid) : idData.actorUuid ? MQfromUuid(idData.actorUuid) : undefined;
-    if (actor.actor) actor = actor.actor;
+    if (actor?.actor) actor = actor.actor; 
     if (!actor) {
-      error("could not find actor for ", idData);
+      warn("could not find actor for ", idData.tokenUuid);
+      continue;
     }
     const effectsToDelete = actor?.effects?.filter(ef => ef.data.origin === origin && !ignore.includes(ef.uuid));
     if (effectsToDelete?.length > 0) {
@@ -90,8 +91,8 @@ async function addConventientEffect(options) {
   game.dfreds.effectHandler.addEffect({effectName, actor, origin});
 }
 
-async function localDoReactions(data: { tokenUuid: string; triggerTokenUuid: string, attackRoll: string; }) {
-  const result =  await promptReactions(data.tokenUuid, data.triggerTokenUuid, JSON.parse(data.attackRoll))
+async function localDoReactions(data: { tokenUuid: string; triggerTokenUuid: string, attackRoll: string; triggerType: string}) {
+  const result =  await promptReactions(data.tokenUuid, data.triggerTokenUuid, JSON.parse(data.attackRoll), data.triggerType)
   return result;
 }
 
@@ -117,7 +118,7 @@ export async function rollAbility(data: { request: string; targetUuid: string; a
   return result;
 }
 
-export function monksTokenBarSaves(data: { tokens: any[]; request: any; silent: any; rollMode: any; }) {
+export function monksTokenBarSaves(data: { tokens: any[]; request: any; silent: any; rollMode: any; dc: number|undefined}) {
   let tokens = data.tokens.map((tuuid: any) => new Token(MQfromUuid(tuuid)));
 
   // TODO come back and see what things can be passed to this.
@@ -127,7 +128,8 @@ export function monksTokenBarSaves(data: { tokens: any[]; request: any; silent: 
     {
       request: data.request,
       silent: data.silent,
-      rollMode: data.rollMode
+      rollMode: data.rollMode,
+      dc: data.dc
   });
 }
 
@@ -139,7 +141,7 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
   let promises: Promise<any>[] = [];
   let tokenIdList: any[] = [];
   let templateData = { 
-    damageApplied: ["yes", "yesCard"].includes(data.autoApplyDamage) ? "HP Updated" : "HP Not Updated",
+    damageApplied: ["yes", "yesCard"].includes(data.autoApplyDamage) ? i18n("midi-qol.HPUpdated") : i18n("midi-qol.HPNotUpdated"),
     damageList: [] ,
     needsButtonAll: false
   };

@@ -79,13 +79,11 @@
 
         <div class="form-group">
           <label>{{localize "midi-qol.GMHide3dDice.Name"}}</label>
-          <input type="checkbox" name="gmHide3dDice" data-dtype="Boolean" {{checked
-            configSettings.gmHide3dDice}} />
+          <input type="checkbox" name="gmHide3dDice" data-dtype="Boolean" {{checked configSettings.gmHide3dDice}} />
         </div>
         <div class="form-group">
           <label>{{localize "midi-qol.GhostRolls.Name"}}</label>
-          <input type="checkbox" name="ghostRolls" data-dtype="Boolean" {{checked
-            configSettings.ghostRolls}} />
+          <input type="checkbox" name="ghostRolls" data-dtype="Boolean" {{checked configSettings.ghostRolls}} />
         </div>
       </div>
 
@@ -105,7 +103,7 @@
             configSettings.fastForwardSpells}} />
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.FastForwardSpells.Hint"}}</div>
-        
+
         <div class="form-group">
           <label>{{localize "midi-qol.AutoDamage.Name"}}</label>
           <select name="autoRollDamage" data-dtype="String">
@@ -232,45 +230,48 @@
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.AutoCheckHit.Hint"}}</div>
 
-        {{localize "Reactions"}}
-        <div class="midi-qol-faint">{{localize "midi-qol.DoReactions.Hint"}}</div>
-        <div class="form-group">
-          <label>{{localize "midi-qol.DoReactions.Name"}}</label>
-          <select name="doReactions" data-dtype="String">
-            {{#select configSettings.doReactions}}
-            {{#each doReactionsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
-          </select>
-        </div>
+        <div class="midi-qol-box">
+          {{localize "midi-qol.Reactions"}}
+          <div class="midi-qol-faint">{{localize "midi-qol.DoReactions.Hint"}}</div>
+          <div class="form-group">
+            <label>{{localize "midi-qol.DoReactions.Name"}}</label>
+            <select name="doReactions" data-dtype="String">
+              {{#select configSettings.doReactions}}
+              {{#each doReactionsOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
 
-        <div class="form-group">
-          <label>{{localize "midi-qol.GMDoReactions.Name"}}</label>
-          <select name="gmDoReactions" data-dtype="String">
-            {{#select configSettings.gmDoReactions}}
-            {{#each gmDoReactionsOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
-          </select>
-        </div>
+          <div class="form-group">
+            <label>{{localize "midi-qol.GMDoReactions.Name"}}</label>
+            <select name="gmDoReactions" data-dtype="String">
+              {{#select configSettings.gmDoReactions}}
+              {{#each gmDoReactionsOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
 
-        <div class="form-group">
-          <label>{{localize "midi-qol.ReactionTimeout.Name"}}</label>
-          <input type="Number" name="reactionTimeout" value="{{configSettings.reactionTimeout}}" data-dtype="Number" />
-        </div>
-        <div class="midi-qol-faint">{{localize "midi-qol.ReactionTimeout.Hint"}}</div>
+          <div class="form-group">
+            <label>{{localize "midi-qol.ReactionTimeout.Name"}}</label>
+            <input type="Number" name="reactionTimeout" value="{{configSettings.reactionTimeout}}"
+              data-dtype="Number" />
+          </div>
+          <div class="midi-qol-faint">{{localize "midi-qol.ReactionTimeout.Hint"}}</div>
 
-        <div class="form-group">
-          <label>{{localize "midi-qol.ShowReactionAttackRoll.Name"}}</label>
-          <select name="showReactionAttackRoll" data-dtype="String">
-            {{#select configSettings.showReactionAttackRoll}}
-            {{#each showReactionAttackRollOptions as |label val|}}
-            <option value="{{val}}">{{label}}</option>
-            {{/each}}
-            {{/select}}
-          </select>
+          <div class="form-group">
+            <label>{{localize "midi-qol.ShowReactionAttackRoll.Name"}}</label>
+            <select name="showReactionAttackRoll" data-dtype="String">
+              {{#select configSettings.showReactionAttackRoll}}
+              {{#each showReactionAttackRollOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -415,7 +416,6 @@
         <div class="midi-qol-faint">{{localize "midi-qol.RollOtherDamage.Hint"}}</div>
         <!-- Concentration-->
         <div class="midi-qol-box">
-
           <div class="form-group">
             <label>{{localize "midi-qol.ConcentrationAutomation.Name"}}</label>
             <input type="checkbox" name="concentrationAutomation" data-dtype="Boolean" {{checked
@@ -533,6 +533,13 @@
             <input type="checkbox" name="speedItemRolls" data-dtype="Boolean" {{checked
               configSettings.speedItemRolls}} />
           </div>
+
+          <div class="form-group accelKeysOverride">
+            <label>{{localize "midi-qol.AccelKeysOverride.Name"}}</label>
+            <input type="checkbox" name="accelKeysOverride" data-dtype="Boolean" {{checked
+              configSettings.accelKeysOverride}} />
+          </div>
+          {{localize "midi-qol.AccelKeysOverride.Hint"}}
 
           {{#unless configSettings.speedItemRolls}}
           {{localize "midi-qol.SpeedItemRolls.Hint"}}
@@ -752,10 +759,31 @@
               <label>{{localize "midi-qol.ActiveDefence.Name"}}</label>
               <input type="checkbox" style="width:40px;" name="optionalRules.activeDefence" data-dtype="Boolean"
                 {{checked configSettings.optionalRules.activeDefence}}
-                value="{{configSettings.optionalRules.activeDefence}}" data-dtype="Boolea n" />
+                value="{{configSettings.optionalRules.activeDefence}}" data-dtype="Boolean" />
             </span>
           </div>
           <div class="midi-qol-faint">{{localize "midi-qol.ActiveDefence.Hint"}}</div>
+
+          <div class="midi-qol-box">
+            <div class="form-fields">
+              <span>
+                <label>{{localize "midi-qol.ChallengeModeArmor.Name"}}</label>
+                <input type="checkbox" style="width:40px;" name="optionalRules.challengeModeArmor" data-dtype="Boolean"
+                  {{checked configSettings.optionalRules.challengeModeArmor}}
+                  value="{{configSettings.optionalRules.challengeModeArmor}}" data-dtype="Boolean" />
+              </span>
+            </div>
+            <div class="midi-qol-faint">{{localize "midi-qol.ChallengeModeArmor.Hint"}}</div>
+            <div class="form-fields">
+              <span>
+                <label>{{localize "midi-qol.ChallengeModeArmorScale.Name"}}</label>
+                <input type="checkbox" style="width:40px;" name="optionalRules.challengeModeArmorScale"
+                  data-dtype="Boolean" {{checked configSettings.optionalRules.challengeModeArmorScale}}
+                  value="{{configSettings.optionalRules.challengeModeArmorScale}}" data-dtype="Boolean" />
+              </span>
+            </div>
+            <div class="midi-qol-faint">{{localize "midi-qol.ChallengeModeArmorScale.Hint"}}</div>
+          </div>
           {{/if}}
         </div>
       </div>

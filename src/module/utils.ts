@@ -1,7 +1,7 @@
 import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, midiFlags, getCanvas, overTimeEffectsToDelete } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule } from "./settings.js";
 import { log } from "../midi-qol.js";
-import { Workflow, WORKFLOWSTATES } from "./workflow.js";
+import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { socketlibSocket } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { baseEvent } from "./patching.js";
@@ -13,12 +13,12 @@ import { getConfigFileParsingDiagnostics, idText, isConstructorDeclaration } fro
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
  */
-export let createDamageList = ({roll, item, versatile, defaultType = MQdefaultDamageType}) => {
+export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultDamageType }) => {
   let damageParts = {};
   const rollTerms = roll.terms;
   let evalString = "";
   let parts = duplicate(item?.data.data.damage.parts ?? []);
-  if ( versatile && item?.data.data.damage.versatile ) {
+  if (versatile && item?.data.data.damage.versatile) {
     parts[0][0] = item.data.data.damage.versatile;
   }
   // create data for a synthetic roll
@@ -203,9 +203,11 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
     const magicalDamage = (item?.type !== "weapon"
       || (item?.data.data.attackBonus > 0 && !configSettings.requireMagical)
       || item.data.data.properties["mgc"]);
+    const silverDamage = item.data.data.properties?.sil;
     for (let { type, mult } of [{ type: "di", mult: 0 }, { type: "dr", mult: 0.5 }, { type: "dv", mult: 2 }]) {
       let trait = actor.data.data.traits[type].value;
       if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
+      if (!(magicalDamage || silverDamage) && trait.includes("silver")) trait = trait.concat("bludgeoning", "slashing", "piercing")
       if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (item?.type === "power" && trait.includes("power")) totalMult = totalMult * mult;
       else if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
@@ -248,34 +250,53 @@ export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTar
       DRAll += (new Roll((getProperty(a.data, `flags.midi-qol.DR.${item.data.data.actionType}`) || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
     }
     const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
-    let DRTotal = 0;
+    const silverDamage = magicalDamage || (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["sil"]);
+    let AR = 0; // Armor reduction for challenge mode armor etc.
+    const ac = a.data.data.attributes.ac;
 
     for (let i = 0; i < totalDamageArr.length; i++) {
-      let damageDetail = damageDetailArr[i];
+      let damageDetail = duplicate(damageDetailArr[i]);
+      let attackRoll = workflow.attackTotal;
       let saves = savesArr[i] ?? new Set();
       let superSavers: Set<Token> = options.superSavers[i] ?? new Set();
       var dmgType;
       // This is overall Damage Reduction
 
       let maxDR = DRAll;
+
+      if (checkRule("challengeModeArmor") && checkRule("challengeModeArmorScale")) {
+        AR = workflow.isCritical ? 0 : ac.AR;
+      } else if (checkRule("challengeModeArmor") && attackRoll) {
+        AR = ac.AR;
+      } else AR = 0;
+
       let maxDRIndex = -1;
 
+      for (let [index, damageDetailItem] of damageDetail.entries()) {
+        if (checkRule("challengeModeArmor") && checkRule("challengeModeArmorScale") && attackRoll && workflow.hitTargetsEC.has(t)) {
+          //scale te damage detail for a glancing blow - only for the first damage list? or all?
+          const scale = getProperty(a.data, "flags.midi-qol.challengeModeScale");
+          damageDetailItem.damage *= scale;
+        }
+      }
       // Calculate the Damage Reductions for each damage type
       for (let [index, damageDetailItem] of damageDetail.entries()) {
         let { damage, type } = damageDetailItem;
+        type = type ?? MQdefaultDamageType;
         let DRType = 0;
         if (type.toLowerCase() !== "temphp") dmgType = type.toLowerCase();
-        //         let DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) || 0;
+        // Pick the highest DR applicable to the damage type being inflicted.
         if (getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) {
           DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0;
         }
         if (DRType === 0 && ["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
           DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0);
-          //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
+        }
+        if (DRType === 0 && ["bludgeoning", "slashing", "piercing"].includes(type) && !silverDamage) {
+          DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-silver`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0);
         }
         if (DRType === 0 && ["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(t.actor.data, `flags.midi-qol.DR.physical`)) {
           DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.physical`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0);
-          //         DRType = parseInt(getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`)) || 0;
         }
         if (DRType === 0 && !["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`)) {
           DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-physical`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0);
@@ -288,7 +309,6 @@ export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTar
         }
         damageDetailItem.DR = DRType;
       }
-
       // Now apportion DRAll to each damage type if required
       for (let [index, damageDetailItem] of damageDetail.entries()) {
         let { damage, type, DR } = damageDetailItem;
@@ -300,15 +320,16 @@ export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTar
           damageDetailItem.DR = Math.min(damage, DR + DRAll);
           DRAll = Math.max(0, DRAll + DR - damage);
         }
+        // Apply AR here
       }
 
       for (let [index, damageDetailItem] of damageDetail.entries()) {
         let { damage, type, DR } = damageDetailItem;
-        //let mult = 1;
         let mult = saves.has(t) ? getSaveMultiplierForItem(item) : 1;
         if (superSavers.has(t) && getSaveMultiplierForItem(item) === 0.5) {
           mult = saves.has(t) ? 0 : 0.5;
         }
+
         // TODO this should end up getting removed when the prepare data is done. Currently depends on 1Reaction expiry.
         if (getProperty(t.actor, "data.flags.midi-qol.uncanny-dodge") && mult >= 0) {
           mult = mult / 2;
@@ -326,18 +347,23 @@ export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTar
           appliedDamage += typeDamage
         }
 
-        // TODO: consider mwak damage reduCtion
+        // TODO: consider mwak damage reduction - we have the workflow so should be possible
       }
       if (debugEnabled > 0) console.warn("midi-qol | Damage Details plus resistance/save multiplier for ", t.actor.data.name, duplicate(damageDetail))
     }
-
     //@ts-ignore CONFIG.DND5E
     if (!Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType)) {
       totalDamage = Math.max(totalDamage, 0);
       appliedDamage = Math.max(appliedDamage, 0);
     }
-    totalAppliedDamage += appliedDamage;
+    //@ts-ignore
+    if (AR > 0 && appliedDamage > 0 && !Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType) && checkRule("challengeModeArmor")) {
+      totalDamage = appliedDamage;
+      if (checkRule("challengeModeArmorScale") || workflow.hitTargetsEC.has(t))
+        appliedDamage = Math.max(0, appliedDamage - AR)
+    }
 
+    totalAppliedDamage += appliedDamage;
     if (!dmgType) dmgType = "temphp";
     if (!["healing", "temphp"].includes(dmgType) && getProperty(t.actor.data, `flags.midi-qol.DR.final`)) {
       let DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.final`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0;
@@ -358,6 +384,7 @@ export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTar
     damageList.push(ditem);
     targetNames.push(t.name)
   }
+
   if (theTargets.size > 0) {
     await socketlibSocket.executeAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
@@ -385,7 +412,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
 
   // Show damage buttons if enabled, but only for the applicable user and the GM
 
-  let theTargets = workflow.hitTargets;
+  let theTargets = new Set([...workflow.hitTargets, ...workflow.hitTargetsEC]);
   if (item?.data.data.target?.type === "self") theTargets = getSelfTargetSet(actor) || theTargets;
   let effectsToExpire: string[] = [];
   if (theTargets.size > 0 && item?.hasAttack) effectsToExpire.push("1Hit");
@@ -447,6 +474,13 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       });
   }
   workflow.damageList = appliedDamage;
+  //@ts-ignore
+  if (workflow && workflow.item && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
+    for (let targetToken of theTargets) {
+      //@ts-ignore
+      let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, i18n("midi-qol.damaged"));
+    }
+  }
   if (debugEnabled > 1) debug("process damage roll: ", configSettings.autoApplyDamage, workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves)
 }
 
@@ -468,6 +502,9 @@ export let getSaveMultiplierForItem = (item: Item) => {
   if (description.includes(i18n("midi-qol.fullDamage").toLocaleLowerCase())) return 1;
   if (noDamageSaves.includes(cleanSpellName(itemData.name))) return 0;
   if (description?.includes(i18n("midi-qol.noDamageText").toLocaleLowerCase())) {
+    return 0.0;
+  }
+  if (description?.includes(i18n("midi-qol.noDamage").toLocaleLowerCase())) {
     return 0.0;
   }
 
@@ -500,7 +537,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
     let message = `${configSettings.displaySaveDC ? "DC " + dc : ""} ${i18n("midi-qol.saving-throw")} ${flavor}`;
     if (rollType === "abil")
       message = `${configSettings.displaySaveDC ? "DC " + dc : ""} ${i18n("midi-qol.ability-check")} ${flavor}`;
-    if (rollType === "skill") 
+    if (rollType === "skill")
       message = `${configSettings.displaySaveDC ? "DC " + dc : ""} ${flavor}`;
     // Send a message for LMRTFY to do a save.
     const socketData = {
@@ -514,7 +551,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
       title: i18n("midi-qol.saving-throw"),
       message,
       formula: "",
-      attach: {requestId},
+      attach: { requestId },
       deathsave: false,
       initiative: false
     }
@@ -561,7 +598,7 @@ export function requestPCActiveDefence(player, actor, advantage, saveItemNname, 
     actors: [actorId],
     advantage,
     formula,
-    attach: {requestId, disableMessage: true},
+    attach: { requestId, disableMessage: true },
     deathsave: false,
     initiative: false
   }
@@ -723,7 +760,7 @@ export async function processOverTime(combat, data, options, user) {
               let skillId = CONFIG.DND5E.skills[saveAbility];
               if (!skillId) {
                 // @ts-ignore
-                const hasEntry = Object.values(CONFIG.DND5E.skills).map(id=>id.toLowerCase()).includes(saveAbility)
+                const hasEntry = Object.values(CONFIG.DND5E.skills).map(id => id.toLowerCase()).includes(saveAbility)
                 if (hasEntry) {
                   //@ts-ignore
                   saveAbility = Object.keys(CONFIG.DND5E.skills).find(id => CONFIG.DND5E.skills[id].toLocaleLowerCase() === saveAbility)
@@ -759,7 +796,7 @@ export async function processOverTime(combat, data, options, user) {
             if (macroToCall) {
               setProperty(ownedItem.data, "flags.midi-qol.onUseMacroName", macroToCall)
             }
-            
+
             if (details.removeCondition) {
               let value = replaceAtFields(details.removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
               let remove;
@@ -1581,15 +1618,21 @@ export function isConcentrating(actor: Actor5e): undefined | ActiveEffect {
   return actor.effects.contents.find(e => e.data.label === concentrationName && !e.data.disabled && !e.isSuppressed);
 }
 
-export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
+export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
   const noResult = { name: undefined, uuid: undefined, ac: undefined };
   if (!target.actor || !target.actor.data.flags || !target.actor.data.flags["midi-qol"]) return noResult;
   let player = playerFor(target) || ChatMessage.getWhisperRecipients("GM").find(u => u.active);
   if (!player) return noResult;
   if (getReactionSetting(player) === "none") return noResult;
+  if (target.actor.getFlag("midi-qol", "reactionCombatRound")) return noResult;
   let reactions = target.actor.items.filter(item => {
     //@ts-ignore activation
     if (item.data.data.activation?.type !== "reaction") return false;
+    //@ts-ignore activation
+    if ((item.data.data.activation.condition ?? "" !== "") && !item.data.data.activation.condition.includes(triggerType))
+      return false;
+    //@ts-ignore
+    if (triggerType === i18n("midi-qol.damaged") && (item.data.data.activation.condition ?? "") === "") return false
     //@ts-ignore .preparation
     if (item.data.data.preparation?.prepared !== true && item.data.data.preparation?.mode === "prepared") return false;
     return true;
@@ -1608,30 +1651,37 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
       resolve(noResult);
     }, (configSettings.reactionTimeout || 30) * 1000);
     // Complier does not realise player can't be undefined to get here
-    player && requestReactions(target, player, triggerTokenUuid, attackRoll, resolve)
+    player && requestReactions(target, player, triggerTokenUuid, attackRoll, triggerType, resolve)
   })
 }
 
-export async function requestReactions(target: Token, player: User, triggerTokenUuid: string | undefined, attackRoll: Roll, resolve: ({ }) => void) {
+export async function requestReactions(target: Token, player: User, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string, resolve: ({ }) => void) {
+  if (!attackRoll) attackRoll = await new Roll("0").roll();
   const result = (await socketlibSocket.executeAsUser("chooseReactions", player.id, {
     tokenUuid: target.document.uuid,
     attackRoll: JSON.stringify(attackRoll.toJSON()),
-    triggerTokenUuid
+    triggerTokenUuid,
+    triggerType
   }));
   resolve(result);
 }
 
-export async function promptReactions(tokenUuid: string, triggerTokenUuid: string | undefined, attackRoll: Roll) {
+export async function promptReactions(tokenUuid: string, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string) {
   const target: Token = MQfromUuid(tokenUuid);
   const actor: Actor | null = target.actor;
   if (!actor) return;
   const midiFlags: any = actor.data.flags["midi-qol"];
-  if (midiFlags?.reactionCombatRound) return false; // already had a reaction this round
+  if (actor.getFlag("midi-qol", "reactionCombatRound")) return false; // already had a reaction this round
   let result;
   //@ts-ignore activation
   let reactionItems = actor.items.filter(item => {
     //@ts-ignore activation
     if (item.data.data.activation?.type !== "reaction") return false;
+    //@ts-ignore activation
+    if ((item.data.data.activation.condition ?? "" !== "") && !item.data.data.activation.condition.includes(triggerType))
+      return false;
+    //@ts-ignore
+    if (triggerType === i18n("midi-qol.damaged") && (item.data.data.activation.condition ?? "") === "") return false
     //@ts-ignore .preparation
     if (item.data.data.preparation?.prepared !== true && item.data.data.preparation?.mode === "prepared") return false;
     return true;
@@ -1641,9 +1691,9 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
       console.warn("midi-qol | Reaction processing cancelled by Hook");
       return { name: "Filter" };
     }
-    result = await reactionDialog(actor, triggerTokenUuid, reactionItems, attackRoll)
+    result = await reactionDialog(actor, triggerTokenUuid, reactionItems, attackRoll, triggerType)
     if (result.uuid) {
-      actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
+      await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
       return result;
     }
   }
@@ -1666,7 +1716,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
     const preBounsRollTotal = data.roll.total;
     //@ts-ignore attributes
     await bonusDialog.bind(data)(bonusFlags, "ac", true, `${actor.name} - ${i18n("DND5E.AC")} ${actor.data.data.attributes.ac.value}`, "roll", "rollTotal", "rollHTML")
-    if (preBounsRollTotal !== data.roll.total) actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round); // TODO this is wrong
+    if (preBounsRollTotal !== data.roll.total) await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round); // TODO this is wrong
     return { name: actor.name, uuid: actor.uuid, ac: data.roll.total };
   }
   return { name: "None" };
@@ -1682,7 +1732,7 @@ export function playerFor(target: Token): User | undefined {
   return player;
 }
 
-export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | undefined, reactionItems: any[], attackRoll: Roll) {
+export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | undefined, reactionItems: any[], attackRoll: Roll, triggerType: string) {
 
   return new Promise((resolve, reject) => {
     const callback = async (dialog, button) => {
@@ -1700,6 +1750,7 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
           game.user?.updateTokenTargets([tokenId]);
         }
       }
+      await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
       await item.roll();
     }
 
@@ -1707,7 +1758,8 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
     // {"none": "Attack Hit", "d20": "d20 roll only", "all": "Whole Attack Roll"},
 
     let content;
-    switch (configSettings.showReactionAttackRoll) {
+    if (triggerType === i18n("midi-qol.damaged"))  content = i18n("midi-qol.Damage");
+    else switch (configSettings.showReactionAttackRoll) {
       case "all":
         content = `<h4>${rollOptions.all} ${attackRoll.total}</h4>`;
         break;
@@ -1755,21 +1807,26 @@ class ReactionDialog extends Application {
 
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
-      template: "templates/hud/dialog.html",
+      template: "modules/midi-qol/templates/dialog.html",
       classes: ["dialog"],
-      width: 400,
+      width: 150,
+      height: "auto",
       jQuery: true
     });
   }
   get title() {
     return this.data.title || "Dialog";
   }
-
+  // <img src="img_girl.jpg" alt="Girl in a jacket" width="500" height="600">
   async getData(options) {
     this.data.buttons = this.data.items.reduce((acc: {}, item: Item) => {
       acc[randomID()] = {
-        icon: '<i class="fas fa-dice-d20"></i>',
-        label: item.name,
+//        icon: '<i class="fas fa-dice-d20"></i>',
+// <div class="item-image" tabindex="0" role="button" aria-label="{{item.name}}" style="background-image: url('{{item.img}}')"></div>
+//<img class="item-image" src=${item.img} alt="" >`,
+        icon: `<div class="item-image"> <image src=${item.img} width="50" height="50" style="margin:10px"></div>`,
+//        icon: `<image src=${item.img} class="item-image" width="50" height="50" style="margin:10px">`,
+        label: `${item.name}`,
         value: item.name,
         key: item.id,
         callback: this.data.callback,
@@ -1858,7 +1915,7 @@ export function reportMidiCriticalFlags() {
  * @returns the concentration effect if present and null otherwise
  */
 export function getConcentrationEffect(actor): ActiveEffect | undefined {
-  let concentrationLabel: any = "Concentrating";
+  let concentrationLabel: any = i18n("midi-qol.Concentrating");
   if (game.modules.get("dfreds-convenient-effects")?.active) {
     let concentrationId = "Convenient Effect: Concentrating";
     let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
@@ -1867,4 +1924,28 @@ export function getConcentrationEffect(actor): ActiveEffect | undefined {
     concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
   }
   return actor.effects.contents.find(i => i.data.label === concentrationLabel);
+}
+
+
+export function evalActivationCondition(workflow: Workflow, condition: string | undefined): boolean {
+  if (condition === undefined || condition === "") return true;
+  let returnValue;
+  const rollData = workflow.otherDamageItem?.getRollData();
+  rollData.target = workflow.hitTargets.values().next()?.value;
+  rollData.workflow = workflow;
+  if (rollData.target) {
+    rollData.target = rollData.target.actor.data.data;
+    if (rollData.target.details.race ?? "" !== "") rollData.raceOrType = rollData.target.details.race.toLocaleLowerCase();
+    else rollData.raceOrType = rollData.target.details.type.value.toLocaleLowerCase();
+  }
+  let expression = condition ?? "";
+  expression = Roll.replaceFormulaData(expression, rollData, { missing: "0" });
+  try {
+    //@ts-ignore - safeEval can return boolean
+    returnValue = Roll.safeEval(expression);
+  } catch (err) {
+    returnValue = true;
+    console.warn(`midi-qol | activation condition (${expression}) error `, err)
+  }
+  return returnValue;
 }

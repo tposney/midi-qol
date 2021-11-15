@@ -119,3 +119,27 @@
 .midi-qol-tooltip:hover .midi-qol-tooltiptext {
   visibility: visible;
 }
+
+* ----------------------------------------- */
+/* Dialog Window
+/* ----------------------------------------- */
+.midi-qol .dialog .dialog-content .dialog-buttons {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  justify-content: space-around;
+}
+
+.midi-qol .dialog .dialog-buttons button {
+  background: rgba(0, 0, 0, 0.1);
+  border: 2px groove #f0f0e0;
+  margin: 0 5px 0 0;
+}
+.midi-qol .dialog .dialog-buttons button:last-child {
+  margin-right: 0;
+}
+.midi-qol .dialog .dialog-buttons button.default {
+  background: rgba(0, 0, 0, 0.05);
+  border: 2px groove #c9c7b8;
+}

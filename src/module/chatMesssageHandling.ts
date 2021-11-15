@@ -3,6 +3,7 @@ import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { nsaFlag, coloredBorders,  addChatDamageButtons, configSettings, forceHideRoll } from "./settings.js";
 import { createDamageList, getTraitMult, calculateDamage,  MQfromUuid } from "./utils.js";
+import { shouldRollOtherDamage } from "./itemhandling.js";
 export const MAESTRO_MODULE_NAME = "maestro";
 export const MODULE_LABEL = "Maestro";
 
@@ -65,7 +66,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
 
   let damageList: any[] = [];
   let otherDamageList: any[] = [];
-
+  let workflow = Workflow.getWorkflow(item.uuid);
   // Get attack roll info
   const attackEntry = brFlags.entries?.find((e) => e.type === "multiroll" && e.rollType === "attack");
   let attackTotal = attackEntry?.entries?.find((e) => !e.ignored)?.total ?? -1;
@@ -89,8 +90,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
         // Check for versatile and flag set. TODO damageIndex !== other looks like nonsense.
         if (subEntry.damageIndex !== "other")
           damageList.push({ type, damage });
-        else if ("ifSave" === configSettings.rollOtherDamage || "activation" === configSettings.rollOtherDamage) {
-          // TODO
+        else {
           otherDamageList.push({ type, damage });
           if (subEntry.baseRoll instanceof Roll) otherDamageRoll = subEntry.baseRoll;
           else otherDamageRoll = Roll.fromData(subEntry.baseRoll);
@@ -102,7 +102,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
 
   //@ts-ignore udpate
   const targets = (item?.data.data.target?.type === "self") ? new Set([token]) : new Set(game.user?.targets);
-  let workflow = Workflow.getWorkflow(item.uuid);
+
   if (!workflow) workflow = new BetterRollsWorkflow(actor, item, message.data.speaker, targets, null);
   workflow.isCritical = isCritical;
   workflow.isFumble = diceRoll === 1;
@@ -110,7 +110,6 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   workflow.itemCardId = message.id;
   workflow.ammo = item._ammo;
 
-  // TODO check activaiton condition to disable the roll if required.
   //@ts-ignore evaluate
   workflow.attackRoll = new Roll(`${attackTotal}`).evaluate({ async: false });
   if (configSettings.keepRollStats && item.hasAttack) {
@@ -119,11 +118,6 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   workflow.damageDetail = damageList;
   workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
 
-  if (otherDamageList.length > 0) {
-    workflow.otherDamageTotal = otherDamageList.reduce((acc, a) => a.damage + acc, 0);
-    //@ts-ignore evaluate
-    workflow.otherDamageRoll = otherDamageRoll;
-  }
   workflow.itemLevel = brFlags.params.slotLevel ?? 0;
   workflow.itemCardData = message.data;
   workflow.advantage = advantage;
@@ -153,6 +147,18 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   // Workflow will be advanced when the better rolls card is displayed.
   // Workflow.removeWorkflow(workflow.uuid);
   workflow.needItemCard = false;
+  // check activaiton condition and remove other damage if required
+  workflow.shouldRollOtherDamage = shouldRollOtherDamage.bind(item)(workflow, configSettings.rollOtherDamage, configSettings.rollOtherSpellDamage);
+  if (!workflow.shouldRollOtherDamage) {
+    otherDamageList = [];
+    // TODO find out how to remove it from the better rolls card?
+  }
+
+  if (otherDamageList.length > 0) {
+    workflow.otherDamageTotal = otherDamageList.reduce((acc, a) => a.damage + acc, 0);
+    //@ts-ignore evaluate
+    workflow.otherDamageRoll = otherDamageRoll;
+  }
   if (!workflow.needTemplate) workflow.next(WORKFLOWSTATES.NONE);
   return true;
 }
