@@ -477,8 +477,11 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   //@ts-ignore
   if (workflow && workflow.item && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
     for (let targetToken of theTargets) {
+      const damageListItem = workflow.damageList.find(e=> e.tokenUuid = targetToken.document ? targetToken.document.uuid: targetToken.uuid);
+      if (damageListItem?.appliedDamage > 0) {
       //@ts-ignore
       let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, i18n("midi-qol.damaged"));
+      }
     }
   }
   if (debugEnabled > 1) debug("process damage roll: ", configSettings.autoApplyDamage, workflow.damageDetail, workflow.damageTotal, theTargets, item, workflow.saves)

@@ -1,5 +1,9 @@
-### 0.8.83
 
+### 0.8.84
+* Fix for being able to Hellish Rebuke someone who heals you.
+* Fix for duplicated lines in en.json.
+
+### 0.8.83
 * Fix for better rolls activation condition processing.
 * Added non magical silver physical damage resistance/immunity/vulnerability, which is bypassed by magical and silvered weapons.
 * Fix for removing cocnentration effects when one of the target tokens has been removed from the scene.
