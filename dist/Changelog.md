@@ -1,22 +1,22 @@
 
 ### 0.8.85
-* Allow items to be set to not provoke a reaction (set item.data.flags.midi-qol.noProvokeReaction to true).
+* Allow items to be set to not provoke a reaction (set item.data.flags.midi-qol.noProvokeReaction to true). No UI for this yet.
 * Fix for silvered weapons check causing problems if there is no item in the workflow.
-* Added resistance/immunity/vulnerabilt to non-adamantine weapons. Added DR against adamantine weapons.
-* New improved Spirit Guardian sampel item, requires active auras to work and assumes there is a combat active.
+* Added resistance/immunity/vulnerability to non-adamantine weapons. Added DR against adamantine weapons.
 * Added new overTime option, killAnim: boolean, to force automated animations not to fire for the overtime effect (niche I know, but I needed it for Spirit Guardian).
+* New improved Spirit Guardian sampel item, requires active auras to work and assumes there is a combat active.
 Supports the following:
   - If a token enters the Spirit Guardian's range on their turn they will save && take damage.
   - At the start of an affected token's turn they will save && take damage.
   - If the token moves out of range of the effect they won't take damage anymore.
   - All effects removed on expiry/loss of concentration.
   - Spell scaling is supported automatically.
-  - If using automated animations, only the initial cast will spawn the automated animation.
+  - If using automated animations, only the initial cast will spawn the automated animation, whcih is VERY pretty by the way.
   - Works with better rolls.
-  - Not Supported: picking tokens to be exlcuded, the spell will only target enemies.
+Not Supported: picking tokens to be exlcuded, the spell will only target enemies.
 
 ### 0.8.84
-* Fix for being able to Hellish Rebuke someone who heals you.
+* Fix for triggering reactions (Hellish Rebuke) when someone heals you.
 * Fix for duplicated lines in en.json.
 
 ### 0.8.83

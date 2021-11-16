@@ -88,6 +88,25 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.8.85
+  * Allow items to be set to not provoke a reaction (set item.data.flags.midi-qol.noProvokeReaction to true). No UI for this yet.
+  * Fix for silvered weapons check causing problems if there is no item in the workflow.
+  * Added resistance/immunity/vulnerability to non-adamantine weapons. Added DR against adamantine weapons.
+  * Added new overTime option, killAnim: boolean, to force automated animations not to fire for the overtime effect (niche I know, but I needed it for Spirit Guardian).
+  * New improved Spirit Guardian sampel item, requires active auras to work and assumes there is a combat active.
+  Supports the following:
+    - If a token enters the Spirit Guardian's range on their turn they will save && take damage.
+    - At the start of an affected token's turn they will save && take damage.
+    - If the token moves out of range of the effect they won't take damage anymore.
+    - All effects removed on expiry/loss of concentration.
+    - Spell scaling is supported automatically.
+    - If using automated animations, only the initial cast will spawn the automated animation, whcih is VERY pretty by the way.
+    - Works with better rolls.
+  Not Supported: picking tokens to be exlcuded, the spell will only target enemies.
+
+  0.8.84
+  * Fix for triggering reactions (Hellish Rebuke) when someone heals you.
+  * Fix for duplicated lines in en.json.
   0.8.83
   * Fix for better rolls activation condition processing.
   * Added non magical silver physical damage resistance/immunity/vulnerability, which is bypassed by magical and silvered weapons.
@@ -104,30 +123,6 @@ Hooks.once('libChangelogsReady', function() {
   * Added new item field "Active Effect Condtion". If set the activation condition must evaluate to true for the active effect to be applied. The saving throw if any must also be failed for the effect to be applied. For example, the included mace of disruption does additional damage to undead and if an undead fails it's save it is frightened. By setting the Activation Condition and Active Effect Activation Condition to checked only undead will suffer extra damage and be set frightened if they fail the save.
   
   * Implemented Optional Rule: Challenge Mode Armor. See the readme.md for more information. My testing indicates that this is extremly unfavourable to higher level tank characters, dramatically increasing the amount of damage they take. I have implemented a modified version that, 1) scales the damage from an EC hit and 2) Armor provides damage reduction equal to the AR for all hits.
-  
-  0.8.81
-  * Fix for bug introduced in 0.8.80 for onUse/Damage Bonus macros where targets was not set correctly. Impacted concentration not being removed automatically.
-
-  0.8.80
-  * "full damage on save" to configure save damage for spells (like no damage on save it is always checked) - full damage on save would be used for spells that always do their damage but have contingent effects, like poisoned on a failed save.
-  * Added roll other damage for spells with the same settings as roll other damage for rwak/mwak.
-  * Fix for TrapWorkflow not targeting via templates correctly.
-  * Corrected tooltip for saving throw details when using better rolls (was always displaying 1d20).
-  * Correction to Divine Smite sample item which was incorrectly adding the bonus damage for improved divine smite.
-  * Fix for better rolls AoE spells failing if the template was placed before the damage roll completed (i.e. when dice so nice enabled).
-  * Fix for midi-qol not picking up the damage types for versatile damage rolls.
-  * Tidied up Readme.md
-
-  * Discovered, but have not fixed that if a) using better rolls, b) not using merge card and c) using dice so nice then save results won't be displayed to the chat. So if using better rolls you should enable merge card.
-
-0.8.79
-  * fix for overtime effects duplicating convenient effects when the name of the effect being checked matches a convenient effect.
-  * fix for TrapWorkflow not displaying the damage type list in the roll flavor.
-  * Add new config option to bypass the spell cast dialog, casting at default level and placing templates. Pressing both Advantage+Disadvantage keys will force display of the casting dialog. If you don't have a spell slot of the level of the spell the dialog will be displayed so you can choose another slot. 
-  * exported overTimeJSONData to help macros create items on the fly.  
-  FYI: if you want an overtime effect that just calls a macro each turn use  
-    flags.midi-qol.overTime OVERRIDE turn=start,macro=macro name, label=My Label  
-  The macro will be called with the normal onUse macro data for the overTime effect being rolled.
   
   [Full Changelog](https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md)`,
   "major")
