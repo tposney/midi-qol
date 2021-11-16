@@ -426,7 +426,7 @@ support for **concentration automation**. The is dependent on DAE being installe
 
 Midi-qol will attempt to use Convenient Effects, then Combat Uiltiy Belt, then an internal concentration effect (in that order) when applying and removing concentration.  
 * Convenient Effects: No Additional configuration is required.
-* Combat utility belt. Since in CUB you need to identify which of the conditions (in condition lab) is the concentration effect (and midi uses that mapping), you need to make sure that the concentration name is set correctly in CUB's concentrator to match the concentration effect in codition lab.
+* Combat utility belt. Since in CUB you need to identify which of the conditions (in condition lab) is the concentration effect (and midi uses that mapping), you need to make sure that the concentration name is set correctly in CUB's concentrator to match the concentration effect in condition lab.
 * For the internal effect no additional configuration is required.
 
 ## Magic Resistance
@@ -451,6 +451,13 @@ All of these effects expire at the end of the combat if no other duration is spe
 
 ## Reactions
 If the config settings for reaction checks is enabled midi will check a target that is hit by an attack for any items/feautres/spells that have an activation type of reaction and prompt the target if they want to use any of their reactions, which will then initiate a midi workflow for that item/feature/spell targeting the attacker (so hellish rebuke for example works). Currently does not support spells from magic items.
+
+As well as triggering on attacks reactions can trigger on damage application. Midi uses the activation condition of the item to work out which one is applicable.  
+
+Most feats/spells have a blank activation conditon and midi will treat those as attack triggered reactions. Hellish Rebuke, for example, has "Which you take in response to being damaged by a creature within 60 feet of you that you can see", and midi will tirgger those with the word damage in the activation conditon when a character is damage. (Hellish rebuke is a pscial one isnce it triggers even if there was no attack roll for the damage).
+
+If the item being used for the attack/or to cause damage has the flag (item.data.flags.midi-qol.noProvokeReaction set, it won't trigger reactions).
+
 
 
 ## flags.midi-qol 
@@ -495,7 +502,7 @@ Gives the attacker advantage on attacks made against the target. Midi-qol only c
 * flags.midi-qol.noCritical.mwak/rwak/msak/rsak/other
 * flags.midi-qol.grants.critical.all (applies when targeted)
 * flags.midi-qol.grants.critical.mwak/rwak/msak/rsak/other (applies when targeted)
-* flags.midi-qol.fail.critical.all (applies when targeted)
+* flags.midi-qol.fail.critical.all (applies when targeted - attacker can't do a critical attack - think adamantine armor)
 * flags.midi-qol.fail.critical.mwak/rwak/msak/rsak/other (applies when targeted)
 * flags.midi-qol.DR.all - all incoming damage
 * flags.midi-qol.DR.non-magical - non-magical bludgeoning/slashing/piercing
@@ -762,6 +769,68 @@ Set full damage save (on a weapon it's a property on anything else the text "ful
 
 * How to set the special duration of an effect. There are lots of various ways to expire a condition (too many to list here) but one common problem is setting an effect to expire at the start of the targets next turn/next attack by the caster. If you don't specify a seconds/rounds/turns duration as well, then the default of 1 round will apply, which may be before the special duration expires. So if putting a special duration make sure to set the duration of the effect to be larger than the special duration will take to happen. If the item generating the effect has a duration that will get used if there is no time based duration specified.
 
+* I recently added the Spirit Guardian to the sample items compendium. It has a couple of maybe useful ideas for those trying to develop their own items.
+  - Active auras is used to apply an effect to the target, i.e. when they get closer than 15 feet. The applied effect has 2 components:
+  - the first is an overtime effect that fires at the start of the targets turn. So if they are within range save/damage will be rolled at the start of their turn. If they move out of range the effect is removed and they take no damage.
+  - the second is a macro.ItemMacro which only fires when the effect is applied/removed, i.e. the token ends up within 15 feet of the caster. The macro checks if it was the token that moved within the radius or not and then applies damage if they did. Since the macro fires when the effect is applied it neatly covers the do damage when first entering condition. I've added the complete macro, but the general idea is:
+    - Check if it was the token moving that applied the effect, otherwise don't do anything
+```js
+    if (args[0] === "on" && args[1] !== lastArg.tokenId && lastArg.tokenId === game.combat?.current.tokenId)
+```
+```js
+    args[0] === "on"
+```
+  the effect was newly applied to us
+    `` args[1]`` is set to the casters id, so 
+```js
+     args[1] !== lastArg.tokenId
+```
+    checks that we are not the caster (deals with the initial spell casting)
+```js
+     lastArg.tokenId === game.combat?.current.tokenId
+```
+    checks that it was the affectd tokens turn when the effect was applied - i.e. they moved into the area
+    
+    - Create an item to roll the damge and save. Pretty standard stuff, just create a temporary item so we can roll it to apply the damage.
+    - Roll the created item to do the save/damage. Uses a newish midi-qol feature that allows you to do a complete roll and complete it before continuing.
+```js
+    const options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false };
+    await MidiQOL.completeItemRoll(item, options);
+```
+  Here's the complete item macro
+```js
+  const lastArg = args[args.length -1];
+  // Check when applying the effect - if the token is not the caster and it IS the tokens turn they take damage
+  if (args[0] === "on" && args[1] !== lastArg.tokenId && lastArg.tokenId === game.combat?.current.tokenId) {
+    const sourceItem = await fromUuid(lastArg.origin);
+    let theActor = await fromUuid(lastArg.actorUuid);
+    if (theActor.actor) theActor = theActor.actor;
+    const itemData = mergeObject(duplicate(sourceItem.data), {
+        type: "weapon",
+        effects: [],
+        flags: {
+            "midi-qol": {
+                noProvokeReaction: true, // no reactions triggered
+                onUseMacroName: null // 
+            },
+        },
+        data: {
+            actionType: "save",
+            save: {dc: Number.parseInt(args[3]), ability: "wis", scaling: "flat"},
+            damage: { parts: [[`${args[2]}d8`, "radiant"]] },
+            "target.type": "self",
+            components: {concentration: false, material: false, ritual: false, somatic: false, value: "", vocal: false},
+            duration: {units: "inst", value: undefined},
+            weaponType: "improv"
+        }
+    }, {overwrite: true, inlace: true, insertKeys: true, insertValues: true});
+    itemData.data.target.type = "self";
+    itemData.flags.autoanimations.killAnim = true;;
+    const item = new CONFIG.Item.documentClass(itemData, { parent: theActor })
+    const options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false };
+    await MidiQOL.completeItemRoll(item, options);
+}
+```
 * WHich sort of Macro to use?
   - macro.execute/macro.ItemMacro effects (DAE) are applied to the target (run when added and run again when deleted) and are able to access fields from the caster and the target (see the DAE readme). They can be especially useful if you need to change a field that should not be changed via active effects, like temphp (or any effect that might get changed after the effect is applied, hp is the classic example). They are only applied to the target if the attack hit or the target did not save. Since the macro is also called when the active effect is removed from the target you are able to do any cleanup you want.
   - OnUse macros (set on the item sheet). These are run whenever the item is used, even if the attack missed. You can do pretty much anything inside the macro and the result is awaited. Look in here for the information that is provided. You can't pass arguments to OnUse macros yourself. Useful if you want to do something to targets/other tokens/self that can't be expressed/should not be done with active effects.
