@@ -21,7 +21,7 @@ Same problem as above - check workflow automation is enabled on all clients. You
 Some of the items require creating a DamageBonusMacro, make sure that is enabled in the midi settings. Also, if the damage bonus macro effect runs an ItemMacro.ItemName, the name of the feature needs to match the name of the item macro being run. For example Rage MQ0.8.9, will have to be renamed Rage when equipped on a character or the damage bonus macro won't run. I know this is not ideal, but I wanted to make clear when the version of the items changed.
 
 ## How do I write macros for this module?
-Have a look at [Notes for Macro writers](#notes-for-macro-writers) which I try to update if new things occur.
+Have a look at [Notes for Macro writers](#notes-for-macro-writers) which I try to update if new things occur. I've included some examples and if I do something I think is maybe useful, will add it to this section going forwards.
 
 ## MidiQOL sample items compendium
 midi-qol is an automation tool that is meant to make it possible to automate some/many facets of your game. It is not a library of items that you can plug and play into your game, there are other modules for that like the excellent **DAE SRD** and **Midi SRD**, and many great macro modules that play well with midi-qol (too many for me to list and I'm sure I don't know them all).
