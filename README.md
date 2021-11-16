@@ -20,6 +20,9 @@ Same problem as above - check workflow automation is enabled on all clients. You
 ## Items I bring in from the sample compendium don't work. 
 Some of the items require creating a DamageBonusMacro, make sure that is enabled in the midi settings. Also, if the damage bonus macro effect runs an ItemMacro.ItemName, the name of the feature needs to match the name of the item macro being run. For example Rage MQ0.8.9, will have to be renamed Rage when equipped on a character or the damage bonus macro won't run. I know this is not ideal, but I wanted to make clear when the version of the items changed.
 
+## How do I write macros for this module?
+Have a look at [Notes for Macro writers](Notes for Macro writers) which I try to update if new things occur.
+
 [TOC]
 
 # Changes in dnd5e 1.5:
@@ -619,7 +622,7 @@ where specification is a comma separated list of fields.
 probably many however....
 * Language translations are not up to date.
 
-# Notes For Macro writers
+# Notes for Macro writers
 For modules that want to call midi-qol it is easier than in minor-qol. Just call item.roll() and if you pass an event via item.roll({event}) you can have key accelerators. (the meanings of shift/ctrl/alt will be interpreted using the speed rolls settings)
 event.altKey: true => advantage roll
 event.crtlKey: true => disadvantage roll
@@ -771,8 +774,15 @@ Set full damage save (on a weapon it's a property on anything else the text "ful
 
 * I recently added the Spirit Guardian to the sample items compendium. It has a couple of maybe useful ideas for those trying to develop their own items.
   - Active auras is used to apply an effect to the target, i.e. when they get closer than 15 feet. The applied effect has 2 components:
-  - the first is an overtime effect that fires at the start of the targets turn. So if they are within range save/damage will be rolled at the start of their turn. If they move out of range the effect is removed and they take no damage.
-  - the second is a macro.ItemMacro which only fires when the effect is applied/removed, i.e. the token ends up within 15 feet of the caster. The macro checks if it was the token that moved within the radius or not and then applies damage if they did. Since the macro fires when the effect is applied it neatly covers the do damage when first entering condition. I've added the complete macro, but the general idea is:
+   - the first is an overtime effect that fires at the start of the targets turn. So if they are within range save/damage will be rolled at the start of their turn. If they move out of range the effect is removed and they take no damage.
+   - the second is a macro.ItemMacro which only fires when the effect is applied/removed, i.e. the token ends up within 15 feet of the caster. The macro checks if it was the token that moved within the radius or not and then applies damage if they did. Since the macro fires when the effect is applied it neatly covers the do damage when first entering condition.  
+
+Here's the effect setup  
+![Spirit Guardian Effect Setup](pictures/sample_spirit_guardian.png)  
+and heres the Active Aura setup  
+![Spirit Guardian Effect Setup](pictures/aura_spirit_guardian.png)  
+
+I've included the complete macro, but the general idea is:  
     - Check if it was the token moving that applied the effect, otherwise don't do anything
 ```js
     if (args[0] === "on" && args[1] !== lastArg.tokenId && lastArg.tokenId === game.combat?.current.tokenId)
@@ -785,14 +795,14 @@ Set full damage save (on a weapon it's a property on anything else the text "ful
 ```js
      args[1] !== lastArg.tokenId
 ```
-    checks that we are not the caster (deals with the initial spell casting)
+  checks that we are not the caster (deals with the initial spell casting)
 ```js
      lastArg.tokenId === game.combat?.current.tokenId
 ```
-    checks that it was the affectd tokens turn when the effect was applied - i.e. they moved into the area
+  checks that it was the affectd tokens turn when the effect was applied - i.e. they moved into the area
     
-    - Create an item to roll the damge and save. Pretty standard stuff, just create a temporary item so we can roll it to apply the damage.
-    - Roll the created item to do the save/damage. Uses a newish midi-qol feature that allows you to do a complete roll and complete it before continuing.
+- Create an item to roll the damge and save. Pretty standard stuff, just create a temporary item so we can roll it to apply the damage.
+- Roll the created item to do the save/damage. Uses a newish midi-qol feature that allows you to do a complete roll and complete it before continuing.
 ```js
     const options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false };
     await MidiQOL.completeItemRoll(item, options);
@@ -831,7 +841,7 @@ Set full damage save (on a weapon it's a property on anything else the text "ful
     await MidiQOL.completeItemRoll(item, options);
 }
 ```
-* WHich sort of Macro to use?
+* Which sort of Macro to use?
   - macro.execute/macro.ItemMacro effects (DAE) are applied to the target (run when added and run again when deleted) and are able to access fields from the caster and the target (see the DAE readme). They can be especially useful if you need to change a field that should not be changed via active effects, like temphp (or any effect that might get changed after the effect is applied, hp is the classic example). They are only applied to the target if the attack hit or the target did not save. Since the macro is also called when the active effect is removed from the target you are able to do any cleanup you want.
   - OnUse macros (set on the item sheet). These are run whenever the item is used, even if the attack missed. You can do pretty much anything inside the macro and the result is awaited. Look in here for the information that is provided. You can't pass arguments to OnUse macros yourself. Useful if you want to do something to targets/other tokens/self that can't be expressed/should not be done with active effects.
   - DamageBonusMacro, this is run whenever an attack rolls damage. The main idea is to enhance the damage rolled by the attack which does not depend on the item used, things like sneak attack/hunter's mark and so on. The same information is passed to the macro and can be awaited.
