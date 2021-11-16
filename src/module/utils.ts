@@ -203,11 +203,14 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
     const magicalDamage = (item?.type !== "weapon"
       || (item?.data.data.attackBonus > 0 && !configSettings.requireMagical)
       || item.data.data.properties["mgc"]);
-    const silverDamage = item.data.data.properties?.sil;
+    const silverDamage = item?.data.data.properties?.sil;
+    const adamantineDamage = item?.data.data.properties?.ada
     for (let { type, mult } of [{ type: "di", mult: 0 }, { type: "dr", mult: 0.5 }, { type: "dv", mult: 2 }]) {
       let trait = actor.data.data.traits[type].value;
       if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
       if (!(magicalDamage || silverDamage) && trait.includes("silver")) trait = trait.concat("bludgeoning", "slashing", "piercing")
+      if (!(magicalDamage || adamantineDamage) && trait.includes("adamant")) trait = trait.concat("bludgeoning", "slashing", "piercing")
+
       if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (item?.type === "power" && trait.includes("power")) totalMult = totalMult * mult;
       else if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
@@ -250,7 +253,9 @@ export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTar
       DRAll += (new Roll((getProperty(a.data, `flags.midi-qol.DR.${item.data.data.actionType}`) || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
     }
     const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
-    const silverDamage = magicalDamage || (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["sil"]);
+    const silverDamage = magicalDamage || (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["sil"]);
+    const adamantineDamage = magicalDamage || (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["ada"]);
+
     let AR = 0; // Armor reduction for challenge mode armor etc.
     const ac = a.data.data.attributes.ac;
 
@@ -294,6 +299,9 @@ export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTar
         }
         if (DRType === 0 && ["bludgeoning", "slashing", "piercing"].includes(type) && !silverDamage) {
           DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-silver`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0);
+        }
+        if (DRType === 0 && ["bludgeoning", "slashing", "piercing"].includes(type) && !adamantineDamage) {
+          DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-adamantine`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0);
         }
         if (DRType === 0 && ["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(t.actor.data, `flags.midi-qol.DR.physical`)) {
           DRType = Math.max(DRType, (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.physical`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0);
@@ -478,9 +486,9 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   if (workflow && workflow.item && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
     for (let targetToken of theTargets) {
       const damageListItem = workflow.damageList.find(e=> e.tokenUuid = targetToken.document ? targetToken.document.uuid: targetToken.uuid);
-      if (damageListItem?.appliedDamage > 0) {
+      if (damageListItem?.appliedDamage > 0 && workflow.item && !getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction")) {
       //@ts-ignore
-      let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, i18n("midi-qol.damaged"));
+      let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, i18n("midi-qol.reactionDamaged"));
       }
     }
   }
@@ -742,6 +750,7 @@ export async function processOverTime(combat, data, options, user) {
             const damageBeforeSave = JSON.parse(details.damageBeforeSave ?? "false");
             const macroToCall = details.macro;
             const rollType = details.rollType;
+            const killAnim = JSON.parse(details.killAnim ?? "false");
 
             if (debugEnabled > 0) warn(`Overtime provided data is `, details);
             if (debugEnabled > 0) warn(`OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
@@ -750,6 +759,7 @@ export async function processOverTime(combat, data, options, user) {
             itemData.data.save.dc = saveDC;
             itemData.data.save.ability = saveAbility;
             itemData.data.save.scaling = "flat";
+            setProperty(itemData, "flags.midi-qol.noProvokeReaction", true)
             if (saveMagic) {
               itemData.type = "spell";
               itemData.data.preparation = { mode: "atwill" }
@@ -786,6 +796,7 @@ export async function processOverTime(combat, data, options, user) {
               itemData.data.damage.parts = [[damageRollString, damageType]];
             }
             setProperty(itemData.flags, "midi-qol.forceCEOff", true);
+            if (killAnim) setProperty(itemData.flags, "autoanimations.killAnim", true)
             //@ts-ignore
             itemData._id = randomID();
             // roll the damage and save....
@@ -1635,7 +1646,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
     if ((item.data.data.activation.condition ?? "" !== "") && !item.data.data.activation.condition.includes(triggerType))
       return false;
     //@ts-ignore
-    if (triggerType === i18n("midi-qol.damaged") && (item.data.data.activation.condition ?? "") === "") return false
+    if (triggerType === i18n("midi-qol.reactionDamaged") && (item.data.data.activation.condition ?? "") === "") return false
     //@ts-ignore .preparation
     if (item.data.data.preparation?.prepared !== true && item.data.data.preparation?.mode === "prepared") return false;
     return true;
@@ -1684,7 +1695,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
     if ((item.data.data.activation.condition ?? "" !== "") && !item.data.data.activation.condition.includes(triggerType))
       return false;
     //@ts-ignore
-    if (triggerType === i18n("midi-qol.damaged") && (item.data.data.activation.condition ?? "") === "") return false
+    if (triggerType === i18n("midi-qol.reactionDamaged") && (item.data.data.activation.condition ?? "") === "") return false
     //@ts-ignore .preparation
     if (item.data.data.preparation?.prepared !== true && item.data.data.preparation?.mode === "prepared") return false;
     return true;
@@ -1761,7 +1772,7 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
     // {"none": "Attack Hit", "d20": "d20 roll only", "all": "Whole Attack Roll"},
 
     let content;
-    if (triggerType === i18n("midi-qol.damaged"))  content = i18n("midi-qol.Damage");
+    if (triggerType === i18n("midi-qol.reactionDamaged"))  content = i18n("midi-qol.Damage");
     else switch (configSettings.showReactionAttackRoll) {
       case "all":
         content = `<h4>${rollOptions.all} ${attackRoll.total}</h4>`;

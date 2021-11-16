@@ -9,6 +9,7 @@ import { socketlibSocket } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls, useMidiCrit } from "./settings.js";
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition } from "./utils.js"
+import { getTrailingCommentRanges } from "typescript";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -1617,9 +1618,10 @@ export class Workflow {
         let GMprompt;
         let gmMonksTB;
         if (player?.isGM) {
-          const monksTBSetting = target.document.isLinked ? configSettings.rollNPCLinkedSaves === "mtb" : configSettings.rollNPCSaves === "mtb"
+          const targetDocument = target.document ?? target;
+          const monksTBSetting = targetDocument.isLinked ? configSettings.rollNPCLinkedSaves === "mtb" : configSettings.rollNPCSaves === "mtb"
           gmMonksTB = installedModules.get("monks-tokenbar") && monksTBSetting;
-          GMprompt = (target.document.isLinked ? configSettings.rollNPCLinkedSaves : configSettings.rollNPCSaves);
+          GMprompt = (targetDocument.isLinked ? configSettings.rollNPCLinkedSaves : configSettings.rollNPCSaves);
           promptPlayer = GMprompt !== "auto";
         }
         if ((!player?.isGM && playerMonksTB) || (player?.isGM && gmMonksTB)) {
@@ -1974,8 +1976,8 @@ export class Workflow {
           else isHit = this.attackTotal >= targetAC || this.isCritical;
           if (targetEC) isHitEC = checkRule("challengeModeArmor") && this.attackTotal <= targetAC && this.attackTotal >= targetEC;
           // check to see if the roll hit the target
-          if ((isHit || isHitEC || this.iscritical) && this.attackRoll) {
-            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "attack");
+          if ((isHit || isHitEC || this.iscritical) && this.attackRoll && !getProperty(this, "item.data.flags.midi-qol.noProvokeReaction")) {
+            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, i18n("midi-qol.reaactionAttacked"));
             if (result?.name) {
               targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
             }
@@ -2246,9 +2248,10 @@ export class DamageOnlyWorkflow extends Workflow {
         this.effectsAlreadyExpired = [];
         if (this.itemData) {
           this.itemData.effects = this.itemData.effects.map(e => duplicate(e))
-          this.item = new CONFIG.Item.documentClass(this.itemData, { parent: this.actor }); setProperty(this.item, "data.flags.midi-qol.onUseMacroName", null);
+          this.item = new CONFIG.Item.documentClass(this.itemData, { parent: this.actor }); 
+          setProperty(this.item, "data.flags.midi-qol.onUseMacroName", null);
         } else this.item = null;
-        if (this.itemCardId === "new" && this.itemData) { // create a new chat card for the item
+        if (this.itemCardId === "new" && this.item) { // create a new chat card for the item
           this.createCount += 1;
           this.itemCard = await showItemCard.bind(this.item)(false, this, true);
           this.itemCardId = this.itemCard.id;

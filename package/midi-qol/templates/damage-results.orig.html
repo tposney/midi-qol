@@ -1,0 +1,49 @@
+<div>
+  <strong>{{damageApplied}}</strong>
+  {{#each damageList as |damage iid|}}
+  <div class="xmidi-qol-flex-container">
+    <div class="flexrow">
+      <div>
+        <button id="reverse-{{damage.tokenId}}" style="width: 22px; height:22px; font-size:10px;line-height:1px">
+          <i class="fas fa-user-plus" title="Click to reverse updated HP."></i></button>
+        <button id="apply-{{damage.tokenId}}" style="width: 22px; height:22px; font-size:10px;line-height:1px">
+          <i class="fas fa-user-minus" title="Click to apply updated HP."></i></button>
+        <label class="midi-qol-target-name" id={{damage.tokenId}}> <strong>{{damage.tokenName}}</strong></label>
+      </div>
+      <div>
+        <button id="full-{{damage.tokenId}}" style="width: 22px; height:22px; font-size:10px;line-height:1px">
+          <i class="fas fa-user-minus" title="Click to remove {{totalDamage}}HP"></i></button>
+        <button id="half-{{damage.tokenId}}" style="width: 22px; height:22px; font-size:10px;line-height:1px">
+          <i class="fas fa-user-shield" title="Click to remove {{halfDamage}}HP."></i></button>
+        <button id="double-{{damage.tokenId}}" style="width: 22px; height:22px; font-size:10px;line-height:1px">
+          <i class="fas fa-user-injured" title="Click to remove {{doubleDamage}}HP."></i></button>
+        <button id="heal-{{damage.tokenId}}" style="width: 22px; height:22px; font-size:10px;line-height:1px">
+          <i class="fas fa-user-plus" title="Click to add {{totalDamage}} HP."></i></button>
+      </div>
+    </div>
+
+    <div>
+      {{#if oldTempHP}}
+      ({{damage.oldHP}}:{{damage.oldTempHP}}) {{damage.dmgSign}} {{absDamage}}[{{damage.totalDamage}}]
+      ->({{damage.newHP}}:{{damage.newTempHP}})
+      {{else}}
+      {{damage.oldHP}} {{damage.dmgSign}} {{absDamage}}[{{damage.totalDamage}}] -> {{damage.newHP}}
+      {{/if}}
+    </div>
+    <div>{{damage.di}}</div>
+    <div>{{damage.dr}}</div>
+    <div>{{damage.dv}}</div>
+  </div>
+  {{/each}}
+  {{#if needsButtonAll}}
+  <div class="flexrow 3">
+    <div>
+      <strong>ALL</strong>
+      <button id="all-reverse" style="width: 25px; height:25px; font-size:10px;line-height:1px">
+        <i class="fas fa-user-plus" title="Click to reverse updated HP to all targets."></i></button>
+      <button id="all-apply" style="width: 25px; height:25px; font-size:10px;line-height:1px">
+        <i class="fas fa-user-minus" title="Click to apply updated HP to all targets."></i></button>
+    </div>
+  </div>
+  {{/if}}
+</div>

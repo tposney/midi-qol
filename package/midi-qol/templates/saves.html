@@ -1,0 +1,26 @@
+<div>
+  <div class="midi-qol-nobox midi-qol-saves-display">
+    <div class="midi-qol-bigger-text"><span>{{noDamage}}</span></div>
+    <div class="midi-qol-bigger-text"><span>{{fullDamage}}</span></div>
+    {{#each saves as |save iid|}}
+    <div class="midi-qol-flex-container">
+      <div class="midi-qol-target-npc-GM midi-qol-target-name" id={{save.id}}> {{save.gmName}}</div>
+      <div class="midi-qol-target-npc-Player midi-qol-target-name" id={{save.id}}> {{save.playerName}}</div>
+
+      <div>
+        {{save.saveString}}
+        <div class="midi-qol-tooltip midi-qol-save-total">: {{save.rollTotal}}
+          <div class="midi-qol-tooltiptext midi-qol-save-tooltip" style="text-align: left;">
+            <div>{{save.rollDetail.formula}}</div>
+            <div>{{save.rollDetail.result}}</div>
+
+          </div>
+        </div>
+
+        {{adv}}
+      </div>
+      <div><img src="{{save.img}}" height="30" style="border:0px"></div>
+    </div>
+    {{/each}}
+  </div>
+</div>

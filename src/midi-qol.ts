@@ -128,6 +128,8 @@ Hooks.once('setup', function () {
     //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.damageResistanceTypes["silver"] = i18n("midi-qol.nonSilverPhysical");
     //@ts-ignore CONFIG.DND5E
+    CONFIG.DND5E.damageResistanceTypes["adamant"] = i18n("midi-qol.nonAdamantinePhysical");
+    //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
     //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.damageResistanceTypes["healing"] = CONFIG.DND5E.healingTypes.healing;
@@ -146,6 +148,8 @@ Hooks.once('setup', function () {
     CONFIG.DND5E.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
     //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.damageResistanceTypes["silver"] = i18n("midi-qol.nonSilverPhysical");
+    //@ts-ignore CONFIG.DND5E
+    CONFIG.DND5E.damageResistanceTypes["adamant"] = i18n("midi-qol.nonAdamantinePhysical");
     //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
     //@ts-ignore CONFIG.DND5E
@@ -400,6 +404,7 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.DR.all`);
     midiFlags.push(`flags.midi-qol.DR.non-magical`);
     midiFlags.push(`flags.midi-qol.DR.non-silver`);
+    midiFlags.push(`flags.midi-qol.DR.non-adamant`);
     midiFlags.push(`flags.midi-qol.DR.non-physical`);
 
     midiFlags.push(`flags.midi-qol.DR.final`);

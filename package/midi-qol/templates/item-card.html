@@ -1,0 +1,102 @@
+<div class="dnd5e chat-card item-card midi-qol-item-card" 
+  data-actor-id="{{actor.id}}" data-item-id="{{item._id}}"
+  data-actor-uuid="{{actor.uuid}}" data-item-uuid="{{itemUuid}}"
+  {{#if tokenId}}data-token-id="{{tokenId}}" {{/if}} 
+  {{#if tokenUuid}}data-token-uuid="{{tokenUuid}}" {{/if}} 
+  {{#if isSpell}}data-spell-level="{{item.data.level}}" {{/if}}
+  {{#if isPower}}data-power-level="{{item.data.level}}" {{/if}}>
+  
+  <header class="card-header flexrow">
+    <img src="{{item.img}}" title="{{item.name}}" width="36" height="36" />
+    <h3 class="item-name">{{item.name}}</h3>
+  </header>
+
+  <div class="card-content">
+    {{#unless hideItemDetails}}
+    {{{data.description.value}}}
+    {{#if data.materials.value}}
+    <p><strong>{{ localize "DND5E.RequiredMaterials" }}.</strong> {{data.materials.value}}</p>
+    {{/if}}
+    {{/unless}}
+  </div>
+
+  <div class="card-buttons">
+    {{#if hasAttack}}<button data-action="attack">{{ localize "DND5E.Attack" }}</button>{{/if}}
+
+    {{#if condensed}}
+    <div class="flexrow 2">
+      <div class="midi-qol-attack-roll">
+        <div class="end-midi-qol-attack-roll"></div>
+      </div>
+      <div class="midi-qol-damage-roll">
+        <div class="end-midi-qol-damage-roll"></div>
+      </div>
+    </div>
+    {{else}}
+    <div>
+      <div class="flexrow 1">
+        <div class="midi-qol-attack-roll"><div class="end-midi-qol-attack-roll"></div>
+        </div>
+      </div>
+      <div class="flexrow 1">
+        <div class="midi-qol-damage-roll"><div class="end-midi-qol-damage-roll"></div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+    <div class="flexrow 1">
+      <div class="midi-qol-bonus-roll"><div class="end-midi-qol-bonus-roll"></div>
+      </div>
+    </div>
+    <div class="flexrow 1">
+      <div class="midi-qol-other-roll"><div class="end-midi-qol-other-roll"></div>
+      </div>
+    </div>
+
+    {{#if hasDamage}}
+    <button data-action="damage">
+      {{ dmgBtnText}}
+    </button>
+    {{/if}}
+
+    {{#if isVersatile}}
+    <button data-action="versatile">{{ versaBtnText }}</button>
+    {{/if}}
+
+    {{#if hasSave}}
+    <button data-action="save" data-ability="{{data.save.ability}}">
+      {{ localize "DND5E.SavingThrow" }} {{labels.save}}
+    </button>
+    {{/if}}
+
+    {{#if data.formula}}
+    <button data-action="formula">{{ localize "DND5E.OtherFormula"}}</button>
+    {{/if}}
+
+    {{#if hasAreaTarget}}
+    <button data-action="placeTemplate">{{ localize "DND5E.PlaceTemplate" }}</button>
+    {{/if}}
+
+    {{#if isTool}}
+    <button data-action="toolCheck" data-ability="{{data.ability.value}}">{{ localize "DND5E.Use" }} {{item.name}}</button>
+    {{/if}}
+    
+    {{#if hasEffects}}
+    <button data-action="applyEffects">{{ localize "midi-qol.ApplyEffects" }}</button>
+    {{/if}}
+    {{#if isMerge}}
+    <div class="midi-qol-hits-display"><div class="end-midi-qol-hits-display"></div>
+    </div>
+    <div class="midi-qol-saves-display"><div class="end-midi-qol-saves-display"></div>
+    </div>
+    {{/if}}
+  </div>
+
+  <footer class="card-footer">
+    {{#if showProperties}}
+    {{#each data.properties}}
+    <span>{{this}}</span>
+    {{/each}}
+    {{/if}}
+  </footer>
+</div>
