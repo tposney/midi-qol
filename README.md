@@ -23,6 +23,15 @@ Some of the items require creating a DamageBonusMacro, make sure that is enabled
 ## How do I write macros for this module?
 Have a look at [Notes for Macro writers](#notes-for-macro-writers) which I try to update if new things occur.
 
+## MidiQOL sample items compendium
+midi-qol is an automation tool that is meant to make it possible to automate some/many facets of your game. It is not a library of items that you can plug and play into your game, there are other modules for that like the excellent **DAE SRD** and **Midi SRD**, and many great macro modules that play well with midi-qol (too many for me to list and I'm sure I don't know them all).
+
+Similarly there are some excellent tools for animation effects, beyond those supported directly by dae/midi. I don't know them all and I have no doubt that there are some gems that I simply have not discovered, but do use Automated Animations in my game as well as Token Magic FX.
+
+midi-qol combined with DAE has lots of ways for you to implement items/spells/features you might want. Sometimes that will require writing macros, and sometimes not.
+
+Over time I have come up with some items that I use in my game, which I think others might find useful, or which I think might have some interesting ideas for other to develop their own items. I have created a sample items compendium of these which you are free to use in any way you want. The warning is that whilst they work in my game, they may not in yours and there is no certification that they are fit for purpose. Feel free to try them and if they work for you great, if not make them better and share with the community - I am always happy to receive suggestions for inclusion. I try to add a version number to items to indicate the midi-qol version in which they were updated. You don't have to keep the version number in your game.
+
 [TOC]
 
 # Changes in dnd5e 1.5:
@@ -35,37 +44,39 @@ You can make most of the changes that midi-qol supports for critical hits via th
 https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
 
 # Symbiotic Modules
-I don't spend a lot of time examining all of the modules that are written (and there are hundreds) so it is almost certain that other modules can substitute for the Highly Recommended/Good to Have just as well. If your favorite module is not in the list, it probably means I just don't know about it.
+I don't spend a lot of time examining all of the modules that are written (and there are hundreds) so it is almost certain that other modules can substitute for the Highly Recommended/Good to Have just as well. If your favorite module is not in the list, it probably means I just don't know about it, so don't take the absence of a module from this list as a negative - it simply reflects my ignorance.
 
 ## Required Modules
+You have to have these, period.
 * libwrapper
 * socketlib
 
 ## Almost Required
-You can survive without these but midi pretty much assumes they are installed.
+You can probably survive without these but midi pretty much assumes they are installed.
 * Advanced Macros
 * DAE
 * Times-up - for automated expiry of effects. If you don't use combat expriy then you can use about-time instead.
 * Simple calendar - to manage the game clock
+* Item Macros - many of the sample items I include have itemMacros on them, without the module you can't examine the macro.
 
 ## Highly Recommended
 * Either LMRTFY or Monks Token Bar (or both) to manage saving throws
 * Either Convenient Effects or Combat Utility Belt (or both)
-* Item Macros
 * DAE SRD/Midi SRD (elots of prebuilt items)
-* Token Magic - lets you add some spiffye graphical effects to spells.
-* libChangeLogs - will show the midi change log when it changes
-* Smalltime - to make time advancement easy.
 * Active Auras - works well with midi/dae and some of the sample items require it.
-* Automated Animations - If you have the jb2a module this will automatically add lots of animations to spell/weapon effects.
+* Token Magic - lets you add some spiffye graphical effects to spells.
+* Smalltime - to make time advancement easy.
+* Automated Animations - If you have the jb2a module this will automatically add lots of anmations to spell/weapon effects.
+* libChangeLogs - will show the midi change log when it changes
+
 
 ## Good To Have
 * Active Token Lighting
 * levels - if you are doing anything with height.
 * levels - Volumetric Templates
 * dnd5e-helpers
-* Dice So Nice if you like 3d dice rolling pretty much the only choice.
-* Better Rolls if you don't like the default dnd attack/damage roll cards. Better Rolls is mostly compatible with midi-qol.
+* Dice So Nice, if you like 3d dice rolling it's pretty much the only choice.
+* Better Rolls if you don't like the default dnd attack/damage roll cards. Better Rolls is **mostly** compatible with midi-qol, but there are some wrinkles. I don't use the module so tend to rely on community reports for errors.
 
 # (In)Compatibilities? ##
 As already mentioned I don't look at lots of modules, so there will be others that do/don't work with midi. As they come to my attention I'll try and update the list.
@@ -74,10 +85,10 @@ As already mentioned I don't look at lots of modules, so there will be others th
 Midi generally works with dice so nice, but the interactions are more complicated with the merge card.
 
 ## Let Me Roll That For You
-Midi-qol can use Let Me Roll That For You for player/gm saving throws and is the preferred roller.
+Midi-qol can use Let Me Roll That For You for player/gm saving throws and is the preferred roller. There is a "feature" that LMRTFY returns the roll result to midi before the 3d dice have finished rolling, so you may see the saves display before the dice finsih doing their thing.
 
 ## Monks Token Bar
-Midi-qol can use Monk's Token Bar to roll saves. If using Monk's token bar flags.midi-qol.(dis)advantage.concentration and magic resistance won't work.
+Midi-qol can use Monk's Token Bar to roll saves. If using Monk's token bar flags.midi-qol.(dis)advantage.concentration and magic resistance won't work, but otherwise works well. If you set display the saving throw DC success/failure will be shown on the monks token bar.
 
 ## Convenient Effects
 Midi supports the application of Convenient Effects spell/item effects (configuration setting - Apply Convenient Effects) and matches those by name. For example, if you cast the spell Bless midi will see if there is a convenient effect "Bless" and apply it to any targets that were hit by the spell.
@@ -93,13 +104,13 @@ There is an additional check box available on the item sheet, for items that hav
 - Midi-qol will use levels volumetric template target calculations if installed.
 
 ## DF Quality of Life
-- Midi-qol does NOT implement the RAW Dnd5e template coverage, it uses the Foundry template coverage. DF Quality of Life implements the correct dnd5e template coverage, so you can disable midis auto area of effect targeting and use DF Quality of Life instead, but you won't get on the fly targeting.
+- Midi-qol does NOT implement the RAW Dnd5e template coverage, it uses the Foundry template coverage. DF Quality of Life implements the correct dnd5e template coverage, so you can disable midis auto area of effect targeting and use DF Quality of Life instead, but you won't get on the fly targeting updates.
 
 ## Furnace (deprecated for Foundry 0.8.x - Use Advanced Macros)
 If you intend to make use of any of the macro features in midi-qol you will need to install the Advanced Macros module.
 
 ## Better Rolls
-If you are using Better Rolls (which is a great module), midi-qol takes over once the hit/damage card is placed by Better Rolls. This means that resource consumption, template placement, critical/fumble, and  advantage/disadvantage determination are **all** handled by Better Rolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage, and calls active effects.  In particular, Better Rolls does not use any of the flags.midi-qol....   
+If you are using Better Rolls (which is a great module), midi-qol takes over once the hit/damage card is placed by Better Rolls. This means that resource consumption, template placement, critical/fumble determination are **all** handled by Better Rolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage, and calls active effects. When using Better rolls flags.midi-qol should be applied.
 
 ## Magic Items
 **(Thanks to @simone for his help)**
@@ -631,16 +642,19 @@ event.shiftKey: true => auto roll the attack roll
 * MinorQOL.doRoll and MinorQOL.applyTokenDamage remain supported.
 * MidiQOL.applyTokenDamage is exported.
 * If you have macros that depend on being called when the roll is complete, that is still supported, both "minor-qol.RollComplete" and "midi-qol.RollComplete" are called when the roll is finished. See also the onUse macro field which can be used to achieve similar results.
+* There is a function `MidiQOL.completeItemRoll(item, options)` that returns a promise you can await, which will do the entire midi-qol workflow for the item before resolving. This is useful if you want to roll and item and do everything without worrying about saving throws and so on.
 
 ## Midi-qol called Hooks
-Item and workflow are "live" so changes will affect subsequent actions. In particular preAttackRoll and preDamageRoll will affect the roll about to be done.  
-
-  * Hooks.call("midi-qol.preAttackRoll", item, workflow) - called immediately before the item attack roll is made. If the hook returns false, the roll is aborted. 
-  Hooks.callAll("midi-qol.AttackRollComplete", this) - Called after the attack roll is made and hits are checked, but before damage is rolled.
-  *  Hooks.call("midi-qol.preDamageRoll", item, workflow) - called immediately before the item damage roll is made. If the hook returns false, the roll is aborted.
-  * Hooks.callAll("midi-qol.preDamageRollComplete", this) - called before the damage roll processing starts        
-  * Hooks.callAll("midi-qol.damageRollComplete", this) - called after damage application is complete. The targets may not have their hit points updated when this call is made since the hit point update is farmed off to a gm client
-  *  Hooks.callAll("midi-qol.RollComplete", this);
+The passed workflow is "live" so changes will affect subsequent actions. In particular preAttackRoll and preDamageRoll will affect the roll about to be done.  
+  * Hooks.call("midi-qol.preambleComplete",workflow) - called after targeting (for AoE items) is complete. If the hook returns false the workflow is aborted.
+  * Hooks.call("midi-qol.preAttackRoll", workflow) - called immediately before the item attack roll is made. If the hook returns false, the roll is aborted. 
+  * Hooks.callAll("midi-qol.AttackRollComplete", worfklow) - Called after the attack roll is made and hits are checked, but before damage is rolled.
+  * Hookls.callAll("midi-qol.preCheckHits", workflow) - called before checking hits.
+  *  Hooks.call("midi-qol.preDamageRoll", workflow) - called immediately before the item damage roll is made. If the hook returns false, the roll is aborted.
+  * Hooks.callAll("midi-qol.preDamageRollComplete", worfklow) - called before the damage roll processing starts        
+  * Hooks.callAll("midi-qol.damageRollComplete", worfklow) - called after damage application is complete. The targets may not have their hit points updated when this call is made since the hit point update is farmed off to a gm client
+  * Hooks.call("midi-qol.preApplyDynamicEffects", workflow) - called before applying active effects. If the call returns false the rest of the workflow is marked complete.
+  *  Hooks.callAll("midi-qol.RollComplete", worfklow); - called after the workflow is completed.
 
 * midi-qol supports a TrapWorkflow, triggered by
 ```
@@ -664,7 +678,7 @@ if (trapToken) await trapToken.update({"hidden" : true});
 ```
 
 * midi-qol supports a DamageOnlyWorkflow to support items/spells with special damage rolls. Divine Smite is a good example, the damage depends on whether the target is a fiend/undead. This is my implementation, which assumes it is activated via midi-qol's onUse macro field.
-I have created a spell called "Divine Smite", with no saving throw or damage or attack, (although you can have such things) which has an onUse macro set to Divine Smite. (see the onUse macro details below). The total damage field passed in is only used in the final display on the apply damage card, the individual damage elements are all taken from the damageRoll.
+I have created a spell called "Divine Smite", with no saving throw or damage or attack, (although you can have such things) which has an onUse macro set to Divine Smite, included in the sample items compendium. (see the onUse macro details below). The total damage field passed in is only used in the final display on the apply damage card, the individual damage elements are all taken from the damageRoll.
 
 ```
 let target = await fromUuid(args[0].hitTargetUuids[0] ?? "");
@@ -682,6 +696,8 @@ new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", target
 
 Flavor is only used if you are not using combo cards.  
 The args[0].itemCardId passes the id of the item card that caused the macro to be rolled, i.e. for divine smite the ItemCard of the Divine Smite spell/feature. By passing this to the  DamageOnlyWorkflow the damage roll can be added to the ItemCard making the whole effect look like an item damage roll (almost). 
+
+The itemCardId field is used to append the damage result to the item card that rolled the onUse macro (in this case the Divine Smite spell).
 
 You can use this feature to roll custom damage via a macro for any item - just leave the item damage blank and roll the damage in a macro and then pass the itemCardId to the DamageOnlyWorkflow.
 
