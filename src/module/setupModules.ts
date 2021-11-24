@@ -89,6 +89,18 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.8.86
+  * Change to coloured borders. Now messages are coloured accoring to the user that created it.
+  * Made chat card border coloring a bit more agressive - it should now color most everthing.
+  * New template targeting setting - "Use DF QOL". DfReds Qol has support for RAW template targeting, so by using this setting you can finally get templates that work "correctly" which should resolve long standing frustrations with midi-qol's template targeting. This also resolves an issue, that if DF QoL template targeting is enabled it would "fight" with midi and the winner would be essentially random.
+  * Various fixes for roll other damage spell settings.
+  * Added an option to create a chat message when a player is prompted for a reaction. After the reaction is resolved the chat message is removed.
+  * Midi/dae/times-up will now remove Sequencer permanent effects created by Automated Animation when the initiating effect is removed. The midi sample spirit guardians is an example.
+  * Fix for drop down lists not populating in 0.9 dev 2. Midi seems to work fine in 9 dev 2.
+  * Automated Animations permanent effects, if created via a midi-qol effect will be auto removed on spell expiration. Requires a DAE and times-up update as well.
+  * Note - includes code for pre-release ddb-gamelog support which is not yet operational.
+  * MidiQOL.selectTargetsForTemplate now returns an array of targeted tokens.
+  
   0.8.85
   * Allow items to be set to not provoke a reaction (set item.data.flags.midi-qol.noProvokeReaction to true). No UI for this yet.
   * Fix for silvered weapons check causing problems if there is no item in the workflow.
