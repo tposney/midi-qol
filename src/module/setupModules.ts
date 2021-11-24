@@ -19,7 +19,8 @@ let modules = {"about-time": "0.0",
               "dfreds-convenient-effects": "1.8.0",
               "levels": "1.7.0",
               "levelsvolumetrictemplates": "0.0.0",
-              "lib-changelogs": "0.0.0"
+              "lib-changelogs": "0.0.0",
+              "df-qol": "1.6.0"
             };
 export let installedModules = new Map();
 

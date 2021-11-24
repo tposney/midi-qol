@@ -62,13 +62,14 @@ You can probably survive without these but midi pretty much assumes they are ins
 ## Highly Recommended
 * Either LMRTFY or Monks Token Bar (or both) to manage saving throws
 * Either Convenient Effects or Combat Utility Belt (or both)
-* DAE SRD/Midi SRD (elots of prebuilt items)
+* DAE SRD/Midi SRD (lots of prebuilt items)
 * Active Auras - works well with midi/dae and some of the sample items require it.
-* Token Magic - lets you add some spiffye graphical effects to spells.
+* Token Magic - lets you add some spiffy graphical effects to spells.
 * Smalltime - to make time advancement easy.
 * Automated Animations - If you have the jb2a module this will automatically add lots of anmations to spell/weapon effects.
-* libChangeLogs - will show the midi change log when it changes
-
+* libChangeLogs - will show the midi change log when it changes.
+* Dfreds QoL. If you want template targeting to work as written in the rules, install this and enable it for template targeting.
+* Warpgate. Some of the sample items use warpgate to summon tokens (Flaming Sphere, Spiritual Weapon).
 
 ## Good To Have
 * Active Token Lighting
@@ -77,6 +78,7 @@ You can probably survive without these but midi pretty much assumes they are ins
 * dnd5e-helpers
 * Dice So Nice, if you like 3d dice rolling it's pretty much the only choice.
 * Better Rolls if you don't like the default dnd attack/damage roll cards. Better Rolls is **mostly** compatible with midi-qol, but there are some wrinkles. I don't use the module so tend to rely on community reports for errors.
+
 
 # (In)Compatibilities? ##
 As already mentioned I don't look at lots of modules, so there will be others that do/don't work with midi. As they come to my attention I'll try and update the list.
@@ -90,21 +92,26 @@ Midi-qol can use Let Me Roll That For You for player/gm saving throws and is the
 ## Monks Token Bar
 Midi-qol can use Monk's Token Bar to roll saves. If using Monk's token bar flags.midi-qol.(dis)advantage.concentration and magic resistance won't work, but otherwise works well. If you set display the saving throw DC success/failure will be shown on the monks token bar.
 
+## Dfreds Quality of Life  
+Midi supports the foundry template targeting, DF Qol has support for rules as written template targeting behaviour. There is an option in midi's AoE auto target to use DF QoL's template targeting, which disables midi's internal template targeting. You should only enable one sort of template targeting since mid/df-qol will fight over who gets to do the targeting which will lead to confusing results.
+
+As of version 1.6.0, DF QoL does not seem to have a wall blocking option, so if that is important you'll need to use midi's targeting.
+
 ## Convenient Effects
 Midi supports the application of Convenient Effects spell/item effects (configuration setting - Apply Convenient Effects) and matches those by name. For example, if you cast the spell Bless midi will see if there is a convenient effect "Bless" and apply it to any targets that were hit by the spell.
 
-If you have apply convenient effects set and use items from the DAE SRD/Midi SRD modules, **you will get a double up of the effect**. You need to choose how you want the item to behave, if using convenient effects, delete the DAE SRD effects. The double up problem is intentional, since you might wish to augment the Concenient Effect definition with your own extra effects on the item.
+If you have apply convenient effects set and use items from the DAE SRD/Midi SRD modules, **you will get a double up of the effect**. You need to choose how you want the item to behave, if using convenient effects, delete the DAE SRD effects. The double up problem is intentional, since you might wish to augment the Concenient Effect definition with your own extra effects on the item. 
 
-There is an additional check box available on the item sheet, for items that have corresponding convenient effects. The check box reverses the apply convenient effects setting for that item. If you have "auto apply convenient effect" set to true, the check box will disable the auto applicaiton for that one item. Similarly, if you have "auto apply convenient effect" set to false, the check box will enable the auto applicaiton for that one item. 
+If you generally use DAE SRD/Midi SRD or hand crafted effects I suggest setting apply convenient effects to false and then enabling convenient effects on an item by item basis (using the setting below).
+If you generally use convenient effects you would disable the convenient effect for the items that you want to use from DAE SRD/Midi SRD or hand crafted.
+
+There is an additional check box available on the item sheet, for items that have corresponding convenient effects. The check box reverses the "apply convenient effects setting" for that item. If you have "auto apply convenient effect" set to true, the check box will disable the auto applicaiton for that one item. Similarly, if you have "auto apply convenient effect" set to false, the check box will enable the auto applicaiton for that one item. 
 
 ## levels
 - Midi-qol will use the levels wall collision detection for it's distance calculations/LOS calculations.
 
 ## levelVolumeticTemplates
 - Midi-qol will use levels volumetric template target calculations if installed.
-
-## DF Quality of Life
-- Midi-qol does NOT implement the RAW Dnd5e template coverage, it uses the Foundry template coverage. DF Quality of Life implements the correct dnd5e template coverage, so you can disable midis auto area of effect targeting and use DF Quality of Life instead, but you won't get on the fly targeting updates.
 
 ## Furnace (deprecated for Foundry 0.8.x - Use Advanced Macros)
 If you intend to make use of any of the macro features in midi-qol you will need to install the Advanced Macros module.
@@ -152,6 +159,22 @@ The settings are per player so each player needs to change the setting to disabl
 ## Dnd5e-helpers
 Midi-qol has configuration options (in the optional rules section) to incorporate the AC bonus calculated by dnd5e-helpers. There are two settings dnd5e-helpers which allows an attack if any of the 4 corners of the target are visible and dnd5e-helpers+AC which will include the AC bonus from armor when calculating a hit. The bonus AC on the target will be displayed in the to hit card.
 
+## Warpgate
+Some items in the midi sample items compendium use warpgate and won't function otherwise. It is also a very useful module for handling creating tokens on the canvas
+
+## DDB Game Log.
+DDG Game Log sends rolls from dnd beyond to foundry. If DDB Game Log is enabled in the optional settings section of midi, making an attack roll (or damage roll if there is not attack roll) will trigger a midi-qol workflow for the attack. Hits will be checked, saving throws asked for and damage applied as per the rest of the midi-qol settings, except that midi will wait for dnd beyond and will resolve when the dnd beyond roll is made.
+
+You can run mixed games with some/all players/monsters on dnd beyond and some on foundry only. It's really up to you. 
+
+Things to keep in mind:
+* If you want saving throws to be made on dnd beyond then make sure to se the midi saving throw setting to Chat Message. DND Beyond integration will work with LMRTFY/Monks Token **but** the roll will be prompted for and rolled in foundry **not** DND Beyond.
+* When casting an AoE spell midi will target in foundry, auto starting the place template action (as if you had cast the spell in foundry).
+* Damage/effects are applied in foundry only, no updates of any sort are passed back to DND Beyond.
+* DnD Beyond does not apply any foundry in game effects made to actors, so attack, damage and saving throws will not use any foundry local data, like short term damage bonuses.
+* Midi will look only at the foundry data, so it is up to you to keep things synchronised betwee the two.
+* Effects that increase attack bonus/damage dealt (when applied in foundry) will have no effect on attack/damage rolls made on DND Beyond. Midi **will** take into account effects that change AC (when checking hits), damage resistance etc when applying damage.
+
 # Short Guide to configuration settings
 The heading says short, but it really isn't.
 
@@ -184,7 +207,7 @@ If you assign a key multiple meanings the behaviour is going to be confusing at 
 ## Targeting
 Almost everywhere midi-qol uses the **targeted** tokens to apply hits/saves/damage not **selected** tokens. Targeted tokens have 4 arrows pointing at the token and selected tokens have a box around them.
 
-* **Auto target on template draw** If a spell/feature has an area effect template then enabling this setting will auto target (for later damage application) all tokens inside the template once placed. Also, the roll will not progress (i.e. roll saves or apply damage) until the template is placed. If "walls-block" is selected then any wall between the template origin and the token will block the targeting.
+* **Auto target on template draw** If a spell/feature has an area effect template then enabling this setting will auto target (for later damage application) all tokens inside the template once placed. Also, the roll will not progress (i.e. roll saves or apply damage) until the template is placed. If "walls-block" is selected then any wall between the template origin and the token will block the targeting. Thre is an additional setting "Use DF QoL" which requires the DF-QOL module to be installed and active
 * **Auto target for ranged spells/attacks** If the item specifies a ranged target with a target type of creature/enemy/ally then all tokens within range of the caster will be auto targeted when the effect is cast. “enemy/ally” are enemies/allies of the caster. 
 * **Auto roll attack**, **Auto roll damage** and **Auto fast forward rolls**. The auto roll attack and damage settings tell midi-qol to start an attack roll or damage roll if there is one. The auto fast forward settings determine if the advantage/disadvantage and/or critical/normal dialogs are shown or suppressed. Damage can be set to “Attack Hits”, which will roll damage only if the attack roll was sufficient to hit the target. These are settable on the GM/Player tabs.
 * **Require targets to be selected before rolling** It is incredibly common in my games that players forget to target before starting the roll. This setting will not allow them to roll if they have not selected a target and one is needed. (Auto-target spells - like a fireball - are not affected by this setting.)
@@ -247,6 +270,14 @@ midi will evaluate the activation condition as an expression, providing, the act
     "@target.details.type.value".includes("dragon")
 ```
 will only roll if the target has a type of dragon. 
+
+Specifically midi will populate the expression data with:
+* casting actor, anything from actor.data.data (direct via @field, e.g. @attributes...),
+* casting actor, anything from from actor.data.flags (via @flags....),
+* anything from item.data.data (via @item.damage.),
+* anything from the target.actor.data.data, via (@target.abilities etc),
+* anything from the workflow itself (via @workflow.attackRoll etc).
+
 **An empty activation condition** will evaluate as true. If you don't want a specfic weapon to roll Other Damage set Activation Condition false.
 
 You can add the above conditon to the SRD slayer items to make the bonus damage automated based on target type.

@@ -1,9 +1,12 @@
 import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats, debugEnabled, MQdefaultDamageType } from "../midi-qol.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
-import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
-import { nsaFlag, coloredBorders,  addChatDamageButtons, configSettings, forceHideRoll } from "./settings.js";
-import { createDamageList, getTraitMult, calculateDamage,  MQfromUuid } from "./utils.js";
-import { shouldRollOtherDamage } from "./itemhandling.js";
+import { BetterRollsWorkflow, DDBGameLogWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
+import { nsaFlag, coloredBorders, addChatDamageButtons, configSettings, forceHideRoll } from "./settings.js";
+import { createDamageList, getTraitMult, calculateDamage, MQfromUuid, MQfromActorUuid, playerFor, playerForActor } from "./utils.js";
+import { shouldRollOtherDamage, showItemCard } from "./itemhandling.js";
+import { config } from "simple-peer";
+import { reduceEachTrailingCommentRange } from "typescript";
+import { socketlibSocket } from "./GMAction.js";
 export const MAESTRO_MODULE_NAME = "maestro";
 export const MODULE_LABEL = "Maestro";
 
@@ -215,13 +218,9 @@ export let colorChatMessageHandler = (message, html, data) => {
   let userId = message.data.user;
   let actor = game.actors?.get(actorId);
   let user = game.users?.get(userId);
-  if (!user || !actor) return true;
-  //@ts-ignore permission is actually not a boolean
-  if (actor.data.permission[userId] !== CONST.ENTITY_PERMISSIONS.OWNER && !actor.data.permission["default"] !== CONST.ENTITY_PERMISSIONS.OWNER && !user.isGM) {
-    user = game.users?.find(p => p.isGM && p.active)
-    if (!user) return true;
-  }
 
+  if (actor) user = playerForActor(actor);
+  if (!user) return true;
   //@ts-ignore .color not defined
   html[0].style.borderColor = user.data.color;
   // const oldColor = html[0].children[0].children[0].style.backgroundColor;
@@ -256,7 +255,7 @@ let _onTargetHover = (event) => {
 
   event.preventDefault();
   if (!canvas?.scene?.data.active) return;
-  const token: Token | undefined= canvas.tokens?.get(event.currentTarget.id);
+  const token: Token | undefined = canvas.tokens?.get(event.currentTarget.id);
   if (token?.isVisible) {
     //@ts-ignore _controlled, _onHoverIn
     if (!token?._controlled) token._onHoverIn(event);
@@ -389,23 +388,23 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-other-roll").find(".dice-formula").remove();
       html.find(".midi-qol-bonus-roll").find(".dice-tooltip").remove();
       html.find(".midi-qol-bonus-roll").find(".dice-formula").remove();
-/* TODO remove this pending feedback
-      html.find(".midi-qol-damge-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
-      html.find(".midi-qol-other-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
-      html.find(".midi-qol-bonus-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
-*/
+      /* TODO remove this pending feedback
+            html.find(".midi-qol-damge-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+            html.find(".midi-qol-other-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+            html.find(".midi-qol-bonus-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      */
     } else if (d20AttackRoll && configSettings.hideRollDetails === "hitDamage") {
       const hitFlag = getProperty(message.data.flags, "midi-qol.isHit");
-        const hitString = hitFlag === undefined ? "" : hitFlag ? i18n("midi-qol.hits") : i18n("midi-qol.misses");
-        html.find(".midi-qol-attack-roll .dice-total").text(`${hitString}`);
-        html.find(".dice-tooltip").remove();
-        html.find(".dice-formula").remove();
-        html.find(".midi-qol-damage-roll").find(".dice-tooltip").remove();
-        html.find(".midi-qol-damage-roll").find(".dice-formula").remove();
-        html.find(".midi-qol-other-roll").find(".dice-tooltip").remove();
-        html.find(".midi-qol-other-roll").find(".dice-formula").remove();
-        html.find(".midi-qol-bonus-roll").find(".dice-tooltip").remove();
-        html.find(".midi-qol-bonus-roll").find(".dice-formula").remove();
+      const hitString = hitFlag === undefined ? "" : hitFlag ? i18n("midi-qol.hits") : i18n("midi-qol.misses");
+      html.find(".midi-qol-attack-roll .dice-total").text(`${hitString}`);
+      html.find(".dice-tooltip").remove();
+      html.find(".dice-formula").remove();
+      html.find(".midi-qol-damage-roll").find(".dice-tooltip").remove();
+      html.find(".midi-qol-damage-roll").find(".dice-formula").remove();
+      html.find(".midi-qol-other-roll").find(".dice-tooltip").remove();
+      html.find(".midi-qol-other-roll").find(".dice-formula").remove();
+      html.find(".midi-qol-bonus-roll").find(".dice-tooltip").remove();
+      html.find(".midi-qol-bonus-roll").find(".dice-formula").remove();
     } else if (configSettings.hideRollDetails === "all" || message.data.blind) {
       // html.find(".midi-qol-attack-roll .dice-total").text(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       html.find(".midi-qol-attack-roll .dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
@@ -482,7 +481,7 @@ export let chatDamageButtons = (message, html, data) => {
     // find the item => workflow => damageList, totalDamage
     const defaultDamageType = (item?.data.data.damage.parts[0] && item?.data.data.damage?.parts[0][1]) ?? "bludgeoning";
     // TODO fix this for versatile damage
-    const damageList = createDamageList({roll: message.roll, item, versatile: false, defaultType: defaultDamageType});
+    const damageList = createDamageList({ roll: message.roll, item, versatile: false, defaultType: defaultDamageType });
     const totalDamage = message.roll.total;
     addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemUuid, "damage", ".dice-total", "position:relative; top:5px; color:blue");
   } else if (getProperty(message.data, "flags.midi-qol.damageDetail")) {
@@ -556,8 +555,11 @@ export function processItemCardCreation(message, user) {
   if (user === game.user?.id && midiFlags?.workflowId) { // check to see if it is a workflow
     const workflow = Workflow.getWorkflow(midiFlags.workflowId);
     if (!workflow) return;
-    if (!workflow.itemCardId && !["TrapWorkflow"].includes(workflow.workflowType)) {
+    if (!workflow.itemCardId) {
       workflow.itemCardId = message.id;
+    }
+    if (workflow.kickStart) {
+      workflow.kickStart = false;
       workflow.next(WORKFLOWSTATES.NONE);
     }
   }
@@ -631,3 +633,132 @@ export async function onChatCardAction(event) {
   button.disabled = false;
 }
 
+export function ddbglPendingFired(data) {
+  let { sceneId, tokenId, actorId, itemId, actionType } = data;
+  if (!itemId || !["attack", "damage"].includes(actionType)) {
+    error("DDB Game Log - no item/action for pending roll"); return
+  }
+  // const tokenUuid = `Scene.${sceneId??0}.Token.${tokenId??0}`;
+  const token = MQfromUuid(`Scene.${sceneId??0}.Token.${tokenId??0}`);
+  const actor = token?.actor ?? game.actors?.get(actorId ?? "");
+  if (!actor) {
+    warn(" ddb-game-log hook could not find actor");
+    return;
+  }
+  // find the player who controls the charcter.
+  let player;
+  if (token) {
+    player = playerFor(token);
+  } else {
+    player = game.users?.players.find(p => p.active && actor?.data.permission[p.id ?? ""] === CONST.ENTITY_PERMISSIONS.OWNER)
+  }
+  if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
+  if (player?.id !== game.user?.id) return;
+
+  let item = actor.items.get(itemId);
+  if (!item) {
+    warn(` ddb-game-log - hook could not find item ${itemId} on actor ${actor.name}`);
+    return;
+  }
+
+  let workflow: Workflow | undefined = DDBGameLogWorkflow.get(item.uuid);
+  if (actionType === "attack") workflow = undefined;
+  if (actionType === "damage" && item.hasAttack && !workflow) {
+    warn(` ddb-game-log damage roll wihtout workflow being started ${actor.name} using ${item.name}`);
+    return;
+  }
+  // if (workflow?.currentState !== WORKFLOWSTATES.WAITFORATTACKROLL) workflow = undefined;
+
+  if (!workflow) {
+    const speaker = {
+      scene: sceneId,
+      token: tokenId,
+      actor: actorId,
+      alias: token?.name ?? actor.name
+    }
+    //@ts-ignore
+    workflow = new DDBGameLogWorkflow(actor, item, speaker, game.user.targets, {});
+    showItemCard.bind(item)(false, workflow, false, true);
+    return;
+  }
+
+}
+export function ddbglPendingHook(data) { // need to propagate this to all players.
+  if (!configSettings.enableddbGL) return;
+  socketlibSocket.executeForEveryone("ddbglPendingFired", data);
+}
+
+export function processCreateDDBGLMessages(message: ChatMessage, options: any, user: string) {
+  if (!configSettings.enableddbGL) return;
+  const flags: any = message.data.flags;
+  if (!flags || !flags["ddb-game-log"] || !game.user) return;
+  const ddbGLFlags: any = flags["ddb-game-log"];
+  if (!ddbGLFlags || ddbGLFlags.pending) return;
+  // let sceneId, tokenId, actorId, itemId;
+  //@ts-ignore
+  if (!(["attack", "damage"].includes(flags.dnd5e?.roll?.type))) return;
+  const itemId = flags.dnd5e?.roll?.itemId;
+  if (!itemId) { error("Could not find item for fulfilled roll"); return }
+  const token = MQfromUuid(`Scene.${message.data.speaker.scene}.Token.${message.data.speaker.token}`);
+  const actor = token.actor ?? game.actors?.get(message.data.speaker.actor ?? "");
+  if (!actor) {
+    error("ddb-game-log could not find actor for roll");
+    return;
+  }
+  // find the player who controls the charcter.
+  let player;
+  if (token) {
+    player = playerFor(token);
+  } else {
+    player = game.users?.players.find(p => p.active && actor?.data.permission[p.id ?? ""] === CONST.ENTITY_PERMISSIONS.OWNER)
+  }
+  if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
+  if (player?.id !== game.user?.id) return;
+
+  const item = actor.items.get(itemId);
+  if (!item) {
+    error(`ddb-game-log roll could not find item ${flags.dnd5e.roll.itemId} on actor ${actor.name}`);
+    return;
+  }
+
+  let workflow: Workflow | undefined = DDBGameLogWorkflow.get(item.uuid);
+  if (!workflow && flags.dnd5e.roll.type === "damage" && item.hasAttack && ["rwak", "mwak"].includes(item.data.actionType)) {
+    warn(`ddb-game-log roll damage roll wihtout workflow being started ${actor.name} using ${item.name}`);
+    return;
+  }
+  if (!workflow) {
+    error(`ddb-game-log roll no workflow for ${item.name}`)
+    return;
+  }
+  if (flags.dnd5e.roll.type === "attack") {
+    workflow.needItemCard = false;
+    workflow.attackRoll = message.roll ?? undefined;
+    workflow.attackTotal = message.roll?.total ?? 0;
+    workflow.attackRollHTML = message.data.content;
+    workflow.attackRolled = true;
+    if (workflow.currentState === WORKFLOWSTATES.WAITFORATTACKROLL) {
+      // the workflow is already waiting for us - toggle attack roll complete and restart the workflow
+      workflow.next(WORKFLOWSTATES.WAITFORATTACKROLL);
+    }
+  }
+
+  if (flags.dnd5e.roll.type === "damage") {
+    workflow.needItemCard = false;
+    workflow.attackRolled = true;
+    if (!workflow.damageRolled) {
+      workflow.damageRoll = message.roll ?? undefined;
+      workflow.damageTotal = message.roll?.total ?? 0;
+      workflow.damageRollHTML = message.data.content;
+    } else if (workflow.needsOtherDamage) {
+      workflow.otherDamageRoll = message.roll ?? undefined;
+      workflow.otherDamageTotal = message.roll?.total ?? 0;
+      workflow.damageRollHTML = message.data.content;
+      workflow.needsOtherDamage = false;
+    }
+    workflow.damageRolled = true;
+    if (workflow.currentState === WORKFLOWSTATES.WAITFORDAMAGEROLL) {
+      // the workflow is already waiting for us - toggle attack roll complete and restart the workflow
+      workflow.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
+    }
+  }
+}

@@ -255,12 +255,19 @@
             </select>
           </div>
 
+
           <div class="form-group">
             <label>{{localize "midi-qol.ReactionTimeout.Name"}}</label>
             <input type="Number" name="reactionTimeout" value="{{configSettings.reactionTimeout}}"
               data-dtype="Number" />
           </div>
           <div class="midi-qol-faint">{{localize "midi-qol.ReactionTimeout.Hint"}}</div>
+
+          <div class="form-group ShowReactionChatMessage">
+            <label>{{localize "midi-qol.ShowReactionChatMessage.Name"}}</label>
+            <input id="showReactionChatMessage" type="checkbox" name="showReactionChatMessage" data-dtype="Boolean" {{checked
+              configSettings.showReactionChatMessage}} />
+          </div>
 
           <div class="form-group">
             <label>{{localize "midi-qol.ShowReactionAttackRoll.Name"}}</label>
@@ -786,6 +793,14 @@
           </div>
           {{/if}}
         </div>
+      </div>
+      <div class="midi-qol-box">
+        <div class="form-group">
+          <label>{{localize "midi-qol.ddbGL.Name"}}</label>
+          <input type="checkbox" name="optionalRules.enableddbGL" data-dtype="Boolean" {{checked
+            configSettings.enableddbGL}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.ddbGL.Hint"}}</div>
       </div>
     </div>
   </section>

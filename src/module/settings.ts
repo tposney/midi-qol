@@ -62,6 +62,7 @@ class ConfigSettings {
   reactionTimeout: number = 10;
   gmDoReactions: string = "all";
   doReactions: string = "all";
+  showReactionChatMessage: boolean = false;
   showReactionAttackRoll: string = "all";
   rollNPCSaves: string = "auto";
   rollNPCLinkedSaves: string = "auto";
@@ -94,6 +95,7 @@ class ConfigSettings {
   promptDamageRoll: boolean = false;
   accelKeysOverride: boolean = false;
   effectActivation: boolean = false;
+  enableddbGL: boolean = true;
   optionalRules: any = {
     invisAdvantage: true,
     checkRange: true,
@@ -222,7 +224,8 @@ export let fetchParams = () => {
   if (configSettings.gmFastForwardSpells === undefined) configSettings.gmFastForwardSpells = false;
   if (configSettings.fastForwardSpells === undefined) configSettings.fastForwardSpells = false;
   if (configSettings.accelKeysOverride === undefined) configSettings.accelKeysOverride = false;
-
+  if (!configSettings.enableddbGL) configSettings.enableddbGL = false;
+  if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
     || !configSettings.keyMapping["DND5E.Disadvantage"]
@@ -370,6 +373,8 @@ const settings = [
   }
 ];
 export function registerSetupSettings() {
+  const translations = game.i18n.translations["midi-qol"] ?? {};
+
   game.settings.register("midi-qol","CriticalDamage", {
     name: "midi-qol.CriticalDamage.Name",
     hint: "midi-qol.CriticalDamage.Hint",
@@ -377,11 +382,12 @@ export function registerSetupSettings() {
     default: "default",
     type: String,
     config: true,
-    choices: Object(i18n("midi-qol.CriticalDamageChoices")),
+    choices: translations["CriticalDamageChoices"],
     onChange: fetchParams
   });
 }
 export const registerSettings = function() {
+  const translations = game.i18n.translations["midi-qol"] ?? {};
   // Register any custom module settings here
   settings.forEach((setting, i) => {
     let MODULE = "midi-qol"
@@ -406,7 +412,7 @@ export const registerSettings = function() {
     default: "none",
     type: String,
     config: true,
-    choices: Object(i18n("midi-qol.CriticalDamageChoices")),
+    choices: translations["CriticalDamageChoices"],
     onChange: fetchParams
   });
 
@@ -417,7 +423,7 @@ export const registerSettings = function() {
     default: "none",
     type: String,
     config: true,
-    choices: Object(i18n("midi-qol.AddChatDamageButtonsOptions")),
+    choices: translations["AddChatDamageButtonsOptions"],
     onChange: fetchParams
   });
 
@@ -429,7 +435,7 @@ export const registerSettings = function() {
     default: "None",
     type: String,
     config: true,
-    choices: Object(i18n("midi-qol.ColoredBordersOptions")),
+    choices: translations["ColoredBordersOptions"],
     onChange: fetchParams
   });
 
@@ -440,7 +446,7 @@ export const registerSettings = function() {
     default: "dead",
     type: String,
     config: true,
-    choices: Object(i18n("midi-qol.AutoRemoveTargetsOptions")),
+    choices: translations["AutoRemoveTargetsOptions"],
     onChange: fetchParams
   });
 
@@ -472,7 +478,7 @@ export const registerSettings = function() {
     default: "None",
     type: String,
     config: true,
-    choices: Object(i18n("midi-qol.DebugOptions")),
+    choices: translations["DebugOptions"],
     onChange: fetchParams
   });
 

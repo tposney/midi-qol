@@ -1,5 +1,5 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
-import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage } from "./chatMesssageHandling.js";
+import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook } from "./chatMesssageHandling.js";
 import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage } from "./utils.js";
 import { configSettings, dragDropTargeting, useMidiCrit } from "./settings.js";
@@ -173,9 +173,9 @@ export function initHooks() {
   if (debugEnabled > 0) warn("Init Hooks processing");
   Hooks.on("preCreateChatMessage", (message: ChatMessage, data, options, user) => {
     if (debugEnabled > 1) debug("preCreateChatMessage entering", message, data, options, user)
-    // recalcCriticalDamage(data, options);
     // processpreCreateBetterRollsMessage(message, data, options, user);
     nsaMessageHandler(message, data, options, user);
+    // ddbGLPreCreateChatMessage(message, data, options, user);
     return true;
   })
 
@@ -183,6 +183,7 @@ export function initHooks() {
     if (debugEnabled > 1) debug("Create Chat Meesage ", message.id, message, options, user)
     processCreateBetterRollsMessage(message, user);
     processItemCardCreation(message, user);
+    processCreateDDBGLMessages(message, options, user);
     return true;
   })
 
@@ -199,6 +200,10 @@ export function initHooks() {
     // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
     processOverTime(combat, data, options, user);
   })
+
+  Hooks.on("ddb-game-log.pendingRoll", (data) => {
+    if (configSettings.enableddbGL) ddbglPendingHook(data);
+  });
 
   Hooks.on("renderChatMessage", (message, html, data) => {
     if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);

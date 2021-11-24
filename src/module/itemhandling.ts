@@ -3,9 +3,6 @@ import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFL
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
 import { checkRange, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isFastForwardSpells, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
-import { config } from "@league-of-foundry-developers/foundry-vtt-types/src/types/augments/simple-peer";
-import { isTemplateMiddleOrTemplateTail } from "typescript";
-import { socketlibSocket } from "./GMAction.js";
 import { mapSpeedKeys } from "./patching.js";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true }) {
@@ -233,10 +230,10 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       otherResult = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: (this.data.data.properties?.critOther ?? true) && workflow.isCritical });
       otherResult = await otherResult?.evaluate({ async: true });
       // otherResult = new Roll(workflow.otherDamageFormula, workflow.actor?.getRollData()).roll();
-    } else if (this.isVersatile && !this.data.data.properties.ver) otherResult = await wrapped({
+    } else if (this.isVersatile && this.type === "weapon" && !this.data.data.properties?.ver) otherResult = await wrapped({
       // roll the versatile damage if there is a versatile damage field and the weapn is not marked versatile
       // TODO review this is the SRD monsters change the way extra damage is represented
-      critical: this.data.data.properties.critOther && workflow.isCritical,
+      critical: this.data.data.properties?.critOther && workflow.isCritical,
       powerLevel: workflow.rollOptions.spellLevel,
       spellLevel: workflow.rollOptions.spellLevel,
       versatile: true,
@@ -665,22 +662,27 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
   return false;
 }
 
-export function templateTokens(templateDetails: { x: number, y: number, shape: any, distance: number }) {
-  if (configSettings.autoTarget === "none") return;
+export function templateTokens(templateDetails: { x: number, y: number, shape: any, distance: number }): Token[] {
+  if (configSettings.autoTarget === "none") return [];
   const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget);
   const tokens = getCanvas().tokens?.placeables || []; //.map(t=>t.data)
   let targets: string[] = [];
+  const targetTokens: Token[] = [];
   for (const token of tokens) {
     if (token.actor && isTokenInside(templateDetails, token, wallsBlockTargeting)) {
       const actorData: any = token.actor?.data;
       if (actorData?.data.details.type?.custom === "NoTarget") continue;
       if (["wallsBlock", "always"].includes(configSettings.autoTarget) || actorData?.data.attributes.hp.value > 0) {
-        if (token.document.id) targets.push(token.document.id);
+        if (token.document.id) {
+          targetTokens.push(token);
+          targets.push(token.document.id);
+        }
       }
     }
   }
   game.user?.updateTokenTargets(targets);
   game.user?.broadcastActivity({ targets });
+  return targetTokens;
 }
 
 export function selectTargets(templateDocument: MeasuredTemplateDocument, data, user) {

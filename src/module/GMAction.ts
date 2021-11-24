@@ -1,6 +1,7 @@
 import { configSettings } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled } from "../midi-qol.js";
 import { MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
+import { ddbglPendingFired } from "./chatMesssageHandling.js";
 
 export var socketlibSocket: any = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
@@ -43,7 +44,8 @@ export let setupSocket = () => {
   socketlibSocket.register("addConvenientEffect", addConventientEffect);
   socketlibSocket.register("deleteItemEffects", deleteItemEffects);
   socketlibSocket.register("createActor", createActor);
-  socketlibSocket.register("deleteToken", deleteToken)
+  socketlibSocket.register("deleteToken", deleteToken);
+  socketlibSocket.register("ddbglPendingFired", ddbglPendingFired)
 };
 
 async function createActor(data) {
@@ -70,6 +72,7 @@ let deleteItemEffects = async (data: {targets, origin: string, ignore: string[]}
       try {
         // TODO find out why delete of multiple efects don't work
         await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToDelete.map(ef => ef.id));
+
         /*
         for (let ef of effectsToDelete) {
           await actor.deleteEmbeddedDocuments("ActiveEffect", [ef.id])
@@ -82,6 +85,7 @@ let deleteItemEffects = async (data: {targets, origin: string, ignore: string[]}
       };
     }
   }
+  if (globalThis.Sequencer) globalThis.Sequencer.EffectManager.endEffects({origin})
 }
 async function addConventientEffect(options) {
   let {effectName, actorUuid, origin} = options;
@@ -91,8 +95,8 @@ async function addConventientEffect(options) {
   game.dfreds.effectHandler.addEffect({effectName, actor, origin});
 }
 
-async function localDoReactions(data: { tokenUuid: string; triggerTokenUuid: string, attackRoll: string; triggerType: string}) {
-  const result =  await promptReactions(data.tokenUuid, data.triggerTokenUuid, JSON.parse(data.attackRoll), data.triggerType)
+async function localDoReactions(data: { tokenUuid: string; triggerTokenUuid: string, reactionFlavor: string; triggerType: string}) {
+  const result =  await promptReactions(data.tokenUuid, data.triggerTokenUuid, data.reactionFlavor, data.triggerType)
   return result;
 }
 

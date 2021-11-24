@@ -159,31 +159,18 @@ Hooks.once('setup', function () {
 
   }
 
-    if (configSettings.allowUseMacro) {
-
-      /*
-      CONFIG.DND5E.characterFlags["AttackBonusMacro"] = {
-        hint: i18n("midi-qol.AttackMacro.Hint"),
-        name: i18n("midi-qol.AttackMacro.Name"),
-        placeholder: "",
-        section: i18n("midi-qol.DAEMidiQOL"),
-        type: String
-      };
-      */
-      //@ts-ignore CONFIG.DND5E
-      CONFIG.DND5E.characterFlags["DamageBonusMacro"] = {
-        hint: i18n("midi-qol.DamageMacro.Hint"),
-        name: i18n("midi-qol.DamageMacro.Name"),
-        placeholder: "",
-        section: i18n("midi-qol.DAEMidiQOL"),
-        type: String
-      };
+  if (configSettings.allowUseMacro) {
+    //@ts-ignore CONFIG.DND5E
+    CONFIG.DND5E.characterFlags["DamageBonusMacro"] = {
+      hint: i18n("midi-qol.DamageMacro.Hint"),
+      name: i18n("midi-qol.DamageMacro.Name"),
+      placeholder: "",
+      section: i18n("midi-qol.DAEMidiQOL"),
+      type: String
     };
-
-    //@ts-ignore
-    noDamageSaves = i18n("midi-qol.noDamageonSaveSpells").map(name => cleanSpellName(name));
-    setupSheetQol();
-  });
+  };
+  setupSheetQol();
+});
 
 /* ------------------------------------ */
 /* When ready							*/
@@ -203,7 +190,14 @@ Hooks.once('ready', function () {
   if (game.user?.isGM && game.modules.get("betterrolls5e")?.active && !installedModules.get("betterrolls5e")) {
     ui.notifications?.warn("Midi QOL requires better rolls to be version 1.6.6 or later");
   }
-
+  //@ts-ignore
+  if (isNewerVersion(game.version, "9")) {
+    const noDamageSavesText: string = game.i18n.translations["midi-qol"]["noDamageonSaveSpellsv9"] ?? "";
+    noDamageSaves = noDamageSavesText.split(",");
+  } else {
+    //@ts-ignore
+    noDamageSaves = game.i18n("midi-qol.noDamageonSaveSpells")?.map(name => cleanSpellName(name));
+  }
   checkModules();
   checkConcentrationSettings();
   readyHooks();

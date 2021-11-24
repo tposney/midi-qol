@@ -58,8 +58,10 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
         evalString += rollTerms[partPos].total;
         partPos += 1;
       }
-      type = rollTerms[partPos].options?.flavor ?? type;
-      evalString += rollTerms[partPos].total;
+      if (rollTerms[partPos]) {
+        type = rollTerms[partPos]?.options?.flavor ?? type;
+        evalString += rollTerms[partPos]?.total;
+      }
       partPos += 1;
     }
     // Each damage line is added together and we can skip the operator term
@@ -90,15 +92,15 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
     if (evalTerm instanceof DiceTerm) {
       // this is a dice roll
       evalString += evalTerm.total;
-      damageType = evalTerm.options.flavor;
+      damageType = evalTerm.options?.flavor;
       numberTermFound = true;
     } else if (evalTerm instanceof Die) { // special case for better rolls that does not return a proper roll
-      damageType = evalTerm.options.flavor;
+      damageType = evalTerm.options?.flavor;
       numberTermFound = true;
       evalString += evalTerm.total;
     } else if (evalTerm instanceof NumericTerm) {
       evalString += evalTerm.total;
-      damageType = evalTerm.options.flavor || damageType; // record this if we get it
+      damageType = evalTerm.options?.flavor || damageType; // record this if we get it
       numberTermFound = true;
     } if (evalTerm instanceof OperatorTerm) {
       if (["*", "/"].includes(evalTerm.operator)) {
@@ -207,10 +209,11 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
     const adamantineDamage = item?.data.data.properties?.ada
     for (let { type, mult } of [{ type: "di", mult: 0 }, { type: "dr", mult: 0.5 }, { type: "dv", mult: 2 }]) {
       let trait = actor.data.data.traits[type].value;
-      if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
-      if (!(magicalDamage || silverDamage) && trait.includes("silver")) trait = trait.concat("bludgeoning", "slashing", "piercing")
-      if (!(magicalDamage || adamantineDamage) && trait.includes("adamant")) trait = trait.concat("bludgeoning", "slashing", "piercing")
-
+      if (configSettings.damageImmunities === "immunityPhysical") {
+        if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
+        if (!(magicalDamage || silverDamage) && trait.includes("silver")) trait = trait.concat("bludgeoning", "slashing", "piercing")
+        if (!(magicalDamage || adamantineDamage) && trait.includes("adamant")) trait = trait.concat("bludgeoning", "slashing", "piercing")
+      }
       if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (item?.type === "power" && trait.includes("power")) totalMult = totalMult * mult;
       else if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
@@ -221,11 +224,11 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   return 1;
 };
 
-export let applyTokenDamage = async (damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any> } = { existingDamage: [], superSavers: new Set() }): Promise<any[]> => {
+export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any> } = { existingDamage: [], superSavers: new Set() }): Promise<any[]> {
   return applyTokenDamageMany([damageDetail], [totalDamage], theTargets, item, [saves], { existingDamage: options.existingDamage, superSavers: [options.superSavers] });
 }
 
-export let applyTokenDamageMany = async (damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[] } = { existingDamage: [], superSavers: [] }): Promise<any[]> => {
+export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[] } = { existingDamage: [], superSavers: [] }): Promise<any[]> {
   let damageList: any[] = [];
   let targetNames: string[] = [];
   let appliedDamage;
@@ -488,7 +491,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       const damageListItem = workflow.damageList.find(e=> e.tokenUuid = targetToken.document ? targetToken.document.uuid: targetToken.uuid);
       if (damageListItem?.appliedDamage > 0 && workflow.item && !getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction")) {
       //@ts-ignore
-      let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, i18n("midi-qol.reactionDamaged"));
+      let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, i18n("midi-qol.reactionDamaged"), {item: workflow.item});
       }
     }
   }
@@ -1632,7 +1635,7 @@ export function isConcentrating(actor: Actor5e): undefined | ActiveEffect {
   return actor.effects.contents.find(e => e.data.label === concentrationName && !e.data.disabled && !e.isSuppressed);
 }
 
-export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
+export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string, options: {item: Item}): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
   const noResult = { name: undefined, uuid: undefined, ac: undefined };
   if (!target.actor || !target.actor.data.flags || !target.actor.data.flags["midi-qol"]) return noResult;
   let player = playerFor(target) || ChatMessage.getWhisperRecipients("GM").find(u => u.active);
@@ -1658,29 +1661,57 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
       if (!midiFlags?.optional[flag].count) return true;
       return getOptionalCountRemainingShortFlag(target.actor, flag) > 0;
     }).length
+
+  const promptString = triggerType === i18n("midi-qol.reactionDamaged") ? "midi-qol.reactionFlavorDamage" : "midi-qol.reactionFlavorAttack";
   if (reactions <= 0) return noResult;
+  let chatMessage;
+  const reactionFlavor = game.i18n.format(promptString, {itemName: options.item?.name ?? "unknown", actorName: target.name});
+  if (configSettings.showReactionChatMessage) {
+    const player = playerFor(target)?.id ?? "";
+    chatMessage = await ChatMessage.create({
+      content: reactionFlavor,
+      whisper: [player]
+    });
+  }
+  const rollOptions = Object(i18n("midi-qol.ShowReactionAttackRollOptions"));
+  // {"none": "Attack Hit", "d20": "d20 roll only", "all": "Whole Attack Roll"},
+
+  let content;
+  if (triggerType === i18n("midi-qol.reactionDamaged"))  content = reactionFlavor;
+  else switch (configSettings.showReactionAttackRoll) {
+    case "all":
+      content = `<h4>${reactionFlavor} - ${rollOptions.all} ${attackRoll.total}</h4>`;
+      break;
+    case "d20":
+      //@ts-ignore
+      const theRoll = attackRoll.terms[0].results[0].result;
+      content = `<h4>{reactionFlavor} ${rollOptions.d20} ${theRoll}</h4>`; break;
+    default:
+      content = reactionFlavor;
+  }
+
   return new Promise((resolve) => {
     // set a timeout for taking over the roll
     setTimeout(() => {
       resolve(noResult);
     }, (configSettings.reactionTimeout || 30) * 1000);
     // Complier does not realise player can't be undefined to get here
-    player && requestReactions(target, player, triggerTokenUuid, attackRoll, triggerType, resolve)
+    player && requestReactions(target, player, triggerTokenUuid, content, triggerType, resolve, chatMessage)
   })
 }
 
-export async function requestReactions(target: Token, player: User, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string, resolve: ({ }) => void) {
-  if (!attackRoll) attackRoll = await new Roll("0").roll();
+export async function requestReactions(target: Token, player: User, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, resolve: ({ }) => void, chatPromptMessage: ChatMessage) {
   const result = (await socketlibSocket.executeAsUser("chooseReactions", player.id, {
     tokenUuid: target.document.uuid,
-    attackRoll: JSON.stringify(attackRoll.toJSON()),
+    reactionFlavor,
     triggerTokenUuid,
     triggerType
   }));
   resolve(result);
+  if (chatPromptMessage) chatPromptMessage.delete();
 }
 
-export async function promptReactions(tokenUuid: string, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string) {
+export async function promptReactions(tokenUuid: string, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string) {
   const target: Token = MQfromUuid(tokenUuid);
   const actor: Actor | null = target.actor;
   if (!actor) return;
@@ -1705,7 +1736,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
       console.warn("midi-qol | Reaction processing cancelled by Hook");
       return { name: "Filter" };
     }
-    result = await reactionDialog(actor, triggerTokenUuid, reactionItems, attackRoll, triggerType)
+    result = await reactionDialog(actor, triggerTokenUuid, reactionItems, reactionFlavor, triggerType)
     if (result.uuid) {
       await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
       return result;
@@ -1724,7 +1755,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
     const data = {
       actor,
       roll: acRoll,
-      rollHTML: "D20 - " + attackRoll.terms[0].total,
+      rollHTML: reactionFlavor,
       rollTotal: acRoll.total,
     }
     const preBounsRollTotal = data.roll.total;
@@ -1737,6 +1768,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
 }
 
 export function playerFor(target: Token): User | undefined {
+  return playerForActor(target.actor ?? undefined);
   // find the controlling player
   let player = game.users?.players.find(p => p.character?.id === target.actor?.id);
   if (!player?.active) { // no controller - find the first owner who is active
@@ -1745,9 +1777,27 @@ export function playerFor(target: Token): User | undefined {
   }
   return player;
 }
+export function playerForActor(actor: Actor|undefined): User | undefined {
+  if (!actor) return undefined;
+  let user;
+  // find an active user whose character is the actor
+  if (actor.hasPlayerOwner) user = game.users?.find(u=> u.data.character === actor?.id && u.active);
+  if (!user) // no controller - find the first owner who is active
+    user = game.users?.players.find(p => p.active && actor?.data.permission[p.id ?? ""] === CONST.ENTITY_PERMISSIONS.OWNER)
+  if (!user) // find a non-active owner
+    user = game.users?.players.find(p => p.character?.id === actor?.id);
+  if (!user) // no controlled - find an owner that is not active
+    user = game.users?.players.find(p => actor?.data.permission[p.id ?? ""] === CONST.ENTITY_PERMISSIONS.OWNER)
+  if (!user && actor?.data.permission.default === CONST.ENTITY_PERMISSIONS.OWNER) {
+    // does anyone have default owner permission who is active
+    user = game.users?.players.find(p => p.active && actor?.data.permission.default === CONST.ENTITY_PERMISSIONS.OWNER)
+  }
+  // if all else fails it's and active gm.
+  if (!user) user = game.users?.find(p => p.isGM && p.active);
+  return user;
+}
 
-export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | undefined, reactionItems: any[], attackRoll: Roll, triggerType: string) {
-
+export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | undefined, reactionItems: any[], rollFlavor: string, triggerType: string) {
   return new Promise((resolve, reject) => {
     const callback = async (dialog, button) => {
       const item = reactionItems.find(i => i.id === button.key);
@@ -1768,30 +1818,14 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
       await item.roll();
     }
 
-    const rollOptions = Object(i18n("midi-qol.ShowReactionAttackRollOptions"));
-    // {"none": "Attack Hit", "d20": "d20 roll only", "all": "Whole Attack Roll"},
-
-    let content;
-    if (triggerType === i18n("midi-qol.reactionDamaged"))  content = i18n("midi-qol.Damage");
-    else switch (configSettings.showReactionAttackRoll) {
-      case "all":
-        content = `<h4>${rollOptions.all} ${attackRoll.total}</h4>`;
-        break;
-      case "d20":
-        //@ts-ignore
-        const theRoll = attackRoll.terms[0].results[0].result;
-        content = `<h4>${rollOptions.d20} ${theRoll}</h4>`; break;
-      default:
-        content = rollOptions.none;
-    }
-
+  
     const dialog = new ReactionDialog(
       {
         actor,
         targetObject: this,
         title: `${actor.name}`,
         items: reactionItems,
-        content,
+        content: rollFlavor,
         callback,
         close: resolve
       }, {

@@ -4,11 +4,11 @@ import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import Item5e from "../../../systems/dnd5e/module/item/entity.js"
 //@ts-ignore
 import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, debugEnabled, timelog, checkConcentrationSettings, getCanvas } from "../midi-qol.js";
-import { selectTargets, showItemCard, templateTokens } from "./itemhandling.js";
+import { selectTargets, shouldRollOtherDamage, showItemCard, templateTokens } from "./itemhandling.js";
 import { socketlibSocket } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls, useMidiCrit } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor } from "./utils.js"
 import { getTrailingCommentRanges } from "typescript";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
@@ -277,6 +277,9 @@ export class Workflow {
     Workflow._workflows[this.uuid] = this;
     this.needTemplate = this.item?.hasAreaTarget;
     this.stateList = [];
+    this.attackRolled = false;
+    this.ddamageRolled = false;
+    this.kickStart = true; // call workflow.next(WORKFLOWSTATES.NONE) when the item card is shown.
   }
 
   public someEventKeySet() {
@@ -315,6 +318,7 @@ export class Workflow {
     }
   }
 
+  // TODO get rid of this - deal with return type issues
   async next(nextState: number) {
     return await this._next(nextState);
   }
@@ -1402,6 +1406,7 @@ export class Workflow {
         case "Workflow":
         case "TrapWorkflow":
         case "DamageOnlyWorkflow":
+        case "DDBGameLogWorkflow":
           if (content && getRemoveAttackButtons() && showHits) {
             const searchRe = /<button data-action="attack">[^<]*<\/button>/;
             content = content.replace(searchRe, "");
@@ -1424,13 +1429,21 @@ export class Workflow {
       }
     } else {
       let speaker = duplicate(this.speaker);
+      let user: User | undefined | null = game.user;
+      if (this.item) {
+        speaker = ChatMessage.getSpeaker({actor: this.item.actor});
+        user = playerForActor(this.item.actor);
+      }
+      if (!user) return;
       speaker.alias = (configSettings.useTokenNames && speaker.token) ? getCanvas().tokens?.get(speaker.token)?.name : speaker.alias;
       speaker.scene = canvas?.scene?.id
       if ((await validTargetTokens(game.user?.targets ?? new Set())).size > 0) {
         let chatData: any = {
+          speaker,
+          // user: user.id,
           messageData: {
             speaker,
-            user: game.user?.id
+            user: user.id
           },
           content: hitContent || "No Targets",
           type: CONST.CHAT_MESSAGE_TYPES.OTHER,
@@ -1464,7 +1477,7 @@ export class Workflow {
 
   async displaySaves(whisper, doMerge) {
     let chatData: any = {};
-    const noDamage = getSaveMultiplierForItem(this.saveItem) === 0 ? i18n("midi-qol.noDamage") : "";
+    const noDamage = getSaveMultiplierForItem(this.saveItem) === 0 ? i18n("midi-qol.noDamageText") : "";
     const fullDamage = getSaveMultiplierForItem(this.saveItem) === 1 ? i18n("midi-qol.fullDamageText") : "";
 
     let templateData = {
@@ -1493,6 +1506,7 @@ export class Workflow {
           break;
         case "Workflow":
         case "TrapWorkflow":
+        case "DDBGameLogWorkflow":
           searchString = /<div class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
           replaceString = `<div class="midi-qol-saves-display"><div data-item-id="${this.item.id}">${saveHTML}${saveContent}</div><div class="end-midi-qol-saves-display">`
           content = content.replace(searchString, replaceString);
@@ -1790,16 +1804,21 @@ export class Workflow {
       i++;
     }
 
+    let DCString = "DC";
+    if (game.system.id === "dnd5e") DCString = i18n("DND5E.AbbreviationDC")
+    else if (i18n("SW5E.AbbreviationDC") !== "SW5E.AbbreviationDC") {
+      DCString = i18n("SW5E.AbbreviationDC");
+    }
+      
     if (rollType === "save")
       //@ts-ignore CONFIG.DND5E
-      this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">DC ${rollDC}</label> ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(allHitTargets.size > 1 ? "midi-qol.saving-throws" : "midi-qol.saving-throw")}:`;
+      this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">${DCString} ${rollDC}</label> ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(allHitTargets.size > 1 ? "midi-qol.saving-throws" : "midi-qol.saving-throw")}:`;
     else if (rollType === "check")
       //@ts-ignore CONFIG.DND5E
-      this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">DC ${rollDC}</label> ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(AllHitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:`;
+      this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">${DCString} ${rollDC}</label> ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(AllHitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:`;
     else if (rollType === "skill") {
       //@ts-ignore CONFIG.DND5E
-      this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">DC ${rollDC}</label> ${CONFIG.DND5E.skills[rollAbility]} `; // ${i18n(this.hitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:
-
+      this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">${DCString} ${rollDC}</label> ${CONFIG.DND5E.skills[rollAbility]} `; // ${i18n(this.hitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:
     }
   }
   monksSavingCheck(message, update, options, user) {
@@ -1852,11 +1871,13 @@ export class Workflow {
 
   processSaveRoll(message, html, data) {
     if (!this.saveRequests) return;
-    const isLMRTFY = (installedModules.get("lmrtfy") && message.data.flags?.lmrtfy?.data);
-    if (!isLMRTFY && message.data.flags?.dnd5e?.roll?.type !== "save") return true;
-    const requestId = isLMRTFY ? message.data.flags.lmrtfy.data.requestId : message.data?.speaker?.actor;
+    const isLMRTFY = message.data.flags?.lmrtfy?.data;
+    const ddbglFlags = message.data.flags && message.data.flags["ddb-game-log"];
+    const isDDBGL = ddbglFlags?.cls==="save" && !ddbglFlags?.pending;
+    if (!isLMRTFY && !isDDBGL && message.data.flags?.dnd5e?.roll?.type !== "save") return true;
+    let requestId = isLMRTFY ? message.data.flags.lmrtfy.data.requestId : message.data?.speaker?.actor;
+    if (!requestId && isDDBGL) requestId = message.data?.speaker?.actor;
     if (debugEnabled > 0) warn("processSaveToll", isLMRTFY, requestId, this.saveRequests)
-
     if (!requestId) return true;
 
     if (!this.saveRequests[requestId]) return true;
@@ -1977,7 +1998,7 @@ export class Workflow {
           if (targetEC) isHitEC = checkRule("challengeModeArmor") && this.attackTotal <= targetAC && this.attackTotal >= targetEC;
           // check to see if the roll hit the target
           if ((isHit || isHitEC || this.iscritical) && this.attackRoll && !getProperty(this, "item.data.flags.midi-qol.noProvokeReaction")) {
-            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, i18n("midi-qol.reaactionAttacked"));
+            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, i18n("midi-qol.reaactionAttacked"), {item: this.item});
             if (result?.name) {
               targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
             }
@@ -2229,6 +2250,7 @@ export class DamageOnlyWorkflow extends Workflow {
     this.itemCardId = options.itemCardId;
     this.useOther = options.useOther ?? true;
     this.isCritical = options.isCritical ?? false;
+    this.kickStart = false;
     return this.next(WORKFLOWSTATES.NONE);
     //return this;
   }
@@ -2306,6 +2328,7 @@ export class TrapWorkflow extends Workflow {
     this.templateLocation = templateLocation;
     // this.saveTargets = game.user.targets; 
     this.rollOptions.fastForward = true;
+    this.kickStart = false;
     this.next(WORKFLOWSTATES.NONE)
   }
 
@@ -2469,7 +2492,6 @@ export class TrapWorkflow extends Workflow {
     }
   }
 }
-
 export class BetterRollsWorkflow extends Workflow {
   betterRollsHookId: number;
   _roll: any;
@@ -2586,6 +2608,144 @@ export class BetterRollsWorkflow extends Workflow {
       case WORKFLOWSTATES.ROLLFINISHED:
         if (this.placeTemlateHookId) Hooks.off("createMeasuredTemplate", this.placeTemlateHookId)
         await this.complete();
+        super._next(WORKFLOWSTATES.ROLLFINISHED);
+        // should remove the apply effects button.
+        Workflow.removeWorkflow(this.item.uuid)
+        return;
+
+      default:
+        return await super._next(newState);
+    }
+  }
+
+  async complete() {
+    if (this._roll) {
+      await this._roll.update({
+        "flags.midi-qol.playSound": false,
+        "flags.midi-qol.type": MESSAGETYPES.HITS,
+        "flags.midi-qol.waitForDiceSoNice": false,
+        "flags.midi-qol.hideTag": "",
+        "flags.midi-qol.displayId": this.displayId
+      });
+      this._roll = null;
+    }
+  }
+}
+
+export class DDBGameLogWorkflow extends Workflow {
+  DDBGameLogHookId: number;
+
+  static get(id: string): DDBGameLogWorkflow {
+    return Workflow._workflows[id];
+  }
+
+  constructor(actor: Actor5e, item: Item5e, speaker, targets, options: any) {
+    super (actor, item, speaker, targets, options);
+    this.needTemplate = this.item?.hasAreaTarget ?? false;
+    this.needItemCard = false;
+    this.damageRolled = false;
+    this.attackRolled = !item.hasAttack;
+    this.needsOtherDamage = shouldRollOtherDamage.bind(this.item)(this, configSettings.rollOtherDamage, configSettings.rollOtherSpellDamage);
+    this.kickStart = true;
+  }
+ 
+  async _next(newState) {
+    this.currentState = newState;
+    let state = stateToLabel(this.currentState);
+    if (debugEnabled > 0) warn("betterRolls workflow.next ", state, configSettings.speedItemRolls, this)
+
+    switch (newState) {
+      case WORKFLOWSTATES.WAITFORATTACKROLL:
+        if (!this.item.hasAttack) {
+          return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
+        }
+        if (!this.attackRolled) return;
+        if (Hooks.call("midi-qol.preAttackRollComplete", this) === false) {
+          return this.next(WORKFLOWSTATES.ROLLFINISHED)
+        };
+        return this.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
+
+      case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
+        this.effectsAlreadyExpired = [];
+        if (checkRule("removeHiddenInvis")) removeHiddenInvis.bind(this)();
+        Hooks.callAll("midi-qol.preCheckHits", this);
+        if (debugEnabled > 1) debug(this.attackRollHTML)
+        if (configSettings.autoCheckHit !== "none") {
+          await this.checkHits();
+          await this.displayHits(configSettings.autoCheckHit === "whisper", configSettings.mergeCard);
+        }
+        Hooks.callAll("midi-qol.AttackRollComplete", this);
+        return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
+        
+        case WORKFLOWSTATES.AWAITTEMPLATE:
+          if (!this.item.hasAreaTarget) return super.next(WORKFLOWSTATES.AWAITTEMPLATE)
+          //@ts-ignore
+          let dnd5e: any = game.dnd5e;
+          // Create the template
+          const template = dnd5e.canvas.AbilityTemplate.fromItem(this.item);
+          if ( template ) template.drawPreview();
+          return await super._next(WORKFLOWSTATES.AWAITTEMPLATE);
+
+      case WORKFLOWSTATES.WAITFORDAMAGEROLL:
+        if (!this.damageRolled) return;
+        if (this.needsOtherDamage) return;
+        const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
+        this.failedSaves = new Set(allHitTargets);
+        if (!itemHasDamage(this.item)) return this.next(WORKFLOWSTATES.WAITFORSAVES);
+        return this.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
+
+      case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
+        this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
+        //@ts-ignore CONFIG.DND5E
+        if (this.item?.data.data.actionType === "heal" && !Object.keys(CONFIG.DND5E.healingTypes).includes(this.defaultDamageType)) this.defaultDamageType = "healing";
+
+        this.damageDetail = createDamageList({roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType});
+
+        const damageBonusMacro = getProperty(this.actor.data.flags, "dnd5e.DamageBonusMacro");
+        if (damageBonusMacro) {
+          await this.rollBonusDamage(damageBonusMacro);
+        }
+/* probably not
+        if (this.otherDamageRoll) {
+          const messageData = {
+            flavor: this.otherDamageFlavor ?? this.damageFlavor,
+            speaker: this.speaker
+          }
+          setProperty(messageData, "flags.dnd5e.roll.type", "damage");
+          if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll.type", "damage");
+
+          //  Not required as we pick up the damage from the better rolls data this.otherDamageRoll.toMessage(messageData);
+          this.otherDamageDetail = createDamageList({roll: this.otherDamageRoll, item: null, versatile: false, defaultType: ""});
+
+        } else this.otherDamageDetail = [];
+    */
+        this.otherDamageDetail = [];
+        if (this.bonusDamageRoll) {
+          const messageData = {
+            flavor: this.bonusDamageFlavor,
+            speaker: this.speaker
+          }
+          setProperty(messageData, "flags.dnd5e.roll.type", "damage");
+          if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll.type", "damage");
+          this.bonusDamageRoll.toMessage(messageData);
+        }
+        expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"]);
+
+        if (configSettings.autoTarget === "none" && this.item.hasAreaTarget && !this.item.hasAttack) {
+          // we are not auto targeting so for area effect attacks, without hits (e.g. fireball)
+          this.targets = await validTargetTokens(game.user?.targets);
+          this.hitTargets = await validTargetTokens(game.user?.targets);
+          this.hitTargetsEC = new Set();
+        }
+        // apply damage to targets plus saves plus immunities
+        if (this.isFumble) { //TODO: Is this right?
+          return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        }
+        if (this.saveItem.hasSave) return this.next(WORKFLOWSTATES.WAITFORSAVES);
+        return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE)
+
+      case WORKFLOWSTATES.ROLLFINISHED:
+        if (this.placeTemlateHookId) Hooks.off("createMeasuredTemplate", this.placeTemlateHookId)
         super._next(WORKFLOWSTATES.ROLLFINISHED);
         // should remove the apply effects button.
         Workflow.removeWorkflow(this.item.uuid)
