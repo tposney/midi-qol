@@ -1,9 +1,10 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled, log } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isFastForwardSpells, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isFastForwardSpells, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./patching.js";
+import { MeasuredTemplateData } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/module.mjs";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
@@ -48,7 +49,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
       workflow.rollOptions.disadvantage = options.event.ctrlKey;
     }
   }
-  
+
   const defaultOption = workflow.rollOptions.advantage ? "advantage" : workflow.rollOptions.disadvantage ? "disadvantage" : "normal";
   {
     //@ts-ignore
@@ -597,6 +598,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
       "core": { "canPopout": true }
     }
   };
+  if (workflow.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", workflow.flagTags);
   if (!this.actor.items.has(this.id)) { // deals with using temp items in overtime effects
     chatData.flags["dnd5e.itemData"] = this.data;
   }
@@ -685,9 +687,19 @@ export function templateTokens(templateDetails: { x: number, y: number, shape: a
   return targetTokens;
 }
 
+
 export function selectTargets(templateDocument: MeasuredTemplateDocument, data, user) {
   if (user !== game.user?.id) {
     return true;
+  }
+  if (game.user?.targets.size === 0 && templateDocument?.object) {
+    //@ts-ignore
+    const mTemplate: MeasuredTemplate = templateDocument.object;
+    if (mTemplate.shape) templateTokens({ x: templateDocument.data.x, y: templateDocument.data.y, shape: mTemplate.shape, distance: mTemplate.data.distance })
+    else {
+      let { shape, distance } = computeTemplateShapeDistance(templateDocument)
+      templateTokens({ x: templateDocument.data.x, y: templateDocument.data.y, shape, distance });
+    }
   }
   let item = this?.item;
   let targeting = configSettings.autoTarget;

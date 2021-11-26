@@ -1,23 +1,32 @@
-### Coming:
 * Experimental - first cut integration with ddb-game-logs. **You need to be a patreon of ddb-game-log for this to work**. Requires a yet to be released version of ddb-game-log.
-  - Midi will aceept attack/damage/saving throw rolls from ddb-game-log. If you roll an attack or roll damage for a feature with no attack, midi will create a workflow and check hits/saves and apply damage using the ddb-game-log rolls.
+  - Midi will accept attack/damage/saving throw rolls from ddb-game-log. If you roll an attack or roll damage for a feature with no attack, midi will create a workflow and check hits/saves and apply damage using the ddb-game-log rolls.
   - The link is one way, from dnd beyond to midi and there is no feedback from midi-qol to update dnd-beyond, like changing hit points or active effects.
-  - Since the charcter settings are taken from dnd beyond NONE of the midi-qol advantange/disadvantage settings will apply to the roll. Similarly with damage rolls none of the foundry local bonuses etc will apply. Simple summary, everything relating to the dnd beyond generated rolls (attack, damage and saves) is taken from dnd beyond.
+  - Since the character settings are taken from dnd beyond NONE of the midi-qol advantage/disadvantage settings will apply to the roll. Similarly with damage rolls none of the foundry local bonuses etc will apply. Simple summary, everything relating to the dnd beyond generated rolls (attack, damage and saves) is taken from dnd beyond.
   - If you want to use dnd beyond saving throws make sure the auto roll save setting is "Chat Message".
-  - Hits/saves/Damage application will take into account the foundry's copy of values or AC, etc.
+  - Hits/saves/Damage application will take into account the foundry's copy of values for AC, etc.
   - If set, midi will add damage buttons to ddb-game-log damage rolls which function exactly as for non game-log rolls.
 
+### 0.8.87
+* Fix for (I think) longstanding bug that if monster saving rolls would be displayed to plaers - even if midi setting was to hide them.
+* Fix to Spirit Guardians to not create multiple sequencer/Automated animations effects. Midi smaple items are in folder if compendium folders is enabled.
+* Correction DF Quality of Life is the template targeting preview module - apologies to @flamewave000 for the wrong attribution).
+* Change so that if player reacitons are enabled and no logged in player with ownership of the actor exists, the GM will be prompted to do the player's reaction rolls.
+* Fixed a problem where midi was trying to get unconnected players to roll saves. It simply would not take no for an answer.
+* Fix for setting not sticking for ddb-game-log integration.
+* Fix for divine smite in v9.
+
 ### 0.8.86
-* Change to coloured borders. Now messages are coloured accoring to the user that created it.
-* Made chat card border coloring a bit more agressive - it should now color most everthing.
-* New template targeting setting - "Use DF QOL". DfReds Qol has support for RAW template targeting, so by using this setting you can finally get templates that work "correctly" which should resolve long standing frustrations with midi-qol's template targeting. This also resolves an issue, that if DF QoL template targeting is enabled it would "fight" with midi and the winner would be essentially random.
+Change to coloured borders. Now messages are coloured according to the user that created it.
+* Made chat card border colouring a bit more aggressive - it should now colour most everything.
+* New template targeting setting - "Use DF QOL". DF Qol has support for RAW template targeting, so by using this setting you can finally get templates that work "correctly" which should resolve long standing frustrations with midi-qol's template targeting. This also resolves an issue, that if DF QoL template targeting is enabled it would "fight" with midi and the winner would be essentially random.
 * Various fixes for roll other damage spell settings.
 * Added an option to create a chat message when a player is prompted for a reaction. After the reaction is resolved the chat message is removed.
 * Midi/dae/times-up will now remove Sequencer permanent effects created by Automated Animation when the initiating effect is removed. The midi sample spirit guardians is an example.
-* Fix for drop down lists not populating in 0.9 dev 2. Midi seems to work fine in 9 dev 2.
 * Automated Animations permanent effects, if created via a midi-qol effect will be auto removed on spell expiration. Requires a DAE and times-up update as well.
 * Note - includes code for pre-release ddb-gamelog support which is not yet operational.
 * MidiQOL.selectTargetsForTemplate now returns an array of targeted tokens.
+
+* Fix for drop down lists not populating in 0.9 dev 2. Midi seems to work in 9 dev 2.
 
 ### 0.8.85
 * Allow items to be set to not provoke a reaction (set item.data.flags.midi-qol.noProvokeReaction to true). No UI for this yet.

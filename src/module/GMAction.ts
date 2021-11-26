@@ -138,7 +138,7 @@ export function monksTokenBarSaves(data: { tokens: any[]; request: any; silent: 
 }
 
 // Fetch the token, then use the tokenData.actor.id
-let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: string; }) => {
+let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: string; flagTags: any}) => {
   const damageList = data.damageList;
   let actor: { update: (arg0: { "data.attributes.hp.temp": any; "data.attributes.hp.value": number; "flags.dae.damageApplied": any; damageItem: any []}) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
   const timestamp = Date.now();
@@ -230,6 +230,7 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
       type: CONST.CHAT_MESSAGE_TYPES.OTHER,
       flags: { "midiqol": {"undoDamage": tokenIdList }}
     };
+    if (data.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", data.flagTags);
     let message = await ChatMessage.create(chatData);
   }
 }

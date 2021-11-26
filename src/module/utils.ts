@@ -403,6 +403,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
       damageList: damageList,
       targetNames,
       chatCardId: workflow.itemCardId,
+      flagTags: workflow?.flagTags
     })
   }
   if (configSettings.keepRollStats) {
@@ -578,10 +579,13 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
     //@ts-ignore CONFIG.DND5E
     let content = ` ${actorName} ${configSettings.displaySaveDC ? "DC " + dc : ""} ${CONFIG.DND5E.abilities[ability]} ${i18n("midi-qol.saving-throw")}`;
     content = content + (advantage ? ` (${i18n("DND5E.Advantage")})` : "") + ` - ${flavor}`;
-    ChatMessage.create({
+    const chatData = {
       content,
       whisper: [player]
-    });
+    }
+    // think about how to do this if (workflow?.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", workflow.flagTags);
+
+    ChatMessage.create(chatData);
   }
 }
 
@@ -1638,9 +1642,10 @@ export function isConcentrating(actor: Actor5e): undefined | ActiveEffect {
 export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string, options: {item: Item}): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
   const noResult = { name: undefined, uuid: undefined, ac: undefined };
   if (!target.actor || !target.actor.data.flags || !target.actor.data.flags["midi-qol"]) return noResult;
-  let player = playerFor(target) || ChatMessage.getWhisperRecipients("GM").find(u => u.active);
-  if (!player) return noResult;
+  let player = playerFor(target);
   if (getReactionSetting(player) === "none") return noResult;
+  if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
+  if (!player) return noResult;
   if (target.actor.getFlag("midi-qol", "reactionCombatRound")) return noResult;
   let reactions = target.actor.items.filter(item => {
     //@ts-ignore activation
@@ -1666,12 +1671,18 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   if (reactions <= 0) return noResult;
   let chatMessage;
   const reactionFlavor = game.i18n.format(promptString, {itemName: options.item?.name ?? "unknown", actorName: target.name});
+  const chatData: any = {  
+    content: reactionFlavor,
+    whisper: [player]
+  };
+
   if (configSettings.showReactionChatMessage) {
     const player = playerFor(target)?.id ?? "";
-    chatMessage = await ChatMessage.create({
-      content: reactionFlavor,
-      whisper: [player]
-    });
+    if (configSettings.enableddbGL && installedModules.get("ddb-game-log")){
+      const workflow = Workflow.getWorkflow(options?.item?.uuid);
+      if (workflow?.flagTags) chatData.flags = workflow.flagTags;
+    }
+    chatMessage = await ChatMessage.create(chatData);
   }
   const rollOptions = Object(i18n("midi-qol.ShowReactionAttackRollOptions"));
   // {"none": "Attack Hit", "d20": "d20 roll only", "all": "Whole Attack Roll"},
@@ -1996,4 +2007,30 @@ export function evalActivationCondition(workflow: Workflow, condition: string | 
     console.warn(`midi-qol | activation condition (${expression}) error `, err)
   }
   return returnValue;
+}
+
+export function computeTemplateShapeDistance(templateDocument: MeasuredTemplateDocument) {
+  let { direction, distance, angle, width } = templateDocument.data;
+  const dimensions = getCanvas().dimensions || { size: 1, distance: 1 };
+  distance *= dimensions.size / dimensions.distance;
+  width *= dimensions.size / dimensions.distance;
+  direction = Math.toRadians(direction);
+  let shape: any;
+  switch (templateDocument.data.t) {
+    case "circle":
+      shape = new PIXI.Circle(0, 0, distance);
+      break;
+    case "cone":
+      //@ts-ignore
+      shape = templateDocument._object._getConeShape(direction, angle, distance);
+      break;
+    case "rect":
+      //@ts-ignore
+      shape = templateDocument._object._getRectShape(direction, distance);
+      break;
+    case "ray":
+      //@ts-ignore
+      shape = templateDocument._object._getRayShape(direction, distance, width);
+  }
+  return { shape, distance };
 }

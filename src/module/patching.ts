@@ -357,14 +357,12 @@ function procAdvantageSkill(actor, skillId, options: Options): Options {
   return options;
 }
 
-let _midiATRefresh = debounce(__midiATIRefresh, 30);
-
-function __midiATIRefresh(template) {
+let debouncedATRefreach = debounce(_midiATIRefresh, 30);
+function _midiATIRefresh(template) {
   if (!canvas?.tokens) return;
   if (configSettings.autoTarget === "none") return;
   if (configSettings.autoTarget === "dfqol" && installedModules.get("df-qol"))
    return; // df-qol will handle template tagerting.
-
   if (installedModules.get("levelsvolumetrictemplates")) {
     // Filter which tokens to pass - not too far and not blocked by a wall.
     let distance = template.data.distance;
@@ -406,7 +404,7 @@ function __midiATIRefresh(template) {
 }
 
 function midiATRefresh(wrapped) {
-  _midiATRefresh(this);
+  debouncedATRefreach(this);
   return wrapped();
 }
 

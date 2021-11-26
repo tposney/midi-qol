@@ -342,7 +342,7 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-save-total").hide();
   }
   // Hide saving throws if not rolled by me.
-  if (!game.user?.isGM && ["all", "whisper"].includes(configSettings.autoCheckSaves) && message.isRoll &&
+  if (!game.user?.isGM && ["all", "whisper", "allNoRoll"].includes(configSettings.autoCheckSaves) && message.isRoll &&
     (message.data.flavor?.includes(i18n("DND5E.ActionSave")) || message.data.flavor?.includes(i18n("DND5E.ActionAbil")))) {
     if (game.user?.id !== message.user.id) {
       html.hide();

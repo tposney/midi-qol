@@ -127,6 +127,7 @@ export class Workflow {
   displayId: string;
   reactionUpdates: Set<Actor5e>;
   stateList: workflowSate[];
+  flagTags: {} | undefined;
 
   static eventHack: any;
 
@@ -278,8 +279,9 @@ export class Workflow {
     this.needTemplate = this.item?.hasAreaTarget;
     this.stateList = [];
     this.attackRolled = false;
-    this.ddamageRolled = false;
+    this.damageRolled = false;
     this.kickStart = true; // call workflow.next(WORKFLOWSTATES.NONE) when the item card is shown.
+    this.flagTags = undefined;
   }
 
   public someEventKeySet() {
@@ -336,6 +338,7 @@ export class Workflow {
         this.templateTargeting = configSettings.autoTarget !== "none" && this.item.hasAreaTarget;
         if (debugEnabled > 1) debug(" workflow.next ", state, configSettings.autoTarget, this.item.hasAreaTarget);
         if (this.templateTargeting) {
+          game.user?.updateTokenTargets([]); // clear out the targets
           return this.next(WORKFLOWSTATES.AWAITTEMPLATE);
         }
         const targetDetails = this.item.data.data.target;
@@ -1466,6 +1469,7 @@ export class Workflow {
           setProperty(chatData, "flags.midi-qol.waitForDiceSoNice", false);
           // setProperty(chatData, "flags.midi-qol.hideTag", "")
         }
+        if (this.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", this.flagTags);
         let returns;
         if (game.users?.get(chatData.messageData.user)?.isGM)
           returns = await socketlibSocket.executeAsGM("createChatMessage", { chatData });
@@ -1545,6 +1549,7 @@ export class Workflow {
 
         if (debugEnabled > 1) debug("Trying to whisper message", chatData)
       }
+      if (this.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", this.flagTags);
       await ChatMessage.create(chatData);
       // Non GMS don't have permission to create the message so hand it off to a gm client
       // await socketlibSocket.executeAsGM("createChatMessage", {chatData});
@@ -1685,9 +1690,9 @@ export class Workflow {
         } else {  // GM to roll save
           // Find a player owner for the roll if possible
           let owner: User | undefined = playerFor(target);
-          if (owner) showRoll = true; // Always show player save rolls
+          if (owner?.active) showRoll = true; // Always show player save rolls
           // If no player owns the token, find an active GM
-          if (!owner) owner = game.users?.find((u: User) => u.isGM && u.active);
+          if (!owner?.active) owner = game.users?.find((u: User) => u.isGM && u.active);
           // Fall back to rolling as the current user
           if (!owner) owner = game.user ?? undefined;
           promises.push(socketlibSocket.executeAsUser("rollAbility", owner?.id, {
@@ -2645,8 +2650,10 @@ export class DDBGameLogWorkflow extends Workflow {
     this.needItemCard = false;
     this.damageRolled = false;
     this.attackRolled = !item.hasAttack;
-    this.needsOtherDamage = shouldRollOtherDamage.bind(this.item)(this, configSettings.rollOtherDamage, configSettings.rollOtherSpellDamage);
+    // for dnd beyond only roll if other damge is defined.
+    this.needsOtherDamage = this.item.data.data.formula && shouldRollOtherDamage.bind(this.item)(this, configSettings.rollOtherDamage, configSettings.rollOtherSpellDamage) ;
     this.kickStart = true;
+    this.flagTags = {"ddb-game-log": {"midi-generated": true}}
   }
  
   async _next(newState) {

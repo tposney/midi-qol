@@ -95,7 +95,7 @@ class ConfigSettings {
   promptDamageRoll: boolean = false;
   accelKeysOverride: boolean = false;
   effectActivation: boolean = false;
-  enableddbGL: boolean = true;
+  enableddbGL: boolean = false;
   optionalRules: any = {
     invisAdvantage: true,
     checkRange: true,

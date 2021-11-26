@@ -68,7 +68,7 @@ You can probably survive without these but midi pretty much assumes they are ins
 * Smalltime - to make time advancement easy.
 * Automated Animations - If you have the jb2a module this will automatically add lots of anmations to spell/weapon effects.
 * libChangeLogs - will show the midi change log when it changes.
-* Dfreds QoL. If you want template targeting to work as written in the rules, install this and enable it for template targeting.
+* DF QoL. If you want template targeting to work as written in the rules, install this and enable it for template targeting. (apologies to @flamewave000 for the mislabelling)
 * Warpgate. Some of the sample items use warpgate to summon tokens (Flaming Sphere, Spiritual Weapon).
 
 ## Good To Have
