@@ -78,6 +78,7 @@ You can probably survive without these but midi pretty much assumes they are ins
 * dnd5e-helpers
 * Dice So Nice, if you like 3d dice rolling it's pretty much the only choice.
 * Better Rolls if you don't like the default dnd attack/damage roll cards. Better Rolls is **mostly** compatible with midi-qol, but there are some wrinkles. I don't use the module so tend to rely on community reports for errors.
+* FVTTEncounterStats. If you like to keep data about all the rolls done by players/GM this module goes a lot further than the built in midi-qol roll stats. Worth a look.
 
 
 # (In)Compatibilities? ##
@@ -174,6 +175,9 @@ Things to keep in mind:
 * DnD Beyond does not apply any foundry in game effects made to actors, so attack, damage and saving throws will not use any foundry local data, like short term damage bonuses.
 * Midi will look only at the foundry data, so it is up to you to keep things synchronised betwee the two.
 * Effects that increase attack bonus/damage dealt (when applied in foundry) will have no effect on attack/damage rolls made on DND Beyond. Midi **will** take into account effects that change AC (when checking hits), damage resistance etc when applying damage.
+
+## FVTTEncounterStats. 
+This module keeps very detailed stats about each encounter you run and is fully compatible with midi-qol. If keeping game stats is your thing it's worth a look. Much better and more informative than the midi inbuilt rollStats.
 
 # Short Guide to configuration settings
 The heading says short, but it really isn't.

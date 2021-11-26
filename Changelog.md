@@ -1,4 +1,6 @@
 
+### 0.8.88
+* Fix for ddbgl breakage in 0.8.87
 
 ### 0.8.87
 * Fix for (I think) longstanding bug that if monster saving rolls would be displayed to plaers - even if midi setting was to hide them.

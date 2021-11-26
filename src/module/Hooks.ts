@@ -31,6 +31,10 @@ export let readyHooks = async () => {
     if (expiredEffects.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", expiredEffects.map(ef => ef.id));
   })
 
+  Hooks.on("ddb-game-log.pendingRoll", (data) => {
+    ddbglPendingHook(data);
+  });
+
   // Have to trigger on preUpdate to check the HP before the update occured.
   Hooks.on("updateActor", async (actor, update, diff, user) => {
     //@ts-ignore
@@ -200,10 +204,6 @@ export function initHooks() {
     // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
     processOverTime(combat, data, options, user);
   })
-
-  Hooks.on("ddb-game-log.pendingRoll", (data) => {
-    if (configSettings.enableddbGL) ddbglPendingHook(data);
-  });
 
   Hooks.on("renderChatMessage", (message, html, data) => {
     if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);

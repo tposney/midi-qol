@@ -684,12 +684,12 @@ export function ddbglPendingFired(data) {
 
 }
 export function ddbglPendingHook(data) { // need to propagate this to all players.
-  if (!configSettings.enableddbGL) return;
+  if (!configSettings.optionalRules.enableddbGL) return;
   socketlibSocket.executeForEveryone("ddbglPendingFired", data);
 }
 
 export function processCreateDDBGLMessages(message: ChatMessage, options: any, user: string) {
-  if (!configSettings.enableddbGL) return;
+  if (!configSettings.optionalRules.enableddbGL) return;
   const flags: any = message.data.flags;
   if (!flags || !flags["ddb-game-log"] || !game.user) return;
   const ddbGLFlags: any = flags["ddb-game-log"];
