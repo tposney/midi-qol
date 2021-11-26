@@ -1,3 +1,6 @@
+### 0.8.89
+* Added "heal" action type to ddb-game-log support
+* Fix for broken "no damage on save" cantrip list.
 
 ### 0.8.88
 * Fix for ddbgl breakage in 0.8.87

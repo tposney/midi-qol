@@ -191,9 +191,9 @@ Hooks.once('ready', function () {
     ui.notifications?.warn("Midi QOL requires better rolls to be version 1.6.6 or later");
   }
   //@ts-ignore
-  if (isNewerVersion(game.version, "9")) {
+  if (game.i18n.translations["midi-qol"]["noDamageonSaveSpellsv9"]) {
     const noDamageSavesText: string = game.i18n.translations["midi-qol"]["noDamageonSaveSpellsv9"] ?? "";
-    noDamageSaves = noDamageSavesText.split(",");
+    noDamageSaves = noDamageSavesText.split(",")?.map(s=> s.trim()).map(s=>cleanSpellName(s));
   } else {
     //@ts-ignore
     noDamageSaves = game.i18n("midi-qol.noDamageonSaveSpells")?.map(name => cleanSpellName(name));

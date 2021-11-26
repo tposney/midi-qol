@@ -635,7 +635,7 @@ export async function onChatCardAction(event) {
 
 export function ddbglPendingFired(data) {
   let { sceneId, tokenId, actorId, itemId, actionType } = data;
-  if (!itemId || !["attack", "damage"].includes(actionType)) {
+  if (!itemId || !["attack", "damage", "heal"].includes(actionType)) {
     error("DDB Game Log - no item/action for pending roll"); return
   }
   // const tokenUuid = `Scene.${sceneId??0}.Token.${tokenId??0}`;
@@ -663,7 +663,7 @@ export function ddbglPendingFired(data) {
 
   let workflow: Workflow | undefined = DDBGameLogWorkflow.get(item.uuid);
   if (actionType === "attack") workflow = undefined;
-  if (actionType === "damage" && item.hasAttack && !workflow) {
+  if (["damage", "heal"].includes(actionType) && item.hasAttack && !workflow) {
     warn(` ddb-game-log damage roll wihtout workflow being started ${actor.name} using ${item.name}`);
     return;
   }
@@ -696,7 +696,7 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   if (!ddbGLFlags || ddbGLFlags.pending) return;
   // let sceneId, tokenId, actorId, itemId;
   //@ts-ignore
-  if (!(["attack", "damage"].includes(flags.dnd5e?.roll?.type))) return;
+  if (!(["attack", "damage", "heal"].includes(flags.dnd5e?.roll?.type))) return;
   const itemId = flags.dnd5e?.roll?.itemId;
   if (!itemId) { error("Could not find item for fulfilled roll"); return }
   const token = MQfromUuid(`Scene.${message.data.speaker.scene}.Token.${message.data.speaker.token}`);
@@ -742,7 +742,7 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
     }
   }
 
-  if (flags.dnd5e.roll.type === "damage") {
+  if (["damage", "heal"].includes(flags.dnd5e.roll.type)) {
     workflow.needItemCard = false;
     workflow.attackRolled = true;
     if (!workflow.damageRolled) {
