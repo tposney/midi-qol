@@ -23,40 +23,40 @@ export class ConfigPanel extends FormApplication {
   async getData(options: any) : Promise<any> {
     const translations = game.i18n.translations["midi-qol"]
 
-    let wallsBlockRangeOptions = translations["WallsBlockRangeOptions"];
+    let wallsBlockRangeOptions = translations["WallsBlockRangeOptions"] ?? {};
     if (installedModules.get("dnd5e-helpers"))
-      wallsBlockRangeOptions = translations["WallsBlockRangeOptionsNew"];
+      wallsBlockRangeOptions = translations["WallsBlockRangeOptionsNew"] ?? {};
 
 //@ts-ignore
     let data = {
       configSettings,
-      speedItemRollsOptions: translations["speedItemRollsOptions"],
-      autoCheckHitOptions: translations["autoCheckHitOptions"],
-      clickOptions: translations["clickOptions"],
-      autoTargetOptions: translations["autoTargetOptions"],
-      rangeTargetOptions: translations["rangeTargetOptions"],
-      requiresTargetsOptions: translations["requiresTargetsOptions"],
-      autoCheckSavesOptions: translations["autoCheckSavesOptions"],
-      autoRollDamageOptions: translations["autoRollDamageOptions"],
-      removeButtonsOptions: translations["removeButtonsOptions"],
+      speedItemRollsOptions: translations["speedItemRollsOptions"] ?? {},
+      autoCheckHitOptions: translations["autoCheckHitOptions"] ?? {},
+      clickOptions: translations["clickOptions"] ?? {},
+      autoTargetOptions: translations["autoTargetOptions"] ?? {},
+      rangeTargetOptions: translations["rangeTargetOptions"] ?? {},
+      requiresTargetsOptions: translations["requiresTargetsOptions"] ?? {},
+      autoCheckSavesOptions: translations["autoCheckSavesOptions"] ?? {},
+      autoRollDamageOptions: translations["autoRollDamageOptions"] ?? {},
+      removeButtonsOptions: translations["removeButtonsOptions"] ?? {},
       criticalDamage,
-      autoApplyDamageOptions: translations["autoApplyDamageOptions"],
-      damageImmunitiesOptions: translations["damageImmunitiesOptions"],
-      showItemDetailsOptions: translations["showItemDetailsOptions"],
-      doReactionsOptions: translations["DoReactionsOptions"],
-      gmDoReactionsOptions: translations["GMDoReactionsOptions"],
-      rollOtherDamageOptions: translations["RollOtherDamageOptions"],
-      showReactionAttackRollOptions: translations["ShowReactionAttackRollOptions"],
+      autoApplyDamageOptions: translations["autoApplyDamageOptions"] ?? {},
+      damageImmunitiesOptions: translations["damageImmunitiesOptions"] ?? {},
+      showItemDetailsOptions: translations["showItemDetailsOptions"] ?? {},
+      doReactionsOptions: translations["DoReactionsOptions"] ?? {},
+      gmDoReactionsOptions: translations["GMDoReactionsOptions"] ?? {},
+      rollOtherDamageOptions: translations["RollOtherDamageOptions"] ?? {},
+      showReactionAttackRollOptions: translations["ShowReactionAttackRollOptions"] ?? {},
       wallsBlockRangeOptions,
       //@ts-ignore
       itemTypeLabels: CONFIG.Item.typeLabels,
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),
       itemDeleteCheck,
-      hideRollDetailsOptions: translations["hideRollDetailsOptions"],
+      hideRollDetailsOptions: translations["hideRollDetailsOptions"] ?? {},
       hideRollDetailsHint: i18n("midi-qol.HideRollDetails.HintLong"),
       nsaFlag,
       coloredBorders,
-      playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? translations["playerRollSavesOptionsReduced"] : translations["playerRollSavesOptions"],
+      playerRollSavesOptions: (autoFastForwardAbilityRolls && false) ? (translations["playerRollSavesOptionsReduced"] ?? {}) : (translations["playerRollSavesOptions"] ?? {}),
       rollNPCSavesOptions: translations["rollNPCSavesOptions"],
       //@ts-ignore .map undefined
       customSoundsPlaylistOptions: game.playlists.contents.reduce((acc, e) =>{acc[e.id]= e.name; return acc}, {}) || {},
