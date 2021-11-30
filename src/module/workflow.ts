@@ -651,12 +651,14 @@ export class Workflow {
         // if (this.item && !getAutoRollAttack() && !this.forceApplyEffects && !this.item.hasAttack && !this.item.hasDamage && !this.item.hasSave) { return; }
         if (!this.item) return this.next(WORKFLOWSTATES.ROLLFINISHED);
         if (!configSettings.autoItemEffects && !this.forceApplyEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED); // TODO see if there is a better way to do this.
-        this.applicationTargets = new Set();
-        if (this.saveItem.hasSave) this.applicationTargets = this.failedSaves;
-        else if (this.item.hasAttack) {
-          this.applicationTargets = this.hitTargets;
-          // TODO EC add in all EC targets that took damage
-        } else this.applicationTargets = this.targets;
+        if (!this.forceApplyEffects) {
+          this.applicationTargets = new Set();
+          if (this.saveItem.hasSave) this.applicationTargets = this.failedSaves;
+          else if (this.item.hasAttack) {
+            this.applicationTargets = this.hitTargets;
+            // TODO EC add in all EC targets that took damage
+          } else this.applicationTargets = this.targets;
+        }
         let applyCondtion = true;
         if (getProperty(this.item, "data.flags.midi-qol.effectActivation")) {
           applyCondtion = evalActivationCondition(this, getProperty(this.item, "data.data.activation.condition") ?? "");
@@ -1690,7 +1692,7 @@ export class Workflow {
         } else {  // GM to roll save
           // Find a player owner for the roll if possible
           let owner: User | undefined = playerFor(target);
-          if (owner?.active) showRoll = true; // Always show player save rolls
+          if (!owner?.isGM && owner?.active) showRoll = true; // Always show player save rolls
           // If no player owns the token, find an active GM
           if (!owner?.active) owner = game.users?.find((u: User) => u.isGM && u.active);
           // Fall back to rolling as the current user
@@ -2003,7 +2005,7 @@ export class Workflow {
           if (targetEC) isHitEC = checkRule("challengeModeArmor") && this.attackTotal <= targetAC && this.attackTotal >= targetEC;
           // check to see if the roll hit the target
           if ((isHit || isHitEC || this.iscritical) && this.attackRoll && !getProperty(this, "item.data.flags.midi-qol.noProvokeReaction")) {
-            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, i18n("midi-qol.reaactionAttacked"), {item: this.item});
+            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, i18n("midi-qol.reactionAttacked"), {item: this.item});
             if (result?.name) {
               targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
             }

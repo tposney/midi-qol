@@ -1,11 +1,9 @@
-import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats, debugEnabled, MQdefaultDamageType } from "../midi-qol.js";
+import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats, debugEnabled, MQdefaultDamageType, i18nFormat } from "../midi-qol.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { BetterRollsWorkflow, DDBGameLogWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { nsaFlag, coloredBorders, addChatDamageButtons, configSettings, forceHideRoll } from "./settings.js";
 import { createDamageList, getTraitMult, calculateDamage, MQfromUuid, MQfromActorUuid, playerFor, playerForActor } from "./utils.js";
 import { shouldRollOtherDamage, showItemCard } from "./itemhandling.js";
-import { config } from "simple-peer";
-import { reduceEachTrailingCommentRange } from "typescript";
 import { socketlibSocket } from "./GMAction.js";
 export const MAESTRO_MODULE_NAME = "maestro";
 export const MODULE_LABEL = "Maestro";
@@ -289,7 +287,8 @@ export let hideRollRender = (msg, html, data) => {
   if (forceHideRoll && (msg.data.whisper.length > 0 || msg.data?.blind)) {
     if (!game.user?.isGM && !msg.isAuthor && msg.data.whisper.indexOf(game.user?.id) === -1) {
       if (debugEnabled > 0) warn("hideRollRender | hiding message", msg.data.whisper)
-      html.hide();
+      // html.hide();
+      html.remove();
     }
   }
   return true;
@@ -411,7 +410,7 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-damage-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       html.find(".midi-qol-other-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       html.find(".midi-qol-bonus-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
-      // html.find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      html.find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       //TODO this should probably just check formula
     } else if (["details", "detailsDSN"].includes(configSettings.hideRollDetails)) {
       html.find(".dice-tooltip").remove();
@@ -604,7 +603,7 @@ export async function onChatCardAction(event) {
   } else {
     // Recover the actor for the chat card
     //@ts-ignore
-    actor = await CONFIG.Item.entityClass._getChatCardActor(card);
+    actor = await CONFIG.Item.documentClass._getChatCardActor(card);
     if (!actor) return;
 
     // Get the Item from stored flag data or by the item ID on the Actor
@@ -617,19 +616,13 @@ export async function onChatCardAction(event) {
   }
   if (!actor || !item) return;
   let workflow = Workflow.getWorkflow(item.uuid);
-  workflow.forceApplyEffects = true;
-  await workflow.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
-  /*
-  const hasDAE = installedModules.get("dae") && (item?.effects?.contents.some(ef => ef.data.transfer === false));
-  if (hasDAE) {
-    //@ts-ignore
-    let dae = window.DAE;
-    dae.doEffects(item, true, game.user?.targets, { whisper: false, spellLevel: workflow?.itemLevel, damageTotal: workflow?.damageTotal, critical: workflow?.isCritical, fumble: workflow?.isFumble, itemCardId: workflow?.itemCardId })
-    if (configSettings.autoItemEffects) workflow.removeEffectsButton();
-
+  if (workflow) {
+    workflow.forceApplyEffects = true; // don't overwrite the application targets
+    workflow.applicationTargets = game.user?.targets;
+    if (workflow.applicationTargets.size > 0) await workflow.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
+  } else {
+    ui.notifications?.warn(i18nFormat("midi-qo.NoWorkflow", {itemName: item.name}));
   }
-  */
-  // Re-enable the button
   button.disabled = false;
 }
 

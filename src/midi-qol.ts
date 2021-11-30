@@ -196,7 +196,7 @@ Hooks.once('ready', function () {
     noDamageSaves = noDamageSavesText.split(",")?.map(s=> s.trim()).map(s=>cleanSpellName(s));
   } else {
     //@ts-ignore
-    noDamageSaves = game.i18n("midi-qol.noDamageonSaveSpells")?.map(name => cleanSpellName(name));
+    noDamageSaves = i18n("midi-qol.noDamageonSaveSpells")?.map(name => cleanSpellName(name));
   }
   checkModules();
   checkConcentrationSettings();

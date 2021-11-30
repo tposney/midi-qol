@@ -462,7 +462,7 @@ Another collection of settings, designed to achieve these goals:
   * MidiQOL.gameStats.statData returns the current statData (have a look and see what is stored)
 
 ## Concentration Checks
-support for **concentration automation**. The is dependent on DAE being installed and of the right version and **requires** CUB concentration automation to be disabled. Midi will work with Convenient Effects, Combat Utility Belt of use it's own effect for concentration.
+support for **concentration automation**. The is dependent on DAE being installed and of the right version and **requires** CUB concentration automation to be disabled. Midi will work with Convenient Effects, Combat Utility Belt or use it's own effect for concentration.
   * Enabled via config setting (near auto check saves)
   * Get user confirmation before casting a second concentration spell while the first is still active. First concentration is removed if you proceed.
   * Taking damage causes a concentration check, failure removes concentration.
@@ -477,6 +477,8 @@ Midi-qol will attempt to use Convenient Effects, then Combat Uiltiy Belt, then a
 * Convenient Effects: No Additional configuration is required.
 * Combat utility belt. Since in CUB you need to identify which of the conditions (in condition lab) is the concentration effect (and midi uses that mapping), you need to make sure that the concentration name is set correctly in CUB's concentrator to match the concentration effect in condition lab.
 * For the internal effect no additional configuration is required.
+
+Recently (Nov 2021) CUB supports it's own system for removing concentration checks on failed saves so the two options midi/CUB are feature equivlaent - just choose the one you prefer.
 
 ## Magic Resistance
 If the target token has the SRD feat "Magic Resistance" or a custom damage resistance trait equal to exactly magic-resistant the auto rolled saving throws against magic effects (item type spell) with be rolled with advantage. This is really intended for NPCs with magic resistance to have their auto rolled saving throws made with advantage.    

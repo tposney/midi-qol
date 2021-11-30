@@ -1,3 +1,11 @@
+### 0.8.90
+* Reinstated the intended behaviour of the "Apply Active Effects" button, which is to apply effects to targeted tokens, rather than tokens targeted when the item was first rolled.
+* Fix for better rolls saving throws not being hidden.
+* Fix for a bug when using LMRTFY and midi, where midi would (sometimes) cause LMRTFY to do all rolls as normal rolls (ignoring the private/blind setting in LMRTFY).
+* Fix for failed initialisation in non-english versions.
+* Fixed wrong image in Readme.md for Hold person.
+* Fix for some spells being ignored when doing reactions.
+
 ### 0.8.89
 * Added "heal" action type to ddb-game-log support
 * Fix for broken "no damage on save" cantrip list.

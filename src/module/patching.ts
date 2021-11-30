@@ -119,7 +119,7 @@ async function doRollSkill(wrapped, ...args) {
     const args = { "speaker": getSpeaker(this) };
     setProperty(args, "flags.dnd5e.roll", { type: "skill", skillId });
     if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "skill", skillId })
-    result.toMessage(args);
+    await result.toMessage(args);
   }
   await expireRollEffect.bind(this)("Skill", skillId);
   return result;
@@ -242,7 +242,7 @@ async function rollAbilityTest(wrapped, ...args) {
     const args = { "speaker": getSpeaker(this) };
     setProperty(args, "flags.dnd5e.roll", { type: "ability", abilityId });
     if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "ability", abilityId })
-    result.toMessage(args);
+    await result.toMessage(args);
   }
   await expireRollEffect.bind(this)("Check", abilityId);
   return result;
@@ -281,7 +281,7 @@ async function rollAbilitySave(wrapped, ...args) {
     const args = { "speaker": getSpeaker(this) };
     setProperty(args, "flags.dnd5e.roll", { type: "save", abilityId });
     if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "save", abilityId })
-    result.toMessage(args);
+    await result.toMessage(args);
   }
   await expireRollEffect.bind(this)("Save", abilityId);
   return result;
