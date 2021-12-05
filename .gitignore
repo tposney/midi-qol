@@ -4,3 +4,4 @@ dist/module
 dist/templates
 dist/**/*.js
 dist/**/*.json
+*.code-workspace

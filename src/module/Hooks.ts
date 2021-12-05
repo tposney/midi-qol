@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook } from "./chatMesssageHandling.js";
 import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage, onUseMacro } from "./utils.js";
 import { configSettings, dragDropTargeting, useMidiCrit } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 
@@ -231,14 +231,29 @@ export function initHooks() {
   Hooks.on("applyActiveEffect", midiCustomEffect);
   Hooks.on("preCreateActiveEffect", checkImmunity);
 
+  Hooks.on("preUpdateItem", (_, data) => {
+    const macros = getProperty(data, 'flags.midi-qol.onUseMacroName');
+    if (macros && macros?.parts) {
+      let macroName = "";
+      for(var i in macros.parts) {
+        macroName += `[${macros.parts[i][1]}]${macros.parts[i][0]},`;
+      }
+      data.flags["midi-qol"].onUseMacroName = macroName.slice(0, -1);
+    }
+  });
 
   Hooks.on("renderItemSheet", (app, html, data) => {
     const element = html.find('input[name="data.chatFlavor"]').parent().parent();
     if (configSettings.allowUseMacro) {
       const labelText = i18n("midi-qol.onUseMacroLabel");
-      const currentMacro = getProperty(app.object.data, "flags.midi-qol.onUseMacroName") ?? "";
-
-      const macroField = `<div class="form-group"><label>${labelText}</label><input type="text" name="flags.midi-qol.onUseMacroName" value="${currentMacro}"/> </div>`;
+      const designations = i18n('midi-qol.onUseMacro.designation') as any as [string, string];
+      const macros: onUseMacro[] = getProperty(app.object.data, "flags.midi-qol.onUseMacroName")?.split(',')?.map((x: string) => new onUseMacro(x)) ?? [];
+      const macroField = `<h4 class="damage-header">${labelText}
+  <a class="damage-control add-damage"><i class="fas fa-plus"></i></a>
+</h4>
+  <ol class="damage-parts form-group">    
+    ${macros?.reduce((options: string, x: onUseMacro, currentIndex) => options += x.toListItem(currentIndex, designations), "")}
+  </ol>`;
       element.append(macroField)
     }
     const labelText = i18n("midi-qol.EffectActivation");
