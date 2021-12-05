@@ -10,7 +10,7 @@ export class OnUseMacros {
   }
 
   public getMacros(designation: string) {
-    return this.items.filter(x => (x.designation === designation && !x.called) || x.designation === "all").map(x => x.macroName).toString();
+    return this.items.filter(x => x.macroName?.length > 0).filter(x => (x.designation === designation && !x.called) || x.designation === "all").map(x => x.macroName).toString();
   }
 
   public setDesignationCalled(designation: string) {
