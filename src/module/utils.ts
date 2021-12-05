@@ -2034,31 +2034,3 @@ export function computeTemplateShapeDistance(templateDocument: MeasuredTemplateD
   }
   return { shape, distance };
 }
-
-export class onUseMacro {
-  macroName: string;
-  designation: string; 
-
-  constructor(macro: string) {
-    const pattern = new RegExp('(?:\\[(?<designation>.*?)\\])?(?<macroName>.*)', '');
-    let data = macro.match(pattern)?.groups; 
-
-    this.macroName = data!["macroName"].trim();
-    this.designation = data!["designation"] ?? "postActiveEffects";
-  }
-
-  public toString = () : string => {
-    return `[${this.designation}]${this.macroName}`;
-  }
-
-  public toListItem = (index: Number, designations: [string, string]) => {    
-    const options = designations?.reduce((opts: string, x: string) => opts += `<option value="${x[0]}" ${x[0] === this.designation ? 'selected' : ''}>${x[1]}</option>`, "");
-    return `<li class="damage-part flexrow" midiqol-macro-part="${index}">
-  <input type="text" name="flags.midi-qol.onUseMacroName.parts.${index}.0" value="${this.macroName}">
-  <select name="flags.midi-qol.onUseMacroName.parts.${index}.1">
-    ${options}
-  </select>
-  <a class="damage-control delete-damage"><i class="fas fa-minus"></i></a>
-</li>`;
-  }
-}

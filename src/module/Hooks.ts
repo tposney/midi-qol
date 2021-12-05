@@ -1,7 +1,8 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook } from "./chatMesssageHandling.js";
 import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage, onUseMacro } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage } from "./utils.js";
+import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { configSettings, dragDropTargeting, useMidiCrit } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 
@@ -245,14 +246,13 @@ export function initHooks() {
   Hooks.on("renderItemSheet", (app, html, data) => {
     const element = html.find('input[name="data.chatFlavor"]').parent().parent();
     if (configSettings.allowUseMacro) {
-      const labelText = i18n("midi-qol.onUseMacroLabel");
-      const designations = i18n('midi-qol.onUseMacro.designation') as any as [string, string];
-      const macros: onUseMacro[] = getProperty(app.object.data, "flags.midi-qol.onUseMacroName")?.split(',')?.map((x: string) => new onUseMacro(x)) ?? [];
-      const macroField = `<h4 class="damage-header">${labelText}
-  <a class="damage-control add-damage"><i class="fas fa-plus"></i></a>
+      const labelText = i18n("midi-qol.onUseMacroLabel");      
+      const macros = new OnUseMacros(getProperty(app.object.data, "flags.midi-qol.onUseMacroName"));
+      const macroField = `<h4 class="macro-header">${labelText}
+  <a class="macro-control add-macro"><i class="fas fa-plus"></i></a>
 </h4>
-  <ol class="damage-parts form-group">    
-    ${macros?.reduce((options: string, x: onUseMacro, currentIndex) => options += x.toListItem(currentIndex, designations), "")}
+  <ol class="macro-parts form-group">    
+    ${macros.selectListOptions}
   </ol>`;
       element.append(macroField)
     }
@@ -290,6 +290,7 @@ export function initHooks() {
       element2.append(criticalField);
     }
 
+    activateMacroListeners(app, html);
   })
 
   function _chatListeners(html) {
@@ -304,10 +305,10 @@ export function initHooks() {
     let grid_size = canvas.scene?.data.grid
 
     canvas.tokens?.targetObjects({
-      x: dropData.x - grid_size / 2,
-      y: dropData.y - grid_size / 2,
-      height: grid_size,
-      width: grid_size
+      x: dropData.x - grid_size! / 2,
+      y: dropData.y - grid_size! / 2,
+      height: grid_size!,
+      width: grid_size!
     });
 
     let actor: Actor | undefined | null = game.actors?.get(dropData.actorId);
@@ -580,4 +581,3 @@ export const itemJSONData = {
     },
   }
 }
-
