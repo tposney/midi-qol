@@ -460,8 +460,7 @@ export class Workflow {
           return undefined;
         };
         if (configSettings.allowUseMacro) {
-          await this.callMacros(this.item, this.onUseMacros?.getMacros("preAttackRoll"), "OnUse");
-          this.onUseMacros?.setDesignationCalled("preAttackRoll");
+          await this.callMacros(this.item, this.onUseMacros?.getMacros("preAttackRoll"), "OnUse");          
         }        
         const attackBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.AttackBonusMacro`);
         if (configSettings.allowUseMacro && attackBonusMacro) {
@@ -487,7 +486,6 @@ export class Workflow {
         await this.expireTargetEffects(attackExpiries)
         if (configSettings.allowUseMacro) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("postAttackRoll"), "OnUse");
-          this.onUseMacros?.setDesignationCalled("postAttackRoll");
         }
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
         Hooks.callAll("midi-qol.AttackRollComplete", this);
@@ -568,7 +566,6 @@ export class Workflow {
         Hooks.callAll("midi-qol.preDamageRollComplete", this)
         if (configSettings.allowUseMacro) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preDamageRoll"), "OnUse");
-          this.onUseMacros?.setDesignationCalled("preDamageRoll");
         }
         // apply damage to targets plus saves plus immunities
         // done here cause not needed for betterrolls workflow
@@ -587,7 +584,6 @@ export class Workflow {
         }
         if (configSettings.allowUseMacro) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("postDamageRoll"), "OnUse");
-          this.onUseMacros?.setDesignationCalled("postDamageRoll");
         }
         await this.displayDamageRoll(configSettings.mergeCard);
         Hooks.callAll("midi-qol.DamageRollComplete", this)
@@ -662,7 +658,6 @@ export class Workflow {
 
         if (configSettings.allowUseMacro) {
           const results: any = await this.callMacros(this.item, this.onUseMacros?.getMacros("preActiveEffects"), "OnUse");
-          this.onUseMacros?.setDesignationCalled("preActiveEffects");
           // Special check for return of {haltEffectsApplication: true} from item macro
           if (results.some(r => r?.haltEffectsApplication))
             return this.next(WORKFLOWSTATES.ROLLFINISHED);
@@ -710,7 +705,6 @@ export class Workflow {
 
         if (configSettings.allowUseMacro) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("postActiveEffects"), "OnUse");
-          this.onUseMacros?.setDesignationCalled("postActiveEffects");
         }
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 

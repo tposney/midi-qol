@@ -1,7 +1,6 @@
 import { ItemDataSchema } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/data.mjs/itemData";
 import { i18n } from "../../midi-qol.js";
 
-
 export class OnUseMacros {
   items: OnUseMacro[];
 
@@ -9,36 +8,30 @@ export class OnUseMacros {
     this.items = onUseMacroNames?.split(',')?.filter((value: string) => value.trim().length > 0)?.map((macro: string) => new OnUseMacro(macro)) ?? [];
   }
 
-  public getMacros(designation: string) {
-    return this.items.filter(x => x.macroName?.length > 0).filter(x => (x.designation === designation && !x.called) || x.designation === "all").map(x => x.macroName).toString();
-  }
-
-  public setDesignationCalled(designation: string) {
-    this.items.filter(x => x.designation === designation).forEach(x => x.called === true);
+  public getMacros(currentOption: string) {
+    return this.items.filter(x => x.macroName?.length > 0).filter(x => x.option === currentOption || x.option === "all").map(x => x.macroName).toString();
   }
 
   get selectListOptions() {
-    const designations = i18n('midi-qol.onUseMacro.designation') as any as [string, string];
-    return this.items.reduce((value: string, macro: OnUseMacro, index: number) => value += macro.toListItem(index, designations), "");
+    const macroOptions = new OnUseMacroOptions(i18n('midi-qol.onUseMacroOptions')).getOptions;
+    return this.items.reduce((value: string, macro: OnUseMacro, index: number) => value += macro.toListItem(index, macroOptions), "");
   }
 }
 
 class OnUseMacro {
     macroName: string;
-    designation: string; 
-    called: boolean;
+    option: string; 
   
     constructor(macro: string) {
-      const pattern = new RegExp('(?:\\[(?<designation>.*?)\\])?(?<macroName>.*)', '');
+      const pattern = new RegExp('(?:\\[(?<option>.*?)\\])?(?<macroName>.*)', '');
       let data = macro.match(pattern)?.groups; 
   
       this.macroName = data!["macroName"].trim();
-      this.designation = data!["designation"] ?? "postActiveEffects";
-      this.called = false;
+      this.option = data!["option"] ?? "postActiveEffects";
     }
 
-    public toListItem (index: Number, designations: [string, string]) {    
-      const options = designations?.reduce((opts: string, x: string) => opts += `<option value="${x[0]}" ${x[0] === this.designation ? 'selected' : ''}>${x[1]}</option>`, "");
+    public toListItem (index: Number, macroOptions: Array<OnUseMacroOption>) {    
+      const options = macroOptions?.reduce((opts: string, x: OnUseMacroOption) => opts += `<option value="${x.option}" ${x.option === this.option ? 'selected' : ''}>${x.label}</option>`, "");
       return `<li class="macro-part flexrow" midiqol-macro-part="${index}">
     <input type="text" name="flags.midi-qol.onUseMacroName.parts.${index}.0" value="${this.macroName}">
     <select name="flags.midi-qol.onUseMacroName.parts.${index}.1">
@@ -48,6 +41,58 @@ class OnUseMacro {
   </li>`;
     }
 }
+
+class OnUseMacroOption {
+  option: string;
+  label: string;
+
+  constructor(option, label){
+    this.option = option;
+    this.label = label;
+  }
+}
+
+class OnUseMacroOptions {
+  preAttackRoll: string;
+	preCheckHits: string;
+	postAttackRoll: string;
+	preSave: string;
+	postSave: string;
+	preDamageRoll: string;
+	postDamageRoll: string;
+	preDamageApplication: string;
+	preActiveEffects: string;
+	postActiveEffects: string;
+	all: string;
+
+  constructor(data: any) {
+    this.preAttackRoll = "preAttackRoll";
+    this.preCheckHits = "preCheckHits";
+    this.postAttackRoll = "postAttackRoll";
+    this.preSave = "preSave";
+    this.postSave = "postSave";
+    this.preDamageRoll = "preDamageRoll";
+    this.postDamageRoll = "postDamageRoll";
+    this.preDamageApplication = "preDamageApplication";
+    this.preActiveEffects = "preActiveEffects";
+    this.postActiveEffects = "postActiveEffects";
+    this.all = "all";
+    for(const [k, v] of Object.entries(data)) {
+      if(this[k]) {
+        this[k] = v;
+      }
+    }
+  }
+
+  get getOptions() {
+    let result: Array<OnUseMacroOption> = [];
+    for(const [option, label] of Object.entries(this)) {
+      result.push(new OnUseMacroOption(option, label));
+    }
+    return result;
+  }
+}
+
 
 export function activateMacroListeners(app: ItemSheet, html) {
   if (app.isEditable) {
