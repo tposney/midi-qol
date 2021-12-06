@@ -232,14 +232,19 @@ export function initHooks() {
   Hooks.on("applyActiveEffect", midiCustomEffect);
   Hooks.on("preCreateActiveEffect", checkImmunity);
 
-  Hooks.on("preUpdateItem", (_, data) => {
+  Hooks.on("preUpdateItem", (item, data) => {
     const macros = getProperty(data, 'flags.midi-qol.onUseMacroName');
-    if (macros && macros?.parts) {
-      let macroName = "";
-      for(var i in macros.parts) {
-        macroName += `[${macros.parts[i][1]}]${macros.parts[i][0]},`;
+    if (macros && macros?.parts) {      
+      data.flags["midi-qol"].onUseMacroName = OnUseMacros.parseParts(macros.parts).toString();
+    }
+  });
+  Hooks.on("updateToken", async (token, data, payload) => {
+    const key : string = Object.keys(payload.embedded.hookData)[0];
+    if (key) {
+      const macros = getProperty(payload, `embedded.hookData.${key}.doc.flags.midi-qol.onUseMacroName`)?.parts;
+      if (macros) {
+        payload.embedded.hookData[key].doc.flags['midi-qol'].onUseMacroName = OnUseMacros.parseParts(macros).toString();
       }
-      data.flags["midi-qol"].onUseMacroName = macroName.slice(0, -1);
     }
   });
 
