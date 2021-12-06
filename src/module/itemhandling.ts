@@ -626,8 +626,8 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
   for (let x = startX; x < token.data.width; x++) {
     for (let y = startY; y < token.data.height; y++) {
       const currGrid = {
-        x: token.data.x + x * grid - templatePos.x,
-        y: token.data.y + y * grid - templatePos.y,
+        x: token.data.x + x * grid! - templatePos.x,
+        y: token.data.y + y * grid! - templatePos.y,
       };
       let contains = templateDetails.shape?.contains(currGrid.x, currGrid.y);
       if (contains && wallsBlockTargeting) {

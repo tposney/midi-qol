@@ -10,6 +10,7 @@ import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls, useMidiCrit } from "./settings.js";
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor } from "./utils.js"
 import { getTrailingCommentRanges } from "typescript";
+import { OnUseMacros } from "./apps/Item.js";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -128,6 +129,7 @@ export class Workflow {
   reactionUpdates: Set<Actor5e>;
   stateList: workflowSate[];
   flagTags: {} | undefined;
+  onUseMacros: OnUseMacros | undefined;
 
   static eventHack: any;
 
@@ -282,6 +284,9 @@ export class Workflow {
     this.damageRolled = false;
     this.kickStart = true; // call workflow.next(WORKFLOWSTATES.NONE) when the item card is shown.
     this.flagTags = undefined;
+
+    if (configSettings.allowUseMacro) 
+      this.onUseMacros = new OnUseMacros(getProperty(this.item, "data.flags.midi-qol.onUseMacroName"));
   }
 
   public someEventKeySet() {
@@ -454,6 +459,9 @@ export class Workflow {
         if (Hooks.call("midi-qol.preAttackRollComplete", this) === false) {
           return undefined;
         };
+        if (configSettings.allowUseMacro) {
+          await this.callMacros(this.item, this.onUseMacros?.getMacros("preAttackRoll"), "OnUse");          
+        }        
         const attackBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.AttackBonusMacro`);
         if (configSettings.allowUseMacro && attackBonusMacro) {
           await this.rollAttackBonus(attackBonusMacro);
@@ -476,6 +484,9 @@ export class Workflow {
           "1Reaction",
         ];
         await this.expireTargetEffects(attackExpiries)
+        if (configSettings.allowUseMacro) {
+          await this.callMacros(this.item, this.onUseMacros?.getMacros("postAttackRoll"), "OnUse");
+        }
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
         Hooks.callAll("midi-qol.AttackRollComplete", this);
         if (
@@ -491,7 +502,7 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMAGEROLL:
-        if (debugEnabled > 1) debug(`wait for damage roll has damage ${itemHasDamage(this.item)} isfumble ${this.isFumble} no auto damage ${this.noAutoDamage}`);
+        if (debugEnabled > 1) debug(`wait for damage roll has damage ${itemHasDamage(this.item)} isfumble ${this.isFumble} no auto damage ${this.noAutoDamage}`);        
         if (!itemHasDamage(this.item)) return this.next(WORKFLOWSTATES.WAITFORSAVES);
         if (this.isFumble && configSettings.autoRollDamage !== "none") {
           // Auto rolling damage but we fumbled - we failed - skip everything.
@@ -520,7 +531,7 @@ export class Workflow {
           return undefined;
         }
         this.processDamageEventOptions(event);
-
+        
         //        if (configSettings.mergeCard && !shouldRollDamage) {
         //if (!shouldRollDamage) {
         {
@@ -553,6 +564,9 @@ export class Workflow {
           if (debugEnabled > 0) warn(" damage roll complete for non auto target area effects spells", this)
         }
         Hooks.callAll("midi-qol.preDamageRollComplete", this)
+        if (configSettings.allowUseMacro) {
+          await this.callMacros(this.item, this.onUseMacros?.getMacros("preDamageRoll"), "OnUse");
+        }
         // apply damage to targets plus saves plus immunities
         // done here cause not needed for betterrolls workflow
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
@@ -567,6 +581,9 @@ export class Workflow {
         // TODO Need to do DSN stuff
         if (this.otherDamageRoll) {
           this.otherDamageDetail = createDamageList({roll: this.otherDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType});
+        }
+        if (configSettings.allowUseMacro) {
+          await this.callMacros(this.item, this.onUseMacros?.getMacros("postDamageRoll"), "OnUse");
         }
         await this.displayDamageRoll(configSettings.mergeCard);
         Hooks.callAll("midi-qol.DamageRollComplete", this)
@@ -639,9 +656,8 @@ export class Workflow {
         ];
         await this.expireTargetEffects(specialExpiries)
 
-        if (configSettings.allowUseMacro && !this.onUseMacroCalled && this.item?.data.flags) {
-          this.onUseMacroCalled = true;
-          const results: any = await this.callMacros(this.item, getProperty(this.item, "data.flags.midi-qol.onUseMacroName"), "OnUse");
+        if (configSettings.allowUseMacro) {
+          const results: any = await this.callMacros(this.item, this.onUseMacros?.getMacros("preActiveEffects"), "OnUse");
           // Special check for return of {haltEffectsApplication: true} from item macro
           if (results.some(r => r?.haltEffectsApplication))
             return this.next(WORKFLOWSTATES.ROLLFINISHED);
@@ -685,6 +701,10 @@ export class Workflow {
               }
             }
           }
+        }
+
+        if (configSettings.allowUseMacro) {
+          await this.callMacros(this.item, this.onUseMacros?.getMacros("postActiveEffects"), "OnUse");
         }
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
@@ -984,7 +1004,7 @@ export class Workflow {
   }
 
   async callMacros(item, macros, tag): Promise<damageBonusMacroResult[]> {
-    if (!macros) return [];
+    if (!macros || macros?.length === 0) return [];
     let values: Promise<damageBonusMacroResult | any>[] = [];
     let results: damageBonusMacroResult[];
     const macroNames = macros.split(",");

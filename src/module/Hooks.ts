@@ -2,6 +2,7 @@ import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from 
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook } from "./chatMesssageHandling.js";
 import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage } from "./utils.js";
+import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { configSettings, dragDropTargeting, useMidiCrit } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 
@@ -231,14 +232,28 @@ export function initHooks() {
   Hooks.on("applyActiveEffect", midiCustomEffect);
   Hooks.on("preCreateActiveEffect", checkImmunity);
 
+  Hooks.on("preUpdateItem", (_, data) => {
+    const macros = getProperty(data, 'flags.midi-qol.onUseMacroName');
+    if (macros && macros?.parts) {
+      let macroName = "";
+      for(var i in macros.parts) {
+        macroName += `[${macros.parts[i][1]}]${macros.parts[i][0]},`;
+      }
+      data.flags["midi-qol"].onUseMacroName = macroName.slice(0, -1);
+    }
+  });
 
   Hooks.on("renderItemSheet", (app, html, data) => {
     const element = html.find('input[name="data.chatFlavor"]').parent().parent();
     if (configSettings.allowUseMacro) {
-      const labelText = i18n("midi-qol.onUseMacroLabel");
-      const currentMacro = getProperty(app.object.data, "flags.midi-qol.onUseMacroName") ?? "";
-
-      const macroField = `<div class="form-group"><label>${labelText}</label><input type="text" name="flags.midi-qol.onUseMacroName" value="${currentMacro}"/> </div>`;
+      const labelText = i18n("midi-qol.onUseMacroLabel");      
+      const macros = new OnUseMacros(getProperty(app.object.data, "flags.midi-qol.onUseMacroName"));
+      const macroField = `<h4 class="macro-header">${labelText}
+  <a class="macro-control add-macro"><i class="fas fa-plus"></i></a>
+</h4>
+  <ol class="macro-parts form-group">    
+    ${macros.selectListOptions}
+  </ol>`;
       element.append(macroField)
     }
     const labelText = i18n("midi-qol.EffectActivation");
@@ -275,6 +290,7 @@ export function initHooks() {
       element2.append(criticalField);
     }
 
+    activateMacroListeners(app, html);
   })
 
   function _chatListeners(html) {
@@ -289,10 +305,10 @@ export function initHooks() {
     let grid_size = canvas.scene?.data.grid
 
     canvas.tokens?.targetObjects({
-      x: dropData.x - grid_size / 2,
-      y: dropData.y - grid_size / 2,
-      height: grid_size,
-      width: grid_size
+      x: dropData.x - grid_size! / 2,
+      y: dropData.y - grid_size! / 2,
+      height: grid_size!,
+      width: grid_size!
     });
 
     let actor: Actor | undefined | null = game.actors?.get(dropData.actorId);
@@ -565,4 +581,3 @@ export const itemJSONData = {
     },
   }
 }
-
