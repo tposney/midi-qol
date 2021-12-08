@@ -1,3 +1,56 @@
+### 0.8.91
+* Fix for rectangular templates coupled with wall blocking producing odd results.
+* Support editing targets after placing an AoE template but before rolling damage for items without an attack roll (attacks lock the targets).
+* Fix for better rolls saving throws results NOT being displayed for the player that did the save when using dice so nice.
+* Fix for ability test saves not working.
+* Breaking - libWrapper is now a dependency for midi-qol.
+* Added some new midi-qol flags, flags.midi-qol.absorption.acid/bludgeoning etc, which converts damage of that type to healing, for example Clay Golem
+* Added noDamageAlt and fullDamageAlt strings, mainly of use for language translators.
+* Support for monk's token bar 1.0.55 to set advantage/disadvantage on saving throws as required. Midi-qol REQUIRES monk's token bar 1.0.55.
+* Change to reaction processing. 
+  - Added an additional reaction type, Reaction Damage as well as the existing Reaction.
+  - Items with activation type Reaction will get applied after the attack roll has been made, but before it is adjudicated.
+  - Items with activation type Reaction Damage will get called before damage is applied, but after it is determined that damage is going to be applied.
+  - The activation condition is no longer consulted for reactions, only the activation type.
+* Added Absorb Elements to the sample item compendium.
+
+* OnUse macros - added some control for macro writers to decide when their macro should get called, this is meant to be more convenient that a macro that registers for hooks. The macro data will be current for the state of the workflow. e.g. ``[postActiveEffects]ItemMacro``. Many thanks to @Seriousnes#7895 for almost all of the code for this.
+```
+    [preAttackRoll] before the attack roll is made
+    [preCheckHits] after the attack roll is made but before hits are adjudicated
+    [postAttackRoll] after the attack is adjudicated
+    [preSave] before saving throws are rolled
+    [postSave] after saving throws are rolled
+    [preDamageRoll] before damage is rolled
+    [postDamageRoll] after the damage roll is made
+    [preDamageApplication] before damage is applied
+    [preActiveEffects] before active effects are applied
+    [postActiveEffects] after active effects are applied
+    [All] call the macro for each of the above cases
+```
+  - the macro arguments have an additional parameter args[0].macroPass set to the pass being called, being one of:
+    preAttackRoll
+    preCheckHits
+    postAttackRoll
+    preSave
+    postSave
+    preDamageRoll
+    postDamageRoll
+    preDamageApplication
+    preActiveEffects
+    postActiveEffects
+  - all is special, being called with each value of args[0].macroPass. You can differentiate by checking ```args[0].macroPass``` to decide which ones to act on.
+  - You can specify (for example):
+    ```[postAttackRoll]ItemMacro, [postDmageApplication]ItemMacro``` for multiple passes, or use All
+  - The default pass is "postActiveEffects", to correspond to the existing behaviour.
+  * Note: if you are creating a damage only workflow in your macro it is best to run it in "postActiveEffects". 
+  * Note: For better rolls the preAttackRoll, preDamageRoll don't really mean anything.
+  * If you wish to make changes to the workflow in these macros you will need to do: (remembering that if the macro is an execute as GM macro being run on the GM client, the Workflow.get may return undefined)
+  ```
+  const workflow = MidiQOL.Workflow.getWorkflow(args[0].uuid)
+  workflow.... = .....
+  ```
+
 ### 0.8.90
 * Reinstated the intended behaviour of the "Apply Active Effects" button, which is to apply effects to targeted tokens, rather than tokens targeted when the item was first rolled.
 * Fix for better rolls saving throws not being hidden.

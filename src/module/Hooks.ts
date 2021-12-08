@@ -5,6 +5,7 @@ import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget,
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { configSettings, dragDropTargeting, useMidiCrit } from "./settings.js";
 import { installedModules } from "./setupModules.js";
+import { preUpdateItemOnUseMacro } from "./patching.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -203,7 +204,7 @@ export function initHooks() {
     untargetAllTokens(combat, data.options, user);
     untargetDeadTokens();
     // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
-    processOverTime(combat, data, options, user);
+    // processOverTime(combat, data, options, user);
   })
 
   Hooks.on("renderChatMessage", (message, html, data) => {
@@ -231,7 +232,9 @@ export function initHooks() {
   })
   Hooks.on("applyActiveEffect", midiCustomEffect);
   Hooks.on("preCreateActiveEffect", checkImmunity);
+  Hooks.on("preUpdateItem", preUpdateItemOnUseMacro);
 
+  /*
   Hooks.on("preUpdateItem", (item, data) => {
     const macros = getProperty(data, 'flags.midi-qol.onUseMacroName');
     if (macros && macros?.parts) {      
@@ -239,6 +242,8 @@ export function initHooks() {
     }
   });
   Hooks.on("updateToken", async (token, data, payload) => {
+    if (!payload?.embedded?.hookData) return;
+    if (typeof payload.embedded.hookData !== "string") return;
     const key : string = Object.keys(payload.embedded.hookData)[0];
     if (key) {
       const macros = getProperty(payload, `embedded.hookData.${key}.doc.flags.midi-qol.onUseMacroName`)?.parts;
@@ -247,7 +252,7 @@ export function initHooks() {
       }
     }
   });
-
+*/
   Hooks.on("renderItemSheet", (app, html, data) => {
     const element = html.find('input[name="data.chatFlavor"]').parent().parent();
     if (configSettings.allowUseMacro) {
@@ -294,7 +299,6 @@ export function initHooks() {
       const criticalField = `<div class="form-group"><label>${labelText2}</label><div class="form-fields"><input type="text" name="flags.midi-qol.criticalThreshold" value="${criticalThreshold}"/></div></div>`;
       element2.append(criticalField);
     }
-
     activateMacroListeners(app, html);
   })
 

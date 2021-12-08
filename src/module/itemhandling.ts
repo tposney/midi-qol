@@ -148,7 +148,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   let workflow = Workflow.getWorkflow(this.uuid);
   if (!enableWorkflow || !workflow) {
     if (!workflow && debugEnabled > 0) warn("Roll Damage: No workflow for item ", this.name);
-    return await wrapped({ event, versatile, options })
+    return await wrapped({ event, versatile, spellLevel, powerLevel, options })
   }
   const midiFlags = workflow.actor.data.flags["midi-qol"]
   if (workflow.currentState !== WORKFLOWSTATES.WAITFORDAMAGEROLL && workflow.noAutoAttack) {
@@ -636,11 +636,13 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
         if (templateDetails.shape.type === 1) { // A rectangle
           tx = tx + templateDetails.shape.width / 2;
           ty = ty + templateDetails.shape.height / 2;
+
         }
-        const r = new Ray({ x: tx, y: ty }, { x: currGrid.x + tx, y: currGrid.y + ty });
+        const r = new Ray({ x: tx, y: ty }, { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y });
+
         if (configSettings.optionalRules.wallsBlockRange === "centerLevels" && installedModules.get("levels")) {
           let p1 = {
-            x: currGrid.x + tx, y: currGrid.y + ty,
+            x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y,
             //@ts-ignore
             z: token.data.elevation
           }

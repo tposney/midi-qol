@@ -1,14 +1,11 @@
-import { ItemDataSchema } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/data.mjs/itemData";
-import { i18n } from "../../midi-qol.js";
-
 export class OnUseMacros {
   items: OnUseMacro[];
 
   constructor(onUseMacros: any = null){
-    if (onUseMacros?.parts) {
-      this.items = OnUseMacros.parseParts(onUseMacros.parts)?.items;
-    } else {
+    if (typeof onUseMacros === "string") {
       this.items = onUseMacros?.split(',')?.filter((value: string) => value.trim().length > 0)?.map((macro: string) => new OnUseMacro(macro)) ?? [];
+    } else {
+      this.items = [];
     }
   }
 
@@ -19,7 +16,7 @@ export class OnUseMacros {
   }
 
   public getMacros(currentOption: string) {
-    return this.items.filter(x => x.macroName?.length > 0).filter(x => x.option === currentOption || x.option === "all").map(x => x.macroName).toString();
+    return this.items.filter(x => x.macroName?.length > 0 && (x.option === currentOption || x.option === "all")).map(x => x.macroName).toString();
   }
 
   public toString() {
@@ -27,94 +24,63 @@ export class OnUseMacros {
   }
 
   get selectListOptions() {
-    const macroOptions = new OnUseMacroOptions(i18n('midi-qol.onUseMacroOptions')).getOptions;
-    return this.items.reduce((value: string, macro: OnUseMacro, index: number) => value += macro.toListItem(index, macroOptions), "");
+    return this.items.reduce((value: string, macro: OnUseMacro, index: number) => value += macro.toListItem(index, OnUseMacroOptions.getOptions), "");
   }
 }
 
-class OnUseMacro {
+export class OnUseMacro {
     macroName: string;
     option: string; 
   
-    constructor(macro: string = "") {
-      const pattern = new RegExp('(?:\\[(?<option>.*?)\\])?(?<macroName>.*)', '');
-      let data = macro.match(pattern)?.groups; 
-  
-      this.macroName = data!["macroName"].trim();
-      this.option = data!["option"] ?? "postActiveEffects";
+    constructor(macro: string | undefined = undefined) {
+      if (macro === undefined) {
+        this.macroName = "";
+      } else {
+        const pattern = new RegExp('(?:\\[(?<option>.*?)\\])?(?<macroName>.*)', '');
+        let data = macro.match(pattern)?.groups; 
+        this.macroName = data!["macroName"].trim();
+        this.option = data!["option"];
+      }
+      if (this.option === undefined)
+        this.option = "postActiveEffects";
     }
 
     static parsePart(parts: [string, string]) {
-      return new OnUseMacro(`[${parts[1]}]${parts[0]}`);
+      const m =  new OnUseMacro();
+      m.macroName = parts[0]
+      m.option = parts[1] ?? m.option;
+      return m;
     }
 
     public toString() {
       return `[${this.option}]${this.macroName}`;
     }
 
-    public toListItem (index: Number, macroOptions: Array<OnUseMacroOption>) {    
-      const options = macroOptions?.reduce((opts: string, x: OnUseMacroOption) => opts += `<option value="${x.option}" ${x.option === this.option ? 'selected' : ''}>${x.label}</option>`, "");
+    public toListItem (index: Number, macroOptions: OnUseMacroOptions) {    
+      const options = OnUseMacroOptions.getOptions?.reduce((opts: string, x: {option: string, label: string}) => opts += `<option value="${x.option}" ${x.option === this.option ? 'selected' : ''}>${x.label}</option>`, "");
       return `<li class="macro-part flexrow" data-midiqol-macro-part="${index}">
-    <input type="text" name="flags.midi-qol.onUseMacroName.parts.${index}.0" value="${this.macroName}">
-    <select name="flags.midi-qol.onUseMacroName.parts.${index}.1">
+    <input type="text" name="flags.midi-qol.onUseMacroParts.${index}.0" value="${this.macroName}">
+    <select name="flags.midi-qol.onUseMacroParts.${index}.1">
       ${options}
     </select>
     <a class="macro-control delete-macro"><i class="fas fa-minus"></i></a>
   </li>`;
     }
 }
+export class OnUseMacroOptions {
+  static options : Array<{option: string, label: string}>;
 
-class OnUseMacroOption {
-  option: string;
-  label: string;
-
-  constructor(option, label){
-    this.option = option;
-    this.label = label;
-  }
-}
-
-class OnUseMacroOptions {
-  preAttackRoll: string;
-	preCheckHits: string;
-	postAttackRoll: string;
-	preSave: string;
-	postSave: string;
-	preDamageRoll: string;
-	postDamageRoll: string;
-	preDamageApplication: string;
-	preActiveEffects: string;
-	postActiveEffects: string;
-	all: string;
-
-  constructor(data: any) {
-    this.preAttackRoll = "preAttackRoll";
-    this.preCheckHits = "preCheckHits";
-    this.postAttackRoll = "postAttackRoll";
-    this.preSave = "preSave";
-    this.postSave = "postSave";
-    this.preDamageRoll = "preDamageRoll";
-    this.postDamageRoll = "postDamageRoll";
-    this.preDamageApplication = "preDamageApplication";
-    this.preActiveEffects = "preActiveEffects";
-    this.postActiveEffects = "postActiveEffects";
-    this.all = "all";
-    for(const [k, v] of Object.entries(data)) {
-      if(this[k]) {
-        this[k] = v;
-      }
+  static setOptions(options: any) {
+    this.options = [];
+    for (let option of Object.keys(options)) {
+      this.options.push({option, label: options[option]});
     }
   }
 
-  get getOptions() {
-    let result: Array<OnUseMacroOption> = [];
-    for(const [option, label] of Object.entries(this)) {
-      result.push(new OnUseMacroOption(option, label));
-    }
-    return result;
+  static get getOptions(): Array<{option: string, label: string}> {
+    return this.options;
   }
 }
-
 
 export function activateMacroListeners(app: ItemSheet, html) {
   if (app.isEditable) {
@@ -128,23 +94,23 @@ async function _onMacroControl(event){
 
   // Add new macro component
   if ( a.classList.contains("add-macro") ) {
-    await this._onSubmit(event);  // Submit any unsaved changes    
     const macros = getCurrentMacros(this.item);
+    await this._onSubmit(event);  // Submit any unsaved changes    
     macros.items.push(new OnUseMacro());
     return this.item.update({"flags.midi-qol.onUseMacroName":  macros.toString()});
   }
 
   // Remove a macro component
   if ( a.classList.contains("delete-macro") ) {
+    const macros = getCurrentMacros(this.item);
     await this._onSubmit(event);  // Submit any unsaved changes
     const li = a.closest(".macro-part");
-    const macros = getCurrentMacros(this.item);
     macros.items.splice(Number(li.dataset.midiqolMacroPart), 1);
     return this.item.update({"flags.midi-qol.onUseMacroName": macros.toString()});
   }
 }
 
 function getCurrentMacros(item): OnUseMacros {
-  const macroField = getProperty(item, "data.flags.midi-qol.onUseMacroName");
-  return macroField?.parts ? OnUseMacros.parseParts(macroField!.parts) : new OnUseMacros(macroField ?? null);
+  const macroField = getProperty(item, "data.flags.midi-qol.onUseMacroParts");
+  return macroField;
 }

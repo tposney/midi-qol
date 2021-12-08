@@ -182,6 +182,8 @@ export let diceSoNiceHandler = async (message, html, data) => {
   if (!getProperty(message.data, "flags.midi-qol.waitForDiceSoNice")) return;
   if (debugEnabled > 1) debug("dice so nice handler - non-merge card", html)
 
+  // better rolls handles delaying the chat card until complete.
+  if (!configSettings.mergeCard && installedModules.get("betterrolls5e")) return; 
   html.hide();
   Hooks.once("diceSoNiceRollComplete", (id) => {
     let savesDisplay = $(html).find(".midi-qol-saves-display").length === 1;
@@ -194,8 +196,7 @@ export let diceSoNiceHandler = async (message, html, data) => {
     } else if (hitsDisplay) {
       if (game.user?.isGM || (configSettings.autoCheckHit !== "whisper" && !message.data.blind))
         html.show()
-    }
-    else {
+    } else {
       html.show();
       //@ts-ignore
       ui.chat.scrollBottom()

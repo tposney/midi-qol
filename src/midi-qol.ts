@@ -23,6 +23,7 @@ import { applyTokenDamage, checkNearby, completeItemRoll, findNearby, getConcent
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
+import { OnUseMacroOptions } from './module/apps/Item.js';
 
 export let debugEnabled = 0;
 // 0 = none, warnings = 1, debug = 2, all = 3
@@ -64,6 +65,9 @@ export let midiFlags: string[] = [];
 export let allAttackTypes: string[] = []
 export let gameStats: RollStats;
 export let overTimeEffectsToDelete = {};
+export let MQItemMacroLabel: string;
+export let MQDeferMacroLabel: string;
+export let MQOnUseOptions
 export const MESSAGETYPES = {
   HITS: 1,
   SAVES: 2,
@@ -114,6 +118,10 @@ Hooks.once('setup', function () {
   savingThrowText = i18n("midi-qol.savingThrowText");
   savingThrowTextAlt = i18n("midi-qol.savingThrowTextAlt");
   MQdefaultDamageType = i18n("midi-qol.defaultDamageType");
+  MQItemMacroLabel = i18n("midi-qol.ItemMacroText");
+  if (MQItemMacroLabel ===  "midi-qol.ItemMacroText") MQItemMacroLabel = "ItemMacro";
+  MQDeferMacroLabel = i18n("midi-qol.DeferText");
+  if (MQDeferMacroLabel === "midi-qol.DeferText") MQDeferMacroLabel = "[Defer]";
   if (game.system.id === "dnd5e") {
     //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.weaponProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
@@ -135,6 +143,8 @@ Hooks.once('setup', function () {
     CONFIG.DND5E.damageResistanceTypes["healing"] = CONFIG.DND5E.healingTypes.healing;
     //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.damageResistanceTypes["temphp"] = CONFIG.DND5E.healingTypes.temphp;
+    //@ts-ignore CONFIG.DND5E
+    CONFIG.DND5E.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
   } else { // sw5e
     //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.weaponProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
@@ -168,6 +178,7 @@ Hooks.once('setup', function () {
       section: i18n("midi-qol.DAEMidiQOL"),
       type: String
     };
+
   };
   setupSheetQol();
 });
@@ -176,12 +187,25 @@ Hooks.once('setup', function () {
 /* When ready							*/
 /* ------------------------------------ */
 Hooks.once('ready', function () {
-  if (!game.modules.get("lib-wrapper")?.active && game.user?.isGM)
-    ui.notifications?.warn("The 'Midi QOL' module recommends to install and activate the 'libWrapper' module.");
   gameStats = new RollStats();
-
-  // Do anything once the module is ready
   actorAbilityRollPatching();
+  // has to be done before setup api.
+  MQOnUseOptions = i18n("midi-qol.OnUseOptions");
+  if (typeof MQOnUseOptions === "string") MQOnUseOptions = {
+		"preAttackRoll": "Before Attack Roll",
+		"preCheckHits": "Before Check Hits",
+		"postAttackRoll": "After Attack Roll",
+		"preSave": "Before Save", 
+		"postSave": "After Save",
+		"preDamageRoll": "Before Damage Roll",
+		"postDamageRoll": "After Damage Roll",
+		"preDamageApplication": "Before Damage Application",
+		"preActiveEffects": "Before Active Effects",
+		"postActiveEffects": "After Active Effects ",		
+		"all": "All"
+	}
+  OnUseMacroOptions.setOptions(MQOnUseOptions);
+
   setupMidiQOLApi();
 
   if (game.user?.isGM && !installedModules.get("dae")) {
@@ -242,7 +266,8 @@ function setupMidiQOLApi() {
     checkRule: checkRule,
     reportMidiCriticalFlags: reportMidiCriticalFlags,
     completeItemRoll: completeItemRoll,
-    overTimeJSONData: overTimeJSONData
+    overTimeJSONData: overTimeJSONData,
+    MQOnUseOptions
   }
 }
 
@@ -418,6 +443,13 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.uncanny-dodge`);
 
   midiFlags.push(`flags.midi-qol.OverTime`);
+
+  //@ts-ignore
+  const damageTypes = Object.keys(CONFIG.SW5E?.damageTypes ?? CONFIG.DND5E.damageTypes);
+  for (let key of damageTypes) {
+    midiFlags.push(`flags.midi-qol.absorption.${key}`);
+  }
+
   /*
   midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);

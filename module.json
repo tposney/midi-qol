@@ -12,7 +12,11 @@
   "dependencies": [
     {
     "name": "socketlib", "type": "module"
+    },
+    {
+    "name": "lib-wrapper", "type": "module"
     }
+
   ],
   "packs": [
     {

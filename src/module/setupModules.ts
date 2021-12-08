@@ -12,7 +12,7 @@ let modules = {"about-time": "0.0",
               "combat-utility-belt": "1.3.8",
               "times-up": "0.1.2",
               "conditional-visibility": "0.0",
-              "monks-tokenbar": "0.0",
+              "monks-tokenbar": "1.0.55",
               "socketlib": "0.0",
               "advanced-macros": "1.0",
               "dnd5e-helpers":  "3.0.0",
@@ -44,7 +44,8 @@ export let setupModules = () => {
 
 export function dice3dEnabled() {
   //@ts-ignore
-  return installedModules.get("dice-so-nice") && game.dice3d?.isEnabled();
+  // return installedModules.get("dice-so-nice") && game.dice3d?.isEnabled();
+  return installedModules.get("dice-so-nice");
 }
 
 export function checkModules() {

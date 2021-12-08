@@ -1,9 +1,11 @@
 import { log, warn, debug, i18n, error, getCanvas } from "../midi-qol.js";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
-import { bonusDialog, expireRollEffect, getOptionalCountRemainingShortFlag, getSpeaker, testKey } from "./utils.js";
+import { bonusDialog, expireRollEffect, getOptionalCountRemainingShortFlag, getSpeaker, processOverTime, testKey } from "./utils.js";
 import { installedModules } from "./setupModules.js";
-import { libWrapper } from "./lib/shim.js";
+import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
+import { FlowFlags } from "typescript";
+let libWrapper;
 
 var d20Roll;
 
@@ -32,25 +34,41 @@ export const baseEvent = { shiftKey: false, altKey: false, ctrlKey: false, metaK
 
 export function mapSpeedKeys(event) {
   if (installedModules.get("betterrolls5e")) return event;
+  console.error("Event is ", event)
+  if (!event) return {};
+  var fastKey = false;
+  var advKey;
+  var disKey;
+  let returnEvent;
   if (configSettings.speedItemRolls && configSettings.speedAbilityRolls) {
     if (game.system.id === "sw5e") {
-      var advKey = testKey(configSettings.keyMapping["SW5E.Advantage"], event);
-      var disKey = testKey(configSettings.keyMapping["SW5E.Disadvantage"], event);
+      advKey = testKey(configSettings.keyMapping["SW5E.Advantage"], event);
+      disKey = testKey(configSettings.keyMapping["SW5E.Disadvantage"], event);
     } else {
-      var advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
-      var disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
+      advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
+      disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
     }
   } else {
-    var advKey = event?.altKey ? true : false;
-    var disKey = (event?.ctrlKey | event?.metaKey) ? true : false;
+    advKey = event?.altKey ? true : false;
+    disKey = (event?.ctrlKey | event?.metaKey) ? true : false;
+    fastKey = event?.shiftKey ? true : false;
   };
-  if (advKey && disKey)
-    event = fastforwardEvent;
-  else if (disKey) event = disadvantageEvent;
-  else if (advKey) event = advantageEvent;
+  if (advKey && disKey) {
+    fastKey = true;
+    advKey = false;
+    disKey = false;
+  }
+  if (disKey) returnEvent = disadvantageEvent;
+  else if (advKey) returnEvent = advantageEvent;
   else
-    event = baseEvent;
-  return event;
+    returnEvent = baseEvent;
+  if (fastKey || autoFastForwardAbilityRolls) {
+    returnEvent = duplicate(returnEvent);
+    if (autoFastForwardAbilityRolls) returnEvent.fastKey = !fastKey;
+    else returnEvent.fastKey = fastKey;
+  }
+  console.error("Retun event is ", returnEvent)
+  return returnEvent;
 }
 
 interface Options {
@@ -253,8 +271,11 @@ async function rollAbilitySave(wrapped, ...args) {
   if (procAutoFail(this, "save", abilityId)) {
     options.parts = ["-100"];
   }
+  console.error("args are ", options, ...args)
+
   const chatMessage = options.chatMessage;
   options.event = mapSpeedKeys(options.event);
+  console.error("options 1", duplicate(options));
   if (options.event === advantageEvent || options.event === disadvantageEvent)
     options.fastForward = true;
   let procOptions = procAdvantage(this, "save", abilityId, options);
@@ -262,6 +283,7 @@ async function rollAbilitySave(wrapped, ...args) {
     procOptions.advantage = false;
     procOptions.disadvantage = false;
   }
+  console.error("options 2", duplicate(procOptions))
 
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.save && (flags.save.all || flags.save[abilityId])) ?? 0;
@@ -275,6 +297,7 @@ async function rollAbilitySave(wrapped, ...args) {
     return createRollResultFromCustomRoll(result)
   }
   procOptions.chatMessage = false;
+  console.error("Calling options are ", procOptions)
   let result = await wrapped(abilityId, procOptions);
   result = await bonusCheck(this, result, "save")
   if (chatMessage !== false && result) {
@@ -323,7 +346,9 @@ function procAdvantage(actor, rollType, abilityId, options: Options): Options {
   var withAdvantage = options.event?.altKey || options.advantage;
   var withDisadvantage = options.event?.ctrlKey || options.event?.metaKey || options.disadvantage;
 
-  options.fastForward = options.fastForward || (autoFastForwardAbilityRolls ? !options.event?.fastKey : options.event?.fastKey);
+  //options.fastForward = options.fastForward || (autoFastForwardAbilityRolls ? !options.event?.fastKey : options.event?.fastKey);
+  
+  options.fastForward = options.fastForward || options.event?.fastKey;
   if (advantage.ability || advantage.all) {
     const rollFlags = (advantage.ability && advantage.ability[rollType]) ?? {};
     withAdvantage = withAdvantage || advantage.all || advantage.ability.all || rollFlags.all || rollFlags[abilityId];
@@ -408,7 +433,7 @@ function midiATRefresh(wrapped) {
   return wrapped();
 }
 
-export function _prepareData(wrapped, ...args) {
+export function _prepareActorData(wrapped, ...args) {
   wrapped(...args);
 
   if (checkRule("challengeModeArmor")) {
@@ -448,10 +473,55 @@ export function _prepareData(wrapped, ...args) {
 }
 
 export function initPatching() {
-  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareData", _prepareData, "WRAPPER");
+  libWrapper = globalThis.libWrapper;
+  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareData", _prepareActorData, "WRAPPER");
+  // For new onuse macros stuff.
+  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.prepareData", _prepareItemData, "WRAPPER");
 }
+
+
+export function _prepareItemData(wrapped, ...args) {
+  wrapped(...args);
+  const macros = getProperty(this.data, 'flags.midi-qol.onUseMacroName');
+  setProperty(this.data, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macros ?? null));
+}
+
+// This can replace the ItemSheetSubmit solution when in v9 
+export function preUpdateItemOnUseMacro(item, changes, options, user) {
+  const macroParts = getProperty(changes, "flags.midi-qol.onUseMacroParts");
+  if (!macroParts) return true;
+  try {
+    const macroString = macroParts.items.map(oum => oum.toString()).join(",");
+    changes.flags["midi-qol"].onUseMacroName = macroString;
+    delete changes.flags["midi-qol"].onUseMacroParts;
+  } catch (err) {
+  }
+  return true;
+};
+
+// TODO this is not needed for v9.
+function itemSheetGetSubmitData(wrapped, ...args) {
+  let data = wrapped(...args);
+  try {
+    data = expandObject(data);
+    const macroParts: any = getProperty(data, "flags.midi-qol.onUseMacroParts");
+    if (macroParts) {
+      const macros = OnUseMacros.parseParts(macroParts)
+      delete data.flags["midi-qol"].onUseMacroParts;
+      data.flags["midi-qol"].onUseMacroName = macros.toString();
+    }
+  } catch (err) {
+    warn("onUseMacro update processing ", err)
+  } finally {
+    return flattenObject(data);
+  }
+}
+
 export function readyPatching() {
+  // TODO remove this when v9 default
+  libWrapper.register("midi-qol", "CONFIG.Item.sheetClasses.weapon['dnd5e.ItemSheet5e'].cls.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
   libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER")
+  libWrapper.register("midi-qol", "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
 }
 
 export let visionPatching = () => {

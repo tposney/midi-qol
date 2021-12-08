@@ -179,6 +179,11 @@ Things to keep in mind:
 ## FVTTEncounterStats. 
 This module keeps very detailed stats about each encounter you run and is fully compatible with midi-qol. If keeping game stats is your thing it's worth a look. Much better and more informative than the midi inbuilt rollStats.
 
+## Minor Roll Enhancements.
+* Generally not compatible.
+* You can use MRE to manage accelerator keys, provided you set it to be registered first in libWrapper settings.
+* I've only done a little bit of playing with the attack/damage behaviour, but it seems to be incompatible with midi.
+
 # Short Guide to configuration settings
 The heading says short, but it really isn't.
 
@@ -537,7 +542,7 @@ Advantage/disadvantage on checks for an ability check also grants advantage on t
 * flags.midi-qol.concentrationSaveBonus, a roll expression, which is added to concentration saves (auto, letme, monks, prompted). The roll will display without the bonus on the roll card, but the save result display will reflect the bonus. The revised saving throw formula is available in the tooltip on the save results card.
 * flags.midi-qol.uncanny-dodge which halves damage applied if set
 
-flags.midi-qol.fail.all/ability.all/ability.check.all/ability.save.all/skill.all etc to auto fail a given roll.  
+* flags.midi-qol.fail.all/ability.all/ability.check.all/ability.save.all/skill.all etc to auto fail a given roll.  
 * flags.midi-qol.ingoreNearbyFoes - when set cancels ranged attack disadvantage from a nearby enemy. Useful for sharpshooter feat.
 * flags.midi-qol.fail.spell.all
 * flags.midi-qol.fail.spell.vocal|verbal/somatic/material  
@@ -569,11 +574,13 @@ These flags can be used to grant damage reduction to a character and can be set 
 flags.midi-qol.DR.all CUSTOM 3, will give 3 points of damage reduction to all incoming damage.
 Negative DR is not supported (i.e. to increase damage taken).  
 
-flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver will take 0.5/0 damage on failed/successful save, compared to the normal 1/0.5. Useful for things like rogue's/monks evasion class feature.  
+* flags.midi-qol.absorption.damageType (acid/bludgeoning etc) converts damage of that type to healing when applied to the actor with the flag set.
 
-flags.midi-qol.ignoreNearbyFoes which, when set, means disadvantage from nearby foes (optional rules) will not affect the actor.
+* flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver will take 0.5/0 damage on failed/successful save, compared to the normal 1/0.5. Useful for things like rogue's/monks evasion class feature.  
 
-flags.midi-qol.potentCantrip, if set cantrips cast by the actor will do 1/2 damage instead of no damage. Overrides any other damage multiplier settings.
+* flags.midi-qol.ignoreNearbyFoes which, when set, means disadvantage from nearby foes (optional rules) will not affect the actor.
+
+* flags.midi-qol.potentCantrip, if set cantrips cast by the actor will do 1/2 damage instead of no damage. Overrides any other damage multiplier settings.
 
 ## Optional Bonus Effects
 Optional flags cause a dialog to be raised when an opportunity to apply the effect comes up (i.e. the player is hit by an attack).
@@ -742,7 +749,43 @@ You can use this feature to roll custom damage via a macro for any item - just l
 
 These field lets you specify a macro to call during the roll. 
 
-**OnUse macros** are called after the item roll is complete. It is ALWAYS called whether the attack hit/missed and is passed the following data as args[0]. The field should contain ONLY the macro name and recognizes the exact text ItemMacro to mean calling the items itemMacro if any. The intention is that you can customise the behaviour of how a particular item behaves.
+**OnUse macros** are called after the item roll is complete. The field should contain ONLY the macro name, with an optional pass to execute the macro, and recognizes the exact text ItemMacro to mean calling the items itemMacro if any. The intention is that you can customise the behaviour of how a particular item behaves.
+There are some control for macro writers to decide when their macro should get executed. The macro data will be current for the state of the workflow. e.g. ``[postActiveEffects]ItemMacro``, the text is a localised string so may vary with language.
+```
+    [preAttackRoll] before the attack roll is made
+    [preCheckHits] after the attack roll is made but before hits are adjudicated
+    [postAttackRoll] after the attack is adjudicated
+    [preSave] before saving throws are rolled
+    [postSave] after saving throws are rolled
+    [preDamageRoll] before damage is rolled
+    [postDamageRoll] after the damage roll is made
+    [preDamageApplication] before damage is applied
+    [preActiveEffects] before active effects are applied
+    [postActiveEffects] after active effects are applied
+    [All] call the macro for each of the above cases
+```
+  - the macro arguments have an additional parameter args[0].macroPass set to the pass being called, being one of:
+    preAttackRoll
+    preCheckHits
+    postAttackRoll
+    preSave
+    postSave
+    preDamageRoll
+    postDamageRoll
+    preDamageApplication
+    preActiveEffects
+    postActiveEffects
+    all
+  - [All] is special, being called with each value of macroPass. You can differentiate via args[0].macroPass to decide which ones to act on.
+  - You can specify (for example):
+    ```[postAttackRoll]ItemMacro, [postDmageApplication]ItemMacro``` for multiple passes
+  - The default pass is "preActiveEffects", to correspond to the existing behaviour.
+  * Note: if you are creating a damage only workflow in your macro it is best to run it in "postActiveEffects".
+  * If you wish to make changes to the workflow in these macros you will need to do: (remembering that if the macro is an execute as GM macro being run on the GM client, the Workflow.get may return undefined)
+  ```
+  const workflow = MidiQOL.Workflow.get(args[0].uuid)
+  workflow.... = .....
+  ```
 
 **Damage bonus macros** are called after hits/misses/saves are adjudicated but BEFORE damage is applied, so you can specify extra damage if required, e.g. hunter's mark. The intention is support effects that are based on the character's state, rather than being related to a specific item. You can do whatever processing you want there, so could create a condition on some of the targets, do extra damage to specifc creatues/types of creatures and so on. Damage bonus macros can return an array of ``` [{damageRoll: string, flavor: string}]``` which will be added to the damage of the attack. The damage roll is a roll expression and flavor should be a damage type, e.g. fire. Damage returned via the damage bonus will NOT be increased for critical hits.
 
