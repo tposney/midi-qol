@@ -49,6 +49,12 @@ export let i18n = key => {
 export let i18nFormat = (key, data = {}) => {
   return game.i18n.format(key, data);
 }
+export function geti18nTranslations() {
+  let translations = game.i18n.translations["midi-qol"];
+  //@ts-ignore _fallback not accessible
+  if (!translations) translations = game.i18n._fallback["midi-qol"];
+  return translations ?? {};
+}
 
 export let setDebugLevel = (debugText: string) => {
   debugEnabled = { "none": 0, "warn": 1, "debug": 2, "all": 3 }[debugText] || 0;
@@ -119,7 +125,7 @@ Hooks.once('setup', function () {
   savingThrowTextAlt = i18n("midi-qol.savingThrowTextAlt");
   MQdefaultDamageType = i18n("midi-qol.defaultDamageType");
   MQItemMacroLabel = i18n("midi-qol.ItemMacroText");
-  if (MQItemMacroLabel ===  "midi-qol.ItemMacroText") MQItemMacroLabel = "ItemMacro";
+  if (MQItemMacroLabel === "midi-qol.ItemMacroText") MQItemMacroLabel = "ItemMacro";
   MQDeferMacroLabel = i18n("midi-qol.DeferText");
   if (MQDeferMacroLabel === "midi-qol.DeferText") MQDeferMacroLabel = "[Defer]";
   if (game.system.id === "dnd5e") {
@@ -192,18 +198,18 @@ Hooks.once('ready', function () {
   // has to be done before setup api.
   MQOnUseOptions = i18n("midi-qol.OnUseOptions");
   if (typeof MQOnUseOptions === "string") MQOnUseOptions = {
-		"preAttackRoll": "Before Attack Roll",
-		"preCheckHits": "Before Check Hits",
-		"postAttackRoll": "After Attack Roll",
-		"preSave": "Before Save", 
-		"postSave": "After Save",
-		"preDamageRoll": "Before Damage Roll",
-		"postDamageRoll": "After Damage Roll",
-		"preDamageApplication": "Before Damage Application",
-		"preActiveEffects": "Before Active Effects",
-		"postActiveEffects": "After Active Effects ",		
-		"all": "All"
-	}
+    "preAttackRoll": "Before Attack Roll",
+    "preCheckHits": "Before Check Hits",
+    "postAttackRoll": "After Attack Roll",
+    "preSave": "Before Save",
+    "postSave": "After Save",
+    "preDamageRoll": "Before Damage Roll",
+    "postDamageRoll": "After Damage Roll",
+    "preDamageApplication": "Before Damage Application",
+    "preActiveEffects": "Before Active Effects",
+    "postActiveEffects": "After Active Effects ",
+    "all": "All"
+  }
   OnUseMacroOptions.setOptions(MQOnUseOptions);
 
   setupMidiQOLApi();
@@ -214,10 +220,9 @@ Hooks.once('ready', function () {
   if (game.user?.isGM && game.modules.get("betterrolls5e")?.active && !installedModules.get("betterrolls5e")) {
     ui.notifications?.warn("Midi QOL requires better rolls to be version 1.6.6 or later");
   }
-  //@ts-ignore
-  if (game.i18n.translations["midi-qol"]["noDamageonSaveSpellsv9"]) {
-    const noDamageSavesText: string = game.i18n.translations["midi-qol"]["noDamageonSaveSpellsv9"] ?? "";
-    noDamageSaves = noDamageSavesText.split(",")?.map(s=> s.trim()).map(s=>cleanSpellName(s));
+  if (isNewerVersion(game.data.version, "0.8.9")) {
+    const noDamageSavesText: string = i18n("midi-qol.noDamageonSaveSpellsv9");
+    noDamageSaves = noDamageSavesText.split(",")?.map(s => s.trim()).map(s => cleanSpellName(s));
   } else {
     //@ts-ignore
     noDamageSaves = i18n("midi-qol.noDamageonSaveSpells")?.map(name => cleanSpellName(name));

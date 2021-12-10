@@ -366,7 +366,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       return null;
     }
   }
-  const needsConcentration = this.data.data.components?.concentration || this.data.data.activation?.condition?.includes("Concentration");
+  const needsConcentration = this.data.data.components?.concentration || this.data.data.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
   const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
   if (needsConcentration && checkConcentration) {
     const concentrationEffect = getConcentrationEffect(this.actor);

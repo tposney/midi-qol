@@ -9,6 +9,7 @@ import { itemJSONData, overTimeJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import { getConfigFileParsingDiagnostics, idText, isConstructorDeclaration } from "typescript";
+import { OnUseMacros } from "./apps/Item.js";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -702,14 +703,12 @@ function replaceAtFields(value, context, options: { blankValue: string | number,
 
 export async function processOverTime(wrapped, data, options, user) {
   if (data.round === undefined && data.turn === undefined) return wrapped(data, options, user);
-  console.error("pre update 1", this, this.previous.round, this.current.round, data)
   try {
     let prev = (this.current.round ?? 0) * 100 + (this.current.turn ?? 0);
     let  testTurn = this.current.turn ?? 0;
     let  testRound = this.current.round ?? 0;
     const  last = (data.round ?? this.current.round) * 100 + (data.turn ?? this.current.turn);
 
-    console.error("pot", prev, testTurn, testRound, last)
     // const prev = (combat.previous.round ?? 0) * 100 + (combat.previous.turn ?? 0);
     // let testTurn = combat.previous.turn ?? 0;
     // let testRound = combat.previous.round ?? 0;
@@ -844,7 +843,8 @@ export async function processOverTime(wrapped, data, options, user) {
                 overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id };
               if (macroToCall) {
                 //TODO update this for new version
-                setProperty(ownedItem.data, "flags.midi-qol.onUseMacroName", macroToCall)
+                setProperty(ownedItem.data, "flags.midi-qol.onUseMacroName", macroToCall);
+                setProperty(ownedItem.data, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macroToCall));
               }
 
               if (details.removeCondition) {
@@ -892,7 +892,6 @@ export async function processOverTime(wrapped, data, options, user) {
 export async function completeItemRoll(item, options) {
   return new Promise((resolve) => {
     Hooks.once("midi-qol.RollComplete", (workflow) => {
-      console.error("complete item roll workflow complete ", workflow)
       resolve(workflow);
     })
     if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process  

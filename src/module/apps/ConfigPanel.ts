@@ -1,6 +1,6 @@
 import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON } from "../settings.js"
  import { configSettings } from "../settings.js"
-import { warn, i18n, error, debug, gameStats, debugEnabled } from "../../midi-qol.js";
+import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nTranslations } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
 export class ConfigPanel extends FormApplication {
   
@@ -21,7 +21,7 @@ export class ConfigPanel extends FormApplication {
     return i18n("midi-qol.ConfigTitle")
   }
   async getData(options: any) : Promise<any> {
-    const translations = game.i18n.translations["midi-qol"]
+    const translations = geti18nTranslations();
 
     let wallsBlockRangeOptions = translations["WallsBlockRangeOptions"] ?? {};
     if (installedModules.get("dnd5e-helpers"))

@@ -1,3 +1,9 @@
+### 0.8.92
+* Fix for non english games with no translation for midi-qol failing to open config. panel.
+* Fix for removing "missed" chat cards when not auto rolling damage.
+* Fix for onUseMacro settings and Foriens Unidentified Items.
+* Fix for activation condition concentration not working.
+
 ### 0.8.91
 * Fix for rectangular templates coupled with wall blocking producing odd results.
 * Support editing targets after placing an AoE template but before rolling damage for items without an attack roll (attacks lock the targets).

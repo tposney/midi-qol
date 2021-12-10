@@ -34,7 +34,6 @@ export const baseEvent = { shiftKey: false, altKey: false, ctrlKey: false, metaK
 
 export function mapSpeedKeys(event) {
   if (installedModules.get("betterrolls5e")) return event;
-  console.error("Event is ", event)
   if (!event) return {};
   var fastKey = false;
   var advKey;
@@ -67,7 +66,6 @@ export function mapSpeedKeys(event) {
     if (autoFastForwardAbilityRolls) returnEvent.fastKey = !fastKey;
     else returnEvent.fastKey = fastKey;
   }
-  console.error("Retun event is ", returnEvent)
   return returnEvent;
 }
 
@@ -271,11 +269,9 @@ async function rollAbilitySave(wrapped, ...args) {
   if (procAutoFail(this, "save", abilityId)) {
     options.parts = ["-100"];
   }
-  console.error("args are ", options, ...args)
 
   const chatMessage = options.chatMessage;
   options.event = mapSpeedKeys(options.event);
-  console.error("options 1", duplicate(options));
   if (options.event === advantageEvent || options.event === disadvantageEvent)
     options.fastForward = true;
   let procOptions = procAdvantage(this, "save", abilityId, options);
@@ -283,7 +279,6 @@ async function rollAbilitySave(wrapped, ...args) {
     procOptions.advantage = false;
     procOptions.disadvantage = false;
   }
-  console.error("options 2", duplicate(procOptions))
 
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.save && (flags.save.all || flags.save[abilityId])) ?? 0;
@@ -297,7 +292,6 @@ async function rollAbilitySave(wrapped, ...args) {
     return createRollResultFromCustomRoll(result)
   }
   procOptions.chatMessage = false;
-  console.error("Calling options are ", procOptions)
   let result = await wrapped(abilityId, procOptions);
   result = await bonusCheck(this, result, "save")
   if (chatMessage !== false && result) {
@@ -483,7 +477,7 @@ export function initPatching() {
 export function _prepareItemData(wrapped, ...args) {
   wrapped(...args);
   const macros = getProperty(this.data, 'flags.midi-qol.onUseMacroName');
-  setProperty(this.data, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macros ?? null));
+  if (macros !== undefined) setProperty(this.data, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macros ?? null));
 }
 
 // This can replace the ItemSheetSubmit solution when in v9 
@@ -519,7 +513,7 @@ function itemSheetGetSubmitData(wrapped, ...args) {
 
 export function readyPatching() {
   // TODO remove this when v9 default
-  libWrapper.register("midi-qol", "CONFIG.Item.sheetClasses.weapon['dnd5e.ItemSheet5e'].cls.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
+  libWrapper.register("midi-qol", "game.dnd5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
   libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER")
   libWrapper.register("midi-qol", "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
 }

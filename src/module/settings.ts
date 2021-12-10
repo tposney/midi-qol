@@ -1,7 +1,7 @@
 import { MacroData } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/data.mjs";
 import { _mergeUpdate } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/utils/helpers.mjs";
 import { config } from "simple-peer";
-import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, debugEnabled } from "../midi-qol.js";
+import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, debugEnabled, geti18nTranslations } from "../midi-qol.js";
 import { ConfigPanel} from "./apps/ConfigPanel.js"
 import { configureDamageRollDialog } from "./patching.js";
 import { isAutoFastAttack, reportMidiCriticalFlags } from "./utils.js";
@@ -373,7 +373,7 @@ const settings = [
   }
 ];
 export function registerSetupSettings() {
-  const translations = game.i18n.translations["midi-qol"] ?? {};
+  const translations = geti18nTranslations();
 
   game.settings.register("midi-qol","CriticalDamage", {
     name: "midi-qol.CriticalDamage.Name",
@@ -387,7 +387,7 @@ export function registerSetupSettings() {
   });
 }
 export const registerSettings = function() {
-  const translations = game.i18n.translations["midi-qol"] ?? {};
+  const translations = geti18nTranslations();
   // Register any custom module settings here
   settings.forEach((setting, i) => {
     let MODULE = "midi-qol"

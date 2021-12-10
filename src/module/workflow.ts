@@ -215,7 +215,8 @@ export class Workflow {
     this.item = item;
     if (Workflow.getWorkflow(item?.uuid)) {
       const existing = Workflow.getWorkflow(item.uuid);
-      if (existing.currentState !== WORKFLOWSTATES.ROLLFINISHED && existing.itemCardId) {
+      // Roll is finished or stuck waiting for damage roll (attack missed but GM could overrule)
+      if (!([WORKFLOWSTATES.ROLLFINISHED, WORKFLOWSTATES.WAITFORDAMAGEROLL].includes(existing.currentState)) && existing.itemCardId) {
         game.messages?.get(existing.itemCardId)?.delete();
       }
       Workflow.removeWorkflow(item.uuid);
@@ -469,8 +470,6 @@ export class Workflow {
         if (Hooks.call("midi-qol.preAttackRollComplete", this) === false) {
           return undefined;
         };
-        if (configSettings.allowUseMacro) {
-        }        
         const attackBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.AttackBonusMacro`);
         if (configSettings.allowUseMacro && attackBonusMacro) {
           await this.rollAttackBonus(attackBonusMacro);
@@ -505,7 +504,8 @@ export class Workflow {
 
         if (
           (getAutoRollDamage() === "onHit" && this.hitTargetsEC.size === 0 && this.hitTargets.size === 0 && this.targets.size !== 0)
-          // TODO what is the answer for not auto damage none targeted (so none hit)          || (getAutoRollDamage() === "none" && ((this.hitTargets.size === 0 && this.hitTargetsEC.size === 0) || this.targets.size === 0))
+          // This actually causes an issue when the attack missed but GM might want to turn it into a hit.
+          // || (configSettings.autoCheckHit !== "none" && this.hitTargets.size === 0 && this.hitTargetsEC.size === 0 && this.targets.size !== 0)
         ) {
           expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"])
           // Do special expiries
@@ -607,19 +607,19 @@ export class Workflow {
 
       case WORKFLOWSTATES.WAITFORSAVES:
         this.saves = new Set(); // not auto checking assume no saves
-        this.failedSaves = new Set(this.hitTargets);
-        if (!this.item?.hasAttack && this.item?.data.data.target?.type !== "self") { // Allow editing of targets if there is no attack that has already been processed.
-          this.targets = new Set(game.user?.targets);
-          this.hitTargets = new Set(this.targets);
-          this.failedSaves = new Set(this.targets);
-        }
-        
-        if (!this.hasSave) {
-          return this.next(WORKFLOWSTATES.SAVESCOMPLETE);
-        }
+   
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preSaves"), "OnUse", "preSaves");
         }
+        if (!this.item?.hasAttack && this.item?.data.data.target?.type !== "self") { // Allow editing of targets if there is no attack that has already been processed.
+          this.targets = new Set(game.user?.targets);
+          this.hitTargets = new Set(this.targets);
+        }
+        this.failedSaves = new Set(this.hitTargets);
+        if (!this.hasSave) {
+          return this.next(WORKFLOWSTATES.SAVESCOMPLETE);
+        }
+
         if (configSettings.autoCheckSaves !== "none") {
           //@ts-ignore ._hooks not defined
           if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks._hooks["renderChatMessage"]?.length)
@@ -734,7 +734,7 @@ export class Workflow {
       case WORKFLOWSTATES.ROLLFINISHED:
         if (debugEnabled > 0) warn('Inside workflow.rollFINISHED');
         // Add concentration data if required
-        let hasConcentration = this.item?.data.data.components?.concentration || this.item?.data.data.activation?.condition?.includes(i18n("midi-qol.Concentration"));
+        let hasConcentration = this.item?.data.data.components?.concentration || this.item?.data.data.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
         hasConcentration = hasConcentration;
         if (this.item &&
           (

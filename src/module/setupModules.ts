@@ -91,72 +91,76 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
-  0.8.87
-  * Fix for (I think) longstanding bug that if monster saving rolls would be displayed to plaers - even if midi setting was to hide them.
-  * Fix to Spirit Guardians to not create multiple sequencer/Automated animations effects. Midi smaple items are in folders if compendium folders is enabled.
-  * Correction DF Quality of Life is the template targeting preview module (apologies to @flamewave000 for the wrong attribution).
-  * Change so that if player reacitons are enabled and no logged in player with ownership of the actor exists, the GM will be prompted to do the player's reaction rolls.
-  * Fixed a problem where midi was trying to get unconnected players to roll saves. It simply would not take no for an answer.
-  * Fix for divine smite in v9.
-  
-  * Experimental - first cut integration with ddb-game-logs. **You need to be a patreon of ddb-game-log for this to work**. Requires a yet to be released version of ddb-game-log.
-  - Midi will accept attack/damage/saving throw rolls from ddb-game-log. If you roll an attack or roll damage for a feature with no attack, midi will create a workflow and check hits/saves and apply damage using the ddb-game-log rolls.
-  - The link is one way, from dnd beyond to midi and there is no feedback from midi-qol to update dnd-beyond, like changing hit points or active effects.
-  - Since the character settings are taken from dnd beyond NONE of the midi-qol advantage/disadvantage settings will apply to the roll. Similarly with damage rolls none of the foundry local bonuses etc will apply. Simple summary, everything relating to the dnd beyond generated rolls (attack, damage and saves) is taken from dnd beyond.
-  - If you want to use dnd beyond saving throws make sure the auto roll save setting is "Chat Message".
-  - Hits/saves/Damage application will take into account the foundry's copy of values for AC, etc.
-  - If set, midi will add damage buttons to ddb-game-log damage rolls which function exactly as for non game-log rolls.
-  * Fix for setting not sticking for ddb-game-log integration.
-  
-  0.8.86
-  Change to coloured borders. Now messages are coloured according to the user that created it.
-  * Made chat card border colouring a bit more aggressive - it should now colour most everything.
-  * New template targeting setting - "Use DF QOL". DfReds Qol has support for RAW template targeting, so by using this setting you can finally get templates that work "correctly" which should resolve long standing frustrations with midi-qol's template targeting. This also resolves an issue, that if DF QoL template targeting is enabled it would "fight" with midi and the winner would be essentially random.
-  * Various fixes for roll other damage spell settings.
-  * Added an option to create a chat message when a player is prompted for a reaction. After the reaction is resolved the chat message is removed.
-  * Midi/dae/times-up will now remove Sequencer permanent effects created by Automated Animation when the initiating effect is removed. The midi sample spirit guardians is an example.
-  * Automated Animations permanent effects, if created via a midi-qol effect will be auto removed on spell expiration. Requires a DAE and times-up update as well.
-  * Note - includes code for pre-release ddb-gamelog support which is not yet operational.
-  * MidiQOL.selectTargetsForTemplate now returns an array of targeted tokens.
-  
-  * Fix for drop down lists not populating in 0.9 dev 2. Midi seems to work in 9 dev 2.
-  
-  0.8.85
-  * Allow items to be set to not provoke a reaction (set item.data.flags.midi-qol.noProvokeReaction to true). No UI for this yet.
-  * Fix for silvered weapons check causing problems if there is no item in the workflow.
-  * Added resistance/immunity/vulnerability to non-adamantine weapons. Added DR against adamantine weapons.
-  * Added new overTime option, killAnim: boolean, to force automated animations not to fire for the overtime effect (niche I know, but I needed it for Spirit Guardian).
-  * New improved Spirit Guardian sampel item, requires active auras to work and assumes there is a combat active.
-  Supports the following:
-    - If a token enters the Spirit Guardian's range on their turn they will save && take damage.
-    - At the start of an affected token's turn they will save && take damage.
-    - If the token moves out of range of the effect they won't take damage anymore.
-    - All effects removed on expiry/loss of concentration.
-    - Spell scaling is supported automatically.
-    - If using automated animations, only the initial cast will spawn the automated animation, whcih is VERY pretty by the way.
-    - Works with better rolls.
-  Not Supported: picking tokens to be exlcuded, the spell will only target enemies.
+  0.8.92
+  * Fix for non english games with no translation for midi-qol failing to open config. panel.
+  * Fix for removing "missed" chat cards when not auto rolling damage.
+  * Include missing Absorb Elements Spell
 
-  0.8.84
-  * Fix for triggering reactions (Hellish Rebuke) when someone heals you.
-  * Fix for duplicated lines in en.json.
-  0.8.83
-  * Fix for better rolls activation condition processing.
-  * Added non magical silver physical damage resistance/immunity/vulnerability, which is bypassed by magical and silvered weapons.
-  * Fix for removing cocnentration effects when one of the target tokens has been removed from the scene.
-  * Monk's token bar saves now displays the DC based on the midi midi show DC setting.
-  * Fix for bug introduced in 0.8.81 with critical damage configuration - if you have Default DND5e as you setting, midi would incorrectly interpret that as no damage bonus.
-  * Fix for 1Reaction effects not expiring on a missed attack.
-  * Fix for localisation problem if using midi's concentration effect (i.e. no CUB/Convenient Effects).
-  * Addition to reactions. As well as triggering on attacks, reactions can trigger on damage application. Midi uses the activation condition of the item to work out which one is applicable.  
-  Most feats/spells have a blank activation conditon and midi will treat those as attack triggered reactions, or if the localised string attacked is in the activation condition.  
+  0.8.91
+  * Fix for rectangular templates coupled with wall blocking producing odd results.
+  * Support editing targets after placing an AoE template but before rolling damage for items without an attack roll (attacks lock the targets).
+  * Fix for better rolls saving throws results NOT being displayed for the player that did the save when using dice so nice.
+  * Fix for ability test saves not working.
+  * Breaking - libWrapper is now a dependency for midi-qol.
+  * Added some new midi-qol flags, flags.midi-qol.absorption.acid/bludgeoning etc, which converts damage of that type to healing, for example Clay Golem
+  * Added noDamageAlt and fullDamageAlt strings, mainly of use for language translators.
+  * Support for monks token bar 1.0.55 to set advantage/disadvantage on saving throws as required. Midi-qol REQUIRES monk's token bar 1.0.55.
+  * Change to reaction processing. 
+    - Added an additional reaction type, Reaction Damage as well as the existing Reaction.
+    - Items with activation type Reaction will get applied after the attack roll has been made, but before it is adjudicated.
+    - Items with activation type Reaction Damage will get called before damage is applied, but after it is determined that damage is going to be applied.
+    - The activation condition is no longer consulted for reactions, only the activation type.
+  * Added Absorb Elements to the sample item compendium.
+
+  * OnUse macros - added some control for macro writers to decide when their macro should get called, this is meant to be more convenient that a macro that registers for hooks. The macro data will be current for the state of the workflow. e.g. [postActiveEffects]ItemMacro. Many thanks to @Seriousnes#7895 for almost all of the code for this.
+      [preAttackRoll] before the attack roll is made
+      [preCheckHits] after the attack roll is made but before hits are adjudicated
+      [postAttackRoll] after the attack is adjudicated
+      [preSave] before saving throws are rolled
+      [postSave] after saving throws are rolled
+      [preDamageRoll] before damage is rolled
+      [postDamageRoll] after the damage roll is made
+      [preDamageApplication] before damage is applied
+      [preActiveEffects] before active effects are applied
+      [postActiveEffects] after active effects are applied
+      [All] call the macro for each of the above cases
+    - the macro arguments have an additional parameter args[0].macroPass set to the pass being called, being one of:
+      preAttackRoll
+      preCheckHits
+      postAttackRoll
+      preSave
+      postSave
+      preDamageRoll
+      postDamageRoll
+      preDamageApplication
+      preActiveEffects
+      postActiveEffects
+    - all is special, being called with each value of args[0].macroPass. You can differentiate by checking args[0].macroPass to decide which ones to act on.
+    - You can specify (for example):
+      [postAttackRoll]ItemMacro, [postDmageApplication]ItemMacro for multiple passes, or use All  
+    - The default pass is "postActiveEffects", to correspond to the existing behaviour.
+    * Note: if you are creating a damage only workflow in your macro it is best to run it in "postActiveEffects". 
+    * Note: For better rolls the preAttackRoll, preDamageRoll don't really mean anything.
+    * If you wish to make changes to the workflow in these macros you will need to do: (remembering that if the macro is an execute as GM macro being run on the GM client, the Workflow.get may return undefined)
+    
+    const workflow = MidiQOL.Workflow.getWorkflow(args[0].uuid)
+    workflow.... = .....
   
-  Hellish Rebuke, for example, has "Which you take in response to being **damaged** by a creature within 60 feet of you that you can see", and midi will tirgger those with the word damage in the activation conditon when a character is damage. (Hellish rebuke is a special one since it triggers only if you took damage).
-  
-  * Added new item field "Active Effect Condtion". If set the activation condition must evaluate to true for the active effect to be applied. The saving throw if any must also be failed for the effect to be applied. For example, the included mace of disruption does additional damage to undead and if an undead fails it's save it is frightened. By setting the Activation Condition and Active Effect Activation Condition to checked only undead will suffer extra damage and be set frightened if they fail the save.
-  
-  * Implemented Optional Rule: Challenge Mode Armor. See the readme.md for more information. My testing indicates that this is extremly unfavourable to higher level tank characters, dramatically increasing the amount of damage they take. I have implemented a modified version that, 1) scales the damage from an EC hit and 2) Armor provides damage reduction equal to the AR for all hits.
-  
+  0.8.90
+  * Reinstated the intended behaviour of the "Apply Active Effects" button, which is to apply effects to targeted tokens, rather than tokens targeted when the item was first rolled.
+  * Fix for better rolls saving throws not being hidden.
+  * Fix for a bug when using LMRTFY and midi, where midi would (sometimes) cause LMRTFY to do all rolls as normal rolls (ignoring the private/blind setting in LMRTFY).
+  * Fix for failed initialisation in non-english versions.
+  * Fixed wrong image in Readme.md for Hold person.
+  * Fix for some spells being ignored when doing reactions.
+
+  0.8.89
+  * Added "heal" action type to ddb-game-log support
+  * Fix for broken "no damage on save" cantrip list.
+
+  0.8.88
+  * Fix for ddbgl breakage in 0.8.87
+ 
   [Full Changelog](https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md)`,
   "major")
 })
