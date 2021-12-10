@@ -82,7 +82,9 @@ export const MESSAGETYPES = {
   ITEM: 0
 };
 export let cleanSpellName = (name: string): string => {
-  return name.toLowerCase().replace(/[^가-힣一-龠ぁ-ゔァ-ヴーa-zA-Z0-9ａ-ｚＡ-Ｚ０-９々〆〤]/g, '').replace("'", '').replace(/ /g, '');
+  // const regex = /[^가-힣一-龠ぁ-ゔァ-ヴーa-zA-Z0-9ａ-ｚＡ-Ｚ０-９々〆〤]/g
+  const regex =  /[^가-힣一-龠ぁ-ゔァ-ヴーa-zA-Z0-9ａ-ｚＡ-Ｚ０-９а-яА-Я々〆〤]/g
+  return name.toLowerCase().replace(regex, '').replace("'", '').replace(/ /g, '');
 }
 
 /* ------------------------------------ */

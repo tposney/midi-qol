@@ -611,7 +611,7 @@ export class Workflow {
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preSaves"), "OnUse", "preSaves");
         }
-        if (!this.item?.hasAttack && this.item?.data.data.target?.type !== "self") { // Allow editing of targets if there is no attack that has already been processed.
+        if (this.workflowType === "Workflow" && !this.item?.hasAttack && this.item?.data.data.target?.type !== "self") { // Allow editing of targets if there is no attack that has already been processed.
           this.targets = new Set(game.user?.targets);
           this.hitTargets = new Set(this.targets);
         }

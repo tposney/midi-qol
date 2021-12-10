@@ -258,18 +258,17 @@ export function initHooks() {
     if (configSettings.allowUseMacro) {
       const labelText = i18n("midi-qol.onUseMacroLabel");      
       const macros = new OnUseMacros(getProperty(app.object.data, "flags.midi-qol.onUseMacroName"));
-      const macroField = `<h4 class="macro-header">${labelText}
-  <a class="macro-control add-macro"><i class="fas fa-plus"></i></a>
+
+      const macroField = `<h4 class="damage-header">${labelText}
+  <a class="macro-control damage-control add-macro"><i class="fas fa-plus"></i></a>
 </h4>
-  <ol class="macro-parts form-group">    
+  <ol class="damage-parts form-group">    
     ${macros.selectListOptions}
-  </ol>`;
+  </ol>`;      
       element.append(macroField)
     }
     const labelText = i18n("midi-qol.EffectActivation");
     let currentEffectActivation = getProperty(app.object.data, "flags.midi-qol.effectActivation") ?? "";
-    // currentEffectActivation = currentEffectActivation.replaceAll('"', "'");
-    //    const activationField = `<div class="form-group"><label>${labelText}</label><input type="text" name="flags.midi-qol.effectActivation" value=${currentEffectActivation}/> </div>`;
     const activationField = `<div class="form-group"><label>${labelText}</label><input type="checkbox" name="flags.midi-qol.effectActivation" ${currentEffectActivation ? "checked" : ""}/> </div>`;
 
     element.append(activationField);

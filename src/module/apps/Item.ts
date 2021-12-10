@@ -58,12 +58,13 @@ export class OnUseMacro {
 
     public toListItem (index: Number, macroOptions: OnUseMacroOptions) {    
       const options = OnUseMacroOptions.getOptions?.reduce((opts: string, x: {option: string, label: string}) => opts += `<option value="${x.option}" ${x.option === this.option ? 'selected' : ''}>${x.label}</option>`, "");
-      return `<li class="macro-part flexrow" data-midiqol-macro-part="${index}">
+      return `<li class="damage-part flexrow" data-midiqol-macro-part="${index}">
     <input type="text" name="flags.midi-qol.onUseMacroParts.${index}.0" value="${this.macroName}">
     <select name="flags.midi-qol.onUseMacroParts.${index}.1">
       ${options}
     </select>
-    <a class="macro-control delete-macro"><i class="fas fa-minus"></i></a>
+
+    <a class="macro-control damage-control delete-macro"><i class="fas fa-minus"></i></a>
   </li>`;
     }
 }
@@ -104,7 +105,7 @@ async function _onMacroControl(event){
   if ( a.classList.contains("delete-macro") ) {
     const macros = getCurrentMacros(this.item);
     await this._onSubmit(event);  // Submit any unsaved changes
-    const li = a.closest(".macro-part");
+    const li = a.closest(".damage-part");
     macros.items.splice(Number(li.dataset.midiqolMacroPart), 1);
     return this.item.update({"flags.midi-qol.onUseMacroName": macros.toString()});
   }

@@ -91,10 +91,16 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.8.93
+  * Fix for better rolls not AoE template targeting correctly.
+  * Fix for No Damage On Save spell list failing in cyrillic alphabets.
+  * Fix for onUseMacros and tidy itemsheet5e display issues. Thanks @Seriousnes#7895
+  
   0.8.92
   * Fix for non english games with no translation for midi-qol failing to open config. panel.
   * Fix for removing "missed" chat cards when not auto rolling damage.
   * Include missing Absorb Elements Spell
+  * **BREAKING** as of 0.8.91 if using uncanny dodge from the compendium, you will need to change it's activation cost to "Reaction Damaged" or it won't function. I failed to update the compendium but will do it later. 
 
   0.8.91
   * Fix for rectangular templates coupled with wall blocking producing odd results.
