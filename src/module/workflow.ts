@@ -201,7 +201,7 @@ export class Workflow {
     this.disadvantage = this.disadvantage || this.rollOptions.disKey;
   }
 
-  get shouldRollDamage() : boolean {
+  get shouldRollDamage(): boolean {
 
     return getAutoRollDamage() === "always"
       || (getAutoRollDamage() !== "none" && !this.item.hasAttack)
@@ -294,7 +294,7 @@ export class Workflow {
     this.kickStart = true; // call workflow.next(WORKFLOWSTATES.NONE) when the item card is shown.
     this.flagTags = undefined;
 
-    if (configSettings.allowUseMacro) 
+    if (configSettings.allowUseMacro)
       this.onUseMacros = getProperty(this.item, "data.flags.midi-qol.onUseMacroParts");
   }
 
@@ -423,7 +423,7 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.WAITFORATTACKROLL);
 
       case WORKFLOWSTATES.WAITFORATTACKROLL:
-      if (this.item.data.type === "tool" && autoFastForwardAbilityRolls) {
+        if (this.item.data.type === "tool" && autoFastForwardAbilityRolls) {
           this.processAttackEventOptions(this.event);
           const hasAdvantage = this.advantage && !this.disadvantage;
           const hasDisadvantage = this.disadvantage && !this.advantage;
@@ -455,7 +455,7 @@ export class Workflow {
           } else if (!chatMessage) error("no chat message")
         }
         if (configSettings.allowUseMacro) {
-          await this.callMacros(this.item, this.onUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");          
+          await this.callMacros(this.item, this.onUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
         }
 
         if (shouldRoll) {
@@ -499,7 +499,7 @@ export class Workflow {
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
         Hooks.callAll("midi-qol.AttackRollComplete", this);
         if (configSettings.allowUseMacro && this.item?.data.flags) {
-            await this.callMacros(this.item, this.onUseMacros?.getMacros("postAttackRoll"), "OnUse", "postAttackRoll");
+          await this.callMacros(this.item, this.onUseMacros?.getMacros("postAttackRoll"), "OnUse", "postAttackRoll");
         }
 
         if (
@@ -515,7 +515,7 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMAGEROLL:
-        if (debugEnabled > 1) debug(`wait for damage roll has damage ${itemHasDamage(this.item)} isfumble ${this.isFumble} no auto damage ${this.noAutoDamage}`);        
+        if (debugEnabled > 1) debug(`wait for damage roll has damage ${itemHasDamage(this.item)} isfumble ${this.isFumble} no auto damage ${this.noAutoDamage}`);
         if (!itemHasDamage(this.item)) return this.next(WORKFLOWSTATES.WAITFORSAVES);
 
         if (this.isFumble && configSettings.autoRollDamage !== "none") {
@@ -545,7 +545,7 @@ export class Workflow {
           return undefined;
         }
         this.processDamageEventOptions(event);
-        
+
         //        if (configSettings.mergeCard && !shouldRollDamage) {
         //if (!this.shouldRollDamage) {
         {
@@ -607,7 +607,7 @@ export class Workflow {
 
       case WORKFLOWSTATES.WAITFORSAVES:
         this.saves = new Set(); // not auto checking assume no saves
-   
+
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preSaves"), "OnUse", "preSaves");
         }
@@ -683,13 +683,13 @@ export class Workflow {
         await this.expireTargetEffects(specialExpiries)
 
         if (this.item) {
-        if (configSettings.allowUseMacro) {
-          const results: any = await this.callMacros(this.item, this.onUseMacros?.getMacros("preActiveEffects"), "OnUse", "preActiveEffects");
-          // Special check for return of {haltEffectsApplication: true} from item macro
-          if (results.some(r => r?.haltEffectsApplication))
-            return this.next(WORKFLOWSTATES.ROLLFINISHED);
+          if (configSettings.allowUseMacro) {
+            const results: any = await this.callMacros(this.item, this.onUseMacros?.getMacros("preActiveEffects"), "OnUse", "preActiveEffects");
+            // Special check for return of {haltEffectsApplication: true} from item macro
+            if (results.some(r => r?.haltEffectsApplication))
+              return this.next(WORKFLOWSTATES.ROLLFINISHED);
+          }
         }
-      }
         if (Hooks.call("midi-qol.preApplyDynamicEffects", this) === false) return this.this.next(WORKFLOWSTATES.ROLLFINISHED);
         // no item, not auto effects or not module skip
         // if (this.item && !getAutoRollAttack() && !this.forceApplyEffects && !this.item.hasAttack && !this.item.hasDamage && !this.item.hasSave) { return; }
@@ -1019,7 +1019,7 @@ export class Workflow {
 
   async callMacros(item, macros, tag, macroPass): Promise<damageBonusMacroResult[]> {
     if (!macros || macros?.length === 0) return [];
-    const macroNames = macros.split(",").map(s=>s.trim());
+    const macroNames = macros.split(",").map(s => s.trim());
     let values: Promise<damageBonusMacroResult | any>[] = [];
     let results: damageBonusMacroResult[];
     let targets: any[] = [];
@@ -1690,7 +1690,7 @@ export class Workflow {
           // monkRequests.push(target)
           monkRequests.push({
             token: target.id,
-            altKey:  advantage === true,
+            altKey: advantage === true,
             ctrlKey: advantage === false,
             fastForward: false
           })

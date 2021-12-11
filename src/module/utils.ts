@@ -1677,7 +1677,8 @@ export function isConcentrating(actor: Actor5e): undefined | ActiveEffect {
 
 export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string, options: { item: Item }): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
   const noResult = { name: undefined, uuid: undefined, ac: undefined };
-  if (!target.actor || !target.actor.data.flags || !target.actor.data.flags["midi-qol"]) return noResult;
+  //@ts-ignore attributes
+  if (!target.actor || !target.actor.data.flags || !target.actor.data.flags["midi-qol"] || target.actor.data.data.attributes.hp.value <= 0) return noResult;
   let player = playerFor(target);
   if (getReactionSetting(player) === "none") return noResult;
   if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);

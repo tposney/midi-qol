@@ -478,6 +478,7 @@ export function _prepareItemData(wrapped, ...args) {
   wrapped(...args);
   const macros = getProperty(this.data, 'flags.midi-qol.onUseMacroName');
   if (macros !== undefined) setProperty(this.data, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macros ?? null));
+  else setProperty(this.data, "flags.midi-qol.onUseMacroParts", new OnUseMacros(null));
 }
 
 // This can replace the ItemSheetSubmit solution when in v9 

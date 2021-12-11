@@ -91,6 +91,10 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.8.94
+  * Fix for empty onUseMacro field failing to allow adding onUseMacros
+  * Incapacitated actors can't take reactions
+
   0.8.93
   * Fix for better rolls not AoE template targeting correctly.
   * Fix for No Damage On Save spell list failing in cyrillic alphabets.

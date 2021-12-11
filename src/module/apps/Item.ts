@@ -96,7 +96,7 @@ async function _onMacroControl(event){
   // Add new macro component
   if ( a.classList.contains("add-macro") ) {
     const macros = getCurrentMacros(this.item);
-    await this._onSubmit(event);  // Submit any unsaved changes    
+    await this._onSubmit(event);  // Submit any unsaved changes
     macros.items.push(new OnUseMacro());
     return this.item.update({"flags.midi-qol.onUseMacroName":  macros.toString()});
   }
