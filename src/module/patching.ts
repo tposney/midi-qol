@@ -1,7 +1,7 @@
 import { log, warn, debug, i18n, error, getCanvas } from "../midi-qol.js";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
-import { bonusDialog, expireRollEffect, getOptionalCountRemainingShortFlag, getSpeaker, processOverTime, testKey } from "./utils.js";
+import { bonusDialog, expireRollEffect, getOptionalCountRemainingShortFlag, getSpeaker, notificationNotify, processOverTime, testKey } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { FlowFlags } from "typescript";
@@ -497,8 +497,8 @@ export function preUpdateItemOnUseMacro(item, changes, options, user) {
 // TODO this is not needed for v9.
 function itemSheetGetSubmitData(wrapped, ...args) {
   let data = wrapped(...args);
+  data = expandObject(data);
   try {
-    data = expandObject(data);
     const macroParts: any = getProperty(data, "flags.midi-qol.onUseMacroParts");
     if (macroParts) {
       const macros = OnUseMacros.parseParts(macroParts)
@@ -517,6 +517,9 @@ export function readyPatching() {
   libWrapper.register("midi-qol", "game.dnd5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
   libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER")
   libWrapper.register("midi-qol", "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
+  Notifications
+  libWrapper.register("midi-qol", "Notifications.prototype.notify", notificationNotify, "MIXED");
+
 }
 
 export let visionPatching = () => {

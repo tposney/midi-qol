@@ -201,7 +201,8 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   let totalMult = 1;
   if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) totalMult = -1;
   if (dmgTypeString.includes("midi-none")) return 0;
-  if (configSettings.damageImmunities !== "none" && dmgTypeString !== "") {
+  if (configSettings.damageImmunities === "none") return totalMult;
+  if (dmgTypeString !== "") {
     // if not checking all damage counts as magical
     const magicalDamage = (item?.type !== "weapon"
       || (item?.data.data.attackBonus > 0 && !configSettings.requireMagical)
@@ -222,7 +223,6 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   }
   return totalMult;
   // Check the custom immunities
-  return 1;
 };
 
 export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any> } = { existingDamage: [], superSavers: new Set() }): Promise<any[]> {
@@ -275,15 +275,16 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
 
     let AR = 0; // Armor reduction for challenge mode armor etc.
     const ac = a.data.data.attributes.ac;
-
+    let damageDetail;
+    let damageDetailResolved: any[] = [];
     for (let i = 0; i < totalDamageArr.length; i++) {
-      let damageDetail = duplicate(damageDetailArr[i]);
+      damageDetail = duplicate(damageDetailArr[i]);
       let attackRoll = workflow.attackTotal;
       let saves = savesArr[i] ?? new Set();
       let superSavers: Set<Token> = options.superSavers[i] ?? new Set();
       var dmgType;
-      // This is overall Damage Reduction
 
+      // This is overall Damage Reduction
       let maxDR = DRAll;
 
       if (checkRule("challengeModeArmor") && checkRule("challengeModeArmorScale")) {
@@ -378,6 +379,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
 
         // TODO: consider mwak damage reduction - we have the workflow so should be possible
       }
+      damageDetailResolved = damageDetailResolved.concat(damageDetail);
       if (debugEnabled > 0) console.warn("midi-qol | Damage Details plus resistance/save multiplier for ", t.actor.data.name, duplicate(damageDetail))
     }
     //@ts-ignore CONFIG.DND5E
@@ -401,7 +403,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
 
     // Deal with vehicle damage threshold.
     if (appliedDamage > 0 && appliedDamage < (t.actor.data.data.attributes.hp.dt ?? 0)) appliedDamage = 0;
-    let ditem = calculateDamage(a, appliedDamage, t, totalDamage, dmgType, options.existingDamage);
+    let ditem: any = calculateDamage(a, appliedDamage, t, totalDamage, dmgType, options.existingDamage);
     ditem.tempDamage = ditem.tempDamage + appliedTempHP;
     if (appliedTempHP <= 0) { // tmphealing applied to actor does not add only gets the max
       ditem.newTempHP = Math.max(ditem.newTempHP, -appliedTempHP);
@@ -410,25 +412,13 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     }
     //@ts-ignore
     ditem.damageDetail = duplicate(damageDetailArr);
+    const damageData = duplicate(ditem);
+    damageData.damageDetail = damageDetailResolved;
+    Hooks.callAll("midi-qol.damageApplied", t, { item, workflow, damageData });
     damageList.push(ditem);
     targetNames.push(t.name)
   }
   if (theTargets.size > 0) {
-    /*
-    if (theTargets.size > 0) {
-      //@ts-ignore
-      if (workflow && workflow.item && !getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction") && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
-        for (let targetToken of theTargets) {
-          const damageListItem = damageList.find(e => e.tokenUuid = targetToken.document ? targetToken.document.uuid : targetToken.uuid);
-          if (damageListItem?.appliedDamage > 0 && workflow.item && !getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction")) {
-            //@ts-ignore
-            let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item });
-          }
-        }
-      }
-    }
-    */
-
     await socketlibSocket.executeAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
@@ -667,7 +657,7 @@ export function checkImmunity(candidate, data, options, user) {
   if (!returnvalue) {
     candidate.data.update({ "disabled": true })
     // TODO find out why returning false for pre create does not work for synthetic tokens?
-    // foundry issue 5930 - stopgap in dae to disablete effect
+    // foundry issue 5930 - stopgap in dae to disable the effect
   }
   return returnvalue;
 }
@@ -705,9 +695,9 @@ export async function processOverTime(wrapped, data, options, user) {
   if (data.round === undefined && data.turn === undefined) return wrapped(data, options, user);
   try {
     let prev = (this.current.round ?? 0) * 100 + (this.current.turn ?? 0);
-    let  testTurn = this.current.turn ?? 0;
-    let  testRound = this.current.round ?? 0;
-    const  last = (data.round ?? this.current.round) * 100 + (data.turn ?? this.current.turn);
+    let testTurn = this.current.turn ?? 0;
+    let testRound = this.current.round ?? 0;
+    const last = (data.round ?? this.current.round) * 100 + (data.turn ?? this.current.turn);
 
     // const prev = (combat.previous.round ?? 0) * 100 + (combat.previous.turn ?? 0);
     // let testTurn = combat.previous.turn ?? 0;
@@ -1586,7 +1576,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
         newRoll = await new Roll("99").evaluate({ async: true })
       } else {
         newRoll = new Roll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData());
-        await newRoll.evaluate({ async: true })
+        newRoll = await newRoll.evaluate({ async: true })
       }
       this[rollId] = newRoll;
       this[rollTotalId] = newRoll.total;
@@ -1675,6 +1665,30 @@ export function isConcentrating(actor: Actor5e): undefined | ActiveEffect {
   return actor.effects.contents.find(e => e.data.label === concentrationName && !e.data.disabled && !e.isSuppressed);
 }
 
+function maxCastLevel(actor) {
+  const spells = actor.data.data.spells;
+  if (!spells) return 0;
+  let pactLevel =  spells.pact?.level ?? 0;
+  for (let i = 9; i > pactLevel; i--) {
+    if (spells[`spell${i}`].value > 0) return i;
+  }
+  return spells.pact?.value ? pactLevel : 0;
+}
+
+function itemReaction(item, triggerType, maxLevel) {
+  //@ts-ignore activation
+  if (item.data.data.activation?.type !== triggerType) return false;
+  if (item.type === "spell") {
+    if (item.data.data.preparation === "atwill") return true;
+    if (item.data.data.level === 0) return true;
+    if (item.data.data.preparation !== "innate") return item.data.data.level <= maxLevel;
+  }
+  if (item.data.data.preparation?.prepared !== true && item.data.data.preparation?.mode === "prepared") return false;
+  //@ts-ignore DND5E
+  if (item.data.data.attunement === CONFIG.DND5E.attunementTypes.REQUIRED) return false;
+  if (!item._getUsageUpdates({ consumeRecharge: item.data.data.recharge?.value, consumeResource: true, consumeSpellLevel: false, consumeUsage: item.data.data.uses?.max > 0, consumeQuantity: item.type === "consumable" })) return false;
+  return true;
+}
 export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string, options: { item: Item }): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
   const noResult = { name: undefined, uuid: undefined, ac: undefined };
   //@ts-ignore attributes
@@ -1684,13 +1698,15 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
   if (!player) return noResult;
   if (target.actor.getFlag("midi-qol", "reactionCombatRound")) return noResult;
-  let reactions = target.actor.items.filter(item => {
-    //@ts-ignore activation
-    if (item.data.data.activation?.type !== triggerType) return false;
-    //@ts-ignore .preparation
-    if (item.data.data.preparation?.prepared !== true && item.data.data.preparation?.mode === "prepared") return false;
-    return true;
-  }).length;
+  const maxLevel = maxCastLevel(target.actor);
+  enableNotifications(false);
+  let reactions;
+  try {
+    reactions = target.actor.items.filter(item => itemReaction(item, triggerType, maxLevel)).length;
+  } finally {
+    enableNotifications(true);
+  }
+
   const midiFlags: any = target.actor.data.flags["midi-qol"];
   reactions = reactions + Object.keys(midiFlags?.optional ?? [])
     .filter(flag => {
@@ -1761,14 +1777,14 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
   const midiFlags: any = actor.data.flags["midi-qol"];
   if (actor.getFlag("midi-qol", "reactionCombatRound")) return false; // already had a reaction this round
   let result;
-  //@ts-ignore activation
-  let reactionItems = actor.items.filter(item => {
-    //@ts-ignore activation
-    if (item.data.data.activation?.type !== triggerType) return false;
-    //@ts-ignore .preparation
-    if (item.data.data.preparation?.prepared !== true && item.data.data.preparation?.mode === "prepared") return false;
-    return true;
-  });
+  let reactionItems;
+  const maxLevel = maxCastLevel(target.actor);
+  enableNotifications(false);
+  try {
+    reactionItems = actor.items.filter(item => itemReaction(item, triggerType, maxLevel));
+  } finally {
+    enableNotifications(true);
+  }
   if (reactionItems.length > 0) {
     if (!Hooks.call("midi-qol.ReactionFilter", reactionItems)) {
       console.warn("midi-qol | Reaction processing cancelled by Hook");
@@ -2065,4 +2081,14 @@ export function computeTemplateShapeDistance(templateDocument: MeasuredTemplateD
       shape = templateDocument._object._getRayShape(direction, distance, width);
   }
   return { shape, distance };
+}
+
+var _enableNotifications = true;
+
+export function notificationNotify(wrapped, ...args) {
+  if (_enableNotifications) return wrapped(...args);
+  return;
+}
+export function enableNotifications(enable: boolean) {
+  _enableNotifications = enable;
 }

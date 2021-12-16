@@ -105,11 +105,13 @@ export let readyHooks = async () => {
     //@ts-ignore documentClass
     if (!(effect.parent instanceof CONFIG.Actor.documentClass)) return true;
     const actor = effect.parent;
-    const token = actor.token ? actor.token : actor.getActiveTokens()[0];
+    // const token = actor.token ? actor.token : actor.getActiveTokens()[0];
     const checkConcentration = globalThis.MidiQOL?.configSettings()?.concentrationAutomation;
     if (checkConcentration) {
       /// result = await wrapped(...args);
-      handleRemoveConcentration(effect, [token]);
+      // handleRemoveConcentration(effect, [token]);
+      handleRemoveConcentration(effect);
+
     }
     return true;
   });
@@ -136,8 +138,8 @@ export function restManager(actor, result) {
   if (myExpiredEffects?.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects);
 }
 
-async function handleRemoveConcentration(effect, tokens) {
-  // TODO fix this to be localised
+// async function handleRemoveConcentration(effect, tokens) {
+async function handleRemoveConcentration(effect) {
   let actor = effect.parent;
   let concentrationLabel: any = i18n("midi-qol.Concentrating");
   if (installedModules.get("dfreds-convenient-effects")) {
@@ -147,7 +149,6 @@ async function handleRemoveConcentration(effect, tokens) {
   } else if (installedModules.get("combat-utility-belt")) {
     concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
   }
-  // Change this to 
   let isConcentration = effect.data.label === concentrationLabel;
   if (!isConcentration) return false;
 

@@ -493,7 +493,7 @@ export class Workflow {
         if (checkRule("removeHiddenInvis")) removeHiddenInvis.bind(this)();
         const attackExpiries = [
           "isAttacked",
-          "1Reaction",
+         "1Reaction",
         ];
         await this.expireTargetEffects(attackExpiries)
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
@@ -2601,10 +2601,7 @@ export class BetterRollsWorkflow extends Workflow {
           await this.displayHits(configSettings.autoCheckHit === "whisper", configSettings.mergeCard);
         }
         if (configSettings.allowUseMacro && this.item?.data.flags) {
-          // A hack so that onUse macros only called once, but for most cases it is evaluated in APPLYDYNAMICEFFECTS
-          let onUseMacroName = getProperty(this.item, "data.flags.midi-qol.onUseMacroName") ?? "";
           await this.callMacros(this.item, this.onUseMacros?.getMacros("postAttackRoll"), "OnUse", "postAttackRoll");
-
         }
         Hooks.callAll("midi-qol.AttackRollComplete", this);
         return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);

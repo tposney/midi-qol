@@ -1,5 +1,28 @@
+### 0.8.95
+* Reactions now check for resource availability and spell slot availability. (Probably some bugs in this).
+* Added another midi-qol Hook call, Hooks.call("midi-qol.damageApplied", token, {item, workflow, damageData} => ());
+
+damageData:
+  actorId: "BGiR3QTov6V63oY7"
+  actorUuid: "Scene.XRSav5mOrp1iEC7S.Token.fJYVrQVkOtulpQ8W"
+  appliedDamage: 7
+  damageDetail: Array(2)
+    0: {damage: 7, type: 'fire', DR: 0, damageMultiplier: 0.5}
+    1: {damage: 4, type: 'acid', DR: 0, damageMultiplier: 1}
+  hpDamage: 7
+  newHP: 493
+  newTempHP: 0
+  oldHP: 500
+  oldTempHP: 0
+  sceneId: "XRSav5mOrp1iEC7S"
+  tempDamage: 0
+  tokenId: "fJYVrQVkOtulpQ8W"
+  tokenUuid: "Scene.XRSav5mOrp1iEC7S.Token.fJYVrQVkOtulpQ8W"
+  totalDamage: 11
+
 ### 0.8.94
 * Fix for empty onUseMacro field failing to allow adding onUseMacros
+* Incapacitated actors can't take reactions
 
 ### 0.8.93
 * Fix for better rolls not AoE template targeting correctly.
