@@ -94,6 +94,12 @@ Hooks.once('libChangelogsReady', function() {
   0.8.96
   * Fix for concentration save bonus being ignored. Thanks @SagaTympana#8143.
   * Fix reactions ignoring prepared status on spells - broken in 0.8.95
+  * Remove context field from onUseMacros when using betterrolls5e
+  * Experimental "late targeting mode" for items that are NOT Template, Range or Self targeting. If auto roll attack is enabled then after you start the roll (click on the icon):
+    - token + targeting will be selected in the controls tab, 
+    - the character sheet will be minimised and midi will wait for you to target tokens.
+    - You signal that you are ready by changing the control selection to anything other than token targeting.
+    - The sheet will be restoed and the workflow continue.
 
   0.8.95
   * Reactions now check for resource availability and spell slot availability. (Probably some bugs in this).
