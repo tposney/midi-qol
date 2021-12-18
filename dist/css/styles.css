@@ -144,34 +144,10 @@
   border: 2px groove #c9c7b8;
 }
 
-.dnd5e.sheet.item h4.macro-header {
-  margin: 0;
-  padding: 0;
-  font-weight: bold;
-  line-height: 24px;
-  color: #4b4a44;
-}
-.dnd5e.sheet.item .macro-parts {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.dnd5e.sheet.item .macro-parts .macro-part {
-  flex: 0 0 100%;
-  padding: 0;
-}
-.dnd5e.sheet.item .macro-parts .macro-part input {
-  flex: 3;
-}
-.dnd5e.sheet.item .macro-parts .macro-part select {
-  margin-left: 5px;
-  flex: 1;
-}
-.dnd5e.sheet.item .macro-control {
-  width: 18px;
-  flex: 0 0 18px;
-  line-height: 24px;
-  float: right;
-  text-align: right;
-  color: #7a7971;
+
+/* ----------------------------------------- */
+/* On Use Macros
+/* ----------------------------------------- */
+.onusemacro-group li [name*="betterRolls5e"] {
+	display: none;
 }

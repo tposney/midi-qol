@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled, log } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isFastForwardSpells, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isFastForwardSpells, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./patching.js";
 import { MeasuredTemplateData } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/module.mjs";
@@ -308,6 +308,37 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   return result;
 }
 
+async function resolveLateTargeting(item: any) {
+  if (!getLateTargeting()) return;
+
+  // clear targets?
+
+  // enable target mode
+  const controls: any = ui.controls;
+  controls.activeControl = "token"
+  controls.controls[0].activeTool = "target"
+  await controls.render();
+
+  const wasMaximized = !(item.actor.sheet?._minimized);
+  // Hide the sheet that originated the preview
+  if (wasMaximized) await item.actor.sheet.minimize();
+
+  let targets = new Promise((resolve, reject) => {
+    // hook for exit target mode
+    const timeoutId = setTimeout(() => {
+      resolve(false)
+    }, 30000); // TODO maybe make this a config option
+    const hookId = Hooks.on("renderSceneControls", (app, html, data) => {
+      if (app.activeControl === "token" && data.controls[0].activeTool === "target") return;
+      Hooks.off("renderSceneControls", hookId)
+      clearTimeout(timeoutId)
+      resolve(true);
+    });
+  });
+  await targets;
+  if (wasMaximized) await item.actor.sheet.maximize()
+}
+
 export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event }) {
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
@@ -318,8 +349,24 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
   const isRangeSpell = ["ft", "m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget;
-  const myTargets = game.user?.targets && await validTargetTokens(game.user?.targets);
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
+  if (getLateTargeting() && !isRangeSpell && !isAoESpell && getAutoRollAttack()) {
+    // normal targeting and auto rolling attack so allow late targeting
+    let canDoLateTargeting = this.data.data.target.type !== "self";
+
+    // TODO look at this if AoE spell and not auto targeting need to work out how to deal with template placement
+    if (false && isAoESpell && configSettings.autoTarget === "none" && this.hasAreaTarget) 
+      canDoLateTargeting = true;
+
+    // TODO look at this if range spell and not auto targeting
+    const targetDetails = this.data.data.target;
+    if (false && configSettings.rangeTarget === "none" && ["ft", "m"].includes(targetDetails?.units) && ["creature", "ally", "enemy"].includes(targetDetails?.type))
+      canDoLateTargeting = true;
+    // TODO consider template and range spells when not template targeting?
+
+    if (canDoLateTargeting) await resolveLateTargeting(this);
+  }
+  const myTargets = game.user?.targets && await validTargetTokens(game.user?.targets);
   let shouldAllowRoll = !requiresTargets // we don't care about targets
     || ((myTargets?.size || 0) > 0) // there are some target selected
     || (this.data.data.target?.type === "self") // self target

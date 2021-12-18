@@ -31,6 +31,8 @@ const defaultKeyMapping = {
 class ConfigSettings {
   gmAutoAttack: boolean = false;
   gmAutoFastForwardAttack: boolean = false;
+  gmLateTargeting: boolean = false;
+  lateTargeting: boolean = false;
   gmAutoDamage: string = "none";
   gmAutoFastForwardDamage: boolean =  false;
   gmFastForwardSpells = false;
@@ -226,6 +228,9 @@ export let fetchParams = () => {
   if (configSettings.accelKeysOverride === undefined) configSettings.accelKeysOverride = false;
   if (!configSettings.enableddbGL) configSettings.enableddbGL = false;
   if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
+  if (!configSettings.gmLateTargeting) configSettings.gmLateTargeting = false; // TODO fix this
+  if (!configSettings.lateTargeting) configSettings.lateTargeting = false; // TODO fix this
+
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
     || !configSettings.keyMapping["DND5E.Disadvantage"]

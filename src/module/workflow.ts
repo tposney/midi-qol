@@ -8,7 +8,7 @@ import { selectTargets, shouldRollOtherDamage, showItemCard, templateTokens } fr
 import { socketlibSocket } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls, useMidiCrit } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting } from "./utils.js"
 import { getTrailingCommentRanges } from "typescript";
 import { OnUseMacros } from "./apps/Item.js";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
@@ -24,17 +24,18 @@ export const WORKFLOWSTATES = {
   ROLLSTARTED: 1,
   AWAITTEMPLATE: 2,
   TEMPLATEPLACED: 3,
-  VALIDATEROLL: 4,
-  PREAMBLECOMPLETE: 5,
-  WAITFORATTACKROLL: 6,
-  ATTACKROLLCOMPLETE: 7,
-  WAITFORDAMAGEROLL: 8,
-  DAMAGEROLLCOMPLETE: 9,
-  WAITFORSAVES: 10,
-  SAVESCOMPLETE: 11,
-  ALLROLLSCOMPLETE: 12,
-  APPLYDYNAMICEFFECTS: 13,
-  ROLLFINISHED: 14
+  LATETARGETING: 4,
+  VALIDATEROLL: 5,
+  PREAMBLECOMPLETE: 6,
+  WAITFORATTACKROLL: 7,
+  ATTACKROLLCOMPLETE: 8,
+  WAITFORDAMAGEROLL: 9,
+  DAMAGEROLLCOMPLETE: 10,
+  WAITFORSAVES: 11,
+  SAVESCOMPLETE: 12,
+  ALLROLLSCOMPLETE: 13,
+  APPLYDYNAMICEFFECTS: 14,
+  ROLLFINISHED: 15
 };
 
 function stateToLabel(state: number) {
@@ -364,7 +365,7 @@ export class Workflow {
           this.targets = await validTargetTokens(this.targets);
           return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
         }
-        return this.next(WORKFLOWSTATES.VALIDATEROLL);
+        return this.next(WORKFLOWSTATES.LATETARGETING);
 
       case WORKFLOWSTATES.AWAITTEMPLATE:
         if (this.templateTargeting) {
@@ -398,6 +399,9 @@ export class Workflow {
           "flags.midi-qol.type": MESSAGETYPES.ITEM,
           type: CONST.CHAT_MESSAGE_TYPES.OTHER
         });
+        return this.next(WORKFLOWSTATES.VALIDATEROLL);
+
+      case WORKFLOWSTATES.LATETARGETING:
         return this.next(WORKFLOWSTATES.VALIDATEROLL);
 
       case WORKFLOWSTATES.VALIDATEROLL:
@@ -1318,7 +1322,7 @@ export class Workflow {
       const versatileRe = /<button data-action="versatile">[^<]*<\/button>/
       const damageRe = /<button data-action="damage">[^<]*<\/button>/
       const formulaRe = /<button data-action="formula">[^<]*<\/button>/
-      content = content?.replace(damageRe, "<div></div")
+      content = content?.replace(damageRe, "<div></div>")
       content = content?.replace(formulaRe, "")
       content = content?.replace(versatileRe, "")
     }
@@ -1810,7 +1814,7 @@ export class Workflow {
           const rollBonus = (await new Roll(checkBonus, target.actor?.getRollData()).evaluate({ async: true })).total;
           rollTotal += rollBonus;
           rollDetail = (await new Roll(`${rollDetail.result} + ${rollBonus}`).evaluate({ async: true }));
-          let saved = rollTotal >= rollDC;
+          saved = rollTotal >= rollDC;
           if (checkRule("criticalSaves")) { // normal d20 roll/lmrtfy/monks roll
             saved = (isCritical || rollTotal >= rollDC) && !isFumble;
           }

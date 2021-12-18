@@ -1,3 +1,16 @@
+### 0.8.96
+* Fix for concentration save bonus being ignored. Thanks @SagaTympana#8143.
+* Fix reactions ignoring prepared status on spells - broken in 0.8.95
+* Remove context field from onUseMacros when using betterrolls5e
+* Experimental "late targeting mode" for items that are NOT Template, range or self targeting. If auto roll attack is enabled then after you start the roll (click on the icon)
+  - token + targeting will be selected in the controls tab, 
+  - the character sheet minimised and midi will wait for you to target tokens.
+  - You signal that you are ready by changing the control selection to anything other than token targeting.
+  - The sheet will be restoed and the workflow continue.
+
+**Known Issues**. If the item does not have any targets, you will still have to complete the targeting process by clicking away from token targeting.
+This is rreally intended for players who really, really can't get the hang of targeting before they do the roll.
+
 ### 0.8.95
 * Reactions now check for resource availability and spell slot availability. (Probably some bugs in this).
 * Added another midi-qol Hook call, Hooks.call("midi-qol.damageApplied", token, {item, workflow, damageData} => ());

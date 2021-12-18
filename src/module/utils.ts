@@ -1127,6 +1127,10 @@ export function getAutoRollAttack(): boolean {
   return game.user?.isGM ? configSettings.gmAutoAttack : configSettings.autoRollAttack;
 }
 
+export function getLateTargeting() {
+  return game.user?.isGM ? configSettings.gmLateTargeting : configSettings.lateTargeting;
+}
+
 export function itemHasDamage(item) {
   return item?.data.data.actionType !== "" && item?.hasDamage;
 }
@@ -1679,11 +1683,11 @@ function itemReaction(item, triggerType, maxLevel) {
   //@ts-ignore activation
   if (item.data.data.activation?.type !== triggerType) return false;
   if (item.type === "spell") {
-    if (item.data.data.preparation === "atwill") return true;
+    if (item.data.data.preparation.mode === "atwill") return true;
     if (item.data.data.level === 0) return true;
-    if (item.data.data.preparation !== "innate") return item.data.data.level <= maxLevel;
+    if (item.data.data.preparation?.prepared !== true && item.data.data.preparation?.mode === "prepared") return false;
+    if (item.data.data.preparation.mode !== "innate") return item.data.data.level <= maxLevel;
   }
-  if (item.data.data.preparation?.prepared !== true && item.data.data.preparation?.mode === "prepared") return false;
   //@ts-ignore DND5E
   if (item.data.data.attunement === CONFIG.DND5E.attunementTypes.REQUIRED) return false;
   if (!item._getUsageUpdates({ consumeRecharge: item.data.data.recharge?.value, consumeResource: true, consumeSpellLevel: false, consumeUsage: item.data.data.uses?.max > 0, consumeQuantity: item.type === "consumable" })) return false;

@@ -26,6 +26,12 @@
         <div class="midi-qol-faint">{{localize "midi-qol.FastForwardSpells.Hint"}}</div>
 
         <div class="form-group">
+          <label>{{localize "midi-qol.LateTargeting.Name"}}</label>
+          <input type="checkbox" name="gmLateTargeting" data-dtype="Boolean" {{checked configSettings.gmLateTargeting}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.LateTargeting.Hint"}}</div>
+
+        <div class="form-group">
           <label>{{localize "midi-qol.AutoFastForwardAttack.Name"}}</label>
           <input type="checkbox" name="gmAutoFastForwardAttack" data-dtype="Boolean" {{checked
             configSettings.gmAutoFastForwardAttack}} />
@@ -96,6 +102,12 @@
           <label>{{localize "midi-qol.AutoAttack.Name"}}</label>
           <input type="checkbox" name="autoRollAttack" data-dtype="Boolean" {{checked configSettings.autoRollAttack}} />
         </div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.LateTargeting.Name"}}</label>
+          <input type="checkbox" name="lateTargeting" data-dtype="Boolean" {{checked configSettings.laateTargeting}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.LateTargeting.Hint"}}</div>
 
         <div class="form-group">
           <label>{{localize "midi-qol.FastForwardSpells.Name"}}</label>

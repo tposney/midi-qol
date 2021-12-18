@@ -260,10 +260,11 @@ export function initHooks() {
       const labelText = i18n("midi-qol.onUseMacroLabel");      
       const macros = new OnUseMacros(getProperty(app.object.data, "flags.midi-qol.onUseMacroName"));
 
+
       const macroField = `<h4 class="damage-header">${labelText}
   <a class="macro-control damage-control add-macro"><i class="fas fa-plus"></i></a>
 </h4>
-  <ol class="damage-parts form-group">    
+  <ol class="damage-parts onusemacro-group form-group">
     ${macros.selectListOptions}
   </ol>`;      
       element.append(macroField)
