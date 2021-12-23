@@ -253,7 +253,7 @@ async function doClick(event: { stopPropagation: () => void; }, actorUuid: any, 
 async function doMidiClick(ev: any, actorUuid: any, newTempHP: any, newHP: any) {
   let actor = MQfromActorUuid(actorUuid);
   log(`Setting HP to ${newTempHP} and ${newHP}`);
-  await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP });
+  await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP },{ dhp: (newHP - actor.data.data.attributes.hp.value) });
 }
 
 export let processUndoDamageCard = async (message, html, data) => {
@@ -265,7 +265,7 @@ export let processUndoDamageCard = async (message, html, data) => {
       if (!actorUuid) return;
       let actor = MQfromActorUuid(actorUuid);
       log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
-      await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP });
+      await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP }, {dhp: oldHP - actor.data.data.attributes.hp.value });
       ev.stopPropagation();
     })
   })
@@ -276,7 +276,7 @@ export let processUndoDamageCard = async (message, html, data) => {
       if (!actorUuid) return;
       let actor = MQfromActorUuid(actorUuid);
       log(`Setting HP to ${newTempHP} and ${newHP}`);
-      await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem });
+      await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, {dhp: newHP - actor.data.data.attributes.hp.value });
       ev.stopPropagation();
     })
   })
@@ -288,7 +288,7 @@ export let processUndoDamageCard = async (message, html, data) => {
     button.click(async (ev: { stopPropagation: () => void; }) => {
       let actor = MQfromActorUuid(actorUuid);
       log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
-      await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP });
+      await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP }, {dhp: oldHP - actor.data.data.attributes.hp.value });
       ev.stopPropagation();
     });
 
@@ -297,7 +297,7 @@ export let processUndoDamageCard = async (message, html, data) => {
     button.click(async (ev: { stopPropagation: () => void; }) => {
       let actor = MQfromActorUuid(actorUuid);
       log(`Setting HP to ${newTempHP} and ${newHP}`);
-      await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem });
+      await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, {dhp: newHP - actor.data.data.attributes.hp.value });
       ev.stopPropagation();
     });
 

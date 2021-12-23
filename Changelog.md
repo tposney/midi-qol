@@ -1,3 +1,7 @@
+### 0.8.98
+* Support core damage numbers for all damage/healing application.
+* Remove accidental debugger call.
+
 ### 0.8.97
 * Process flags.midi-qol.advantage..., flags.midi-qol.disadvantage.... when doing initiative rolls (dex check advantage will give initiative advantage).
 * Fix for sneak attack and v9.

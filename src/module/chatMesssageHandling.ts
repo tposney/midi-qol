@@ -520,7 +520,7 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
       // find solution for non-magic weapons
       let promises: Promise<any>[] = [];
       if (canvas?.tokens) for (let t of canvas.tokens.controlled) {
-        let a: Actor | null = t.actor;
+        let a: any | null = t.actor;
         if (!a) continue;
         let appliedDamage = 0;
         for (let { damage, type } of damageList) {
@@ -528,7 +528,7 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
         }
         appliedDamage = Math.floor(Math.abs(appliedDamage)) * mult;
         let damageItem = calculateDamage(a, appliedDamage, t, totalDamage, "", null);
-        promises.push(a.update({ "data.attributes.hp.temp": damageItem.newTempHP, "data.attributes.hp.value": damageItem.newHP }));
+        promises.push(a.update({ "data.attributes.hp.temp": damageItem.newTempHP, "data.attributes.hp.value": damageItem.newHP }, { dhp: damageItem.newHP - a.data.data.attributes.hp.value }));
       }
       let retval = await Promise.all(promises);
       return retval;

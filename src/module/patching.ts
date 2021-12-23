@@ -513,7 +513,6 @@ function itemSheetGetSubmitData(wrapped, ...args) {
 }
 
 export function _getInitiativeFormula(wrapped) {
-  debugger;
   const original = wrapped();
   const actor = this.actor;
   let disadv = actor.getFlag("dnd5e", "iniitiativeDis");
