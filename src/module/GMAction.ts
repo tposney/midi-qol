@@ -174,7 +174,8 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
     // removed intended for check
     if (["yes", "yesCard"].includes(data.autoApplyDamage)) {
       if (newHP !== oldHP || newTempHP !== oldTempHP) {
-        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem }));
+        //@ts-ignore
+        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem }, {dhp: -appliedDamage}));
       }
     }
     tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP, damageItem });

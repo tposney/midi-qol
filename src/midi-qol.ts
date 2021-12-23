@@ -198,8 +198,10 @@ Hooks.once('ready', function () {
   gameStats = new RollStats();
   actorAbilityRollPatching();
   // has to be done before setup api.
-  MQOnUseOptions = i18n("midi-qol.OnUseOptions");
+  MQOnUseOptions = i18n("midi-qol.onUseMacroOptions");
   if (typeof MQOnUseOptions === "string") MQOnUseOptions = {
+    "templatePlaced": "Only callled once a template is placed",
+    "preambleComplete": "After targeting complete",
     "preAttackRoll": "Before Attack Roll",
     "preCheckHits": "Before Check Hits",
     "postAttackRoll": "After Attack Roll",

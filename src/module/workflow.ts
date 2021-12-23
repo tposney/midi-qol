@@ -382,6 +382,9 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
 
       case WORKFLOWSTATES.TEMPLATEPLACED:
+        if (configSettings.allowUseMacro) {
+          await this.callMacros(this.item, this.onUseMacros?.getMacros("templatePlaced"), "OnUse", "templatePlaced");
+        }
         // Some modules stop being able to get the item card id.
         if (!this.itemCardId) return this.next(WORKFLOWSTATES.VALIDATEROLL);
 
@@ -419,6 +422,9 @@ export class Workflow {
       case WORKFLOWSTATES.PREAMBLECOMPLETE:
         this.effectsAlreadyExpired = [];
         if (Hooks.call("midi-qol.preambleComplete", this) === false) return;
+        if (configSettings.allowUseMacro) {
+          await this.callMacros(this.item, this.onUseMacros?.getMacros("preambleComplete"), "OnUse", "preambleComplete");
+        }
         if (!getAutoRollAttack() && this.item?.hasAttack) {
           const rollMode = game.settings.get("core", "rollMode");
           this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === "blindroll" || rollMode === "gmroll";
@@ -739,7 +745,6 @@ export class Workflow {
         if (debugEnabled > 0) warn('Inside workflow.rollFINISHED');
         // Add concentration data if required
         let hasConcentration = this.item?.data.data.components?.concentration || this.item?.data.data.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
-        hasConcentration = hasConcentration;
         if (this.item &&
           (
             (this.item.hasAttack && (this.targets.size > 0 && this.hitTargets.size === 0 && this.hitTargetsEC.size === 0))  // did  not hit anyone
@@ -764,7 +769,7 @@ export class Workflow {
 
             if (!selfTargeted) targets.push({ tokenUuid: this.tokenUuid, actorUuid: this.actor.uuid })
             let templates = this.templateUuid ? [this.templateUuid] : [];
-            await this.actor.setFlag("midi-qol", "concentration-data", { uuid: this.item.uuid, targets: targets, templates: templates })
+            await this.actor.setFlag("midi-qol", "concentration-data", { uuid: this.item.uuid, targets: targets, templates: templates, removeUuids: [] })
           }
         }
 

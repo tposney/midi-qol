@@ -752,19 +752,23 @@ These field lets you specify a macro to call during the roll.
 **OnUse macros** are called after the item roll is complete. The field should contain ONLY the macro name, with an optional pass to execute the macro, and recognizes the exact text ItemMacro to mean calling the items itemMacro if any. The intention is that you can customise the behaviour of how a particular item behaves.
 There are some control for macro writers to decide when their macro should get executed. The macro data will be current for the state of the workflow. e.g. ``[postActiveEffects]ItemMacro``, the text is a localised string so may vary with language.
 ```
-    [preAttackRoll] before the attack roll is made
-    [preCheckHits] after the attack roll is made but before hits are adjudicated
-    [postAttackRoll] after the attack is adjudicated
-    [preSave] before saving throws are rolled
-    [postSave] after saving throws are rolled
-    [preDamageRoll] before damage is rolled
-    [postDamageRoll] after the damage roll is made
-    [preDamageApplication] before damage is applied
-    [preActiveEffects] before active effects are applied
-    [postActiveEffects] after active effects are applied
-    [All] call the macro for each of the above cases
+    templatePlaced only called after a measure template is placed
+    preambleComplete called after all targeting is completed
+    preAttackRoll before the attack roll is made
+    preCheckHits after the attack roll is made but before hits are adjudicated
+    postAttackRoll after the attack is adjudicated
+    preSave before saving throws are rolled
+    postSave after saving throws are rolled
+    preDamageRoll before damage is rolled
+    postDamageRoll after the damage roll is made
+    preDamageApplication before damage is applied
+    preActiveEffects before active effects are applied
+    postActiveEffects after active effects are applied
+    All call the macro for each of the above cases
 ```
   - the macro arguments have an additional parameter args[0].macroPass set to the pass being called, being one of:
+    templatePlaced
+    preambleComplete
     preAttackRoll
     preCheckHits
     postAttackRoll
@@ -775,7 +779,7 @@ There are some control for macro writers to decide when their macro should get e
     preDamageApplication
     preActiveEffects
     postActiveEffects
-    all
+
   - [All] is special, being called with each value of macroPass. You can differentiate via args[0].macroPass to decide which ones to act on.
   - You can specify (for example):
     ```[postAttackRoll]ItemMacro, [postDmageApplication]ItemMacro``` for multiple passes

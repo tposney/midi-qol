@@ -512,6 +512,55 @@ function itemSheetGetSubmitData(wrapped, ...args) {
   }
 }
 
+export function _getInitiativeFormula(wrapped) {
+  debugger;
+  const original = wrapped();
+  const actor = this.actor;
+  let disadv = actor.getFlag("dnd5e", "iniitiativeDis");
+  let adv = actor.getFlag("dnd5e", "initiativeAdv");
+  const flags = actor.data.flags["midi-qol"];
+  if (flags && flags.advantage) {
+    adv = adv || flags.advantage.all || flags.advantage.ability?.check?.all || flags.advantage.ability?.check?.dex
+  }
+  if (flags && flags.disadvantage) {
+    disadv = disadv || flags.disadvantage.all || flags.disadvantage.ability?.check?.all || flags.disadvantage.ability?.check?.dex
+  }
+  if (!disadv && !adv) return original;
+  if ( !actor ) return "1d20";
+  const actorData = actor.data.data;
+  const init = actorData.attributes.init;
+  const rollData = actor.getRollData();
+
+  // Construct initiative formula parts
+  let nd = 1;
+  let mods = "";
+  if (actor.getFlag("dnd5e", "halflingLucky")) mods += "r1=1";
+  if (adv && !disadv) {
+    nd = 2;
+    mods += "kh";
+  } else if (!adv && disadv) {
+    nd = 2;
+    mods += "kl";
+  }
+  const parts = [
+    `${nd}d20${mods}`,
+    init.mod,
+    (init.prof.term !== "0") ? init.prof.term : null,
+    (init.bonus !== 0) ? init.bonus : null
+  ];
+
+  // Ability Check Bonuses
+  const dexCheckBonus = actorData.abilities.dex.bonuses?.check;
+  const globalCheckBonus = actorData.bonuses?.abilities?.check;
+  if ( dexCheckBonus ) parts.push(Roll.replaceFormulaData(dexCheckBonus, rollData));
+  if ( globalCheckBonus ) parts.push(Roll.replaceFormulaData(globalCheckBonus, rollData));
+
+  // Optionally apply Dexterity tiebreaker
+  const tiebreaker = game.settings.get("dnd5e", "initiativeDexTiebreaker");
+  if ( tiebreaker ) parts.push(actor.data.data.abilities.dex.value / 100);
+  return parts.filter(p => p !== null).join(" + ");
+};
+
 export function readyPatching() {
   // TODO remove this when v9 default
   libWrapper.register("midi-qol", "game.dnd5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
@@ -519,7 +568,7 @@ export function readyPatching() {
   libWrapper.register("midi-qol", "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
   Notifications
   libWrapper.register("midi-qol", "Notifications.prototype.notify", notificationNotify, "MIXED");
-
+  libWrapper.register("midi-qol", "Combatant.prototype._getInitiativeFormula",_getInitiativeFormula, "WRAPPER");
 }
 
 export let visionPatching = () => {

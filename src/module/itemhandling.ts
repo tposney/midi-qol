@@ -326,7 +326,7 @@ async function resolveLateTargeting(item: any) {
   let targets = new Promise((resolve, reject) => {
     // hook for exit target mode
     const timeoutId = setTimeout(() => {
-      resolve(false)
+      resolve(false);
     }, 30000); // TODO maybe make this a config option
     const hookId = Hooks.on("renderSceneControls", (app, html, data) => {
       if (app.activeControl === "token" && data.controls[0].activeTool === "target") return;

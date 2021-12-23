@@ -6,6 +6,7 @@ import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { configSettings, dragDropTargeting, useMidiCrit } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 import { preUpdateItemOnUseMacro } from "./patching.js";
+import { isExpressionWithTypeArguments } from "typescript";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -168,6 +169,10 @@ async function handleRemoveConcentration(effect) {
         const template = MQfromUuid(templateUuid);
         if (template) await template.delete();
       }
+    }
+    for (let removeUuid of concentrationData.removeUuids) {
+      const entity = await fromUuid(removeUuid);
+      if (entity) await entity.delete()
     }
     await socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
   } catch (err) {
