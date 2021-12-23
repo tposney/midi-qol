@@ -91,6 +91,13 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+
+  0.8.97
+  * Process flags.midi-qol.advantage..., flags.midi-qol.disadvantage.... when doing initiative rolls (dex check advantage will give initiative advantage).
+  * Fix for sneak attack and v9.
+  * Fix for v9 scrolling damage display not working with midi apply damage.
+  * 2 new onUseMacro call points, templatePlaced and preambleComplete.
+
   0.8.96
   * Fix for concentration save bonus being ignored. Thanks @SagaTympana#8143.
   * Fix reactions ignoring prepared status on spells - broken in 0.8.95
