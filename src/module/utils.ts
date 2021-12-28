@@ -1115,8 +1115,8 @@ export function isAutoFastDamage(workFlow: Workflow | undefined = undefined): bo
   return game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward)
 }
 
-export function isFastForwardSpells(workFlow: Workflow | undefined = undefined): boolean {
-  return game.user?.isGM ? configSettings.gmFastForwardSpells : configSettings.fastForwardSpells;
+export function isAutoConsumeResource(workFlow: Workflow | undefined = undefined): boolean {
+  return game.user?.isGM ? configSettings.gmConsumeResource : configSettings.consumeResource;
 }
 
 export function getAutoRollDamage(): string {
@@ -1358,7 +1358,7 @@ export async function expireMyEffects(effectsToExpire: string[]) {
     })
     if (debugEnabled > 1) debug("expiry map is ", test)
   }
-  const myExpiredEffects = this.actor.effects.filter(ef => {
+  const myExpiredEffects = this.actor.effects?.filter(ef => {
     const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
     if (!specialDuration || !specialDuration?.length) return false;
     return (expireAction && specialDuration.includes("1Action")) ||

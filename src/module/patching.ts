@@ -515,8 +515,8 @@ function itemSheetGetSubmitData(wrapped, ...args) {
 export function _getInitiativeFormula(wrapped) {
   const original = wrapped();
   const actor = this.actor;
-  let disadv = actor.getFlag("dnd5e", "iniitiativeDis");
-  let adv = actor.getFlag("dnd5e", "initiativeAdv");
+  let disadv = actor.getFlag(game.system.id, "iniitiativeDis");
+  let adv = actor.getFlag(game.system.id, "initiativeAdv");
   const flags = actor.data.flags["midi-qol"];
   if (flags && flags.advantage) {
     adv = adv || flags.advantage.all || flags.advantage.ability?.check?.all || flags.advantage.ability?.check?.dex
@@ -533,7 +533,7 @@ export function _getInitiativeFormula(wrapped) {
   // Construct initiative formula parts
   let nd = 1;
   let mods = "";
-  if (actor.getFlag("dnd5e", "halflingLucky")) mods += "r1=1";
+  if (game.system.id === "dnd5e" && actor.getFlag("dnd5e", "halflingLucky")) mods += "r1=1";
   if (adv && !disadv) {
     nd = 2;
     mods += "kh";

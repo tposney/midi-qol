@@ -545,7 +545,7 @@ export class Workflow {
         if (this.shouldRollDamage) {
           if (debugEnabled > 0) warn(" about to roll damage ", this.event, configSettings.autoRollAttack, configSettings.autoFastForward)
           //@ts-ignore
-          const storedData: any = game.messages?.get(this.itemCardId).getFlag(game.system.id, "itemData");
+          const storedData: any = game.messages?.get(this.itemCardId)?.getFlag(game.system.id, "itemData");
           if (storedData) { // It magic items is being used it fiddles the roll to include the item data
             this.item = new CONFIG.Item.documentClass(storedData, { parent: this.actor })
           }
@@ -1450,7 +1450,10 @@ export class Workflow {
           const roll = this.roll;
           const html = `<div class="midi-qol-hits-display">${hitContent}</div>`;
           // For better rolls the show targets without hits causes an empty item card to be shown that breaks the workflow.
-          if (showHits) await roll.entries.push({ type: "raw", html, source: "midi" });
+          if (showHits) {
+            roll.entries.push({ type: "raw", html, source: "midi" });
+            // await roll.update();
+          }
           break;
         case "Workflow":
         case "TrapWorkflow":
@@ -1963,7 +1966,6 @@ export class Workflow {
   }
 
   checkSuperSaver(token, ability: string) {
-    // TODO workout what this looks like
     const actor = token.actor;
     const flags = getProperty(actor.data.flags, "midi-qol.superSaver");
     if (!flags) return false;
@@ -2199,7 +2201,7 @@ export class Workflow {
       this.isCritical = false;
       this.isFumble = false;
       // Get the attack bonus for the attack
-      const attackBonus = roll.total - roll.dice[0].total; // TODO see if there is a better way to work out roll pluasses
+      const attackBonus = roll.total - roll.dice[0].total; // TODO see if there is a better way to work out roll plusses
       await this.checkActiveAttacks(attackBonus, false, 20 - (roll.options.fumble ?? 1) + 1, 20 - (roll.options.critical ?? 20) + 1);
     } finally {
       Hooks.off("renderChatMessage", hookId);
@@ -2562,6 +2564,7 @@ export class BetterRollsWorkflow extends Workflow {
     super(actor, item, speaker, targets, options);
     this.needTemplate = this.item?.hasAreaTarget ?? false;
     this.needItemCard = true;
+    this.damageRolled = !game.settings.get("betterrolls5e", "damagePromptEnabled");
     if (this.needTemplate) this.placeTemlateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
   }
   /**
@@ -2619,8 +2622,12 @@ export class BetterRollsWorkflow extends Workflow {
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preDamageRoll"), "OnUse", "preDamageRoll");
         }
-        // better rolls always have damage rolled, but we might have to show it
+        // better rolls usually have damage rolled, but we might have to show it
 
+        if (!this.damageRolled) {
+          // wait for damage roll
+          return;
+        }
         if (this.shouldRollDamage) {
           this.roll?.rollDamage();
         }

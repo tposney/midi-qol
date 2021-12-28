@@ -1,5 +1,5 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
-import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook } from "./chatMesssageHandling.js";
+import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
 import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
@@ -202,6 +202,7 @@ export function initHooks() {
   Hooks.on("updateChatMessage", (message, update, options, user) => {
     mergeCardSoundPlayer(message, update, options, user);
     hideRollUpdate(message, update, options, user);
+    betterRollsUpdate(message, update, options, user);
     //@ts-ignore scrollBottom
     ui.chat?.scrollBottom();
   })

@@ -32,6 +32,73 @@ export function mergeCardSoundPlayer(message, update, options, user) {
   return true;
 }
 
+export function betterRollsUpdate(message, update, options, user) {
+  console.error("update is ", message, update)
+  if (game.user?.id !== user) return true;
+  const flags = message.data.flags;
+  if(update.flags && update.flags["midi-qol"])  {
+    // Should be a hits display update
+    return;
+  }
+  const brFlags: any = flags?.betterrolls5e;
+  if (!brFlags) return true;
+  let actorId = brFlags.actorId;
+  let tokenId = brFlags.tokenId;
+  if (tokenId && !tokenId.startsWith("Scene")) { // remove when BR passes a uuid instead of constructed id.
+    const parts = tokenId.split(".");
+    tokenId = `Scene.${parts[0]}.Token.${parts[1]}`
+  }
+  let token: Token = tokenId && MQfromUuid(tokenId)
+
+  let actor;
+  if (token) actor = token.actor;
+  else actor = game.actors?.get(actorId);
+  let damageList: any[] = [];
+  let otherDamageList: any[] = [];
+  const item = actor?.items.get(brFlags.itemId)
+  let workflow = Workflow.getWorkflow(item?.uuid);
+  if (!workflow || workflow.damageRolled) return true;
+  let otherDamageRoll;
+  for (let entry of brFlags.entries) {
+    if (entry.type === "damage-group") {
+      for (const subEntry of entry.entries) {
+        let damage = subEntry.baseRoll?.total ?? 0;
+        let type = subEntry.damageType;
+        if (workflow.isCritical && subEntry.critRoll) {
+          damage += subEntry.critRoll.total;
+        }
+        if (type === "") {
+          type = MQdefaultDamageType;
+          if (item?.data.data.actionType === "heal") type = "healing";
+        }
+        // Check for versatile and flag set. TODO damageIndex !== other looks like nonsense.
+        if (subEntry.damageIndex !== "other")
+          damageList.push({ type, damage });
+        else {
+          otherDamageList.push({ type, damage });
+          if (subEntry.baseRoll instanceof Roll) otherDamageRoll = subEntry.baseRoll;
+          else otherDamageRoll = Roll.fromData(subEntry.baseRoll);
+        }
+      }
+    }
+  }
+  // Assume it is a damage roll
+  workflow.damageDetail = damageList;
+  workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
+  if (!workflow.shouldRollOtherDamage) {
+    otherDamageList = [];
+    // TODO find out how to remove it from the better rolls card?
+  }
+  workflow.damageRolled = true;
+  if (otherDamageList.length > 0) {
+    workflow.otherDamageTotal = otherDamageList.reduce((acc, a) => a.damage + acc, 0);
+    //@ts-ignore evaluate
+    workflow.otherDamageRoll = otherDamageRoll;
+  }
+  workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
+  return true;
+}
+
 export let processCreateBetterRollsMessage = (message: ChatMessage, user: string) => {
   if (game.user?.id !== user) return true;
   const flags = message.data.flags;
@@ -183,7 +250,7 @@ export let diceSoNiceHandler = async (message, html, data) => {
   if (debugEnabled > 1) debug("dice so nice handler - non-merge card", html)
 
   // better rolls handles delaying the chat card until complete.
-  if (!configSettings.mergeCard && installedModules.get("betterrolls5e")) return; 
+  if (!configSettings.mergeCard && installedModules.get("betterrolls5e")) return;
   html.hide();
   Hooks.once("diceSoNiceRollComplete", (id) => {
     let savesDisplay = $(html).find(".midi-qol-saves-display").length === 1;
@@ -622,7 +689,7 @@ export async function onChatCardAction(event) {
     workflow.applicationTargets = game.user?.targets;
     if (workflow.applicationTargets.size > 0) await workflow.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
   } else {
-    ui.notifications?.warn(i18nFormat("midi-qo.NoWorkflow", {itemName: item.name}));
+    ui.notifications?.warn(i18nFormat("midi-qo.NoWorkflow", { itemName: item.name }));
   }
   button.disabled = false;
 }
@@ -633,7 +700,7 @@ export function ddbglPendingFired(data) {
     error("DDB Game Log - no item/action for pending roll"); return
   }
   // const tokenUuid = `Scene.${sceneId??0}.Token.${tokenId??0}`;
-  const token = MQfromUuid(`Scene.${sceneId??0}.Token.${tokenId??0}`);
+  const token = MQfromUuid(`Scene.${sceneId ?? 0}.Token.${tokenId ?? 0}`);
   const actor = token?.actor ?? game.actors?.get(actorId ?? "");
   if (!actor) {
     warn(" ddb-game-log hook could not find actor");

@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled, log } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isFastForwardSpells, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./patching.js";
 import { MeasuredTemplateData } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/module.mjs";
@@ -355,7 +355,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     let canDoLateTargeting = this.data.data.target.type !== "self";
 
     // TODO look at this if AoE spell and not auto targeting need to work out how to deal with template placement
-    if (false && isAoESpell && configSettings.autoTarget === "none" && this.hasAreaTarget) 
+    if (false && isAoESpell && configSettings.autoTarget === "none" && this.hasAreaTarget)
       canDoLateTargeting = true;
 
     // TODO look at this if range spell and not auto targeting
@@ -460,20 +460,23 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
 
   if (configureDialog) {
-    if (this.type === "spell" && isFastForwardSpells() && !mapSpeedKeys(event).fastKey) {
-      configureDialog = false;
-      // Check that there is a spell slot of the right level
-      const spells = this.actor.data.data.spells;
-      if (spells[`spell${this.data.data.level}`]?.value === 0 &&
-        (spells.pact.value === 0 || spells.pact.level < this.data.data.level)) {
-        configureDialog = true;
+    if (this.type === "spell") {
+      if (isAutoConsumeResource() && !mapSpeedKeys(event).fastKey) {
+        configureDialog = false;
+        // Check that there is a spell slot of the right level
+        const spells = this.actor.data.data.spells;
+        if (spells[`spell${this.data.data.level}`]?.value === 0 &&
+          (spells.pact.value === 0 || spells.pact.level < this.data.data.level)) {
+          configureDialog = true;
+        }
+
+        if (!configureDialog && this.hasAreaTarget && this.actor?.sheet) {
+          setTimeout(() => {
+            this.actor?.sheet.minimize();
+          }, 100)
+        }
       }
-    }
-    if (!configureDialog && this.hasAreaTarget && this.actor?.sheet) {
-      setTimeout(() => {
-        this.actor?.sheet.minimize();
-      }, 100)
-    }
+    } else configureDialog = !isAutoConsumeResource();
   }
 
   let result = await wrapped({ configureDialog, rollMode: null, createMessage: false });
