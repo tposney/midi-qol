@@ -1,5 +1,9 @@
+### 0.8.100
+* Remove accidental debug left in
+* Fix for incomplete lang.json files.
+
 ### 0.8.99
-* Fix for Raksih Audacity and Sneak Attack sample items which break in v9 stable.
+* Fix for Rakish Audacity and Sneak Attack sample items which break in v9 stable.
 * Extend skip consume spell slot to cover skipping all consumption dialogs, pressing adv/dis when clicking causes the dialogs to be shown.
 * Fix for expiring effects when actor has none. (v9 tweak I think).
 * Removed unintentional reference to inappropriate icon from the module that shall not be named.

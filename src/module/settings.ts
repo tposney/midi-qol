@@ -214,6 +214,7 @@ export let fetchParams = () => {
   if (!configSettings.doReactions) configSettings.doReactions = "none";
   if (!configSettings.gmDoReactions) configSettings.gmDoReactions = "none";
   if (configSettings.reactionTimeout === undefined) configSettings.reactionTimeout = 0;
+  if (typeof configSettings.rangeTarget !== "string") configSettings.rangeTarget = "none";
   if (!configSettings.showReactionAttackRoll === undefined) configSettings.showReactionAttackRoll = "all";
   // deal with change of type of rollOtherDamage
   if (configSettings.rollOtherDamage === false) configSettings.rollOtherDamage = "none";

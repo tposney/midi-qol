@@ -91,8 +91,13 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  
+  0.8.100
+  * Remove accidental debug left in
+  * Fix for incomplete lang.json files.
+
   0.8.99
-  * Fix for Raksih Audacity and Sneak Attack sample items which break in v9 stable.
+  * Fix for Rakish Audacity and Sneak Attack sample items which break in v9 stable.
   * Extend skip consume spell slot to cover skipping all consumption dialogs, pressing adv/dis when clicking causes the dialogs to be shown.
   * Fix for expiring effects when actor has none. (v9 tweak I think).
   * Removed unintentional reference to inappropriate icon from the module that shall not be named.
@@ -138,5 +143,5 @@ Hooks.once('libChangelogsReady', function() {
   * **BREAKING** as of 0.8.91 if using uncanny dodge from the compendium, you will need to change it's activation cost to "Reaction Damaged" or it won't function. I failed to update the compendium but will do it later. 
 
   [Full Changelog](https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md)`,
-  "major")
+  "minor")
 })

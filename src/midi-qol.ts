@@ -49,6 +49,12 @@ export let i18n = key => {
 export let i18nFormat = (key, data = {}) => {
   return game.i18n.format(key, data);
 }
+export function geti18nOptions(key) {
+  const translations = game.i18n.translations["midi-qol"] ?? {};
+  //@ts-ignore _fallback not accessible
+  let translation = translations[key] ?? game.i18n._fallback["midi-qol"][key];
+  return translation ?? {};
+}
 export function geti18nTranslations() {
   let translations = game.i18n.translations["midi-qol"];
   //@ts-ignore _fallback not accessible

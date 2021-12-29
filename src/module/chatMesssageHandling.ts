@@ -33,7 +33,6 @@ export function mergeCardSoundPlayer(message, update, options, user) {
 }
 
 export function betterRollsUpdate(message, update, options, user) {
-  console.error("update is ", message, update)
   if (game.user?.id !== user) return true;
   const flags = message.data.flags;
   if(update.flags && update.flags["midi-qol"])  {
