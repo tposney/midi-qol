@@ -45,7 +45,7 @@ export let setupModules = () => {
 export function dice3dEnabled() {
   //@ts-ignore
   // return installedModules.get("dice-so-nice") && game.dice3d?.isEnabled();
-  return installedModules.get("dice-so-nice");
+  return installedModules.get("dice-so-nice") && (game.dice3d?.config?.enabled || game.dice3d.isEnabled());
 }
 
 export function checkModules() {
@@ -91,6 +91,10 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.8.101
+  * Fix for change from roll -> publicroll in v9 rollmode.
+  * Fix for sculpt spell flag and better rolls.
+  * Fix for roll other damage with activation condition still applying saving throw.
   
   0.8.100
   * Remove accidental debug left in

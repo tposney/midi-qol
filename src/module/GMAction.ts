@@ -175,7 +175,7 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
     if (["yes", "yesCard"].includes(data.autoApplyDamage)) {
       if (newHP !== oldHP || newTempHP !== oldTempHP) {
         //@ts-ignore
-        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem }, {dhp: -appliedDamage}));
+        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem }, { dhp: -appliedDamage }));
       }
     }
     tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP, damageItem });
@@ -253,65 +253,74 @@ async function doClick(event: { stopPropagation: () => void; }, actorUuid: any, 
 async function doMidiClick(ev: any, actorUuid: any, newTempHP: any, newHP: any) {
   let actor = MQfromActorUuid(actorUuid);
   log(`Setting HP to ${newTempHP} and ${newHP}`);
-  await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP },{ dhp: (newHP - actor.data.data.attributes.hp.value) });
+  await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP }, { dhp: (newHP - actor.data.data.attributes.hp.value) });
 }
 
-export let processUndoDamageCard = async (message, html, data) => {
+export let processUndoDamageCard = (message, html, data) => {
   if (!message.data.flags?.midiqol?.undoDamage) return true;
   let button = html.find("#all-reverse");
 
   button.click((ev: { stopPropagation: () => void; }) => {
-    message.data.flags.midiqol.undoDamage.forEach(async ({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem }) => {
-      if (!actorUuid) return;
-      let actor = MQfromActorUuid(actorUuid);
-      log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
-      await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP }, {dhp: oldHP - actor.data.data.attributes.hp.value });
-      ev.stopPropagation();
-    })
-  })
+    (async () => {
+      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem } of message.data.flags.midiqol.undoDamage) {
+        //message.data.flags.midiqol.undoDamage.forEach(async ({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem }) => {
+        if (!actorUuid) return;
+        let actor = MQfromActorUuid(actorUuid);
+        log(`Setting HP back to ${oldTempHP} and ${oldHP}`, actor);
+        await actor.update({ "data.attributes.hp.temp": oldTempHP ?? 0, "data.attributes.hp.value": oldHP ?? 0 }, { dhp: (oldHP ?? 0) - (actor.data.data.attributes.hp.value ?? 0) });
+        ev.stopPropagation();
+      }
+    })();
+  });
 
   button = html.find("#all-apply");
   button.click((ev: { stopPropagation: () => void; }) => {
-    message.data.flags.midiqol.undoDamage.forEach(async ({ actorUuid, oldTempHP, oldHP, absDamage, newHP, newTempHP, damageItem }) => {
-      if (!actorUuid) return;
-      let actor = MQfromActorUuid(actorUuid);
-      log(`Setting HP to ${newTempHP} and ${newHP}`);
-      await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, {dhp: newHP - actor.data.data.attributes.hp.value });
-      ev.stopPropagation();
-    })
+    (async () => {
+      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem } of message.data.flags.midiqol.undoDamage) {
+        if (!actorUuid) return;
+        let actor = MQfromActorUuid(actorUuid);
+        log(`Setting HP to ${newTempHP} and ${newHP}`);
+        await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.data.data.attributes.hp.value });
+        ev.stopPropagation();
+      }
+    })();
   })
 
   message.data.flags.midiqol.undoDamage.forEach(({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem }) => {
     if (!actorUuid) return;
     // ids should not have "." in the or it's id.class
     let button = html.find(`#reverse-${actorUuid.replaceAll(".", "")}`);
-    button.click(async (ev: { stopPropagation: () => void; }) => {
-      let actor = MQfromActorUuid(actorUuid);
-      log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
-      await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP }, {dhp: oldHP - actor.data.data.attributes.hp.value });
-      ev.stopPropagation();
+    button.click((ev: { stopPropagation: () => void; }) => {
+      (async () => {
+        let actor = MQfromActorUuid(actorUuid);
+        log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
+        await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP }, { dhp: oldHP - actor.data.data.attributes.hp.value });
+        ev.stopPropagation();
+      })();
     });
 
     // Default action of button is to do midi damage
     button = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
-    button.click(async (ev: { stopPropagation: () => void; }) => {
-      let actor = MQfromActorUuid(actorUuid);
-      log(`Setting HP to ${newTempHP} and ${newHP}`);
-      await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, {dhp: newHP - actor.data.data.attributes.hp.value });
-      ev.stopPropagation();
+    button.click((ev: { stopPropagation: () => void; }) => {
+      (async () => {
+        let actor = MQfromActorUuid(actorUuid);
+        log(`Setting HP to ${newTempHP} and ${newHP}`);
+        await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.data.data.attributes.hp.value });
+        ev.stopPropagation();
+      })();
     });
 
     let select = html.find(`#dmg-multiplier-${actorUuid.replaceAll(".", "")}`);
-    select.change(async (ev: any) => {
+    select.change( (ev: any) => {
       let multiplier = html.find(`#dmg-multiplier-${actorUuid.replaceAll(".", "")}`).val();
       button = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
       button.off('click');
 
       const mults = { "-1": -1, "x1": 1, "x0.25": 0.25, "x0.5": 0.5, "x2": 2 };
       if (multiplier === "calc")
-        button.click(async (ev: any) => doMidiClick(ev, actorUuid, newTempHP, newHP));
+        button.click(async (ev: any) => await doMidiClick(ev, actorUuid, newTempHP, newHP));
       else if (mults[multiplier])
-        button.click(async (ev: any) => doClick(ev, actorUuid, totalDamage, mults[multiplier]));
+        button.click(async (ev: any) => await doClick(ev, actorUuid, totalDamage, mults[multiplier]));
     });
   })
   return true;

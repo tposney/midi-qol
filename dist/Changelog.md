@@ -1,3 +1,8 @@
+### 0.8.101
+* Fix for change from roll -> publicroll in v9 rollmode.
+* Fix for sculpt spell flag and better rolls.
+* Fix for roll other damage with activation condition still applying saving throw.
+
 ### 0.8.100
 * Remove accidental debug left in
 * Fix for incomplete lang.json files.

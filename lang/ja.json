@@ -317,13 +317,15 @@
     "midi-qol.AllowUseMacro.Hint": "有効にすると、アイテム使用時に呼び出すマクロ名を入力するフィールドがアイテムの詳細画面に追加されます。詳しくはReadmeを参照してください。",
     "midi-qol.onUseMacroLabel": "使用時に呼び出すマクロ",
 	"midi-qol.onUseMacroOptions": {
+        "templatePlaced": "テンプレート配置時に呼び出される",
+        "preambleComplete": "ターゲット完了後",
 		"preAttackRoll": "攻撃ロール前",
 		"preCheckHits": "ヒット確認前",
 		"postAttackRoll": "攻撃ロール後",
+        "preDamageRoll": "ダメージロール前",
+		"postDamageRoll": "ダメージロール後",
 		"preSave": "セーヴ前", 
 		"postSave": "セーヴ後",
-		"preDamageRoll": "ダメージロール前",
-		"postDamageRoll": "ダメージロール後",
 		"preDamageApplication": "ダメージ適用前",
 		"preActiveEffects": "アクティブ効果の前",
 		"postActiveEffects": "アクティブ効果の後",
@@ -467,5 +469,7 @@
 	"midi-qol._comment for translaters_DeferText": "この下のテキストは、Midi-QOLがアイテムのonUseMacroフィールドを検索するためのものです。変更するとonUseMacroを持つすべてのアイテムを、それに合わせて変更する必要があります。",
 	"midi-qol.DeferText": "[Defer]",
 	"midi-qol._comment for translaters_ItemMacroText": "この下のテキストは、Midi-QOLがアイテムのonUseMacroフィールドを検索するためのものです。変更するとonUseMacroを持つすべてのアイテムを、それに合わせて変更する必要があります。",
-	"midi-qol.ItemMacroText": "ItemMacro"
+	"midi-qol.ItemMacroText": "アイテムマクロ",
+    "midi-qol.LateTargeting.Name": "実験的機能：ロール開始後ターゲットを許可する",
+    "midi-qol.LateTargeting.Hint": "自動ロール使用時、範囲効果を持たない攻撃は使用者が対象をターゲットするまで待機します。ターゲットモードはHUD上で切り替えられます。"
 }

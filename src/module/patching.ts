@@ -562,8 +562,13 @@ export function _getInitiativeFormula(wrapped) {
 
 export function readyPatching() {
   // TODO remove this when v9 default
-  libWrapper.register("midi-qol", "game.dnd5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
-  libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER")
+  if (game.system.id === "dnd5e") {
+  	libWrapper.register("midi-qol", "game.dnd5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
+  	libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
+  } else { // TDOD find out what itemsheet5e is called in sw5e
+  	libWrapper.register("midi-qol", "game.sw5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
+  	libWrapper.register("midi-qol", "game.se5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
+  }
   libWrapper.register("midi-qol", "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
   Notifications
   libWrapper.register("midi-qol", "Notifications.prototype.notify", notificationNotify, "MIXED");

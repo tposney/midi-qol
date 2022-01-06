@@ -185,9 +185,7 @@ export function initHooks() {
   if (debugEnabled > 0) warn("Init Hooks processing");
   Hooks.on("preCreateChatMessage", (message: ChatMessage, data, options, user) => {
     if (debugEnabled > 1) debug("preCreateChatMessage entering", message, data, options, user)
-    // processpreCreateBetterRollsMessage(message, data, options, user);
     nsaMessageHandler(message, data, options, user);
-    // ddbGLPreCreateChatMessage(message, data, options, user);
     return true;
   })
 
@@ -211,7 +209,6 @@ export function initHooks() {
     untargetAllTokens(combat, data.options, user);
     untargetDeadTokens();
     // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
-    // processOverTime(combat, data, options, user);
   })
 
   Hooks.on("renderChatMessage", (message, html, data) => {
@@ -240,26 +237,6 @@ export function initHooks() {
   Hooks.on("applyActiveEffect", midiCustomEffect);
   Hooks.on("preCreateActiveEffect", checkImmunity);
   Hooks.on("preUpdateItem", preUpdateItemOnUseMacro);
-
-  /*
-  Hooks.on("preUpdateItem", (item, data) => {
-    const macros = getProperty(data, 'flags.midi-qol.onUseMacroName');
-    if (macros && macros?.parts) {      
-      data.flags["midi-qol"].onUseMacroName = OnUseMacros.parseParts(macros.parts).toString();
-    }
-  });
-  Hooks.on("updateToken", async (token, data, payload) => {
-    if (!payload?.embedded?.hookData) return;
-    if (typeof payload.embedded.hookData !== "string") return;
-    const key : string = Object.keys(payload.embedded.hookData)[0];
-    if (key) {
-      const macros = getProperty(payload, `embedded.hookData.${key}.doc.flags.midi-qol.onUseMacroName`)?.parts;
-      if (macros) {
-        payload.embedded.hookData[key].doc.flags['midi-qol'].onUseMacroName = OnUseMacros.parseParts(macros).toString();
-      }
-    }
-  });
-*/
   Hooks.on("renderItemSheet", (app, html, data) => {
     const element = html.find('input[name="data.chatFlavor"]').parent().parent();
     if (configSettings.allowUseMacro) {

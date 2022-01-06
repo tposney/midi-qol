@@ -297,6 +297,7 @@ export class Workflow {
 
     if (configSettings.allowUseMacro)
       this.onUseMacros = getProperty(this.item, "data.flags.midi-qol.onUseMacroParts");
+    this.preSelectedTargets = new Set(game.user?.targets); // record those targets targeted before cast.
   }
 
   public someEventKeySet() {
@@ -348,7 +349,6 @@ export class Workflow {
     // error(this.stateList);
     switch (newState) {
       case WORKFLOWSTATES.NONE:
-        this.preSelectedTargets = new Set(game.user?.targets); // record those targets targeted before cast.
         this.templateTargeting = configSettings.autoTarget !== "none" && this.item.hasAreaTarget;
         if (debugEnabled > 1) debug(state, configSettings.autoTarget, this.item.hasAreaTarget);
         if (this.templateTargeting) {
@@ -1501,7 +1501,7 @@ export class Workflow {
           type: CONST.CHAT_MESSAGE_TYPES.OTHER,
         }
         const rollMode = game.settings.get("core", "rollMode");
-        if (whisper || rollMode !== "roll") {
+        if (whisper || !(["roll", "publicroll"].includes(rollMode))) {
           chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u => u.active).map(u => u.id);
           if (!game.user?.isGM && rollMode !== "blindroll") chatData.whisper.push(game.user?.id); // message is going to be created by GM add self
           chatData.messageData.user = ChatMessage.getWhisperRecipients("GM").find(u => u.active)?.id;
@@ -1520,7 +1520,7 @@ export class Workflow {
         }
         if (this.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", this.flagTags);
         let returns;
-        if (game.users?.get(chatData.messageData.user)?.isGM)
+        if (!game.users?.get(chatData.messageData.user)?.isGM)
           returns = await socketlibSocket.executeAsGM("createChatMessage", { chatData });
         else
           returns = await ChatMessage.create(chatData);
@@ -1589,7 +1589,7 @@ export class Workflow {
       };
 
       const rollMode = game.settings.get("core", "rollMode");
-      if (configSettings.autoCheckSaves === "whisper" || whisper || rollMode !== "roll") {
+      if (configSettings.autoCheckSaves === "whisper" || whisper || !(["roll", "publicroll"].includes(rollMode))) {
         chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
         chatData.messageData.user = game.user?.id; // ChatMessage.getWhisperRecipients("GM").find(u => u.active);
         if (rollMode === "blindroll") {
@@ -1702,6 +1702,8 @@ export class Workflow {
           // monkRequests.push(target)
           monkRequests.push({
             token: target.id,
+            // advantage: advantage === true, TODO - reinstate this when monks token bar is able to handle it.
+            // disadvantage: advantage === false,
             altKey: advantage === true,
             ctrlKey: advantage === false,
             fastForward: false
@@ -1971,7 +1973,7 @@ export class Workflow {
     if (!flags) return false;
     if (flags?.all) return true;
     if (getProperty(flags, `${ability}`)) return true;
-    if (this.actor?.items.getName("Sculpt Spells") && this.item?.data.school === "evo" && this.preSlectedTargets.has(token)) {
+    if (getProperty(this.actor, "data.flags.midi-qol.sculptSpells") && this.item?.data.school === "evo" && this.preSelectedTargets.has(token)) {
       return true;
     }
     return false;

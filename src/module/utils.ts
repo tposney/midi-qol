@@ -1,4 +1,4 @@
-import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, midiFlags, getCanvas, overTimeEffectsToDelete } from "../midi-qol.js";
+import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, midiFlags, getCanvas, overTimeEffectsToDelete, geti18nOptions } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
@@ -456,11 +456,12 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   }
 
   // Don't check for critical - RAW say these don't get critical damage
-  if (["rwak", "mwak"].includes(item?.data.data.actionType) && configSettings.rollOtherDamage) {
-    if (workflow.otherDamageRoll && configSettings.singleConcentrationRoll) {
+  if (["rwak", "mwak"].includes(item?.data.data.actionType) && configSettings.rollOtherDamage !== "none") {
+    if (item?.data.data.formula && configSettings.singleConcentrationRoll) {
+    //if (workflow.otherDamageRoll && configSettings.singleConcentrationRoll) {
       appliedDamage = await applyTokenDamageMany(
-        [workflow.damageDetail, workflow.otherDamageDetail, workflow.bonusDamageDetail ?? []],
-        [workflow.damageTotal, workflow.otherDamageTotal, workflow.bonusDamageTotal ?? 0],
+        [workflow.damageDetail, workflow.otherDamageDetail ?? [], workflow.bonusDamageDetail ?? []],
+        [workflow.damageTotal, workflow.otherDamageTotal ?? 0, workflow.bonusDamageTotal ?? 0],
         theTargets,
         item,
         [new Set(), workflow.saves, new Set()],
@@ -468,9 +469,10 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           existingDamage: [],
           superSavers: [new Set(), workflow.superSavers, new Set()]
         });
-
     } else {
-      let savesToUse = workflow.otherDamageRoll ? new Set() : workflow.saves;
+      // let savesToUse = workflow.otherDamageRoll ? new Set() : workflow.saves;
+      let savesToUse = this.item.data.data.formula ? new Set() : workflow.saves;
+
       appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
         [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
@@ -556,7 +558,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
     } else {
       advantage = (advantage === true ? 1 : advantage === false ? -1 : 0);
     }
-    let mode = "roll";
+    let mode = isNewerVersion(game.data.version, "0.9.236") ? "publicroll" : "roll";
     if (player.isGM && configSettings.autoCheckSaves !== "allShow") {
       mode = "blindroll";
     }
@@ -609,7 +611,7 @@ export function requestPCActiveDefence(player, actor, advantage, saveItemNname, 
   } else {
     advantage = (advantage === true ? 1 : advantage === false ? -1 : 0);
   }
-  let mode = "roll";
+  let mode = isNewerVersion(game.data.version, "0.9.236") ? "publicroll" : "roll";
   if (player.isGM && configSettings.autoCheckSaves !== "allShow") {
     mode = "selfroll";
   }
@@ -1722,7 +1724,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   const promptString = triggerType === "reactiondamage" ? "midi-qol.reactionFlavorDamage" : "midi-qol.reactionFlavorAttack";
   if (reactions <= 0) return noResult;
   let chatMessage;
-  const reactionFlavor = game.i18n.format(promptString, { itemName: options.item?.name ?? "unknown", actorName: target.name });
+  const reactionFlavor = game.i18n.format(promptString, { itemName: (options.item?.name ?? "unknown"), actorName: target.name });
   const chatData: any = {
     content: reactionFlavor,
     whisper: [player]
@@ -1736,7 +1738,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
     }
     chatMessage = await ChatMessage.create(chatData);
   }
-  const rollOptions = Object(i18n("midi-qol.ShowReactionAttackRollOptions"));
+  const rollOptions = geti18nOptions("ShowReactionAttackRollOptions");
   // {"none": "Attack Hit", "d20": "d20 roll only", "all": "Whole Attack Roll"},
 
   let content;
@@ -1748,7 +1750,8 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
     case "d20":
       //@ts-ignore
       const theRoll = attackRoll?.terms[0].results[0].result ?? "";
-      content = `<h4>{reactionFlavor} ${rollOptions.d20} ${theRoll}</h4>`; break;
+      content = `<h4>{reactionFlavor} ${rollOptions.d20} ${theRoll}</h4>`; 
+      break;
     default:
       content = reactionFlavor;
   }
@@ -1928,7 +1931,6 @@ class ReactionDialog extends Application {
   get title() {
     return this.data.title || "Dialog";
   }
-  // <img src="img_girl.jpg" alt="Girl in a jacket" width="500" height="600">
   async getData(options) {
     this.data.buttons = this.data.items.reduce((acc: {}, item: Item) => {
       acc[randomID()] = {

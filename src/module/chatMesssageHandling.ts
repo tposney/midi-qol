@@ -39,6 +39,7 @@ export function betterRollsUpdate(message, update, options, user) {
     // Should be a hits display update
     return;
   }
+
   const brFlags: any = flags?.betterrolls5e;
   if (!brFlags) return true;
   let actorId = brFlags.actorId;
@@ -81,6 +82,7 @@ export function betterRollsUpdate(message, update, options, user) {
       }
     }
   }
+  workflow.damageRolled = true;
   // Assume it is a damage roll
   workflow.damageDetail = damageList;
   workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
@@ -88,6 +90,7 @@ export function betterRollsUpdate(message, update, options, user) {
     otherDamageList = [];
     // TODO find out how to remove it from the better rolls card?
   }
+
   workflow.damageRolled = true;
   if (otherDamageList.length > 0) {
     workflow.otherDamageTotal = otherDamageList.reduce((acc, a) => a.damage + acc, 0);
@@ -232,7 +235,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
 
 export let diceSoNiceHandler = async (message, html, data) => {
   //@ts-ignore game.dice3d
-  if (!dice3dEnabled() || game.dice3d?.messageHookDisabled) return;
+  if (!dice3dEnabled()) return;
   if (debugEnabled > 1) debug("Dice so nice handler ", message, html, data);
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
   let rollDice = game.user?.isGM ||
@@ -425,7 +428,7 @@ export let hideStuffHandler = (message, html, data) => {
     html.find(".midi-qol-target-npc-Player").hide();
     //@ts-ignore
     ui.chat.scrollBottom
-    return;
+    return true;
   }
   if (game.user?.isGM) {
     html.find(".midi-qol-target-npc-Player").hide();
@@ -505,6 +508,7 @@ export let hideStuffHandler = (message, html, data) => {
   }
   //@ts-ignore
   setTimeout(() => ui.chat.scrollBottom(), 0);
+  return true;
 }
 
 export function betterRollsButtons(message, html, data) {
