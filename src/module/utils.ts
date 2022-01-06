@@ -471,7 +471,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         });
     } else {
       // let savesToUse = workflow.otherDamageRoll ? new Set() : workflow.saves;
-      let savesToUse = this.item.data.data.formula ? new Set() : workflow.saves;
+      let savesToUse = item?.data.data.formula ? new Set() : workflow.saves;
 
       appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
