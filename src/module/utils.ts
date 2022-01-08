@@ -1022,7 +1022,7 @@ export function getDistance(t1: Token, t2: Token, includeCover, wallblocking = f
     return noResult;
   }
   //@ts-ignore
-  rdistance = segments.map(ray => getCanvas()?.grid.measureDistances([ray], { gridSpaces: true })[0]);
+  rdistance = segments.map(ray => getCanvas().grid.measureDistances([ray], { gridSpaces: true })[0]);
   distance = rdistance[0];
   rdistance.forEach(d => { if (d < distance) distance = d; });
   if (configSettings.optionalRules.distanceIncludesHeight) {

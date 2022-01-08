@@ -2688,7 +2688,7 @@ export class BetterRollsWorkflow extends Workflow {
       case WORKFLOWSTATES.ROLLFINISHED:
         if (this.placeTemlateHookId) Hooks.off("createMeasuredTemplate", this.placeTemlateHookId)
         await this.complete();
-        super._next(WORKFLOWSTATES.ROLLFINISHED);
+        await super._next(WORKFLOWSTATES.ROLLFINISHED);
         // should remove the apply effects button.
         Workflow.removeWorkflow(this.item.uuid)
         return;
@@ -2828,7 +2828,7 @@ export class DDBGameLogWorkflow extends Workflow {
 
       case WORKFLOWSTATES.ROLLFINISHED:
         if (this.placeTemlateHookId) Hooks.off("createMeasuredTemplate", this.placeTemlateHookId)
-        super._next(WORKFLOWSTATES.ROLLFINISHED);
+        await super._next(WORKFLOWSTATES.ROLLFINISHED);
         // should remove the apply effects button.
         Workflow.removeWorkflow(this.item.uuid)
         return;

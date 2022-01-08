@@ -61,7 +61,7 @@ export function checkModules() {
   if (game.user?.isGM && !installedModules.get("lib-changelogs") && isNewerVersion(midiVersion, notificationVersion)) {
     game.settings.set("midi-qol", "notificationVersion", midiVersion);
     //@ts-ignore expected one argument but got 2
-    ui.notifications?.warn("midi-qol.NoChangelogs", {permanent: true, localize: true});
+    ui.notifications?.warn("midi-qol.NoChangelogs", {permanent: false, localize: true});
   }
   checkCubInstalled();
 }
@@ -91,6 +91,9 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.8.102
+  * rerelease for package problem
+  
   0.8.101
   * Fix for change from roll -> publicroll in v9 rollmode.
   * Fix for sculpt spell flag and better rolls.

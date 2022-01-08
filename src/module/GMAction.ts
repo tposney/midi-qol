@@ -232,7 +232,7 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
     speaker.alias = game.user?.name;
     let chatData: any = {
       user: game.user?.id,
-      speaker: { scene: getCanvas().scene?.id, alias: game.user?.name, user: game.user?.id },
+      speaker: { scene: getCanvas()?.scene?.id, alias: game.user?.name, user: game.user?.id },
       content: content,
       whisper: ChatMessage.getWhisperRecipients("GM").filter(u => u.active).map(u => u.id),
       type: CONST.CHAT_MESSAGE_TYPES.OTHER,

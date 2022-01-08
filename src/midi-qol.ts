@@ -39,7 +39,7 @@ declare global {
   }
 }
 export function getCanvas(): Canvas {
-  if (!canvas) throw new Error("Canvas not ready");
+  if (!canvas || !canvas.scene) throw new Error("midi-qol - Canvas/Scene not ready");
   return canvas;
 }
 

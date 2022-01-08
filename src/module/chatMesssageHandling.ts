@@ -37,7 +37,7 @@ export function betterRollsUpdate(message, update, options, user) {
   const flags = message.data.flags;
   if(update.flags && update.flags["midi-qol"])  {
     // Should be a hits display update
-    return;
+    return true;
   }
 
   const brFlags: any = flags?.betterrolls5e;
