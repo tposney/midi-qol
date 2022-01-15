@@ -311,7 +311,7 @@ async function rollAbilitySave(wrapped, ...args) {
   */
 }
 
-function procAutoFail(actor, rollType: string, abilityId: string): boolean {
+export function procAutoFail(actor, rollType: string, abilityId: string): boolean {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const fail = midiFlags.fail ?? {};
   if (fail.ability || fail.all) {
@@ -322,7 +322,7 @@ function procAutoFail(actor, rollType: string, abilityId: string): boolean {
   return false;
 }
 
-function procAutoFailSkill(actor, skillId): boolean {
+export function procAutoFailSkill(actor, skillId): boolean {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const fail = midiFlags.fail ?? {};
   if (fail.skill || fail.all) {
@@ -333,7 +333,7 @@ function procAutoFailSkill(actor, skillId): boolean {
   return false;
 }
 
-function procAdvantage(actor, rollType, abilityId, options: Options): Options {
+export function procAdvantage(actor, rollType, abilityId, options: Options): Options {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const advantage = midiFlags.advantage ?? {};
   const disadvantage = midiFlags.disadvantage ?? {};
@@ -357,7 +357,7 @@ function procAdvantage(actor, rollType, abilityId, options: Options): Options {
   return options;
 }
 
-function procAdvantageSkill(actor, skillId, options: Options): Options {
+export function procAdvantageSkill(actor, skillId, options: Options): Options {
   const midiFlags = actor.data.flags["midi-qol"];
   const advantage = midiFlags?.advantage;
   const disadvantage = midiFlags?.disadvantage;
@@ -515,6 +515,7 @@ function itemSheetGetSubmitData(wrapped, ...args) {
 export function _getInitiativeFormula(wrapped) {
   const original = wrapped();
   const actor = this.actor;
+  if (!actor) return "1d20";
   let disadv = actor.getFlag(game.system.id, "iniitiativeDis");
   let adv = actor.getFlag(game.system.id, "initiativeAdv");
   const flags = actor.data.flags["midi-qol"];
@@ -567,7 +568,7 @@ export function readyPatching() {
   	libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
   } else { // TDOD find out what itemsheet5e is called in sw5e
   	libWrapper.register("midi-qol", "game.sw5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
-  	libWrapper.register("midi-qol", "game.se5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
+  	libWrapper.register("midi-qol", "game.sw5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
   }
   libWrapper.register("midi-qol", "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
   Notifications

@@ -859,6 +859,8 @@ hitContent is just html, so you could insert whatever you want in any of the div
 ## Some Tricks you can do...
 This is just a place where I'll write down some ideas that I think are cute. I'll assume that DAE/times-up is avaialable as well.
 
+* DAE has an option, Force Display on Token which enables passive effects to display the effect image on the token when active similarly to how non-transfer effects behave.
+
 * Activation Conditions can be useful to tailor effects without requiring additional macro code. Activation Condition is checked when the config setting for Roll Other Damage is set to activation and allows fine tuning of bonus damage, think slayer items. The Active Effect Condition allows you apply active effects to targets, e.g. mace of disruption only frightens undead, use ```['fiend', 'undead'].includes('@raceOrType')``` to only apply active effects to undead.
 
 * Items/Weapons that do full damage and a save to avoid application of an effect (like blinded).

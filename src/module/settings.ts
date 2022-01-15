@@ -77,7 +77,9 @@ class ConfigSettings {
   criticalSound: string = "";
   itemUseSound: string = "";
   spellUseSound: string = "";
+  spellUseSoundRanged: string = "";
   weaponUseSound: string = "";
+  weaponUseSoundRanged: string = "";
   potionUseSound: string = "";
   fullAuto: boolean = false;
   useCustomSounds: boolean = true;
@@ -115,6 +117,7 @@ class ConfigSettings {
   keepRollStats: boolean = false;
   saveStatsEvery: number = 20;
   playerStatsOnly: boolean = false;
+  addWounded: boolean = false;
 }
 
 export var configSettings = new ConfigSettings();

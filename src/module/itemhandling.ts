@@ -627,8 +627,14 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const html = await renderTemplate(template, templateData);
   if (debugEnabled > 1) debug(" Show Item Card ", configSettings.useTokenNames, (configSettings.useTokenNames && token) ? token?.data?.name : this.actor.name, token, token?.data.name, this.actor.name)
   let theSound = configSettings.itemUseSound;
-  if (this.type === "weapon") theSound = configSettings.weaponUseSound;
-  else if (["spell", "power"].includes(this.type)) theSound = configSettings.spellUseSound;
+  if (this.type === "weapon") {
+    theSound = configSettings.weaponUseSound;
+    if (["rwak"].includes(this.data.data.actionType)) theSound = configSettings.weaponUseSoundRanged;
+  }
+  else if (["spell", "power"].includes(this.type)) {
+    theSound = configSettings.spellUseSound;
+    if (["rsak", "rpak"].includes(this.data.data.actionType)) theSound = configSettings.spellUseSoundRanged;
+  }
   else if (this.type === "consumable" && this.name.toLowerCase().includes(i18n("midi-qol.potion").toLowerCase())) theSound = configSettings.potionUseSound;
   const chatData = {
     user: game.user?.id,

@@ -139,7 +139,7 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
     {
       request: data.request,
       silent: data.silent,
-      rollMode: data.rollMode,
+      rollmode: data.rollMode,
       dc: data.dc
     });
 }

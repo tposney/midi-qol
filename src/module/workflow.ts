@@ -11,6 +11,7 @@ import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRol
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, testKey, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting } from "./utils.js"
 import { getTrailingCommentRanges } from "typescript";
 import { OnUseMacros } from "./apps/Item.js";
+import { advantageEvent, disadvantageEvent, mapSpeedKeys, procAdvantage, procAutoFail } from "./patching.js";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -433,12 +434,24 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.WAITFORATTACKROLL);
 
       case WORKFLOWSTATES.WAITFORATTACKROLL:
-        if (this.item.data.type === "tool" && autoFastForwardAbilityRolls) {
-          this.processAttackEventOptions(this.event);
-          const hasAdvantage = this.advantage && !this.disadvantage;
-          const hasDisadvantage = this.disadvantage && !this.advantage;
-          this.item.rollToolCheck({ fastForward: this.rollOptions.fastForward, advantage: hasAdvantage, disadvantage: hasDisadvantage })
-          return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
+        if (this.item.data.type === "tool") {
+          let options: any = {event: this.event}
+          const abilityId = this.item?.data.data.ability ?? "dex";
+          if (procAutoFail(this.actor, "check", abilityId)) options.parts = ["-100"];
+          options.event = mapSpeedKeys(options.event);
+          if (options.event === advantageEvent || options.event === disadvantageEvent)
+            options.fastForward = true;
+          let procOptions = procAdvantage(this.actor, "check", abilityId, options);
+          this.advantage = procOptions.advantage;
+          this.disadvantage = procOptions.disadvantage;
+          this.rollOptions.fastForward = true;
+        
+          if (autoFastForwardAbilityRolls) {
+            this.rollOptions.fastForward = true;
+//            this.item.rollToolCheck({ fastForward: this.rollOptions.fastForward, advantage: hasAdvantage, disadvantage: hasDisadvantage })
+            await this.item.rollToolCheck(procOptions)
+            return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
+          }
         }
         if (!this.item.hasAttack) {
           return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
@@ -729,9 +742,12 @@ export class Workflow {
             if (game.dfreds.effects.all.find(e => e.name === effectName)) {
               for (let token of this.applicationTargets) {
                 //@ts-ignore
-                if (game.dfreds.effectInterface) {
+                if (game.dfreds.effectInterface && isNewerVersion("2.0.0", game.modules.get("dfreds-convenient-effects")?.data.version ).version) {
                   //@ts-ignore
                   await game.dfreds.effectInterface?.addEffect(effectName, token.actor.uuid, this.item?.uuid);
+                } else {
+                  //@ts-ignore
+                  await game.dfreds.effectInterface?.addEffect({effectName, uuid: token.actor.uuid, origin: this.item?.uuid});
                 }
               }
             }
@@ -1769,7 +1785,7 @@ export class Workflow {
 
     const requestData: any = {
       tokenData: monkRequests,
-      request: `${rollType}:${this.saveItem.data.data.save.ability}`,
+      request: `${rollType === "abil" ? "ability" : rollType}:${this.saveItem.data.data.save.ability}`,
       silent: true,
       rollMode: "gmroll",
     }

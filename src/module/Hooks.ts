@@ -40,6 +40,16 @@ export let readyHooks = async () => {
 
   // Have to trigger on preUpdate to check the HP before the update occured.
   Hooks.on("updateActor", async (actor, update, diff, user) => {
+    if (installedModules.get("dfreds-convenient-effects") && configSettings.addWounded) {
+      const attributes = actor.data.data.attributes;
+      const wounded = actor.effects.find(ae => ae.data.label === "Wounded");
+      if (!wounded && attributes.hp.value > 0 && attributes.hp.value < (attributes.hp.max / 2)) {
+        //@ts-ignore
+        await game.dfreds.effectInterface?.addEffect("Wounded", actor.uuid, undefined);
+      } else if ((attributes.hp.value > attributes.hp.max / 2 || attributes.hp.value === 0) && wounded) {
+        await wounded.delete();
+      }
+    }
     //@ts-ignore
     if (game.user.id !== user) return false;
     if (!configSettings.concentrationAutomation) return true;
@@ -240,7 +250,7 @@ export function initHooks() {
   Hooks.on("renderItemSheet", (app, html, data) => {
     const element = html.find('input[name="data.chatFlavor"]').parent().parent();
     if (configSettings.allowUseMacro) {
-      const labelText = i18n("midi-qol.onUseMacroLabel");      
+      const labelText = i18n("midi-qol.onUseMacroLabel");
       const macros = new OnUseMacros(getProperty(app.object.data, "flags.midi-qol.onUseMacroName"));
 
 
@@ -249,7 +259,7 @@ export function initHooks() {
 </h4>
   <ol class="damage-parts onusemacro-group form-group">
     ${macros.selectListOptions}
-  </ol>`;      
+  </ol>`;
       element.append(macroField)
     }
     const labelText = i18n("midi-qol.EffectActivation");

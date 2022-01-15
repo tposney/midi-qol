@@ -56,7 +56,9 @@ export function betterRollsUpdate(message, update, options, user) {
   let damageList: any[] = [];
   let otherDamageList: any[] = [];
   const item = actor?.items.get(brFlags.itemId)
-  let workflow = Workflow.getWorkflow(item?.uuid);
+  if (!actor || !brFlags.itemId) return;
+  let itemUuid = `${actor.uuid}.Item.${brFlags.itemId}`;
+  let workflow = Workflow.getWorkflow(itemUuid);
   if (!workflow || workflow.damageRolled) return true;
   let otherDamageRoll;
   for (let entry of brFlags.entries) {
@@ -480,7 +482,10 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-damage-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       html.find(".midi-qol-other-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       html.find(".midi-qol-bonus-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
-      html.find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      if (!(message.data.flags && message.data.flags["monks-tokenbar"])) // not a monks roll
+        html.find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+//    html.find(".dice-result").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`); Monks saving throw css
+
       //TODO this should probably just check formula
     } else if (["details", "detailsDSN"].includes(configSettings.hideRollDetails)) {
       html.find(".dice-tooltip").remove();

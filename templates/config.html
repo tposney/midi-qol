@@ -620,11 +620,32 @@
             {{/select}}
           </select>
         </div>
+        <div class="form-group">
+          <label>{{localize "midi-qol.WeaponUseSoundRanged.Name"}}</label>
+          <select name="weaponUseSoundRanged" data-dtype="String">
+            {{#select configSettings.weaponUseSoundRanged}}
+            {{#each customSoundOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
 
         <div class="form-group">
           <label>{{localize "midi-qol.SpellUseSound.Name"}}</label>
           <select name="spellUseSound" data-dtype="String">
             {{#select configSettings.spellUseSound}}
+            {{#each customSoundOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label>{{localize "midi-qol.SpellUseSoundRanged.Name"}}</label>
+          <select name="spellUseSoundRanged" data-dtype="String">
+            {{#select configSettings.spellUseSoundRanged}}
             {{#each customSoundOptions as |label val|}}
             <option value="{{val}}">{{label}}</option>
             {{/each}}

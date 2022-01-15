@@ -1,3 +1,16 @@
+### 0.8.103
+* Fix for tools using wrong advantage/disadvantage flags
+* Fix for overtime effects stalling combat tracker when using better rolls with damage button enabled.
+* Added ability to use different sounds for melee/ranged weapons/spell.
+* Fix for monks token bar ability checks as saving throws not working.
+* Fix for midi-qol making some monks rolls impossible to roll by hiding the roll button.
+* Fix for initiative formula when token has no referenced actor.
+* Compatibility change for Convenient Effects 2.0.1
+
+
+### 0.8.102
+* rerelease for package problem
+
 ### 0.8.101
 * Fix for change from roll -> publicroll in v9 rollmode.
 * Fix for sculpt spell flag and better rolls.
