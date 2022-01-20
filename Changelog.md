@@ -1,3 +1,17 @@
+### 0.8.104
+* Fix for items that do no damage but apply effects when using better rolls and not auto rolling damage (i.e. add chat damage button is checked).
+* Fix for Shillelagh item macro.
+* Add automatic marking of wounded/unconscious targets, controlled by config settings. Wounded requires a convenient effect whose name is the localised string "Wounded" (midi-qol.Wounded) to be defined (you need to do this). These are very simplistic, for any complex token triggers you should use Combat Utility Belt and Triggler which are excellent. 
+* Added Action Type Reaction Manual which won't trigger a reaction dialog. So there are now 3 reaction types you can set, reaction which triggers when hit, reaction damage which triggers when you take damage and reaction manual which does not trigger the reaction dialog.
+* Fix for inadvertent breaking of flags.midi-qol.initiativeDisadv 
+* Fix for hiding hit/save chat card when not using merge card.
+* Fix for a bug when applying overtime effects when players end their turn, if the next actor in the combat tracker has an overtime effect to apply.
+* Additions to midi-qol.completeItemRoll options:
+  - checkGMStatus: boolean, If true non-gm clients will hand the roll to a gm client.
+  - options.targetUuids: string[], if present the roll will target the passed array of token uuids (token.document.uuid).
+* Fix for game.data.version deprecation warning.
+* Fix for some edge cases in Damage Reduction processing.
+
 ### 0.8.103
 * Fix for tools using wrong advantage/disadvantage flags
 * Fix for overtime effects stalling combat tracker when using better rolls with damage button enabled.

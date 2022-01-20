@@ -91,6 +91,20 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  08.104
+  * Fix for items that do no damage but apply effects when using better rolls and not auto rolling damage (i.e. add chat damage button is checked).
+  * Fix for Shillelagh item macro.
+  * Add automatic marking of wounded/unconscious targets, controlled by config settings. Wounded requires a convenient effect whose name is the localised string "Wounded" (midi-qol.Wounded) to be defined (you need to do this). These are very simplistic, for any complex token triggers you should use Combat Utility Belt and Triggler which are excellent. 
+  * Added Action Type Reaction Manual which won't trigger a reaction dialog. So there are now 3 reaction types you can set, reaction which triggers when hit, reaction damage which triggers when you take damage and reaction manual which does not trigger the reaction dialog.
+  * Fix for inadvertent breaking of flags.midi-qol.initiativeDisadv 
+  * Fix for hiding hit/save chat card when not using merge card.
+  * Fix for a bug when applying overtime effects when players end their turn, if the next actor in the combat tracker has an overtime effect to apply.
+  * Additions to midi-qol.completeItemRoll options:
+    - checkGMStatus: boolean, If true non-gm clients will hand the roll to a gm client.
+    - options.targetUuids, if present the roll will target the passed list of token uuids (token.document.uuid).
+  * Fix for game.data.version deprecation warning.
+  * Fix for some edge cases in Damage Reduction processing.
+  
   0.8.103
   * Fix for tools using wrong advantage/disadvantage flags
   * Fix for overtime effects stalling combat tracker when using better rolls with damage button enabled.
@@ -100,64 +114,6 @@ Hooks.once('libChangelogsReady', function() {
   * Fix for initiative formula when token has no referenced actor.
   * Compatibility change for Convenient Effects 2.0.1
   
-  0.8.102
-  * rerelease for package problem
-  
-  0.8.101
-  * Fix for change from roll -> publicroll in v9 rollmode.
-  * Fix for sculpt spell flag and better rolls.
-  * Fix for roll other damage with activation condition still applying saving throw.
-  
-  0.8.100
-  * Remove accidental debug left in
-  * Fix for incomplete lang.json files.
-
-  0.8.99
-  * Fix for Rakish Audacity and Sneak Attack sample items which break in v9 stable.
-  * Extend skip consume spell slot to cover skipping all consumption dialogs, pressing adv/dis when clicking causes the dialogs to be shown.
-  * Fix for expiring effects when actor has none. (v9 tweak I think).
-  * Removed unintentional reference to inappropriate icon from the module that shall not be named.
-
-  
-  0.8.98
-  * Support core damage numbers for all damage/healing application.
-  * Remove accidental debugger call.
-  
-  0.8.97
-  * Process flags.midi-qol.advantage..., flags.midi-qol.disadvantage.... when doing initiative rolls (dex check advantage will give initiative advantage).
-  * Fix for sneak attack and v9.
-  * Fix for v9 scrolling damage display not working with midi apply damage.
-  * 2 new onUseMacro call points, templatePlaced and preambleComplete.
-
-  0.8.96
-  * Fix for concentration save bonus being ignored. Thanks @SagaTympana#8143.
-  * Fix reactions ignoring prepared status on spells - broken in 0.8.95
-  * Remove context field from onUseMacros when using betterrolls5e
-  * Experimental "late targeting mode" for items that are NOT Template, Range or Self targeting. If auto roll attack is enabled then after you start the roll (click on the icon):
-    - token + targeting will be selected in the controls tab, 
-    - the character sheet will be minimised and midi will wait for you to target tokens.
-    - You signal that you are ready by changing the control selection to anything other than token targeting.
-    - The sheet will be restoed and the workflow continue.
-
-  0.8.95
-  * Reactions now check for resource availability and spell slot availability. (Probably some bugs in this).
-  * Added another midi-qol Hook call, Hooks.call("midi-qol.damageApplied", token, {item, workflow, damageData} => ());
-  * 
-  0.8.94
-  * Fix for empty onUseMacro field failing to allow adding onUseMacros
-  * Incapacitated actors can't take reactions
-
-  0.8.93
-  * Fix for better rolls not AoE template targeting correctly.
-  * Fix for No Damage On Save spell list failing in cyrillic alphabets.
-  * Fix for onUseMacros and tidy itemsheet5e display issues. Thanks @Seriousnes#7895
-  
-  0.8.92
-  * Fix for non english games with no translation for midi-qol failing to open config. panel.
-  * Fix for removing "missed" chat cards when not auto rolling damage.
-  * Include missing Absorb Elements Spell
-  * **BREAKING** as of 0.8.91 if using uncanny dodge from the compendium, you will need to change it's activation cost to "Reaction Damaged" or it won't function. I failed to update the compendium but will do it later. 
-
   [Full Changelog](https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md)`,
   "minor")
 })

@@ -496,19 +496,15 @@ export let hideStuffHandler = (message, html, data) => {
   if (!game.user?.isGM && (configSettings.autoCheckHit === "whisper" || message.data.blind)) {
     if (configSettings.mergeCard) {
       html.find(".midi-qol-hits-display").hide();
-    } else {
-      if (html.find(".midi-qol-single-hit-card").length === 1) {
+    } else if (html.find(".midi-qol-single-hit-card").length === 1 && data.whisper) {
         html.hide();
-      }
     }
   }
   if (!game.user?.isGM && (configSettings.autoCheckSaves === "whisper" || message.data.blind)) {
     if (configSettings.mergeCard) {
       html.find(".midi-qol-saves-display").hide();
-    } else {
-      if (html.find(".midi-qol-saves-display").length === 1) {
-        html.hide();
-      }
+    } else if (html.find(".midi-qol-saves-display").length === 1 && data.whisper) {
+      html.hide();
     }
   }
   //@ts-ignore

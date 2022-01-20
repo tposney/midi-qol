@@ -117,7 +117,8 @@ class ConfigSettings {
   keepRollStats: boolean = false;
   saveStatsEvery: number = 20;
   playerStatsOnly: boolean = false;
-  addWounded: boolean = false;
+  addWounded: number = 0;
+  addDead: boolean = false;
 }
 
 export var configSettings = new ConfigSettings();
@@ -242,6 +243,8 @@ export let fetchParams = () => {
       configSettings.keyMapping = defaultKeyMapping;
   }
 
+  if (configSettings.addWounded === undefined) configSettings.addWounded = 0;
+  if (configSettings.addDead === undefined) configSettings.addDead = false;
   if (typeof configSettings.requiresTargets !== "string") configSettings.requiresTargets = "none";
   if (!configSettings.optionalRules) {
     configSettings.optionalRules = {
@@ -468,7 +471,8 @@ export const registerSettings = function() {
     restricted: true
   });
 
-  if (isNewerVersion(game.data.version, "0.7.0")) {
+  //@ts-ignore game.version
+  if (isNewerVersion(game.version ? game.version : game.data.version, "0.7.0")) {
     game.settings.register("midi-qol", "playerControlsInvisibleTokens", {
       name: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Name"),
       hint: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Hint"),

@@ -40,21 +40,37 @@ export let readyHooks = async () => {
 
   // Have to trigger on preUpdate to check the HP before the update occured.
   Hooks.on("updateActor", async (actor, update, diff, user) => {
-    if (installedModules.get("dfreds-convenient-effects") && configSettings.addWounded) {
-      const attributes = actor.data.data.attributes;
-      const wounded = actor.effects.find(ae => ae.data.label === "Wounded");
-      if (!wounded && attributes.hp.value > 0 && attributes.hp.value < (attributes.hp.max / 2)) {
+    if (user !== game.user?.id) return;
+    const hpUpdate = getProperty(update, "data.attributes.hp.value");
+    if (hpUpdate === undefined) return true;
+    const attributes = actor.data.data.attributes;
+    if (configSettings.addWounded > 0 && installedModules.get("dfreds-convenient-effects")) {
+      const woundedString = i18n("midi-qol.Wounded");
+      const wounded = actor.effects.find(ae => ae.data.label === woundedString);
+      const woundedLevel = attributes.hp.max * configSettings.addWounded / 100;
+      if (!wounded && attributes.hp.value > 0 && attributes.hp.value < woundedLevel) {
         //@ts-ignore
-        await game.dfreds.effectInterface?.addEffect("Wounded", actor.uuid, undefined);
-      } else if ((attributes.hp.value > attributes.hp.max / 2 || attributes.hp.value === 0) && wounded) {
+        if (game.dfreds.effectInterface && isNewerVersion("2.0.0", game.modules.get("dfreds-convenient-effects")?.data.version).version) {
+          //@ts-ignore
+          await game.dfreds.effectInterface?.addEffect(woundedString, actor.uuid, undefined);
+        } else {
+          //@ts-ignore
+          await game.dfreds.effectInterface?.addEffect({ effectName: woundedString, uuid: actor.uuid });
+        }
+      } else if (wounded && (attributes.hp.value > woundedLevel || attributes.hp.value === 0)) {
         await wounded.delete();
       }
     }
-    //@ts-ignore
-    if (game.user.id !== user) return false;
+
+    if (configSettings.addDead) {
+      const tokens = actor.getActiveTokens();
+      const controlled = tokens.filter(t => t._controlled);
+      const token = controlled.length ? controlled.shift() : tokens.shift();
+      if (token) {
+        await token.toggleEffect(CONFIG.controlIcons.defeated, { overlay: true, active: hpUpdate === 0 })
+      }
+    }
     if (!configSettings.concentrationAutomation) return true;
-    const hpUpdate = getProperty(update, "data.attributes.hp.value");
-    if (hpUpdate === undefined) return true;
     const hpDiff = getProperty(actor.data, "flags.midi-qol.concentration-damage")
     if (!hpDiff || hpDiff <= 0) return true;
     // expireRollEffect.bind(actor)("Damaged", ""); - not this simple - need to think about specific damage types

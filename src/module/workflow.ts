@@ -457,6 +457,7 @@ export class Workflow {
           return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
         }
         if (this.noAutoAttack) return undefined;
+
         let shouldRoll = this.someEventKeySet() || getAutoRollAttack();
         // this.processAttackEventOptions(event);
         if (getAutoRollAttack() && isAutoFastAttack() && this.rollOptions.fastForwardKey) shouldRoll = false;
@@ -480,7 +481,6 @@ export class Workflow {
         if (configSettings.allowUseMacro) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
         }
-
         if (shouldRoll) {
           await this.item.rollAttack({ event: {} });
         } else if (isAutoFastAttack() && this.rollOptions.fastForwardKey) {
@@ -2582,7 +2582,7 @@ export class BetterRollsWorkflow extends Workflow {
     super(actor, item, speaker, targets, options);
     this.needTemplate = this.item?.hasAreaTarget ?? false;
     this.needItemCard = true;
-    this.damageRolled = !game.settings.get("betterrolls5e", "damagePromptEnabled");
+    this.damageRolled = !(game.settings.get("betterrolls5e", "damagePromptEnabled") && item?.hasDamage);
     if (this.needTemplate) this.placeTemlateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
   }
   /**

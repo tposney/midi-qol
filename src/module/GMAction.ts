@@ -1,6 +1,6 @@
 import { configSettings } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled } from "../midi-qol.js";
-import { MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
+import { completeItemRoll, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMesssageHandling.js";
 
 export var socketlibSocket: any = undefined;
@@ -45,9 +45,25 @@ export let setupSocket = () => {
   socketlibSocket.register("deleteItemEffects", deleteItemEffects);
   socketlibSocket.register("createActor", createActor);
   socketlibSocket.register("deleteToken", deleteToken);
-  socketlibSocket.register("ddbglPendingFired", ddbglPendingFired)
+  socketlibSocket.register("ddbglPendingFired", ddbglPendingFired);
+  socketlibSocket.register("completeItemRoll", _completeItemRoll);
 };
 
+async function _completeItemRoll(data: {itemData: any, actorUuid: string, options: any, targetUuids: string[]}) {
+  if (!game.user) return null;
+  let {itemData, actorUuid, options} = data;
+  let actor: any = await fromUuid(actorUuid);
+  if (actor.actor) actor = actor.actor;
+  let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
+  const saveTargets = game.user?.targets;
+  game.user.updateTokenTargets([]);
+  for (let targetUuid of data.targetUuids) {
+    const theTarget = MQfromUuid(targetUuid);
+    if (theTarget) theTarget.object.setTarget(true, {user: itemData.parent, releaseOthers: false, groupSelection: true});
+  }
+  const result =  await completeItemRoll(ownedItem, options);
+  return result;
+}
 async function createActor(data) {
   await CONFIG.Actor.documentClass.createDocuments([data.actorData]);
 }

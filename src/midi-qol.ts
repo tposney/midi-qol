@@ -159,7 +159,11 @@ Hooks.once('setup', function () {
     CONFIG.DND5E.damageResistanceTypes["temphp"] = CONFIG.DND5E.healingTypes.temphp;
     //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
+    //@ts-ignore CONFIG.DND5E
+    CONFIG.DND5E.abilityActivationTypes["reactionManual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
+
   } else { // sw5e
+    
     //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.weaponProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
     //@ts-ignore CONFIG.DND5E
@@ -230,7 +234,8 @@ Hooks.once('ready', function () {
   if (game.user?.isGM && game.modules.get("betterrolls5e")?.active && !installedModules.get("betterrolls5e")) {
     ui.notifications?.warn("Midi QOL requires better rolls to be version 1.6.6 or later");
   }
-  if (isNewerVersion(game.data.version, "0.8.9")) {
+  //@ts-ignore game.version
+  if (isNewerVersion(game.version ? game.version : game.data.version, "0.8.9")) {
     const noDamageSavesText: string = i18n("midi-qol.noDamageonSaveSpellsv9");
     noDamageSaves = noDamageSavesText.split(",")?.map(s => s.trim()).map(s => cleanSpellName(s));
   } else {
