@@ -837,15 +837,6 @@ export async function processOverTime(wrapped, data, options, user) {
                 itemData.data.properties.halfdam = true;
               } else itemData.data.properties.nodam = true;
               itemData.name = label;
-              if (damageRoll) {
-                let damageRollString = damageRoll;
-                for (let i = 1; i < (effect.data.flags.dae?.stacks ?? 1); i++)
-                  damageRollString = `${damageRollString} + ${damageRoll}`;
-                //@ts-ignore
-                itemData.data.damage.parts = [[damageRollString, damageType]];
-              }
-              setProperty(itemData.flags, "midi-qol.forceCEOff", true);
-              if (killAnim) setProperty(itemData.flags, "autoanimations.killAnim", true)
               //@ts-ignore
               itemData._id = randomID();
               // roll the damage and save....
@@ -854,6 +845,21 @@ export async function processOverTime(wrapped, data, options, user) {
               const theTargetId = theTargetToken?.document ? theTargetToken?.document.id : theTargetToken?.id;
               const theTargetUuid = theTargetToken?.document ? theTargetToken?.document.uuid : theTargetToken?.uuid;
               if (game.user?.isGM && theTargetId) game.user.updateTokenTargets([theTargetId]);
+
+              if (damageRoll) {
+                let damageRollString = damageRoll;
+                let stackCount = effect.data.flags.dae?.stacks ?? 1;
+                if (globalThis.EffectCounter && theTargetToken) {
+                  const counter = globalThis.EffectCounter.findCounter(theTargetToken, effect.data.icon)
+                  if (counter) stackCount = counter.getValue();
+                }
+                for (let i = 1; i < stackCount; i++)
+                  damageRollString = `${damageRollString} + ${damageRoll}`;
+                //@ts-ignore
+                itemData.data.damage.parts = [[damageRollString, damageType]];
+              }
+              setProperty(itemData.flags, "midi-qol.forceCEOff", true);
+              if (killAnim) setProperty(itemData.flags, "autoanimations.killAnim", true)
               let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
               if (saveRemove && saveDC > -1)
                 overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id };

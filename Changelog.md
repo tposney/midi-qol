@@ -1,3 +1,7 @@
+### 0.8.105
+* Mark player owned tokens as unconcious when hp reaches 0, rather than defeated.
+* Overtime effects use the globalThis.EffectCounter count if present for rolling damage.
+
 ### 0.8.104
 * Fix for items that do no damage but apply effects when using better rolls and not auto rolling damage (i.e. add chat damage button is checked).
 * Fix for Shillelagh item macro.

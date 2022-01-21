@@ -67,7 +67,10 @@ export let readyHooks = async () => {
       const controlled = tokens.filter(t => t._controlled);
       const token = controlled.length ? controlled.shift() : tokens.shift();
       if (token) {
-        await token.toggleEffect(CONFIG.controlIcons.defeated, { overlay: true, active: hpUpdate === 0 })
+        if (actor.hasPlayerOwner) 
+          await token.toggleEffect("icons/svg/unconscious.svg", { overlay: true, active: hpUpdate === 0 });
+        else 
+          await token.toggleEffect(CONFIG.controlIcons.defeated, { overlay: true, active: hpUpdate === 0 });
       }
     }
     if (!configSettings.concentrationAutomation) return true;
