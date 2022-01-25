@@ -1,12 +1,11 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
-import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
+import { processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
-import { configSettings, dragDropTargeting, useMidiCrit } from "./settings.js";
+import { configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 import { preUpdateItemOnUseMacro } from "./patching.js";
-import { isExpressionWithTypeArguments } from "typescript";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -203,7 +202,7 @@ async function handleRemoveConcentration(effect) {
       const entity = await fromUuid(removeUuid);
       if (entity) await entity.delete()
     }
-    await socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
+    timedAwaitExecuteAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid});
   } catch (err) {
     console.warn("midi-qol | error deleteing concentration effects: ", err)
   }
@@ -304,13 +303,6 @@ export function initHooks() {
           element.append(effect)
         }
       }
-    }
-    if (!installedModules.get("betterrolls5e") && isNewerVersion("1.4.9", game.system.data.version) || useMidiCrit) { // 1.5.0 will include per weapon criticals
-      const element2 = html.find('input[name="data.attackBonus"]').parent().parent();
-      const labelText2 = i18n('midi-qol.criticalThreshold');
-      const criticalThreshold = getProperty(app.object.data, "flags.midi-qol.criticalThreshold") ?? 20;
-      const criticalField = `<div class="form-group"><label>${labelText2}</label><div class="form-fields"><input type="text" name="flags.midi-qol.criticalThreshold" value="${criticalThreshold}"/></div></div>`;
-      element2.append(criticalField);
     }
     activateMacroListeners(app, html);
   })

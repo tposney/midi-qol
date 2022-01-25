@@ -2,7 +2,7 @@ import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamag
 import { configSettings, autoRemoveTargets, checkRule } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
-import { socketlibSocket, updateEffects } from "./GMAction.js";
+import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, updateEffects } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { baseEvent } from "./patching.js";
 import { itemJSONData, overTimeJSONData } from "./Hooks.js";
@@ -258,8 +258,10 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     if (flags) {
       absorptions = Object.keys(flags)
     }
+    const firstDamageHealing = damageDetailArr[0] && ["healing", "temphp"].includes(damageDetailArr[0][0]?.type);
+    const isHealing = ("heal" === workflow?.item?.data.data.actionType) || firstDamageHealing;
     //@ts-ignore
-    if (workflow && workflow.item && !getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction")
+    if (workflow && !isHealing && workflow.item && !getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction")
       && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
       //@ts-ignore
       let result = await doReactions(t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item });
@@ -322,7 +324,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
         if (getProperty(t.actor.data, `flags.midi-qol.DR.${type}`)) {
           DRType = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.${type}`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0;
         }
-        if (DRType === 0 &&!nonMagicalDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
+        if (DRType === 0 && !nonMagicalDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
           const DR = (new Roll((getProperty(t.actor.data, `flags.midi-qol.DR.non-magical`) || "0"), t.actor.getRollData())).evaluate({ async: false }).total ?? 0;
           nonMagicalDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
@@ -442,7 +444,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     targetNames.push(t.name)
   }
   if (theTargets.size > 0) {
-    await socketlibSocket.executeAsGM("createReverseDamageCard", {
+    timedAwaitExecuteAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
       damageList: damageList,
@@ -552,15 +554,15 @@ export let getSaveMultiplierForItem = (item: Item) => {
   if (itemProperties?.fulldam) return 1;
   if (itemProperties?.halfdam) return 0.5;
   let description = TextEditor.decodeHTML((itemData.data.description?.value || "")).toLocaleLowerCase();
-  if (description.includes(i18n("midi-qol.fullDamage").toLocaleLowerCase()) || description.includes(i18n("midi-qol.fullDamageAlt").toLocaleLowerCase())) {
+  if (description.includes(i18n("midi-qol.fullDamage").toLocaleLowerCase().trim()) || description.includes(i18n("midi-qol.fullDamageAlt").toLocaleLowerCase().trim())) {
     return 1;
   }
   if (noDamageSaves.includes(cleanSpellName(itemData.name))) return 0;
-  if (description?.includes(i18n("midi-qol.noDamage").toLocaleLowerCase()) || description?.includes(i18n("midi-qol.noDamageAlt").toLocaleLowerCase())) {
+  if (description?.includes(i18n("midi-qol.noDamage").toLocaleLowerCase().trim()) || description?.includes(i18n("midi-qol.noDamageAlt").toLocaleLowerCase().trim())) {
     return 0.0;
   }
   if (!configSettings.checkSaveText) return configSettings.defaultSaveMult;
-  if (description?.includes(i18n("midi-qol.halfDamage").toLocaleLowerCase()) || description?.includes(i18n("midi-qol.halfDamageAlt").toLocaleLowerCase())) {
+  if (description?.includes(i18n("midi-qol.halfDamage").toLocaleLowerCase().trim()) || description?.includes(i18n("midi-qol.halfDamageAlt").toLocaleLowerCase().trim())) {
     return 0.5;
   }
   //  Think about this. if (checkSavesText true && item.hasSave) return 0; // A save is specified but the half-damage is not specified.
@@ -735,10 +737,24 @@ export async function processOverTime(wrapped, data, options, user) {
       const actor = this.turns[testTurn]?.actor;
       const endTurn = toTest < last;
       const startTurn = toTest > prev;
-      if (actor && toTest !== prev) { // this is for reaction processing.
+
+      // Remove reaction used status from each combatant
+      if (actor && toTest !== prev) {
         const midiFlags = getProperty(actor.data.flags, "midi-qol");
         if (midiFlags?.reactionCombatRound !== undefined) {
           await actor?.unsetFlag("midi-qol", "reactionCombatRound");
+        }
+      }
+
+      // Remove any per turn optional bonus effects
+      const midiFlags: any = getProperty(actor.data, "flags.midi-qol");
+      if (actor && toTest !== prev && midiFlags) {
+        if (midiFlags.optional) {
+          for (let key of Object.keys(midiFlags.optional)) {
+            if (midiFlags.optional[key].used) {
+              await actor.setFlag("midi-qol", `optional.${key}.used`, false)
+            }
+          }
         }
       }
 
@@ -940,7 +956,7 @@ export async function completeItemRoll(item, options) {
       targetUuids,
       options
     }
-    return socketlibSocket.executeAsGM("completeItemRoll", data)
+    return timedExecuteAsGM("completeItemRoll", data)
   }
 }
 
@@ -1436,16 +1452,17 @@ export async function expireRollEffect(rollType: string, abilityId: string) {
     return false;
   }).map(ef => ef.id);
   if (expiredEffects?.length > 0) {
-    await socketlibSocket.executeAsGM("removeEffects", {
+    timedAwaitExecuteAsGM("removeEffects", {
       actorUuid: this.uuid,
-      effects: expiredEffects,
+      effects: expiredEffects
     })
   }
 }
 
-// TODO revisit the whole synth token piece.
-export async function validTargetTokens(tokenSet: UserTargets | Set<Token> | undefined): Promise<Set<Token>> {
+// TODO revisit the whole synth token piece. find out why USERTARGETS is not
+export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<Token> {
   if (!tokenSet) return new Set();
+  if (!game.modules.get("multilevel-tokens")?.active) return tokenSet;
   const multiLevelTokens = [...tokenSet].filter(t => getProperty(t.data, "flags.multilevel-tokens"));
   //@ts-ignore t.data.flags
   const nonLocalTokens = multiLevelTokens.filter(t => !getCanvas().tokens?.get(t.data.flags["multilevel-tokens"].stoken))
@@ -1457,9 +1474,6 @@ export async function validTargetTokens(tokenSet: UserTargets | Set<Token> | und
     const token = MQfromUuid(`Scene.${mlFlags.sscene}.Token.${mlFlags.stoken}`);
     return token;
   });
-  // const testToken = await Token.create(tokenData, {temporary: true});
-
-  // const synthTokens = await Promise.all(synthTokenPromises);
   return new Set(normalTokens.concat(synthTokens));
 }
 
@@ -1674,6 +1688,11 @@ export function getOptionalCountRemaining(actor: Actor5e, flag: string) {
     let result = getProperty(actor.data.data, countValue.slice(1))
     return result;
   }
+  if (countValue === "turn" && game.combat) {
+    const usedFlag = flag.replace(".count", ".used");
+    // check for the flag
+    if (getProperty(actor.data, usedFlag)) return 0;
+  }
   return 1; //?? TODO is this sensible?
 }
 
@@ -1705,6 +1724,9 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
       update[`data.${key}`] = charges;
       return actor.update(update);
     }
+  } else if (count.value === "turn" && game.combat) {
+    const flagKey = `${changeKey}.used`.replace("flags.midi-qol.", "");
+    return actor.setFlag("midi-qol", flagKey, true);
   }
 }
 
@@ -1753,7 +1775,12 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   if (getReactionSetting(player) === "none") return noResult;
   if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
   if (!player) return noResult;
-  if (target.actor.getFlag("midi-qol", "reactionCombatRound")) return noResult;
+
+  if (hasConvenientEffectsReaction()) {
+    //@ts-ignore
+    if (await game.dfreds?.effectInterface.hasEffectApplied(game.dfreds.effects._reaction.name, target.document.uuid)) return noResult;
+  } else if (target.actor.getFlag("midi-qol", "reactionCombatRound")) return noResult;
+
   const maxLevel = maxCastLevel(target.actor);
   enableNotifications(false);
   let reactions;
@@ -1832,7 +1859,10 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
   const actor: Actor | null = target.actor;
   if (!actor) return;
   const midiFlags: any = actor.data.flags["midi-qol"];
-  if (actor.getFlag("midi-qol", "reactionCombatRound")) return false; // already had a reaction this round
+  if (hasConvenientEffectsReaction()) {
+    //@ts-ignore
+    if (await game.dfreds?.effectInterface.hasEffectApplied(game.dfreds.effects._reaction.name, tokenUuid)) return false;
+  } else if (actor.getFlag("midi-qol", "reactionCombatRound")) return false; // already had a reaction this round
   let result;
   let reactionItems;
   const maxLevel = maxCastLevel(target.actor);
@@ -1848,10 +1878,10 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
       return { name: "Filter" };
     }
     result = await reactionDialog(actor, triggerTokenUuid, reactionItems, reactionFlavor, triggerType)
-    if (result.uuid) {
+    if (result.uuid && !hasConvenientEffectsReaction()) {
       await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
-      return result;
     }
+    return result;
   }
   if (!midiFlags) return { name: "None" };
   const bonusFlags = Object.keys(midiFlags?.optional ?? [])
@@ -1872,7 +1902,9 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
     const preBounsRollTotal = data.roll.total;
     //@ts-ignore attributes
     await bonusDialog.bind(data)(bonusFlags, "ac", true, `${actor.name} - ${i18n("DND5E.AC")} ${actor.data.data.attributes.ac.value}`, "roll", "rollTotal", "rollHTML")
-    if (preBounsRollTotal !== data.roll.total) await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round); // TODO this is wrong
+    if (preBounsRollTotal !== data.roll.total) {
+      await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round); // TODO this is wrong
+    }
     return { name: actor.name, uuid: actor.uuid, ac: data.roll.total };
   }
   return { name: "None" };
@@ -2147,4 +2179,9 @@ export function notificationNotify(wrapped, ...args) {
 }
 export function enableNotifications(enable: boolean) {
   _enableNotifications = enable;
+}
+
+export function hasConvenientEffectsReaction() {
+  //@ts-ignore
+  return game.dfreds?.effects?._reaction;
 }

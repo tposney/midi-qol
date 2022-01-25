@@ -1,5 +1,18 @@
+### 0.9.01
+* Fix for it.json having trailing spaces.
+* Added new option "log call timing" which will send some elapsed time log messages to the console.log.
+* Support for convenient effects "reaction". If convenient effects is enabled midi will apply the reaction effect when a reaction item is used (either manually or via reaction dialog), remove the reaction marker at the start of the the actors turn and not prompt/allow reaction items to be used if a reaction has already been taken this turn.
+* Added flags.midi-qol.grants.attack.bonus.all/rwak etc which adds a simple numeric bonus to attacker's rolls when checking hits against that target. The chat card does not refelct the bonus.
+  e.g. flags.mid-qol.grants.attack.bonus.all OVERRIDE 5 means that all attacks against the actor will get +5 when adjudicating hits. A natural 1 will still miss.
+* Added flags.midi-qol.grants.attack.success.all/rwak etc which means attacks against the actor will always succeed
+* New option for optional effects. If the effect has flags.midi-qol.optional.NAME.count OVERRIDE turn (instead of a number or @field), then the optional effect will be presented once per round (if in combat). Once triggered the actor must be in combat for the count to get reset at the start of their turn, or you can update flags.midi-qol.optional.NAME.used to false. If there is no active combat the effect will be presented each time it might be used.
+  - The idea is that some optional rules allow you to do bonus damage once per round and now these can be modelled.
+  - Also the effect wont be automatically deleted when used like the other count options. Use a timeout or special expiry to remove the effect.
+* **BREAKING** removed midi-qol critical threshold, since it is now supported in core.
+* **BREAKING** midi-qol now requires dnd5e 1.5.0 or later
+
 ### 0.8.105
-* Mark player owned tokens as unconcious when hp reaches 0, rather than defeated.
+* Mark player owned tokens as unsconcious when hp reaches 0, rather than defeated.
 * Overtime effects use the globalThis.EffectCounter count if present for rolling damage.
 
 ### 0.8.104

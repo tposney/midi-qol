@@ -1,13 +1,14 @@
-import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled, log } from "../midi-qol.js";
+import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled, log, debugCallTiming } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, hasConvenientEffectsReaction } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./patching.js";
 import { MeasuredTemplateData } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/module.mjs";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
+  const attackRollStart = Date.now();
   if (debugEnabled > 1) debug("Entering item attack roll ", event, workflow, Workflow._workflows);
   if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
     if (enableWorkflow && debugEnabled > 0) warn("Roll Attack: No workflow for item ", this.name, this.id, event);
@@ -19,8 +20,8 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   if (workflow.workflowType === "Workflow") {
     if (this.data.data.target?.type === self) {
       workflow.targets = getSelfTargetSet(this.actor)
-    } else if (game.user?.targets?.size ?? 0 > 0) workflow.targets = await validTargetTokens(game.user?.targets);
-    // workflow.targets = (this.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : await validTargetTokens(game.user?.targets);
+    } else if (game.user?.targets?.size ?? 0 > 0) workflow.targets = validTargetTokens(game.user?.targets);
+    // workflow.targets = (this.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : validTargetTokens(game.user?.targets);
     if (workflow.attackRoll) { // we are re-rolling the attack.
       workflow.damageRoll = undefined;
       await Workflow.removeAttackDamageButtons(this.id)
@@ -75,6 +76,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     });
     return workflow.activeDefence(this, result);
   }
+  const wrappedRollStart = Date.now();
   let result: Roll = await wrapped({
     advantage: workflow.rollOptions.advantage,
     disadvantage: workflow.rollOptions.disadvantage,
@@ -85,6 +87,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     }
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
   });
+  if (debugCallTiming) log(`wrapped item.rollAttack():  elapsed ${Date.now() - wrappedRollStart}`);
 
   if (!result) return result;
   console.warn("Advantage/Disadvantage sources: ", advDisadvAttribution(this.actor));
@@ -131,7 +134,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
 
   if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
-    workflow.targets = await validTargetTokens(game.user?.targets);
+    workflow.targets = validTargetTokens(game.user?.targets);
   }
   if (!result) { // attack roll failed.
     error("Itemhandling rollAttack failed")
@@ -140,12 +143,15 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
   // workflow.attackRoll = result; already set
   workflow.attackRollHTML = await result.render();
+  if (debugCallTiming) log(`final item.rollAttack():  elapsed ${Date.now() - attackRollStart}`);
+
   workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
   return result;
 }
 
 export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, powerLevel = null, versatile = null, options = {} } = {}) {
   let workflow = Workflow.getWorkflow(this.uuid);
+  const damageRollStart = Date.now();
   if (!enableWorkflow || !workflow) {
     if (!workflow && debugEnabled > 0) warn("Roll Damage: No workflow for item ", this.name);
     return await wrapped({ event, versatile, spellLevel, powerLevel, options })
@@ -199,6 +205,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     console.warn("midi-qol | Damaage roll blocked via pre-hook");
     return;
   }
+  const wrappedRollStart = Date.now();
   let result: Roll = await wrapped({
     critical: workflow.rollOptions.critical,
     spellLevel: workflow.rollOptions.spellLevel,
@@ -212,6 +219,8 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       chatMessage: false //!configSettings.mergeCard
     }
   })
+  if (debugCallTiming) log(`wrapped item.rollDamage():  elapsed ${Date.now() - wrappedRollStart}`);
+
   if (!result) { // user backed out of damage roll or roll failed
     return;
   }
@@ -304,6 +313,8 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   workflow.otherDamageHTML = await otherResult?.render();
   workflow.bonusDamageRoll = null;
   workflow.bonusDamageHTML = null;
+  if (debugCallTiming) log(`item.rollDamage():  elapsed ${Date.now() - damageRollStart}`);
+
   workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
   return result;
 }
@@ -340,6 +351,7 @@ async function resolveLateTargeting(item: any) {
 }
 
 export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event }) {
+  const itemRollStart = Date.now()
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
   let versatile = options?.versatile ?? false;
@@ -366,7 +378,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
     if (canDoLateTargeting) await resolveLateTargeting(this);
   }
-  const myTargets = game.user?.targets && await validTargetTokens(game.user?.targets);
+  const myTargets = game.user?.targets && validTargetTokens(game.user?.targets);
   let shouldAllowRoll = !requiresTargets // we don't care about targets
     || ((myTargets?.size || 0) > 0) // there are some target selected
     || (this.data.data.target?.type === "self") // self target
@@ -410,6 +422,13 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     }
     if (midiFlags?.fail?.spell?.material && needsMaterial) {
       ui.notifications?.warn("You can't use the material component and the spell fails");
+      return null;
+    }
+  }
+  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type) && hasConvenientEffectsReaction()) {
+    //@ts-ignore
+    if (await game.dfreds?.effectInterface.hasEffectApplied(game.dfreds.effects._reaction.name, this.actor.uuid)) {
+      ui.notifications?.warn(i18n("midi-qol.ReactionAlreadyUsed"));
       return null;
     }
   }
@@ -479,12 +498,18 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     } else configureDialog = !isAutoConsumeResource();
   }
 
+  const wrappedRollStart = Date.now();
   let result = await wrapped({ configureDialog, rollMode: null, createMessage: false });
   if (!result) {
     //TODO find the right way to clean this up
     // Workflow.removeWorkflow(workflow.id); ?
     return null;
   }
+  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type) && hasConvenientEffectsReaction()) {
+    //@ts-ignore
+    await game.dfreds?.effectInterface.addEffect({effectName: game.dfreds.effects._reaction.name, uuid: this.actor.uuid});
+  }
+  if (debugCallTiming) log(`wrapped item.roll() elapsed ${Date.now()- wrappedRollStart}`);
   /* need to get spell level from the html returned in result */
   if (this.type === "spell") {
     //TODO look to use returned data when available
@@ -510,7 +535,9 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       item.data.update({ _id: this.id });
       item.prepareFinalAttributes();
     }
-    result = await showItemCard.bind(item)(showFullCard, workflow, false, options.createMessage)
+    const showCardStart = Date.now();
+    result = await showItemCard.bind(item)(showFullCard, workflow, false, options.createMessage);
+    if (debugCallTiming) log(`showItemCard elapsed ${Date.now() - showCardStart}`);
     /*
     if (options.createMessage !== false) {
       workflow.itemCardId = result.id;
@@ -519,6 +546,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     */
     if (debugEnabled > 1) debug("Item Roll: showing card", result, workflow);
   }
+  if (debugCallTiming) log(`item.roll() elapsed ${Date.now() - itemRollStart}`);
   return result;
 }
 

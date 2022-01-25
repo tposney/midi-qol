@@ -565,6 +565,8 @@ Gives the attacker advantage on attacks made against the target. Midi-qol only c
 * flags.midi-qol.noCritical.mwak/rwak/msak/rsak/other
 * flags.midi-qol.grants.critical.all (applies when targeted)
 * flags.midi-qol.grants.critical.mwak/rwak/msak/rsak/other (applies when targeted)
+* flags.midi-qol.grants.attack.bonus.all/rwak etc adds a numeric bonus to the attackers roll when checking hits. Will not be displayed in the chat card.
+* flags.midi-qol.grants.attack.success.all/rwak etc attack made against the actor automatically succeed.
 * flags.midi-qol.fail.critical.all (applies when targeted - attacker can't do a critical attack - think adamantine armor)
 * flags.midi-qol.fail.critical.mwak/rwak/msak/rsak/other (applies when targeted)
 * flags.midi-qol.DR.all - all incoming damage

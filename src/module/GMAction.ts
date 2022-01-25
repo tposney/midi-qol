@@ -1,5 +1,5 @@
 import { configSettings } from "./settings.js";
-import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled } from "../midi-qol.js";
+import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming } from "../midi-qol.js";
 import { completeItemRoll, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMesssageHandling.js";
 
@@ -27,6 +27,22 @@ export function removeActorStats(data: { actorId: any }) {
 
 export function GMupdateEntityStats(data: { id: any; currentStats: any; }) {
   return gameStats.GMupdateEntity(data)
+}
+
+export async function timedExecuteAsGM(toDo: string, data: any) {
+  if (!debugCallTiming) return socketlibSocket.executeAsGM(toDo, data);
+  const start = Date.now();
+  const returnValue = socketlibSocket.executeAsGM(toDo, data);
+  log(`executeAsGM: ${toDo} elapsed: ${Date.now() - start}`)
+  return returnValue;
+}
+
+export async function timedAwaitExecuteAsGM(toDo: string, data: any) {
+  if (!debugCallTiming) return await socketlibSocket.executeAsGM(toDo, data);
+  const start = Date.now();
+  const returnValue = await socketlibSocket.executeAsGM(toDo, data);
+  log(`await executeAsGM: ${toDo} elapsed: ${Date.now() - start}`)
+  return returnValue;
 }
 
 export let setupSocket = () => {
@@ -164,7 +180,7 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
 let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: string; flagTags: any }) => {
   const damageList = data.damageList;
   let actor: { update: (arg0: { "data.attributes.hp.temp": any; "data.attributes.hp.value": number; "flags.dae.damageApplied": any; damageItem: any[] }) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
-  const timestamp = Date.now();
+  const startTime = Date.now();
   let promises: Promise<any>[] = [];
   let tokenIdList: any[] = [];
   let templateData = {
@@ -257,6 +273,7 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
     if (data.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", data.flagTags);
     let message = await ChatMessage.create(chatData);
   }
+  log(`createReverseDamageCard elapsed: ${Date.now() - startTime}`)
 }
 
 async function doClick(event: { stopPropagation: () => void; }, actorUuid: any, totalDamage: any, mult: any) {

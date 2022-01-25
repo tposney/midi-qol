@@ -19,7 +19,6 @@ export var autoRemoveTargets: string;
 export var forceHideRoll: boolean;
 export var enableWorkflow: boolean;
 export var dragDropTargeting: boolean;
-export var useMidiCrit: boolean = true;
 
 const defaultKeyMapping = {
   "DND5E.Advantage": "altKey", 
@@ -66,6 +65,7 @@ class ConfigSettings {
   doReactions: string = "all";
   showReactionChatMessage: boolean = false;
   showReactionAttackRoll: string = "all";
+  convenientEffectsReaction: string = "Reaction";
   rollNPCSaves: string = "auto";
   rollNPCLinkedSaves: string = "auto";
   mergeCard: boolean = false;
@@ -218,6 +218,7 @@ export let fetchParams = () => {
   if (!configSettings.doReactions) configSettings.doReactions = "none";
   if (!configSettings.gmDoReactions) configSettings.gmDoReactions = "none";
   if (configSettings.reactionTimeout === undefined) configSettings.reactionTimeout = 0;
+  if (configSettings.convenientEffectsReaction === undefined) configSettings.convenientEffectsReaction = "Reaction"; //TODO come back when it is configurable in midi and set it to ""
   if (typeof configSettings.rangeTarget !== "string") configSettings.rangeTarget = "none";
   if (!configSettings.showReactionAttackRoll === undefined) configSettings.showReactionAttackRoll = "all";
   // deal with change of type of rollOtherDamage
@@ -292,13 +293,13 @@ export let fetchParams = () => {
   let debugText: string = String(game.settings.get("midi-qol", "Debug"));
   forceHideRoll = Boolean(game.settings.get("midi-qol", "ForceHideRoll"));
   dragDropTargeting = Boolean(game.settings.get("midi-qol", "DragDropTarget"));
-  useMidiCrit = Boolean(game.settings.get("midi-qol", "UseMidiCrit"))
 
   if (game.ready) {
     configureDamageRollDialog();
   }
 
   setDebugLevel(debugText);
+
   if (configSettings.concentrationAutomation) {
     // Force on use macro to true
     if (!configSettings.allowUseMacro) {
@@ -363,14 +364,6 @@ const settings = [
     name: "DragDropTarget",
     scope: "world",
     default: false,
-    type: Boolean,
-    onChange: fetchParams,
-    config: true
-  },
-  {
-    name: "UseMidiCrit",
-    scope: "world",
-    default: true,
     type: Boolean,
     onChange: fetchParams,
     config: true
@@ -471,18 +464,15 @@ export const registerSettings = function() {
     restricted: true
   });
 
-  //@ts-ignore game.version
-  if (isNewerVersion(game.version ? game.version : game.data.version, "0.7.0")) {
-    game.settings.register("midi-qol", "playerControlsInvisibleTokens", {
-      name: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Name"),
-      hint: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Hint"),
-      scope: "world",
-      default: false,
-      config: true,
-      type: Boolean,
-      onChange: (value) => {window.location.reload()}
-    });
-  }
+  game.settings.register("midi-qol", "playerControlsInvisibleTokens", {
+    name: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Name"),
+    hint: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Hint"),
+    scope: "world",
+    default: false,
+    config: true,
+    type: Boolean,
+    onChange: (value) => {window.location.reload()}
+  });
 
   game.settings.register("midi-qol", "Debug", {
     name: "midi-qol.Debug.Name",
@@ -492,6 +482,16 @@ export const registerSettings = function() {
     type: String,
     config: true,
     choices: translations["DebugOptions"],
+    onChange: fetchParams
+  });
+
+  game.settings.register("midi-qol", "debugCallTiming", {
+    name: "midi-qol.debugCallTiming.Name",
+    hint: "midi-qol.debugCallTiming.Hint",
+    scope: "world",
+    default: false,
+    type: Boolean,
+    config: true,
     onChange: fetchParams
   });
 

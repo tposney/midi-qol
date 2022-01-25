@@ -26,6 +26,7 @@ import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
 
 export let debugEnabled = 0;
+export let debugCallTiming: any = false;
 // 0 = none, warnings = 1, debug = 2, all = 3
 export let debug = (...args) => { if (debugEnabled > 1) console.log("DEBUG: midi-qol | ", ...args) };
 export let log = (...args) => console.log("midi-qol | ", ...args);
@@ -66,6 +67,7 @@ export let setDebugLevel = (debugText: string) => {
   debugEnabled = { "none": 0, "warn": 1, "debug": 2, "all": 3 }[debugText] || 0;
   // 0 = none, warnings = 1, debug = 2, all = 3
   if (debugEnabled >= 3) CONFIG.debug.hooks = true;
+  debugCallTiming = game.settings.get("midi-qol", "debugCallTiming") ?? false;
 }
 
 export let noDamageSaves: string[] = [];
@@ -365,6 +367,9 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.fail.attack.all")
   midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
+  midiFlags.push(`flags.midi-qol.grants.attack.success.all`);
+  midiFlags.push(`flags.midi-qol.grants.attack.bonus.all`);
+
   midiFlags.push(`flags.midi-qol.grants.critical.all`);
   midiFlags.push(`flags.midi-qol.fail.critical.all`);
   // midiFlags.push(`flags.midi-qol.maxDamage.all`); // TODO implement this
@@ -393,8 +398,8 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.grants.critical.${at}`);
     midiFlags.push(`flags.midi-qol.fail.critical.${at}`);
     midiFlags.push(`flags.midi-qol.maxDamage.${at}`);
-
-
+    midiFlags.push(`flags.midi-qol.grants.attack.bonus.${at}`)
+    midiFlags.push(`flags.midi-qol.grants.attack.success.${at}`)
   });
   midiFlags.push("flags.midi-qol.advantage.ability.all");
   midiFlags.push("flags.midi-qol.advantage.ability.check.all");
