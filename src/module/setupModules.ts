@@ -16,7 +16,7 @@ let modules = {"about-time": "0.0",
               "socketlib": "0.0",
               "advanced-macros": "1.0",
               "dnd5e-helpers":  "3.0.0",
-              "dfreds-convenient-effects": "2.0.0",
+              "dfreds-convenient-effects": "2.1.0",
               "levels": "1.7.0",
               "levelsvolumetrictemplates": "0.0.0",
               "lib-changelogs": "0.0.0",
@@ -93,6 +93,9 @@ Hooks.once('libChangelogsReady', function() {
   libChangelogs.register("midi-qol",`
   0.9.01
   * Fix for it.json having trailing spaces.
+  * Fix for inadvertent breaking of flags.dnd5e.initiativeDisadv 
+  * Fix for marking unconscious when dfreds installed. Requires v2.1.1 of Convenient effects.
+  * Use dnd5e bleeding effect for wounded is convenient effects not installed.
   * Added new option "log call timing" which will send some elapsed time log messages to the console.log.
   * Support for convenient effects "reaction". If convenient effects is enabled midi will apply the reaction effect when a reaction item is used (either manually or via reaction dialog), remove the reaction marker at the start of the the actors turn and not prompt/allow reaction items to be used if a reaction has already been taken this turn.
   * Added flags.midi-qol.grants.attack.bonus.all/rwak etc which adds a simple numeric bonus to attacker's rolls when checking hits against that target. The chat card does not refelct the bonus.

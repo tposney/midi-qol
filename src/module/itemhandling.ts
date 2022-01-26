@@ -1,10 +1,9 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled, log, debugCallTiming } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, hasConvenientEffectsReaction } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./patching.js";
-import { MeasuredTemplateData } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/module.mjs";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
@@ -425,9 +424,9 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       return null;
     }
   }
-  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type) && hasConvenientEffectsReaction()) {
+  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type) && getConvenientEffectsReaction()) {
     //@ts-ignore
-    if (await game.dfreds?.effectInterface.hasEffectApplied(game.dfreds.effects._reaction.name, this.actor.uuid)) {
+    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, this.actor.uuid)) {
       ui.notifications?.warn(i18n("midi-qol.ReactionAlreadyUsed"));
       return null;
     }
@@ -505,9 +504,9 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     // Workflow.removeWorkflow(workflow.id); ?
     return null;
   }
-  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type) && hasConvenientEffectsReaction()) {
+  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type) && getConvenientEffectsReaction()) {
     //@ts-ignore
-    await game.dfreds?.effectInterface.addEffect({effectName: game.dfreds.effects._reaction.name, uuid: this.actor.uuid});
+    await game.dfreds?.effectInterface.addEffect({effectName: getConvenientEffectsReaction().name, uuid: this.actor.uuid});
   }
   if (debugCallTiming) log(`wrapped item.roll() elapsed ${Date.now()- wrappedRollStart}`);
   /* need to get spell level from the html returned in result */

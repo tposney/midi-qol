@@ -1724,9 +1724,9 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
       update[`data.${key}`] = charges;
       return actor.update(update);
     }
-  } else if (count.value === "turn" && game.combat) {
+  } else if (count.value === "turn") {
     const flagKey = `${changeKey}.used`.replace("flags.midi-qol.", "");
-    return actor.setFlag("midi-qol", flagKey, true);
+    return actor.setFlag("midi-qol", flagKey, game.combat !== undefined);
   }
 }
 
@@ -1776,9 +1776,10 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
   if (!player) return noResult;
 
-  if (hasConvenientEffectsReaction()) {
+  const reactionEffect = getConvenientEffectsReaction();
+  if (reactionEffect) {
     //@ts-ignore
-    if (await game.dfreds?.effectInterface.hasEffectApplied(game.dfreds.effects._reaction.name, target.document.uuid)) return noResult;
+    if (await game.dfreds?.effectInterface.hasEffectApplied(reactionEffect.name, target.document.uuid)) return noResult;
   } else if (target.actor.getFlag("midi-qol", "reactionCombatRound")) return noResult;
 
   const maxLevel = maxCastLevel(target.actor);
@@ -1859,9 +1860,9 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
   const actor: Actor | null = target.actor;
   if (!actor) return;
   const midiFlags: any = actor.data.flags["midi-qol"];
-  if (hasConvenientEffectsReaction()) {
+  if (getConvenientEffectsReaction()) {
     //@ts-ignore
-    if (await game.dfreds?.effectInterface.hasEffectApplied(game.dfreds.effects._reaction.name, tokenUuid)) return false;
+    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, tokenUuid)) return false;
   } else if (actor.getFlag("midi-qol", "reactionCombatRound")) return false; // already had a reaction this round
   let result;
   let reactionItems;
@@ -1878,7 +1879,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
       return { name: "Filter" };
     }
     result = await reactionDialog(actor, triggerTokenUuid, reactionItems, reactionFlavor, triggerType)
-    if (result.uuid && !hasConvenientEffectsReaction()) {
+    if (result.uuid && !getConvenientEffectsReaction()) {
       await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
     }
     return result;
@@ -2181,7 +2182,22 @@ export function enableNotifications(enable: boolean) {
   _enableNotifications = enable;
 }
 
-export function hasConvenientEffectsReaction() {
+export function getConvenientEffectsReaction() {
   //@ts-ignore
   return game.dfreds?.effects?._reaction;
 }
+
+export function getConvenientEffectsUnconscious() {
+  //@ts-ignore
+  return game.dfreds?.effects?._unconscious;
+}
+export function getConvenientEffectsDead() {
+  //@ts-ignore
+  return game.dfreds?.effects?._dead;
+}
+
+export async function ConvenientEffectsHasEffect(effectName: string, uuid: string) {
+  //@ts-ignore
+  return game.dfreds.effectInterface.hasEffectApplied(effectName, uuid);
+}
+

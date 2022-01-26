@@ -516,7 +516,7 @@ export function _getInitiativeFormula(wrapped) {
   const original = wrapped();
   const actor = this.actor;
   if (!actor) return "1d20";
-  let disadv = actor.getFlag(game.system.id, "iniitiativeDisadv");
+  let disadv = actor.getFlag(game.system.id, "initiativeDisadv");
   let adv = actor.getFlag(game.system.id, "initiativeAdv");
   const flags = actor.data.flags["midi-qol"];
   if (flags && flags.advantage) {

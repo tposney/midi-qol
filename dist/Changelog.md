@@ -1,5 +1,8 @@
 ### 0.9.01
 * Fix for it.json having trailing spaces.
+* Fix for inadvertent breaking of flags.dnd5e.initiativeDisadv 
+* Fix for marking unconscious when dfreds installed.
+* Use dnd5e bleeding effect for wounded is convenient effects not installed.
 * Added new option "log call timing" which will send some elapsed time log messages to the console.log.
 * Support for convenient effects "reaction". If convenient effects is enabled midi will apply the reaction effect when a reaction item is used (either manually or via reaction dialog), remove the reaction marker at the start of the the actors turn and not prompt/allow reaction items to be used if a reaction has already been taken this turn.
 * Added flags.midi-qol.grants.attack.bonus.all/rwak etc which adds a simple numeric bonus to attacker's rolls when checking hits against that target. The chat card does not refelct the bonus.
@@ -20,7 +23,7 @@
 * Fix for Shillelagh item macro.
 * Add automatic marking of wounded/unconscious targets, controlled by config settings. Wounded requires a convenient effect whose name is the localised string "Wounded" (midi-qol.Wounded) to be defined (you need to do this). These are very simplistic, for any complex token triggers you should use Combat Utility Belt and Triggler which are excellent. 
 * Added Action Type Reaction Manual which won't trigger a reaction dialog. So there are now 3 reaction types you can set, reaction which triggers when hit, reaction damage which triggers when you take damage and reaction manual which does not trigger the reaction dialog.
-* Fix for inadvertent breaking of flags.midi-qol.initiativeDisadv 
+* Fix for inadvertent breaking of flags.dnd5e.initiativeDisadv 
 * Fix for hiding hit/save chat card when not using merge card.
 * Fix for a bug when applying overtime effects when players end their turn, if the next actor in the combat tracker has an overtime effect to apply.
 * Additions to midi-qol.completeItemRoll options:

@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
 import { processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
@@ -43,36 +43,48 @@ export let readyHooks = async () => {
     const hpUpdate = getProperty(update, "data.attributes.hp.value");
     if (hpUpdate === undefined) return true;
     const attributes = actor.data.data.attributes;
-    if (configSettings.addWounded > 0 && installedModules.get("dfreds-convenient-effects")) {
-      const woundedString = i18n("midi-qol.Wounded");
-      const wounded = actor.effects.find(ae => ae.data.label === woundedString);
+    const tokens = actor.getActiveTokens();
+    const controlled = tokens.filter(t => t._controlled);
+    const token = controlled.length ? controlled.shift() : tokens.shift();
+    if (configSettings.addWounded > 0) {
       const woundedLevel = attributes.hp.max * configSettings.addWounded / 100;
-      if (!wounded && attributes.hp.value > 0 && attributes.hp.value < woundedLevel) {
-        //@ts-ignore
-        if (game.dfreds.effectInterface && isNewerVersion("2.0.0", game.modules.get("dfreds-convenient-effects")?.data.version).version) {
-          //@ts-ignore
-          await game.dfreds.effectInterface?.addEffect(woundedString, actor.uuid, undefined);
-        } else {
+      const needsWounded = attributes.hp.value > 0 && attributes.hp.value < woundedLevel
+      if (installedModules.get("dfreds-convenient-effects")) {
+        const woundedString = i18n("midi-qol.Wounded");
+        const wounded = actor.effects.find(ae => ae.data.label === woundedString);
+        if (!wounded && needsWounded) {
           //@ts-ignore
           await game.dfreds.effectInterface?.addEffect({ effectName: woundedString, uuid: actor.uuid });
+        } else if (wounded && !needsWounded) {
+          await wounded.delete();
         }
-      } else if (wounded && (attributes.hp.value > woundedLevel || attributes.hp.value === 0)) {
-        await wounded.delete();
+      } else {
+        const bleeding = CONFIG.statusEffects.find(se => se.id === "bleeding");
+        if (bleeding && token)
+          token.toggleEffect(bleeding.icon, { overlay: false, active: needsWounded })
+      }
+    }
+    if (configSettings.addDead) {
+      const needsDead = hpUpdate === 0;
+      if (installedModules.get("dfreds-convenient-effects") && game.settings.get("dfreds-convenient-effects", "modifyStatusEffects") !== "none") {
+        const effectName = actor.hasPlayerOwner ? getConvenientEffectsUnconscious().name : getConvenientEffectsDead().name;
+        const hasEffect = await ConvenientEffectsHasEffect(effectName, actor.uuid);
+        if ((needsDead !== hasEffect)) {
+          //@ts-ignore
+          await game.dfreds?.effectInterface.toggleEffect(effectName, { overlay: true, uuids: [actor.uuid] });
+        }
+      }
+      else if (token) {
+        if (actor.hasPlayerOwner) {
+          await token.toggleEffect("/icons/svg/unconscious.svg", { overlay: true, active: needsDead });
+        } else {
+          await token.toggleEffect(CONFIG.controlIcons.defeated, { overlay: true, active: needsDead });
+        }
       }
     }
 
-    if (configSettings.addDead) {
-      const tokens = actor.getActiveTokens();
-      const controlled = tokens.filter(t => t._controlled);
-      const token = controlled.length ? controlled.shift() : tokens.shift();
-      if (token) {
-        if (actor.hasPlayerOwner) 
-          await token.toggleEffect("icons/svg/unconscious.svg", { overlay: true, active: hpUpdate === 0 });
-        else 
-          await token.toggleEffect(CONFIG.controlIcons.defeated, { overlay: true, active: hpUpdate === 0 });
-      }
-    }
     if (!configSettings.concentrationAutomation) return true;
+
     const hpDiff = getProperty(actor.data, "flags.midi-qol.concentration-damage")
     if (!hpDiff || hpDiff <= 0) return true;
     // expireRollEffect.bind(actor)("Damaged", ""); - not this simple - need to think about specific damage types
@@ -112,12 +124,13 @@ export let readyHooks = async () => {
       }
     }
     return true;
-  })
+  });
 
   Hooks.on("renderChatMessage", (message, html, data) => {
     if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);
     diceSoNiceHandler(message, html, data);
-  })
+  });
+
   Hooks.on("renderActorArmorConfig", (app, html, data) => {
     if (configSettings.optionalRules.challengeModeArmor) {
       const ac = data.ac;
@@ -126,6 +139,7 @@ export let readyHooks = async () => {
       element.append(ARHtml);
     }
   });
+  
   Hooks.on("restCompleted", restManager);
 
   Hooks.on("deleteActiveEffect", (...args) => {
@@ -202,7 +216,7 @@ async function handleRemoveConcentration(effect) {
       const entity = await fromUuid(removeUuid);
       if (entity) await entity.delete()
     }
-    timedAwaitExecuteAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid});
+    timedAwaitExecuteAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
   } catch (err) {
     console.warn("midi-qol | error deleteing concentration effects: ", err)
   }

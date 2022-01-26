@@ -746,13 +746,7 @@ export class Workflow {
             if (game.dfreds.effects.all.find(e => e.name === effectName)) {
               for (let token of this.applicationTargets) {
                 //@ts-ignore
-                if (game.dfreds.effectInterface && isNewerVersion("2.0.0", game.modules.get("dfreds-convenient-effects")?.data.version ).version) {
-                  //@ts-ignore
-                  await game.dfreds.effectInterface?.addEffect(effectName, token.actor.uuid, this.item?.uuid);
-                } else {
-                  //@ts-ignore
-                  await game.dfreds.effectInterface?.addEffect({effectName, uuid: token.actor.uuid, origin: this.item?.uuid});
-                }
+                await game.dfreds.effectInterface?.addEffect({effectName, uuid: token.actor.uuid, origin: this.item?.uuid});
               }
             }
           }
