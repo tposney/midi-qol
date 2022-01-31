@@ -91,7 +91,25 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
-  0.9.01
+  **0.9.02**
+  * Added the promised flags.midi-qol.DR.mwak etc to the auto complete list.
+  * flags.midi-qol.DR.all now supports negative values to deal extra damage when being attacked.
+  * midi-qol will now call "midi-qol.XXXX.itemUuid" as well as "midi-qol.XXXX", so you can have multiple rolls in flight and wait on the item specific Hook to be called.
+  * Target tooltip on midi-damage card now includes DR settings as well as dr/di/dv.
+  * Added option to have spell saves auto fail for friendly targets. If the text "auto fail friendly" or the localised equivalent appears in the spell description then tokens with the same disposition as the caster will auto fail their save. Useful for some spell effects where you don't want to save.
+  * **VERY BREAKING** If you used speed keys. Midi-qol now uses core foundry key mapping instead of speed key settings - access from "Configure Controls".
+    - This means you will have to redo your speed key mappings (sorry about that) in Configure Controls. 
+    - By default these settings are **per user** so have to be set up for each player. There is a midi setting World Key Mappings (misc tab) which, if checked, will force all clients to use the GM settings (changes to World Key Mappings requires a reload).
+    - This change has required quite a lot of internal changes and it almost certain there are cases I have not tested - so don't upgrade 5 minutes before game time. v0.9.01 is available for re-installation.
+    - Out of the box the configurations are (almost) the default midi-qol setttings, so if you didn't use speed keys you should not notice much difference.
+    - There is a new accelerator toggle roll ("T" by defualt) which when held when clicking will toggle  auto roll/fast forward for both the initial click and subsequent chat card button presses. This is an extension of the previous adv+ disadv functionality which is not created by default. You can configure the toggle key to use ctrl/alt if you wish.
+    - The existing Caps-Lock functions can't be supported in core key mappings so use "T" instead.
+    - Critical now supports "C" for critical in addition to the default Control Key
+    - versatile damgae is V+click as well as Shift+click.
+    * You can choose to roll "Other Damage" instead of normal or versatile damage via the "O" key when pressinf the item icon. IF using this and you have roll other damage on rwak/mwak set, make sure to roll other damage to "Activation condition" and set the activation conition to false in the item. So that rolling the item won't auto roll the "Other" Damage in addition to the normal damage.
+    - Foundry core supports differentiating between left and right ctrl/shift/alt keys, so you have more options to configure things as you wish.
+
+  **0.9.01**
   * Fix for it.json having trailing spaces.
   * Fix for inadvertent breaking of flags.dnd5e.initiativeDisadv 
   * Fix for marking unconscious when dfreds installed. Requires v2.1.1 of Convenient effects.
@@ -106,11 +124,12 @@ Hooks.once('libChangelogsReady', function() {
     - Also the effect wont be automatically deleted when used like the other count options. Use a timeout or special expiry to remove the effect.
   * **BREAKING** removed midi-qol critical threshold, since it is now supported in core.
   * **BREAKING** midi-qol now requires dnd5e 1.5.0 or later
-  0.8.105
+  
+  **0.8.105**
   * Mark player owned tokens as unsconcious when hp reaches 0, rather than defeated.
   * Overtime effects use the globalThis.EffectCounter count if present for rolling damage.
 
-  0.8.104
+  **0.8.104**
   * Fix for items that do no damage but apply effects when using better rolls and not auto rolling damage (i.e. add chat damage button is checked).
   * Fix for Shillelagh item macro.
   * Add automatic marking of wounded/unconscious targets, controlled by config settings. Wounded requires a convenient effect whose name is the localised string "Wounded" (midi-qol.Wounded) to be defined (you need to do this). These are very simplistic, for any complex token triggers you should use Combat Utility Belt and Triggler which are excellent. 
@@ -123,16 +142,7 @@ Hooks.once('libChangelogsReady', function() {
     - options.targetUuids, if present the roll will target the passed list of token uuids (token.document.uuid).
   * Fix for game.data.version deprecation warning.
   * Fix for some edge cases in Damage Reduction processing.
-  
-  0.8.103
-  * Fix for tools using wrong advantage/disadvantage flags
-  * Fix for overtime effects stalling combat tracker when using better rolls with damage button enabled.
-  * Added ability to use different sounds for melee/ranged weapons/spell.
-  * Fix for monks token bar ability checks as saving throws not working.
-  * Fix for midi-qol making some monks rolls impossible to roll by hiding the roll button.
-  * Fix for initiative formula when token has no referenced actor.
-  * Compatibility change for Convenient Effects 2.0.1
-  
+
   [Full Changelog](https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md)`,
   "minor")
 })

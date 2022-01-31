@@ -37,7 +37,10 @@ export let readyHooks = async () => {
     ddbglPendingHook(data);
   });
 
-  // Have to trigger on preUpdate to check the HP before the update occured.
+  // Handle updates to the characters HP
+  // Apply wounded
+  // Appply dead/unconscious
+  // Handle concentration checks
   Hooks.on("updateActor", async (actor, update, diff, user) => {
     if (user !== game.user?.id) return;
     const hpUpdate = getProperty(update, "data.attributes.hp.value");
@@ -47,9 +50,11 @@ export let readyHooks = async () => {
     const controlled = tokens.filter(t => t._controlled);
     const token = controlled.length ? controlled.shift() : tokens.shift();
     if (configSettings.addWounded > 0) {
+      //@ts-ignore
+      const CEWounded = game.dfreds?.effects?.all.find(ef=>ef.name === i18n("midi-qol.Wounded"))
       const woundedLevel = attributes.hp.max * configSettings.addWounded / 100;
       const needsWounded = attributes.hp.value > 0 && attributes.hp.value < woundedLevel
-      if (installedModules.get("dfreds-convenient-effects")) {
+      if (installedModules.get("dfreds-convenient-effects") && CEWounded) {
         const woundedString = i18n("midi-qol.Wounded");
         const wounded = actor.effects.find(ae => ae.data.label === woundedString);
         if (!wounded && needsWounded) {

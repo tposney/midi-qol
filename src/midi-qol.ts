@@ -24,6 +24,7 @@ import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
+import { MidiKeyManager } from './module/MidiKeyManager.js';
 
 export let debugEnabled = 0;
 export let debugCallTiming: any = false;
@@ -112,6 +113,8 @@ Hooks.once('init', async function () {
   preloadTemplates();
   // Register custom sheets (if any)
   initPatching();
+  globalThis.MidiKeyManager = new MidiKeyManager();
+  globalThis.MidiKeyManager.initKeyMappings();
 });
 
 /* ------------------------------------ */
@@ -398,8 +401,9 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.grants.critical.${at}`);
     midiFlags.push(`flags.midi-qol.fail.critical.${at}`);
     midiFlags.push(`flags.midi-qol.maxDamage.${at}`);
-    midiFlags.push(`flags.midi-qol.grants.attack.bonus.${at}`)
-    midiFlags.push(`flags.midi-qol.grants.attack.success.${at}`)
+    midiFlags.push(`flags.midi-qol.grants.attack.bonus.${at}`);
+    midiFlags.push(`flags.midi-qol.grants.attack.success.${at}`);
+    midiFlags.push(`flags.midi-qol.DR.${at}`);
   });
   midiFlags.push("flags.midi-qol.advantage.ability.all");
   midiFlags.push("flags.midi-qol.advantage.ability.check.all");

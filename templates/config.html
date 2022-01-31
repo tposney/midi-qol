@@ -311,6 +311,13 @@
         <div class="midi-qol-faint">{{localize "midi-qol.AutoCheckSaves.Hint"}}</div>
 
         <div class="form-group">
+          <label>{{localize "midi-qol.AutoFailSavesFriendly.Name"}}</label>
+          <input type="checkbox" name="autoFailSavesFriendly" data-dtype="Boolean" {{checked
+            configSettings.autoFailSavesFriendly}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.AutoFailSavesFriendly.Hint"}}</div>
+
+        <div class="form-group">
           <label>{{localize "midi-qol.DisplaySaveDC.Name"}}</label>
           <input type="checkbox" name="displaySaveDC" data-dtype="Boolean" {{checked configSettings.displaySaveDC}} />
         </div>
@@ -564,45 +571,11 @@
         <div>
           <!-- Speed Rolls -->
           <div class="form-group speedRolls">
-            <label>{{localize "midi-qol.SpeedItemRolls.Name"}}</label>
-            <input type="checkbox" name="speedItemRolls" data-dtype="Boolean" {{checked
-              configSettings.speedItemRolls}} />
+            <label>{{localize "midi-qol.WorldKeyMappings.Name"}}</label>
+            <input type="checkbox" name="worldKeyMappings" data-dtype="Boolean" {{checked
+              configSettings.worldKeyMappings}} />
           </div>
-
-          <div class="form-group accelKeysOverride">
-            <label>{{localize "midi-qol.AccelKeysOverride.Name"}}</label>
-            <input type="checkbox" name="accelKeysOverride" data-dtype="Boolean" {{checked
-              configSettings.accelKeysOverride}} />
-          </div>
-          {{localize "midi-qol.AccelKeysOverride.Hint"}}
-
-          {{#unless configSettings.speedItemRolls}}
-          {{localize "midi-qol.SpeedItemRolls.Hint"}}
-          {{/unless}}
-          {{#if configSettings.speedItemRolls}}
-
-          <div class="form-group speedAbilityRolls">
-            <label>{{localize "midi-qol.SpeedAbilityRolls.Name"}}</label>
-            <input type="checkbox" name="speedAbilityRolls" data-dtype="Boolean" {{checked
-              configSettings.speedAbilityRolls}} />
-          </div>
-
-          {{localize "midi-qol.SpeedItemRolls.Blurb"}}
-          <div style="width:80%">
-            <div class="form-group">
-              {{#each configSettings.keyMapping}}
-              <div class="form-group">
-                <label> {{localize @key }} </label>
-                <div class="keymapping">
-                  <select name="keyMapping.{{@key}}" data-dtype="String">
-                    {{selectOptions ../keys selected=@this}}
-                  </select>
-                </div>
-              </div>
-              {{/each}}
-            </div>
-          </div>
-          {{/if}}
+          <div class="midi-qol-faint">{{localize "midi-qol.WorldKeyMappings.Hint"}}</div>
         </div>
       </div>
       <div class=" midi-qol-box">

@@ -4,11 +4,10 @@ import { log } from "../midi-qol.js";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, updateEffects } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { baseEvent } from "./patching.js";
 import { itemJSONData, overTimeJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
-import { getConfigFileParsingDiagnostics, idText, isConstructorDeclaration } from "typescript";
+import { getConfigFileParsingDiagnostics, getDefaultFormatCodeSettings, idText, isConstructorDeclaration } from "typescript";
 import { OnUseMacros } from "./apps/Item.js";
 
 /**
@@ -357,8 +356,8 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
         }
         damageDetailItem.DR = DRType;
       }
-      if (DRAll < maxDR && checkRule("maxDRValue")) DRAll = 0;
-      let DRAllRemaining = DRAll;
+      if (DRAll > 0 && DRAll < maxDR && checkRule("maxDRValue")) DRAll = 0;
+      let DRAllRemaining = Math.max(DRAll, 0);
       // Now apportion DRAll to each damage type if required
       for (let [index, damageDetailItem] of damageDetail.entries()) {
         let { damage, type, DR } = damageDetailItem;
@@ -406,6 +405,11 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
       }
       damageDetailResolved = damageDetailResolved.concat(damageDetail);
       if (debugEnabled > 0) console.warn("midi-qol | Damage Details plus resistance/save multiplier for ", t.actor.data.name, duplicate(damageDetail))
+    }
+    if (DRAll < 0) {
+      damageDetailResolved = damageDetailResolved.concat({ damage: -DRAll, type: "DR", DR: 0 });
+      appliedDamage -= DRAll;
+      totalDamage -= DRAll;
     }
     //@ts-ignore CONFIG.DND5E
     if (!Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType)) {
@@ -744,7 +748,17 @@ export async function processOverTime(wrapped, data, options, user) {
         if (midiFlags?.reactionCombatRound !== undefined) {
           await actor?.unsetFlag("midi-qol", "reactionCombatRound");
         }
+        /*
+        const ceReaction = getConvenientEffectsReaction();
+        if (getConvenientEffectsReaction()) {
+          if (!ceReaction.flags?.dae?.specialDuration && await ConvenientEffectsHasEffect(ceReaction.name, actor.uuid)) {
+            //@ts-ignore
+            game.dfreds.effectInterface.removeEffect({effectname: ceReaction.name, uuid: actor.uuid})
+          }
+        }
+      */
       }
+
 
       // Remove any per turn optional bonus effects
       const midiFlags: any = getProperty(actor.data, "flags.midi-qol");
@@ -938,7 +952,7 @@ export async function completeItemRoll(item, options) {
         }
       }
 
-      Hooks.once("midi-qol.RollComplete", (workflow) => {
+      Hooks.once(`midi-qol.RollComplete.${item.uuid}`, (workflow) => {
         resolve(workflow);
       })
 
@@ -1156,21 +1170,6 @@ export function checkRange(actor, item, tokenId, targets) {
     }
   }
   return "normal";
-}
-
-export function testKey(keyString, event: typeof baseEvent | undefined | null): boolean {
-  if (!event) return false;
-  switch (keyString) {
-    case "altKey":
-      return event?.altKey;
-    case "shiftKey":
-      return event?.shiftKey;
-    case "ctrlKey":
-      return event?.ctrlKey || event?.metaKey;
-    default:
-      error("Impossible key mapping for speed roll");
-      return false;
-  }
 }
 
 export function isAutoFastAttack(workFlow: Workflow | undefined = undefined): boolean {

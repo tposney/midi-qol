@@ -577,7 +577,7 @@ Gives the attacker advantage on attacks made against the target. Midi-qol only c
 * flags.midi-qol.DR.fire
 * flags.midi-qol.DR.force
 * flags.midi-qol.DR.lightning
-* glags.midi-qol.DR.rwak/mwak/rsak/msak
+* flags.midi-qol.DR.rwak/mwak/rsak/msak
 * etc  
 These flags can be used to grant damage reduction to a character and can be set by active effects and are evaluated after derived fields are calculated, so things like dex.mod etc are available.  
 flags.midi-qol.DR.all CUSTOM 3, will give 3 points of damage reduction to all incoming damage.

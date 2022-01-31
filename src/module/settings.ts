@@ -37,8 +37,7 @@ class ConfigSettings {
   gmConsumeResource = false;
   gmHide3dDice: boolean = false;
   ghostRolls: boolean = false;
-  speedItemRolls: boolean = false;
-  speedAbilityRolls: boolean = false;
+  worldKeyMappings: boolean = false;
   showItemDetails: string = "";
   itemTypeList: any = null;
   autoRollAttack: boolean = false;
@@ -47,6 +46,7 @@ class ConfigSettings {
   autoTarget: string = "none";
   autoCheckHit: string = "none";
   autoCheckSaves: string = "none";
+  autoFailSavesFriendly: boolean = false;
   hideRollDetails: string = "none";
   displaySaveDC: boolean = true;
   checkSaveText: boolean = false;
@@ -97,7 +97,6 @@ class ConfigSettings {
   itemRollStartWorkflow: boolean = false;
   usePlayerPortrait: boolean = false;
   promptDamageRoll: boolean = false;
-  accelKeysOverride: boolean = false;
   effectActivation: boolean = false;
   enableddbGL: boolean = false;
   optionalRules: any = {
@@ -231,7 +230,6 @@ export let fetchParams = () => {
   if (configSettings.ghostRolls === undefined) configSettings.ghostRolls = false;
   if (configSettings.gmConsumeResource === undefined) configSettings.gmConsumeResource = false;
   if (configSettings.consumeResource === undefined) configSettings.consumeResource = false;
-  if (configSettings.accelKeysOverride === undefined) configSettings.accelKeysOverride = false;
   if (!configSettings.enableddbGL) configSettings.enableddbGL = false;
   if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
   if (!configSettings.gmLateTargeting) configSettings.gmLateTargeting = false; // TODO fix this

@@ -28,7 +28,6 @@ export class ConfigPanel extends FormApplication {
 
     let data = {
       configSettings,
-      speedItemRollsOptions: geti18nOptions("speedItemRollsOptions"),
       autoCheckHitOptions: geti18nOptions("autoCheckHitOptions"),
       clickOptions: geti18nOptions("clickOptions"),
       autoTargetOptions: geti18nOptions("autoTargetOptions"),
@@ -74,10 +73,6 @@ export class ConfigPanel extends FormApplication {
   }
 
   activateListeners(html) {
-    html.find(".speedRolls").change(() => {
-      configSettings.speedItemRolls = !configSettings.speedItemRolls;
-      this.render()
-    });
     html.find(".customSounds").change(() => {
       configSettings.useCustomSounds = !configSettings.useCustomSounds;
       this.render()

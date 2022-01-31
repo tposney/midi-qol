@@ -250,6 +250,15 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
         listItem[trait] = (`${traitList[trait]}: ${traits.value.map(t => CONFIG.DND5E.damageResistanceTypes[t]).join(",").concat(" " + traits?.custom)}`);
       }
     });
+    //@ts-ignore
+    const actorFlags = actor.data.flags;
+    const DRFlags = actorFlags["midi-qol"] ? actorFlags["midi-qol"].DR : undefined;
+    if (DRFlags) {
+      listItem["DR"] = "DR: ";
+      for (let key of Object.keys(DRFlags)) {
+        listItem["DR"] += `${key}:${DRFlags[key]} `;
+      }
+    }
     //@ts-ignore listItem
     templateData.damageList.push(listItem);
   }
