@@ -252,7 +252,7 @@ export class Workflow {
       else
         mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "damage"), { inplace: true, overwrite: true });
     }
-    this.itemRollToggle = options.pressedKeys.rollToggle ?? false;
+    this.itemRollToggle = options.pressedKeys?.rollToggle ?? false;
     this.advantage = this.rollOptions.advantage;
     this.disadvantage = this.rollOptions.disadvantage;
     this.templateId = null;

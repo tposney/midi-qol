@@ -91,6 +91,10 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  **0.9.04**
+  * Fix for broken better rolls automation being brokwn.
+  - Midi keyboard shortcuts do not apply for attack/damage when better rolls is active.
+
   **0.9.03**
   * Fixed a number of edge cases when processing alt/ctl/shift that were causing problems.
   * As a side effec token action hud seems to be working agagin.

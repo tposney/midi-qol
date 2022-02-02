@@ -5,7 +5,7 @@ import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getA
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 
-export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true }) {
+export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true, fastForward: false, advantage: false, disadvantage: false }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
   // if rerolling the attack re-record the rollToggle key.
   if (workflow.attackRoll) workflow.itemRollToggle = globalThis.MidiKeyManager.pressedKeys.rollToggle;
@@ -17,19 +17,13 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
     if (enableWorkflow && debugEnabled > 0) warn("Roll Attack: No workflow for item ", this.name, this.id, event);
     const roll = await wrapped(options);
-    // if (configSettings.keepRollStats) gameStats.addAttackRoll(roll, this);
     return roll;
   }
-  /*
-    if (!workflow.rollOptions.fastForward && !) {
-      mergeObject(workflow.rollOptions, mapSpeedKeys(null, "attack"), {inplace: true, overwrite: true});
-    }
-    */
+
   if (["Workflow"].includes(workflow.workflowType)) {
     if (this.data.data.target?.type === self) {
       workflow.targets = getSelfTargetSet(this.actor)
     } else if (game.user?.targets?.size ?? 0 > 0) workflow.targets = validTargetTokens(game.user?.targets);
-    // workflow.targets = (this.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : validTargetTokens(game.user?.targets);
     if (workflow.attackRoll) { // we are re-rolling the attack.
       workflow.damageRoll = undefined;
       await Workflow.removeAttackDamageButtons(this.id)
@@ -37,6 +31,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     }
   } else if (workflow.workflowType === "BetterRollsWorkflow") {
     workflow.rollOptions = options;
+    workflow.rollOptions.fastForwardAttack = options.fastForward;
   }
 
   if (options.resetAdvantage) {
@@ -70,13 +65,11 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     return workflow.activeDefence(this, result);
   }
   const wrappedRollStart = Date.now();
-
-
   let result: Roll = await wrapped({
     advantage: workflow.advantage,
     disadvantage: workflow.disadvantage,
     chatMessage: (["TrapWorkflow", "Workflow"].includes(workflow.workflowType)) ? false : options.chatMessage,
-    fastForward: workflow.rollOptions.fastForwardAttack,
+    fastForward: workflow.rollOptions.fastForwardAttack || options.fastForward,
     messageData: {
       speaker: getSpeaker(this.actor)
     }
@@ -147,9 +140,13 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
 export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powerLevel = null, versatile = null, options = {} } = {}) {
   const pressedKeys = globalThis.MidiKeyManager.pressedKeys; // record the key state if needed
   let workflow = Workflow.getWorkflow(this.uuid);
-  if (workflow && !workflow.shouldRollDamage) // if we did not auto roll then process any keys
+  if (workflow?.workflowType === "BetterRollsWorkflow") {
+    workflow.rollOptions = options;
+    //@ts-ignore .fastForward
+    if (options.fastForward) workflow.rollOptions.fastForwardDamage = options.fastForward;
+  } else if (workflow && !workflow.shouldRollDamage) // if we did not auto roll then process any keys
     mergeObject(workflow.rollOptions, mapSpeedKeys(pressedKeys, "damage", workflow.itemRollToggle), { inplace: true, overwrite: true });
-  if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
+  if (workflow?.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
 
   const damageRollStart = Date.now();
   if (!enableWorkflow || !workflow) {
