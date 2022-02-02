@@ -550,7 +550,7 @@ Advantage/disadvantage on checks for an ability check also grants advantage on t
 * flags.midi-qol.uncanny-dodge which halves damage applied if set
 
 * flags.midi-qol.fail.all/ability.all/ability.check.all/ability.save.all/skill.all etc to auto fail a given roll.  
-* flags.midi-qol.ingoreNearbyFoes - when set cancels ranged attack disadvantage from a nearby enemy. Useful for sharpshooter feat.
+* flags.midi-qol.ignoreNearbyFoes - when set cancels ranged attack disadvantage from a nearby enemy. Useful for Crossbow Expert feat.
 * flags.midi-qol.fail.spell.all
 * flags.midi-qol.fail.spell.vocal|verbal/somatic/material  
 Fails attempts to cast spells with the specified components (or all).
@@ -684,6 +684,7 @@ where specification is a comma separated list of fields.
 
 # Bugs
 probably many however....
+* flags.midi-qol.maxDamage.... are not working so don't use them.
 * Language translations are not up to date.
 
 # Notes for Macro writers

@@ -10,7 +10,8 @@ import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
-import { mapSpeedKeys, Options, procAdvantage, procAutoFail } from "./patching.js";
+import { procAdvantage, procAutoFail } from "./patching.js";
+import { mapSpeedKeys } from "./MidiKeyManager.js";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -166,10 +167,8 @@ export class Workflow {
   }
 
   get otherDamageFormula() {
-    return this.otherDamageItem?.data.data.formula;
+    return (this.otherDamageItem?.data.data.formula ?? "") === "" && !this.otherDamageItem?.data.data.properties?.ver ? this.otherDamageItem?.data.data.damage.versatile : this.otherDamageItem?.data.data.formula;
   }
-
-
 
   get hasDAE() {
     return installedModules.get("dae") && (this.item?.effects?.some(ef => ef.data?.transfer === false));
@@ -179,18 +178,18 @@ export class Workflow {
     Workflow._actions = actions;
   }
 
-  public processAttackEventOptions(){ }
+  public processAttackEventOptions() { }
 
   get shouldRollDamage(): boolean {
-    if ((this.rollOptions.rollToggle && getAutoRollDamage()) || !getAutoRollDamage())  return false;
-    return getAutoRollDamage() === "always"
+    // if ((this.itemRollToggle && getAutoRollDamage()) || !getAutoRollDamage())  return false;
+    const normalRoll = getAutoRollDamage() === "always"
       || (getAutoRollDamage() !== "none" && !this.item.hasAttack)
       || (getAutoRollDamage() === "onHit" && (this.hitTargets.size > 0 || this.hitTargetsEC.size > 0 || this.targets.size === 0))
       || (getAutoRollDamage() === "onHit" && (this.hitTargetsEC.size > 0));
+    return this.itemRollToggle ? !normalRoll : normalRoll;
   }
 
   constructor(actor: Actor5e, item: Item5e, speaker, targets, options: any) {
-    this.rollOptions = duplicate(defaultRollOptions);
     this.actor = actor;
     this.item = item;
     if (Workflow.getWorkflow(item?.uuid)) {
@@ -249,10 +248,11 @@ export class Workflow {
     this.pressedKeys = options.pressedKeys;
     if (this.pressedKeys) {
       if (this.item?.hasAttack)
-        mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "attack"), {inplace: true, overwrite: true});
+        mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "attack"), { inplace: true, overwrite: true });
       else
-        mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "damage"), {inplace: true, overwrite: true});
+        mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "damage"), { inplace: true, overwrite: true });
     }
+    this.itemRollToggle = options.pressedKeys.rollToggle ?? false;
     this.advantage = this.rollOptions.advantage;
     this.disadvantage = this.rollOptions.disadvantage;
     this.templateId = null;
@@ -442,12 +442,11 @@ export class Workflow {
         }
         if (this.noAutoAttack) return undefined;
 
-        this.autoRollAttack =  this.rollOptions.advantage || this.rollOptions.disAdvantage;
+        this.autoRollAttack = this.rollOptions.advantage || this.rollOptions.disAdvantage;
         if (!this.autoRollAttack) this.autoRollAttack = (getAutoRollAttack() && !this.rollOptions.rollToggle) || (!getAutoRollAttack() && this.rollOptions.rollToggle)
-        if (!this.autoRollAttack)
-        {
+        if (!this.autoRollAttack) {
           const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId ?? "");
-          const isFastRoll = isAutoFastAttack();
+          const isFastRoll = this.rollOptions.fastForwarAttack;
           if (chatMessage && (!this.autoRollAttack || !isFastRoll)) {
             // provide a hint as to the type of roll expected.
             let content = chatMessage && duplicate(chatMessage.data.content)
@@ -554,22 +553,20 @@ export class Workflow {
         }
         this.processDamageEventOptions();
 
-        //        if (configSettings.mergeCard && !shouldRollDamage) {
-        //if (!this.shouldRollDamage) {
-        {
+        if (!this.shouldRollDamage) {
           const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId || "");
           if (chatMessage) {
             // provide a hint as to the type of roll expected.
             let content = chatMessage && duplicate(chatMessage.data.content)
             let searchRe = /<button data-action="damage">[^<]+<\/button>/;
             const damageTypeString = (this.item.data?.data?.actionType === "heal") ? i18n("DND5E.Healing") : i18n("DND5E.Damage");
-            let damageString = (this.rollOptions.critical) ? i18n("DND5E.Critical") : damageTypeString;
-            if (isAutoFastDamage()) damageString += ` ${i18n("midi-qol.fastForward")}`;
+            let damageString = (this.rollOptions.critical || this.isCritical) ? i18n("DND5E.Critical") : damageTypeString;
+            if (this.rollOptions.fastForwardDamage) damageString += ` ${i18n("midi-qol.fastForward")}`;
             let replaceString = `<button data-action="damage">${damageString}</button>`
             content = content.replace(searchRe, replaceString);
             searchRe = /<button data-action="versatile">[^<]+<\/button>/;
             damageString = i18n("DND5E.Versatile")
-            if (isAutoFastDamage()) damageString += ` ${i18n("midi-qol.fastForward")}`;
+            if (this.rollOptions.fastForwardDamage) damageString += ` ${i18n("midi-qol.fastForward")}`;
             replaceString = `<button data-action="versatile">${damageString}</button>`
             content = content.replace(searchRe, replaceString);
             await chatMessage?.update({ content });
@@ -808,12 +805,14 @@ export class Workflow {
 
     if (advantage) {
       const withAdvantage = advantage.all || advantage.attack?.all || (advantage.attack && advantage.attack[actType]);
-      this.advantage = this.advantage || withAdvantage || this.rollOptions.advantage;
+      this.advantage = this.advantage || withAdvantage;
     }
+    this.advantage = this.advantage || this.rollOptions.advantage;
     if (disadvantage) {
       const withDisadvantage = disadvantage.all || disadvantage.attack?.all || (disadvantage.attack && disadvantage.attack[actType]);
-      this.disadvantage = this.disadvantage || withDisadvantage || this.rollOptions.disadvantage;
+      this.disadvantage = this.disadvantage || withDisadvantage;
     }
+    this.disadvantage = this.disadvantage || this.rollOptions.disadvantage;
     // TODO Hidden should check the target to see if they notice them?
     if (checkRule("invisAdvantage")) {
       const token = getCanvas().tokens?.get(this.tokenId);
@@ -844,18 +843,11 @@ export class Workflow {
   }
 
   public processDamageEventOptions() {
-    if (this.workflowType === "TrapWorkflow") this.options.fastForward = true;
-    // if (!game.user.isGM && ["all", "damage"].includes(configSettings.autoFastForward)) this.rollOptions.fastForward = true;
-    // if (game.user.isGM && configSettings.gmAutoFastForwardDamage) this.rollOptions.fastForward = true;
-    // if we have an event here it means they clicked on the damage button?
-    if (this.noCritFlagSet) this.rollOptions.critical = false;
-    else if (this.isCritical || this.critFlagSet) {
-      this.rollOptions.critical = true;
-    }
-    this.critical = this.rollOptions.critical;
-    // trap workflows are fastforward by default.
-    if (this.workflowType === "TrapWorkflow")
+    if (this.workflowType === "TrapWorkflow") {
+      this.options.fastForward = true;
       this.rollOptions.fastForward = true;
+      this.rollOptions.fastForwardDamage = true;
+    }
   }
 
   processCriticalFlags() {
@@ -880,13 +872,15 @@ export class Workflow {
     this.rollOptions.maxDamage = (maxFlags.all || maxFlags[attackType]) ?? false;
 
     // check target critical/nocritical
-    if (this.targets.size !== 1) return;
-    // Change this to TokenDocument
-    const firstTarget = this.targets.values().next().value;
-    const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants?.critical ?? {};
-    const fails = firstTarget.actor?.data.flags["midi-qol"]?.fail?.critical ?? {};
-    if (grants?.all || grants[attackType]) this.critFlagSet = true;
-    if (fails?.all || fails[attackType]) this.noCritFlagSet = true;
+    if (this.hitTargets.size === 1) {
+      const firstTarget = this.hitTargets.values().next().value;
+      const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants?.critical ?? {};
+      const fails = firstTarget.actor?.data.flags["midi-qol"]?.fail?.critical ?? {};
+      if (grants.all || grants[attackType]) this.critFlagSet = true;
+      if (fails.all || fails[attackType]) this.noCritFlagSet = true;
+    }
+    this.isCritical = this.isCritical || this.critFlagSet;
+    if (this.noCritFlagSet) this.isCritical = false;
   }
 
   checkAbilityAdvantage() {
@@ -902,8 +896,8 @@ export class Workflow {
     if (!this.targets?.size) return;
     const actionType = this.item.data.data.actionType;
     const firstTarget = this.targets.values().next().value;
-    if (checkRule("nearbyAllyRanged") && ["rwak", "rsak", "rpak"].includes(actionType)) {
-      if (firstTarget.data.width * firstTarget.data.height < checkRule("nearbyAllyRanged")) {
+    if (checkRule("nearbyAllyRanged") > 0 && ["rwak", "rsak", "rpak"].includes(actionType)) {
+      if (firstTarget.data.width * firstTarget.data.height < Number(checkRule("nearbyAllyRanged"))) {
         //TODO change this to TokenDocument
         const nearbyAlly = checkNearby(-1, firstTarget, configSettings.optionalRules.nearbyFoe); // targets near a friend that is not too big
         // TODO include thrown weapons in check
@@ -917,7 +911,6 @@ export class Workflow {
     const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants;
     if (!grants) return;
     if (!["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) return;
-
     const attackAdvantage = grants.advantage?.attack || {};
     const grantsAdvantage = grants.all || attackAdvantage.all || attackAdvantage[actionType]
     const attackDisadvantage = grants.disadvantage?.attack || {};
@@ -1637,7 +1630,7 @@ export class Workflow {
       }
 
       for (let target of allHitTargets) {
-        let isFriendly = target.document.data.disposition === actorDisposition;
+        let isFriendly = target.data.disposition === actorDisposition;
         if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
         let advantage: Boolean | undefined = undefined;
         // If spell, check for magic resistance
@@ -2077,7 +2070,7 @@ export class Workflow {
         if (checkRule("challengeModeArmorScale") && !this.isCritical) scale = Math.floor((this.attackTotal - targetEC + 1) / ((targetActor?.data.data.attributes.ac.AR ?? 0) + 1) * 10) / 10;
         setProperty(targetToken.actor?.data ?? {}, "flags.midi-qol.challengeModeScale", scale);
         if (this.isCritical) isHit = true;
-        if (isHit || isHitEC || this.isCritical) this.processCriticalFlags();
+        if (isHit || isHitEC) this.processCriticalFlags();
         setProperty(targetActor.data, "flags.midi-qol.acBonus", 0);
       }
       if (game.user?.isGM) log(`${this.speaker.alias} Rolled a ${this.attackTotal} to hit ${targetName}'s AC of ${targetAC} ${(isHit || this.isCritical) ? "hitting" : "missing"}`);
@@ -2283,8 +2276,8 @@ export class Workflow {
       if (!results[i]) error("Token ", target, "could not roll active defence assuming 0");
       const result = results[i];
       let rollTotal = results[i]?.total || 0;
-      if (this.critical === undefined) this.isCritical = result.dice[0].total <= criticalTarget
-      if (this.fumble === undefined) this.isFumble = result.dice[0].total >= fumbleTarget;
+      if (this.isCritical === undefined) this.isCritical = result.dice[0].total <= criticalTarget
+      if (this.isFumble === undefined) this.isFumble = result.dice[0].total >= fumbleTarget;
       this.activeDefenceRolls[target.document.uuid] = results[i];
       let hit = this.isCritical || rollTotal < this.activeDefenceDC;
       if (hit) {

@@ -486,8 +486,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
 
   // Don't check for critical - RAW say these don't get critical damage
   if (["rwak", "mwak"].includes(item?.data.data.actionType) && configSettings.rollOtherDamage !== "none") {
-    if (item?.data.data.formula && configSettings.singleConcentrationRoll) {
-      //if (workflow.otherDamageRoll && configSettings.singleConcentrationRoll) {
+    if ((workflow.otherDamageFormula ?? "") !== "" && configSettings.singleConcentrationRoll) {
       appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.otherDamageDetail ?? [], workflow.bonusDamageDetail ?? []],
         [workflow.damageTotal, workflow.otherDamageTotal ?? 0, workflow.bonusDamageTotal ?? 0],
@@ -500,8 +499,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         });
     } else {
       // let savesToUse = workflow.otherDamageRoll ? new Set() : workflow.saves;
-      let savesToUse = item?.data.data.formula ? new Set() : workflow.saves;
-
+      let savesToUse = (workflow.otherDamageFormula ?? "") !== "" ? new Set() : workflow.saves;
       appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
         [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
@@ -1177,8 +1175,8 @@ export function isAutoFastAttack(workFlow: Workflow | undefined = undefined): bo
   return game.user?.isGM ? configSettings.gmAutoFastForwardAttack : ["all", "attack"].includes(configSettings.autoFastForward);
 }
 
-export function isAutoFastDamage(workFlow: Workflow | undefined = undefined): boolean {
-  if (workFlow && workFlow.workflowType === "DummyWorkflow") return workFlow.rollOptions.fastForward;;
+export function isAutoFastDamage(workflow: Workflow | undefined = undefined): boolean {
+  if (workflow?.workflowType === "DummyWorkflow") return workflow.rollOptions.fastForwardDamage;;
   return game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward)
 }
 
@@ -1892,7 +1890,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
     }).map(flag => `flags.midi-qol.optional.${flag}`);
   if (bonusFlags.length > 0) {
     //@ts-ignore attributes
-    let acRoll = new Roll(`${actor.data.data.attributes.ac.value}`).roll();
+    let acRoll = await new Roll(`${actor.data.data.attributes.ac.value}`).roll();
     const data = {
       actor,
       roll: acRoll,

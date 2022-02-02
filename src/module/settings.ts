@@ -104,7 +104,7 @@ class ConfigSettings {
     checkRange: true,
     wallsBlockRange: "center",
     nearbyFoe: 5,
-    nearbyAllyRanged: 4,
+    nearbyAllyRanged: 0,
     incapacitated: true,
     removeHiddenInvis: true,
     maxDRValue: false,
@@ -232,8 +232,8 @@ export let fetchParams = () => {
   if (configSettings.consumeResource === undefined) configSettings.consumeResource = false;
   if (!configSettings.enableddbGL) configSettings.enableddbGL = false;
   if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
-  if (!configSettings.gmLateTargeting) configSettings.gmLateTargeting = false; // TODO fix this
-  if (!configSettings.lateTargeting) configSettings.lateTargeting = false; // TODO fix this
+  if (!configSettings.gmLateTargeting) configSettings.gmLateTargeting = false;
+  if (!configSettings.lateTargeting) configSettings.lateTargeting = false;
 
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
@@ -251,7 +251,7 @@ export let fetchParams = () => {
       checkRange: true,
       wallsBlockRange: "center",
       nearbyFoe: 5,
-      nearbyAllyRanged: 4,
+      nearbyAllyRanged: 0,
       incapacitated: true,
       removeHiddenInvis: true,
       maxDRValue: false,

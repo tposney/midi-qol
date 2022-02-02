@@ -4,6 +4,7 @@ import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule 
 import { bonusDialog, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getOptionalCountRemainingShortFlag, getSpeaker, isAutoFastAttack, isAutoFastDamage, notificationNotify, processOverTime } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
+import { mapSpeedKeys } from "./MidiKeyManager.js";
 let libWrapper;
 
 var d20Roll;
@@ -24,41 +25,6 @@ function isVisible(wrapped) {
     return true;
   }
   return isVisible;
-}
-
-export function mapSpeedKeys(keys, type: string): Options | undefined{
-  // if (installedModules.get("betterrolls5e")) return undefined;
-
-  const pressedKeys = duplicate(keys ?? globalThis.MidiKeyManager.pressedKeys);
-  switch (type) {
-    case "ability":
-      pressedKeys.fastForward = pressedKeys.rollToggle ? !autoFastForwardAbilityRolls : autoFastForwardAbilityRolls;
-      pressedKeys.fastForwardAbility = pressedKeys.fastforward;
-      if (pressedKeys.rollToggle) {
-        pressedKeys.advantage = false;
-        pressedKeys.disadvantage = false;
-      }
-      if (pressedKeys.advantage || pressedKeys.disadvantage) pressedKeys.fastForward = true;
-      pressedKeys.critical = undefined;
-      break;
-    case "damage":
-      if (!pressedKeys.fastForward) pressedKeys.fastForward = pressedKeys.rollToggle ? !isAutoFastDamage() : isAutoFastAttack();
-      pressedKeys.fastForwardDamage = pressedKeys.fastForward;
-      pressedKeys.advantage = undefined;
-      pressedKeys.disadvantage = undefined;
-      break;
-    
-    default:
-      pressedKeys.critical = undefined;
-      if (!pressedKeys.fastForward) pressedKeys.fastForward = pressedKeys.rollToggle ? !isAutoFastAttack() : isAutoFastAttack();
-      pressedKeys.fastForwardAttack = pressedKeys.fastForward;
-      if (pressedKeys.advantage && pressedKeys.disadvantage) {
-        pressedKeys.advantage = false;
-        pressedKeys.disadvantage = false;
-      }
-      break;
-  }
-  return pressedKeys;
 }
 
 export interface Options {

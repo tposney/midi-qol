@@ -1,7 +1,8 @@
 import { i18n } from "../midi-qol.js";
 import { Options } from "./patching.js";
-import { configSettings } from "./settings.js";
+import { autoFastForwardAbilityRolls, configSettings } from "./settings.js";
 import { setupSheetQol } from "./sheetQOL";
+import { isAutoFastAttack, isAutoFastDamage } from "./utils.js";
 
 export class MidiKeyManager {
   _adv = false;
@@ -97,7 +98,7 @@ export class MidiKeyManager {
         { key: "AltLeft" },
         { key: "AltRight" },
       ],
-      onDown: () => { this._adv = true },
+      onDown: () => { this._adv = true},
       onUp: () => { this._adv = false },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
@@ -120,7 +121,8 @@ export class MidiKeyManager {
       hint: "midi-qol.KeysVersatile.Hint",
       editable: [
         { key: "KeyV"}, 
-        { key: "Shift" },
+        { key: "ShiftLeft" },
+        { key: "ShiftRight" }
       ],
       onDown: () => { this._vers = true },
       onUp: () => { this._vers = false },
@@ -175,4 +177,44 @@ export class MidiKeyManager {
       precedence: normalPrecedence
     });
   }
+}
+
+export function mapSpeedKeys(keys, type: string, forceToggle = false): Options | undefined{
+  // if (installedModules.get("betterrolls5e")) return undefined;
+
+  const pressedKeys = duplicate(keys ?? globalThis.MidiKeyManager.pressedKeys);
+  let hasToggle = pressedKeys.rollToggle || forceToggle;
+  if (pressedKeys.rollToggle && forceToggle) hasToggle = false;
+  switch (type) {
+    case "ability":
+      pressedKeys.fastForwardAbility = hasToggle ? !autoFastForwardAbilityRolls : autoFastForwardAbilityRolls;
+      if (pressedKeys.rollToggle) {
+        pressedKeys.advantage = false;
+        pressedKeys.disadvantage = false;
+      }
+      if (pressedKeys.advantage || pressedKeys.disadvantage) pressedKeys.fastForwardAbility = true;
+      pressedKeys.fastForward = pressedKeys.fastForwardAbility;
+      pressedKeys.critical = undefined;
+      break;
+    case "damage":
+      pressedKeys.fastForwardDamage = (hasToggle ? !isAutoFastDamage() : isAutoFastDamage()) || pressedKeys.critical;
+      pressedKeys.fastForward = pressedKeys.fastForwardDamage;
+      pressedKeys.advantage = undefined;
+      pressedKeys.disadvantage = undefined;
+      break;
+    
+    case "attack":
+    default:
+      pressedKeys.critical = undefined;
+      pressedKeys.fastForwardAttack = (hasToggle ? !isAutoFastAttack() : isAutoFastAttack()) || pressedKeys.advantage || pressedKeys.disadvantage;
+      pressedKeys.fastForward = pressedKeys.fastForwardAttack;
+      pressedKeys.critical = false;
+      pressedKeys.fastForwardDamage = hasToggle ? !isAutoFastDamage() : isAutoFastDamage();
+      if (pressedKeys.advantage && pressedKeys.disadvantage) {
+        pressedKeys.advantage = false;
+        pressedKeys.disadvantage = false;
+      }
+      break;
+  }
+  return pressedKeys;
 }

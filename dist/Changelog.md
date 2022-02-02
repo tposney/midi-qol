@@ -1,3 +1,12 @@
+### 0.9.03
+  * Fixed a number of edge cases when processing alt/ctl/shift that were causing problems.
+  * As a side effec token action hud seems to be working agagin.
+  * Fixed a problem with flags.midi-qol.grants.critical.all/mwak etc.
+  * Fix for bug introduced in 0.9.02 for saving throws in overtime effects.
+  * Fix for bug introduced in 0.9.02 when rolling versatile damage. 
+  * To roll versatile attacks with advantage/disadvantage press V then alt/ctrl. alt/ctrl then V will not work, nor will shift+Ctrl or Shit+Alt
+  * Fix for bardic inspiration valor (and any optional effect that can increase AC).
+
 ### 0.9.02
   * Added the promised flags.midi-qol.DR.mwak etc to the auto complete list.
   * flags.midi-qol.DR.all now supports negative values to deal extra damage when being attacked.
@@ -13,7 +22,7 @@
     - The existing Caps-Lock functions can't be supported in core key mappings so use "T" instead.
     - Critical now supports "C" for critical in addition to the default Control Key
     - versatile damgae is V+click as well as Shift+click.
-    * You can choose to roll "Other Damage" instead of normal or versatile damage via the "O" key when pressinf the item icon. IF using this and you have roll other damage on rwak/mwak set, make sure to roll other damage to "Activation condition" and set the activation conition to false in the item. So that rolling the item won't auto roll the "Other" Damage in addition to the normal damage.
+    * You can choose to roll "Other Damage" instead of normal or versatile damage via the "O" key when pressing the item icon. IF using this and you have roll other damage on rwak/mwak set, make sure to roll other damage to "Activation condition" and set the activation condition to false in the item. So that rolling the item won't auto roll the "Other" Damage in addition to the normal damage.
     - Foundry core supports differentiating between left and right ctrl/shift/alt keys, so you have more options to configure things as you wish.
 
 ### 0.9.01
