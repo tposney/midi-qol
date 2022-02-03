@@ -13,6 +13,7 @@ export class MidiKeyManager {
   _other = false;
   _fastForward = false;
   _critical = false;
+  _noop = false;
   _lastReturned: Options = {
     advantage: undefined,
     disadvantage: undefined,
@@ -103,7 +104,7 @@ export class MidiKeyManager {
       parts: undefined,
       chatMessage: undefined,
       critical: this._critical,
-      event: null
+      event: null,
     }
   }
   get pressedKeys(): Options {
@@ -170,6 +171,16 @@ export class MidiKeyManager {
       precedence: normalPrecedence
     });
 
+    keybindings.register("midi-qol", "noOptionalRules", {
+      name: "midi-qol.NoOptionalRules",
+      hint: "midi-qol.NoOptionalRules.Hint",
+      editable: [
+      ],
+      onDown: () => { configSettings.toggleOptionalRules = true; return false; },
+      onUp: () => { configSettings.toggleOptionalRules = false; return false; },
+      restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
+      precedence: normalPrecedence
+    });
     keybindings.register("midi-qol", "Versatile", {
       name: i18n("DND5E.Versatile"),
       hint: "midi-qol.KeysVersatile.Hint",

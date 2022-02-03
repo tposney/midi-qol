@@ -1,3 +1,8 @@
+### 0.9.06
+  * Fix for "midi - qol" text error
+  * Added configurable suspend optional rules key (only available to GM). If pressed when rolling an item/attack/damage no optional rules will be applied to the roll(s).
+  * Note: if you want to combine keyboard keys with modifier keys (e.g. O+Ctrl for critical other damage roll perhaps) you need to press the O before the modifer key, otherwise it will be treated as control-O which does not match any keybard configurations
+
 ### 0.9.05
   * Added ability to do game.settings.set("midi-qol", "splashWarnings", false)
     from the console or a macro, to permanently disable midi's notification warnings about missing modules on load. 

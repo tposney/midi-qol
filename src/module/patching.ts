@@ -40,7 +40,7 @@ export interface Options {
   critical: boolean | undefined,
   fastForwardAttack: boolean | undefined,
   fastForwardDamage: boolean | undefined,
-  fastForwardAbility: boolean | undefined
+  fastForwardAbility: boolean | undefined,
 };
 
 async function bonusCheck(actor, result: Roll, checkName): Promise<Roll> {

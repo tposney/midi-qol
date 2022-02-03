@@ -253,6 +253,7 @@ export class Workflow {
         mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "damage"), { inplace: true, overwrite: true });
     }
     this.itemRollToggle = options.pressedKeys?.rollToggle ?? false;
+    this.noOptionalRules = options.pressedKeys?.noOptionalRules ?? false;
     this.advantage = this.rollOptions.advantage;
     this.disadvantage = this.rollOptions.disadvantage;
     this.templateId = null;
@@ -809,9 +810,9 @@ export class Workflow {
         // delete Workflow._workflows[this.itemId];
         Hooks.callAll("minor-qol.RollComplete", this); // just for the macro writers.
         Hooks.callAll("midi-qol.RollComplete", this);
-        if (this.item) Hooks.callAll(`midi - qol.RollComplete.${this.item?.uuid} `, this);
+        if (this.item) Hooks.callAll(`midi-qol.RollComplete.${this.item?.uuid}`, this);
         if (autoRemoveTargets !== "none") setTimeout(untargetDeadTokens, 500); // delay to let the updates finish
-        if (debugCallTiming) log(`RollFinished elpaseed ${Date.now() - rollFinishedStartTime} `)
+        if (debugCallTiming) log(`RollFinished elpased ${Date.now() - rollFinishedStartTime}`)
         //@ts-ignore scrollBottom protected
         ui.chat?.scrollBottom();
         return undefined;
@@ -846,7 +847,7 @@ export class Workflow {
         const hidden = hasCondition(token, "hidden");
         const invisible = hasCondition(token, "invisible");
         this.advantage = this.advantage || hidden || invisible;
-        if (hidden || invisible) log(`Advantage given to ${this.actor.name} due to hidden / invisible`)
+        if (hidden || invisible) log(`Advantage given to ${this.actor.name} due to hidden/invisible`)
       }
     }
     // Neaarby foe gives disadvantage on ranged attacks
@@ -885,8 +886,8 @@ export class Workflow {
     * flags.midi-qol.noCritical.mwak/rwak/msak/rsak/other
     */
     // check actor force critical/noCritical
-    const criticalFlags = getProperty(this.actor.data, `flags.midi - qol.critical`) ?? {};
-    const noCriticalFlags = getProperty(this.actor.data, `flags.midi - qol.noCritical`) ?? {};
+    const criticalFlags = getProperty(this.actor.data, `flags.midi-qol.critical`) ?? {};
+    const noCriticalFlags = getProperty(this.actor.data, `flags.midi-qol.noCritical`) ?? {};
     const attackType = this.item?.data.data.actionType;
     this.critFlagSet = false;
     this.noCritFlagSet = false;
@@ -894,7 +895,7 @@ export class Workflow {
     this.noCritFlagSet = noCriticalFlags.all || noCriticalFlags[attackType];
 
     // check max roll
-    const maxFlags = getProperty(this.actor.data, `flags.midi - qol.maxDamage`) ?? {};
+    const maxFlags = getProperty(this.actor.data, `flags.midi-qol.maxDamage`) ?? {};
     this.rollOptions.maxDamage = (maxFlags.all || maxFlags[attackType]) ?? false;
 
     // check target critical/nocritical
@@ -913,8 +914,8 @@ export class Workflow {
     if (!["mwak", "rwak"].includes(this.item?.data.data.actionType)) return;
     let ability = this.item?.data.data.ability;
     if (ability === "") ability = this.item?.data.data.properties?.fin ? "dex" : "str";
-    this.advantage = this.advantage || getProperty(this.actor.data, `flags.midi - qol.advantage.attack.${ability} `);
-    this.disadvantage = this.disadvantage || getProperty(this.actor.data, `flags.midi - qol.disadvantage.attack.${ability} `);
+    this.advantage = this.advantage || getProperty(this.actor.data, `flags.midi-qol.advantage.attack.${ability}`);
+    this.disadvantage = this.disadvantage || getProperty(this.actor.data, `flags.midi-qol.disadvantage.attack.${ability}`);
   }
 
   checkTargetAdvantage() {
@@ -960,14 +961,14 @@ export class Workflow {
           return true;
         if ((expireList.includes("1Reaction") && specialDuration.includes("1Reaction")) && target.actor?.uuid !== this.actor.uuid) return true;
         for (let dt of this.damageDetail) {
-          if (expireList.includes(`isDamaged`) && wasDamaged && specialDuration.includes(`isDamaged.${dt.type} `)) return true;
+          if (expireList.includes(`isDamaged`) && wasDamaged && specialDuration.includes(`isDamaged.${dt.type}`)) return true;
         }
         if (!this.item) return false;
         if (this.saveItem.hasSave && expireList.includes("isSaveSuccess") && specialDuration.includes(`isSaveSuccess`) && this.saves.has(target)) return true;
         if (this.saveItem.hasSave && expireList.includes("isSaveFailure") && specialDuration.includes(`isSaveFailure`) && !this.saves.has(target)) return true;
         const abl = this.item?.data.data.save?.ability;
-        if (this.saveItem.hasSave && expireList.includes(`isSaveSuccess`) && specialDuration.includes(`isSaveSuccess.${abl} `) && this.saves.has(target)) return true;
-        if (this.saveItem.hasSave && expireList.includes(`isSaveFailure`) && specialDuration.includes(`isSaveFailure.${abl} `) && !this.saves.has(target)) return true;
+        if (this.saveItem.hasSave && expireList.includes(`isSaveSuccess`) && specialDuration.includes(`isSaveSuccess.${abl}`) && this.saves.has(target)) return true;
+        if (this.saveItem.hasSave && expireList.includes(`isSaveFailure`) && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) return true;
         return false;
       }).map(ef => ef.id);
       if (expiredEffects?.length ?? 0 > 0) {
@@ -986,7 +987,7 @@ export class Workflow {
       if (extraDamage?.damageRoll) {
         formula += (formula ? "+" : "") + extraDamage.damageRoll;
         if (extraDamage.flavor) {
-          flavor = `${flavor}${flavor !== "" ? "<br>" : ""}${extraDamage.flavor} `
+          flavor = `${flavor}${flavor !== "" ? "<br>" : ""}${extraDamage.flavor}`
         }
         // flavor = extraDamage.flavor ? extraDamage.flavor : flavor;
       }
@@ -1000,7 +1001,7 @@ export class Workflow {
       this.bonusDamageFlavor = flavor ?? "";
       this.bonusDamageDetail = createDamageList({ roll: this.bonusDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
     } catch (err) {
-      console.warn(`midi - qol | error in evaluating${formula} in bonus damage`, err);
+      console.warn(`midi-qol | error in evaluating${formula} in bonus damage`, err);
       this.bonusDamageRoll = null;
       this.bonusDamageDetail = [];
     }
@@ -1187,7 +1188,7 @@ export class Workflow {
         const args = [macroData];
 
         if (!itemMacro?.data?.command) {
-          if (debugEnabled > 0) warn(`could not find item macro ${name} `);
+          if (debugEnabled > 0) warn(`could not find item macro ${name}`);
           return {};
         }
         return (new Function(`"use strict";
@@ -1201,7 +1202,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
         }
       }
     } catch (err) {
-      ui.notifications?.error(`There was an error in your macro.See the console(F12) for details`);
+      ui.notifications?.error(`There was an error in your macro.See the console (F12) for details`);
       error("Error evaluating macro ", err)
     }
     return {};
@@ -1233,8 +1234,8 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
     }
     if (game.user?.isGM && this.useActiveDefence) {
       const searchRe = /<div class="midi-qol-attack-roll">[\s\S]*?<div class="end-midi-qol-attack-roll">/
-      const attackString = `${i18n("midi-qol.ActiveDefenceString")}${configSettings.displaySaveDC ? " " + this.activeDefenceDC : ""} `;
-      const replaceString = `< div class="midi-qol-attack-roll" > <div style="text-align:center" > ${attackString} </div><div class="end-midi-qol-attack-roll">`
+      const attackString = `${i18n("midi-qol.ActiveDefenceString")}${configSettings.displaySaveDC ? " " + this.activeDefenceDC : ""}`;
+      const replaceString = `<div class="midi-qol-attack-roll"> <div style="text-align:center">${attackString}</div><div class="end-midi-qol-attack-roll">`
       content = content.replace(searchRe, replaceString);
       newFlags = mergeObject(flags, {
         "midi-qol":
@@ -1891,7 +1892,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">${DCString} ${rollDC}</label> ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(AllHitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:`;
     else if (rollType === "skill") {
       //@ts-ignore CONFIG.DND5E
-      this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">${DCString} ${rollDC}</label> ${CONFIG.DND5E.skills[rollAbility]} `; // ${i18n(this.hitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:
+      this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">${DCString} ${rollDC}</label> ${CONFIG.DND5E.skills[rollAbility]}`; // ${i18n(this.hitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:
     }
   }
   monksSavingCheck(message, update, options, user) {

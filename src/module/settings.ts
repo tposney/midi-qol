@@ -100,6 +100,7 @@ class ConfigSettings {
   promptDamageRoll: boolean = false;
   effectActivation: boolean = false;
   enableddbGL: boolean = false;
+  toggleOptionalRules: boolean = false;
   optionalRules: any = {
     invisAdvantage: true,
     checkRange: true,
@@ -124,7 +125,10 @@ class ConfigSettings {
 export var configSettings = new ConfigSettings();
 
 export function checkRule(rule: string) {
-  return configSettings.optionalRulesEnabled && configSettings.optionalRules[rule];
+  let rulesEnabled = configSettings.optionalRulesEnabled;
+  if (game.user?.isGM)
+    rulesEnabled = rulesEnabled ? !configSettings.toggleOptionalRules : configSettings.toggleOptionalRules;
+  return rulesEnabled && configSettings.optionalRules[rule];
 }
 
 export function collectSettingData() {
@@ -239,6 +243,7 @@ export let fetchParams = () => {
   //@ts-ignore legacy boolean value
   if (configSettings.autoCEEffects === true) configSettings.autoCEEffects = "both";
   if (!configSettings.autoCEEffects) configSettings.autoCEEffects = "none";
+  configSettings.toggleOptionalRules = false;
 
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
