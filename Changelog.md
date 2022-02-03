@@ -1,7 +1,20 @@
+### 0.9.05
+  * Added ability to do game.settings.set("midi-qol", "splashWarnings", false)
+    from the console or a macro, to permanently disable midi's notification warnings about missing modules on load. 
+  * Notification warnings on load are only shown to the GM.
+  * Added config setting Fix Sticky Keys. If enabled midi attempts to fix the cases where adv/dis get stuck "on". Tested specifically with Token Action Hud. If it causes issues you can disable it.
+  * Updated ja.json - thanks @Brother Sharp
+  * Slight enhancement to the applicaiton of convenient effects when using items.
+    - There are 3 options in the workflow setting, Don't Apply, CE take priority, both CE and Item Effects.
+    - The first and 3rd settings are pretty obvious. The second option means apply the CE effect if it exists and otherwise apply the item effecs.
+    - The apply CE/don't apply CE checkboxes on the item card have slightly different semantics.
+      - Don't Apply checked means the workflow setting becomes "Don't Apply".
+      - Apply CE Checked means, Don't Apply => CE has priority, CE has priority and Apply both are unchanged.
+
 ### 0.9.04
   * Fix for broken better rolls automation being brokwn.
     - Midi keyboard shortcuts do not apply for attack/damage when better rolls is active.
-    
+
 ### 0.9.03
   * Fixed a number of edge cases when processing alt/ctl/shift that were causing problems.
   * As a side effec token action hud seems to be working agagin.

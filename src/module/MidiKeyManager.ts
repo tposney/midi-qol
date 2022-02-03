@@ -1,3 +1,4 @@
+import { config } from "simple-peer";
 import { i18n } from "../midi-qol.js";
 import { Options } from "./patching.js";
 import { autoFastForwardAbilityRolls, configSettings } from "./settings.js";
@@ -34,8 +35,59 @@ export class MidiKeyManager {
     this._vers = false;
     this._other = false;
     this._rollToggle = false;
-    this._fastForward  = false;
+    this._fastForward = false;
     this._critical = false;
+    window.addEventListener('keyup', (event) => this.handleKeyUpEvent(event));
+  }
+
+  handleKeyUpEvent(event) {
+    if (!configSettings.fixStickyKeys) return;
+    if (event.isComposing) return;
+    if (!event.key && !event.code) return;
+
+    const debug: any = CONFIG.debug;
+    const keyboardManager = game.keyboard;
+    //@ts-ignore
+    const context = KeyboardManager.getKeyboardEventContext(event, true);
+    // Don't do anything if downKeys for the key is not set
+    //@ts-ignore .downKeys
+    if (!keyboardManager?.downKeys.has(context.key)) return;
+    if (!(keyboardManager?.hasFocus && ["Control", "Alt", "Shift"].includes(context.event.key))) return;
+    //@ts-ignore
+    keyboardManager?.downKeys.delete(context.key);
+    // Open debugging group
+    if (debug.keybindings) {
+      console.group(`[${context.up ? 'UP' : 'DOWN'}] Checking for keybinds that respond to ${context.modifiers}+${context.key}`);
+      console.dir(context);
+      //@ts-ignore
+      console.log("midi-qol | keyboard handler removing key pressed status for ", context.key)
+    }
+
+    // Check against registered Keybindings
+    //@ts-ignore
+    const actions = KeyboardManager._getMatchingActions(context);
+    if (actions.length === 0) {
+      if (debug.keybindings) {
+        console.log("No matching keybinds");
+        console.groupEnd();
+      }
+      return;
+    }
+
+    // Execute matching Keybinding Actions to see if any consume the event
+    let handled;
+    for (const action of actions) {
+      //@ts-ignore
+      handled = KeyboardManager._executeKeybind(action, context);
+      if (handled) break;
+    }
+
+    // Don't Cancel event since it should do whatever else it is supposed to.
+    if ( handled && context.event ) {
+      //@ts-ignore
+      if ( CONFIG.debug.keybindings ) console.log("Event was not consumed");
+    }
+    if (debug.keybindings) console.groupEnd();
   }
   getstate(): Options {
     return {
@@ -55,8 +107,10 @@ export class MidiKeyManager {
     }
   }
   get pressedKeys(): Options {
+    const keyboardManager = game.keyboard;
     const returnValue = this.getstate();
     this._lastReturned = returnValue;
+    //@ts-ignore
     return returnValue;
   }
 
@@ -77,13 +131,13 @@ export class MidiKeyManager {
       },
       {
         key: "Alt",
-        modifiers: [ "Control" ]
+        modifiers: ["Control"]
       },
       {
         key: "Control",
         modifiers: ["Alt"]
       }
-   ]);
+    ]);
   }
   initKeyMappings() {
     const worldSettings = configSettings.worldKeyMappings ?? false;
@@ -98,8 +152,8 @@ export class MidiKeyManager {
         { key: "AltLeft" },
         { key: "AltRight" },
       ],
-      onDown: () => { this._adv = true},
-      onUp: () => { this._adv = false },
+      onDown: () => { this._adv = true; return false; },
+      onUp: () => { this._adv = false; return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });
@@ -107,11 +161,11 @@ export class MidiKeyManager {
       name: "DND5E.Disadvantage",
       hint: "midi-qol.KeysDisadvantage.Hint",
       editable: [
-        { key: "ControlLeft"},
-        { key: "ControlRight"},
+        { key: "ControlLeft" },
+        { key: "ControlRight" },
       ],
-      onDown: () => { this._dis = true },
-      onUp: () => { this._dis = false },
+      onDown: () => { this._dis = true; return false; },
+      onUp: () => { this._dis = false; return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });
@@ -120,12 +174,12 @@ export class MidiKeyManager {
       name: i18n("DND5E.Versatile"),
       hint: "midi-qol.KeysVersatile.Hint",
       editable: [
-        { key: "KeyV"}, 
+        { key: "KeyV" },
         { key: "ShiftLeft" },
         { key: "ShiftRight" }
       ],
-      onDown: () => { this._vers = true },
-      onUp: () => { this._vers = false },
+      onDown: () => { this._vers = true; return false; },
+      onUp: () => { this._vers = false; return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });
@@ -137,12 +191,11 @@ export class MidiKeyManager {
       editable: [
         { key: "KeyO" },
       ],
-      onDown: () => { this._other = true },
-      onUp: () => { this._other = false },
+      onDown: () => { this._other = true; return false; },
+      onUp: () => { this._other = false; return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });
-    
 
     keybindings.register("midi-qol", "Critical", {
       name: i18n("DND5E.Critical"),
@@ -153,8 +206,8 @@ export class MidiKeyManager {
         { key: "ControlRight" },
 
       ],
-      onDown: () => { this._critical = true },
-      onUp: () => { this._critical = false },
+      onDown: () => { this._critical = true; return false; },
+      onUp: () => { this._critical = false; return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });
@@ -171,15 +224,15 @@ export class MidiKeyManager {
         { key: "AltRight", modifiers: ["Control"]}
         */
       ],
-      onDown: () => { this._rollToggle = true; },
-      onUp: () => { this._rollToggle = false; },
+      onDown: () => { this._rollToggle = true; return false; },
+      onUp: () => { this._rollToggle = false; return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });
   }
 }
 
-export function mapSpeedKeys(keys, type: string, forceToggle = false): Options | undefined{
+export function mapSpeedKeys(keys, type: string, forceToggle = false): Options | undefined {
   // if (installedModules.get("betterrolls5e")) return undefined;
 
   const pressedKeys = duplicate(keys ?? globalThis.MidiKeyManager.pressedKeys);
@@ -202,7 +255,7 @@ export function mapSpeedKeys(keys, type: string, forceToggle = false): Options |
       pressedKeys.advantage = undefined;
       pressedKeys.disadvantage = undefined;
       break;
-    
+
     case "attack":
     default:
       pressedKeys.critical = undefined;

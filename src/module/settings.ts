@@ -38,6 +38,7 @@ class ConfigSettings {
   gmHide3dDice: boolean = false;
   ghostRolls: boolean = false;
   worldKeyMappings: boolean = false;
+  fixStickyKeys: boolean = true;
   showItemDetails: string = "";
   itemTypeList: any = null;
   autoRollAttack: boolean = false;
@@ -56,7 +57,7 @@ class ConfigSettings {
   damageImmunities: string = "none";
   requireMagical: boolean = false;
   autoItemEffects: null;
-  autoCEEffects: boolean = false;
+  autoCEEffects: string = "none";
   rangeTarget: string = "none";
   playerRollSaves: string = "none";
   playerSaveTimeout: number = 0;
@@ -234,6 +235,10 @@ export let fetchParams = () => {
   if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
   if (!configSettings.gmLateTargeting) configSettings.gmLateTargeting = false;
   if (!configSettings.lateTargeting) configSettings.lateTargeting = false;
+  if (configSettings.fixStickyKeys === undefined) configSettings.fixStickyKeys = true;
+  //@ts-ignore legacy boolean value
+  if (configSettings.autoCEEffects === true) configSettings.autoCEEffects = "both";
+  if (!configSettings.autoCEEffects) configSettings.autoCEEffects = "none";
 
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
@@ -501,5 +506,14 @@ export const registerSettings = function() {
     type: String,
     config: false,
   });
+
+  game.settings.register("midi-qol", "splashWarnings", {
+    name: "",
+    hint: "",
+    scope: "world",
+    type: Boolean,
+    config: false,
+    default: true
+  })
 }
 

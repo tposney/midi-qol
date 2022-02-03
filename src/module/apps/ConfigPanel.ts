@@ -45,6 +45,7 @@ export class ConfigPanel extends FormApplication {
       rollOtherDamageOptions: geti18nOptions("RollOtherDamageOptions"),
       showReactionAttackRollOptions: geti18nOptions("ShowReactionAttackRollOptions"),
       wallsBlockRangeOptions,
+      AutoCEEffectsOptions: geti18nOptions("AutoCEEffectsOptions"),
       //@ts-ignore
       itemTypeLabels: CONFIG.Item.typeLabels,
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),

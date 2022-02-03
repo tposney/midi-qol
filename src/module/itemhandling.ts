@@ -8,7 +8,7 @@ import { mapSpeedKeys } from "./MidiKeyManager.js";
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true, fastForward: false, advantage: false, disadvantage: false }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
   // if rerolling the attack re-record the rollToggle key.
-  if (workflow.attackRoll) workflow.itemRollToggle = globalThis.MidiKeyManager.pressedKeys.rollToggle;
+  if (workflow?.attackRoll) workflow.itemRollToggle = globalThis.MidiKeyManager.pressedKeys.rollToggle;
   if (workflow && !workflow.autoRollAttack) {
     mergeObject(workflow.rollOptions, mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.itemRollToggle), { inplace: true, overwrite: true });
   }
@@ -24,7 +24,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     if (this.data.data.target?.type === self) {
       workflow.targets = getSelfTargetSet(this.actor)
     } else if (game.user?.targets?.size ?? 0 > 0) workflow.targets = validTargetTokens(game.user?.targets);
-    if (workflow.attackRoll) { // we are re-rolling the attack.
+    if (workflow?.attackRoll) { // we are re-rolling the attack.
       workflow.damageRoll = undefined;
       await Workflow.removeAttackDamageButtons(this.id)
       workflow.itemCardId = (await showItemCard.bind(this)(false, workflow, false, true)).id;

@@ -310,7 +310,7 @@ export function initHooks() {
       const ceForItem = game.dfreds.effects.all.find(e => e.name === app.object.name);
       if (ceForItem) {
         const element = html.find('input[name="data.chatFlavor"]').parent().parent();
-        if (configSettings.autoCEEffects) {
+        if (["both", "cepri"].includes(configSettings.autoCEEffects)) {
           const offLabel = i18n("midi-qol.convenientEffectsOff");
           const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOff") ?? false;
           const effect = `<div class="form-group"><label>${offLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOff" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`
