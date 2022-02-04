@@ -38,11 +38,11 @@ export class MidiKeyManager {
     this._rollToggle = false;
     this._fastForward = false;
     this._critical = false;
-    window.addEventListener('keyup', (event) => this.handleKeyUpEvent(event));
+    // window.addEventListener('keyup', (event) => this.handleKeyUpEvent(event));
   }
 
   handleKeyUpEvent(event) {
-    if (!configSettings.fixStickyKeys) return;
+    if (!configSettings.fixStickyKeys || false) return;
     if (event.isComposing) return;
     if (!event.key && !event.code) return;
 
@@ -111,6 +111,7 @@ export class MidiKeyManager {
     const keyboardManager = game.keyboard;
     const returnValue = this.getstate();
     this._lastReturned = returnValue;
+    if (configSettings.fixStickyKeys && game.keyboard?.hasFocus) window.blur();
     //@ts-ignore
     return returnValue;
   }
@@ -141,7 +142,7 @@ export class MidiKeyManager {
     ]);
   }
   initKeyMappings() {
-    const worldSettings = configSettings.worldKeyMappings ?? false;
+    const worldSettings = false; // configSettings.worldKeyMappings ?? false;
     //@ts-ignore
     const keybindings = game.keybindings;
     //@ts-ignore

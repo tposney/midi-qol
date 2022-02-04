@@ -243,6 +243,7 @@ export let fetchParams = () => {
   //@ts-ignore legacy boolean value
   if (configSettings.autoCEEffects === true) configSettings.autoCEEffects = "both";
   if (!configSettings.autoCEEffects) configSettings.autoCEEffects = "none";
+  configSettings.worldKeyMappings = false;
   configSettings.toggleOptionalRules = false;
 
   if (!configSettings.keyMapping 

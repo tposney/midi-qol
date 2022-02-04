@@ -1,3 +1,6 @@
+## World Key Mappings don't work
+Please disable the setting which means key mappings are per client.
+
 Midi-qol is a module designed to help automate various parts of your game, specifically rolling attacks/casting spells and applying damage/effects.
 
 It has LOTS of configuration options which can be daunting.
