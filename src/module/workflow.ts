@@ -189,7 +189,7 @@ export class Workflow {
     return this.itemRollToggle ? !normalRoll : normalRoll;
   }
 
-  constructor(actor: Actor5e, item: Item5e, speaker, targets, options: any) {
+  constructor(actor: Actor5e, item: Item5e, speaker, targets, options: any = {}) {
     this.actor = actor;
     this.item = item;
     if (Workflow.getWorkflow(item?.uuid)) {
@@ -245,15 +245,15 @@ export class Workflow {
     this.event = options?.event;
     this.capsLock = options?.event?.getModifierState && options?.event.getModifierState("CapsLock");
     this.rollOptions = { advantage: false, disadvantage: false, versatile: false, critical: false, fastForward: false, rollToggle: false };
-    this.pressedKeys = options.pressedKeys;
+    this.pressedKeys = options?.pressedKeys;
     if (this.pressedKeys) {
       if (this.item?.hasAttack)
         mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "attack"), { inplace: true, overwrite: true });
       else
         mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "damage"), { inplace: true, overwrite: true });
     }
-    this.itemRollToggle = options.pressedKeys?.rollToggle ?? false;
-    this.noOptionalRules = options.pressedKeys?.noOptionalRules ?? false;
+    this.itemRollToggle = options?.pressedKeys?.rollToggle ?? false;
+    this.noOptionalRules = options?.pressedKeys?.noOptionalRules ?? false;
     this.advantage = this.rollOptions.advantage;
     this.disadvantage = this.rollOptions.disadvantage;
     this.templateId = null;

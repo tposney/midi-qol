@@ -165,7 +165,7 @@ Hooks.once('setup', function () {
     //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
     //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.abilityActivationTypes["reactionManual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
+    CONFIG.DND5E.abilityActivationTypes["reactionmanual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
 
   } else { // sw5e
     

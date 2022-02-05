@@ -371,7 +371,9 @@ Requires LIMRTFY and does **not** work with better rolls.
   Your AR is equal to your AC - applied dex mod, i.e. the part of your AC that is not nimbleness
   This means that tanks, high armor class but weighed down take more glancing damage, but that damage is mitigated by your AR. The logic of the system is that part of hitting is having the blow land  on the targget, which is measured by the EC which rewards nimble characters and secondly damage reduction done when a glancing blow does not get "through the armor" and so the damage is reduced by the Armor Resistance.
   * Some informal testing suggests this is badly weighted against tank classes once they reach a high enough level to be fighting tough opponents doing high levels of damage, since many of the EC hits will get through the AR but there is no compensation for taking this extra damage.
-
+  * The **house rule** version makes the follofwin changes.
+    1. The damage from an EC hit (i.e. greater than EC and <= AC) is scaled, so a tank with 8 points of armor reduction wil take 1/9. 2/9, ... 9/9 of the rolled damage when an EC hits for EC, EC +1, EC +2 ... EC+8
+    2. The damage reduction applies for all hits except critical hits.
 
 ### Settings for full auto mode:
 If the above was discussion was all too tedious here are the settings I use.
@@ -522,9 +524,21 @@ All of these effects expire at the end of the combat if no other duration is spe
 ## Reactions
 If the config settings for reaction checks is enabled midi will check a target that is hit by an attack for any items/feautres/spells that have an activation type of reaction and prompt the target if they want to use any of their reactions, which will then initiate a midi workflow for that item/feature/spell targeting the attacker (so hellish rebuke for example works). Currently does not support spells from magic items.
 
-Instead of triggering on attacks reactions can trigger on damage application. Midi supports 3 activation types, reaction (triggers if hit), reaction damage (triggers if damaged), reaction manual (midi will ignore this when prompting for reactions).
+Reaction spells must be prepared (if preparation is required for the spell) and you must have a spell slot of the appropriate level available for the spell to be included in the list of possible reactions.
+
+Instead of triggering on attacks reactions can trigger on damage application (e.g. hellish rebuke).
+
+Midi supports 3 activation types, reaction (triggers if hit), reaction damage (triggers if damaged), reaction manual (midi will ignore this when prompting for reactions).
+
+Items in the SRD have the activation type set to reaction for reaction spells/features, so you will need to edit them in your game.
 
 If the item being used for the attack/or to cause damage has the flag (item.data.flags.midi-qol.noProvokeReaction set, it won't trigger reactions).
+
+## Item description text and saving throws
+* "no damage on save" (or the localised equivalent) in the item description means targets that save will take no damage. Lots of cantrips are like this. Most cantrips are already in a list that midi maintains automatically, but if your favorite sepll is not in the list you can the text to the description.
+* "full damage on save" (or the localised equivalent) in the item description means targets that save will take full damage. This is mainly useful for attacks that do full damage on a hit and have a save to avoid the application of a condition, like the mace of disruption and the frightened condition.
+* "auto fail friendly" (or the localised equivalent) in the item description then tokens with the same disposition as the caster will auto fail their save. Useful for some spell effects where you don't want friends to save.
+* If the midi-qol setting "check spell text" is enabled and the text "half damage on save" appears in the item description then saves will do 1/2 damage no matter what the default save modifier is set to. When set this means you can change the default modifer to whatever you like for various reasons.
 
 ## flags.midi-qol 
 Midi-qol supports a lot of flags values that alter how attacks/casts are rolled. They are supported by any modules that use item.rollI(), item.rollAttack(), item.rollDamage() or actor.useSpell() [the standard dnd5e rolls]. Usually you would apply these via active effects. Mostly they work with better rolls.
@@ -698,7 +712,7 @@ event.shiftKey: true => auto roll the attack roll
 
 * MinorQOL.doRoll and MinorQOL.applyTokenDamage remain supported.
 * MidiQOL.applyTokenDamage is exported.
-* If you have macros that depend on being called when the roll is complete, that is still supported, both "minor-qol.RollComplete" and "midi-qol.RollComplete" are called when the roll is finished. See also the onUse macro field which can be used to achieve similar results.
+* If you have macros that depend on being called when the roll is complete, that is still supported, both "minor-qol.RollComplete" and "midi-qol.RollComplete" as well as "midi-qol.RollComplete.ItemUuid" (where ItemUUid is the uuid of the item doing the roll) are called when the roll is finished. See also the onUse macro field which can be used to achieve similar results.
 * There is a function `async MidiQOL.completeItemRoll(item, options)` that returns a promise you can await, which will do the entire midi-qol workflow for the item before resolving. This is useful if you want to roll an item and do everything without worrying about saving throws and so on.
 
 I* t takes the same arguments as midis item.roll:
@@ -970,6 +984,8 @@ I've included the complete macro, but the general idea is:
 * Which sort of Macro to use?
   - macro.execute/macro.ItemMacro effects (DAE) are applied to the target (run when added and run again when deleted) and are able to access fields from the caster and the target (see the DAE readme). They can be especially useful if you need to change a field that should not be changed via active effects, like temphp (or any effect that might get changed after the effect is applied, hp is the classic example). They are only applied to the target if the attack hit or the target did not save. Since the macro is also called when the active effect is removed from the target you are able to do any cleanup you want.
   - OnUse macros (set on the item sheet). These are run whenever the item is used, even if the attack missed. You can do pretty much anything inside the macro and the result is awaited. Look in here for the information that is provided. You can't pass arguments to OnUse macros yourself. Useful if you want to do something to targets/other tokens/self that can't be expressed/should not be done with active effects.
+    - They are useful for effects/status icons that are not removed when the spell expires/concentration is removed.
+    - They execute within the workflow asynch context, so there is no question of off behaviour with multiple asynch operations in flight (which can happen with macro.execute).
   - DamageBonusMacro, this is run whenever an attack rolls damage. The main idea is to enhance the damage rolled by the attack which does not depend on the item used, things like sneak attack/hunter's mark and so on. The same information is passed to the macro and can be awaited.
   - If you want to store information about the state of things you can do ```setProperty(actor,"flags.myflag.something", value)``` and retrieve it with ```getProperty(actor, "flags.myflag.somethng")```. The information will be reset on a game reload (so it really should be short term data) and is ONLY available on the same client that set the infromation, but does not require a database transaction so is very cheap. If it needs to last over game reloads or be accessible on other clients you need to do actor.setFlag...
 

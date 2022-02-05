@@ -435,7 +435,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       return null;
     }
   }
-  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type) && getConvenientEffectsReaction()) {
+  if (["reaction", "reactiondamage", "reactiondanual"].includes(this.data.data.activation?.type) && getConvenientEffectsReaction()) {
     //@ts-ignore
     if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, this.actor.uuid)) {
       ui.notifications?.warn(i18n("midi-qol.ReactionAlreadyUsed"));
@@ -490,7 +490,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
   if (configureDialog) {
     if (this.type === "spell") {
-      if (isAutoConsumeResource() && !this.rollOptions.fastForward) {
+      if (isAutoConsumeResource() && !workflow.rollOptions.fastForward) {
         configureDialog = false;
         // Check that there is a spell slot of the right level
         const spells = this.actor.data.data.spells;

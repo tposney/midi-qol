@@ -1620,7 +1620,7 @@ export async function processAttackRollBonusFlags() { // bound to workflow
 export async function processDamageRollBonusFlags() { // bound to a workflow
   const bonusFlags = Object.keys(this.actor.data.flags["midi-qol"]?.optional ?? [])
     .filter(flag => {
-      if (!this.actor.data.flags["midi-qol"].optional[flag].damage) return false;
+      if (!(this.actor.data.flags["midi-qol"].optional[flag].damage || this.actor.data.flags["midi-qol"].optional[flag].magicalDamage)) return false;
       if (!this.actor.data.flags["midi-qol"].optional[flag].count) return true;
       return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
     })

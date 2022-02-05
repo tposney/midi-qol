@@ -91,6 +91,15 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.9.08
+  * Fix for "skipping consume dialog setting" enabled throwing an error.
+  * Fix for overtimeEffects when better rolls enabled.
+  * Removed the over eager custom sound effects from every workflow settings tab.
+
+  0.9.07
+  * Turns out restricted key bindings did not mean what I thought they did. So the world key mappings setting is temporarily disabled no matter what you set it to and key bindings are per client until further notice.
+  * Trying a new fix for sticky keys. I've not seen any adverse effects, but there might be - if so disabe it.
+
   0.9.06
   * Fix for "midi - qol" text error and others.
   * Added configurable suspend optional rules key (only available to GM). If pressed when rolling an item/attack/damage no optional rules will be applied to the roll(s).
