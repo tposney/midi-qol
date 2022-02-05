@@ -1,12 +1,11 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
-import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage } from "./utils.js";
+import { processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
-import { configSettings, dragDropTargeting, useMidiCrit } from "./settings.js";
+import { configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 import { preUpdateItemOnUseMacro } from "./patching.js";
-import { isExpressionWithTypeArguments } from "typescript";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -38,13 +37,59 @@ export let readyHooks = async () => {
     ddbglPendingHook(data);
   });
 
-  // Have to trigger on preUpdate to check the HP before the update occured.
+  // Handle updates to the characters HP
+  // Apply wounded
+  // Appply dead/unconscious
+  // Handle concentration checks
   Hooks.on("updateActor", async (actor, update, diff, user) => {
-    //@ts-ignore
-    if (game.user.id !== user) return false;
-    if (!configSettings.concentrationAutomation) return true;
+    if (user !== game.user?.id) return;
     const hpUpdate = getProperty(update, "data.attributes.hp.value");
     if (hpUpdate === undefined) return true;
+    const attributes = actor.data.data.attributes;
+    const tokens = actor.getActiveTokens();
+    const controlled = tokens.filter(t => t._controlled);
+    const token = controlled.length ? controlled.shift() : tokens.shift();
+    if (configSettings.addWounded > 0) {
+      //@ts-ignore
+      const CEWounded = game.dfreds?.effects?.all.find(ef=>ef.name === i18n("midi-qol.Wounded"))
+      const woundedLevel = attributes.hp.max * configSettings.addWounded / 100;
+      const needsWounded = attributes.hp.value > 0 && attributes.hp.value < woundedLevel
+      if (installedModules.get("dfreds-convenient-effects") && CEWounded) {
+        const woundedString = i18n("midi-qol.Wounded");
+        const wounded = actor.effects.find(ae => ae.data.label === woundedString);
+        if (!wounded && needsWounded) {
+          //@ts-ignore
+          await game.dfreds.effectInterface?.addEffect({ effectName: woundedString, uuid: actor.uuid });
+        } else if (wounded && !needsWounded) {
+          await wounded.delete();
+        }
+      } else {
+        const bleeding = CONFIG.statusEffects.find(se => se.id === "bleeding");
+        if (bleeding && token)
+          token.toggleEffect(bleeding.icon, { overlay: false, active: needsWounded })
+      }
+    }
+    if (configSettings.addDead) {
+      const needsDead = hpUpdate === 0;
+      if (installedModules.get("dfreds-convenient-effects") && game.settings.get("dfreds-convenient-effects", "modifyStatusEffects") !== "none") {
+        const effectName = actor.hasPlayerOwner ? getConvenientEffectsUnconscious().name : getConvenientEffectsDead().name;
+        const hasEffect = await ConvenientEffectsHasEffect(effectName, actor.uuid);
+        if ((needsDead !== hasEffect)) {
+          //@ts-ignore
+          await game.dfreds?.effectInterface.toggleEffect(effectName, { overlay: true, uuids: [actor.uuid] });
+        }
+      }
+      else if (token) {
+        if (actor.hasPlayerOwner) {
+          await token.toggleEffect("/icons/svg/unconscious.svg", { overlay: true, active: needsDead });
+        } else {
+          await token.toggleEffect(CONFIG.controlIcons.defeated, { overlay: true, active: needsDead });
+        }
+      }
+    }
+
+    if (!configSettings.concentrationAutomation) return true;
+
     const hpDiff = getProperty(actor.data, "flags.midi-qol.concentration-damage")
     if (!hpDiff || hpDiff <= 0) return true;
     // expireRollEffect.bind(actor)("Damaged", ""); - not this simple - need to think about specific damage types
@@ -84,12 +129,13 @@ export let readyHooks = async () => {
       }
     }
     return true;
-  })
+  });
 
   Hooks.on("renderChatMessage", (message, html, data) => {
     if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);
     diceSoNiceHandler(message, html, data);
-  })
+  });
+
   Hooks.on("renderActorArmorConfig", (app, html, data) => {
     if (configSettings.optionalRules.challengeModeArmor) {
       const ac = data.ac;
@@ -98,6 +144,7 @@ export let readyHooks = async () => {
       element.append(ARHtml);
     }
   });
+  
   Hooks.on("restCompleted", restManager);
 
   Hooks.on("deleteActiveEffect", (...args) => {
@@ -174,7 +221,7 @@ async function handleRemoveConcentration(effect) {
       const entity = await fromUuid(removeUuid);
       if (entity) await entity.delete()
     }
-    await socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
+    timedAwaitExecuteAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
   } catch (err) {
     console.warn("midi-qol | error deleteing concentration effects: ", err)
   }
@@ -185,9 +232,7 @@ export function initHooks() {
   if (debugEnabled > 0) warn("Init Hooks processing");
   Hooks.on("preCreateChatMessage", (message: ChatMessage, data, options, user) => {
     if (debugEnabled > 1) debug("preCreateChatMessage entering", message, data, options, user)
-    // processpreCreateBetterRollsMessage(message, data, options, user);
     nsaMessageHandler(message, data, options, user);
-    // ddbGLPreCreateChatMessage(message, data, options, user);
     return true;
   })
 
@@ -211,7 +256,6 @@ export function initHooks() {
     untargetAllTokens(combat, data.options, user);
     untargetDeadTokens();
     // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
-    // processOverTime(combat, data, options, user);
   })
 
   Hooks.on("renderChatMessage", (message, html, data) => {
@@ -240,30 +284,10 @@ export function initHooks() {
   Hooks.on("applyActiveEffect", midiCustomEffect);
   Hooks.on("preCreateActiveEffect", checkImmunity);
   Hooks.on("preUpdateItem", preUpdateItemOnUseMacro);
-
-  /*
-  Hooks.on("preUpdateItem", (item, data) => {
-    const macros = getProperty(data, 'flags.midi-qol.onUseMacroName');
-    if (macros && macros?.parts) {      
-      data.flags["midi-qol"].onUseMacroName = OnUseMacros.parseParts(macros.parts).toString();
-    }
-  });
-  Hooks.on("updateToken", async (token, data, payload) => {
-    if (!payload?.embedded?.hookData) return;
-    if (typeof payload.embedded.hookData !== "string") return;
-    const key : string = Object.keys(payload.embedded.hookData)[0];
-    if (key) {
-      const macros = getProperty(payload, `embedded.hookData.${key}.doc.flags.midi-qol.onUseMacroName`)?.parts;
-      if (macros) {
-        payload.embedded.hookData[key].doc.flags['midi-qol'].onUseMacroName = OnUseMacros.parseParts(macros).toString();
-      }
-    }
-  });
-*/
   Hooks.on("renderItemSheet", (app, html, data) => {
     const element = html.find('input[name="data.chatFlavor"]').parent().parent();
     if (configSettings.allowUseMacro) {
-      const labelText = i18n("midi-qol.onUseMacroLabel");      
+      const labelText = i18n("midi-qol.onUseMacroLabel");
       const macros = new OnUseMacros(getProperty(app.object.data, "flags.midi-qol.onUseMacroName"));
 
 
@@ -272,7 +296,7 @@ export function initHooks() {
 </h4>
   <ol class="damage-parts onusemacro-group form-group">
     ${macros.selectListOptions}
-  </ol>`;      
+  </ol>`;
       element.append(macroField)
     }
     const labelText = i18n("midi-qol.EffectActivation");
@@ -286,7 +310,7 @@ export function initHooks() {
       const ceForItem = game.dfreds.effects.all.find(e => e.name === app.object.name);
       if (ceForItem) {
         const element = html.find('input[name="data.chatFlavor"]').parent().parent();
-        if (configSettings.autoCEEffects) {
+        if (["both", "cepri"].includes(configSettings.autoCEEffects)) {
           const offLabel = i18n("midi-qol.convenientEffectsOff");
           const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOff") ?? false;
           const effect = `<div class="form-group"><label>${offLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOff" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`
@@ -298,13 +322,6 @@ export function initHooks() {
           element.append(effect)
         }
       }
-    }
-    if (!installedModules.get("betterrolls5e") && isNewerVersion("1.4.9", game.system.data.version) || useMidiCrit) { // 1.5.0 will include per weapon criticals
-      const element2 = html.find('input[name="data.attackBonus"]').parent().parent();
-      const labelText2 = i18n('midi-qol.criticalThreshold');
-      const criticalThreshold = getProperty(app.object.data, "flags.midi-qol.criticalThreshold") ?? 20;
-      const criticalField = `<div class="form-group"><label>${labelText2}</label><div class="form-fields"><input type="text" name="flags.midi-qol.criticalThreshold" value="${criticalThreshold}"/></div></div>`;
-      element2.append(criticalField);
     }
     activateMacroListeners(app, html);
   })

@@ -1,10 +1,10 @@
 import { log, warn, debug, i18n, error, getCanvas } from "../midi-qol.js";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
-import { bonusDialog, expireRollEffect, getOptionalCountRemainingShortFlag, getSpeaker, notificationNotify, processOverTime, testKey } from "./utils.js";
+import { bonusDialog, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getOptionalCountRemainingShortFlag, getSpeaker, isAutoFastAttack, isAutoFastDamage, notificationNotify, processOverTime } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
-import { FlowFlags } from "typescript";
+import { mapSpeedKeys } from "./MidiKeyManager.js";
 let libWrapper;
 
 var d20Roll;
@@ -27,55 +27,20 @@ function isVisible(wrapped) {
   return isVisible;
 }
 
-export const advantageEvent = { shiftKey: false, altKey: true, ctrlKey: false, metaKey: false, fastKey: false };
-export const disadvantageEvent = { shiftKey: false, altKey: false, ctrlKey: true, metaKey: true, fastKey: false };
-export const fastforwardEvent = { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false, fastKey: true };
-export const baseEvent = { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false, fastKey: false };
-
-export function mapSpeedKeys(event) {
-  if (installedModules.get("betterrolls5e")) return event;
-  if (!event) return {};
-  var fastKey = false;
-  var advKey;
-  var disKey;
-  let returnEvent;
-  if (configSettings.speedItemRolls && configSettings.speedAbilityRolls) {
-    if (game.system.id === "sw5e") {
-      advKey = testKey(configSettings.keyMapping["SW5E.Advantage"], event);
-      disKey = testKey(configSettings.keyMapping["SW5E.Disadvantage"], event);
-    } else {
-      advKey = testKey(configSettings.keyMapping["DND5E.Advantage"], event);
-      disKey = testKey(configSettings.keyMapping["DND5E.Disadvantage"], event);
-    }
-  } else {
-    advKey = event?.altKey ? true : false;
-    disKey = (event?.ctrlKey | event?.metaKey) ? true : false;
-    fastKey = event?.shiftKey ? true : false;
-  };
-  if (advKey && disKey) {
-    fastKey = true;
-    advKey = false;
-    disKey = false;
-  }
-  if (disKey) returnEvent = disadvantageEvent;
-  else if (advKey) returnEvent = advantageEvent;
-  else
-    returnEvent = baseEvent;
-  if (fastKey || autoFastForwardAbilityRolls) {
-    returnEvent = duplicate(returnEvent);
-    if (autoFastForwardAbilityRolls) returnEvent.fastKey = !fastKey;
-    else returnEvent.fastKey = fastKey;
-  }
-  return returnEvent;
-}
-
-interface Options {
+export interface Options {
   event: any,
   advantage: boolean | undefined,
   disadvantage: boolean | undefined,
   fastForward: boolean | undefined,
   parts: [] | undefined,
-  chatMessage: boolean | undefined
+  chatMessage: boolean | undefined,
+  rollToggle: boolean | undefined,
+  other: boolean | undefined,
+  versatile: boolean | undefined,
+  critical: boolean | undefined,
+  fastForwardAttack: boolean | undefined,
+  fastForwardDamage: boolean | undefined,
+  fastForwardAbility: boolean | undefined,
 };
 
 async function bonusCheck(actor, result: Roll, checkName): Promise<Roll> {
@@ -104,9 +69,8 @@ async function bonusCheck(actor, result: Roll, checkName): Promise<Roll> {
 async function doRollSkill(wrapped, ...args) {
   const [skillId, options = { event: {}, parts: [], avantage: false, disadvantage: false }] = args;
   const chatMessage = options.chatMessage;
-  options.event = mapSpeedKeys(options.event);
-  if (options.event === advantageEvent || options.event === disadvantageEvent)
-    options.fastForward = true;
+  mergeObject(options, mapSpeedKeys(null, "ability"), {inplace: true, overwrite: true});
+  options.event = {};
   let procOptions: Options = procAdvantage(this, "check", this.data.data.skills[skillId].ability, options)
   procOptions = procAdvantageSkill(this, skillId, procOptions);
   if (procOptions.advantage && procOptions.disadvantage) {
@@ -117,7 +81,6 @@ async function doRollSkill(wrapped, ...args) {
     options.parts = ["-100"];
   }
 
-  options.event = {};
   if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
     let event = {};
     if (procOptions.advantage) event = { shiftKey: true };
@@ -143,18 +106,15 @@ async function doRollSkill(wrapped, ...args) {
 
 function rollDeathSave(wrapped, ...args) {
   const [options] = args;
-  const event = mapSpeedKeys(options.event);
+  mergeObject(options, mapSpeedKeys(null, "ability"), {inplace: true, overwrite: true});
+  options.event = {};
   const advFlags = getProperty(this.data.flags, "midi-qol")?.advantage ?? {};
   const disFlags = getProperty(this.data.flags, "midi-qol")?.disadvantage ?? {};
-  var withAdvantage = options.event?.altKey || options.advantage;
-  var withDisadvantage = options.event?.ctrlKey || options.event?.metaKey || options.disadvantage;
   options.fastForward = autoFastForwardAbilityRolls ? !options.event?.fastKey : options.event?.fastKey;
-  withAdvantage = advFlags.deathSave || advFlags.all;
-  withDisadvantage = disFlags.deathSave || disFlags.all;
+  const withAdvantage = advFlags.deathSave || advFlags.all;
+  const withDisadvantage = disFlags.deathSave || disFlags.all;
   options.advantage = withAdvantage && !withDisadvantage;
   options.disadvantage = withDisadvantage && !withAdvantage;
-  options.event = {};
-
   if (options.advantage && options.disadvantage) {
     options.advantage = options.disadvantage = false;
   }
@@ -235,12 +195,10 @@ async function rollAbilityTest(wrapped, ...args) {
   const [abilityId, options = { event: {}, parts: [], chatMessage: undefined }] = args;
   const chatMessage = options.chatMessage;
   if (procAutoFail(this, "check", abilityId)) options.parts = ["-100"];
-  options.event = mapSpeedKeys(options.event);
-  if (options.event === advantageEvent || options.event === disadvantageEvent)
-    options.fastForward = true;
+  mergeObject(options, mapSpeedKeys(null, "ability"), {inplace: true, overwrite: true});
+  options.event = {};
   let procOptions = procAdvantage(this, "check", abilityId, options);
 
-  options.event = {};
   const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
   const minimumRoll = (flags.check && (flags.check.all || flags.save[abilityId])) ?? 0;
   if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
@@ -249,7 +207,7 @@ async function rollAbilityTest(wrapped, ...args) {
     if (procOptions.disadvantage) event = { ctrlKey: true };
     procOptions.event = event;
     const result = await wrapped(abilityId, procOptions);
-    return createRollResultFromCustomRoll(result)
+    return createRollResultFromCustomRoll(result);
   }
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
@@ -271,9 +229,8 @@ async function rollAbilitySave(wrapped, ...args) {
   }
 
   const chatMessage = options.chatMessage;
-  options.event = mapSpeedKeys(options.event);
-  if (options.event === advantageEvent || options.event === disadvantageEvent)
-    options.fastForward = true;
+  mergeObject(options, mapSpeedKeys(null, "ability"), {inplace: true, overwrite: true});
+  options.event = {};
   let procOptions = procAdvantage(this, "save", abilityId, options);
   if (procOptions.advantage && procOptions.disadvantage) {
     procOptions.advantage = false;
@@ -311,7 +268,7 @@ async function rollAbilitySave(wrapped, ...args) {
   */
 }
 
-function procAutoFail(actor, rollType: string, abilityId: string): boolean {
+export function procAutoFail(actor, rollType: string, abilityId: string): boolean {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const fail = midiFlags.fail ?? {};
   if (fail.ability || fail.all) {
@@ -322,7 +279,7 @@ function procAutoFail(actor, rollType: string, abilityId: string): boolean {
   return false;
 }
 
-function procAutoFailSkill(actor, skillId): boolean {
+export function procAutoFailSkill(actor, skillId): boolean {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const fail = midiFlags.fail ?? {};
   if (fail.skill || fail.all) {
@@ -333,7 +290,7 @@ function procAutoFailSkill(actor, skillId): boolean {
   return false;
 }
 
-function procAdvantage(actor, rollType, abilityId, options: Options): Options {
+export function procAdvantage(actor, rollType, abilityId, options: Options): Options {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const advantage = midiFlags.advantage ?? {};
   const disadvantage = midiFlags.disadvantage ?? {};
@@ -357,7 +314,7 @@ function procAdvantage(actor, rollType, abilityId, options: Options): Options {
   return options;
 }
 
-function procAdvantageSkill(actor, skillId, options: Options): Options {
+export function procAdvantageSkill(actor, skillId, options: Options): Options {
   const midiFlags = actor.data.flags["midi-qol"];
   const advantage = midiFlags?.advantage;
   const disadvantage = midiFlags?.disadvantage;
@@ -515,7 +472,8 @@ function itemSheetGetSubmitData(wrapped, ...args) {
 export function _getInitiativeFormula(wrapped) {
   const original = wrapped();
   const actor = this.actor;
-  let disadv = actor.getFlag(game.system.id, "iniitiativeDis");
+  if (!actor) return "1d20";
+  let disadv = actor.getFlag(game.system.id, "initiativeDisadv");
   let adv = actor.getFlag(game.system.id, "initiativeAdv");
   const flags = actor.data.flags["midi-qol"];
   if (flags && flags.advantage) {
@@ -562,8 +520,13 @@ export function _getInitiativeFormula(wrapped) {
 
 export function readyPatching() {
   // TODO remove this when v9 default
-  libWrapper.register("midi-qol", "game.dnd5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
-  libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER")
+  if (game.system.id === "dnd5e") {
+  	libWrapper.register("midi-qol", "game.dnd5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
+  	libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
+  } else { // TDOD find out what itemsheet5e is called in sw5e
+  	libWrapper.register("midi-qol", "game.sw5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
+  	libWrapper.register("midi-qol", "game.sw5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
+  }
   libWrapper.register("midi-qol", "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
   Notifications
   libWrapper.register("midi-qol", "Notifications.prototype.notify", notificationNotify, "MIXED");
@@ -571,7 +534,8 @@ export function readyPatching() {
 }
 
 export let visionPatching = () => {
-  const patchVision = isNewerVersion(game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
+  //@ts-ignore game.verison
+  const patchVision = isNewerVersion(game.version ? game.version : game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
   if (patchVision) {
     ui.notifications?.warn("Player control vision is deprecated please use the module Your Tokens Visible")
     console.warn("midi-qol | Player control vision is deprecated please use the module Your Tokens Visible")

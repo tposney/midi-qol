@@ -19,7 +19,6 @@ export var autoRemoveTargets: string;
 export var forceHideRoll: boolean;
 export var enableWorkflow: boolean;
 export var dragDropTargeting: boolean;
-export var useMidiCrit: boolean = true;
 
 const defaultKeyMapping = {
   "DND5E.Advantage": "altKey", 
@@ -38,8 +37,8 @@ class ConfigSettings {
   gmConsumeResource = false;
   gmHide3dDice: boolean = false;
   ghostRolls: boolean = false;
-  speedItemRolls: boolean = false;
-  speedAbilityRolls: boolean = false;
+  worldKeyMappings: boolean = false;
+  fixStickyKeys: boolean = true;
   showItemDetails: string = "";
   itemTypeList: any = null;
   autoRollAttack: boolean = false;
@@ -48,6 +47,7 @@ class ConfigSettings {
   autoTarget: string = "none";
   autoCheckHit: string = "none";
   autoCheckSaves: string = "none";
+  autoFailSavesFriendly: boolean = false;
   hideRollDetails: string = "none";
   displaySaveDC: boolean = true;
   checkSaveText: boolean = false;
@@ -57,7 +57,7 @@ class ConfigSettings {
   damageImmunities: string = "none";
   requireMagical: boolean = false;
   autoItemEffects: null;
-  autoCEEffects: boolean = false;
+  autoCEEffects: string = "none";
   rangeTarget: string = "none";
   playerRollSaves: string = "none";
   playerSaveTimeout: number = 0;
@@ -66,6 +66,7 @@ class ConfigSettings {
   doReactions: string = "all";
   showReactionChatMessage: boolean = false;
   showReactionAttackRoll: string = "all";
+  convenientEffectsReaction: string = "Reaction";
   rollNPCSaves: string = "auto";
   rollNPCLinkedSaves: string = "auto";
   mergeCard: boolean = false;
@@ -77,7 +78,9 @@ class ConfigSettings {
   criticalSound: string = "";
   itemUseSound: string = "";
   spellUseSound: string = "";
+  spellUseSoundRanged: string = "";
   weaponUseSound: string = "";
+  weaponUseSoundRanged: string = "";
   potionUseSound: string = "";
   fullAuto: boolean = false;
   useCustomSounds: boolean = true;
@@ -95,15 +98,15 @@ class ConfigSettings {
   itemRollStartWorkflow: boolean = false;
   usePlayerPortrait: boolean = false;
   promptDamageRoll: boolean = false;
-  accelKeysOverride: boolean = false;
   effectActivation: boolean = false;
   enableddbGL: boolean = false;
+  toggleOptionalRules: boolean = false;
   optionalRules: any = {
     invisAdvantage: true,
     checkRange: true,
     wallsBlockRange: "center",
     nearbyFoe: 5,
-    nearbyAllyRanged: 4,
+    nearbyAllyRanged: 0,
     incapacitated: true,
     removeHiddenInvis: true,
     maxDRValue: false,
@@ -115,12 +118,17 @@ class ConfigSettings {
   keepRollStats: boolean = false;
   saveStatsEvery: number = 20;
   playerStatsOnly: boolean = false;
+  addWounded: number = 0;
+  addDead: boolean = false;
 }
 
 export var configSettings = new ConfigSettings();
 
 export function checkRule(rule: string) {
-  return configSettings.optionalRulesEnabled && configSettings.optionalRules[rule];
+  let rulesEnabled = configSettings.optionalRulesEnabled;
+  if (game.user?.isGM)
+    rulesEnabled = rulesEnabled ? !configSettings.toggleOptionalRules : configSettings.toggleOptionalRules;
+  return rulesEnabled && configSettings.optionalRules[rule];
 }
 
 export function collectSettingData() {
@@ -214,6 +222,7 @@ export let fetchParams = () => {
   if (!configSettings.doReactions) configSettings.doReactions = "none";
   if (!configSettings.gmDoReactions) configSettings.gmDoReactions = "none";
   if (configSettings.reactionTimeout === undefined) configSettings.reactionTimeout = 0;
+  if (configSettings.convenientEffectsReaction === undefined) configSettings.convenientEffectsReaction = "Reaction"; //TODO come back when it is configurable in midi and set it to ""
   if (typeof configSettings.rangeTarget !== "string") configSettings.rangeTarget = "none";
   if (!configSettings.showReactionAttackRoll === undefined) configSettings.showReactionAttackRoll = "all";
   // deal with change of type of rollOtherDamage
@@ -226,11 +235,16 @@ export let fetchParams = () => {
   if (configSettings.ghostRolls === undefined) configSettings.ghostRolls = false;
   if (configSettings.gmConsumeResource === undefined) configSettings.gmConsumeResource = false;
   if (configSettings.consumeResource === undefined) configSettings.consumeResource = false;
-  if (configSettings.accelKeysOverride === undefined) configSettings.accelKeysOverride = false;
   if (!configSettings.enableddbGL) configSettings.enableddbGL = false;
   if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
-  if (!configSettings.gmLateTargeting) configSettings.gmLateTargeting = false; // TODO fix this
-  if (!configSettings.lateTargeting) configSettings.lateTargeting = false; // TODO fix this
+  if (!configSettings.gmLateTargeting) configSettings.gmLateTargeting = false;
+  if (!configSettings.lateTargeting) configSettings.lateTargeting = false;
+  if (configSettings.fixStickyKeys === undefined) configSettings.fixStickyKeys = true;
+  //@ts-ignore legacy boolean value
+  if (configSettings.autoCEEffects === true) configSettings.autoCEEffects = "both";
+  if (!configSettings.autoCEEffects) configSettings.autoCEEffects = "none";
+  configSettings.worldKeyMappings = false;
+  configSettings.toggleOptionalRules = false;
 
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
@@ -239,6 +253,8 @@ export let fetchParams = () => {
       configSettings.keyMapping = defaultKeyMapping;
   }
 
+  if (configSettings.addWounded === undefined) configSettings.addWounded = 0;
+  if (configSettings.addDead === undefined) configSettings.addDead = false;
   if (typeof configSettings.requiresTargets !== "string") configSettings.requiresTargets = "none";
   if (!configSettings.optionalRules) {
     configSettings.optionalRules = {
@@ -246,7 +262,7 @@ export let fetchParams = () => {
       checkRange: true,
       wallsBlockRange: "center",
       nearbyFoe: 5,
-      nearbyAllyRanged: 4,
+      nearbyAllyRanged: 0,
       incapacitated: true,
       removeHiddenInvis: true,
       maxDRValue: false,
@@ -286,13 +302,13 @@ export let fetchParams = () => {
   let debugText: string = String(game.settings.get("midi-qol", "Debug"));
   forceHideRoll = Boolean(game.settings.get("midi-qol", "ForceHideRoll"));
   dragDropTargeting = Boolean(game.settings.get("midi-qol", "DragDropTarget"));
-  useMidiCrit = Boolean(game.settings.get("midi-qol", "UseMidiCrit"))
 
   if (game.ready) {
     configureDamageRollDialog();
   }
 
   setDebugLevel(debugText);
+
   if (configSettings.concentrationAutomation) {
     // Force on use macro to true
     if (!configSettings.allowUseMacro) {
@@ -357,14 +373,6 @@ const settings = [
     name: "DragDropTarget",
     scope: "world",
     default: false,
-    type: Boolean,
-    onChange: fetchParams,
-    config: true
-  },
-  {
-    name: "UseMidiCrit",
-    scope: "world",
-    default: true,
     type: Boolean,
     onChange: fetchParams,
     config: true
@@ -465,17 +473,15 @@ export const registerSettings = function() {
     restricted: true
   });
 
-  if (isNewerVersion(game.data.version, "0.7.0")) {
-    game.settings.register("midi-qol", "playerControlsInvisibleTokens", {
-      name: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Name"),
-      hint: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Hint"),
-      scope: "world",
-      default: false,
-      config: true,
-      type: Boolean,
-      onChange: (value) => {window.location.reload()}
-    });
-  }
+  game.settings.register("midi-qol", "playerControlsInvisibleTokens", {
+    name: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Name"),
+    hint: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Hint"),
+    scope: "world",
+    default: false,
+    config: true,
+    type: Boolean,
+    onChange: (value) => {window.location.reload()}
+  });
 
   game.settings.register("midi-qol", "Debug", {
     name: "midi-qol.Debug.Name",
@@ -488,6 +494,16 @@ export const registerSettings = function() {
     onChange: fetchParams
   });
 
+  game.settings.register("midi-qol", "debugCallTiming", {
+    name: "midi-qol.debugCallTiming.Name",
+    hint: "midi-qol.debugCallTiming.Hint",
+    scope: "world",
+    default: false,
+    type: Boolean,
+    config: true,
+    onChange: fetchParams
+  });
+
   game.settings.register("midi-qol", "notificationVersion", {
     name: "",
     hint: "",
@@ -496,5 +512,14 @@ export const registerSettings = function() {
     type: String,
     config: false,
   });
+
+  game.settings.register("midi-qol", "splashWarnings", {
+    name: "",
+    hint: "",
+    scope: "world",
+    type: Boolean,
+    config: false,
+    default: true
+  })
 }
 

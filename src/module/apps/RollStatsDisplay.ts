@@ -48,7 +48,8 @@ export class RollStatsDisplay extends FormApplication {
     let data: any = super.getData();
     data.stats = this.object.prepareStats();
     Object.keys(data.stats).forEach(aid => {
-      if (this.playersOnly && game.user && !game.actors?.get(aid)?.hasPerm(game.user, "OWNER", true))
+      //@ts-ignore DOCUMENT_PERMISSION_LEVELS
+      if (this.playersOnly && game.user && game.actors?.get(aid)?.permission !== CONST.DOCUMENT_PERMISSION_LEVELS.OWNER && game.user.id !== aid )
         delete data.stats[aid];
     })
     data.isGM = game.user?.isGM;

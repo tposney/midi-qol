@@ -1,6 +1,6 @@
 import { error, gameStats, i18n } from "../midi-qol.js";
 import { RollStatsDisplay } from "./apps/RollStatsDisplay.js";
-import { socketlibSocket } from "./GMAction.js";
+import { timedExecuteAsGM } from "./GMAction.js";
 import { configSettings } from "./settings.js";
 
 function fetchStats() {
@@ -140,8 +140,8 @@ export class RollStats {
     await game.settings.set("midi-qol", "RollStats", {})
   }
   async clearActorStats(actorId: string) {
-    socketlibSocket.executeAsGM("removeStatsForActorId", {
-      actorId: actorId,
+    timedExecuteAsGM("removeStatsForActorId", {
+      actorId: actorId
     })
   }
 
@@ -232,9 +232,9 @@ export class RollStats {
   }
 
   public updateEntity({ id }) {
-    socketlibSocket.executeAsGM("updateEntityStats", {
+    timedExecuteAsGM("updateEntityStats", {
       id,
-      currentStats: gameStats.currentStats[id],
+      currentStats: gameStats.currentStats[id]
     })
   }
   public exportToJSON() {

@@ -37,8 +37,9 @@ export function betterRollsUpdate(message, update, options, user) {
   const flags = message.data.flags;
   if(update.flags && update.flags["midi-qol"])  {
     // Should be a hits display update
-    return;
+    return true;
   }
+
   const brFlags: any = flags?.betterrolls5e;
   if (!brFlags) return true;
   let actorId = brFlags.actorId;
@@ -55,7 +56,9 @@ export function betterRollsUpdate(message, update, options, user) {
   let damageList: any[] = [];
   let otherDamageList: any[] = [];
   const item = actor?.items.get(brFlags.itemId)
-  let workflow = Workflow.getWorkflow(item?.uuid);
+  if (!actor || !brFlags.itemId) return;
+  let itemUuid = `${actor.uuid}.Item.${brFlags.itemId}`;
+  let workflow = Workflow.getWorkflow(itemUuid);
   if (!workflow || workflow.damageRolled) return true;
   let otherDamageRoll;
   for (let entry of brFlags.entries) {
@@ -81,6 +84,7 @@ export function betterRollsUpdate(message, update, options, user) {
       }
     }
   }
+  workflow.damageRolled = true;
   // Assume it is a damage roll
   workflow.damageDetail = damageList;
   workflow.damageTotal = damageList.reduce((acc, a) => a.damage + acc, 0);
@@ -88,6 +92,7 @@ export function betterRollsUpdate(message, update, options, user) {
     otherDamageList = [];
     // TODO find out how to remove it from the better rolls card?
   }
+
   workflow.damageRolled = true;
   if (otherDamageList.length > 0) {
     workflow.otherDamageTotal = otherDamageList.reduce((acc, a) => a.damage + acc, 0);
@@ -232,7 +237,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
 
 export let diceSoNiceHandler = async (message, html, data) => {
   //@ts-ignore game.dice3d
-  if (!dice3dEnabled() || game.dice3d?.messageHookDisabled) return;
+  if (!dice3dEnabled()) return;
   if (debugEnabled > 1) debug("Dice so nice handler ", message, html, data);
   // Roll the 3d dice if we are a gm, or the message is not blind and we are the author or a recipient (includes public)
   let rollDice = game.user?.isGM ||
@@ -425,7 +430,7 @@ export let hideStuffHandler = (message, html, data) => {
     html.find(".midi-qol-target-npc-Player").hide();
     //@ts-ignore
     ui.chat.scrollBottom
-    return;
+    return true;
   }
   if (game.user?.isGM) {
     html.find(".midi-qol-target-npc-Player").hide();
@@ -477,7 +482,10 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-damage-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       html.find(".midi-qol-other-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       html.find(".midi-qol-bonus-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
-      html.find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+      if (!(message.data.flags && message.data.flags["monks-tokenbar"])) // not a monks roll
+        html.find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+//    html.find(".dice-result").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`); Monks saving throw css
+
       //TODO this should probably just check formula
     } else if (["details", "detailsDSN"].includes(configSettings.hideRollDetails)) {
       html.find(".dice-tooltip").remove();
@@ -488,23 +496,20 @@ export let hideStuffHandler = (message, html, data) => {
   if (!game.user?.isGM && (configSettings.autoCheckHit === "whisper" || message.data.blind)) {
     if (configSettings.mergeCard) {
       html.find(".midi-qol-hits-display").hide();
-    } else {
-      if (html.find(".midi-qol-single-hit-card").length === 1) {
+    } else if (html.find(".midi-qol-single-hit-card").length === 1 && data.whisper) {
         html.hide();
-      }
     }
   }
   if (!game.user?.isGM && (configSettings.autoCheckSaves === "whisper" || message.data.blind)) {
     if (configSettings.mergeCard) {
       html.find(".midi-qol-saves-display").hide();
-    } else {
-      if (html.find(".midi-qol-saves-display").length === 1) {
-        html.hide();
-      }
+    } else if (html.find(".midi-qol-saves-display").length === 1 && data.whisper) {
+      html.hide();
     }
   }
   //@ts-ignore
   setTimeout(() => ui.chat.scrollBottom(), 0);
+  return true;
 }
 
 export function betterRollsButtons(message, html, data) {

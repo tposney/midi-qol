@@ -24,8 +24,10 @@ import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
+import { MidiKeyManager } from './module/MidiKeyManager.js';
 
 export let debugEnabled = 0;
+export let debugCallTiming: any = false;
 // 0 = none, warnings = 1, debug = 2, all = 3
 export let debug = (...args) => { if (debugEnabled > 1) console.log("DEBUG: midi-qol | ", ...args) };
 export let log = (...args) => console.log("midi-qol | ", ...args);
@@ -39,7 +41,7 @@ declare global {
   }
 }
 export function getCanvas(): Canvas {
-  if (!canvas) throw new Error("Canvas not ready");
+  if (!canvas || !canvas.scene) throw new Error("midi-qol - Canvas/Scene not ready");
   return canvas;
 }
 
@@ -66,6 +68,7 @@ export let setDebugLevel = (debugText: string) => {
   debugEnabled = { "none": 0, "warn": 1, "debug": 2, "all": 3 }[debugText] || 0;
   // 0 = none, warnings = 1, debug = 2, all = 3
   if (debugEnabled >= 3) CONFIG.debug.hooks = true;
+  debugCallTiming = game.settings.get("midi-qol", "debugCallTiming") ?? false;
 }
 
 export let noDamageSaves: string[] = [];
@@ -110,6 +113,8 @@ Hooks.once('init', async function () {
   preloadTemplates();
   // Register custom sheets (if any)
   initPatching();
+  globalThis.MidiKeyManager = new MidiKeyManager();
+  globalThis.MidiKeyManager.initKeyMappings();
 });
 
 /* ------------------------------------ */
@@ -159,7 +164,11 @@ Hooks.once('setup', function () {
     CONFIG.DND5E.damageResistanceTypes["temphp"] = CONFIG.DND5E.healingTypes.temphp;
     //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
+    //@ts-ignore CONFIG.DND5E
+    CONFIG.DND5E.abilityActivationTypes["reactionmanual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
+
   } else { // sw5e
+    
     //@ts-ignore CONFIG.DND5E
     CONFIG.DND5E.weaponProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
     //@ts-ignore CONFIG.DND5E
@@ -224,13 +233,16 @@ Hooks.once('ready', function () {
 
   setupMidiQOLApi();
 
-  if (game.user?.isGM && !installedModules.get("dae")) {
-    ui.notifications?.warn("Midi-qol requires DAE to be installed and at least version 0.8.43 or many automation effects won't work");
+  if (game.settings.get("midi-qol", "splashWarnings") && game.user?.isGM) {
+    if (game.user?.isGM && !installedModules.get("dae")) {
+      ui.notifications?.warn("Midi-qol requires DAE to be installed and at least version 0.8.43 or many automation effects won't work");
+    }
+    if (game.user?.isGM && game.modules.get("betterrolls5e")?.active && !installedModules.get("betterrolls5e")) {
+      ui.notifications?.warn("Midi QOL requires better rolls to be version 1.6.6 or later");
+    }
   }
-  if (game.user?.isGM && game.modules.get("betterrolls5e")?.active && !installedModules.get("betterrolls5e")) {
-    ui.notifications?.warn("Midi QOL requires better rolls to be version 1.6.6 or later");
-  }
-  if (isNewerVersion(game.data.version, "0.8.9")) {
+  //@ts-ignore game.version
+  if (isNewerVersion(game.version ? game.version : game.data.version, "0.8.9")) {
     const noDamageSavesText: string = i18n("midi-qol.noDamageonSaveSpellsv9");
     noDamageSaves = noDamageSavesText.split(",")?.map(s => s.trim()).map(s => cleanSpellName(s));
   } else {
@@ -321,6 +333,7 @@ export function checkConcentrationSettings() {
 
 // Minor-qol compatibility patching
 function doRoll(event = { shiftKey: false, ctrlKey: false, altKey: false, metaKey: false, type: "none" }, itemName, options = { type: "", versatile: false }) {
+  error("doRoll is deprecated and will be removed");
   const speaker = ChatMessage.getSpeaker();
   var actor;
   if (speaker.token) {
@@ -360,6 +373,9 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.fail.attack.all")
   midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
+  midiFlags.push(`flags.midi-qol.grants.attack.success.all`);
+  midiFlags.push(`flags.midi-qol.grants.attack.bonus.all`);
+
   midiFlags.push(`flags.midi-qol.grants.critical.all`);
   midiFlags.push(`flags.midi-qol.fail.critical.all`);
   // midiFlags.push(`flags.midi-qol.maxDamage.all`); // TODO implement this
@@ -388,8 +404,9 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.grants.critical.${at}`);
     midiFlags.push(`flags.midi-qol.fail.critical.${at}`);
     midiFlags.push(`flags.midi-qol.maxDamage.${at}`);
-
-
+    midiFlags.push(`flags.midi-qol.grants.attack.bonus.${at}`);
+    midiFlags.push(`flags.midi-qol.grants.attack.success.${at}`);
+    midiFlags.push(`flags.midi-qol.DR.${at}`);
   });
   midiFlags.push("flags.midi-qol.advantage.ability.all");
   midiFlags.push("flags.midi-qol.advantage.ability.check.all");
