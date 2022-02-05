@@ -745,7 +745,7 @@ new MidiQOL.TrapWorkflow(actor, item, [targets], {x:number, y:number})
 Which will roll the atack/and or damage and apply to the passed targets. If the item has an area template it will be placed at x,y and targets auto selected inside the template.
 
 Sample DoTrapAttack replacement:
-```
+```js
 // @Token[Fireball]@Trigger[click]@ChatMessage[/DoTrapAttack _Traps Fireball Fireball 2]
 
 let tactor = game.actors.getName(args[0])
@@ -762,7 +762,7 @@ if (trapToken) await trapToken.update({"hidden" : true});
 * midi-qol supports a DamageOnlyWorkflow to support items/spells with special damage rolls. Divine Smite is a good example, the damage depends on whether the target is a fiend/undead. This is my implementation, which assumes it is activated via midi-qol's onUse macro field.
 I have created a spell called "Divine Smite", with no saving throw or damage or attack, (although you can have such things) which has an onUse macro set to Divine Smite, included in the sample items compendium. (see the onUse macro details below). The total damage field passed in is only used in the final display on the apply damage card, the individual damage elements are all taken from the damageRoll.
 
-```
+```js
 let target = await fromUuid(args[0].hitTargetUuids[0] ?? "");
 let numDice = 1 + args[0].spellLevel;
 if (numDice > 5) numDice = 5;
@@ -873,7 +873,7 @@ Both calls supply the following data
 You can use the various target details to work out which tokens to apply the effect to, for example hitTargets is only those targets that the item roll "hit" if any.
 
 The combo card has some special divs included to allow you to easily add data to the card.
-```
+```html
     <div class="midi-qol-attack-roll"></div>
     <div class="midi-qol-damage-roll"></div>
     <div class="midi-qol-hits-display"></div>
@@ -882,7 +882,7 @@ The combo card has some special divs included to allow you to easily add data to
 Which it uses to update the card when things happen, like attacks, damage, saves, etc. You can take over those fields to create custom items.
 
 This is the code that puts the hit roll detail on the item card
-```
+```js
 const chatMessage: ChatMessage = game.messages.get(args[0].itemCardId);
 var content = duplicate(chatMessage.data.content);    
 const searchString =  '<div class="midi-qol-hits-display"></div>';
