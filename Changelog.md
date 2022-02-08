@@ -1,3 +1,7 @@
+### 0.9.10
+  0.9.10
+  * Fix for template error in midi-qol settings template.
+  
 ### 0.9.09
   * Make the suspend options rules key actually only avilable to the GM, not all players.
   * Some GMs dont want their players to knwo if the baddy saving had advantage or not, so there is a new setting in the saves section of the workflow tab 

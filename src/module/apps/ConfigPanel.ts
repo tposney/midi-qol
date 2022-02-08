@@ -408,10 +408,10 @@ let quickSettingsDetails: any = {
   DisableReactions: {
     description: "Turn off Reaction processing",
     configSettings: {
-      "doReactions": "none",
-      "gmDoReactions": "none",
-      "reactionTimeout": 0,
-      "showReactionAttackRoll": "all",
+      doReactions: "none",
+      gmDoReactions: "none",
+      reactionTimeout: 0,
+      showReactionAttackRoll: "all",
     },
   },
   EnableConcentration: {

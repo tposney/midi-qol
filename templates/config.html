@@ -6,9 +6,7 @@
     <a class="item" data-tab="workflow"><i class="fas fa-cogs"></i> {{localize "midi-qol.Workflow"}}</a>
     <a class="item" data-tab="misc"><i class="fas fa-cogs"></i> {{localize "midi-qol.Misc"}}</a>
     <a class="item" data-tab="optional"><i class="fas fa-cogs"></i> {{localize "midi-qol.Optional"}}</a>
-    {{#if configSettings.quickSettings}}
     <a class="item" data-tab="quicksettings"><i class="fas fa-cogs"></i> {{localize "midi-qol.QuickSettings"}}</a>
-    {{/if}}
 
   </nav>
   <section id="config-tabs" class="content">
@@ -853,23 +851,21 @@
       </div>
     </div>
 
-    {{#if configSettings.quickSettings}}
     <!-- Quick Settings Tab-->
     <div class="tab" data-tab="quicksettings" data-group="sections">
       {{#each QuickSettingsBlurb as |line lineNum|}}
       {{line}}<br>
       {{/each}}
       <div class="midi-qol-box">
-        <div class="column-button-container-mqol" >
+        <div class="column-button-container-mqol">
           {{#each quickSettingsOptions as |label val|}}
-          <button type="quickbutton" class="import-quick-setting" style="text-align: left;" import-quick-setting" id={{val}}>
+          <button type="quickbutton" class="import-quick-setting" style="text-align: left;" id={{val}}>
             <i class="fas fa-dice-d20"></i> {{ label }}
           </button>
           {{/each}}
         </div>
       </div>
     </div>
-    {{/if}}
   </section>
   <footer class="sheet-footer flexrow">
     <button type="submit" name="submit">

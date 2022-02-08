@@ -27,8 +27,7 @@
 }
 
 .column-button-container-mqol {
-	text-align: center;
-	position: absolute;
+	text-align: left;
 	left: 0;
 	right: 0;
 	top: -5px;
@@ -40,6 +39,7 @@
 	z-index: 1;
   flex-direction: column;
 }
+
 .dmgBtn-container-mqol{
     display: flex !important;
   opacity: 0;
