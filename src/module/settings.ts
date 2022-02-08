@@ -50,6 +50,7 @@ class ConfigSettings {
   autoFailSavesFriendly: boolean = false;
   hideRollDetails: string = "none";
   displaySaveDC: boolean = true;
+  displaySaveAdvantage: boolean = true;
   checkSaveText: boolean = false;
   defaultSaveMult: number = 0.5;
   autoRollDamage: string = "none";
@@ -101,6 +102,7 @@ class ConfigSettings {
   effectActivation: boolean = false;
   enableddbGL: boolean = false;
   toggleOptionalRules: boolean = false;
+  quickSettings: boolean = true;
   optionalRules: any = {
     invisAdvantage: true,
     checkRange: true,
@@ -245,6 +247,7 @@ export let fetchParams = () => {
   if (!configSettings.autoCEEffects) configSettings.autoCEEffects = "none";
   configSettings.worldKeyMappings = false;
   configSettings.toggleOptionalRules = false;
+  if (configSettings.displaySaveAdvantage === undefined) configSettings.displaySaveAdvantage = true;
 
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
@@ -286,7 +289,7 @@ export let fetchParams = () => {
     configSettings.itemTypeList = itemList;
   }
   if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;
-
+  configSettings.quickSettings = true;
   enableWorkflow = Boolean(game.settings.get("midi-qol", "EnableWorkflow"));
   if (debugEnabled > 0) warn("Fetch Params Loading", configSettings);
   

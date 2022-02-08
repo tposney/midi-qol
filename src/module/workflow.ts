@@ -254,8 +254,8 @@ export class Workflow {
     }
     this.itemRollToggle = options?.pressedKeys?.rollToggle ?? false;
     this.noOptionalRules = options?.pressedKeys?.noOptionalRules ?? false;
-    this.advantage = this.rollOptions.advantage;
-    this.disadvantage = this.rollOptions.disadvantage;
+    this.advantage = undefined;
+    this.disadvantage = undefined;
     this.templateId = null;
     this.templateUuid = null;
 
@@ -590,14 +590,15 @@ export class Workflow {
         // apply damage to targets plus saves plus immunities
         // done here cause not needed for betterrolls workflow
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
-        //@ts-ignore CONFIG.DND5E
-        if (this.item?.data.data.actionType === "heal" && !Object.keys(CONFIG.DND5E.healingTypes).includes(this.defaultDamageType)) this.defaultDamageType = "healing";
-
-        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
-        const damageBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.DamageBonusMacro`);
+       const damageBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.DamageBonusMacro`);
         if (damageBonusMacro && this.workflowType === "Workflow") {
           await this.rollBonusDamage(damageBonusMacro);
         }
+        //@ts-ignore CONFIG.DND5E
+        if (this.item?.data.data.actionType === "heal" && !Object.keys(CONFIG.DND5E.healingTypes).includes(this.defaultDamageType)) this.defaultDamageType = "healing";
+        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
+
+ 
         // TODO Need to do DSN stuff
         if (this.otherDamageRoll) {
           this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
@@ -834,12 +835,10 @@ export class Workflow {
       const withAdvantage = advantage.all || advantage.attack?.all || (advantage.attack && advantage.attack[actType]);
       this.advantage = this.advantage || withAdvantage;
     }
-    this.advantage = this.advantage || this.rollOptions.advantage;
     if (disadvantage) {
       const withDisadvantage = disadvantage.all || disadvantage.attack?.all || (disadvantage.attack && disadvantage.attack[actType]);
       this.disadvantage = this.disadvantage || withDisadvantage;
     }
-    this.disadvantage = this.disadvantage || this.rollOptions.disadvantage;
     // TODO Hidden should check the target to see if they notice them?
     if (checkRule("invisAdvantage")) {
       const token = getCanvas().tokens?.get(this.tokenId);
@@ -1849,11 +1848,14 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
 
       if (game.user?.isGM) log(`Ability save/check: ${target.name} rolled ${rollTotal} vs ${rollAbility} DC ${rollDC}`);
       let saveString = i18n(saved ? "midi-qol.save-success" : "midi-qol.save-failure");
-      let adv = this.advantageSaves.has(target) ? `(${i18n("DND5E.Advantage")})` : "";
-      if (this.disadvantageSaves.has(target)) adv = `(${i18n("DND5E.Disadvantage")})`;
-      if (game.system.id === "sw5e") {
-        adv = this.advantageSaves.has(target) ? `(${i18n("SW5E.Advantage")})` : "";
-        if (this.disadvantageSaves.has(target)) adv = `(${i18n("SW5E.Disadvantage")})`;
+      let adv = "";
+      if (configSettings.displaySaveAdvantage) {
+        adv = this.advantageSaves.has(target) ? `(${i18n("DND5E.Advantage")})` : "";
+        if (this.disadvantageSaves.has(target)) adv = `(${i18n("DND5E.Disadvantage")})`;
+        if (game.system.id === "sw5e") {
+          adv = this.advantageSaves.has(target) ? `(${i18n("SW5E.Advantage")})` : "";
+          if (this.disadvantageSaves.has(target)) adv = `(${i18n("SW5E.Disadvantage")})`;
+        }
       }
       let img: string = target.data.img ?? target.actor.img ?? "";
       if (configSettings.usePlayerPortrait && target.actor.data.type === "character")
@@ -2248,15 +2250,21 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
     let showRoll = configSettings.autoCheckSaves === "allShow";
     for (let target of this.targets) {
       if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
-      let advantage: Boolean | undefined = undefined;
-      // If spell, check for magic resistance
+      let advantage: boolean | undefined = undefined;
+      let advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.NORMAL;
 
       //@ts-ignore
       const formula = `1d20 + ${target.actor.data.data.attributes.ac.value - 10}`;
       // Advantage/Disadvantage are reveresed for active defence rolls.
-      let advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.NORMAL;
-      if (this.rollOptions.advantage && !this.rollOptions.disadvantage) advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.DISADVANTAGE;
-      if (!this.rollOptions.advantaage && this.rollOptions.disadvantage) advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.ADVANTAGE;
+      const wfadvantage = this.advantage || this.rollOptions.advantage;
+      const wfdisadvantage = this.disadvantage || this.rollOptions.disadvantage;
+      if (wfadvantage && !wfdisadvantage) {
+        advantage = false;
+        advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.DISADVANTAGE;
+      } else if (!wfadvantage && wfdisadvantage) {
+        advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.ADVANTAGE;
+        advantage = true;
+      }
       var player = playerFor(target);
       // if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
       //@ts-ignore CONFIG.DND5E

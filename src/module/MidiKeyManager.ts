@@ -41,13 +41,13 @@ export class MidiKeyManager {
     // window.addEventListener('keyup', (event) => this.handleKeyUpEvent(event));
   }
 
-  handleKeyUpEvent(event) {
-    if (!configSettings.fixStickyKeys || false) return;
+  handleKeyUpEvent(event) { // Not being used TODO remove if not required
+    if (!configSettings.fixStickyKeys) return;
     if (event.isComposing) return;
     if (!event.key && !event.code) return;
-
     const debug: any = CONFIG.debug;
     const keyboardManager = game.keyboard;
+    if (!keyboardManager?.hasFocus) return;
     //@ts-ignore
     const context = KeyboardManager.getKeyboardEventContext(event, true);
     // Don't do anything if downKeys for the key is not set
@@ -108,10 +108,15 @@ export class MidiKeyManager {
     }
   }
   get pressedKeys(): Options {
-    const keyboardManager = game.keyboard;
+    if (configSettings.fixStickyKeys) {
+      const formElements = [ "button"];
+      const selector = formElements.map(el => `${el}:focus`).join(", ");
+      const selectors = document.querySelectorAll(selector);
+      //@ts-ignore
+      if (selectors.length > 0) selectors.forEach(selector => selector.blur())
+    }
     const returnValue = this.getstate();
     this._lastReturned = returnValue;
-    if (configSettings.fixStickyKeys && game.keyboard?.hasFocus) window.blur();
     //@ts-ignore
     return returnValue;
   }
@@ -165,6 +170,8 @@ export class MidiKeyManager {
       editable: [
         { key: "ControlLeft" },
         { key: "ControlRight" },
+        { key: "MetaLeft"},
+        { key: "MetaRigt"}
       ],
       onDown: () => { this._dis = true; return false; },
       onUp: () => { this._dis = false; return false; },
@@ -173,13 +180,13 @@ export class MidiKeyManager {
     });
 
     keybindings.register("midi-qol", "noOptionalRules", {
-      name: "midi-qol.NoOptionalRules",
+      name: "midi-qol.NoOptionalRules.Name",
       hint: "midi-qol.NoOptionalRules.Hint",
       editable: [
       ],
       onDown: () => { configSettings.toggleOptionalRules = true; return false; },
       onUp: () => { configSettings.toggleOptionalRules = false; return false; },
-      restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
+      restricted: true,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });
     keybindings.register("midi-qol", "Versatile", {
@@ -216,6 +223,8 @@ export class MidiKeyManager {
         { key: "KeyC" },
         { key: "ControlLeft" },
         { key: "ControlRight" },
+        { key: "MetaLeft"},
+        { key: "MetaRigt"}
 
       ],
       onDown: () => { this._critical = true; return false; },

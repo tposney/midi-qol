@@ -42,8 +42,6 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
 
   // workflow.processAttackEventOptions();
   workflow.checkAttackAdvantage();
-  workflow.rollOptions.advantage = workflow.disadvantage ? false : workflow.advantage;
-  workflow.rollOptions.disadvantage = workflow.advantage ? false : workflow.disadvantage;
 
   if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
   if (Hooks.call("midi-qol.preAttackRoll", workflow) === false || Hooks.call(`midi-qol.preAttackRoll.${this.uuid}`, workflow) === false) {
@@ -64,10 +62,16 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     });
     return workflow.activeDefence(this, result);
   }
+  let advantage = workflow?.advantage || workflow.rollOptions.advantage;
+  let disadvantage = workflow?.disadvantage || workflow.rollOptions.disadvantage;
+  if (advantage && disadvantage) {
+    advantage = false;
+    disadvantage = false;
+  }
   const wrappedRollStart = Date.now();
   let result: Roll = await wrapped({
-    advantage: workflow.advantage,
-    disadvantage: workflow.disadvantage,
+    advantage,
+    disadvantage,
     chatMessage: (["TrapWorkflow", "Workflow"].includes(workflow.workflowType)) ? false : options.chatMessage,
     fastForward: workflow.rollOptions.fastForwardAttack || options.fastForward,
     messageData: {

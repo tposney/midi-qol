@@ -1,5 +1,18 @@
+### 0.9.09
+  * Make the suspend options rules key actually only avilable to the GM, not all players.
+  * Some GMs dont want their players to knwo if the baddy saving had advantage or not, so there is a new setting in the saves section of the workflow tab 
+    - "Display if save had advantage/disadvantage" (default true).
+  * Correct keyboard adv/dis interaction with flags adv/dis.
+  * Another tweak to the fix sticky rolls. This one seems to work perfectly with Token Action Hud.
+  * First release of Midi Qol Quick Settings (treat as experimental and export your settings before playing to be safe). Idea for this thanks to @MrPrimate
+    - Provides a way to set a group of settings in midi to achieve a desired configuration.
+    - When these are applied a dialog is displayed showing what seting changes were made.
+    - There are 2 "full" configurations "Full Auto" and "All Manual", both of which overwrite the entire configuration setttings when activated.
+    - There are a small numbeer (seeking feedback on what else would be useful) of sub groups that achieve specific settings, for example GM Auto/Manual rolls will set a group of midi settings in what I think might be a sensible configuration for GM auto/Manual rolls. These can be applied without (hopefully) disturbing other configuration details.
+    - I'm actively seeking feedback on whether this is useful and what else should be added. Primarily looking for feedback from users who are not all that comfortable with the midi settings or new to midi.
+
 ### 0.9.08
-  * Fix for skipping consume dialog setting enabled throwing an error.
+  * Fix for "skipping consume dialog setting" enabled throwing an error.
   * Fix for overtimeEffects when better rolls enabled.
   * Removed the over eager custom sound effects from every workflow settings tab.
   
@@ -57,6 +70,7 @@
     - Foundry core supports differentiating between left and right ctrl/shift/alt keys, so you have more options to configure things as you wish.
 
 ### 0.9.01
+**This is the last midi release that is compatible with versions earlier than 9.**
 * Fix for it.json having trailing spaces.
 * Fix for inadvertent breaking of flags.dnd5e.initiativeDisadv 
 * Fix for marking unconscious when dfreds installed. Requires v2.1.1 of Convenient effects.

@@ -19,6 +19,7 @@ const TEMPLATES = 'templates/';
 const CSS = 'css/';
 const ICON = "icons/";
 const PACK = "packs/";
+const CONFIG = "sample-config/"
 const SOUND = "sounds/";
 
 var PACKAGE = JSON.parse(fs.readFileSync('package.json'));
@@ -88,6 +89,8 @@ function outputMetaFiles(output = null) { return () => gulp.src(['LICENSE', 'REA
 function outputIconFiles(output = null) { return () => gulp.src(ICON + GLOB).pipe(gulp.dest((output || DIST) + ICON));}
 function outputPackFiles(output = null) { return () => gulp.src(PACK + GLOB).pipe(gulp.dest((output || DIST) + PACK));}
 function outputSoundFiles(output = null) { return () => gulp.src(SOUND + GLOB).pipe(gulp.dest((output || DIST) + SOUND));}
+function outputConfigFiles(output = null) { return () => gulp.src(CONFIG + GLOB).pipe(gulp.dest((output || DIST) + CONFIG));}
+
 
 
 
@@ -133,6 +136,8 @@ exports.default = gulp.series(
     , outputIconFiles()
     , outputPackFiles()
     , outputSoundFiles()
+    , outputConfigFiles()
+
   )
 );
 /**
@@ -150,6 +155,7 @@ exports.dev = gulp.series(
     , outputIconFiles(DEV_DIST())
     , outputPackFiles(DEV_DIST())
     , outputSoundFiles(DEV_DIST())
+    , outputConfigFiles(DEV_DIST())
 
 	)
 );
@@ -168,6 +174,7 @@ exports.zip = gulp.series(
     , outputIconFiles()
     , outputPackFiles()
     , outputSoundFiles()
+    , outputConfigFiles()
 
 	)
 	, compressDistribution()
@@ -186,8 +193,8 @@ exports.watch = function () {
 	gulp.watch(['LICENSE', 'README.md', 'Changelog.md'], outputMetaFiles());
   gulp.watch(ICON + GLOB, gulp.series(pdel(DIST + ICON), outputIconFiles()));
   gulp.watch(PACK + GLOB, gulp.series(pdel(DIST + PACK), outputPackFiles()));
-  gulp.watch(SOUND + GLOB, gulp.series(pdel(DIST + SOUND), outputPackFiles()));
-
+  gulp.watch(SOUND + GLOB, gulp.series(pdel(DIST + SOUND), outputSoundFiles()));
+  gulp.watch(CONFIG + GLOB, gulp.series(pdel(DIST + CONFIG), outputConfigFiles()));
 
 }
 /**
@@ -205,5 +212,7 @@ gulp.watch(['LICENSE', 'README.md', 'CHANGELOG.md'], gulp.series(outputMetaFiles
 gulp.watch(ICON + GLOB, gulp.series(pdel(devDist + ICON + GLOB, { force: true }), outputIconFiles(devDist), plog('icon done.')));
 gulp.watch(PACK + GLOB, gulp.series(pdel(devDist + PACK + GLOB, { force: true }), outputPackFiles(devDist), plog('packs done.')));
 gulp.watch(SOUND + GLOB, gulp.series(pdel(devDist + SOUND + GLOB, { force: true }), outputSoundFiles(devDist), plog('sounds done.')));
+gulp.watch(CONFIG + GLOB, gulp.series(pdel(devDist + CONFIG + GLOB, { force: true }), outputConfigFiles(devDist), plog('config done.')));
+
 
 }

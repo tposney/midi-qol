@@ -1776,7 +1776,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   const reactionEffect = getConvenientEffectsReaction();
   if (reactionEffect) {
     //@ts-ignore
-    if (await game.dfreds?.effectInterface.hasEffectApplied(reactionEffect.name, target.document.uuid)) return noResult;
+    if (await game.dfreds?.effectInterface.hasEffectApplied(reactionEffect.name, target.document?.uuid ?? target.uuid)) return noResult;
   } else if (target.actor.getFlag("midi-qol", "reactionCombatRound")) return noResult;
 
   const maxLevel = maxCastLevel(target.actor);
@@ -1843,7 +1843,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
 
 export async function requestReactions(target: Token, player: User, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, resolve: ({ }) => void, chatPromptMessage: ChatMessage) {
   const result = (await socketlibSocket.executeAsUser("chooseReactions", player.id, {
-    tokenUuid: target.document ? target.document.uuid : target.uuid,
+    tokenUuid: target.document?.uuid ?? target.uuid,
     reactionFlavor,
     triggerTokenUuid,
     triggerType

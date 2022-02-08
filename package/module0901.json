@@ -70,7 +70,7 @@
           "path": "lang/it.json"
       }
   ],
-  "minimumCoreVersion": "0.8.4",
+  "minimumCoreVersion": "0.8.8",
   "compatibleCoreVersion": "9",
   "minimumSystemVersion": "1.5.0",
   "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",
