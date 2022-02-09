@@ -451,10 +451,11 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (needsConcentration && checkConcentration) {
     const concentrationEffect = getConcentrationEffect(this.actor);
     if (concentrationEffect) {
+      const concentrationEffectName = (concentrationEffect._sourceName && concentrationEffect._sourceName !== "None") ? concentrationEffect._sourceName : false;
       shouldAllowRoll = false;
       let d = await Dialog.confirm({
         title: i18n("midi-qol.ActiveConcentrationSpell.Title"),
-        content: i18n("midi-qol.ActiveConcentrationSpell.Content"),
+        content: i18n(concentrationEffectName ? "midi-qol.ActiveConcentrationSpell.ContentNamed" : "midi-qol.ActiveConcentrationSpell.ContentGeneric").replace("@NAME@", concentrationEffectName),
         yes: () => { shouldAllowRoll = true },
       });
       if (!shouldAllowRoll) return; // user aborted spell
