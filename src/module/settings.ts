@@ -197,20 +197,21 @@ export function exportSettingsToJSON() {
 }
 
 export async function importSettingsFromJSON(json) {
-  const data = JSON.parse(json);
-  console.warn("midi-qol | Import settings ", data);
-  game.settings.set("midi-qol", "ConfigSettings", data.configSettings);
-  game.settings.set("midi-qol", "ItemRollButtons", data.itemRollButtons);
-  game.settings.set("midi-qol", "CriticalDamage", data.criticalDamage);
-  game.settings.set("midi-qol", "ItemDeleteCheck", data.itemDeleteCheck);
-  game.settings.set("midi-qol", "showGM", data.nsaFlag);
-  game.settings.set("midi-qol", "ColoredBorders", data.coloredBorders);
-  game.settings.set("midi-qol", "AddChatDamageButtons", data.addChatDamageButtons);
-  game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", data.autoFastForwardAbilityRolls);
-  game.settings.set("midi-qol", "AutoRemoveTargets", data.autoRemoveTargets);
-  game.settings.set("midi-qol", "ForceHideRoll", data.forceHideRoll);
-  game.settings.set("midi-qol", "EnableWorkflow", data.enableWorkflow);
-  game.settings.set("midi-qol", "DragDropTarget", data.dragDropTargeting);
+  if (typeof json === "string")
+    json = JSON.parse(json);
+  game.settings.set("midi-qol", "ConfigSettings", json.configSettings);
+  game.settings.set("midi-qol", "ItemRollButtons", json.itemRollButtons);
+  game.settings.set("midi-qol", "CriticalDamage", json.criticalDamage);
+  game.settings.set("midi-qol", "ItemDeleteCheck", json.itemDeleteCheck);
+  game.settings.set("midi-qol", "showGM", json.nsaFlag);
+  game.settings.set("midi-qol", "ColoredBorders", json.coloredBorders);
+  game.settings.set("midi-qol", "AddChatDamageButtons", json.addChatDamageButtons);
+  game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", json.autoFastForwardAbilityRolls);
+  game.settings.set("midi-qol", "AutoRemoveTargets", json.autoRemoveTargets);
+  game.settings.set("midi-qol", "ForceHideRoll", json.forceHideRoll);
+  game.settings.set("midi-qol", "EnableWorkflow", json.enableWorkflow);
+  game.settings.set("midi-qol", "DragDropTarget", json.dragDropTargeting);
+
 }
 
 export let fetchParams = () => {

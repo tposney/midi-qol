@@ -368,18 +368,18 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.advantage.attack.all")
   midiFlags.push("flags.midi-qol.disadvantage.attack.all")
   midiFlags.push("flags.midi-qol.critical.all")
+  midiFlags.push(`flags.midi-qol.max.damage.all`);
+  midiFlags.push(`flags.midi-qol.min.damage.all`);
   midiFlags.push("flags.midi-qol.noCritical.all")
   midiFlags.push("flags.midi-qol.fail.all")
   midiFlags.push("flags.midi-qol.fail.attack.all")
   midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
+  // TODO work out how to do grants damage.max
   midiFlags.push(`flags.midi-qol.grants.attack.success.all`);
   midiFlags.push(`flags.midi-qol.grants.attack.bonus.all`);
-
   midiFlags.push(`flags.midi-qol.grants.critical.all`);
   midiFlags.push(`flags.midi-qol.fail.critical.all`);
-  // midiFlags.push(`flags.midi-qol.maxDamage.all`); // TODO implement this
-  // midiFlags.push(`flags.midi-qol.grants.maxDamage.all`);
   midiFlags.push(`flags.midi-qol.advantage.concentration`)
   midiFlags.push(`flags.midi-qol.disadvantage.concentration`)
   midiFlags.push("flags.midi-qol.ignoreNearbyFoes");
@@ -403,10 +403,11 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.${at}`);
     midiFlags.push(`flags.midi-qol.grants.critical.${at}`);
     midiFlags.push(`flags.midi-qol.fail.critical.${at}`);
-    midiFlags.push(`flags.midi-qol.maxDamage.${at}`);
     midiFlags.push(`flags.midi-qol.grants.attack.bonus.${at}`);
     midiFlags.push(`flags.midi-qol.grants.attack.success.${at}`);
     midiFlags.push(`flags.midi-qol.DR.${at}`);
+    midiFlags.push(`flags.midi-qol.max.damage.${at}`);
+    midiFlags.push(`flags.midi-qol.min.damage.${at}`);
   });
   midiFlags.push("flags.midi-qol.advantage.ability.all");
   midiFlags.push("flags.midi-qol.advantage.ability.check.all");
@@ -418,7 +419,10 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.fail.ability.check.all");
   midiFlags.push("flags.midi-qol.fail.ability.save.all");
   midiFlags.push("flags.midi-qol.superSaver.all");
-  midiFlags.push("flags.midi-qol.MR.ability.save.all");
+  midiFlags.push("flags.midi-qol.max.ability.save.all");
+  midiFlags.push("flags.midi-qol.max.ability.check.all");
+  midiFlags.push("flags.midi-qol.min.ability.save.all");
+  midiFlags.push("flags.midi-qol.min.ability.check.all");
 
 
   //@ts-ignore CONFIG.DND5E
@@ -432,17 +436,23 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.fail.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.fail.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.superSaver.${abl}`);
-    midiFlags.push(`flags.midi-qol.MR.ability.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.max.ability.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.mim.ability.save.${abl}`);
+
 
   })
   midiFlags.push(`flags.midi-qol.advantage.skill.all`);
   midiFlags.push(`flags.midi-qol.disadvantage.skill.all`);
   midiFlags.push(`flags.midi-qol.fail.skill.all`);
+  midiFlags.push("flags.midi-qol.max.skill.all");
+  midiFlags.push("flags.midi-qol.max.skill.all");
   //@ts-ignore CONFIG.DND5E
   Object.keys(CONFIG.DND5E.skills).forEach(skill => {
     midiFlags.push(`flags.midi-qol.advantage.skill.${skill}`);
     midiFlags.push(`flags.midi-qol.disadvantage.skill.${skill}`);
     midiFlags.push(`flags.midi-qol.fail.skill.${skill}`);
+    midiFlags.push(`flags.midi-qol.max.skill.${skill}`);
+    midiFlags.push(`flags.midi-qol.min.skill.${skill}`);
   })
   midiFlags.push(`flags.midi-qol.advantage.deathSave`);
   midiFlags.push(`flags.midi-qol.disadvantage.deathSave`);

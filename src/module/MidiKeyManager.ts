@@ -104,7 +104,7 @@ export class MidiKeyManager {
       parts: undefined,
       chatMessage: undefined,
       critical: this._critical,
-      event: null,
+      event: {},
     }
   }
   get pressedKeys(): Options {
@@ -146,6 +146,12 @@ export class MidiKeyManager {
       }
     ]);
   }
+  track (status: string) {
+    //@ts-ignore
+    if (CONFIG.debug.keybindings) {
+      console.warn("midi-qol | key pressed ", status)
+    }
+  }
   initKeyMappings() {
     const worldSettings = false; // configSettings.worldKeyMappings ?? false;
     //@ts-ignore
@@ -159,8 +165,8 @@ export class MidiKeyManager {
         { key: "AltLeft" },
         { key: "AltRight" },
       ],
-      onDown: () => { this._adv = true; return false; },
-      onUp: () => { this._adv = false; return false; },
+      onDown: () => { this._adv = true; this.track("adv dowm"); return false; },
+      onUp: () => { this._adv = false; this.track("adv up"); return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });
@@ -173,8 +179,8 @@ export class MidiKeyManager {
         { key: "MetaLeft"},
         { key: "MetaRigt"}
       ],
-      onDown: () => { this._dis = true; return false; },
-      onUp: () => { this._dis = false; return false; },
+      onDown: () => { this._dis = true; this.track("dis down"); return false; },
+      onUp: () => { this._dis = false; this.track("dis up"); return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });
@@ -184,8 +190,8 @@ export class MidiKeyManager {
       hint: "midi-qol.NoOptionalRules.Hint",
       editable: [
       ],
-      onDown: () => { configSettings.toggleOptionalRules = true; return false; },
-      onUp: () => { configSettings.toggleOptionalRules = false; return false; },
+      onDown: () => { configSettings.toggleOptionalRules = true; this.track("no opt rules dowm"); return false; },
+      onUp: () => { configSettings.toggleOptionalRules = false; this.track("no opt rules up"); return false; },
       restricted: true,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });
@@ -197,8 +203,8 @@ export class MidiKeyManager {
         { key: "ShiftLeft" },
         { key: "ShiftRight" }
       ],
-      onDown: () => { this._vers = true; return false; },
-      onUp: () => { this._vers = false; return false; },
+      onDown: () => { this._vers = true; this.track("versatile dowm");return false; },
+      onUp: () => { this._vers = false; this.track("versatile up"); return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });
@@ -210,8 +216,8 @@ export class MidiKeyManager {
       editable: [
         { key: "KeyO" },
       ],
-      onDown: () => { this._other = true; return false; },
-      onUp: () => { this._other = false; return false; },
+      onDown: () => { this._other = true; this.track("roll other down"); return false; },
+      onUp: () => { this._other = false; this.track("roll other up"); return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });
@@ -227,8 +233,8 @@ export class MidiKeyManager {
         { key: "MetaRigt"}
 
       ],
-      onDown: () => { this._critical = true; return false; },
-      onUp: () => { this._critical = false; return false; },
+      onDown: () => { this._critical = true; this.track("crit dowm"); return false; },
+      onUp: () => { this._critical = false; this.track("crit up"); return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });
@@ -245,8 +251,8 @@ export class MidiKeyManager {
         { key: "AltRight", modifiers: ["Control"]}
         */
       ],
-      onDown: () => { this._rollToggle = true; return false; },
-      onUp: () => { this._rollToggle = false; return false; },
+      onDown: () => { this._rollToggle = true; this.track("roll toggle down"); return false; },
+      onUp: () => { this._rollToggle = false; this.track("roll toggle up"); return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });

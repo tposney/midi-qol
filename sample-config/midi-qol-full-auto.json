@@ -99,5 +99,11 @@
     "toggleOptionalRules": false
   },
   "addChatDamageButtons": "none",
-  "autoFastForwardAbilityRolls": true
+  "autoFastForwardAbilityRolls": true,
+  "itemRollButtons": true,
+  "itemDeleteCheck": true,
+  "nsaFlag": true,
+  "forceHideRoll": true,
+  "enableWorkflow": true,
+  "dragDropTargeting": false
 }

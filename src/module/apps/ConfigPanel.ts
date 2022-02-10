@@ -119,20 +119,19 @@ export class ConfigPanel extends FormApplication {
         if (config.codeChecks) config.codeChecks(configSettings, settingsToApply)
         showDiffs(configSettings, settingsToApply);
         settingsToApply = mergeObject(configSettings, settingsToApply, { overwrite: true, inplace: true });
+        if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", settingsToApply);
       } else if (config.fileName) {
         try {
           const jsonText = await fetchConfigFile(this.PATH + config.fileName);
           const configData = JSON.parse(jsonText);
-          settingsToApply = configData.configSettings;
-          if (configData.addChatDamageButtons !== undefined)
-            game.settings.set("midi-qol", "AddChatDamageButtons", configData.addChatDamageButtons);
-          showDiffs(configSettings, settingsToApply);
+          importSettingsFromJSON(jsonText);
+          showDiffs(configSettings, configData.configSettings);
+          return;
         } catch (err) {
           error("could not load config file", config.fileName, err);
         }
         log(`Loaded ${config.fileName} verion ${config.version}`);
       } else return;
-      if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", settingsToApply);
       this.render();
     }.bind(this))
   }
@@ -282,7 +281,12 @@ function showDiffs(current: any, changed: any, flavor: string = "") {
     let longName = i18n("midi-qol." + name + ".Name");
     if (longName.startsWith("midi-qol")) longName = name;
     debug("Show config changes: Name is ", name, key, key.startsWith("gm") ? "GM" : "", i18n(`midi-qol.${name + ".Name"}`))
-    changes.push(`${key.startsWith("gm") ? "GM " : ""}${longName} <strong>${current[key]} => ${changed[key]}</strong>`)
+    let currentVal =  current[key];
+    let changedVal = changed[key];
+    if (typeof currentVal === "object") currentVal = "Object"
+    if (typeof changedVal === "object") changedVal = "Object"
+
+    changes.push(`${key.startsWith("gm") ? "GM " : ""}${longName} <strong>${currentVal} => ${changedVal}</strong>`)
   }
   if (changes.length === 0) changes.push("No Changes");
   let d = new Dialog({
@@ -320,7 +324,6 @@ let quickSettingsDetails: any = {
       gmLateTargeting: false,
       autoItemEffects: true,
       allowUseMacro: true,
-
     },
   },
   GMManual: {

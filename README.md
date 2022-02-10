@@ -191,8 +191,14 @@ This module keeps very detailed stats about each encounter you run and is fully 
 * You can use MRE to manage accelerator keys, provided you set it to be registered first in libWrapper settings.
 * I've only done a little bit of playing with the attack/damage behaviour, but it seems to be incompatible with midi.
 
+## Advantage Reminder for dnd5e
+If you dont't fastforward rolls this does a good job of hihglightimg the default advantage/disadvantage/critical status of a roll.  
+Reminders also lets you highlight when a saving throw might meed advantage which midi can't process (e.g. advantage on poison saves).  
+Thanks to @kaelad for highlighting a midi problem, as of 0.9.11 midi is compatible with Advamtage Reminder for attack and damage rolls.
+
 # Short Guide to configuration settings
 The heading says short, but it really isn't.
+
 
 ## Workflow settings
 * **Speed Item Rolls** 
@@ -623,7 +629,7 @@ You can specify a resource to consume in the count field, e.g. @resources.tertia
 * flags.midi-qol.optional.Name.save	the bonus is added after the save roll. Requires auto fast forward		
 * flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
 
-Values for the optional roll bonus flags include a dice expression, a number, reroll (rerolling the roll completely) or success which changes the roll to 99 ensuring success.
+Values for the optional roll bonus flags include a dice expression (added to the roll), a number, reroll (rerolling the roll completely) reroll-max, reroll-min (reroll with max dice or min dice) or success which changes the roll to 99 ensuring success.
 
 ## Spell Sculpting: flags.midi-qol.sculptSpell
 If a spell caster with flags.midi-qol.sculptSpell set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 damage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.

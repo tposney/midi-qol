@@ -91,23 +91,38 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
-  0.9.10
+  0.9.11
+  * Fix for TrapWorkflow setter only error.
+  * Fix for showing hit result to players without merge card being used.
+  * Fix for broken flags.midi-qol.crticial.EVERYTHING., fags.midi-qol.grants.critical.EVERYTHING. These flags omly apply if exactly one target is hit.
+  * Fix for stuck advantage/disadvantage when rerolling an item from the chat card.
+  * Allow optional.Name.skill.acr etc to trigger only on acrobatics etc skill rolls
+  * Allow optional.Name.save.dex etc to trigger only of dex etc saving throws.
+  * Allow optional.Name.check.dex etc to trigger only of dex etc ability checks.
+  * Support reroll-max and reroll-min in flags.midi-qol.optional.NAME.XXX to reroll with max or min dice,
+  * Added flags.midi-qol.max.damage.all.mwak/etc which forces maximum rolls on all dice terms. (grants to follow)
+  * Added flags.midi-qol.max/min.ability.check/save/skill.all/abilityid/skillId to maximise check/save/skill rolls.
+  * Pass through dialogOptions in rollDamage and rollAttack.
+  * Dom't pass a null event to any of the item roll calls.
+  * Comcemtration checks now list the effect that has concentration when prompting for removal. Thanks spappz.
+
+    0.9.10
   * Fix for template error in midi-qol settings template.
 
   0.9.09
-  * Make the suspend options rules key actually only avilable to the GM, not all players.
-  * Some GMs dont want their players to knwo if the baddy saving had advantage or not, so there is a new setting in the saves section of the workflow tab 
+  * Make the suspend options rules key actually only available to the GM, not all players.
+  * Some GMs don't want their players to know if the baddy saving had advantage or not, so there is a new setting in the saves section of the workflow tab 
     - "Display if save had advantage/disadvantage" (default true).
   * Correct keyboard adv/dis interaction with flags adv/dis.
   * Another tweak to the fix sticky rolls. This one seems to work perfectly with Token Action Hud.
   * First release of Midi Qol Quick Settings (treat as experimental and export your settings before playing to be safe). Idea for this thanks to @MrPrimate
     - Provides a way to set a group of settings in midi to achieve a desired configuration.
-    - When these are applied a dialog is displayed showing what seting changes were made.
-    - There are 2 "full" configurations "Full Auto" and "All Manual", both of which overwrite the entire configuration setttings when activated.
-    - There are a small numbeer (seeking feedback on what else would be useful) of sub groups that achieve specific settings, for example GM Auto/Manual rolls will set a group of midi settings in what I think might be a sensible configuration for GM auto/Manual rolls. These can be applied without (hopefully) disturbing other configuration details.
+    - When these are applied a dialog is displayed showing what setting changes were made.
+    - There are 2 "full" configurations "Full Auto" and "All Manual", both of which overwrite the entire configuration settings when activated.
+    - There are a small number (seeking feedback on what else would be useful) of sub groups that achieve specific settings, for example GM Auto/Manual rolls will set a group of midi settings in what I think might be a sensible configuration for GM auto/Manual rolls. These can be applied without (hopefully) disturbing other configuration details.
     - I'm actively seeking feedback on whether this is useful and what else should be added. Primarily looking for feedback from users who are not all that comfortable with the midi settings or new to midi.
-
-    0.9.08
+    
+  0.9.08
   * Fix for "skipping consume dialog setting" enabled throwing an error.
   * Fix for overtimeEffects when better rolls enabled.
   * Removed the over eager custom sound effects from every workflow settings tab.

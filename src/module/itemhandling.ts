@@ -1,16 +1,28 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled, log, debugCallTiming } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 
-export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true, fastForward: false, advantage: false, disadvantage: false }) {
+export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true, fastForward: false, advantage: false, disadvantage: false, dialogOptions: {} }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
   // if rerolling the attack re-record the rollToggle key.
-  if (workflow?.attackRoll) workflow.itemRollToggle = globalThis.MidiKeyManager.pressedKeys.rollToggle;
+  if (workflow?.attackRoll) {
+    workflow.advantage = false;
+    workflow.disadvantage = false;
+    workflow.itemRollToggle = globalThis.MidiKeyManager.pressedKeys.rollToggle;
+    if (workflow) {
+      workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.itemRollToggle), { overwrite: true, insertValues: true, insertKeys: true });
+    }
+  }
   if (workflow && !workflow.autoRollAttack) {
-    mergeObject(workflow.rollOptions, mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.itemRollToggle), { inplace: true, overwrite: true });
+    workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.itemRollToggle), { overwrite: true, insertValues: true, insertKeys: true });
+  }
+  //@ts-ignore
+  if (CONFIG.debug.keybindings) {
+    log("itemhandling: workflow.rolloptions", workflow.rollOption);
+    log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.itemRollToggle));
   }
   const attackRollStart = Date.now();
   if (debugEnabled > 1) debug("Entering item attack roll ", event, workflow, Workflow._workflows);
@@ -51,7 +63,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
 
   //@ts-ignore
   if (game.user.isGM && workflow.useActiveDefence) {
-    let result: Roll = await wrapped({
+    let result: Roll = await wrapped(mergeObject(options, {
       advantage: false,
       disadvantage: workflow.rollOptions.disadvantage,
       chatMessage: false,
@@ -59,17 +71,17 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
       messageData: {
         speaker: getSpeaker(this.actor)
       }
-    });
+    }, { oveerwrite: true, insertKeys: true, insertValues: true }));
     return workflow.activeDefence(this, result);
   }
-  let advantage = workflow?.advantage || workflow.rollOptions.advantage;
-  let disadvantage = workflow?.disadvantage || workflow.rollOptions.disadvantage;
+  let advantage = options.advantage || workflow?.advantage || workflow?.rollOptions.advantage;
+  let disadvantage = options.disadvantage || workflow?.disadvantage || workflow.rollOptions.disadvantage;
   if (advantage && disadvantage) {
     advantage = false;
     disadvantage = false;
   }
   const wrappedRollStart = Date.now();
-  let result: Roll = await wrapped({
+  let result: Roll = await wrapped(mergeObject(options, {
     advantage,
     disadvantage,
     chatMessage: (["TrapWorkflow", "Workflow"].includes(workflow.workflowType)) ? false : options.chatMessage,
@@ -77,8 +89,10 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     messageData: {
       speaker: getSpeaker(this.actor)
     }
+  },
+    { insertKeys: true, overwrite: true }
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
-  });
+  ));
   if (debugCallTiming) log(`wrapped item.rollAttack():  elapsed ${Date.now() - wrappedRollStart}`);
 
   if (!result) return result;
@@ -88,7 +102,12 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     // we are rolling this for better rolls
     return result;
   }
-
+  const maxflags = getProperty(workflow.actor.data.flags, "midi-qol.max") ?? {};
+  if ((maxflags.attack && (maxflags.attack.all || maxflags.attack[this.data.data.actionType])) ?? false)
+    result = await result.reroll({ maximize: true });
+  const minflags = getProperty(this.data.flags, "midi-qol.min") ?? {};
+  if ((minflags.attack && (minflags.attack.all || minflags.attack[this.data.data.actionType])) ?? false)
+    result = await result.reroll({ minimize: true })
   workflow.attackRoll = result;
   workflow.ammo = this._ammo;
   result = await processAttackRollBonusFlags.bind(workflow)();
@@ -149,7 +168,13 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
     //@ts-ignore .fastForward
     if (options.fastForward) workflow.rollOptions.fastForwardDamage = options.fastForward;
   } else if (workflow && !workflow.shouldRollDamage) // if we did not auto roll then process any keys
-    mergeObject(workflow.rollOptions, mapSpeedKeys(pressedKeys, "damage", workflow.itemRollToggle), { inplace: true, overwrite: true });
+    workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(pressedKeys, "damage", workflow.itemRollToggle), { insertKeys: true, insertValues: true,  overwrite: true });
+      //@ts-ignore
+  if (CONFIG.debug.keybindings) {
+    log("itemhandling: workflow.rolloptions", workflow.rollOption);
+    log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.itemRollToggle));
+  }
+
   if (workflow?.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
 
   const damageRollStart = Date.now();
@@ -211,18 +236,19 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   const wrappedRollStart = Date.now();
   let result: Roll;
   if (!workflow.rollOptions.other) {
-    result = await wrapped({
+    result = await wrapped(mergeObject(options, {
       critical: workflow.rollOptions.critical || workflow.isCritical,
       spellLevel: workflow.rollOptions.spellLevel,
       powerLevel: workflow.rollOptions.spellLevel,
       versatile: workflow.rollOptions.versatile || versatile,
       fastForward: workflow.rollOptions.fastForwardDamage,
       event: {},
+      //@ts-ignore
       options: {
         fastForward: workflow.rollOptions.fastForwardDamage,
-        chatMessage: false //!configSettings.mergeCard
+        chatMessage: false
       }
-    })
+    }, { overwrite: true, insertKeys: true, insertValues: true }));
     if (debugCallTiming) log(`wrapped item.rollDamage():  elapsed ${Date.now() - wrappedRollStart}`);
   } else {
     //@ts-ignore
@@ -232,6 +258,12 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   if (!result) { // user backed out of damage roll or roll failed
     return;
   }
+  const maxflags = getProperty(workflow.actor.data.flags, "midi-qol.max") ?? {};
+  if ((maxflags.damage && (maxflags.damage.all || maxflags.damage[this.data.data.actionType])) ?? false)
+    result = await result.reroll({ maximize: true });
+  const minflags = getProperty(this.data.flags, "midi-qol.min") ?? {};
+  if ((minflags.damage && (minflags.damage.all || minflags.damage[this.data.data.actionType])) ?? false)
+    result = await result.reroll({ minimize: true })
   // need to do this nonsense since the returned roll _formula has a trailing + for ammo
   result = Roll.fromJSON(JSON.stringify(result.toJSON()))
   workflow.damageRoll = result;
@@ -244,29 +276,15 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   workflow.shouldRollOtherDamage = shouldRollOtherDamage.bind(this)(workflow, configSettings.rollOtherDamage, configSettings.rollOtherSpellDamage);
 
   if (workflow.shouldRollOtherDamage) {
-    if ((workflow.otherDamageFormula ?? "") !== "") {
+    if ((workflow.otherDamageFormula ?? "") !== "") { // other damage formula swaps in versatile if needed
       //@ts-ignore
-      otherResult = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: (this.data.data.properties?.critOther ?? true) && (workflow.isCritical || workflow.rollOptions.critical) });
+      otherResult = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: (this.data.data.properties?.critOther ?? false) && (workflow.isCritical || workflow.rollOptions.critical) });
       otherResult = await otherResult?.evaluate({ async: true });
-      // otherResult = new Roll(workflow.otherDamageFormula, workflow.actor?.getRollData()).roll();
-    } /* else if (this.isVersatile && this.type === "weapon" && !this.data.data.properties?.ver) {
-      otherResult = await wrapped({
-        // roll the versatile damage if there is a versatile damage field and the weapn is not marked versatile
-        // TODO review this is the SRD monsters change the way extra damage is represented
-        critical: this.data.data.properties?.critOther && (workflow.isCritical || workflow.rollOptions.critical),
-        powerLevel: workflow.rollOptions.spellLevel,
-        spellLevel: workflow.rollOptions.spellLevel,
-        versatile: true,
-        fastForward: true,
-        event: {},
-        // "data.default": (workflow.rollOptions.critical || workflow.isCritical) ? "critical" : "normal",
-        options: {
-          fastForward: true,
-          chatMessage: false //!configSettings.mergeCard,
-        }
-      });
+      if ((maxflags.damage && (maxflags.damage.all || maxflags.damage[this.data.data.actionType])) ?? false)
+        otherResult = await otherResult?.reroll({ maximize: true });
+      if ((minflags.damage && (minflags.damage.all || minflags.damage[this.data.data.actionType])) ?? false)
+        otherResult = await otherResult?.reroll({ minimize: true })
     }
-    */
   }
   if (!configSettings.mergeCard) {
     let actionFlavor;
@@ -451,7 +469,9 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (needsConcentration && checkConcentration) {
     const concentrationEffect = getConcentrationEffect(this.actor);
     if (concentrationEffect) {
-      const concentrationEffectName = (concentrationEffect._sourceName && concentrationEffect._sourceName !== "None") ? concentrationEffect._sourceName : false;
+      //@ts-ignore
+      const concentrationEffectName = (concentrationEffect._sourceName && concentrationEffect._sourceName !== "None") ? concentrationEffect._sourceName : "";
+
       shouldAllowRoll = false;
       let d = await Dialog.confirm({
         title: i18n("midi-qol.ActiveConcentrationSpell.Title"),

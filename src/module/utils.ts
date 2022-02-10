@@ -1544,8 +1544,8 @@ class RollModifyDialog extends Application {
       const flagData = getProperty(this.data.actor.data, flag);
       obj[randomID()] = {
         icon: '<i class="fas fa-dice-d20"></i>',
-        label: (flagData.label ?? "Bonus") + `  (${flagData[this.data.flagSelector] ?? "0"})`,
-        value: flagData[this.data.flagSelector] ?? "0",
+        label: (flagData.label ?? "Bonus") + `  (${getProperty(flagData, this.data.flagSelector) ?? "0"})`,
+        value: getProperty(flagData, this.data.flagSelector) ?? "0",
         key: flag,
         callback: this.data.callback
       }
@@ -1561,10 +1561,10 @@ class RollModifyDialog extends Application {
   activateListeners(html) {
     html.find(".dialog-button").click(this._onClickButton.bind(this));
     $(document).on('keydown.chooseDefault', this._onKeyDown.bind(this));
-    // if ( this.data.render instanceof Function ) this.data.render(this.options.jQuery ? html : html[0]);
   }
 
   _onClickButton(event) {
+    const oneUse = true;
     const id = event.currentTarget.dataset.button;
     const button = this.data.buttons[id];
     this.submit(button);
@@ -1575,7 +1575,6 @@ class RollModifyDialog extends Application {
     if (event.key === "Escape" || event.key === "Enter") {
       event.preventDefault();
       event.stopPropagation();
-      if (this.data.close) this.data.close();
       this.close();
     }
   }
@@ -1637,13 +1636,15 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
     const callback = async (dialog, button) => {
       if (!hasEffectGranting(this.actor, button.key, flagSelector)) return;
       var newRoll;
-      if (button.value === "reroll") {
-        newRoll = await this[rollId].reroll({ async: true });
-      } else if (button.value === "success") {
-        newRoll = await new Roll("99").evaluate({ async: true })
-      } else {
+      switch (button.value) {
+      case "reroll": newRoll = await this[rollId].reroll({ async: true }); break;
+      case "reroll-max": newRoll = await this[rollId].reroll({ async: true, maximize: true }); break;
+      case "reroll-min": newRoll = await this[rollId].reroll({ async: true, minimize: true }); break;
+      case "success": newRoll = await new Roll("99").evaluate({ async: true }); break;
+      default: 
         newRoll = new Roll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData());
-        newRoll = await newRoll.evaluate({ async: true })
+        newRoll = await newRoll.evaluate({ async: true });
+        break;
       }
       this[rollId] = newRoll;
       this[rollTotalId] = newRoll.total;
@@ -1651,6 +1652,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       dialog.data.rollHTML = this[rollHTMLId];
       await removeEffectGranting(this.actor, button.key);
       this.actor.prepareData();
+      dialog.close();
     }
 
     const dialog = new RollModifyDialog(

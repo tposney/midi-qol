@@ -43,23 +43,33 @@ export interface Options {
   fastForwardAbility: boolean | undefined,
 };
 
-async function bonusCheck(actor, result: Roll, checkName): Promise<Roll> {
+async function bonusCheck(actor, result: Roll, category, detail): Promise<Roll> {
   if (!installedModules.get("betterrolls5e")) {
+    let useDetail = false;
     const bonusFlags = Object.keys(actor.data.flags["midi-qol"]?.optional ?? [])
       .filter(flag => {
-        if (!actor.data.flags["midi-qol"].optional[flag][checkName]) return false;
+        const checkFlag = actor.data.flags["midi-qol"].optional[flag][category];
+        if (!checkFlag) return false;
+        if (!(typeof checkFlag === "string" || checkFlag[detail])) return false;
+        if (typeof checkFlag !== "string") useDetail = true;
         if (!actor.data.flags["midi-qol"].optional[flag].count) return true;
         return getOptionalCountRemainingShortFlag(actor, flag) > 0;
       })
-      .map(flag => `flags.midi-qol.optional.${flag}`);
+      .map(flag => {
+        const checkFlag = actor.data.flags["midi-qol"].optional[flag][category];
+        if (typeof checkFlag === "string") return `flags.midi-qol.optional.${flag}`;
+        else return `flags.midi-qol.optional.${flag}`;
+      });
     if (bonusFlags.length > 0) {
       const data = {
         actor,
         roll: result,
         rollHTML: await result.render(),
         rollTotal: result.total,
+        category,
+        detail
       }
-      await bonusDialog.bind(data)(bonusFlags, checkName, true, `${actor.name} - ${i18n("midi-qol.ability-check")}`, "roll", "rollTotal", "rollHTML")
+      await bonusDialog.bind(data)(bonusFlags, useDetail ? `${category}.${detail}` : category, true, `${actor.name} - ${i18n("midi-qol.ability-check")}`, "roll", "rollTotal", "rollHTML")
       result = data.roll;
     }
   }
@@ -67,9 +77,9 @@ async function bonusCheck(actor, result: Roll, checkName): Promise<Roll> {
 }
 
 async function doRollSkill(wrapped, ...args) {
-  const [skillId, options = { event: {}, parts: [], avantage: false, disadvantage: false }] = args;
+  let [skillId, options = { event: {}, parts: [], avantage: false, disadvantage: false }] = args;
   const chatMessage = options.chatMessage;
-  mergeObject(options, mapSpeedKeys(null, "ability"), {inplace: true, overwrite: true});
+  options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
   options.event = {};
   let procOptions: Options = procAdvantage(this, "check", this.data.data.skills[skillId].ability, options)
   procOptions = procAdvantageSkill(this, skillId, procOptions);
@@ -91,8 +101,15 @@ async function doRollSkill(wrapped, ...args) {
   }
   procOptions.chatMessage = false;
   let result = await wrapped.call(this, skillId, procOptions);
-  let newResult = await bonusCheck(this, result, "skill")
-  if (newResult === result) newResult = await bonusCheck(this, result, "check");
+  const maxflags = getProperty(this.data.flags, "midi-qol.max.ability") ?? {};
+  if ((maxflags.skill && (maxflags.skill.all || maxflags.check[skillId])) ?? false)
+    result = await result.reroll({ maximize: true });
+  const minflags = getProperty(this.data.flags, "midi-qol.min.ability") ?? {};
+  if ((minflags.skill && (minflags.skill.all || minflags.skill[skillId])) ?? false)
+    result = await result.reroll({ minimize: true })
+  let newResult = await bonusCheck(this, result, "skill", skillId);
+  const abl = this.data.data.skills[skillId].ability;
+  if (newResult === result) newResult = await bonusCheck(this, result, "check", abl);
   result = newResult;
   if (chatMessage !== false && result) {
     const args = { "speaker": getSpeaker(this) };
@@ -105,8 +122,8 @@ async function doRollSkill(wrapped, ...args) {
 }
 
 function rollDeathSave(wrapped, ...args) {
-  const [options] = args;
-  mergeObject(options, mapSpeedKeys(null, "ability"), {inplace: true, overwrite: true});
+  let [options] = args;
+  options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
   options.event = {};
   const advFlags = getProperty(this.data.flags, "midi-qol")?.advantage ?? {};
   const disFlags = getProperty(this.data.flags, "midi-qol")?.disadvantage ?? {};
@@ -192,15 +209,18 @@ function configureDamage(wrapped) {
 }
 
 async function rollAbilityTest(wrapped, ...args) {
-  const [abilityId, options = { event: {}, parts: [], chatMessage: undefined }] = args;
+  let [abilityId, options = { event: {}, parts: [], chatMessage: undefined }] = args;
   const chatMessage = options.chatMessage;
   if (procAutoFail(this, "check", abilityId)) options.parts = ["-100"];
-  mergeObject(options, mapSpeedKeys(null, "ability"), {inplace: true, overwrite: true});
+  options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
   options.event = {};
-  let procOptions = procAdvantage(this, "check", abilityId, options);
+  let procOptions: any = procAdvantage(this, "check", abilityId, options);
 
-  const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
-  const minimumRoll = (flags.check && (flags.check.all || flags.save[abilityId])) ?? 0;
+  if (procOptions.advantage && procOptions.disadvantage) {
+    procOptions.advantage = false;
+    procOptions.disadvantage = false;
+  }
+
   if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
     let event = {};
     if (procOptions.advantage) event = { shiftKey: true };
@@ -211,7 +231,13 @@ async function rollAbilityTest(wrapped, ...args) {
   }
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
-  result = await bonusCheck(this, result, "check")
+  const maxflags = getProperty(this.data.flags, "midi-qol.max.ability") ?? {};
+  if ((maxflags.check && (maxflags.check.all || maxflags.check[abilityId])) ?? false)
+    result = await result.reroll({ maximize: true });
+  const minflags = getProperty(this.data.flags, "midi-qol.min.ability") ?? {};
+  if ((minflags.check && (minflags.check.all || minflags.check[abilityId])) ?? false)
+    result = await result.reroll({ minimize: true })
+  result = await bonusCheck(this, result, "check", abilityId)
   if (chatMessage !== false && result) {
     const args = { "speaker": getSpeaker(this) };
     setProperty(args, "flags.dnd5e.roll", { type: "ability", abilityId });
@@ -223,22 +249,21 @@ async function rollAbilityTest(wrapped, ...args) {
 }
 
 async function rollAbilitySave(wrapped, ...args) {
-  const [abilityId, options = { event: {}, parts: [], chatMessage: undefined }] = args;
+  let [abilityId, options = { event: {}, parts: [], chatMessage: undefined }] = args;
   if (procAutoFail(this, "save", abilityId)) {
     options.parts = ["-100"];
   }
-
   const chatMessage = options.chatMessage;
-  mergeObject(options, mapSpeedKeys(null, "ability"), {inplace: true, overwrite: true});
+  options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
   options.event = {};
-  let procOptions = procAdvantage(this, "save", abilityId, options);
+  let procOptions: any = procAdvantage(this, "save", abilityId, options);
+
+
+
   if (procOptions.advantage && procOptions.disadvantage) {
     procOptions.advantage = false;
     procOptions.disadvantage = false;
   }
-
-  const flags = getProperty(this.data.flags, "midi-qol.MR.ability") ?? {};
-  const minimumRoll = (flags.save && (flags.save.all || flags.save[abilityId])) ?? 0;
 
   if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
     let event = {};
@@ -250,7 +275,13 @@ async function rollAbilitySave(wrapped, ...args) {
   }
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
-  result = await bonusCheck(this, result, "save")
+  const maxflags = getProperty(this.data.flags, "midi-qol.max.ability") ?? {};
+  if ((maxflags.save && (maxflags.save.all || maxflags.save[abilityId])) ?? false)
+    result = await result.reroll({ maximize: true });
+  const minflags = getProperty(this.data.flags, "midi-qol.min.ability") ?? {};
+  if ((minflags.save && (minflags.save.all || minflags.save[abilityId])) ?? false)
+    result = await result.reroll({ minimize: true })
+  result = await bonusCheck(this, result, "save", abilityId)
   if (chatMessage !== false && result) {
     const args = { "speaker": getSpeaker(this) };
     setProperty(args, "flags.dnd5e.roll", { type: "save", abilityId });
@@ -294,11 +325,11 @@ export function procAdvantage(actor, rollType, abilityId, options: Options): Opt
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const advantage = midiFlags.advantage ?? {};
   const disadvantage = midiFlags.disadvantage ?? {};
-  var withAdvantage = options.event?.altKey || options.advantage;
-  var withDisadvantage = options.event?.ctrlKey || options.event?.metaKey || options.disadvantage;
+  var withAdvantage = options.advantage;
+  var withDisadvantage = options.disadvantage;
 
   //options.fastForward = options.fastForward || (autoFastForwardAbilityRolls ? !options.event?.fastKey : options.event?.fastKey);
-  
+
   options.fastForward = options.fastForward || options.event?.fastKey;
   if (advantage.ability || advantage.all) {
     const rollFlags = (advantage.ability && advantage.ability[rollType]) ?? {};
@@ -338,7 +369,7 @@ function _midiATIRefresh(template) {
   if (!canvas?.tokens) return;
   if (configSettings.autoTarget === "none") return;
   if (configSettings.autoTarget === "dfqol" && installedModules.get("df-qol"))
-   return; // df-qol will handle template tagerting.
+    return; // df-qol will handle template tagerting.
   if (installedModules.get("levelsvolumetrictemplates")) {
     // Filter which tokens to pass - not too far and not blocked by a wall.
     let distance = template.data.distance;
@@ -398,7 +429,7 @@ export function _prepareActorData(wrapped, ...args) {
     if (checkRule("challengeModeArrmorScale")) {
       switch (armorDetails.calc) {
         case 'flat':
-            armorAC = (ac.flat ?? 10) - this.data.data.abilities.dex.mod;
+          armorAC = (ac.flat ?? 10) - this.data.data.abilities.dex.mod;
           break;
         case 'draconic': armorAC = 13; break;
         case 'natural': armorAC = (armorDetails.value ?? 10) - this.data.data.abilities.dex.mod; break;
@@ -483,7 +514,7 @@ export function _getInitiativeFormula(wrapped) {
     disadv = disadv || flags.disadvantage.all || flags.disadvantage.ability?.check?.all || flags.disadvantage.ability?.check?.dex
   }
   if (!disadv && !adv) return original;
-  if ( !actor ) return "1d20";
+  if (!actor) return "1d20";
   const actorData = actor.data.data;
   const init = actorData.attributes.init;
   const rollData = actor.getRollData();
@@ -509,28 +540,28 @@ export function _getInitiativeFormula(wrapped) {
   // Ability Check Bonuses
   const dexCheckBonus = actorData.abilities.dex.bonuses?.check;
   const globalCheckBonus = actorData.bonuses?.abilities?.check;
-  if ( dexCheckBonus ) parts.push(Roll.replaceFormulaData(dexCheckBonus, rollData));
-  if ( globalCheckBonus ) parts.push(Roll.replaceFormulaData(globalCheckBonus, rollData));
+  if (dexCheckBonus) parts.push(Roll.replaceFormulaData(dexCheckBonus, rollData));
+  if (globalCheckBonus) parts.push(Roll.replaceFormulaData(globalCheckBonus, rollData));
 
   // Optionally apply Dexterity tiebreaker
   const tiebreaker = game.settings.get("dnd5e", "initiativeDexTiebreaker");
-  if ( tiebreaker ) parts.push(actor.data.data.abilities.dex.value / 100);
+  if (tiebreaker) parts.push(actor.data.data.abilities.dex.value / 100);
   return parts.filter(p => p !== null).join(" + ");
 };
 
 export function readyPatching() {
   // TODO remove this when v9 default
   if (game.system.id === "dnd5e") {
-  	libWrapper.register("midi-qol", "game.dnd5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
-  	libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
+    libWrapper.register("midi-qol", "game.dnd5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
+    libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
   } else { // TDOD find out what itemsheet5e is called in sw5e
-  	libWrapper.register("midi-qol", "game.sw5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
-  	libWrapper.register("midi-qol", "game.sw5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
+    libWrapper.register("midi-qol", "game.sw5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
+    libWrapper.register("midi-qol", "game.sw5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
   }
   libWrapper.register("midi-qol", "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
   Notifications
   libWrapper.register("midi-qol", "Notifications.prototype.notify", notificationNotify, "MIXED");
-  libWrapper.register("midi-qol", "Combatant.prototype._getInitiativeFormula",_getInitiativeFormula, "WRAPPER");
+  libWrapper.register("midi-qol", "Combatant.prototype._getInitiativeFormula", _getInitiativeFormula, "WRAPPER");
 }
 
 export let visionPatching = () => {

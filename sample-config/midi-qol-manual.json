@@ -107,12 +107,10 @@
   "itemRollButtons": true,
   "criticalDamage": "default",
   "itemDeleteCheck": true,
-  "nsaFlag": false,
-  "coloredBorders": "none",
   "addChatDamageButtons": "both",
   "autoFastForwardAbilityRolls": false,
-  "autoRemoveTargets": "all",
-  "forceHideRoll": true,
+  "autoRemoveTargets": "none",
+  "forceHideRoll": false,
   "enableWorkflow": true,
   "dragDropTargeting": false
 }
