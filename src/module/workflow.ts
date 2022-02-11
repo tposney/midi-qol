@@ -871,8 +871,8 @@ export class Workflow {
 
   public processDamageEventOptions() {
     if (this.workflowType === "TrapWorkflow") {
-      this.options.fastForward = true;
       this.rollOptions.fastForward = true;
+      this.rollOptions.fastForwardAttack = true;
       this.rollOptions.fastForwardDamage = true;
     }
   }
@@ -1199,6 +1199,9 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
                   ${itemMacro.data.command}
 }); `))().call(this, { speaker, actor, token, character, item, args });
       } else {
+        macroData.speaker = this.speaker;
+        macroData.actor = this.actor;
+
         const macroCommand = game.macros?.getName(name);
         if (macroCommand) {
           return macroCommand.execute(macroData);
@@ -2380,7 +2383,7 @@ export class DamageOnlyWorkflow extends Workflow {
         const whisperCard = configSettings.autoCheckHit === "whisper" || game.settings.get("core", "rollMode") === "blindroll";
         await this.displayHits(whisperCard, configSettings.mergeCard && this.itemCardId);
 
-        if (this.actor && this.item) { // Hacky process bonus flags
+        if (this.actor) { // Hacky process bonus flags
           this.damageRoll = await processDamageRollBonusFlags.bind(this)();
           this.damageTotal = this.damageRoll?.total ?? 0;
           this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });

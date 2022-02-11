@@ -12,16 +12,13 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     workflow.advantage = false;
     workflow.disadvantage = false;
     workflow.itemRollToggle = globalThis.MidiKeyManager.pressedKeys.rollToggle;
-    if (workflow) {
-      workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.itemRollToggle), { overwrite: true, insertValues: true, insertKeys: true });
-    }
   }
-  if (workflow && !workflow.autoRollAttack) {
+  if (workflow) {
     workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.itemRollToggle), { overwrite: true, insertValues: true, insertKeys: true });
   }
   //@ts-ignore
   if (CONFIG.debug.keybindings) {
-    log("itemhandling: workflow.rolloptions", workflow.rollOption);
+    log("itemhandling doAttackRoll: workflow.rolloptions", workflow.rollOption);
     log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.itemRollToggle));
   }
   const attackRollStart = Date.now();
@@ -36,7 +33,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     if (this.data.data.target?.type === self) {
       workflow.targets = getSelfTargetSet(this.actor)
     } else if (game.user?.targets?.size ?? 0 > 0) workflow.targets = validTargetTokens(game.user?.targets);
-    if (workflow?.attackRoll) { // we are re-rolling the attack.
+    if (workflow?.attackRoll && workflow.currentState === WORKFLOWSTATES.ROLLFINISHED) { // we are re-rolling the attack.
       workflow.damageRoll = undefined;
       await Workflow.removeAttackDamageButtons(this.id)
       workflow.itemCardId = (await showItemCard.bind(this)(false, workflow, false, true)).id;
@@ -457,7 +454,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       return null;
     }
   }
-  if (["reaction", "reactiondamage", "reactiondanual"].includes(this.data.data.activation?.type) && getConvenientEffectsReaction()) {
+  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type) && getConvenientEffectsReaction()) {
     //@ts-ignore
     if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, this.actor.uuid)) {
       ui.notifications?.warn(i18n("midi-qol.ReactionAlreadyUsed"));
@@ -499,7 +496,9 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     const result = await wrapped(options);
     return result;
   }
-  workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys });
+  workflow = Workflow.getWorkflow(this.uuid);
+  if (!workflow || workflow.currentState === WORKFLOWSTATES.ROLLFINISHED)
+    workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys });
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = showFullCard;

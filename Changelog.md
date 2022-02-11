@@ -1,7 +1,15 @@
+### 0.9.12
+* Fix for typo in reaction processing for reaction manual.
+* Fix for trapworkflows - again.
+* Removed requirement for itemData being passed to damageonlyworflows to trigger bonus features.
+* Fix for challenge mode armor AC.AR/AC/ER not being modifiable from active effects.
+* Fix for macro.execute to make sure actor and token are available inside the macro.
+* Small tweak if you are not auto rolling damage. If the roll is not complete(i.e. you have not rolled damage) you ca re-roll the attack and the chat card will update (i.e. you forgot advantage or some such) and the workflow will continue form then on. The only change is that the chat card will update rather, than displaying another chat card
+
 ### 0.9.11
 * Fix for TrapWorkflow setter only error.
-* Fix for showing hit result to players without merge card being used.
-* Fix for broken flags.midi-qol.crticial.EVERYTHING., fags.midi-qol.grants.critical.EVERYTHING. These flags omly apply if exactly one target is hit.
+* Fix for showing hit result to players (when it should be hidden) when merge card not being used.
+* Fix for broken flags.midi-qol.crticial.EVERYTHING., fags.midi-qol.grants.critical.EVERYTHING. These flags only apply if exactly one target is hit.
 * Fix for stuck advantage/disadvantage when rerolling an item from the chat card.
 * Allow optional.Name.skill.acr etc to trigger only on acrobatics etc skill rolls
 * Allow optional.Name.save.dex etc to trigger only of dex etc saving throws.
@@ -10,8 +18,8 @@
 * Added flags.midi-qol.max.damage.all.mwak/etc which forces maximum rolls on all dice terms. (grants to follow)
 * Added flags.midi-qol.max/min.ability.check/save/skill.all/abilityid/skillId to maximise check/save/skill rolls.
 * Pass through dialogOptions in rollDamage and rollAttack.
-* Dom't pass a null event to any of the item roll calls.
-* Comcemtration checks now list the effect that has concentration when prompting for removal. Thanks spappz.
+* Don't pass a null event to any of the item roll calls.
+* Concentration checks now list the effect that has concentration when prompting for removal. Thanks spappz.
 
 ### 0.9.10
   0.9.10

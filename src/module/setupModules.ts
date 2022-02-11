@@ -93,8 +93,8 @@ Hooks.once('libChangelogsReady', function() {
   libChangelogs.register("midi-qol",`
   0.9.11
   * Fix for TrapWorkflow setter only error.
-  * Fix for showing hit result to players without merge card being used.
-  * Fix for broken flags.midi-qol.crticial.EVERYTHING., fags.midi-qol.grants.critical.EVERYTHING. These flags omly apply if exactly one target is hit.
+  * Fix for showing hit result to players (when it should be hidden) when merge card not being used.
+  * Fix for broken flags.midi-qol.crticial.EVERYTHING., fags.midi-qol.grants.critical.EVERYTHING. These flags only apply if exactly one target is hit.
   * Fix for stuck advantage/disadvantage when rerolling an item from the chat card.
   * Allow optional.Name.skill.acr etc to trigger only on acrobatics etc skill rolls
   * Allow optional.Name.save.dex etc to trigger only of dex etc saving throws.
@@ -103,8 +103,8 @@ Hooks.once('libChangelogsReady', function() {
   * Added flags.midi-qol.max.damage.all.mwak/etc which forces maximum rolls on all dice terms. (grants to follow)
   * Added flags.midi-qol.max/min.ability.check/save/skill.all/abilityid/skillId to maximise check/save/skill rolls.
   * Pass through dialogOptions in rollDamage and rollAttack.
-  * Dom't pass a null event to any of the item roll calls.
-  * Comcemtration checks now list the effect that has concentration when prompting for removal. Thanks spappz.
+  * Do't pass a null event to any of the item roll calls.
+  * Concentration checks now list the effect that has concentration when prompting for removal. Thanks spappz.
 
     0.9.10
   * Fix for template error in midi-qol settings template.

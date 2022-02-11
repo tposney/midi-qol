@@ -415,7 +415,7 @@ function midiATRefresh(wrapped) {
   return wrapped();
 }
 
-export function _prepareActorData(wrapped, ...args) {
+export function _prepareDerivedData(wrapped, ...args) {
   wrapped(...args);
 
   if (checkRule("challengeModeArmor")) {
@@ -456,7 +456,7 @@ export function _prepareActorData(wrapped, ...args) {
 
 export function initPatching() {
   libWrapper = globalThis.libWrapper;
-  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareData", _prepareActorData, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
   // For new onuse macros stuff.
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.prepareData", _prepareItemData, "WRAPPER");
 }
