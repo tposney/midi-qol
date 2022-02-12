@@ -1,3 +1,7 @@
+### 0.9.13
+* Fix for quick inserts causing midi to think control key was left on.
+* Added Item effects take priority when  choosing to apply convenient effects.
+
 ### 0.9.12
 * Fix for typo in reaction processing for reaction manual.
 * Fix for trapworkflows - again.

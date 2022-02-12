@@ -315,7 +315,8 @@ export function initHooks() {
           const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOff") ?? false;
           const effect = `<div class="form-group"><label>${offLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOff" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`
           element.append(effect)
-        } else {
+        } 
+        if (["none", "itempri"].includes(configSettings.autoCEEffects)) {
           const onLabel = i18n("midi-qol.convenientEffectsOn");
           const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOn") ?? false;
           const effect = `<div class="form-group"><label>${onLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOn" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`

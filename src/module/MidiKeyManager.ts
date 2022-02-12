@@ -38,7 +38,7 @@ export class MidiKeyManager {
     this._rollToggle = false;
     this._fastForward = false;
     this._critical = false;
-    // window.addEventListener('keyup', (event) => this.handleKeyUpEvent(event));
+    window.addEventListener('keyup', (event) => this.handleKeyUpEvent(event));
   }
 
   handleKeyUpEvent(event) { // Not being used TODO remove if not required
@@ -50,9 +50,11 @@ export class MidiKeyManager {
     if (!keyboardManager?.hasFocus) return;
     //@ts-ignore
     const context = KeyboardManager.getKeyboardEventContext(event, true);
+
     // Don't do anything if downKeys for the key is not set
+    // Had to take this out since ctrl-space removes the downKey(Control) but does not send a CTRL-Up status
     //@ts-ignore .downKeys
-    if (!keyboardManager?.downKeys.has(context.key)) return;
+    // if (!keyboardManager?.downKeys.has(context.key)) return;
     if (!(keyboardManager?.hasFocus && ["Control", "Alt", "Shift"].includes(context.event.key))) return;
     //@ts-ignore
     keyboardManager?.downKeys.delete(context.key);
@@ -92,8 +94,8 @@ export class MidiKeyManager {
   }
   getstate(): Options {
     return {
-      advantage: this._adv,
-      disadvantage: this._dis,
+      advantage: this._rollToggle ? false: this._adv,
+      disadvantage: this._rollToggle ? false : this._dis,
       versatile: this._vers,
       other: this._other,
       rollToggle: this._rollToggle,
@@ -129,27 +131,10 @@ export class MidiKeyManager {
     return returnValue;
   }
 
-  setupKeyMappings() {
-    //@ts-ignore
-    const keybindings = game.keybindings;
-    keybindings.set("midi-qol", "rollToggle", [
-      {
-        key: "T"
-      },
-      {
-        key: "Alt",
-        modifiers: ["Control"]
-      },
-      {
-        key: "Control",
-        modifiers: ["Alt"]
-      }
-    ]);
-  }
   track (status: string) {
     //@ts-ignore
     if (CONFIG.debug.keybindings) {
-      console.warn("midi-qol | key pressed ", status)
+      console.log("midi-qol | key pressed ", status);
     }
   }
   initKeyMappings() {
@@ -244,12 +229,12 @@ export class MidiKeyManager {
       hint: i18n("midi-qol.RollToggle.Hint"),
       editable: [
         { key: "KeyT" },
-        /*
+        
         { key: "ControlLeft", modifiers: ["Alt"]},
         { key: "ControlRight", modifiers: ["Alt"]},
         { key: "AltLeft", modifiers: ["Control"]},
         { key: "AltRight", modifiers: ["Control"]}
-        */
+        
       ],
       onDown: () => { this._rollToggle = true; this.track("roll toggle down"); return false; },
       onUp: () => { this._rollToggle = false; this.track("roll toggle up"); return false; },

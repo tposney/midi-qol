@@ -90,7 +90,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     { insertKeys: true, overwrite: true }
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
   ));
-  if (debugCallTiming) log(`wrapped item.rollAttack():  elapsed ${Date.now() - wrappedRollStart}`);
+  if (debugCallTiming) log(`wrapped item.rollAttack():  elapsed ${Date.now() - wrappedRollStart}ms`);
 
   if (!result) return result;
   console.warn("Advantage/Disadvantage sources: ", advDisadvAttribution(this.actor));
@@ -151,7 +151,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
   // workflow.attackRoll = result; already set
   workflow.attackRollHTML = await result.render();
-  if (debugCallTiming) log(`final item.rollAttack():  elapsed ${Date.now() - attackRollStart}`);
+  if (debugCallTiming) log(`final item.rollAttack():  elapsed ${Date.now() - attackRollStart}ms`);
 
   workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
   return result;
@@ -246,7 +246,7 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
         chatMessage: false
       }
     }, { overwrite: true, insertKeys: true, insertValues: true }));
-    if (debugCallTiming) log(`wrapped item.rollDamage():  elapsed ${Date.now() - wrappedRollStart}`);
+    if (debugCallTiming) log(`wrapped item.rollDamage():  elapsed ${Date.now() - wrappedRollStart}ms`);
   } else {
     //@ts-ignore
     result = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: workflow.rollOptions.critical || workflow.isCritical });
@@ -340,7 +340,7 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   workflow.otherDamageHTML = await otherResult?.render();
   workflow.bonusDamageRoll = null;
   workflow.bonusDamageHTML = null;
-  if (debugCallTiming) log(`item.rollDamage():  elapsed ${Date.now() - damageRollStart}`);
+  if (debugCallTiming) log(`item.rollDamage():  elapsed ${Date.now() - damageRollStart}ms`);
 
   workflow.next(WORKFLOWSTATES.DAMAGEROLLCOMPLETE);
   return result;
@@ -387,7 +387,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return await wrapped(options);
   }
 
-  const pressedKeys = globalThis.MidiKeyManager.pressedKeys;
+  const pressedKeys = duplicate(globalThis.MidiKeyManager.pressedKeys);
   const isRangeSpell = ["ft", "m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
@@ -497,8 +497,12 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return result;
   }
   workflow = Workflow.getWorkflow(this.uuid);
-  if (!workflow || workflow.currentState === WORKFLOWSTATES.ROLLFINISHED)
+  /* TODO this is not working correctly (for not auto roll cases) always create the workflow
+  if (!workflow || workflow.currentState === WORKFLOWSTATES.ROLLFINISHED) {
     workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys });
+  }
+  */
+  workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys });
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = showFullCard;
@@ -543,7 +547,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     //@ts-ignore
     await game.dfreds?.effectInterface.addEffect({ effectName: getConvenientEffectsReaction().name, uuid: this.actor.uuid });
   }
-  if (debugCallTiming) log(`wrapped item.roll() elapsed ${Date.now() - wrappedRollStart}`);
+  if (debugCallTiming) log(`wrapped item.roll() elapsed ${Date.now() - wrappedRollStart}ms`);
   /* need to get spell level from the html returned in result */
   if (this.type === "spell") {
     //TODO look to use returned data when available
@@ -571,7 +575,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     }
     const showCardStart = Date.now();
     result = await showItemCard.bind(item)(showFullCard, workflow, false, options.createMessage);
-    if (debugCallTiming) log(`showItemCard elapsed ${Date.now() - showCardStart}`);
+    if (debugCallTiming) log(`showItemCard elapsed ${Date.now() - showCardStart}ms`);
     /*
     if (options.createMessage !== false) {
       workflow.itemCardId = result.id;
@@ -580,7 +584,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     */
     if (debugEnabled > 1) debug("Item Roll: showing card", result, workflow);
   }
-  if (debugCallTiming) log(`item.roll() elapsed ${Date.now() - itemRollStart}`);
+  if (debugCallTiming) log(`item.roll() elapsed ${Date.now() - itemRollStart}ms`);
   return result;
 }
 

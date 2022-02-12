@@ -91,6 +91,18 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.9.13
+  * Fix for quick inserts causing midi to think control key was left on.
+  * Added Item effects take priority when  choosing to apply convenient effects.
+
+0.9.12
+  * Fix for typo in reaction processing for reaction manual.
+  * Fix for trapworkflows - again.
+  * Removed requirement for itemData being passed to damageonlyworflows to trigger bonus features.
+  * Fix for challenge mode armor AC.AR/AC/ER not being modifiable from active effects.
+  * Fix for macro.execute to make sure actor and token are available inside the macro.
+  * Small tweak if you are not auto rolling damage. If the roll is not complete(i.e. you have not rolled damage) you ca re-roll the attack and the chat card will update (i.e. you forgot advantage or some such) and the workflow will continue form then on. The only change is that the chat card will update rather, than displaying another chat card
+  * 
   0.9.11
   * Fix for TrapWorkflow setter only error.
   * Fix for showing hit result to players (when it should be hidden) when merge card not being used.
@@ -121,36 +133,6 @@ Hooks.once('libChangelogsReady', function() {
     - There are 2 "full" configurations "Full Auto" and "All Manual", both of which overwrite the entire configuration settings when activated.
     - There are a small number (seeking feedback on what else would be useful) of sub groups that achieve specific settings, for example GM Auto/Manual rolls will set a group of midi settings in what I think might be a sensible configuration for GM auto/Manual rolls. These can be applied without (hopefully) disturbing other configuration details.
     - I'm actively seeking feedback on whether this is useful and what else should be added. Primarily looking for feedback from users who are not all that comfortable with the midi settings or new to midi.
-    
-  0.9.08
-  * Fix for "skipping consume dialog setting" enabled throwing an error.
-  * Fix for overtimeEffects when better rolls enabled.
-  * Removed the over eager custom sound effects from every workflow settings tab.
-
-  0.9.07
-  * Turns out restricted key bindings did not mean what I thought they did. So the world key mappings setting is temporarily disabled no matter what you set it to and key bindings are per client until further notice.
-  * Trying a new fix for sticky keys. I've not seen any adverse effects, but there might be - if so disabe it.
-
-  0.9.06
-  * Fix for "midi - qol" text error and others.
-  * Added configurable suspend optional rules key (only available to GM). If pressed when rolling an item/attack/damage no optional rules will be applied to the roll(s).
-  * Note: if you want to combine keyboard keys with modifier keys (e.g. O+Ctrl for critical other damage roll perhaps) you need to press the O before the modifer key, otherwise it will be treated as control-O which does not match any keybard configurations
-
-  0.9.05
-  * Added ability to do game.settings.set("midi-qol", "splashWarnings", false)
-    from the console or a macro, to permanently disable midi's notification warnings about missing modules on load. 
-  * Notification warnings on load are only shown to the GM.
-  * Added config setting Fix Sticky Keys. If enabled midi attempts to fix the cases where adv/dis get stuck "on". Tested specifically with Token Action Hud. If it causes issues you can disable it.
-  * Updated ja.json - thanks @Brother Sharp
-  * Slight enhancement to the applicaiton of convenient effects when using items.
-    - There are 3 options in the workflow setting, Don't Apply, CE take priority, both CE and Item Effects.
-    - The first and 3rd settings are pretty obvious. The second option means apply the CE effect if it exists and otherwise apply the item effecs.
-    - The apply CE/don't apply CE checkboxes on the item card have slightly different semantics.
-      - Don't Apply checked means the workflow setting becomes "Don't Apply".
-      - Apply CE Checked means, Don't Apply => CE has priority, CE has priority and Apply both are unchanged.
-  **0.9.04**
-  * Fix for broken better rolls automation being brokwn.
-  - Midi keyboard shortcuts do not apply for attack/damage when better rolls is active.
 
 
   [Full Changelog](https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md)`,

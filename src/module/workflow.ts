@@ -248,9 +248,9 @@ export class Workflow {
     this.pressedKeys = options?.pressedKeys;
     if (this.pressedKeys) {
       if (this.item?.hasAttack)
-        mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "attack"), { inplace: true, overwrite: true });
+        this.rollOptions = mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "attack"), { overwrite: true });
       else
-        mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "damage"), { inplace: true, overwrite: true });
+        this.rollOptions = mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "damage"), { overwrite: true });
     }
     this.itemRollToggle = options?.pressedKeys?.rollToggle ?? false;
     this.noOptionalRules = options?.pressedKeys?.noOptionalRules ?? false;
@@ -443,7 +443,7 @@ export class Workflow {
         }
         if (this.noAutoAttack) return undefined;
 
-        this.autoRollAttack = this.rollOptions.advantage || this.rollOptions.disAdvantage;
+        this.autoRollAttack = this.rollOptions.advantage || this.rollOptions.disadvantage;
         if (!this.autoRollAttack) this.autoRollAttack = (getAutoRollAttack() && !this.rollOptions.rollToggle) || (!getAutoRollAttack() && this.rollOptions.rollToggle)
         if (!this.autoRollAttack) {
           const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId ?? "");
@@ -523,7 +523,7 @@ export class Workflow {
           await this.expireTargetEffects(["isAttacked"])
           return this.next(WORKFLOWSTATES.ROLLFINISHED);
         }
-        if (debugCallTiming) log(`AttackRollComplete elapsed ${Date.now() - attackRollCompleteStartTime}`)
+        if (debugCallTiming) log(`AttackRollComplete elapsed ${Date.now() - attackRollCompleteStartTime}ms`)
         return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMAGEROLL:
@@ -590,7 +590,7 @@ export class Workflow {
         // apply damage to targets plus saves plus immunities
         // done here cause not needed for betterrolls workflow
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
-       const damageBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.DamageBonusMacro`);
+        const damageBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.DamageBonusMacro`);
         if (damageBonusMacro && this.workflowType === "Workflow") {
           await this.rollBonusDamage(damageBonusMacro);
         }
@@ -598,7 +598,7 @@ export class Workflow {
         if (this.item?.data.data.actionType === "heal" && !Object.keys(CONFIG.DND5E.healingTypes).includes(this.defaultDamageType)) this.defaultDamageType = "healing";
         this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
 
- 
+
         // TODO Need to do DSN stuff
         if (this.otherDamageRoll) {
           this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
@@ -610,7 +610,7 @@ export class Workflow {
         Hooks.callAll("midi-qol.DamageRollComplete", this);
         if (this.item) Hooks.callAll(`midi-qol.DamageRollComplete.${this.item.uuid}`, this);
 
-        log(`DmageRollComplete elapsed ${Date.now() - damgeRollCompleteStartTime}`)
+        log(`DmageRollComplete elapsed ${Date.now() - damgeRollCompleteStartTime}ms`)
         if (this.isFumble) {
           expireMyEffects.bind(this)(["1Action", "1Attack", "1Spell"]);
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
@@ -726,17 +726,18 @@ export class Workflow {
         let useCE = configSettings.autoCEEffects;
         const midiFlags = this.item.data.flags["midi-qol"];
         if (applyCondition || this.forceApplyEffects) {
-          if (midiFlags?.forceCEOff) useCE = "none";
-          if (midiFlags?.forceCEOn) useCE = useCE === "both" ? "both" : "cepri";
+          if (midiFlags?.forceCEOff && ["both", "cepri"].includes(useCE)) useCE = "none";
+          else if (midiFlags?.forceCEOn && ["none", "itempri"].includes(useCE)) useCE = "cepri";
           const hasCE = installedModules.get("dfreds-convenient-effects")
           //@ts-ignore
           const ceEffect = hasCE ? game.dfreds.effects.all.find(e => e.name === this.item?.name) : undefined;
-          if (this.hasDAE && (!ceEffect || ["none", "both"].includes(useCE))) {
+          const hasItemEffect = this.hasDAE;
+          if (hasItemEffect && (!ceEffect || ["none", "both", "itempri"].includes(useCE))) {
             await globalThis.DAE.doEffects(this.item, true, this.applicationTargets, { whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId })
             if (!this.forceApplyEffects) await this.removeEffectsButton();
           }
           if (ceEffect && this.item) {
-            if (["both", "cepri"].includes(useCE)) {
+            if (["both", "cepri"].includes(useCE) || (useCE === "itempri" && !hasItemEffect)) {
               const metadata = this.getMacroData();
               for (let token of this.applicationTargets) {
                 //@ts-ignore
@@ -746,33 +747,26 @@ export class Workflow {
           }
         }
 
-        /*
-        if (this.hasDAE && applyCondition) {
-          await globalThis.DAE.doEffects(this.item, true, this.applicationTargets, { whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId })
-          if (!this.forceApplyEffects) await this.removeEffectsButton();
-        }
-        if (installedModules.get("dfreds-convenient-effects") && this.item) {
-          const midiFlags = this.item.data.flags["midi-qol"];
-  
-          if ((configSettings.autoCEEffects && !midiFlags?.forceCEOff) || (!configSettings.autoCEEffects && midiFlags?.forceCEOn)) {
-            const effectName = this.item.name;
-            //@ts-ignore
-            if (game.dfreds.effects.all.find(e => e.name === effectName)) {
-              for (let token of this.applicationTargets) {
-                //@ts-ignore
-                await game.dfreds.effectInterface?.addEffect({ effectName, uuid: token.actor.uuid, origin: this.item?.uuid });
-              }
-            }
-          }
-        }
-      }
-        */
-
-        if (debugCallTiming) log(`applyActiveEffects elapsed ${Date.now() - applyDynamicEffectsStartTime}`)
+        if (debugCallTiming) log(`applyActiveEffects elapsed ${Date.now() - applyDynamicEffectsStartTime}ms`)
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
       case WORKFLOWSTATES.ROLLFINISHED:
         const rollFinishedStartTime = Date.now();
+        if (this.workflowType !== "BetterRollsWorkflow") {
+          const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId ?? "");
+          let content = chatMessage?.data.content;
+          if (content && getRemoveAttackButtons() && chatMessage) {
+            const searchRe = /<button data-action="attack">[^<]*<\/button>/;
+            content = content.replace(searchRe, "");
+            await chatMessage.update({
+              "content": content,
+              timestamp: Date.now(),
+              "flags.midi-qol.playSound": false,
+              "flags.midi-qol.type": MESSAGETYPES.ITEM,
+              type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+            });
+          }
+        }
         if (debugEnabled > 0) warn('Inside workflow.rollFINISHED');
         // Add concentration data if required
         let hasConcentration = this.item?.data.data.components?.concentration || this.item?.data.data.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
@@ -1023,7 +1017,7 @@ export class Workflow {
     return;
   }
 
-  getMacroData() : any {
+  getMacroData(): any {
     let targets: any[] = [];
     let targetUuids: string[] = []
     let failedSaves: any[] = [];
@@ -1138,11 +1132,11 @@ export class Workflow {
     const macroNames = macros.split(",").map(s => s.trim());
     let values: Promise<damageBonusMacroResult | any>[] = [];
     let results: damageBonusMacroResult[];
- 
+
     const macroData = this.getMacroData();
     macroData.tag = tag;
     macroData.macroPass = macroPass;
-     if (debugEnabled > 0) warn("macro data ", macroData)
+    if (debugEnabled > 0) warn("macro data ", macroData)
     for (let macro of macroNames) {
       values.push(this.callMacro(item, macro, macroData))
     }
@@ -1234,10 +1228,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
     var rollSound = configSettings.diceSound;
 
     let newFlags = {};
-    if (content && getRemoveAttackButtons()) {
-      const searchRe = /<button data-action="attack">[^<]*<\/button>/;
-      content = content.replace(searchRe, "");
-    }
+
     if (game.user?.isGM && this.useActiveDefence) {
       const searchRe = /<div class="midi-qol-attack-roll">[\s\S]*?<div class="end-midi-qol-attack-roll">/
       const attackString = `${i18n("midi-qol.ActiveDefenceString")}${configSettings.displaySaveDC ? " " + this.activeDefenceDC : ""}`;
@@ -1461,10 +1452,12 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
         case "TrapWorkflow":
         case "DamageOnlyWorkflow":
         case "DDBGameLogWorkflow":
+          /*
           if (content && getRemoveAttackButtons() && showHits) {
             const searchRe = /<button data-action="attack">[^<]*<\/button>/;
             content = content.replace(searchRe, "");
           }
+          */
           searchString = /<div class="midi-qol-hits-display">[\s\S]*?<div class="end-midi-qol-hits-display">/;
           replaceString = `<div class="midi-qol-hits-display">${hitContent}<div class="end-midi-qol-hits-display">`
           content = content.replace(searchString, replaceString);
@@ -2139,7 +2132,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
           }
         }
 
-      } 
+      }
       this.hitDisplayData.push({ isPC: targetToken.actor?.hasPlayerOwner, target: targetToken, hitString, attackType, img, gmName: targetToken.name, playerName: getTokenPlayerName(targetToken), bonusAC });
     }
   }
@@ -2388,7 +2381,7 @@ export class DamageOnlyWorkflow extends Workflow {
           this.damageTotal = this.damageRoll?.total ?? 0;
           this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
         }
-      
+
         if (configSettings.mergeCard && this.itemCardId) {
           this.damageRollHTML = await this.damageRoll?.render() ?? "";
           this.damageCardData = {
