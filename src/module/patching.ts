@@ -1,4 +1,4 @@
-import { log, warn, debug, i18n, error, getCanvas } from "../midi-qol.js";
+import { log, warn, debug, i18n, error, getCanvas, i18nFormat } from "../midi-qol.js";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
 import { bonusDialog, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getOptionalCountRemainingShortFlag, getSpeaker, isAutoFastAttack, isAutoFastDamage, notificationNotify, processOverTime } from "./utils.js";
@@ -50,14 +50,14 @@ async function bonusCheck(actor, result: Roll, category, detail): Promise<Roll> 
       .filter(flag => {
         const checkFlag = actor.data.flags["midi-qol"].optional[flag][category];
         if (!checkFlag) return false;
-        if (!(typeof checkFlag === "string" || checkFlag[detail])) return false;
+        if (!(typeof checkFlag === "string" || checkFlag[detail] || checkFlag["all"])) return false;
         if (typeof checkFlag !== "string") useDetail = true;
         if (!actor.data.flags["midi-qol"].optional[flag].count) return true;
         return getOptionalCountRemainingShortFlag(actor, flag) > 0;
       })
       .map(flag => {
         const checkFlag = actor.data.flags["midi-qol"].optional[flag][category];
-        if (typeof checkFlag === "string") return `flags.midi-qol.optional.${flag}`;
+        if (typeof checkFlag === "string") return `flags.midi-qol.optional.${flag}`; 
         else return `flags.midi-qol.optional.${flag}`;
       });
     if (bonusFlags.length > 0) {
@@ -67,9 +67,27 @@ async function bonusCheck(actor, result: Roll, category, detail): Promise<Roll> 
         rollHTML: await result.render(),
         rollTotal: result.total,
         category,
-        detail
+        detail: useDetail ? detail : "all"
       }
-      await bonusDialog.bind(data)(bonusFlags, useDetail ? `${category}.${detail}` : category, true, `${actor.name} - ${i18n("midi-qol.ability-check")}`, "roll", "rollTotal", "rollHTML")
+      let title;
+      switch(category) {
+        //@ts-ignore
+        case "check": title = i18nFormat("DND5E.AbilityPromptTitle", {ability: useDetail ? CONFIG.DND5E.abilities[detail] : ""}); 
+          break;
+        //@ts-ignore
+        case "save": title = i18nFormat("DND5E.SavePromptTitle", {ability: useDetail ? CONFIG.DND5E.abilities[detail] : ""});
+          break;
+        //@ts-ignore
+        case "skill": title = i18nFormat("DND5E.SkillPromptTitle", {skill: useDetail ? CONFIG.DND5E.skills[detail] : ""});
+          break;
+      }
+      await bonusDialog.bind(data)(
+        bonusFlags, 
+        useDetail ? `${category}.${detail}` : category, 
+        true, 
+        `${actor.name} - ${title}`, 
+        "roll", "rollTotal", "rollHTML"
+      );
       result = data.roll;
     }
   }

@@ -1,6 +1,22 @@
-### 0.9.13
+### 0.9.14
+  * Fix for roll other damage for spells not applying other damage.
+  * Fix for chat damage buttons not working for "Other" damage.
+  * Fix for a reported error when canvas disabled - there are probably more.
+  * Enhancement to optional effects
+    * **Breaking** **You must upgrade to DAE 0.9.05**, which is required for optional effects to continue to work. You will get a warning if the correct version of DAE is not installed even if you don't have optional effects. And midi will behave as if DAE is not installed.
+    * flags.midi-qol.optional.Name.attack is deprecated in favour of flags.midi-qol.optional.Name.attack.all. Similarly .check, .save, .skill, .damage all need to be changed to check.all, save.all, skill.all and damage.all. If you have the old style effects you will get deprecation errors but they will be treated as .all.
+    * Additional support for skill.all/itm/per/prc etc.
+    * Additional support for check.all/dex/str etc.
+    * Additional support for save.all/dex/str etc.
+    * Additional support for attack.all/mwak/rwak/rsak/msak
+    * Additional support for damage.all/mwak/rwak/rsak/msak
+    * Updated Bardic Inspiration and Lucky for the changes. Upgrade these in game to avoid deprecation errors.
+  * Put back rollOptions in the arguments passed to onUse macros and added isVersatile.
+  * Calculate damage detail before and after the call to any Damage Bonus Macros. Damage bonus Macros are now able to adjust the damage roll recorded for the item.
+
+  ### 0.9.13
 * Fix for quick inserts causing midi to think control key was left on.
-* Added Item effects take priority when  choosing to apply convenient effects.
+* Added Item effects take priority when choosing to apply convenient effects.
 
 ### 0.9.12
 * Fix for typo in reaction processing for reaction manual.

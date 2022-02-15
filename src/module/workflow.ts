@@ -115,6 +115,7 @@ export class Workflow {
   damageCardData: ChatMessage | undefined;
   defaultDamageType: string | undefined;
   noAutoDamage: boolean; // override damage roll for damage rolls
+  versatile: boolean;
 
   saves: Set<Token>;
   superSavers: Set<Token>;
@@ -123,7 +124,6 @@ export class Workflow {
   saveRequests: any;
   saveTimeouts: any;
 
-  versatile: boolean;
   saveDisplayData;
 
   chatMessage: ChatMessage;
@@ -256,6 +256,7 @@ export class Workflow {
     this.noOptionalRules = options?.pressedKeys?.noOptionalRules ?? false;
     this.advantage = undefined;
     this.disadvantage = undefined;
+    this.isVersatile = false;
     this.templateId = null;
     this.templateUuid = null;
 
@@ -591,14 +592,14 @@ export class Workflow {
         // done here cause not needed for betterrolls workflow
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
         const damageBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.DamageBonusMacro`);
-        if (damageBonusMacro && this.workflowType === "Workflow") {
-          await this.rollBonusDamage(damageBonusMacro);
-        }
         //@ts-ignore CONFIG.DND5E
         if (this.item?.data.data.actionType === "heal" && !Object.keys(CONFIG.DND5E.healingTypes).includes(this.defaultDamageType)) this.defaultDamageType = "healing";
         this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
 
-
+        if (damageBonusMacro && this.workflowType === "Workflow") {
+          await this.rollBonusDamage(damageBonusMacro);
+        }
+        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
         // TODO Need to do DSN stuff
         if (this.otherDamageRoll) {
           this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
@@ -1101,6 +1102,7 @@ export class Workflow {
       attackTotal: this.attackTotal,
       itemCardId: this.itemCardId,
       isCritical: this.rollOptions.critical || this.isCritical,
+      isVersatile: this.rollOptions.versatile || this.isVersatile,
       isFumble: this.isFumble,
       spellLevel: this.itemLevel,
       powerLevel: this.itemLevel,
@@ -1124,6 +1126,7 @@ export class Workflow {
       concentrationData: getProperty(this.actor.data.flags, "midi-qol.concentration-data"),
       templateId: this.templateId, // deprecated
       templateUuid: this.templateUuid,
+      rollOptions: this.rollOptions
     }
   }
 
@@ -2835,20 +2838,7 @@ export class DDBGameLogWorkflow extends Workflow {
         if (damageBonusMacro) {
           await this.rollBonusDamage(damageBonusMacro);
         }
-        /* probably not
-                if (this.otherDamageRoll) {
-                  const messageData = {
-                    flavor: this.otherDamageFlavor ?? this.damageFlavor,
-                    speaker: this.speaker
-                  }
-                  setProperty(messageData, "flags.dnd5e.roll.type", "damage");
-                  if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll.type", "damage");
-        
-                  //  Not required as we pick up the damage from the better rolls data this.otherDamageRoll.toMessage(messageData);
-                  this.otherDamageDetail = createDamageList({roll: this.otherDamageRoll, item: null, versatile: false, defaultType: ""});
-        
-                } else this.otherDamageDetail = [];
-            */
+        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
         this.otherDamageDetail = [];
         if (this.bonusDamageRoll) {
           const messageData = {

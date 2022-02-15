@@ -8,7 +8,7 @@ let modules = {"about-time": "0.0",
               "itemacro": "1.0.0", 
               "lmrtfy": "0.9",
               "lib-wrapper": "1.3.5",
-              "dae": "0.8.43",
+              "dae": "0.9.05",
               "combat-utility-belt": "1.3.8",
               "times-up": "0.1.2",
               "conditional-visibility": "0.0",
@@ -45,7 +45,7 @@ export let setupModules = () => {
 export function dice3dEnabled() {
   //@ts-ignore
   // return installedModules.get("dice-so-nice") && game.dice3d?.isEnabled();
-  return installedModules.get("dice-so-nice") && (game.dice3d?.config?.enabled || game.dice3d.isEnabled());
+  return installedModules.get("dice-so-nice") && (game.dice3d?.config?.enabled || game.dice3d?.isEnabled());
 }
 
 export function checkModules() {
@@ -91,7 +91,23 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
-  0.9.13
+0.9.14
+* Fix for roll other damage for spells not applying other damage.
+* Fix for chat damage buttons not working for "Other" damage.
+* Fix for a reported error when canvas disabled - there are probably more.
+* Enhancement to optional effects
+  * **Breaking** **You must upgrade to DAE 0.9.05**, which is required for optional effects to continue to work. You will get a warning if the correct version of DAE is not installed even if you don't have optional effects. And midi will behave as if DAE is not installed.
+  * flags.midi-qol.optional.Name.attack is deprecated in favour of flags.midi-qol.optional.Name.attack.all. Similarly .check, .save, .skill, .damage all need to be changed to check.all, save.all, skill.all and damage.all. If you have the old style effects you will get deprecation errors but they will be treated as .all.
+  * Additional support for skill.all/itm/per/prc etc.
+  * Additional support for check.all/dex/str etc.
+  * Additional support for save.all/dex/str etc.
+  * Additional support for attack.all/mwak/rwak/rsak/msak
+  * Additional support for damage.all/mwak/rwak/rsak/msak
+  * Updated Bardic Inspiration and Lucky for the changes. Upgrade these in game to avoid deprecation errors.
+* Put back rollOptions in the arguments passed to onUse macros and added isVersatile.
+* Calculate damage detail before and after the call to any Damage Bonus Macros. Damage bonus Macros are now able to adjust the damage roll recorded for the item.
+
+0.9.13
   * Fix for quick inserts causing midi to think control key was left on.
   * Added Item effects take priority when  choosing to apply convenient effects.
 
@@ -102,8 +118,8 @@ Hooks.once('libChangelogsReady', function() {
   * Fix for challenge mode armor AC.AR/AC/ER not being modifiable from active effects.
   * Fix for macro.execute to make sure actor and token are available inside the macro.
   * Small tweak if you are not auto rolling damage. If the roll is not complete(i.e. you have not rolled damage) you ca re-roll the attack and the chat card will update (i.e. you forgot advantage or some such) and the workflow will continue form then on. The only change is that the chat card will update rather, than displaying another chat card
-  * 
-  0.9.11
+  
+0.9.11
   * Fix for TrapWorkflow setter only error.
   * Fix for showing hit result to players (when it should be hidden) when merge card not being used.
   * Fix for broken flags.midi-qol.crticial.EVERYTHING., fags.midi-qol.grants.critical.EVERYTHING. These flags only apply if exactly one target is hit.
@@ -118,7 +134,7 @@ Hooks.once('libChangelogsReady', function() {
   * Do't pass a null event to any of the item roll calls.
   * Concentration checks now list the effect that has concentration when prompting for removal. Thanks spappz.
 
-    0.9.10
+0.9.10
   * Fix for template error in midi-qol settings template.
 
   0.9.09

@@ -619,14 +619,16 @@ Optional flags cause a dialog to be raised when an opportunity to apply the effe
 
 An optional attack bonus prompts the attacker after the attack roll is made, but before the attack is adjudicated, givin the attacker the option to modify the roll. Effects last for one application unless the count flag is set.
 
-* flags.midi-qol.optional.Name.damage	bonus to apply to damage done		
-* flags.midi-qol.optional.Name.skill	bonus to apply to skill rolls		
-* flags.midi-qol.optional.Name.attack	the bonus is added after the attack roll		
-* flags.midi-qol.optional.Name.check	the bonus is added after the ability check roll		
+* flags.midi-qol.optional.Name.damage.all/mwak/rwak/msak/rsak	bonus to apply to damage done		
+* flags.midi-qol.optional.Name.skill.all/per/prc/item etc	bonus to apply to skill rolls		
+* flags.midi-qol.optional.Name.attack.all/mwak/rwak/msak/rsak	the bonus is added after the attack roll		
+* flags.midi-qol.optional.Name.check.all/str/dex/etcthe bonus is added after theability check roll		
+* flags.midi-qol.optional.Name.save.all/str/dex/etc	the bonus is added after the save roll. Requires auto fast forward		
 * flags.midi-qol.optional.Name.label	label to use in the dialog		
 * flags.midi-qol.optional.Name.count	how many uses the effect has (think lukcy which has 3), if absent the bonus will be single use (bardic inspiration).   
+
 You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
-* flags.midi-qol.optional.Name.save	the bonus is added after the save roll. Requires auto fast forward		
+
 * flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
 
 Values for the optional roll bonus flags include a dice expression (added to the roll), a number, reroll (rerolling the roll completely) reroll-max, reroll-min (reroll with max dice or min dice) or success which changes the roll to 99 ensuring success.

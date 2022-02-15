@@ -235,7 +235,7 @@ Hooks.once('ready', function () {
 
   if (game.settings.get("midi-qol", "splashWarnings") && game.user?.isGM) {
     if (game.user?.isGM && !installedModules.get("dae")) {
-      ui.notifications?.warn("Midi-qol requires DAE to be installed and at least version 0.8.43 or many automation effects won't work");
+      ui.notifications?.warn("Midi-qol requires DAE to be installed and at least version 0.9.05 or many automation effects won't work");
     }
     if (game.user?.isGM && game.modules.get("betterrolls5e")?.active && !installedModules.get("betterrolls5e")) {
       ui.notifications?.warn("Midi QOL requires better rolls to be version 1.6.6 or later");
@@ -408,6 +408,8 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.DR.${at}`);
     midiFlags.push(`flags.midi-qol.max.damage.${at}`);
     midiFlags.push(`flags.midi-qol.min.damage.${at}`);
+    midiFlags.push(`flags.midi-qol.optional.NAME.attack.${at}`);
+    midiFlags.push(`flags.midi-qol.optional.NAME.damage.${at}`);
   });
   midiFlags.push("flags.midi-qol.advantage.ability.all");
   midiFlags.push("flags.midi-qol.advantage.ability.check.all");
@@ -438,8 +440,8 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.superSaver.${abl}`);
     midiFlags.push(`flags.midi-qol.max.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.mim.ability.save.${abl}`);
-
-
+    midiFlags.push(`flags.midi-qol.ptional.NAME.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.optional.NAME.check.${abl}`);
   })
   midiFlags.push(`flags.midi-qol.advantage.skill.all`);
   midiFlags.push(`flags.midi-qol.disadvantage.skill.all`);
@@ -453,6 +455,7 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.fail.skill.${skill}`);
     midiFlags.push(`flags.midi-qol.max.skill.${skill}`);
     midiFlags.push(`flags.midi-qol.min.skill.${skill}`);
+    midiFlags.push(`flags.midi-qol.optional.NAME.skill.${skill}`);
   })
   midiFlags.push(`flags.midi-qol.advantage.deathSave`);
   midiFlags.push(`flags.midi-qol.disadvantage.deathSave`);
@@ -476,11 +479,11 @@ function setupMidiFlags() {
     })
   }
 
-  midiFlags.push(`flags.midi-qol.optional.NAME.attack`);
-  midiFlags.push(`flags.midi-qol.optional.NAME.check`);
-  midiFlags.push(`flags.midi-qol.optional.NAME.save`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.attack.all`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.check.all`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.save.all`);
   midiFlags.push(`flags.midi-qol.optional.NAME.label`);
-  midiFlags.push(`flags.midi-qol.optional.NAME.skill`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.skill.all`);
   midiFlags.push(`flags.midi-qol.optional.NAME.count`);
   midiFlags.push(`flags.midi-qol.uncanny-dodge`);
 

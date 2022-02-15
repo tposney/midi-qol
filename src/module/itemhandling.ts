@@ -136,9 +136,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     }
 
     //@ts-ignore game.dice3d
-    // await game.dice3d.showForRoll(workflow.attackRoll, game.user, true, null, rollMode === "blindroll" && !game.user.isGM)
-    await game.dice3d.showForRoll(workflow.attackRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
-
+    await game.dice3d?.showForRoll(workflow.attackRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
   }
 
   if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
@@ -147,7 +145,6 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   if (!result) { // attack roll failed.
     error("Itemhandling rollAttack failed")
     return;
-    // workflow._next(WORKFLOWSTATES.ROLLFINISHED);
   }
   // workflow.attackRoll = result; already set
   workflow.attackRollHTML = await result.render();
@@ -232,6 +229,7 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
 
   const wrappedRollStart = Date.now();
   let result: Roll;
+  workflow.isVersatile = workflow.rollOptions.versatile || versatile;
   if (!workflow.rollOptions.other) {
     result = await wrapped(mergeObject(options, {
       critical: workflow.rollOptions.critical || workflow.isCritical,
@@ -328,10 +326,10 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
       if (game.user) whisperIds.concat(game.user);
     }
     //@ts-ignore game.dice3d
-    await game.dice3d.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+    await game.dice3d?.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
     if (configSettings.rollOtherDamage !== "none" && otherResult)
       //@ts-ignore game.dice3d
-      await game.dice3d.showForRoll(otherResult, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+      await game.dice3d?.showForRoll(otherResult, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
   }
 
 
@@ -503,7 +501,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
   */
   workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys });
-  workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile;
+  workflow.rollOptions.isVersatile = workflow.rollOptions.versatile || versatile;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = showFullCard;
   workflow.noAutoAttack = showFullCard;

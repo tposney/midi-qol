@@ -211,7 +211,7 @@ export async function importSettingsFromJSON(json) {
   game.settings.set("midi-qol", "ForceHideRoll", json.forceHideRoll);
   game.settings.set("midi-qol", "EnableWorkflow", json.enableWorkflow);
   game.settings.set("midi-qol", "DragDropTarget", json.dragDropTargeting);
-
+  
 }
 
 export let fetchParams = () => {

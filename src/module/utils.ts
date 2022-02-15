@@ -485,7 +485,8 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   }
 
   // Don't check for critical - RAW say these don't get critical damage
-  if (["rwak", "mwak"].includes(item?.data.data.actionType) && configSettings.rollOtherDamage !== "none") {
+  // if (["rwak", "mwak"].includes(item?.data.data.actionType) && configSettings.rollOtherDamage !== "none") {
+  if (workflow.shouldRollOtherDamage) {
     if ((workflow.otherDamageFormula ?? "") !== "" && configSettings.singleConcentrationRoll) {
       appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.otherDamageDetail ?? [], workflow.bonusDamageDetail ?? []],
@@ -1542,12 +1543,28 @@ class RollModifyDialog extends Application {
     if (this.data.flags.length === 0) this.close();
     this.data.buttons = this.data.flags.reduce((obj, flag) => {
       const flagData = getProperty(this.data.actor.data, flag);
-      obj[randomID()] = {
-        icon: '<i class="fas fa-dice-d20"></i>',
-        label: (flagData.label ?? "Bonus") + `  (${getProperty(flagData, this.data.flagSelector) ?? "0"})`,
-        value: getProperty(flagData, this.data.flagSelector) ?? "0",
-        key: flag,
-        callback: this.data.callback
+      let value = getProperty(flagData, this.data.flagSelector);
+      if (value) {
+        obj[randomID()] = {
+          icon: '<i class="fas fa-dice-d20"></i>',
+          label: (flagData.label ?? "Bonus") + `  (${getProperty(flagData, this.data.flagSelector) ?? "0"})`,
+          value,
+          key: flag,
+          callback: this.data.callback
+        }
+      }
+      let selector = this.data.flagSelector.split(".");
+      selector[selector.length - 1] = "all";
+      const allSelector = selector.join(".");
+      value = getProperty(flagData, allSelector);
+      if (value) {
+        obj[randomID()] = {
+          icon: '<i class="fas fa-dice-d20"></i>',
+          label: (flagData.label ?? "Bonus") + `  (${getProperty(flagData, allSelector) ?? "0"})`,
+          value,
+          key: flag,
+          callback: this.data.callback
+        }
       }
       return obj;
     }, {})
@@ -1602,31 +1619,38 @@ class RollModifyDialog extends Application {
 
 export async function processAttackRollBonusFlags() { // bound to workflow
   // const bonusFlags = ["flags.midi-qol.bardicInspiration"];
+  let attackBonus = "attack.all";
+  if (this.item && this.item.hasAttack) attackBonus = `attack.${this.item.data.data.actionType}`
   const bonusFlags = Object.keys(this.actor.data.flags["midi-qol"]?.optional ?? [])
     .filter(flag => {
-      if (!this.actor.data.flags["midi-qol"].optional[flag].attack) return false;
+      const hasAttackFlag = getProperty(this.actor.data.flags, `midi-qol.optional.${flag}.attack.all`) ||
+        getProperty(this.actor.data.flags, `midi-qol.optional.${flag}.${attackBonus}`);
+      if (!hasAttackFlag) return false;
       if (!this.actor.data.flags["midi-qol"].optional[flag].count) return true;
       return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
     })
     .map(flag => `flags.midi-qol.optional.${flag}`);
   if (bonusFlags.length > 0) {
     this.attackRollHTML = await this.attackRoll.render();
-    await bonusDialog.bind(this)(bonusFlags, "attack", false, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, "attackRoll", "attackTotal", "attackRollHTML")
+    await bonusDialog.bind(this)(bonusFlags, attackBonus, false, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, "attackRoll", "attackTotal", "attackRollHTML")
   }
   return this.attackRoll;
 }
 
 export async function processDamageRollBonusFlags() { // bound to a workflow
+  let damageBonus = "damage.all";
+  if (this.item && this.item.hasAttack) damageBonus = `damage.${this.item.data.data.actionType}`;
   const bonusFlags = Object.keys(this.actor.data.flags["midi-qol"]?.optional ?? [])
     .filter(flag => {
-      if (!(this.actor.data.flags["midi-qol"].optional[flag].damage || this.actor.data.flags["midi-qol"].optional[flag].magicalDamage)) return false;
-      if (!this.actor.data.flags["midi-qol"].optional[flag].count) return true;
+      const hasDamageFlag = getProperty(this.actor.data.flags, `midi-qol.optional.${flag}.damage.all`) ||
+        getProperty(this.actor.data.flags, `midi-qol.optional.${flag}.${damageBonus}`);
+        if (!hasDamageFlag) return false;
       return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
     })
     .map(flag => `flags.midi-qol.optional.${flag}`);
   if (bonusFlags.length > 0) {
     this.damageRollHTML = await this.damageRoll.render();
-    await bonusDialog.bind(this)(bonusFlags, "damage", false, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, "damageRoll", "damageTotal", "damageRollHTML")
+    await bonusDialog.bind(this)(bonusFlags, damageBonus, false, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, "damageRoll", "damageTotal", "damageRollHTML")
   }
   return this.damageRoll;
 }
@@ -1637,14 +1661,14 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       if (!hasEffectGranting(this.actor, button.key, flagSelector)) return;
       var newRoll;
       switch (button.value) {
-      case "reroll": newRoll = await this[rollId].reroll({ async: true }); break;
-      case "reroll-max": newRoll = await this[rollId].reroll({ async: true, maximize: true }); break;
-      case "reroll-min": newRoll = await this[rollId].reroll({ async: true, minimize: true }); break;
-      case "success": newRoll = await new Roll("99").evaluate({ async: true }); break;
-      default: 
-        newRoll = new Roll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData());
-        newRoll = await newRoll.evaluate({ async: true });
-        break;
+        case "reroll": newRoll = await this[rollId].reroll({ async: true }); break;
+        case "reroll-max": newRoll = await this[rollId].reroll({ async: true, maximize: true }); break;
+        case "reroll-min": newRoll = await this[rollId].reroll({ async: true, minimize: true }); break;
+        case "success": newRoll = await new Roll("99").evaluate({ async: true }); break;
+        default:
+          newRoll = new Roll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData());
+          newRoll = await newRoll.evaluate({ async: true });
+          break;
       }
       this[rollId] = newRoll;
       this[rollTotalId] = newRoll.total;
@@ -1709,7 +1733,7 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
     if (count.value <= 1)
       return actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id])
     else {
-      count.value -= 1;
+      count.value = `${count.value - 1}`; // must be a string
       actor.updateEmbeddedDocuments("ActiveEffect", [effectData])
     }
   } else if (count.value.startsWith("@")) {
@@ -1730,8 +1754,20 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
 }
 
 export function hasEffectGranting(actor: Actor5e, key: string, selector: string) {
-  const changeKey = `${key}.${selector}`;
-  return actor.effects.find(ef => ef.data.changes.some(c => c.key === changeKey) && getOptionalCountRemainingShortFlag(actor, key) > 0)
+  // Actually check for the flag being set...
+  if (getOptionalCountRemainingShortFlag(actor, key) <= 0) return false;
+  let changeKey = `${key}.${selector}`;
+  // let hasKey = actor.effects.find(ef => ef.data.changes.some(c => c.key === changeKey) && getOptionalCountRemainingShortFlag(actor, key) > 0)
+  let hasKey = getProperty(actor.data, changeKey);
+  if (hasKey) return true;
+  let allKey = selector.split(".");
+  allKey[allKey.length - 1] = "all";
+  changeKey = `${key}.${allKey.join(".")}`;
+  // return actor.effects.find(ef => ef.data.changes.some(c => c.key === changeKey) && getOptionalCountRemainingShortFlag(actor, key) > 0)
+  hasKey = getProperty(actor.data, changeKey);
+  if (hasKey) return true;
+  return false;
+
 }
 
 //TODO fix this to search 
@@ -1793,7 +1829,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   const midiFlags: any = target.actor.data.flags["midi-qol"];
   reactions = reactions + Object.keys(midiFlags?.optional ?? [])
     .filter(flag => {
-      if (!midiFlags?.optional[flag].ac) return false;
+      if (triggerType !== "reaction" || !midiFlags?.optional[flag].ac) return false;
       if (!midiFlags?.optional[flag].count) return true;
       return getOptionalCountRemainingShortFlag(target.actor, flag) > 0;
     }).length
