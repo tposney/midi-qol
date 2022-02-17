@@ -37,7 +37,6 @@ class ConfigSettings {
   gmConsumeResource = false;
   gmHide3dDice: boolean = false;
   ghostRolls: boolean = false;
-  worldKeyMappings: boolean = false;
   fixStickyKeys: boolean = true;
   showItemDetails: string = "";
   itemTypeList: any = null;
@@ -246,7 +245,6 @@ export let fetchParams = () => {
   //@ts-ignore legacy boolean value
   if (configSettings.autoCEEffects === true) configSettings.autoCEEffects = "both";
   if (!configSettings.autoCEEffects) configSettings.autoCEEffects = "none";
-  configSettings.worldKeyMappings = false;
   configSettings.toggleOptionalRules = false;
   if (configSettings.displaySaveAdvantage === undefined) configSettings.displaySaveAdvantage = true;
 

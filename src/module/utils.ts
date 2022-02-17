@@ -9,6 +9,7 @@ import { itemJSONData, overTimeJSONData } from "./Hooks.js";
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import { getConfigFileParsingDiagnostics, getDefaultFormatCodeSettings, idText, isConstructorDeclaration } from "typescript";
 import { OnUseMacros } from "./apps/Item.js";
+import { ddbglPendingFired } from "./chatMesssageHandling.js";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -1525,11 +1526,11 @@ class RollModifyDialog extends Application {
 
   static get defaultOptions() {
     return mergeObject(super.defaultOptions, {
-      template: "templates/hud/dialog.html",
+      template: "modules/midi-qol/templates/dialog.html",
       classes: ["dialog"],
-      width: 400,
+      width: 600,
       jQuery: true
-    });
+    }, { overwrite: true });
   }
   get title() {
     return this.data.title || "Dialog";
@@ -1644,7 +1645,7 @@ export async function processDamageRollBonusFlags() { // bound to a workflow
     .filter(flag => {
       const hasDamageFlag = getProperty(this.actor.data.flags, `midi-qol.optional.${flag}.damage.all`) ||
         getProperty(this.actor.data.flags, `midi-qol.optional.${flag}.${damageBonus}`);
-        if (!hasDamageFlag) return false;
+      if (!hasDamageFlag) return false;
       return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
     })
     .map(flag => `flags.midi-qol.optional.${flag}`);
@@ -1669,6 +1670,18 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
           newRoll = new Roll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData());
           newRoll = await newRoll.evaluate({ async: true });
           break;
+      }
+      if (showRoll && this.category === "ac") { // TODO do a more general fix for displaying this stuff
+        const player = playerForActor(this.actor)?.id ?? "";
+        const oldRollHTML = await this[rollId].render() ?? this[rollId].result
+        const newRollHTML = await newRoll.render();
+        const chatData: any = {
+          // content: `${this[rollId].result} -> ${newRoll.formula} = ${newRoll.total}`,
+          flavor: game.i18n.localize("DND5E.ArmorClass"),
+          content: `${newRollHTML}`,
+          whisper: [player]
+        };
+        const chatMessage = await ChatMessage.create(chatData);
       }
       this[rollId] = newRoll;
       this[rollTotalId] = newRoll.total;
@@ -1715,13 +1728,13 @@ export function getOptionalCountRemaining(actor: Actor5e, flag: string) {
     const usedFlag = flag.replace(".count", ".used");
     // check for the flag
     if (getProperty(actor.data, usedFlag)) return 0;
+  } else if (countValue === "reaction") {
+    return actor.getFlag("midi-qol", "reactionCombatRound") ? 0 : 1;
   }
   return 1; //?? TODO is this sensible?
 }
 
 export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
-  // TODO implement charges rather than single value
-
   const effect = actor.effects.find(ef => ef.data.changes.some(c => c.key.includes(changeKey)))
   if (!effect) return;
   const effectData = effect.toObject();
@@ -1747,9 +1760,14 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
       update[`data.${key}`] = charges;
       return actor.update(update);
     }
-  } else if (count.value === "turn") {
+  } else if ("turn" === count.value) {
     const flagKey = `${changeKey}.used`.replace("flags.midi-qol.", "");
-    return actor.setFlag("midi-qol", flagKey, game.combat !== undefined);
+  } else if (count.value === "reaction") {
+    if (getConvenientEffectsReaction() && count.value === "reaction") {
+      //@ts-ignore
+      await game.dfreds.effectInterface.addEffect({effectName: getConvenientEffectsReaction().name, uuid: actor.uuid})
+    }
+    await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
   }
 }
 
@@ -1802,6 +1820,15 @@ function itemReaction(item, triggerType, maxLevel) {
   if (!item._getUsageUpdates({ consumeRecharge: item.data.data.recharge?.value, consumeResource: true, consumeSpellLevel: false, consumeUsage: item.data.data.uses?.max > 0, consumeQuantity: item.type === "consumable" })) return false;
   return true;
 }
+export async function actorHasUsedReaction(actor) {
+  if (actor.getFlag("midi-qol", "reactionCombatRound")) return true;
+  if (getConvenientEffectsReaction()) {
+    //@ts-ignore
+    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, actor.uuid)) return true;
+  }
+  return false;
+}
+
 export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string, options: { item: Item }): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
   const noResult = { name: undefined, uuid: undefined, ac: undefined };
   //@ts-ignore attributes
@@ -1810,13 +1837,8 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   if (getReactionSetting(player) === "none") return noResult;
   if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
   if (!player) return noResult;
-
-  const reactionEffect = getConvenientEffectsReaction();
-  if (reactionEffect) {
-    //@ts-ignore
-    if (await game.dfreds?.effectInterface.hasEffectApplied(reactionEffect.name, target.document?.uuid ?? target.uuid)) return noResult;
-  } else if (target.actor.getFlag("midi-qol", "reactionCombatRound")) return noResult;
-
+  if (await actorHasUsedReaction(target.actor)) return noResult;
+// CHeck CE reaction effect?
   const maxLevel = maxCastLevel(target.actor);
   enableNotifications(false);
   let reactions;
@@ -1895,10 +1917,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
   const actor: Actor | null = target.actor;
   if (!actor) return;
   const midiFlags: any = actor.data.flags["midi-qol"];
-  if (getConvenientEffectsReaction()) {
-    //@ts-ignore
-    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, tokenUuid)) return false;
-  } else if (actor.getFlag("midi-qol", "reactionCombatRound")) return false; // already had a reaction this round
+  if (await actorHasUsedReaction(actor)) return false;
   let result;
   let reactionItems;
   const maxLevel = maxCastLevel(target.actor);
@@ -1914,10 +1933,16 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
       return { name: "Filter" };
     }
     result = await reactionDialog(actor, triggerTokenUuid, reactionItems, reactionFlavor, triggerType)
-    if (result.uuid && !getConvenientEffectsReaction()) {
+    if (result.uuid) {
       await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
-    }
-    return result;
+ /*
+      if (getConvenientEffectsReaction()) {
+        //@ts-ignore
+        await game.dfreds.effectInterface.addEffect({effectName: getConvenientEffectsReaction().name, uuid: actor.uuid})
+      }
+*/
+    } 
+    if (result.uuid) return result;
   }
   if (!midiFlags) return { name: "None" };
   const bonusFlags = Object.keys(midiFlags?.optional ?? [])
@@ -1926,7 +1951,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
       if (!midiFlags.optional[flag].count) return true;
       return getOptionalCountRemainingShortFlag(actor, flag) > 0;
     }).map(flag => `flags.midi-qol.optional.${flag}`);
-  if (bonusFlags.length > 0) {
+  if (bonusFlags.length > 0 && triggerType === "reaction") {
     //@ts-ignore attributes
     let acRoll = await new Roll(`${actor.data.data.attributes.ac.value}`).roll();
     const data = {
@@ -1938,9 +1963,11 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
     const preBounsRollTotal = data.roll.total;
     //@ts-ignore attributes
     await bonusDialog.bind(data)(bonusFlags, "ac", true, `${actor.name} - ${i18n("DND5E.AC")} ${actor.data.data.attributes.ac.value}`, "roll", "rollTotal", "rollHTML")
-    if (preBounsRollTotal !== data.roll.total) {
+    /* This should now be auto set 
+     if (preBounsRollTotal !== data.roll.total) {
       await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round); // TODO this is wrong
     }
+    */
     return { name: actor.name, uuid: actor.uuid, ac: data.roll.total };
   }
   return { name: "None" };
@@ -1996,6 +2023,7 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
         }
       }
       await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
+      // No need to set reaction effect since using item will do so.
       dialog.close();
       await completeItemRoll(item, {});
       actor.prepareData();
@@ -2157,7 +2185,22 @@ export function getConcentrationEffect(actor): ActiveEffect | undefined {
   return actor.effects.contents.find(i => i.data.label === concentrationLabel);
 }
 
+function mySafeEval(expression: string, sandbox: any) {
+  let result;
+  try {
 
+    const src = 'with (sandbox) { return ' + expression + '}';
+    const evl = new Function('sandbox', src);
+    result = evl(mergeObject(sandbox, Roll.MATH_PROXY));
+  } catch (err) {
+    console.warn("midi-qol | expression evaluaton failed ", err);
+    result = undefined;
+  }
+  if (Number.isNumeric(result)) return Number(result)
+  return result;
+};
+
+// Same as 
 export function evalActivationCondition(workflow: Workflow, condition: string | undefined): boolean {
   if (condition === undefined || condition === "") return true;
   let returnValue;
@@ -2165,18 +2208,58 @@ export function evalActivationCondition(workflow: Workflow, condition: string | 
   rollData.target = workflow.hitTargets.values().next()?.value;
   rollData.workflow = workflow;
   if (rollData.target) {
-    rollData.target = rollData.target.actor.data.data;
+    rollData.target = rollData.target.actor.getRollData();
     if (rollData.target.details.race ?? "" !== "") rollData.raceOrType = rollData.target.details.race.toLocaleLowerCase();
     else rollData.raceOrType = rollData.target.details.type.value.toLocaleLowerCase();
   }
   let expression = condition ?? "";
-  expression = Roll.replaceFormulaData(expression, rollData, { missing: "0" });
+
   try {
-    //@ts-ignore - safeEval can return boolean
-    returnValue = Roll.safeEval(expression);
+    if (expression.includes("@")) {
+      expression = Roll.replaceFormulaData(expression, rollData, { missing: "0" });
+      returnValue = mySafeEval(expression, {});
+    } else { // transform the rollData.workflow to just data
+      const copyWorkflow = {};
+      // const newTarget = duplicate(rollData.target.document.data._source);
+      // newTarget.actor = duplicate(rollData.target.actor.data._source);
+      // rollData.target = newTarget;
+      for (let [k, v] of Object.entries(workflow)) {
+        if (!["actor", "item", "templateElevation", "speaker", "tokenUuid", "saveDisplayFlavor", "itemId", "item",
+          "itemUuid", "uuid", "itemLevel", "currentState",
+          "isCritical", "isFumble", "vestatile",
+          "targets", "hitTargets",
+          "diceRoll", "attackRoll", "attackTotal", "damageRoll", "damageTotal", "otherDamageRoll", "otherDamageDetail", "damageDetail",
+          "saves", "superSavers", "failedSaves", "advantageSaves"].includes(k)) continue;
+        if (v instanceof Set) {
+          const newV = new Set();
+          for (let t of v) {
+            if (!t.actor || !t.document) newV.add(t);
+            else {
+              const newT = duplicate(t.document.data._source);
+              newT.actor = duplicate(t.actor.data._source);
+              newV.add(newT)
+            }
+          }
+          copyWorkflow[k] = newV;
+        } else if (k === "item") copyWorkflow[k] = duplicate(workflow[k].data._source);
+        else if (k === "actor") copyWorkflow[k] = duplicate(workflow[k].data._source);
+        else {
+          try {
+            copyWorkflow[k] = v ? duplicate(v) : undefined;
+          } catch (err) {
+            console.warn(`midi-qol | Failed eval condition copy of ${k}`, v)
+          }
+        }
+      }
+      rollData.workflow = copyWorkflow;
+      //@ts-ignore .replaceAll
+      expression = expression.replaceAll(".data", ""); // TODO see if this is right
+      returnValue = mySafeEval(expression, rollData);
+      warn("evalActivationCondition ", returnValue, expression, rollData);
+    }
   } catch (err) {
     returnValue = true;
-    console.warn(`midi-qol | activation condition (${expression}) error `, err)
+    console.warn(`midi-qol | activation condition (${expression}) error `, err, rollData)
   }
   return returnValue;
 }

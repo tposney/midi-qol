@@ -485,6 +485,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.optional.NAME.label`);
   midiFlags.push(`flags.midi-qol.optional.NAME.skill.all`);
   midiFlags.push(`flags.midi-qol.optional.NAME.count`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.ac`);
   midiFlags.push(`flags.midi-qol.uncanny-dodge`);
 
   midiFlags.push(`flags.midi-qol.OverTime`);

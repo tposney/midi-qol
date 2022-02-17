@@ -1,3 +1,18 @@
+### 0.9.15
+  * Fix for warning when applying effects with no origin.
+  * Fix for optional.ac efffects being triggered on damage rolls
+  * Fix for optional effects not being triggered if other reactions are available.
+  * Added chatmessage to show the results of an optional.ac effect (previously you had to deduce the result).
+  * Optional effects can now have a count of "reaction". This is very similar to "turn", except that it will apply the convenient effects reaction effect and blocks other reactions being used until the start of the actors next turn. This means you can create optional effects that will count as using your reaction. So improving save throw/attack roll/damage roll/ac bonus can count as a reaction.
+  * New auto apply damage setting, auto apply to NPC but not to characters. If selected damage will be applied automatically for NPC targets but not "character" targets. Targets who do not have damage applied will be marked with "*" to the left of the target icon. The tick button will apply damage to those targets normally. The test for PC is that the actor is of type "character", so if you have NPCs of type character they will also be excluded from the damage application.
+  * Some imporvment to the activation condition evaulation. If an activation conditon contains an @field reference it will be evaluated as currntly. If not, it will be evaluated in a sandbox that contins the current workflow, target, actor and item data. So
+```
+  workflow.targets.some(t=> t.actor.effects.find(i=>i.data.label === "Poisoned")
+```
+  works. 
+    - If the condition contains an @field reference it will be evaluated as currently. 
+    - If not the expression is given a sanitised version of the same data, but only as data so actor/token/item functions will work, eg. actor.update(). The above expression works without modification.
+
 ### 0.9.14
   * Fix for roll other damage for spells not applying other damage.
   * Fix for chat damage buttons not working for "Other" damage.

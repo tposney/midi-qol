@@ -159,7 +159,6 @@ export let readyHooks = async () => {
       /// result = await wrapped(...args);
       // handleRemoveConcentration(effect, [token]);
       handleRemoveConcentration(effect);
-
     }
     return true;
   });

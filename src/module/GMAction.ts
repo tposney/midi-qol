@@ -184,7 +184,9 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
   let promises: Promise<any>[] = [];
   let tokenIdList: any[] = [];
   let templateData = {
-    damageApplied: ["yes", "yesCard"].includes(data.autoApplyDamage) ? i18n("midi-qol.HPUpdated") : i18n("midi-qol.HPNotUpdated"),
+    damageApplied: ["yes", "yesCard"].includes(data.autoApplyDamage) ? 
+            i18n("midi-qol.HPUpdated") : 
+            data.autoApplyDamage === "yesCardNPC" ? i18n("midi-qol.HPNPCUpdated") : i18n("midi-qol.HPNotUpdated"),
     damageList: [],
     needsButtonAll: false
   };
@@ -204,8 +206,8 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
     }
     let newHP = Math.max(0, oldHP - hpDamage);
     // removed intended for check
-    if (["yes", "yesCard"].includes(data.autoApplyDamage)) {
-      if (newHP !== oldHP || newTempHP !== oldTempHP) {
+    if (["yes", "yesCard", "yesCardNPC"].includes(data.autoApplyDamage)) {
+      if ((newHP !== oldHP || newTempHP !== oldTempHP) && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
         //@ts-ignore
         promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem }, { dhp: -appliedDamage }));
       }
@@ -240,7 +242,8 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
       newTempHP,
       oldTempHP,
       oldHP,
-      buttonId: tokenUuid
+      buttonId: tokenUuid,
+      iconPrefix: (data.autoApplyDamage === "yesCardNPC" && actor.type === "character") ? "*" : ""
     };
 
     ["di", "dv", "dr"].forEach(trait => {
@@ -267,7 +270,7 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
   //@ts-ignore
   const results = await Promise.allSettled(promises);
   if (debugEnabled > 0) warn("GM action results are ", results)
-  if (["yesCard", "noCard"].includes(data.autoApplyDamage)) {
+  if (["yesCard", "noCard", "yesCardNPC"].includes(data.autoApplyDamage)) {
     const content = await renderTemplate("modules/midi-qol/templates/damage-results.html", templateData);
     const speaker: any = ChatMessage.getSpeaker();
     speaker.alias = game.user?.name;

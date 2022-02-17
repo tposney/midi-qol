@@ -1105,7 +1105,7 @@ export class Workflow {
       isVersatile: this.rollOptions.versatile || this.isVersatile,
       isFumble: this.isFumble,
       spellLevel: this.itemLevel,
-      powerLevel: this.itemLevel,
+      powerLevel: game.system.id === "sw5e" ? this.itemLevel : undefined,
       damageTotal: this.damageTotal,
       damageDetail: this.damageDetail,
       damageList: this.damageList,
