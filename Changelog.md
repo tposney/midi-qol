@@ -1,3 +1,6 @@
+### 0.9.16
+  * fix for bonus dialog debug left in
+
 ### 0.9.15
   * Fix for warning when applying effects with no origin.
   * Fix for optional.ac efffects being triggered on damage rolls
