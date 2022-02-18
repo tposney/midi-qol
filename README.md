@@ -625,7 +625,7 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
 * flags.midi-qol.optional.Name.check.all/str/dex/etcthe bonus is added after theability check roll		
 * flags.midi-qol.optional.Name.save.all/str/dex/etc	the bonus is added after the save roll. Requires auto fast forward		
 * flags.midi-qol.optional.Name.label	label to use in the dialog		
-* flags.midi-qol.optional.Name.count	how many uses the effect has (think lukcy which has 3), if absent the bonus will be single use (bardic inspiration).   
+* flags.midi-qol.optional.Name.count	how many uses the effect has (think lucky which has 3), if absent the bonus will be single use (bardic inspiration), turn for once per turn.   
 
 You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
 
@@ -644,7 +644,7 @@ flags.midi-qol.OverTime OVERRIDE specification
 where specification is a comma separated list of fields.
   * turn=start/end (check at the start or end of the actor's turn) The only required field.
   * applyCondition=expression, if present must evaluate to true or rest of the processing will be aborted.
-  e.g. appplyCondition=@attributes.hp.value > 0 - for regeneration.
+  e.g. applyCondition=@attributes.hp.value > 0 - for regeneration.
   * removeCondition=expression, if present and evaluates to true the effect is removed after the rest of the processing.
   Saving Throw: the entire active effect will be removed when the saving throw is made (or the effect duration expires)
   * rollType=check/save/skill (default save), roll an ability check, save or skill.
