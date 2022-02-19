@@ -282,7 +282,7 @@ export class Workflow {
     this.damageRolled = false;
     this.kickStart = true; // call workflow.next(WORKFLOWSTATES.NONE) when the item card is shown.
     this.flagTags = undefined;
-    this.workflowOptions = options.workflowOptions;
+    this.workflowOptions = options.workflowOptions ?? {};;
 
     if (configSettings.allowUseMacro)
       this.onUseMacros = getProperty(this.item, "data.flags.midi-qol.onUseMacroParts");
@@ -1721,8 +1721,8 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
           monkRequests.push({
             token: target.id,
             // TODO - reinstate this when monks token bar is able to handle it.
-            // advantage: advantage === true,
-            // disadvantage: advantage === false,
+            advantage: advantage === true,
+            disadvantage: advantage === false,
             altKey: advantage === true,
             ctrlKey: advantage === false,
             fastForward: false

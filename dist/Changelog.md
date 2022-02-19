@@ -1,3 +1,6 @@
+### 0.9.18
+* Fix for error thrown when using checking hits.
+
 ### 0.9.17
   * Added additional onUseMacro call "preItemRoll", this is called before the item is rolled, which means before resource/spell slot consumption. If the macro returns false the roll is aborted, before the spell slot/other resources are consumed. This allows you to implement special item usage conditions.
   * Added additional Hook "midi-qol.preItemRoll" which allows you to do general preItem checks. If the hook returns false the workflow is aborted.
