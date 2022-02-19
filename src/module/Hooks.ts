@@ -51,7 +51,7 @@ export let readyHooks = async () => {
     const token = controlled.length ? controlled.shift() : tokens.shift();
     if (configSettings.addWounded > 0) {
       //@ts-ignore
-      const CEWounded = game.dfreds?.effects?.all.find(ef=>ef.name === i18n("midi-qol.Wounded"))
+      const CEWounded = game.dfreds?.effects?.all.find(ef => ef.name === i18n("midi-qol.Wounded"))
       const woundedLevel = attributes.hp.max * configSettings.addWounded / 100;
       const needsWounded = attributes.hp.value > 0 && attributes.hp.value < woundedLevel
       if (installedModules.get("dfreds-convenient-effects") && CEWounded) {
@@ -144,24 +144,8 @@ export let readyHooks = async () => {
       element.append(ARHtml);
     }
   });
-  
-  Hooks.on("restCompleted", restManager);
 
-  Hooks.on("deleteActiveEffect", (...args) => {
-    let [effect, option, userId] = args;
-    if (game.user?.id !== userId) return true;
-    //@ts-ignore documentClass
-    if (!(effect.parent instanceof CONFIG.Actor.documentClass)) return true;
-    const actor = effect.parent;
-    // const token = actor.token ? actor.token : actor.getActiveTokens()[0];
-    const checkConcentration = globalThis.MidiQOL?.configSettings()?.concentrationAutomation;
-    if (checkConcentration) {
-      /// result = await wrapped(...args);
-      // handleRemoveConcentration(effect, [token]);
-      handleRemoveConcentration(effect);
-    }
-    return true;
-  });
+  Hooks.on("restCompleted", restManager);
 
   // Concentration Check is rolled as an item roll so we need an item.
   if (installedModules.get("combat-utility-belt")) {
@@ -183,48 +167,6 @@ export function restManager(actor, result) {
       || specialDuration.includes(`shortRest`));
   }).map(ef => ef.id);;
   if (myExpiredEffects?.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects);
-}
-
-// async function handleRemoveConcentration(effect, tokens) {
-async function handleRemoveConcentration(effect) {
-  let actor = effect.parent;
-  let concentrationLabel: any = i18n("midi-qol.Concentrating");
-  if (installedModules.get("dfreds-convenient-effects")) {
-    let concentrationId = "Convenient Effect: Concentrating";
-    let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
-    if (statusEffect) concentrationLabel = statusEffect.label;
-  } else if (installedModules.get("combat-utility-belt")) {
-    concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
-  }
-  let isConcentration = effect.data.label === concentrationLabel;
-  if (!isConcentration) return false;
-
-  // If concentration has expired and times-up installed - leave it to TU.
-  if (installedModules.get("times-up")) {
-    let expired = effect.data.duration?.seconds && (game.time.worldTime - effect.data.duration.startTime) >= effect.data.duration.seconds;
-    const duration = effect.duration;
-    expired = expired || (duration && duration.remaining <= 0 && duration.type === "turns");
-    if (expired) return true;
-  }
-  const concentrationData = actor.getFlag("midi-qol", "concentration-data");
-  if (!concentrationData) return false;
-  try {
-    await actor.unsetFlag("midi-qol", "concentration-data")
-    if (concentrationData.templates) {
-      for (let templateUuid of concentrationData.templates) {
-        const template = MQfromUuid(templateUuid);
-        if (template) await template.delete();
-      }
-    }
-    for (let removeUuid of concentrationData.removeUuids) {
-      const entity = await fromUuid(removeUuid);
-      if (entity) await entity.delete()
-    }
-    timedAwaitExecuteAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
-  } catch (err) {
-    console.warn("midi-qol | error deleteing concentration effects: ", err)
-  }
-  return true;
 }
 
 export function initHooks() {
@@ -314,7 +256,7 @@ export function initHooks() {
           const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOff") ?? false;
           const effect = `<div class="form-group"><label>${offLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOff" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`
           element.append(effect)
-        } 
+        }
         if (["none", "itempri"].includes(configSettings.autoCEEffects)) {
           const onLabel = i18n("midi-qol.convenientEffectsOn");
           const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOn") ?? false;

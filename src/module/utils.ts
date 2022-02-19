@@ -1,15 +1,14 @@
-import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, midiFlags, getCanvas, overTimeEffectsToDelete, geti18nOptions } from "../midi-qol.js";
+import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, overTimeEffectsToDelete, geti18nOptions } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
-import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, updateEffects } from "./GMAction.js";
+import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { itemJSONData, overTimeJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
-import { getConfigFileParsingDiagnostics, getDefaultFormatCodeSettings, idText, isConstructorDeclaration } from "typescript";
 import { OnUseMacros } from "./apps/Item.js";
-import { ddbglPendingFired } from "./chatMesssageHandling.js";
+import { Options } from "./patching.js";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -136,7 +135,7 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
 export function getSelfTarget(actor): Token | undefined {
   if (actor.token) return actor.token;
   const speaker = ChatMessage.getSpeaker({ actor })
-  if (speaker.token) return getCanvas().tokens?.get(speaker.token);
+  if (speaker.token) return canvas?.tokens?.get(speaker.token);
   //@ts-ignore this is a token document not a token ??
   return new CONFIG.Token.documentClass(actor.getTokenData(), { actor });
 }
@@ -264,7 +263,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     if (workflow && !isHealing && workflow.item && !getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction")
       && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
       //@ts-ignore
-      let result = await doReactions(t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item });
+      let result = await doReactions(t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: {damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid}});
     }
     if (getProperty(a.data, "flags.midi-qol.DR.all") !== undefined)
       DRAll = (new Roll((getProperty(a.data, "flags.midi-qol.DR.all") || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
@@ -744,21 +743,8 @@ export async function processOverTime(wrapped, data, options, user) {
 
       // Remove reaction used status from each combatant
       if (actor && toTest !== prev) {
-        const midiFlags = getProperty(actor.data.flags, "midi-qol");
-        if (midiFlags?.reactionCombatRound !== undefined) {
-          await actor?.unsetFlag("midi-qol", "reactionCombatRound");
-        }
-        /*
-        const ceReaction = getConvenientEffectsReaction();
-        if (getConvenientEffectsReaction()) {
-          if (!ceReaction.flags?.dae?.specialDuration && await ConvenientEffectsHasEffect(ceReaction.name, actor.uuid)) {
-            //@ts-ignore
-            game.dfreds.effectInterface.removeEffect({effectname: ceReaction.name, uuid: actor.uuid})
-          }
-        }
-      */
+        if (await hasUsedReaction(actor)) removeReactionUsed(actor);
       }
-
 
       // Remove any per turn optional bonus effects
       const midiFlags: any = getProperty(actor.data, "flags.midi-qol");
@@ -941,7 +927,7 @@ export async function processOverTime(wrapped, data, options, user) {
   }
 }
 
-export async function completeItemRoll(item, options) {
+export async function completeItemRoll(item, options: any = {}) {
   if (game.user?.isGM || !options.checkGMStatus) {
     return new Promise((resolve) => {
       if (options.targetUuids && game.user) {
@@ -982,7 +968,7 @@ export function untargetAllTokens(...args) {
     prevTurn = combat.turns.length - 1;
 
   const previous = combat.turns[prevTurn];
-  if ((game.user?.isGM && ["allGM", "all"].includes(autoRemoveTargets)) || (autoRemoveTargets === "all" && getCanvas().tokens?.controlled.find(t => t.id === previous.token?.id))) {
+  if ((game.user?.isGM && ["allGM", "all"].includes(autoRemoveTargets)) || (autoRemoveTargets === "all" && canvas?.tokens?.controlled.find(t => t.id === previous.token?.id))) {
     // release current targets
     game.user?.targets.forEach((t: Token) => {
       t.setTarget(false, { releaseOthers: false });
@@ -990,7 +976,7 @@ export function untargetAllTokens(...args) {
   }
 }
 
-export function checkIncapcitated(actor: Actor, item: Item, event) {
+export function checkIncapcitated(actor: Actor, item: Item | undefined = undefined, event: any) {
   const actorData: any = actor.data;
   if (actorData?.data.attributes?.hp?.value <= 0) {
     log(`minor-qol | ${actor.name} is incapacitated`)
@@ -1024,10 +1010,10 @@ export function getDistanceSimple(t1: Token, t2: Token, includeCover, wallBlocki
 **/
 //TODO change this to TokenData
 export function getDistance(t1: Token, t2: Token, includeCover, wallblocking = false): { distance: number, acBonus: number | undefined } {
-  const canvas = getCanvas();
+  const noResult = { distance: -1, acBonus: undefined }
+  if (!canvas || !canvas.scene) return noResult;
   let coverACBonus = 0;
   let tokenTileACBonus = 0;
-  const noResult = { distance: -1, acBonus: undefined }
   let coverData;
   if (!canvas.grid || !canvas.dimensions) noResult;
   if (!t1 || !t2) return noResult
@@ -1102,13 +1088,13 @@ export function getDistance(t1: Token, t2: Token, includeCover, wallblocking = f
     return noResult;
   }
   //@ts-ignore
-  rdistance = segments.map(ray => getCanvas().grid.measureDistances([ray], { gridSpaces: true })[0]);
+  rdistance = segments.map(ray => canvas.grid.measureDistances([ray], { gridSpaces: true })[0]);
   distance = rdistance[0];
   rdistance.forEach(d => { if (d < distance) distance = d; });
   if (configSettings.optionalRules.distanceIncludesHeight) {
     let height = Math.abs((t1.data.elevation || 0) - (t2.data.elevation || 0))
     //@ts-ignore diagonalRule from DND5E
-    const rule = getCanvas().grid?.diagonalRule
+    const rule = canvas.grid.diagonalRule
     if (["555", "5105"].includes(rule)) {
       let nd = Math.min(distance, height);
       let ns = Math.abs(distance - height);
@@ -1125,17 +1111,17 @@ let pointWarn = debounce(() => {
   ui.notifications?.warn("4 Point LOS check selected but dnd5e-helpers not installed")
 }, 100)
 
-export function checkRange(actor, item, tokenId, targets) {
+export function checkRange(actor, item, tokenId, targets): string {
   let itemData = item.data.data;
-
+  if (!canvas || !canvas.scene) return "normal"
   // check that a range is specified at all
-  if (!itemData.range) return;
+  if (!itemData.range) return "normal";
   if (!itemData.range.value && !itemData.range.long && itemData.range.units !== "touch") return "normal";
   if (itemData.target?.type === "self") return "normal";
   // skip non mwak/rwak/rsak/msak types that do not specify a target type
   if (!allAttackTypes.includes(itemData.actionType) && !["creature", "ally", "enemy"].includes(itemData.target?.type)) return "normal";
 
-  let token: Token | undefined = getCanvas().tokens?.get(tokenId);
+  let token: Token | undefined = canvas.tokens?.get(tokenId);
   if (!token) {
     if (debugEnabled > 0) warn(`${game.user?.name} no token selected cannot check range`)
     ui.notifications?.warn(`${game.user?.name} no token selected`)
@@ -1347,10 +1333,11 @@ export async function addConcentration(options: { workflow: Workflow }) {
  * @param {number} distance in game units to consider near
  */
 
-export function findNearby(disposition: number | null, token: Token | undefined, distance: number, maxSize: number | undefined = undefined) {
+export function findNearby(disposition: number | null, token: Token | undefined, distance: number, maxSize: number | undefined = undefined): Token[] {
   if (!token) return [];
+  if (!canvas || !canvas.scene) return [];
   let targetDisposition = token.data.disposition * (disposition ?? 0);
-  let nearby = getCanvas().tokens?.placeables.filter(t => {
+  let nearby = canvas.tokens?.placeables.filter(t => {
     if (maxSize && t.data.height * t.data.width > maxSize) return false;
     if (t.actor &&
       t.id !== token.id && // not the token
@@ -1381,14 +1368,16 @@ export function hasCondition(token, condition: string) {
 }
 
 export async function removeHiddenInvis() {
-  const token: Token | undefined = getCanvas().tokens?.get(this.tokenId);
+  if (!canvas || !canvas.scene) return;
+  const token: Token | undefined = canvas.tokens?.get(this.tokenId);
   await removeTokenCondition(token, "hidden");
   await removeTokenCondition(token, "invisible");
   log(`Hidden/Invisibility removed for ${this.actor.name} due to attack`)
 }
 
 export async function removeCondition(condition: string) {
-  const token: Token | undefined = getCanvas().tokens?.get(this.tokenId);
+  if (!canvas || !canvas.scene) return;
+  const token: Token | undefined = canvas.tokens?.get(this.tokenId);
   removeTokenCondition(token, condition);
 }
 
@@ -1460,11 +1449,12 @@ export async function expireRollEffect(rollType: string, abilityId: string) {
 
 // TODO revisit the whole synth token piece. find out why USERTARGETS is not
 export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<Token> {
+  if (!canvas || !canvas.scene) return tokenSet;
   if (!tokenSet) return new Set();
   if (!game.modules.get("multilevel-tokens")?.active) return tokenSet;
   const multiLevelTokens = [...tokenSet].filter(t => getProperty(t.data, "flags.multilevel-tokens"));
   //@ts-ignore t.data.flags
-  const nonLocalTokens = multiLevelTokens.filter(t => !getCanvas().tokens?.get(t.data.flags["multilevel-tokens"].stoken))
+  const nonLocalTokens = multiLevelTokens.filter(t => canvas.tokens?.get(t.data.flags["multilevel-tokens"].stoken))
   let normalTokens = [...tokenSet].filter(a => a.actor);
   // return new Set(normalTokens);
   let tokenData;
@@ -1538,7 +1528,7 @@ class RollModifyDialog extends Application {
 
   async getData(options) {
     this.data.flags = this.data.flags.filter(flagName => {
-      if (getOptionalCountRemaining(this.data.actor, `${flagName}.count`) < 1) return false;
+      if ((getOptionalCountRemaining(this.data.actor, `${flagName}.count`)) < 1) return false;
       return getProperty(this.data.actor.data, flagName)
     });
     if (this.data.flags.length === 0) this.close();
@@ -1729,6 +1719,7 @@ export function getOptionalCountRemaining(actor: Actor5e, flag: string) {
     // check for the flag
     if (getProperty(actor.data, usedFlag)) return 0;
   } else if (countValue === "reaction") {
+    // return await hasUsedReaction(actor)
     return actor.getFlag("midi-qol", "reactionCombatRound") ? 0 : 1;
   }
   return 1; //?? TODO is this sensible?
@@ -1763,11 +1754,7 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
   } else if ("turn" === count.value) {
     const flagKey = `${changeKey}.used`.replace("flags.midi-qol.", "");
   } else if (count.value === "reaction") {
-    if (getConvenientEffectsReaction() && count.value === "reaction") {
-      //@ts-ignore
-      await game.dfreds.effectInterface.addEffect({effectName: getConvenientEffectsReaction().name, uuid: actor.uuid})
-    }
-    await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
+    setReactionUsed(actor);
   }
 }
 
@@ -1820,25 +1807,25 @@ function itemReaction(item, triggerType, maxLevel) {
   if (!item._getUsageUpdates({ consumeRecharge: item.data.data.recharge?.value, consumeResource: true, consumeSpellLevel: false, consumeUsage: item.data.data.uses?.max > 0, consumeQuantity: item.type === "consumable" })) return false;
   return true;
 }
-export async function actorHasUsedReaction(actor) {
-  if (actor.getFlag("midi-qol", "reactionCombatRound")) return true;
-  if (getConvenientEffectsReaction()) {
-    //@ts-ignore
-    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, actor.uuid)) return true;
-  }
-  return false;
-}
 
-export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string, options: { item: Item }): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
+export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string, options: any = {}): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
   const noResult = { name: undefined, uuid: undefined, ac: undefined };
   //@ts-ignore attributes
-  if (!target.actor || !target.actor.data.flags || !target.actor.data.flags["midi-qol"] || target.actor.data.data.attributes.hp.value <= 0) return noResult;
+  if (!target.actor || !target.actor.data.flags || target.actor.data.data.attributes.hp.value <= 0) return noResult;
+  if (checkRule("incapacitated")) {
+    try {
+      enableNotifications(false);
+      if (checkIncapcitated(target.actor, undefined,  undefined)) return noResult;
+    } finally {
+      enableNotifications(true);
+    }
+  }
+
+  if (await hasUsedReaction(target.actor)) return noResult;
   let player = playerFor(target);
   if (getReactionSetting(player) === "none") return noResult;
   if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
   if (!player) return noResult;
-  if (await actorHasUsedReaction(target.actor)) return noResult;
-// CHeck CE reaction effect?
   const maxLevel = maxCastLevel(target.actor);
   enableNotifications(false);
   let reactions;
@@ -1855,9 +1842,9 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
       if (!midiFlags?.optional[flag].count) return true;
       return getOptionalCountRemainingShortFlag(target.actor, flag) > 0;
     }).length
-
-  const promptString = triggerType === "reactiondamage" ? "midi-qol.reactionFlavorDamage" : "midi-qol.reactionFlavorAttack";
+  
   if (reactions <= 0) return noResult;
+  const promptString = triggerType === "reactiondamage" ? "midi-qol.reactionFlavorDamage" : "midi-qol.reactionFlavorAttack";
   let chatMessage;
   const reactionFlavor = game.i18n.format(promptString, { itemName: (options.item?.name ?? "unknown"), actorName: target.name });
   const chatData: any = {
@@ -1897,27 +1884,28 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
       resolve(noResult);
     }, (configSettings.reactionTimeout || 30) * 1000);
     // Complier does not realise player can't be undefined to get here
-    player && requestReactions(target, player, triggerTokenUuid, content, triggerType, resolve, chatMessage)
+    player && requestReactions(target, player, triggerTokenUuid, content, triggerType, resolve, chatMessage, options)
   })
 }
 
-export async function requestReactions(target: Token, player: User, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, resolve: ({ }) => void, chatPromptMessage: ChatMessage) {
+export async function requestReactions(target: Token, player: User, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, resolve: ({ }) => void, chatPromptMessage: ChatMessage, options: {} = {}) {
   const result = (await socketlibSocket.executeAsUser("chooseReactions", player.id, {
     tokenUuid: target.document?.uuid ?? target.uuid,
     reactionFlavor,
     triggerTokenUuid,
-    triggerType
+    triggerType,
+    options
   }));
   resolve(result);
   if (chatPromptMessage) chatPromptMessage.delete();
 }
 
-export async function promptReactions(tokenUuid: string, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string) {
+export async function promptReactions(tokenUuid: string, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, options: any = {}) {
   const target: Token = MQfromUuid(tokenUuid);
   const actor: Actor | null = target.actor;
   if (!actor) return;
+  if (await hasUsedReaction(actor)) return false;
   const midiFlags: any = actor.data.flags["midi-qol"];
-  if (await actorHasUsedReaction(actor)) return false;
   let result;
   let reactionItems;
   const maxLevel = maxCastLevel(target.actor);
@@ -1932,17 +1920,8 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
       console.warn("midi-qol | Reaction processing cancelled by Hook");
       return { name: "Filter" };
     }
-    result = await reactionDialog(actor, triggerTokenUuid, reactionItems, reactionFlavor, triggerType)
-    if (result.uuid) {
-      await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
- /*
-      if (getConvenientEffectsReaction()) {
-        //@ts-ignore
-        await game.dfreds.effectInterface.addEffect({effectName: getConvenientEffectsReaction().name, uuid: actor.uuid})
-      }
-*/
-    } 
-    if (result.uuid) return result;
+    result = await reactionDialog(actor, triggerTokenUuid, reactionItems, reactionFlavor, triggerType, options)
+    if (result.uuid) return result; //TODO look at multiple choices here
   }
   if (!midiFlags) return { name: "None" };
   const bonusFlags = Object.keys(midiFlags?.optional ?? [])
@@ -1963,11 +1942,6 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
     const preBounsRollTotal = data.roll.total;
     //@ts-ignore attributes
     await bonusDialog.bind(data)(bonusFlags, "ac", true, `${actor.name} - ${i18n("DND5E.AC")} ${actor.data.data.attributes.ac.value}`, "roll", "rollTotal", "rollHTML")
-    /* This should now be auto set 
-     if (preBounsRollTotal !== data.roll.total) {
-      await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round); // TODO this is wrong
-    }
-    */
     return { name: actor.name, uuid: actor.uuid, ac: data.roll.total };
   }
   return { name: "None" };
@@ -1975,14 +1949,8 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
 
 export function playerFor(target: Token): User | undefined {
   return playerForActor(target.actor ?? undefined);
-  // find the controlling player
-  let player = game.users?.players.find(p => p.character?.id === target.actor?.id);
-  if (!player?.active) { // no controller - find the first owner who is active
-    player = game.users?.players.find(p => p.active && target.actor?.data.permission[p.id ?? ""] === CONST.ENTITY_PERMISSIONS.OWNER)
-    if (!player) player = game.users?.players.find(p => p.active && target.actor?.data.permission.default === CONST.ENTITY_PERMISSIONS.OWNER)
-  }
-  return player;
 }
+
 export function playerForActor(actor: Actor | undefined): User | undefined {
   if (!actor) return undefined;
   let user;
@@ -2003,18 +1971,10 @@ export function playerForActor(actor: Actor | undefined): User | undefined {
   return user;
 }
 
-export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | undefined, reactionItems: any[], rollFlavor: string, triggerType: string) {
+export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | undefined, reactionItems: any[], rollFlavor: string, triggerType: string, options: any) {
   return new Promise((resolve, reject) => {
     const callback = async (dialog, button) => {
       const item = reactionItems.find(i => i.id === button.key);
-      /*
-      Hooks.once("midi-qol.RollComplete", () => {
-        setTimeout(() => {
-          actor.prepareData();
-          resolve({ name: item.name, uuid: item.uuid })
-        }, 50);
-      });
-      */
       if (item.data.data.target?.type === "creature" && triggerTokenUuid) {
         const [dummy1, sceneId, dummy2, tokenId] = triggerTokenUuid.split(".");
         // TODO change this when token targets take uuids instead of ids.
@@ -2022,14 +1982,13 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
           game.user?.updateTokenTargets([tokenId]);
         }
       }
-      await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
+      // await setReactionUsed(actor);
       // No need to set reaction effect since using item will do so.
       dialog.close();
-      await completeItemRoll(item, {});
+      options.workflowOptions = mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid}, {overwrite: true});
+      await completeItemRoll(item, options);
       actor.prepareData();
       resolve({ name: item.name, uuid: item.uuid })
-
-      // await item.roll();
     }
 
     const dialog = new ReactionDialog({
@@ -2039,7 +1998,7 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
       items: reactionItems,
       content: rollFlavor,
       callback,
-      close: resolve
+      close: resolve,
     }, {
       width: 400
     }).render(true);
@@ -2264,9 +2223,10 @@ export function evalActivationCondition(workflow: Workflow, condition: string | 
   return returnValue;
 }
 
-export function computeTemplateShapeDistance(templateDocument: MeasuredTemplateDocument) {
+export function computeTemplateShapeDistance(templateDocument: MeasuredTemplateDocument) : {shape: string, distance: number} {
   let { direction, distance, angle, width } = templateDocument.data;
-  const dimensions = getCanvas().dimensions || { size: 1, distance: 1 };
+  if (!canvas || !canvas.scene) return {shape: "none", distance: 0};
+  const dimensions = canvas.dimensions || { size: 1, distance: 1 };
   distance *= dimensions.size / dimensions.distance;
   width *= dimensions.size / dimensions.distance;
   direction = Math.toRadians(direction);
@@ -2319,3 +2279,46 @@ export async function ConvenientEffectsHasEffect(effectName: string, uuid: strin
   return game.dfreds.effectInterface.hasEffectApplied(effectName, uuid);
 }
 
+export function isInCombat(tokenId: string) {
+  let combats = game.combats?.combats.filter(combat =>
+    combat.combatants.filter(combatant=> combatant.token?.id === tokenId).length !== 0
+  );
+  return (combats?.length ?? 0) > 0;
+}
+
+export async function setReactionUsed(actor: Actor) {
+  if (getConvenientEffectsReaction()) {
+    //@ts-ignore
+    await game.dfreds?.effectInterface.addEffect({ effectName: getConvenientEffectsReaction().name, uuid: actor.uuid });
+  }
+  await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
+}
+
+export async function removeReactionUsed(actor: Actor) {
+  return await actor?.unsetFlag("midi-qol", "reactionCombatRound");
+}
+
+export async function hasUsedReaction(actor: Actor) {
+  if (actor.getFlag("midi-qol", "reactionCombatRound")) return true;
+  if (getConvenientEffectsReaction()) {
+    //@ts-ignore
+    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, actor.uuid)) return true;
+  }
+  return false;
+}
+
+export function mergeKeyboardOptions(options: any, pressedKeys: Options | undefined) {
+  if (!pressedKeys) return;
+  options.advantage = options.advantage || pressedKeys.advantage;
+  options.disadvantage = options.disadvantage || pressedKeys.disadvantage;
+  options.versatile = options.versatile || pressedKeys.versatile;
+  options.other = options.other || pressedKeys.other;
+  options.rollToggle = options.rollToggle || pressedKeys.rollToggle;
+  options.fastForward = options.fastForward || pressedKeys.fastForward;
+  options.fastForwardAbility = options.fastForwardAbility || pressedKeys.fastForwardAbility;
+  options.fastForwardDamage = options.fastForwardDamage || pressedKeys.fastForwardDamage;
+  options.fastForwardAttack = options.fastForwardAttack || pressedKeys.fastForwardAttack;
+  options.parts = options.parts || pressedKeys.parts;
+  options.chatMessage = options.chatMessage || pressedKeys.chatMessage;
+  options.critical = options.critical || pressedKeys.critical;
+}

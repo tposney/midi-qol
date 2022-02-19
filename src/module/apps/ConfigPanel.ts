@@ -60,6 +60,8 @@ export class ConfigPanel extends FormApplication {
       showReactionAttackRollOptions: geti18nOptions("ShowReactionAttackRollOptions"),
       wallsBlockRangeOptions,
       AutoCEEffectsOptions: geti18nOptions("AutoCEEffectsOptions"),
+      RecordAOOOptions: geti18nOptions("RecordAOOOptions"),
+      EnforceReactionsOptions: geti18nOptions("EnforceReactionsOptions"),
       //@ts-ignore
       itemTypeLabels: CONFIG.Item.typeLabels,
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),
@@ -281,7 +283,7 @@ function showDiffs(current: any, changed: any, flavor: string = "") {
     let longName = i18n("midi-qol." + name + ".Name");
     if (longName.startsWith("midi-qol")) longName = name;
     debug("Show config changes: Name is ", name, key, key.startsWith("gm") ? "GM" : "", i18n(`midi-qol.${name + ".Name"}`))
-    let currentVal =  current[key];
+    let currentVal = current[key];
     let changedVal = changed[key];
     if (typeof currentVal === "object") currentVal = "Object"
     if (typeof changedVal === "object") changedVal = "Object"
@@ -406,6 +408,8 @@ let quickSettingsDetails: any = {
       "gmDoReactions": "all",
       "reactionTimeout": 30,
       "showReactionAttackRoll": "all",
+      enforceReactions: "all",
+      recordAOO: "all"
     },
   },
   DisableReactions: {
@@ -415,6 +419,8 @@ let quickSettingsDetails: any = {
       gmDoReactions: "none",
       reactionTimeout: 0,
       showReactionAttackRoll: "all",
+      enforceReactions: "none",
+      recordAOO: "none"
     },
   },
   EnableConcentration: {

@@ -1,11 +1,54 @@
+### 0.9.17
+  * Added additional onUseMacro call "preItemRoll", this is called before the item is rolled, which means before resource/spell slot consumption. If the macro returns false the roll is aborted, before the spell slot/other resources are consumed. This allows you to implement special item usage conditions.
+  * Added additional Hook "midi-qol.preItemRoll" which allows you to do general preItem checks. If the hook returns false the workflow is aborted.
+  * Aborting the casting of a concentration spell by closing the spell slot usage dialog no longer removes concentration if it already existed.
+  * Fix for magic resistance and concentration advantage. Broken with the move to new key mapping. 
+    - When using LMRTFY + query the display will not include magic resistance/concentration advantage/disadvantage, however the roll query will correctly set the default option.
+    - When using LMRTFY, all sources of advantage/disadvantage will be merged and the advantage/disadvantage LMRTFY will refelect those sources.
+    - When using Monk's token bar magic resistance/concentration check advantage won't be set - you'll have to manually hit atl/control as required. Other sources of advantage/disadvantage work.
+  * Some cleanup on blind rolls and hiding of rolls.
+    - If the player makes a blind gm roll, instead of seeing nothing in chat, they will see the Item card, but attack and damage will be "Rolled" and they will not see the results of the roll.
+    - If you are not using auto roll attack/damage and do a blind gm roll instead of being unable to complete the roll the attack/damage buttons will be displayed on the chat card, but when you roll the results of the roll will be "Rolled".
+    -  I've changed "Really Hide Private Rolls" to a per client setting so each player can decide if they want the "X privately rolled some dice" message or not. As a reminder the "Rally Hide Private Rolls" setting only refers to core dnd5e attack/damage/save/skill rolls. When using the merge card attack/damage roll cards are never displayed.
+  * Optional rule incapacitated now checks before the item is rolled so that you won't have to answer questions and the discover that you can't do the roll. Similarly reactions won't be prompted for inacapacitated actors.
+  * Added deflect missiles to sample item compendium - deals with the damage reduction part.
+
+  * Some enhancements to reaction processing. All reaction processing settings have moved to the Optional settings tab.
+    - Reaction processing is much clearer when convenient effects is installed as there is a visual indicator when a reaction has been used.
+    - New optional rule, "Record Oppotunity Attacks". If an actor who is in comabt makes an attack roll when it is not their turn in the combat tracker a reaction marker will be applied (if using CE) and record that they have used their reaction for the round. Settings are:
+      - None: don't check this
+      - Characters: record this for characters but not NPCs
+      - All: record for all actors.
+    - New optional rule, "Enforce Reactions", same options as record attacks of opportunity. If enabled, when using an item that would be counted as a reaction (has reaction set in the item details or is an attack of opportunity) the player/GM is queried if they want to continue because they have already used their reaction for the round. This replaces the previous automatic blocking of using reaction items if a reaction had already been taken.
+
+    - Reactions are now tested via either the convenient effects reaction effect or midi's internal reaction tracker, midi automatically applies both. Both are reset at the start of the actors turn or when the CE reaction is removed.
+    - If an actor is not in combat attacks won't be recorded as reactions.
+    - The test for in combat covers all combats, not just the current combat.
+    * To help macro writers creating reacion items, args[0] now contains an additional field, workflowOptions which includes some data from the attack that triggered the reaction.
+      - workflowOptions.sourceActorUuid: the uuid of the actor that triggered the reaction, fetch the actor via fromUuid.
+      - workflowOptions.sourceItemUuid: the uuid of the item that triggered the reaction, feth the item via fromUuid.
+      - workflowOptions.triggerTokenUuid: the uuid of the toekn that triggered the reaction, fetch the token via fromUuid.
+      - workflowOptions.damageTotal: the total damage of the attack (if a reaction damaged reaction).
+      - workflowOptions.damageDetail: the detail of the damage done which is an arry of {damage: number, type: string}. Where the string is piercing, fire etc.
+      - Be aware when writing macros that if the item is rolled from the character sheet these fields will not be populated.
+    - **warning** There has been quite a lot of refactoring of the reaction management code so errors could well be present.
+    - If you were part way through a combat with reactions used and update midi you might see some odd behaviour until at least one round has been completed.
+
+  * Known issue: 
+    - Checking reactions for NPC's can be confusing. If you double click to open an NPC sheet, attacks of opportunity rolled from that sheet will ALWAYS refer to the token you double clicked on - even if you select a new token on the canvas. This can be confusing (and one of the reasons that there is a character only option for reaction checking).
+    - If you use "Token Action HUD" to do your rolls the selected token will be used.
+
+### 0.9.16
+  * fix for bonus dialog debug left in
+ 
 ### 0.9.15
   * Fix for warning when applying effects with no origin.
-  * Fix for optional.ac efffects being triggered on damage rolls
+  * Fix for optional.ac effects being triggered on damage rolls
   * Fix for optional effects not being triggered if other reactions are available.
   * Added chatmessage to show the results of an optional.ac effect (previously you had to deduce the result).
   * Optional effects can now have a count of "reaction". This is very similar to "turn", except that it will apply the convenient effects reaction effect and blocks other reactions being used until the start of the actors next turn. This means you can create optional effects that will count as using your reaction. So improving save throw/attack roll/damage roll/ac bonus can count as a reaction.
   * New auto apply damage setting, auto apply to NPC but not to characters. If selected damage will be applied automatically for NPC targets but not "character" targets. Targets who do not have damage applied will be marked with "*" to the left of the target icon. The tick button will apply damage to those targets normally. The test for PC is that the actor is of type "character", so if you have NPCs of type character they will also be excluded from the damage application.
-  * Some imporvment to the activation condition evaulation. If an activation conditon contains an @field reference it will be evaluated as currntly. If not, it will be evaluated in a sandbox that contins the current workflow, target, actor and item data. So
+  * Some improvement to the activation condition evaluation. If an activation condition contains an @field reference it will be evaluated as currently. If not, it will be evaluated in a sandbox that contains the current workflow, target, actor and item data. So
 ```
   workflow.targets.some(t=> t.actor.effects.find(i=>i.data.label === "Poisoned")
 ```

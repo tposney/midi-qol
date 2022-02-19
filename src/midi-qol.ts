@@ -40,8 +40,11 @@ declare global {
     game: any; // the type doesn't matter
   }
 }
-export function getCanvas(): Canvas {
-  if (!canvas || !canvas.scene) throw new Error("midi-qol - Canvas/Scene not ready");
+export function getCanvas(): Canvas | undefined{
+  if (!canvas || !canvas.scene) {
+    error("Canvas/Scene not ready - roll automation will not function");
+    return undefined;
+  }
   return canvas;
 }
 
@@ -215,6 +218,7 @@ Hooks.once('ready', function () {
   // has to be done before setup api.
   MQOnUseOptions = i18n("midi-qol.onUseMacroOptions");
   if (typeof MQOnUseOptions === "string") MQOnUseOptions = {
+    "preItemRoll": "Called before the item is rolled (*)",
     "templatePlaced": "Only callled once a template is placed",
     "preambleComplete": "After targeting complete",
     "preAttackRoll": "Before Attack Roll",

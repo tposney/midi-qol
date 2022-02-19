@@ -211,7 +211,7 @@ export class Workflow {
     }
 
     this.tokenId = speaker.token;
-    const token = getCanvas().tokens?.get(this.tokenId);
+    const token = canvas?.tokens?.get(this.tokenId);
     this.tokenUuid = this.tokenId ? token?.document.uuid : undefined; // TODO see if this could be better
     if (installedModules.get("levels") && token) {
       //@ts-ignore
@@ -282,10 +282,11 @@ export class Workflow {
     this.damageRolled = false;
     this.kickStart = true; // call workflow.next(WORKFLOWSTATES.NONE) when the item card is shown.
     this.flagTags = undefined;
+    this.workflowOptions = options.workflowOptions;
 
     if (configSettings.allowUseMacro)
       this.onUseMacros = getProperty(this.item, "data.flags.midi-qol.onUseMacroParts");
-    this.preSelectedTargets = new Set(game.user?.targets); // record those targets targeted before cast.
+    this.preSelectedTargets = canvas?.scene ? new Set(game.user?.targets) : new Set(); // record those targets targeted before cast.
   }
 
   public someEventKeySet() {
@@ -734,7 +735,7 @@ export class Workflow {
           const ceEffect = hasCE ? game.dfreds.effects.all.find(e => e.name === this.item?.name) : undefined;
           const hasItemEffect = this.hasDAE;
           if (hasItemEffect && (!ceEffect || ["none", "both", "itempri"].includes(useCE))) {
-            await globalThis.DAE.doEffects(this.item, true, this.applicationTargets, { whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId })
+            await globalThis.DAE.doEffects(this.item, true, this.applicationTargets, { whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions })
             if (!this.forceApplyEffects) await this.removeEffectsButton();
           }
           if (ceEffect && this.item) {
@@ -837,7 +838,7 @@ export class Workflow {
     }
     // TODO Hidden should check the target to see if they notice them?
     if (checkRule("invisAdvantage")) {
-      const token = getCanvas().tokens?.get(this.tokenId);
+      const token = canvas?.tokens?.get(this.tokenId);
       if (token) {
         const hidden = hasCondition(token, "hidden");
         const invisible = hasCondition(token, "invisible");
@@ -847,11 +848,11 @@ export class Workflow {
     }
     // Neaarby foe gives disadvantage on ranged attacks
     if (checkRule("nearbyFoe") && !getProperty(this.actor, "data.flags.midi-qol.ignoreNearbyFoes") && (["rwak", "rsak", "rpak"].includes(actType) || this.item.data.data.properties?.thr)) { // Check if there is a foe near me when doing ranged attack
-      let nearbyFoe = checkNearby(-1, getCanvas().tokens?.get(this.tokenId), configSettings.optionalRules.nearbyFoe);
+      let nearbyFoe = checkNearby(-1, canvas?.tokens?.get(this.tokenId), configSettings.optionalRules.nearbyFoe);
       // special case check for thrown weapons within 5 feet (players will forget to set the property)
       if (this.item.data.data.properties?.thr) {
         const firstTarget: Token = this.targets.values().next().value;
-        const me = getCanvas().tokens?.get(this.tokenId);
+        const me = canvas?.tokens?.get(this.tokenId);
         if (firstTarget && me && getDistance(me, firstTarget, false, false).distance <= configSettings.optionalRules.nearbyFoe) nearbyFoe = false;
       }
       if (nearbyFoe) {
@@ -974,47 +975,48 @@ export class Workflow {
   async rollBonusDamage(damageBonusMacro) {
     let formula = "";
     var flavor = "";
-    var extraDamages: damageBonusMacroResult[] = await this.callMacros(this.item, damageBonusMacro, "DamageBonus", "DamageBonus");
-    for (let extraDamage of extraDamages) {
-      if (extraDamage?.damageRoll) {
-        formula += (formula ? "+" : "") + extraDamage.damageRoll;
-        if (extraDamage.flavor) {
-          flavor = `${flavor}${flavor !== "" ? "<br>" : ""}${extraDamage.flavor}`
-        }
-        // flavor = extraDamage.flavor ? extraDamage.flavor : flavor;
-      }
-    }
-    if (formula === "") return;
-    try {
-      const roll = await (new Roll(formula, this.actor.getRollData()).evaluate({ async: true }));
-      this.bonusDamageRoll = roll;
-      this.bonusDamageTotal = roll.total;
-      this.bonusDamageHTML = await roll.render();
-      this.bonusDamageFlavor = flavor ?? "";
-      this.bonusDamageDetail = createDamageList({ roll: this.bonusDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
-    } catch (err) {
-      console.warn(`midi-qol | error in evaluating${formula} in bonus damage`, err);
-      this.bonusDamageRoll = null;
-      this.bonusDamageDetail = [];
-    }
-    if (this.bonusDamageRoll !== null) {
-      if (dice3dEnabled() && configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)) {
-        let whisperIds: User[] = [];
-        const rollMode = game.settings.get("core", "rollMode");
-        if ((configSettings.hideRollDetails !== "none" && game.user?.isGM) || rollMode === "blindroll") {
-          if (configSettings.ghostRolls) {
-            //@ts-ignore ghost
-            this.bonusDamageRoll.ghost = true;
-          } else {
-            whisperIds = ChatMessage.getWhisperRecipients("GM")
+    var extraDamages: (damageBonusMacroResult | boolean | undefined)[]  = await this.callMacros(this.item, damageBonusMacro, "DamageBonus", "DamageBonus");
+      for (let extraDamage of extraDamages) {
+        if (!extraDamage || typeof extraDamage === "boolean") continue;
+        if (extraDamage?.damageRoll) {
+          formula += (formula ? "+" : "") + extraDamage.damageRoll;
+          if (extraDamage.flavor) {
+            flavor = `${flavor}${flavor !== "" ? "<br>" : ""}${extraDamage.flavor}`
           }
-        } else if (game.user && (rollMode === "selfroll" || rollMode === "gmroll")) {
-          whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
-        } else whisperIds = ChatMessage.getWhisperRecipients("GM");
-        //@ts-ignore game.dice3d
-        await game.dice3d.showForRoll(this.bonusDamageRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+          // flavor = extraDamage.flavor ? extraDamage.flavor : flavor;
+        }
       }
-    }
+      if (formula === "") return;
+      try {
+        const roll = await (new Roll(formula, this.actor.getRollData()).evaluate({ async: true }));
+        this.bonusDamageRoll = roll;
+        this.bonusDamageTotal = roll.total;
+        this.bonusDamageHTML = await roll.render();
+        this.bonusDamageFlavor = flavor ?? "";
+        this.bonusDamageDetail = createDamageList({ roll: this.bonusDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
+      } catch (err) {
+        console.warn(`midi-qol | error in evaluating${formula} in bonus damage`, err);
+        this.bonusDamageRoll = null;
+        this.bonusDamageDetail = [];
+      }
+      if (this.bonusDamageRoll !== null) {
+        if (dice3dEnabled() && configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)) {
+          let whisperIds: User[] = [];
+          const rollMode = game.settings.get("core", "rollMode");
+          if ((configSettings.hideRollDetails !== "none" && game.user?.isGM) || rollMode === "blindroll") {
+            if (configSettings.ghostRolls) {
+              //@ts-ignore ghost
+              this.bonusDamageRoll.ghost = true;
+            } else {
+              whisperIds = ChatMessage.getWhisperRecipients("GM")
+            }
+          } else if (game.user && (rollMode === "selfroll" || rollMode === "gmroll")) {
+            whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
+          } else whisperIds = ChatMessage.getWhisperRecipients("GM");
+          //@ts-ignore game.dice3d
+          await game.dice3d.showForRoll(this.bonusDamageRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+        }
+      }
     return;
   }
 
@@ -1126,11 +1128,12 @@ export class Workflow {
       concentrationData: getProperty(this.actor.data.flags, "midi-qol.concentration-data"),
       templateId: this.templateId, // deprecated
       templateUuid: this.templateUuid,
-      rollOptions: this.rollOptions
+      rollOptions: this.rollOptions,
+      workflowOptions: this.workflowOptions
     }
   }
 
-  async callMacros(item, macros, tag, macroPass): Promise<damageBonusMacroResult[]> {
+  async callMacros(item, macros, tag, macroPass): Promise<(damageBonusMacroResult | boolean | undefined)[]> {
     if (!macros || macros?.length === 0) return [];
     const macroNames = macros.split(",").map(s => s.trim());
     let values: Promise<damageBonusMacroResult | any>[] = [];
@@ -1183,7 +1186,7 @@ export class Workflow {
         }
         const speaker = this.speaker;
         const actor = this.actor;
-        const token = getCanvas().tokens?.get(this.tokenId);
+        const token = canvas?.tokens?.get(this.tokenId);
         const character = game.user?.character;
         const args = [macroData];
 
@@ -1395,7 +1398,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
         flavor: this.bonusDamageFlavor,
         speaker: this.speaker
       }
-      setProperty(messageData, "flags.dnd5e.roll.type", "damage");
+      setProperty(messageData, `flags.${game.system.id}.roll.type`, "damage");
       if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll.type", "damage");
       this.bonusDamageRoll.toMessage(messageData);
     }
@@ -1485,7 +1488,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
         user = playerForActor(this.item.actor);
       }
       if (!user) return;
-      speaker.alias = (configSettings.useTokenNames && speaker.token) ? getCanvas().tokens?.get(speaker.token)?.name : speaker.alias;
+      speaker.alias = (configSettings.useTokenNames && speaker.token) ? canvas?.tokens?.get(speaker.token)?.name : speaker.alias;
       speaker.scene = canvas?.scene?.id
       if ((validTargetTokens(game.user?.targets ?? new Set())).size > 0) {
         let chatData: any = {
@@ -1674,6 +1677,10 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
           else advantage = undefined; // TODO why is this here???
           if (debugEnabled > 1) debug(`${target.actor.name} resistant to magic : ${advantage}`);
         }
+        const settingsOptions = procAdvantage(target.actor, rollType, this.saveItem.data.data.save.ability, {});
+        if (settingsOptions.advantage) advantage = true;
+        if (settingsOptions.disadvantage) advantage = false;
+
         if (this.saveItem.data.flags["midi-qol"]?.isConcentrationCheck) {
           if (getProperty(target.actor.data.flags, "midi-qol.advantage.concentration")) {
             advantage = true;
@@ -1714,10 +1721,10 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
           monkRequests.push({
             token: target.id,
             // TODO - reinstate this when monks token bar is able to handle it.
-            advantage: advantage === true,
-            disadvantage: advantage === false,
-            //altKey: advantage === true,
-            //ctrlKey: advantage === false,
+            // advantage: advantage === true,
+            // disadvantage: advantage === false,
+            altKey: advantage === true,
+            ctrlKey: advantage === false,
             fastForward: false
           })
         } else if (promptPlayer && player?.active) {
@@ -2080,7 +2087,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
           if (targetEC) isHitEC = checkRule("challengeModeArmor") && attackTotal <= targetAC && attackTotal >= targetEC;
           // check to see if the roll hit the target
           if ((isHit || isHitEC || this.iscritical) && this.attackRoll && !getProperty(this, "item.data.flags.midi-qol.noProvokeReaction")) {
-            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { item: this.item });
+            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { item: this.item, workflowOptions: mergeObject(this.workflowOptions, {sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid}, {inpace:false, overwrite: true})});
             if (result?.name) {
               targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
             }
@@ -2141,7 +2148,8 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
   }
 
   setRangedTargets(targetDetails) {
-    const token = getCanvas().tokens?.get(this.speaker.token);
+    if (!canvas || !canvas.scene) return true;
+    const token = canvas?.tokens?.get(this.speaker.token);
     if (!token) {
       ui.notifications?.warn(`${game.i18n.localize("midi-qol.noSelection")}`)
       return true;
@@ -2156,7 +2164,6 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
     game.user?.targets.clear();
     // min dist is the number of grid squares away.
     let minDist = targetDetails.value;
-    const canvas = getCanvas();
     const targetIds: string[] = [];
     if (canvas.tokens?.placeables && canvas.grid) {
       for (let target of canvas.tokens.placeables) {
@@ -2172,7 +2179,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
         // && (["always", "wallsBlock"].includes(configSettings.rangeTarget) || target.actor?.data.data.attributes.hp.value > 0)
         if (inRange) {
           // if the item specifies a range of "special" don't target the caster.
-          let selfTarget = (this.item?.data.data.range?.units === "spec") ? getCanvas().tokens?.get(this.tokenId) : null;
+          let selfTarget = (this.item?.data.data.range?.units === "spec") ? canvas.tokens?.get(this.tokenId) : null;
           if (selfTarget === target) {
             inRange = false;
           }
@@ -2467,7 +2474,7 @@ export class TrapWorkflow extends Workflow {
         templateData.direction = this.templateLocation.direction || 0;
 
         // Create the template
-        let templates = await getCanvas().scene?.createEmbeddedDocuments("MeasuredTemplate", [templateData]);
+        let templates = await canvas?.scene?.createEmbeddedDocuments("MeasuredTemplate", [templateData]);
         if (templates) {
           const templateDocument: any = templates[0];
           templateTokens({ x: templateDocument.data.x, y: templateDocument.data.y, shape: templateDocument.object.shape, distance: templateDocument.data.distance })
@@ -2476,7 +2483,7 @@ export class TrapWorkflow extends Workflow {
             //@ts-ignore _ids
             let ids: string[] = templates.map(td => td._id)
             //TODO test this again
-            setTimeout(() => getCanvas().scene?.deleteEmbeddedDocuments("MeasuredTemplate", ids), this.templateLocation.removeDelay * 1000);
+            setTimeout(() => canvas?.scene?.deleteEmbeddedDocuments("MeasuredTemplate", ids), this.templateLocation.removeDelay * 1000);
           }
         }
         return await this.next(WORKFLOWSTATES.TEMPLATEPLACED);
@@ -2688,7 +2695,7 @@ export class BetterRollsWorkflow extends Workflow {
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("postDamageRoll"), "OnUse", "postDamageRoll");
         }
-        const damageBonusMacro = getProperty(this.actor.data.flags, "dnd5e.DamageBonusMacro");
+        const damageBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.DamageBonusMacro`);
         if (damageBonusMacro) {
           await this.rollBonusDamage(damageBonusMacro);
         }
@@ -2697,8 +2704,7 @@ export class BetterRollsWorkflow extends Workflow {
             flavor: this.otherDamageFlavor ?? this.damageFlavor,
             speaker: this.speaker
           }
-          setProperty(messageData, "flags.dnd5e.roll.type", "damage");
-          if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll.type", "damage");
+          setProperty(messageData, `flags.${game.system.id}.roll.type`, "damage");
 
           //  Not required as we pick up the damage from the better rolls data this.otherDamageRoll.toMessage(messageData);
           this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, versatile: false, defaultType: "" });
@@ -2709,8 +2715,7 @@ export class BetterRollsWorkflow extends Workflow {
             flavor: this.bonusDamageFlavor,
             speaker: this.speaker
           }
-          setProperty(messageData, "flags.dnd5e.roll.type", "damage");
-          if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll.type", "damage");
+          setProperty(messageData, `flags.${game.system.id}.roll.type`, "damage");
           this.bonusDamageRoll.toMessage(messageData);
         }
         expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"]);
@@ -2813,9 +2818,9 @@ export class DDBGameLogWorkflow extends Workflow {
       case WORKFLOWSTATES.AWAITTEMPLATE:
         if (!this.item.hasAreaTarget) return super.next(WORKFLOWSTATES.AWAITTEMPLATE)
         //@ts-ignore
-        let dnd5e: any = game.dnd5e;
+        let system: any = game[game.system.id]
         // Create the template
-        const template = dnd5e.canvas.AbilityTemplate.fromItem(this.item);
+        const template = system.canvas.AbilityTemplate.fromItem(this.item);
         if (template) template.drawPreview();
         return await super._next(WORKFLOWSTATES.AWAITTEMPLATE);
 
@@ -2834,7 +2839,7 @@ export class DDBGameLogWorkflow extends Workflow {
 
         this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
 
-        const damageBonusMacro = getProperty(this.actor.data.flags, "dnd5e.DamageBonusMacro");
+        const damageBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.DamageBonusMacro`);
         if (damageBonusMacro) {
           await this.rollBonusDamage(damageBonusMacro);
         }
@@ -2845,8 +2850,7 @@ export class DDBGameLogWorkflow extends Workflow {
             flavor: this.bonusDamageFlavor,
             speaker: this.speaker
           }
-          setProperty(messageData, "flags.dnd5e.roll.type", "damage");
-          if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll.type", "damage");
+          setProperty(messageData, `flags.${game.system.id}.roll.type`, "damage");
           this.bonusDamageRoll.toMessage(messageData);
         }
         expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"]);

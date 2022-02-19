@@ -134,8 +134,8 @@ async function addConventientEffect(options) {
   }
 }
 
-async function localDoReactions(data: { tokenUuid: string; triggerTokenUuid: string, reactionFlavor: string; triggerType: string }) {
-  const result = await promptReactions(data.tokenUuid, data.triggerTokenUuid, data.reactionFlavor, data.triggerType)
+async function localDoReactions(data: { tokenUuid: string; triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any}) {
+  const result = await promptReactions(data.tokenUuid, data.triggerTokenUuid, data.reactionFlavor, data.triggerType, data.options)
   return result;
 }
 

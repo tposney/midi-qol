@@ -29,7 +29,7 @@ Have a look at [Notes for Macro writers](#notes-for-macro-writers) which I try t
 ## I have a macro that works and just want to call it when using an item.
 If you have a standalone macro, or one from (say) the community macros collection that you want to call when using an item, create an item and set it's onUse macro to the macro's name and set the pass to preamble complete. 
 
-If you want to get fancier then change the pass at which it is called and check the arguments for use a macro.execute (some changes may be required) which is only called if active effects are applied to the target.
+If you want to get fancier then change the point at which it is called and have a look at the data passed to onUse macros. Or use a macro.execute (some changes may be required) which is only called if active effects are applied to the target.
 
 ## MidiQOL sample items compendium
 midi-qol is an automation tool that is meant to make it possible to automate some/many facets of your game. It is not a library of items that you can plug and play into your game, there are other modules for that like the excellent **DAE SRD** and **Midi SRD**, and many great macro modules that play well with midi-qol (too many for me to list and I'm sure I don't know them all).
@@ -540,6 +540,28 @@ Items in the SRD have the activation type set to reaction for reaction spells/fe
 
 If the item being used for the attack/or to cause damage has the flag (item.data.flags.midi-qol.noProvokeReaction set, it won't trigger reactions).
 
+Reaction processing is much clearer when convenient effects is installed as there is a visual indicator when a reaction has been used.
+
+Optional rule, **Record Oppotunity Attacks**.
+  * If an actor who is in comabt makes an attack roll when it is not their turn in the combat tracker reaction marker will be applied (if using CE) and recording that they have used their reaction for the round. Settings are:
+    - None: don't check this
+    - Characters: record this for characters but not NPCs
+    - All: record for all actors.
+Optional rule **Enforce Reactions**
+  - same options as record attacks of opportunity. 
+  - If enabled, when using an item that would be counted as a reaction (has reaction set in the item details or is an attack of opportunity) the player/GM is queried if they want to continue because they have already used their reaction for the round.
+Reactions are tested for either the convenient effects reaction effect or midi's internal reaction tracker. And both are reset at the start of the actors turn or when the CE reaction is removed.
+
+If an actor is not in combat attacks won't be recorded as reactions.
+The test for in combat covers all combats, not just the current combat.
+
+To help macro writers creating reacion items, args[0] contains an additional field in args[0].workflowOptions which includes some data from the attack that triggered the reaction.
+  - workflowOptions.sourceActorUuid: the uuid of the actor that triggered the reaction, fetch the actor via fromUuid.
+  - workflowOptions.sourceItemUuid: the uuid of the item that triggered the reaction, feth the item via fromUuid.
+  - workflowOptions.damageTotal: the total damage of the attack (if a reaction damaged reaction).
+  - workflowOptions.damageDetail: the detail of the damage done which is an arry of {damage: number, type: string}. Where the string is piercing, fire etc.
+  - Be aware when writing macros that if the item is rolled from the character sheet these fields will not be populated.
+
 ## Item description text and saving throws
 * "no damage on save" (or the localised equivalent) in the item description means targets that save will take no damage. Lots of cantrips are like this. Most cantrips are already in a list that midi maintains automatically, but if your favorite sepll is not in the list you can the text to the description.
 * "full damage on save" (or the localised equivalent) in the item description means targets that save will take full damage. This is mainly useful for attacks that do full damage on a hit and have a save to avoid the application of a condition, like the mace of disruption and the frightened condition.
@@ -736,6 +758,7 @@ I* t takes the same arguments as midis item.roll:
 
 ## Midi-qol called Hooks
 The passed workflow is "live" so changes will affect subsequent actions. In particular preAttackRoll and preDamageRoll will affect the roll about to be done.  
+  * Hooks.call("midi-qol.preItemRoll) - called before the item is rolled. If the hook returns false the workflow is aborted.
   * Hooks.call("midi-qol.preambleComplete",workflow) - called after targeting (for AoE items) is complete. If the hook returns false the workflow is aborted.
   * Hooks.call("midi-qol.preAttackRoll", workflow) - called immediately before the item attack roll is made. If the hook returns false, the roll is aborted. 
   * Hooks.callAll("midi-qol.AttackRollComplete", worfklow) - Called after the attack roll is made and hits are checked, but before damage is rolled.
@@ -795,24 +818,32 @@ You can use this feature to roll custom damage via a macro for any item - just l
 
 These field lets you specify a macro to call during the roll. 
 
-**OnUse macros** are called during the item workflow. The field should contain ONLY the macro name, with an optional pass to execute the macro, and recognizes the exact text ItemMacro to mean calling the items itemMacro if any. The intention is that you can customise the behaviour of how a particular item behaves.
-There are some controls for macro writers to decide when their macro should get executed. The macro data will be current for the state of the workflow. e.g. ``[postActiveEffects]ItemMacro``, the text is a localised string so may vary with language.
+**OnUse macros** are called during the item workflow. The intention of this feature is that you can customise the behaviour of how a particular item behaves.  
+
+The field should contain ONLY the macro name, or the string "ItemMacro" or "ItemMacro.ItemName". 
+  - "ItemMacro" means it will call the item macro for the item for the workflow. 
+  - "ItemMacro.ItemName" allows you to lookup by name another item that the actor for the workflow has.  
+You may specify the point at in the workflow when the macro is called.  
+The macro will be called with args[0] containing the current state information for the workflow (see below).
+There are some controls for macro writers to decide when their macro should get executed. 
 ```
-    templatePlaced only called after a measure template is placed
-    preambleComplete called after all targeting is completed
-    preAttackRoll before the attack roll is made
-    preCheckHits after the attack roll is made but before hits are adjudicated
-    postAttackRoll after the attack is adjudicated
-    preSave before saving throws are rolled
-    postSave after saving throws are rolled
-    preDamageRoll before damage is rolled
-    postDamageRoll after the damage roll is made
-    preDamageApplication before damage is applied
-    preActiveEffects before active effects are applied
-    postActiveEffects after active effects are applied
-    All call the macro for each of the above cases
+    preItemRoll: Called before the item is rolled (*)
+    templatePlaced: Only callled once a template is placed
+    preambleComplete: Called after all targeting is complete
+		preAttackRoll: Called before the attack roll is made
+		preCheckHits: Called after the attack roll is made but before hits are adjudicated
+		postAttackRoll: Called after the attack is adjudicated
+		preDamageRoll: Called before damage is rolled
+		postDamageRoll: Called after the damage roll is made
+    preSave: Called before saving throws are rolled
+		postSave: Called after saves are rolled
+		preDamageApplication: Called before Damage Application
+		preActiveEffects: Called before applying active effects
+		postActiveEffects: Called after applying active effects
+		all: Called at each of the above
 ```
   - the macro arguments have an additional parameter args[0].macroPass set to the pass being called, being one of:
+    preItemRoll
     templatePlaced
     preambleComplete
     preAttackRoll
@@ -827,17 +858,19 @@ There are some controls for macro writers to decide when their macro should get 
     postActiveEffects
 
   - [All] is special, being called with each value of macroPass. You can differentiate via args[0].macroPass to decide which ones to act on.
-  - The default pass is "preActiveEffects", to correspond to the existing behaviour.
+  - The default pass is "preActiveEffects", to correspond to the original onUse macro behaviour.
   * Note: if you are creating a damage only workflow in your macro it is best to run it in "postActiveEffects".
-  * If you wish to make changes to the workflow in these macros you will need to do: (remembering that if the macro is an execute as GM macro being run on the GM client, the Workflow.get may return undefined)
+  * If you wish to make changes to the workflow in these macros you will need to do: 
   ```
   const workflow = MidiQOL.Workflow.get(args[0].uuid)
   workflow.... = .....
   ```
+  * Remember that if the macro is an execute as GM macro the macro may execute on a different client and the workflow may not be defined, the Workflow.get may return undefined.
 
-**Damage bonus macros** are called after hits/misses/saves are adjudicated but BEFORE damage is applied, so you can specify extra damage if required, e.g. hunter's mark. The intention is support effects that are based on the character's state, rather than being related to a specific item. You can do whatever processing you want there, so could create a condition on some of the targets, do extra damage to specifc creatues/types of creatures and so on. Damage bonus macros can return an array of ``` [{damageRoll: string, flavor: string}]``` which will be added to the damage of the attack. The damage roll is a roll expression and flavor should be a damage type, e.g. fire. Damage returned via the damage bonus will NOT be increased for critical hits.
+**Damage bonus macros** are called after hits/misses/saves are adjudicated but BEFORE damage is applied, so you can specify extra damage if required, e.g. hunter's mark. The macro is not dependent on a particular item being rolled, but is called whenever damage is rolled by that character.  
+The intention is to support effects that are based on the character's state, rather than being related to a specific item. You can do whatever processing you want there, so could create a condition on some of the targets, do extra damage to specifc creatues/types of creatures and so on. Damage bonus macros can return an array of ``` [{damageRoll: string, flavor: string}]``` which will be added to the damage of the attack. The damage roll is a roll expression and flavor should be a damage type, e.g. fire. Damage returned via the damage bonus will NOT be increased for critical hits.
 
-Both calls supply the following data
+Macro calls supply the following data
 ```
   actorData = actor.data (the actor using the item).
   actor = actor.data (same as above, kept for backwards compatibility)
@@ -990,11 +1023,15 @@ I've included the complete macro, but the general idea is:
 }
 ```
 * Which sort of Macro to use?
-  - macro.execute/macro.ItemMacro effects (DAE) are applied to the target (run when added and run again when deleted) and are able to access fields from the caster and the target (see the DAE readme). They can be especially useful if you need to change a field that should not be changed via active effects, like temphp (or any effect that might get changed after the effect is applied, hp is the classic example). They are only applied to the target if the attack hit or the target did not save. Since the macro is also called when the active effect is removed from the target you are able to do any cleanup you want.
-  - OnUse macros (set on the item sheet). These are run whenever the item is used, even if the attack missed. You can do pretty much anything inside the macro and the result is awaited. Look in here for the information that is provided. You can't pass arguments to OnUse macros yourself. Useful if you want to do something to targets/other tokens/self that can't be expressed/should not be done with active effects.
-    - They are useful for effects/status icons that are not removed when the spell expires/concentration is removed.
-    - They execute within the workflow asynch context, so there is no question of off behaviour with multiple asynch operations in flight (which can happen with macro.execute).
-  - DamageBonusMacro, this is run whenever an attack rolls damage. The main idea is to enhance the damage rolled by the attack which does not depend on the item used, things like sneak attack/hunter's mark and so on. The same information is passed to the macro and can be awaited.
+  - **macro.execute/macro.ItemMacro** effects (a DAE feature - see the DAE readme) are applied to the target (run when added and run again when deleted) and are able to access fields from the caster and the target (see the DAE readme).
+    * They can be especially useful if you need to change a field that should not be changed via active effects, like temphp (or any effect that might get changed after the effect is applied, hp is the classic example).
+    * The effect is applied to the target if the attack hit or the target did not save and the macro called by DAE. 
+    * Since the macro is also called when the active effect is removed from the target you are able to do any cleanup you want.
+  - **OnUse macros** (set on the item sheet). These are run whenever the item is used, even if the attack missed.  
+    * You can do pretty much anything inside the macro and the result is awaited. Look in here for the information that is provided. You can't pass arguments to OnUse macros yourself. Useful if you want to do something to targets/other tokens/self that can't be expressed/should not be done with active effects.
+    * They are useful for effects/status icons that are not removed when the spell expires/concentration is removed.
+    * They execute within the workflow asynch context, so there is no question of off behaviour with multiple asynch operations in flight (which can happen with macro.execute).
+  - **DamageBonusMacro**, this is run whenever an attack rolls damage. The main idea is to enhance the damage rolled by the attack which does not depend on the item used, things like sneak attack/hunter's mark and so on. The same information is passed to the macro and can be awaited.
   - If you want to store information about the state of things you can do ```setProperty(actor,"flags.myflag.something", value)``` and retrieve it with ```getProperty(actor, "flags.myflag.somethng")```. The information will be reset on a game reload (so it really should be short term data) and is ONLY available on the same client that set the infromation, but does not require a database transaction so is very cheap. If it needs to last over game reloads or be accessible on other clients you need to do actor.setFlag...
 
 ## Sample Chat Logs

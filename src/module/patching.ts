@@ -1,10 +1,12 @@
 import { log, warn, debug, i18n, error, getCanvas, i18nFormat } from "../midi-qol.js";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
-import { bonusDialog, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getOptionalCountRemainingShortFlag, getSpeaker, isAutoFastAttack, isAutoFastDamage, notificationNotify, processOverTime } from "./utils.js";
+import { bonusDialog, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, getSpeaker, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, notificationNotify, processOverTime } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
+import { convertCompilerOptionsFromJson } from "typescript";
+import { timedAwaitExecuteAsGM } from "./GMAction.js";
 let libWrapper;
 
 var d20Roll;
@@ -97,7 +99,8 @@ async function bonusCheck(actor, result: Roll, category, detail): Promise<Roll> 
 async function doRollSkill(wrapped, ...args) {
   let [skillId, options = { event: {}, parts: [], avantage: false, disadvantage: false }] = args;
   const chatMessage = options.chatMessage;
-  options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
+  // options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
+  mergeKeyboardOptions(options, mapSpeedKeys(null, "ability"));
   options.event = {};
   let procOptions: Options = procAdvantage(this, "check", this.data.data.skills[skillId].ability, options)
   procOptions = procAdvantageSkill(this, skillId, procOptions);
@@ -141,7 +144,8 @@ async function doRollSkill(wrapped, ...args) {
 
 function rollDeathSave(wrapped, ...args) {
   let [options] = args;
-  options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
+  // options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
+  mergeKeyboardOptions(options, mapSpeedKeys(null, "ability"));
   options.event = {};
   const advFlags = getProperty(this.data.flags, "midi-qol")?.advantage ?? {};
   const disFlags = getProperty(this.data.flags, "midi-qol")?.disadvantage ?? {};
@@ -230,7 +234,8 @@ async function rollAbilityTest(wrapped, ...args) {
   let [abilityId, options = { event: {}, parts: [], chatMessage: undefined }] = args;
   const chatMessage = options.chatMessage;
   if (procAutoFail(this, "check", abilityId)) options.parts = ["-100"];
-  options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
+  // options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
+  mergeKeyboardOptions(options, mapSpeedKeys(null, "ability"));
   options.event = {};
   let procOptions: any = procAdvantage(this, "check", abilityId, options);
 
@@ -272,12 +277,18 @@ async function rollAbilitySave(wrapped, ...args) {
     options.parts = ["-100"];
   }
   const chatMessage = options.chatMessage;
-  options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
+  const keyOptions = mapSpeedKeys(null, "ability");
+  if (options.mapKeys !== false)  {
+    options.advantage = options.advantage || keyOptions?.advantage;
+    if (keyOptions?.disadvantage === true) options.disadvantage = true;
+    if (keyOptions?.fastForwardAbility === true) options.fastForward = true;
+  }
+
+  // options = foundry.utils.mergeObject(mapSpeedKeys(null, "ability") ?? {}, options, { inplace: false, overwrite: true });
+  mergeKeyboardOptions(options, mapSpeedKeys(null, "ability"));
   options.event = {};
+
   let procOptions: any = procAdvantage(this, "save", abilityId, options);
-
-
-
   if (procOptions.advantage && procOptions.disadvantage) {
     procOptions.advantage = false;
     procOptions.disadvantage = false;
@@ -339,7 +350,7 @@ export function procAutoFailSkill(actor, skillId): boolean {
   return false;
 }
 
-export function procAdvantage(actor, rollType, abilityId, options: Options): Options {
+export function procAdvantage(actor, rollType, abilityId, options: Options | any): Options {
   const midiFlags = actor.data.flags["midi-qol"] ?? {};
   const advantage = midiFlags.advantage ?? {};
   const disadvantage = midiFlags.disadvantage ?? {};
@@ -391,7 +402,7 @@ function _midiATIRefresh(template) {
   if (installedModules.get("levelsvolumetrictemplates")) {
     // Filter which tokens to pass - not too far and not blocked by a wall.
     let distance = template.data.distance;
-    const dimensions = getCanvas().dimensions || { size: 1, distance: 1 };
+    const dimensions = canvas.dimensions || { size: 1, distance: 1 };
     distance *= dimensions.size / dimensions.distance;
     //@ts-ignore
     // if (template.document.data.flags.levels?.elevation === undefined) setProperty(template.document.data.flags, "levels.elevation", _levels.lastTokenForTemplate.data.elevation);
@@ -567,6 +578,62 @@ export function _getInitiativeFormula(wrapped) {
   return parts.filter(p => p !== null).join(" + ");
 };
 
+async function _preDeleteActiveEffect(wrapped, ...args) {
+  try {
+    if (!(this.parent instanceof CONFIG.Actor.documentClass)) return;
+    let [options, user] = args;
+
+    // Handle removal of reaction effect
+    if (getConvenientEffectsReaction()._id === this.data.flags.core?.statusId) {
+      await this.parent.unsetFlag("midi-qol", "reactionCombatRound");
+    }
+
+    // Handle removal of concentration
+    const actor = this.parent;
+    // const token = actor.token ? actor.token : actor.getActiveTokens()[0];
+    const checkConcentration = globalThis.MidiQOL?.configSettings()?.concentrationAutomation;
+    if (!checkConcentration) return;
+    let concentrationLabel: any = i18n("midi-qol.Concentrating");
+    if (installedModules.get("dfreds-convenient-effects")) {
+      let concentrationId = "Convenient Effect: Concentrating";
+      let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
+      if (statusEffect) concentrationLabel = statusEffect.label;
+    } else if (installedModules.get("combat-utility-belt")) {
+      concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
+    }
+    let isConcentration = this.data.label === concentrationLabel;
+    if (!isConcentration) return;
+
+    // If concentration has expired effects and times-up installed - leave it to TU.
+    if (installedModules.get("times-up")) {
+      let expired = this.data.duration?.seconds && (game.time.worldTime - this.data.duration.startTime) >= this.data.duration.seconds;
+      const duration = this.duration;
+      expired = expired || (duration && duration.remaining <= 0 && duration.type === "turns");
+      if (expired) return;
+    }
+    const concentrationData = actor.getFlag("midi-qol", "concentration-data");
+    if (!concentrationData) return;
+    try {
+      await actor.unsetFlag("midi-qol", "concentration-data")
+      if (concentrationData.templates) {
+        for (let templateUuid of concentrationData.templates) {
+          const template = await fromUuid(templateUuid);
+          if (template) await template.delete();
+        }
+      }
+      for (let removeUuid of concentrationData.removeUuids) {
+        const entity = await fromUuid(removeUuid);
+        if (entity) await entity.delete(); // TODO check if this needs to be run as GM
+      }
+      timedAwaitExecuteAsGM("deleteItemEffects", { ignore: [this.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
+    } catch (err) {
+      console.warn("midi-qol | error deleteing concentration effects: ", err)
+    }
+  } finally {
+    return wrapped(...args);
+  }
+}
+
 export function readyPatching() {
   // TODO remove this when v9 default
   if (game.system.id === "dnd5e") {
@@ -580,6 +647,7 @@ export function readyPatching() {
   Notifications
   libWrapper.register("midi-qol", "Notifications.prototype.notify", notificationNotify, "MIXED");
   libWrapper.register("midi-qol", "Combatant.prototype._getInitiativeFormula", _getInitiativeFormula, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.ActiveEffect.documentClass.prototype._preDelete", _preDeleteActiveEffect, "WRAPPER");
 }
 
 export let visionPatching = () => {

@@ -60,7 +60,9 @@
       "activeDefence": false,
       "challengeModeArmor": false,
       "challengeModeArmorScale": false,
-      "enableddbGL": false
+      "enableddbGL": false,
+      "enforceReactions": "none",
+      "recordAOO": "none"
     },
     "optionalRulesEnabled": false,
     "defaultSaveMult": 0.5,

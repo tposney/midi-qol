@@ -64,6 +64,8 @@ class ConfigSettings {
   reactionTimeout: number = 10;
   gmDoReactions: string = "all";
   doReactions: string = "all";
+  enforceReactions = "none";
+  recordAOO = "none";
   showReactionChatMessage: boolean = false;
   showReactionAttackRoll: string = "all";
   convenientEffectsReaction: string = "Reaction";
@@ -114,7 +116,7 @@ class ConfigSettings {
     distanceIncludesHeight: false,
     criticalSaves: false,
     activeDefence: false,
-    challengModeArmor: false
+    challengModeArmor: false,
   };
   keepRollStats: boolean = false;
   saveStatsEvery: number = 20;
@@ -247,6 +249,8 @@ export let fetchParams = () => {
   if (!configSettings.autoCEEffects) configSettings.autoCEEffects = "none";
   configSettings.toggleOptionalRules = false;
   if (configSettings.displaySaveAdvantage === undefined) configSettings.displaySaveAdvantage = true;
+  if (!configSettings.recordAOO) configSettings.recordAOO = "none";
+  if (!configSettings.enforceReactions) configSettings.enforceReactions = "none";
 
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
@@ -258,8 +262,7 @@ export let fetchParams = () => {
   if (configSettings.addWounded === undefined) configSettings.addWounded = 0;
   if (configSettings.addDead === undefined) configSettings.addDead = false;
   if (typeof configSettings.requiresTargets !== "string") configSettings.requiresTargets = "none";
-  if (!configSettings.optionalRules) {
-    configSettings.optionalRules = {
+  configSettings.optionalRules = mergeObject({
       invisAdvantage: true,
       checkRange: true,
       wallsBlockRange: "center",
@@ -272,9 +275,8 @@ export let fetchParams = () => {
       criticalSaves: false,
       activeDefence: false,
       challengeModeArmor: false,
-      challengeModeArmorScale: false
-    }
-  }
+      challengeModeArmorScale: false,
+    }, configSettings.optionalRules ?? {}, {overwrite: true, insertKeys: true, insertValues: true});
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
   if (typeof configSettings.optionalRules.nearbyFoe !== "number") {
     if (configSettings.optionalRulesEnabled)
@@ -356,7 +358,7 @@ const settings = [
   },
   {
     name: "ForceHideRoll",
-    scope: "world",
+    scope: "client",
     default: true,
     type: Boolean,
     choices: [],

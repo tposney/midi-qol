@@ -1,7 +1,7 @@
-import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, getCanvas, debugEnabled, log, debugCallTiming } from "../midi-qol.js";
+import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 
@@ -54,7 +54,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
 
   if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
   if (Hooks.call("midi-qol.preAttackRoll", workflow) === false || Hooks.call(`midi-qol.preAttackRoll.${this.uuid}`, workflow) === false) {
-    console.warn("midi-qol | attack roll blocked by pre hook");
+    console.warn("midi-qol | attack roll blocked by preAttackRoll hook");
     return;
   }
 
@@ -162,8 +162,8 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
     //@ts-ignore .fastForward
     if (options.fastForward) workflow.rollOptions.fastForwardDamage = options.fastForward;
   } else if (workflow && !workflow.shouldRollDamage) // if we did not auto roll then process any keys
-    workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(pressedKeys, "damage", workflow.itemRollToggle), { insertKeys: true, insertValues: true,  overwrite: true });
-      //@ts-ignore
+    workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(pressedKeys, "damage", workflow.itemRollToggle), { insertKeys: true, insertValues: true, overwrite: true });
+  //@ts-ignore
   if (CONFIG.debug.keybindings) {
     log("itemhandling: workflow.rolloptions", workflow.rollOption);
     log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.itemRollToggle));
@@ -375,7 +375,7 @@ async function resolveLateTargeting(item: any) {
   if (wasMaximized) await item.actor.sheet.maximize()
 }
 
-export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event }) {
+export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event, workflowOptions: {}}) {
   const itemRollStart = Date.now()
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
@@ -384,6 +384,8 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (!enableWorkflow || createWorkflow === false) {
     return await wrapped(options);
   }
+
+  if (checkRule("incapacitated") && checkIncapcitated(this.actor, this, null)) return;
 
   const pressedKeys = duplicate(globalThis.MidiKeyManager.pressedKeys);
   const isRangeSpell = ["ft", "m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
@@ -452,13 +454,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       return null;
     }
   }
-  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type) && getConvenientEffectsReaction()) {
-    //@ts-ignore
-    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, this.actor.uuid)) {
-      ui.notifications?.warn(i18n("midi-qol.ReactionAlreadyUsed"));
-      return null;
-    }
-  }
+
   const needsConcentration = this.data.data.components?.concentration || this.data.data.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
   const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
   if (needsConcentration && checkConcentration) {
@@ -474,7 +470,6 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
         yes: () => { shouldAllowRoll = true },
       });
       if (!shouldAllowRoll) return; // user aborted spell
-      await concentrationEffect.delete();
     }
   }
 
@@ -497,10 +492,10 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   workflow = Workflow.getWorkflow(this.uuid);
   /* TODO this is not working correctly (for not auto roll cases) always create the workflow
   if (!workflow || workflow.currentState === WORKFLOWSTATES.ROLLFINISHED) {
-    workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys });
+    workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
   }
   */
-  workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys });
+  workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
   workflow.rollOptions.isVersatile = workflow.rollOptions.versatile || versatile;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = showFullCard;
@@ -512,6 +507,23 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     //@ts-ignore
     // _levels.templateElevation = true;
     // if (game.user) setProperty(game.user, "data.flags.midi-qol.elevation", workflow.templateElevation);
+  }
+  if (Hooks.call("midi-qol.preItemRoll", workflow) === false || Hooks.call(`midi-qol.preItemRoll.${this.uuid}`, workflow) === false) {
+    console.warn("midi-qol | attack roll blocked by preItemRoll hook");
+    return workflow.next(WORKFLOWSTATES.ROLLFINISHED)
+    // Workflow.removeWorkflow(workflow.id);
+    // return;
+  }
+  if (configSettings.allowUseMacro) {
+//    await this.callMacros(this.item, this.onUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
+
+    const results = await workflow.callMacros(this, workflow.onUseMacros?.getMacros("preItemRoll"), "OnUse", "preItemRoll");
+    if (results.some(i => i === false)) {
+      console.warn("midi-qol | attack roll blocked by preItemRoll macro");
+      return workflow.next(WORKFLOWSTATES.ROLLFINISHED)
+      // Workflow.removeWorkflow(workflow.id);
+      // return;
+    }
   }
 
   if (configureDialog) {
@@ -541,10 +553,37 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     // Workflow.removeWorkflow(workflow.id); ?
     return null;
   }
-  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type) && getConvenientEffectsReaction()) {
-    //@ts-ignore
-    await game.dfreds?.effectInterface.addEffect({ effectName: getConvenientEffectsReaction().name, uuid: this.actor.uuid });
+  if (needsConcentration && checkConcentration) {
+    const concentrationEffect = getConcentrationEffect(this.actor);
+    if (concentrationEffect)
+      await concentrationEffect.delete();
   }
+
+  let itemUsesReaction = false;
+  const hasReaction = await hasUsedReaction(this.actor);
+  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type)) {
+    itemUsesReaction = true;
+  }
+  const checkReactionAOO = configSettings.recordAOO=== "all" || (configSettings.recordAOO=== this.actor.type)
+  if (checkReactionAOO && !itemUsesReaction && this.hasAttack) {
+    const inCombat = isInCombat(workflow.tokenId);
+    let activeCombatants = game.combats?.combats.map(combat => combat.combatant.token?.id)
+    const isTurn = activeCombatants?.includes(workflow.tokenId)
+    if (!isTurn && inCombat) itemUsesReaction = true;
+  }
+
+  const blockReaction = itemUsesReaction && hasReaction && configSettings.enforceReactions === "all" || configSettings.enforceReactions === this.actor.type;
+  if (blockReaction) {
+    let shouldRoll = false;
+    let d = await Dialog.confirm({
+      title: i18n("midi-qol.EnforceReactions.Title"),
+      content: i18n( "midi-qol.EnforceReactions.Content"),
+      yes: () => { shouldRoll = true },
+    });
+   if (!shouldRoll) return; // user aborted roll TODO should the workflow be deleted?
+  }
+  if (itemUsesReaction && !hasReaction) await setReactionUsed(this.actor); 
+
   if (debugCallTiming) log(`wrapped item.roll() elapsed ${Date.now() - wrappedRollStart}ms`);
   /* need to get spell level from the html returned in result */
   if (this.type === "spell") {
@@ -588,7 +627,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
 export async function showItemInfo() {
   const token = this.actor.token;
-  const sceneId = token?.scene && token.scene.id || getCanvas().scene?.id;
+  const sceneId = token?.scene && token.scene.id || canvas?.scene?.id;
 
   const templateData = {
     actor: this.actor,
@@ -653,7 +692,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     || !getRemoveDamageButtons()
     || showFullCard);
   const needVersatileButton = itemIsVersatile(this) && (showFullCard || getAutoRollDamage() === "none" || !getRemoveDamageButtons());
-  const sceneId = token?.scene && token.scene.id || getCanvas().scene?.id;
+  const sceneId = token?.scene && token.scene.id || canvas?.scene?.id;
   const isPlayerOwned = this.actor.hasPlayerOwner;
   const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned))
     || !configSettings.itemTypeList.includes(this.type);
@@ -739,7 +778,8 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
 }
 
 function isTokenInside(templateDetails: { x: number, y: number, shape: any, distance: number }, token: Token, wallsBlockTargeting) {
-  const grid = getCanvas().scene?.data.grid;
+  const grid = canvas?.scene?.data.grid;
+  if (!grid) return false;
   const templatePos = { x: templateDetails.x, y: templateDetails.y };
 
   // Check for center of  each square the token uses.
@@ -779,7 +819,7 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
           contains = contains && !_levels.testCollision(p1, p2, "collision");
           //@ts-ignore
         } else {
-          contains = !getCanvas().walls?.checkCollision(r);
+          contains = !canvas?.walls?.checkCollision(r);
         }
       }
       // Check the distance from origin.
@@ -792,7 +832,7 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
 export function templateTokens(templateDetails: { x: number, y: number, shape: any, distance: number }): Token[] {
   if (configSettings.autoTarget === "none") return [];
   const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget);
-  const tokens = getCanvas().tokens?.placeables || []; //.map(t=>t.data)
+  const tokens = canvas?.tokens?.placeables ?? []; //.map(t=>t.data)
   let targets: string[] = [];
   const targetTokens: Token[] = [];
   for (const token of tokens) {
@@ -836,7 +876,7 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   }
 
   // if the item specifies a range of "special" don't target the caster.
-  let selfTarget = (item?.data.data.range?.units === "spec") ? getCanvas().tokens?.get(this.tokenId) : null;
+  let selfTarget = (item?.data.data.range?.units === "spec") ? canvas?.tokens?.get(this.tokenId) : null;
   if (selfTarget && game.user?.targets.has(selfTarget)) {
     // we are targeted and should not be
     selfTarget.setTarget(false, { user: game.user, releaseOthers: false })
