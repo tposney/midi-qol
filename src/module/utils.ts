@@ -499,7 +499,6 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           superSavers: [new Set(), workflow.superSavers, new Set()]
         });
     } else {
-      // let savesToUse = workflow.otherDamageRoll ? new Set() : workflow.saves;
       let savesToUse = (workflow.otherDamageFormula ?? "") !== "" ? new Set() : workflow.saves;
       appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
@@ -512,7 +511,6 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           superSavers: [workflow.superSavers, workflow.superSavers]
         });
 
-      //      appliedDamage = await applyTokenDamage(workflow.damageDetail, workflow.damageTotal, theTargets, item, new Set(), {existingDamage: [], superSavers: new Set()});
       if (workflow.otherDamageRoll) {
         // assume pervious damage applied and then calc extra damage
         appliedDamage = await applyTokenDamage(
@@ -729,12 +727,14 @@ export async function processOverTime(wrapped, data, options, user) {
     let testRound = this.current.round ?? 0;
     const last = (data.round ?? this.current.round) * 100 + (data.turn ?? this.current.turn);
 
+    // These changed since overtime moved to _preUpdate function instead of hook
     // const prev = (combat.previous.round ?? 0) * 100 + (combat.previous.turn ?? 0);
     // let testTurn = combat.previous.turn ?? 0;
     // let testRound = combat.previous.round ?? 0;
+    // const last = (combat.current.round ?? 0) * 100 + (combat.current.turn ?? 0);
+
     let toTest = prev;
     let count = 0;
-    // const last = (combat.current.round ?? 0) * 100 + (combat.current.turn ?? 0);
     while (toTest <= last && count < 200) { // step through each turn from prev to current
       count += 1; // make sure we don't do an infinite loop
       const actor = this.turns[testTurn]?.actor;
@@ -759,7 +759,6 @@ export async function processOverTime(wrapped, data, options, user) {
       }
 
       if (actor) {
-        let rollPromise: Promise<any> | undefined = undefined;
         let rollData = actor.getRollData();
         if (!rollData.flags) rollData.flags = actor.data.flags;
         rollData.flags.midiqol = rollData.flags["midi-qol"];
@@ -901,15 +900,13 @@ export async function processOverTime(wrapped, data, options, user) {
 
               try {
                 const options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid] };
-                if (!rollPromise) rollPromise = completeItemRoll(ownedItem, options)
-                else rollPromise = rollPromise.then((data) => completeItemRoll(ownedItem, options));
+                await completeItemRoll(ownedItem, options); // worried about multiple effects in flight so do one at a time
               } finally {
                 if (saveTargets && game.user?.isGM) game.user.targets = saveTargets;
               }
             }
           }
         }
-        if (rollPromise) await rollPromise;
       }
       testTurn += 1;
       if (testTurn === this.turns.length) {
@@ -927,7 +924,7 @@ export async function processOverTime(wrapped, data, options, user) {
   }
 }
 
-export async function completeItemRoll(item, options: any = {}) {
+export async function completeItemRoll(item, options: any = {checkGMstatus: false}) {
   if (game.user?.isGM || !options.checkGMStatus) {
     return new Promise((resolve) => {
       if (options.targetUuids && game.user) {
@@ -956,7 +953,7 @@ export async function completeItemRoll(item, options: any = {}) {
       targetUuids,
       options
     }
-    return timedExecuteAsGM("completeItemRoll", data)
+    return await timedExecuteAsGM("completeItemRoll", data)
   }
 }
 
@@ -1290,7 +1287,7 @@ export async function addConcentration(options: { workflow: Workflow }) {
     let actor = options.workflow.actor;
     let concentrationName = i18n("midi-qol.Concentrating");
     const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
-    //const itemData = duplicate(itemJSONData);
+    // const itemData = duplicate(itemJSONData);
     // const currentItem: Item = new CONFIG.Item.documentClass(itemData)
     const effectData = {
       changes: [],
@@ -1649,10 +1646,18 @@ export async function processDamageRollBonusFlags() { // bound to a workflow
 export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rollId: string, rollTotalId: string, rollHTMLId: string) {
   return new Promise((resolve, reject) => {
     const callback = async (dialog, button) => {
+      let newRoll;
+      let reRoll;
       if (!hasEffectGranting(this.actor, button.key, flagSelector)) return;
-      var newRoll;
       switch (button.value) {
-        case "reroll": newRoll = await this[rollId].reroll({ async: true }); break;
+        case "reroll": reRoll = await this[rollId].reroll({ async: true }); 
+        newRoll = reRoll; break;
+        case "reroll-kh": reRoll = await this[rollId].reroll({ async: true });
+            newRoll = reRoll;
+            if (reRoll.total <= this[rollId].total) newRoll = this[rollId]; break;
+        case "reroll-kl": reRoll = await this[rollId].reroll({ async: true });
+            newRoll = reRoll;
+            if (reRoll.total > this[rollId].total) newRoll = this[rollId]; break;
         case "reroll-max": newRoll = await this[rollId].reroll({ async: true, maximize: true }); break;
         case "reroll-min": newRoll = await this[rollId].reroll({ async: true, minimize: true }); break;
         case "success": newRoll = await new Roll("99").evaluate({ async: true }); break;
@@ -1663,12 +1668,23 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       }
       if (showRoll && this.category === "ac") { // TODO do a more general fix for displaying this stuff
         const player = playerForActor(this.actor)?.id ?? "";
-        const oldRollHTML = await this[rollId].render() ?? this[rollId].result
+        // const oldRollHTML = await this[rollId].render() ?? this[rollId].result
         const newRollHTML = await newRoll.render();
         const chatData: any = {
           // content: `${this[rollId].result} -> ${newRoll.formula} = ${newRoll.total}`,
           flavor: game.i18n.localize("DND5E.ArmorClass"),
           content: `${newRollHTML}`,
+          whisper: [player]
+        };
+        const chatMessage = await ChatMessage.create(chatData);
+      } else if (showRoll) {
+        const oldRollHTML = await this[rollId].render() ?? this[rollId].result
+        const player = playerForActor(this.actor)?.id ?? "";
+        const newRollHTML = reRoll ? await reRoll.render() : await newRoll.render();
+        const chatData: any = {
+          // content: `${this[rollId].result} -> ${newRoll.formula} = ${newRoll.total}`,
+          flavor: `${title} ${button.value}` ,
+          content: `${oldRollHTML}<br>${newRollHTML}`,
           whisper: [player]
         };
         const chatMessage = await ChatMessage.create(chatData);
@@ -1678,8 +1694,16 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       this[rollHTMLId] = await newRoll.render();
       dialog.data.rollHTML = this[rollHTMLId];
       await removeEffectGranting(this.actor, button.key);
+      bonusFlags = bonusFlags.filter(bf => bf !== button.key)
       this.actor.prepareData();
-      dialog.close();
+      if (bonusFlags.length === 0) {
+
+        dialog.close();
+        resolve(null);
+      }
+      dialog.data.flags = bonusFlags;
+      dialog.render(true);
+      // dialog.close();
     }
 
     const dialog = new RollModifyDialog(
@@ -1709,11 +1733,7 @@ export function getOptionalCountRemainingShortFlag(actor: Actor5e, flag: string)
 export function getOptionalCountRemaining(actor: Actor5e, flag: string) {
   const countValue = getProperty(actor.data, flag);
   if (!countValue) return 1;
-  if (Number.isNumeric(countValue)) return countValue;
-  if (countValue.startsWith("@")) {
-    let result = getProperty(actor.data.data, countValue.slice(1))
-    return result;
-  }
+
   if (countValue === "turn" && game.combat) {
     const usedFlag = flag.replace(".count", ".used");
     // check for the flag
@@ -1721,6 +1741,11 @@ export function getOptionalCountRemaining(actor: Actor5e, flag: string) {
   } else if (countValue === "reaction") {
     // return await hasUsedReaction(actor)
     return actor.getFlag("midi-qol", "reactionCombatRound") ? 0 : 1;
+  }
+  if (Number.isNumeric(countValue)) return countValue;
+  if (countValue.startsWith("@")) {
+    let result = getProperty(actor.data.data, countValue.slice(1))
+    return result;
   }
   return 1; //?? TODO is this sensible?
 }
@@ -1985,8 +2010,9 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
       // await setReactionUsed(actor);
       // No need to set reaction effect since using item will do so.
       dialog.close();
-      options.workflowOptions = mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid}, {overwrite: true});
-      await completeItemRoll(item, options);
+      // options = mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStaus: false}, {overwrite: true});
+      const itemRollOptions = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, checkGMStatus: false, targetUuids: [triggerTokenUuid], workflowOptions: options };
+      await completeItemRoll(item, itemRollOptions);
       actor.prepareData();
       resolve({ name: item.name, uuid: item.uuid })
     }
@@ -2001,7 +2027,12 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
       close: resolve,
     }, {
       width: 400
-    }).render(true);
+    });
+    setTimeout(() => {
+      dialog.close();
+      resolve({});
+    }, (configSettings.reactionTimeout -1) * 1000);
+    dialog.render(true);
   });
 }
 
@@ -2039,11 +2070,7 @@ class ReactionDialog extends Application {
   async getData(options) {
     this.data.buttons = this.data.items.reduce((acc: {}, item: Item) => {
       acc[randomID()] = {
-        //        icon: '<i class="fas fa-dice-d20"></i>',
-        // <div class="item-image" tabindex="0" role="button" aria-label="{{item.name}}" style="background-image: url('{{item.img}}')"></div>
-        //<img class="item-image" src=${item.img} alt="" >`,
         icon: `<div class="item-image"> <image src=${item.img} width="50" height="50" style="margin:10px"></div>`,
-        //        icon: `<image src=${item.img} class="item-image" width="50" height="50" style="margin:10px">`,
         label: `${item.name}`,
         value: item.name,
         key: item.id,
@@ -2179,9 +2206,6 @@ export function evalActivationCondition(workflow: Workflow, condition: string | 
       returnValue = mySafeEval(expression, {});
     } else { // transform the rollData.workflow to just data
       const copyWorkflow = {};
-      // const newTarget = duplicate(rollData.target.document.data._source);
-      // newTarget.actor = duplicate(rollData.target.actor.data._source);
-      // rollData.target = newTarget;
       for (let [k, v] of Object.entries(workflow)) {
         if (!["actor", "item", "templateElevation", "speaker", "tokenUuid", "saveDisplayFlavor", "itemId", "item",
           "itemUuid", "uuid", "itemLevel", "currentState",
@@ -2299,6 +2323,7 @@ export async function removeReactionUsed(actor: Actor) {
 }
 
 export async function hasUsedReaction(actor: Actor) {
+  if (!configSettings.enforceReactions) return false;
   if (actor.getFlag("midi-qol", "reactionCombatRound")) return true;
   if (getConvenientEffectsReaction()) {
     //@ts-ignore

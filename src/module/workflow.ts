@@ -282,7 +282,7 @@ export class Workflow {
     this.damageRolled = false;
     this.kickStart = true; // call workflow.next(WORKFLOWSTATES.NONE) when the item card is shown.
     this.flagTags = undefined;
-    this.workflowOptions = options.workflowOptions ?? {};;
+    this.workflowOptions = options?.workflowOptions ?? {};
 
     if (configSettings.allowUseMacro)
       this.onUseMacros = getProperty(this.item, "data.flags.midi-qol.onUseMacroParts");
@@ -338,6 +338,10 @@ export class Workflow {
     // error(this.stateList);
     switch (newState) {
       case WORKFLOWSTATES.NONE:
+        if (this.item?.data.data.target?.type === "self") {
+          this.targets = getSelfTargetSet(this.actor);
+          this.hitTargets = new Set(this.targets);
+        }
         this.templateTargeting = configSettings.autoTarget !== "none" && this.item.hasAreaTarget;
         if (debugEnabled > 1) debug(state, configSettings.autoTarget, this.item.hasAreaTarget);
         if (this.templateTargeting) {
@@ -586,28 +590,31 @@ export class Workflow {
           this.hitTargetsEC = new Set();
           if (debugEnabled > 0) warn(" damage roll complete for non auto target area effects spells", this)
         }
-        Hooks.callAll("midi-qol.preDamageRollComplete", this)
-        if (this.item) Hooks.callAll(`midi-qol.preDamageRollComplete.${this.item.uuid}`, this);
 
         // apply damage to targets plus saves plus immunities
         // done here cause not needed for betterrolls workflow
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
-        const damageBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.DamageBonusMacro`);
         //@ts-ignore CONFIG.DND5E
         if (this.item?.data.data.actionType === "heal" && !Object.keys(CONFIG.DND5E.healingTypes).includes(this.defaultDamageType)) this.defaultDamageType = "healing";
         this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
 
+        Hooks.callAll("midi-qol.preDamageRollComplete", this)
+        if (this.item) Hooks.callAll(`midi-qol.preDamageRollComplete.${this.item.uuid}`, this);
+
+        if (configSettings.allowUseMacro && this.item?.data.flags) {
+          await this.callMacros(this.item, this.onUseMacros?.getMacros("postDamageRoll"), "OnUse", "postDamageRoll");
+        }
+        const damageBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.DamageBonusMacro`);
         if (damageBonusMacro && this.workflowType === "Workflow") {
           await this.rollBonusDamage(damageBonusMacro);
         }
+
         this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
         // TODO Need to do DSN stuff
         if (this.otherDamageRoll) {
           this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
         }
-        if (configSettings.allowUseMacro && this.item?.data.flags) {
-          await this.callMacros(this.item, this.onUseMacros?.getMacros("postDamageRoll"), "OnUse", "postDamageRoll");
-        }
+
         await this.displayDamageRoll(configSettings.mergeCard);
         Hooks.callAll("midi-qol.DamageRollComplete", this);
         if (this.item) Hooks.callAll(`midi-qol.DamageRollComplete.${this.item.uuid}`, this);
@@ -1163,7 +1170,7 @@ export class Workflow {
           macroData.sourceItemUuid = item?.uuid;
         } else {
           const parts = name.split(".");
-          const itemName = parts.slice(1).join(".");;
+          const itemName = parts.slice(1).join(".");
           item = this.actor.items.find(i => i.name === itemName && getProperty(i.data.flags, "itemacro.macro"))
           if (!item) {
             // Try to find a UUID refence for the macro
@@ -1972,7 +1979,8 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       const handler = this.saveRequests[requestId]
       delete this.saveRequests[requestId];
       delete this.saveTimeouts[requestId];
-      const brFlags = message.data.flags?.betterrolls5e;
+      const brFlags = message.data.flags?.betterrolls5e;      
+
       if (brFlags) {
         const rollEntry = brFlags.entries?.find((e) => e.type === "multiroll");
         if (!rollEntry) return true;
@@ -1985,7 +1993,9 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
         handler(message._roll)
       }
     }
-    if (game.user?.id !== message.user.id && ["whisper", "all"].includes(configSettings.autoCheckSaves)) html.hide();
+    if (game.user?.id !== message.user.id && ["whisper", "all"].includes(configSettings.autoCheckSaves)) {
+      html.hide();
+    }
     return true;
   }
 
@@ -2006,7 +2016,9 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
     if (!brFlags) return true;
     if (debugEnabled > 1) debug("processBetterRollsChatCard", message.html, data)
     const requestId = message.data.speaker.actor;
-    if (!this.saveRequests[requestId]) return true;
+    if (!this.saveRequests[requestId]) {
+      return true;
+    }
     const formula = "1d20";
     const isSave = brFlags.fields.find(e => e[0] === "check");
     if (!isSave) return true;

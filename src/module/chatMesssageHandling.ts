@@ -35,7 +35,7 @@ export function mergeCardSoundPlayer(message, update, options, user) {
 export function betterRollsUpdate(message, update, options, user) {
   if (game.user?.id !== user) return true;
   const flags = message.data.flags;
-  if(update.flags && update.flags["midi-qol"])  {
+  if (update.flags && update.flags["midi-qol"]) {
     // Should be a hits display update
     return true;
   }
@@ -432,19 +432,24 @@ export let hideStuffHandler = (message, html, data) => {
     ) {
       html.hide();
     }
+    // better rolls save handler
+    if (
+      game.user?.id !== message.user.id
+      && ["all", "whisper", "allNoRoll"].includes(configSettings.autoCheckSaves)
+      && message.data.flags?.betterrolls5e?.fields
+      && message.data.flags.betterrolls5e.fields.some(f => f[0] === "check")
+    ) {
+      html.hide();
+    }
+
     // hide tool tips from non-gm
     html.find(".midi-qol-save-tooltip").hide();
-    html.find(".dice-tooltip").remove();
-    html.find(".dice-formula").remove();
     // if not showing saving throw total hide from players
-    if (configSettings.autoCheckSaves === "allNoRoll")
-      html.find(".midi-qol-save-total").hide();
+    if (configSettings.autoCheckSaves === "allNoRoll") html.find(".midi-qol-save-total").hide();
     // Hide the save dc if rquired
     if (!configSettings.displaySaveDC) {
       html.find(".midi-qol-saveDC").hide();
     }
-    // hide the gm version of the name from players
-    html.find(".midi-qol-target-npc-GM").hide();
     if (message.data.blind) {
       // html.find(".midi-qol-attack-roll .dice-total").text(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
       html.find(".midi-qol-attack-roll .dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
@@ -470,11 +475,13 @@ export let hideStuffHandler = (message, html, data) => {
         html.hide();
       }
     }
-
+    // hide the gm version of the name from players
+    html.find(".midi-qol-target-npc-GM").hide();
     if (message.user?.isGM) {
       const d20AttackRoll = getProperty(message.data.flags, "midi-qol.d20AttackRoll");
 
       if (configSettings.hideRollDetails === "all") {
+        html.find(".dice-tooltip").remove();
         // html.find(".midi-qol-attack-roll .dice-total").text(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
         html.find(".midi-qol-attack-roll .dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
         html.find(".midi-qol-damage-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
@@ -485,6 +492,10 @@ export let hideStuffHandler = (message, html, data) => {
         // html.find(".dice-result").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`); Monks saving throw css
         //TODO this should probably just check formula
       } else if (configSettings.hideRollDetails !== "none") {
+        // in all cases remove the tooltip and formula from the non gm client
+        html.find(".dice-tooltip").remove();
+        html.find(".dice-formula").remove();
+
         if (d20AttackRoll && configSettings.hideRollDetails === "d20AttackOnly") {
           html.find(".midi-qol-attack-roll .dice-total").text(`(d20) ${d20AttackRoll}`);
           html.find(".midi-qol-damage-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
@@ -492,8 +503,6 @@ export let hideStuffHandler = (message, html, data) => {
           html.find(".midi-qol-bonus-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
         } else if (d20AttackRoll && configSettings.hideRollDetails === "d20Only") {
           html.find(".midi-qol-attack-roll .dice-total").text(`(d20) ${d20AttackRoll}`);
-          html.find(".midi-qol-damage-roll").find(".dice-tooltip").remove();
-          html.find(".midi-qol-damage-roll").find(".dice-formula").remove();
           html.find(".midi-qol-other-roll").find(".dice-tooltip").remove();
           html.find(".midi-qol-other-roll").find(".dice-formula").remove();
           html.find(".midi-qol-bonus-roll").find(".dice-tooltip").remove();
@@ -507,23 +516,22 @@ export let hideStuffHandler = (message, html, data) => {
           const hitFlag = getProperty(message.data.flags, "midi-qol.isHit");
           const hitString = hitFlag === undefined ? "" : hitFlag ? i18n("midi-qol.hits") : i18n("midi-qol.misses");
           html.find(".midi-qol-attack-roll .dice-total").text(`${hitString}`);
-          html.find(".midi-qol-damage-roll").find(".dice-tooltip").remove();
-          html.find(".midi-qol-damage-roll").find(".dice-formula").remove();
           html.find(".midi-qol-other-roll").find(".dice-tooltip").remove();
           html.find(".midi-qol-other-roll").find(".dice-formula").remove();
           html.find(".midi-qol-bonus-roll").find(".dice-tooltip").remove();
           html.find(".midi-qol-bonus-roll").find(".dice-formula").remove();
         } else if (["details", "detailsDSN"].includes(configSettings.hideRollDetails)) {
-          html.find(".dice-tooltip").remove();
-          html.find(".dice-formula").remove();
+          // html.find(".dice-tooltip").remove();
+          // html.find(".dice-formula").remove();
         }
       }
     }
 
-    //@ts-ignore
-    setTimeout(() => ui.chat.scrollBottom(), 0);
-    return true;
   }
+  //@ts-ignore
+  setTimeout(() => ui.chat.scrollBottom(), 0);
+  return true;
+
 }
 
 export function betterRollsButtons(message, html, data) {

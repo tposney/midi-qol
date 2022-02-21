@@ -32,7 +32,7 @@ export function GMupdateEntityStats(data: { id: any; currentStats: any; }) {
 export async function timedExecuteAsGM(toDo: string, data: any) {
   if (!debugCallTiming) return socketlibSocket.executeAsGM(toDo, data);
   const start = Date.now();
-  const returnValue = socketlibSocket.executeAsGM(toDo, data);
+  const returnValue = await socketlibSocket.executeAsGM(toDo, data);
   log(`executeAsGM: ${toDo} elapsed: ${Date.now() - start}`)
   return returnValue;
 }
@@ -78,7 +78,7 @@ async function _completeItemRoll(data: {itemData: any, actorUuid: string, option
     if (theTarget) theTarget.object.setTarget(true, {user: itemData.parent, releaseOthers: false, groupSelection: true});
   }
   const result =  await completeItemRoll(ownedItem, options);
-  return result;
+  return true; // can't return the workflow
 }
 async function createActor(data) {
   await CONFIG.Actor.documentClass.createDocuments([data.actorData]);

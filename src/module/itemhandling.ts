@@ -484,7 +484,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   let workflow: Workflow;
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
     if (!this.id) this.data._id = randomID();
-    workflow = new BetterRollsWorkflow(this.actor, this, speaker, targets, event || options.event);
+    workflow = new BetterRollsWorkflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
     // options.createMessage = true;
     const result = await wrapped(options);
     return result;
@@ -572,7 +572,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     if (!isTurn && inCombat) itemUsesReaction = true;
   }
 
-  const blockReaction = itemUsesReaction && hasReaction && configSettings.enforceReactions === "all" || configSettings.enforceReactions === this.actor.type;
+  const blockReaction = itemUsesReaction && hasReaction && (configSettings.enforceReactions === "all" || configSettings.enforceReactions === this.actor.type);
   if (blockReaction) {
     let shouldRoll = false;
     let d = await Dialog.confirm({

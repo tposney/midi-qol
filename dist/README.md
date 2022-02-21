@@ -550,6 +550,7 @@ Optional rule, **Record Oppotunity Attacks**.
 Optional rule **Enforce Reactions**
   - same options as record attacks of opportunity. 
   - If enabled, when using an item that would be counted as a reaction (has reaction set in the item details or is an attack of opportunity) the player/GM is queried if they want to continue because they have already used their reaction for the round.
+  - If disabled you can take as many reactions as you like.
 Reactions are tested for either the convenient effects reaction effect or midi's internal reaction tracker. And both are reset at the start of the actors turn or when the CE reaction is removed.
 
 If an actor is not in combat attacks won't be recorded as reactions.
@@ -860,12 +861,24 @@ There are some controls for macro writers to decide when their macro should get 
   - [All] is special, being called with each value of macroPass. You can differentiate via args[0].macroPass to decide which ones to act on.
   - The default pass is "preActiveEffects", to correspond to the original onUse macro behaviour.
   * Note: if you are creating a damage only workflow in your macro it is best to run it in "postActiveEffects".
+  
   * If you wish to make changes to the workflow in these macros you will need to do: 
   ```
   const workflow = MidiQOL.Workflow.get(args[0].uuid)
   workflow.... = .....
   ```
-  * Remember that if the macro is an execute as GM macro the macro may execute on a different client and the workflow may not be defined, the Workflow.get may return undefined.
+  * Remember that if the macro is an "Execute as GM" macro the macro may execute on a different client and the workflow may not be defined, i.e. the Workflow.get may return undefined.
+
+  * If you want to change the damage roll of weapon have your macro run at the postDmageRoll onUse pass and do something like (this won't work with better rolls - the damge will be changed, but the chat card for the item won't updated)
+  ```
+  if (args[0].tag === "OnUse" && args[0].macroPass === "postDamageRoll") {
+    let workflow = MidiQOL.Workflow.getWorkflow(args[0].uuid); // this gets a copy of the "live" workflow
+    workflow.damageRoll = await new Roll("1d10").roll();
+    workflow.damageTotal = workflow.damageRoll.total;
+    workflow.damageRollHTML = await workflow.damageRoll.render();
+  }
+  ```
+  which will replace the items normal damage roll with your custom roll.
 
 **Damage bonus macros** are called after hits/misses/saves are adjudicated but BEFORE damage is applied, so you can specify extra damage if required, e.g. hunter's mark. The macro is not dependent on a particular item being rolled, but is called whenever damage is rolled by that character.  
 The intention is to support effects that are based on the character's state, rather than being related to a specific item. You can do whatever processing you want there, so could create a condition on some of the targets, do extra damage to specifc creatues/types of creatures and so on. Damage bonus macros can return an array of ``` [{damageRoll: string, flavor: string}]``` which will be added to the damage of the attack. The damage roll is a roll expression and flavor should be a damage type, e.g. fire. Damage returned via the damage bonus will NOT be increased for critical hits.

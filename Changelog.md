@@ -1,5 +1,20 @@
+### 0.9.19
+* **breaking** flags.midi-qol.optional.NAME.check will no logner be triggered for skill checks. To trigger both skills and ability checks add both flags.midi-qol.optional.NAME.check and flags.midi-qol.optional.NAME.skill to the active effect.
+  - This prevents some confusing behaviour when trying to combine with other effects.
+* Fix for over zealously hiding roll formula from players.
+* Fix for always hiding roll details when using betterrolls5e.
+* Fix for not hiding saving throws when using betterrolls5e.
+* Reaction dialogs will now be removed if the reactee does not respond in time.
+* Another fix for players ending their own turn when overtime effects are present (causing the combat tracker to not update).
+* When Enforce Reactions is set to "Do Not Check" you can take as many reactions as you want - i.e will get prompted any time you might take a reaction.
+* Added reroll-kh, reroll-kl to optional.NAME.xxx effects. Will keep the higher/lower of the rerolled and original roll.
+* Ability saves/check/skills optiona.NAME effects will now send a message to chat indicating the roll.
+* Ability saves/check/skills optiona.NAME effects dialog will remain open as long as there are valid optional flags available.
+* onUse macro (postDamageRoll) supports modifying the workflows damage roll, details in Readme.
+* Update Lucky to reflect the new reroll-kh facility.
+
 ### 0.9.18
-* Fix for error thrown when using checking hits.
+* Fix for error thrown when checking hits.
 
 ### 0.9.17
   * Added additional onUseMacro call "preItemRoll", this is called before the item is rolled, which means before resource/spell slot consumption. If the macro returns false the roll is aborted, before the spell slot/other resources are consumed. This allows you to implement special item usage conditions.

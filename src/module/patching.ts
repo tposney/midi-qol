@@ -45,23 +45,36 @@ export interface Options {
   fastForwardAbility: boolean | undefined,
 };
 
+function collectBonusFlags(actor, category, detail): any[] {
+  if (!installedModules.get("betterrolls5e")) {
+  let useDetail = false;
+  const bonusFlags = Object.keys(actor.data.flags["midi-qol"]?.optional ?? [])
+    .filter(flag => {
+      const checkFlag = actor.data.flags["midi-qol"].optional[flag][category];
+      if (!checkFlag) return false;
+      if (!(typeof checkFlag === "string" || checkFlag[detail] || checkFlag["all"])) return false;
+      if (!actor.data.flags["midi-qol"].optional[flag].count) return true;
+      return getOptionalCountRemainingShortFlag(actor, flag) > 0;
+    })
+    .map(flag => {
+      const checkFlag = actor.data.flags["midi-qol"].optional[flag][category];
+      if (typeof checkFlag === "string") return `flags.midi-qol.optional.${flag}`; 
+      else return `flags.midi-qol.optional.${flag}`;
+    });
+    return bonusFlags;
+  }
+  return [];
+}
+
 async function bonusCheck(actor, result: Roll, category, detail): Promise<Roll> {
   if (!installedModules.get("betterrolls5e")) {
-    let useDetail = false;
-    const bonusFlags = Object.keys(actor.data.flags["midi-qol"]?.optional ?? [])
-      .filter(flag => {
-        const checkFlag = actor.data.flags["midi-qol"].optional[flag][category];
-        if (!checkFlag) return false;
-        if (!(typeof checkFlag === "string" || checkFlag[detail] || checkFlag["all"])) return false;
-        if (typeof checkFlag !== "string") useDetail = true;
-        if (!actor.data.flags["midi-qol"].optional[flag].count) return true;
-        return getOptionalCountRemainingShortFlag(actor, flag) > 0;
-      })
-      .map(flag => {
-        const checkFlag = actor.data.flags["midi-qol"].optional[flag][category];
-        if (typeof checkFlag === "string") return `flags.midi-qol.optional.${flag}`; 
-        else return `flags.midi-qol.optional.${flag}`;
-      });
+    let bonusFlags = collectBonusFlags(actor, category, detail);
+    /* casues strange behaviour when enabled 
+    if (category === "skill") {
+      const abl = actor.data.data.skills[detail].ability;
+      bonusFlags = bonusFlags.concat(collectBonusFlags(actor, "check", "abl"));
+    }
+    */
     if (bonusFlags.length > 0) {
       const data = {
         actor,
@@ -69,23 +82,23 @@ async function bonusCheck(actor, result: Roll, category, detail): Promise<Roll> 
         rollHTML: await result.render(),
         rollTotal: result.total,
         category,
-        detail: useDetail ? detail : "all"
+        detail: detail
       }
       let title;
       switch(category) {
         //@ts-ignore
-        case "check": title = i18nFormat("DND5E.AbilityPromptTitle", {ability: useDetail ? CONFIG.DND5E.abilities[detail] : ""}); 
+        case "check": title = i18nFormat("DND5E.AbilityPromptTitle", {ability: CONFIG.DND5E.abilities[detail]}); 
           break;
         //@ts-ignore
-        case "save": title = i18nFormat("DND5E.SavePromptTitle", {ability: useDetail ? CONFIG.DND5E.abilities[detail] : ""});
+        case "save": title = i18nFormat("DND5E.SavePromptTitle", {ability: CONFIG.DND5E.abilities[detail]});
           break;
         //@ts-ignore
-        case "skill": title = i18nFormat("DND5E.SkillPromptTitle", {skill: useDetail ? CONFIG.DND5E.skills[detail] : ""});
+        case "skill": title = i18nFormat("DND5E.SkillPromptTitle", {skill: CONFIG.DND5E.skills[detail]});
           break;
       }
       await bonusDialog.bind(data)(
         bonusFlags, 
-        useDetail ? `${category}.${detail}` : category, 
+        detail ? `${category}.${detail}` : category, 
         true, 
         `${actor.name} - ${title}`, 
         "roll", "rollTotal", "rollHTML"
@@ -129,8 +142,8 @@ async function doRollSkill(wrapped, ...args) {
   if ((minflags.skill && (minflags.skill.all || minflags.skill[skillId])) ?? false)
     result = await result.reroll({ minimize: true })
   let newResult = await bonusCheck(this, result, "skill", skillId);
-  const abl = this.data.data.skills[skillId].ability;
-  if (newResult === result) newResult = await bonusCheck(this, result, "check", abl);
+  // const abl = this.data.data.skills[skillId].ability;
+  // if (newResult === result) newResult = await bonusCheck(this, result, "check", abl);
   result = newResult;
   if (chatMessage !== false && result) {
     const args = { "speaker": getSpeaker(this) };
