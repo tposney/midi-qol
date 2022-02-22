@@ -12,6 +12,7 @@ import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultipl
 import { OnUseMacros } from "./apps/Item.js";
 import { procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
+import { config } from "simple-peer";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -106,7 +107,7 @@ export class Workflow {
   attackRollHTML: HTMLElement | JQuery<HTMLElement> | string;
   noAutoAttack: boolean; // override attack roll for standard care
 
-  hitDisplayData: any[];
+  hitDisplayData: any;
 
   damageRoll: Roll | undefined;
   damageTotal: number;
@@ -647,13 +648,13 @@ export class Workflow {
           if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks._hooks["renderChatMessage"]?.length)
           // setup to process saving throws as generated
           let hookId = Hooks.on("renderChatMessage", this.processSaveRoll.bind(this));
-          let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
+          // let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
           let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
           try {
-            await this.checkSaves(true);
+            await this.checkSaves(configSettings.autoCheckSaves !== "allShow");
           } finally {
             Hooks.off("renderChatMessage", hookId);
-            Hooks.off("renderChatMessage", brHookId);
+            // Hooks.off("renderChatMessage", brHookId);
             Hooks.off("updateChatMessage", monksId);
           }
           if (debugEnabled > 1) debug("Check Saves: ", this.saveRequests, this.saveTimeouts, this.saves);
@@ -1415,7 +1416,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
 
   async displayTargets(whisper = false) {
     if (!configSettings.mergeCard) return;
-    this.hitDisplayData = [];
+    this.hitDisplayData = {};
     for (let targetToken of this.targets) {
       let img = targetToken.data?.img || targetToken.actor?.img;
       if (configSettings.usePlayerPortrait && targetToken.actor?.data.type === "character")
@@ -1423,7 +1424,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       if (VideoHelper.hasVideoExtension(img ?? "")) {
         img = await game.video.createThumbnail(img ?? "", { width: 100, height: 100 });
       }
-      this.hitDisplayData.push({ isPC: targetToken.actor?.hasPlayerOwner, target: targetToken, hitString: "targets", aattackType: "", img, gmName: targetToken.name, playerName: getTokenPlayerName(targetToken), bonusAC: 0 });
+      this.hitDisplayData[targetToken.document.uuid] = ({ isPC: targetToken.actor?.hasPlayerOwner, target: targetToken, hitString: "targets", aattackType: "", img, gmName: targetToken.name, playerName: getTokenPlayerName(targetToken), bonusAC: 0 });
     }
     await this.displayHits(whisper, configSettings.mergeCard && this.itemCardId, false);
   }
@@ -1783,8 +1784,8 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
             targetUuid: target.actor.uuid,
             request: rollType,
             ability: this.saveItem.data.data.save.ability,
-            showRoll,
-            options: { messageData: { user: owner?.id }, chatMessage: showRoll, mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true },
+            showRoll: whisper,
+            options: { messageData: { user: owner?.id }, chatMessage: showRoll, rollmode: whisper ? "gmroll" : "gmroll", mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true },
           }));
         }
       }
@@ -1797,7 +1798,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       tokenData: monkRequests,
       request: `${rollType === "abil" ? "ability" : rollType}:${this.saveItem.data.data.save.ability}`,
       silent: true,
-      rollMode: "gmroll"
+      rollmode: whisper ? "gmroll" : "roll" // should be "publicroll" but monks does not check it
     }
     if (configSettings.displaySaveDC) requestData.dc = rollDC
     if (monkRequests.length > 0) {
@@ -1805,7 +1806,8 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
     };
     if (debugEnabled > 1) debug("check saves: requests are ", this.saveRequests)
     var results = await Promise.all(promises);
-
+    // replace betterrolls results (customRoll) with pseudo normal roll
+    results = results.map(result => result.entries ? this.processCustomRoll(result) : result);
     this.saveResults = results;
     let i = 0;
     const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
@@ -1919,14 +1921,17 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
     for (let key of Object.keys(mflags)) {
       if (!key.startsWith("token")) continue;
       const requestId = key.replace("token", "");
-      let roll;
-      try {
-        roll = Roll.fromJSON(JSON.stringify(mflags[key].roll));
-      } catch (err) {
-        roll = mflags[key].roll;
+      if (this.saveRequests[requestId]) {
+        let roll;
+        try {
+          roll = Roll.fromJSON(JSON.stringify(mflags[key].roll));
+        } catch (err) {
+          roll = deepClone(mflags[key].roll);
+        }
+        const func = this.saveRequests[requestId];
+        delete this.saveRequests[requestId];
+        func(roll)
       }
-      if (this.saveRequests[requestId]) this.saveRequests[requestId](roll)
-      delete this.saveRequests[requestId];
     }
     return true;
   }
@@ -2011,6 +2016,18 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
     return false;
   }
 
+  processCustomRoll(customRoll: any) {
+
+    const formula = "1d20";
+    const isSave = customRoll.fields.find(e => e[0] === "check");
+    if (!isSave) return true;
+    const rollEntry = customRoll.entries?.find((e) => e.type === "multiroll");
+    let total = rollEntry?.entries?.find((e) => !e.ignored)?.total ?? -1;
+    let advantage = rollEntry ? rollEntry.rollState === "highest" : undefined;
+    let disadvantage = rollEntry ? rollEntry.rollState === "lowest" : undefined;
+    return ({ total, formula, terms: [{ options: { advantage, disadvantage } }] });
+  }
+
   processBetterRollsChatCard(message, html, data) {
     const brFlags = message.data.flags?.betterrolls5e;
     if (!brFlags) return true;
@@ -2067,7 +2084,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       this.hitTargets = new Set();
       this.hitTargetsEC = new Set(); //TO wonder if this can work with active defence?
     };
-    this.hitDisplayData = [];
+    this.hitDisplayData ={};
     for (let targetToken of this.targets) {
       let targetName = configSettings.useTokenNames && targetToken.name ? targetToken.name : targetToken.actor?.name;
       let targetActor: Actor5e = targetToken.actor;
@@ -2098,8 +2115,8 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
           }
           if (targetEC) isHitEC = checkRule("challengeModeArmor") && attackTotal <= targetAC && attackTotal >= targetEC;
           // check to see if the roll hit the target
-          if ((isHit || isHitEC || this.iscritical) && this.attackRoll && !getProperty(this, "item.data.flags.midi-qol.noProvokeReaction")) {
-            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { item: this.item, workflowOptions: mergeObject(this.workflowOptions, {sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid}, {inpace:false, overwrite: true})});
+          if ((isHit || isHitEC || this.iscritical) && this.item?.hasAttack && this.attackRoll && !getProperty(this, "item.data.flags.midi-qol.noProvokeReaction")) {
+            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { item: this.item, workflowOptions: mergeObject(this.workflowOptions, {sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid}, {inplace:false, overwrite: true})});
             if (result?.name) {
               targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
             }
@@ -2153,9 +2170,8 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
             hitString = `(${this.activeDefenceRolls[targetToken.document.uuid].total}): ${hitString}`
           }
         }
-
       }
-      this.hitDisplayData.push({ isPC: targetToken.actor?.hasPlayerOwner, target: targetToken, hitString, attackType, img, gmName: targetToken.name, playerName: getTokenPlayerName(targetToken), bonusAC });
+      this.hitDisplayData[targetToken.document.uuid] = ({ isPC: targetToken.actor?.hasPlayerOwner, target: targetToken, hitString, attackType, img, gmName: targetToken.name, playerName: getTokenPlayerName(targetToken), bonusAC });
     }
   }
 
@@ -2539,13 +2555,13 @@ export class TrapWorkflow extends Workflow {
           return await this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
         }
         let hookId = Hooks.on("renderChatMessage", this.processSaveRoll.bind(this));
-        let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
+//        let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
         let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
         try {
-          await this.checkSaves(true);
+          await this.checkSaves(configSettings.autoCheckSaves !== "allShow");
         } finally {
           Hooks.off("renderChatMessage", hookId);
-          Hooks.off("renderChatMessage", brHookId);
+//          Hooks.off("renderChatMessage", brHookId);
           Hooks.off("updateChatMessage", monksId)
         }
         //@ts-ignore ._hooks not defined

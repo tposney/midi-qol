@@ -6,7 +6,7 @@ import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { convertCompilerOptionsFromJson } from "typescript";
-import { timedAwaitExecuteAsGM } from "./GMAction.js";
+import { rollAbility, timedAwaitExecuteAsGM } from "./GMAction.js";
 let libWrapper;
 
 var d20Roll;
@@ -125,13 +125,21 @@ async function doRollSkill(wrapped, ...args) {
     options.parts = ["-100"];
   }
 
-  if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
+  if (installedModules.get("betterrolls5e")) {
     let event = {};
-    if (procOptions.advantage) event = { shiftKey: true };
-    if (procOptions.disadvantage) event = { ctrlKey: true };
-    procOptions.event = event;
-    const result = await wrapped(skillId, procOptions);
-    return createRollResultFromCustomRoll(result)
+    if (procOptions.advantage) {options.advantage = true; event = { shiftKey: true }};
+    if (procOptions.disadvantage) {options.disadvantage = true; event = { ctrlKey: true }};
+    options.event = event;
+    if (options.chatMessage === false) {
+      options.vanilla = true;
+      const result = await wrapped(skillId, options);
+      const returnValue = createRollResultFromCustomRoll(result)
+      return result;
+    } else {
+      const returnValue =  await wrapped(skillId, options);
+      return returnValue;
+
+    }
   }
   procOptions.chatMessage = false;
   let result = await wrapped.call(this, skillId, procOptions);
@@ -147,7 +155,7 @@ async function doRollSkill(wrapped, ...args) {
   result = newResult;
   if (chatMessage !== false && result) {
     const args = { "speaker": getSpeaker(this) };
-    setProperty(args, "flags.dnd5e.roll", { type: "skill", skillId });
+    setProperty(args, `flags.${game.system.id}.roll`, { type: "skill", skillId });
     if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "skill", skillId })
     await result.toMessage(args);
   }
@@ -243,7 +251,10 @@ function configureDamage(wrapped) {
   this._formula = this.constructor.getFormula(this.terms);
 }
 
-async function rollAbilityTest(wrapped, ...args) {
+
+
+/*
+async function doRollAbility(wrapped, rollType, ...args) {
   let [abilityId, options = { event: {}, parts: [], chatMessage: undefined }] = args;
   const chatMessage = options.chatMessage;
   if (procAutoFail(this, "check", abilityId)) options.parts = ["-100"];
@@ -276,44 +287,62 @@ async function rollAbilityTest(wrapped, ...args) {
   result = await bonusCheck(this, result, "check", abilityId)
   if (chatMessage !== false && result) {
     const args = { "speaker": getSpeaker(this) };
-    setProperty(args, "flags.dnd5e.roll", { type: "ability", abilityId });
-    if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "ability", abilityId })
+    setProperty(args, `flags.${game.system.id}.roll`, { type: "ability", abilityId });
     await result.toMessage(args);
   }
   await expireRollEffect.bind(this)("Check", abilityId);
   return result;
 }
+*/
 
 async function rollAbilitySave(wrapped, ...args) {
+  return doAbilityRoll.bind(this)(wrapped, "save", ...args);
+}
+async function rollAbilityTest(wrapped, ...args) {
+  return doAbilityRoll.bind(this)(wrapped, "check", ...args);
+}
+
+async function doAbilityRoll(wrapped, rollType: string, ...args) {
   let [abilityId, options = { event: {}, parts: [], chatMessage: undefined }] = args;
-  if (procAutoFail(this, "save", abilityId)) {
+  if (procAutoFail(this, rollType, abilityId)) {
     options.parts = ["-100"];
   }
   const chatMessage = options.chatMessage;
   const keyOptions = mapSpeedKeys(null, "ability");
   if (options.mapKeys !== false)  {
-    options.advantage = options.advantage || keyOptions?.advantage;
-    if (keyOptions?.disadvantage === true) options.disadvantage = true;
-    if (keyOptions?.fastForwardAbility === true) options.fastForward = true;
+    if (keyOptions?.advantage === true) options.advantage = options.advantage || keyOptions.advantage;
+    if (keyOptions?.disadvantage === true) options.disadvantage = options.disadvantage || keyOptions.disadvantage;
+    if (keyOptions?.fastForwardAbility === true) options.fastForward = options.fastForward || keyOptions.fastForwardAbility;
   }
 
-  // options = foundry.utils.mergeObject(mapSpeedKeys(null, "ability") ?? {}, options, { inplace: false, overwrite: true });
-  mergeKeyboardOptions(options, mapSpeedKeys(null, "ability"));
+  // Hack for MTB bug
+  if (options.event?.advantage) options.advantage = options.event.advantage || options.advantage;
+  if (options.event?.disadvantage) options.disadvantage = options.event.disadvantage || options.disadvantage;
+
   options.event = {};
 
-  let procOptions: any = procAdvantage(this, "save", abilityId, options);
+  let procOptions: any = procAdvantage(this, rollType, abilityId, options);
   if (procOptions.advantage && procOptions.disadvantage) {
     procOptions.advantage = false;
     procOptions.disadvantage = false;
   }
 
-  if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
+  // if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
+  if (installedModules.get("betterrolls5e")) {
     let event = {};
-    if (procOptions.advantage) event = { shiftKey: true };
-    if (procOptions.disadvantage) event = { ctrlKey: true };
-    procOptions.event = event;
-    const result = await wrapped(abilityId, procOptions);
-    return createRollResultFromCustomRoll(result)
+    if (procOptions.advantage) {options.advantage = true; event = { shiftKey: true }};
+    if (procOptions.disadvantage) {options.disadvantage = true; event = { ctrlKey: true }};
+    options.event = event;
+    if (options.chatMessage === false) {
+      options.vanilla = true;
+      const result = await wrapped(abilityId, options);
+      const returnValue = createRollResultFromCustomRoll(result)
+      return result;
+    } else {
+      const returnValue =  await wrapped(abilityId, options);
+      return returnValue;
+
+    }
   }
   procOptions.chatMessage = false;
   let result = await wrapped(abilityId, procOptions);
@@ -323,22 +352,14 @@ async function rollAbilitySave(wrapped, ...args) {
   const minflags = getProperty(this.data.flags, "midi-qol.min.ability") ?? {};
   if ((minflags.save && (minflags.save.all || minflags.save[abilityId])) ?? false)
     result = await result.reroll({ minimize: true })
-  result = await bonusCheck(this, result, "save", abilityId)
+  result = await bonusCheck(this, result, rollType, abilityId)
   if (chatMessage !== false && result) {
     const args = { "speaker": getSpeaker(this) };
-    setProperty(args, "flags.dnd5e.roll", { type: "save", abilityId });
-    if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "save", abilityId })
+    setProperty(args, `flags.${game.system.id}.roll`, { type: rollType, abilityId });
     await result.toMessage(args);
   }
   await expireRollEffect.bind(this)("Save", abilityId);
   return result;
-  /* TODO work out how to do minimum rolls properly
-  return wrapped.call(this, wrapped, abilityId, procOptions).then(roll => {
-    console.error("mini check save", roll.total, minimumRoll, roll.total < minimumRoll, (new Roll(`${minimumRoll}`)).roll())
-    if (roll.total < minimumRoll) return (new Roll(`${minimumRoll}`)).roll()
-    else return roll
-  });
-  */
 }
 
 export function procAutoFail(actor, rollType: string, abilityId: string): boolean {
@@ -586,7 +607,7 @@ export function _getInitiativeFormula(wrapped) {
   if (globalCheckBonus) parts.push(Roll.replaceFormulaData(globalCheckBonus, rollData));
 
   // Optionally apply Dexterity tiebreaker
-  const tiebreaker = game.settings.get("dnd5e", "initiativeDexTiebreaker");
+  const tiebreaker = game.settings.get(game.system.id, "initiativeDexTiebreaker");
   if (tiebreaker) parts.push(actor.data.data.abilities.dex.value / 100);
   return parts.filter(p => p !== null).join(" + ");
 };
@@ -597,7 +618,7 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
     let [options, user] = args;
 
     // Handle removal of reaction effect
-    if (getConvenientEffectsReaction()._id === this.data.flags.core?.statusId) {
+    if (installedModules.get("dfreds-convenient-effects") && getConvenientEffectsReaction()?._id === this.data.flags?.core?.statusId) {
       await this.parent.unsetFlag("midi-qol", "reactionCombatRound");
     }
 

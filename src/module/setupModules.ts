@@ -91,6 +91,17 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+0.9.20
+* Fix for EnforceReactions "Do Not Check" now really does not check.
+* Fix for optional.NAME.damage.heal
+* Fix for broken concentration automation if using CUB and convenient effects not installed.
+* (Several) Fixes for better rolls and Monks Token Bar interactions when using midi.
+* Magic resistance/concentration advantage work with MTB.
+* Fix for reactions incorrectly targeting and incorrectly displaying the original hit card.  09.9.19 introduced some bad funkiness which this is supposed to fix.
+* Be warned if you turn off enforce reaction checking then you can continue to do reactions to reactions until the end of time or you run out of spell slots. Enabling enforce reaction checking will stop that happening. You can still use items marked as reaction/reaction damage etc, but will be prompted to do so if rolling from the character sheet. 
+* If enforce reactions is enabled and you have used your reaction for the round you won't be prompted to choose a reaction when hit/damaged until the reaction marker is cleared.
+
+0.9.19
 * **breaking** flags.midi-qol.optional.NAME.check will no logner be triggered for skill checks. To trigger both skills and ability checks add both flags.midi-qol.optional.NAME.check and flags.midi-qol.optional.NAME.skill to the active effect.
   - This prevents some confusing behaviour when trying to combine with other effects.
 * Fix for over zealously hiding roll formula from players.

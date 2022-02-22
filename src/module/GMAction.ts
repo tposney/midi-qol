@@ -71,12 +71,6 @@ async function _completeItemRoll(data: {itemData: any, actorUuid: string, option
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
-  const saveTargets = game.user?.targets;
-  game.user.updateTokenTargets([]);
-  for (let targetUuid of data.targetUuids) {
-    const theTarget = MQfromUuid(targetUuid);
-    if (theTarget) theTarget.object.setTarget(true, {user: itemData.parent, releaseOthers: false, groupSelection: true});
-  }
   const result =  await completeItemRoll(ownedItem, options);
   return true; // can't return the workflow
 }
@@ -161,7 +155,7 @@ export async function rollAbility(data: { request: string; targetUuid: string; a
   return result;
 }
 
-export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: any; dc: number | undefined }) {
+export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollmode: string; dc: number | undefined }) {
   // let tokens = data.tokens.map((tuuid: any) => new Token(MQfromUuid(tuuid)));
 
   // TODO come back and see what things can be passed to this.
@@ -171,7 +165,7 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
     {
       request: data.request,
       silent: data.silent,
-      rollmode: data.rollMode,
+      rollmode: data.rollmode,
       dc: data.dc
     });
 }

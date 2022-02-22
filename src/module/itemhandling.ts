@@ -1,9 +1,10 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated, needsReactionCheck } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
+import { convertCompilerOptionsFromJson } from "typescript";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true, fastForward: false, advantage: false, disadvantage: false, dialogOptions: {} }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
@@ -344,6 +345,34 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   return result;
 }
 
+//@ts-ignore .Item
+async function newResolveLateTargeting(item: CONFIG.Item.documentClass) {
+  if (!getLateTargeting()) return;
+
+    // enable target mode
+    const controls: any = ui.controls;
+    controls.activeControl = "token"
+    controls.controls[0].activeTool = "target"
+    await controls.render();
+  
+    const wasMaximized = !(item.actor.sheet?._minimized);
+    // Hide the sheet that originated the preview
+    if (wasMaximized) await item.actor.sheet.minimize();
+  
+    let targets = new Promise((resolve, reject) => {
+
+      // no timeout since there is a dialog to close
+      // create target dialog which updates the target display
+      // hook for exit target mode
+      const hookId = Hooks.on("renderSceneControls", (app, html, data) => {
+        if (app.activeControl === "token" && data.controls[0].activeTool === "target") return;
+        Hooks.off("renderSceneControls", hookId)
+        resolve(true);
+      });
+    });
+    await targets;
+    if (wasMaximized) await item.actor.sheet.maximize()
+}
 async function resolveLateTargeting(item: any) {
   if (!getLateTargeting()) return;
 
@@ -572,7 +601,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     if (!isTurn && inCombat) itemUsesReaction = true;
   }
 
-  const blockReaction = itemUsesReaction && hasReaction && (configSettings.enforceReactions === "all" || configSettings.enforceReactions === this.actor.type);
+  const blockReaction = itemUsesReaction && hasReaction && needsReactionCheck(this.actor);
   if (blockReaction) {
     let shouldRoll = false;
     let d = await Dialog.confirm({

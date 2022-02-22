@@ -262,6 +262,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     //@ts-ignore
     if (workflow && !isHealing && workflow.item && !getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction")
       && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
+      log("Calling do reactions with ", t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: {damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid}})
       //@ts-ignore
       let result = await doReactions(t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: {damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid}});
     }
@@ -855,7 +856,6 @@ export async function processOverTime(wrapped, data, options, user) {
               //@ts-ignore
               itemData._id = randomID();
               // roll the damage and save....
-              const saveTargets = game.user?.targets;
               const theTargetToken = getSelfTarget(actor);
               const theTargetId = theTargetToken?.document ? theTargetToken?.document.id : theTargetToken?.id;
               const theTargetUuid = theTargetToken?.document ? theTargetToken?.document.uuid : theTargetToken?.uuid;
@@ -902,7 +902,6 @@ export async function processOverTime(wrapped, data, options, user) {
                 const options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid] };
                 await completeItemRoll(ownedItem, options); // worried about multiple effects in flight so do one at a time
               } finally {
-                if (saveTargets && game.user?.isGM) game.user.targets = saveTargets;
               }
             }
           }
@@ -927,7 +926,8 @@ export async function processOverTime(wrapped, data, options, user) {
 export async function completeItemRoll(item, options: any = {checkGMstatus: false}) {
   if (game.user?.isGM || !options.checkGMStatus) {
     return new Promise((resolve) => {
-      if (options.targetUuids && game.user) {
+      let saveTargets = Array.from(game.user?.targets ?? []).map(t=>{return t.id});
+      if (options.targetUuids && game.user && item.data.data.target.type !== "self") {
         game.user.updateTokenTargets([]);
         for (let targetUuid of options.targetUuids) {
           const theTarget = MQfromUuid(targetUuid);
@@ -936,6 +936,12 @@ export async function completeItemRoll(item, options: any = {checkGMstatus: fals
       }
 
       Hooks.once(`midi-qol.RollComplete.${item.uuid}`, (workflow) => {
+        if (saveTargets && game.user) 
+        {
+          game.user?.updateTokenTargets(saveTargets);
+          Array.from(game.user?.targets ?? []).map(t=>{return t.id});
+        }
+
         resolve(workflow);
       })
 
@@ -953,7 +959,7 @@ export async function completeItemRoll(item, options: any = {checkGMstatus: fals
       targetUuids,
       options
     }
-    return await timedExecuteAsGM("completeItemRoll", data)
+    return await timedAwaitExecuteAsGM("completeItemRoll", data)
   }
 }
 
@@ -1627,7 +1633,7 @@ export async function processAttackRollBonusFlags() { // bound to workflow
 
 export async function processDamageRollBonusFlags() { // bound to a workflow
   let damageBonus = "damage.all";
-  if (this.item && this.item.hasAttack) damageBonus = `damage.${this.item.data.data.actionType}`;
+  damageBonus = `damage.${this.item.data.data.actionType}`;
   const bonusFlags = Object.keys(this.actor.data.flags["midi-qol"]?.optional ?? [])
     .filter(flag => {
       const hasDamageFlag = getProperty(this.actor.data.flags, `midi-qol.optional.${flag}.damage.all`) ||
@@ -1740,7 +1746,7 @@ export function getOptionalCountRemaining(actor: Actor5e, flag: string) {
     if (getProperty(actor.data, usedFlag)) return 0;
   } else if (countValue === "reaction") {
     // return await hasUsedReaction(actor)
-    return actor.getFlag("midi-qol", "reactionCombatRound") ? 0 : 1;
+    return actor.getFlag("midi-qol", "reactionCombatRound") && needsReactionCheck(actor) ? 0 : 1;
   }
   if (Number.isNumeric(countValue)) return countValue;
   if (countValue.startsWith("@")) {
@@ -1846,7 +1852,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
     }
   }
 
-  if (await hasUsedReaction(target.actor)) return noResult;
+  if (await hasUsedReaction(target.actor) && needsReactionCheck(target.actor)) return noResult;
   let player = playerFor(target);
   if (getReactionSetting(player) === "none") return noResult;
   if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
@@ -1903,7 +1909,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
       content = reactionFlavor;
   }
 
-  return new Promise((resolve) => {
+  return await new Promise((resolve) => {
     // set a timeout for taking over the roll
     setTimeout(() => {
       resolve(noResult);
@@ -1929,7 +1935,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
   const target: Token = MQfromUuid(tokenUuid);
   const actor: Actor | null = target.actor;
   if (!actor) return;
-  if (await hasUsedReaction(actor)) return false;
+  if (await hasUsedReaction(actor) && needsReactionCheck(actor)) return false;
   const midiFlags: any = actor.data.flags["midi-qol"];
   let result;
   let reactionItems;
@@ -2000,18 +2006,11 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
   return new Promise((resolve, reject) => {
     const callback = async (dialog, button) => {
       const item = reactionItems.find(i => i.id === button.key);
-      if (item.data.data.target?.type === "creature" && triggerTokenUuid) {
-        const [dummy1, sceneId, dummy2, tokenId] = triggerTokenUuid.split(".");
-        // TODO change this when token targets take uuids instead of ids.
-        if (sceneId === canvas?.scene?.id) {
-          game.user?.updateTokenTargets([tokenId]);
-        }
-      }
       // await setReactionUsed(actor);
       // No need to set reaction effect since using item will do so.
       dialog.close();
       // options = mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStaus: false}, {overwrite: true});
-      const itemRollOptions = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, checkGMStatus: false, targetUuids: [triggerTokenUuid], workflowOptions: options };
+      const itemRollOptions = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, checkGMStatus: true, targetUuids: [triggerTokenUuid], workflowOptions: options };
       await completeItemRoll(item, itemRollOptions);
       actor.prepareData();
       resolve({ name: item.name, uuid: item.uuid })
@@ -2323,7 +2322,6 @@ export async function removeReactionUsed(actor: Actor) {
 }
 
 export async function hasUsedReaction(actor: Actor) {
-  if (!configSettings.enforceReactions) return false;
   if (actor.getFlag("midi-qol", "reactionCombatRound")) return true;
   if (getConvenientEffectsReaction()) {
     //@ts-ignore
@@ -2332,6 +2330,9 @@ export async function hasUsedReaction(actor: Actor) {
   return false;
 }
 
+export function needsReactionCheck(actor) {
+  return (configSettings.enforceReactions === "all" || configSettings.enforceReactions === actor.type)
+}
 export function mergeKeyboardOptions(options: any, pressedKeys: Options | undefined) {
   if (!pressedKeys) return;
   options.advantage = options.advantage || pressedKeys.advantage;

@@ -805,7 +805,7 @@ let undead = ["undead", "fiend"].some(type => (target?.actor.data.data.details.t
 if (undead) numDice += 1;
 if (args[0].isCritical) numDice = numDice * 2;
 let damageRoll = new Roll(`${numDice}d8`).roll();
-new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", target ? [target] : [], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[0].itemCardId})```
+new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", target ? [target] : [], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[0].itemCardId})
 ```
 
 Flavor is only used if you are not using combo cards.  

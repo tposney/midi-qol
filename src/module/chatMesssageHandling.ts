@@ -385,8 +385,8 @@ export let hideRollUpdate = (message, data, diff, id) => {
 
 export let hideStuffHandler = (message, html, data) => {
   if (debugEnabled > 1) debug("hideStuffHandler message: ", message.id, message)
+  if (getProperty(message.data, "flags.monks-tokenbar")) return;
   const midiqolFlags = getProperty(message.data, "flags.midi-qol");
-
   // Hide non midi rolls which are blind and not the GM if force hide is true
   if (forceHideRoll && !midiqolFlags && message.data.blind && !game.user?.isGM) {
     html.hide();
@@ -435,7 +435,7 @@ export let hideStuffHandler = (message, html, data) => {
     // better rolls save handler
     if (
       game.user?.id !== message.user.id
-      && ["all", "whisper", "allNoRoll"].includes(configSettings.autoCheckSaves)
+      && (configSettings.autoCheckSaves !== "allShow")
       && message.data.flags?.betterrolls5e?.fields
       && message.data.flags.betterrolls5e.fields.some(f => f[0] === "check")
     ) {
