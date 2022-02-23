@@ -91,6 +91,9 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+0.9.21
+* Fix for breaking damage only workflows in 0.9.20
+
 0.9.20
 * Fix for EnforceReactions "Do Not Check" now really does not check.
 * Fix for optional.NAME.damage.heal

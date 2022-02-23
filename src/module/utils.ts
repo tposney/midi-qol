@@ -1423,9 +1423,9 @@ export async function expireMyEffects(effectsToExpire: string[]) {
     return (expireAction && specialDuration.includes("1Action")) ||
       (expireAttack && this.item?.hasAttack && specialDuration.includes("1Attack")) ||
       (expireSpell && this.item?.type === "spell" && specialDuration.includes("1Spell")) ||
-      (expireAttack && this.item?.hasAttack && specialDuration.includes(`1Attack:${this.item.data.data.actionType}`)) ||
+      (expireAttack && this.item?.hasAttack && specialDuration.includes(`1Attack:${this.item?.data.data.actionType}`)) ||
       (expireHit && this.item?.hasAttack && specialDuration.includes("1Hit") && this.hitTargets.size > 0) ||
-      (expireHit && this.item?.hasAttack && specialDuration.includes(`1Hit:${this.item.data.data.actionType}`) && this.hitTargets.size > 0) ||
+      (expireHit && this.item?.hasAttack && specialDuration.includes(`1Hit:${this.item?.data.data.actionType}`) && this.hitTargets.size > 0) ||
       (expireDamage && this.item?.hasDamage && specialDuration.includes("DamageDealt")) ||
       (expireInitiative && specialDuration.includes("Initiative"))
   }).map(ef => ef.id);
@@ -1633,7 +1633,7 @@ export async function processAttackRollBonusFlags() { // bound to workflow
 
 export async function processDamageRollBonusFlags() { // bound to a workflow
   let damageBonus = "damage.all";
-  damageBonus = `damage.${this.item.data.data.actionType}`;
+  if (this.item) damageBonus = `damage.${this.item.data.data.actionType}`;
   const bonusFlags = Object.keys(this.actor.data.flags["midi-qol"]?.optional ?? [])
     .filter(flag => {
       const hasDamageFlag = getProperty(this.actor.data.flags, `midi-qol.optional.${flag}.damage.all`) ||
