@@ -1,5 +1,5 @@
 import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, overTimeEffectsToDelete, geti18nOptions } from "../midi-qol.js";
-import { configSettings, autoRemoveTargets, checkRule } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, lateTargeting } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
@@ -1184,7 +1184,9 @@ export function getAutoRollAttack(): boolean {
 }
 
 export function getLateTargeting() {
-  return game.user?.isGM ? configSettings.gmLateTargeting : configSettings.lateTargeting;
+  return game.user?.isGM ? configSettings.gmLateTargeting : lateTargeting;
+
+  // return game.user?.isGM ? configSettings.gmLateTargeting : configSettings.lateTargeting;
 }
 
 export function itemHasDamage(item) {
@@ -2304,7 +2306,7 @@ export async function ConvenientEffectsHasEffect(effectName: string, uuid: strin
 
 export function isInCombat(tokenId: string) {
   let combats = game.combats?.combats.filter(combat =>
-    combat.combatants.filter(combatant=> combatant.token?.id === tokenId).length !== 0
+    combat.combatants.filter(combatant=> combatant?.token?.id === tokenId).length !== 0
   );
   return (combats?.length ?? 0) > 0;
 }

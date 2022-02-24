@@ -91,6 +91,14 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+0.9.22
+* Fix for empty combat causing all attack rolls error.
+* Late targeting now shows a panel that displays which tokens have been targeted and has roll/cancel buttons for the player to select. Any item that has a target type of creature (or does not have creature specified as the target type and is not an AoE item) will go through late targeting if enabled. I think this makes late targeting much easier to understand/use.
+* Late targeting changed to a per client setting for players and a global setting for the GM, so each player can choose. Defaults to false, so you'll need to tell your players what to set or use a global settings enforcement module like "Force Client Settings" which I use, but there are others.
+* Due to ~~complaining~~ popular demand I have reinstated the behaviour that players can always see the saving/ability/skill rolls made by other players. 
+* **Heads up** if you are overriding a reaction prompt and want to roll with advantage/disadvantage you need to hold alt/ctrl while clicking yes.
+* Another DamageOnlyWorkflow fix.
+
 0.9.21
 * Fix for breaking damage only workflows in 0.9.20
 

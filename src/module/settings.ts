@@ -19,6 +19,7 @@ export var autoRemoveTargets: string;
 export var forceHideRoll: boolean;
 export var enableWorkflow: boolean;
 export var dragDropTargeting: boolean;
+export var lateTargeting: boolean;
 
 const defaultKeyMapping = {
   "DND5E.Advantage": "altKey", 
@@ -31,7 +32,6 @@ class ConfigSettings {
   gmAutoAttack: boolean = false;
   gmAutoFastForwardAttack: boolean = false;
   gmLateTargeting: boolean = false;
-  lateTargeting: boolean = false;
   gmAutoDamage: string = "none";
   gmAutoFastForwardDamage: boolean =  false;
   gmConsumeResource = false;
@@ -242,7 +242,6 @@ export let fetchParams = () => {
   if (!configSettings.enableddbGL) configSettings.enableddbGL = false;
   if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
   if (!configSettings.gmLateTargeting) configSettings.gmLateTargeting = false;
-  if (!configSettings.lateTargeting) configSettings.lateTargeting = false;
   if (configSettings.fixStickyKeys === undefined) configSettings.fixStickyKeys = true;
   //@ts-ignore legacy boolean value
   if (configSettings.autoCEEffects === true) configSettings.autoCEEffects = "both";
@@ -306,6 +305,7 @@ export let fetchParams = () => {
   let debugText: string = String(game.settings.get("midi-qol", "Debug"));
   forceHideRoll = Boolean(game.settings.get("midi-qol", "ForceHideRoll"));
   dragDropTargeting = Boolean(game.settings.get("midi-qol", "DragDropTarget"));
+  lateTargeting = Boolean(game.settings.get("midi-qol", "LateTargeting"));
 
   if (game.ready) {
     configureDamageRollDialog();
@@ -330,6 +330,14 @@ const settings = [
     default: true,
     config: true,
     type: Boolean,
+    onChange: fetchParams
+  },
+  {
+    name: "LateTargeting",
+    scope: "client",
+    default: false,
+    type: Boolean,
+    config:true,
     onChange: fetchParams
   },
   {

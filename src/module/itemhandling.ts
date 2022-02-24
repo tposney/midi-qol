@@ -5,6 +5,7 @@ import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getA
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { convertCompilerOptionsFromJson } from "typescript";
+import { LateTargetingDialog } from "./apps/LateTargeting.js";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true, fastForward: false, advantage: false, disadvantage: false, dialogOptions: {} }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
@@ -14,7 +15,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     workflow.disadvantage = false;
     workflow.itemRollToggle = globalThis.MidiKeyManager.pressedKeys.rollToggle;
   }
-  if (workflow) {
+  if (workflow && !workflow.reactionQueried) {
     workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.itemRollToggle), { overwrite: true, insertValues: true, insertKeys: true });
   }
   //@ts-ignore
@@ -346,8 +347,8 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
 }
 
 //@ts-ignore .Item
-async function newResolveLateTargeting(item: CONFIG.Item.documentClass) {
-  if (!getLateTargeting()) return;
+async function newResolveLateTargeting(item: CONFIG.Item.documentClass): boolean {
+  if (!getLateTargeting()) return true;
 
     // enable target mode
     const controls: any = ui.controls;
@@ -355,24 +356,35 @@ async function newResolveLateTargeting(item: CONFIG.Item.documentClass) {
     controls.controls[0].activeTool = "target"
     await controls.render();
   
+
     const wasMaximized = !(item.actor.sheet?._minimized);
     // Hide the sheet that originated the preview
     if (wasMaximized) await item.actor.sheet.minimize();
   
-    let targets = new Promise((resolve, reject) => {
-
+    let targets = new Promise((resolve, reject)  => {
       // no timeout since there is a dialog to close
       // create target dialog which updates the target display
+      let lateTargeting = new LateTargetingDialog(item.actor, item, game.user, {callback: resolve}).render(true);
       // hook for exit target mode
       const hookId = Hooks.on("renderSceneControls", (app, html, data) => {
         if (app.activeControl === "token" && data.controls[0].activeTool === "target") return;
-        Hooks.off("renderSceneControls", hookId)
         resolve(true);
+        //@ts-ignore
+        lateTargeting.close();
+        Hooks.off("renderSceneControls", hookId)
+
       });
     });
-    await targets;
-    if (wasMaximized) await item.actor.sheet.maximize()
+    let shouldContinue = await targets;
+    if (wasMaximized) await item.actor.sheet.maximize();
+    controls.activeControl = "token"
+    controls.controls[0].activeTool = "select"
+    await controls.render();
+    if (game.user?.targets.size === 0) shouldContinue = false;
+    return shouldContinue ? true : false;
+    //@ts-ignore
 }
+
 async function resolveLateTargeting(item: any) {
   if (!getLateTargeting()) return;
 
@@ -420,7 +432,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const isRangeSpell = ["ft", "m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
-  if (getLateTargeting() && !isRangeSpell && !isAoESpell && getAutoRollAttack()) {
+  if (getLateTargeting() && ((!isRangeSpell && !isAoESpell && getAutoRollAttack()) || this.data.data.target.type === "creature")) {
     // normal targeting and auto rolling attack so allow late targeting
     let canDoLateTargeting = this.data.data.target.type !== "self";
 
@@ -434,7 +446,11 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       canDoLateTargeting = true;
     // TODO consider template and range spells when not template targeting?
 
-    if (canDoLateTargeting) await resolveLateTargeting(this);
+
+    if (canDoLateTargeting) {
+      if (!(await newResolveLateTargeting(this)))
+      return null;
+    }
   }
   const myTargets = game.user?.targets && validTargetTokens(game.user?.targets);
   let shouldAllowRoll = !requiresTargets // we don't care about targets
@@ -596,11 +612,12 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const checkReactionAOO = configSettings.recordAOO=== "all" || (configSettings.recordAOO=== this.actor.type)
   if (checkReactionAOO && !itemUsesReaction && this.hasAttack) {
     const inCombat = isInCombat(workflow.tokenId);
-    let activeCombatants = game.combats?.combats.map(combat => combat.combatant.token?.id)
+    let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
     const isTurn = activeCombatants?.includes(workflow.tokenId)
     if (!isTurn && inCombat) itemUsesReaction = true;
   }
 
+  workflow.reactionQueried = false;
   const blockReaction = itemUsesReaction && hasReaction && needsReactionCheck(this.actor);
   if (blockReaction) {
     let shouldRoll = false;
@@ -610,6 +627,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       yes: () => { shouldRoll = true },
     });
    if (!shouldRoll) return; // user aborted roll TODO should the workflow be deleted?
+
   }
   if (itemUsesReaction && !hasReaction) await setReactionUsed(this.actor); 
 

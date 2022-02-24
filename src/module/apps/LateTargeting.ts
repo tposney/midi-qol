@@ -1,27 +1,87 @@
-import { log, debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, overTimeEffectsToDelete, geti18nOptions } from "../../midi-qol.js";
+import { tokenToString } from "typescript";
+import { log, debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, overTimeEffectsToDelete, geti18nOptions, i18nFormat } from "../../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule } from "../settings.js";
+import { getTokenPlayerName } from "../utils.js";
 
-class LateTargetingDialog extends Application {
+export class LateTargetingDialog extends Application {
+  callback: ((data) => {}) | undefined
   data: {
     //@ts-ignore
     actor: CONFIG.Actor.documentClass,
     //@ts-ignore
     item: CONFIG.Item.documentClass,
-    user: User
-  }
+    user: User | null,
+    targets: Token[],
+  };
+  hookId: number;
 
   //@ts-ignore .Actor, .Item
-  constructor(actor: CONFIG.Actor.documentClass, item: CONFIG.Item.documentClass, user, options = {}) {
+  constructor(actor: CONFIG.Actor.documentClass, item: CONFIG.Item.documentClass, user, options: any = {}): Application {
     super(options);
+    this.data = { actor: undefined, item: undefined, user: game.user, targets: [] }
     this.data.actor = actor;
     this.data.item = item;
     this.data.user = user;
+    this.callback = options.callback;
+    return this;
   }
 
+  static get defaultOptions() {
+    return foundry.utils.mergeObject(super.defaultOptions, {
+      title: i18n("midi-qol.LateTargeting.Name"),
+      classes: ["midi-targeting"],
+      template: "modules/midi-qol/templates/lateTargeting.html",
+      id: "midi-qol-lateTargeting",
+      width: 300,
+      height: "auto",
+      resizeable: "true",
+      closeOnSubmit: true,
+      top: 100,
+      left: 100
+    });
+  }
   async getData(options = {}) {
     let data: any = mergeObject(this.data, await super.getData(options));
-
-    this.data = data;
+    data.targets = Array.from(game.user?.targets ?? []);
+    data.targets = data.targets.map(t=> {
+      return {
+        name: game.user?.isGM ? t.name : getTokenPlayerName(t),
+        img: t.data.img
+      }
+    })
+    if (this.data.item) {
+      if (this.data.item.data.data.target.type === "creature" && this.data.item.data.data.target.value)
+        data.targetCount = this.data.item.data.data.target.value;
+      else data.targetCount = "";
+      data.blurb = i18nFormat("midi-qol.LateTargeting.Blurb", {targetCount: data.targetCount})
+    }
     return data;
+  }
+
+  activateListeners(html) {
+    super.activateListeners(html);
+    if (!this.hookId) {
+      this.hookId = Hooks.on("targetToken", (user, token, targeted) => {
+        if (user !== game.user) return;
+        this.data.targets = Array.from(game.user?.targets ?? [])
+        this.render(true);
+      });
+    }
+    html.find(".midi-roll-confirm").on("click", () => {
+      if (this.callback) this.callback(true);
+      this.callback = undefined;
+      this.close();
+    })
+    html.find(".midi-roll-cancel").on("click", () => {
+      if (this.callback) this.callback(false);
+      this.callback = undefined;
+      this.close();
+    })
+  }
+
+  close(options = {}) {
+    Hooks.off("targetToken", this.hookId);
+    if (this.callback) this.callback(false);
+    return super.close(options);
   }
 }

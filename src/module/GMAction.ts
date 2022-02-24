@@ -155,7 +155,7 @@ export async function rollAbility(data: { request: string; targetUuid: string; a
   return result;
 }
 
-export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollmode: string; dc: number | undefined }) {
+export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined }) {
   // let tokens = data.tokens.map((tuuid: any) => new Token(MQfromUuid(tuuid)));
 
   // TODO come back and see what things can be passed to this.
@@ -165,7 +165,7 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
     {
       request: data.request,
       silent: data.silent,
-      rollmode: data.rollmode,
+      rollmode: data.rollMode,
       dc: data.dc
     });
 }

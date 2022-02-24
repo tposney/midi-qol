@@ -423,9 +423,10 @@ export let hideStuffHandler = (message, html, data) => {
     return;
 
   } else { // not a GM
+    /* - turned off so that players can see player rolls.
     // Hide saving throws/checks if not rolled by me.
     if (
-      game.user?.id !== message.user.id
+      (game.user?.id !== message.user.id)
       && ["all", "whisper", "allNoRoll"].includes(configSettings.autoCheckSaves)
       && message.isRoll
       && (message.data.flavor?.includes(i18n("DND5E.ActionSave")) || message.data.flavor?.includes(i18n("DND5E.ActionAbil")))
@@ -434,14 +435,14 @@ export let hideStuffHandler = (message, html, data) => {
     }
     // better rolls save handler
     if (
-      game.user?.id !== message.user.id
+    (game.user?.id !== message.user.id)
       && (configSettings.autoCheckSaves !== "allShow")
       && message.data.flags?.betterrolls5e?.fields
       && message.data.flags.betterrolls5e.fields.some(f => f[0] === "check")
     ) {
       html.hide();
     }
-
+*/
     // hide tool tips from non-gm
     html.find(".midi-qol-save-tooltip").hide();
     // if not showing saving throw total hide from players

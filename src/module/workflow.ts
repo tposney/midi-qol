@@ -922,7 +922,7 @@ export class Workflow {
   checkTargetAdvantage() {
     if (!this.item) return;
     if (!this.targets?.size) return;
-    const actionType = this.item.data.data.actionType;
+    const actionType = this.item?.data.data.actionType;
     const firstTarget = this.targets.values().next().value;
     if (checkRule("nearbyAllyRanged") > 0 && ["rwak", "rsak", "rpak"].includes(actionType)) {
       if (firstTarget.data.width * firstTarget.data.height < Number(checkRule("nearbyAllyRanged"))) {
@@ -1785,7 +1785,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
             request: rollType,
             ability: this.saveItem.data.data.save.ability,
             showRoll: whisper,
-            options: { messageData: { user: owner?.id }, chatMessage: showRoll, rollmode: whisper ? "gmroll" : "gmroll", mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true },
+            options: { messageData: { user: owner?.id }, chatMessage: showRoll, rollMode: whisper ? "gmroll" : "gmroll", mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true },
           }));
         }
       }
@@ -1798,9 +1798,10 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       tokenData: monkRequests,
       request: `${rollType === "abil" ? "ability" : rollType}:${this.saveItem.data.data.save.ability}`,
       silent: true,
-      rollmode: whisper ? "gmroll" : "roll" // should be "publicroll" but monks does not check it
+      rollMode: whisper ? "gmroll" : "roll" // should be "publicroll" but monks does not check it
     }
-    if (configSettings.displaySaveDC) requestData.dc = rollDC
+    // Display dc triggers the tick/cross on monks tb
+    if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) requestData.dc = rollDC
     if (monkRequests.length > 0) {
       timedExecuteAsGM("monksTokenBarSaves", requestData);
     };
@@ -2171,7 +2172,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
           }
         }
       }
-      this.hitDisplayData[targetToken.document.uuid] = ({ isPC: targetToken.actor?.hasPlayerOwner, target: targetToken, hitString, attackType, img, gmName: targetToken.name, playerName: getTokenPlayerName(targetToken), bonusAC });
+      this.hitDisplayData[targetToken.document?.uuid ?? targetToken.uuid] = ({ isPC: targetToken.actor?.hasPlayerOwner, target: targetToken, hitString, attackType, img, gmName: targetToken.name, playerName: getTokenPlayerName(targetToken), bonusAC });
     }
   }
 
