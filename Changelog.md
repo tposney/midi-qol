@@ -1,3 +1,5 @@
+### 0.9.25
+  * Fix for user XXX lacks permission to delete active effect on token introduced in 0.9.23 for concentration - same symptom different cause.
 ### 0.9.24
   * Fix for user XXX lacks permission to delete active effect on token introduced in 0.9.23 for concentration
 ### 0.9.23

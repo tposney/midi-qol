@@ -6,6 +6,7 @@ import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { convertCompilerOptionsFromJson } from "typescript";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
+import { deleteItemEffects } from "./GMAction.js";
 
 export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true, fastForward: false, advantage: false, disadvantage: false, dialogOptions: {} }) {
   let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
@@ -600,8 +601,27 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
   if (needsConcentration && checkConcentration) {
     const concentrationEffect = getConcentrationEffect(this.actor);
-    if (concentrationEffect)
-      await concentrationEffect.delete();
+    if (concentrationEffect) {
+      const concentrationData = this.actor.getFlag("midi-qol", "concentration-data");
+      if (!concentrationData) return;
+      try {
+        await this.actor.unsetFlag("midi-qol", "concentration-data")
+        if (concentrationData.templates) {
+          for (let templateUuid of concentrationData.templates) {
+            const template = await fromUuid(templateUuid);
+            if (template) await template.delete();
+          }
+        }
+        for (let removeUuid of concentrationData.removeUuids) {
+          const entity = await fromUuid(removeUuid);
+          if (entity) await entity.delete(); // TODO check if this needs to be run as GM
+        }
+        await deleteItemEffects({ ignore: [], targets: concentrationData.targets, origin: concentrationData.uuid });
+        // await concentrationEffect.delete();
+      } catch (err) {
+        error("error when attempting to remove concentration ", err)
+      }
+    }
   }
 
   let itemUsesReaction = false;

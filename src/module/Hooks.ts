@@ -1,6 +1,6 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
-import { processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
+import { deleteItemEffects, processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { configSettings, dragDropTargeting } from "./settings.js";
@@ -172,7 +172,7 @@ export let readyHooks = async () => {
           const entity = await fromUuid(removeUuid);
           if (entity) await entity.delete(); // TODO check if this needs to be run as GM
         }
-        timedAwaitExecuteAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
+        await deleteItemEffects({ ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
       } catch (err) {
         error("error when attempting to remove concentration ", err)
       }

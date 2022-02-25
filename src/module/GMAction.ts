@@ -84,7 +84,7 @@ async function deleteToken(data: { tokenUuid: string }) {
     token.delete();
   }
 }
-let deleteItemEffects = async (data: { targets, origin: string, ignore: string[] }) => {
+export async function deleteItemEffects(data: { targets, origin: string, ignore: string[] }) {
   let { targets, origin, ignore } = data;
   for (let idData of targets) {
     let actor = idData.tokenUuid ? MQfromActorUuid(idData.tokenUuid) : idData.actorUuid ? MQfromUuid(idData.actorUuid) : undefined;
