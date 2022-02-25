@@ -150,6 +150,8 @@ export let readyHooks = async () => {
   // Handle removal of concentration
   Hooks.on("deleteActiveEffect", (...args) => {
     let [effect, options, user] = args;
+    let gmToUse = game.users?.find(u => u.isGM && u.active);
+    if (gmToUse?.id !== game.user?.id) return;
     if (!(effect.parent instanceof CONFIG.Actor.documentClass)) return;
 
     let changeFunc = async () => {

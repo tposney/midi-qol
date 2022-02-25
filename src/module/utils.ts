@@ -1134,6 +1134,11 @@ export function checkRange(actor, item, tokenId, targets): string {
   if (!canvas || !canvas.scene) return "normal"
   // check that a range is specified at all
   if (!itemData.range) return "normal";
+  //TODO think about setting default range for mwak/etc
+  // if (["mwak", "msak", "mpak"].includes(itemData.actionType) && !itemData.properties?.thr) {
+  //    itemData.range.value = 5; // set default range for melee attacks
+  //}
+
   if (!itemData.range.value && !itemData.range.long && itemData.range.units !== "touch") return "normal";
   if (itemData.target?.type === "self") return "normal";
   // skip non mwak/rwak/rsak/msak types that do not specify a target type

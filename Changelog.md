@@ -1,3 +1,5 @@
+### 0.9.24
+  * Fix for user XXX lacks permission to delete active effect on token introduced in 0.9.23 for concentration
 ### 0.9.23
   * Fix for double dice so nice dice rolling for damage bonus macro dice.
   * Fix for late targeting causing concentration save to late target.
