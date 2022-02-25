@@ -31,6 +31,7 @@ export let readyHooks = async () => {
       return specialDuration?.includes("isMoved");
     }) ?? [];
     if (expiredEffects.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", expiredEffects.map(ef => ef.id));
+    
   })
 
   Hooks.on("ddb-game-log.pendingRoll", (data) => {
@@ -119,15 +120,16 @@ export let readyHooks = async () => {
         if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
           //@ts-ignore
           // await ownedItem.roll({ vanilla: false, showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false })
-          await globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC }).toMessage();
+          await globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC, workflowOptions: {lateTargeting: false }}).toMessage();
         } else {
           //@ts-ignore
-          await ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false })
+          await ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: {lateTargeting: false }})
         }
       } finally {
         if (saveTargets && game.user) game.user.targets = saveTargets;
       }
     }
+
     return true;
   });
 
@@ -144,6 +146,37 @@ export let readyHooks = async () => {
       element.append(ARHtml);
     }
   });
+
+  // Handle removal of concentration
+  Hooks.on("deleteActiveEffect", (...args) => {
+    let [effect, options, user] = args;
+    if (!(effect.parent instanceof CONFIG.Actor.documentClass)) return;
+
+    let changeFunc = async () => {
+
+      // Handle removal of concentration
+      const actor = effect.parent;
+      const concentrationData = actor.getFlag("midi-qol", "concentration-data");
+      if (!concentrationData) return;
+      try {
+        await actor.unsetFlag("midi-qol", "concentration-data")
+        if (concentrationData.templates) {
+          for (let templateUuid of concentrationData.templates) {
+            const template = await fromUuid(templateUuid);
+            if (template) await template.delete();
+          }
+        }
+        for (let removeUuid of concentrationData.removeUuids) {
+          const entity = await fromUuid(removeUuid);
+          if (entity) await entity.delete(); // TODO check if this needs to be run as GM
+        }
+        timedAwaitExecuteAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
+      } catch (err) {
+        error("error when attempting to remove concentration ", err)
+      }
+    };
+    changeFunc();
+  })
 
   Hooks.on("restCompleted", restManager);
 

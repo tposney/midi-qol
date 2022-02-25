@@ -416,7 +416,7 @@ async function resolveLateTargeting(item: any) {
   if (wasMaximized) await item.actor.sheet.maximize()
 }
 
-export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event, workflowOptions: {}}) {
+export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event, workflowOptions: {lateTargeting: true}}) {
   const itemRollStart = Date.now()
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
@@ -432,7 +432,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const isRangeSpell = ["ft", "m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
-  if (getLateTargeting() && ((!isRangeSpell && !isAoESpell && getAutoRollAttack()) || this.data.data.target.type === "creature")) {
+  if (getLateTargeting() && options.workflowOptions?.lateTargeting !== false && ((!isRangeSpell && !isAoESpell && getAutoRollAttack()) || this.data.data.target.type === "creature")) {
     // normal targeting and auto rolling attack so allow late targeting
     let canDoLateTargeting = this.data.data.target.type !== "self";
 

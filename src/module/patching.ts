@@ -614,6 +614,7 @@ export function _getInitiativeFormula(wrapped) {
 
 async function _preDeleteActiveEffect(wrapped, ...args) {
   try {
+
     if (!(this.parent instanceof CONFIG.Actor.documentClass)) return;
     let [options, user] = args;
 
@@ -645,26 +646,10 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
       expired = expired || (duration && duration.remaining <= 0 && duration.type === "turns");
       if (expired) return;
     }
-    const concentrationData = actor.getFlag("midi-qol", "concentration-data");
-    if (!concentrationData) return;
-    try {
-      await actor.unsetFlag("midi-qol", "concentration-data")
-      if (concentrationData.templates) {
-        for (let templateUuid of concentrationData.templates) {
-          const template = await fromUuid(templateUuid);
-          if (template) await template.delete();
-        }
-      }
-      for (let removeUuid of concentrationData.removeUuids) {
-        const entity = await fromUuid(removeUuid);
-        if (entity) await entity.delete(); // TODO check if this needs to be run as GM
-      }
-      timedAwaitExecuteAsGM("deleteItemEffects", { ignore: [this.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
-    } catch (err) {
-      console.warn("midi-qol | error deleteing concentration effects: ", err)
-    }
+  } catch (err) {
+    console.warn("midi-qol | error deleteing concentration effects: ", err)
   } finally {
-    return wrapped(...args);
+    return wrapped(...args)
   }
 }
 
@@ -838,7 +823,7 @@ class CustomizeDamageFormula {
           },
           default: defaultCritical ? "critical" : "normal",
           // Inject the formula customizer - this is the only line that differs from the original
-          render: (html) => { try { CustomizeDamageFormula.injectFormulaCustomizer(this, html) } catch (e) { console.error(e) } },
+          render: (html) => { try { CustomizeDamageFormula.injectFormulaCustomizer(this, html) } catch (e) { error(e) } },
           close: () => resolve(null),
         },
         options

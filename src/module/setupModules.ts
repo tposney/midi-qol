@@ -57,12 +57,16 @@ export function checkModules() {
   const midiVersion = game.modules.get("midi-qol").data.version;
   const notificationVersion = game.settings.get("midi-qol", "notificationVersion");
 
-  //@ts-ignore
-  if (game.user?.isGM && !installedModules.get("lib-changelogs") && isNewerVersion(midiVersion, notificationVersion)) {
+  if (game.user?.isGM && 
+    !installedModules.get("lib-changelogs") 
+    && !game.modules.get("module-credits")?.active
+    //@ts-ignore
+    && isNewerVersion(midiVersion, notificationVersion)) {
     game.settings.set("midi-qol", "notificationVersion", midiVersion);
     //@ts-ignore expected one argument but got 2
     ui.notifications?.warn("midi-qol.NoChangelogs", {permanent: false, localize: true});
   }
+
   checkCubInstalled();
 }
 
@@ -91,6 +95,16 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+0.9.23
+* Fix for double dice so nice dice rolling for damage bonus macro dice.
+* Fix for late targeting causing concentration save to late target.
+* A tweak to using monk's token bar for saving throws. Player rolls always are always visible to other players. If there are GM rolls and the player's are not allowed to see the rolls, the GM rolls will be split to a separate card and displayed only to the GM. This resolves the issue of NPC names being shown to players when doing saving throws with Monk's Token Bar.
+* Fix for a maybe edge case where concentration removal was not working (concentration was removed but stayed on the actor).
+* Tidy up so that late targeting does not apply when doing reactions, concentration saving throws or overtime effects.
+* Late targeting window now appears next to the chat log so that you are well position to hit the damage button if required.
+* Reactions now prompt for spell level when casting reaction spells and the reaction executes on the correct player client.
+* Damage bonus macro damage is now added to base weapon damage by type before checking resistance/immunity (with a minimum of 0), so if you have 2 lots of piercing one that does 3 points and a bonus damage macro providing 5 the total damage of 8 will be applied (as it was before). If you have damage resistance to piercing the damage applied will be 4 points, instead of 3 points as it would have been when the damage resistance was calculated on each slashing damage and then added together. Should you wish to implement (who knows why) damage bonus macros that reduce damage, i.e. you do 1d4 less piercing damage because your're eyesight is bad, the damage bonus macro can return "-1d4[piercing]"
+
 0.9.22
 * Fix for empty combat causing all attack rolls error.
 * Late targeting now shows a panel that displays which tokens have been targeted and has roll/cancel buttons for the player to select. Any item that has a target type of creature (or does not have creature specified as the target type and is not an AoE item) will go through late targeting if enabled. I think this makes late targeting much easier to understand/use.

@@ -27,17 +27,20 @@ export class LateTargetingDialog extends Application {
   }
 
   static get defaultOptions() {
+
+
     return foundry.utils.mergeObject(super.defaultOptions, {
       title: i18n("midi-qol.LateTargeting.Name"),
       classes: ["midi-targeting"],
       template: "modules/midi-qol/templates/lateTargeting.html",
       id: "midi-qol-lateTargeting",
       width: 300,
+      //@ts-ignore _collapsed
+      left: window.innerWidth - 310 - (ui.sidebar?._collapsed ? 10 : (ui.sidebar?.position.width ?? 300)),
+      top: window.innerHeight - 200,
       height: "auto",
       resizeable: "true",
-      closeOnSubmit: true,
-      top: 100,
-      left: 100
+      closeOnSubmit: true
     });
   }
   async getData(options = {}) {

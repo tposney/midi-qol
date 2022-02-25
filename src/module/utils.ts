@@ -9,6 +9,7 @@ import { itemJSONData, overTimeJSONData } from "./Hooks.js";
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { Options } from "./patching.js";
+import { valueInArray } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/validators.mjs";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -485,6 +486,20 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     await expireMyEffects.bind(workflow)(effectsToExpire);
   }
 
+  warn("ddamge pre merge are ", workflow.damageDetail, workflow.bonusDamageDetail);
+  let totalDamage = 0;
+  let merged = workflow.damageDetail.concat(workflow.bonusDamageDetail ?? []).reduce((acc, item) => {
+    acc[item.type] = (acc[item.type] ?? 0) + item.damage;
+    return acc;
+  }, {});
+  const newDetail = Object.keys(merged).map((key) => {return {damage: Math.max(0, merged[key]), type: key}});
+  totalDamage = newDetail.reduce((acc, value) => acc + value.damage, 0);
+  workflow.damageDetail = newDetail;
+  workflow.damageTotal = totalDamage;
+  warn("merged damage details is  ", newDetail);
+  workflow.bonusDamageDetail = undefined;
+  workflow.bonusDamageTotal = undefined;
+  // TODO come back and remove bonusDamage from the args to applyTokenDamageMany
   // Don't check for critical - RAW say these don't get critical damage
   // if (["rwak", "mwak"].includes(item?.data.data.actionType) && configSettings.rollOtherDamage !== "none") {
   if (workflow.shouldRollOtherDamage) {
@@ -899,7 +914,7 @@ export async function processOverTime(wrapped, data, options, user) {
               }
 
               try {
-                const options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid] };
+                const options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid], workflowOptions: {lateTargeting: false} };
                 await completeItemRoll(ownedItem, options); // worried about multiple effects in flight so do one at a time
               } finally {
               }
@@ -952,7 +967,7 @@ export async function completeItemRoll(item, options: any = {checkGMstatus: fals
       }
     })
   } else {
-    const targetUuids = options.targetUuids ? options.targetUuids : Array.from(game.user?.targets || []).map(t => t.document.uuid);
+    const targetUuids = options.targetUuids ? options.targetUuids : Array.from(game.user?.targets || []).map(t => t.document.uuid); // game.user.targets is alway a set of tokens
     const data = {
       itemData: item.toObject(),
       actorUuid: item.parent.uuid,
@@ -2012,7 +2027,8 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
       // No need to set reaction effect since using item will do so.
       dialog.close();
       // options = mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStaus: false}, {overwrite: true});
-      const itemRollOptions = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, checkGMStatus: true, targetUuids: [triggerTokenUuid], workflowOptions: options };
+      options.lateTargeting = false;
+      const itemRollOptions = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, checkGMStatus: false, targetUuids: [triggerTokenUuid], workflowOptions: options };
       await completeItemRoll(item, itemRollOptions);
       actor.prepareData();
       resolve({ name: item.name, uuid: item.uuid })

@@ -213,7 +213,7 @@ export class Workflow {
 
     this.tokenId = speaker.token;
     const token = canvas?.tokens?.get(this.tokenId);
-    this.tokenUuid = this.tokenId ? token?.document.uuid : undefined; // TODO see if this could be better
+    this.tokenUuid = token?.document?.uuid ?? token?.uuid; // TODO see if this could be better
     if (installedModules.get("levels") && token) {
       //@ts-ignore
       this.templateElevation = _levels.templateElevation ? _levels.nextTemplateHeight : token.data.elevation;
@@ -980,51 +980,54 @@ export class Workflow {
       }
     }
   }
+
   async rollBonusDamage(damageBonusMacro) {
     let formula = "";
     var flavor = "";
-    var extraDamages: (damageBonusMacroResult | boolean | undefined)[]  = await this.callMacros(this.item, damageBonusMacro, "DamageBonus", "DamageBonus");
-      for (let extraDamage of extraDamages) {
-        if (!extraDamage || typeof extraDamage === "boolean") continue;
-        if (extraDamage?.damageRoll) {
-          formula += (formula ? "+" : "") + extraDamage.damageRoll;
-          if (extraDamage.flavor) {
-            flavor = `${flavor}${flavor !== "" ? "<br>" : ""}${extraDamage.flavor}`
-          }
-          // flavor = extraDamage.flavor ? extraDamage.flavor : flavor;
+    var extraDamages: (damageBonusMacroResult | boolean | undefined)[] = await this.callMacros(this.item, damageBonusMacro, "DamageBonus", "DamageBonus");
+    for (let extraDamage of extraDamages) {
+      if (!extraDamage || typeof extraDamage === "boolean") continue;
+      if (extraDamage?.damageRoll) {
+        formula += (formula ? "+" : "") + extraDamage.damageRoll;
+        if (extraDamage.flavor) {
+          flavor = `${flavor}${flavor !== "" ? "<br>" : ""}${extraDamage.flavor}`
         }
+        // flavor = extraDamage.flavor ? extraDamage.flavor : flavor;
       }
-      if (formula === "") return;
-      try {
-        const roll = await (new Roll(formula, this.actor.getRollData()).evaluate({ async: true }));
-        this.bonusDamageRoll = roll;
-        this.bonusDamageTotal = roll.total;
-        this.bonusDamageHTML = await roll.render();
-        this.bonusDamageFlavor = flavor ?? "";
-        this.bonusDamageDetail = createDamageList({ roll: this.bonusDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
-      } catch (err) {
-        console.warn(`midi-qol | error in evaluating${formula} in bonus damage`, err);
-        this.bonusDamageRoll = null;
-        this.bonusDamageDetail = [];
-      }
-      if (this.bonusDamageRoll !== null) {
-        if (dice3dEnabled() && configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)) {
-          let whisperIds: User[] = [];
-          const rollMode = game.settings.get("core", "rollMode");
-          if ((configSettings.hideRollDetails !== "none" && game.user?.isGM) || rollMode === "blindroll") {
-            if (configSettings.ghostRolls) {
-              //@ts-ignore ghost
-              this.bonusDamageRoll.ghost = true;
-            } else {
-              whisperIds = ChatMessage.getWhisperRecipients("GM")
-            }
-          } else if (game.user && (rollMode === "selfroll" || rollMode === "gmroll")) {
-            whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
-          } else whisperIds = ChatMessage.getWhisperRecipients("GM");
+    }
+    if (formula === "") return;
+    try {
+      const roll = await (new Roll(formula, this.actor.getRollData()).evaluate({ async: true }));
+      this.bonusDamageRoll = roll;
+      this.bonusDamageTotal = roll.total;
+      this.bonusDamageHTML = await roll.render();
+      this.bonusDamageFlavor = flavor ?? "";
+      this.bonusDamageDetail = createDamageList({ roll: this.bonusDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
+    } catch (err) {
+      console.warn(`midi-qol | error in evaluating${formula} in bonus damage`, err);
+      this.bonusDamageRoll = null;
+      this.bonusDamageDetail = [];
+    }
+    if (this.bonusDamageRoll !== null) {
+      if (dice3dEnabled() && configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)) {
+        let whisperIds: User[] = [];
+        const rollMode = game.settings.get("core", "rollMode");
+        if ((configSettings.hideRollDetails !== "none" && game.user?.isGM) || rollMode === "blindroll") {
+          if (configSettings.ghostRolls) {
+            //@ts-ignore ghost
+            this.bonusDamageRoll.ghost = true;
+          } else {
+            whisperIds = ChatMessage.getWhisperRecipients("GM")
+          }
+        } else if (game.user && (rollMode === "selfroll" || rollMode === "gmroll")) {
+          whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
+        } else whisperIds = ChatMessage.getWhisperRecipients("GM");
+        if (!installedModules.get("betterrolls5e")) { // exclude better rolls since it does the roll itself
           //@ts-ignore game.dice3d
           await game.dice3d.showForRoll(this.bonusDamageRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
         }
       }
+    }
     return;
   }
 
@@ -1424,7 +1427,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       if (VideoHelper.hasVideoExtension(img ?? "")) {
         img = await game.video.createThumbnail(img ?? "", { width: 100, height: 100 });
       }
-      this.hitDisplayData[targetToken.document.uuid] = ({ isPC: targetToken.actor?.hasPlayerOwner, target: targetToken, hitString: "targets", aattackType: "", img, gmName: targetToken.name, playerName: getTokenPlayerName(targetToken), bonusAC: 0 });
+      this.hitDisplayData[targetToken.document?.uuid ?? targetToken.uuid] = ({ isPC: targetToken.actor?.hasPlayerOwner, target: targetToken, hitString: "targets", aattackType: "", img, gmName: targetToken.name, playerName: getTokenPlayerName(targetToken), bonusAC: 0 });
     }
     await this.displayHits(whisper, configSettings.mergeCard && this.itemCardId, false);
   }
@@ -1658,7 +1661,8 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
     // make sure saving throws are renabled.
 
     const playerMonksTB = installedModules.get("monks-tokenbar") && configSettings.playerRollSaves === "mtb";
-    let monkRequests: any[] = [];
+    let monkRequestsPlayer: any[] = [];
+    let monkRequestsGM: any[] = [];
     let showRoll = configSettings.autoCheckSaves === "allShow";
     try {
       const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
@@ -1726,7 +1730,8 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
             this.saveRequests[requestId] = resolve;
           }));
 
-          monkRequests.push({
+          const requests = player?.isGM ? monkRequestsGM : monkRequestsPlayer;
+          requests.push({
             token: target.id,
             // TODO - reinstate this when monks token bar is able to handle it.
             advantage: advantage === true,
@@ -1794,17 +1799,47 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
     } finally {
     }
 
-    const requestData: any = {
-      tokenData: monkRequests,
-      request: `${rollType === "abil" ? "ability" : rollType}:${this.saveItem.data.data.save.ability}`,
-      silent: true,
-      rollMode: whisper ? "gmroll" : "roll" // should be "publicroll" but monks does not check it
+    if (!whisper) {
+      const monkRequests = monkRequestsPlayer.concat(monkRequestsGM);
+      const requestData: any = {
+        tokenData: monkRequests,
+        request: `${rollType === "abil" ? "ability" : rollType}:${this.saveItem.data.data.save.ability}`,
+        silent: true,
+        rollMode: whisper ? "gmroll" : "roll" // should be "publicroll" but monks does not check it
+      };
+      // Display dc triggers the tick/cross on monks tb
+      if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) requestData.dc = rollDC
+      if (monkRequests.length > 0) {
+        timedExecuteAsGM("monksTokenBarSaves", requestData);
+      };
+    } else {
+      const requestDataGM: any = {
+        tokenData: monkRequestsGM,
+        request: `${rollType === "abil" ? "ability" : rollType}:${this.saveItem.data.data.save.ability}`,
+        silent: true,
+        rollMode: whisper ? "selfroll" : "roll" // should be "publicroll" but monks does not check it
+      }
+      const requestDataPlayer: any = {
+        tokenData: monkRequestsPlayer,
+        request: `${rollType === "abil" ? "ability" : rollType}:${this.saveItem.data.data.save.ability}`,
+        silent: true,
+        rollMode: "roll" // should be "publicroll" but monks does not check it
+      }
+      // Display dc triggers the tick/cross on monks tb
+      if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) 
+      {
+        requestDataPlayer.dc = rollDC
+        requestDataGM.dc = rollDC
+      }
+      if (monkRequestsPlayer.length > 0) {
+        timedExecuteAsGM("monksTokenBarSaves", requestDataPlayer);
+      };
+      if (monkRequestsGM.length > 0) {
+        timedExecuteAsGM("monksTokenBarSaves", requestDataGM);
+      };
+
+
     }
-    // Display dc triggers the tick/cross on monks tb
-    if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) requestData.dc = rollDC
-    if (monkRequests.length > 0) {
-      timedExecuteAsGM("monksTokenBarSaves", requestData);
-    };
     if (debugEnabled > 1) debug("check saves: requests are ", this.saveRequests)
     var results = await Promise.all(promises);
     // replace betterrolls results (customRoll) with pseudo normal roll
@@ -2166,9 +2201,9 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       if (this.useActiveDefence) {
         if (this.activeDefenceRolls[targetToken.document.uuid]) {
           if (targetToken.actor?.type === "character") {
-            hitString = `(${this.activeDefenceRolls[targetToken.document.uuid].result}): ${hitString}`
+            hitString = `(${this.activeDefenceRolls[targetToken.document?.uuid ?? targetToken.uuid].result}): ${hitString}`
           } else {
-            hitString = `(${this.activeDefenceRolls[targetToken.document.uuid].total}): ${hitString}`
+            hitString = `(${this.activeDefenceRolls[targetToken.document?.uuid ?? targetToken.uuid].total}): ${hitString}`
           }
         }
       }
@@ -2350,7 +2385,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       let rollTotal = results[i]?.total || 0;
       if (this.isCritical === undefined) this.isCritical = result.dice[0].total <= criticalTarget
       if (this.isFumble === undefined) this.isFumble = result.dice[0].total >= fumbleTarget;
-      this.activeDefenceRolls[target.document.uuid] = results[i];
+      this.activeDefenceRolls[target.document?.uuid ?? target.uuid] = results[i];
       let hit = this.isCritical || rollTotal < this.activeDefenceDC;
       if (hit) {
         this.hitTargets.add(target);
