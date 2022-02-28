@@ -1,7 +1,7 @@
 import { tokenToString } from "typescript";
 import { log, debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, overTimeEffectsToDelete, geti18nOptions, i18nFormat } from "../../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule } from "../settings.js";
-import { getTokenPlayerName } from "../utils.js";
+import { getAutoRollAttack, getTokenPlayerName, isAutoFastAttack } from "../utils.js";
 
 export class LateTargetingDialog extends Application {
   callback: ((data) => {}) | undefined
@@ -28,6 +28,9 @@ export class LateTargetingDialog extends Application {
 
   static get defaultOptions() {
 
+      //@ts-ignore _collapsed
+    let left = window.innerWidth - 310 - (ui.sidebar?._collapsed ? 10 : (ui.sidebar?.position.width ?? 300));
+    let top = window.innerHeight - 200;
 
     return foundry.utils.mergeObject(super.defaultOptions, {
       title: i18n("midi-qol.LateTargeting.Name"),
@@ -35,9 +38,8 @@ export class LateTargetingDialog extends Application {
       template: "modules/midi-qol/templates/lateTargeting.html",
       id: "midi-qol-lateTargeting",
       width: 300,
-      //@ts-ignore _collapsed
-      left: window.innerWidth - 310 - (ui.sidebar?._collapsed ? 10 : (ui.sidebar?.position.width ?? 300)),
-      top: window.innerHeight - 200,
+      left: (getAutoRollAttack() && isAutoFastAttack()) ? undefined : left,
+      top: (getAutoRollAttack() && isAutoFastAttack()) ? undefined : top,
       height: "auto",
       resizeable: "true",
       closeOnSubmit: true
@@ -67,7 +69,7 @@ export class LateTargetingDialog extends Application {
       this.hookId = Hooks.on("targetToken", (user, token, targeted) => {
         if (user !== game.user) return;
         this.data.targets = Array.from(game.user?.targets ?? [])
-        this.render(true);
+        this.render();
       });
     }
     html.find(".midi-roll-confirm").on("click", () => {

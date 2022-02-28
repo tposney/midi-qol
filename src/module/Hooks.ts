@@ -156,6 +156,26 @@ export let readyHooks = async () => {
 
     let changeFunc = async () => {
 
+      const checkConcentration = globalThis.MidiQOL?.configSettings()?.concentrationAutomation;
+      if (!checkConcentration) return;
+      let concentrationLabel: any = i18n("midi-qol.Concentrating");
+      if (installedModules.get("dfreds-convenient-effects")) {
+        let concentrationId = "Convenient Effect: Concentrating";
+        let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
+        if (statusEffect) concentrationLabel = statusEffect.label;
+      } else if (installedModules.get("combat-utility-belt")) {
+        concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
+      }
+      let isConcentration = effect.data.label === concentrationLabel;
+      if (!isConcentration) return;
+
+      // If concentration has expired effects and times-up installed - leave it to TU.
+      if (installedModules.get("times-up")) {
+        let expired = effect.data.duration?.seconds && (game.time.worldTime - effect.data.duration.startTime) >= effect.data.duration.seconds;
+        const duration = effect.duration;
+        expired = expired || (duration && duration.remaining <= 0 && duration.type === "turns");
+        if (expired) return;
+      }
       // Handle removal of concentration
       const actor = effect.parent;
       const concentrationData = actor.getFlag("midi-qol", "concentration-data");

@@ -5,8 +5,6 @@ import { bonusDialog, expireRollEffect, getAutoRollAttack, getAutoRollDamage, ge
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
-import { convertCompilerOptionsFromJson } from "typescript";
-import { rollAbility, timedAwaitExecuteAsGM } from "./GMAction.js";
 let libWrapper;
 
 var d20Roll;
@@ -125,24 +123,20 @@ async function doRollSkill(wrapped, ...args) {
     options.parts = ["-100"];
   }
 
+  let result;
   if (installedModules.get("betterrolls5e")) {
     let event = {};
     if (procOptions.advantage) {options.advantage = true; event = { shiftKey: true }};
     if (procOptions.disadvantage) {options.disadvantage = true; event = { ctrlKey: true }};
     options.event = event;
-    if (options.chatMessage === false) {
-      options.vanilla = true;
-      const result = await wrapped(skillId, options);
-      const returnValue = createRollResultFromCustomRoll(result)
-      return result;
-    } else {
-      const returnValue =  await wrapped(skillId, options);
-      return returnValue;
-
-    }
+    result = wrapped(skillId, options);
+    if (chatMessage !== false) return result;
+    result = await result;
+  } else {
+    procOptions.chatMessage = false;
+    // result = await wrapped.call(this, skillId, procOptions);
+    result = await wrapped(skillId, procOptions);
   }
-  procOptions.chatMessage = false;
-  let result = await wrapped.call(this, skillId, procOptions);
   const maxflags = getProperty(this.data.flags, "midi-qol.max.ability") ?? {};
   if ((maxflags.skill && (maxflags.skill.all || maxflags.check[skillId])) ?? false)
     result = await result.reroll({ maximize: true });
@@ -251,50 +245,6 @@ function configureDamage(wrapped) {
   this._formula = this.constructor.getFormula(this.terms);
 }
 
-
-
-/*
-async function doRollAbility(wrapped, rollType, ...args) {
-  let [abilityId, options = { event: {}, parts: [], chatMessage: undefined }] = args;
-  const chatMessage = options.chatMessage;
-  if (procAutoFail(this, "check", abilityId)) options.parts = ["-100"];
-  // options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
-  mergeKeyboardOptions(options, mapSpeedKeys(null, "ability"));
-  options.event = {};
-  let procOptions: any = procAdvantage(this, "check", abilityId, options);
-
-  if (procOptions.advantage && procOptions.disadvantage) {
-    procOptions.advantage = false;
-    procOptions.disadvantage = false;
-  }
-
-  if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
-    let event = {};
-    if (procOptions.advantage) event = { shiftKey: true };
-    if (procOptions.disadvantage) event = { ctrlKey: true };
-    procOptions.event = event;
-    const result = await wrapped(abilityId, procOptions);
-    return createRollResultFromCustomRoll(result);
-  }
-  procOptions.chatMessage = false;
-  let result = await wrapped(abilityId, procOptions);
-  const maxflags = getProperty(this.data.flags, "midi-qol.max.ability") ?? {};
-  if ((maxflags.check && (maxflags.check.all || maxflags.check[abilityId])) ?? false)
-    result = await result.reroll({ maximize: true });
-  const minflags = getProperty(this.data.flags, "midi-qol.min.ability") ?? {};
-  if ((minflags.check && (minflags.check.all || minflags.check[abilityId])) ?? false)
-    result = await result.reroll({ minimize: true })
-  result = await bonusCheck(this, result, "check", abilityId)
-  if (chatMessage !== false && result) {
-    const args = { "speaker": getSpeaker(this) };
-    setProperty(args, `flags.${game.system.id}.roll`, { type: "ability", abilityId });
-    await result.toMessage(args);
-  }
-  await expireRollEffect.bind(this)("Check", abilityId);
-  return result;
-}
-*/
-
 async function rollAbilitySave(wrapped, ...args) {
   return doAbilityRoll.bind(this)(wrapped, "save", ...args);
 }
@@ -327,25 +277,20 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     procOptions.disadvantage = false;
   }
 
+  let result;
   // if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
   if (installedModules.get("betterrolls5e")) {
     let event = {};
     if (procOptions.advantage) {options.advantage = true; event = { shiftKey: true }};
     if (procOptions.disadvantage) {options.disadvantage = true; event = { ctrlKey: true }};
     options.event = event;
-    if (options.chatMessage === false) {
-      options.vanilla = true;
-      const result = await wrapped(abilityId, options);
-      const returnValue = createRollResultFromCustomRoll(result)
-      return result;
-    } else {
-      const returnValue =  await wrapped(abilityId, options);
-      return returnValue;
-
-    }
+    result = wrapped(abilityId, options);
+    if (options.chatMessage !== false && !options.vanilla) return result;
+    result = await result;
+  } else {
+    procOptions.chatMessage = false;
+    result = await wrapped(abilityId, procOptions);
   }
-  procOptions.chatMessage = false;
-  let result = await wrapped(abilityId, procOptions);
   const maxflags = getProperty(this.data.flags, "midi-qol.max.ability") ?? {};
   if ((maxflags.save && (maxflags.save.all || maxflags.save[abilityId])) ?? false)
     result = await result.reroll({ maximize: true });
@@ -621,30 +566,6 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
     // Handle removal of reaction effect
     if (installedModules.get("dfreds-convenient-effects") && getConvenientEffectsReaction()?._id === this.data.flags?.core?.statusId) {
       await this.parent.unsetFlag("midi-qol", "reactionCombatRound");
-    }
-
-    // Handle removal of concentration
-    const actor = this.parent;
-    // const token = actor.token ? actor.token : actor.getActiveTokens()[0];
-    const checkConcentration = globalThis.MidiQOL?.configSettings()?.concentrationAutomation;
-    if (!checkConcentration) return;
-    let concentrationLabel: any = i18n("midi-qol.Concentrating");
-    if (installedModules.get("dfreds-convenient-effects")) {
-      let concentrationId = "Convenient Effect: Concentrating";
-      let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
-      if (statusEffect) concentrationLabel = statusEffect.label;
-    } else if (installedModules.get("combat-utility-belt")) {
-      concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
-    }
-    let isConcentration = this.data.label === concentrationLabel;
-    if (!isConcentration) return;
-
-    // If concentration has expired effects and times-up installed - leave it to TU.
-    if (installedModules.get("times-up")) {
-      let expired = this.data.duration?.seconds && (game.time.worldTime - this.data.duration.startTime) >= this.data.duration.seconds;
-      const duration = this.duration;
-      expired = expired || (duration && duration.remaining <= 0 && duration.type === "turns");
-      if (expired) return;
     }
   } catch (err) {
     console.warn("midi-qol | error deleteing concentration effects: ", err)

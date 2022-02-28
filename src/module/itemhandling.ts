@@ -81,6 +81,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     disadvantage = false;
   }
   const wrappedRollStart = Date.now();
+  workflow.attackrollc += 1;
   let result: Roll = await wrapped(mergeObject(options, {
     advantage,
     disadvantage,
@@ -193,7 +194,7 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
     }
   }
 
-  if (workflow.damageRoll) { // we are re-rolling the damage. redisplay the item card but remove the damage
+  if (workflow.damageRollCount > 0) { // we are re-rolling the damage. redisplay the item card but remove the damage
     let chatMessage = game.messages?.get(workflow.itemCardId ?? "");
     let content = (chatMessage && chatMessage.data.content) ?? "";
     let data;
@@ -231,6 +232,7 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   }
 
   const wrappedRollStart = Date.now();
+  workflow.damageRollCount += 1;
   let result: Roll;
   workflow.isVersatile = workflow.rollOptions.versatile || versatile;
   if (!workflow.rollOptions.other) {
@@ -381,9 +383,8 @@ async function newResolveLateTargeting(item: CONFIG.Item.documentClass): boolean
     controls.activeControl = "token"
     controls.controls[0].activeTool = "select"
     await controls.render();
-    if (game.user?.targets.size === 0) shouldContinue = false;
+    // if (game.user?.targets.size === 0) shouldContinue = false;
     return shouldContinue ? true : false;
-    //@ts-ignore
 }
 
 async function resolveLateTargeting(item: any) {
@@ -417,7 +418,7 @@ async function resolveLateTargeting(item: any) {
   if (wasMaximized) await item.actor.sheet.maximize()
 }
 
-export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event, workflowOptions: {lateTargeting: true}}) {
+export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event, workflowOptions: {lateTargeting: undefined}}) {
   const itemRollStart = Date.now()
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
@@ -433,12 +434,15 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const isRangeSpell = ["ft", "m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
-  if (getLateTargeting() && options.workflowOptions?.lateTargeting !== false && ((!isRangeSpell && !isAoESpell && getAutoRollAttack()) || this.data.data.target.type === "creature")) {
+  const shouldCheckLateTargeting = ["weapon", "feat", "spell"].includes(this.data.type) && getLateTargeting();
+                               
+  if (shouldCheckLateTargeting  && !isRangeSpell && !isAoESpell) {
+
     // normal targeting and auto rolling attack so allow late targeting
     let canDoLateTargeting = this.data.data.target.type !== "self";
 
     // TODO look at this if AoE spell and not auto targeting need to work out how to deal with template placement
-    if (false && isAoESpell && configSettings.autoTarget === "none" && this.hasAreaTarget)
+    if (false && isAoESpell && configSettings.autoTarget === "none")
       canDoLateTargeting = true;
 
     // TODO look at this if range spell and not auto targeting

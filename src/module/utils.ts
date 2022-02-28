@@ -914,7 +914,8 @@ export async function processOverTime(wrapped, data, options, user) {
               }
 
               try {
-                const options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid], workflowOptions: {lateTargeting: false} };
+                const options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid], 
+                  workflowOptions: {lateTargeting: false, autoRollDamage: "onHit", autoFastDamage: true} };
                 await completeItemRoll(ownedItem, options); // worried about multiple effects in flight so do one at a time
               } finally {
               }
@@ -1181,13 +1182,15 @@ export function checkRange(actor, item, tokenId, targets): string {
   return "normal";
 }
 
-export function isAutoFastAttack(workFlow: Workflow | undefined = undefined): boolean {
-  if (workFlow && workFlow.workflowType === "DummyWorkflow") return workFlow.rollOptions.fastForward;
+export function isAutoFastAttack(workflow: Workflow | undefined = undefined): boolean {
+  if (workflow?.workflowOptions?.autoFastAttack !== undefined) return workflow.workflowOptions.autoFastAttack;
+  if (workflow && workflow.workflowType === "DummyWorkflow") return workflow.rollOptions.fastForward;
   return game.user?.isGM ? configSettings.gmAutoFastForwardAttack : ["all", "attack"].includes(configSettings.autoFastForward);
 }
 
 export function isAutoFastDamage(workflow: Workflow | undefined = undefined): boolean {
-  if (workflow?.workflowType === "DummyWorkflow") return workflow.rollOptions.fastForwardDamage;;
+  if (workflow?.workflowOptions?.autoFastDamage !== undefined) return workflow.workflowOptions.autoFastDamage;
+  if (workflow?.workflowType === "DummyWorkflow") return workflow.rollOptions.fastForwardDamage;
   return game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward)
 }
 
@@ -1195,18 +1198,26 @@ export function isAutoConsumeResource(workFlow: Workflow | undefined = undefined
   return game.user?.isGM ? configSettings.gmConsumeResource : configSettings.consumeResource;
 }
 
-export function getAutoRollDamage(): string {
+export function getAutoRollDamage(workflow: Workflow | undefined = undefined): string {
+  if (workflow?.workflowOptions?.autoRollDamage) {
+    const damageOptions = Object.keys(geti18nOptions("autoRollDamageOptions"));
+    if (damageOptions.includes(workflow.workflowOptions.autoRollDamage))
+      return workflow.workflowOptions.autoRollDamage;
+    console.warn(`midi-qol | could not find ${workflow.workflowOptions.autoRollDamage} workflowOptions.autoRollDamage must be ond of ${damageOptions} defaulting to "onHit"`)
+    return "onHit";
+  }
   return game.user?.isGM ? configSettings.gmAutoDamage : configSettings.autoRollDamage;
 }
 
-export function getAutoRollAttack(): boolean {
+export function getAutoRollAttack(workflow: Workflow | undefined = undefined): boolean {
+  if (workflow?.workflowOptions?.autoRollAttack !== undefined) 
+      return workflow.workflowOptions.autoRollAttack;
   return game.user?.isGM ? configSettings.gmAutoAttack : configSettings.autoRollAttack;
 }
 
-export function getLateTargeting() {
+export function getLateTargeting(workflow: Workflow | undefined = undefined) {
+  if (workflow?.workflowOptions?.lateTargeting !== undefined)  return workflow?.workflowOptions?.lateTargeting
   return game.user?.isGM ? configSettings.gmLateTargeting : lateTargeting;
-
-  // return game.user?.isGM ? configSettings.gmLateTargeting : configSettings.lateTargeting;
 }
 
 export function itemHasDamage(item) {
@@ -1453,7 +1464,7 @@ export async function expireMyEffects(effectsToExpire: string[]) {
   }).map(ef => ef.id);
   if (debugEnabled > 1) debug("expire my effects", myExpiredEffects, expireAction, expireAttack, expireHit);
   this.effectsAlreadyExpired = this.effectsAlreadyExpired.concat(effectsToExpire);
-  if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects);
+  if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects,  {"midi-qol": effectsToExpire});
 }
 
 export async function expireRollEffect(rollType: string, abilityId: string) {
@@ -1467,7 +1478,8 @@ export async function expireRollEffect(rollType: string, abilityId: string) {
   if (expiredEffects?.length > 0) {
     timedAwaitExecuteAsGM("removeEffects", {
       actorUuid: this.uuid,
-      effects: expiredEffects
+      effects: expiredEffects,
+      options: {"midi-qol": `special-duration:${rollType}:${abilityId}` }
     })
   }
 }
@@ -1769,7 +1781,7 @@ export function getOptionalCountRemaining(actor: Actor5e, flag: string) {
   } else if (countValue === "reaction") {
     // return await hasUsedReaction(actor)
     return actor.getFlag("midi-qol", "reactionCombatRound") && needsReactionCheck(actor) ? 0 : 1;
-  }
+  } else if (countValue === "every") return 1;
   if (Number.isNumeric(countValue)) return countValue;
   if (countValue.startsWith("@")) {
     let result = getProperty(actor.data.data, countValue.slice(1))
@@ -1806,6 +1818,8 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
     }
   } else if ("turn" === count.value) {
     const flagKey = `${changeKey}.used`.replace("flags.midi-qol.", "");
+  } else if (count.value === "every") {
+
   } else if (count.value === "reaction") {
     setReactionUsed(actor);
   }
@@ -2368,6 +2382,5 @@ export function mergeKeyboardOptions(options: any, pressedKeys: Options | undefi
   options.fastForwardDamage = options.fastForwardDamage || pressedKeys.fastForwardDamage;
   options.fastForwardAttack = options.fastForwardAttack || pressedKeys.fastForwardAttack;
   options.parts = options.parts || pressedKeys.parts;
-  options.chatMessage = options.chatMessage || pressedKeys.chatMessage;
   options.critical = options.critical || pressedKeys.critical;
 }

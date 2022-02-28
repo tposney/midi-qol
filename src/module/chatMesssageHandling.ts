@@ -688,6 +688,7 @@ export async function onChatCardAction(event) {
   if (!(game.user?.isGM || message?.isAuthor)) return;
   if (!(targets && targets.size > 0)) return; // cope with targets undefined
   if (action !== "applyEffects") return;
+  if (!message?.user) return;
 
   //@ts-ignore speaker
   const betterRollsFlags: any = message.data.flags.betterrolls5e;
@@ -710,13 +711,31 @@ export async function onChatCardAction(event) {
     }
   }
   if (!actor || !item) return;
-  let workflow = Workflow.getWorkflow(item.uuid);
-  if (workflow) {
-    workflow.forceApplyEffects = true; // don't overwrite the application targets
-    workflow.applicationTargets = game.user?.targets;
-    if (workflow.applicationTargets.size > 0) await workflow.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
+  button.disabled = false;
+  if (game.user?.id !== message.user?.id) {
+    if (!game.user?.isGM) {
+      ui.notifications?.warn("Only the GM can apply effects for other players")
+      return;
+    }
+    if (game.user.targets.size === 0) {
+      ui.notifications?.warn(i18n("midi-qol.noTokens"));
+      return;
+    }
+    const result = (await socketlibSocket.executeAsUser("applyEffects", message.user.id, {
+      workflowId: item.uuid,
+      targets: Array.from(game.user.targets).map(t => t.document.uuid)
+    }));
+
+    // applying effects on behalf of another user;
   } else {
-    ui.notifications?.warn(i18nFormat("midi-qo.NoWorkflow", { itemName: item.name }));
+    let workflow = Workflow.getWorkflow(item.uuid);
+    if (workflow) {
+      workflow.forceApplyEffects = true; // don't overwrite the application targets
+      workflow.applicationTargets = game.user?.targets;
+      if (workflow.applicationTargets.size > 0) await workflow.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
+    } else {
+      ui.notifications?.warn(i18nFormat("midi-qo.NoWorkflow", { itemName: item.name }));
+    }
   }
   button.disabled = false;
 }

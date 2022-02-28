@@ -2,13 +2,14 @@ import { configSettings } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming } from "../midi-qol.js";
 import { completeItemRoll, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMesssageHandling.js";
+import { Workflow, WORKFLOWSTATES } from "./workflow.js";
 
 export var socketlibSocket: any = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
 
-export async function removeEffects(data: { actorUuid: string; effects: string[]; }) {
+export async function removeEffects(data: { actorUuid: string; effects: string[]; options: {}}) {
   const actor = MQfromActorUuid(data.actorUuid);
-  await actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects)
+  await actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects, data.options)
 }
 
 export async function createEffects(data: { actorUuid: string, effects: any[] }) {
@@ -63,7 +64,27 @@ export let setupSocket = () => {
   socketlibSocket.register("deleteToken", deleteToken);
   socketlibSocket.register("ddbglPendingFired", ddbglPendingFired);
   socketlibSocket.register("completeItemRoll", _completeItemRoll);
+  socketlibSocket.register("applyEffects", _applyEffects);
 };
+
+export async function _applyEffects(data: { workflowId: string, targets: string[] }) {
+  let result;
+  try {
+    const workflow = Workflow.getWorkflow(data.workflowId);
+    if (!workflow) return result;
+    workflow.forceApplyEffects = true; // don't overwrite the application targets
+    const targets: Set<Token> = new Set();
+    //@ts-ignore
+    for (let targetUuid of data.targets) targets.add(await fromUuid(targetUuid));
+
+    workflow.applicationTargets = targets;
+    if (workflow.applicationTargets.size > 0) result = await workflow.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
+    return result;
+  } catch (err) {
+    warn("remote apply effects error", error);
+  }
+  return result;
+}
 
 async function _completeItemRoll(data: {itemData: any, actorUuid: string, options: any, targetUuids: string[]}) {
   if (!game.user) return null;

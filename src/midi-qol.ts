@@ -446,7 +446,9 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.mim.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.ptional.NAME.save.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.check.${abl}`);
+    midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
   })
+  
   midiFlags.push(`flags.midi-qol.advantage.skill.all`);
   midiFlags.push(`flags.midi-qol.disadvantage.skill.all`);
   midiFlags.push(`flags.midi-qol.fail.skill.all`);

@@ -744,13 +744,20 @@ For modules that want to call midi-qol it is easier than in minor-qol. Just call
 event.altKey: true => advantage roll
 event.crtlKey: true => disadvantage roll
 event.shiftKey: true => auto roll the attack roll
+Additional workflow processing options to itemRoll(options). You can set 
+  - lateTargeting: boolen to force enable/disable late targting for the items wokrflow
+  - autoRollAttack: boolean force enable/disable auto rolling of the attack,
+  - autoFastAttack: boolean force enable/disable fast forwarding of the attack
+  - autoRollDamage: string (always, onHit, none)
+  - autoFastDamage: boolean force enable/disable fastForward of the damage roll.
+  - Leaving these blank means that the configured workflow options from the midi-qol configuration panel will apply.
 
 * MinorQOL.doRoll and MinorQOL.applyTokenDamage remain supported.
 * MidiQOL.applyTokenDamage is exported.
 * If you have macros that depend on being called when the roll is complete, that is still supported, both "minor-qol.RollComplete" and "midi-qol.RollComplete" as well as "midi-qol.RollComplete.ItemUuid" (where ItemUUid is the uuid of the item doing the roll) are called when the roll is finished. See also the onUse macro field which can be used to achieve similar results.
 * There is a function `async MidiQOL.completeItemRoll(item, options)` that returns a promise you can await, which will do the entire midi-qol workflow for the item before resolving. This is useful if you want to roll an item and do everything without worrying about saving throws and so on.
 
-I* t takes the same arguments as midis item.roll:
+It takes the same arguments as midis item.roll:
  * showFullCard: default false
  * createWorkflow: default true
  * versatile: default false
@@ -760,6 +767,14 @@ I* t takes the same arguments as midis item.roll:
  In addition you can specify (in options)
   * checkGMStatus: boolen, If true non-gm clients will hand the roll to a gm client.
   * targetUuids, if present the roll will target the passed list of token uuids (token.document.uuid) rather than the users (or GMS) current targets.
+  * Additional workflow processing options to completeItemRoll(item, options: {...., workflowOptions}).
+  You can set: 
+  - lateTargeting: boolen to force enable/disable late targting for the items wokrflow
+  - autoRollAttack: boolean force enable/disable auto rolling of the attack,
+  - autoFastAttack: boolean force enable/disable fast forwarding of the attack
+  - autoRollDamage: string (always, onHit, none)
+  - autoFastDamage: boolean force enable/disable fastForward of the damage roll.
+  - Leaving these blank means that the configured workflow options from the midi-qol configuration panel will apply.
 
 ## Midi-qol called Hooks
 The passed workflow is "live" so changes will affect subsequent actions. In particular preAttackRoll and preDamageRoll will affect the roll about to be done.  

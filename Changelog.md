@@ -1,10 +1,28 @@
+### 0.9.26
+  * Added missing flags.midi-qol.optional.NAME.save.dex/wis etc to auto complete fields 
+  * Added "every" option to count fields, means you can use the effect every time it matches without it ever expiring.
+  * Fix for rolling tools with late targeting enabled.
+  * Concentration will be applied to the user of an item (even if all targets saved) if the item places a measured template and has non-instantaneous duration - wall of fire/thorns etc.
+  * Fix for the removal on any effect causing the removal of concentration.
+  * Overtime effects that roll damage no longer wait for the damage roll button to be pressed, instead they damage is auto rolled and fast forwarded.
+  * Support for GMs to apply effects (via the apply effects button) for other players. Effects are applied to whoever the GM has targeted.
+  * For macro writers: Additional workflow processing options to itemRoll(options)/completeItemRoll(item, options: {...., workflowOptions}).
+  You can set 
+    lateTargeting: boolean to force enable/disable late targeting for the items workflow
+    autoRollAttack: boolean force enable/disable auto rolling of the attack,
+    autoFastAttack: boolean force enable/disable fast forwarding of the attack
+    autoRollDamage: string (always, onHit, none)
+    autoFastDamage: boolean force enable/disable fast Forward of the damage roll.
+    Leaving these undefined means that the configured workflow options from the midi-qol configuration panel will apply.
+
 ### 0.9.25
   * Fix for user XXX lacks permission to delete active effect on token introduced in 0.9.23 for concentration - same symptom different cause.
+  
 ### 0.9.24
   * Fix for user XXX lacks permission to delete active effect on token introduced in 0.9.23 for concentration
 ### 0.9.23
   * Fix for double dice so nice dice rolling for damage bonus macro dice.
-  * Fix for late targeting causing concentration save to late target.
+  * Fix for late targeting causing concentration save to require late targeting.
   * A tweak to using monk's token bar for saving throws. Player rolls always are always visible to other players. If there are GM rolls and the player's are not allowed to see the rolls, the GM rolls will be split to a separate card and displayed only to the GM. This resolves the issue of NPC names being shown to players when doing saving throws with Monk's Token Bar.
   * Fix for a maybe edge case where concentration removal was not working (concentration was removed but stayed on the actor).
   * Tidy up so that late targeting does not apply when doing reactions, concentration saving throws or overtime effects.

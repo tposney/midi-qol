@@ -105,6 +105,7 @@ export class Workflow {
   attackTotal: number;
   attackCardData: ChatMessage | undefined;
   attackRollHTML: HTMLElement | JQuery<HTMLElement> | string;
+  attackRollCount: number;
   noAutoAttack: boolean; // override attack roll for standard care
 
   hitDisplayData: any;
@@ -113,6 +114,7 @@ export class Workflow {
   damageTotal: number;
   damageDetail: any[];
   damageRollHTML: HTMLElement | JQuery<HTMLElement> | string;
+  damageRollCount: number;
   damageCardData: ChatMessage | undefined;
   defaultDamageType: string | undefined;
   noAutoDamage: boolean; // override damage roll for damage rolls
@@ -183,10 +185,10 @@ export class Workflow {
 
   get shouldRollDamage(): boolean {
     // if ((this.itemRollToggle && getAutoRollDamage()) || !getAutoRollDamage())  return false;
-    const normalRoll = getAutoRollDamage() === "always"
-      || (getAutoRollDamage() !== "none" && !this.item.hasAttack)
-      || (getAutoRollDamage() === "onHit" && (this.hitTargets.size > 0 || this.hitTargetsEC.size > 0 || this.targets.size === 0))
-      || (getAutoRollDamage() === "onHit" && (this.hitTargetsEC.size > 0));
+    const normalRoll = getAutoRollDamage(this) === "always"
+      || (getAutoRollDamage(this) !== "none" && !this.item.hasAttack)
+      || (getAutoRollDamage(this) === "onHit" && (this.hitTargets.size > 0 || this.hitTargetsEC.size > 0 || this.targets.size === 0))
+      || (getAutoRollDamage(this) === "onHit" && (this.hitTargetsEC.size > 0));
     return this.itemRollToggle ? !normalRoll : normalRoll;
   }
 
@@ -255,6 +257,8 @@ export class Workflow {
     }
     this.itemRollToggle = options?.pressedKeys?.rollToggle ?? false;
     this.noOptionalRules = options?.pressedKeys?.noOptionalRules ?? false;
+    this.attackRollCount = 0;
+    this.damageRollCount = 0;
     this.advantage = undefined;
     this.disadvantage = undefined;
     this.isVersatile = false;
@@ -787,6 +791,9 @@ export class Workflow {
           )
         )
           hasConcentration = false;
+          // items that leave a template laying around for an extended period generally should have concentration
+        if (this.item?.hasAreaTarget && this.item.data.data.duration?.units !== "instantaneous")
+          hasConcentration = true;
         const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
         if (hasConcentration && checkConcentration) {
           await addConcentration({ workflow: this });
@@ -2103,7 +2110,10 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
     //@ts-ignore .fumble undefined
     this.isFumble = this.diceRoll <= this.attackRoll.terms[0].options.fumble;
     this.attackTotal = this.attackRoll.total ?? 0;
-    if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble)
+    if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble);
+    if (this.attackRollCount > 1) { // we re-rolled the attack
+
+    }
   }
 
   async checkHits() {
