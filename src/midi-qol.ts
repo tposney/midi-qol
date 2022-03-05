@@ -146,53 +146,39 @@ Hooks.once('setup', function () {
   if (MQDeferMacroLabel === "midi-qol.DeferText") MQDeferMacroLabel = "[Defer]";
   if (game.system.id === "dnd5e") {
     //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.weaponProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.weaponProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.weaponProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp")
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.weaponProperties["critOther"] = i18n("midi-qol.otherCritProp")
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.damageResistanceTypes["silver"] = i18n("midi-qol.nonSilverPhysical");
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.damageResistanceTypes["adamant"] = i18n("midi-qol.nonAdamantinePhysical");
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.damageResistanceTypes["healing"] = CONFIG.DND5E.healingTypes.healing;
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.damageResistanceTypes["temphp"] = CONFIG.DND5E.healingTypes.temphp;
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.abilityActivationTypes["reactionmanual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
+    let config = CONFIG.DND5E
+    config.midiProperties = {};
+    config.midiProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
+    config.midiProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
+    config.midiProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp");
+    config.midiProperties["critOther"] = i18n("midi-qol.otherCritProp");
+    config.midiProperties["concentration"] = i18n("midi-qol.concentrationActivationCondition");
+
+    config.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
+    config.damageResistanceTypes["silver"] = i18n("midi-qol.nonSilverPhysical");
+    config.damageResistanceTypes["adamant"] = i18n("midi-qol.nonAdamantinePhysical");
+    config.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
+    config.damageResistanceTypes["healing"] = config.healingTypes.healing;
+    config.damageResistanceTypes["temphp"] = config.healingTypes.temphp;
+    config.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
+    config.abilityActivationTypes["reactionmanual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
 
   } else { // sw5e
-    
     //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.weaponProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.weaponProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.weaponProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp")
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.weaponProperties["critOther"] = i18n("midi-qol.otherCritProp")
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.damageResistanceTypes["silver"] = i18n("midi-qol.nonSilverPhysical");
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.damageResistanceTypes["adamant"] = i18n("midi-qol.nonAdamantinePhysical");
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.damageResistanceTypes["healing"] = CONFIG.DND5E.healingTypes.healing;
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.damageResistanceTypes["temphp"] = CONFIG.DND5E.healingTypes.temphp;
+    let config = CONFIG.DND5E
+    config.midiProperties = {};
+    config.midiProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
+    config.midiProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
+    config.midiProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp")
+    config.midiProperties["critOther"] = i18n("midi-qol.otherCritProp");
+    config.midiProperties["concentration"] = i18n("midi-qol.concentrationActivationCondition");
 
+    config.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
+    config.damageResistanceTypes["silver"] = i18n("midi-qol.nonSilverPhysical");
+    config.damageResistanceTypes["adamant"] = i18n("midi-qol.nonAdamantinePhysical");
+    config.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
+    config.damageResistanceTypes["healing"] = config.healingTypes.healing;
+    config.damageResistanceTypes["temphp"] = config.healingTypes.temphp;
   }
 
   if (configSettings.allowUseMacro) {

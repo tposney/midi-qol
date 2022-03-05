@@ -15,6 +15,7 @@ export let readyHooks = async () => {
   Hooks.on("preUpdateActor", (actor, update, diff, user) => {
     const hpUpdate = getProperty(update, "data.attributes.hp.value");
     if (hpUpdate === undefined) return true;
+
     let hpDiff = actor.data.data.attributes.hp.value - hpUpdate;
     if (hpUpdate >= (actor.data.data.attributes.hp.tempmax ?? 0) + actor.data.data.attributes.hp.max) hpDiff = 0;
     actor.data.update({ "flags.midi-qol.concentration-damage": hpDiff })
@@ -30,8 +31,8 @@ export let readyHooks = async () => {
       const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
       return specialDuration?.includes("isMoved");
     }) ?? [];
-    if (expiredEffects.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", expiredEffects.map(ef => ef.id));
-    
+    if (expiredEffects.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", expiredEffects.map(ef => ef.id), { "expiry-reaason": "midi-qol:isMoved" });
+
   })
 
   Hooks.on("ddb-game-log.pendingRoll", (data) => {
@@ -46,48 +47,6 @@ export let readyHooks = async () => {
     if (user !== game.user?.id) return;
     const hpUpdate = getProperty(update, "data.attributes.hp.value");
     if (hpUpdate === undefined) return true;
-    const attributes = actor.data.data.attributes;
-    const tokens = actor.getActiveTokens();
-    const controlled = tokens.filter(t => t._controlled);
-    const token = controlled.length ? controlled.shift() : tokens.shift();
-    if (configSettings.addWounded > 0) {
-      //@ts-ignore
-      const CEWounded = game.dfreds?.effects?.all.find(ef => ef.name === i18n("midi-qol.Wounded"))
-      const woundedLevel = attributes.hp.max * configSettings.addWounded / 100;
-      const needsWounded = attributes.hp.value > 0 && attributes.hp.value < woundedLevel
-      if (installedModules.get("dfreds-convenient-effects") && CEWounded) {
-        const woundedString = i18n("midi-qol.Wounded");
-        const wounded = actor.effects.find(ae => ae.data.label === woundedString);
-        if (!wounded && needsWounded) {
-          //@ts-ignore
-          await game.dfreds.effectInterface?.addEffect({ effectName: woundedString, uuid: actor.uuid });
-        } else if (wounded && !needsWounded) {
-          await wounded.delete();
-        }
-      } else {
-        const bleeding = CONFIG.statusEffects.find(se => se.id === "bleeding");
-        if (bleeding && token)
-          token.toggleEffect(bleeding.icon, { overlay: false, active: needsWounded })
-      }
-    }
-    if (configSettings.addDead) {
-      const needsDead = hpUpdate === 0;
-      if (installedModules.get("dfreds-convenient-effects") && game.settings.get("dfreds-convenient-effects", "modifyStatusEffects") !== "none") {
-        const effectName = actor.hasPlayerOwner ? getConvenientEffectsUnconscious().name : getConvenientEffectsDead().name;
-        const hasEffect = await ConvenientEffectsHasEffect(effectName, actor.uuid);
-        if ((needsDead !== hasEffect)) {
-          //@ts-ignore
-          await game.dfreds?.effectInterface.toggleEffect(effectName, { overlay: true, uuids: [actor.uuid] });
-        }
-      }
-      else if (token) {
-        if (actor.hasPlayerOwner) {
-          await token.toggleEffect("/icons/svg/unconscious.svg", { overlay: true, active: needsDead });
-        } else {
-          await token.toggleEffect(CONFIG.controlIcons.defeated, { overlay: true, active: needsDead });
-        }
-      }
-    }
 
     if (!configSettings.concentrationAutomation) return true;
 
@@ -120,10 +79,10 @@ export let readyHooks = async () => {
         if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
           //@ts-ignore
           // await ownedItem.roll({ vanilla: false, showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false })
-          await globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC, workflowOptions: {lateTargeting: false }}).toMessage();
+          await globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC, workflowOptions: { lateTargeting: false } }).toMessage();
         } else {
           //@ts-ignore
-          await ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: {lateTargeting: false }})
+          await ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: false } })
         }
       } finally {
         if (saveTargets && game.user) game.user.targets = saveTargets;
@@ -222,7 +181,7 @@ export function restManager(actor, result) {
       || (result.newDay && specialDuration.includes(`newDay`))
       || specialDuration.includes(`shortRest`));
   }).map(ef => ef.id);;
-  if (myExpiredEffects?.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects);
+  if (myExpiredEffects?.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects, { "expiry-reason": "midi-qol:rest" });
 }
 
 export function initHooks() {
@@ -272,7 +231,7 @@ export function initHooks() {
       if (workflow.saves.size === 1 || !workflow.hasSave) {
         let effectId = overTimeEffectsToDelete[wfuuid].effectId;
         let actor = overTimeEffectsToDelete[wfuuid].actor;
-        actor.deleteEmbeddedDocuments("ActiveEffect", [effectId]);
+        actor.deleteEmbeddedDocuments("ActiveEffect", [effectId]), { "expiry-reason": "midi-qol:overTime" };
       }
       delete overTimeEffectsToDelete[wfuuid];
     }
@@ -286,8 +245,6 @@ export function initHooks() {
     if (configSettings.allowUseMacro) {
       const labelText = i18n("midi-qol.onUseMacroLabel");
       const macros = new OnUseMacros(getProperty(app.object.data, "flags.midi-qol.onUseMacroName"));
-
-
       const macroField = `<h4 class="damage-header">${labelText}
   <a class="macro-control damage-control add-macro"><i class="fas fa-plus"></i></a>
 </h4>
@@ -320,6 +277,70 @@ export function initHooks() {
           element.append(effect)
         }
       }
+    }
+    if (app.object && ["spell", "feat", "weapon"].includes(app.object.type)) {
+      const data = app.object.data;
+      if (data.flags.midiProperties === undefined) {
+        app.object.data.flags.midiProperties = {};
+        if (data.data.properties?.nodam && data.flags.midiProperties.nodam === undefined) {
+          data.flags.midiProperties.nodam = true;
+          delete data.data.properties.nodam;
+        }
+        if (data.data.properties?.halfdam && data.flags.midiProperties.halfdam === undefined) {
+          data.flags.midiProperties.halfdam = true;
+          delete data.data.properties.halfdam;
+        }
+        if (data.data.properties?.fulldam && data.flags.midiProperties.fulldam === undefined) {
+          data.flags.midiProperties.fulldam = true;
+          delete data.data.properties.fulldam;
+        }
+        if (data.data.properties?.critOther && data.flags.midiProperties.critOther === undefined) {
+          data.flags.midiProperties.critOther = true;
+          delete data.data.properties.critOther;
+        }
+      }
+      if (data.data.properties?.fulldam !== undefined) {
+        app.object.update({
+          "data.properties.-=fulldam": null,
+          "data.properties.-=halfdam": null,
+          "data.properties.-=nodam": null,
+          "data.properties.-=critOther": null,
+          "flags.midiProperties": data.flags.midiProperties
+        })
+      }
+      //@ts-ignore
+      const midiProps = CONFIG.DND5E.midiProperties;
+      let newHtml = `<div class="form-group stacked midi-properties">
+          <label>${i18n("midi-qol.MidiProperties")}</label>
+          <label class="checkbox">
+              <input type="checkbox" name="flags.midiProperties.nodam" ${data.flags.midiProperties.nodam ? "checked" : ""} /> ${midiProps.nodam}
+          </label>
+          <label class="checkbox">
+          <input type="checkbox" name="flags.midiProperties.halfdam" ${data.flags.midiProperties.halfdam ? "checked" : ""} /> ${midiProps.halfdam}
+          </label>
+          <label class="checkbox">
+          <input type="checkbox" name="flags.midiProperties.fulldam" ${data.flags.midiProperties.fulldam ? "checked" : ""} /> ${midiProps.fulldam}
+          </label>
+          <label class="checkbox">
+          <input type="checkbox" name="flags.midiProperties.critOther" ${data.flags.midiProperties.critOther ? "checked" : ""} /> ${midiProps.critOther}
+          </label>
+          <label class="checkbox">
+          <input type="checkbox" name="flags.midiProperties.concentration" ${data.flags.midiProperties.concentration ? "checked" : ""} /> ${midiProps.concentration}
+          </label>
+          </div>`;
+
+      /*
+      const templateData = {
+         data: app.object.data,
+         //@ts-ignore
+         config: CONFIG.DND5E
+      }
+      
+      renderTemplate("modules/midi-qol/templates/midiProperties.html", templateData).then(template => {
+        element.append(template)
+      })
+      */
+      element.append(newHtml);
     }
     activateMacroListeners(app, html);
   })

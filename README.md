@@ -102,7 +102,7 @@ Midi generally works with dice so nice, but the interactions are more complicate
 Midi-qol can use Let Me Roll That For You for player/gm saving throws and is the preferred roller. There is a "feature" that LMRTFY returns the roll result to midi before the 3d dice have finished rolling, so you may see the saves display before the dice finsih doing their thing.
 
 ## Monks Token Bar
-Midi-qol can use Monk's Token Bar to roll saves. If using Monk's token bar flags.midi-qol.(dis)advantage.concentration and magic resistance won't work, but otherwise works well. If you set display the saving throw DC success/failure will be shown on the monks token bar.
+Midi-qol can use Monk's Token Bar to roll saves. **update** adv/dis advantage for magic resistance/concentration now work with MTB.
 
 ## Dfreds Quality of Life  
 Midi supports the foundry template targeting, DF Qol has support for rules as written template targeting behaviour. There is an option in midi's AoE auto target to use DF QoL's template targeting, which disables midi's internal template targeting. You should only enable one sort of template targeting since mid/df-qol will fight over who gets to do the targeting which will lead to confusing results.
@@ -911,17 +911,16 @@ Macro calls supply the following data
   tokenUuid
   item = item.data (the item, i.e. spell/weapon/feat)
   itemUuid the item uuid
-  targets = [token.data] (an array of token data taken from game.user.targets)
-  targetUuids = [uuid]
-  hitTargets = [token.data] (an array of token data taken from targets that were hit)
-  hitTargetUuids [uuid]
-  saves= [token.data] (an array of token data taken from targets that made a save)
+  targets: [token.docucment] (an array of token documents taken from game.user.targets)
+  targetUuids: [uuid]
+  hitTargets: [token.document] (an array of token documenta taken from targets that were hit)s  hitTargetUuids [uuid]
+  saves: [token.document] (an array of token documents taken from targets that made a save)
   saveUuids = [uuid]
-  failedSaves = [token.data] (an array of token data taken from targets that failed the save)
+  failedSaves: [token.document] (an array of token document taken from targets that failed the save)
   failedSaveUuids = [uuid]
-  criticalSaves = [token.data]
+  criticalSaves: [token.document]
   criticalSaveUuids = [uuid]
-  fumbleSaves = [token.data]
+  fumbleSaves: [token.document]
   fumbleSaveUuids = [uuid]
   damageRoll = the Roll object for the damage roll (if any)
   attackRoll = the Roll object for the attack roll (if any)

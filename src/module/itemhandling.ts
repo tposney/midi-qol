@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated, needsReactionCheck } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { convertCompilerOptionsFromJson } from "typescript";
@@ -56,7 +56,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   workflow.checkAttackAdvantage();
 
   if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
-  if (Hooks.call("midi-qol.preAttackRoll", workflow) === false || Hooks.call(`midi-qol.preAttackRoll.${this.uuid}`, workflow) === false) {
+  if (await asyncHooksCall("midi-qol.preAttackRoll", workflow) === false || await asyncHooksCall(`midi-qol.preAttackRoll.${this.uuid}`, workflow) === false) {
     console.warn("midi-qol | attack roll blocked by preAttackRoll hook");
     return;
   }
@@ -81,7 +81,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     disadvantage = false;
   }
   const wrappedRollStart = Date.now();
-  workflow.attackrollc += 1;
+  workflow.attackRollCount += 1;
   let result: Roll = await wrapped(mergeObject(options, {
     advantage,
     disadvantage,
@@ -226,7 +226,7 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   if (versatile !== null) workflow.rollOptions.versatile = versatile;
   if (debugEnabled > 0) warn("rolling damage  ", this.name, this);
 
-  if (Hooks.call("midi-qol.preDamageRoll", workflow) === false || Hooks.call(`midi-qol.preDamageRoll.${this.uuid}`, workflow) === false) {
+  if (await asyncHooksCall("midi-qol.preDamageRoll", workflow) === false || await asyncHooksCall(`midi-qol.preDamageRoll.${this.uuid}`, workflow) === false) {
     console.warn("midi-qol | Damaage roll blocked via pre-hook");
     return;
   }
@@ -278,7 +278,7 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   if (workflow.shouldRollOtherDamage) {
     if ((workflow.otherDamageFormula ?? "") !== "") { // other damage formula swaps in versatile if needed
       //@ts-ignore
-      otherResult = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: (this.data.data.properties?.critOther ?? false) && (workflow.isCritical || workflow.rollOptions.critical) });
+      otherResult = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: (this.data.flags.midiProperties?.critOther ?? false) && (workflow.isCritical || workflow.rollOptions.critical) });
       otherResult = await otherResult?.evaluate({ async: true });
       if ((maxflags.damage && (maxflags.damage.all || maxflags.damage[this.data.data.actionType])) ?? false)
         otherResult = await otherResult?.reroll({ maximize: true });
@@ -505,7 +505,9 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     }
   }
 
-  const needsConcentration = this.data.data.components?.concentration || this.data.data.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
+  const needsConcentration = this.data.data.components?.concentration 
+                              || this.data.flags.midiProperties?.concentration
+                              || this.data.data.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
   const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
   if (needsConcentration && checkConcentration) {
     const concentrationEffect = getConcentrationEffect(this.actor);
@@ -529,6 +531,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return;
   }
 
+  
   const targets = (this?.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : myTargets;
 
   let workflow: Workflow;
@@ -558,7 +561,50 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     // _levels.templateElevation = true;
     // if (game.user) setProperty(game.user, "data.flags.midi-qol.elevation", workflow.templateElevation);
   }
-  if (Hooks.call("midi-qol.preItemRoll", workflow) === false || Hooks.call(`midi-qol.preItemRoll.${this.uuid}`, workflow) === false) {
+  let itemUsesReaction = false;
+  const hasReaction = await hasUsedReaction(this.actor);
+  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type)) {
+    itemUsesReaction = true;
+  }
+  const checkReactionAOO = configSettings.recordAOO=== "all" || (configSettings.recordAOO=== this.actor.type)
+  if (checkReactionAOO && !itemUsesReaction && this.hasAttack) {
+    const inCombat = isInCombat(workflow.tokenId);
+    let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
+    const isTurn = activeCombatants?.includes(workflow.tokenId)
+    if (!isTurn && inCombat) itemUsesReaction = true;
+  }
+
+  workflow.reactionQueried = false;
+  const blockReaction = itemUsesReaction && hasReaction && needsReactionCheck(this.actor);
+  if (blockReaction) {
+    let shouldRoll = false;
+    let d = await Dialog.confirm({
+      title: i18n("midi-qol.EnforceReactions.Title"),
+      content: i18n( "midi-qol.EnforceReactions.Content"),
+      yes: () => { shouldRoll = true },
+    });
+   if (!shouldRoll) return; // user aborted roll TODO should the workflow be deleted?
+  }
+  if (itemUsesReaction && !hasReaction) await setReactionUsed(this.actor); 
+
+  const hasBonusAction = await hasUsedBonusAction(this.actor);
+  let itemUsesBonusAction = false;
+  if (["bonus"].includes(this.data.data.activation?.type)) {
+    itemUsesBonusAction = true;
+  }
+  const blockBonus = itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(this.actor);
+  if (blockBonus) {
+    let shouldRoll = false;
+    let d = await Dialog.confirm({
+      title: i18n("midi-qol.EnforceBonusActions.Title"),
+      content: i18n( "midi-qol.EnforceBonusActions.Content"),
+      yes: () => { shouldRoll = true },
+    });
+   if (!shouldRoll) return; // user aborted roll TODO should the workflow be deleted?
+  }
+  if (itemUsesBonusAction && !hasBonusAction) await setBonusActionUsed(this.actor); 
+
+  if (await asyncHooksCall("midi-qol.preItemRoll", workflow) === false || await asyncHooksCall(`midi-qol.preItemRoll.${this.uuid}`, workflow) === false) {
     console.warn("midi-qol | attack roll blocked by preItemRoll hook");
     return workflow.next(WORKFLOWSTATES.ROLLFINISHED)
     // Workflow.removeWorkflow(workflow.id);
@@ -628,32 +674,6 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     }
   }
 
-  let itemUsesReaction = false;
-  const hasReaction = await hasUsedReaction(this.actor);
-  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type)) {
-    itemUsesReaction = true;
-  }
-  const checkReactionAOO = configSettings.recordAOO=== "all" || (configSettings.recordAOO=== this.actor.type)
-  if (checkReactionAOO && !itemUsesReaction && this.hasAttack) {
-    const inCombat = isInCombat(workflow.tokenId);
-    let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
-    const isTurn = activeCombatants?.includes(workflow.tokenId)
-    if (!isTurn && inCombat) itemUsesReaction = true;
-  }
-
-  workflow.reactionQueried = false;
-  const blockReaction = itemUsesReaction && hasReaction && needsReactionCheck(this.actor);
-  if (blockReaction) {
-    let shouldRoll = false;
-    let d = await Dialog.confirm({
-      title: i18n("midi-qol.EnforceReactions.Title"),
-      content: i18n( "midi-qol.EnforceReactions.Content"),
-      yes: () => { shouldRoll = true },
-    });
-   if (!shouldRoll) return; // user aborted roll TODO should the workflow be deleted?
-
-  }
-  if (itemUsesReaction && !hasReaction) await setReactionUsed(this.actor); 
 
   if (debugCallTiming) log(`wrapped item.roll() elapsed ${Date.now() - wrappedRollStart}ms`);
   /* need to get spell level from the html returned in result */

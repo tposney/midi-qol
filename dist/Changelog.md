@@ -1,3 +1,17 @@
+### 0.9.27
+* If not auto rolling damage and using the merge card midi will display a roll count for the second and subsequent attack rolls on the same item card. Should help stop sneaky players mashing roll until it hits.
+* Optional setting to display how much an attack hit or missed by.
+* Fix for non spells with measured templates being tagged for concentration.
+* Fix for race condition when marking wounded and applying effects at the same time.
+* Tracking of bonus actions as well as reaction usage. Enabling enforce reactions also enabled checking bonus action usage.
+* **Experimental** support for getting reaction items/features from magic items. Enable from the reaction settings on the optional tab.
+* **For macro writers** Support for async Hook functions. For any of the midi-qol.XXXXX hooks, you can pass an async function and midi-qol will await the function call.
+* **For macro writers** When midi expires an effect as an options[expriy-reason] is set to a string "midi-qol:reason", describing the reason which you can process as you wish.
+* **Potentially breaking** Implemented fulldam/halfdam/nodam/critOther for weapons/spells/features rather than just weapons and this change replaces the weapon properties that were previously created by midi-qol.
+  - Weapons with the old properties set should continue to work and the first time you edit the item it will auto migrate to the new data scheme (but of course there might be bugs).
+  - Setting fulldam etc check box for a spell/feature/weapon will take precedence over the text description search. If none are set the text description will still take place.
+  - Added concentration property for any weapon/feature/spell (allows you to specify that concentration should be set when rolling the item via a check box) This is in addition to the now deprecated activation condition === Concentration.
+  
 ### 0.9.26
   * Added missing flags.midi-qol.optional.NAME.save.dex/wis etc to auto complete fields 
   * Added "every" option to count fields, means you can use the effect every time it matches without it ever expiring.
@@ -14,12 +28,14 @@
     autoRollDamage: string (always, onHit, none)
     autoFastDamage: boolean force enable/disable fast Forward of the damage roll.
     Leaving these undefined means that the configured workflow options from the midi-qol configuration panel will apply.
+  * Added Aura of Vitality to sample items compendium - when used creates a new feature Aura of Vitality Cure which does 2d6 healing to the target. For macro writers: this uses a different approach to removing the item when the spell expires. The created item is registered for removal on the spells concentration data, so the macro can run as an onUse macro (only called once), rather than macro.ItemMacro.
 
 ### 0.9.25
   * Fix for user XXX lacks permission to delete active effect on token introduced in 0.9.23 for concentration - same symptom different cause.
-  
+
 ### 0.9.24
   * Fix for user XXX lacks permission to delete active effect on token introduced in 0.9.23 for concentration
+
 ### 0.9.23
   * Fix for double dice so nice dice rolling for damage bonus macro dice.
   * Fix for late targeting causing concentration save to require late targeting.

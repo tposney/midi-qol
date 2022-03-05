@@ -263,9 +263,9 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     //@ts-ignore
     if (workflow && !isHealing && workflow.item && !getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction")
       && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
-      log("Calling do reactions with ", t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: {damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid}})
+      log("Calling do reactions with ", t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } })
       //@ts-ignore
-      let result = await doReactions(t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: {damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid}});
+      let result = await doReactions(t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } });
     }
     if (getProperty(a.data, "flags.midi-qol.DR.all") !== undefined)
       DRAll = (new Roll((getProperty(a.data, "flags.midi-qol.DR.all") || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
@@ -445,12 +445,12 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     ditem.damageDetail = duplicate(damageDetailArr);
     const damageData = duplicate(ditem);
     damageData.damageDetail = damageDetailResolved;
-    Hooks.callAll("midi-qol.damageApplied", t, { item, workflow, damageData });
+    await asyncHooksCallAll("midi-qol.damageApplied", t, { item, workflow, damageData });
     damageList.push(ditem);
     targetNames.push(t.name)
   }
   if (theTargets.size > 0) {
-    timedAwaitExecuteAsGM("createReverseDamageCard", {
+    await timedAwaitExecuteAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
       damageList: damageList,
@@ -492,7 +492,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     acc[item.type] = (acc[item.type] ?? 0) + item.damage;
     return acc;
   }, {});
-  const newDetail = Object.keys(merged).map((key) => {return {damage: Math.max(0, merged[key]), type: key}});
+  const newDetail = Object.keys(merged).map((key) => { return { damage: Math.max(0, merged[key]), type: key } });
   totalDamage = newDetail.reduce((acc, value) => acc + value.damage, 0);
   workflow.damageDetail = newDetail;
   workflow.damageTotal = totalDamage;
@@ -566,7 +566,7 @@ export let getSaveMultiplierForItem = (item: Item) => {
     if (midiFlags?.potentCantrip) return 0.5;
   }
 
-  const itemProperties: any = itemData.data.properties;
+  const itemProperties: any = itemData.flags.midiProperties;
   if (itemProperties?.nodam) return 0;
   if (itemProperties?.fulldam) return 1;
   if (itemProperties?.halfdam) return 0.5;
@@ -760,6 +760,7 @@ export async function processOverTime(wrapped, data, options, user) {
       // Remove reaction used status from each combatant
       if (actor && toTest !== prev) {
         if (await hasUsedReaction(actor)) removeReactionUsed(actor);
+        if (await hasUsedBonusAction(actor)) removeBonusActionUsed(actor);
       }
 
       // Remove any per turn optional bonus effects
@@ -863,10 +864,15 @@ export async function processOverTime(wrapped, data, options, user) {
               }
 
               if (damageBeforeSave || !damageRoll || saveDamage === "fulldamage") {
-                itemData.data.properties.fulldam = true;
+                //@ts-ignore
+                itemData.flags.midiProperties.fulldam = true;
               } else if (saveDamage === "halfdamage") {
-                itemData.data.properties.halfdam = true;
-              } else itemData.data.properties.nodam = true;
+                //@ts-ignore
+                itemData.flags.midiProperties.halfdam = true;
+              } else {
+                //@ts-ignore
+                itemData.flags.midiProperties.nodam = true;
+              }
               itemData.name = label;
               //@ts-ignore
               itemData._id = randomID();
@@ -914,8 +920,10 @@ export async function processOverTime(wrapped, data, options, user) {
               }
 
               try {
-                const options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid], 
-                  workflowOptions: {lateTargeting: false, autoRollDamage: "onHit", autoFastDamage: true} };
+                const options = {
+                  showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid],
+                  workflowOptions: { lateTargeting: false, autoRollDamage: "onHit", autoFastDamage: true }
+                };
                 await completeItemRoll(ownedItem, options); // worried about multiple effects in flight so do one at a time
               } finally {
               }
@@ -939,30 +947,40 @@ export async function processOverTime(wrapped, data, options, user) {
   }
 }
 
-export async function completeItemRoll(item, options: any = {checkGMstatus: false}) {
+export async function completeItemRoll(item, options: any = { checkGMstatus: false }) {
+  let theItem = item;
+  if (!(item instanceof CONFIG.Item.documentClass)) {
+    theItem = new CONFIG.Item.documentClass(await item.item.data(), {parent: item.actor})
+  }
+
   if (game.user?.isGM || !options.checkGMStatus) {
+
     return new Promise((resolve) => {
-      let saveTargets = Array.from(game.user?.targets ?? []).map(t=>{return t.id});
-      if (options.targetUuids && game.user && item.data.data.target.type !== "self") {
+      let saveTargets = Array.from(game.user?.targets ?? []).map(t => { return t.id });
+      let selfTarget = false;
+      if (options.targetUuids && game.user && theItem.data.data.target.type !== "self") {
         game.user.updateTokenTargets([]);
         for (let targetUuid of options.targetUuids) {
           const theTarget = MQfromUuid(targetUuid);
           if (theTarget) theTarget.object.setTarget(true, { user: game.user, releaseOthers: false, groupSelection: true });
         }
       }
+      let hookName = `midi-qol.RollComplete.${item.uuid}`;
+      if (!(item instanceof CONFIG.Item.documentClass)) {
+        // Magic items create a pseudo item when doing the roll so have to hope we get the right completion
+        hookName = "midi-qol.RollComplete";
+      }
 
-      Hooks.once(`midi-qol.RollComplete.${item.uuid}`, (workflow) => {
-        if (saveTargets && game.user) 
-        {
+      Hooks.once(hookName, (workflow) => {
+        if (saveTargets && game.user) {
           game.user?.updateTokenTargets(saveTargets);
-          Array.from(game.user?.targets ?? []).map(t=>{return t.id});
+          Array.from(game.user?.targets ?? []).map(t => { return t.id });
         }
-
         resolve(workflow);
-      })
+      });
 
       if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process  
-        globalThis.BetterRolls.rollItem(item, { itemData: item.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: options.saveDC }).toMessage()
+        globalThis.BetterRolls.rollItem(theItem, { itemData: item.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: options.saveDC }).toMessage()
       } else {
         item.roll(options);
       }
@@ -970,8 +988,8 @@ export async function completeItemRoll(item, options: any = {checkGMstatus: fals
   } else {
     const targetUuids = options.targetUuids ? options.targetUuids : Array.from(game.user?.targets || []).map(t => t.document.uuid); // game.user.targets is alway a set of tokens
     const data = {
-      itemData: item.toObject(),
-      actorUuid: item.parent.uuid,
+      itemData: theItem.toObject(),
+      actorUuid: theItem.parent.uuid,
       targetUuids,
       options
     }
@@ -1210,13 +1228,13 @@ export function getAutoRollDamage(workflow: Workflow | undefined = undefined): s
 }
 
 export function getAutoRollAttack(workflow: Workflow | undefined = undefined): boolean {
-  if (workflow?.workflowOptions?.autoRollAttack !== undefined) 
-      return workflow.workflowOptions.autoRollAttack;
+  if (workflow?.workflowOptions?.autoRollAttack !== undefined)
+    return workflow.workflowOptions.autoRollAttack;
   return game.user?.isGM ? configSettings.gmAutoAttack : configSettings.autoRollAttack;
 }
 
 export function getLateTargeting(workflow: Workflow | undefined = undefined) {
-  if (workflow?.workflowOptions?.lateTargeting !== undefined)  return workflow?.workflowOptions?.lateTargeting
+  if (workflow?.workflowOptions?.lateTargeting !== undefined) return workflow?.workflowOptions?.lateTargeting
   return game.user?.isGM ? configSettings.gmLateTargeting : lateTargeting;
 }
 
@@ -1464,7 +1482,7 @@ export async function expireMyEffects(effectsToExpire: string[]) {
   }).map(ef => ef.id);
   if (debugEnabled > 1) debug("expire my effects", myExpiredEffects, expireAction, expireAttack, expireHit);
   this.effectsAlreadyExpired = this.effectsAlreadyExpired.concat(effectsToExpire);
-  if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects,  {"midi-qol": effectsToExpire});
+  if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects, { "expiry-reason": `midi-qol:${effectsToExpire}` });
 }
 
 export async function expireRollEffect(rollType: string, abilityId: string) {
@@ -1479,7 +1497,7 @@ export async function expireRollEffect(rollType: string, abilityId: string) {
     timedAwaitExecuteAsGM("removeEffects", {
       actorUuid: this.uuid,
       effects: expiredEffects,
-      options: {"midi-qol": `special-duration:${rollType}:${abilityId}` }
+      options: { "midi-qol": `special-duration:${rollType}:${abilityId}` }
     })
   }
 }
@@ -1690,14 +1708,14 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       let reRoll;
       if (!hasEffectGranting(this.actor, button.key, flagSelector)) return;
       switch (button.value) {
-        case "reroll": reRoll = await this[rollId].reroll({ async: true }); 
-        newRoll = reRoll; break;
+        case "reroll": reRoll = await this[rollId].reroll({ async: true });
+          newRoll = reRoll; break;
         case "reroll-kh": reRoll = await this[rollId].reroll({ async: true });
-            newRoll = reRoll;
-            if (reRoll.total <= this[rollId].total) newRoll = this[rollId]; break;
+          newRoll = reRoll;
+          if (reRoll.total <= this[rollId].total) newRoll = this[rollId]; break;
         case "reroll-kl": reRoll = await this[rollId].reroll({ async: true });
-            newRoll = reRoll;
-            if (reRoll.total > this[rollId].total) newRoll = this[rollId]; break;
+          newRoll = reRoll;
+          if (reRoll.total > this[rollId].total) newRoll = this[rollId]; break;
         case "reroll-max": newRoll = await this[rollId].reroll({ async: true, maximize: true }); break;
         case "reroll-min": newRoll = await this[rollId].reroll({ async: true, minimize: true }); break;
         case "success": newRoll = await new Roll("99").evaluate({ async: true }); break;
@@ -1723,7 +1741,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
         const newRollHTML = reRoll ? await reRoll.render() : await newRoll.render();
         const chatData: any = {
           // content: `${this[rollId].result} -> ${newRoll.formula} = ${newRoll.total}`,
-          flavor: `${title} ${button.value}` ,
+          flavor: `${title} ${button.value}`,
           content: `${oldRollHTML}<br>${newRollHTML}`,
           whisper: [player]
         };
@@ -1797,13 +1815,13 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
 
   const count = effectData.changes.find(c => c.key.includes(changeKey) && c.key.endsWith(".count"));
   if (!count) {
-    return actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id])
+    return actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id], { "expiry-reason": "midi-qol:optionalConsumed" })
   } else if (Number.isNumeric(count.value)) {
     if (count.value <= 1)
-      return actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id])
+      return actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id], { "expiry-reason": "midi-qol:optionalConsumed" })
     else {
       count.value = `${count.value - 1}`; // must be a string
-      actor.updateEmbeddedDocuments("ActiveEffect", [effectData])
+      actor.updateEmbeddedDocuments("ActiveEffect", [effectData], { "expiry-reason": "midi-qol:optionalConsumed" })
     }
   } else if (count.value.startsWith("@")) {
     let key = count.value.slice(1);
@@ -1859,6 +1877,22 @@ function maxCastLevel(actor) {
   }
   return spells.pact?.value ? pactLevel : 0;
 }
+async function getMagicItemReactions(actor: Actor, triggerType: string): Promise<Item[]> {
+  if (!globalThis.MagicItems) return [];
+  const magicItemActor = globalThis.MagicItems.actor(actor.id);
+  if (!magicItemActor) return [];
+  const items: Item[] = []
+  // globalThis.MagicItems.actor(_token.actor.id).items[0].ownedEntries[0].ownedItem
+  for (let magicItem of magicItemActor.items) {
+    for (let ownedItem of magicItem.ownedEntries) {
+      const theItem = await ownedItem.item.data()
+      if (theItem.data.activation.type === triggerType) {
+        items.push(ownedItem);
+      }
+    }
+  }
+  return items;
+}
 
 function itemReaction(item, triggerType, maxLevel) {
   //@ts-ignore activation
@@ -1882,7 +1916,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   if (checkRule("incapacitated")) {
     try {
       enableNotifications(false);
-      if (checkIncapcitated(target.actor, undefined,  undefined)) return noResult;
+      if (checkIncapcitated(target.actor, undefined, undefined)) return noResult;
     } finally {
       enableNotifications(true);
     }
@@ -1897,7 +1931,10 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   enableNotifications(false);
   let reactions;
   try {
-    reactions = target.actor.items.filter(item => itemReaction(item, triggerType, maxLevel)).length;
+    reactions = target.actor.items.filter(item => itemReaction(item, triggerType, maxLevel));
+    if (getReactionSetting(player) === "allMI")
+      reactions = reactions.concat(await getMagicItemReactions(target.actor, triggerType));
+    reactions = reactions.length;
   } finally {
     enableNotifications(true);
   }
@@ -1909,7 +1946,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
       if (!midiFlags?.optional[flag].count) return true;
       return getOptionalCountRemainingShortFlag(target.actor, flag) > 0;
     }).length
-  
+
   if (reactions <= 0) return noResult;
   const promptString = triggerType === "reactiondamage" ? "midi-qol.reactionFlavorDamage" : "midi-qol.reactionFlavorAttack";
   let chatMessage;
@@ -1939,7 +1976,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
     case "d20":
       //@ts-ignore
       const theRoll = attackRoll?.terms[0].results[0].result ?? "";
-      content = `<h4>{reactionFlavor} ${rollOptions.d20} ${theRoll}</h4>`;
+      content = `<h4>${reactionFlavor} ${rollOptions.d20} ${theRoll}</h4>`;
       break;
     default:
       content = reactionFlavor;
@@ -1979,11 +2016,14 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
   enableNotifications(false);
   try {
     reactionItems = actor.items.filter(item => itemReaction(item, triggerType, maxLevel));
+    //@ts-ignore game.user type
+    if (getReactionSetting(game.user) === "allMI")
+      reactionItems = reactionItems.concat(await getMagicItemReactions(actor, triggerType));
   } finally {
     enableNotifications(true);
   }
   if (reactionItems.length > 0) {
-    if (!Hooks.call("midi-qol.ReactionFilter", reactionItems)) {
+    if (!await asyncHooksCall("midi-qol.ReactionFilter", reactionItems)) {
       console.warn("midi-qol | Reaction processing cancelled by Hook");
       return { name: "Filter" };
     }
@@ -2067,7 +2107,7 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
     setTimeout(() => {
       dialog.close();
       resolve({});
-    }, (configSettings.reactionTimeout -1) * 1000);
+    }, (configSettings.reactionTimeout - 1) * 1000);
     dialog.render(true);
   });
 }
@@ -2283,9 +2323,9 @@ export function evalActivationCondition(workflow: Workflow, condition: string | 
   return returnValue;
 }
 
-export function computeTemplateShapeDistance(templateDocument: MeasuredTemplateDocument) : {shape: string, distance: number} {
+export function computeTemplateShapeDistance(templateDocument: MeasuredTemplateDocument): { shape: string, distance: number } {
   let { direction, distance, angle, width } = templateDocument.data;
-  if (!canvas || !canvas.scene) return {shape: "none", distance: 0};
+  if (!canvas || !canvas.scene) return { shape: "none", distance: 0 };
   const dimensions = canvas.dimensions || { size: 1, distance: 1 };
   distance *= dimensions.size / dimensions.distance;
   width *= dimensions.size / dimensions.distance;
@@ -2325,6 +2365,10 @@ export function getConvenientEffectsReaction() {
   return game.dfreds?.effects?._reaction;
 }
 
+export function getConvenientEffectsBonusAction() {
+  //@ts-ignore
+  return game.dfreds?.effects?._bonusAction;
+}
 export function getConvenientEffectsUnconscious() {
   //@ts-ignore
   return game.dfreds?.effects?._unconscious;
@@ -2341,7 +2385,7 @@ export async function ConvenientEffectsHasEffect(effectName: string, uuid: strin
 
 export function isInCombat(tokenId: string) {
   let combats = game.combats?.combats.filter(combat =>
-    combat.combatants.filter(combatant=> combatant?.token?.id === tokenId).length !== 0
+    combat.combatants.filter(combatant => combatant?.token?.id === tokenId).length !== 0
   );
   return (combats?.length ?? 0) > 0;
 }
@@ -2354,6 +2398,13 @@ export async function setReactionUsed(actor: Actor) {
   await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
 }
 
+export async function setBonusActionUsed(actor: Actor) {
+  if (getConvenientEffectsBonusAction()) {
+    //@ts-ignore
+    await game.dfreds?.effectInterface.addEffect({ effectName: getConvenientEffectsBonusAction().name, uuid: actor.uuid });
+  }
+  await actor.setFlag("midi-qol", "bonusActionCombatRound", game.combat?.round);
+}
 export async function removeReactionUsed(actor: Actor) {
   return await actor?.unsetFlag("midi-qol", "reactionCombatRound");
 }
@@ -2367,7 +2418,24 @@ export async function hasUsedReaction(actor: Actor) {
   return false;
 }
 
+export async function hasUsedBonusAction(actor: Actor) {
+  if (actor.getFlag("midi-qol", "bonusAtionCombatRound")) return true;
+  if (getConvenientEffectsBonusAction()) {
+    //@ts-ignore
+    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsBonusAction().name, actor.uuid)) return true;
+  }
+  return false;
+}
+
+export async function removeBonusActionUsed(actor: Actor) {
+  return await actor?.unsetFlag("midi-qol", "bonusActionCombatRound");
+}
+
 export function needsReactionCheck(actor) {
+  return (configSettings.enforceReactions === "all" || configSettings.enforceReactions === actor.type)
+}
+
+export function needsBonusActionCheck(actor) {
   return (configSettings.enforceReactions === "all" || configSettings.enforceReactions === actor.type)
 }
 export function mergeKeyboardOptions(options: any, pressedKeys: Options | undefined) {
@@ -2383,4 +2451,37 @@ export function mergeKeyboardOptions(options: any, pressedKeys: Options | undefi
   options.fastForwardAttack = options.fastForwardAttack || pressedKeys.fastForwardAttack;
   options.parts = options.parts || pressedKeys.parts;
   options.critical = options.critical || pressedKeys.critical;
+}
+
+export async function asyncHooksCallAll(hook, ...args) {
+  if ( CONFIG.debug.hooks ) {
+    console.log(`DEBUG | midi-qol async Calling ${hook} hook with args:`);
+    console.log(args);
+  }
+  //@ts-ignore
+  if ( !Hooks._hooks.hasOwnProperty(hook) ) return true;
+  //@ts-ignore
+  const fns = new Array(...Hooks._hooks[hook]);
+  for ( let fn of fns ) {
+    //@ts-ignore
+    await Hooks._call(hook, fn, args);
+  }
+  return true;
+}
+
+export async function asyncHooksCall(hook, ...args) {
+  if ( CONFIG.debug.hooks ) {
+    console.log(`DEBUG | midi-qol aysnc Calling ${hook} hook with args:`);
+    console.log(args);
+  }
+  //@ts-ignore
+  if ( !Hooks._hooks.hasOwnProperty(hook) ) return true;
+  //@ts-ignore
+  const fns = new Array(...Hooks._hooks[hook]);
+  for ( let fn of fns ) {
+    //@ts-ignore
+    let callAdditional = Hooks._call(hook, fn, args);
+    if ( callAdditional === false ) return false;
+  }
+  return true;
 }

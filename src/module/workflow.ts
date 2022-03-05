@@ -8,11 +8,10 @@ import { selectTargets, shouldRollOtherDamage, showItemCard, templateTokens } fr
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
-import { config } from "simple-peer";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -292,6 +291,15 @@ export class Workflow {
     if (configSettings.allowUseMacro)
       this.onUseMacros = getProperty(this.item, "data.flags.midi-qol.onUseMacroParts");
     this.preSelectedTargets = canvas?.scene ? new Set(game.user?.targets) : new Set(); // record those targets targeted before cast.
+    if (this.item && ["spell", "feat", "weapon"].includes(this.item.type)) {
+      if (!this.item?.data.flags.midiProperties ) {
+        this.item.data.flags.midiProperties = {};
+        this.item.data.flags.midiProperties.fulldam = this.item.data.data.properties?.fulldam;
+        this.item.data.flags.midiProperties.halfdam = this.item.data.data.properties?.halfdam;
+        this.item.data.flags.midiProperties.nodam = this.item.data.data.properties?.nodam;
+        this.item.data.flags.midiProperties.critOther = this.item.data.data.properties?.critOther;
+      }
+    }
   }
 
   public someEventKeySet() {
@@ -419,8 +427,8 @@ export class Workflow {
 
       case WORKFLOWSTATES.PREAMBLECOMPLETE:
         this.effectsAlreadyExpired = [];
-        if (Hooks.call("midi-qol.preambleComplete", this) === false) return;
-        if (this.item && Hooks.call(`midi-qol.preambleComplete.${this.item.uuid}`, this) === false) return;
+        if (await asyncHooksCall("midi-qol.preambleComplete", this) === false) return;
+        if (this.item && await asyncHooksCall(`midi-qol.preambleComplete.${this.item.uuid}`, this) === false) return;
         if (configSettings.allowUseMacro) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preambleComplete"), "OnUse", "preambleComplete");
         }
@@ -481,10 +489,10 @@ export class Workflow {
         return undefined;
 
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
-        if (Hooks.call("midi-qol.preAttackRollComplete", this) === false) {
+        if (await asyncHooksCall("midi-qol.preAttackRollComplete", this) === false) {
           return undefined;
         };
-        if (this.item && Hooks.call(`midi-qol.preAttackRollComplete.${this.item.uuid}`, this) === false) {
+        if (this.item && await asyncHooksCall(`midi-qol.preAttackRollComplete.${this.item.uuid}`, this) === false) {
           return undefined;
         };
         const attackRollCompleteStartTime = Date.now();
@@ -494,8 +502,8 @@ export class Workflow {
         }
         this.processAttackRoll();
 
-        Hooks.callAll("midi-qol.preCheckHits", this);
-        if (this.item) Hooks.callAll(`midi-qol.preCheckHits.${this.item.uuid}`, this);
+        await asyncHooksCallAll("midi-qol.preCheckHits", this);
+        if (this.item) await asyncHooksCallAll(`midi-qol.preCheckHits.${this.item.uuid}`, this);
 
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preCheckHits"), "OnUse", "preCheckHits");
@@ -517,8 +525,8 @@ export class Workflow {
         ];
         await this.expireTargetEffects(attackExpiries)
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
-        Hooks.callAll("midi-qol.AttackRollComplete", this);
-        if (this.item) Hooks.callAll(`midi-qol.AttackRollComplete.${this.item.uuid}`, this);
+        await asyncHooksCallAll("midi-qol.AttackRollComplete", this);
+        if (this.item) await asyncHooksCallAll(`midi-qol.AttackRollComplete.${this.item.uuid}`, this);
 
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("postAttackRoll"), "OnUse", "postAttackRoll");
@@ -603,8 +611,8 @@ export class Workflow {
         if (this.item?.data.data.actionType === "heal" && !Object.keys(CONFIG.DND5E.healingTypes).includes(this.defaultDamageType)) this.defaultDamageType = "healing";
         this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
 
-        Hooks.callAll("midi-qol.preDamageRollComplete", this)
-        if (this.item) Hooks.callAll(`midi-qol.preDamageRollComplete.${this.item.uuid}`, this);
+        await await asyncHooksCallAll("midi-qol.preDamageRollComplete", this)
+        if (this.item) await asyncHooksCallAll(`midi-qol.preDamageRollComplete.${this.item.uuid}`, this);
 
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("postDamageRoll"), "OnUse", "postDamageRoll");
@@ -621,8 +629,8 @@ export class Workflow {
         }
 
         await this.displayDamageRoll(configSettings.mergeCard);
-        Hooks.callAll("midi-qol.DamageRollComplete", this);
-        if (this.item) Hooks.callAll(`midi-qol.DamageRollComplete.${this.item.uuid}`, this);
+        await asyncHooksCallAll("midi-qol.DamageRollComplete", this);
+        if (this.item) await asyncHooksCallAll(`midi-qol.DamageRollComplete.${this.item.uuid}`, this);
 
         log(`DmageRollComplete elapsed ${Date.now() - damgeRollCompleteStartTime}ms`)
         if (this.isFumble) {
@@ -718,8 +726,8 @@ export class Workflow {
               return this.next(WORKFLOWSTATES.ROLLFINISHED);
           }
         }
-        if (Hooks.call("midi-qol.preApplyDynamicEffects", this) === false) return this.next(WORKFLOWSTATES.ROLLFINISHED);
-        if (this.item && Hooks.call(`midi-qol.preApplyDynamicEffects.${this.item.uuid}`, this) === false) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        if (await asyncHooksCall("midi-qol.preApplyDynamicEffects", this) === false) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+        if (this.item && await asyncHooksCall(`midi-qol.preApplyDynamicEffects.${this.item.uuid}`, this) === false) return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
         // no item, not auto effects or not module skip
         // if (this.item && !getAutoRollAttack() && !this.forceApplyEffects && !this.item.hasAttack && !this.item.hasDamage && !this.item.hasSave) { return; }
@@ -783,17 +791,19 @@ export class Workflow {
         }
         if (debugEnabled > 0) warn('Inside workflow.rollFINISHED');
         // Add concentration data if required
-        let hasConcentration = this.item?.data.data.components?.concentration || this.item?.data.data.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
-        if (this.item &&
+        let hasConcentration = this.item?.data.data.components?.concentration 
+              || this.item?.data.flags.midiProperties?.concentration
+              || this.item?.data.data.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
+        if (hasConcentration && this.item?.hasAreaTarget && this.item?.data.data.duration?.units !== "inst") {
+          hasConcentration = true;
+        } else if (this.item &&
           (
             (this.item.hasAttack && (this.targets.size > 0 && this.hitTargets.size === 0 && this.hitTargetsEC.size === 0))  // did  not hit anyone
             || (this.saveItem.hasSave && (this.targets.size > 0 && this.failedSaves.size === 0)) // everyone saved
           )
         )
           hasConcentration = false;
-          // items that leave a template laying around for an extended period generally should have concentration
-        if (this.item?.hasAreaTarget && this.item.data.data.duration?.units !== "instantaneous")
-          hasConcentration = true;
+        // items that leave a template laying around for an extended period generally should have concentration
         const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
         if (hasConcentration && checkConcentration) {
           await addConcentration({ workflow: this });
@@ -821,9 +831,9 @@ export class Workflow {
         }
 
         // delete Workflow._workflows[this.itemId];
-        Hooks.callAll("minor-qol.RollComplete", this); // just for the macro writers.
-        Hooks.callAll("midi-qol.RollComplete", this);
-        if (this.item) Hooks.callAll(`midi-qol.RollComplete.${this.item?.uuid}`, this);
+        await asyncHooksCallAll("minor-qol.RollComplete", this); // just for the macro writers.
+        await asyncHooksCallAll("midi-qol.RollComplete", this);
+        if (this.item) await asyncHooksCallAll(`midi-qol.RollComplete.${this.item?.uuid}`, this);
         if (autoRemoveTargets !== "none") setTimeout(untargetDeadTokens, 500); // delay to let the updates finish
         if (debugCallTiming) log(`RollFinished elpased ${Date.now() - rollFinishedStartTime}`)
         //@ts-ignore scrollBottom protected
@@ -1279,6 +1289,10 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       const attackString = this.advantage ? i18n("DND5E.Advantage") : this.disadvantage ? i18n("DND5E.Disadvantage") : i18n("DND5E.Attack")
       let replaceString = `<div class="midi-qol-attack-roll"><div style="text-align:center" >${attackString}</div>${this.attackRollHTML}<div class="end-midi-qol-attack-roll">`
       content = content.replace(searchRe, replaceString);
+      if (this.attackRollCount > 1) {
+        const attackButtonRe = /<button data-action="attack">(\[\d*\] )*([^<]+)<\/button>/;
+        content = content.replace(attackButtonRe, `<button data-action="attack">[${this.attackRollCount}] $2</button>`);
+      }
 
       if (this.attackRoll?.dice.length) {
         const d: any = this.attackRoll.dice[0]; // should be a dice term but DiceTerm.options not defined
@@ -1448,6 +1462,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       hits: this.hitDisplayData,
       isCritical: this.isCritical,
       isGM: game.user?.isGM,
+      displayHitResultNumeric: configSettings.displayHitResultNumeric && !this.isFumble && !this.isCritical
     };
     if (debugEnabled > 0) warn("displayHits ", templateData, whisper, doMerge);
     const hitContent = await renderTemplate("modules/midi-qol/templates/hits.html", templateData) || "No Targets";
@@ -1618,9 +1633,9 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
         if (debugEnabled > 1) debug("Trying to whisper message", chatData)
       }
       if (this.flagTags) chatData.flags = mergeObject(chatData.flags ?? {}, this.flagTags);
-      await ChatMessage.create(chatData);
+      // await ChatMessage.create(chatData);
       // Non GMS don't have permission to create the message so hand it off to a gm client
-      // await timedAwaitExecuteAsGM("createChatMessage", {chatData});
+      await timedAwaitExecuteAsGM("createChatMessage", { chatData });
     };
   }
 
@@ -1833,8 +1848,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
         rollMode: "roll" // should be "publicroll" but monks does not check it
       }
       // Display dc triggers the tick/cross on monks tb
-      if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) 
-      {
+      if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) {
         requestDataPlayer.dc = rollDC
         requestDataGM.dc = rollDC
       }
@@ -2027,7 +2041,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       const handler = this.saveRequests[requestId]
       delete this.saveRequests[requestId];
       delete this.saveTimeouts[requestId];
-      const brFlags = message.data.flags?.betterrolls5e;      
+      const brFlags = message.data.flags?.betterrolls5e;
 
       if (brFlags) {
         const rollEntry = brFlags.entries?.find((e) => e.type === "multiroll");
@@ -2111,9 +2125,6 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
     this.isFumble = this.diceRoll <= this.attackRoll.terms[0].options.fumble;
     this.attackTotal = this.attackRoll.total ?? 0;
     if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble);
-    if (this.attackRollCount > 1) { // we re-rolled the attack
-
-    }
   }
 
   async checkHits() {
@@ -2130,12 +2141,13 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       this.hitTargets = new Set();
       this.hitTargetsEC = new Set(); //TO wonder if this can work with active defence?
     };
-    this.hitDisplayData ={};
+    this.hitDisplayData = {};
     for (let targetToken of this.targets) {
       let targetName = configSettings.useTokenNames && targetToken.name ? targetToken.name : targetToken.actor?.name;
       let targetActor: Actor5e = targetToken.actor;
       if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
       let targetAC = Number.parseInt(targetActor.data.data.attributes.ac.value ?? 10);
+      let hitResultNumeric;
       let targetEC = targetActor.data.data.attributes.ac.EC ?? 0;
       let targetAR = targetActor.data.data.attributes.ac.AR ?? 0;
       const bonusAC = getProperty(targetActor.data, "flags.midi-qol.acBonus") ?? 0;
@@ -2144,6 +2156,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       isHitEC = false;
       if (this.useActiveDefence) {
         isHit = this.hitTargets.has(targetToken);
+        hitResultNumeric = "";
       } else {
         targetAC += bonusAC;
         let attackTotal = this.attackTotal;
@@ -2162,7 +2175,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
           if (targetEC) isHitEC = checkRule("challengeModeArmor") && attackTotal <= targetAC && attackTotal >= targetEC;
           // check to see if the roll hit the target
           if ((isHit || isHitEC || this.iscritical) && this.item?.hasAttack && this.attackRoll && !getProperty(this, "item.data.flags.midi-qol.noProvokeReaction")) {
-            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { item: this.item, workflowOptions: mergeObject(this.workflowOptions, {sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid}, {inplace:false, overwrite: true})});
+            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { item: this.item, workflowOptions: mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true }) });
             if (result?.name) {
               targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
             }
@@ -2174,6 +2187,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
             if (checkRule("challengeModeArmor")) isHit = this.attackTotal >= targetAC || this.isCritical;
             if (targetEC) isHitEC = checkRule("challengeModeArmor") && this.attackTotal <= targetAC && this.attackTotal >= targetEC;
           }
+          hitResultNumeric = this.isCritical ? "++" : Math.abs(attackTotal - targetAC);
         }
         if (midiFlagsAttackSuccess && (midiFlagsAttackSuccess.all || midiFlagsAttackSuccess[item.data.data.actionType])) {
           isHit = true;
@@ -2217,7 +2231,18 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
           }
         }
       }
-      this.hitDisplayData[targetToken.document?.uuid ?? targetToken.uuid] = ({ isPC: targetToken.actor?.hasPlayerOwner, target: targetToken, hitString, attackType, img, gmName: targetToken.name, playerName: getTokenPlayerName(targetToken), bonusAC });
+      if (this.isFumble) hitResultNumeric = "--";
+      this.hitDisplayData[targetToken.document?.uuid ?? targetToken.uuid] = { 
+        isPC: targetToken.actor?.hasPlayerOwner, 
+        target: targetToken, 
+        hitString, 
+        attackType, 
+        img, 
+        gmName: targetToken.name, 
+        playerName: getTokenPlayerName(targetToken), 
+        bonusAC, 
+        hitResultNumeric
+      };
     }
   }
 
@@ -2601,13 +2626,13 @@ export class TrapWorkflow extends Workflow {
           return await this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
         }
         let hookId = Hooks.on("renderChatMessage", this.processSaveRoll.bind(this));
-//        let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
+        //        let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
         let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
         try {
           await this.checkSaves(configSettings.autoCheckSaves !== "allShow");
         } finally {
           Hooks.off("renderChatMessage", hookId);
-//          Hooks.off("renderChatMessage", brHookId);
+          //          Hooks.off("renderChatMessage", brHookId);
           Hooks.off("updateChatMessage", monksId)
         }
         //@ts-ignore ._hooks not defined
@@ -2715,10 +2740,10 @@ export class BetterRollsWorkflow extends Workflow {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
         }
 
-        if (Hooks.call("midi-qol.preAttackRollComplete", this) === false) {
+        if (await asyncHooksCall("midi-qol.preAttackRollComplete", this) === false) {
           return this.next(WORKFLOWSTATES.ROLLFINISHED)
         };
-        if (this.item && Hooks.call(`midi-qol.preAttackRollComplete.${this.item.uuid}`, this) === false) {
+        if (this.item && await asyncHooksCall(`midi-qol.preAttackRollComplete.${this.item.uuid}`, this) === false) {
           return this.next(WORKFLOWSTATES.ROLLFINISHED)
         };
         return this.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
@@ -2729,8 +2754,8 @@ export class BetterRollsWorkflow extends Workflow {
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preCheckhits"), "OnUse", "preCheckhits");
         }
-        Hooks.callAll("midi-qol.preCheckHits", this);
-        if (this.item) Hooks.callAll(`midi-qol.preCheckHits.${this.item.uuid}`, this);
+        await asyncHooksCallAll("midi-qol.preCheckHits", this);
+        if (this.item) await asyncHooksCallAll(`midi-qol.preCheckHits.${this.item.uuid}`, this);
 
         if (debugEnabled > 1) debug(this.attackRollHTML)
         if (configSettings.autoCheckHit !== "none") {
@@ -2740,8 +2765,8 @@ export class BetterRollsWorkflow extends Workflow {
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("postAttackRoll"), "OnUse", "postAttackRoll");
         }
-        Hooks.callAll("midi-qol.AttackRollComplete", this);
-        if (this.item) Hooks.callAll(`midi-qol.AttackRollComplete.${this.item.uuid}`, this);
+        await asyncHooksCallAll("midi-qol.AttackRollComplete", this);
+        if (this.item) await asyncHooksCallAll(`midi-qol.AttackRollComplete.${this.item.uuid}`, this);
         return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
 
       case WORKFLOWSTATES.WAITFORDAMAGEROLL:
@@ -2864,10 +2889,10 @@ export class DDBGameLogWorkflow extends Workflow {
           return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
         }
         if (!this.attackRolled) return;
-        if (Hooks.call("midi-qol.preAttackRollComplete", this) === false) {
+        if (await asyncHooksCall("midi-qol.preAttackRollComplete", this) === false) {
           return this.next(WORKFLOWSTATES.ROLLFINISHED)
         };
-        if (this.item && Hooks.call(`midi-qol.preAttackRollComplete.${this.item.uuid}`, this) === false) {
+        if (this.item && await asyncHooksCall(`midi-qol.preAttackRollComplete.${this.item.uuid}`, this) === false) {
           return this.next(WORKFLOWSTATES.ROLLFINISHED)
         }
 
@@ -2876,16 +2901,16 @@ export class DDBGameLogWorkflow extends Workflow {
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
         this.effectsAlreadyExpired = [];
         if (checkRule("removeHiddenInvis")) removeHiddenInvis.bind(this)();
-        Hooks.callAll("midi-qol.preCheckHits", this);
-        if (this.item) Hooks.callAll(`midi-qol.preCheckHits.${this.item.uuid}`, this);
+        await asyncHooksCallAll("midi-qol.preCheckHits", this);
+        if (this.item) await asyncHooksCallAll(`midi-qol.preCheckHits.${this.item.uuid}`, this);
 
         if (debugEnabled > 1) debug(this.attackRollHTML)
         if (configSettings.autoCheckHit !== "none") {
           await this.checkHits();
           await this.displayHits(configSettings.autoCheckHit === "whisper", configSettings.mergeCard);
         }
-        Hooks.callAll("midi-qol.AttackRollComplete", this);
-        if (this.item) Hooks.callAll(`midi-qol.AttackRollComplete.${this.item.uuid}`, this);
+        await asyncHooksCallAll("midi-qol.AttackRollComplete", this);
+        if (this.item) await asyncHooksCallAll(`midi-qol.AttackRollComplete.${this.item.uuid}`, this);
 
         return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
 

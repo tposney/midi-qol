@@ -1,0 +1,10 @@
+{{!-- Midi Properties --}}
+<div class="form-group stacked midi-properties">
+    <label>{{ localize "DND5E.ItemWeaponProperties" }}</label>
+    {{#each config.midiProperties as |name prop|}}
+    {{name}} {{prop}} {{../data.midiProperties}} {{../midiProperties}}
+    <label class="checkbox">
+        <input type="checkbox" name="data.midiProperties.{{prop}}" {{checked (lookup ../midiProperties prop)}}/> {{ name }}
+    </label>
+    {{/each}}
+</div>

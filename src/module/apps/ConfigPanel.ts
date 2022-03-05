@@ -2,6 +2,7 @@ import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwa
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
+import { chatDamageButtons } from "../chatMesssageHandling.js";
 export class ConfigPanel extends FormApplication {
 
   PATH: string;
@@ -374,7 +375,7 @@ let quickSettingsDetails: any = {
       autoCEEffects: "cepri",
       autoItemEffects: true,
       allowUseMacro: true,
-      "autoApplyDamage": "yesCard"
+      autoApplyDamage: "yesCard"
     },
     codeChecks: (current, settings) => {
       if (installedModules.get("lmrtfy")) settings.playerRollSaves = "letme";
@@ -437,6 +438,15 @@ let quickSettingsDetails: any = {
       }
     }
   },
+  NoDamageApplication: {
+    description: "Allow GM to fudge damage application (display but no auto apply",
+    configSettings: {
+      autoApplyDamage: "noCard"
+    },
+    codeChecks: (current, settings) => {
+      game.settings.set("midi-qol", "AddChatDamageButtons", "gm"); 
+    }
+  },
   DisableConcentration: {
     description: "Disable Concentration Automation",
     configSettings: {
@@ -455,7 +465,8 @@ let quickSettingsDetails: any = {
       hideNPCNames: "Unknown Creature",
       showReactionAttackRoll: "none",
       gmHide3dDice: true,
-      ghostRolls: true
+      ghostRolls: true,
+      displayHitResultNumeric: false
     },
     codeChecks: (current, settings) => {
       if (current.autoCheckHit !== "none") settings.autoCheckHit = "whisper";
@@ -473,6 +484,7 @@ let quickSettingsDetails: any = {
       hideNPCNames: "",
       gmHide3dDice: false,
       ghostRolls: false,
+      displayHitResultNumeric: true
     },
     codeChecks: (current, settings) => {
       if (current.autoCheckHit !== "none") settings.autoCheckHit = "all";

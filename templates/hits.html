@@ -8,6 +8,9 @@
       {{#if ../showHits}}
       <div>
         {{hit.hitString}}
+        {{#if ../displayHitResultNumeric}}
+        ({{hit.hitResultNumeric}})
+        {{/if}}
       </div>
       {{/if}}
       <div class="midi-qol-target-npc-GM midi-qol-target-name" id={{hit.target.id}}> {{hit.gmName}}</div>

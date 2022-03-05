@@ -164,6 +164,8 @@ export function initGMActionSetup() {
 }
 
 export async function createChatMessage(data: { chatData: any; }) {
+  const messageData = getProperty(data, "chatData.messageData") ?? {};
+  messageData.user = game.user?.id;
   return await ChatMessage.create(data.chatData);
 }
 
