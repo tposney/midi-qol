@@ -1,3 +1,7 @@
+### 0.9.28
+* Fix for overtime effects broken in 0.9.27.
+* Fix for Longsword of Life Stealing in midi sample items compendium
+
 ### 0.9.27
 * If not auto rolling damage and using the merge card midi will display a roll count for the second and subsequent attack rolls on the same item card. Should help stop sneaky players mashing roll until it hits.
 * Optional setting to display how much an attack hit or missed by.
@@ -11,7 +15,7 @@
   - Weapons with the old properties set should continue to work and the first time you edit the item it will auto migrate to the new data scheme (but of course there might be bugs).
   - Setting fulldam etc check box for a spell/feature/weapon will take precedence over the text description search. If none are set the text description will still take place.
   - Added concentration property for any weapon/feature/spell (allows you to specify that concentration should be set when rolling the item via a check box) This is in addition to the now deprecated activation condition === Concentration.
-  
+
 ### 0.9.26
   * Added missing flags.midi-qol.optional.NAME.save.dex/wis etc to auto complete fields 
   * Added "every" option to count fields, means you can use the effect every time it matches without it ever expiring.

@@ -865,13 +865,13 @@ export async function processOverTime(wrapped, data, options, user) {
 
               if (damageBeforeSave || !damageRoll || saveDamage === "fulldamage") {
                 //@ts-ignore
-                itemData.flags.midiProperties.fulldam = true;
+                setProperty(itemData.flags, "midiProperties.fulldam", true);
               } else if (saveDamage === "halfdamage") {
                 //@ts-ignore
-                itemData.flags.midiProperties.halfdam = true;
+                setProperty(itemData.flags, "midiProperties.halfdam", true);
               } else {
                 //@ts-ignore
-                itemData.flags.midiProperties.nodam = true;
+                setProperty(itemData.flags, "midiProperties.nodam", true);
               }
               itemData.name = label;
               //@ts-ignore

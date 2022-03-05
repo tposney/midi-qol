@@ -95,6 +95,10 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.9.28
+  * Fix for overtime effects broken in 0.9.27.
+  * Fix for Longsword of Life Stealing in midi sample items compendium
+
   0.9.27
   * If not auto rolling damage and using the merge card midi will display a roll count for the second and subsequent attack rolls on the same item card. Should help stop sneaky players mashing roll until it hits.
   * Optional setting to display how much an attack hit or missed by.
