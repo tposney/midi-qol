@@ -376,8 +376,8 @@ let debouncedATRefreach = debounce(_midiATIRefresh, 30);
 function _midiATIRefresh(template) {
   if (!canvas?.tokens) return;
   if (configSettings.autoTarget === "none") return;
-  if (configSettings.autoTarget === "dfqol" && installedModules.get("df-qol"))
-    return; // df-qol will handle template tagerting.
+  if (configSettings.autoTarget === "dftemplates" && installedModules.get("df-templates"))
+    return; // df-templates will handle template tagerting.
   if (installedModules.get("levelsvolumetrictemplates")) {
     // Filter which tokens to pass - not too far and not blocked by a wall.
     let distance = template.data.distance;

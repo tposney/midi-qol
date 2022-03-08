@@ -20,7 +20,7 @@ let modules = {"about-time": "0.0",
               "levels": "1.7.0",
               "levelsvolumetrictemplates": "0.0.0",
               "lib-changelogs": "0.0.0",
-              "df-qol": "1.6.0",
+              "df-templates": "1.0.0",
               "ddb-game-log": "0.0.0"
             };
 export let installedModules = new Map();
