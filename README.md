@@ -646,8 +646,8 @@ Optional flags cause a dialog to be raised when an opportunity to apply the effe
 
 An optional attack bonus prompts the attacker after the attack roll is made, but before the attack is adjudicated, givin the attacker the option to modify the roll. Effects last for one application unless the count flag is set.
 
-* flags.midi-qol.optional.Name.damage.all/mwak/rwak/msak/rsak	bonus to apply to damage done		
-* flags.midi-qol.optional.Name.skill.all/per/prc/item etc	bonus to apply to skill rolls		
+* flags.midi-qol.optional.Name.damage.all/mwak/rwak/msak/rsak	bonus to apply to damage done. This does not work with better rolls active.
+* flags.midi-qol.optional.Name.skill.all/per/prc/item etc	bonus to apply to skill rolls
 * flags.midi-qol.optional.Name.attack.all/mwak/rwak/msak/rsak	the bonus is added after the attack roll		
 * flags.midi-qol.optional.Name.check.all/str/dex/etcthe bonus is added after theability check roll		
 * flags.midi-qol.optional.Name.save.all/str/dex/etc	the bonus is added after the save roll. Requires auto fast forward		
@@ -659,6 +659,8 @@ You can specify a resource to consume in the count field, e.g. @resources.tertia
 * flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
 
 Values for the optional roll bonus flags include a dice expression (added to the roll), a number, reroll (rerolling the roll completely) reroll-max, reroll-min (reroll with max dice or min dice) or success which changes the roll to 99 ensuring success.
+
+Generally options.Name fields do not work with better rolls due to the way it creates rolls.
 
 ## Spell Sculpting: flags.midi-qol.sculptSpell
 If a spell caster with flags.midi-qol.sculptSpell set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 damage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.
