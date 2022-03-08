@@ -95,6 +95,42 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.9.29
+  * Added roll other damage for per item setting to roll other damage. Works with activation conditions.
+  * Separated Bonus Action usage and Reaction usage checking, which can be configured separately.
+  * **VERY BREAKING** 
+  **Custom Sounds Complete rewrite as of v0.9.29**
+  Existing custom sounds will be disabled.
+    * Custom sounds work best with the merge card.
+    * Custom sounds now apply to both merge and non-merge cards. However non-merge cards will always roll the dice sound in addition to any midi custom sounds. I am unaware of any way to disable the dice sounds for standard dnd5e cards.
+    * Custom sounds Will play with dice so nice active. It is suggested that you set the dice so nice sound volume to 0, so that midi can control the sounds made when a weapon is rolled.
+    * If using Dice so nice key the main sound effect on the item roll (specify the weapon subtype) and have no sound for the rwak/mwak, this way the sound will play while the dice are rolling. If not using dice so nice key on rwak/mwak/rsak/msak and the sound will play while whole the card is displaying.
+    * The General Format is to specify a sound for
+      - Item Class (any/weapon/spell/etc)
+      - Item Subtype (all, Martial Melee, Evocation etc)
+      - Action, roll the item, attack, mwak, roll damage, damage of specific types
+      - Playlist to get the sound from, you can use any playlist you have.
+      - Name of the sound to use, drawn from the specified playlist 
+      - You can now use as many playlists as you wish). 
+      - Support for special sound names, "none" (no sound) and "random", pick a sound randomly from the playlist.
+      
+    * In the case that more than one setting might apply midi always chooses the more specific first. So:
+        - Weapon/Martial Melee/mwak will be used in preference to 
+        - Weapon/all/mwak, which will be used in preference to  
+        - Any/all/mwak
+  
+    **Actions**
+      * Item Roll is checked when the item is first rolled to chat.
+      * attack/rwak/mwak/msak/rsak/hit/miss/critical/fumble etc are checked after the attack roll is complete and hits have been checked
+      * Damage/damage:type are checked after the damage roll is complete.
+  
+    * Custom sounds be configured from the Configure Midi Sounds panel immediately below the midi workflow panel on module config settings. Custom sounds are only active if the Enable Custom Sounds is checked on the misc tab of workflow settings.
+    * You can create very complex setups, but don't need to.
+    * To get your toes wet, enable custom sounds on the workflow panel - misc tab (where it has always been).
+    * Open the configure midi custom sounds panel.
+      - From the quick settings tab, choose create sample playlist, which will create a playlist with a few sounds already configured
+      - Also on the quick settings tab choose Basic Settings, which will setup a simple configuration of custom sounds. This is roughly equivalent to what can be configured with the existing midi-qol custom sounds, but has a few more options and can be extended. (Basic settings are configured to work best with merge cards and no dice so nice).
+
   0.9.28
   * Fix for overtime effects broken in 0.9.27.
   * Fix for Longsword of Life Stealing in midi sample items compendium

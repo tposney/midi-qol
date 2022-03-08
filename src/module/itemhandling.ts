@@ -585,7 +585,6 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     });
    if (!shouldRoll) return; // user aborted roll TODO should the workflow be deleted?
   }
-  if (itemUsesReaction && !hasReaction) await setReactionUsed(this.actor); 
 
   const hasBonusAction = await hasUsedBonusAction(this.actor);
   let itemUsesBonusAction = false;
@@ -602,7 +601,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     });
    if (!shouldRoll) return; // user aborted roll TODO should the workflow be deleted?
   }
-  if (itemUsesBonusAction && !hasBonusAction) await setBonusActionUsed(this.actor); 
+
 
   if (await asyncHooksCall("midi-qol.preItemRoll", workflow) === false || await asyncHooksCall(`midi-qol.preItemRoll.${this.uuid}`, workflow) === false) {
     console.warn("midi-qol | attack roll blocked by preItemRoll hook");
@@ -649,6 +648,10 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     // Workflow.removeWorkflow(workflow.id); ?
     return null;
   }
+
+  if (itemUsesBonusAction && !hasBonusAction) await setBonusActionUsed(this.actor); 
+  if (itemUsesReaction && !hasReaction) await setReactionUsed(this.actor); 
+
   if (needsConcentration && checkConcentration) {
     const concentrationEffect = getConcentrationEffect(this.actor);
     if (concentrationEffect) {
@@ -1021,6 +1024,12 @@ export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: s
       ((conditionFlagWeapon === "activation") && (this.data.data.attunement !== CONFIG.DND5E.attunementTypes.REQUIRED));
     conditionFlagToUse = conditionFlagWeapon;
     conditionToUse = workflow.otherDamageItem?.data.data.activation?.condition
+  }
+
+  if (workflow.item?.data.flags?.midiProperties?.rollOther) {
+    rollOtherDamage = true;
+    conditionToUse = workflow.otherDamageItem?.data.data.activation?.condition
+    conditionFlagToUse = "activation"
   }
 
   //@ts-ignore

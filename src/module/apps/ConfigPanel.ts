@@ -1,8 +1,7 @@
-import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, fetchParams, addChatDamageButtons } from "../settings.js"
+import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON } from "../settings.js"
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
-import { chatDamageButtons } from "../chatMesssageHandling.js";
 export class ConfigPanel extends FormApplication {
 
   PATH: string;

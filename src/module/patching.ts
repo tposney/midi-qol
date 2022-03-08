@@ -1,7 +1,7 @@
 import { log, warn, debug, i18n, error, getCanvas, i18nFormat } from "../midi-qol.js";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, MQfromActorUuid, notificationNotify, processOverTime } from "./utils.js";
+import { bonusDialog, ConvenientEffectsHasEffect, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, MQfromActorUuid, notificationNotify, processOverTime } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -567,6 +567,12 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
     if (installedModules.get("dfreds-convenient-effects") && getConvenientEffectsReaction()?._id === this.data.flags?.core?.statusId) {
       await this.parent.unsetFlag("midi-qol", "reactionCombatRound");
     }
+
+    // Handle removal of bonus action effect
+    if (installedModules.get("dfreds-convenient-effects") && getConvenientEffectsBonusAction()?._id === this.data.flags?.core?.statusId) {
+      await this.parent.unsetFlag("midi-qol", "bonusActionCombatRound");
+    }
+
   } catch (err) {
     console.warn("midi-qol | error deleteing concentration effects: ", err)
   } finally {

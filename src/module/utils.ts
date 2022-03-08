@@ -2419,7 +2419,7 @@ export async function hasUsedReaction(actor: Actor) {
 }
 
 export async function hasUsedBonusAction(actor: Actor) {
-  if (actor.getFlag("midi-qol", "bonusAtionCombatRound")) return true;
+  if (actor.getFlag("midi-qol", "bonusActionCombatRound")) return true;
   if (getConvenientEffectsBonusAction()) {
     //@ts-ignore
     if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsBonusAction().name, actor.uuid)) return true;
@@ -2436,7 +2436,7 @@ export function needsReactionCheck(actor) {
 }
 
 export function needsBonusActionCheck(actor) {
-  return (configSettings.enforceReactions === "all" || configSettings.enforceReactions === actor.type)
+  return (configSettings.enforceBonusActions === "all" || configSettings.enforceBonusActions === actor.type)
 }
 export function mergeKeyboardOptions(options: any, pressedKeys: Options | undefined) {
   if (!pressedKeys) return;

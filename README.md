@@ -1,5 +1,9 @@
-## World Key Mappings don't work
+## Breaking News
+### World Key Mappings don't work
 Please disable the setting which means key mappings are per client.
+
+### Custom Sounds rewritten
+You will have to change your configuration
 
 Midi-qol is a module designed to help automate various parts of your game, specifically rolling attacks/casting spells and applying damage/effects.
 
@@ -319,12 +323,38 @@ If you are not using convenient effects you can set this up much more flexibly i
 
 **Add defeated when HP === 0**. The dnd5e defeated condition will automatically be added to the token if it's hp fall to 0.
 
-## Custom Sounds
-* Midi-qol uses whatever audio files you want for sounds, but they must all be in the same playlist. I will be extending the sound options, next will be specific sounds by damage type, then sounds per item use.
-* A tiny selection of sounds is distributed with the module and are available in Data/modules/midi-qol/sounds and can be used to setup a playlist. 
-* Attack, critical and fumble sounds are only available if using a combo card.
-* Item use sounds are available when midi-qol is enabled and handling the roll (i.e. not Better Rolls).  
-![Custom Sound Settings](pictures/sound.png)
+## Custom Sounds Complete rewrite as of v0.9.29
+Existing custom sounds will be disabled.
+  
+  Custom sounds apply to both merge and non-merge cards.
+  Custom sounds Will play even with dice so nice active.
+  The General Format is to specify a sound for
+    - Item Class (any/weapon/spell/etc)
+    - Item Subtype (all, Martial Melee, Evocation etc)
+    - Action, roll the item, attack, mwak, roll damage, damage of specific types
+    - Playlist to get the sound from
+    - Name of the sound to use, drawn from the specified playlist 
+    - You can now use as many playlists as you wish). 
+    - Support for special sound names, "none" (no sound) and "random", pick a sound randomly from the playlist.
+    
+  * In the case that more than one setting might apply midi always chooses the more specific first. So:
+      - Weapon/Martial Melee/mwak will be used in preference to 
+      - Weapon/all/mwak, which will be used in preference to  
+      - Any/all/mwak
+
+  **Actions**
+    * Item Roll is checked when the item is first rolled to chat.
+    * attack/rwak/mwak/msak/rsak/hit/miss/critical/fumble etc are checked after the attack roll is complete and hits have been checked
+    * Damage/damage:type are checked after the damage roll is complete.
+
+  * Can be configured from the Configure Midi Sounds panel immediately below the midi worklow panel on module config settings.
+  * You can create very complex setups, but don't need to.
+  * To get your toes wet, enable custom sounds on the worklfow panel (where it has always been).
+  * Open the configure midi custom sounds panel.
+    - From the quick settings tab, choose create sample playlist, which will create a playlist with a few sounds already configured
+    - Also on the quick settings tab choose Basic Settings, which will setup a simple configuration of custom sounds. This is roughly equivalent to what can be configured with the existing midi-qol custom sounds, but has a few more options and can be extended.
+    
+![Custom Sound Settings](pictures/newSounds.png)
 
 ## Other QOL settings
 * **Add attack damage buttons to the inventory** If enabled then a set of buttons (to bypass the midi-qol behaviour) are added to the description drop down in the inventory.
@@ -1070,4 +1100,31 @@ I've included the complete macro, but the general idea is:
 ## Sample Chat Logs
 ![No Combo Card](pictures/nocombo.png) ![Combo Card](pictures/combo.png)
 
+
+# Credits
+The sound file fail1.ogg, distributed with this module is licensed under the following terms:
+Licensed under the Crative Commons v3.0: https://creativecommons.org/licenses/by/3.0/legalcode
+Obtained from https://freesound.org/s/178687/ from Freesound user Soundb. It has been converted from .wav to .ogg format.
+
+The file success-drums.ogg distributed with this module is licensed under the following terms:
+Licensed under the Crative Commons v3.0: https://creativecommons.org/licenses/by/3.0/legalcode
+Obtained from https://freesound.org/people/LittleRobotSoundFactory/sounds/270467/ It has been converted from .wav to .ogg format.
+
+The file drinkng.wav distributed with this module is licensed under the following terms:
+Licensed under the Crative Commons v3.0: https://creativecommons.org/licenses/by/3.0/legalcode
+Obtained from. https://freesound.org/people/dersuperanton/sounds/433645/ Not changes have been made to the file.
+
+The file use.wav distributed with this module is licensed under the following terms:
+Licensed under the Crative Commons v3.0: https://creativecommons.org/licenses/by/3.0/legalcode
+Obtained from https://freesound.org/people/32cheeseman32/sounds/180831/. No changes have been made to the file
+
+Code from the module Actually Private Rolls (https://github.com/syl3r86/Actually-Private-Rolls) written by felix.mueller.86@web.de has been included in midi-qol
+
+concentrate icon by Chanut is Industries from the Noun Project. 
+Licensed under the Crative Commons v3.0: https://creativecommons.org/licenses/by/3.0/legalcode
+Obtained from https://thenounproject.com/term/concentrate/2189896/
+
+Bow and Arrow sound.
+Licensed under the ZapSplat standard license.
+Additional sound effects from https://www.zapsplat.com
 

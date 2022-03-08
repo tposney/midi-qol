@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
-import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, mergeCardSoundPlayer, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
+import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
 import { deleteItemEffects, processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
@@ -175,6 +175,7 @@ export let readyHooks = async () => {
 export function restManager(actor, result) {
   if (!actor || !result) return;
   removeReactionUsed(actor); // remove reaction used for a rest
+  removeBonusActionUsed(actor);
   const myExpiredEffects = actor.effects.filter(ef => {
     const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
     return specialDuration && ((result.longRest && specialDuration.includes(`longRest`))
@@ -201,7 +202,6 @@ export function initHooks() {
   })
 
   Hooks.on("updateChatMessage", (message, update, options, user) => {
-    mergeCardSoundPlayer(message, update, options, user);
     hideRollUpdate(message, update, options, user);
     betterRollsUpdate(message, update, options, user);
     //@ts-ignore scrollBottom
@@ -320,6 +320,9 @@ export function initHooks() {
           </label>
           <label class="checkbox">
           <input type="checkbox" name="flags.midiProperties.fulldam" ${data.flags.midiProperties.fulldam ? "checked" : ""} /> ${midiProps.fulldam}
+          </label>
+          <label class="checkbox">
+          <input type="checkbox" name="flags.midiProperties.rollOther" ${data.flags.midiProperties.rollOther ? "checked" : ""} /> ${midiProps.rollOther}
           </label>
           <label class="checkbox">
           <input type="checkbox" name="flags.midiProperties.critOther" ${data.flags.midiProperties.critOther ? "checked" : ""} /> ${midiProps.critOther}

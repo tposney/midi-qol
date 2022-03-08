@@ -24,7 +24,7 @@
       "label": "MidiQOL Sample Items",
       "path": "./packs/sampleitems.db",
       "module": "world",
-      "entity": "Item",
+      "type": "Item",
       "lang": ["en", "de"]
     }
   ],

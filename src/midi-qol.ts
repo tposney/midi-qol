@@ -11,7 +11,7 @@
  */
 
 // Import TypeScript modules
-import { registerSettings, fetchParams, configSettings, checkRule, collectSettingData, enableWorkflow } from './module/settings.js';
+import { registerSettings, fetchParams, configSettings, checkRule, collectSettingData, enableWorkflow, midiSoundSettings, fetchSoundSettings } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, installedModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, readyPatching, initPatching } from './module/patching.js';
@@ -25,6 +25,7 @@ import { showItemCard, showItemInfo, templateTokens } from './module/itemhandlin
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
 import { MidiKeyManager } from './module/MidiKeyManager.js';
+import { MidiSounds } from './module/midi-sounds.js';
 
 export let debugEnabled = 0;
 export let debugCallTiming: any = false;
@@ -111,6 +112,7 @@ Hooks.once('init', async function () {
   // Register custom module settings
   registerSettings();
   fetchParams();
+  fetchSoundSettings();
 
   // Preload Handlebars templates
   preloadTemplates();
@@ -128,6 +130,7 @@ Hooks.once('setup', function () {
   // ready
   setupSocket();
   fetchParams();
+  fetchSoundSettings();
   itemPatching();
   visionPatching();
   setupModules();
@@ -151,6 +154,7 @@ Hooks.once('setup', function () {
     config.midiProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
     config.midiProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
     config.midiProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp");
+    config.midiProperties["rollOther"] = i18n("midi-qol.rollOtherProp");
     config.midiProperties["critOther"] = i18n("midi-qol.otherCritProp");
     config.midiProperties["concentration"] = i18n("midi-qol.concentrationActivationCondition");
 
@@ -170,6 +174,7 @@ Hooks.once('setup', function () {
     config.midiProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
     config.midiProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
     config.midiProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp")
+    config.midiProperties["rollOther"] = i18n("midi-qol.rollOtherProp");
     config.midiProperties["critOther"] = i18n("midi-qol.otherCritProp");
     config.midiProperties["concentration"] = i18n("midi-qol.concentrationActivationCondition");
 
@@ -220,6 +225,7 @@ Hooks.once('ready', function () {
     "all": "All"
   }
   OnUseMacroOptions.setOptions(MQOnUseOptions);
+  MidiSounds.midiSoundsReadyHooks();
 
   setupMidiQOLApi();
 
@@ -263,6 +269,7 @@ function setupMidiQOLApi() {
     Workflow,
     enableWorkflow,
     configSettings: () => { return configSettings },
+    midiSoundSettings: () => {return midiSoundSettings },
     ConfigPanel: ConfigPanel,
     getTraitMult: getTraitMult,
     getDistance: getDistanceSimple,
@@ -430,7 +437,7 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.superSaver.${abl}`);
     midiFlags.push(`flags.midi-qol.max.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.mim.ability.save.${abl}`);
-    midiFlags.push(`flags.midi-qol.ptional.NAME.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.check.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
   })

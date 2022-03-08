@@ -1,0 +1,113 @@
+<form class="flexcol" autocomplete="off">
+  <!-- Config Settings Configuration Tabs -->
+  <nav class="sheet-tabs tabs" data-group="sections">
+    <a class="item" data-tab="sounds"><i class="fas fa-dice-d20"></i> {{localize "midi-qol.SoundSettings.Tab"}}</a>
+    <a class="item" data-tab="quicksettings"><i class="fas fa-cogs"></i> {{localize "midi-qol.QuickSettings"}}</a>
+  </nav>
+  <section id="config-tabs" class="content">
+    <!-- Sounds Tab -->
+    <div class="tab" data-tab="sounds" data-group="sections">
+      <div class="midi-qol-box">
+        <table>
+          <tr>
+            <td></td>
+            <td>Item Type</td>
+            <td>Sub Type</td>
+            <td>Event</td>
+            <td>Playlist</td>
+            <td>Sound</td>
+          </tr>
+          {{#each midiSoundSettings as |categorySettings category|}}
+          {{#each categorySettings as |settings subtype|}}
+          {{#each settings as |setting action|}}
+          <tr>
+            <td>
+              <div class="sound-controls">
+                <a class="sound-control" data-action="delete"><i class="fas fa-trash"></i></a>
+              </div>
+            </td>
+            <td>
+              <div class="form-group category">
+                <select name="category" data-dtype="String">
+                  {{#select category}}
+                  {{#each ../../../itemTypes as |label val|}}
+                  <option value="{{val}}">{{label}}</option>
+                  {{/each}}
+                  {{/select}}
+                </select>
+              </div>
+            </td>
+            <td>
+              <div class="form-group subtype">
+                <select name="subtype" data-dtype="String">
+                  {{#select subtype}}
+                  {{#each (lookup ../../../subTypes category) as |label val|}}
+                  <option value="{{val}}">{{label}}</option>
+                  {{/each}}
+                  {{/select}}
+                </select>
+              </div>
+            </td>
+            <td>
+              <div class="action">
+                <select name="action" data-dtype="String">
+                  {{#select action}}
+                  {{#each ../../../actionTypes as |label val|}}
+                  <option value="{{val}}">{{label}}</option>
+                  {{/each}}
+                  {{/select}}
+                </select>
+              </div>
+            </td>
+            <td>
+              <div class="playlistName">
+                <select name="playlistName" data-dtype="String">
+                  {{#select setting.playlistName}}
+                  {{#each ../../../playlists as |label val|}}
+                  <option value="{{val}}">{{val}}</option>
+                  {{/each}}
+                  {{/select}}
+                </select>
+              </div>
+            </td>
+            <td>
+              <div class="soundName">
+                <select name="soundName" data-dtype="String">
+                  {{#select setting.soundName}}
+                  {{#each (lookup ../../../playlists setting.playlistName) as |label val|}}
+                  <option value="{{val}}">{{label}}</option>
+                  {{/each}}
+                  {{/select}}
+                </select>
+              </div>
+            </td>
+          </tr>
+      </div>
+      {{/each}}
+      {{/each}}
+      {{/each}}
+      </table>
+      <button type="addrow" name="addrow" class="sound-control" data-action="add">
+        <i class="fas fa-plus" ></i> {{localize "midi-qol.AddRow"}}
+      </button>
+      </div>
+    </div>
+    <!-- Quick Settings Tab-->
+    <div class="tab" data-tab="quicksettings" data-group="sections">
+      {{#each SoundSettingsBlurb as |line lineNum|}}
+      {{line}}<br>
+      {{/each}}
+      <div class="midi-qol-box">
+        <div class="column-button-container-mqol">
+          {{#each quickSettingsOptions as |label val|}}
+          <button type="quickbutton" class="import-quick-setting" style="text-align: left;" id={{val}}>
+            <i class="fas fa-dice-d20"></i> {{ label }}
+          </button>
+          {{/each}}
+        </div>
+      </div>
+    </div>
+  </section>
+  <footer class="sheet-footer flexrow">
+  </footer>
+</form>

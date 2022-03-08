@@ -404,7 +404,6 @@ export class Workflow {
         content = content?.replace(buttonRe, "");
         await chatMessage?.update({
           "content": content,
-          "flags.midi-qol.playSound": false,
           "flags.midi-qol.type": MESSAGETYPES.ITEM,
           type: CONST.CHAT_MESSAGE_TYPES.OTHER
         });
@@ -783,7 +782,6 @@ export class Workflow {
             await chatMessage.update({
               "content": content,
               timestamp: Date.now(),
-              "flags.midi-qol.playSound": false,
               "flags.midi-qol.type": MESSAGETYPES.ITEM,
               type: CONST.CHAT_MESSAGE_TYPES.OTHER,
             });
@@ -1259,8 +1257,6 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
     const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId ?? "");
     let content = (chatMessage && duplicate(chatMessage.data.content)) || "";
     const flags = chatMessage?.data.flags || {};
-    var rollSound = configSettings.diceSound;
-
     let newFlags = {};
 
     if (game.user?.isGM && this.useActiveDefence) {
@@ -1319,14 +1315,12 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
           type: MESSAGETYPES.ATTACK,
           waitForDiceSoNice: true,
           hideTag: this.hideTags,
-          playSound: true,
           roll: this.attackRoll?.roll,
           displayId: this.displayId,
           isCritical: this.isCritical,
           isFumble: this.isFumble,
           isHit: this.hitTargets.size > 0,
           isHitEC: this.hitTargetsEC.size > 0,
-          sound: rollSound,
           d20AttackRoll: this.d20AttackRoll
         }
       }, { overwrite: true, inplace: false }
@@ -1362,7 +1356,6 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
       content = content?.replace(formulaRe, "")
       content = content?.replace(versatileRe, "")
     }
-    var rollSound = configSettings.diceSound;
     var newFlags = chatMessage?.data.flags || {};
     if (doMerge && chatMessage) {
       if (this.damageRollHTML) {
@@ -1410,8 +1403,6 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
         "midi-qol": {
           waitForDiceSoNice: true,
           type: MESSAGETYPES.DAMAGE,
-          playSound: false,
-          sound: rollSound,
           // roll: this.damageCardData.roll,
           roll: this.damageRoll?.roll,
           damageDetail: this.damageDetail,
@@ -1503,13 +1494,11 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
           await chatMessage.update({
             "content": content,
             timestamp: Date.now(),
-            "flags.midi-qol.playSound": this.isCritical || this.isFumble,
             "flags.midi-qol.type": MESSAGETYPES.HITS,
             type: CONST.CHAT_MESSAGE_TYPES.OTHER,
             "flags.midi-qol.waitForDiceSoNice": true,
             "flags.midi-qol.hideTag": this.hideTags,
             "flags.midi-qol.displayId": this.displayId,
-            "flags.midi-qol.sound": this.isCritical ? configSettings.criticalSound : configSettings.fumbleSound
           });
           break;
       }
@@ -2169,9 +2158,7 @@ return (async function ({ speaker, actor, token, character, item, args } = {}) {
           }
           if (checkRule("challengeModeArmor")) isHit = attackTotal > targetAC || this.isCritical;
           else isHit = attackTotal >= targetAC || this.isCritical;
-          if (midiFlagsAttackSuccess) {
 
-          }
           if (targetEC) isHitEC = checkRule("challengeModeArmor") && attackTotal <= targetAC && attackTotal >= targetEC;
           // check to see if the roll hit the target
           if ((isHit || isHitEC || this.iscritical) && this.item?.hasAttack && this.attackRoll && !getProperty(this, "item.data.flags.midi-qol.noProvokeReaction")) {
@@ -2517,17 +2504,15 @@ export class DamageOnlyWorkflow extends Workflow {
 
 export class TrapWorkflow extends Workflow {
 
-  trapSound: { playlist: string, sound: string } | undefined;
   templateLocation: { x: number, y: number, direction: number, removeDelay: number } | undefined;
   saveTargets: any;
 
   constructor(actor: Actor5e, item: Item5e, targets: [Token],
     templateLocation: { x: number, y: number, direction: number, removeDelay: number } | undefined = undefined,
-    trapSound: { playlist: string, sound: string } | undefined = undefined, event: any = {}) {
+      trapSound: { playlist: string, sound: string } | undefined = undefined, event: any = {}) {
     super(actor, item, ChatMessage.getSpeaker({ actor }), new Set(targets), event);
     // this.targets = new Set(targets);
     if (!this.event) this.event = duplicate(shiftOnlyEvent);
-    this.trapSound = trapSound;
     this.templateLocation = templateLocation;
     // this.saveTargets = game.user.targets; 
     this.rollOptions.fastForward = true;
@@ -2546,7 +2531,6 @@ export class TrapWorkflow extends Workflow {
         this.onUseMacroCalled = false;
         this.itemCardId = (await showItemCard.bind(this.item)(false, this, true))?.id;
         //@ts-ignore TOODO this is just wrong fix
-        if (this.trapSound) AudioHelper.play({ src: this.trapSound }, false)
         if (debugEnabled > 1) debug(" workflow.none ", state, this.item, configSettings.autoTarget, this.item.hasAreaTarget, this.targets);
         // don't support the placement of a tempalte
         return await this.next(WORKFLOWSTATES.AWAITTEMPLATE);
@@ -2848,7 +2832,6 @@ export class BetterRollsWorkflow extends Workflow {
   async complete() {
     if (this._roll) {
       await this._roll.update({
-        "flags.midi-qol.playSound": false,
         "flags.midi-qol.type": MESSAGETYPES.HITS,
         "flags.midi-qol.waitForDiceSoNice": false,
         "flags.midi-qol.hideTag": "",
@@ -2982,7 +2965,6 @@ export class DDBGameLogWorkflow extends Workflow {
   async complete() {
     if (this._roll) {
       await this._roll.update({
-        "flags.midi-qol.playSound": false,
         "flags.midi-qol.type": MESSAGETYPES.HITS,
         "flags.midi-qol.waitForDiceSoNice": false,
         "flags.midi-qol.hideTag": "",

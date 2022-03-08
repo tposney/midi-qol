@@ -274,13 +274,6 @@
         <div class="midi-qol-faint">{{localize "midi-qol.AutoCheckSaves.Hint"}}</div>
 
         <div class="form-group">
-          <label>{{localize "midi-qol.AutoFailSavesFriendly.Name"}}</label>
-          <input type="checkbox" name="autoFailSavesFriendly" data-dtype="Boolean" {{checked
-            configSettings.autoFailSavesFriendly}} />
-        </div>
-        <div class="midi-qol-faint">{{localize "midi-qol.AutoFailSavesFriendly.Hint"}}</div>
-
-        <div class="form-group">
           <label>{{localize "midi-qol.DisplaySaveDC.Name"}}</label>
           <input type="checkbox" name="displaySaveDC" data-dtype="Boolean" {{checked configSettings.displaySaveDC}} />
         </div>
@@ -550,6 +543,7 @@
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.FixStickyKeys.Hint"}}</div>
       </div>
+
       <div class=" midi-qol-box">
         <div class="form-group customSounds">
           <label>{{localize "midi-qol.UseCustomSounds.Name"}}</label>
@@ -558,6 +552,7 @@
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.UseCustomSounds.Hint"}}</div>
 
+        <!--
         {{#if configSettings.useCustomSounds}}
         <div class="form-group">
           <label>{{localize "midi-qol.CustomSoundsPlaylist.Name"}}</label>
@@ -671,8 +666,9 @@
         </div>
         {{/if}}
       </div>
+  -->
+      </div>
     </div>
-
     <!-- Optional Rules Tab-->
     <div class="tab" data-tab="optional" data-group="sections">
       <!-- Reactions -->
@@ -728,6 +724,16 @@
           <label>{{localize "midi-qol.EnforceReactions.Name"}}</label>
           <select name="enforceReactions" data-dtype="String">
             {{#select configSettings.enforceReactions}}
+            {{#each EnforceReactionsOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>{{localize "midi-qol.EnforceBonusActions.Name"}}</label>
+          <select name="enforceBonusActions" data-dtype="String">
+            {{#select configSettings.enforceBonusActions}}
             {{#each EnforceReactionsOptions as |label val|}}
             <option value="{{val}}">{{label}}</option>
             {{/each}}

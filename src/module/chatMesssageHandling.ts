@@ -8,30 +8,6 @@ import { socketlibSocket } from "./GMAction.js";
 export const MAESTRO_MODULE_NAME = "maestro";
 export const MODULE_LABEL = "Maestro";
 
-export function mergeCardSoundPlayer(message, update, options, user) {
-  if (debugEnabled > 1) debug("Merge card sound player ", message.data, getProperty(update, "flags.midi-qol.playSound"), message.data.sound)
-  const firstGM = game.user; //game.users.find(u=> u.isGM && u.active);
-  if (game.user !== firstGM) return true;
-  const updateFlags = getProperty(update, "flags.midi-qol") || {};
-  const midiqolFlags = mergeObject(getProperty(message.data, "flags.midi-qol") || {}, updateFlags, { inplace: false, overwrite: true })
-  if (midiqolFlags.playSound && configSettings.useCustomSounds) {
-    const playlist = game.playlists?.get(configSettings.customSoundsPlaylist);
-    //@ts-ignore .sounds
-    const sound = playlist?.sounds.find(s => s.id === midiqolFlags.sound)
-    const delay = (dice3dEnabled() && midiqolFlags?.waitForDiceSoNice && [MESSAGETYPES.HITS].includes(midiqolFlags.type)) ? 500 : 0;
-    if (debugEnabled > 1) debug("mergeCardsound player ", update, playlist, sound, sound ? 'playing sound' : 'not palying sound', delay)
-
-    if (sound && game.user?.isGM) {
-      setTimeout(() => {
-        //@ts-ignore playSound
-        playlist?.playSound(sound);
-      }, delay)
-    }
-    return true;
-  }
-  return true;
-}
-
 export function betterRollsUpdate(message, update, options, user) {
   if (game.user?.id !== user) return true;
   const flags = message.data.flags;
@@ -655,20 +631,6 @@ export function processItemCardCreation(message, user) {
     if (workflow.kickStart) {
       workflow.kickStart = false;
       workflow.next(WORKFLOWSTATES.NONE);
-    }
-  }
-  if (debugEnabled > 1) debug("Doing item card creation", configSettings.useCustomSounds, configSettings.itemUseSound, midiFlags?.type)
-  if (configSettings.useCustomSounds && midiFlags?.type === MESSAGETYPES.ITEM) {
-    const playlist = game.playlists?.get(configSettings.customSoundsPlaylist);
-    //@ts-ignore playlist.sounds
-    const sound = playlist?.sounds.find(s => s.id === midiFlags?.sound);
-    const delay = 0;
-    if (sound && game.user?.isGM) {
-      setTimeout(() => {
-        // sound.playing = true;
-        //@ts-ignore playSound
-        playlist?.playSound(sound);
-      }, delay)
     }
   }
 }

@@ -1,10 +1,9 @@
-import { MacroData } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/data.mjs";
 import { _mergeUpdate } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/utils/helpers.mjs";
-import { config } from "simple-peer";
 import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, debugEnabled, geti18nTranslations } from "../midi-qol.js";
 import { ConfigPanel} from "./apps/ConfigPanel.js"
+import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
+import { MidiSounds } from "./midi-sounds.js";
 import { configureDamageRollDialog } from "./patching.js";
-import { isAutoFastAttack, reportMidiCriticalFlags } from "./utils.js";
 
 export var itemRollButtons: boolean;
 export var criticalDamage: string;
@@ -20,6 +19,7 @@ export var forceHideRoll: boolean;
 export var enableWorkflow: boolean;
 export var dragDropTargeting: boolean;
 export var lateTargeting: boolean;
+export var midiSoundSettings: any = {};
 
 const defaultKeyMapping = {
   "DND5E.Advantage": "altKey", 
@@ -37,7 +37,6 @@ class ConfigSettings {
   autoCEEffects: string = "none";
   autoCheckHit: string = "none";
   autoCheckSaves: string = "none";
-  autoFailSavesFriendly: boolean = false;
   autoFastForward: string = "off";
   autoItemEffects: null;
   autoRollAttack: boolean = false;
@@ -59,6 +58,7 @@ class ConfigSettings {
   effectActivation: boolean = false;
   enableddbGL: boolean = false;
   enforceReactions = "none";
+  enforceBonusActions = "none";
   fixStickyKeys: boolean = true;
   fumbleSound: string = "";
   ghostRolls: boolean = false;
@@ -126,7 +126,6 @@ class ConfigSettings {
     activeDefence: false,
     challengModeArmor: false,
   };
-
 }
 
 export var configSettings = new ConfigSettings();
@@ -141,6 +140,7 @@ export function checkRule(rule: string) {
 export function collectSettingData() {
   let data = {
     configSettings,
+    midiSoundSettings,
     itemRollButtons,
     criticalDamage,
     itemDeleteCheck,
@@ -216,7 +216,10 @@ export async function importSettingsFromJSON(json) {
   game.settings.set("midi-qol", "ForceHideRoll", json.forceHideRoll);
   game.settings.set("midi-qol", "EnableWorkflow", json.enableWorkflow);
   game.settings.set("midi-qol", "DragDropTarget", json.dragDropTargeting);
-  
+  game.settings.set("midi-qol", "MidiSoundSettings", json.midiSoundSettings ?? {});
+}
+export let fetchSoundSettings = () => {
+  midiSoundSettings = game.settings.get("midi-qol", "MidiSoundSettings");
 }
 
 export let fetchParams = () => {
@@ -254,6 +257,8 @@ export let fetchParams = () => {
   if (configSettings.displaySaveAdvantage === undefined) configSettings.displaySaveAdvantage = true;
   if (!configSettings.recordAOO) configSettings.recordAOO = "none";
   if (!configSettings.enforceReactions) configSettings.enforceReactions = "none";
+  if (!configSettings.enforceBonusActions) configSettings.enforceBonusActions = "none";
+
   if (configSettings.displayHitResultNumeric === undefined) configSettings.displayHitResultNumeric = false;
 
   if (!configSettings.keyMapping 
@@ -262,6 +267,9 @@ export let fetchParams = () => {
     || !configSettings.keyMapping["DND5E.Critical"]) {
       configSettings.keyMapping = defaultKeyMapping;
   }
+
+ MidiSounds.setupBasicSounds();
+ migrateExistingSounds();
 
   if (configSettings.addWounded === undefined) configSettings.addWounded = 0;
   if (configSettings.addDead === undefined) configSettings.addDead = false;
@@ -401,6 +409,14 @@ const settings = [
     default: configSettings,
     onChange: fetchParams,
     config: false
+  },
+  {
+    name: "MidiSoundSettings",
+    scope: "world",
+    type: Object,
+    default: midiSoundSettings,
+    onChange: fetchSoundSettings,
+    config: false
   }
 ];
 export function registerSetupSettings() {
@@ -490,6 +506,15 @@ export const registerSettings = function() {
     restricted: true
   });
 
+  game.settings.registerMenu("midi-qol", "midi-qol-sounds", {
+    name: i18n("midi-qol.SoundSettings.Name"),
+    label: "midi-qol.SoundSettings.Label",
+    hint: i18n("midi-qol.SoundSettings.Hint"),
+    icon: "fas fa-dice-d20",
+    type: SoundConfigPanel,
+    restricted: true
+  });
+
   game.settings.register("midi-qol", "playerControlsInvisibleTokens", {
     name: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Name"),
     hint: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Hint"),
@@ -540,3 +565,48 @@ export const registerSettings = function() {
   })
 }
 
+export function migrateExistingSounds() {
+  if (!configSettings.useCustomSounds) return;
+  const playlist = game.playlists?.get(configSettings.customSoundsPlaylist);
+  if (!playlist) {
+    ui.notifications?.warn("Specified playlist does not exist. Aborting migration");
+    return;
+  }
+  // create basic settings for the setup
+  // if (!configSettings.midiSoundSettings) MidiSounds.setupBasicSounds();
+  //@ts-ignore .sounds
+  const sounds = playlist.sounds;
+  const fumbleSound = sounds.get(configSettings.fumbleSound)?.name ?? "none";
+  const diceSound = sounds.get(configSettings.diceSound)?.name ?? "none";
+  const criticalSound = sounds.get(configSettings.criticalSound)?.name ?? "none";
+  const itemUseSound = sounds.get(configSettings.itemUseSound)?.name ?? "none";
+  const spellUseSound = sounds.get(configSettings.spellUseSound)?.name ?? "none";
+  const potionUseSound = sounds.get(configSettings.potionUseSound)?.name ?? "none";
+  const weaponUseSound = sounds.get(configSettings.weaponUseSound)?.name ?? "none";
+  const weaponUseSoundRanged = sounds.get(configSettings.weaponUseSoundRanged)?.name ?? "none";
+  const spellUseSoundRanged = sounds.get(configSettings.spellUseSoundRanged)?.name ?? "none";
+  /*
+  configSettings.midiSoundSettings = mergeObject(configSettings.midiSoundSettings, {
+    all: {
+      critical: { playlistName: playlist.name, soundName: criticalSound },
+      fumble: { playlistName: playlist.name, soundName: fumbleSound },
+      itemRoll: { playlistName: playlist.name, soundName: itemUseSound },
+    },
+    weapon: {
+      itemRoll: { playlistName: playlist.name, soundName: "none" },
+      mwak: { playlistName: playlist.name, soundName: weaponUseSound },
+      rwak: { playlistName: playlist.name, soundName: weaponUseSoundRanged },
+      attack: { playlistName: playlist.name, soundName: weaponUseSound }
+    },
+    spell: {
+      itemRoll: { playlistName: playlist.name, soundName: "none" },
+      msak: { playlistName: playlist.name, soundName: spellUseSound },
+      rsak: { playlistName: playlist.name, soundName: spellUseSoundRanged },
+      attack: { playlistName: playlist.name, soundName: spellUseSound }
+    },
+    "consumable:potion": {
+      itemRoll: { playlistName: playlist.name, soundName: potionUseSound },
+    }
+  }, {overwrite: true})
+*/
+}
