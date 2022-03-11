@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, midiRenderRoll } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { convertCompilerOptionsFromJson } from "typescript";
@@ -151,7 +151,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     return;
   }
   // workflow.attackRoll = result; already set
-  workflow.attackRollHTML = await result.render();
+  workflow.attackRollHTML = await midiRenderRoll(result);
   if (debugCallTiming) log(`final item.rollAttack():  elapsed ${Date.now() - attackRollStart}ms`);
 
   workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
@@ -268,7 +268,7 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   result = Roll.fromJSON(JSON.stringify(result.toJSON()))
   workflow.damageRoll = result;
   workflow.damageTotal = Number(result.total);
-  workflow.damageRollHTML = await result.render();
+  workflow.damageRollHTML = await midiRenderRoll(result);
   result = await processDamageRollBonusFlags.bind(workflow)();
 
   let otherResult: Roll | undefined = undefined;
@@ -340,7 +340,7 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
 
   workflow.otherDamageRoll = otherResult;
   workflow.otherDamageTotal = otherResult?.total;
-  workflow.otherDamageHTML = await otherResult?.render();
+  workflow.otherDamageHTML = await midiRenderRoll(otherResult);
   workflow.bonusDamageRoll = null;
   workflow.bonusDamageHTML = null;
   if (debugCallTiming) log(`item.rollDamage():  elapsed ${Date.now() - damageRollStart}ms`);
@@ -649,8 +649,8 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return null;
   }
 
-  if (itemUsesBonusAction && !hasBonusAction) await setBonusActionUsed(this.actor); 
-  if (itemUsesReaction && !hasReaction) await setReactionUsed(this.actor); 
+  if (itemUsesBonusAction && !hasBonusAction && configSettings.enforceBonusActions !== "none") await setBonusActionUsed(this.actor); 
+  if (itemUsesReaction && !hasReaction && configSettings.enforceReactions !== "none") await setReactionUsed(this.actor); 
 
   if (needsConcentration && checkConcentration) {
     const concentrationEffect = getConcentrationEffect(this.actor);

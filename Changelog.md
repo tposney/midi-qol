@@ -1,13 +1,32 @@
+### 0.9.30
+* Tweak to custom sounds so that if dice so nice is enabled attack/damage sounds are played before the roll rather than after. This should mean the same configuration will work with dice so nice or not.
+* With the introduction of the per item flag (also roll other - which means roll other damage if the activation condition is met/empty), it is suggested that you use that route to enable/disable rolling of the other damage, especially for spells, rather than the global setting.
+* Updated slayer's prey sample item so that it works for v9
+* If you are not hiding roll details when an attack is made and the result is influenced by flags.grants effects the modified attack roll will be displayed on the hit card.
+* Fix for "turn" optional effects that were not being marked as used and hence would be prompted each roll.
+* Fix for asyncHooksCall missing awaiting the result. Thanks @Elwin
+* New special duration ZeroHP, the effect will expire if the actor goes to 0 hp. Requires DAE 0.9.11
+* **Breaking** Sligth change to reaction/bonus action checking. New option display which will cause the reaction/bonus action icon to be added when an item that is used. Don't Check now means don't display anything for reactions/bonus actions, whereas it used to mean dislay but don't check.
+* If you use a weapon with ammunition and the ammunition has active effects they will be applied to the target in addition to those of the ranged weapon. Useful for special ammunition like arrows of wounding etc. Any activation condition on the ammunition will be checked before applying the effect.
+* New misc tab setting, Alternate Rolls. At this stage only a boolean which if set moves the roll formula to the roll tooltip, to give a less cluttered look.
+* First implementation of flanking (optional rule - in optional settings).  
+  - If any line drawn between the center of any square covered by the attacking token and the center of any ally's covered squares passes through the top and bottom, or left ad right of the target the attacker will have advantage. 
+  - In the case that both the attacker and ally are of size 1, this ends up meaning that a line between the centers of the two tokens passes through the top and bottom, or left and right, of the target, which is the common version of the rule statement.
+  - An ally is any token that is of the opposite disposition of the target (friendly/neutral/enemy - my enemey's enemy is my ally) is not incapacitated (meaning hp === 0). 
+  - The attacker must be within 5 feet of the target.
+  - Seems to work with the corner cases.
+  - There are probably special cases I've missed so errors are possible.
+
 ### 0.9.29
-* Added roll other damage for per item setting to roll other damage. Works with activaiton conditions.
-* Spearated Bonus Action usagae and Reaction usage checking, which can be configured separately.
+* Added roll other damage for per item setting to roll other damage. Works with activation conditions.
+* Separated Bonus Action usage and Reaction usage checking, which can be configured separately.
 * **VERY BREAKING** 
 **Custom Sounds Complete rewrite as of v0.9.29**
 Existing custom sounds will be disabled.
-  * Custom souds work best with the merge card.
+  * Custom sounds work best with the merge card.
   * Custom sounds now apply to both merge and non-merge cards. However non-merge cards will always roll the dice sound in addition to any midi custom sounds. I am unaware of any way to disable the dice sounds for standard dnd5e cards.
   * Custom sounds Will play with dice so nice active. It is suggested that you set the dice so nice sound volume to 0, so that midi can control the sounds made when a weapon is rolled.
-  * If using Dice so nice key the main sound effect on the item roll (specify the weapon subtype) and have no sound for the rwak/mwak, this way the sound will play while the dice are rolling. If not using dice so nice key on rwak/mwak/rsak/msak and the sound will play while whiole the card is displaying.
+  * ~~If using Dice so nice key the main sound effect on the item roll (specify the weapon subtype) and have no sound for the rwak/mwak, this way the sound will play while the dice are rolling.~~ If not using dice so nice key on rwak/mwak/rsak/msak and the sound will play while whole the card is displaying.
   * The General Format is to specify a sound for
     - Item Class (any/weapon/spell/etc)
     - Item Subtype (all, Martial Melee, Evocation etc)
@@ -27,9 +46,9 @@ Existing custom sounds will be disabled.
     * attack/rwak/mwak/msak/rsak/hit/miss/critical/fumble etc are checked after the attack roll is complete and hits have been checked
     * Damage/damage:type are checked after the damage roll is complete.
 
-  * Custom sounds be configured from the Configure Midi Sounds panel immediately below the midi worklow panel on module config settings. Custom sounds are only active if the Enable Custom Sounds is checked on the misc tab of workflow settings.
+  * Custom sounds be configured from the Configure Midi Sounds panel immediately below the midi workflow panel on module config settings. Custom sounds are only active if the Enable Custom Sounds is checked on the misc tab of workflow settings.
   * You can create very complex setups, but don't need to.
-  * To get your toes wet, enable custom sounds on the worklfow panel - misc tab (where it has always been).
+  * To get your toes wet, enable custom sounds on the workflow panel - misc tab (where it has always been).
   * Open the configure midi custom sounds panel.
     - From the quick settings tab, choose create sample playlist, which will create a playlist with a few sounds already configured
     - Also on the quick settings tab choose Basic Settings, which will setup a simple configuration of custom sounds. This is roughly equivalent to what can be configured with the existing midi-qol custom sounds, but has a few more options and can be extended. (Basic settings are configured to work best with merge cards and no dice so nice).

@@ -112,6 +112,7 @@ class ConfigSettings {
   weaponHitSound: string = "";
   weaponUseSound: string = "";
   weaponUseSoundRanged: string = "";
+  rollAlternate: boolean = false;
   optionalRules: any = {
     invisAdvantage: true,
     checkRange: true,
@@ -125,6 +126,7 @@ class ConfigSettings {
     criticalSaves: false,
     activeDefence: false,
     challengModeArmor: false,
+    checkFlanking: false
   };
 }
 
@@ -219,7 +221,7 @@ export async function importSettingsFromJSON(json) {
   game.settings.set("midi-qol", "MidiSoundSettings", json.midiSoundSettings ?? {});
 }
 export let fetchSoundSettings = () => {
-  midiSoundSettings = game.settings.get("midi-qol", "MidiSoundSettings");
+  midiSoundSettings = game.settings.get("midi-qol", "MidiSoundSettings") ?? {};
 }
 
 export let fetchParams = () => {
@@ -260,7 +262,7 @@ export let fetchParams = () => {
   if (!configSettings.enforceBonusActions) configSettings.enforceBonusActions = "none";
 
   if (configSettings.displayHitResultNumeric === undefined) configSettings.displayHitResultNumeric = false;
-
+  if (configSettings.rollAlternate === undefined) configSettings.rollAlternate = false;
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
     || !configSettings.keyMapping["DND5E.Disadvantage"]
@@ -268,8 +270,8 @@ export let fetchParams = () => {
       configSettings.keyMapping = defaultKeyMapping;
   }
 
- MidiSounds.setupBasicSounds();
- migrateExistingSounds();
+ // MidiSounds.setupBasicSounds();
+ // migrateExistingSounds();
 
   if (configSettings.addWounded === undefined) configSettings.addWounded = 0;
   if (configSettings.addDead === undefined) configSettings.addDead = false;
@@ -288,6 +290,7 @@ export let fetchParams = () => {
       activeDefence: false,
       challengeModeArmor: false,
       challengeModeArmorScale: false,
+      checkFlanking: false
     }, configSettings.optionalRules ?? {}, {overwrite: true, insertKeys: true, insertValues: true});
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
   if (typeof configSettings.optionalRules.nearbyFoe !== "number") {
@@ -564,7 +567,7 @@ export const registerSettings = function() {
     default: true
   })
 }
-
+/*
 export function migrateExistingSounds() {
   if (!configSettings.useCustomSounds) return;
   const playlist = game.playlists?.get(configSettings.customSoundsPlaylist);
@@ -585,8 +588,8 @@ export function migrateExistingSounds() {
   const weaponUseSound = sounds.get(configSettings.weaponUseSound)?.name ?? "none";
   const weaponUseSoundRanged = sounds.get(configSettings.weaponUseSoundRanged)?.name ?? "none";
   const spellUseSoundRanged = sounds.get(configSettings.spellUseSoundRanged)?.name ?? "none";
-  /*
-  configSettings.midiSoundSettings = mergeObject(configSettings.midiSoundSettings, {
+
+  midiSoundSettings = mergeObject(midiSoundSettings, {
     all: {
       critical: { playlistName: playlist.name, soundName: criticalSound },
       fumble: { playlistName: playlist.name, soundName: fumbleSound },
@@ -608,5 +611,5 @@ export function migrateExistingSounds() {
       itemRoll: { playlistName: playlist.name, soundName: potionUseSound },
     }
   }, {overwrite: true})
-*/
 }
+*/

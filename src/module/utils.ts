@@ -2,7 +2,7 @@ import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamag
 import { configSettings, autoRemoveTargets, checkRule, lateTargeting } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
-import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
+import { rollAbility, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { itemJSONData, overTimeJSONData } from "./Hooks.js";
 //@ts-ignore
@@ -10,6 +10,7 @@ import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { Options } from "./patching.js";
 import { valueInArray } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/validators.mjs";
+import { config } from "simple-peer";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -1614,7 +1615,7 @@ class RollModifyDialog extends Application {
       }
       return obj;
     }, {})
-    this.data.content = $(await this.data.currentRoll.render());
+    this.data.content = $(await midiRenderRoll(this.data.currentRoll));
     return {
       content: this.data.rollHTML,
       buttons: this.data.buttons
@@ -1677,7 +1678,7 @@ export async function processAttackRollBonusFlags() { // bound to workflow
     })
     .map(flag => `flags.midi-qol.optional.${flag}`);
   if (bonusFlags.length > 0) {
-    this.attackRollHTML = await this.attackRoll.render();
+    this.attackRollHTML = await midiRenderRoll(this.attackRoll);
     await bonusDialog.bind(this)(bonusFlags, attackBonus, false, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, "attackRoll", "attackTotal", "attackRollHTML")
   }
   return this.attackRoll;
@@ -1695,7 +1696,7 @@ export async function processDamageRollBonusFlags() { // bound to a workflow
     })
     .map(flag => `flags.midi-qol.optional.${flag}`);
   if (bonusFlags.length > 0) {
-    this.damageRollHTML = await this.damageRoll.render();
+    this.damageRollHTML = await midiRenderRoll(this.damageRoll);
     await bonusDialog.bind(this)(bonusFlags, damageBonus, false, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, "damageRoll", "damageTotal", "damageRollHTML")
   }
   return this.damageRoll;
@@ -1727,7 +1728,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       if (showRoll && this.category === "ac") { // TODO do a more general fix for displaying this stuff
         const player = playerForActor(this.actor)?.id ?? "";
         // const oldRollHTML = await this[rollId].render() ?? this[rollId].result
-        const newRollHTML = await newRoll.render();
+        const newRollHTML = await midiRenderRoll(newRoll);
         const chatData: any = {
           // content: `${this[rollId].result} -> ${newRoll.formula} = ${newRoll.total}`,
           flavor: game.i18n.localize("DND5E.ArmorClass"),
@@ -1738,7 +1739,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       } else if (showRoll) {
         const oldRollHTML = await this[rollId].render() ?? this[rollId].result
         const player = playerForActor(this.actor)?.id ?? "";
-        const newRollHTML = reRoll ? await reRoll.render() : await newRoll.render();
+        const newRollHTML = reRoll ? await midiRenderRoll(reRoll) : await midiRenderRoll(newRoll);
         const chatData: any = {
           // content: `${this[rollId].result} -> ${newRoll.formula} = ${newRoll.total}`,
           flavor: `${title} ${button.value}`,
@@ -1749,7 +1750,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       }
       this[rollId] = newRoll;
       this[rollTotalId] = newRoll.total;
-      this[rollHTMLId] = await newRoll.render();
+      this[rollHTMLId] = await midiRenderRoll(newRoll);
       dialog.data.rollHTML = this[rollHTMLId];
       await removeEffectGranting(this.actor, button.key);
       bonusFlags = bonusFlags.filter(bf => bf !== button.key)
@@ -1836,6 +1837,7 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
     }
   } else if ("turn" === count.value) {
     const flagKey = `${changeKey}.used`.replace("flags.midi-qol.", "");
+    await actor.setFlag("midi-qol", flagKey, true);
   } else if (count.value === "every") {
 
   } else if (count.value === "reaction") {
@@ -2272,7 +2274,7 @@ export function evalActivationCondition(workflow: Workflow, condition: string | 
   if (rollData.target) {
     rollData.target = rollData.target.actor.getRollData();
     if (rollData.target.details.race ?? "" !== "") rollData.raceOrType = rollData.target.details.race.toLocaleLowerCase();
-    else rollData.raceOrType = rollData.target.details.type.value.toLocaleLowerCase();
+    else rollData.raceOrType = rollData.target.details.type?.value.toLocaleLowerCase() ?? "";
   }
   let expression = condition ?? "";
 
@@ -2463,6 +2465,7 @@ export async function asyncHooksCallAll(hook, ...args) {
   //@ts-ignore
   const fns = new Array(...Hooks._hooks[hook]);
   for ( let fn of fns ) {
+    //TODO see if this might be better as a Promises.all
     //@ts-ignore
     await Hooks._call(hook, fn, args);
   }
@@ -2480,8 +2483,14 @@ export async function asyncHooksCall(hook, ...args) {
   const fns = new Array(...Hooks._hooks[hook]);
   for ( let fn of fns ) {
     //@ts-ignore
-    let callAdditional = Hooks._call(hook, fn, args);
+    let callAdditional = await Hooks._call(hook, fn, args);
     if ( callAdditional === false ) return false;
   }
   return true;
+}
+
+export async function midiRenderRoll(roll: Roll | undefined) {
+  if (!roll) return "";
+  if (!configSettings.rollAlternate) return roll.render();
+  else return roll.render({template: "modules/midi-qol/templates/rollAlternate.html"});
 }

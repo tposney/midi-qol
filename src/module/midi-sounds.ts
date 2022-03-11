@@ -1,5 +1,6 @@
 import { i18n } from "../midi-qol.js";
 import { configSettings, midiSoundSettings } from "./settings.js";
+import { dice3dEnabled } from "./setupModules.js";
 import { Workflow } from "./workflow.js";
 
 interface rollSpec {
@@ -109,7 +110,6 @@ export class MidiSounds {
   }
 
   static processHook(workflow, selector) {
-    if (!workflow.item) return false;
     const subtype = this.getSubtype(workflow.item);
     let spec = this.getSpecFor(workflow.item.type, subtype, selector);
     if (!spec) return false;
@@ -117,14 +117,21 @@ export class MidiSounds {
   }
   static midiSoundsReadyHooks() {
     Hooks.on("midi-qol.preItemRoll", async (workflow: Workflow) => {
-      if (!configSettings.useCustomSounds) return true;
+      if (!configSettings.useCustomSounds || !workflow.item) return true;
       return await this.processHook(workflow, "itemRoll")
+    });
+    Hooks.on("midi-qol.preAttackRoll", async (workflow: Workflow) => {
+      if (!configSettings.useCustomSounds || !workflow.item) return true;
+      if (dice3dEnabled()) {
+        return await this.processHook(workflow, workflow.item.data.data.actionType);
+      }
     });
 
     Hooks.on("midi-qol.AttackRollComplete", async (workflow: Workflow) => {
-      if (!configSettings.useCustomSounds) return true;
-      if (!workflow.item) return;
-      await this.processHook(workflow, workflow.item.data.data.actionType);
+      if (!configSettings.useCustomSounds || !workflow.item) return true;
+      if (!dice3dEnabled()) {
+        await this.processHook(workflow, workflow.item.data.data.actionType);
+      }
       if (workflow.isCritical) {
         return this.processHook(workflow, "critical")
       } else if (workflow.isFumble) {
@@ -136,12 +143,26 @@ export class MidiSounds {
       }
     });
 
+    Hooks.on("midi-qol.preDamageRoll", async (workflow: Workflow) => {
+      if (!configSettings.useCustomSounds || !workflow.item) return true;
+      if (dice3dEnabled()) {
+        const result = await await this.processHook(workflow, workflow.defaultDamageType);
+        if (!result)
+          return this.processHook(workflow, "damage");
+        return result;
+      }
+      return true;
+    });
+
     Hooks.on("midi-qol.DamageRollComplete", async (workflow: Workflow) => {
-      if (!configSettings.useCustomSounds) return true;
-      const result = await await this.processHook(workflow, workflow.defaultDamageType);
-      if (!result)
-        return this.processHook(workflow, "damage");
-      return result;
+      if (!configSettings.useCustomSounds || !workflow.item) return true;
+      if (!dice3dEnabled()) {
+        const result = await await this.processHook(workflow, workflow.defaultDamageType);
+        if (!result)
+          return this.processHook(workflow, "damage");
+        return result;
+      }
+      return true;
     });
   }
 

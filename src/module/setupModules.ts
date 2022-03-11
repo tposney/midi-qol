@@ -95,6 +95,25 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.9.30
+  * Tweak to custom sounds so that if dice so nice is enabled attack/damage sounds are played before the roll rather than after. This should mean the same configuration will work with dice so nice or not.
+  * With the introduction of the per item flag (also roll other - which means roll other damage if the activation condition is met/empty), it is suggested that you use that route to enable/disable rolling of the other damage, especially for spells, rather than the global setting.
+  * Updated slayer's prey sample item so that it works for v9
+  * If you are not hiding roll details when an attack is made and the result is influenced by flags.grants effects the modified attack roll will be displayed on the hit card.
+  * Fix for "turn" optional effects that were not being marked as used and hence would be prompted each roll.
+  * Fix for asyncHooksCall missing awaiting the result. Thanks @Elwin#1410
+  * New special duration ZeroHP, the effect will expire if the actor goes to 0 hp. Requires DAE 0.9.11
+  * **Breaking** Slight change to reaction/bonus action checking. New option display which will cause the reaction/bonus action icon to be added when an item that is used. Don't Check now means don't display anything for reactions/bonus actions, whereas it used to mean display but don't check.
+  * If you use a weapon with ammunition and the ammunition has active effects they will be applied to the target in addition to those of the ranged weapon. Useful for special ammunition like arrows of wounding etc. Any activation condition on the ammunition will be checked before applying the effect.
+  * New misc tab setting, Alternate Rolls. At this stage only a boolean which if set moves the roll formula to the roll tooltip, to give a less cluttered look.
+  * First implementation of flanking (optional rule - in optional settings).  
+    - If any line drawn between the centre of any square covered by the attacking token and the centre of any ally's covered squares passes through the top and bottom, or left ad right of the target the attacker will have advantage. 
+    - In the case that both the attacker and ally are of size 1, this ends up meaning that a line between the centres of the two tokens passes through the top and bottom, or left and right, of the target, which is the common version of the rule statement.
+    - An ally is any token that is of the opposite disposition of the target (friendly/neutral/enemy - my enemy's enemy is my ally) is not incapacitated (meaning hp === 0). 
+    - The attacker must be within 5 feet of the target.
+    - Seems to work with the corner cases.
+    - There are probably special cases I've missed so errors are possible.
+
   0.9.29
   * Added roll other damage for per item setting to roll other damage. Works with activation conditions.
   * Separated Bonus Action usage and Reaction usage checking, which can be configured separately.
@@ -148,40 +167,6 @@ Hooks.once('libChangelogsReady', function() {
     - Weapons with the old properties set should continue to work and the first time you edit the item it will auto migrate to the new data scheme (but of course there might be bugs).
     - Setting fulldam etc check box for a spell/feature/weapon will take precedence over the text description search. If none are set the text description will still take place.
     - Added concentration property for any weapon/feature/spell (allows you to specify that concentration should be set when rolling the item via a check box) This is in addition to the now deprecated activation condition === Concentration.
-
-  0.9.26
-  * Added missing flags.midi-qol.optional.NAME.save.dex/wis etc to auto complete fields 
-  * Added "every" option to count fields, means you can use the effect every time it matches without it ever expiring.
-  * Fix for rolling tools with late targeting enabled.
-  * Concentration will be applied to the user of an item (even if all targets saved) if the item places a measured template and has non-instantaneous duration - wall of fire/thorns etc.
-  * Fix for the removal on any effect causing the removal of concentration.
-  * Overtime effects that roll damage no longer wait for the damage roll button to be pressed, instead they damage is auto rolled and fast forwarded.
-  * Support for GMs to apply effects (via the apply effects button) for other players. Effects are applied to whoever the GM has targeted.
-  * For macro writers: Additional workflow processing options to itemRoll(options)/completeItemRoll(item, options: {...., workflowOptions}).
-  You can set 
-    lateTargeting: boolean to force enable/disable late targeting for the items workflow
-    autoRollAttack: boolean force enable/disable auto rolling of the attack,
-    autoFastAttack: boolean force enable/disable fast forwarding of the attack
-    autoRollDamage: string (always, onHit, none)
-    autoFastDamage: boolean force enable/disable fast Forward of the damage roll.
-    Leaving these undefined means that the configured workflow options from the midi-qol configuration panel will apply.
-
-0.9.25
-  * Fix for user XXX lacks permission to delete active effect on token introduced in 0.9.23 for concentration - same symptom different cause.
-
-0.9.24
-  * Fix for user XXX lacks permission to delete active effect on token introduced in 0.9.23 for concentration
-
-0.9.23
-* Fix for double dice so nice dice rolling for damage bonus macro dice.
-* Fix for late targeting causing concentration save to late target.
-* A tweak to using monk's token bar for saving throws. Player rolls always are always visible to other players. If there are GM rolls and the player's are not allowed to see the rolls, the GM rolls will be split to a separate card and displayed only to the GM. This resolves the issue of NPC names being shown to players when doing saving throws with Monk's Token Bar.
-* Fix for a maybe edge case where concentration removal was not working (concentration was removed but stayed on the actor).
-* Tidy up so that late targeting does not apply when doing reactions, concentration saving throws or overtime effects.
-* Late targeting window now appears next to the chat log so that you are well position to hit the damage button if required.
-* Reactions now prompt for spell level when casting reaction spells and the reaction executes on the correct player client.
-* Damage bonus macro damage is now added to base weapon damage by type before checking resistance/immunity (with a minimum of 0), so if you have 2 lots of piercing one that does 3 points and a bonus damage macro providing 5 the total damage of 8 will be applied (as it was before). If you have damage resistance to piercing the damage applied will be 4 points, instead of 3 points as it would have been when the damage resistance was calculated on each slashing damage and then added together. Should you wish to implement (who knows why) damage bonus macros that reduce damage, i.e. you do 1d4 less piercing damage because your're eyesight is bad, the damage bonus macro can return "-1d4[piercing]"
-
 
   [Full Changelog](https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md)`,
   "minor")

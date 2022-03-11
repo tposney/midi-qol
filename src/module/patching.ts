@@ -1,7 +1,7 @@
 import { log, warn, debug, i18n, error, getCanvas, i18nFormat } from "../midi-qol.js";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, MQfromActorUuid, notificationNotify, processOverTime } from "./utils.js";
+import { bonusDialog, ConvenientEffectsHasEffect, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, notificationNotify, processOverTime } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -77,7 +77,7 @@ async function bonusCheck(actor, result: Roll, category, detail): Promise<Roll> 
       const data = {
         actor,
         roll: result,
-        rollHTML: await result.render(),
+        rollHTML: await midiRenderRoll(result),
         rollTotal: result.total,
         category,
         detail: detail
@@ -299,11 +299,12 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     result = await result.reroll({ minimize: true })
   result = await bonusCheck(this, result, rollType, abilityId)
   if (chatMessage !== false && result) {
-    const args = { "speaker": getSpeaker(this) };
+    const args: any = { "speaker": getSpeaker(this) };
     setProperty(args, `flags.${game.system.id}.roll`, { type: rollType, abilityId });
+    args.template = "modules/midi-qol/templates/roll.html";
     await result.toMessage(args);
   }
-  await expireRollEffect.bind(this)("Save", abilityId);
+  await expireRollEffect.bind(this)(rollType, abilityId);
   return result;
 }
 
@@ -580,6 +581,16 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
   }
 }
 
+async function zeroHPExpiry(actor, update, options, user) {
+  const hpUpdate = getProperty(update, "data.attributes.hp.value");
+if (hpUpdate !== 0) return;
+const expiredEffects: string[] = [];
+  for (let effect of actor.effects) {
+    if (effect.data.flags?.dae?.specialDuration?.includes("zeroHP")) expiredEffects.push(effect.data._id)
+  }
+  if (expiredEffects.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", expiredEffects)
+}
+
 async function checkWounded(actor, update, options, user) {
   const hpUpdate = getProperty(update, "data.attributes.hp.value");
   // return wrapped(update,options,user);
@@ -634,6 +645,7 @@ async function checkWounded(actor, update, options, user) {
 async function _preUpdateActor(wrapped, update, options, user) {
   try {
     await checkWounded(this, update, options, user);
+    await zeroHPExpiry(this, update, options, user);
   } catch (err) { 
     console.warn("midi-qol | preUpdateActor failed ", err)
   }

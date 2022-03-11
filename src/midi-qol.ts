@@ -479,6 +479,7 @@ function setupMidiFlags() {
   }
 
   midiFlags.push(`flags.midi-qol.optional.NAME.attack.all`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.damage.all`);
   midiFlags.push(`flags.midi-qol.optional.NAME.check.all`);
   midiFlags.push(`flags.midi-qol.optional.NAME.save.all`);
   midiFlags.push(`flags.midi-qol.optional.NAME.label`);
