@@ -118,8 +118,10 @@ export class MidiSounds {
   static midiSoundsReadyHooks() {
     Hooks.on("midi-qol.preItemRoll", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
-      return await this.processHook(workflow, "itemRoll")
+      await this.processHook(workflow, "itemRoll");
+      return true; // sounds can never block roll
     });
+    
     Hooks.on("midi-qol.preAttackRoll", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
       if (dice3dEnabled()) {

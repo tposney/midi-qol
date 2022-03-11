@@ -1,18 +1,21 @@
+### 0.9.31
+* Fix for item rolls being blocked if custom sounds turned off. (bug in 0.9.30)
+
 ### 0.9.30
 * Tweak to custom sounds so that if dice so nice is enabled attack/damage sounds are played before the roll rather than after. This should mean the same configuration will work with dice so nice or not.
 * With the introduction of the per item flag (also roll other - which means roll other damage if the activation condition is met/empty), it is suggested that you use that route to enable/disable rolling of the other damage, especially for spells, rather than the global setting.
 * Updated slayer's prey sample item so that it works for v9
 * If you are not hiding roll details when an attack is made and the result is influenced by flags.grants effects the modified attack roll will be displayed on the hit card.
 * Fix for "turn" optional effects that were not being marked as used and hence would be prompted each roll.
-* Fix for asyncHooksCall missing awaiting the result. Thanks @Elwin
+* Fix for asyncHooksCall missing awaiting the result. Thanks @Elwin#1410
 * New special duration ZeroHP, the effect will expire if the actor goes to 0 hp. Requires DAE 0.9.11
-* **Breaking** Sligth change to reaction/bonus action checking. New option display which will cause the reaction/bonus action icon to be added when an item that is used. Don't Check now means don't display anything for reactions/bonus actions, whereas it used to mean dislay but don't check.
+* **Breaking** Slight change to reaction/bonus action checking. New option display which will cause the reaction/bonus action icon to be added when an item that is used. Don't Check now means don't display anything for reactions/bonus actions, whereas it used to mean display but don't check.
 * If you use a weapon with ammunition and the ammunition has active effects they will be applied to the target in addition to those of the ranged weapon. Useful for special ammunition like arrows of wounding etc. Any activation condition on the ammunition will be checked before applying the effect.
 * New misc tab setting, Alternate Rolls. At this stage only a boolean which if set moves the roll formula to the roll tooltip, to give a less cluttered look.
 * First implementation of flanking (optional rule - in optional settings).  
-  - If any line drawn between the center of any square covered by the attacking token and the center of any ally's covered squares passes through the top and bottom, or left ad right of the target the attacker will have advantage. 
-  - In the case that both the attacker and ally are of size 1, this ends up meaning that a line between the centers of the two tokens passes through the top and bottom, or left and right, of the target, which is the common version of the rule statement.
-  - An ally is any token that is of the opposite disposition of the target (friendly/neutral/enemy - my enemey's enemy is my ally) is not incapacitated (meaning hp === 0). 
+  - If any line drawn between the centre of any square covered by the attacking token and the centre of any ally's covered squares passes through the top and bottom, or left ad right of the target the attacker will have advantage. 
+  - In the case that both the attacker and ally are of size 1, this ends up meaning that a line between the centres of the two tokens passes through the top and bottom, or left and right, of the target, which is the common version of the rule statement.
+  - An ally is any token that is of the opposite disposition of the target (friendly/neutral/enemy - my enemy's enemy is my ally) is not incapacitated (meaning hp === 0). 
   - The attacker must be within 5 feet of the target.
   - Seems to work with the corner cases.
   - There are probably special cases I've missed so errors are possible.
