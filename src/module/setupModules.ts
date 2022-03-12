@@ -95,6 +95,10 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.9.32
+  * (Hopefully) better fix for item rolls being blocked if custom sounds turned off. (bug introduced in 0.9.30)
+  * New optional rule, "Critical Roll Margin". You can specify a numeric margin such that if the attack roll >= target AC + margin the roll is a critical hit, otherwise not (even if the roll is a 20). Apparently this variant is in use in some countries. The rule is only applied if there is a single target, since midi can only track one critical status for the roll. Setting the margin to -1 (the default) disables the check. Works with better rolls, but the dice total will not be highlighted in green.
+
   0.9.31
   * Fix for item rolls being blocked if custom sounds turned off. (bug introduced in 0.9.30)
 

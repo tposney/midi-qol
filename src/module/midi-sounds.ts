@@ -77,6 +77,7 @@ export class MidiSounds {
       return AudioHelper.play({ src: sound.data.path, volume: sound.data.volume, autoplay: true, loop: false }, true);
     }
   }
+  
   static getSubtype(item: any): string {
     if (!item.type) return "";
     let subtype = "";
@@ -102,7 +103,6 @@ export class MidiSounds {
   }
 
   static playSpec(spec) {
-
     if (spec.soundName !== "random")
       return this.playSound(spec.playlistName, spec.soundName);
     else
@@ -115,6 +115,7 @@ export class MidiSounds {
     if (!spec) return false;
     return this.playSpec(spec);
   }
+
   static midiSoundsReadyHooks() {
     Hooks.on("midi-qol.preItemRoll", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
@@ -125,8 +126,9 @@ export class MidiSounds {
     Hooks.on("midi-qol.preAttackRoll", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
       if (dice3dEnabled()) {
-        return await this.processHook(workflow, workflow.item.data.data.actionType);
+        await this.processHook(workflow, workflow.item.data.data.actionType);
       }
+      return true;
     });
 
     Hooks.on("midi-qol.AttackRollComplete", async (workflow: Workflow) => {
@@ -135,14 +137,15 @@ export class MidiSounds {
         await this.processHook(workflow, workflow.item.data.data.actionType);
       }
       if (workflow.isCritical) {
-        return this.processHook(workflow, "critical")
+        await this.processHook(workflow, "critical")
       } else if (workflow.isFumble) {
-        return this.processHook(workflow, "fumble")
+        await this.processHook(workflow, "fumble")
       } else if (workflow.hitTargets.size === 0) {
-        return this.processHook(workflow, "miss")
+        await this.processHook(workflow, "miss")
       } else {
-        return this.processHook(workflow, "hit")
+        await this.processHook(workflow, "hit")
       }
+      return true;
     });
 
     Hooks.on("midi-qol.preDamageRoll", async (workflow: Workflow) => {
@@ -150,8 +153,7 @@ export class MidiSounds {
       if (dice3dEnabled()) {
         const result = await await this.processHook(workflow, workflow.defaultDamageType);
         if (!result)
-          return this.processHook(workflow, "damage");
-        return result;
+          await this.processHook(workflow, "damage");
       }
       return true;
     });
@@ -161,8 +163,7 @@ export class MidiSounds {
       if (!dice3dEnabled()) {
         const result = await await this.processHook(workflow, workflow.defaultDamageType);
         if (!result)
-          return this.processHook(workflow, "damage");
-        return result;
+          await this.processHook(workflow, "damage");
       }
       return true;
     });

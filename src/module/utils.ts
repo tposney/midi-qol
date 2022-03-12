@@ -2,15 +2,13 @@ import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamag
 import { configSettings, autoRemoveTargets, checkRule, lateTargeting } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
-import { rollAbility, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
+import { socketlibSocket, timedAwaitExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { itemJSONData, overTimeJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { Options } from "./patching.js";
-import { valueInArray } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/validators.mjs";
-import { config } from "simple-peer";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item

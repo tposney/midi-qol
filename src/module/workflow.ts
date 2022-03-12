@@ -2181,8 +2181,7 @@ export class Workflow {
       //TODO find out why this is using results - seems it should just be the total
       // this.diceRoll = terms[0].results.find(d => d.active).result;
     }
-    //@ts-ignore
-    //@ts-ignore .critical undefined
+    //@ts-ignore .options.critical undefined
     this.isCritical = this.diceRoll >= this.attackRoll.terms[0].options.critical;
     //@ts-ignore .fumble undefined
     this.isFumble = this.diceRoll <= this.attackRoll.terms[0].options.fumble;
@@ -2248,6 +2247,10 @@ export class Workflow {
             isHit = attackTotal >= targetAC || this.isCritical;
             if (checkRule("challengeModeArmor")) isHit = this.attackTotal >= targetAC || this.isCritical;
             if (targetEC) isHitEC = checkRule("challengeModeArmor") && this.attackTotal <= targetAC && this.attackTotal >= targetEC;
+          }
+          if (this.targets.size === 1 && checkRule("optionalCritRule") > -1) {
+            //@ts-ignore .attributes
+            this.isCritical = attackTotal >= (targetToken.actor?.data.data.attributes?.ac?.value ?? 10) + Number(checkRule("optionalCritRule"));
           }
           hitResultNumeric = this.isCritical ? "++" : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
         }

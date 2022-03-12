@@ -126,7 +126,8 @@ class ConfigSettings {
     criticalSaves: false,
     activeDefence: false,
     challengModeArmor: false,
-    checkFlanking: false
+    checkFlanking: false,
+    optionalCritRule: -1
   };
 }
 
@@ -290,7 +291,8 @@ export let fetchParams = () => {
       activeDefence: false,
       challengeModeArmor: false,
       challengeModeArmorScale: false,
-      checkFlanking: false
+      checkFlanking: false,
+      optionalCritRule: -1
     }, configSettings.optionalRules ?? {}, {overwrite: true, insertKeys: true, insertValues: true});
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
   if (typeof configSettings.optionalRules.nearbyFoe !== "number") {

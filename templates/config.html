@@ -712,7 +712,6 @@
             </span>
           </div>
 
-
           <div class="form-group">
             <label style>{{localize "midi-qol.MaxDRValue.Name"}}</label>
             <input type="checkbox" name="optionalRules.maxDRValue" data-dtype="Boolean" {{checked
@@ -724,6 +723,15 @@
             <input type="checkbox" name="optionalRules.criticalSaves" data-dtype="Boolean" {{checked
               configSettings.optionalRules.criticalSaves}} />
           </div>
+
+          <div class="form-group">
+            <span>
+              <label>{{localize "midi-qol.OptionalCritRule.Name"}}</label>
+              <input type="Number" style="width:40px;" name="optionalRules.optionalCritRule"
+                value="{{configSettings.optionalRules.optionalCritRule}}" data-dtype="Number" />
+            </span>
+          </div>
+          <div class="midi-qol-faint">{{localize "midi-qol.OptionalCritRule.Hint"}}</div>
 
           <div class="form-fields">
             <span>
