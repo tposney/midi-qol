@@ -1,4 +1,4 @@
-### 0.9.32
+### 0.9.33
 * Fix for proliferating critical hits if optional rules disabled. Live and learn, turns out (false > -1) is true.
 
 ### 0.9.32
