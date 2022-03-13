@@ -2248,7 +2248,8 @@ export class Workflow {
             if (checkRule("challengeModeArmor")) isHit = this.attackTotal >= targetAC || this.isCritical;
             if (targetEC) isHitEC = checkRule("challengeModeArmor") && this.attackTotal <= targetAC && this.attackTotal >= targetEC;
           }
-          if (this.targets.size === 1 && checkRule("optionalCritRule") > -1) {
+          const optionalCrits = checkRule("optionalCritRule");
+          if (this.targets.size === 1 && optionalCrits !== false && optionalCrits > -1) {
             //@ts-ignore .attributes
             this.isCritical = attackTotal >= (targetToken.actor?.data.data.attributes?.ac?.value ?? 10) + Number(checkRule("optionalCritRule"));
           }
