@@ -4,7 +4,8 @@
 	"midi-qol.DamageImmunities.Name": "Appliquer les immunités aux dégâts",
 	"midi-qol.DamageImmunities.Hint": "Applique les immunités/vulnérabilités/résistances lorsque des dégâts sont infligés automatiquement ou via le bouton fournit par midi-qol. Tous les types de dégâts sont vérifiés.",
 	"midi-qol.WorldKeyMappings.Name": "Raccourci entre client",
-	"midi-qol.WorldKeyMappings.Hint": "Si activé, les raccourcis du MJ sont activé pour les clients joueurs également, sinon, uniquement en local.",
+	"midi-qol.WorldKeyMappings.Blurb1": "Les raccourcis claviers sont définis par client. Chaque joueur peut avoir des raccourcis différents. Pour forcer tous les clients à avoir les mêmes raccourcis, utilisez l'un des modules disponibles pour définir des paramètres communs.",
+	"midi-qol.WorldKeyMappings.Blurb2": "J'ai testé 'Force Client Controls' avec succès.",
 	"midi-qol.SpeedAbilityRolls.Name": "Activer les jets de capacité rapides (sauvegarde/caractéristiques/compétences)",
 	"midi-qol.ShowItemDetails.Name": "Afficher les détails de l'élément dans la carte du chat",
 	"midi-qol.ShowItemDetails.Hint": "Si cette option est activée, les détails de l'élément seront affichés dans la carte du chat. Vous pouvez utiliser les paramètres du système DND5E pour masquer automatiquement la description.",
@@ -37,8 +38,6 @@
 	"midi-qol.AutoRollDamage.Hint": "Lance le jet de dégâts automatiquement lors d'une attaque",
 	"midi-qol.AutoCheckSaves.Name": "Sauvegardes auto",
 	"midi-qol.AutoCheckSaves.Hint": "Effectuer automatiquement les jets de sauvegarde lors du lancement d'un sort",
-	"midi-qol.AutoFailSavesFriendly.Name": "Échouer les sauvegardes du lanceur de sorts ami",
-	"midi-qol.AutoFailSavesFriendly.Hint": "Lorsqu'un lanceur de sorts ami doit effectuer un jet de sauvegarde, il échoue automatiquement à ce jet.",
 	"midi-qol.DisplaySaveDC.Name": "Afficher la difficulté du Jet de sauvegarde",
 	"midi-qol.DisplaySaveDC.Hint": "Si faux, cachez le DC du jet de sauvegarde aux joueurs (carte combinée uniquement).",
 	"midi-qol.AutoRemoveTargets.Name": "Décibler à la fin du tour",
@@ -159,8 +158,8 @@
 	"midi-qol.Hint": "Configurez les différents paramètres des flux pour midi-qol. Attention, il y en a beaucoup.",
 	"midi-qol.DiceSound.Name": "Jet d'attaque",
 	"midi-qol.AttackRoll": "Jet d'attaque",
-	"midi-qol.CriticalSound.Name": "Coup critique",
-	"midi-qol.FumbleSound.Name": "Échec critique",
+	"midi-qol.CriticalSoundName": "Coup critique",
+	"midi-qol.FumbleSoundName": "Échec critique",
 	"midi-qol.DiceSounds.Hint": "Son à jouer pour différents Jets. S'applique UNIQUEMENT à la carte combinée",
 	"midi-qol.CustomSoundsPlaylist.Name": "Liste de lecture",
 	"midi-qol.WeaponUseSound.Name": " Utilisation des armes",
@@ -203,7 +202,7 @@
 		"alwaysIgnoreDefeated": "Toujours - Ignorer les vaincus",
 		"wallsBlock": "Blocage des murs",
 		"wallsBlockIgnoreDefeated": "Blocage des murs - Ignorer vaincu",
-		"dfqol": "Utiliser DF QOL"
+		"dftemplates": "Utiliser \"DF Template Enhancements\""
 	},
 	"midi-qol.autoCheckSavesOptions": {
 		"none": "Désactivé",
@@ -228,7 +227,8 @@
 		"none": "Non",
 		"noCard": "Non + carte de dégâts",
 		"yes": "Oui",
-		"yesCard": "Oui + carte de dégâts"
+		"yesCard": "Oui + carte de dégâts",
+		"yesCardNPC": "Oui(PNJ) Non(PJ) + carte de dégâts"
 	},
 	"midi-qol.removeButtonsOptions": {
 		"off": "Désactivé",
@@ -292,27 +292,6 @@
 		"ifSave": "Si une sauvegarde est présente",
 		"activation": "Condition d'activation"
 	},
-	"midi-qol.ReactionAlreadyUsed": "Vous avez déjà utilisé votre réaction ce tour-ci",
-	"midi-qol.GMDoReactionsOptions": {
-		"all": "Activé",
-		"none": "désactivé"
-	},
-	"midi-qol.DoReactionsOptions": {
-		"all": "Activé",
-		"none": "désactivé"
-	},
-	"midi-qol.ShowReactionAttackRoll.Name": "Afficher le jet d'attaque",
-	"midi-qol.ShowReactionAttackRollOptions": {
-		"none": "Attaques touchées",
-		"d20": "jet de d20 uniquement",
-		"all": "Jet d'attaque total"
-	},
-	"midi-qol.Reactions": "Reactions - Only if checking hits",
-	"midi-qol.DoReactions.Name": "Vérifier les réactions des JOUEURS",
-	"midi-qol.DoReactions.Hint": "Donner à un acteur attaqué la possibilité d'utiliser une réaction avant de juger le jet.",
-	"midi-qol.GMDoReactions.Name": "Vérifier les réactions des PNJ/MJ",
-	"midi-qol.ReactionTimeout.Name": "Délai de vérification de la réaction",
-	"midi-qol.ReactionTimeout.Hint": "Combien de temps faut-il attendre avant de supposer qu'aucune réaction n'a eu lieu",
 	"midi-qol.potion": "Potion",
 	"midi-qol.HideRollDetails.Name": "Détails des jets du MJ",
 	"midi-qol.HideRollDetails.Hint": "Choisissez la part des jets du MJ à cacher ou à montrer aux joueurs.",
@@ -335,6 +314,7 @@
 	"midi-qol.fullDamageSaveProp": "Full Dam Save",
 	"midi-qol.defaultDamageType": "Aucun",
 	"midi-qol.halfDamageSaveProp": "Half Dam Save",
+	"midi-qol.rollOtherProp": "Autre Jets aussi",
 	"midi-qol.otherCritProp": "Crit Autre jet",
 	"midi-qol.playerControlsInvisibleTokens.Name": "Les joueurs contrôlent des token cachés qui leur appartiennent",
 	"midi-qol.playerControlsInvisibleTokens.Hint": "Expérimental - pourrait fonctionner",
@@ -344,6 +324,7 @@
 	"midi-qol.AllowUseMacro.Hint": "Si activée, ajoute un champ pourqu'une macro soit lancée lors de l'utilisation de l'objet. Voir le Readme pour les détails",
 	"midi-qol.onUseMacroLabel": "Macro à l'utilisation",
 	"midi-qol.onUseMacroOptions": {
+		"preItemRoll": "Utiliser la macro avant le jet (*)",
 		"templatePlaced": "Appelé uniquement lorsqu'un modèle est placé",
 		"preambleComplete": "Après la fin du ciblage",
 		"preAttackRoll": "Avant le jet d'attaque",
@@ -375,19 +356,21 @@
 	"midi-qol.spell-damage": "Dégâts des sorts",
 	"midi-qol.RemoveButtons.Name": "Suppression des boutons de la carte du chat après le jet",
 	"midi-qol.ActiveConcentrationSpell.Title": "Sort de concentration actif",
-	"midi-qol.ActiveConcentrationSpell.ContentNamed": "<p>Vous êtes déjà en train de vous concentrer. Terminer la concentration et continuer ?</p>",
-	"midi-qol.ActiveConcentrationSpell.ContentGeneric": "<p>Vous êtes déjà en train de vous concentrer. Terminer la concentration et continuer ?</p>",
+	"midi-qol.ActiveConcentrationSpell.ContentNamed": "<p>Vous êtes déjà en train de vous concentrer sur <em>@NAME@</em>. Terminer la concentration et continuer ?<p>",
+	"midi-qol.ActiveConcentrationSpell.ContentGeneric": "<p>Vous êtes déjà en train de vous concentrer. Terminer la concentration et continuer ?<p>",
 	"midi-qol.ConcentrationAutomation.Name": "Permettre l'automatisation de la concentration",
 	"midi-qol.ConcentrationAutomation.Hint": "S'il est activé, il gérera la gestion de la concentration via midi-qol, il faut que les sauvegardes automatiques soient activées. Désactive la gestion de la concentration par CUB",
 	"midi-qol.SingleConcentrationRoll.Name": "Jets de concentration unique",
 	"midi-qol.SingleConcentrationRoll.Hint": "Si elle est activée et que l'attaque inflige des dégâts normaux + une sauvegarde + des dégâts autres/versatiles, il suffit de lancer un seul test de concentration pour les dégâts combinés.",
 	"midi-qol.GMSettings": "MJ",
 	"midi-qol.PlayerSettings": "Joueur",
+	"midi-qol.SoundSettings.Tab": "Sons",
 	"midi-qol.Workflow": " Flux",
 	"midi-qol.Misc": "Divers",
 	"midi-qol.Targeting": "Cibler",
 	"midi-qol.Special": "Spéciaux",
 	"midi-qol.Hits": "Attaques touchées",
+	"midi-qol.Misses": "Misses",
 	"midi-qol.Saves": "Sauvegardes",
 	"midi-qol.Damage": "Dégâts",
 	"midi-qol.Concentrating": "Concentration",
@@ -464,6 +447,7 @@
 	"midi-qol.ExportCSV": "Exportation des statistiques des jets vers un fichier CSV",
 	"midi-qol.AutoCEEffectsOptions": {
 		"none": "Ne pas appliquer",
+		"itempri": "Appliquer les effets de l'objet, si absent appliquer celui de CE",
 		"cepri": "Appliquer CE, si absent appliquer les effets de l'objet.",
 		"both": "Appliquer les effets de l'objet et de CE."
 	},
@@ -490,6 +474,7 @@
 	"midi-qol.nonAdamantinePhysical": "Non-Adamantine Physical",
 	"midi-qol.EffectActivation": "Activation Condition true required for effect activation",
 	"midi-qol.HPUpdated": "PV Mis à jour",
+	"midi-qol.HPNPCUpdated": "HP des PNJ mis à jour",
 	"midi-qol.HPNotUpdated": "PV non mis à jour",
 	"midi-qol.reactionDamaged": "Endommagé",
 	"midi-qol.reactionManual": "Manuel",
@@ -507,6 +492,7 @@
 	"midi-qol.ItemMacroText": "ItemMacro",
 	"midi-qol.LateTargeting.Name": "Expérimental : Autoriser le ciblage après le jet",
 	"midi-qol.LateTargeting.Hint": "Lors d'un jet avec l'attaque automatique activé, les objets qui ne sont pas AoE, à distance ou autociblés se mettront en pause et attendront que les cibles soient sélectionnées. Désactiver le mode de ciblage dans le HUD des contrôles.",
+	"midi-qol.LateTargeting.Blurb": "Choisissez  {targetCount} cibles",
 	"midi-qol.AddDead.Name": "Quand PV = 0 : PNJ ajouter Vaincu, PJ ajouter Inconscient de \"Convenient Effect\"",
 	"midi-qol.Wounded": "Blessé",
 	"midi-qol.AddWounded.Name": "Marquer Blessé quand les PV tombe en dessous de %.",
@@ -522,5 +508,78 @@
 	"midi-qol.KeysVersatile.Hint": "Lancer les dégâts Verstatile",
 	"midi-qol.KeysOther.Hint": "Lancer une autre formule comme dégâts",
 	"midi-qol.FixStickyKeys.Name": "Correction du blocage adv/ctl/shift",
-	"midi-qol.FixStickyKeys.Hint": "Si cette option est activée, midi tentera de résoudre le problème du blocage de l'adv/ctl/shift sur 'on'."
+	"midi-qol.FixStickyKeys.Hint": "Si cette option est activée, midi tentera de résoudre le problème du blocage de l'adv/ctl/shift sur 'on'.",
+	"midi-qol.DisplaySaveAdvantage.Name": "Afficher si la sauvegarde a eu un Avantage/Désavantage",
+	"midi-qol.QuickSettings": "Paramètres rapides",
+	"midi-qol.QuickSettingsBlurb": {
+		"1": "Les réglages rapides vous permettent de définir une combinaison de paramètres en une seule fois.",
+		"2": "Lorsque vous appuyez sur l'un des boutons ci-dessous, les modifications sont immédiatement apportées à vos paramètres.",
+		"3": "Une liste des modifications est affichée une fois l'application terminée.",
+		"4": "Les suggestions d'amélioration sont les bienvenues"
+	},
+	"midi-qol.Reaction.Title": "Traitement des réactions",
+	"midi-qol.GMDoReactionsOptions": {
+		"all": "Activé",
+		"allMI": "Activé + Magic Items",
+		"none": "désactivé"
+	},
+	"midi-qol.DoReactionsOptions": {
+		"all": "Activé",
+		"allMI": "Activé + Magic Items",
+		"none": "désactivé"
+	},
+	"midi-qol.ShowReactionAttackRoll.Name": "Afficher le jet d'attaque",
+	"midi-qol.ShowReactionAttackRollOptions": {
+		"none": "Attaques touchées",
+		"d20": "jet de d20 uniquement",
+		"all": "Jet d'attaque total"
+	},
+	"midi-qol.Reactions": "Reactions - Only if checking hits",
+	"midi-qol.DoReactions.Name": "Vérifier les réactions des JOUEURS",
+	"midi-qol.DoReactions.Hint": "Donner à un acteur attaqué la possibilité d'utiliser une réaction avant de juger le jet.",
+	"midi-qol.GMDoReactions.Name": "Vérifier les réactions des PNJ/MJ",
+	"midi-qol.ReactionTimeout.Name": "Délai de vérification de la réaction",
+	"midi-qol.ReactionTimeout.Hint": "Combien de temps faut-il attendre avant de supposer qu'aucune réaction n'a eu lieu",
+	"midi-qol.NoOptionalRules.Name": "Pas de règles optionnelles",
+	"midi-qol.NoOptionalRules.Hint": "Désactiver les règles optionnelles pour ce jet",
+	"midi-qol.RecordAOO.Name": "Enregistrer les attaques d'opportunité",
+	"midi-qol.RecordAOO.Hint": "Lorsqu'un acteur effectue une attaque et que ce n'est pas son tour dans le traceur de combat - marquez sa réaction utilisée.",
+	"midi-qol.RecordAOOOptions": {
+		"none": "Ne pas vérifier",
+		"character": "PJ uniquement",
+		"all": "Tous les acteurs"
+	},
+	"midi-qol.EnforceReactions.Name": "Utilisation d'une Réaction",
+	"midi-qol.EnforceReactions.Hint": "Lors de l'utilisation d'une Réaction ou d'une Action Bonus, vérifie et demande si une de ces actions a déjà été utilisée ce tour-ci",
+	"midi-qol.EnforceBonusActions.Name": "Utilisation d'une Action Bonus",
+	"midi-qol.EnforceBonusActions.Hint": "Demander, lors de l'utilisation d'une capacité d'Action Bonus, si une Action Bonus a déjà été utilisée ce tour-ci.",
+	"midi-qol.EnforceReactionsOptions": {
+		"none": "Ne pas vérifier",
+		"displayOnly": "Affichez l'icône d'état",
+		"character": "PJ : Prévenir si déjà utilisée",
+		"all": "Tous les acteurs : Prévenir si déjà utilisée"
+	},
+	"midi-qol.EnforceReactions.Title": "Réaction utilisée",
+	"midi-qol.EnforceReactions.Content": "Vous avez utilisé votre réaction ce tour-ci. Voulez-vous quand même continuer ?",
+	"midi-qol.DisplayHitResultNumeric.Name": "Affichage de l'ampleur d'une attaque réussie ou manquée (par cible)",
+	"midi-qol.EnforceBonusActions.Title": "Action Bonus utilisée",
+	"midi-qol.EnforceBonusActions.Content": "Vous avez utilisé votre action bonus ce tour-ci. Voulez-vous quand même continuer ?",
+	"midi-qol.MidiProperties": "Propriétés des objets Midi-qol",
+	"midi-qol.SoundSettings.Name": "Configurer les sons personnalisés Midi",
+	"midi-qol.SoundSettings.Hint": "Configuration des sons personnalisés midi-qol pour les jets",
+	"midi-qol.SoundSettings.Label": "Configurer les sons personnalisés Midi",
+	"midi-qol.SoundSettingsBlurb": {
+		"1": "Pour commencer...",
+		"2": "Choisissez \"Create Sample playlist\", ce qui créera une liste de lecture \"Midi Item Sounds\" avec quelques sons.",
+		"3": "Choisissez \"Basic Settings\" et bricolez",
+		"4": "Les autres paramètres de création ajoutent plus de détails/complexité"
+	},
+	"midi-qol.AddRow": "Ajouter une rangée",
+	"midi-qol.CheckFlanking.Name": "Vérifier la tenaille",
+	"midi-qol.CheckFlanking.Hint": "Vérifiez si vous et vos alliés prenez en tenaille l'adversaire.",
+	"midi-qol.RollAlternate.Name": "Déplacer la formule du jet vers l'infobulle",
+	"midi-qol.RollAlternate.Hint": "Utiliser l'affichage alternatif du jet sur la carte fusionnée en déplaçant la formule du jet vers l'infobulle",
+	"midi-qol.OptionalCritRule.Name": "(Règle maison) Marge de Critique",
+	"midi-qol.OptionalCritRule.Hint": " Les jets d'attaques au dessus de CA + X sont critique (-1 désactive) "
+	
 }
