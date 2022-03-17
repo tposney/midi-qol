@@ -181,6 +181,12 @@ function configureDamage(wrapped) {
   if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
   if (criticalDamage === "baseDamage") this.options.criticalMultiplier = 1;
   this.terms = this.terms.filter(term => !term.options.critOnly)
+  // Add extra critical damage term
+  if (this.isCritical && this.options.criticalBonusDamage && !(["maxCrit", "maxAll", "baseDamage", "doubleDice"].includes(criticalDamage))) {
+    const extra = new Roll(this.options.criticalBonusDamage, this.data);
+    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
+    this.terms.push(...extra.terms);
+  }
   for (let [i, term] of this.terms.entries()) {
     // Multiply dice terms
     if (term instanceof DiceTerm) {
@@ -226,11 +232,24 @@ function configureDamage(wrapped) {
     }
   }
 
-  if (flatBonus > 0) {
-    this.terms.push(new CONFIG.Dice.termTypes.OperatorTerm({ operator: "+", options: { critOnly: true } }));
-    this.terms.push(new CONFIG.Dice.termTypes.NumericTerm({ number: flatBonus, options: { critOnly: true } }));
+  // Add powerful critical bonus
+  if (this.options.powerfulCritical && (flatBonus > 0)) {
+    this.terms.push(new OperatorTerm({ operator: "+" }));
+    //@ts-ignore
+    this.terms.push(new NumericTerm({ number: flatBonus }, { flavor: game.i18n.localize("DND5E.PowerfulCritical") }));
   }
-  if (criticalDamage === "doubleDice") {
+  /*
+  "maxDamage": "Max Normal Damage",
+  "maxCrit": "Max Critical Dice",
+  "maxAll": "Max All Dice",
+  "doubleDice": "Double Rolled Damage",
+  "baseDamage": "No Bonus"
+*/
+
+  if (["doubleDice"].includes(criticalDamage)) {
+    const extra = new Roll(this.options.criticalBonusDamage, this.data);
+    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
+    this.terms.push(...extra.terms);
     let newTerms: RollTerm[] = [];
     for (let term of this.terms) {
       if (term instanceof DiceTerm) {
@@ -240,6 +259,18 @@ function configureDamage(wrapped) {
         newTerms.push(term);
     }
     this.terms = newTerms;
+  }
+  // Add extra critical damage term
+  if (this.isCritical && this.options.criticalBonusDamage && ["maxCrit", "maxAll", "baseDamage"].includes(criticalDamage)) {
+    const extra = new Roll(this.options.criticalBonusDamage, this.data);
+    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
+    if (["maxCrit", "maxAll"].includes(criticalDamage)) {
+      for (let term of extra.terms) {
+        //@ts-ignore
+        term.modifiers.push(`min${term.faces}`);
+        this.terms.push(term);
+      }
+    } else this.terms.push(...extra.terms);
   }
   // Re-compile the underlying formula
   this._formula = this.constructor.getFormula(this.terms);
@@ -583,8 +614,8 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
 
 async function zeroHPExpiry(actor, update, options, user) {
   const hpUpdate = getProperty(update, "data.attributes.hp.value");
-if (hpUpdate !== 0) return;
-const expiredEffects: string[] = [];
+  if (hpUpdate !== 0) return;
+  const expiredEffects: string[] = [];
   for (let effect of actor.effects) {
     if (effect.data.flags?.dae?.specialDuration?.includes("zeroHP")) expiredEffects.push(effect.data._id)
   }
@@ -646,7 +677,7 @@ async function _preUpdateActor(wrapped, update, options, user) {
   try {
     await checkWounded(this, update, options, user);
     await zeroHPExpiry(this, update, options, user);
-  } catch (err) { 
+  } catch (err) {
     console.warn("midi-qol | preUpdateActor failed ", err)
   }
   finally {

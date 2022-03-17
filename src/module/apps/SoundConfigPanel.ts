@@ -97,7 +97,7 @@ export class SoundConfigPanel extends FormApplication {
   async _updateObject(event, formData) {
     formData = expandObject(formData);
     const settings = {};
-    for (let i = 0; i < formData.category.length; i++) {
+    for (let i = 0; i < formData.category.length ?? 0; i++) {
       const category = formData.category[i];
       const subtype = formData.subtype[i];
       const action = formData.action[i];

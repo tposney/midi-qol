@@ -53,7 +53,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
 
   // workflow.processAttackEventOptions();
-  workflow.checkAttackAdvantage();
+  await workflow.checkAttackAdvantage();
 
   if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
   if (await asyncHooksCall("midi-qol.preAttackRoll", workflow) === false || await asyncHooksCall(`midi-qol.preAttackRoll.${this.uuid}`, workflow) === false) {
@@ -74,7 +74,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     }, { oveerwrite: true, insertKeys: true, insertValues: true }));
     return workflow.activeDefence(this, result);
   }
-  let advantage = options.advantage || workflow?.advantage || workflow?.rollOptions.advantage;
+  let advantage = options.advantage || workflow?.advantage || workflow?.rollOptions.advantage || workflow.flankingAdvantage;
   let disadvantage = options.disadvantage || workflow?.disadvantage || workflow.rollOptions.disadvantage;
   if (advantage && disadvantage) {
     advantage = false;
@@ -223,7 +223,7 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
   if (powerLevel) workflow.rollOptions.spellLevel = powerLevel;
-  if (versatile !== null) workflow.rollOptions.versatile = versatile;
+  if (workflow.isVersatile) workflow.rollOptions.versatile = true;
   if (debugEnabled > 0) warn("rolling damage  ", this.name, this);
 
   if (await asyncHooksCall("midi-qol.preDamageRoll", workflow) === false || await asyncHooksCall(`midi-qol.preDamageRoll.${this.uuid}`, workflow) === false) {
@@ -234,13 +234,12 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   const wrappedRollStart = Date.now();
   workflow.damageRollCount += 1;
   let result: Roll;
-  workflow.isVersatile = workflow.rollOptions.versatile || versatile;
   if (!workflow.rollOptions.other) {
     result = await wrapped(mergeObject(options, {
       critical: workflow.rollOptions.critical || workflow.isCritical,
       spellLevel: workflow.rollOptions.spellLevel,
       powerLevel: workflow.rollOptions.spellLevel,
-      versatile: workflow.rollOptions.versatile || versatile,
+      versatile: workflow.rollOptions.versatile,
       fastForward: workflow.rollOptions.fastForwardDamage,
       event: {},
       //@ts-ignore
@@ -260,10 +259,11 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   }
   const maxflags = getProperty(workflow.actor.data.flags, "midi-qol.max") ?? {};
   if ((maxflags.damage && (maxflags.damage.all || maxflags.damage[this.data.data.actionType])) ?? false)
-    result = await result.reroll({ maximize: true });
+    result = await new Roll(result.formula).roll({ maximize: true });
+
   const minflags = getProperty(this.data.flags, "midi-qol.min") ?? {};
   if ((minflags.damage && (minflags.damage.all || minflags.damage[this.data.data.actionType])) ?? false)
-    result = await result.reroll({ minimize: true })
+    result = await new Roll(result.formula).roll({ minimize: true });
   // need to do this nonsense since the returned roll _formula has a trailing + for ammo
   result = Roll.fromJSON(JSON.stringify(result.toJSON()))
   workflow.damageRoll = result;
@@ -549,7 +549,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
   */
   workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
-  workflow.rollOptions.isVersatile = workflow.rollOptions.versatile || versatile;
+  workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile || workflow.isVersatile;
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = showFullCard;
   workflow.noAutoAttack = showFullCard;
@@ -694,7 +694,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
 
   workflow.processAttackEventOptions();
-  workflow.checkAttackAdvantage();
+  await workflow.checkAttackAdvantage();
   const needAttckButton = !workflow.someEventKeySet() && !getAutoRollAttack();
   workflow.showCard = true;
   if (workflow.showCard) {

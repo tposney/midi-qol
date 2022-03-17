@@ -95,6 +95,23 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  0.9.34
+  * Some changes to flanking. 
+    - Only applies to mwak/msak.
+    - Flanking is only applied if you have a token selected on screen when making the attack The attack will proceed but flanking will not be checked.
+    - if convenient effects is enabled midi adds convenient effects flanking indicator. The indicator is updated when you target a single enemy (and have a token selected) or roll an attack. 
+    - if you target an enemy and then move your token the flanking indicator might be wrong - it will be corrected when you roll or re target - this is an efficiency consideration so that flanking is not computed too often.
+    - Allies with the convenient effects effect "Incapacitated" are ignored for flanking as well as those with 0 hp.
+    - Flanking does not work with hex grids.
+  * Fix for flanking check enabled and some edge cases throwing an error if no target selected.
+  * **Breaking** Midi critical damage settings now always include per item critical extra dice.
+  * Removed extra call to Hooks.call("preDamageRoll) in workflow.ts. Thanks @Elwin#1410
+  * Fix for max damage causing critical rolls to double the number of dice it should.
+  * When using a reaction from a magic item provided spell/feature the user is prompted with the use charges dialog.
+
+  0.9.33
+  * Fix for proliferating critical hits if optional rules disabled. Live and learn, turns out (false > -1) is true.
+
   0.9.32
   * (Hopefully) better fix for item rolls being blocked if custom sounds turned off. (bug introduced in 0.9.30)
   * New optional rule, "Critical Roll Margin". You can specify a numeric margin such that if the attack roll >= target AC + margin the roll is a critical hit, otherwise not (even if the roll is a 20). Apparently this variant is in use in some countries. The rule is only applied if there is a single target, since midi can only track one critical status for the roll. Setting the margin to -1 (the default) disables the check. Works with better rolls, but the dice total will not be highlighted in green.

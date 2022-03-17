@@ -9,6 +9,7 @@ import { itemJSONData, overTimeJSONData } from "./Hooks.js";
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { Options } from "./patching.js";
+import { EndOfLineState } from "typescript";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -207,8 +208,13 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
       || (item?.data.data.attackBonus > 0 && !configSettings.requireMagical)
       || item.data.data.properties["mgc"]);
     const silverDamage = item?.data.data.properties?.sil;
-    const adamantineDamage = item?.data.data.properties?.ada
-    for (let { type, mult } of [{ type: "di", mult: 0 }, { type: "dr", mult: 0.5 }, { type: "dv", mult: 2 }]) {
+    const adamantineDamage = item?.data.data.properties?.ada;
+    let traitList = [{ type: "di", mult: 0 }, { type: "dr", mult: 0.5 }, { type: "dv", mult: 2 }];
+    // for sw5e use sdi/sdr/sdv instead of di/dr/dv
+    if (actor.type === "starship" && actor.data.data.atrributes.hp.tenp > 0) {
+      traitList = [{ type: "sdi", mult: 0 }, { type: "sdr", mult: 0.5 }, { type: "sdv", mult: 2 }];
+    }
+    for (let { type, mult } of traitList ) {
       let trait = actor.data.data.traits[type].value;
       if (configSettings.damageImmunities === "immunityPhysical") {
         if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
@@ -266,7 +272,13 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
       //@ts-ignore
       let result = await doReactions(t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } });
     }
-    if (getProperty(a.data, "flags.midi-qol.DR.all") !== undefined)
+    if (game.system.id === "sw5e" && t.actor.type === "starship") {
+      // TODO: maybe expand this to work with characters as well?
+      // Starship damage resistance applies only to attacks
+      if (item && ["mwak", "rwak"].includes(item.data.data.actionType)) {
+        DRAll = getProperty(t, "actor.data.data.attributes.equip.armor.dr") ?? 0;;
+      }
+    } else if (getProperty(a.data, "flags.midi-qol.DR.all") !== undefined)
       DRAll = (new Roll((getProperty(a.data, "flags.midi-qol.DR.all") || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
     if (item?.hasAttack && getProperty(a.data, `flags.midi-qol.DR.${item.data.data.actionType}`)) {
       DRAll += (new Roll((getProperty(a.data, `flags.midi-qol.DR.${item.data.data.actionType}`) || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
@@ -294,7 +306,6 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
       } else if (checkRule("challengeModeArmor") && attackRoll) {
         AR = ac.AR;
       } else AR = 0;
-
       let maxDRIndex = -1;
 
       for (let [index, damageDetailItem] of damageDetail.entries()) {
@@ -357,6 +368,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
         }
         damageDetailItem.DR = DRType;
       }
+
       if (DRAll > 0 && DRAll < maxDR && checkRule("maxDRValue")) DRAll = 0;
       let DRAllRemaining = Math.max(DRAll, 0);
       // Now apportion DRAll to each damage type if required
@@ -386,7 +398,9 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
         }
 
         // TODO this should end up getting removed when the prepare data is done. Currently depends on 1Reaction expiry.
-        if (getProperty(t.actor, "data.flags.midi-qol.uncanny-dodge") && mult >= 0) {
+        if (getProperty(t.actor, "data.flags.midi-qol.uncanny-dodge") && mult >= 0 
+              //@ts-ignore DND5E
+              && Object.keys(CONFIG.DND5E.damageTypes).includes(type)) {
           mult = mult / 2;
         }
         if (!type) type = MQdefaultDamageType;
@@ -407,7 +421,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
       damageDetailResolved = damageDetailResolved.concat(damageDetail);
       if (debugEnabled > 0) console.warn("midi-qol | Damage Details plus resistance/save multiplier for ", t.actor.data.name, duplicate(damageDetail))
     }
-    if (DRAll < 0) {
+    if (DRAll < 0) { // negative DR is extra damage
       damageDetailResolved = damageDetailResolved.concat({ damage: -DRAll, type: "DR", DR: 0 });
       appliedDamage -= DRAll;
       totalDamage -= DRAll;
@@ -862,10 +876,10 @@ export async function processOverTime(wrapped, data, options, user) {
                 setProperty(itemData, "flags.midi-qol.overTimeSkillRoll", saveAbility)
               }
 
-              if (damageBeforeSave || !damageRoll || saveDamage === "fulldamage") {
+              if (damageBeforeSave || saveDamage === "fulldamage") {
                 //@ts-ignore
                 setProperty(itemData.flags, "midiProperties.fulldam", true);
-              } else if (saveDamage === "halfdamage") {
+              } else if (saveDamage === "halfdamage" || !damageRoll ) {
                 //@ts-ignore
                 setProperty(itemData.flags, "midiProperties.halfdam", true);
               } else {
@@ -978,7 +992,9 @@ export async function completeItemRoll(item, options: any = { checkGMstatus: fal
         resolve(workflow);
       });
 
-      if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process  
+      if (item.magicItem) {
+        item.magicItem.magicItemActor.roll(item.magicItem.id, item.id)
+      } else if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process  
         globalThis.BetterRolls.rollItem(theItem, { itemData: item.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: options.saveDC }).toMessage()
       } else {
         item.roll(options);
@@ -1036,6 +1052,73 @@ export function getUnitDist(x1: number, y1: number, z1: number, token2): number 
     ) / unitsToPixel;
   return d;
 }
+
+// not working properly yet
+export function getSurroundingHexes(token: Token) {
+  let start = canvas?.grid?.grid?.getGridPositionFromPixels(token.center.x, token.center.y);
+  // console.error("starting position is ", start);
+  if (!start) return;
+
+  const surrounds: any[][] = new Array(11);
+  for (let r = 0; r < 11; r++) {
+    surrounds[r] = new Array(11);
+  }
+  for (let c = -5; c <= 5; c++) 
+    for (let r = -5; r <=5; r++) {
+      const row = start[0] + r;
+      const col = start[1] + c
+      let [x1,y1] = canvas?.grid?.grid?.getPixelsFromGridPosition(row, col) ?? [0,0];
+      let [x, y] = canvas?.grid?.getCenter(x1, y1) ?? [0, 0];
+      if (!x && !y) continue;
+        const distance = distancePointToken({x, y}, token);
+        surrounds[r+5][c+5] = ({r:row,c:col,d: distance})
+  }
+//  for (let r = -5; r <=5; r++)
+//  console.error("Surrounds are ", ...surrounds[r+5]);
+  const filtered = surrounds.map(row => row.filter(ent => {
+    const entDist = ent.d / (canvas?.dimensions?.distance ?? 5);
+    const tokenWidth = token.data.width / 2;
+    // console.error(ent.r, ent.c, ent.d, entDist, tokenWidth)
+    if (token.data.width % 2)
+      return entDist >= tokenWidth  && entDist <= tokenWidth + 0.5
+    else return entDist >= tokenWidth  && entDist < tokenWidth + 0.5
+  }));
+  const hlt = canvas?.grid?.highlightLayers["mylayer"] || canvas?.grid?.addHighlightLayer("mylayer");
+  hlt?.clear();
+
+  for (let a of filtered) if(a.length !== 0) { 
+    a.forEach(item => {
+      let [x, y] = canvas?.grid?.grid?.getPixelsFromGridPosition(item.r, item.c) ?? [0,0];
+      // console.error("highlighting ", x, y, item.r, item.c)
+      //@ts-ignore
+      canvas?.grid?.highlightPosition("mylayer", {x, y, color: game?.user?.color});
+    })
+    // console.error(...a);
+  }
+}
+
+export function distancePointToken({ x, y, elevation = 0 }, token, wallblocking = false) {
+  if (!canvas || !canvas.scene) return undefined;
+  let coverACBonus = 0;
+  let tokenTileACBonus = 0;
+  let coverData;
+  if (!canvas.grid || !canvas.dimensions) undefined;
+  if (!token || x == undefined || y === undefined) return undefined;
+  if (!canvas || !canvas.grid || !canvas.dimensions) return undefined;
+  const t2StartX = -Math.max(0, token.data.width - 1);
+  const t2StartY = -Math.max(0, token.data.heidght - 1);
+  var d, r, segments: { ray: Ray }[] = [], rdistance, distance;
+  const [row, col] = canvas.grid.grid?.getGridPositionFromPixels(x,y) || [0,0];
+  const [xbase,ybase] = canvas.grid.grid?.getPixelsFromGridPosition(row, col) || [0,0];
+  const [xc,yc] = canvas.grid.grid?.getCenter(xbase, ybase) || [0,0];
+  // const snappedOrigin = canvas?.grid?.getSnappedPosition(x,y)
+  const origin = new PIXI.Point(x, y);
+  const tokenCenter = token.center;
+  const ray: Ray = new Ray(origin, tokenCenter)
+  distance = canvas?.grid?.grid?.measureDistances([{ray}], { gridSpaces: false })[0];
+  distance = Math.max(0, distance);
+  return distance;
+  }
 
 export function getDistanceSimple(t1: Token, t2: Token, includeCover, wallBlocking = false) {
   return getDistance(t1, t2, includeCover, wallBlocking).distance;
@@ -2492,3 +2575,107 @@ export async function midiRenderRoll(roll: Roll | undefined) {
   if (!configSettings.rollAlternate) return roll.render();
   else return roll.render({template: "modules/midi-qol/templates/rollAlternate.html"});
 }
+
+export function _checkFlankingAdvantage(token, target): boolean{
+  if (!checkRule("checkFlanking")) return false;
+
+  if (!token) return false;
+  // For the target see how many square between this token and any friendly targets
+  // Find all tokens hostile to the target
+  if (!target) return false;
+  // console.error("Distance is ", getDistance(token, target, false, true));
+  if (getDistance(token, target, false, true).distance > 5) return false;
+  let hasFlankingAdvantage = false;
+  const targetDocument = target.document ?? target;
+  // an enemy's enemies are my friends.
+  const allies: Token[] = findNearby(-1, target, 5);
+
+  if (allies.length === 1) return false; // length 1 means no other allies nearby
+
+  if (canvas?.grid?.grid instanceof SquareGrid) {
+    const tl = { x: target.x, y: target.y };
+    const tr = { x: target.x + target.width, y: target.y };
+    const bl = { x: target.x, y: target.y + target.height };
+    const br = { x: target.x + target.width, y: target.y + target.height };
+    const top: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, tr.x, tr.y];
+    const bottom: [x0: number, y0: number, x1: number, y1: number] = [bl.x, bl.y, br.x, br.y];
+    const left: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, bl.x, bl.y];
+    const right: [x0: number, y0: number, x1: number, y1: number] = [tr.x, tr.y, br.x, br.y];
+
+    // Loop through each square covered by attacker and ally
+    const tokenStartX = token.data.width >= 1 ? 0.5 : token.data.width / 2;
+    const tokenStartY = token.data.height >= 1 ? 0.5 : token.data.height / 2;
+    let gridW = canvas?.grid?.w ?? 100;
+    let gridH = canvas?.grid?.h ?? 100;
+
+    for (let ally of allies) {
+      if (ally.document.uuid === token.document.uuid) continue;
+      const actor: any = ally.actor;
+      if (actor?.data.data.attrbutes?.hp?.value <= 0) continue;
+      if (installedModules.get("dfreds-convenient-effects")) {
+        //@ts-ignore
+        if (actor?.effects.some(ef=>ef.data.label === game.dfreds.effects._incapacitated.name)) continue;
+      }
+
+      const allyStartX = ally.data.width >= 1 ? 0.5 : ally.data.width / 2;
+      const allyStartY = ally.data.height >= 1 ? 0.5 : ally.data.height / 2;
+      var x, x1, y, y1, d, r;
+      for (x = tokenStartX; x < token.data.width; x++) {
+        for (y = tokenStartY; y < token.data.height; y++) {
+          for (x1 = allyStartX; x1 < ally.data.width; x1++) {
+            for (y1 = allyStartY; y1 < ally.data.height; y1++) {
+              let tx = token.x + x * gridW;
+              let ty = token.y + y * gridH;
+              let ax = ally.x + x1 * gridW;
+              let ay = ally.y + y1 * gridH;
+              const rayToCheck = new Ray({ x: tx, y: ty }, { x: ax, y: ay });
+              // console.error("Checking ", tx, ty, ax, ay, token.center, ally.center, target.center)
+              const flankedTop = rayToCheck.intersectSegment(top) && rayToCheck.intersectSegment(bottom);
+              const flankedLeft = rayToCheck.intersectSegment(left) && rayToCheck.intersectSegment(right);
+              if (flankedLeft || flankedTop) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+    }
+  } else if (canvas?.grid?.grid instanceof HexagonalGrid) {
+    let grid: HexagonalGrid = canvas?.grid?.grid;
+    const tokenRowCol = grid.getGridPositionFromPixels(token.center.x, token.center.y);
+    const targetRowCol = grid.getGridPositionFromPixels(target.center.x, target.center.y);
+    const allAdjacent: [number,number][] = [];
+    for (let ally of allies) {
+      let allyRowCol = grid?.getGridPositionFromPixels(ally.center.x, ally.center.y);
+    }
+    return false;
+  }
+  return false;
+}
+
+export async function _checkflanking(user: User, target: Token, targeted: boolean): Promise<boolean> {
+  if (!checkRule("checkFlanking")) return false;
+  if (user !== game.user) return false;
+  if (!installedModules.get("dfreds-convenient-effects")) return false;
+  let needsFlanking = false;
+  let token = canvas?.tokens?.controlled[0];
+  if (!token) {
+    console.error("No token selected - no flanking check");
+    return false;
+  }
+  if (user.targets.size === 1 && canvas?.tokens?.controlled.length === 1) {
+    let token = canvas.tokens.controlled[0];
+    needsFlanking = _checkFlankingAdvantage(token, target);
+  }
+  //@ts-ignore
+  const hasFlanking = await game.dfreds.effectInterface?.hasEffectApplied("Flanking", token.actor.uuid)
+  if (needsFlanking && !hasFlanking) {
+    //@ts-ignore
+    await game.dfreds.effectInterface?.addEffect({ effectName: "Flanking", uuid: token.actor.uuid });
+  } else if (!needsFlanking && hasFlanking) {
+    //@ts-ignore
+    await game.dfreds.effectInterface?.removeEffect({ effectName: "Flanking", uuid: token.actor.uuid });
+  }
+  return needsFlanking;
+}
+

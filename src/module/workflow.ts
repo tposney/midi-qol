@@ -8,11 +8,11 @@ import { selectTargets, shouldRollOtherDamage, showItemCard, templateTokens } fr
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, _checkFlankingAdvantage, _checkflanking } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
-import { tokenToString } from "typescript";
+import { getDefaultFormatCodeSettings, tokenToString } from "typescript";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -118,7 +118,7 @@ export class Workflow {
   damageCardData: ChatMessage | undefined;
   defaultDamageType: string | undefined;
   noAutoDamage: boolean; // override damage roll for damage rolls
-  versatile: boolean;
+  isVersatile: boolean;
 
   saves: Set<Token>;
   superSavers: Set<Token>;
@@ -557,7 +557,6 @@ export class Workflow {
           expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"])
           return this.next(WORKFLOWSTATES.ROLLFINISHED);
         }
-        await asyncHooksCallAll("midi-qol.preDamageRoll", this)
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preDamageRoll"), "OnUse", "preDamageRoll");
         }
@@ -627,7 +626,7 @@ export class Workflow {
         }
 
         this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
-        // TODO Need to do DSN stuff
+        // TODO Need to do DSN stuff?
         if (this.otherDamageRoll) {
           this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
         }
@@ -854,8 +853,8 @@ export class Workflow {
     }
   }
 
-
-  public checkAttackAdvantage() {
+  public async checkAttackAdvantage() {
+    await this.checkFlankingAdvantage();
     const midiFlags = this.actor?.data.flags["midi-qol"];
     const advantage = midiFlags?.advantage;
     const disadvantage = midiFlags?.disadvantage;
@@ -896,7 +895,6 @@ export class Workflow {
     }
     this.checkAbilityAdvantage();
     this.checkTargetAdvantage();
-    this.checkFlankingAdvantage();
   }
 
   public processDamageEventOptions() {
@@ -945,67 +943,26 @@ export class Workflow {
     this.disadvantage = this.disadvantage || getProperty(this.actor.data, `flags.midi-qol.disadvantage.attack.${ability}`);
   }
 
-  checkFlankingAdvantage() {
-    if (!checkRule("checkFlanking")) return;
-    const token = MQfromUuid(this.tokenUuid)?.object;
-    if (!token) return;
-    // For the target see how many square between this token and any friendly targets
-    // Find all tokens hostile to the target
+  async checkFlankingAdvantage(): Promise<boolean> {
+    this.flankingAdvantage = false;
+    if (!(["mwak", "msak", "mpak"].includes(this.item?.data.data.actionType))) return false;
+    const token = MQfromUuid(this.tokenUuid ?? "")?.object;
     const target: Token = this.targets.values().next().value;
-    // console.error("Distance is ", getDistance(token, target, false, true));
-    if (getDistance(token, target, false, true).distance > 5) return;
 
-    const targetDocument = target.document ?? target;
-    // an enemy's enemies are my friends.
-    const allies: Token[] = findNearby(-1, target, 5);
-
-    if (allies.length === 1) return; // length 1 means no other allies nearby
-
-    const tl = { x: target.x, y: target.y };
-    const tr = { x: target.x + target.width, y: target.y };
-    const bl = { x: target.x, y: target.y + target.height };
-    const br = { x: target.x + target.width, y: target.y + target.height };
-    const top: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, tr.x, tr.y];
-    const bottom: [x0: number, y0: number, x1: number, y1: number] = [bl.x, bl.y, br.x, br.y];
-    const left: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, bl.x, bl.y];
-    const right: [x0: number, y0: number, x1: number, y1: number] = [tr.x, tr.y, br.x, br.y];
-
-    // Loop through each square covered by attacker and ally
-    const tokenStartX = token.data.width >= 1 ? 0.5 : token.data.width / 2;
-    const tokenStartY = token.data.height >= 1 ? 0.5 : token.data.height / 2;
-    let gridW = canvas?.grid?.w ?? 100;
-    let gridH = canvas?.grid?.h ?? 100;
-
-    for (let ally of allies) {
-      if (ally.document.uuid === token.document.uuid) continue;
-      const actor: any = ally.actor;
-      if (actor?.data.data.attrbutes?.hp?.value <= 0) continue
-
-      const allyStartX = ally.data.width >= 1 ? 0.5 : ally.data.width / 2;
-      const allyStartY = ally.data.height >= 1 ? 0.5 : ally.data.height / 2;
-      var x, x1, y, y1, d, r;
-      for (x = tokenStartX; x < token.data.width; x++) {
-        for (y = tokenStartY; y < token.data.height; y++) {
-          for (x1 = allyStartX; x1 < ally.data.width; x1++) {
-            for (y1 = allyStartY; y1 < ally.data.height; y1++) {
-              let tx = token.x + x * gridW;
-              let ty = token.y + y * gridH;
-              let ax = ally.x + x1 * gridW;
-              let ay = ally.y + y1 * gridH;
-              const rayToCheck = new Ray({ x: tx, y: ty }, { x: ax, y: ay });
-              // console.error("Checking ", tx, ty, ax, ay, token.center, ally.center, target.center)
-              const flankedTop = rayToCheck.intersectSegment(top) && rayToCheck.intersectSegment(bottom);
-              const flankedLeft = rayToCheck.intersectSegment(left) && rayToCheck.intersectSegment(right);
-              if (flankedLeft || flankedTop) {
-                this.advantage = true;
-                console.log(`${token.name} has flanked ${target.name}`);
-                return;
-              }
-            }
-          }
-        }
-      }
+    this.flankingAdvantage = await _checkFlankingAdvantage(token, target, );
+    //@ts-ignore
+    const hasFlanking = await game.dfreds.effectInterface?.hasEffectApplied("Flanking", token.actor.uuid)
+    if (this.flankingAdvantage && !hasFlanking) {
+      //@ts-ignore
+      await game.dfreds.effectInterface?.addEffect({ effectName: "Flanking", uuid: token.actor.uuid });
+    } else if (!this.flankingAdvantage && hasFlanking) {
+      //@ts-ignore
+      await game.dfreds.effectInterface?.removeEffect({ effectName: "Flanking", uuid: token.actor.uuid });
     }
+    if (this.flankingAdvantage) {
+      console.log(`${token.name} has flanked ${target.name}`);
+    }
+    return this.flankingAdvantage;
   }
 
   checkTargetAdvantage() {
@@ -2027,9 +1984,9 @@ export class Workflow {
     if (rollType === "save")
       //@ts-ignore CONFIG.DND5E
       this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">${DCString} ${rollDC}</label> ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(allHitTargets.size > 1 ? "midi-qol.saving-throws" : "midi-qol.saving-throw")}:`;
-    else if (rollType === "check")
+    else if (rollType === "abil")
       //@ts-ignore CONFIG.DND5E
-      this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">${DCString} ${rollDC}</label> ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(AllHitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:`;
+      this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">${DCString} ${rollDC}</label> ${CONFIG.DND5E.abilities[rollAbility]} ${i18n(allHitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:`;
     else if (rollType === "skill") {
       //@ts-ignore CONFIG.DND5E
       this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">${DCString} ${rollDC}</label> ${CONFIG.DND5E.skills[rollAbility]}`; // ${i18n(this.hitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:
@@ -3074,4 +3031,3 @@ export class DummyWorkflow extends BetterRollsWorkflow {
     return await 0;
   }
 }
-
