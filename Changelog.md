@@ -1,3 +1,6 @@
+### 0.9.35
+* Fix for errors when rolling with check flanking enabled and convenient effects not active.
+
 ### 0.9.34
 * Some changes to flanking. 
   - Only applies to mwak/msak.

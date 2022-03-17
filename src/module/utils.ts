@@ -2593,10 +2593,12 @@ export function _checkFlankingAdvantage(token, target): boolean{
   if (allies.length === 1) return false; // length 1 means no other allies nearby
 
   if (canvas?.grid?.grid instanceof SquareGrid) {
+    let gridW = canvas?.grid?.w ?? 100;
+    let gridH = canvas?.grid?.h ?? 100;
     const tl = { x: target.x, y: target.y };
-    const tr = { x: target.x + target.width, y: target.y };
-    const bl = { x: target.x, y: target.y + target.height };
-    const br = { x: target.x + target.width, y: target.y + target.height };
+    const tr = { x: target.x + target.data.width * gridW, y: target.y };
+    const bl = { x: target.x, y: target.y + target.data.height * gridH};
+    const br = { x: target.x + target.data.width * gridW, y: target.y + target.data.height * gridH};
     const top: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, tr.x, tr.y];
     const bottom: [x0: number, y0: number, x1: number, y1: number] = [bl.x, bl.y, br.x, br.y];
     const left: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, bl.x, bl.y];
@@ -2605,8 +2607,7 @@ export function _checkFlankingAdvantage(token, target): boolean{
     // Loop through each square covered by attacker and ally
     const tokenStartX = token.data.width >= 1 ? 0.5 : token.data.width / 2;
     const tokenStartY = token.data.height >= 1 ? 0.5 : token.data.height / 2;
-    let gridW = canvas?.grid?.w ?? 100;
-    let gridH = canvas?.grid?.h ?? 100;
+
 
     for (let ally of allies) {
       if (ally.document.uuid === token.document.uuid) continue;

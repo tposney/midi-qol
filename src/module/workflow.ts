@@ -945,19 +945,19 @@ export class Workflow {
 
   async checkFlankingAdvantage(): Promise<boolean> {
     this.flankingAdvantage = false;
-    if (!(["mwak", "msak", "mpak"].includes(this.item?.data.data.actionType))) return false;
+    if (this.item && !(["mwak", "msak", "mpak"].includes(this.item?.data.data.actionType))) return false;
     const token = MQfromUuid(this.tokenUuid ?? "")?.object;
     const target: Token = this.targets.values().next().value;
 
     this.flankingAdvantage = await _checkFlankingAdvantage(token, target, );
     //@ts-ignore
-    const hasFlanking = await game.dfreds.effectInterface?.hasEffectApplied("Flanking", token.actor.uuid)
-    if (this.flankingAdvantage && !hasFlanking) {
+    const hasFlanking = installedModules.get("dfreds-convenient-effects") &&  await game.dfreds.effectInterface.hasEffectApplied("Flanking", token.actor.uuid)
+    if (this.flankingAdvantage && !hasFlanking && installedModules.get("dfreds-convenient-effects")) {
       //@ts-ignore
-      await game.dfreds.effectInterface?.addEffect({ effectName: "Flanking", uuid: token.actor.uuid });
-    } else if (!this.flankingAdvantage && hasFlanking) {
+      await game.dfreds.effectInterface.addEffect({ effectName: "Flanking", uuid: token.actor.uuid });
+    } else if (!this.flankingAdvantage && hasFlanking && installedModules.get("dfreds-convenient-effects")) {
       //@ts-ignore
-      await game.dfreds.effectInterface?.removeEffect({ effectName: "Flanking", uuid: token.actor.uuid });
+      await game.dfreds.effectInterface.removeEffect({ effectName: "Flanking", uuid: token.actor.uuid });
     }
     if (this.flankingAdvantage) {
       console.log(`${token.name} has flanked ${target.name}`);
