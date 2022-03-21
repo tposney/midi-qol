@@ -2588,7 +2588,7 @@ export async function midiRenderRoll(roll: Roll | undefined) {
 
 export function _checkFlankingAdvantage(token, target): boolean{
   if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
-  if (!canvas)
+  if (!canvas) return false;
   if (!token) return false;
   // For the target see how many square between this token and any friendly targets
   // Find all tokens hostile to the target
