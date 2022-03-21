@@ -631,6 +631,7 @@ Advantage/disadvantage on checks for an ability check also grants advantage on t
 
 * flags.midi-qol.fail.all/ability.all/ability.check.all/ability.save.all/skill.all etc to auto fail a given roll.  
 * flags.midi-qol.ignoreNearbyFoes - when set cancels ranged attack disadvantage from a nearby enemy. Useful for Crossbow Expert feat.
+* flags.midi-qol.sharpShooter - cancels disadvantage when shooting at long range.
 * flags.midi-qol.fail.spell.all
 * flags.midi-qol.fail.spell.vocal|verbal/somatic/material  
 Fails attempts to cast spells with the specified components (or all).
@@ -688,7 +689,7 @@ You can specify a resource to consume in the count field, e.g. @resources.tertia
 
 * flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
 
-Values for the optional roll bonus flags include a dice expression (added to the roll), a number, reroll (rerolling the roll completely) reroll-max, reroll-min (reroll with max dice or min dice) or success which changes the roll to 99 ensuring success.
+Values for the optional roll bonus flags include a dice expression (added to the roll), a number, reroll (rerolling the roll completely) reroll-max, reroll-min, reroll-kh (reroll with max dice, min dice, or reroll and keep the higher of the original/new roll) or success which changes the roll to 99 ensuring success.
 
 Generally options.Name fields do not work with better rolls due to the way it creates rolls.
 

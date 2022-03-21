@@ -4,7 +4,7 @@ import { configSettings, enableWorkflow, checkRule } from "./settings.js";
 import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, midiRenderRoll } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
-import { convertCompilerOptionsFromJson } from "typescript";
+import { convertCompilerOptionsFromJson, createImportSpecifier } from "typescript";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
 import { deleteItemEffects } from "./GMAction.js";
 
@@ -223,7 +223,7 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
   if (powerLevel) workflow.rollOptions.spellLevel = powerLevel;
-  if (workflow.isVersatile) workflow.rollOptions.versatile = true;
+  if (workflow.isVersatile || versatile) workflow.rollOptions.versatile = true;
   if (debugEnabled > 0) warn("rolling damage  ", this.name, this);
 
   if (await asyncHooksCall("midi-qol.preDamageRoll", workflow) === false || await asyncHooksCall(`midi-qol.preDamageRoll.${this.uuid}`, workflow) === false) {
@@ -272,18 +272,20 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   result = await processDamageRollBonusFlags.bind(workflow)();
 
   let otherResult: Roll | undefined = undefined;
-
   workflow.shouldRollOtherDamage = shouldRollOtherDamage.bind(this)(workflow, configSettings.rollOtherDamage, configSettings.rollOtherSpellDamage);
-
   if (workflow.shouldRollOtherDamage) {
+    const otherRollOptions: any = {};
+    if (game.settings.get("midi-qol", "CriticalDamage") === "default") {
+      otherRollOptions.powerfulCritical = game.settings.get("dnd5e", "criticalDamageMaxDice");
+      otherRollOptions.multiplyNumeric = game.settings.get("dnd5e", "criticalDamageModifiers");
+    }
+    otherRollOptions.critical = (this.data.flags.midiProperties?.critOther ?? false) && (workflow.isCritical || workflow.rollOptions.critical);
     if ((workflow.otherDamageFormula ?? "") !== "") { // other damage formula swaps in versatile if needed
       //@ts-ignore
-      otherResult = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: (this.data.flags.midiProperties?.critOther ?? false) && (workflow.isCritical || workflow.rollOptions.critical) });
-      otherResult = await otherResult?.evaluate({ async: true });
-      if ((maxflags.damage && (maxflags.damage.all || maxflags.damage[this.data.data.actionType])) ?? false)
-        otherResult = await otherResult?.reroll({ maximize: true });
-      if ((minflags.damage && (minflags.damage.all || minflags.damage[this.data.data.actionType])) ?? false)
-        otherResult = await otherResult?.reroll({ minimize: true })
+      const otherRoll = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), otherRollOptions);
+      const maxDamage = (maxflags.damage && (maxflags.damage.all || maxflags.damage[this.data.data.actionType])) ?? false;
+      const minDamage = (minflags.damage && (minflags.damage.all || minflags.damage[this.data.data.actionType])) ?? false;
+      otherResult = await otherRoll?.evaluate({ async: true, maximize: maxDamage, minimize: minDamage });
     }
   }
   if (!configSettings.mergeCard) {

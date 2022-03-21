@@ -89,28 +89,35 @@ export class SoundConfigPanel extends FormApplication {
       case "add":
         formData = this._getSubmitData();
         for (let key of ["action", "category", "playlistName", "soundName", "subtype"]) {
+          if (!formData[key]) formData[key] = [];
+          if (typeof formData[key] === "string") formData[key] = [formData[key]];
           formData[key].push("none");
         }
         this._updateObject(event, formData).then(() => {this.render(true)})
     }
   }
   async _updateObject(event, formData) {
+    if (!game.user?.can("SETTINGS_MODIFY")) return;
     formData = expandObject(formData);
     const settings = {};
-    for (let i = 0; i < formData.category.length ?? 0; i++) {
-      const category = formData.category[i];
-      const subtype = formData.subtype[i];
-      const action = formData.action[i];
-      const playlistName = formData.playlistName[i];
-      const soundName = formData.soundName[i];
-      if (!settings[category]) settings[category] = {};
-      if (!settings[category][subtype]) settings[category][subtype] = {};
-      settings[category][subtype][action] = {playlistName, soundName};
+    if (formData.category) {
+      if (typeof formData.category === "string") {
+        for (let key of ["action", "category", "playlistName", "soundName", "subtype"]) {
+          formData[key] = [formData[key]];
+        }
+      }
+      for (let i = 0; i < formData.category?.length ?? 0; i++) {
+        const category = formData.category[i];
+        const subtype = formData.subtype[i];
+        const action = formData.action[i];
+        const playlistName = formData.playlistName[i];
+        const soundName = formData.soundName[i];
+        if (!settings[category]) settings[category] = {};
+        if (!settings[category][subtype]) settings[category][subtype] = {};
+        settings[category][subtype][action] = { playlistName, soundName };
+      }
     }
-   
-    if (game.user?.can("SETTINGS_MODIFY")) {
-      await game.settings.set("midi-qol", "MidiSoundSettings", settings);
-    }
+    await game.settings.set("midi-qol", "MidiSoundSettings", settings);
   }
 
   activateListeners(html) {

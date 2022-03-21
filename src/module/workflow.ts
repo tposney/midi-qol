@@ -944,12 +944,17 @@ export class Workflow {
   }
 
   async checkFlankingAdvantage(): Promise<boolean> {
+    if (!canvas) {
+      console.warn("midi-qol | Check flanking advantage abandoned - no canvas defined")
+      return false;
+    }
     this.flankingAdvantage = false;
     if (this.item && !(["mwak", "msak", "mpak"].includes(this.item?.data.data.actionType))) return false;
-    const token = MQfromUuid(this.tokenUuid ?? "")?.object;
+    const token = MQfromUuid(this.tokenUuid ?? null)?.object;
     const target: Token = this.targets.values().next().value;
 
-    this.flankingAdvantage = await _checkFlankingAdvantage(token, target, );
+    const flankingAdvantage = await _checkFlankingAdvantage(token, target, );
+    if (["advonly", "ceadv"].includes(checkRule("checkFlanking"))) this.flankingAdvantage = flankingAdvantage;
     //@ts-ignore
     const hasFlanking = installedModules.get("dfreds-convenient-effects") &&  await game.dfreds.effectInterface.hasEffectApplied("Flanking", token.actor.uuid)
     if (this.flankingAdvantage && !hasFlanking && installedModules.get("dfreds-convenient-effects")) {
@@ -1720,7 +1725,7 @@ export class Workflow {
         if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
         let advantage: Boolean | undefined = undefined;
         // If spell, check for magic resistance
-        if (this.item.data.type === "spell") {
+        if (this.item?.data.type === "spell" || this.item?.data.flags.midiProperties?.magiceffect) {
           // check magic resistance in custom damage reduction traits
           //@ts-ignore traits
           advantage = (target?.actor?.data.data.traits?.dr?.custom || "").includes(i18n("midi-qol.MagicResistant").trim());
@@ -2184,8 +2189,16 @@ export class Workflow {
         const midiFlagsAttackSuccess = getProperty(targetActor.data, "flags.midi-qol.grants.attack.success");
         if (!this.isFumble) {
           if (midiFlagsAttackBonus) {
-            if (Number.isNumeric(midiFlagsAttackBonus.all)) attackTotal += Number.parseInt(midiFlagsAttackBonus.all);
-            if (Number.isNumeric(midiFlagsAttackBonus[item.data.data.actionType]) && midiFlagsAttackBonus[item.data.data.actionType]) attackTotal += Number.parseInt(midiFlagsAttackBonus[item.data.data.actionType]);
+            // if (Number.isNumeric(midiFlagsAttackBonus.all)) attackTotal +=  Number.parseInt(midiFlagsAttackBonus.all);
+            // if (Number.isNumeric(midiFlagsAttackBonus[item.data.data.actionType]) && midiFlagsAttackBonus[item.data.data.actionType]) attackTotal += Number.parseInt(midiFlagsAttackBonus[item.data.data.actionType]);
+            if (midiFlagsAttackBonus?.all) {
+              const attackBonus = await (new Roll(midiFlagsAttackBonus.all, targetActor.getRollData()))?.roll();
+              attackTotal += attackBonus?.total ?? 0;
+            }
+            if (midiFlagsAttackBonus[item.data.data.actionType]) {
+              const attackBonus = await (new Roll(midiFlagsAttackBonus[item.data.data.actionType], targetActor.getRollData())).roll();
+              attackTotal += attackBonus?.total ?? 0;
+            }
           }
           if (checkRule("challengeModeArmor")) isHit = attackTotal > targetAC || this.isCritical;
           else isHit = attackTotal >= targetAC || this.isCritical;

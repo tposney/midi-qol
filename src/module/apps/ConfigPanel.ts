@@ -67,6 +67,7 @@ export class ConfigPanel extends FormApplication {
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),
       itemDeleteCheck,
       hideRollDetailsOptions: geti18nOptions("hideRollDetailsOptions"),
+      checkFlankingOptions: geti18nOptions("CheckFlankingOptions"),
       hideRollDetailsHint: i18n("midi-qol.HideRollDetails.HintLong"),
       nsaFlag,
       coloredBorders,

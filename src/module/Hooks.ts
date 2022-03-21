@@ -280,25 +280,17 @@ export function initHooks() {
         }
       }
     }
+    //@ts-ignore
+    const midiProps = CONFIG.DND5E.midiProperties;
     if (app.object && ["spell", "feat", "weapon"].includes(app.object.type)) {
       const data = app.object.data;
       if (data.flags.midiProperties === undefined) {
-        app.object.data.flags.midiProperties = {};
-        if (data.data.properties?.nodam && data.flags.midiProperties.nodam === undefined) {
-          data.flags.midiProperties.nodam = true;
-          delete data.data.properties.nodam;
-        }
-        if (data.data.properties?.halfdam && data.flags.midiProperties.halfdam === undefined) {
-          data.flags.midiProperties.halfdam = true;
-          delete data.data.properties.halfdam;
-        }
-        if (data.data.properties?.fulldam && data.flags.midiProperties.fulldam === undefined) {
-          data.flags.midiProperties.fulldam = true;
-          delete data.data.properties.fulldam;
-        }
-        if (data.data.properties?.critOther && data.flags.midiProperties.critOther === undefined) {
-          data.flags.midiProperties.critOther = true;
-          delete data.data.properties.critOther;
+        data.flags.midiProperties = {};
+        for (let prop of Object.keys(midiProps)) {
+          if (getProperty(data.data, `properties.${prop}`) && data.flags.midiProperties[prop] === undefined) {
+            data.flags.midiProperties[prop] = true;
+            delete data.data.properties.nodam;
+          }
         }
       }
       if (data.data.properties?.fulldam !== undefined) {
@@ -310,30 +302,15 @@ export function initHooks() {
           "flags.midiProperties": data.flags.midiProperties
         })
       }
-      //@ts-ignore
-      const midiProps = CONFIG.DND5E.midiProperties;
-      let newHtml = `<div class="form-group stacked midi-properties">
-          <label>${i18n("midi-qol.MidiProperties")}</label>
-          <label class="checkbox">
-              <input type="checkbox" name="flags.midiProperties.nodam" ${data.flags.midiProperties.nodam ? "checked" : ""} /> ${midiProps.nodam}
-          </label>
-          <label class="checkbox">
-          <input type="checkbox" name="flags.midiProperties.halfdam" ${data.flags.midiProperties.halfdam ? "checked" : ""} /> ${midiProps.halfdam}
-          </label>
-          <label class="checkbox">
-          <input type="checkbox" name="flags.midiProperties.fulldam" ${data.flags.midiProperties.fulldam ? "checked" : ""} /> ${midiProps.fulldam}
-          </label>
-          <label class="checkbox">
-          <input type="checkbox" name="flags.midiProperties.rollOther" ${data.flags.midiProperties.rollOther ? "checked" : ""} /> ${midiProps.rollOther}
-          </label>
-          <label class="checkbox">
-          <input type="checkbox" name="flags.midiProperties.critOther" ${data.flags.midiProperties.critOther ? "checked" : ""} /> ${midiProps.critOther}
-          </label>
-          <label class="checkbox">
-          <input type="checkbox" name="flags.midiProperties.concentration" ${data.flags.midiProperties.concentration ? "checked" : ""} /> ${midiProps.concentration}
-          </label>
-          </div>`;
 
+      let newHtml = `<div><div class="form-group stacked weapon-properties">
+          <label>${i18n("midi-qol.MidiProperties")}</label>`;
+      for (let prop of Object.keys(midiProps)) {
+        newHtml += `<label class="checkbox">
+        <input type="checkbox" name="flags.midiProperties.${prop}" ${data.flags.midiProperties[prop] ? "checked" : ""} /> ${midiProps[prop]}
+        </label>`;
+      }
+      newHtml += "</div></div>"
       /*
       const templateData = {
          data: app.object.data,

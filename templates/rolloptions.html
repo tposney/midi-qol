@@ -1,0 +1,56 @@
+<div class="dnd5e chat-card" data-actor-id="1" data-item-id="1">
+    {{#if title}}
+    <header class="card-header flexrow">
+            <img src="{{img}}" title="{{title}}" width="36" height="36"/>
+            <h3>{{title}}</h3>
+
+    </header>
+    {{/if}}
+    {{#if itemInfo}}
+        <div class="card-content">{{{itemInfo}}}</div>
+    {{/if}}
+    {{#if isAttack}}
+    <div class="dice-roll">
+
+        {{#if attackFlavor}}
+        <div class="midi-qol-flavor-text">{{attackFlavor}} </div>
+        {{/if}}
+        <div class="dice-result">
+        <h4 class="dice-total {{successIndicator}}">{{attackTotal}}</h4>
+        {{{attackTooltip}}}
+        </div>
+    </div>
+    {{/if}}
+    {{#if displayDamage}}
+    <div class="dice-roll">
+        {{#if damageFlavor}}
+        <div class="midi-qol-flavor-text">{{damageFlavor}}</div>
+        {{/if}}
+        <div class="dice-result">
+            <div class="dice-formula">{{damageFormula}}</div>
+            {{{damageTooltip}}}
+            <h4 class="dice-total midi-qol-damage-total">
+                {{damageTotal}}
+                <span class="dmgBtn-container" style="position:absolute; right:0; bottom:1px;">
+                    <button class="midi-qol-full-damage-button">
+                        <i class="fas fa-user-minus" title="Click to apply full damage to selected token(s)."></i>
+                    </button>
+                    <button class="midi-qol-half-damage-button">
+                        <i class="fas fa-user-shield" title="Click to apply half damage to selected token(s)."></i>
+                    </button>
+                    <button class="midi-qol-double-damage-button">
+                        <i class="fas fa-user-injured" title="Click to apply double damage to selected token(s)."></i>
+                    </button>
+                    <button class="midi-qol-full-healing-button">
+                        <i class="fas fa-user-plus" title="Click to apply full healing to selected token(s)."></i>
+                    </button>
+                </span>
+            </h4>
+        </div>
+    </div>
+    {{/if}}
+
+    {{#if saveDetails}} 
+        <span>{{saveDetails}} </span></div>
+{{/if}}
+</div>

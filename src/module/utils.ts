@@ -206,7 +206,8 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
     // if not checking all damage counts as magical
     const magicalDamage = (item?.type !== "weapon"
       || (item?.data.data.attackBonus > 0 && !configSettings.requireMagical)
-      || item.data.data.properties["mgc"]);
+      || item.data.data.properties["mgc"]
+      || item.data.flags.midiProperties?.magicdam);
     const silverDamage = item?.data.data.properties?.sil;
     const adamantineDamage = item?.data.data.properties?.ada;
     let traitList = [{ type: "di", mult: 0 }, { type: "dr", mult: 0.5 }, { type: "dv", mult: 2 }];
@@ -1254,6 +1255,7 @@ export function checkRange(actor, item, tokenId, targets): string {
 
   let range = itemData.range?.value || 0;
   let longRange = itemData.range?.long || 0;
+  if (getProperty(actor.data, "flags.midi-qol.sharpShooter") && range < longRange) range = longRange ;
   if (itemData.range.units === "touch") {
     range = canvas?.dimensions?.distance ?? 5;
     longRange = 0;
@@ -1567,7 +1569,8 @@ export async function expireMyEffects(effectsToExpire: string[]) {
   if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects, { "expiry-reason": `midi-qol:${effectsToExpire}` });
 }
 
-export async function expireRollEffect(rollType: string, abilityId: string) {
+export async function expireRollEffect(rolltype: string, abilityId: string) {
+  const rollType = rolltype.charAt(0).toUpperCase() + rolltype.slice(1)
   const expiredEffects = this.effects?.filter(ef => {
     const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
     if (!specialDuration) return false;
@@ -1580,7 +1583,7 @@ export async function expireRollEffect(rollType: string, abilityId: string) {
       actorUuid: this.uuid,
       effects: expiredEffects,
       options: { "midi-qol": `special-duration:${rollType}:${abilityId}` }
-    })
+    });
   }
 }
 
@@ -1604,12 +1607,14 @@ export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<T
 }
 
 export function MQfromUuid(uuid) {
+  if (!uuid || uuid === "") return null;
   let parts = uuid.split(".");
   let doc;
 
   const [docName, docId] = parts.slice(0, 2);
   parts = parts.slice(2);
-  const collection = CONFIG[docName].collection.instance;
+  const collection = CONFIG[docName]?.collection.instance;
+  if (!collection) return null;
   doc = collection.get(docId);
 
   // Embedded Documents
@@ -1673,9 +1678,11 @@ class RollModifyDialog extends Application {
       const flagData = getProperty(this.data.actor.data, flag);
       let value = getProperty(flagData, this.data.flagSelector);
       if (value) {
+        const labelDetail = Roll.replaceFormulaData(value, this.data.actor.getRollData())
         obj[randomID()] = {
           icon: '<i class="fas fa-dice-d20"></i>',
-          label: (flagData.label ?? "Bonus") + `  (${getProperty(flagData, this.data.flagSelector) ?? "0"})`,
+//          label: (flagData.label ?? "Bonus") + `  (${getProperty(flagData, this.data.flagSelector) ?? "0"})`,
+          label: (flagData.label ?? "Bonus") + `  (${labelDetail})`,
           value,
           key: flag,
           callback: this.data.callback
@@ -1686,9 +1693,12 @@ class RollModifyDialog extends Application {
       const allSelector = selector.join(".");
       value = getProperty(flagData, allSelector);
       if (value) {
+        const labelDetail = Roll.replaceFormulaData(value, this.data.actor.getRollData())
+
         obj[randomID()] = {
           icon: '<i class="fas fa-dice-d20"></i>',
-          label: (flagData.label ?? "Bonus") + `  (${getProperty(flagData, allSelector) ?? "0"})`,
+//          label: (flagData.label ?? "Bonus") + `  (${getProperty(flagData, allSelector) ?? "0"})`,
+          label: (flagData.label ?? "Bonus") + `  (${labelDetail})`,
           value,
           key: flag,
           callback: this.data.callback
@@ -1954,11 +1964,11 @@ export function isConcentrating(actor: Actor5e): undefined | ActiveEffect {
 function maxCastLevel(actor) {
   const spells = actor.data.data.spells;
   if (!spells) return 0;
-  let pactLevel = spells.pact?.level ?? 0;
+  let pactLevel = spells.pact?.value ? spells.pact?.level : 0;
   for (let i = 9; i > pactLevel; i--) {
-    if (spells[`spell${i}`].value > 0) return i;
+    if (spells[`spell${i}`]?.value > 0) return i;
   }
-  return spells.pact?.value ? pactLevel : 0;
+  return pactLevel;
 }
 async function getMagicItemReactions(actor: Actor, triggerType: string): Promise<Item[]> {
   if (!globalThis.MagicItems) return [];
@@ -2577,8 +2587,8 @@ export async function midiRenderRoll(roll: Roll | undefined) {
 }
 
 export function _checkFlankingAdvantage(token, target): boolean{
-  if (!checkRule("checkFlanking")) return false;
-
+  if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
+  if (!canvas)
   if (!token) return false;
   // For the target see how many square between this token and any friendly targets
   // Find all tokens hostile to the target
@@ -2655,7 +2665,7 @@ export function _checkFlankingAdvantage(token, target): boolean{
 }
 
 export async function _checkflanking(user: User, target: Token, targeted: boolean): Promise<boolean> {
-  if (!checkRule("checkFlanking")) return false;
+  if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
   if (user !== game.user) return false;
   if (!installedModules.get("dfreds-convenient-effects")) return false;
   let needsFlanking = false;

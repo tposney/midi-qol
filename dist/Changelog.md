@@ -1,3 +1,17 @@
+### 0.9.36
+* Fixed bug when checking spell slots available for reaction spells with 0 pact slots available.
+* Add flags.midi-qol.sharpShooter which removes long range disadvantage on ranged attacks.
+* flags.midi-qol.grants.attack.bonus.all/mwak etc now accept roll expressions not just numbers.
+* Two new properties for items. 
+  - magical damage - the item does magical damage for checking immunities/resistance.
+  - magical effect - the item counts as magical for checking advantage on saving throws with magic resistance (perviously was just for spells).
+* Fix for chat card damage button to roll versatile damage not working.
+* Cleanup of some edge cases when editing midi sound config starting with an empty sound config.
+* Cleaned up non "default dnd5e" critical damage dice to work properly.
+* Respect dnd5e settings for other damage criticals and dnd5e default damage.
+* Fix for check flanking advantage and invalid tokens throwing an error.
+* Fix for saving throw and ability check special expriy not working.
+
 ### 0.9.35
 * Fix for errors when rolling with check flanking enabled and convenient effects not active.
 
@@ -14,6 +28,7 @@
 * Removed extra call to Hooks.call("preDamageRoll) in workflow.ts. Thanks @Elwin#1410
 * Fix for max damage causing critical rolls to double the number of dice it should.
 * When using a reaction from a magic item provided spell/feature the user is prompted with the use charges dialog.
+
 ### 0.9.33
 * Fix for proliferating critical hits if optional rules disabled. Live and learn, turns out (false > -1) is true.
 

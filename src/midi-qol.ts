@@ -156,7 +156,9 @@ Hooks.once('setup', function () {
     config.midiProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp");
     config.midiProperties["rollOther"] = i18n("midi-qol.rollOtherProp");
     config.midiProperties["critOther"] = i18n("midi-qol.otherCritProp");
-    config.midiProperties["concentration"] = i18n("midi-qol.concentrationActivationCondition");
+    config.midiProperties["magicdam"] = i18n("midi-qol.magicalDamageProp");
+    config.midiProperties["magiceffect"] = i18n("midi-qol.magicalEffectProp");
+    config.midiProperties["concentration"] = i18n("midi-qol.concentrationEffectProp");
 
     config.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
     config.damageResistanceTypes["silver"] = i18n("midi-qol.nonSilverPhysical");
@@ -166,7 +168,6 @@ Hooks.once('setup', function () {
     config.damageResistanceTypes["temphp"] = config.healingTypes.temphp;
     config.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
     config.abilityActivationTypes["reactionmanual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
-
   } else { // sw5e
     //@ts-ignore CONFIG.DND5E
     let config = CONFIG.DND5E
@@ -424,6 +425,7 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.max.ability.check.all");
   midiFlags.push("flags.midi-qol.min.ability.save.all");
   midiFlags.push("flags.midi-qol.min.ability.check.all");
+  midiFlags.push("flags.midi-qol.sharpShooter");
 
 
   //@ts-ignore CONFIG.DND5E

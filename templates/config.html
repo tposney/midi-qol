@@ -665,11 +665,19 @@
             <input type="checkbox" name="optionalRules.incapacitated" data-dtype="Boolean" {{checked
               configSettings.optionalRules.incapacitated}} />
           </div>
+
           <div class="form-group">
             <label>{{localize "midi-qol.CheckFlanking.Name"}}</label>
-            <input type="checkbox" name="optionalRules.checkFlanking" data-dtype="Boolean" {{checked
-              configSettings.optionalRules.checkFlanking}} />
+            <select name="optionalRules.checkFlanking" data-dtype="String">
+              {{#select configSettings.optionalRules.checkFlanking}}
+              {{#each checkFlankingOptions as |label val|}}
+              <option value="{{val}}">{{label}}</option>
+              {{/each}}
+              {{/select}}
+            </select>
           </div>
+
+          <div class="midi-qol-faint">{{localize "midi-qol.CheckFlanking.Hint"}}</div>
           <div class="form-group">
             <label>{{localize "midi-qol.InvisAdvantage.Name"}}</label>
             <input type="checkbox" name="optionalRules.invisAdvantage" data-dtype="Boolean" {{checked

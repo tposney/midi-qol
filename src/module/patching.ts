@@ -233,7 +233,7 @@ function configureDamage(wrapped) {
   }
 
   // Add powerful critical bonus
-  if (this.options.powerfulCritical && (flatBonus > 0)) {
+  if (/*this.options.powerfulCritical && */ (flatBonus > 0)) {
     this.terms.push(new OperatorTerm({ operator: "+" }));
     //@ts-ignore
     this.terms.push(new NumericTerm({ number: flatBonus }, { flavor: game.i18n.localize("DND5E.PowerfulCritical") }));
