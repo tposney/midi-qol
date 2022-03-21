@@ -2671,7 +2671,7 @@ export async function _checkflanking(user: User, target: Token, targeted: boolea
   let needsFlanking = false;
   let token = canvas?.tokens?.controlled[0];
   if (!token) {
-    console.error("No token selected - no flanking check");
+    log("Flanking check: No token selected - no flanking applied");
     return false;
   }
   if (user.targets.size === 1 && canvas?.tokens?.controlled.length === 1) {

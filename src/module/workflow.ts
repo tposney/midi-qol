@@ -956,13 +956,13 @@ export class Workflow {
     const flankingAdvantage = await _checkFlankingAdvantage(token, target, );
     if (["advonly", "ceadv"].includes(checkRule("checkFlanking"))) this.flankingAdvantage = flankingAdvantage;
     //@ts-ignore
-    const hasFlanking = installedModules.get("dfreds-convenient-effects") &&  await game.dfreds.effectInterface.hasEffectApplied("Flanking", token.actor.uuid)
+    const hasFlanking = installedModules.get("dfreds-convenient-effects") &&  await game.dfreds.effectInterface.hasEffectApplied("Flanking", this.actor.uuid)
     if (this.flankingAdvantage && !hasFlanking && installedModules.get("dfreds-convenient-effects")) {
       //@ts-ignore
-      await game.dfreds.effectInterface.addEffect({ effectName: "Flanking", uuid: token.actor.uuid });
+      await game.dfreds.effectInterface.addEffect({ effectName: "Flanking", uuid: this.actor.uuid });
     } else if (!this.flankingAdvantage && hasFlanking && installedModules.get("dfreds-convenient-effects")) {
       //@ts-ignore
-      await game.dfreds.effectInterface.removeEffect({ effectName: "Flanking", uuid: token.actor.uuid });
+      await game.dfreds.effectInterface.removeEffect({ effectName: "Flanking", uuid: this.actor.uuid });
     }
     if (this.flankingAdvantage) {
       console.log(`${token.name} has flanked ${target.name}`);
