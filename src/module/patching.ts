@@ -629,15 +629,14 @@ async function checkWounded(actor, update, options, user) {
   const attributes = actor.data.data.attributes;
   if (configSettings.addWounded > 0) {
     //@ts-ignore
-    const CEWounded = game.dfreds?.effects?.all.find(ef => ef.name === i18n("midi-qol.Wounded"))
+    const CEWounded = game.dfreds?.effects?._wounded
     const woundedLevel = attributes.hp.max * configSettings.addWounded / 100;
     const needsWounded = hpUpdate > 0 && hpUpdate < woundedLevel
     if (installedModules.get("dfreds-convenient-effects") && CEWounded) {
-      const woundedString = i18n("midi-qol.Wounded");
-      const wounded = await ConvenientEffectsHasEffect(woundedString, actor.uuid);
+      const wounded = await ConvenientEffectsHasEffect(CEWounded.name, actor.uuid);
       if (wounded !== needsWounded) {
         //@ts-ignore
-        await game.dfreds?.effectInterface.toggleEffect(woundedString, { overlay: false, uuids: [actor.uuid] });
+        await game.dfreds?.effectInterface.toggleEffect(CEWounded.name, { overlay: false, uuids: [actor.uuid] });
       }
     } else {
       const tokens = actor.getActiveTokens();

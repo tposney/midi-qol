@@ -34,11 +34,12 @@ class ConfigSettings {
   addWounded: number = 0;
   allowUseMacro: boolean = false;
   autoApplyDamage: string = "none";
+  playerDamageCard: string = "none";
   autoCEEffects: string = "none";
   autoCheckHit: string = "none";
   autoCheckSaves: string = "none";
   autoFastForward: string = "off";
-  autoItemEffects: null;
+  autoItemEffects: string;
   autoRollAttack: boolean = false;
   autoRollDamage: string = "none";
   autoTarget: string = "none";
@@ -261,6 +262,11 @@ export let fetchParams = () => {
   if (!configSettings.recordAOO) configSettings.recordAOO = "none";
   if (!configSettings.enforceReactions) configSettings.enforceReactions = "none";
   if (!configSettings.enforceBonusActions) configSettings.enforceBonusActions = "none";
+  //@ts-ignore
+  if (configSettings.autoItemEffects === false) configSettings.autoItemEffects = "off";
+  //@ts-ignore
+  if (configSettings.autoItemEffects === true) configSettings.autoItemEffects = "applyRemove";
+  if (configSettings.playerDamageCard === undefined) configSettings.playerDamageCard = "none";
 
   if (configSettings.displayHitResultNumeric === undefined) configSettings.displayHitResultNumeric = false;
   if (configSettings.rollAlternate === undefined) configSettings.rollAlternate = false;

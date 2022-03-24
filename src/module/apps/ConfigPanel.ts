@@ -52,6 +52,7 @@ export class ConfigPanel extends FormApplication {
       removeButtonsOptions: geti18nOptions("removeButtonsOptions"),
       criticalDamage,
       autoApplyDamageOptions: geti18nOptions("autoApplyDamageOptions"),
+      playerDamageCardOptions: geti18nOptions("playerDamageCardOptions"),
       damageImmunitiesOptions: geti18nOptions("damageImmunitiesOptions"),
       showItemDetailsOptions: geti18nOptions("showItemDetailsOptions"),
       doReactionsOptions: geti18nOptions("DoReactionsOptions"),
@@ -62,6 +63,7 @@ export class ConfigPanel extends FormApplication {
       AutoCEEffectsOptions: geti18nOptions("AutoCEEffectsOptions"),
       RecordAOOOptions: geti18nOptions("RecordAOOOptions"),
       EnforceReactionsOptions: geti18nOptions("EnforceReactionsOptions"),
+      AutoEffectsOptions: geti18nOptions("AutoEffectsOptions"),
       //@ts-ignore
       itemTypeLabels: CONFIG.Item.typeLabels,
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),

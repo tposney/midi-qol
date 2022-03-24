@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
 import { deleteItemEffects, processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, _checkFlankingAdvantage, _checkflanking } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, checkflanking } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
@@ -35,15 +35,13 @@ export let readyHooks = async () => {
     if (expiredEffects.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", expiredEffects.map(ef => ef.id), { "expiry-reaason": "midi-qol:isMoved" });
   })
 
-  Hooks.on("targetToken", debounce(_checkflanking, 150));
+  Hooks.on("targetToken", debounce(checkflanking, 150));
   
   Hooks.on("ddb-game-log.pendingRoll", (data) => {
     ddbglPendingHook(data);
   });
 
   // Handle updates to the characters HP
-  // Apply wounded
-  // Appply dead/unconscious
   // Handle concentration checks
   Hooks.on("updateActor", async (actor, update, diff, user) => {
     if (user !== game.user?.id) return;

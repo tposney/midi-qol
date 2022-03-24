@@ -3,16 +3,15 @@ import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 //@ts-ignore
 import Item5e from "../../../systems/dnd5e/module/item/entity.js"
 //@ts-ignore
-import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, debugEnabled, timelog, checkConcentrationSettings, getCanvas, MQItemMacroLabel, MQDeferMacroLabel, MQOnUseOptions, debugCallTiming } from "../midi-qol.js";
+import { warn, debug, log, i18n, MESSAGETYPES, error, MQdefaultDamageType, debugEnabled, timelog, checkConcentrationSettings, getCanvas, MQItemMacroLabel, debugCallTiming } from "../midi-qol.js";
 import { selectTargets, shouldRollOtherDamage, showItemCard, templateTokens } from "./itemhandling.js";
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, _checkFlankingAdvantage, _checkflanking } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
-import { getDefaultFormatCodeSettings, tokenToString } from "typescript";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -739,7 +738,7 @@ export class Workflow {
           // no item, not auto effects or not module skip
           // if (theItem && !getAutoRollAttack() && !this.forceApplyEffects && !theItem.hasAttack && !theItem.hasDamage && !theItem.hasSave) { return; }
           if (!theItem) return this.next(WORKFLOWSTATES.ROLLFINISHED);
-          if (!configSettings.autoItemEffects && !this.forceApplyEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED); // TODO see if there is a better way to do this.
+          if (configSettings.autoItemEffects === "off" && !this.forceApplyEffects) return this.next(WORKFLOWSTATES.ROLLFINISHED); // TODO see if there is a better way to do this.
           if (!this.forceApplyEffects) {
             this.applicationTargets = new Set();
             if (this.saveItem.hasSave) this.applicationTargets = this.failedSaves;
@@ -760,18 +759,22 @@ export class Workflow {
             const hasCE = installedModules.get("dfreds-convenient-effects")
             //@ts-ignore
             const ceEffect = hasCE ? game.dfreds.effects.all.find(e => e.name === theItem?.name) : undefined;
-            const hasItemEffect = this.hasDAE && theItem?.effects?.some(ef => ef.data?.transfer === false)
-            ;
+            const hasItemEffect = this.hasDAE && theItem?.effects?.some(ef => ef.data?.transfer === false);
             if (hasItemEffect && (!ceEffect || ["none", "both", "itempri"].includes(useCE))) {
-              await globalThis.DAE.doEffects(theItem, true, this.applicationTargets, { whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions })
-              if (!this.forceApplyEffects) await this.removeEffectsButton();
+              await globalThis.DAE.doEffects(theItem, true, this.applicationTargets, { toggleEffect: this.item?.data.flags.midiProperties.toggleEffect, whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions })
+              if (!this.forceApplyEffects && configSettings.autoItemEffects !== "applyLeave") await this.removeEffectsButton();
             }
             if (ceEffect && theItem) {
               if (["both", "cepri"].includes(useCE) || (useCE === "itempri" && !hasItemEffect)) {
                 const metadata = this.getMacroData();
                 for (let token of this.applicationTargets) {
-                  //@ts-ignore
-                  await game.dfreds.effectInterface?.addEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
+                  if (this.item?.data.flags.midiProperties.toggleEffect) {
+                    //@ts-ignore
+                    await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
+                  } else {
+                    //@ts-ignore
+                    await game.dfreds.effectInterface?.addEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
+                  }
                 }
               }
             }
@@ -953,21 +956,9 @@ export class Workflow {
     const token = MQfromUuid(this.tokenUuid ?? null)?.object;
     const target: Token = this.targets.values().next().value;
 
-    const flankingAdvantage = await _checkFlankingAdvantage(token, target, );
-    if (["advonly", "ceadv"].includes(checkRule("checkFlanking"))) this.flankingAdvantage = flankingAdvantage;
-    //@ts-ignore
-    const hasFlanking = installedModules.get("dfreds-convenient-effects") &&  await game.dfreds.effectInterface.hasEffectApplied("Flanking", this.actor.uuid)
-    if (this.flankingAdvantage && !hasFlanking && installedModules.get("dfreds-convenient-effects")) {
-      //@ts-ignore
-      await game.dfreds.effectInterface.addEffect({ effectName: "Flanking", uuid: this.actor.uuid });
-    } else if (!this.flankingAdvantage && hasFlanking && installedModules.get("dfreds-convenient-effects")) {
-      //@ts-ignore
-      await game.dfreds.effectInterface.removeEffect({ effectName: "Flanking", uuid: this.actor.uuid });
-    }
-    if (this.flankingAdvantage) {
-      console.log(`${token.name} has flanked ${target.name}`);
-    }
-    return this.flankingAdvantage;
+    const needsFlanking = await markFlanking(token, target, );
+    if (["advonly", "ceadv"].includes(checkRule("checkFlanking"))) this.flankingAdvantage = needsFlanking;
+     return needsFlanking;
   }
 
   checkTargetAdvantage() {
@@ -1277,7 +1268,6 @@ export class Workflow {
   }
 
   async removeEffectsButton() {
-
     if (!this.itemCardId) return;
     const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId);
     if (chatMessage) {

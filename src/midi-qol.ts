@@ -159,6 +159,7 @@ Hooks.once('setup', function () {
     config.midiProperties["magicdam"] = i18n("midi-qol.magicalDamageProp");
     config.midiProperties["magiceffect"] = i18n("midi-qol.magicalEffectProp");
     config.midiProperties["concentration"] = i18n("midi-qol.concentrationEffectProp");
+    config.midiProperties["toggleEffect"] = i18n("midi-qol.toggleEffectProp");
 
     config.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
     config.damageResistanceTypes["silver"] = i18n("midi-qol.nonSilverPhysical");

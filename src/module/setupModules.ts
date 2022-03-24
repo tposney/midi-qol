@@ -95,7 +95,20 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
-  0.9.35
+
+  0.9.39
+  * Some more features for flanking checks. Checked when targeting a token (1 token selected - the attacker and one target targeted) or when attacking.
+    - adv only flanking actor will gain advantage and no icon added to display flanking
+    - CE Only, flanking actor will gain CE effect "Flanking" on the attacker and you can configure that however you want, adv to attack or whatever.
+    - CE + advantage, grants advantage + whatever the CE "Flanking" effect has.
+    - CE Flanked. The flanked target gets the CE "Flanked" condition, rather than the attacker getting flanking. Checking to see if a token is flanked is done whenever the token is targeted or an attack is rolled.
+    - CE Flanked No Conga. Flanked tokens cannot contribute to flanking other tokens, meaning the flanking conga line can't form.
+  * Support for new item flag, Toggle Effect, each use of the item will toggle any associated active effects/convenient effects. One use to turn on, next use turns off. This can be a viable alternative to passive effects where you click to enable and click again to remove. Should also simply a range of effects currently done as macro.execute/macro.itemMacro where the on/off cases just enable/remove effects. For active effects (as opposed to convenient effects) toggling requires DAE 0.10.01.
+  * Added a players version of the GM's damage card. Can be configured separately to GM card to show/not show damage done to NPCs, and show/not show damage done to players (with the option to provide apply damage buttons that the players can use themselves - instead of the DM applying damage). If players try to apply damage to a token they don't own an error (non fatal) will be thrown.
+    - Showing the damage applied to NPCs will show the damage resistances of the target in the target tool-tip. But since players will see the modified damage done, it's not that much extra information.
+  * Added option to "apply item effects" apply the effects but do not display apply effects buttons. In case players have twitchy fingers and hit the apply effects button when they shouldn't.
+  
+    0.9.35
   * Fix for errors when rolling with check flanking enabled and convenient effects not active.
   
   0.9.34
@@ -111,89 +124,6 @@ Hooks.once('libChangelogsReady', function() {
   * Removed extra call to Hooks.call("preDamageRoll) in workflow.ts. Thanks @Elwin#1410
   * Fix for max damage causing critical rolls to double the number of dice it should.
   * When using a reaction from a magic item provided spell/feature the user is prompted with the use charges dialog.
-
-  0.9.33
-  * Fix for proliferating critical hits if optional rules disabled. Live and learn, turns out (false > -1) is true.
-
-  0.9.32
-  * (Hopefully) better fix for item rolls being blocked if custom sounds turned off. (bug introduced in 0.9.30)
-  * New optional rule, "Critical Roll Margin". You can specify a numeric margin such that if the attack roll >= target AC + margin the roll is a critical hit, otherwise not (even if the roll is a 20). Apparently this variant is in use in some countries. The rule is only applied if there is a single target, since midi can only track one critical status for the roll. Setting the margin to -1 (the default) disables the check. Works with better rolls, but the dice total will not be highlighted in green.
-
-  0.9.31
-  * Fix for item rolls being blocked if custom sounds turned off. (bug introduced in 0.9.30)
-
-  0.9.30
-  * Tweak to custom sounds so that if dice so nice is enabled attack/damage sounds are played before the roll rather than after. This should mean the same configuration will work with dice so nice or not.
-  * With the introduction of the per item flag (also roll other - which means roll other damage if the activation condition is met/empty), it is suggested that you use that route to enable/disable rolling of the other damage, especially for spells, rather than the global setting.
-  * Updated slayer's prey sample item so that it works for v9
-  * If you are not hiding roll details when an attack is made and the result is influenced by flags.grants effects the modified attack roll will be displayed on the hit card.
-  * Fix for "turn" optional effects that were not being marked as used and hence would be prompted each roll.
-  * Fix for asyncHooksCall missing awaiting the result. Thanks @Elwin#1410
-  * New special duration ZeroHP, the effect will expire if the actor goes to 0 hp. Requires DAE 0.9.11
-  * **Breaking** Slight change to reaction/bonus action checking. New option display which will cause the reaction/bonus action icon to be added when an item that is used. Don't Check now means don't display anything for reactions/bonus actions, whereas it used to mean display but don't check.
-  * If you use a weapon with ammunition and the ammunition has active effects they will be applied to the target in addition to those of the ranged weapon. Useful for special ammunition like arrows of wounding etc. Any activation condition on the ammunition will be checked before applying the effect.
-  * New misc tab setting, Alternate Rolls. At this stage only a boolean which if set moves the roll formula to the roll tooltip, to give a less cluttered look.
-  * First implementation of flanking (optional rule - in optional settings).  
-    - If any line drawn between the centre of any square covered by the attacking token and the centre of any ally's covered squares passes through the top and bottom, or left ad right of the target the attacker will have advantage. 
-    - In the case that both the attacker and ally are of size 1, this ends up meaning that a line between the centres of the two tokens passes through the top and bottom, or left and right, of the target, which is the common version of the rule statement.
-    - An ally is any token that is of the opposite disposition of the target (friendly/neutral/enemy - my enemy's enemy is my ally) is not incapacitated (meaning hp === 0). 
-    - The attacker must be within 5 feet of the target.
-    - Seems to work with the corner cases.
-    - There are probably special cases I've missed so errors are possible.
-
-  0.9.29
-  * Added roll other damage for per item setting to roll other damage. Works with activation conditions.
-  * Separated Bonus Action usage and Reaction usage checking, which can be configured separately.
-  * **VERY BREAKING** 
-  **Custom Sounds Complete rewrite as of v0.9.29**
-  Existing custom sounds will be disabled.
-    * Custom sounds work best with the merge card.
-    * Custom sounds now apply to both merge and non-merge cards. However non-merge cards will always roll the dice sound in addition to any midi custom sounds. I am unaware of any way to disable the dice sounds for standard dnd5e cards.
-    * Custom sounds Will play with dice so nice active. It is suggested that you set the dice so nice sound volume to 0, so that midi can control the sounds made when a weapon is rolled.
-    * If using Dice so nice key the main sound effect on the item roll (specify the weapon subtype) and have no sound for the rwak/mwak, this way the sound will play while the dice are rolling. If not using dice so nice key on rwak/mwak/rsak/msak and the sound will play while whole the card is displaying.
-    * The General Format is to specify a sound for
-      - Item Class (any/weapon/spell/etc)
-      - Item Subtype (all, Martial Melee, Evocation etc)
-      - Action, roll the item, attack, mwak, roll damage, damage of specific types
-      - Playlist to get the sound from, you can use any playlist you have.
-      - Name of the sound to use, drawn from the specified playlist 
-      - You can now use as many playlists as you wish). 
-      - Support for special sound names, "none" (no sound) and "random", pick a sound randomly from the playlist.
-      
-    * In the case that more than one setting might apply midi always chooses the more specific first. So:
-        - Weapon/Martial Melee/mwak will be used in preference to 
-        - Weapon/all/mwak, which will be used in preference to  
-        - Any/all/mwak
-  
-    **Actions**
-      * Item Roll is checked when the item is first rolled to chat.
-      * attack/rwak/mwak/msak/rsak/hit/miss/critical/fumble etc are checked after the attack roll is complete and hits have been checked
-      * Damage/damage:type are checked after the damage roll is complete.
-  
-    * Custom sounds be configured from the Configure Midi Sounds panel immediately below the midi workflow panel on module config settings. Custom sounds are only active if the Enable Custom Sounds is checked on the misc tab of workflow settings.
-    * You can create very complex setups, but don't need to.
-    * To get your toes wet, enable custom sounds on the workflow panel - misc tab (where it has always been).
-    * Open the configure midi custom sounds panel.
-      - From the quick settings tab, choose create sample playlist, which will create a playlist with a few sounds already configured
-      - Also on the quick settings tab choose Basic Settings, which will setup a simple configuration of custom sounds. This is roughly equivalent to what can be configured with the existing midi-qol custom sounds, but has a few more options and can be extended. (Basic settings are configured to work best with merge cards and no dice so nice).
-
-  0.9.28
-  * Fix for overtime effects broken in 0.9.27.
-  * Fix for Longsword of Life Stealing in midi sample items compendium
-
-  0.9.27
-  * If not auto rolling damage and using the merge card midi will display a roll count for the second and subsequent attack rolls on the same item card. Should help stop sneaky players mashing roll until it hits.
-  * Optional setting to display how much an attack hit or missed by.
-  * Fix for non spells with measured templates being tagged for concentration.
-  * Fix for race condition when marking wounded and applying effects at the same time.
-  * Tracking of bonus actions as well as reaction usage. Enabling enforce reactions also enabled checking bonus action usage.
-  * **Experimental** support for getting reaction items/features from magic items. Enable from the reaction settings on the optional tab.
-  * **For macro writers** Support for async Hook functions. For any of the midi-qol.XXXXX hooks, you can pass an async function and midi-qol will await the function call.
-  * **For macro writers** When midi expires an effect as an options[expriy-reason] is set to a string "midi-qol:reason", describing the reason which you can process as you wish.
-  * **Potentially breaking** Implemented fulldam/halfdam/nodam/critOther for weapons/spells/features rather than just weapons and this change replaces the weapon properties that were previously created by midi-qol.
-    - Weapons with the old properties set should continue to work and the first time you edit the item it will auto migrate to the new data scheme (but of course there might be bugs).
-    - Setting fulldam etc check box for a spell/feature/weapon will take precedence over the text description search. If none are set the text description will still take place.
-    - Added concentration property for any weapon/feature/spell (allows you to specify that concentration should be set when rolling the item via a check box) This is in addition to the now deprecated activation condition === Concentration.
 
   [Full Changelog](https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md)`,
   "minor")

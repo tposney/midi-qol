@@ -2586,7 +2586,82 @@ export async function midiRenderRoll(roll: Roll | undefined) {
   else return roll.render({template: "modules/midi-qol/templates/rollAlternate.html"});
 }
 
-export function _checkFlankingAdvantage(token, target): boolean{
+export async function computeFlankedStatus(target): Promise<boolean> {
+  if (!checkRule("checkFlanking") || !["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking"))) return false;
+  if (!canvas || !target) return false;
+  const allies: Token[] = findNearby(-1, target, 5);
+  if (allies.length <= 1) return false; // length 1 means no other allies nearby
+  if (canvas?.grid?.grid instanceof SquareGrid) {
+    let gridW = canvas?.grid?.w ?? 100;
+    let gridH = canvas?.grid?.h ?? 100;
+    const tl = { x: target.x, y: target.y };
+    const tr = { x: target.x + target.data.width * gridW, y: target.y };
+    const bl = { x: target.x, y: target.y + target.data.height * gridH };
+    const br = { x: target.x + target.data.width * gridW, y: target.y + target.data.height * gridH };
+    const top: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, tr.x, tr.y];
+    const bottom: [x0: number, y0: number, x1: number, y1: number] = [bl.x, bl.y, br.x, br.y];
+    const left: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, bl.x, bl.y];
+    const right: [x0: number, y0: number, x1: number, y1: number] = [tr.x, tr.y, br.x, br.y];
+
+    while (allies.length > 1) {
+      const token = allies.pop();
+      if (!token) break;
+      if (checkRule("checkFlanking") === "ceflankedNoconga" && installedModules.get("dfreds-convenient-effects")) {
+        //@ts-ignore
+        const CEFlanked = game.dfreds.effects._flanked;
+        //@ts-ignore
+        const hasFlanked = CEFlanked && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.name, token.actor.uuid);
+        if (hasFlanked) continue;
+      }
+      // Loop through each square covered by attacker and ally
+      const tokenStartX = token.data.width >= 1 ? 0.5 : token.data.width / 2;
+      const tokenStartY = token.data.height >= 1 ? 0.5 : token.data.height / 2;
+      for (let ally of allies) {
+        if (ally.document.uuid === token.document.uuid) continue;
+        const actor: any = ally.actor;
+        if (actor?.data.data.attrbutes?.hp?.value <= 0) continue;
+        if (installedModules.get("dfreds-convenient-effects")) {
+          //@ts-ignore
+          if (actor?.effects.some(ef => ef.data.label === game.dfreds.effects._incapacitated.name)) continue;
+        }
+        if (checkRule("checkFlanking") === "ceflankedNoconga" && installedModules.get("dfreds-convenient-effects")) {
+          //@ts-ignore
+          const CEFlanked = game.dfreds.effects._flanked;
+          //@ts-ignore
+          const hasFlanked = CEFlanked && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.name, ally.actor.uuid);
+          if (hasFlanked) continue;
+        }
+        const allyStartX = ally.data.width >= 1 ? 0.5 : ally.data.width / 2;
+        const allyStartY = ally.data.height >= 1 ? 0.5 : ally.data.height / 2;
+        var x, x1, y, y1, d, r;
+        for (x = tokenStartX; x < token.data.width; x++) {
+          for (y = tokenStartY; y < token.data.height; y++) {
+            for (x1 = allyStartX; x1 < ally.data.width; x1++) {
+              for (y1 = allyStartY; y1 < ally.data.height; y1++) {
+                let tx = token.x + x * gridW;
+                let ty = token.y + y * gridH;
+                let ax = ally.x + x1 * gridW;
+                let ay = ally.y + y1 * gridH;
+                const rayToCheck = new Ray({ x: tx, y: ty }, { x: ax, y: ay });
+                // console.error("Checking ", tx, ty, ax, ay, token.center, ally.center, target.center)
+                const flankedTop = rayToCheck.intersectSegment(top) && rayToCheck.intersectSegment(bottom);
+                const flankedLeft = rayToCheck.intersectSegment(left) && rayToCheck.intersectSegment(right);
+                if (flankedLeft || flankedTop) {
+                  return true;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  } else if (canvas?.grid?.grid instanceof HexagonalGrid) {
+    return false;
+  }
+  return false;
+}
+
+export function computeFlankingStatus(token, target): boolean{
   if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
   if (!canvas) return false;
   if (!token) return false;
@@ -2595,8 +2670,6 @@ export function _checkFlankingAdvantage(token, target): boolean{
   if (!target) return false;
   // console.error("Distance is ", getDistance(token, target, false, true));
   if (getDistance(token, target, false, true).distance > 5) return false;
-  let hasFlankingAdvantage = false;
-  const targetDocument = target.document ?? target;
   // an enemy's enemies are my friends.
   const allies: Token[] = findNearby(-1, target, 5);
 
@@ -2664,29 +2737,58 @@ export function _checkFlankingAdvantage(token, target): boolean{
   return false;
 }
 
-export async function _checkflanking(user: User, target: Token, targeted: boolean): Promise<boolean> {
-  if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
-  if (user !== game.user) return false;
-  if (!installedModules.get("dfreds-convenient-effects")) return false;
+
+export async function markFlanking(token, target): Promise<boolean> {
+  if (!canvas) return false;
   let needsFlanking = false;
+  if (!token || !target || !checkRule("checkFlanking") || checkRule["checkFlanking"] === "off") return false;
+  if (["ceonly", "ceadv"].includes(checkRule("checkFlanking"))) {
+    needsFlanking = computeFlankingStatus(token, target);
+    if (installedModules.get("dfreds-convenient-effects")) {
+    //@ts-ignore
+    const CEFlanking = game.dfreds.effects._flanking;
+    if (!CEFlanking) return needsFlanking;
+      //@ts-ignore
+      const hasFlanking = await game.dfreds.effectInterface?.hasEffectApplied(CEFlanking.name, token.actor.uuid)
+      if (needsFlanking && !hasFlanking) {
+        //@ts-ignore
+        await game.dfreds.effectInterface?.addEffect({ effectName: CEFlanking.name, uuid: token.actor.uuid });
+      } else if (!needsFlanking && hasFlanking) {
+        //@ts-ignore
+        await game.dfreds.effectInterface?.removeEffect({ effectName: CEFlanking.name, uuid: token.actor.uuid });
+      }
+    }
+  } else if (checkRule("checkFlanking") === "advonly") {
+    needsFlanking = computeFlankingStatus(token, target);
+  } else if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking"))) {
+    if (installedModules.get("dfreds-convenient-effects")) {
+      //@ts-ignore
+      const CEFlanked = game.dfreds.effects._flanked;
+      if (!CEFlanked) return false;
+      const needsFlanked = await computeFlankedStatus(target);
+      //@ts-ignore
+      const hasFlanked = await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.name, target.actor.uuid);
+      if (needsFlanked && !hasFlanked) {
+        //@ts-ignore
+        await game.dfreds.effectInterface?.addEffect({ effectName: CEFlanked.name, uuid: target.actor.uuid });
+      } else if (!needsFlanked && hasFlanked) {
+        //@ts-ignore
+        await game.dfreds.effectInterface?.removeEffect({ effectName: CEFlanked.name, uuid: target.actor.uuid });
+      }
+      return false;
+    }
+  }
+  return needsFlanking;
+}
+
+export async function checkflanking(user: User, target: Token, targeted: boolean): Promise<boolean> {
+  if (user !== game.user) return false;
   let token = canvas?.tokens?.controlled[0];
   if (!token) {
     log("Flanking check: No token selected - no flanking applied");
     return false;
   }
-  if (user.targets.size === 1 && canvas?.tokens?.controlled.length === 1) {
-    let token = canvas.tokens.controlled[0];
-    needsFlanking = _checkFlankingAdvantage(token, target);
-  }
-  //@ts-ignore
-  const hasFlanking = await game.dfreds.effectInterface?.hasEffectApplied("Flanking", token.actor.uuid)
-  if (needsFlanking && !hasFlanking) {
-    //@ts-ignore
-    await game.dfreds.effectInterface?.addEffect({ effectName: "Flanking", uuid: token.actor.uuid });
-  } else if (!needsFlanking && hasFlanking) {
-    //@ts-ignore
-    await game.dfreds.effectInterface?.removeEffect({ effectName: "Flanking", uuid: token.actor.uuid });
-  }
-  return needsFlanking;
-}
+  if (user.targets.size === 1 && canvas?.tokens?.controlled.length === 1) return markFlanking(token, target);
+  return false
 
+}

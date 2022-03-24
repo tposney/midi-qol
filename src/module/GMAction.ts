@@ -3,6 +3,7 @@ import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTi
 import { completeItemRoll, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMesssageHandling.js";
 import { Workflow, WORKFLOWSTATES } from "./workflow.js";
+import { config } from "simple-peer";
 
 export var socketlibSocket: any = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
@@ -193,8 +194,143 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
     });
 }
 
+async function createReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any }) {
+  createGMReverseDamageCard(data);
+  createPlayerDamageCard(data);
+}
+
+async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: string; flagTags: any }, templateData, tokenIdList, createPromises: boolean = false, showNPC: boolean = true): Promise<Promise<any>[]> 
+{
+  const damageList = data.damageList;
+  let promises: Promise<any>[] = [];
+
+  for (let damageItem of damageList) {
+    let { tokenId, tokenUuid, actorId, actorUuid, oldHP, oldTempHP, newTempHP, tempDamage, hpDamage, totalDamage, appliedDamage, sceneId } = damageItem;
+
+    let tokenDocument;
+    let actor;
+    if (tokenUuid) {
+      tokenDocument = MQfromUuid(tokenUuid);
+      actor = tokenDocument.actor;
+    }
+    else
+      actor = MQfromActorUuid(actorUuid)
+
+    if (!actor) {
+      if (debugEnabled > 0) warn(`GMAction: reverse damage card could not find actor to update HP tokenUuid ${tokenUuid} actorUuid ${actorUuid}`);
+      continue;
+    }
+    if (!showNPC && !actor.hasPlayerOwner) continue;
+    let newHP = Math.max(0, oldHP - hpDamage);
+    if (createPromises && ["yes", "yesCard", "yesCardNPC"].includes(data.autoApplyDamage)) {
+      if ((newHP !== oldHP || newTempHP !== oldTempHP) && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
+        //@ts-ignore
+        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem }, { dhp: -appliedDamage }));
+      }
+    }
+    tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP, damageItem });
+
+    let img = tokenDocument?.data.img || actor.img;
+    if (configSettings.usePlayerPortrait && actor.type === "character")
+      img = actor?.img || tokenDocument?.data.img;
+    if (VideoHelper.hasVideoExtension(img)) {
+      //@ts-ignore - createThumbnail not defined
+      img = await game.video.createThumbnail(img, { width: 100, height: 100 });
+    }
+
+    let listItem = {
+      isCharacter: actor.hasPlayerOwner,
+      isNpc: !actor.hasPlayerOwner,
+      actorUuid,
+      tokenId: tokenId ?? "none",
+      displayUuid: actorUuid.replaceAll(".", ""),
+      tokenUuid,
+      tokenImg: img,
+      hpDamage,
+      abshpDamage: Math.abs(hpDamage),
+      tempDamage: newTempHP - oldTempHP,
+      totalDamage: Math.abs(totalDamage),
+      halfDamage: Math.abs(Math.floor(totalDamage / 2)),
+      doubleDamage: Math.abs(totalDamage * 2),
+      appliedDamage,
+      absDamage: Math.abs(appliedDamage),
+      tokenName: (tokenDocument?.name && configSettings.useTokenNames) ? tokenDocument.name : actor.name,
+      dmgSign: appliedDamage < 0 ? "+" : "-", // negative damage is added to hit points
+      newHP,
+      newTempHP,
+      oldTempHP,
+      oldHP,
+      buttonId: tokenUuid,
+      iconPrefix: (data.autoApplyDamage === "yesCardNPC" && actor.type === "character") ? "*" : ""
+    };
+
+    ["di", "dv", "dr"].forEach(trait => {
+      const traits = actor?.data.data.traits[trait]
+      if (traits?.custom || traits?.value.length > 0) {
+        //@ts-ignore CONFIG.DND5E
+        listItem[trait] = (`${traitList[trait]}: ${traits.value.map(t => CONFIG.DND5E.damageResistanceTypes[t]).join(",").concat(" " + traits?.custom)}`);
+      }
+    });
+    //@ts-ignore
+    const actorFlags: any = actor.data.flags;
+    const DRFlags = actorFlags["midi-qol"] ? actorFlags["midi-qol"].DR : undefined;
+    if (DRFlags) {
+      listItem["DR"] = "DR: ";
+      for (let key of Object.keys(DRFlags)) {
+        listItem["DR"] += `${key}:${DRFlags[key]} `;
+      }
+    }
+    //@ts-ignore listItem
+    templateData.damageList.push(listItem);
+  }
+  return promises;
+}
 // Fetch the token, then use the tokenData.actor.id
-let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: string; flagTags: any }) => {
+async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any }) {
+  if (configSettings.playerDamageCard === "none") return;
+  let showNPC = ["npcplayerresults", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
+  let playerButtons = ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
+  const damageList = data.damageList;
+  //@ts-ignore
+  let actor: CONFIG.Actor.documentClass; // { update: (arg0: { "data.attributes.hp.temp": any; "data.attributes.hp.value": number; "flags.dae.damageApplied": any; damageItem: any[] }) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
+  const startTime = Date.now();
+  let tokenIdList: any[] = [];
+  let templateData = {
+    damageApplied: ["yes", "yesCard"].includes(data.autoApplyDamage) ? i18n("midi-qol.HPUpdated") : i18n("midi-qol.HPNotUpdated"),
+    damageList: [],
+    needsButtonAll: false,
+    showNPC,
+    playerButtons
+  };
+  prepareDamageListItems(data, templateData, tokenIdList, false, showNPC)
+  if (templateData.damageList.length === 0) {
+    log("No damage data to show to player");
+    return; 
+  }
+  templateData.needsButtonAll = damageList.length > 1;
+
+  //@ts-ignore
+  if (debugEnabled > 0) warn("GM action results are ", results)
+  if (["yesCard", "noCard", "yesCardNPC"].includes(data.autoApplyDamage)) {
+    const content = await renderTemplate("modules/midi-qol/templates/damage-results-player.html", templateData);
+    const speaker: any = ChatMessage.getSpeaker();
+    speaker.alias = game.user?.name;
+    let chatData: any = {
+      user: game.user?.id,
+      speaker: { scene: getCanvas()?.scene?.id, alias: game.user?.name, user: game.user?.id },
+      content: content,
+      // whisper: ChatMessage.getWhisperRecipients("players").filter(u => u.active).map(u => u.id),
+      type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+      flags: { "midiqol": { "undoDamage": tokenIdList } }
+    };
+    if (data.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", data.flagTags);
+    let message = await ChatMessage.create(chatData);
+  }
+  log(`createReverseDamageCard elapsed: ${Date.now() - startTime}`)
+}
+  
+  // Fetch the token, then use the tokenData.actor.id
+async function createGMReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any }) {
   const damageList = data.damageList;
   let actor: { update: (arg0: { "data.attributes.hp.temp": any; "data.attributes.hp.value": number; "flags.dae.damageApplied": any; damageItem: any[] }) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
   const startTime = Date.now();
@@ -207,6 +343,8 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
     damageList: [],
     needsButtonAll: false
   };
+  promises = await prepareDamageListItems(data, templateData, tokenIdList, true, true)
+/*
   for (let damageItem of damageList) {
     let { tokenId, tokenUuid, actorId, actorUuid, oldHP, oldTempHP, newTempHP, tempDamage, hpDamage, totalDamage, appliedDamage, sceneId } = damageItem;
     let tokenDocument;
@@ -282,6 +420,7 @@ let createReverseDamageCard = async (data: { damageList: any; autoApplyDamage: s
     //@ts-ignore listItem
     templateData.damageList.push(listItem);
   }
+  */
   templateData.needsButtonAll = damageList.length > 1;
 
   //@ts-ignore

@@ -916,10 +916,10 @@ There are some controls for macro writers to decide when their macro should get 
   
   * If you wish to make changes to the workflow in these macros you will need to do: 
   ```
-  const workflow = MidiQOL.Workflow.get(args[0].uuid)
-  workflow.... = .....
+  const workflow = MidiQOL.Workflow.getWorkflow(args[0].uuid)
+  workflow.XXX = .....
   ```
-  * Remember that if the macro is an "Execute as GM" macro the macro may execute on a different client and the workflow may not be defined, i.e. the Workflow.get may return undefined.
+  * Remember that if the macro is an "Execute as GM" macro the macro may execute on a different client and the workflow may not be defined, i.e. the Workflow.getWorkflow may return undefined.
 
   * If you want to change the damage roll of a weapon have your macro run at the postDmageRoll onUse pass and do something like (this will work with better rolls - the damage will be changed, but the chat card for the item won't updated)
   ```

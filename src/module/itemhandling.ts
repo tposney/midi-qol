@@ -792,7 +792,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const isPlayerOwned = this.actor.hasPlayerOwner;
   const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned))
     || !configSettings.itemTypeList.includes(this.type);
-  const hasEffects = workflow.hasDAE && workflow.workflowType === "Workflow" && this.data.effects.find(ae => !ae.transfer);
+  const hasEffects = !["applyNoButton"].includes(configSettings.autoItemEffects) && workflow.hasDAE && workflow.workflowType === "Workflow" && this.data.effects.find(ae => !ae.transfer);
   let dmgBtnText = (this.data?.data?.actionType === "heal") ? i18n("DND5E.Healing") : i18n("DND5E.Damage");
   if (workflow.rollOptions.fastForwardDamage) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
   let versaBtnText = i18n("DND5E.Versatile");

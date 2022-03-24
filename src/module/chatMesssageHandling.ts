@@ -385,6 +385,8 @@ export let hideStuffHandler = (message, html, data) => {
     ids.hover(_onTargetHover, _onTargetHoverOut)
     ids.click(_onTargetSelect);
 
+    if ($(html).find(".midi-qol-player-damage-card").length) html.hide();
+
     if ($(html).find(".midi-qol-hits-display").length) {
       if (configSettings.mergeCard) {
         $(html).find(".midi-qol-hits-display").show();
