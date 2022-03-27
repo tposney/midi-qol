@@ -380,87 +380,91 @@
           </div>
           <div class="midi-qol-faint">{{localize "midi-qol.PlayerDamageCard.Hint"}}</div>
         </div>
-      </div>
-      <div class="form-group">
-        <label>{{localize "midi-qol.DamageImmunities.Name"}}</label>
-        <select name="damageImmunities" data-dtype="String">
-          {{#select configSettings.damageImmunities}}
-          {{#each damageImmunitiesOptions as |label val|}}
-          <option value="{{val}}">{{label}}</option>
-          {{/each}}
-          {{/select}}
-        </select>
-      </div>
-      <div class="midi-qol-faint">{{localize "midi-qol.DamageImmunities.Hint"}}</div>
+        <div class="form-group">
+          <label>{{localize "midi-qol.DamageImmunities.Name"}}</label>
+          <select name="damageImmunities" data-dtype="String">
+            {{#select configSettings.damageImmunities}}
+            {{#each damageImmunitiesOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.DamageImmunities.Hint"}}</div>
 
-      <div class="form-group">
-        <label>{{localize "midi-qol.RequireMagical.Name"}}</label>
-        <input type="checkbox" name="requireMagical" data-dtype="Boolean" {{checked configSettings.requireMagical}} />
+        <div class="form-group">
+          <label>{{localize "midi-qol.RequireMagical.Name"}}</label>
+          <select name="requireMagical" data-dtype="String">
+            {{#select configSettings.requireMagical}}
+            {{#each RequireMagicalOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.RequireMagical.Hint"}}</div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.RollOtherDamage.Name"}}</label>
+          <select name="rollOtherDamage" data-dtype="String">
+            {{#select configSettings.rollOtherDamage}}
+            {{#each rollOtherDamageOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.RollOtherSpellDamage.Name"}}</label>
+          <select name="rollOtherSpellDamage" data-dtype="String">
+            {{#select configSettings.rollOtherSpellDamage}}
+            {{#each rollOtherDamageOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
+
+        <div class="midi-qol-faint">{{localize "midi-qol.RollOtherDamage.Hint"}}</div>
+
+        <div class="form-group">
+          <span>
+            <label>{{localize "midi-qol.AddWounded.Name"}}</label>
+            <input type="Number" style="width:40px;" name="addWounded" value="{{configSettings.addWounded}}"
+              data-dtype="Number" />
+          </span>
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.AddWounded.Hint"}}</div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.AddDead.Name"}}</label>
+          <input type="checkbox" name="addDead" data-dtype="addDead" {{checked configSettings.addDead}} />
+        </div>
       </div>
-      <div class="midi-qol-faint">{{localize "midi-qol.RequireMagical.Hint"}}</div>
+      <!-- Concentration-->
+      <div class="midi-qol-box">
+        <div class="form-group">
+          <label>{{localize "midi-qol.ConcentrationAutomation.Name"}}</label>
+          <input type="checkbox" name="concentrationAutomation" data-dtype="Boolean" {{checked
+            configSettings.concentrationAutomation}} />
+        </div>
 
-      <div class="form-group">
-        <label>{{localize "midi-qol.RollOtherDamage.Name"}}</label>
-        <select name="rollOtherDamage" data-dtype="String">
-          {{#select configSettings.rollOtherDamage}}
-          {{#each rollOtherDamageOptions as |label val|}}
-          <option value="{{val}}">{{label}}</option>
-          {{/each}}
-          {{/select}}
-        </select>
+        <div class="form-group">
+          <label>{{localize "midi-qol.RemoveConcentration.Name"}}</label>
+          <input type="checkbox" name="removeConcentration" data-dtype="Boolean" {{checked
+            configSettings.removeConcentration}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.RemoveConcentration.Hint"}}</div>
+
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.SingleConcentrationRoll.Name"}}</label>
+          <input type="checkbox" name="singleConcentrationRoll" data-dtype="Boolean" {{checked
+            configSettings.singleConcentrationRoll}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.SingleConcentrationRoll.Hint"}}</div>
       </div>
-
-      <div class="form-group">
-        <label>{{localize "midi-qol.RollOtherSpellDamage.Name"}}</label>
-        <select name="rollOtherSpellDamage" data-dtype="String">
-          {{#select configSettings.rollOtherSpellDamage}}
-          {{#each rollOtherDamageOptions as |label val|}}
-          <option value="{{val}}">{{label}}</option>
-          {{/each}}
-          {{/select}}
-        </select>
-      </div>
-
-      <div class="midi-qol-faint">{{localize "midi-qol.RollOtherDamage.Hint"}}</div>
-
-      <div class="form-group">
-        <span>
-          <label>{{localize "midi-qol.AddWounded.Name"}}</label>
-          <input type="Number" style="width:40px;" name="addWounded" value="{{configSettings.addWounded}}"
-            data-dtype="Number" />
-        </span>
-      </div>
-      <div class="midi-qol-faint">{{localize "midi-qol.AddWounded.Hint"}}</div>
-
-      <div class="form-group">
-        <label>{{localize "midi-qol.AddDead.Name"}}</label>
-        <input type="checkbox" name="addDead" data-dtype="addDead" {{checked configSettings.addDead}} />
-      </div>
-    </div>
-    <!-- Concentration-->
-    <div class="midi-qol-box">
-      <div class="form-group">
-        <label>{{localize "midi-qol.ConcentrationAutomation.Name"}}</label>
-        <input type="checkbox" name="concentrationAutomation" data-dtype="Boolean" {{checked
-          configSettings.concentrationAutomation}} />
-      </div>
-
-      <div class="form-group">
-        <label>{{localize "midi-qol.RemoveConcentration.Name"}}</label>
-        <input type="checkbox" name="removeConcentration" data-dtype="Boolean" {{checked
-          configSettings.removeConcentration}} />
-      </div>
-      <div class="midi-qol-faint">{{localize "midi-qol.RemoveConcentration.Hint"}}</div>
-
-
-      <div class="form-group">
-        <label>{{localize "midi-qol.SingleConcentrationRoll.Name"}}</label>
-        <input type="checkbox" name="singleConcentrationRoll" data-dtype="Boolean" {{checked
-          configSettings.singleConcentrationRoll}} />
-      </div>
-      <div class="midi-qol-faint">{{localize "midi-qol.SingleConcentrationRoll.Hint"}}</div>
-    </div>
-
     </div>
     <!-- Misc Tab -->
     <div class="tab" data-tab="misc" data-group="sections">

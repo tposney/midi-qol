@@ -92,7 +92,7 @@ class ConfigSettings {
   recordAOO = "none";
   removeButtons: string = "all";
   removeConcentration: boolean = true;
-  requireMagical: boolean = false;
+  requireMagical: string = "off";
   requiresTargets: string = "none";
   rollNPCLinkedSaves: string = "auto";
   rollNPCSaves: string = "auto";
@@ -303,7 +303,9 @@ export let fetchParams = () => {
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
   if (configSettings.optionalRules.checkFlanking === true) configSettings.optionalRules.checkFlanking = "ceadv";
   if (configSettings.optionalRules.checkFlanking === false) configSettings.optionalRules.checkFlanking = "off";
-  
+  if (typeof configSettings.requireMagical !== "string" && configSettings.requireMagical !== true) configSettings.requireMagical = "off";
+  if (typeof configSettings.requireMagical !== "string" && configSettings.requireMagical === true) configSettings.requireMagical = "nonspell";
+
   if (typeof configSettings.optionalRules.nearbyFoe !== "number") {
     if (configSettings.optionalRulesEnabled)
       configSettings.optionalRules.nearbyFoe = 5;

@@ -26,6 +26,7 @@ import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
 import { MidiKeyManager } from './module/MidiKeyManager.js';
 import { MidiSounds } from './module/midi-sounds.js';
+import { convertTypeAcquisitionFromJson } from 'typescript';
 
 export let debugEnabled = 0;
 export let debugCallTiming: any = false;
@@ -162,11 +163,15 @@ Hooks.once('setup', function () {
     config.midiProperties["toggleEffect"] = i18n("midi-qol.toggleEffectProp");
 
     config.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
-    config.damageResistanceTypes["silver"] = i18n("midi-qol.nonSilverPhysical");
-    config.damageResistanceTypes["adamant"] = i18n("midi-qol.nonAdamantinePhysical");
+    config.damageResistanceTypes["silver"] = i18n("midi-qol.NonSilverPhysical");
+    config.damageResistanceTypes["adamant"] = i18n("midi-qol.NonAdamantinePhysical");
     config.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
+    config.damageResistanceTypes["nonmagic"] = i18n("midi-qol.NonMagical");
+    config.damageResistanceTypes["magic"] = i18n("midi-qol.Magical");
+
     config.damageResistanceTypes["healing"] = config.healingTypes.healing;
     config.damageResistanceTypes["temphp"] = config.healingTypes.temphp;
+
     config.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
     config.abilityActivationTypes["reactionmanual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
   } else { // sw5e

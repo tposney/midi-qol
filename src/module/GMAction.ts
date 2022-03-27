@@ -287,7 +287,7 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
 }
 // Fetch the token, then use the tokenData.actor.id
 async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any }) {
-  if (configSettings.playerDamageCard === "none") return;
+  if (configSettings.playerDamageCard === "none" ) return;
   let showNPC = ["npcplayerresults", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
   let playerButtons = ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
   const damageList = data.damageList;
@@ -326,7 +326,7 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
     if (data.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", data.flagTags);
     let message = await ChatMessage.create(chatData);
   }
-  log(`createReverseDamageCard elapsed: ${Date.now() - startTime}`)
+  log(`createPlayerReverseDamageCard elapsed: ${Date.now() - startTime}`)
 }
   
   // Fetch the token, then use the tokenData.actor.id
@@ -441,7 +441,7 @@ async function createGMReverseDamageCard (data: { damageList: any; autoApplyDama
     if (data.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", data.flagTags);
     let message = await ChatMessage.create(chatData);
   }
-  log(`createReverseDamageCard elapsed: ${Date.now() - startTime}`)
+  log(`createGMReverseDamageCard elapsed: ${Date.now() - startTime}`)
 }
 
 async function doClick(event: { stopPropagation: () => void; }, actorUuid: any, totalDamage: any, mult: any) {

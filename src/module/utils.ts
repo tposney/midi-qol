@@ -204,15 +204,15 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   if (configSettings.damageImmunities === "none") return totalMult;
   if (dmgTypeString !== "") {
     // if not checking all damage counts as magical
-    const magicalDamage = (item?.type !== "weapon"
-      || (item?.data.data.attackBonus > 0 && !configSettings.requireMagical)
-      || item.data.data.properties["mgc"]
-      || item.data.flags.midiProperties?.magicdam);
+    let magicalDamage = item.data.data.properties?.mgc || item.data.flags.midiProperties?.magicdam;
+    magicalDamage = magicalDamage || (configSettings.requireMagical === "off" &&  item?.data.data.attackBonus > 0);
+    magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && item?.data.type !== "weapon");
+    magicalDamage = magicalDamage || (configSettings.requireMagical === "nonspell" && item?.data.type === "spell");
     const silverDamage = item?.data.data.properties?.sil;
     const adamantineDamage = item?.data.data.properties?.ada;
     let traitList = [{ type: "di", mult: 0 }, { type: "dr", mult: 0.5 }, { type: "dv", mult: 2 }];
     // for sw5e use sdi/sdr/sdv instead of di/dr/dv
-    if (actor.type === "starship" && actor.data.data.atrributes.hp.tenp > 0) {
+    if (game.system.id === "sw5e" && actor.type === "starship" && actor.data.data.atrributes.hp.tenp > 0) {
       traitList = [{ type: "sdi", mult: 0 }, { type: "sdr", mult: 0.5 }, { type: "sdv", mult: 2 }];
     }
     for (let { type, mult } of traitList ) {
@@ -222,8 +222,10 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
         if (!(magicalDamage || silverDamage) && trait.includes("silver")) trait = trait.concat("bludgeoning", "slashing", "piercing")
         if (!(magicalDamage || adamantineDamage) && trait.includes("adamant")) trait = trait.concat("bludgeoning", "slashing", "piercing")
       }
-      if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
-      else if (item?.type === "power" && trait.includes("power")) totalMult = totalMult * mult;
+      if (!magicalDamage && trait.find(t => t === "nonmagic")) totalMult = totalMult * mult;
+      else if (magicalDamage && trait.find(t => t === "magic")) totalMult = totalMult * mult;
+      else if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
+      else if (item?.type === "power" && trait.includes("power") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
     }
   }

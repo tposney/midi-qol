@@ -761,14 +761,14 @@ export class Workflow {
             const ceEffect = hasCE ? game.dfreds.effects.all.find(e => e.name === theItem?.name) : undefined;
             const hasItemEffect = this.hasDAE && theItem?.effects?.some(ef => ef.data?.transfer === false);
             if (hasItemEffect && (!ceEffect || ["none", "both", "itempri"].includes(useCE))) {
-              await globalThis.DAE.doEffects(theItem, true, this.applicationTargets, { toggleEffect: this.item?.data.flags.midiProperties.toggleEffect, whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions })
+              await globalThis.DAE.doEffects(theItem, true, this.applicationTargets, { toggleEffect: this.item?.data.flags.midiProperties?.toggleEffect, whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions })
               if (!this.forceApplyEffects && configSettings.autoItemEffects !== "applyLeave") await this.removeEffectsButton();
             }
             if (ceEffect && theItem) {
               if (["both", "cepri"].includes(useCE) || (useCE === "itempri" && !hasItemEffect)) {
                 const metadata = this.getMacroData();
                 for (let token of this.applicationTargets) {
-                  if (this.item?.data.flags.midiProperties.toggleEffect) {
+                  if (this.item?.data.flags.midiProperties?.toggleEffect) {
                     //@ts-ignore
                     await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
                   } else {

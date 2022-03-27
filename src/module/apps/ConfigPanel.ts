@@ -64,6 +64,7 @@ export class ConfigPanel extends FormApplication {
       RecordAOOOptions: geti18nOptions("RecordAOOOptions"),
       EnforceReactionsOptions: geti18nOptions("EnforceReactionsOptions"),
       AutoEffectsOptions: geti18nOptions("AutoEffectsOptions"),
+      RequireMagicalOptions: geti18nOptions("RequireMagicalOptions"),
       //@ts-ignore
       itemTypeLabels: CONFIG.Item.typeLabels,
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),
