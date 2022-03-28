@@ -32,7 +32,7 @@ export let readyHooks = async () => {
       const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
       return specialDuration?.includes("isMoved");
     }) ?? [];
-    if (expiredEffects.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", expiredEffects.map(ef => ef.id), { "expiry-reaason": "midi-qol:isMoved" });
+    if (expiredEffects.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", expiredEffects.map(ef => ef.id), { "expiry-reason": "midi-qol:isMoved" });
   })
 
   Hooks.on("targetToken", debounce(checkflanking, 150));
