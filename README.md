@@ -663,6 +663,7 @@ Gives the attacker advantage on attacks made against the target. Midi-qol only c
 These flags can be used to grant damage reduction to a character and can be set by active effects and are evaluated after derived fields are calculated, so things like dex.mod etc are available.  
 flags.midi-qol.DR.all CUSTOM 3, will give 3 points of damage reduction to all incoming damage.
 Negative DR is not supported (i.e. to increase damage taken).  
+* flags.midi-qol.magicResistance.all/str/dex etc. Will give advantage on saves versus magical effects (spell or magic effect property set).
 
 * flags.midi-qol.absorption.damageType (acid/bludgeoning etc) converts damage of that type to healing when applied to the actor with the flag set.
 
@@ -710,7 +711,8 @@ where specification is a comma separated list of fields.
   * rollType=check/save/skill (default save), roll an ability check, save or skill.
   * saveAbility=dex/con/etc prc/perception etc The actor's ability/skill to use for rolling the saving throw
   * saveDC=number
-  * saveDamage=halfdamage/nodamage/fulldamage - default nodamage
+  * added saveDamage=halfdamage/nodamage/fulldamage - default nodamage
+  * added saveRemove=true/false - remove effect on save - default true.
   * saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
   * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is failed.
   Damage:
@@ -872,6 +874,16 @@ You can use this feature to roll custom damage via a macro for any item - just l
 These field lets you specify a macro to call during the roll. 
 
 **OnUse macros** are called during the item workflow. The intention of this feature is that you can customise the behaviour of how a particular item behaves.  
+
+Midi-qol supports item based onUse macros, which are called when the item is rolled, and actor onUse macros which are called whenever any item is rolled, at various points in the workflow.
+
+The interpretation of the field settings are identical in both actor and item onUse macros. For actor based onUse macros, ItemMacro will refer to the item being rolled, which is not useful, either specify a world macro or an ItemMacro.item name.
+
+For actor onUse macros you can specify to call the macro by setting actor flags by hand or active effects, 
+```
+flags.midi-qol.onUseMacroName CUSTOM macroName,macroPass
+```
+which will call the specified macro on the specified macroPass. macroPass is taken from the list below.
 
 The field should contain ONLY the macro name, or the string "ItemMacro" or "ItemMacro.ItemName". 
   - "ItemMacro" means it will call the item macro for the item for the workflow. 

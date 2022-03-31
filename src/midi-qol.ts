@@ -392,6 +392,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.concentrationSaveBonus`);
   midiFlags.push(`flags.midi-qol.potentCantrip`);
   midiFlags.push(`flags.midi-qol.sculptSpells`);
+  midiFlags.push("flags.midi-qol.magiResistance.all")
 
   allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
   if (game.system.id === "sw5e")
@@ -432,6 +433,7 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.min.ability.save.all");
   midiFlags.push("flags.midi-qol.min.ability.check.all");
   midiFlags.push("flags.midi-qol.sharpShooter");
+  midiFlags.push("flags.midi-qol.onUseMacroName");
 
 
   //@ts-ignore CONFIG.DND5E
@@ -450,6 +452,7 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.check.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.magiResistance.all.${abl}`);
   })
   
   midiFlags.push(`flags.midi-qol.advantage.skill.all`);

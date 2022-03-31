@@ -8,7 +8,7 @@ import { selectTargets, shouldRollOtherDamage, showItemCard, templateTokens } fr
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, removeCondition, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -291,8 +291,12 @@ export class Workflow {
     this.flagTags = undefined;
     this.workflowOptions = options?.workflowOptions ?? {};
 
-    if (configSettings.allowUseMacro)
+    if (configSettings.allowUseMacro) {
       this.onUseMacros = getProperty(this.item, "data.flags.midi-qol.onUseMacroParts");
+      const actorOnUseMacros = getProperty(this.actor, "data.flags.midi-qol.onUseMacroParts");
+      //@ts-ignore
+      this.onUseMacros.items = (this.onUseMacros.items ?? []).concat(actorOnUseMacros.items);
+    }
     this.preSelectedTargets = canvas?.scene ? new Set(game.user?.targets) : new Set(); // record those targets targeted before cast.
     if (this.item && ["spell", "feat", "weapon"].includes(this.item.type)) {
       if (!this.item?.data.flags.midiProperties ) {
@@ -873,13 +877,19 @@ export class Workflow {
     }
     // TODO Hidden should check the target to see if they notice them?
     if (checkRule("invisAdvantage")) {
-      const token = canvas?.tokens?.get(this.tokenId);
-      if (token) {
+      const token: Token | undefined = canvas?.tokens?.get(this.tokenId);
+      const target: Token | undefined = this.targets.values().next().value;
+      let isHidden;
+      if (token && target && installedModules.get("conditional-visibility")) { // preferentially check CV isHidden
+        //@ts-ignore .api
+        isHidden = game.modules.get('conditional-visibility')?.api?.canSee(target, token) === false;
+      } else if (token) {
         const hidden = hasCondition(token, "hidden");
         const invisible = hasCondition(token, "invisible");
-        this.advantage = this.advantage || hidden || invisible;
-        if (hidden || invisible) log(`Advantage given to ${this.actor.name} due to hidden/invisible`)
+        isHidden = hidden || invisible
       }
+      this.advantage = this.advantage || isHidden;
+      if (isHidden) log(`Advantage given to ${this.actor.name} due to hidden/invisible`)
     }
     // Neaarby foe gives disadvantage on ranged attacks
     if (checkRule("nearbyFoe") && !getProperty(this.actor, "data.flags.midi-qol.ignoreNearbyFoes") && (["rwak", "rsak", "rpak"].includes(actType) || this.item.data.data.properties?.thr)) { // Check if there is a foe near me when doing ranged attack
@@ -1684,8 +1694,7 @@ export class Workflow {
       rollType = "abil"
       //@ts-ignore actor.rollAbilityTest
       rollAction = CONFIG.Actor.documentClass.prototype.rollAbilityTest;
-    }
-    else {
+    } else {
       const midiFlags = this.saveItem.data.flags ? this.saveItem.data.flags["midi-qol"] : undefined;
       if (midiFlags?.overTimeSkillRoll) {
         rollType = "skill"
@@ -1721,7 +1730,10 @@ export class Workflow {
           advantage = (target?.actor?.data.data.traits?.dr?.custom || "").includes(i18n("midi-qol.MagicResistant").trim());
           // check magic resistance as a feature (based on the SRD name as provided by the DnD5e system)
           advantage = advantage || target?.actor?.data.items.find(a => a.type === "feat" && a.name === i18n("midi-qol.MagicResistanceFeat").trim()) !== undefined;
-
+          const magicResistanceFlags = getProperty(target.actor.data, "flags.midi-qol.magicResistance");
+          if (magicResistanceFlags && (magicResistanceFlags?.all || getProperty(magicResistanceFlags, rollAbility))) {
+            advantage = true;
+          }
           if (advantage) this.advantageSaves.add(target);
           else advantage = undefined; // TODO why is this here???
           if (debugEnabled > 1) debug(`${target.actor.name} resistant to magic : ${advantage}`);

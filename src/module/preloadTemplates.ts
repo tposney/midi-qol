@@ -13,6 +13,7 @@ export async function preloadTemplates() {
     // "modules/midi-qol/templates/midiProperties.html"
     "modules/midi-qol/templates/sound-config.html",
     "modules/midi-qol/templates/rollAlternate.html",
+    "modules/midi-qol/templates/actorOnUseMacrosConfig.html",
   ];
 	return loadTemplates(templatePaths);
 }

@@ -1,7 +1,6 @@
-import { config } from "simple-peer";
 import { geti18nOptions, i18n } from "../../midi-qol.js";
 import { MidiSounds } from "../midi-sounds.js";
-import { autoFastForwardAbilityRolls, configSettings, midiSoundSettings } from "../settings.js";
+import { configSettings, midiSoundSettings } from "../settings.js";
 
 export class SoundConfigPanel extends FormApplication {
 

@@ -83,7 +83,8 @@ export class OnUseMacroOptions {
   }
 }
 
-export function activateMacroListeners(app: ItemSheet, html) {
+export function activateMacroListeners(app: Application, html) {
+  //@ts-ignore
   if (app.isEditable) {
     html.find(".macro-control").click(_onMacroControl.bind(app));    
   }
@@ -95,23 +96,23 @@ async function _onMacroControl(event){
 
   // Add new macro component
   if ( a.classList.contains("add-macro") ) {
-    const macros = getCurrentMacros(this.item);
+    const macros = getCurrentMacros(this.object);
     await this._onSubmit(event);  // Submit any unsaved changes
     macros.items.push(new OnUseMacro());
-    return this.item.update({"flags.midi-qol.onUseMacroName":  macros.toString()});
+    return this.object.update({"flags.midi-qol.onUseMacroName":  macros.toString()});
   }
 
   // Remove a macro component
   if ( a.classList.contains("delete-macro") ) {
-    const macros = getCurrentMacros(this.item);
+    const macros = getCurrentMacros(this.object);
     await this._onSubmit(event);  // Submit any unsaved changes
     const li = a.closest(".damage-part");
     macros.items.splice(Number(li.dataset.midiqolMacroPart), 1);
-    return this.item.update({"flags.midi-qol.onUseMacroName": macros.toString()});
+    return this.object.update({"flags.midi-qol.onUseMacroName": macros.toString()});
   }
 }
 
-function getCurrentMacros(item): OnUseMacros {
-  const macroField = getProperty(item, "data.flags.midi-qol.onUseMacroParts");
+export function getCurrentMacros(object): OnUseMacros {
+  const macroField = getProperty(object, "data.flags.midi-qol.onUseMacroParts");
   return macroField;
 }

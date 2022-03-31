@@ -95,8 +95,30 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
-
-  0.9.39
+  0.9.41
+  * Support for Conditional Visibility hidden/invisible conditions for advantage/disadvantage.
+  * Support for application of CV effects is via Convenient Effects, so you need convenient effects/DAE to be able to implement the invisiblity spell. Midi-qol sample items updated to support CV and CV convenient effects. It is suggested that you toggle the CV effects to be "status effects".
+  * Some tweaks to spiritual weapon to make it a little more friendly to use. You no longer need to define a "Slash" attack on the spiritual weapon actor, all of the damge rolls etc will be configured when the item is summoned.
+  * Added Lay on Hands with resource consumption, dialog for how many points to use etc.
+  * Added flags.mid-qol.magicResistance.all/dex/str/etc.
+  * For macro writers: Added support for workflow.workflowOptions.lateTargeting, autoConsumeResource etc to set per workflow whether to allow late targeting, prompt for resource consumption. These are useful in preItemRoll macros to configure the workflow to behave a certain way. See lay on hands sample item which skips dialog to consume resources.
+  * Fix for overtime effects that call a macro when a non-gm advances the combat tracker.
+  * **Breaking** All reaction used tracking/prompting, bonus action tracking/prompting bonus actions, attacks of opportunity tracking are now only performed if the actor is in combat.
+  * Added actor based onUse macros. Behaves exactly the same as item onUse macros. You can specify a global macro, identified by name, ItemMacro which refers to the workflow item (not useful), or ItemMacro.item name, (probably the most useful) which allows you add specific item macro calls for any item roll.
+  * Can be configured from the Actor sheet or via ...
+  * Added flags.midi-qol.onUseMacroName CUSTOM macroName,macroPass - which will cause the specified macro (world macro name, ItemMacro, or ItemMacro.macro name) to be called when midi-qol gets to the workflow point specified by macroPass.
+  * Fix for damageOnlyWorkflow and BetterRollsWorkflow throwing an error in getTraitMulti.
+  
+  0.9.40
+  * **Breaking** Change to Requires Magical. New options, "off", "non-spell", "all".
+    - Previously non-weapons would do magical damage and "requires magical" only applied to weapons.
+    - New options are off (same as previous disabled), "non-spell" all items except spells will do non-magical damage unless the per item midi-qol flag (or weapon magic property) is set to true.
+    - "all" All items will do non-magical damage unless they have the magical damage property set.
+    - I expect that most people will want "requires magical" to be set to non-spell and make sure that non-spells that do magical damage will have the magical property set.
+  * Added dr/dv/di for "Magical Damage" and "Non Magical Damage", where magical/non-magical is determined as above. 
+  * Fix some errors being thrown when applying effects due to midiProperties and not removing the apply effects buttons in some cases.
+  
+    0.9.39
   * Some more features for flanking checks. Checked when targeting a token (1 token selected - the attacker and one target targeted) or when attacking.
     - adv only flanking actor will gain advantage and no icon added to display flanking
     - CE Only, flanking actor will gain CE effect "Flanking" on the attacker and you can configure that however you want, adv to attack or whatever.

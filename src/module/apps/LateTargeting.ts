@@ -1,6 +1,4 @@
-import { tokenToString } from "typescript";
-import { log, debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, overTimeEffectsToDelete, geti18nOptions, i18nFormat } from "../../midi-qol.js";
-import { configSettings, autoRemoveTargets, checkRule } from "../settings.js";
+import { log, debug, i18n, error, warn, geti18nOptions, i18nFormat } from "../../midi-qol.js";
 import { getAutoRollAttack, getTokenPlayerName, isAutoFastAttack } from "../utils.js";
 
 export class LateTargetingDialog extends Application {
@@ -27,7 +25,6 @@ export class LateTargetingDialog extends Application {
   }
 
   static get defaultOptions() {
-
       //@ts-ignore _collapsed
     let left = window.innerWidth - 310 - (ui.sidebar?._collapsed ? 10 : (ui.sidebar?.position.width ?? 300));
     let top = window.innerHeight - 200;
@@ -45,6 +42,7 @@ export class LateTargetingDialog extends Application {
       closeOnSubmit: true
     });
   }
+  
   async getData(options = {}) {
     let data: any = mergeObject(this.data, await super.getData(options));
     data.targets = Array.from(game.user?.targets ?? []);

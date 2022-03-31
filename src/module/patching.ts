@@ -498,11 +498,11 @@ export function initPatching() {
   libWrapper = globalThis.libWrapper;
   libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
   // For new onuse macros stuff.
-  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.prepareData", _prepareItemData, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.prepareData", _prepareOnUseMacroData, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareData", _prepareOnUseMacroData, "WRAPPER");
 }
 
-
-export function _prepareItemData(wrapped, ...args) {
+export function _prepareOnUseMacroData(wrapped, ...args) {
   wrapped(...args);
   const macros = getProperty(this.data, 'flags.midi-qol.onUseMacroName');
   if (macros !== undefined) setProperty(this.data, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macros ?? null));
@@ -510,7 +510,7 @@ export function _prepareItemData(wrapped, ...args) {
 }
 
 // This can replace the ItemSheetSubmit solution when in v9 
-export function preUpdateItemOnUseMacro(item, changes, options, user) {
+export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user) {
   const macroParts = getProperty(changes, "flags.midi-qol.onUseMacroParts");
   if (!macroParts) return true;
   try {

@@ -1,4 +1,4 @@
-import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats, debugEnabled, MQdefaultDamageType, i18nFormat, midiFlags } from "../midi-qol.js";
+import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats, debugEnabled, MQdefaultDamageType, i18nFormat } from "../midi-qol.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { BetterRollsWorkflow, DDBGameLogWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { nsaFlag, coloredBorders, addChatDamageButtons, configSettings, forceHideRoll } from "./settings.js";

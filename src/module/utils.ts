@@ -7,7 +7,7 @@ import { installedModules } from "./setupModules.js";
 import { itemJSONData, overTimeJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
-import { OnUseMacros } from "./apps/Item.js";
+import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { Options } from "./patching.js";
 import { EndOfLineState } from "typescript";
 
@@ -202,9 +202,15 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) totalMult = -1;
   if (dmgTypeString.includes("midi-none")) return 0;
   if (configSettings.damageImmunities === "none") return totalMult;
+  /*
+  let attacker = item?.parent;
+  if (attacker) {
+    const ignoreFlags = getProperty(attacker.data.flags, "midi-qol.ignoreTrait"
+  }
+  */
   if (dmgTypeString !== "") {
     // if not checking all damage counts as magical
-    let magicalDamage = item.data.data.properties?.mgc || item.data.flags.midiProperties?.magicdam;
+    let magicalDamage = item?.data.data.properties?.mgc || item?.data.flags.midiProperties?.magicdam;
     magicalDamage = magicalDamage || (configSettings.requireMagical === "off" &&  item?.data.data.attackBonus > 0);
     magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && item?.data.type !== "weapon");
     magicalDamage = magicalDamage || (configSettings.requireMagical === "nonspell" && item?.data.type === "spell");
@@ -278,15 +284,15 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     if (game.system.id === "sw5e" && t.actor.type === "starship") {
       // TODO: maybe expand this to work with characters as well?
       // Starship damage resistance applies only to attacks
-      if (item && ["mwak", "rwak"].includes(item.data.data.actionType)) {
+      if (item && ["mwak", "rwak"].includes(item?.data.data.actionType)) {
         DRAll = getProperty(t, "actor.data.data.attributes.equip.armor.dr") ?? 0;;
       }
     } else if (getProperty(a.data, "flags.midi-qol.DR.all") !== undefined)
       DRAll = (new Roll((getProperty(a.data, "flags.midi-qol.DR.all") || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
-    if (item?.hasAttack && getProperty(a.data, `flags.midi-qol.DR.${item.data.data.actionType}`)) {
-      DRAll += (new Roll((getProperty(a.data, `flags.midi-qol.DR.${item.data.data.actionType}`) || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
+    if (item?.hasAttack && getProperty(a.data, `flags.midi-qol.DR.${item?.data.data.actionType}`)) {
+      DRAll += (new Roll((getProperty(a.data, `flags.midi-qol.DR.${item?.data.data.actionType}`) || "0"), a.getRollData())).evaluate({ async: false }).total ?? 0;
     }
-    const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item.data.data.properties["mgc"]);
+    const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["mgc"]);
     const silverDamage = magicalDamage || (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["sil"]);
     const adamantineDamage = magicalDamage || (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["ada"]);
 
@@ -700,9 +706,21 @@ export function requestPCActiveDefence(player, actor, advantage, saveItemNname, 
 export function midiCustomEffect(actor, change) {
   if (typeof change?.key !== "string") return true;
   if (!change.key?.startsWith("flags.midi-qol")) return true;
-  //@ts-ignore
-  const val = Number.isNumeric(change.value) ? parseInt(change.value) : 1;
-  setProperty(actor.data, change.key, change.value);
+  if (change.key === "flags.midi-qol.onUseMacroName") {
+    const args = change.value.split(",");
+    if (args.length !== 2) return true;
+    const onUseMacro = OnUseMacro.parsePart([args[0], args[1]]);
+    const macroItems = getProperty(actor.data, "flags.midi-qol.actorOnUseMacroParts")?.items ?? [];
+    macroItems.push(onUseMacro);
+    setProperty(actor.data, "flags.midi-qol.onUseMacroParts.items", macroItems);
+    const macroString = macroItems.map(oum => oum.toString()).join(",");
+    setProperty(actor.data, "flags.midi-qol.onUseMacroName", macroString)
+    return true;
+  } else {
+    //@ts-ignore
+    const val = Number.isNumeric(change.value) ? parseInt(change.value) : 1;
+    setProperty(actor.data, change.key, change.value);
+  }
   return true;
 }
 
@@ -912,15 +930,14 @@ export async function processOverTime(wrapped, data, options, user) {
               }
               setProperty(itemData.flags, "midi-qol.forceCEOff", true);
               if (killAnim) setProperty(itemData.flags, "autoanimations.killAnim", true)
+              if (macroToCall) {
+                setProperty(itemData, "flags.midi-qol.onUseMacroName", macroToCall);
+                setProperty(itemData, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macroToCall));
+              }
               let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
               if (saveRemove && saveDC > -1)
                 overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id };
-              if (macroToCall) {
-                //TODO update this for new version
-                setProperty(ownedItem.data, "flags.midi-qol.onUseMacroName", macroToCall);
-                setProperty(ownedItem.data, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macroToCall));
-              }
-
+  
               if (details.removeCondition) {
                 let value = replaceAtFields(details.removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
                 let remove;
@@ -981,7 +998,7 @@ export async function completeItemRoll(item, options: any = { checkGMstatus: fal
           if (theTarget) theTarget.object.setTarget(true, { user: game.user, releaseOthers: false, groupSelection: true });
         }
       }
-      let hookName = `midi-qol.RollComplete.${item.uuid}`;
+      let hookName = `midi-qol.RollComplete.${item?.uuid}`;
       if (!(item instanceof CONFIG.Item.documentClass)) {
         // Magic items create a pseudo item when doing the roll so have to hope we get the right completion
         hookName = "midi-qol.RollComplete";
@@ -1234,7 +1251,7 @@ let pointWarn = debounce(() => {
 }, 100)
 
 export function checkRange(actor, item, tokenId, targets): string {
-  let itemData = item.data.data;
+  let itemData = item?.data.data;
   if (!canvas || !canvas.scene) return "normal"
   // check that a range is specified at all
   if (!itemData.range) return "normal";
@@ -1298,7 +1315,8 @@ export function isAutoFastDamage(workflow: Workflow | undefined = undefined): bo
   return game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward)
 }
 
-export function isAutoConsumeResource(workFlow: Workflow | undefined = undefined): boolean {
+export function isAutoConsumeResource(workflow: Workflow | undefined = undefined): boolean {
+  if (workflow?.workflowOptions.autoConsumeResource !== undefined) return workflow?.workflowOptions.autoConsumeResource;
   return game.user?.isGM ? configSettings.gmConsumeResource : configSettings.consumeResource;
 }
 
@@ -1395,7 +1413,7 @@ export async function addConcentration(options: { workflow: Workflow }) {
     statusEffect = CONFIG.statusEffects.find(se => se.id === "combat-utility-belt.concentrating" || se.id === "combat-utility-belt.concentration");
   }
   if (statusEffect) { // found a cub or convenient status effect.
-    const itemDuration = item.data.data.duration;
+    const itemDuration = item?.data.data.duration;
     statusEffect = duplicate(statusEffect);
     // set the token as concentrating
     // Update the duration of the concentration effect - TODO remove it CUB supports a duration
@@ -1499,11 +1517,6 @@ export function hasCondition(token, condition: string) {
   if (!token) return false;
   const localCondition = i18n(`midi-qol.${condition}`);
   if (installedModules.get("conditional-visibility") && getProperty((token.actor.data.flags), `conditional-visibility.${condition}`)) return true;
-  //@ts-ignore game.cub
-  if (installedModules.get("combat-utility-belt") && game.cub.getCondition(localCondition)) {
-    //@ts-ignore game.cub
-    return game.cub.hasCondition(localCondition, [token], { warn: false });
-  }
   return false;
 }
 
@@ -1972,19 +1985,24 @@ function maxCastLevel(actor) {
   }
   return pactLevel;
 }
+
 async function getMagicItemReactions(actor: Actor, triggerType: string): Promise<Item[]> {
   if (!globalThis.MagicItems) return [];
-  const magicItemActor = globalThis.MagicItems.actor(actor.id);
-  if (!magicItemActor) return [];
   const items: Item[] = []
-  // globalThis.MagicItems.actor(_token.actor.id).items[0].ownedEntries[0].ownedItem
-  for (let magicItem of magicItemActor.items) {
-    for (let ownedItem of magicItem.ownedEntries) {
-      const theItem = await ownedItem.item.data()
-      if (theItem.data.activation.type === triggerType) {
-        items.push(ownedItem);
+  try {
+    const magicItemActor = globalThis.MagicItems.actor(actor.id);
+    if (!magicItemActor) return [];
+    // globalThis.MagicItems.actor(_token.actor.id).items[0].ownedEntries[0].ownedItem
+    for (let magicItem of magicItemActor.items) {
+      for (let ownedItem of magicItem.ownedEntries) {
+        const theItem = await ownedItem.item.data()
+        if (theItem.data.activation.type === triggerType) {
+          items.push(ownedItem);
+        }
       }
     }
+  } catch (err) {
+    console.warn(`midi-qol | Fetching magic item spells/features on ${actor.name} failed - ignoring`, err)
   }
   return items;
 }
@@ -2027,8 +2045,9 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   let reactions;
   try {
     reactions = target.actor.items.filter(item => itemReaction(item, triggerType, maxLevel));
-    if (getReactionSetting(player) === "allMI")
-      reactions = reactions.concat(await getMagicItemReactions(target.actor, triggerType));
+    if (getReactionSetting(player) === "allMI") {
+        reactions = reactions.concat(await getMagicItemReactions(target.actor, triggerType));
+    }
     reactions = reactions.length;
   } finally {
     enableNotifications(true);
@@ -2478,10 +2497,20 @@ export async function ConvenientEffectsHasEffect(effectName: string, uuid: strin
   return game.dfreds.effectInterface.hasEffectApplied(effectName, uuid);
 }
 
-export function isInCombat(tokenId: string) {
-  let combats = game.combats?.combats.filter(combat =>
-    combat.combatants.filter(combatant => combatant?.token?.id === tokenId).length !== 0
-  );
+export function isInCombat(actor: Actor) {
+  const actorUuid = actor.uuid;
+  let combats;
+  if (actorUuid.startsWith("Scene")) { // actor is a token synthetic actor
+    const tokenId = actorUuid.split(".")[3]
+    combats = game.combats?.combats.filter(combat =>
+      combat.combatants.filter(combatant => combatant?.data.tokenId === tokenId).length !== 0
+    );
+  } else { // actor is not a synthetic actor so can use actor Uuid 
+    const actorId = actor.id;
+    combats = game.combats?.combats.filter(combat =>
+      combat.combatants.filter(combatant => combatant?.data.actorId === actorId).length !== 0
+    );
+  }
   return (combats?.length ?? 0) > 0;
 }
 

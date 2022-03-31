@@ -1,0 +1,34 @@
+<form class="{{classes}}" autocomplete="off">
+  <section>
+    <header class="effect-change effects-header flexrow">
+      <div class="key">{{localize "midi-qol.MacroName"}}</div>
+      <div class="value">{{localize "midi-qol.MacroPass"}}</div>
+      <div class="effect-controls">
+          <a class="effect-control macro-control add-macro" data-action="add"><i class="far fa-plus-square"></i></a>
+      </div>
+  </header>
+    <div class="midi-qol-box">
+      <ol class="changes-list">
+        {{#each onUseMacroParts}}
+        <li class="effect-change macro-change flexrow">
+          <div class = "key">
+          <input type="text" name="onUseMacroParts.{{@index}}.macroName" value={{this.macroName}}>
+          </div>
+          <div class="value">
+          <select name="onUseMacroParts.{{@index}}.option" data-dtype="String">
+            {{#select this.option}}
+            {{#each ../MacroPassOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
+        <div class="effect-controls">
+          <a class="effect-control macro-control delete-macro"><i class="fas fa-trash"></i></a>
+        </div>
+        </li>
+        {{/each}}
+      </ol>
+    </div>
+  </section>
+</form>

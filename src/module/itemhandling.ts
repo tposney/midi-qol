@@ -4,7 +4,6 @@ import { configSettings, enableWorkflow, checkRule } from "./settings.js";
 import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, midiRenderRoll } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
-import { convertCompilerOptionsFromJson, createImportSpecifier } from "typescript";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
 import { deleteItemEffects } from "./GMAction.js";
 
@@ -218,7 +217,6 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
     }
   };
 
-
   workflow.processDamageEventOptions();
   // Allow overrides form the caller
   if (spellLevel) workflow.rollOptions.spellLevel = spellLevel;
@@ -353,7 +351,8 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
 
 //@ts-ignore .Item
 async function newResolveLateTargeting(item: CONFIG.Item.documentClass): boolean {
-  if (!getLateTargeting()) return true;
+  const workflow = Workflow.getWorkflow(item?.uuid);
+  if (!getLateTargeting(workflow)) return true;
 
     // enable target mode
     const controls: any = ui.controls;
@@ -438,10 +437,13 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
   const shouldCheckLateTargeting = ["weapon", "feat", "spell"].includes(this.data.type) && getLateTargeting();
                                
-  if (shouldCheckLateTargeting  && !isRangeSpell && !isAoESpell) {
+  if (shouldCheckLateTargeting && !isRangeSpell && !isAoESpell) {
 
     // normal targeting and auto rolling attack so allow late targeting
     let canDoLateTargeting = this.data.data.target.type !== "self";
+
+    //explicit don't do late targeting passed
+    if (options.workflowOptions.lateTargeting === false) canDoLateTargeting = false;
 
     // TODO look at this if AoE spell and not auto targeting need to work out how to deal with template placement
     if (false && isAoESpell && configSettings.autoTarget === "none")
@@ -568,16 +570,23 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type)) {
     itemUsesReaction = true;
   }
+  let inCombat = isInCombat(workflow.actor);
+  
   const checkReactionAOO = configSettings.recordAOO=== "all" || (configSettings.recordAOO=== this.actor.type)
+
+  // inCombat used by reactions, bonus actions and AOO checking - only evaluate it once since it's expensiveish
+  if (checkReactionAOO || needsReactionCheck(this.actor) || configSettings.enforceBonusActions !== "none" 
+        || configSettings.enforceReactions !== "none") {
+    inCombat = isInCombat(workflow.actor);
+  }
   if (checkReactionAOO && !itemUsesReaction && this.hasAttack) {
-    const inCombat = isInCombat(workflow.tokenId);
     let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
     const isTurn = activeCombatants?.includes(workflow.tokenId)
     if (!isTurn && inCombat) itemUsesReaction = true;
   }
 
   workflow.reactionQueried = false;
-  const blockReaction = itemUsesReaction && hasReaction && needsReactionCheck(this.actor);
+  const blockReaction = itemUsesReaction && hasReaction && inCombat && needsReactionCheck(this.actor);
   if (blockReaction) {
     let shouldRoll = false;
     let d = await Dialog.confirm({
@@ -593,7 +602,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (["bonus"].includes(this.data.data.activation?.type)) {
     itemUsesBonusAction = true;
   }
-  const blockBonus = itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(this.actor);
+  const blockBonus = inCombat && itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(this.actor);
   if (blockBonus) {
     let shouldRoll = false;
     let d = await Dialog.confirm({
@@ -604,7 +613,6 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
    if (!shouldRoll) return; // user aborted roll TODO should the workflow be deleted?
   }
 
-
   if (await asyncHooksCall("midi-qol.preItemRoll", workflow) === false || await asyncHooksCall(`midi-qol.preItemRoll.${this.uuid}`, workflow) === false) {
     console.warn("midi-qol | attack roll blocked by preItemRoll hook");
     return workflow.next(WORKFLOWSTATES.ROLLFINISHED)
@@ -612,9 +620,8 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     // return;
   }
   if (configSettings.allowUseMacro) {
-//    await this.callMacros(this.item, this.onUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
-
     const results = await workflow.callMacros(this, workflow.onUseMacros?.getMacros("preItemRoll"), "OnUse", "preItemRoll");
+
     if (results.some(i => i === false)) {
       console.warn("midi-qol | attack roll blocked by preItemRoll macro");
       return workflow.next(WORKFLOWSTATES.ROLLFINISHED)
@@ -625,7 +632,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
   if (configureDialog) {
     if (this.type === "spell") {
-      if (isAutoConsumeResource() && !workflow.rollOptions.fastForward) {
+      if (isAutoConsumeResource(workflow) && !workflow.rollOptions.fastForward) {
         configureDialog = false;
         // Check that there is a spell slot of the right level
         const spells = this.actor.data.data.spells;
@@ -640,7 +647,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
           }, 100)
         }
       }
-    } else configureDialog = !isAutoConsumeResource();
+    } else configureDialog = !isAutoConsumeResource(workflow);
   }
 
   const wrappedRollStart = Date.now();
@@ -651,8 +658,8 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return null;
   }
 
-  if (itemUsesBonusAction && !hasBonusAction && configSettings.enforceBonusActions !== "none") await setBonusActionUsed(this.actor); 
-  if (itemUsesReaction && !hasReaction && configSettings.enforceReactions !== "none") await setReactionUsed(this.actor); 
+  if (itemUsesBonusAction && !hasBonusAction && configSettings.enforceBonusActions !== "none" && inCombat) await setBonusActionUsed(this.actor); 
+  if (itemUsesReaction && !hasReaction && configSettings.enforceReactions !== "none" && inCombat) await setReactionUsed(this.actor); 
 
   if (needsConcentration && checkConcentration) {
     const concentrationEffect = getConcentrationEffect(this.actor);

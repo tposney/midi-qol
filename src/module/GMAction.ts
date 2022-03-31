@@ -3,7 +3,6 @@ import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTi
 import { completeItemRoll, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMesssageHandling.js";
 import { Workflow, WORKFLOWSTATES } from "./workflow.js";
-import { config } from "simple-peer";
 
 export var socketlibSocket: any = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
@@ -118,14 +117,7 @@ export async function deleteItemEffects(data: { targets, origin: string, ignore:
     const effectsToDelete = actor?.effects?.filter(ef => ef.data.origin === origin && !ignore.includes(ef.uuid));
     if (effectsToDelete?.length > 0) {
       try {
-        // TODO find out why delete of multiple efects don't work
         await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToDelete.map(ef => ef.id));
-
-        /*
-        for (let ef of effectsToDelete) {
-          await actor.deleteEmbeddedDocuments("ActiveEffect", [ef.id])
-        }
-        */
       } catch (err) {
         console.warn("delete effects failed ", err);
         if (debugEnabled > 0) warn("delete effects failed ", err)
@@ -344,83 +336,7 @@ async function createGMReverseDamageCard (data: { damageList: any; autoApplyDama
     needsButtonAll: false
   };
   promises = await prepareDamageListItems(data, templateData, tokenIdList, true, true)
-/*
-  for (let damageItem of damageList) {
-    let { tokenId, tokenUuid, actorId, actorUuid, oldHP, oldTempHP, newTempHP, tempDamage, hpDamage, totalDamage, appliedDamage, sceneId } = damageItem;
-    let tokenDocument;
-    if (tokenUuid) {
-      tokenDocument = MQfromUuid(tokenUuid);
-      actor = tokenDocument.actor;
-    }
-    else
-      actor = MQfromActorUuid(actorUuid)
 
-    if (!actor) {
-      if (debugEnabled > 0) warn(`GMAction: reverse damage card could not find actor to update HP tokenUuid ${tokenUuid} actorUuid ${actorUuid}`);
-      continue;
-    }
-    let newHP = Math.max(0, oldHP - hpDamage);
-    // removed intended for check
-    if (["yes", "yesCard", "yesCardNPC"].includes(data.autoApplyDamage)) {
-      if ((newHP !== oldHP || newTempHP !== oldTempHP) && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
-        //@ts-ignore
-        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem }, { dhp: -appliedDamage }));
-      }
-    }
-    tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP, damageItem });
-
-    let img = tokenDocument?.data.img || actor.img;
-    if (configSettings.usePlayerPortrait && actor.type === "character")
-      img = actor?.img || tokenDocument?.data.img;
-    if (VideoHelper.hasVideoExtension(img)) {
-      //@ts-ignore - createThumbnail not defined
-      img = await game.video.createThumbnail(img, { width: 100, height: 100 });
-    }
-
-    let listItem = {
-      actorUuid,
-      tokenId: tokenId ?? "none",
-      displayUuid: actorUuid.replaceAll(".", ""),
-      tokenUuid,
-      tokenImg: img,
-      hpDamage,
-      abshpDamage: Math.abs(hpDamage),
-      tempDamage: newTempHP - oldTempHP,
-      totalDamage: Math.abs(totalDamage),
-      halfDamage: Math.abs(Math.floor(totalDamage / 2)),
-      doubleDamage: Math.abs(totalDamage * 2),
-      appliedDamage,
-      absDamage: Math.abs(appliedDamage),
-      tokenName: (tokenDocument?.name && configSettings.useTokenNames) ? tokenDocument.name : actor.name,
-      dmgSign: appliedDamage < 0 ? "+" : "-", // negative damage is added to hit points
-      newHP,
-      newTempHP,
-      oldTempHP,
-      oldHP,
-      buttonId: tokenUuid,
-      iconPrefix: (data.autoApplyDamage === "yesCardNPC" && actor.type === "character") ? "*" : ""
-    };
-
-    ["di", "dv", "dr"].forEach(trait => {
-      const traits = actor?.data.data.traits[trait]
-      if (traits?.custom || traits?.value.length > 0) {
-        //@ts-ignore CONFIG.DND5E
-        listItem[trait] = (`${traitList[trait]}: ${traits.value.map(t => CONFIG.DND5E.damageResistanceTypes[t]).join(",").concat(" " + traits?.custom)}`);
-      }
-    });
-    //@ts-ignore
-    const actorFlags = actor.data.flags;
-    const DRFlags = actorFlags["midi-qol"] ? actorFlags["midi-qol"].DR : undefined;
-    if (DRFlags) {
-      listItem["DR"] = "DR: ";
-      for (let key of Object.keys(DRFlags)) {
-        listItem["DR"] += `${key}:${DRFlags[key]} `;
-      }
-    }
-    //@ts-ignore listItem
-    templateData.damageList.push(listItem);
-  }
-  */
   templateData.needsButtonAll = damageList.length > 1;
 
   //@ts-ignore

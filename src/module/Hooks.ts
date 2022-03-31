@@ -5,7 +5,7 @@ import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget,
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
-import { preUpdateItemOnUseMacro } from "./patching.js";
+import { preUpdateItemActorOnUseMacro } from "./patching.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -68,6 +68,7 @@ export let readyHooks = async () => {
       // actor took damage and is concentrating....
       const saveTargets = game.user?.targets;
       const theTargetToken = getSelfTarget(actor);
+      itemData.data.target.type = "self";
       const theTarget = theTargetToken?.document ? theTargetToken?.document.id : theTargetToken?.id;
       if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
       let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor })
@@ -239,7 +240,8 @@ export function initHooks() {
   })
   Hooks.on("applyActiveEffect", midiCustomEffect);
   Hooks.on("preCreateActiveEffect", checkImmunity);
-  Hooks.on("preUpdateItem", preUpdateItemOnUseMacro);
+  Hooks.on("preUpdateItem",  preUpdateItemActorOnUseMacro);
+  Hooks.on("preUpdateActor", preUpdateItemActorOnUseMacro)
   Hooks.on("renderItemSheet", (app, html, data) => {
     const element = html.find('input[name="data.chatFlavor"]').parent().parent();
     if (configSettings.allowUseMacro) {
