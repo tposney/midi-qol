@@ -1,6 +1,12 @@
+### 0.9.42
+* Sigh - another fix for DamageOnlyWorkflows.
+* Player Damage cards now are displayed as created by the actor that did the damage roll rather than as GM.
+* Player Damage card - only display the hp updated/hp not updated header if there are player damage buttons on the card. 
+* Added flags.midi-qol.semiSuperSaver for things like 
+
 ### 0.9.41
-* Support for Conditional Visibility hiden/invisible conditions for advantage/disadvantage.
-* Support for applicaiton of CV effects is via Convenient Effects, so you need convenient effects/DAE to be able to implement the invisiblity spell. Midi-qol sample items updated to support CV and CV convenient effects. It is suggested that you toggle the CV effects to be "status effects".
+* Support for Conditional Visibility hidden/invisible conditions for advantage/disadvantage.
+* Support for application of CV effects is via Convenient Effects, so you need convenient effects/DAE to be able to implement the invisiblity spell. Midi-qol sample items updated to support CV and CV convenient effects. It is suggested that you toggle the CV effects to be "status effects".
 * Some tweaks to spiritual weapon to make it a little more friendly to use. You no longer need to define a "Slash" attack on the spiritual weapon actor, all of the damge rolls etc will be configured when the item is summoned.
 * Added Lay on Hands with resource consumption, dialog for how many points to use etc.
 * Added flags.mid-qol.magicResistance.all/dex/str/etc.
@@ -10,7 +16,7 @@
 * Added actor based onUse macros. Behaves exactly the same as item onUse macros. You can specify a global macro, identified by name, ItemMacro which refers to the workflow item (not useful), or ItemMacro.item name, (probably the most useful) which allows you add specific item macro calls for any item roll.
 * Can be configured from the Actor sheet or via ...
 * Added flags.midi-qol.onUseMacroName CUSTOM macroName,macroPass - which will cause the specified macro (world macro name, ItemMacro, or ItemMacro.macro name) to be called when midi-qol gets to the workflow point specified by macroPass.
-* Fix for damageOnlyWorkflow and BetterRollsWorkflow throwing an error in getTraitMult.
+* Fix for damageOnlyWorkflow and BetterRollsWorkflow throwing an error in getTraitMulti.
 
 ### 0.9.40
 * **Breaking** Change to Requires Magical. New options, "off", "non-spell", "all".

@@ -239,15 +239,15 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   // Check the custom immunities
 };
 
-export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any> } = { existingDamage: [], superSavers: new Set() }): Promise<any[]> {
-  return applyTokenDamageMany([damageDetail], [totalDamage], theTargets, item, [saves], { existingDamage: options.existingDamage, superSavers: [options.superSavers] });
+export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any>, semiSuperSavers: Set<any>, workflow: Workflow | undefined} = { existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined }): Promise<any[]> {
+  return applyTokenDamageMany([damageDetail], [totalDamage], theTargets, item, [saves], { existingDamage: options.existingDamage, superSavers: [options.superSavers], semiSuperSavers: [options.semiSuperSavers], workflow: options.workflow });
 }
 
-export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[] } = { existingDamage: [], superSavers: [] }): Promise<any[]> {
+export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[], semiSuperSavers: Set<any>[], workflow: Workflow | undefined } = { existingDamage: [], superSavers: [], semiSuperSavers: [], workflow: undefined }): Promise<any[]> {
   let damageList: any[] = [];
   let targetNames: string[] = [];
   let appliedDamage;
-  let workflow = (Workflow.workflows && Workflow._workflows[item?.uuid]) || {};
+  let workflow: any = options.workflow ?? {};
   if (debugEnabled > 0) warn("Apply token damage ", damageDetailArr, totalDamageArr, theTargets, item, savesArr, workflow)
 
   if (!theTargets || theTargets.size === 0) {
@@ -305,6 +305,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
       let attackRoll = workflow.attackTotal;
       let saves = savesArr[i] ?? new Set();
       let superSavers: Set<Token> = options.superSavers[i] ?? new Set();
+      let semiSuperSavers: Set<Token> = options.semiSuperSavers[i] ?? new Set();
       var dmgType;
 
       // This is overall Damage Reduction
@@ -405,6 +406,8 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
         if (superSavers.has(t) && itemSaveMultiplier === 0.5) {
           mult = saves.has(t) ? 0 : 0.5;
         }
+        if (semiSuperSavers.has(t) && itemSaveMultiplier === 0.5)
+          mult = saves.has(t) ? 0 : 1;
 
         // TODO this should end up getting removed when the prepare data is done. Currently depends on 1Reaction expiry.
         if (getProperty(t.actor, "data.flags.midi-qol.uncanny-dodge") && mult >= 0 
@@ -475,6 +478,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     await timedAwaitExecuteAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
+      charName: workflow.actor.name,
       damageList: damageList,
       targetNames,
       chatCardId: workflow.itemCardId,
@@ -534,7 +538,9 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         [new Set(), workflow.saves, new Set()],
         {
           existingDamage: [],
-          superSavers: [new Set(), workflow.superSavers, new Set()]
+          superSavers: [new Set(), workflow.superSavers, new Set()],
+          semiSuperSavers: [new Set(), workflow.semiSuperSavers, new Set()],
+          workflow
         });
     } else {
       let savesToUse = (workflow.otherDamageFormula ?? "") !== "" ? new Set() : workflow.saves;
@@ -546,7 +552,9 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         [savesToUse, savesToUse],
         {
           existingDamage: [],
-          superSavers: [workflow.superSavers, workflow.superSavers]
+          superSavers: [workflow.superSavers, workflow.superSavers],
+          semiSuperSavers: [workflow.semiSuperSavers, workflow.semiSuperSavers],
+          workflow
         });
 
       if (workflow.otherDamageRoll) {
@@ -557,7 +565,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           theTargets,
           item,
           workflow.saves,
-          { existingDamage: appliedDamage, superSavers: workflow.superSavers }
+          { existingDamage: appliedDamage, superSavers: workflow.superSavers, semiSuperSavers: workflow.semiSuperSavers, workflow }
         );
       }
     }
@@ -570,7 +578,9 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       [workflow.saves, workflow.saves],
       {
         existingDamage: [],
-        superSavers: [workflow.superSavers, workflow.superSavers]
+        superSavers: [workflow.superSavers, workflow.superSavers],
+        semiSuperSavers: [workflow.semiSuperSavers, workflow.semiSuperSavers],
+        workflow
       });
   }
   workflow.damageList = appliedDamage;
@@ -861,6 +871,7 @@ export async function processOverTime(wrapped, data, options, user) {
               const saveMagic = JSON.parse(details.saveMagic ?? "false"); //parse the saving throw true/false
               const damageRoll = details.damageRoll;
               const damageType = details.damageType ?? "piercing";
+              const itemName = details.itemName;
               const saveRemove = JSON.parse(details.saveRemove ?? "true");
               const damageBeforeSave = JSON.parse(details.damageBeforeSave ?? "false");
               const macroToCall = details.macro;
@@ -869,7 +880,18 @@ export async function processOverTime(wrapped, data, options, user) {
 
               if (debugEnabled > 0) warn(`Overtime provided data is `, details);
               if (debugEnabled > 0) warn(`OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
-              const itemData = duplicate(overTimeJSONData);
+
+              let itemData: any = duplicate(overTimeJSONData);
+              if (typeof itemName === "string") {
+                if (itemName.startsWith("Actor.")) {
+                  const localName = itemName.replace("Actor.", "")
+                  const theItem = actor.items.getName(localName);
+                  if (theItem) itemData = theItem.data.toObject();
+                } else {
+                  const theItem = game.items?.getName(itemName);
+                  if (theItem) itemData = theItem.data.toObject();
+                }
+              }
               itemData.img = effect.data.icon;
               itemData.data.save.dc = saveDC;
               itemData.data.save.ability = saveAbility;
@@ -2402,7 +2424,7 @@ export function evalActivationCondition(workflow: Workflow, condition: string | 
           "isCritical", "isFumble", "vestatile",
           "targets", "hitTargets",
           "diceRoll", "attackRoll", "attackTotal", "damageRoll", "damageTotal", "otherDamageRoll", "otherDamageDetail", "damageDetail",
-          "saves", "superSavers", "failedSaves", "advantageSaves"].includes(k)) continue;
+          "saves", "superSavers", "semiSuperSavers", "failedSaves", "advantageSaves"].includes(k)) continue;
         if (v instanceof Set) {
           const newV = new Set();
           for (let t of v) {

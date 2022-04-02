@@ -26,7 +26,6 @@ import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
 import { MidiKeyManager } from './module/MidiKeyManager.js';
 import { MidiSounds } from './module/midi-sounds.js';
-import { convertTypeAcquisitionFromJson } from 'typescript';
 
 export let debugEnabled = 0;
 export let debugCallTiming: any = false;
@@ -256,7 +255,13 @@ Hooks.once('ready', function () {
   checkConcentrationSettings();
   readyHooks();
   readyPatching();
+  Hooks.callAll("midi-qol.midiReady");
 });
+
+/*
+import { setupMidiTests } from './module/tests/setupTest.js';
+Hooks.once("midi-qol.midiReady", setupMidiTests);
+*/
 
 // Add any additional hooks if necessary
 
@@ -428,6 +433,7 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.fail.ability.check.all");
   midiFlags.push("flags.midi-qol.fail.ability.save.all");
   midiFlags.push("flags.midi-qol.superSaver.all");
+  midiFlags.push("flags.midi-qol.semiSuperSaver.all");
   midiFlags.push("flags.midi-qol.max.ability.save.all");
   midiFlags.push("flags.midi-qol.max.ability.check.all");
   midiFlags.push("flags.midi-qol.min.ability.save.all");
@@ -447,6 +453,7 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.fail.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.fail.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.superSaver.${abl}`);
+    midiFlags.push(`flags.midi-qol.semiSuperSaver.${abl}`);
     midiFlags.push(`flags.midi-qol.max.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.mim.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);

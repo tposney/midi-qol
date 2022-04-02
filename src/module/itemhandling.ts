@@ -73,8 +73,8 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     }, { oveerwrite: true, insertKeys: true, insertValues: true }));
     return workflow.activeDefence(this, result);
   }
-  let advantage = options.advantage || workflow?.advantage || workflow?.rollOptions.advantage || workflow.flankingAdvantage;
-  let disadvantage = options.disadvantage || workflow?.disadvantage || workflow.rollOptions.disadvantage;
+  let advantage = options.advantage || workflow?.advantage || workflow?.rollOptions.advantage || workflow?.workflowOptions.advantage || workflow.flankingAdvantage;
+  let disadvantage = options.disadvantage || workflow?.disadvantage || workflow?.workflowOptions.disadvantage || workflow.rollOptions.disadvantage;
   if (advantage && disadvantage) {
     advantage = false;
     disadvantage = false;
@@ -443,7 +443,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     let canDoLateTargeting = this.data.data.target.type !== "self";
 
     //explicit don't do late targeting passed
-    if (options.workflowOptions.lateTargeting === false) canDoLateTargeting = false;
+    if (options.workflowOptions?.lateTargeting === false) canDoLateTargeting = false;
 
     // TODO look at this if AoE spell and not auto targeting need to work out how to deal with template placement
     if (false && isAoESpell && configSettings.autoTarget === "none")

@@ -121,6 +121,7 @@ export class Workflow {
 
   saves: Set<Token>;
   superSavers: Set<Token>;
+  semiSuperSavers: Set<Token>;
   failedSaves: Set<Token>
   advantageSaves: Set<Token>;
   saveRequests: any;
@@ -233,6 +234,7 @@ export class Workflow {
     this.targets = new Set(targets);
     this.saves = new Set();
     this.superSavers = new Set();
+    this.semiSuperSavers = new Set();
     this.failedSaves = new Set(this.targets)
     this.hitTargets = new Set(this.targets);
     this.hitTargetsEC = new Set();
@@ -292,10 +294,10 @@ export class Workflow {
     this.workflowOptions = options?.workflowOptions ?? {};
 
     if (configSettings.allowUseMacro) {
-      this.onUseMacros = getProperty(this.item, "data.flags.midi-qol.onUseMacroParts");
-      const actorOnUseMacros = getProperty(this.actor, "data.flags.midi-qol.onUseMacroParts");
+      this.onUseMacros = getProperty(this.item, "data.flags.midi-qol.onUseMacroParts") ?? new OnUseMacros();
+      const actorOnUseMacros = getProperty(this.actor, "data.flags.midi-qol.onUseMacroParts") ?? new OnUseMacros();
       //@ts-ignore
-      this.onUseMacros.items = (this.onUseMacros.items ?? []).concat(actorOnUseMacros.items);
+      this.onUseMacros.items = (this.onUseMacros.items).concat(actorOnUseMacros.items);
     }
     this.preSelectedTargets = canvas?.scene ? new Set(game.user?.targets) : new Set(); // record those targets targeted before cast.
     if (this.item && ["spell", "feat", "weapon"].includes(this.item.type)) {
@@ -468,7 +470,7 @@ export class Workflow {
         }
         if (this.noAutoAttack) return undefined;
 
-        this.autoRollAttack = this.rollOptions.advantage || this.rollOptions.disadvantage;
+        this.autoRollAttack = this.rollOptions.advantage || this.rollOptions.disadvantage || this.rollOptions;
         if (!this.autoRollAttack) this.autoRollAttack = (getAutoRollAttack() && !this.rollOptions.rollToggle) || (!getAutoRollAttack() && this.rollOptions.rollToggle)
         if (!this.autoRollAttack) {
           const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId ?? "");
@@ -650,7 +652,7 @@ export class Workflow {
         this.saves = new Set(); // not auto checking assume no saves
 
         if (configSettings.allowUseMacro && this.item?.data.flags) {
-          await this.callMacros(this.item, this.onUseMacros?.getMacros("preSaves"), "OnUse", "preSaves");
+          await this.callMacros(this.item, this.onUseMacros?.getMacros("preSave"), "OnUse", "preSave");
         }
         if (this.workflowType === "Workflow" && !this.item?.hasAttack && this.item?.data.data.target?.type !== "self") { // Allow editing of targets if there is no attack that has already been processed.
           this.targets = new Set(game.user?.targets);
@@ -690,7 +692,7 @@ export class Workflow {
       case WORKFLOWSTATES.SAVESCOMPLETE:
         expireMyEffects.bind(this)(["1Action", "1Spell"]);
         if (configSettings.allowUseMacro && this.item?.data.flags) {
-          await this.callMacros(this.item, this.onUseMacros?.getMacros("postSaves"), "OnUse", "postSaves");
+          await this.callMacros(this.item, this.onUseMacros?.getMacros("postSave"), "OnUse", "postSave");
         }
         return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
 
@@ -1100,6 +1102,8 @@ export class Workflow {
     let saveUuids: string[] = [];
     let superSavers: any[] = [];
     let superSaverUuids: string[] = [];
+    let semiSuperSavers: any[] = [];
+    let semiSuperSaverUuids: string[] = [];
     for (let target of this.targets) {
       targets.push(target.document ?? target);
       targetUuids.push(target.document?.uuid ?? target.uuid);
@@ -1133,6 +1137,10 @@ export class Workflow {
       superSavers.push(save.document ?? save);
       superSaverUuids.push(save.document?.uuid ?? save.uuid);
     };
+    for (let save of this.semiSuperSavers) {
+      semiSuperSavers.push(save.document ?? save);
+      semiSuperSaverUuids.push(save.document?.uuid ?? save.uuid);
+    };
     const itemData = this.item?.data.toObject(false);
 
     return {
@@ -1154,6 +1162,8 @@ export class Workflow {
       saveUuids,
       superSavers,
       superSaverUuids,
+      semiSuperSavers,
+      semiSuperSaverUuids,
       failedSaves,
       failedSaveUuids,
       criticalSaves,
@@ -1930,6 +1940,9 @@ export class Workflow {
       if (isFumble && !saved) this.fumbleSaves.add(target);
       if (this.checkSuperSaver(target, this.saveItem.data.data.save.ability))
         this.superSavers.add(target);
+      if (this.checkSemiSuperSaver(target, this.saveItem.data.data.save.ability))
+        this.semiSuperSavers.add(target);
+
       if (this.item.data.flags["midi-qol"]?.isConcentrationCheck) {
         const checkBonus = getProperty(target, "actor.data.flags.midi-qol.concentrationSaveBonus");
         if (checkBonus) {
@@ -2097,6 +2110,15 @@ export class Workflow {
     if (getProperty(this.actor, "data.flags.midi-qol.sculptSpells") && this.item?.data.school === "evo" && this.preSelectedTargets.has(token)) {
       return true;
     }
+    return false;
+  }
+
+  checkSemiSuperSaver(token, ability: string) {
+    const actor = token.actor;
+    const flags = getProperty(actor.data.flags, "midi-qol.semiSuperSaver");
+    if (!flags) return false;
+    if (flags?.all) return true;
+    if (getProperty(flags, `${ability}`)) return true;
     return false;
   }
 
@@ -2548,7 +2570,7 @@ export class DamageOnlyWorkflow extends Workflow {
         this.hitTargets = new Set(this.targets);
         this.hitTargetsEC = new Set();
         this.applicationTargets = new Set(this.targets);
-        this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, this.item, new Set(), { existingDamage: this.damageList, superSavers: new Set() })
+        this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, this.item, new Set(), { existingDamage: this.damageList, superSavers: new Set(), semiSuperSavers: new Set(), workflow: this })
         await super._next(WORKFLOWSTATES.ROLLFINISHED);
 
         Workflow.removeWorkflow(this.uuid);

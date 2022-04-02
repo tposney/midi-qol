@@ -32,6 +32,7 @@ export interface Options {
   advantage: boolean | undefined,
   disadvantage: boolean | undefined,
   fastForward: boolean | undefined,
+  fastForwardSet: boolean | undefined,
   parts: [] | undefined,
   chatMessage: boolean | undefined,
   rollToggle: boolean | undefined,
@@ -276,7 +277,7 @@ function configureDamage(wrapped) {
   this._formula = this.constructor.getFormula(this.terms);
 }
 
-async function rollAbilitySave(wrapped, ...args) {
+export async function rollAbilitySave(wrapped, ...args) {
   return doAbilityRoll.bind(this)(wrapped, "save", ...args);
 }
 async function rollAbilityTest(wrapped, ...args) {

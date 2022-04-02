@@ -12,6 +12,7 @@ export class MidiKeyManager {
   _rollToggle = false;
   _other = false;
   _fastForward = false;
+  _fastForwardSet = false;
   _critical = false;
   _noop = false;
   _lastReturned: Options = {
@@ -21,6 +22,7 @@ export class MidiKeyManager {
     other: undefined,
     rollToggle: undefined,
     fastForward: undefined,
+    fastForwardSet: undefined,
     parts: undefined,
     chatMessage: undefined,
     critical: undefined,
@@ -37,6 +39,7 @@ export class MidiKeyManager {
     this._other = false;
     this._rollToggle = false;
     this._fastForward = false;
+    this._fastForwardSet = false;
     this._critical = false;
     window.addEventListener('keyup', (event) => this.handleKeyUpEvent(event));
   }
@@ -100,6 +103,7 @@ export class MidiKeyManager {
       other: this._other,
       rollToggle: this._rollToggle,
       fastForward: this._fastForward,
+      fastForwardSet: this._fastForwardSet,
       fastForwardAbility: undefined,
       fastForwardDamage: undefined,
       fastForwardAttack: undefined,
@@ -224,6 +228,18 @@ export class MidiKeyManager {
       precedence: normalPrecedence
     });
 
+    keybindings.register("midi-qol", "fastForward", {
+      name: i18n("midi-qol.FastForward.Name"),
+      hint: i18n("midi-qol.FastForward.Hint"),
+      editable: [
+        { key: "KeyF" },
+      ],
+      onDown: () => { this._fastForwardSet = true; this.track("roll ff down"); return false; },
+      onUp: () => { this._fastForwardSet = false; this.track("roll ff up"); return false; },
+      restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
+      precedence: normalPrecedence
+    });
+    
     keybindings.register("midi-qol", "rollToggle", {
       name: i18n("midi-qol.RollToggle.Name"),
       hint: i18n("midi-qol.RollToggle.Hint"),
@@ -253,6 +269,7 @@ export function mapSpeedKeys(keys, type: string, forceToggle = false): Options |
   switch (type) {
     case "ability":
       pressedKeys.fastForwardAbility = hasToggle ? !autoFastForwardAbilityRolls : autoFastForwardAbilityRolls;
+      if (pressedKeys.fastForwardSet) pressedKeys.fastForwardAbility = true;
       if (pressedKeys.rollToggle) {
         pressedKeys.advantage = false;
         pressedKeys.disadvantage = false;
@@ -263,7 +280,9 @@ export function mapSpeedKeys(keys, type: string, forceToggle = false): Options |
       break;
     case "damage":
       pressedKeys.fastForwardDamage = (hasToggle ? !isAutoFastDamage() : isAutoFastDamage()) || pressedKeys.critical;
-      pressedKeys.fastForward = pressedKeys.fastForwardDamage;
+      if (pressedKeys.fastForwardSet) pressedKeys.fastForwardDamage = true;
+      if (pressedKeys.fastForward) pressedKeys.fastForwardDamage = true;
+
       pressedKeys.advantage = undefined;
       pressedKeys.disadvantage = undefined;
       break;
@@ -272,6 +291,7 @@ export function mapSpeedKeys(keys, type: string, forceToggle = false): Options |
     default:
       pressedKeys.critical = undefined;
       pressedKeys.fastForwardAttack = (hasToggle ? !isAutoFastAttack() : isAutoFastAttack()) || pressedKeys.advantage || pressedKeys.disadvantage;
+      if (pressedKeys.fastForwardSet) pressedKeys.fastForwardAttack = true;
       pressedKeys.fastForward = pressedKeys.fastForwardAttack;
       pressedKeys.critical = false;
       pressedKeys.fastForwardDamage = hasToggle ? !isAutoFastDamage() : isAutoFastDamage();
@@ -279,6 +299,7 @@ export function mapSpeedKeys(keys, type: string, forceToggle = false): Options |
         pressedKeys.advantage = false;
         pressedKeys.disadvantage = false;
       }
+
       break;
   }
   return pressedKeys;

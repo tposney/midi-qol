@@ -186,7 +186,7 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
     });
 }
 
-async function createReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any }) {
+async function createReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string }) {
   createGMReverseDamageCard(data);
   createPlayerDamageCard(data);
 }
@@ -245,6 +245,7 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
       halfDamage: Math.abs(Math.floor(totalDamage / 2)),
       doubleDamage: Math.abs(totalDamage * 2),
       appliedDamage,
+      playerViewTotalDamage: hpDamage + tempDamage,
       absDamage: Math.abs(appliedDamage),
       tokenName: (tokenDocument?.name && configSettings.useTokenNames) ? tokenDocument.name : actor.name,
       dmgSign: appliedDamage < 0 ? "+" : "-", // negative damage is added to hit points
@@ -278,7 +279,7 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
   return promises;
 }
 // Fetch the token, then use the tokenData.actor.id
-async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any }) {
+async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string }) {
   if (configSettings.playerDamageCard === "none" ) return;
   let showNPC = ["npcplayerresults", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
   let playerButtons = ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
@@ -300,16 +301,17 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
     return; 
   }
   templateData.needsButtonAll = damageList.length > 1;
-
+  //@ts-ignore
+  templateData.playerButtons = templateData.playerButtons && templateData.damageList.some(listItem => listItem.isCharacter)
   //@ts-ignore
   if (debugEnabled > 0) warn("GM action results are ", results)
   if (["yesCard", "noCard", "yesCardNPC"].includes(data.autoApplyDamage)) {
     const content = await renderTemplate("modules/midi-qol/templates/damage-results-player.html", templateData);
     const speaker: any = ChatMessage.getSpeaker();
-    speaker.alias = game.user?.name;
+    speaker.alias = data.sender;
     let chatData: any = {
       user: game.user?.id,
-      speaker: { scene: getCanvas()?.scene?.id, alias: game.user?.name, user: game.user?.id },
+      speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: game.user?.id },
       content: content,
       // whisper: ChatMessage.getWhisperRecipients("players").filter(u => u.active).map(u => u.id),
       type: CONST.CHAT_MESSAGE_TYPES.OTHER,

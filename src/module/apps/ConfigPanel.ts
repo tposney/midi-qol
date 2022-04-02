@@ -2,9 +2,10 @@ import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwa
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
-export class ConfigPanel extends FormApplication {
 
-  PATH: string;
+const PATH = "./modules/midi-qol/sample-config/";
+
+export class ConfigPanel extends FormApplication {
   static get defaultOptions(): any {
     return mergeObject(super.defaultOptions, {
       title: game.i18n.localize("midi-qol.ConfigTitle"),
@@ -20,7 +21,6 @@ export class ConfigPanel extends FormApplication {
 
   constructor(...args) {
     super(args);
-    this.PATH = "./modules/midi-qol/sample-config/";
   }
 
   get title() {
@@ -118,29 +118,11 @@ export class ConfigPanel extends FormApplication {
 
     html.find(".import-quick-setting").on("click", async function (event) {
       const key = event.currentTarget.id;
-      let settingsToApply = {};
-      const config = quickSettingsDetails[key];
-      if (config.configSettings) {
-        settingsToApply = duplicate(config.configSettings);
-        if (config.codeChecks) config.codeChecks(configSettings, settingsToApply)
-        showDiffs(configSettings, settingsToApply);
-        settingsToApply = mergeObject(configSettings, settingsToApply, { overwrite: true, inplace: true });
-        if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", settingsToApply);
-      } else if (config.fileName) {
-        try {
-          const jsonText = await fetchConfigFile(this.PATH + config.fileName);
-          const configData = JSON.parse(jsonText);
-          importSettingsFromJSON(jsonText);
-          showDiffs(configSettings, configData.configSettings);
-          return;
-        } catch (err) {
-          error("could not load config file", config.fileName, err);
-        }
-        log(`Loaded ${config.fileName} verion ${config.version}`);
-      } else return;
+      await applySettings.bind(this)(key);
       this.render();
     }.bind(this))
   }
+
 
   async _playList(event) {
     event.preventDefault();
@@ -494,4 +476,27 @@ let quickSettingsDetails: any = {
       if (current.autoCheckSaves !== "none") settings.autoCheckSaves = "allShow";
     }
   }
+}
+
+export async function applySettings (key: string) {
+  let settingsToApply = {};
+  const config = quickSettingsDetails[key];
+  if (config.configSettings) {
+    settingsToApply = duplicate(config.configSettings);
+    if (config.codeChecks) config.codeChecks(configSettings, settingsToApply)
+    showDiffs(configSettings, settingsToApply);
+    settingsToApply = mergeObject(configSettings, settingsToApply, { overwrite: true, inplace: true });
+    if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", settingsToApply);
+  } else if (config.fileName) {
+    try {
+      const jsonText = await fetchConfigFile(PATH + config.fileName);
+      const configData = JSON.parse(jsonText);
+      importSettingsFromJSON(jsonText);
+      showDiffs(configSettings, configData.configSettings);
+      return;
+    } catch (err) {
+      error("could not load config file", config.fileName, err);
+    }
+    log(`Loaded ${config.fileName} verion ${config.version}`);
+  } else return;
 }
