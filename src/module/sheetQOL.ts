@@ -1,4 +1,4 @@
-import { itemDeleteCheck, itemRollButtons } from "./settings.js";
+import { configSettings, itemDeleteCheck, itemRollButtons } from "./settings.js";
 import { i18n, debug, log, warn, debugEnabled } from "../midi-qol.js";
 import { showItemInfo } from "./itemhandling.js";
 import { itemHasDamage, itemIsVersatile } from "./utils.js";
@@ -52,6 +52,7 @@ let enableSheetQOL = (app, html, data) => {
       addItemSheetButtons(app, html, data);
     }
   }
+  if (configSettings.allowUseMacro) {
   // Add actor macros
     html.find(".traits").prepend(`<div class="form-group">
       <label>${i18n("midi-qol.ActorOnUseMacros")}</label>
@@ -62,6 +63,7 @@ let enableSheetQOL = (app, html, data) => {
     html.find(".midiqol-onuse-macros").click(ev => {
       new ActorOnUseMacrosConfig(app.object, {}).render(true);
     });
+  }
   return true;
 };
 let itemDeleteHandler = ev => {

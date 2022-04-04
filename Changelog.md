@@ -1,8 +1,17 @@
+### 0.9.43
+* Added Toll the Dead spell to the midi sample items. It does a few tricks to modify the damage roll of the spell according to the HP of the target being less than max.
+* Fix for direct calling of applyTokenDamageMany throwing an error looking for workflow.actor.name.
+* Fix for auto rolling attacks when they shouldn't be.
+* Fix for accidental translation of spell component flags when language is not english.
+* FIx for concentration advantage and disadvantage not cancelling out.
+* Clarification: enabling concentration checks forces allow onUse macros to be true, since it is required for concentration automation.
+* Rough cut of attack roll advantage/disaadvantage attribution, displayed as console warning. Not really usable yet.
+
 ### 0.9.42
 * Sigh - another fix for DamageOnlyWorkflows.
 * Player Damage cards now are displayed as created by the actor that did the damage roll rather than as GM.
 * Player Damage card - only display the hp updated/hp not updated header if there are player damage buttons on the card. 
-* Added flags.midi-qol.semiSuperSaver for things like 
+* Added flags.midi-qol.semiSuperSaver for items that cause 0/full damage on save/failed save.
 
 ### 0.9.41
 * Support for Conditional Visibility hidden/invisible conditions for advantage/disadvantage.

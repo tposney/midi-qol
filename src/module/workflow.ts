@@ -12,6 +12,7 @@ import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultipl
 import { OnUseMacros } from "./apps/Item.js";
 import { procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
+import { collapseTextChangeRangesAcrossMultipleVersions } from "typescript";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -137,6 +138,7 @@ export class Workflow {
   flagTags: {} | undefined;
   onUseMacros: OnUseMacros | undefined;
 
+  attackAdvAttribution: {};
   static eventHack: any;
 
 
@@ -292,6 +294,7 @@ export class Workflow {
     this.kickStart = true; // call workflow.next(WORKFLOWSTATES.NONE) when the item card is shown.
     this.flagTags = undefined;
     this.workflowOptions = options?.workflowOptions ?? {};
+    this.attackAdvAttribution = {};
 
     if (configSettings.allowUseMacro) {
       this.onUseMacros = getProperty(this.item, "data.flags.midi-qol.onUseMacroParts") ?? new OnUseMacros();
@@ -427,6 +430,7 @@ export class Workflow {
           switch (checkRange(this.actor, this.item, this.tokenId, this.targets)) {
             case "fail": return this.next(WORKFLOWSTATES.ROLLFINISHED);
             case "dis": this.disadvantage = true;
+              this.attackAdvAttribution["disadvantage.range"] = true;
           }
         }
         if (checkRule("incapacitated") && checkIncapcitated(this.actor, this.item, null)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
@@ -470,11 +474,13 @@ export class Workflow {
         }
         if (this.noAutoAttack) return undefined;
 
-        this.autoRollAttack = this.rollOptions.advantage || this.rollOptions.disadvantage || this.rollOptions;
-        if (!this.autoRollAttack) this.autoRollAttack = (getAutoRollAttack() && !this.rollOptions.rollToggle) || (!getAutoRollAttack() && this.rollOptions.rollToggle)
+        this.autoRollAttack = this.rollOptions.advantage || this.rollOptions.disadvantage || getAutoRollAttack();
+        if (this.rollOptions?.fastForwardSet) this.autoRollAttack = true;
+        if (this.rollOptions.rollToggle) this.autoRollAttack = !this.autoRollAttack;
+        // if (!this.autoRollAttack) this.autoRollAttack = (getAutoRollAttack() && !this.rollOptions.rollToggle) || (!getAutoRollAttack() && this.rollOptions.rollToggle)
         if (!this.autoRollAttack) {
           const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId ?? "");
-          const isFastRoll = this.rollOptions.fastForwarAttack;
+          const isFastRoll = this.rollOptions.fastForwarAttack ;
           if (chatMessage && (!this.autoRollAttack || !isFastRoll)) {
             // provide a hint as to the type of roll expected.
             let content = chatMessage && duplicate(chatMessage.data.content)
@@ -871,10 +877,16 @@ export class Workflow {
 
     if (advantage) {
       const withAdvantage = advantage.all || advantage.attack?.all || (advantage.attack && advantage.attack[actType]);
+      if (advantage.all) this.attackAdvAttribution["advantage.all"] = true;
+      if (advantage.attack?.all) this.attackAdvAttribution["advantage.attack.all"] = true;
+      if (advantage.attack && advantage.attack[actType]) this.attackAdvAttribution[`advantage.attack.${actType}`] = true;
       this.advantage = this.advantage || withAdvantage;
     }
     if (disadvantage) {
       const withDisadvantage = disadvantage.all || disadvantage.attack?.all || (disadvantage.attack && disadvantage.attack[actType]);
+      if (disadvantage.all) this.attackAdvAttribution["disadvantage.all"] = true;
+      if (disadvantage.attack?.all) this.attackAdvAttribution["disadvantage.attack.all"] = true;
+      if (disadvantage.attack && disadvantage.attack[actType]) this.attackAdvAttribution[`disadvantage.attack.${actType}`] = true;
       this.disadvantage = this.disadvantage || withDisadvantage;
     }
     // TODO Hidden should check the target to see if they notice them?
@@ -891,6 +903,8 @@ export class Workflow {
         isHidden = hidden || invisible
       }
       this.advantage = this.advantage || isHidden;
+      if (isHidden) this.attackAdvAttribution["advantage.hidden"] = true;
+
       if (isHidden) log(`Advantage given to ${this.actor.name} due to hidden/invisible`)
     }
     // Neaarby foe gives disadvantage on ranged attacks
@@ -907,6 +921,7 @@ export class Workflow {
         if (debugEnabled > 0) warn(`Ranged attack by ${this.actor.name} at disadvantage due to neabye foe`);
       }
       this.disadvantage = this.disadvantage || nearbyFoe;
+      if (nearbyFoe) this.attackAdvAttribution["disadvantage.nearbyFoe"];
     }
     this.checkAbilityAdvantage();
     this.checkTargetAdvantage();
@@ -955,7 +970,11 @@ export class Workflow {
     let ability = this.item?.data.data.ability;
     if (ability === "") ability = this.item?.data.data.properties?.fin ? "dex" : "str";
     this.advantage = this.advantage || getProperty(this.actor.data, `flags.midi-qol.advantage.attack.${ability}`);
+    if (getProperty(this.actor.data, `flags.midi-qol.advantage.attack.${ability}`))
+      this.attackAdvAttribution[`advantage.attack.${ability}`] = true;
     this.disadvantage = this.disadvantage || getProperty(this.actor.data, `flags.midi-qol.disadvantage.attack.${ability}`);
+    if (getProperty(this.actor.data, `flags.midi-qol.disadvantage.attack.${ability}`))
+      this.attackAdvAttribution[`disadvantage.attack.${ability}`] = true;;
   }
 
   async checkFlankingAdvantage(): Promise<boolean> {
@@ -969,6 +988,8 @@ export class Workflow {
     const target: Token = this.targets.values().next().value;
 
     const needsFlanking = await markFlanking(token, target, );
+    if (needsFlanking)
+      this.attackAdvAttribution[`advantage.flanking`] = true;;
     if (["advonly", "ceadv"].includes(checkRule("checkFlanking"))) this.flankingAdvantage = needsFlanking;
      return needsFlanking;
   }
@@ -987,16 +1008,30 @@ export class Workflow {
           if (debugEnabled > 0) warn("ranged attack with disadvantage because target is near a friend");
           log(`Ranged attack by ${this.actor.name} at disadvantage due to nearby ally`)
         }
-        this.disadvantage = this.disadvantage || nearbyAlly
+        this.disadvantage = this.disadvantage || nearbyAlly;
+        if (nearbyAlly)
+          this.attackAdvAttribution[`disadvantage.nearbyAlly`] = true;;
       }
     }
     const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants;
     if (!grants) return;
     if (!["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) return;
     const attackAdvantage = grants.advantage?.attack || {};
-    const grantsAdvantage = grants.all || attackAdvantage.all || attackAdvantage[actionType]
+    const grantsAdvantage = grants.all || attackAdvantage.all || attackAdvantage[actionType];
+    if (grants.all)
+      this.attackAdvAttribution[`advantage.grants.all`] = true;;
+    if (attackAdvantage.all)
+      this.attackAdvAttribution[`advantage.grants.attack.all`] = true;
+    if (attackAdvantage[actionType])
+      this.attackAdvAttribution[`advantage.grants.attack.${actionType}`] = true;
     const attackDisadvantage = grants.disadvantage?.attack || {};
-    const grantsDisadvantage = grants.all || attackDisadvantage.all || attackDisadvantage[actionType]
+    const grantsDisadvantage = grants.all || attackDisadvantage.all || attackDisadvantage[actionType];
+    if (grants.all)
+      this.attackAdvAttribution[`disadvantage.grants.all`] = true;;
+    if (attackDisadvantage.all)
+      this.attackAdvAttribution[`disadvantage.grants.attack.all`] = true;
+    if (attackDisadvantage[actionType])
+      this.attackAdvAttribution[`disadvantage.grants.attack.${actionType}`] = true;
     this.advantage = this.advantage || grantsAdvantage;
     this.disadvantage = this.disadvantage || grantsDisadvantage;
   }
@@ -1753,13 +1788,17 @@ export class Workflow {
         if (settingsOptions.disadvantage) advantage = false;
 
         if (this.saveItem.data.flags["midi-qol"]?.isConcentrationCheck) {
-          if (getProperty(target.actor.data.flags, "midi-qol.advantage.concentration")) {
+          const concAdv = (advantage === true) || getProperty(target.actor.data.flags, "midi-qol.advantage.concentration");
+          const concDisadv = (advantage === false) || getProperty(target.actor.data.flags, "midi-qol.disadvantage.concentration");
+          if (concAdv && !concDisadv) {
             advantage = true;
             this.advantageSaves.add(target);
           }
-          if (getProperty(target.actor.data.flags, "midi-qol.disadvantage.concentration")) {
+          if (!concAdv && concDisadv) {
             advantage = false;
             this.disadvantageSaves.add(target);
+          } else {
+            advantage = undefined;
           }
         }
 

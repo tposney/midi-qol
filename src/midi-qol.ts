@@ -258,9 +258,12 @@ Hooks.once('ready', function () {
   Hooks.callAll("midi-qol.midiReady");
 });
 
+
 /*
 import { setupMidiTests } from './module/tests/setupTest.js';
-Hooks.once("midi-qol.midiReady", setupMidiTests);
+Hooks.once("midi-qol.midiReady", () => {
+  setTimeout(setupMidiTests, 1000);
+});
 */
 
 // Add any additional hooks if necessary
@@ -480,8 +483,8 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.disadvantage.deathSave`);
 
   if (game.system.id === "dnd5e") {
-    //@ts-ignore CONFIG.DND5E
-    Object.values(CONFIG.DND5E.spellComponents).forEach((comp: string) => {
+    // fix for translations
+    ["vocal", "somatic", "material"].forEach(comp => {
       midiFlags.push(`flags.midi-qol.fail.spell.${comp.toLowerCase()}`);
     });
     midiFlags.push(`flags.midi-qol.DR.all`);
@@ -489,7 +492,6 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.DR.non-silver`);
     midiFlags.push(`flags.midi-qol.DR.non-adamant`);
     midiFlags.push(`flags.midi-qol.DR.non-physical`);
-
     midiFlags.push(`flags.midi-qol.DR.final`);
 
     //@ts-ignore CONFIG.DND5E

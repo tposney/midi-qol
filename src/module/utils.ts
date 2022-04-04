@@ -277,7 +277,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     //@ts-ignore
     if (workflow && !isHealing && workflow.item && !getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction")
       && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
-      log("Calling do reactions with ", t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } })
+      // log("Calling do reactions with ", t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } })
       //@ts-ignore
       let result = await doReactions(t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } });
     }
@@ -478,7 +478,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     await timedAwaitExecuteAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
-      charName: workflow.actor.name,
+      charName: workflow.actor?.name ?? game?.user?.name,
       damageList: damageList,
       targetNames,
       chatCardId: workflow.itemCardId,

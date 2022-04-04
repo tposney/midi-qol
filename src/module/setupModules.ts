@@ -95,6 +95,18 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+
+  0.9.43
+  * Added Toll the Dead spell to the midi sample items. It does a few tricks to modify the damage roll of the spell according to the HP of the target being less than max.
+  * Fix for direct calling of applyTokenDamageMany throwing an error looking for workflow.actor.name.
+  * Fix for auto rolling attacks when they shouldn't be.
+
+  0.9.42
+  * Sigh - another fix for DamageOnlyWorkflows.
+  * Player Damage cards now are displayed as created by the actor that did the damage roll rather than as GM.
+  * Player Damage card - only display the hp updated/hp not updated header if there are player damage buttons on the card. 
+  * Added flags.midi-qol.semiSuperSaver for items that cause 0/full damage on save/failed save.
+
   0.9.41
   * Support for Conditional Visibility hidden/invisible conditions for advantage/disadvantage.
   * Support for application of CV effects is via Convenient Effects, so you need convenient effects/DAE to be able to implement the invisiblity spell. Midi-qol sample items updated to support CV and CV convenient effects. It is suggested that you toggle the CV effects to be "status effects".

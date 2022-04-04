@@ -74,7 +74,21 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     return workflow.activeDefence(this, result);
   }
   let advantage = options.advantage || workflow?.advantage || workflow?.rollOptions.advantage || workflow?.workflowOptions.advantage || workflow.flankingAdvantage;
+  if (options.advantage)
+    workflow.attackAdvAttribution[`options.advantage`] = true;
+  if (workflow.rollOptions.advantage)
+    workflow.attackAdvAttribution[`rollOptions.advantage`] = true;
+  if (workflow.flankingAdvantage)
+    workflow.attackAdvAttribution[`workflowOptions.advantage.flanking`] = true;
+
   let disadvantage = options.disadvantage || workflow?.disadvantage || workflow?.workflowOptions.disadvantage || workflow.rollOptions.disadvantage;
+  if (options.disadvantage)
+    workflow.attackAdvAttribution[`options.disadvantage`] = true;
+  if (workflow.rollOptions.disadvantage)
+    workflow.attackAdvAttribution[`rollOptions.disadvantage`] = true;
+  if (workflow.workflowOptions.disadvantage)
+    workflow.attackAdvAttribution[`workflowOptions.disadvantage`] = true;
+
   if (advantage && disadvantage) {
     advantage = false;
     disadvantage = false;
@@ -93,10 +107,11 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     { insertKeys: true, overwrite: true }
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
   ));
+  workflow.attackExpression = "1d20+".concat(this.getAttackToHit().parts.join("+"));
   if (debugCallTiming) log(`wrapped item.rollAttack():  elapsed ${Date.now() - wrappedRollStart}ms`);
 
   if (!result) return result;
-  console.warn("Advantage/Disadvantage sources: ", advDisadvAttribution(this.actor));
+  console.warn("testing: advantage/disadvantage", workflow.attackAdvAttribution);
   result = Roll.fromJSON(JSON.stringify(result.toJSON()))
   if (workflow.workflowType === "BetterRollsWorkflow") {
     // we are rolling this for better rolls
@@ -998,24 +1013,6 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   if (this instanceof TrapWorkflow) return;
   return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
 };
-
-export function advDisadvAttribution(actor) {
-  const attributions: any[] = [];
-  if (!actor.data.effects) return attributions;
-  for (let effect of actor.data.effects) {
-    for (let change of effect.data.changes) {
-      if (change.key.includes("advantage") && !effect.data.disabled) {
-        attributions.push({
-          label: effect.data.label,
-          key: change.key,
-          mode: change.mode,
-          value: change.value
-        })
-      }
-    }
-  }
-  return attributions;
-}
 
 export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: string, conditionFlagSpell: string) {
   let rollOtherDamage = false;
