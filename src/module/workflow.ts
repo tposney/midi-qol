@@ -297,10 +297,11 @@ export class Workflow {
     this.attackAdvAttribution = {};
 
     if (configSettings.allowUseMacro) {
-      this.onUseMacros = getProperty(this.item, "data.flags.midi-qol.onUseMacroParts") ?? new OnUseMacros();
+      this.onUseMacros = new OnUseMacros();
+      const itemOnUseMacros = getProperty(this.item, "data.flags.midi-qol.onUseMacroParts") ?? new OnUseMacros();
       const actorOnUseMacros = getProperty(this.actor, "data.flags.midi-qol.onUseMacroParts") ?? new OnUseMacros();
       //@ts-ignore
-      this.onUseMacros.items = (this.onUseMacros.items).concat(actorOnUseMacros.items);
+      this.onUseMacros.items = itemOnUseMacros.items.concat(actorOnUseMacros.items);
     }
     this.preSelectedTargets = canvas?.scene ? new Set(game.user?.targets) : new Set(); // record those targets targeted before cast.
     if (this.item && ["spell", "feat", "weapon"].includes(this.item.type)) {
@@ -388,12 +389,14 @@ export class Workflow {
       case WORKFLOWSTATES.AWAITTEMPLATE:
         if (this.templateTargeting) {
           if (debugEnabled > 1) debug("Item has template; registering Hook");
+          /*
           if (installedModules.get("levels")) {
             //@ts-ignore
             _levels.templateElevation = true;
             //@ts-ignore
             _levels.nextTemplateHeight = this.templateElevation;
           }
+          */
           if (!(this instanceof BetterRollsWorkflow)) this.placeTemlateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
           if (this.needTemplate) return undefined;
         }
@@ -430,7 +433,7 @@ export class Workflow {
           switch (checkRange(this.actor, this.item, this.tokenId, this.targets)) {
             case "fail": return this.next(WORKFLOWSTATES.ROLLFINISHED);
             case "dis": this.disadvantage = true;
-              this.attackAdvAttribution["disadvantage.range"] = true;
+              this.attackAdvAttribution["DIS:range"] = true;
           }
         }
         if (checkRule("incapacitated") && checkIncapcitated(this.actor, this.item, null)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
@@ -877,16 +880,16 @@ export class Workflow {
 
     if (advantage) {
       const withAdvantage = advantage.all || advantage.attack?.all || (advantage.attack && advantage.attack[actType]);
-      if (advantage.all) this.attackAdvAttribution["advantage.all"] = true;
-      if (advantage.attack?.all) this.attackAdvAttribution["advantage.attack.all"] = true;
-      if (advantage.attack && advantage.attack[actType]) this.attackAdvAttribution[`advantage.attack.${actType}`] = true;
+      if (advantage.all) this.attackAdvAttribution["ADV:all"] = true;
+      if (advantage.attack?.all) this.attackAdvAttribution["ADV:attack.all"] = true;
+      if (advantage.attack && advantage.attack[actType]) this.attackAdvAttribution[`ADV.attack.${actType}`] = true;
       this.advantage = this.advantage || withAdvantage;
     }
     if (disadvantage) {
       const withDisadvantage = disadvantage.all || disadvantage.attack?.all || (disadvantage.attack && disadvantage.attack[actType]);
-      if (disadvantage.all) this.attackAdvAttribution["disadvantage.all"] = true;
-      if (disadvantage.attack?.all) this.attackAdvAttribution["disadvantage.attack.all"] = true;
-      if (disadvantage.attack && disadvantage.attack[actType]) this.attackAdvAttribution[`disadvantage.attack.${actType}`] = true;
+      if (disadvantage.all) this.attackAdvAttribution["DIS:all"] = true;
+      if (disadvantage.attack?.all) this.attackAdvAttribution["DIS:attack.all"] = true;
+      if (disadvantage.attack && disadvantage.attack[actType]) this.attackAdvAttribution[`DIS:attack.${actType}`] = true;
       this.disadvantage = this.disadvantage || withDisadvantage;
     }
     // TODO Hidden should check the target to see if they notice them?
@@ -903,7 +906,7 @@ export class Workflow {
         isHidden = hidden || invisible
       }
       this.advantage = this.advantage || isHidden;
-      if (isHidden) this.attackAdvAttribution["advantage.hidden"] = true;
+      if (isHidden) this.attackAdvAttribution["ADV:hidden"] = true;
 
       if (isHidden) log(`Advantage given to ${this.actor.name} due to hidden/invisible`)
     }
@@ -921,7 +924,7 @@ export class Workflow {
         if (debugEnabled > 0) warn(`Ranged attack by ${this.actor.name} at disadvantage due to neabye foe`);
       }
       this.disadvantage = this.disadvantage || nearbyFoe;
-      if (nearbyFoe) this.attackAdvAttribution["disadvantage.nearbyFoe"];
+      if (nearbyFoe) this.attackAdvAttribution["DIS:nearbyFoe"] = true;
     }
     this.checkAbilityAdvantage();
     this.checkTargetAdvantage();
@@ -971,10 +974,10 @@ export class Workflow {
     if (ability === "") ability = this.item?.data.data.properties?.fin ? "dex" : "str";
     this.advantage = this.advantage || getProperty(this.actor.data, `flags.midi-qol.advantage.attack.${ability}`);
     if (getProperty(this.actor.data, `flags.midi-qol.advantage.attack.${ability}`))
-      this.attackAdvAttribution[`advantage.attack.${ability}`] = true;
+      this.attackAdvAttribution[`ADV:attack.${ability}`] = true;
     this.disadvantage = this.disadvantage || getProperty(this.actor.data, `flags.midi-qol.disadvantage.attack.${ability}`);
     if (getProperty(this.actor.data, `flags.midi-qol.disadvantage.attack.${ability}`))
-      this.attackAdvAttribution[`disadvantage.attack.${ability}`] = true;;
+      this.attackAdvAttribution[`DIS:attack.${ability}`] = true;;
   }
 
   async checkFlankingAdvantage(): Promise<boolean> {
@@ -989,7 +992,7 @@ export class Workflow {
 
     const needsFlanking = await markFlanking(token, target, );
     if (needsFlanking)
-      this.attackAdvAttribution[`advantage.flanking`] = true;;
+      this.attackAdvAttribution[`ADV:flanking`] = true;;
     if (["advonly", "ceadv"].includes(checkRule("checkFlanking"))) this.flankingAdvantage = needsFlanking;
      return needsFlanking;
   }
@@ -1010,7 +1013,7 @@ export class Workflow {
         }
         this.disadvantage = this.disadvantage || nearbyAlly;
         if (nearbyAlly)
-          this.attackAdvAttribution[`disadvantage.nearbyAlly`] = true;;
+          this.attackAdvAttribution[`DIS:nearbyAlly`] = true;;
       }
     }
     const grants = firstTarget.actor?.data.flags["midi-qol"]?.grants;
@@ -1019,19 +1022,19 @@ export class Workflow {
     const attackAdvantage = grants.advantage?.attack || {};
     const grantsAdvantage = grants.all || attackAdvantage.all || attackAdvantage[actionType];
     if (grants.all)
-      this.attackAdvAttribution[`advantage.grants.all`] = true;;
+      this.attackAdvAttribution[`ADV:grants.all`] = true;;
     if (attackAdvantage.all)
-      this.attackAdvAttribution[`advantage.grants.attack.all`] = true;
+      this.attackAdvAttribution[`ADV:grants.attack.all`] = true;
     if (attackAdvantage[actionType])
-      this.attackAdvAttribution[`advantage.grants.attack.${actionType}`] = true;
+      this.attackAdvAttribution[`ADV:grants.attack.${actionType}`] = true;
     const attackDisadvantage = grants.disadvantage?.attack || {};
     const grantsDisadvantage = grants.all || attackDisadvantage.all || attackDisadvantage[actionType];
     if (grants.all)
-      this.attackAdvAttribution[`disadvantage.grants.all`] = true;;
+      this.attackAdvAttribution[`DIS:grants.all`] = true;;
     if (attackDisadvantage.all)
-      this.attackAdvAttribution[`disadvantage.grants.attack.all`] = true;
+      this.attackAdvAttribution[`DIS:grants.attack.all`] = true;
     if (attackDisadvantage[actionType])
-      this.attackAdvAttribution[`disadvantage.grants.attack.${actionType}`] = true;
+      this.attackAdvAttribution[`DIS:grants.attack.${actionType}`] = true;
     this.advantage = this.advantage || grantsAdvantage;
     this.disadvantage = this.disadvantage || grantsDisadvantage;
   }
@@ -1182,61 +1185,61 @@ export class Workflow {
       actor: this.actor.data,
       actorData: this.actor.data,
       actorUuid: this.actor.uuid,
-      tokenId: this.tokenId,
-      tokenUuid: this.tokenUuid,
-      itemUuid: this.item?.uuid,
-      item: itemData,
-      itemData,
-      targets,
-      targetUuids,
-      hitTargets,
-      hitTargetUuids,
-      hitTargetsEC,
-      hitTargetUuidsEC,
-      saves,
-      saveUuids,
-      superSavers,
-      superSaverUuids,
-      semiSuperSavers,
-      semiSuperSaverUuids,
-      failedSaves,
-      failedSaveUuids,
-      criticalSaves,
-      criticalSaveUuids,
-      fumbleSaves,
-      fumbleSaveUuids,
-      damageRoll: this.damageRoll,
-      attackRoll: this.attackRoll,
-      diceRoll: this.diceRoll,
+      advantage: this.advantage,
       attackD20: this.diceRoll,
+      attackRoll: this.attackRoll,
       attackTotal: this.attackTotal,
-      itemCardId: this.itemCardId,
-      isCritical: this.rollOptions.critical || this.isCritical,
-      isVersatile: this.rollOptions.versatile || this.isVersatile,
-      isFumble: this.isFumble,
-      spellLevel: this.itemLevel,
-      powerLevel: game.system.id === "sw5e" ? this.itemLevel : undefined,
-      damageTotal: this.damageTotal,
-      damageDetail: this.damageDetail,
-      damageList: this.damageList,
-      otherDamageTotal: this.otherDamageTotal,
-      otherDamageDetail: this.otherDamageDetail,
-      otherDamageList: this.otherDamageList,
-      bonusDamageTotal: this.bonusDamageTotal,
       bonusDamageDetail: this.bonusDamageDetail,
-      bonusDamageRoll: this.bonusDamageRoll,
       bonusDamageFlavor: this.bonusDamageFlavor,
       bonusDamageHTML: this.bonusDamageHTML,
-      advantage: this.advantage,
+      bonusDamageRoll: this.bonusDamageRoll,
+      bonusDamageTotal: this.bonusDamageTotal,
+      concentrationData: getProperty(this.actor.data.flags, "midi-qol.concentration-data"),
+      criticalSaves,
+      criticalSaveUuids,
+      damageDetail: this.damageDetail,
+      damageList: this.damageList,
+      damageRoll: this.damageRoll,
+      damageTotal: this.damageTotal,
+      diceRoll: this.diceRoll,
       disadvantage: this.disadvantage,
       event: this.event,
+      failedSaves,
+      failedSaveUuids,
+      fumbleSaves,
+      fumbleSaveUuids,
+      hitTargets,
+      hitTargetsEC,
+      hitTargetUuids,
+      hitTargetUuidsEC,
       id: this.item.id,
-      uuid: this.uuid,
+      isCritical: this.rollOptions.critical || this.isCritical,
+      isFumble: this.isFumble,
+      isVersatile: this.rollOptions.versatile || this.isVersatile,
+      item: itemData,
+      itemCardId: this.itemCardId,
+      itemData,
+      itemUuid: this.item?.uuid,
+      otherDamageDetail: this.otherDamageDetail,
+      otherDamageList: this.otherDamageList,
+      otherDamageTotal: this.otherDamageTotal,
+      powerLevel: game.system.id === "sw5e" ? this.itemLevel : undefined,
       rollData: this.actor.getRollData(),
-      concentrationData: getProperty(this.actor.data.flags, "midi-qol.concentration-data"),
+      rollOptions: this.rollOptions,
+      saves,
+      saveUuids,
+      semiSuperSavers,
+      semiSuperSaverUuids,
+      spellLevel: this.itemLevel,
+      superSavers,
+      superSaverUuids,
+      targets,
+      targetUuids,
       templateId: this.templateId, // deprecated
       templateUuid: this.templateUuid,
-      rollOptions: this.rollOptions,
+      tokenId: this.tokenId,
+      tokenUuid: this.tokenUuid,
+      uuid: this.uuid,
       workflowOptions: this.workflowOptions
     }
   }
@@ -2234,6 +2237,11 @@ export class Workflow {
       let targetActor: Actor5e = targetToken.actor;
       if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
       let targetAC = Number.parseInt(targetActor.data.data.attributes.ac.value ?? 10);
+      if (targetActor.type === "vehicle") {
+        const inMotion = getProperty(targetActor.data, "flags.midi-qol.inMotion");
+        if (inMotion) targetAC = Number.parseInt(targetActor.data.data.attributes.ac.flat ?? 10); 
+        else targetAC = Number.parseInt(targetActor.data.data.attributes.ac.motionless ?? 10);
+      }
       let hitResultNumeric;
       let targetEC = targetActor.data.data.attributes.ac.EC ?? 0;
       let targetAR = targetActor.data.data.attributes.ac.AR ?? 0;
@@ -2395,7 +2403,7 @@ export class Workflow {
           if (target.document.id) targetIds.push(target.document.id);
         }
       }
-      this.targets = game.user?.targets ?? new Set();
+      this.targets = new Set(game.user?.targets ?? []);
       this.saves = new Set();
       this.failedSaves = new Set(this.targets)
       this.hitTargets = new Set(this.targets);

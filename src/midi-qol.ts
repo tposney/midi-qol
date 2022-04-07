@@ -19,7 +19,7 @@ import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Ho
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
-import { applyTokenDamage, checkNearby, completeItemRoll, distancePointToken, findNearby, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getTraitMult, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
+import { applyTokenDamage, checkNearby, completeItemRoll, distancePointToken, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getTraitMult, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
@@ -190,6 +190,8 @@ Hooks.once('setup', function () {
     config.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
     config.damageResistanceTypes["healing"] = config.healingTypes.healing;
     config.damageResistanceTypes["temphp"] = config.healingTypes.temphp;
+    config.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
+    config.abilityActivationTypes["reactionmanual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
   }
 
   if (configSettings.allowUseMacro) {
@@ -201,7 +203,6 @@ Hooks.once('setup', function () {
       section: i18n("midi-qol.DAEMidiQOL"),
       type: String
     };
-
   };
   setupSheetQol();
 });
@@ -278,6 +279,7 @@ function setupMidiQOLApi() {
   }
   //@ts-ignore
   window.MidiQOL = {
+    getChanges,
     applyTokenDamage,
     TrapWorkflow,
     DamageOnlyWorkflow,
@@ -511,7 +513,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.uncanny-dodge`);
 
   midiFlags.push(`flags.midi-qol.OverTime`);
-
+  midiFlags.push("flags.midi-qol.inMotion");
   //@ts-ignore
   const damageTypes = Object.keys(CONFIG.SW5E?.damageTypes ?? CONFIG.DND5E.damageTypes);
   for (let key of damageTypes) {

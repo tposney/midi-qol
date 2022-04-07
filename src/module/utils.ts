@@ -218,7 +218,7 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
     const adamantineDamage = item?.data.data.properties?.ada;
     let traitList = [{ type: "di", mult: 0 }, { type: "dr", mult: 0.5 }, { type: "dv", mult: 2 }];
     // for sw5e use sdi/sdr/sdv instead of di/dr/dv
-    if (game.system.id === "sw5e" && actor.type === "starship" && actor.data.data.atrributes.hp.tenp > 0) {
+    if (game.system.id === "sw5e" && actor.type === "starship" && actor.data.data.attributes.hp.tenp > 0) {
       traitList = [{ type: "sdi", mult: 0 }, { type: "sdr", mult: 0.5 }, { type: "sdv", mult: 2 }];
     }
     for (let { type, mult } of traitList ) {
@@ -717,7 +717,7 @@ export function midiCustomEffect(actor, change) {
   if (typeof change?.key !== "string") return true;
   if (!change.key?.startsWith("flags.midi-qol")) return true;
   if (change.key === "flags.midi-qol.onUseMacroName") {
-    const args = change.value.split(",");
+    const args = change.value.split(",")?.map(arg => arg.trim());
     if (args.length !== 2) return true;
     const onUseMacro = OnUseMacro.parsePart([args[0], args[1]]);
     const macroItems = getProperty(actor.data, "flags.midi-qol.actorOnUseMacroParts")?.items ?? [];
@@ -2633,10 +2633,25 @@ export async function asyncHooksCall(hook, ...args) {
   return true;
 }
 
+export function addAdvAttribution(html: string, advAttribution: any = undefined) {
+  // <section class="tooltip-part">
+  let advHtml: string = "";
+  if (advAttribution && Object.keys(advAttribution).length > 0) {
+    advHtml = Object.keys(advAttribution).reduce((prev, s) => prev += `${s}<br>`, "");
+    html = html.replace(`<section class="tooltip-part">`, `<section class="tooltip-part">${advHtml}`);
+  }
+  return html;
+}
+
 export async function midiRenderRoll(roll: Roll | undefined) {
   if (!roll) return "";
-  if (!configSettings.rollAlternate) return roll.render();
-  else return roll.render({template: "modules/midi-qol/templates/rollAlternate.html"});
+  switch (configSettings.rollAlternate) {
+    case "formula": 
+    case "formulaadv": return roll.render({template: "modules/midi-qol/templates/rollAlternate.html"});
+    case "adv":
+    case "off":
+    default: return roll.render(); // "off"
+  }
 }
 
 export async function computeFlankedStatus(target): Promise<boolean> {
@@ -2844,4 +2859,13 @@ export async function checkflanking(user: User, target: Token, targeted: boolean
   if (user.targets.size === 1 && canvas?.tokens?.controlled.length === 1) return markFlanking(token, target);
   return false
 
+}
+
+export function getChanges(actorOrItem, key: string) {
+  return actorOrItem.effects.contents
+  .flat()
+  .map(e=>e.data.changes)
+  .flat()
+  .filter(c=>c.key.includes(key))
+  .sort((a,b) => a.key < b.key? -1 : 1)
 }

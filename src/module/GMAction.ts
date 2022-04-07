@@ -187,8 +187,8 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
 }
 
 async function createReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string }) {
-  createGMReverseDamageCard(data);
   createPlayerDamageCard(data);
+  return createGMReverseDamageCard(data);
 }
 
 async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: string; flagTags: any }, templateData, tokenIdList, createPromises: boolean = false, showNPC: boolean = true): Promise<Promise<any>[]> 
@@ -318,7 +318,7 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
       flags: { "midiqol": { "undoDamage": tokenIdList } }
     };
     if (data.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", data.flagTags);
-    let message = await ChatMessage.create(chatData);
+    ChatMessage.create(chatData);
   }
   log(`createPlayerReverseDamageCard elapsed: ${Date.now() - startTime}`)
 }
@@ -357,7 +357,7 @@ async function createGMReverseDamageCard (data: { damageList: any; autoApplyDama
       flags: { "midiqol": { "undoDamage": tokenIdList } }
     };
     if (data.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", data.flagTags);
-    let message = await ChatMessage.create(chatData);
+    ChatMessage.create(chatData);
   }
   log(`createGMReverseDamageCard elapsed: ${Date.now() - startTime}`)
 }

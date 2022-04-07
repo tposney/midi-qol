@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, midiRenderRoll } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, midiRenderRoll, addAdvAttribution } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
@@ -74,20 +74,20 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     return workflow.activeDefence(this, result);
   }
   let advantage = options.advantage || workflow?.advantage || workflow?.rollOptions.advantage || workflow?.workflowOptions.advantage || workflow.flankingAdvantage;
-  if (options.advantage)
-    workflow.attackAdvAttribution[`options.advantage`] = true;
+  // if (options.advantage)
+  // workflow.attackAdvAttribution[`options.advantage`] = true;
   if (workflow.rollOptions.advantage)
-    workflow.attackAdvAttribution[`rollOptions.advantage`] = true;
+    workflow.attackAdvAttribution[`ADV:rollOptions`] = true;
   if (workflow.flankingAdvantage)
-    workflow.attackAdvAttribution[`workflowOptions.advantage.flanking`] = true;
+    workflow.attackAdvAttribution[`ADV:flanking`] = true;
 
   let disadvantage = options.disadvantage || workflow?.disadvantage || workflow?.workflowOptions.disadvantage || workflow.rollOptions.disadvantage;
-  if (options.disadvantage)
-    workflow.attackAdvAttribution[`options.disadvantage`] = true;
+  // if (options.disadvantage)
+  //  workflow.attackAdvAttribution[`options.disadvantage`] = true;
   if (workflow.rollOptions.disadvantage)
-    workflow.attackAdvAttribution[`rollOptions.disadvantage`] = true;
+    workflow.attackAdvAttribution[`DIS:rollOptions`] = true;
   if (workflow.workflowOptions.disadvantage)
-    workflow.attackAdvAttribution[`workflowOptions.disadvantage`] = true;
+    workflow.attackAdvAttribution[`DIS:workflowOptions`] = true;
 
   if (advantage && disadvantage) {
     advantage = false;
@@ -107,7 +107,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     { insertKeys: true, overwrite: true }
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
   ));
-  workflow.attackExpression = "1d20+".concat(this.getAttackToHit().parts.join("+"));
+  workflow.attackExpression = "d20+".concat(this.getAttackToHit().parts.join("+"));
   if (debugCallTiming) log(`wrapped item.rollAttack():  elapsed ${Date.now() - wrappedRollStart}ms`);
 
   if (!result) return result;
@@ -166,6 +166,8 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
   // workflow.attackRoll = result; already set
   workflow.attackRollHTML = await midiRenderRoll(result);
+  if (["formulaadv", "adv"].includes(configSettings.rollAlternate))
+    workflow.attackRollHTML = addAdvAttribution(workflow.attackRollHTML, workflow.attackAdvAttribution)
   if (debugCallTiming) log(`final item.rollAttack():  elapsed ${Date.now() - attackRollStart}ms`);
 
   workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);

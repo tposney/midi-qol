@@ -1,3 +1,11 @@
+### 0.9.44
+* Fix for levels (the module) and template placement heights.
+* Add advantage attribution as part of the dice tooltip. Works with formula as tooltip or not. This is very experimental.
+* Check Vehicle motionless and flat ac when in motion to determing hits. Added flags.midi-qol.inMotion to mark a vehicle in motion.
+* Fix for sw5e starship sdi,sdr,sdv handling.
+* Fix for actor onUse macros with spaces in name/specification
+* Added sample feature Blessed Healer, that uses an actor onUse macro to do the bonus healing. Does not require modifying any spells to have the effect applied.
+
 ### 0.9.43
 * Added Toll the Dead spell to the midi sample items. It does a few tricks to modify the damage roll of the spell according to the HP of the target being less than max.
 * Fix for direct calling of applyTokenDamageMany throwing an error looking for workflow.actor.name.

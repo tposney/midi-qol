@@ -113,7 +113,7 @@ class ConfigSettings {
   weaponHitSound: string = "";
   weaponUseSound: string = "";
   weaponUseSoundRanged: string = "";
-  rollAlternate: boolean = false;
+  rollAlternate: string = "off";
   optionalRules: any = {
     invisAdvantage: true,
     checkRange: true,
@@ -269,7 +269,12 @@ export let fetchParams = () => {
   if (configSettings.playerDamageCard === undefined) configSettings.playerDamageCard = "none";
 
   if (configSettings.displayHitResultNumeric === undefined) configSettings.displayHitResultNumeric = false;
-  if (configSettings.rollAlternate === undefined) configSettings.rollAlternate = false;
+  if (configSettings.rollAlternate === undefined) configSettings.rollAlternate = "off";
+  //@ts-ignore
+  if (configSettings.rollAlternate === false) configSettings.rollAlternate = "off";
+  //@ts-ignore
+  if (configSettings.rollAlternate === true) configSettings.rollAlternate = "formula";
+
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
     || !configSettings.keyMapping["DND5E.Disadvantage"]
