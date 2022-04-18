@@ -1,3 +1,11 @@
+### 0.9.45
+* Added exploding dice option for critical hit dice.
+* Fix for levels module not initialising if no canvas is defined throwing an error.
+* Fix for rpg damage numbers and unlinked tokens.
+* Fix for applying concentration even if spell aborted via preItemRoll on use macro call.
+* Added notification if item use blocked by preItem roll macro.
+* Clean up for levelsvolumetrictemplates. If the modules is enabled, midi defers to it for targeting calculations and ignores the midi walls block settings (levelsvolumetictemplates has it's own setting for walls block).
+
 ### 0.9.44
 * Fix for levels (the module) and template placement heights.
 * Add advantage attribution as part of the dice tooltip. Works with formula as tooltip or not. This is very experimental.

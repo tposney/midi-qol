@@ -33,6 +33,7 @@ class ConfigSettings {
   addDead: boolean = false;
   addWounded: number = 0;
   allowUseMacro: boolean = false;
+  allowActorUseMacro: boolean = false;
   autoApplyDamage: string = "none";
   playerDamageCard: string = "none";
   autoCEEffects: string = "none";
@@ -274,6 +275,7 @@ export let fetchParams = () => {
   if (configSettings.rollAlternate === false) configSettings.rollAlternate = "off";
   //@ts-ignore
   if (configSettings.rollAlternate === true) configSettings.rollAlternate = "formula";
+  if (configSettings.allowActorUseMacro === undefined) configSettings.allowActorUseMacro = configSettings.allowUseMacro;
 
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 

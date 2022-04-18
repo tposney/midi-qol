@@ -69,7 +69,7 @@ export let readyHooks = async () => {
       const saveTargets = game.user?.targets;
       const theTargetToken = getSelfTarget(actor);
       itemData.data.target.type = "self";
-      const theTarget = theTargetToken?.document ? theTargetToken?.document.id : theTargetToken?.id;
+      const theTarget = theTargetToken instanceof Token ? theTargetToken?.document.id : theTargetToken?.id;
       if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
       let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor })
       if (configSettings.displaySaveDC) {

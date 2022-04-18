@@ -84,7 +84,7 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
   const validTypes = Object.entries(CONFIG.DND5E.damageTypes).deepFlatten().concat(Object.entries(CONFIG.DND5E.healingTypes).deepFlatten())
 
   evalString = "";
-  let damageType: string | undefined = "";
+  let damageType: string | undefined = defaultType;
   let numberTermFound = false; // We won't evaluate until at least 1 numeric term is found
   while (partPos < rollTerms.length) {
     // Accumulate the text for each of the terms until we have enough to eval
@@ -93,10 +93,10 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
     if (evalTerm instanceof DiceTerm) {
       // this is a dice roll
       evalString += evalTerm.total;
-      damageType = evalTerm.options?.flavor;
+      damageType = evalTerm.options?.flavor || damageType;
       numberTermFound = true;
     } else if (evalTerm instanceof Die) { // special case for better rolls that does not return a proper roll
-      damageType = evalTerm.options?.flavor;
+      damageType = evalTerm.options?.flavor || damageType;
       numberTermFound = true;
       evalString += evalTerm.total;
     } else if (evalTerm instanceof NumericTerm) {
@@ -113,7 +113,7 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
           damageParts[damageType || defaultType] = (damageParts[damageType || defaultType] || 0) + result;
           // reset for the next term - we don't know how many there will be
           evalString = "";
-          damageType = "";
+          damageType = defaultType;
           numberTermFound = false;
           evalString = evalTerm.operator;
         } else { // what to do with parenthetical term or others?
@@ -133,15 +133,14 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
   return damageList;
 }
 
-export function getSelfTarget(actor): Token | undefined {
-  if (actor.token) return actor.token;
+export function getSelfTarget(actor): Token | TokenDocument |  undefined {
+  if (actor.token) return actor.token.object; //actor.token is a token document.
   const speaker = ChatMessage.getSpeaker({ actor })
   if (speaker.token) return canvas?.tokens?.get(speaker.token);
-  //@ts-ignore this is a token document not a token ??
   return new CONFIG.Token.documentClass(actor.getTokenData(), { actor });
 }
 
-export function getSelfTargetSet(actor): Set<Token> {
+export function getSelfTargetSet(actor): Set<Token | TokenDocument> {
   const selfTarget = getSelfTarget(actor);
   if (selfTarget) return new Set([selfTarget]);
   return new Set();
@@ -718,12 +717,13 @@ export function midiCustomEffect(actor, change) {
   if (!change.key?.startsWith("flags.midi-qol")) return true;
   if (change.key === "flags.midi-qol.onUseMacroName") {
     const args = change.value.split(",")?.map(arg => arg.trim());
-    if (args.length !== 2) return true;
-    const onUseMacro = OnUseMacro.parsePart([args[0], args[1]]);
-    const macroItems = getProperty(actor.data, "flags.midi-qol.actorOnUseMacroParts")?.items ?? [];
-    macroItems.push(onUseMacro);
-    setProperty(actor.data, "flags.midi-qol.onUseMacroParts.items", macroItems);
-    const macroString = macroItems.map(oum => oum.toString()).join(",");
+    const currentFlag = getProperty(actor.data, "flags.midi-qol.onUseMacroName") ?? "";
+    const extraFlag = `[${args[0]}]${args[1]}`;
+    let macroString;
+    if (currentFlag.length === 0) 
+      macroString = extraFlag;
+    else
+      macroString = [currentFlag, extraFlag].join(",");
     setProperty(actor.data, "flags.midi-qol.onUseMacroName", macroString)
     return true;
   } else {
@@ -934,8 +934,8 @@ export async function processOverTime(wrapped, data, options, user) {
               itemData._id = randomID();
               // roll the damage and save....
               const theTargetToken = getSelfTarget(actor);
-              const theTargetId = theTargetToken?.document ? theTargetToken?.document.id : theTargetToken?.id;
-              const theTargetUuid = theTargetToken?.document ? theTargetToken?.document.uuid : theTargetToken?.uuid;
+              const theTargetId = (theTargetToken instanceof Token) ? theTargetToken?.document.id : theTargetToken?.id;
+              const theTargetUuid = (theTargetToken instanceof Token) ? theTargetToken?.document.uuid : theTargetToken?.uuid;
               if (game.user?.isGM && theTargetId) game.user.updateTokenTargets([theTargetId]);
 
               if (damageRoll) {
@@ -1212,7 +1212,7 @@ export function getDistance(t1: Token, t2: Token, includeCover, wallblocking = f
               z: t2.data.elevation
             }
             //@ts-ignore
-            if (_levels.testCollision(p1, p2, "sight")) continue;
+            if (_levels?.testCollision(p1, p2, "sight")) continue;
           } else if (wallblocking) {
             // TODO use four point rule and work out cover
             switch (configSettings.optionalRules.wallsBlockRange) {
@@ -1388,7 +1388,7 @@ export function getReactionSetting(player: User | undefined): string {
   return player.isGM ? configSettings.gmDoReactions : configSettings.doReactions;
 }
 
-export function getTokenPlayerName(token: Token) {
+export function getTokenPlayerName(token: TokenDocument) {
   if (!token) return game.user?.name;
   if (!installedModules.get("combat-utility-belt")) return token.name;
   if (!game.settings.get("combat-utility-belt", "enableHideNPCNames")) return token.name;

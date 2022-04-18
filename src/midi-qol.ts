@@ -19,7 +19,7 @@ import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Ho
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
-import { applyTokenDamage, checkNearby, completeItemRoll, distancePointToken, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getTraitMult, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
+import { applyTokenDamage, checkNearby, completeItemRoll, distancePointToken, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
@@ -233,6 +233,8 @@ Hooks.once('ready', function () {
   }
   OnUseMacroOptions.setOptions(MQOnUseOptions);
   MidiSounds.midiSoundsReadyHooks();
+   //@ts-ignore
+   if (installedModules.get("levels") && typeof _levels !== "undefined") installedModules.set("levels", _levels);
 
   setupMidiQOLApi();
 
@@ -296,13 +298,14 @@ function setupMidiQOLApi() {
     debug,
     log,
     warn,
-    findNearby: findNearby,
-    checkNearby: checkNearby,
-    showItemInfo: showItemInfo,
-    showItemCard: showItemCard,
+    findNearby,
+    checkNearby,
+    showItemInfo,
+    showItemCard,
     gameStats,
     MQFromUuid: MQfromUuid,
-    MQfromActorUuid: MQfromActorUuid,
+    MQfromUuid,
+    MQfromActorUuid,
     getConcentrationEffect: getConcentrationEffect,
     selectTargetsForTemplate: templateTokens,
     socket: () => { return socketlibSocket },
@@ -310,7 +313,8 @@ function setupMidiQOLApi() {
     reportMidiCriticalFlags: reportMidiCriticalFlags,
     completeItemRoll: completeItemRoll,
     overTimeJSONData: overTimeJSONData,
-    MQOnUseOptions
+    MQOnUseOptions,
+    midiRenderRoll
   }
 }
 

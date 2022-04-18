@@ -291,8 +291,8 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   if (workflow.shouldRollOtherDamage) {
     const otherRollOptions: any = {};
     if (game.settings.get("midi-qol", "CriticalDamage") === "default") {
-      otherRollOptions.powerfulCritical = game.settings.get("dnd5e", "criticalDamageMaxDice");
-      otherRollOptions.multiplyNumeric = game.settings.get("dnd5e", "criticalDamageModifiers");
+      otherRollOptions.powerfulCritical = game.settings.get(game.system.id, "criticalDamageMaxDice");
+      otherRollOptions.multiplyNumeric = game.settings.get(game.system.id, "criticalDamageModifiers");
     }
     otherRollOptions.critical = (this.data.flags.midiProperties?.critOther ?? false) && (workflow.isCritical || workflow.rollOptions.critical);
     if ((workflow.otherDamageFormula ?? "") !== "") { // other damage formula swaps in versatile if needed
@@ -486,7 +486,11 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     || isRangeSpell // rangetarget and will autotarget
     || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
 
-  if (requiresTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && (myTargets?.size || 0) === 0) shouldAllowRoll = false;
+  if (requiresTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && (myTargets?.size || 0) === 0) {
+    ui.notifications?.warn(i18n("midi-qol.noTargets"));
+    if (debugEnabled > 0) warn(`${game.user?.name} attempted to roll with no targets selected`)
+    return null;
+  }
   // only allow weapon attacks against at most the specified number of targets
   let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9999) ?? 9999
   let speaker = getSpeaker(this.actor);
@@ -496,7 +500,6 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       return null;
   }
   if (game.system.id === "dnd5e" && requiresTargets && myTargets && myTargets.size > allowedTargets) {
-    shouldAllowRoll = false;
     ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
     if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat("midi-qol.midi-qol.wrongNumberTargets", { allowedTargets })}`)
     return null;
@@ -544,15 +547,12 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       });
       if (!shouldAllowRoll) return; // user aborted spell
     }
-  }
+  } 
 
   if (!shouldAllowRoll) {
-    ui.notifications?.warn(i18n("midi-qol.noTargets"));
-    if (debugEnabled > 0) warn(`${game.user?.name} attempted to roll with no targets selected`)
-    return;
+    return null;
   }
 
-  
   const targets = (this?.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : myTargets;
 
   let workflow: Workflow;
@@ -574,14 +574,14 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = showFullCard;
   workflow.noAutoAttack = showFullCard;
-  if (installedModules.get("levels")) {
-    //@ts-ignore
-    // _levels.lastTokenForTemplate = workflow.token;
-    // _levels.nextTemplateHeight = workflow.templateElevation ?? 0;
-    //@ts-ignore
-    // _levels.templateElevation = true;
-    // if (game.user) setProperty(game.user, "data.flags.midi-qol.elevation", workflow.templateElevation);
+  
+  
+  if (installedModules.get("levelsvolumetrictemplates")) {
+    installedModules.get("levels").lastTokenForTemplate = workflow.token;
+    // installedModules.get("levels").nextTemplateHeight = workflow.templateElevation ?? 0;
+    installedModules.get("levels").templateElevation = true;
   }
+  
   let itemUsesReaction = false;
   const hasReaction = await hasUsedReaction(this.actor);
   if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type)) {
@@ -589,7 +589,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
   let inCombat = isInCombat(workflow.actor);
   
-  const checkReactionAOO = configSettings.recordAOO=== "all" || (configSettings.recordAOO=== this.actor.type)
+  const checkReactionAOO = configSettings.recordAOO === "all" || (configSettings.recordAOO === this.actor.type)
 
   // inCombat used by reactions, bonus actions and AOO checking - only evaluate it once since it's expensiveish
   if (checkReactionAOO || needsReactionCheck(this.actor) || configSettings.enforceBonusActions !== "none" 
@@ -640,7 +640,9 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     const results = await workflow.callMacros(this, workflow.onUseMacros?.getMacros("preItemRoll"), "OnUse", "preItemRoll");
 
     if (results.some(i => i === false)) {
-      console.warn("midi-qol | attack roll blocked by preItemRoll macro");
+      console.warn("midi-qol | item roll blocked by preItemRoll macro");
+      ui.notifications?.notify(`${this.name ?? ""} use blocked by preItemRoll macro`)
+      workflow.aborted = true;
       return workflow.next(WORKFLOWSTATES.ROLLFINISHED)
       // Workflow.removeWorkflow(workflow.id);
       // return;
@@ -882,7 +884,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   };
   if (workflow.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", workflow.flagTags);
   if (!this.actor.items.has(this.id)) { // deals with using temp items in overtime effects
-    chatData.flags["dnd5e.itemData"] = this.data;
+    chatData.flags[`${game.system.id}.itemData`] = this.data;
   }
   // Temp items (id undefined) or consumables that were removed need itemdata set.
   if (!this.id || (this.data.type === "consumable" && !this.actor.items.has(this.id))) {
@@ -929,14 +931,16 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
             //@ts-ignore
             z: token.data.elevation
           }
+          const p2z = installedModules.get("levels")?.lastTokenForTemplate.data.elevation 
+                      ?? installedModules.get("levels")?.nextTemplateHeight ?? 0;
           let p2 = {
             x: tx, y: ty,
             //@ts-ignore
-            z: _levels.nextTemplateHeight ?? 0 // TODO see if this should be gaurded on _levels.templateElevation
+            z: p2z
           }
           contains = getUnitDist(p2.x, p2.y, p2.z, token) <= templateDetails.distance;
           //@ts-ignore
-          contains = contains && !_levels.testCollision(p1, p2, "collision");
+          contains = contains && !installedModules.get("levels").testCollision(p1, p2, "collision");
           //@ts-ignore
         } else {
           contains = !canvas?.walls?.checkCollision(r);

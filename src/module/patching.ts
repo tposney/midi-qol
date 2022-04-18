@@ -183,7 +183,7 @@ function configureDamage(wrapped) {
   if (criticalDamage === "baseDamage") this.options.criticalMultiplier = 1;
   this.terms = this.terms.filter(term => !term.options.critOnly)
   // Add extra critical damage term
-  if (this.isCritical && this.options.criticalBonusDamage && !(["maxCrit", "maxAll", "baseDamage", "doubleDice"].includes(criticalDamage))) {
+  if (this.isCritical && this.options.criticalBonusDamage && !(["explode", "maxCrit", "maxAll", "baseDamage", "doubleDice"].includes(criticalDamage))) {
     const extra = new Roll(this.options.criticalBonusDamage, this.data);
     if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
     this.terms.push(...extra.terms);
@@ -221,8 +221,8 @@ function configureDamage(wrapped) {
       termOptions.critical = true;
     }
 
+  if (this.options.multiplyNumeric && (term instanceof NumericTerm)) {
     // Multiply numeric terms
-    else if (this.options.multiplyNumeric && (term instanceof NumericTerm)) {
       const termOptions: any = term.options;
       termOptions.baseNumber = termOptions.baseNumber ?? term.number; // Reset back
       term.number = termOptions.baseNumber;
@@ -261,14 +261,39 @@ function configureDamage(wrapped) {
     }
     this.terms = newTerms;
   }
+  if (["explode"].includes(criticalDamage)) {
+    let newTerms: RollTerm[] = [];
+    for (let term of this.terms) {
+      if (term instanceof DiceTerm) {
+        newTerms.push(term);
+        newTerms.push(new OperatorTerm({ operator: "+" }));
+        //@ts-ignore
+        const newTerm = new Die({number: term.number, faces: term.faces})
+        newTerm.modifiers.push(`x${term.faces}`)
+        newTerms.push(newTerm);
+
+      } else
+        newTerms.push(term);
+    }
+    this.terms = newTerms;
+    const extra = new Roll(this.options.criticalBonusDamage, this.data);
+    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
+    /* Not sure if bonus critical dice should be exploded - since they can be done by hand
+    extra.terms.forEach(term => {
+      if (term instanceof DiceTerm) term.modifiers.push(`x${term.faces}`);
+    });
+    */
+    this.terms.push(...extra.terms);
+  }
   // Add extra critical damage term
   if (this.isCritical && this.options.criticalBonusDamage && ["maxCrit", "maxAll", "baseDamage"].includes(criticalDamage)) {
     const extra = new Roll(this.options.criticalBonusDamage, this.data);
     if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
     if (["maxCrit", "maxAll"].includes(criticalDamage)) {
       for (let term of extra.terms) {
-        //@ts-ignore
-        term.modifiers.push(`min${term.faces}`);
+        if (term instanceof DiceTerm) {
+          term.modifiers.push(`min${term.faces}`);
+        }
         this.terms.push(term);
       }
     } else this.terms.push(...extra.terms);
@@ -412,12 +437,13 @@ function _midiATIRefresh(template) {
   if (configSettings.autoTarget === "dftemplates" && installedModules.get("df-templates"))
     return; // df-templates will handle template tagerting.
   if (installedModules.get("levelsvolumetrictemplates")) {
-    // Filter which tokens to pass - not too far and not blocked by a wall.
+    
+    setProperty(template.data, "flags.levels.elevation", 
+    installedModules.get("levels").nextTemplateHeight ?? installedModules.get("levels").lastTokenForTemplate?.data.elevation );
+    // Filter which tokens to pass - not too far wall blocking is left to levels.
     let distance = template.data.distance;
     const dimensions = canvas.dimensions || { size: 1, distance: 1 };
     distance *= dimensions.size / dimensions.distance;
-    //@ts-ignore
-    // if (template.document.data.flags.levels?.elevation === undefined) setProperty(template.document.data.flags, "levels.elevation", _levels.lastTokenForTemplate.data.elevation);
     const tokensToCheck = canvas.tokens.placeables?.filter(tk => {
       const r: Ray = new Ray(
         { x: template.data.x, y: template.data.y },
@@ -426,9 +452,13 @@ function _midiATIRefresh(template) {
       const maxExtension = (1 + Math.max(tk.data.width, tk.data.height)) * dimensions.size;
       const centerDist = r.distance;
       if (centerDist > distance + maxExtension) return false;
-      //  - check for walls collision if required.
       //@ts-ignore
-      if (["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && _levels.testCollision(
+      if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && tk.actor?.data.data.attributes.hp.vale <= 0) 
+        return false;
+      //  - check for walls collision if required - handled by volumetic templates 
+      //@ts-ignore
+      /*
+      if (["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && installedModules.get("levels").testCollision(
         //@ts-ignore
         { x: tk.x, y: tk.y, z: tk.data.elevation },
         { x: template.x, y: template.y, z: template.data.flags.levels?.elevation ?? 0 },
@@ -436,11 +466,10 @@ function _midiATIRefresh(template) {
       ) {
         return false;
       }
+      */
       return true;
     })
-    if (template.document.data.flags.levels?.elevation === undefined) {
-      setProperty(template.data.flags, "levels.elevation", 0); //_levels.lastTokenForTemplate.data.elevation);
-    }
+
     if (tokensToCheck.length > 0) {
       //@ts-ignore compute3Dtemplate(t, tokensToCheck = canvas.tokens.placeables)
       VolumetricTemplates.compute3Dtemplate(template, tokensToCheck);
@@ -620,7 +649,7 @@ async function zeroHPExpiry(actor, update, options, user) {
   for (let effect of actor.effects) {
     if (effect.data.flags?.dae?.specialDuration?.includes("zeroHP")) expiredEffects.push(effect.data._id)
   }
-  if (expiredEffects.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", expiredEffects)
+  if (expiredEffects.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", expiredEffects, {"expiry-reason": "midi-qol:zeroHP"})
 }
 
 async function checkWounded(actor, update, options, user) {
