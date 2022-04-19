@@ -1,3 +1,6 @@
+### 0.9.47
+* Fix for token hud rolling bug introduced in 0.9.46
+
 ### 0.9.46
 * Restore the order or arguments for actor.data.flags.midi-qol.onUseMacro to be macro name, macro pass - thanks @Elwin
 * Fix for typo in template targeting walls block test.
