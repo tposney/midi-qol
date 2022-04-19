@@ -452,7 +452,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const isRangeSpell = ["ft", "m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
-  const shouldCheckLateTargeting = ["weapon", "feat", "spell"].includes(this.data.type) && (options.workflowOptions.lateTargeting ?? getLateTargeting());
+  const shouldCheckLateTargeting = ["weapon", "feat", "spell"].includes(this.data.type) && (options.workflowOptions?.lateTargeting ?? getLateTargeting());
                                
   if (shouldCheckLateTargeting && !isRangeSpell && !isAoESpell) {
 
