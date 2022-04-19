@@ -1,3 +1,4 @@
+import { channelConfig } from "simple-peer";
 import { applySettings } from "../apps/ConfigPanel.js";
 import { completeItemRoll } from "../utils.js";
 
@@ -27,7 +28,7 @@ export function getActor(tokenName): Actor {
     token.actor.prepareData();
     return token.actor;
   };
-  const actor =  game.actors?.getName("tokenName");
+  const actor =  game.actors?.getName(tokenName);
   if (!actor) throw new Error(`No shuch actor ${tokenName}`)
   actor?.prepareData();
   return actor;
@@ -41,9 +42,9 @@ export function getActorItem(actor, itemName) {
 export function setupMidiTests() {
   if (!game?.user?.isGM) return;
   if (game.world.id !== "midi-test") return;
-  applySettings("FullAuto");
+  registerTests();
 }
-Hooks.on("quenchReady", registerTests);
+// Hooks.on("quenchReady", registerTests);
 
 function addEffect(actor: any, changes: any[]) {
 }
@@ -51,6 +52,7 @@ function addEffect(actor: any, changes: any[]) {
 
 async function registerTests() {
   if (globalThis.quench) {
+    applySettings("FullAuto");
     globalThis.quench.registerBatch(
       "quench.midi-qol.tests",
       (context) => {
@@ -78,14 +80,16 @@ async function registerTests() {
     globalThis.quench.registerBatch(
       "quench.midi-qol.abilityrolls",
       (context) => {
-        const { describe, it, assert } = context;
+        const { describe, it, assert, expect } = context;
         const actor: any = getActor(actor1Name);
 
         describe("skill roll tests", function () {
           it("roll perception - 1 dice", function () {
             return actor.rollSkill("prc", { chatMessage: false, fastForward: true })
-              .then(skillRoll => { actor.prepareData(); assert.equal(skillRoll.terms[0].number, 1) });
+              // .then(skillRoll => { actor.prepareData(); assert.equal(skillRoll.terms[0].number, 1) });
+              .then(skillRoll => { actor.prepareData(); expect(skillRoll.terms[0].number).to.equal(1) });
           });
+
           it("roll perception - adv.all", async function () {
             setProperty(actor.data, "flags.midi-qol.advantage.all", true);
             return actor.rollSkill("prc", { chatMessage: false, fastForward: true })

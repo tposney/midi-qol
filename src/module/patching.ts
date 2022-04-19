@@ -453,7 +453,7 @@ function _midiATIRefresh(template) {
       const centerDist = r.distance;
       if (centerDist > distance + maxExtension) return false;
       //@ts-ignore
-      if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && tk.actor?.data.data.attributes.hp.vale <= 0) 
+      if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && tk.actor?.data.data.attributes.hp.value <= 0) 
         return false;
       //  - check for walls collision if required - handled by volumetic templates 
       //@ts-ignore
@@ -683,6 +683,13 @@ async function checkWounded(actor, update, options, user) {
       const effectName = actor.hasPlayerOwner ? getConvenientEffectsUnconscious().name : getConvenientEffectsDead().name;
       const hasEffect = await ConvenientEffectsHasEffect(effectName, actor.uuid);
       if ((needsDead !== hasEffect)) {
+        if (!actor.hasPlayerOwner) { // For CE dnd5e does not treat dead as dead for the combat tracker so update it by hand as well
+          let combatant;
+          if (actor.token) combatant = game.combat?.getCombatantByToken(actor.token.id);
+          //@ts-ignore
+          else combatant = game.combat?.getCombatantByActor(actor.id);
+          if (combatant) await combatant.update({ defeated: needsDead })
+        }
         //@ts-ignore
         await game.dfreds?.effectInterface.toggleEffect(effectName, { overlay: true, uuids: [actor.uuid] });
       }

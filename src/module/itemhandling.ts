@@ -367,9 +367,9 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
 }
 
 //@ts-ignore .Item
-async function newResolveLateTargeting(item: CONFIG.Item.documentClass): boolean {
+async function newResolveLateTargeting(item: CONFIG.Item.documentClassl, overRideSetting = false): boolean {
   const workflow = Workflow.getWorkflow(item?.uuid);
-  if (!getLateTargeting(workflow)) return true;
+  if (!overRideSetting && !getLateTargeting(workflow)) return true;
 
     // enable target mode
     const controls: any = ui.controls;
@@ -452,7 +452,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const isRangeSpell = ["ft", "m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
-  const shouldCheckLateTargeting = ["weapon", "feat", "spell"].includes(this.data.type) && getLateTargeting();
+  const shouldCheckLateTargeting = ["weapon", "feat", "spell"].includes(this.data.type) && (options.workflowOptions.lateTargeting ?? getLateTargeting());
                                
   if (shouldCheckLateTargeting && !isRangeSpell && !isAoESpell) {
 
@@ -474,7 +474,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
 
     if (canDoLateTargeting) {
-      if (!(await newResolveLateTargeting(this)))
+      if (!(await newResolveLateTargeting(this, true)))
       return null;
     }
   }

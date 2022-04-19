@@ -262,12 +262,12 @@ Hooks.once('ready', function () {
 });
 
 
-/*
+
 import { setupMidiTests } from './module/tests/setupTest.js';
 Hooks.once("midi-qol.midiReady", () => {
-  setTimeout(setupMidiTests, 1000);
+  setupMidiTests(); 
 });
-*/
+
 
 // Add any additional hooks if necessary
 

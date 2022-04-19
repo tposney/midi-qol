@@ -186,7 +186,7 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
     });
 }
 
-async function createReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string }) {
+async function createReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string }) {
   createPlayerDamageCard(data);
   return createGMReverseDamageCard(data);
 }
@@ -279,7 +279,7 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
   return promises;
 }
 // Fetch the token, then use the tokenData.actor.id
-async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string }) {
+async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string }) {
   if (configSettings.playerDamageCard === "none" ) return;
   let showNPC = ["npcplayerresults", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
   let playerButtons = ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
@@ -311,7 +311,7 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
     speaker.alias = data.sender;
     let chatData: any = {
       user: game.user?.id,
-      speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: game.user?.id },
+      speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: game.user?.id, actor: data.actorId },
       content: content,
       // whisper: ChatMessage.getWhisperRecipients("players").filter(u => u.active).map(u => u.id),
       type: CONST.CHAT_MESSAGE_TYPES.OTHER,

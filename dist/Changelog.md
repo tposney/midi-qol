@@ -1,9 +1,17 @@
+### 0.9.46
+* Restore the order or arguments for actor.data.flags.midi-qol.onUseMacro to be macro name, macro pass - thanks @Elwin
+* Fix for typo in template targeting walls block test.
+* Fix for CE active and non player tokens -> 0 hp, not marking dead in combat tracker.
+* Fix for player damage card not obscuring actor name if CUB hid name settings enabled.
+* Change to ``item.roll(options: {workflowOptions: {lateTargeting: true/false}})`` behaviour. The lateTargeting setting (if passed) will override the midi-qol module settings, so you can force enable/disable late targeting for a particular item roll.
+
 ### 0.9.45
 * Added exploding dice option for critical hit dice.
 * Fix for levels module not initialising if no canvas is defined throwing an error.
 * Fix for rpg damage numbers and unlinked tokens.
 * Fix for applying concentration even if spell aborted via preItemRoll on use macro call.
 * Added notification if item use blocked by preItem roll macro.
+* Adding actor onUseMacro edtiing as a separate configuration options.
 * Clean up for levelsvolumetrictemplates. If the modules is enabled, midi defers to it for targeting calculations and ignores the midi walls block settings (levelsvolumetictemplates has it's own setting for walls block).
 
 ### 0.9.44

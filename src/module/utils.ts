@@ -477,6 +477,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     await timedAwaitExecuteAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
+      actorId: workflow.actor?.id,
       charName: workflow.actor?.name ?? game?.user?.name,
       damageList: damageList,
       targetNames,
@@ -718,7 +719,7 @@ export function midiCustomEffect(actor, change) {
   if (change.key === "flags.midi-qol.onUseMacroName") {
     const args = change.value.split(",")?.map(arg => arg.trim());
     const currentFlag = getProperty(actor.data, "flags.midi-qol.onUseMacroName") ?? "";
-    const extraFlag = `[${args[0]}]${args[1]}`;
+    const extraFlag = `[${args[1]}]${args[0]}`;
     let macroString;
     if (currentFlag.length === 0) 
       macroString = extraFlag;
