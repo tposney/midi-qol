@@ -1783,7 +1783,7 @@ export class Workflow {
             advantage = true;
             this.advantageSaves.add(target);
           }
-          if (!concAdv && concDisadv) {
+          else if (!concAdv && concDisadv) {
             advantage = false;
             this.disadvantageSaves.add(target);
           } else {
