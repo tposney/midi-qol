@@ -1,3 +1,20 @@
+
+### 0.9.48
+* Added MidiQOL.doOverTimeEffect(actor: Actor5e, effect: ActiveEffect, turnStart: boolean), which will perform the overtime processing for the passed effect, turnStart === true, do turn=start changes, false do turn=end changes. The effect does not need to be present on the actor to work, but can be.
+* Fix for rolling tool checks not supporting alt/ctrl/T.
+* Fix for concentration advantage bug - thanks @kampffrosch94.
+* Added support for different sounds to be played for characters/npcs in midi custom sounds.
+* Added support for weapon subtypes in midi custom sounds. Set the weapon "base type" on the item sheet to whatever you want and you can specify weapon sub types in the sound config to be any of the valid base types. 
+* Existing sound config should be automatically migrated and midi makes a backup of your existing settings. You can restore the old settings via (after rollback of the midi version)
+```js 
+game.settings.set("midi-qol", "MidiSoundSettings", getProperty("midi-qol", "MidiSoundSettings-backup"));
+```
+* Added flags.midi-qol.optional.NAME.criticalDamage which allows optional bonus damage to do critical damage.
+* Fix for editing actor onUseMacros duplicating active effect created onUsemacros.
+
+### 0.9.47
+* Fix for token hud rolling bug introduced in 0.9.46
+
 ### 0.9.46
 * Restore the order or arguments for actor.data.flags.midi-qol.onUseMacro to be macro name, macro pass - thanks @Elwin
 * Fix for typo in template targeting walls block test.

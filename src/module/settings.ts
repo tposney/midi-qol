@@ -20,6 +20,8 @@ export var enableWorkflow: boolean;
 export var dragDropTargeting: boolean;
 export var lateTargeting: boolean;
 export var midiSoundSettings: any = {};
+export var midiSoundSettingsBackup: any = undefined;
+
 
 const defaultKeyMapping = {
   "DND5E.Advantage": "altKey", 
@@ -225,6 +227,11 @@ export async function importSettingsFromJSON(json) {
 }
 export let fetchSoundSettings = () => {
   midiSoundSettings = game.settings.get("midi-qol", "MidiSoundSettings") ?? {};
+  if (midiSoundSettings.version === undefined) {
+    midiSoundSettingsBackup = duplicate(midiSoundSettings);
+    midiSoundSettings = {"any": midiSoundSettings};
+    midiSoundSettings.version = "0.9.48";
+  }
 }
 
 export let fetchParams = () => {
@@ -439,6 +446,13 @@ const settings = [
     type: Object,
     default: midiSoundSettings,
     onChange: fetchSoundSettings,
+    config: false
+  },
+  {
+    name: "MidiSoundSettings-backup",
+    scope: "world",
+    type: Object,
+    default: {},
     config: false
   }
 ];

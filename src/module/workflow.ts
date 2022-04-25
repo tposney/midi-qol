@@ -245,7 +245,7 @@ export class Workflow {
     this.rollOptions = { advantage: false, disadvantage: false, versatile: false, critical: false, fastForward: false, rollToggle: false };
     this.pressedKeys = options?.pressedKeys;
     if (this.pressedKeys) {
-      if (this.item?.hasAttack)
+      if (this.item?.hasAttack || this.item?.type === "tool")
         this.rollOptions = mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "attack"), { overwrite: true });
       else
         this.rollOptions = mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "damage"), { overwrite: true });
@@ -448,10 +448,9 @@ export class Workflow {
           let procOptions = procAdvantage(this.actor, "check", abilityId, this.rollOptions);
           this.advantage = procOptions.advantage;
           this.disadvantage = procOptions.disadvantage;
-          this.rollOptions.fastForward = true;
 
           if (autoFastForwardAbilityRolls) {
-            this.rollOptions.fastForward = true;
+            // procOptions.fastForward = !this.rollOptions.rollToggle;
             //            this.item.rollToolCheck({ fastForward: this.rollOptions.fastForward, advantage: hasAdvantage, disadvantage: hasDisadvantage })
             await this.item.rollToolCheck(procOptions)
             return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
@@ -1782,8 +1781,7 @@ export class Workflow {
           if (concAdv && !concDisadv) {
             advantage = true;
             this.advantageSaves.add(target);
-          }
-          else if (!concAdv && concDisadv) {
+          } else if (!concAdv && concDisadv) {
             advantage = false;
             this.disadvantageSaves.add(target);
           } else {

@@ -1,5 +1,5 @@
 import { geti18nOptions, i18n } from "../../midi-qol.js";
-import { activateMacroListeners, getCurrentMacros, OnUseMacro } from "./Item.js";
+import { activateMacroListeners, getCurrentMacros, getCurrentSourceMacros, OnUseMacro, OnUseMacros } from "./Item.js";
 
 export class ActorOnUseMacrosConfig extends FormApplication {
   object: any;
@@ -23,7 +23,10 @@ export class ActorOnUseMacrosConfig extends FormApplication {
 
   async getData(options) {
     let data: any = await super.getData(options);
-    data.onUseMacroParts = duplicate(getProperty(this.object.data.flags, "midi-qol.onUseMacroParts.items") ?? []);
+    data.onUseMacroName = duplicate(getProperty(this.object.data._source, "flags.midi-qol.onUseMacroName"));
+    if (data.onUseMacroName !== undefined) data.onUseMacroParts = new OnUseMacros(data.onUseMacroName ?? null).items;
+    else data.onUseMacroParts = new OnUseMacros(null).items;
+    // data.onUseMacroParts = duplicate(getProperty(this.object.data.flags, "midi-qol.onUseMacroParts.items") ?? []);
     data.MacroPassOptions = geti18nOptions("onUseMacroOptions");
     return data;
   }

@@ -11,7 +11,7 @@
  */
 
 // Import TypeScript modules
-import { registerSettings, fetchParams, configSettings, checkRule, collectSettingData, enableWorkflow, midiSoundSettings, fetchSoundSettings } from './module/settings.js';
+import { registerSettings, fetchParams, configSettings, checkRule, collectSettingData, enableWorkflow, midiSoundSettings, fetchSoundSettings, midiSoundSettingsBackup } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, installedModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, readyPatching, initPatching } from './module/patching.js';
@@ -19,7 +19,7 @@ import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Ho
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
-import { applyTokenDamage, checkNearby, completeItemRoll, distancePointToken, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
+import { applyTokenDamage, checkNearby, completeItemRoll, distancePointToken, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
@@ -258,17 +258,17 @@ Hooks.once('ready', function () {
   checkConcentrationSettings();
   readyHooks();
   readyPatching();
+  if (midiSoundSettingsBackup) game.settings.set("midi-qol", "MidiSoundSettings-backup", midiSoundSettingsBackup)
+  MidiSounds.getWeaponBaseTypes();
   Hooks.callAll("midi-qol.midiReady");
 });
 
 
-/*
+
 import { setupMidiTests } from './module/tests/setupTest.js';
 Hooks.once("midi-qol.midiReady", () => {
   setupMidiTests(); 
 });
-*/
-
 
 // Add any additional hooks if necessary
 
@@ -315,7 +315,8 @@ function setupMidiQOLApi() {
     completeItemRoll: completeItemRoll,
     overTimeJSONData: overTimeJSONData,
     MQOnUseOptions,
-    midiRenderRoll
+    midiRenderRoll,
+    doOverTimeEffect
   }
 }
 
@@ -515,8 +516,9 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.optional.NAME.skill.all`);
   midiFlags.push(`flags.midi-qol.optional.NAME.count`);
   midiFlags.push(`flags.midi-qol.optional.NAME.ac`);
-  midiFlags.push(`flags.midi-qol.uncanny-dodge`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.criticalDamage`);
 
+  midiFlags.push(`flags.midi-qol.uncanny-dodge`);
   midiFlags.push(`flags.midi-qol.OverTime`);
   midiFlags.push("flags.midi-qol.inMotion");
   //@ts-ignore

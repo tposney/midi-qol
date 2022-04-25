@@ -751,9 +751,16 @@ where specification is a comma separated list of fields.
 
 ![Hold Person](pictures/HoldPerson.png)
 
+**MidiQOL.doOverTimeEffect**
+ 
+ MidiQOL.doOverTimeEffect(actor: Actor5e, effect: ActiveEffect, turnStart: boolean), which will perform the overtime processing for the passed effect, turnStart === true, do turn=start changes, false do turn=end changes.
+
+ The effect does not need to be present on the actor to be processed.
+ 
   **If you are applying the effect via using an item** @ fields are ambiguous, should they refer to the caster or the target? There are reasons to have both interpreations, an ongoing saving throw should refer to the caster, e.g. ```saveDC=@attributes.spelldc```. Regeneration has appplyCondition=@attributes.hp.value > 0, which should refer to the target.
 
   Effects transferred via item usage, require DAE and use it's evaluation to resolve the problem. Fields written as simple @ fields (``@attributes.spelldc``) ALWAYS refer to the caster.  
+
   If you want the @field to refer to the target, that requires use of a DAE feature, ``##field`` will not be evaluated on the caster, but will be converted to an ``@field`` after the effect is applied to the target. The example ``appplyCondition=@attributes.hp.value > 0`` would be written ``appplyCondition=##attributes.hp.value > 0``.
 
   Here's an example, if I add the following effect to a weapon, so that the effect is applied to the target when the weapon hits:
@@ -771,7 +778,6 @@ where specification is a comma separated list of fields.
 
 # Bugs
 probably many however....
-* flags.midi-qol.maxDamage.... are not working so don't use them.
 * Language translations are not up to date.
 
 # Notes for Macro writers
