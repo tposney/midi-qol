@@ -41,7 +41,7 @@ declare global {
     game: any; // the type doesn't matter
   }
 }
-export function getCanvas(): Canvas | undefined{
+export function getCanvas(): Canvas | undefined {
   if (!canvas || !canvas.scene) {
     error("Canvas/Scene not ready - roll automation will not function");
     return undefined;
@@ -96,7 +96,7 @@ export const MESSAGETYPES = {
 };
 export let cleanSpellName = (name: string): string => {
   // const regex = /[^가-힣一-龠ぁ-ゔァ-ヴーa-zA-Z0-9ａ-ｚＡ-Ｚ０-９々〆〤]/g
-  const regex =  /[^가-힣一-龠ぁ-ゔァ-ヴーa-zA-Z0-9ａ-ｚＡ-Ｚ０-９а-яА-Я々〆〤]/g
+  const regex = /[^가-힣一-龠ぁ-ゔァ-ヴーa-zA-Z0-9ａ-ｚＡ-Ｚ０-９а-яА-Я々〆〤]/g
   return name.toLowerCase().replace(regex, '').replace("'", '').replace(/ /g, '');
 }
 
@@ -233,8 +233,8 @@ Hooks.once('ready', function () {
   }
   OnUseMacroOptions.setOptions(MQOnUseOptions);
   MidiSounds.midiSoundsReadyHooks();
-   //@ts-ignore
-   if (installedModules.get("levels") && typeof _levels !== "undefined") installedModules.set("levels", _levels);
+  //@ts-ignore
+  if (installedModules.get("levels") && typeof _levels !== "undefined") installedModules.set("levels", _levels);
 
   setupMidiQOLApi();
 
@@ -267,7 +267,7 @@ Hooks.once('ready', function () {
 
 import { setupMidiTests } from './module/tests/setupTest.js';
 Hooks.once("midi-qol.midiReady", () => {
-  setupMidiTests(); 
+  setupMidiTests();
 });
 
 // Add any additional hooks if necessary
@@ -289,7 +289,7 @@ function setupMidiQOLApi() {
     Workflow,
     enableWorkflow,
     configSettings: () => { return configSettings },
-    midiSoundSettings: () => {return midiSoundSettings },
+    midiSoundSettings: () => { return midiSoundSettings },
     ConfigPanel: ConfigPanel,
     getTraitMult: getTraitMult,
     getDistance: getDistanceSimple,
@@ -472,7 +472,7 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
     midiFlags.push(`flags.midi-qol.magiResistance.all.${abl}`);
   })
-  
+
   midiFlags.push(`flags.midi-qol.advantage.skill.all`);
   midiFlags.push(`flags.midi-qol.disadvantage.skill.all`);
   midiFlags.push(`flags.midi-qol.fail.skill.all`);
@@ -536,7 +536,17 @@ function setupMidiFlags() {
   midiFlags.push(``);
   */
   if (installedModules.get("dae")) {
-    //@ts-ignore
-    window.DAE.addAutoFields(midiFlags);
+    const initDAE = async () => {
+      for (let i = 0; i < 100; i++) {
+        if (globalThis.DAE) {
+          globalThis.DAE.addAutoFields(midiFlags);
+          return true;
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      return false;
+    };
+    initDAE().then(value => {if (!value) console.error(`midi-qol | initDae settomgs failed`)});
   }
 }

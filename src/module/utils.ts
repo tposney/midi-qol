@@ -783,7 +783,7 @@ function replaceAtFields(value, context, options: { blankValue: string | number,
 export async function processOverTime(wrapped, data, options, user) {
   if (data.round === undefined && data.turn === undefined) return wrapped(data, options, user);
   try {
-    _processOverTime.bind(this)(data, options, user)
+    await _processOverTime.bind(this)(data, options, user)
   }
   catch (err) {
     error("processOverTime", err)
@@ -999,7 +999,7 @@ export async function _processOverTime(data, options, user) {
       }
     }
 
-    if (actor) for (let effect of actor.effects) doOverTimeEffect(actor, effect, startTurn);
+    if (actor) for (let effect of actor.effects) await doOverTimeEffect(actor, effect, startTurn);
 
     testTurn += 1;
     if (testTurn === this.turns.length) {

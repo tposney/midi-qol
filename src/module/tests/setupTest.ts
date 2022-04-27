@@ -41,7 +41,12 @@ export function getActorItem(actor, itemName) {
 }
 export function setupMidiTests() {
   if (!game?.user?.isGM) return;
-  if (game.world.id !== "midi-test") return;
+  if (game.world.data.title !== "midi tests - quench") return;
+  const actor1 = getActor(actor1Name);
+  const actor2 = getActor(actor2Name);
+  const token1 = getToken(target1Name);
+  const token2 = getToken(target2Name);
+  if (!(actor1 && actor2 && token1 && token2)) return;
   registerTests();
 }
 // Hooks.on("quenchReady", registerTests);
@@ -236,10 +241,37 @@ async function registerTests() {
               await actor.unsetFlag("midi-qol", "test")
             }
             return true;
+          });
+
+        });
+        describe("Macro actor onUse Macro Tests", async function () {
+          it("call actor onUseMacros", async function() {
+            const actor = getActor(actor2Name);
+            const item = actor.items.getName("OnUseMacroTest");
+            const macroPasses: string[] = [];
+            const hookid = Hooks.on("OnUseMacroTest", (pass: string) => macroPasses.push(pass));
+            await completeItemRoll(actor.items.getName("OnUseMacroTest")); // Apply the effect
+            const target = getToken(target2Name);
+            game.user?.updateTokenTargets([target?.id ?? ""]);
+            await completeItemRoll(actor.items.getName("Longsword")); // Apply the effect
+            Hooks.off("OnUseMacroTest", hookid);
+            let hasEffects: any = actor.effects.filter(a => a.data.label === "OnUseMacroTest") ?? [];
+            assert.ok(hasEffects);
+            await actor.deleteEmbeddedDocuments("ActiveEffect", hasEffects.map(e => e.id))
+            console.log(macroPasses);
+            assert.equal(macroPasses.length, 12);
           })
-        })
+        });
       },
       { displayName: "Midi Item Roll Tests" },
     );
+    globalThis.quench.registerBatch(
+      "quench.midi-qol.otherTessts",
+      (context) => {
+        const { describe, it, assert } = context;
+      },
+      { displayName: "Midi Other Tests" },
+    )
+      
   }
 }

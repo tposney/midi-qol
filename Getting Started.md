@@ -63,7 +63,7 @@ The next sections cover configuring how that combat automation works, midi refer
 ![Targetings](GettingStartedPics/Targeting.png)
 #### Configure attack and damage rolls
 Midi has several concepts that can be confusing to first time users.
-* FastForward - if a roll is fastforwared the confuguation dialog for that roll will be skipped when midi does the roll. For attack and damage that means the advantage/disadvantage dialog is skipped.
+* FastForward - if a roll is fastforwared the confuguation dialog for that roll will be skipped when midi does the roll. For attack and damage that means the advantage/disadvantage/normal/critial dialog is skipped.
 * Auto roll - dnd5e creates a chat card with attack and damage buttons when you roll an item (click on the icon next to the item in the character sheet). If a roll is "auto rolled" midi will behave as if the button had been clicked.
 * Modifier keys (formerly known as speed keys). When you click on a chat card button (let assume attack) you can hold Control (disadvantage) or Alt (advantage) to skip the roll dialog and use the modifer key settings. Midi allows you to press the alt/ctrl key when clicking on the character sheet icon to auto roll the attack with advantage/disadvantage. You can configure the midi-qol keys from Configure Controls in foundry settings section.
 
@@ -77,6 +77,9 @@ This works fine if you are doing an ordinary attack but sometimes you want to do
 
 ##### GM Tab
 ![GM Attack](GettingStartedPics/GM_Settings.png)  
+Auto Roll Attack: if ticked GM attack rolls will be auto rolled.
+Skip Consume resource dialog: If ticked the resource consumption dialog will be skipped and default answer used, for spells this means casting at the base level.
+Late Targeting: By default midi uses the targets selected when you click the attack button. Late targeting allows you to modify the targets after the 
 ##### Player Tab
 ![Player Attack](GettingStartedPics/Player%020Settings.png)
 #### Configure checking hits
@@ -124,7 +127,7 @@ Then you probably want a "transfer" (or passive) effect. The effect is transferr
   - Edit the clock and click on the effects tab, then click on the edit icon next to the single Cloak of Protection effect.
   - You will see in the effect editor details tab that it is a trasnfer effect and on the effects tab it adds 1 to AC. 
   - Inexplicably the SRD item does not add to saving throws. 
-  - To correct this, on the effects tab click the "+" to add a new effect.
+  - To correct this, on the effects tab click the "+" to add a new change.
   - Then set the attribute key field to data.bonuses.abilities.save, mode to ADD and Effect Value to 1.
   - Add the item to a character.
   - You will that the item has "requires attunement" - you will need to change this to attuned for the item to apply it's effects.
@@ -137,17 +140,39 @@ Let's do a very quick example using the SRD Bless spell.
   - You will see that it is a transfer effect (the details tab) and on the effects tab a number of bonuses to be applied.
   - Disable the trasnfer to actor on the details tab and save the spell.
   - Make sure that "auto apply active effects to targets" is checked in the midi-qol settigs workflow tab.
-  - Add the spell to a characters spell book, target someone and cast the spell by clicking on the spell icon on the character sheet (the same as rolling any item).
+  - Add the spell to a character's spell book, target someone and cast the spell by clicking on the spell icon on the character sheet (the same as rolling any item).
   - Examine the target character's sheet and in the effects tab you will see that the bonus effects have been applied to the character, with a durataion specified.
 
-* An item target can be "self". Self targets always apply the effects to the caster.
+* An item target can be "self" targeting which always apply the effects to the caster.
 * There are lots of spell/item/feature effects you can create with this simple model. Look at the DAE and midi-qol readme documents for a list of the available fields you can use. (A little plug for DAE - if you  enable the DAE editor working out which fields can be used is much simpler since both auto complete and a drop down list are available for entering the attribute key).
+
+If you can't get what you want from the "standard" effects you might be able to use some of midis more complex effects.
 
 ### Midi-qol special active effects.
 Midi defines lots of flags that can affect how combat is adjudicated, for example granting advantage or disadvantage. Please see the readme for a list and explanation.
 
 
 #### Overtime effects
+Ovretime effects allow you to create effects that occur whenever it is the turn of the actor who has the effect (which means you must be in combat and the actor in the combat tracker). You configure an overtime effect by setting a comma separated list of (mostly optional fields)
+  * turn=start/end (check at the start or end of the actor's turn) The only required field.
+  * applyCondition=expression, if present must evaluate to true or rest of the processing will be aborted.
+  e.g. applyCondition=@attributes.hp.value > 0 - for regeneration.
+  * removeCondition=expression, if present and evaluates to true the effect is removed after the rest of the processing.
+  Saving Throw: the active effect will be removed when the saving throw is made (or the effect duration expires). Note that the effect is removed, which includes the overtime effect AND any other changes in the same effect.
+  * rollType=check/save/skill (default save), roll an ability check, save or skill.
+  * saveAbility=dex/con/etc prc/perception etc The actor's ability/skill to use for rolling the saving throw
+  * saveDC=number
+  * added saveDamage=halfdamage/nodamage/fulldamage - default nodamage
+  * added saveRemove=true/false - remove effect on save - default true.
+  * saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
+  * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is failed.
+  Damage:
+  * damageRoll=roll expression, e.g. 3d6
+  * damageType=piercing/bludgeoning etc. You can specify "healing" or "temphp" which apply healing or temphp. temphp will only apply if the rolled temphp > exisiting temphp. overtime healing is a way to implement regeneration.
+  * macro="World Macro Name" call the macro as part of the damage application stage, where name must be a world macro, the macro is passed the results of rolling the overTime item, which will include damage done, saving throws made etc, as if it were an OnUse macro of the Overtime item roll.
+
+  If the effect is configured to be stackable with a stack count, of say 2, the damage will 3d6 + 3d6.
+  *label=string - displayed when rolling the saving throw
 #### Optional effects
 
 #### Calling macros

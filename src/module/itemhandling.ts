@@ -95,18 +95,31 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
   const wrappedRollStart = Date.now();
   workflow.attackRollCount += 1;
-  let result: Roll = await wrapped(mergeObject(options, {
-    advantage,
-    disadvantage,
+  const wrappedOptions = mergeObject(options, {
     chatMessage: (["TrapWorkflow", "Workflow"].includes(workflow.workflowType)) ? false : options.chatMessage,
     fastForward: workflow.rollOptions.fastForwardAttack || options.fastForward,
     messageData: {
       speaker: getSpeaker(this.actor)
     }
   },
-    { insertKeys: true, overwrite: true }
+    { insertKeys: true, overwrite: true });
+  if (advantage) wrappedOptions.advantage = true;
+  if (disadvantage) wrappedOptions.disadvantage = true;
+  if (!isObjectEmpty(workflow.attackAdvAttribution)) {
+    let advHTML: string = Object.keys(workflow.attackAdvAttribution).reduce((prev, s) => prev += `${s}<br>`, "");
+    //@ts-ignore .replaceAll
+    advHTML = advHTML.replaceAll("DIS:", "Disadvantage: ").replaceAll("ADV:", "Advantage: ");
+    const existing = (wrappedOptions.dialogOptions && wrappedOptions.dialogOptions["adv-reminder"]?.message) ?? "";
+    advHTML = `${existing}<div class=\"adv-reminder-messages\">\n    <div>${advHTML}</div>\n</div>\n`;
+    wrappedOptions.dialogOptions = {
+      "adv-reminder": {message: advHTML}
+    }    
+  }
+  
+  let result: Roll = await wrapped(
+    wrappedOptions,
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
-  ));
+  );
   workflow.attackExpression = "d20+".concat(this.getAttackToHit().parts.join("+"));
   if (debugCallTiming) log(`wrapped item.rollAttack():  elapsed ${Date.now() - wrappedRollStart}ms`);
 

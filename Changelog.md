@@ -1,3 +1,8 @@
+### 0.9.49
+* added midi-qol advantage/disadvantage attribution for attack rolls to the ADV-Reminders module display (attack rolls only).
+* Guard the DAE setup calls to wait for DAE setup to be complete - seems to cause a problem in at least one game.
+* Fix for overTime effects not applying damage.
+* Fix for levels not installed.
 
 ### 0.9.48
 * Added MidiQOL.doOverTimeEffect(actor: Actor5e, effect: ActiveEffect, turnStart: boolean), which will perform the overtime processing for the passed effect, turnStart === true, do turn=start changes, false do turn=end changes. The effect does not need to be present on the actor to work, but can be.

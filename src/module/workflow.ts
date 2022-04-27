@@ -896,20 +896,23 @@ export class Workflow {
       if (isHidden) log(`Advantage given to ${this.actor.name} due to hidden/invisible`)
     }
     // Neaarby foe gives disadvantage on ranged attacks
-    if (checkRule("nearbyFoe") && !getProperty(this.actor, "data.flags.midi-qol.ignoreNearbyFoes") && (["rwak", "rsak", "rpak"].includes(actType) || this.item.data.data.properties?.thr)) { // Check if there is a foe near me when doing ranged attack
-      let nearbyFoe = checkNearby(-1, canvas?.tokens?.get(this.tokenId), configSettings.optionalRules.nearbyFoe);
+    if (checkRule("nearbyFoe") 
+        && !getProperty(this.actor, "data.flags.midi-qol.ignoreNearbyFoes") 
+        && (["rwak", "rsak", "rpak"].includes(actType) || this.item.data.data.properties?.thr)) 
+      {
+      let nearbyFoe;
       // special case check for thrown weapons within 5 feet (players will forget to set the property)
       if (this.item.data.data.properties?.thr) {
         const firstTarget: Token = this.targets.values().next().value;
         const me = canvas?.tokens?.get(this.tokenId);
         if (firstTarget && me && getDistance(me, firstTarget, false, false).distance <= configSettings.optionalRules.nearbyFoe) nearbyFoe = false;
-      }
+      } else nearbyFoe = checkNearby(-1, canvas?.tokens?.get(this.tokenId), configSettings.optionalRules.nearbyFoe);
       if (nearbyFoe) {
         log(`Ranged attack by ${this.actor.name} at disadvantage due to neabye foe`);
         if (debugEnabled > 0) warn(`Ranged attack by ${this.actor.name} at disadvantage due to neabye foe`);
+        this.attackAdvAttribution["DIS:nearbyFoe"] = true;
       }
       this.disadvantage = this.disadvantage || nearbyFoe;
-      if (nearbyFoe) this.attackAdvAttribution["DIS:nearbyFoe"] = true;
     }
     this.checkAbilityAdvantage();
     this.checkTargetAdvantage();

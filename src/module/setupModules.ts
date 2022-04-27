@@ -102,7 +102,7 @@ Hooks.once('libChangelogsReady', function() {
   * Fix for concentration advantage bug - thanks @kampffrosch94.
   * Added support for different sounds to be played for characters/npcs in midi custom sounds.
   * Added support for weapon subtypes in midi custom sounds. Set the weapon base type on the item sheet to whatever you want and you can specify weapon sub types in the sound config to be any of the valid base types. Existing sound config should be automatically migrated and midi makes a backup of your existing settings. You can restore the old settings via (after rollback of the midi version)
-    game.settings.set("midi-qol", "MidiSoundSettings", getProperty("midi-qol", "MidiSoundSettings-backup"));
+    game.settings.set("midi-qol", "MidiSoundSettings", game.settings.get("midi-qol", "MidiSoundSettings-backup"));
   * Added flags.midi-qol.optional.NAME.criticalDamage which allows optional bonus damage to do critical damage.
   * Fix for editing actor onUseMacros duplicating active effect created onUseMacros.
   
