@@ -57,16 +57,6 @@ export function checkModules() {
   const midiVersion = game.modules.get("midi-qol").data.version;
   const notificationVersion = game.settings.get("midi-qol", "notificationVersion");
 
-  if (game.user?.isGM && 
-    !installedModules.get("lib-changelogs") 
-    && !game.modules.get("module-credits")?.active
-    //@ts-ignore
-    && isNewerVersion(midiVersion, notificationVersion)) {
-    game.settings.set("midi-qol", "notificationVersion", midiVersion);
-    //@ts-ignore expected one argument but got 2
-    ui.notifications?.warn("midi-qol.NoChangelogs", {permanent: false, localize: true});
-  }
-
   checkCubInstalled();
 }
 

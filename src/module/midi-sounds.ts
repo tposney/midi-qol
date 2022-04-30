@@ -1,4 +1,4 @@
-import { i18n } from "../midi-qol.js";
+import { debug, i18n } from "../midi-qol.js";
 import { configSettings, midiSoundSettings } from "./settings.js";
 import { dice3dEnabled } from "./setupModules.js";
 import { Workflow } from "./workflow.js";
@@ -98,17 +98,25 @@ export class MidiSounds {
 
   static async getWeaponBaseTypes() {
     MidiSounds.weaponBaseTypes = {};
-    //@ts-ignore
-    const weaponTypes = Object.keys(CONFIG.DND5E.weaponTypes);
-    const sheetClass = CONFIG.Item.sheetClasses.weapon[`${game.system.id}.ItemSheet5e`].cls;
-    for (let wt of weaponTypes) {
-      //@ts-ignore
-      const baseTypes = await sheetClass.prototype._getItemBaseTypes({type: "weapon", data: {weaponType: wt}});
-      MidiSounds.weaponBaseTypes = mergeObject(MidiSounds.weaponBaseTypes, baseTypes)
+    // TODO remove this if dnd5e getBaseItem bug is fixed
+    const config: any = CONFIG;
+    const packname = game.system.id === "dnd5e" ? config.DND5E?.sourcePacks.ITEMS : config.SW5E?.sourcePacks.ITEMS;
+    if (packname) {
+      const packObject = game.packs.get(packname);
+      //@ts-ignore getindex 0 parrams
+      await packObject?.getIndex({ fields: ["data.armor.type", "data.toolType", "data.weaponType", "img"] });
+
+      const weaponTypes = game.system.id === "dnd5e" ? Object.keys(config.DND5E.weaponTypes) : Object.keys(config.SW5E.weaponTypes);;
+      const sheetClass = config.Item.sheetClasses.weapon[`${game.system.id}.ItemSheet5e`].cls;
+      for (let wt of weaponTypes) {
+        //@ts-ignore
+        const baseTypes = await sheetClass.prototype._getItemBaseTypes({ type: "weapon", data: { weaponType: wt } });
+        MidiSounds.weaponBaseTypes = mergeObject(MidiSounds.weaponBaseTypes, baseTypes)
+      }
     }
-    console.log("Weapon base types are ", MidiSounds.weaponBaseTypes);
+    debug("Weapon base types are ", MidiSounds.weaponBaseTypes);
   }
-  
+
   static getSpecFor(actorType, type, subtype, weaponSubType, selector) {
     let spec;
     for (let atype of [actorType, "any"]) {

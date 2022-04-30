@@ -260,6 +260,16 @@ Hooks.once('ready', function () {
   readyPatching();
   if (midiSoundSettingsBackup) game.settings.set("midi-qol", "MidiSoundSettings-backup", midiSoundSettingsBackup)
   MidiSounds.getWeaponBaseTypes();
+
+  // Make midi-qol targets hoverable
+  $(document).on("mouseover", ".midi-qol-target-name", (e)=>{
+    const tokenid = e.currentTarget.id
+    const tokenObj = canvas?.tokens?.get(tokenid)
+    if(!tokenObj) return;
+    //@ts-ignore
+    tokenObj._hover = true
+  });
+  
   Hooks.callAll("midi-qol.midiReady");
 });
 
@@ -408,7 +418,9 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.concentrationSaveBonus`);
   midiFlags.push(`flags.midi-qol.potentCantrip`);
   midiFlags.push(`flags.midi-qol.sculptSpells`);
+  midiFlags.push(`flags.midi-qol.carefulSpells`);
   midiFlags.push("flags.midi-qol.magiResistance.all")
+
 
   allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
   if (game.system.id === "sw5e")

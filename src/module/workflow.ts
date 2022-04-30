@@ -1965,6 +1965,9 @@ export class Workflow {
         saved = true;
         this.superSavers.add(target)
       }
+      if (getProperty(this.actor, "data.flags.midi-qol.carefulSpells") && (this.rangeTargeting || this.templateTargeting) && this.item?.data.data.school === "evo" && this.preSelectedTargets.has(target)) {
+        saved = true;
+      }
       if (isCritical) this.criticalSaves.add(target);
       if (isFumble && !saved) this.fumbleSaves.add(target);
       if (this.checkSuperSaver(target, this.saveItem.data.data.save.ability))

@@ -1,4 +1,5 @@
 import { _mergeUpdate } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/utils/helpers.mjs";
+import { config } from "@league-of-foundry-developers/foundry-vtt-types/src/types/augments/simple-peer";
 import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, debugEnabled, geti18nTranslations } from "../midi-qol.js";
 import { ConfigPanel} from "./apps/ConfigPanel.js"
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
@@ -48,7 +49,7 @@ class ConfigSettings {
   autoTarget: string = "none";
   checkSaveText: boolean = false;
   concentrationAutomation: boolean = false;
-  consumeResource: boolean = false;
+  consumeResource: string = "none";
   convenientEffectsReaction: string = "Reaction";
   criticalSound: string = "";
   customSoundsPlaylist: string = "none";
@@ -70,7 +71,7 @@ class ConfigSettings {
   gmAutoDamage: string = "none";
   gmAutoFastForwardAttack: boolean = false;
   gmAutoFastForwardDamage: boolean =  false;
-  gmConsumeResource = false;
+  gmConsumeResource: string = "none";
   gmDoReactions: string = "all";
   gmHide3dDice: boolean = false;
   gmLateTargeting: boolean = false;
@@ -256,8 +257,8 @@ export let fetchParams = () => {
   if (configSettings.promptDamageRoll === undefined) configSettings.promptDamageRoll = false;
   if (configSettings.gmHide3dDice === undefined) configSettings.gmHide3dDice = false;
   if (configSettings.ghostRolls === undefined) configSettings.ghostRolls = false;
-  if (configSettings.gmConsumeResource === undefined) configSettings.gmConsumeResource = false;
-  if (configSettings.consumeResource === undefined) configSettings.consumeResource = false;
+  if (typeof configSettings.gmConsumeResource !== "string") configSettings.gmConsumeResource = "none";
+  if (typeof configSettings.consumeResource !== "string") configSettings.consumeResource = "none";
   if (!configSettings.enableddbGL) configSettings.enableddbGL = false;
   if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
   if (!configSettings.gmLateTargeting) configSettings.gmLateTargeting = false;

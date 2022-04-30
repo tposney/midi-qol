@@ -685,8 +685,12 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
 * flags.midi-qol.optional.Name.save.all/str/dex/etc	the bonus is added after the save roll. Requires auto fast forward		
 * flags.midi-qol.optional.Name.label	label to use in the dialog		
 * flags.midi-qol.optional.Name.count	how many uses the effect has (think lucky which has 3), if absent the bonus will be single use (bardic inspiration), turn for once per turn.   
-
-You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
+  **every** - you can use the optional effect on every occurence
+  **reaction** - behaves as a reaction roll, i.e. uses up your reaction
+  **a number** - how many times the effect can be used before expiring
+  **turn** - can be used once per turn (assumes in combat)
+  **@fields** - available if the @field > 0, decrements the @field on use. 
+  You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
 
 * flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
 
@@ -694,8 +698,9 @@ Values for the optional roll bonus flags include a dice expression (added to the
 
 Generally options.Name fields do not work with better rolls due to the way it creates rolls.
 
-## Spell Sculpting: flags.midi-qol.sculptSpell
+## Spell Sculpting: flags.midi-qol.sculptSpell and flags.midi-qol.carefulSpell
 If a spell caster with flags.midi-qol.sculptSpell set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 damage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.
+If a spell caster with flags.midi-qol.carefulSpell set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and damage as if they had saved (no matter what they roll).
 
 ## flags.midi-qol.OverTime (Overtime effects)
 Intended for damage over time effects or until save effects, but can do a bunch of things.

@@ -1345,7 +1345,7 @@ export function isAutoFastDamage(workflow: Workflow | undefined = undefined): bo
   return game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward)
 }
 
-export function isAutoConsumeResource(workflow: Workflow | undefined = undefined): boolean {
+export function isAutoConsumeResource(workflow: Workflow | undefined = undefined): string {
   if (workflow?.workflowOptions.autoConsumeResource !== undefined) return workflow?.workflowOptions.autoConsumeResource;
   return game.user?.isGM ? configSettings.gmConsumeResource : configSettings.consumeResource;
 }
@@ -1391,7 +1391,7 @@ export function getRemoveDamageButtons() {
     ["all", "damage"].includes(configSettings.removeButtons);
 }
 
-export function getReactionSetting(player: User | undefined): string {
+export function getReactionSetting(player: User | null | undefined): string {
   if (!player) return "none";
   return player.isGM ? configSettings.gmDoReactions : configSettings.doReactions;
 }
@@ -2166,8 +2166,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
   enableNotifications(false);
   try {
     reactionItems = actor.items.filter(item => itemReaction(item, triggerType, maxLevel));
-    //@ts-ignore game.user type
-    if (getReactionSetting(game.user) === "allMI")
+    if (getReactionSetting(game?.user) === "allMI")
       reactionItems = reactionItems.concat(await getMagicItemReactions(actor, triggerType));
   } finally {
     enableNotifications(true);

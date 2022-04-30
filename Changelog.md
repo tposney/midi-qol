@@ -1,3 +1,7 @@
+### 0.9.50
+* Fix for Items compendium opening with no icons.
+* Split the auto conume config, to allo auto consume spell slots/resources/both/none.
+
 ### 0.9.49
 * added midi-qol advantage/disadvantage attribution for attack rolls to the ADV-Reminders module display (attack rolls only).
 * Guard the DAE setup calls to wait for DAE setup to be complete - seems to cause a problem in at least one game.

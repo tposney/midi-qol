@@ -90,8 +90,7 @@ export class MidiKeyManager {
 
     // Don't Cancel event since it should do whatever else it is supposed to.
     if ( handled && context.event ) {
-      //@ts-ignore
-      if ( CONFIG.debug.keybindings ) console.log("Event was not consumed");
+      if ( debug.keybindings ) console.log("Event was not consumed");
     }
     if (debug.keybindings) console.groupEnd();
   }

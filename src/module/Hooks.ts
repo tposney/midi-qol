@@ -161,6 +161,7 @@ export let readyHooks = async () => {
   })
 
   Hooks.on("restCompleted", restManager);
+  Hooks.on("dnd5e.restCompleted", restManager);
 
   // Concentration Check is rolled as an item roll so we need an item.
   if (installedModules.get("combat-utility-belt")) {
@@ -282,7 +283,7 @@ export function initHooks() {
     }
     //@ts-ignore
     const midiProps = CONFIG.DND5E.midiProperties;
-    if (app.object && ["spell", "feat", "weapon"].includes(app.object.type)) {
+    if (app.object && ["spell", "feat", "weapon", "consumable"].includes(app.object.type)) {
       const data = app.object.data;
       if (data.flags.midiProperties === undefined) {
         data.flags.midiProperties = {};

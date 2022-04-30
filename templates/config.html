@@ -21,8 +21,13 @@
 
         <div class="form-group">
           <label>{{localize "midi-qol.ConsumeResource.Name"}}</label>
-          <input type="checkbox" name="gmConsumeResource" data-dtype="Boolean" {{checked
-            configSettings.gmConsumeResource}} />
+          <select name="gmConsumeResource" data-dtype="String">
+            {{#select configSettings.gmConsumeResource}}
+            {{#each ConsumeResourceOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.ConsumeResource.Hint"}}</div>
 
@@ -105,11 +110,15 @@
           <input type="checkbox" name="autoRollAttack" data-dtype="Boolean" {{checked configSettings.autoRollAttack}} />
         </div>
 
-
         <div class="form-group">
           <label>{{localize "midi-qol.ConsumeResource.Name"}}</label>
-          <input type="checkbox" name="consumeResource" data-dtype="Boolean" {{checked
-            configSettings.consumeResource}} />
+          <select name="consumeResource" data-dtype="String">
+            {{#select configSettings.consumeResource}}
+            {{#each ConsumeResourceOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.ConsumeResource.Hint"}}</div>
 

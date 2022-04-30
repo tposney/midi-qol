@@ -664,7 +664,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
   if (configureDialog) {
     if (this.type === "spell") {
-      if (isAutoConsumeResource(workflow) && !workflow.rollOptions.fastForward) {
+      if (["both", "spell"].includes(isAutoConsumeResource(workflow)) && !workflow.rollOptions.fastForward) {
         configureDialog = false;
         // Check that there is a spell slot of the right level
         const spells = this.actor.data.data.spells;
@@ -679,7 +679,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
           }, 100)
         }
       }
-    } else configureDialog = !isAutoConsumeResource(workflow);
+    } else configureDialog = !(["both", "item"].includes(isAutoConsumeResource(workflow)));
   }
 
   const wrappedRollStart = Date.now();
