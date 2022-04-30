@@ -1,6 +1,7 @@
 ### 0.9.50
 * Fix for Items compendium opening with no icons.
-* Split the auto conume config, to allo auto consume spell slots/resources/both/none.
+* Split the auto consume config, to allow auto consume spell slots/resources/both/none.
+* Hovering on targets in midi cards now auto selects them, rather than requiring clicking. Thanks @theripper93 
 
 ### 0.9.49
 * added midi-qol advantage/disadvantage attribution for attack rolls to the ADV-Reminders module display (attack rolls only).
