@@ -273,11 +273,10 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     }
     const firstDamageHealing = damageDetailArr[0] && ["healing", "temphp"].includes(damageDetailArr[0][0]?.type);
     const isHealing = ("heal" === workflow?.item?.data.data.actionType) || firstDamageHealing;
-    //@ts-ignore
-    if (workflow && !isHealing && workflow.item && !getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction")
-      && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
+    const noDamageReactions = (item?.hasSave && item.data.flags?.midiProperties?.nodam && workflow.saves.has(t));
+    const noProvokeReaction = workflow.item && getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction");
+    if (totalDamage > 0 && workflow && !isHealing && !noDamageReactions && !noProvokeReaction && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
       // log("Calling do reactions with ", t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } })
-      //@ts-ignore
       let result = await doReactions(t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } });
     }
     if (game.system.id === "sw5e" && t.actor.type === "starship") {
@@ -2134,15 +2133,19 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
 
   return await new Promise((resolve) => {
     // set a timeout for taking over the roll
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
+      warn("doReactions | player timeout expired ", player?.name)
       resolve(noResult);
     }, (configSettings.reactionTimeout || 30) * 1000);
     // Complier does not realise player can't be undefined to get here
-    player && requestReactions(target, player, triggerTokenUuid, content, triggerType, resolve, chatMessage, options)
+    player && requestReactions(target, player, triggerTokenUuid, content, triggerType, resolve, chatMessage, options).then ( () => {
+      clearTimeout(timeoutId);
+    })
   })
 }
 
 export async function requestReactions(target: Token, player: User, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, resolve: ({ }) => void, chatPromptMessage: ChatMessage, options: {} = {}) {
+  const startTime = Date.now();
   const result = (await socketlibSocket.executeAsUser("chooseReactions", player.id, {
     tokenUuid: target.document?.uuid ?? target.uuid,
     reactionFlavor,
@@ -2150,11 +2153,14 @@ export async function requestReactions(target: Token, player: User, triggerToken
     triggerType,
     options
   }));
+  const endTime = Date.now();
+  warn("request reactions returned after ", endTime - startTime, result);
   resolve(result);
   if (chatPromptMessage) chatPromptMessage.delete();
 }
 
 export async function promptReactions(tokenUuid: string, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, options: any = {}) {
+  const startTime = Date.now();
   const target: Token = MQfromUuid(tokenUuid);
   const actor: Actor | null = target.actor;
   if (!actor) return;
@@ -2176,7 +2182,9 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
       console.warn("midi-qol | Reaction processing cancelled by Hook");
       return { name: "Filter" };
     }
-    result = await reactionDialog(actor, triggerTokenUuid, reactionItems, reactionFlavor, triggerType, options)
+    result = await reactionDialog(actor, triggerTokenUuid, reactionItems, reactionFlavor, triggerType, options);
+    const endTime = Date.now();
+    warn("prompt reactions reaction processing returned after ", endTime - startTime, result)
     if (result.uuid) return result; //TODO look at multiple choices here
   }
   if (!midiFlags) return { name: "None" };
@@ -2198,8 +2206,12 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
     const preBounsRollTotal = data.roll.total;
     //@ts-ignore attributes
     await bonusDialog.bind(data)(bonusFlags, "ac", true, `${actor.name} - ${i18n("DND5E.AC")} ${actor.data.data.attributes.ac.value}`, "roll", "rollTotal", "rollHTML")
+    const endTime = Date.now();
+    warn("prompt reactions returned via bonus dialog ", endTime - startTime)
     return { name: actor.name, uuid: actor.uuid, ac: data.roll.total };
   }
+  const endTime = Date.now();
+  warn("prompt reactions returned no result ", endTime - startTime)
   return { name: "None" };
 }
 
@@ -2229,7 +2241,9 @@ export function playerForActor(actor: Actor | undefined): User | undefined {
 
 export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | undefined, reactionItems: any[], rollFlavor: string, triggerType: string, options: any) {
   return new Promise((resolve, reject) => {
+
     const callback = async (dialog, button) => {
+      clearTimeout(timeoutId)
       const item = reactionItems.find(i => i.id === button.key);
       // await setReactionUsed(actor);
       // No need to set reaction effect since using item will do so.
@@ -2253,16 +2267,20 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
     }, {
       width: 400
     });
-    setTimeout(() => {
+    let timeoutId = setTimeout(() => {
+      console.error("Timeout for reaction dialog expired")
       dialog.close();
       resolve({});
-    }, (configSettings.reactionTimeout - 1) * 1000);
+    }, ((configSettings.reactionTimeout || 30) - 1) * 1000);
     dialog.render(true);
   });
 }
 
 
 class ReactionDialog extends Application {
+  startTime: number;
+  endTime: number;
+
   data: {
     actor: Actor5e,
     items: Item[],
@@ -2276,6 +2294,7 @@ class ReactionDialog extends Application {
 
   constructor(data, options) {
     super(options);
+    this.startTime = Date.now();
     this.data = data;
     this.data.completed = false
   }
@@ -2318,12 +2337,14 @@ class ReactionDialog extends Application {
   _onClickButton(event) {
     const id = event.currentTarget.dataset.button;
     const button = this.data.buttons[id];
+    warn("Reaction dialog button clicked", id, button, Date.now() - this.startTime)
     this.submit(button);
   }
 
   _onKeyDown(event) {
     // Close dialog
     if (event.key === "Escape" || event.key === "Enter") {
+      warn("Reaction Dialog onKeyDown esc/enter pressed", event.key, Date.now() - this.startTime);
       event.preventDefault();
       event.stopPropagation();
       this.data.completed = true;
@@ -2334,6 +2355,7 @@ class ReactionDialog extends Application {
 
   async submit(button) {
     try {
+      warn("ReacitonDialog submit", Date.now() - this.startTime, button.callback)
       if (button.callback) {
         this.data.completed = true;
         await button.callback(this, button)
@@ -2349,6 +2371,7 @@ class ReactionDialog extends Application {
   }
 
   async close() {
+    warn("Reaction Dialog close ", Date.now() - this.startTime, this.data.completed)
     if (!this.data.completed && this.data.close) {
       this.data.close({ name: "Close", uuid: undefined });
     }

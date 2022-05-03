@@ -23,9 +23,10 @@ export class ActorOnUseMacrosConfig extends FormApplication {
 
   async getData(options) {
     let data: any = await super.getData(options);
-    data.onUseMacroName = duplicate(getProperty(this.object.data._source, "flags.midi-qol.onUseMacroName"));
-    if (data.onUseMacroName !== undefined) data.onUseMacroParts = new OnUseMacros(data.onUseMacroName ?? null).items;
+    data.onUseMacroName = getProperty(this.object.data._source, "flags.midi-qol.onUseMacroName");
+    if (data.onUseMacroName !== undefined) data.onUseMacroParts = new OnUseMacros(data.onUseMacroName).items;
     else data.onUseMacroParts = new OnUseMacros(null).items;
+    // if (!data.onUseMacroName) data.onUseMacroName = duplicate(data.onUseMacroName);
     // data.onUseMacroParts = duplicate(getProperty(this.object.data.flags, "midi-qol.onUseMacroParts.items") ?? []);
     data.MacroPassOptions = geti18nOptions("onUseMacroOptions");
     return data;

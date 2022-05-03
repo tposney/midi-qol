@@ -1051,7 +1051,7 @@ export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: s
     conditionToUse = workflow.otherDamageItem?.data.data.activation?.condition
   }
 
-  if (workflow.item?.data.flags?.midiProperties?.rollOther) {
+  if (workflow.otherDamageItem?.data.flags?.midiProperties?.rollOther) {
     rollOtherDamage = true;
     conditionToUse = workflow.otherDamageItem?.data.data.activation?.condition
     conditionFlagToUse = "activation"

@@ -85,6 +85,7 @@ class ConfigSettings {
   mergeCard: boolean = false;
   mergeCardCondensed: boolean = false;
   optionalRulesEnabled: boolean = false;
+  paranoidGM : boolean = false;
   playerRollSaves: string = "none";
   playerSaveTimeout: number = 0;
   playerStatsOnly: boolean = false;
@@ -297,6 +298,7 @@ export let fetchParams = () => {
 
   if (configSettings.addWounded === undefined) configSettings.addWounded = 0;
   if (configSettings.addDead === undefined) configSettings.addDead = false;
+  if (configSettings.paranoidGM === undefined) configSettings.paranoidGM = false;
   if (typeof configSettings.requiresTargets !== "string") configSettings.requiresTargets = "none";
   configSettings.optionalRules = mergeObject({
       invisAdvantage: true,

@@ -147,15 +147,17 @@ export class Workflow {
 
   get workflowType() { return this.__proto__.constructor.name };
 
-  get hasSave() {
-    if (this.item.hasSave) return this.item.hasSave;
+  get hasSave(): boolean {
+    if (this.ammo?.hasSave) return true;
+    if (this.item.hasSave) return true;
     if (configSettings.rollOtherDamage && this.shouldRollOtherDamage) return this.otherDamageItem.hasSave;
-    return this.item.hasSave;
+    return false;
   }
 
   get saveItem() {
+    if (this.ammo?.hasSave) return this.ammo;
     if (this.item.hasSave) return this.item;
-    if (configSettings.rollOtherDamage && this.ammo?.hasSave) return this.ammo;
+    if (configSettings.rollOtherDamage && this.otherDamageItem?.hasSave) return this.otherDamageItem;
     return this.item;
   }
 
@@ -1719,7 +1721,7 @@ export class Workflow {
 
     let rollDC = this.saveItem.data.data.save.DC;
     if (this.saveItem.getSaveDC) {
-      rollDC = this.saveItem.getSaveDC(); // TODO see if I need to do this for ammo as well
+      rollDC = this.saveItem.getSaveDC(); 
     }
 
     let promises: Promise<any>[] = [];
@@ -1760,7 +1762,7 @@ export class Workflow {
         if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
         let advantage: Boolean | undefined = undefined;
         // If spell, check for magic resistance
-        if (this.item?.data.type === "spell" || this.item?.data.flags.midiProperties?.magiceffect) {
+        if (this.saveItem?.data.type === "spell" || this.saveItem?.data.flags.midiProperties?.magiceffect || this.item?.data.flags.midiProperties?.magiceffect) {
           // check magic resistance in custom damage reduction traits
           //@ts-ignore traits
           advantage = (target?.actor?.data.data.traits?.dr?.custom || "").includes(i18n("midi-qol.MagicResistant").trim());
@@ -1804,7 +1806,7 @@ export class Workflow {
           GMprompt = (targetDocument.isLinked ? configSettings.rollNPCLinkedSaves : configSettings.rollNPCSaves);
           promptPlayer = GMprompt !== "auto";
         }
-        if (isFriendly && this.item.data.data.description.value.includes(i18n("midi-qol.autoFailFriendly"))) {
+        if (isFriendly && this.saveItem.data.data.description.value.includes(i18n("midi-qol.autoFailFriendly"))) {
           promises.push(new Promise((resolve) => {
             resolve({
               total: -1,

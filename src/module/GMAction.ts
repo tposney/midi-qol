@@ -7,9 +7,13 @@ import { Workflow, WORKFLOWSTATES } from "./workflow.js";
 export var socketlibSocket: any = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
 
+function paranoidCheck(action: string, actor: any, data: any): boolean {
+  return true;
+}
 export async function removeEffects(data: { actorUuid: string; effects: string[]; options: {}}) {
   const actor = MQfromActorUuid(data.actorUuid);
-  await actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects, data.options)
+  if (configSettings.paranoidGM && !paranoidCheck("removeEffects", actor, data)) return "gmBlocked";
+  return await actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects, data.options)
 }
 
 export async function createEffects(data: { actorUuid: string, effects: any[] }) {
@@ -33,6 +37,7 @@ export function GMupdateEntityStats(data: { id: any; currentStats: any; }) {
 export async function timedExecuteAsGM(toDo: string, data: any) {
   if (!debugCallTiming) return socketlibSocket.executeAsGM(toDo, data);
   const start = Date.now();
+  data.playerId = game.user?.id;
   const returnValue = await socketlibSocket.executeAsGM(toDo, data);
   log(`executeAsGM: ${toDo} elapsed: ${Date.now() - start}`)
   return returnValue;

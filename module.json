@@ -4,7 +4,7 @@
   "description": "{{description}}",
   "system": ["dnd5e", "sw5e"],
   "version": "{{version}}",
-  "author": "tposney",
+  "authors": [{"name": "tposney"}],
   "socket": true,
   "scripts": [],
   "esmodules": ["src/midi-qol.js"],
