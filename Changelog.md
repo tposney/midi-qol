@@ -3,7 +3,7 @@
 * Added bardic inspiration for dnd5e 1.6 using the new scale fields. (much simpler)
 * Update of bardic inspiration to activate for skill rolls as well (oversight on my part).
 * No damage on save spells will not trigger a reaction damaged if the target saves.
-* When using an item with ammuniton, if the ammunition has a saving throw that will be used to determing the saving throw for the effect, as will active effects. So an exploding arrow with a save and damage can be used in a mundane bow with no save and should behave as expected.
+* When using an item with ammunition, if the ammunition has a saving throw that will be used to determining the saving throw for the effect, as will active effects. So an exploding arrow with a save and damage can be used in a mundane bow with no save and should behave as expected.
 
 ### 0.9.50
 * Fix for Items compendium opening with no icons.
