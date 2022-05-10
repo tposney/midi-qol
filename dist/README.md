@@ -673,6 +673,14 @@ Negative DR is not supported (i.e. to increase damage taken).
 
 * flags.midi-qol.potentCantrip, if set cantrips cast by the actor will do 1/2 damage instead of no damage. Overrides any other damage multiplier settings.
 
+* flags.midi-qol.max and flags.midi-qol.min
+  flags.midi-qol.min/max.ability.all OVERRIDE value
+  flags.midi-qol.min/max.ability.save.all/dex/str/etc OVERRIDE value
+  flags.midi-qol.min/max.ability.check.all/dex/str/etc OVERRIDE value
+  flags.midi-qol.min/max.skill.all/acr/per/prc etc OVERRIDE value
+
+  The flags modify saving throw, ability checks and skill check rolls. min means that each dice of the d20 roll will be at LEAST value, max mean that the roll will be at MOST value. The value field must benumeric, you can force lookups by using   ``[[@abilities.dex.value]]`` for example
+  
 ## Optional Bonus Effects
 Optional flags cause a dialog to be raised when an opportunity to apply the effect comes up (i.e. the player is hit by an attack).
 

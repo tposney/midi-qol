@@ -391,7 +391,7 @@ export let processUndoDamageCard = (message, html, data) => {
         if (!actorUuid) return;
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP}`, actor);
-        await actor.update({ "data.attributes.hp.temp": oldTempHP ?? 0, "data.attributes.hp.value": oldHP ?? 0 }, { dhp: (oldHP ?? 0) - (actor.data.data.attributes.hp.value ?? 0) });
+        await actor?.update({ "data.attributes.hp.temp": oldTempHP ?? 0, "data.attributes.hp.value": oldHP ?? 0 }, { dhp: (oldHP ?? 0) - (actor.data.data.attributes.hp.value ?? 0) });
         ev.stopPropagation();
       }
     })();
@@ -404,7 +404,7 @@ export let processUndoDamageCard = (message, html, data) => {
         if (!actorUuid) return;
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP to ${newTempHP} and ${newHP}`);
-        await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.data.data.attributes.hp.value });
+        await actor?.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.data.data.attributes.hp.value });
         ev.stopPropagation();
       }
     })();

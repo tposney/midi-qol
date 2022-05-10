@@ -262,6 +262,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
   for (let t of theTargets) {
     let a = t?.actor;
     if (!a) continue;
+
     appliedDamage = 0;
     appliedTempHP = 0;
     let DRAll = 0;
@@ -273,12 +274,13 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     }
     const firstDamageHealing = damageDetailArr[0] && ["healing", "temphp"].includes(damageDetailArr[0][0]?.type);
     const isHealing = ("heal" === workflow?.item?.data.data.actionType) || firstDamageHealing;
-    const noDamageReactions = (item?.hasSave && item.data.flags?.midiProperties?.nodam && workflow.saves.has(t));
+    const noDamageReactions = (item?.hasSave && item.data.flags?.midiProperties?.nodam && workflow.saves?.has(t));
     const noProvokeReaction = workflow.item && getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction");
     if (totalDamage > 0 && workflow && !isHealing && !noDamageReactions && !noProvokeReaction && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
       // log("Calling do reactions with ", t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } })
       let result = await doReactions(t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } });
     }
+    const uncannyDodge = getProperty(a, "data.flags.midi-qol.uncanny-dodge") && workflow.item?.hasAttack;
     if (game.system.id === "sw5e" && t.actor.type === "starship") {
       // TODO: maybe expand this to work with characters as well?
       // Starship damage resistance applies only to attacks
@@ -408,11 +410,8 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
           mult = saves.has(t) ? 0 : 1;
 
         // TODO this should end up getting removed when the prepare data is done. Currently depends on 1Reaction expiry.
-        if (getProperty(t.actor, "data.flags.midi-qol.uncanny-dodge") && mult >= 0
-          //@ts-ignore DND5E
-          && Object.keys(CONFIG.DND5E.damageTypes).includes(type)) {
-          mult = mult / 2;
-        }
+        if (uncannyDodge) mult = mult / 2;
+
         if (!type) type = MQdefaultDamageType;
         const resMult = getTraitMult(a, type, item);
         mult = mult * resMult;
@@ -1650,7 +1649,7 @@ export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<T
   return new Set(normalTokens.concat(synthTokens));
 }
 
-export function MQfromUuid(uuid) {
+export function MQfromUuid(uuid): any | null{
   if (!uuid || uuid === "") return null;
   let parts = uuid.split(".");
   let doc;
@@ -1670,10 +1669,12 @@ export function MQfromUuid(uuid) {
   return doc || null;
 }
 
-export function MQfromActorUuid(uuid) {
+export function MQfromActorUuid(uuid): any | null {
   let doc = MQfromUuid(uuid);
-  if (doc instanceof CONFIG.Token.documentClass) doc = doc.actor;
-  return doc || null;
+  //@ts-ignore doc.actor: any rather than Actor
+  if (doc instanceof CONFIG.Token.documentClass) return doc.actor;
+  if (doc instanceof CONFIG.Actor.documentClass) return doc;
+  return null;
 }
 
 
@@ -1857,7 +1858,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
         case "success": newRoll = await new Roll("99").evaluate({ async: true }); break;
         default:
           if (flagSelector.startsWith("damage.") && getProperty(this.actor.data, `${button.key}.criticalDamage`)) {
-            const rollOptions = { critical: (this.isCritical || this.rollOptions.critical)};
+            const rollOptions = { critical: (this.isCritical || this.rollOptions.critical) };
             //@ts-ignore DamageRoll
             newRoll = new CONFIG.Dice.DamageRoll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData(), rollOptions);
           } else {
@@ -2071,7 +2072,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   }
 
   if (await hasUsedReaction(target.actor) && needsReactionCheck(target.actor)) return noResult;
-  let player = playerFor(target);
+  let player = playerFor(target.document);
   if (getReactionSetting(player) === "none") return noResult;
   if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
   if (!player) return noResult;
@@ -2106,7 +2107,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   };
 
   if (configSettings.showReactionChatMessage) {
-    const player = playerFor(target)?.id ?? "";
+    const player = playerFor(target.document)?.id ?? "";
     if (configSettings.enableddbGL && installedModules.get("ddb-game-log")) {
       const workflow = Workflow.getWorkflow(options?.item?.uuid);
       if (workflow?.flagTags) chatData.flags = workflow.flagTags;
@@ -2138,7 +2139,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
       resolve(noResult);
     }, (configSettings.reactionTimeout || 30) * 1000);
     // Complier does not realise player can't be undefined to get here
-    player && requestReactions(target, player, triggerTokenUuid, content, triggerType, resolve, chatMessage, options).then ( () => {
+    player && requestReactions(target, player, triggerTokenUuid, content, triggerType, resolve, chatMessage, options).then(() => {
       clearTimeout(timeoutId);
     })
   })
@@ -2215,7 +2216,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
   return { name: "None" };
 }
 
-export function playerFor(target: Token): User | undefined {
+export function playerFor(target: TokenDocument): User | undefined {
   return playerForActor(target.actor ?? undefined);
 }
 
@@ -2241,9 +2242,12 @@ export function playerForActor(actor: Actor | undefined): User | undefined {
 
 export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | undefined, reactionItems: any[], rollFlavor: string, triggerType: string, options: any) {
   return new Promise((resolve, reject) => {
-
-    const callback = async (dialog, button) => {
-      clearTimeout(timeoutId)
+    let timeoutId = setTimeout(() => {
+      dialog.close();
+      resolve({});
+    }, ((configSettings.reactionTimeout || 30) - 1) * 1000);
+    const callback = async function(dialog, button) {
+      clearTimeout(timeoutId);
       const item = reactionItems.find(i => i.id === button.key);
       // await setReactionUsed(actor);
       // No need to set reaction effect since using item will do so.
@@ -2254,7 +2258,7 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
       await completeItemRoll(item, itemRollOptions);
       actor.prepareData();
       resolve({ name: item.name, uuid: item.uuid })
-    }
+    };
 
     const dialog = new ReactionDialog({
       actor,
@@ -2267,11 +2271,7 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
     }, {
       width: 400
     });
-    let timeoutId = setTimeout(() => {
-      console.error("Timeout for reaction dialog expired")
-      dialog.close();
-      resolve({});
-    }, ((configSettings.reactionTimeout || 30) - 1) * 1000);
+
     dialog.render(true);
   });
 }

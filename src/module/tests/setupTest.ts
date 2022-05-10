@@ -46,7 +46,10 @@ export function setupMidiTests() {
   const actor2 = getActor(actor2Name);
   const token1 = getToken(target1Name);
   const token2 = getToken(target2Name);
-  if (!(actor1 && actor2 && token1 && token2)) return;
+  if (!(actor1 && actor2 && token1 && token2)) {
+    console.warn("midi-qol | test setup failed ", actor1, actor2, token1, token2);
+    return;
+  }
   registerTests();
 }
 // Hooks.on("quenchReady", registerTests);
@@ -117,6 +120,20 @@ async function registerTests() {
               .then(skillRoll => { actor.prepareData(); assert.equal(skillRoll.terms[0].number, 1) });
 
           });
+          it("roll acr save min = 10", async function() {
+            for (let i = 0; i < 20; i++) {
+              setProperty(actor.data, "flags.midi-qol.min.skill.all", 10);
+              const result = await actor.rollSkill("acr", {chatMessage: false, fastForward: true});
+              assert.ok(result.total >= 10)
+            }
+          })
+          it("roll per save max = 10", async function() {
+            for (let i = 0; i < 20; i++) {
+              setProperty(actor.data, "flags.midi-qol.max.skill.all", 10);
+              const result = await actor.rollSkill("per", {chatMessage: false, fastForward: true});
+              assert.ok(result.total <= 10)
+            }
+          })
         });
         describe("save roll tests", function () {
           it("roll dex save - 1 dice", async function () {
@@ -143,6 +160,20 @@ async function registerTests() {
             return actor.rollAbilitySave("dex", { chatMessage: false, fastForward: true })
               .then(abilitySave => { actor.prepareData(); assert.equal(abilitySave.terms[0].number, 1) });
           });
+          it("roll str save min = 10", async function() {
+            for (let i = 0; i < 20; i++) {
+              setProperty(actor.data, "flags.midi-qol.min.ability.save.all", 10);
+              const result = await actor.rollAbilitySave("str", {chatMessage: false, fastForward: true});
+              assert.ok(result.total >= 10)
+            }
+          })
+          it("roll str save max = 10", async function() {
+            for (let i = 0; i < 20; i++) {
+              setProperty(actor.data, "flags.midi-qol.max.ability.save.all", 10);
+              const result = await actor.rollAbilitySave("str", {chatMessage: false, fastForward: true});
+              assert.ok(result.total <= 10)
+            }
+          })
         });
       },
       { displayName: "Midi Tests Ability Rolls" },

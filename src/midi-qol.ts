@@ -479,6 +479,8 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.semiSuperSaver.${abl}`);
     midiFlags.push(`flags.midi-qol.max.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.mim.ability.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.max.ability.check.${abl}`);
+    midiFlags.push(`flags.midi-qol.mim.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.check.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
@@ -489,7 +491,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.disadvantage.skill.all`);
   midiFlags.push(`flags.midi-qol.fail.skill.all`);
   midiFlags.push("flags.midi-qol.max.skill.all");
-  midiFlags.push("flags.midi-qol.max.skill.all");
+  midiFlags.push("flags.midi-qol.min.skill.all");
   //@ts-ignore CONFIG.DND5E
   Object.keys(CONFIG.DND5E.skills).forEach(skill => {
     midiFlags.push(`flags.midi-qol.advantage.skill.${skill}`);

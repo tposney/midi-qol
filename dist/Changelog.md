@@ -1,9 +1,32 @@
+### 0.9.52
+* Added workflowOption.critical that can be passed to item.roll() or MidiQOL.completeItemRoll(item, optons) to force the damage roll for the item to be a critical roll. The complete critical damage process is applied to the roll.
+* Updated the Sneak Attack Item to work in dnd5e 1.6
+* Fix for not showing Advantage Reminders' Damage  reminder messages - thanks @kaelad.
+* Fix for some midi sample items being out of date. Especially Sneak Attack/Rakish Audacity.
+* Fix for uncanny dodge to require the attacking item to have an attack.
+* fix for MidiQOL.applyTokenDmage failing with .has undefined error.
+
+**Breaking Change** to flags.midi-qol.min/flags.midi-qol.max. The value field is now **numeric** and the sense of max/min has **swapped** so that the displayed dice roll modifier matches the field name. The feature now allows you to implement various minimum/maximum results for skill/save/check rolls.
+  flags.midi-qol.max and flags.midi-qol.min
+  flags.midi-qol.min/max.ability.all OVERRIDE value
+  flags.midi-qol.min/max.ability.save.all/dex/str/etc OVERRIDE value
+  flags.midi-qol.min/max.ability.check.all/dex/str/etc OVERRIDE value
+  flags.midi-qol.min/max.skill.all/acr/per/prc etc OVERRIDE value
+
+  The flags support modifying saving throws, ability checks and skill rolls. min means that each the d20 roll will be at LEAST value, max mean that the d20 will be at MOST value. The value field must be numeric, you can force lookups by using   ``[[@abilities.dex.value]]`` for example.
+
+  As before flags.midi-qol.ability.check does **NOT** affect skill rolls, you need to specify both changes in an effect.
+
+  To replicate the previous behaviour (almost) of max and min flags use
+    flags.midi-qol.max... -> flags.midi-qol.min... OVERRIDE 20
+    flags.midi-qol.min... -> flags.midi-qol.max... OVERRIDE 1
+
 ### 0.9.51
 * Fix for actor onUseMacro editor failing to open on some characters.
-* Added bardic inspiration for dnd5e 1.6 using the new scale fields. (much simpler)
+* Added bardic inspiration for dnd5e 1.6 using the new scale fields. (much simpler). You must migrate you actor to the new dnd 1.6 advancement for this to work.
 * Update of bardic inspiration to activate for skill rolls as well (oversight on my part).
 * No damage on save spells will not trigger a reaction damaged if the target saves.
-* When using an item with ammuniton, if the ammunition has a saving throw that will be used to determing the saving throw for the effect, as will active effects. So an exploding arrow with a save and damage can be used in a mundane bow with no save and should behave as expected.
+* When using an item with ammunition, if the ammunition has a saving throw that will be used to determining the saving throw for the effect, as will active effects. So an exploding arrow with a save and damage can be used in a mundane bow with no save and should behave as expected.
 
 ### 0.9.50
 * Fix for Items compendium opening with no icons.

@@ -711,8 +711,8 @@ export function ddbglPendingFired(data) {
   }
   // const tokenUuid = `Scene.${sceneId??0}.Token.${tokenId??0}`;
   const token = MQfromUuid(`Scene.${sceneId ?? 0}.Token.${tokenId ?? 0}`);
-  const actor = token?.actor ?? game.actors?.get(actorId ?? "");
-  if (!actor) {
+  const actor = (token instanceof CONFIG.Token.documentClass) ? token?.actor ?? game.actors?.get(actorId ?? "") : undefined;
+  if (!actor || !(token instanceof CONFIG.Token.documentClass)) {
     warn(" ddb-game-log hook could not find actor");
     return;
   }
@@ -734,6 +734,7 @@ export function ddbglPendingFired(data) {
 
   let workflow: Workflow | undefined = DDBGameLogWorkflow.get(item.uuid);
   if (actionType === "attack") workflow = undefined;
+  //@ts-ignore .hasAttack
   if (["damage", "heal"].includes(actionType) && item.hasAttack && !workflow) {
     warn(` ddb-game-log damage roll wihtout workflow being started ${actor.name} using ${item.name}`);
     return;

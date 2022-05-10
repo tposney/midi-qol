@@ -187,7 +187,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   return result;
 }
 
-export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powerLevel = null, versatile = null, options = {} } = {}) {
+export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, powerLevel = null, versatile = null, options = {} } = {}) {
   const pressedKeys = globalThis.MidiKeyManager.pressedKeys; // record the key state if needed
   let workflow = Workflow.getWorkflow(this.uuid);
   if (workflow?.workflowType === "BetterRollsWorkflow") {
@@ -263,19 +263,20 @@ export async function doDamageRoll(wrapped, { even = {}, spellLevel = null, powe
   workflow.damageRollCount += 1;
   let result: Roll;
   if (!workflow.rollOptions.other) {
-    result = await wrapped(mergeObject(options, {
-      critical: workflow.rollOptions.critical || workflow.isCritical,
+    const damageRollOptions = mergeObject(options, {
+      fastForward: workflow.rollOptions.fastForwardDamage || workflow.workflowOptions.autoFastDamage, 
+      chatMessage: false
+    },
+      { overwrite: true, insertKeys: true, insertValues: true });
+    const damageRollData = {
+      critical: workflow.rollOptions.critical || workflow.isCritical || workflow.workflowOptions?.critical,
       spellLevel: workflow.rollOptions.spellLevel,
       powerLevel: workflow.rollOptions.spellLevel,
       versatile: workflow.rollOptions.versatile,
-      fastForward: workflow.rollOptions.fastForwardDamage,
       event: {},
-      //@ts-ignore
-      options: {
-        fastForward: workflow.rollOptions.fastForwardDamage,
-        chatMessage: false
-      }
-    }, { overwrite: true, insertKeys: true, insertValues: true }));
+      options: damageRollOptions
+    };
+    result = await wrapped(damageRollData);
     if (debugCallTiming) log(`wrapped item.rollDamage():  elapsed ${Date.now() - wrappedRollStart}ms`);
   } else {
     //@ts-ignore

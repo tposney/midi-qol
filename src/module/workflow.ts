@@ -523,8 +523,7 @@ export class Workflow {
         }
         if (checkRule("removeHiddenInvis")) removeHiddenInvis.bind(this)();
         const attackExpiries = [
-          "isAttacked",
-          "1Reaction",
+          "isAttacked"
         ];
         await this.expireTargetEffects(attackExpiries)
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
@@ -712,7 +711,7 @@ export class Workflow {
         const specialExpiries = [
           "isAttacked",
           "isDamaged",
-          "1Reaction",
+          // XXX "1Reaction",
           "isSaveSuccess",
           "isSaveFailure",
           "isSave",
@@ -785,6 +784,11 @@ export class Workflow {
 
       case WORKFLOWSTATES.ROLLFINISHED:
         if (!this.aborted) {
+          const specialExpiries = [
+            "isDamaged",
+            "1Reaction",
+          ];
+          await this.expireTargetEffects(specialExpiries)
           const rollFinishedStartTime = Date.now();
           if (this.workflowType !== "BetterRollsWorkflow") {
             const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId ?? "");
@@ -995,7 +999,7 @@ export class Workflow {
     if (checkRule("nearbyAllyRanged") > 0 && ["rwak", "rsak", "rpak"].includes(actionType)) {
       if (firstTarget.data.width * firstTarget.data.height < Number(checkRule("nearbyAllyRanged"))) {
         //TODO change this to TokenDocument
-        const nearbyAlly = checkNearby(-1, firstTarget, configSettings.optionalRules.nearbyFoe); // targets near a friend that is not too big
+        const nearbyAlly = checkNearby(-1, firstTarget, 5); // targets near a friend that is not too big
         // TODO include thrown weapons in check
         if (nearbyAlly) {
           if (debugEnabled > 0) warn("ranged attack with disadvantage because target is near a friend");
@@ -1305,11 +1309,11 @@ export class Workflow {
 
         const macroCommand = game.macros?.getName(name);
         if (macroCommand) {
-          return macroCommand.execute(macroData);
+          return await macroCommand.execute(macroData);
         }
       }
     } catch (err) {
-      ui.notifications?.error(`There was an error in your macro.See the console (F12) for details`);
+      ui.notifications?.error(`There was an error running your macro. See the console (F12) for details`);
       error("Error evaluating macro ", err)
     }
     return {};

@@ -138,12 +138,18 @@ async function doRollSkill(wrapped, ...args) {
     // result = await wrapped.call(this, skillId, procOptions);
     result = await wrapped(skillId, procOptions);
   }
-  const maxflags = getProperty(this.data.flags, "midi-qol.max.ability") ?? {};
-  if ((maxflags.skill && (maxflags.skill.all || maxflags.check[skillId])) ?? false)
-    result = await result.reroll({ maximize: true });
-  const minflags = getProperty(this.data.flags, "midi-qol.min.ability") ?? {};
-  if ((minflags.skill && (minflags.skill.all || minflags.skill[skillId])) ?? false)
-    result = await result.reroll({ minimize: true })
+  const maxflags = getProperty(this.data.flags, "midi-qol.max") ?? {};
+  const maxValue = (maxflags.skill && (maxflags.skill.all || maxflags.check[skillId])) ?? false;
+  if (maxValue && Number.isNumeric(maxValue)) {
+    result.terms[0].modifiers.unshift(`max${maxValue}`);
+    result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
+  }
+  const minflags = getProperty(this.data.flags, "midi-qol.min") ?? {};
+  const minValue = (minflags.skill && (minflags.skill.all || minflags.skill[skillId])) ?? false
+  if (minValue && Number.isNumeric(minValue)) {
+    result.terms[0].modifiers.unshift(`min${minValue}`);
+    result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
+  }
   let newResult = await bonusCheck(this, result, "skill", skillId);
   // const abl = this.data.data.skills[skillId].ability;
   // if (newResult === result) newResult = await bonusCheck(this, result, "check", abl);
@@ -221,8 +227,8 @@ function configureDamage(wrapped) {
       termOptions.critical = true;
     }
 
-  if (this.options.multiplyNumeric && (term instanceof NumericTerm)) {
-    // Multiply numeric terms
+    if (this.options.multiplyNumeric && (term instanceof NumericTerm)) {
+      // Multiply numeric terms
       const termOptions: any = term.options;
       termOptions.baseNumber = termOptions.baseNumber ?? term.number; // Reset back
       term.number = termOptions.baseNumber;
@@ -268,7 +274,7 @@ function configureDamage(wrapped) {
         newTerms.push(term);
         newTerms.push(new OperatorTerm({ operator: "+" }));
         //@ts-ignore
-        const newTerm = new Die({number: term.number, faces: term.faces})
+        const newTerm = new Die({ number: term.number, faces: term.faces })
         newTerm.modifiers.push(`x${term.faces}`)
         newTerms.push(newTerm);
 
@@ -348,12 +354,20 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     procOptions.chatMessage = false;
     result = await wrapped(abilityId, procOptions);
   }
-  const maxflags = getProperty(this.data.flags, "midi-qol.max.ability") ?? {};
-  if ((maxflags.save && (maxflags.save.all || maxflags.save[abilityId])) ?? false)
-    result = await result.reroll({ maximize: true });
-  const minflags = getProperty(this.data.flags, "midi-qol.min.ability") ?? {};
-  if ((minflags.save && (minflags.save.all || minflags.save[abilityId])) ?? false)
-    result = await result.reroll({ minimize: true })
+  const maxFlags = getProperty(this.data.flags, "midi-qol.max.ability") ?? {};
+  const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId])) ?? false
+  if (maxValue && Number.isNumeric(maxValue)) {
+    result.terms[0].modifiers.unshift(`max${maxValue}`);
+    result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
+  }
+
+  const minFlags = getProperty(this.data.flags, "midi-qol.min.ability") ?? {};
+  const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId])) ?? false;
+  if (minValue && Number.isNumeric(minValue)) {
+    result.terms[0].modifiers.unshift(`min${minValue}`);
+    result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
+  }
+
   result = await bonusCheck(this, result, rollType, abilityId)
   if (chatMessage !== false && result) {
     const args: any = { "speaker": getSpeaker(this) };
@@ -437,9 +451,9 @@ function _midiATIRefresh(template) {
   if (configSettings.autoTarget === "dftemplates" && installedModules.get("df-templates"))
     return; // df-templates will handle template tagerting.
   if (installedModules.get("levelsvolumetrictemplates")) {
-    
-    setProperty(template.data, "flags.levels.elevation", 
-    installedModules.get("levels").nextTemplateHeight ?? installedModules.get("levels").lastTokenForTemplate?.data.elevation );
+
+    setProperty(template.data, "flags.levels.elevation",
+      installedModules.get("levels").nextTemplateHeight ?? installedModules.get("levels").lastTokenForTemplate?.data.elevation);
     // Filter which tokens to pass - not too far wall blocking is left to levels.
     let distance = template.data.distance;
     const dimensions = canvas.dimensions || { size: 1, distance: 1 };
@@ -453,7 +467,7 @@ function _midiATIRefresh(template) {
       const centerDist = r.distance;
       if (centerDist > distance + maxExtension) return false;
       //@ts-ignore
-      if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && tk.actor?.data.data.attributes.hp.value <= 0) 
+      if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && tk.actor?.data.data.attributes.hp.value <= 0)
         return false;
       //  - check for walls collision if required - handled by volumetic templates 
       //@ts-ignore
@@ -649,7 +663,7 @@ async function zeroHPExpiry(actor, update, options, user) {
   for (let effect of actor.effects) {
     if (effect.data.flags?.dae?.specialDuration?.includes("zeroHP")) expiredEffects.push(effect.data._id)
   }
-  if (expiredEffects.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", expiredEffects, {"expiry-reason": "midi-qol:zeroHP"})
+  if (expiredEffects.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", expiredEffects, { "expiry-reason": "midi-qol:zeroHP" })
 }
 
 async function checkWounded(actor, update, options, user) {
