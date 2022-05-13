@@ -419,7 +419,9 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.potentCantrip`);
   midiFlags.push(`flags.midi-qol.sculptSpells`);
   midiFlags.push(`flags.midi-qol.carefulSpells`);
-  midiFlags.push("flags.midi-qol.magiResistance.all")
+  midiFlags.push("flags.midi-qol.magicResistance.all")
+  midiFlags.push("flags.midi-qol.magicVulnerability.all")
+
 
 
   allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
@@ -484,7 +486,9 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.check.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
-    midiFlags.push(`flags.midi-qol.magiResistance.all.${abl}`);
+    midiFlags.push(`flags.midi-qol.magicResistance.all.${abl}`);
+    midiFlags.push(`flags.midi-qol.magicVulnerability.all.${abl}`);
+
   })
 
   midiFlags.push(`flags.midi-qol.advantage.skill.all`);

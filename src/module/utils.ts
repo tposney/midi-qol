@@ -734,18 +734,14 @@ export function midiCustomEffect(actor, change) {
 }
 
 export function checkImmunity(candidate, data, options, user) {
+  // Not using this in preference to marking effect unavailable
   const parent: Actor | undefined = candidate.parent;
   if (!parent || !(parent instanceof CONFIG.Actor.documentClass)) return true;
 
   //@ts-ignore .traits
   const ci = parent.data.data.traits?.ci?.value;
-  const statusId = (data.flags?.core?.statusId ?? "no effect").toLocaleLowerCase();
-  const returnvalue = !(ci.length && ci.find(c => statusId.endsWith(c)));
-  if (!returnvalue) {
-    candidate.data.update({ "disabled": true })
-    // TODO find out why returning false for pre create does not work for synthetic tokens?
-    // foundry issue 5930 - stopgap in dae to disable the effect
-  }
+  const statusId = (data.label ?? "no effect").toLocaleLowerCase();
+  const returnvalue = !(ci.length && ci.some(c => c === statusId));
   return returnvalue;
 }
 
@@ -1679,6 +1675,8 @@ export function MQfromActorUuid(uuid): any | null {
 
 
 class RollModifyDialog extends Application {
+  rollExpanded: boolean;
+
   data: {
     actor: Actor5e,
     flags: string[],
@@ -1697,8 +1695,11 @@ class RollModifyDialog extends Application {
   }
 
   constructor(data, options) {
+    options.height = "auto";
+    options.resizable = true;
     super(options);
     this.data = data;
+    this.rollExpanded = false;
   }
 
   static get defaultOptions() {
@@ -1738,7 +1739,7 @@ class RollModifyDialog extends Application {
       const allSelector = selector.join(".");
       value = getProperty(flagData, allSelector);
       if (value) {
-        const labelDetail = Roll.replaceFormulaData(value, this.data.actor.getRollData())
+        const labelDetail = Roll.replaceFormulaData(value, this.data.actor.getRollData());
 
         obj[randomID()] = {
           icon: '<i class="fas fa-dice-d20"></i>',
@@ -1751,9 +1752,11 @@ class RollModifyDialog extends Application {
       }
       return obj;
     }, {})
-    this.data.content = $(await midiRenderRoll(this.data.currentRoll));
+    // this.data.content = await midiRenderRoll(this.data.currentRoll);
+    //@ts-ignore
+    // this.data.content = await this.data.currentRoll.render();
     return {
-      content: this.data.rollHTML,
+      content: await midiRenderRoll(this.data.currentRoll),
       buttons: this.data.buttons
     }
   }
@@ -1761,6 +1764,22 @@ class RollModifyDialog extends Application {
   activateListeners(html) {
     html.find(".dialog-button").click(this._onClickButton.bind(this));
     $(document).on('keydown.chooseDefault', this._onKeyDown.bind(this));
+    html.on("click", ".dice-roll", this._onDiceRollClick.bind(this));
+  }
+
+  _onDiceRollClick(event) {
+    event.preventDefault();
+    // Toggle the message flag
+    let roll = event.currentTarget;
+    this.rollExpanded = !this.rollExpanded
+
+    // Expand or collapse tooltips
+    const tooltips = roll.querySelectorAll(".dice-tooltip");
+    for ( let tip of tooltips ) {
+      if ( this.rollExpanded ) $(tip).slideDown(200);
+      else $(tip).slideUp(200);
+      tip.classList.toggle("expanded", this.rollExpanded);
+    }
   }
 
   _onClickButton(event) {

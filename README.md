@@ -664,6 +664,7 @@ These flags can be used to grant damage reduction to a character and can be set 
 flags.midi-qol.DR.all CUSTOM 3, will give 3 points of damage reduction to all incoming damage.
 Negative DR is not supported (i.e. to increase damage taken).  
 * flags.midi-qol.magicResistance.all/str/dex etc. Will give advantage on saves versus magical effects (spell or magic effect property set).
+* flags.midi-qol.magicVulnerabiltiy.all/str/dex etc. Will give disadvantage on saves versus effects (spell or magic effect property set).
 
 * flags.midi-qol.absorption.damageType (acid/bludgeoning etc) converts damage of that type to healing when applied to the actor with the flag set.
 
@@ -680,7 +681,7 @@ Negative DR is not supported (i.e. to increase damage taken).
   flags.midi-qol.min/max.skill.all/acr/per/prc etc OVERRIDE value
 
   The flags modify saving throw, ability checks and skill check rolls. min means that each dice of the d20 roll will be at LEAST value, max mean that the roll will be at MOST value. The value field must benumeric, you can force lookups by using   ``[[@abilities.dex.value]]`` for example
-  
+
 ## Optional Bonus Effects
 Optional flags cause a dialog to be raised when an opportunity to apply the effect comes up (i.e. the player is hit by an attack).
 

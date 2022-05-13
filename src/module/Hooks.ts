@@ -255,7 +255,7 @@ export function initHooks() {
     if (debugEnabled > 1) debug("Finished the roll", wfuuid)
   })
   Hooks.on("applyActiveEffect", midiCustomEffect);
-  Hooks.on("preCreateActiveEffect", checkImmunity);
+  // Hooks.on("preCreateActiveEffect", checkImmunity); Disabled in lieu of having effect marked suppressed
   Hooks.on("preUpdateItem",  preUpdateItemActorOnUseMacro);
   Hooks.on("preUpdateActor", preUpdateItemActorOnUseMacro)
   Hooks.on("renderItemSheet", (app, html, data) => {

@@ -85,44 +85,10 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
+  Support for Changelongs is being discontinued.
+  
+  If you wish to see the changelog automatically on module update please use Module Management+
 
-  0.9.48
-  * Added MidiQOL.doOverTimeEffect(actor: Actor5e, effect: ActiveEffect, turnStart: boolean), which will perform the overtime processing for the passed effect, turnStart === true, do turn=start changes, false do turn=end changes. The effect does not need to be present on the actor to work, but can be.
-  * Fix for rolling tool checks not supporting alt/ctrl/T.
-  * Fix for concentration advantage bug - thanks @kampffrosch94.
-  * Added support for different sounds to be played for characters/npcs in midi custom sounds.
-  * Added support for weapon subtypes in midi custom sounds. Set the weapon base type on the item sheet to whatever you want and you can specify weapon sub types in the sound config to be any of the valid base types. Existing sound config should be automatically migrated and midi makes a backup of your existing settings. You can restore the old settings via (after rollback of the midi version)
-    game.settings.set("midi-qol", "MidiSoundSettings", game.settings.get("midi-qol", "MidiSoundSettings-backup"));
-  * Added flags.midi-qol.optional.NAME.criticalDamage which allows optional bonus damage to do critical damage.
-  * Fix for editing actor onUseMacros duplicating active effect created onUseMacros.
-  
-  0.9.47
-  * Fix for token hud rolling bug introduced in 0.9.46
-  
-  0.9.46
-  * Restore the order or arguments for actor.data.flags.midi-qol.onUseMacro to be macro name, macro pass - thanks @Elwin
-  * Fix for typo in template targeting walls block test.
-  * Fix for CE active and non player tokens -> 0 hp, not marking dead in combat tracker.
-  * Fix for player damage card not obscuring actor name if CUB hid name settings enabled.
-  * Change to item.roll(options: {workflowOptions: {lateTargeting: true/false}}) behaviour. The lateTargeting setting (if passed) will override the midi-qol module settings, so you can force enable/disable late targeting for a particular item roll.
-  
-  0.9.45
-  * Added exploding dice option for critical hit dice.
-  * Fix for levels module not initialising if no canvas is defined throwing an error.
-  * Fix for rpg damage numbers and unlinked tokens.
-  * Fix for applying concentration even if spell aborted via preItemRoll on use macro call.
-  * Added notification if item use blocked by preItem roll macro.
-  * Adding actor onUseMacro edtiing as a separate configuration options.
-  * Clean up for levelsvolumetrictemplates. If the modules is enabled, midi defers to it for targeting calculations and ignores the midi walls block settings (levelsvolumetictemplates has it's own setting for walls block).
-  
-  0.9.44
-  * Fix for levels (the module) and template placement heights.
-  * Add advantage attribution as part of the dice tooltip. Works with formula as tooltip or not. This is very experimental.
-  * Check Vehicle motionless and flat ac when in motion to determing hits. Added flags.midi-qol.inMotion to mark a vehicle in motion.
-  * Fix for sw5e starship sdi,sdr,sdv handling.
-  * Fix for actor onUse macros with spaces in name/specification
-  * Added sample feature Blessed Healer, that uses an actor onUse macro to do the bonus healing. Does not require modifying any spells to have the effect applied.
-  
   [Full Changelog](https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md)`,
   "minor")
 })

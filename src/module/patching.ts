@@ -138,16 +138,19 @@ async function doRollSkill(wrapped, ...args) {
     // result = await wrapped.call(this, skillId, procOptions);
     result = await wrapped(skillId, procOptions);
   }
+  const flavor = result.options.flavor;
   const maxflags = getProperty(this.data.flags, "midi-qol.max") ?? {};
   const maxValue = (maxflags.skill && (maxflags.skill.all || maxflags.check[skillId])) ?? false;
   if (maxValue && Number.isNumeric(maxValue)) {
     result.terms[0].modifiers.unshift(`max${maxValue}`);
+    //@ts-ignore
     result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
   }
   const minflags = getProperty(this.data.flags, "midi-qol.min") ?? {};
   const minValue = (minflags.skill && (minflags.skill.all || minflags.skill[skillId])) ?? false
   if (minValue && Number.isNumeric(minValue)) {
     result.terms[0].modifiers.unshift(`min${minValue}`);
+    //@ts-ignore
     result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
   }
   let newResult = await bonusCheck(this, result, "skill", skillId);
@@ -155,7 +158,7 @@ async function doRollSkill(wrapped, ...args) {
   // if (newResult === result) newResult = await bonusCheck(this, result, "check", abl);
   result = newResult;
   if (chatMessage !== false && result) {
-    const args = { "speaker": getSpeaker(this) };
+    const args = { "speaker": getSpeaker(this), flavor };
     setProperty(args, `flags.${game.system.id}.roll`, { type: "skill", skillId });
     if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "skill", skillId })
     await result.toMessage(args);
@@ -188,7 +191,7 @@ function configureDamage(wrapped) {
   if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
   if (criticalDamage === "baseDamage") this.options.criticalMultiplier = 1;
   this.terms = this.terms.filter(term => !term.options.critOnly)
-  // Add extra critical damage term
+  // Add extra critical damage term`
   if (this.isCritical && this.options.criticalBonusDamage && !(["explode", "maxCrit", "maxAll", "baseDamage", "doubleDice"].includes(criticalDamage))) {
     const extra = new Roll(this.options.criticalBonusDamage, this.data);
     if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
@@ -355,9 +358,11 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     result = await wrapped(abilityId, procOptions);
   }
   const maxFlags = getProperty(this.data.flags, "midi-qol.max.ability") ?? {};
+  const flavor = result.options.flavor;
   const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId])) ?? false
   if (maxValue && Number.isNumeric(maxValue)) {
     result.terms[0].modifiers.unshift(`max${maxValue}`);
+    //@ts-ignore
     result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
   }
 
@@ -365,12 +370,13 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
   const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId])) ?? false;
   if (minValue && Number.isNumeric(minValue)) {
     result.terms[0].modifiers.unshift(`min${minValue}`);
+    //@ts-ignore
     result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
   }
 
   result = await bonusCheck(this, result, rollType, abilityId)
   if (chatMessage !== false && result) {
-    const args: any = { "speaker": getSpeaker(this) };
+    const args: any = { "speaker": getSpeaker(this), flavor };
     setProperty(args, `flags.${game.system.id}.roll`, { type: rollType, abilityId });
     args.template = "modules/midi-qol/templates/roll.html";
     await result.toMessage(args);

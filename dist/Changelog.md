@@ -1,3 +1,13 @@
+### 0.9.53
+* DAE 0.10.13 adds support for condition immunity matching the effect label to the condition immunity and disabling the effect.
+* Added magicVulnerability (the reverse of magicResistance) saves against magic are made at disadvantage.
+* Fixed typo in magicResistance auto complete data (magiResistance -> magicResistance).
+* max/min rolls will now display the roll flavor (type of roll).
+* Fix to initiative advantage flags not working in dnd5e 1.6
+* Updated ja.json thanks @Brother Sharp
+* Display full roll in optional bonus dialog (tooltip expansion now works).
+* Will remove support for ChangeLog module - if you want to see the changelong on updates use Module Management+.
+
 ### 0.9.52
 * Added workflowOption.critical that can be passed to item.roll() or MidiQOL.completeItemRoll(item, optons) to force the damage roll for the item to be a critical roll. The complete critical damage process is applied to the roll.
 * Updated the Sneak Attack Item to work in dnd5e 1.6

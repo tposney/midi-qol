@@ -1,4 +1,5 @@
 import { channelConfig } from "simple-peer";
+import { tokenToString } from "typescript";
 import { applySettings } from "../apps/ConfigPanel.js";
 import { completeItemRoll } from "../utils.js";
 
@@ -28,7 +29,7 @@ export function getActor(tokenName): Actor {
     token.actor.prepareData();
     return token.actor;
   };
-  const actor =  game.actors?.getName(tokenName);
+  const actor = game.actors?.getName(tokenName);
   if (!actor) throw new Error(`No shuch actor ${tokenName}`)
   actor?.prepareData();
   return actor;
@@ -60,6 +61,9 @@ function addEffect(actor: any, changes: any[]) {
 
 async function registerTests() {
   if (globalThis.quench) {
+    //@ts-ignore
+    await globalThis.game.messages.documentClass.deleteDocuments([], {deleteAll: true});
+
     applySettings("FullAuto");
     globalThis.quench.registerBatch(
       "quench.midi-qol.tests",
@@ -76,7 +80,6 @@ async function registerTests() {
             const item = getActorItem(actor, "Toll the Dead");
             if (target?.actor) await target.actor.setFlag("midi-qol", "fail.ability.save.all", true)
             return completeItemRoll(item).then(workflow => {
-              console.log(workflow);
               target?.actor?.unsetFlag("midi-qol", "fail.ability.save.all")
               assert.ok(!!workflow);
             });
@@ -120,21 +123,69 @@ async function registerTests() {
               .then(skillRoll => { actor.prepareData(); assert.equal(skillRoll.terms[0].number, 1) });
 
           });
-          it("roll acr save min = 10", async function() {
+          it("roll acr skill min = 10", async function () {
             for (let i = 0; i < 20; i++) {
               setProperty(actor.data, "flags.midi-qol.min.skill.all", 10);
-              const result = await actor.rollSkill("acr", {chatMessage: false, fastForward: true});
+              const result = await actor.rollSkill("acr", { chatMessage: false, fastForward: true });
               assert.ok(result.total >= 10)
             }
           })
-          it("roll per save max = 10", async function() {
+          it("roll per skill max = 10", async function () {
             for (let i = 0; i < 20; i++) {
               setProperty(actor.data, "flags.midi-qol.max.skill.all", 10);
-              const result = await actor.rollSkill("per", {chatMessage: false, fastForward: true});
+              const result = await actor.rollSkill("per", { chatMessage: false, fastForward: true });
               assert.ok(result.total <= 10)
             }
-          })
+          });
+
         });
+        describe("inititiative rolls", function () {
+          it("rolls a normal initiative roll", async function () {
+            const rollResult: Promise<Roll> = new Promise(async (resolve) => {
+              Hooks.once("createChatMessage", function (chatMessage) {
+                resolve(chatMessage.roll)
+              });
+
+            });
+            const combat = await actor.rollInitiative({ createCombatants: true, rerollInitiative: true });
+            await combat.delete();
+            const roll: Roll = await rollResult;
+            //@ts-ignore
+            assert.equal(roll.terms[0].results.length, 1);
+          });
+          it("rolls an advantage initiative roll", async function () {
+            await actor.setFlag(game.system.id, "initiativeAdv", true);
+            const rollResult: Promise<Roll> = new Promise(async (resolve) => {
+              Hooks.once("createChatMessage", function (chatMessage) {
+                resolve(chatMessage.roll)
+              });
+
+            });
+            const combat = await actor.rollInitiative({ createCombatants: true, rerollInitiative: true });
+            await combat.delete();
+            const roll: Roll = await rollResult;
+            await actor.unsetFlag(game.system.id, "initiativeAdv");
+            //@ts-ignore
+            assert.equal(roll.terms[0].results.length, 2);
+            assert.ok(roll.formula.startsWith("2d20kh"));
+          });
+          it("rolls a disadvantage initiative roll", async function () {
+            await actor.setFlag(game.system.id, "initiativeDisadv", true);
+            const rollResult: Promise<Roll> = new Promise(async (resolve) => {
+              Hooks.once("createChatMessage", function (chatMessage) {
+                resolve(chatMessage.roll)
+              });
+
+            });
+            const combat = await actor.rollInitiative({ createCombatants: true, rerollInitiative: true });
+            await combat.delete();
+            const roll: Roll = await rollResult;
+            await actor.unsetFlag(game.system.id, "initiativeDisadv");
+            //@ts-ignore
+            assert.equal(roll.terms[0].results.length, 2);
+            assert.ok(roll.formula.startsWith("2d20kl"));
+          });
+        })
         describe("save roll tests", function () {
           it("roll dex save - 1 dice", async function () {
             return actor.rollAbilitySave("dex", { chatMessage: false, fastForward: true })
@@ -160,21 +211,66 @@ async function registerTests() {
             return actor.rollAbilitySave("dex", { chatMessage: false, fastForward: true })
               .then(abilitySave => { actor.prepareData(); assert.equal(abilitySave.terms[0].number, 1) });
           });
-          it("roll str save min = 10", async function() {
+          it("roll str save min = 10", async function () {
             for (let i = 0; i < 20; i++) {
               setProperty(actor.data, "flags.midi-qol.min.ability.save.all", 10);
-              const result = await actor.rollAbilitySave("str", {chatMessage: false, fastForward: true});
+              const result = await actor.rollAbilitySave("str", { chatMessage: false, fastForward: true });
+              delete actor.data.flags["midi-qol"].min.ability.save.all;
               assert.ok(result.total >= 10)
             }
           })
-          it("roll str save max = 10", async function() {
+          it("roll str save max = 10", async function () {
             for (let i = 0; i < 20; i++) {
               setProperty(actor.data, "flags.midi-qol.max.ability.save.all", 10);
-              const result = await actor.rollAbilitySave("str", {chatMessage: false, fastForward: true});
+              const result = await actor.rollAbilitySave("str", { chatMessage: false, fastForward: true });
               assert.ok(result.total <= 10)
+              delete actor.data.flags["midi-qol"].max.ability.save.all;
             }
           })
+
+        it("rolls a normal spell saving throw", async function () {
+          const actor = getActor(actor1Name);
+          const target: Token | undefined = getToken(target1Name);
+          assert.ok(target && !!target?.actor && actor)
+          game.user?.updateTokenTargets([target?.id ?? ""]);
+          const item = actor.items.getName("Saving Throw Test");
+          assert.ok(item);
+          const workflow = await completeItemRoll(item);
+          assert.ok(workflow.saveResults.length === 1);
+          assert.equal(workflow.saveResults[0].terms[0].results.length, 1);
+          assert.ok(workflow.saveResults[0].formula.startsWith("1d20"))
         });
+        it("rolls a magic resistance spell saving throw", async function () {
+          const actor: any = getActor(actor1Name);
+          const target: Token | undefined = getToken(target1Name);
+          assert.ok(target && !!target?.actor && actor)
+          game.user?.updateTokenTargets([target?.id ?? ""]);
+          const item = actor.items.getName("Saving Throw Test");
+          assert.ok(item);
+          target?.actor && setProperty(target.actor.data.flags, "midi-qol.magicResistance.all", true)
+          const workflow = await completeItemRoll(item);
+          assert.equal(workflow.saveResults.length, 1);
+          assert.equal(workflow.saveResults[0].terms[0].results.length, 2);
+          assert.ok(workflow.saveResults[0].formula.startsWith("2d20kh"))
+          //@ts-ignore
+          delete target.actor.data.flags["midi-qol"].magicResistance;
+        });
+        it("rolls a magic vulnerability spell saving throw", async function () {
+          const actor: any = getActor(actor1Name);
+          const target: Token | undefined = getToken(target1Name);
+          assert.ok(target && !!target?.actor && actor)
+          game.user?.updateTokenTargets([target?.id ?? ""]);
+          const item = actor.items.getName("Saving Throw Test");
+          assert.ok(item);
+          target?.actor && setProperty(target.actor.data.flags, "midi-qol.magicVulnerability.all", true)
+          const workflow = await completeItemRoll(item);
+          assert.equal(workflow.saveResults.length, 1);
+          assert.equal(workflow.saveResults[0].terms[0].results.length, 2);
+          assert.ok(workflow.saveResults[0].formula.startsWith("2d20kl"))
+          //@ts-ignore
+          delete target.actor.data.flags["midi-qol"].magicVulnerability;
+        });
+      });
       },
       { displayName: "Midi Tests Ability Rolls" },
     );
@@ -219,7 +315,6 @@ async function registerTests() {
             return true;
           })
           it("applies CE conditions", async function () {
-
             let results: any;
             //@ts-ignore
             const ceInterface: any = game.dfreds.effectInterface;
@@ -276,9 +371,8 @@ async function registerTests() {
 
         });
         describe("Macro actor onUse Macro Tests", async function () {
-          it("call actor onUseMacros", async function() {
+          it("calls actor onUseMacros", async function () {
             const actor = getActor(actor2Name);
-            const item = actor.items.getName("OnUseMacroTest");
             const macroPasses: string[] = [];
             const hookid = Hooks.on("OnUseMacroTest", (pass: string) => macroPasses.push(pass));
             await completeItemRoll(actor.items.getName("OnUseMacroTest")); // Apply the effect
@@ -297,12 +391,38 @@ async function registerTests() {
       { displayName: "Midi Item Roll Tests" },
     );
     globalThis.quench.registerBatch(
-      "quench.midi-qol.otherTessts",
+      "quench.midi-qol.conditionImmunity",
+      (context) => {
+        const { describe, it, assert } = context;
+        const actor: Actor = getActor(actor1Name);
+        //@ts-ignore
+        const ceInterface: any = game.dfreds.effectInterface;
+
+        describe("Condition Immunity Tests", async function() {
+          it("Tests condition immunity disables effect", async function () {
+            await ceInterface.addEffect({ effectName: "Paralyzed", uuid: actor.uuid });
+            assert.ok(await ceInterface.hasEffectApplied("Paralyzed", actor?.uuid));
+            const theEffect: ActiveEffect | undefined = actor.effects.find(ef => ef.data.label === "Paralyzed");
+            assert(theEffect);
+            assert(!theEffect?.data.disabled);
+            await actor.update({"data.traits.ci.value": ["paralyzed"]});
+            assert(theEffect?.data.disabled);
+            await actor.update({"data.traits.ci.value": []});
+            assert(!theEffect?.data.disabled);
+            await ceInterface.removeEffect({ effectName: "Paralyzed", uuid: actor.uuid });
+            assert.ok(!(await ceInterface.hasEffectApplied("Paralyzed", actor?.uuid)));
+
+          })
+        });
+      },
+      { displayName: "Midi Conidition Immunity Tests" },
+    )
+    globalThis.quench.registerBatch(
+      "quench.midi-qol.otherTests",
       (context) => {
         const { describe, it, assert } = context;
       },
       { displayName: "Midi Other Tests" },
     )
-      
   }
 }

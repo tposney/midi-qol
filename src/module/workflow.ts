@@ -501,7 +501,7 @@ export class Workflow {
         const attackRollCompleteStartTime = Date.now();
         const attackBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.AttackBonusMacro`);
         if (configSettings.allowUseMacro && attackBonusMacro) {
-          await this.rollAttackBonus(attackBonusMacro);
+          // await this.rollAttackBonus(attackBonusMacro);
         }
         this.processAttackRoll();
 
@@ -535,11 +535,11 @@ export class Workflow {
         }
 
         if (
-          (getAutoRollDamage() === "onHit" && this.hitTargetsEC.size === 0 && this.hitTargets.size === 0 && this.targets.size !== 0)
+          (["onHit"].includes(getAutoRollDamage()) && this.hitTargetsEC.size === 0 && this.hitTargets.size === 0 && this.targets.size !== 0)
           // This actually causes an issue when the attack missed but GM might want to turn it into a hit.
           // || (configSettings.autoCheckHit !== "none" && this.hitTargets.size === 0 && this.hitTargetsEC.size === 0 && this.targets.size !== 0)
         ) {
-          expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"])
+          expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell", "1Hit"])
           // Do special expiries
           await this.expireTargetEffects(["isAttacked"])
           return this.next(WORKFLOWSTATES.ROLLFINISHED);
@@ -596,6 +596,7 @@ export class Workflow {
         return undefined; // wait for a damage roll to advance the state.
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
+        expireMyEffects.bind(this)(["1Action", "1Attack", "1Hit", "1Spell"]);
         const damgeRollCompleteStartTime = Date.now();
         if (configSettings.autoTarget === "none" && this.item.hasAreaTarget && !this.item.hasAttack) {
           // we are not auto targeting so for area effect attacks, without hits (e.g. fireball)
@@ -638,7 +639,6 @@ export class Workflow {
           expireMyEffects.bind(this)(["1Action", "1Attack", "1Spell"]);
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
         }
-        expireMyEffects.bind(this)(["1Action", "1Attack", "1Hit", "1Spell"]);
         return this.next(WORKFLOWSTATES.WAITFORSAVES);
 
       case WORKFLOWSTATES.WAITFORSAVES:
@@ -1772,18 +1772,24 @@ export class Workflow {
           advantage = (target?.actor?.data.data.traits?.dr?.custom || "").includes(i18n("midi-qol.MagicResistant").trim());
           // check magic resistance as a feature (based on the SRD name as provided by the DnD5e system)
           advantage = advantage || target?.actor?.data.items.find(a => a.type === "feat" && a.name === i18n("midi-qol.MagicResistanceFeat").trim()) !== undefined;
+          if (!advantage) advantage = undefined;
           const magicResistanceFlags = getProperty(target.actor.data, "flags.midi-qol.magicResistance");
           if (magicResistanceFlags && (magicResistanceFlags?.all || getProperty(magicResistanceFlags, rollAbility))) {
             advantage = true;
           }
+          const magicVulnerabilityFlags = getProperty(target.actor.data, "flags.midi-qol.magicVulnerability");
+          if (magicVulnerabilityFlags && (magicVulnerabilityFlags?.all || getProperty(magicVulnerabilityFlags, rollAbility))) {
+            advantage = false;
+          }
+          
           if (advantage) this.advantageSaves.add(target);
-          else advantage = undefined; // TODO why is this here???
+          else if (advantage === false) this.disadvantageSaves.add(target);
+          else advantage = undefined; // The value is looked at in player saves
           if (debugEnabled > 1) debug(`${target.actor.name} resistant to magic : ${advantage}`);
         }
         const settingsOptions = procAdvantage(target.actor, rollType, this.saveItem.data.data.save.ability, {});
         if (settingsOptions.advantage) advantage = true;
         if (settingsOptions.disadvantage) advantage = false;
-
         if (this.saveItem.data.flags["midi-qol"]?.isConcentrationCheck) {
           const concAdv = (advantage === true) || getProperty(target.actor.data.flags, "midi-qol.advantage.concentration");
           const concDisadv = (advantage === false) || getProperty(target.actor.data.flags, "midi-qol.disadvantage.concentration");
@@ -1827,7 +1833,6 @@ export class Workflow {
           const requests = player?.isGM ? monkRequestsGM : monkRequestsPlayer;
           requests.push({
             token: target.id,
-            // TODO - reinstate this when monks token bar is able to handle it.
             advantage: advantage === true,
             disadvantage: advantage === false,
             altKey: advantage === true,
