@@ -308,8 +308,6 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
   templateData.needsButtonAll = damageList.length > 1;
   //@ts-ignore
   templateData.playerButtons = templateData.playerButtons && templateData.damageList.some(listItem => listItem.isCharacter)
-  //@ts-ignore
-  if (debugEnabled > 0) warn("GM action results are ", results)
   if (["yesCard", "noCard", "yesCardNPC"].includes(data.autoApplyDamage)) {
     const content = await renderTemplate("modules/midi-qol/templates/damage-results-player.html", templateData);
     const speaker: any = ChatMessage.getSpeaker();

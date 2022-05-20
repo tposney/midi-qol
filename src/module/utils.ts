@@ -4,7 +4,7 @@ import { log } from "../midi-qol.js";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { itemJSONData, overTimeJSONData } from "./Hooks.js";
+import { itemJSONData, midiFlagTypes, overTimeJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
@@ -725,10 +725,23 @@ export function midiCustomEffect(actor, change) {
       macroString = [currentFlag, extraFlag].join(",");
     setProperty(actor.data, "flags.midi-qol.onUseMacroName", macroString)
     return true;
+  } else if (typeof change.value === "string") {
+    let val: any;
+    try {
+      switch (midiFlagTypes[change.key]) {
+        case "string":
+          val = change.value; break;
+        case "number":
+          val = Number.isNumeric(change.value) ? JSON.parse(change.value) : 0; break;
+        default: // boolean by default
+          val = JSON.parse(change.value) ? true : false;
+      }
+      setProperty(actor.data, change.key, val);
+    } catch (err) {
+      console.warn(`midi-qol custom flag eval error ${change.key} ${change.value}`, err)
+    }
   } else {
-    //@ts-ignore
-    const val = Number.isNumeric(change.value) ? parseInt(change.value) : 1;
-    setProperty(actor.data, change.key, change.value);
+    setProperty(actor.data, change.key, change.value)
   }
   return true;
 }
@@ -777,15 +790,13 @@ function replaceAtFields(value, context, options: { blankValue: string | number,
 export async function processOverTime(wrapped, data, options, user) {
   if (data.round === undefined && data.turn === undefined) return wrapped(data, options, user);
   try {
-    await _processOverTime.bind(this)(data, options, user)
-  }
-  catch (err) {
+    await expirePerTurnBonusActions(this);
+    await _processOverTime.bind(this, data, options, user)
+  } catch (err) {
     error("processOverTime", err)
-  }
-  finally {
+  } finally {
     return wrapped(data, options, user);
   }
-
 }
 
 export async function doOverTimeEffect(actor, effect, startTurn: boolean = true) {
@@ -955,11 +966,11 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true)
   }
 }
 
-export async function _processOverTime(data, options, user) {
-  let prev = (this.current.round ?? 0) * 100 + (this.current.turn ?? 0);
-  let testTurn = this.current.turn ?? 0;
-  let testRound = this.current.round ?? 0;
-  const last = (data.round ?? this.current.round) * 100 + (data.turn ?? this.current.turn);
+export async function _processOverTime(combat, data, options, user) {
+  let prev = (combat.current.round ?? 0) * 100 + (combat.current.turn ?? 0);
+  let testTurn = combat.current.turn ?? 0;
+  let testRound = combat.current.round ?? 0;
+  const last = (data.round ?? combat.current.round) * 100 + (data.turn ?? combat.current.turn);
 
   // These changed since overtime moved to _preUpdate function instead of hook
   // const prev = (combat.previous.round ?? 0) * 100 + (combat.previous.turn ?? 0);
@@ -971,7 +982,7 @@ export async function _processOverTime(data, options, user) {
   let count = 0;
   while (toTest <= last && count < 200) { // step through each turn from prev to current
     count += 1; // make sure we don't do an infinite loop
-    const actor = this.turns[testTurn]?.actor;
+    const actor = combat.turns[testTurn]?.actor;
     const endTurn = toTest < last;
     const startTurn = toTest > prev;
 
@@ -996,7 +1007,7 @@ export async function _processOverTime(data, options, user) {
     if (actor) for (let effect of actor.effects) await doOverTimeEffect(actor, effect, startTurn);
 
     testTurn += 1;
-    if (testTurn === this.turns.length) {
+    if (testTurn === combat.turns.length) {
       testTurn = 0;
       testRound += 1;
       toTest = testRound * 100;
@@ -1645,7 +1656,7 @@ export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<T
   return new Set(normalTokens.concat(synthTokens));
 }
 
-export function MQfromUuid(uuid): any | null{
+export function MQfromUuid(uuid): any | null {
   if (!uuid || uuid === "") return null;
   let parts = uuid.split(".");
   let doc;
@@ -1775,8 +1786,8 @@ class RollModifyDialog extends Application {
 
     // Expand or collapse tooltips
     const tooltips = roll.querySelectorAll(".dice-tooltip");
-    for ( let tip of tooltips ) {
-      if ( this.rollExpanded ) $(tip).slideDown(200);
+    for (let tip of tooltips) {
+      if (this.rollExpanded) $(tip).slideDown(200);
       else $(tip).slideUp(200);
       tip.classList.toggle("expanded", this.rollExpanded);
     }
@@ -1834,7 +1845,7 @@ export async function processAttackRollBonusFlags() { // bound to workflow
     .map(flag => `flags.midi-qol.optional.${flag}`);
   if (bonusFlags.length > 0) {
     this.attackRollHTML = await midiRenderRoll(this.attackRoll);
-    await bonusDialog.bind(this)(bonusFlags, attackBonus, false, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, "attackRoll", "attackTotal", "attackRollHTML")
+    await bonusDialog.bind(this)(bonusFlags, attackBonus, true, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, "attackRoll", "attackTotal", "attackRollHTML")
   }
   return this.attackRoll;
 }
@@ -1954,7 +1965,7 @@ export function getOptionalCountRemaining(actor: Actor5e, flag: string) {
   const countValue = getProperty(actor.data, flag);
   if (!countValue) return 1;
 
-  if (countValue === "turn" && game.combat) {
+  if (["turn", "each-round", "each-turn"].includes(countValue) && game.combat) {
     const usedFlag = flag.replace(".count", ".used");
     // check for the flag
     if (getProperty(actor.data, usedFlag)) return 0;
@@ -1996,11 +2007,9 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
       update[`data.${key}`] = charges;
       return actor.update(update);
     }
-  } else if ("turn" === count.value) {
+  } else if (["turn", "each-round", "each-turn"].includes(count.value)) {
     const flagKey = `${changeKey}.used`.replace("flags.midi-qol.", "");
     await actor.setFlag("midi-qol", flagKey, true);
-  } else if (count.value === "every") {
-
   } else if (count.value === "reaction") {
     setReactionUsed(actor);
   }
@@ -2265,7 +2274,7 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
       dialog.close();
       resolve({});
     }, ((configSettings.reactionTimeout || 30) - 1) * 1000);
-    const callback = async function(dialog, button) {
+    const callback = async function (dialog, button) {
       clearTimeout(timeoutId);
       const item = reactionItems.find(i => i.id === button.key);
       // await setReactionUsed(actor);
@@ -2617,6 +2626,23 @@ export async function hasUsedReaction(actor: Actor) {
     if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, actor.uuid)) return true;
   }
   return false;
+}
+
+
+export async function expirePerTurnBonusActions(combat: Combat) {
+  const optionalFlagRe = /flags.midi-qol.optional.[^.]+.count$/;
+  for (let combatant of combat.turns) {
+    const actor = combatant.actor;
+    if (actor) {
+      for (let effect of actor.effects) {
+        for (let change of effect.data.changes) {
+          if (change.key.match(optionalFlagRe) && change.value === "each-turn") {
+            actor.unsetFlag("midi-qol", change.key.replace(/.count$/, ".used").replace("flags.midi-qol.", ""));
+          }
+        }
+      }
+    }
+  }
 }
 
 export async function hasUsedBonusAction(actor: Actor) {

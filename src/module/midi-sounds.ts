@@ -1,4 +1,4 @@
-import { debug, i18n } from "../midi-qol.js";
+import { debug, i18n, log } from "../midi-qol.js";
 import { configSettings, midiSoundSettings } from "./settings.js";
 import { dice3dEnabled } from "./setupModules.js";
 import { Workflow } from "./workflow.js";

@@ -1,7 +1,7 @@
 {
 	"name": "midi-qol",
 	"title": "Midi QOL",
-	"version": "0.9.53",
+	"version": "0.9.54",
 	"description": "Automates rolling weapon/spell attacks and applying damage",
 	"devDir": "/home/timp/foundry-data/foundryalpha/Data/modules/",
 	"main": "src/midi-qol.ts",

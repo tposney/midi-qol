@@ -539,7 +539,7 @@ export class Workflow {
           // This actually causes an issue when the attack missed but GM might want to turn it into a hit.
           // || (configSettings.autoCheckHit !== "none" && this.hitTargets.size === 0 && this.hitTargetsEC.size === 0 && this.targets.size !== 0)
         ) {
-          expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell", "1Hit"])
+          expireMyEffects.bind(this)(["1Attack", "1Action", "1Spell"])
           // Do special expiries
           await this.expireTargetEffects(["isAttacked"])
           return this.next(WORKFLOWSTATES.ROLLFINISHED);
@@ -549,7 +549,7 @@ export class Workflow {
 
       case WORKFLOWSTATES.WAITFORDAMAGEROLL:
         if (debugEnabled > 1) debug(`wait for damage roll has damage ${itemHasDamage(this.item)} isfumble ${this.isFumble} no auto damage ${this.noAutoDamage}`);
-        if (!itemHasDamage(this.item)) return this.next(WORKFLOWSTATES.WAITFORSAVES);
+        if (!itemHasDamage(this.item) && !itemHasDamage(this.ammo)) return this.next(WORKFLOWSTATES.WAITFORSAVES);
 
         if (this.isFumble && configSettings.autoRollDamage !== "none") {
           // Auto rolling damage but we fumbled - we failed - skip everything.
@@ -564,17 +564,15 @@ export class Workflow {
         if (this.shouldRollDamage) {
           if (debugEnabled > 0) warn(" about to roll damage ", this.event, configSettings.autoRollAttack, configSettings.autoFastForward)
           const storedData: any = game.messages?.get(this.itemCardId ?? "")?.getFlag(game.system.id, "itemData");
-          if (storedData) { // It magic items is being used it fiddles the roll to include the item data
+          if (storedData) { // If magic items is being used it fiddles the roll to include the item data
             this.item = new CONFIG.Item.documentClass(storedData, { parent: this.actor })
           }
 
           this.rollOptions.spellLevel = this.itemLevel;
           await this.item.rollDamage(this.rollOptions);
           return undefined;
-        }
-        this.processDamageEventOptions();
-
-        if (!this.shouldRollDamage) {
+        } else {
+          this.processDamageEventOptions();
           const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId || "");
           if (chatMessage) {
             // provide a hint as to the type of roll expected.
@@ -596,7 +594,6 @@ export class Workflow {
         return undefined; // wait for a damage roll to advance the state.
 
       case WORKFLOWSTATES.DAMAGEROLLCOMPLETE:
-        expireMyEffects.bind(this)(["1Action", "1Attack", "1Hit", "1Spell"]);
         const damgeRollCompleteStartTime = Date.now();
         if (configSettings.autoTarget === "none" && this.item.hasAreaTarget && !this.item.hasAttack) {
           // we are not auto targeting so for area effect attacks, without hits (e.g. fireball)
@@ -633,10 +630,10 @@ export class Workflow {
         await this.displayDamageRoll(configSettings.mergeCard);
         await asyncHooksCallAll("midi-qol.DamageRollComplete", this);
         if (this.item) await asyncHooksCallAll(`midi-qol.DamageRollComplete.${this.item.uuid}`, this);
+        expireMyEffects.bind(this)(["1Action", "1Attack", "1Hit", "1Spell"]);
 
         log(`DmageRollComplete elapsed ${Date.now() - damgeRollCompleteStartTime}ms`)
         if (this.isFumble) {
-          expireMyEffects.bind(this)(["1Action", "1Attack", "1Spell"]);
           return this.next(WORKFLOWSTATES.APPLYDYNAMICEFFECTS);
         }
         return this.next(WORKFLOWSTATES.WAITFORSAVES);
@@ -1449,7 +1446,7 @@ export class Workflow {
         }
         if (this.otherDamageHTML) {
           const otherSearchRe = /<div class="midi-qol-other-roll">[\s\S]*?<div class="end-midi-qol-other-roll">/;
-          const otherReplaceString = `<div class="midi-qol-other-roll"><div style="text-align:center" >${this.item?.name ?? this.damageFlavor}${this.otherDamageHTML || ""}</div><div class="end-midi-qol-other-roll">`
+          const otherReplaceString = `<div class="midi-qol-other-roll"><div style="text-align:center" >${this.otherDamageItem?.name ?? this.damageFlavor}${this.otherDamageHTML || ""}</div><div class="end-midi-qol-other-roll">`
           content = content.replace(otherSearchRe, otherReplaceString);
         }
         if (this.bonusDamageRoll) {
@@ -1723,7 +1720,7 @@ export class Workflow {
       return;
     }
 
-    let rollDC = this.saveItem.data.data.save.DC;
+    let rollDC = this.saveItem.data.data.save.dc;
     if (this.saveItem.getSaveDC) {
       rollDC = this.saveItem.getSaveDC(); 
     }
@@ -2057,10 +2054,12 @@ export class Workflow {
   }
   monksSavingCheck(message, update, options, user) {
     if (!update.flags || !update.flags["monks-tokenbar"]) return true;
-    const mflags = update.flags["monks-tokenbar"];
+    const updateFlags = update.flags["monks-tokenbar"];
+    const mflags = message.data.flags["monks-tokenbar"];
     for (let key of Object.keys(mflags)) {
       if (!key.startsWith("token")) continue;
       const requestId = key.replace("token", "");
+      if (!mflags[key].reveal) continue; // Must be showing the roll
       if (this.saveRequests[requestId]) {
         let roll;
         try {
@@ -2068,6 +2067,7 @@ export class Workflow {
         } catch (err) {
           roll = deepClone(mflags[key].roll);
         }
+
         const func = this.saveRequests[requestId];
         delete this.saveRequests[requestId];
         func(roll)

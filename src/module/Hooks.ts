@@ -1,7 +1,7 @@
-import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
 import { deleteItemEffects, processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, checkflanking, MQfromActorUuid } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, checkflanking, MQfromActorUuid } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
@@ -9,6 +9,8 @@ import { preUpdateItemActorOnUseMacro } from "./patching.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
+export var midiFlagTypes: {} = {};
+
 
 
 export let readyHooks = async () => {
@@ -254,6 +256,7 @@ export function initHooks() {
     }
     if (debugEnabled > 1) debug("Finished the roll", wfuuid)
   })
+  setupMidiFlagTypes();
   Hooks.on("applyActiveEffect", midiCustomEffect);
   // Hooks.on("preCreateActiveEffect", checkImmunity); Disabled in lieu of having effect marked suppressed
   Hooks.on("preUpdateItem",  preUpdateItemActorOnUseMacro);
@@ -373,7 +376,57 @@ export function initHooks() {
     return true;
   })
 }
+function setupMidiFlagTypes() {
 
+  let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
+
+  attackTypes.forEach(at => {
+    midiFlagTypes[`flags.midi-qol.DR.${at}`] = "number"
+    midiFlagTypes[`flags.midi-qol.optional.NAME.attack.${at}`] = "string"
+    midiFlagTypes[`flags.midi-qol.optional.NAME.damage.${at}`] = "string"
+  });
+  midiFlagTypes["flags.midi-qol.onUseMacroName"] = "string";
+
+
+  //@ts-ignore CONFIG.DND5E
+  Object.keys(CONFIG.DND5E.abilities).forEach(abl => {
+    midiFlagTypes[`flags.midi-qol.optional.NAME.save.${abl}`] = "string";
+    midiFlagTypes[`flags.midi-qol.optional.NAME.check.${abl}`] = "string";
+
+  })
+
+  //@ts-ignore CONFIG.DND5E
+  Object.keys(CONFIG.DND5E.skills).forEach(skill => {
+    midiFlagTypes[`flags.midi-qol.optional.NAME.skill.${skill}`] = "string";
+
+  })
+
+  if (game.system.id === "dnd5e") {
+    midiFlagTypes[`flags.midi-qol.DR.all`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-magical`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-silver`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-adamant`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-physical`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.final`] = "number";
+
+    //@ts-ignore CONFIG.DND5E
+    Object.keys(CONFIG.DND5E.damageResistanceTypes).forEach(dt => {
+      midiFlagTypes[`flags.midi-qol.DR.${dt}`] = "string";
+    })
+  }
+
+  midiFlagTypes[`flags.midi-qol.optional.NAME.attack.all`] = "string";
+  midiFlagTypes[`flags.midi-qol.optional.NAME.damage.all`] = "string";
+  midiFlagTypes[`flags.midi-qol.optional.NAME.check.all`] = "string";
+  midiFlagTypes[`flags.midi-qol.optional.NAME.save.all`] = "string";
+  midiFlagTypes[`flags.midi-qol.optional.NAME.label`] = "string";
+  midiFlagTypes[`flags.midi-qol.optional.NAME.skill.all`] = "string";
+  midiFlagTypes[`flags.midi-qol.optional.NAME.count`] = "string";
+  midiFlagTypes[`flags.midi-qol.optional.NAME.ac`] = "string";
+  midiFlagTypes[`flags.midi-qol.optional.NAME.criticalDamage`] = "string";
+  midiFlagTypes[`flags.midi-qol.OverTime`] = "string";
+
+}
 export function setupHooks() {
 }
 export const overTimeJSONData = {

@@ -548,15 +548,14 @@ export function initPatching() {
   libWrapper = globalThis.libWrapper;
   libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
   // For new onuse macros stuff.
-  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.prepareData", _prepareOnUseMacroData, "WRAPPER");
-  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareData", _prepareOnUseMacroData, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.prepareData", prepareOnUseMacroData, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareData", prepareOnUseMacroData, "WRAPPER");
 }
 
-export function _prepareOnUseMacroData(wrapped, ...args) {
+export function prepareOnUseMacroData(wrapped, ...args) {
   wrapped(...args);
   const macros = getProperty(this.data, 'flags.midi-qol.onUseMacroName');
-  if (macros !== undefined) setProperty(this.data, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macros ?? null));
-  else setProperty(this.data, "flags.midi-qol.onUseMacroParts", new OnUseMacros(null));
+  setProperty(this.data, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macros ?? null));
 }
 
 // This can replace the ItemSheetSubmit solution when in v9 
@@ -874,10 +873,9 @@ export async function createRollResultFromCustomRoll(customRoll: any) {
 
 class CustomizeDamageFormula {
   static formula: string;
-  static async configureDialog(wrapped, args) {
+  static async configureDialog(wrapped, ...args) {
     // If the option is not enabled, return the original function - as an alternative register\unregister would be possible
-    if (false) return wrapped(...args);
-    const { title, defaultRollMode, defaultCritical, template, allowCritical, options } = args;
+    const [{title, defaultRollMode, defaultCritical, template, allowCritical}, options ] = args;
     // Render the Dialog inner HTML
     const content = await renderTemplate(
       //@ts-ignore

@@ -106,6 +106,9 @@ export let cleanSpellName = (name: string): string => {
 
 Hooks.once('init', async function () {
   console.log('midi-qol | Initializing midi-qol');
+  allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
+  if (game.system.id === "sw5e")
+    allAttackTypes = ["rwak", "mwak", "rpak", "mpak"];
   initHooks();
   // Assign custom classes and constants here
 
@@ -259,7 +262,6 @@ Hooks.once('ready', function () {
   readyHooks();
   readyPatching();
   if (midiSoundSettingsBackup) game.settings.set("midi-qol", "MidiSoundSettings-backup", midiSoundSettingsBackup)
-  MidiSounds.getWeaponBaseTypes();
 
   // Make midi-qol targets hoverable
   $(document).on("mouseover", ".midi-qol-target-name", (e)=>{
@@ -269,7 +271,9 @@ Hooks.once('ready', function () {
     //@ts-ignore
     tokenObj._hover = true
   });
-  
+  // This seems to cause problems for localisation for the items compendium (at least for french)
+  // Try a delay before doing this - hopefully allowing localisation to complete
+  setTimeout(MidiSounds.getWeaponBaseTypes, 5000);
   Hooks.callAll("midi-qol.midiReady");
 });
 
@@ -291,7 +295,7 @@ function setupMidiQOLApi() {
     applyTokenDamage: applyTokenDamage
   }
   //@ts-ignore
-  window.MidiQOL = {
+  globalThis.MidiQOL = {
     getChanges,
     applyTokenDamage,
     TrapWorkflow,
@@ -327,7 +331,8 @@ function setupMidiQOLApi() {
     MQOnUseOptions,
     midiRenderRoll,
     doOverTimeEffect
-  }
+  };
+  globalThis.MidiQOL.actionQueue = new Semaphore();
 }
 
 
@@ -422,12 +427,6 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.magicResistance.all")
   midiFlags.push("flags.midi-qol.magicVulnerability.all")
 
-
-
-  allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
-  if (game.system.id === "sw5e")
-    allAttackTypes = ["rwak", "mwak", "rpak", "mpak"];
-
   let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
 
   attackTypes.forEach(at => {
@@ -466,7 +465,6 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.sharpShooter");
   midiFlags.push("flags.midi-qol.onUseMacroName");
 
-
   //@ts-ignore CONFIG.DND5E
   Object.keys(CONFIG.DND5E.abilities).forEach(abl => {
     midiFlags.push(`flags.midi-qol.advantage.ability.check.${abl}`);
@@ -480,15 +478,13 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.superSaver.${abl}`);
     midiFlags.push(`flags.midi-qol.semiSuperSaver.${abl}`);
     midiFlags.push(`flags.midi-qol.max.ability.save.${abl}`);
-    midiFlags.push(`flags.midi-qol.mim.ability.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.min.ability.save.${abl}`);
     midiFlags.push(`flags.midi-qol.max.ability.check.${abl}`);
-    midiFlags.push(`flags.midi-qol.mim.ability.check.${abl}`);
+    midiFlags.push(`flags.midi-qol.min.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.check.${abl}`);
-    midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
     midiFlags.push(`flags.midi-qol.magicResistance.all.${abl}`);
     midiFlags.push(`flags.midi-qol.magicVulnerability.all.${abl}`);
-
   })
 
   midiFlags.push(`flags.midi-qol.advantage.skill.all`);
@@ -535,6 +531,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.optional.NAME.count`);
   midiFlags.push(`flags.midi-qol.optional.NAME.ac`);
   midiFlags.push(`flags.midi-qol.optional.NAME.criticalDamage`);
+  midiFlags.push(`flags.midi-qol.optional.Name.onUse`);
 
   midiFlags.push(`flags.midi-qol.uncanny-dodge`);
   midiFlags.push(`flags.midi-qol.OverTime`);

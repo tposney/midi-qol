@@ -588,8 +588,10 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   // if showing a full card we don't want to auto roll attcks or damage.
   workflow.noAutoDamage = showFullCard;
   workflow.noAutoAttack = showFullCard;
-  
-  
+  const consume = this.data.data.consume;
+  if ( consume?.type === "ammo" ) {
+    workflow.ammo = this.actor.items.get(consume.target);
+  }
   if (installedModules.get("levelsvolumetrictemplates")) {
     installedModules.get("levels").lastTokenForTemplate = workflow.token;
     // installedModules.get("levels").nextTemplateHeight = workflow.templateElevation ?? 0;
