@@ -712,8 +712,9 @@ export function requestPCActiveDefence(player, actor, advantage, saveItemNname, 
 }
 
 export function midiCustomEffect(actor, change) {
-  if (typeof change?.key !== "string") return true;
+if (typeof change?.key !== "string") return true;
   if (!change.key?.startsWith("flags.midi-qol")) return true;
+  const variableKeys = ["flags.midi-qol.OverTime", "flags.midi-qol.optional"]; // These have trailing data in the change key change.key values and should always just be a string
   if (change.key === "flags.midi-qol.onUseMacroName") {
     const args = change.value.split(",")?.map(arg => arg.trim());
     const currentFlag = getProperty(actor.data, "flags.midi-qol.onUseMacroName") ?? "";
@@ -725,6 +726,8 @@ export function midiCustomEffect(actor, change) {
       macroString = [currentFlag, extraFlag].join(",");
     setProperty(actor.data, "flags.midi-qol.onUseMacroName", macroString)
     return true;
+  } else if (variableKeys.some(k => change.key.startsWith(k))) { 
+    setProperty(actor.data, change.key, change.value);
   } else if (typeof change.value === "string") {
     let val: any;
     try {
@@ -791,7 +794,7 @@ export async function processOverTime(wrapped, data, options, user) {
   if (data.round === undefined && data.turn === undefined) return wrapped(data, options, user);
   try {
     await expirePerTurnBonusActions(this);
-    await _processOverTime.bind(this, data, options, user)
+    await _processOverTime(this, data, options, user)
   } catch (err) {
     error("processOverTime", err)
   } finally {

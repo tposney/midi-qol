@@ -307,8 +307,6 @@ function setupMidiQOLApi() {
     ConfigPanel: ConfigPanel,
     getTraitMult: getTraitMult,
     getDistance: getDistanceSimple,
-    // distancePointToken: distancePointToken,
-    // getSurroundingHexes: getSurroundingHexes,
     midiFlags,
     debug,
     log,

@@ -243,14 +243,14 @@ export function initHooks() {
     hideStuffHandler(message, html, data);
   })
 
-  Hooks.on("midi-qol.RollComplete", (workflow) => {
+  Hooks.on("midi-qol.RollComplete", async (workflow) => {
     const wfuuid = workflow.uuid;
 
     if (overTimeEffectsToDelete[wfuuid]) {
       if (workflow.saves.size === 1 || !workflow.hasSave) {
         let effectId = overTimeEffectsToDelete[wfuuid].effectId;
         let actor = overTimeEffectsToDelete[wfuuid].actor;
-        actor.deleteEmbeddedDocuments("ActiveEffect", [effectId]), { "expiry-reason": "midi-qol:overTime" };
+        await actor.deleteEmbeddedDocuments("ActiveEffect", [effectId]), { "expiry-reason": "midi-qol:overTime" };
       }
       delete overTimeEffectsToDelete[wfuuid];
     }
@@ -382,29 +382,29 @@ function setupMidiFlagTypes() {
 
   attackTypes.forEach(at => {
     midiFlagTypes[`flags.midi-qol.DR.${at}`] = "number"
-    midiFlagTypes[`flags.midi-qol.optional.NAME.attack.${at}`] = "string"
-    midiFlagTypes[`flags.midi-qol.optional.NAME.damage.${at}`] = "string"
+  //  midiFlagTypes[`flags.midi-qol.optional.NAME.attack.${at}`] = "string"
+  //  midiFlagTypes[`flags.midi-qol.optional.NAME.damage.${at}`] = "string"
   });
   midiFlagTypes["flags.midi-qol.onUseMacroName"] = "string";
 
 
   //@ts-ignore CONFIG.DND5E
   Object.keys(CONFIG.DND5E.abilities).forEach(abl => {
-    midiFlagTypes[`flags.midi-qol.optional.NAME.save.${abl}`] = "string";
-    midiFlagTypes[`flags.midi-qol.optional.NAME.check.${abl}`] = "string";
+    // midiFlagTypes[`flags.midi-qol.optional.NAME.save.${abl}`] = "string";
+    // midiFlagTypes[`flags.midi-qol.optional.NAME.check.${abl}`] = "string";
 
   })
 
   //@ts-ignore CONFIG.DND5E
   Object.keys(CONFIG.DND5E.skills).forEach(skill => {
-    midiFlagTypes[`flags.midi-qol.optional.NAME.skill.${skill}`] = "string";
+    // midiFlagTypes[`flags.midi-qol.optional.NAME.skill.${skill}`] = "string";
 
   })
 
   if (game.system.id === "dnd5e") {
-    midiFlagTypes[`flags.midi-qol.DR.all`] = "string";
-    midiFlagTypes[`flags.midi-qol.DR.non-magical`] = "string";
-    midiFlagTypes[`flags.midi-qol.DR.non-silver`] = "string";
+     midiFlagTypes[`flags.midi-qol.DR.all`] = "string";
+     midiFlagTypes[`flags.midi-qol.DR.non-magical`] = "string";
+     midiFlagTypes[`flags.midi-qol.DR.non-silver`] = "string";
     midiFlagTypes[`flags.midi-qol.DR.non-adamant`] = "string";
     midiFlagTypes[`flags.midi-qol.DR.non-physical`] = "string";
     midiFlagTypes[`flags.midi-qol.DR.final`] = "number";
@@ -415,16 +415,16 @@ function setupMidiFlagTypes() {
     })
   }
 
-  midiFlagTypes[`flags.midi-qol.optional.NAME.attack.all`] = "string";
-  midiFlagTypes[`flags.midi-qol.optional.NAME.damage.all`] = "string";
-  midiFlagTypes[`flags.midi-qol.optional.NAME.check.all`] = "string";
-  midiFlagTypes[`flags.midi-qol.optional.NAME.save.all`] = "string";
-  midiFlagTypes[`flags.midi-qol.optional.NAME.label`] = "string";
-  midiFlagTypes[`flags.midi-qol.optional.NAME.skill.all`] = "string";
-  midiFlagTypes[`flags.midi-qol.optional.NAME.count`] = "string";
-  midiFlagTypes[`flags.midi-qol.optional.NAME.ac`] = "string";
-  midiFlagTypes[`flags.midi-qol.optional.NAME.criticalDamage`] = "string";
-  midiFlagTypes[`flags.midi-qol.OverTime`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.attack.all`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.damage.all`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.check.all`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.save.all`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.label`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.skill.all`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.count`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.ac`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.criticalDamage`] = "string";
+  // midiFlagTypes[`flags.midi-qol.OverTime`] = "string";
 
 }
 export function setupHooks() {

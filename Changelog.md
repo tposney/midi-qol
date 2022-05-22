@@ -1,8 +1,11 @@
+### 0.9.55
+* Fix for inadvertant breaking of overTime effects.
+
 ###  0.9.54
 * Fix for localisation problems with armour/weapon proficiencies.
 * Fix for ammo usage for items that don't roll an attack.
 * Fix for damage configuration dialog to pass all arguments to wrapped function.
-* Preferred mode for setting flags.midi-qol.xxxx is now CUSTOM, which will correctly set values to the correct type. Setting a midi-flag to 0/1/true/false via other modes will always result in the flag being treated as true.
+* Preferred mode for setting flags.midi-qol.xxxx (if the flag is meant to be a boolean field) is now CUSTOM, which will correctly set values to the correct type. Setting a midi-flag to 0/1/true/false via other modes will always result in the flag being treated as true. For non-boolean fields you can leave the mode as override.
 * Enhancement to optional rolls count. "turn" remains unchanged - meaning once per round which is confusing. Added two new options "each-turn", which means the roll can be made each combat tracker turn, and "each-round", which means the bonus can be rolled once per round (the same as the current "turn").
 * If DSN enabled, using Monks token bar for saves, auto checking concentration enabled and the check was forced by an item with a saving throw, the concentration check would always fail - fixed.
 * For macro writers, added MidiQOL.action queue, a foundry semaphore based single thread for actions to be done, useful if you are queuing actor/token updates and want to ensure they are executed strictly in order.

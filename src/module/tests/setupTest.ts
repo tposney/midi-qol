@@ -1,5 +1,3 @@
-import { channelConfig } from "simple-peer";
-import { tokenToString } from "typescript";
 import { applySettings } from "../apps/ConfigPanel.js";
 import { completeItemRoll } from "../utils.js";
 
@@ -469,7 +467,66 @@ async function registerTests() {
         });
       },
       { displayName: "Midi Conidition Immunity Tests" },
-    )
+    );
+    globalThis.quench.registerBatch(
+      "quench.midi-qol.overTimeTests",
+      (context) => {
+        const { describe, it, assert } = context;
+        describe("overTime effects", async function() {
+          it ("test overtime effect run and removed on combat update", async function() {
+            this.timeout(20000);
+            let scene = canvas?.scene;
+            const cls = getDocumentClass("Combat");
+            const combat = await cls.create({scene: scene?.id});
+            assert.ok(combat);
+            const token = getToken(target2Name);
+            assert.ok(token);
+            const actor = token?.actor;
+            assert.ok(actor);
+            const createData = {
+              tokenId: token?.id,
+              sceneId: token?.scene.id,
+              actorId: token?.document.data.actorId,
+              //@ts-ignore
+              hidden: token?.document.hidden
+            }
+            //@ts-ignore
+            const hp = actor?.data.data.attributes.hp.value;
+            await combat?.createEmbeddedDocuments("Combatant", [createData]);
+            await combat?.activate();
+
+            const effectData = { 
+              label: "test over time", 
+              changes: [{key: "flags.midi-qol.OverTime.Test", mode: 0, value: `turn=end,
+              removeCondition=true,
+              damageRoll=15,
+              damageType=acid,
+              label=OverTime test`}],
+              duration: {rounds: 10}
+            }
+            const theEffects: any[] | undefined = await actor?.createEmbeddedDocuments("ActiveEffect", [effectData]);
+            assert.ok(theEffects?.length, "Effects created");
+            // actor && console.error(getProperty(actor, "data.flags.midi-qol.OverTime.Test"))
+            assert.ok(actor && getProperty(actor?.data, "flags.midi-qol.OverTime.Test"), "overtime flag set");
+
+            await combat?.nextRound();
+            await busyWait(1);
+            //@ts-ignore
+            let newHp = actor?.data.data.attributes.hp.value;
+            assert.equal(hp - 15, newHp, "verify hp deduction 1st");
+            assert.equal(actor?.effects.contents.length, 0, "check effect is removed");
+            await combat?.nextRound();
+            await busyWait(1);
+            //@ts-ignore
+            newHp = actor?.data.data.attributes.hp.value;
+            assert.equal(hp - 15, newHp, "verify hp deduction 2nd");
+            await combat?.delete();
+
+          })
+        });
+      },
+      { displayName: "Midi Over Time Tests" }
+    );
     globalThis.quench.registerBatch(
       "quench.midi-qol.otherTests",
       (context) => {
