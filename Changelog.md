@@ -1,5 +1,5 @@
 ### 0.9.55
-* Fix for inadvertant breaking of overTime effects.
+* Fix for inadvertent breaking of overTime effects.
 
 ###  0.9.54
 * Fix for localisation problems with armour/weapon proficiencies.
