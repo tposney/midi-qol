@@ -14,10 +14,9 @@ let modules = {"about-time": "0.0",
               "conditional-visibility": "0.0",
               "monks-tokenbar": "1.0.55",
               "socketlib": "0.0",
-              "advanced-macros": "1.0",
               "dnd5e-helpers":  "3.0.0",
               "dfreds-convenient-effects": "2.1.0",
-              "levels": "1.7.0",
+              "levels": "1.7.0", 
               "levelsvolumetrictemplates": "0.0.0",
               "lib-changelogs": "0.0.0",
               "df-templates": "1.0.0",
@@ -29,8 +28,8 @@ export let setupModules = () => {
   for (let name of Object.keys(modules)) { 
     const modVer = game.modules.get(name)?.data.version || "0.0.0";
     const neededVer = modules[name];
-    const isValidVersion = isNewerVersion(modVer, neededVer) || !isNewerVersion(neededVer, modVer) ;
-    installedModules.set(name, game.modules.get(name)?.active && isValidVersion) 
+    const isValidVersion = isNewerVersion(modVer, neededVer) || !isNewerVersion(neededVer, modVer);
+    if (!installedModules.get(name)) installedModules.set(name, game.modules.get(name)?.active && isValidVersion) 
     if (!installedModules.get(name)) {
       if (game.modules.get(name)?.active)
         error(`midi-qol requires ${name} to be of version ${modules[name]} or later, but it is version ${game.modules.get(name)?.data.version}`);

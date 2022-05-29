@@ -278,7 +278,7 @@ You can enable auto checking of hits. Fumbles automatically miss and criticals a
 ## Damage
 * **Auto apply damage to target**
   * Yes: Damage is auto-applied to targeted tokens (**or self if self-target is specified**) that were hit or did not save, or that saved and take half damage.
-  * "+ damage card": If included, a chat card is sent to the GM which includes each target that had damage applied with details of the damage, any immunities/resistances and 6 buttons. They set the target hit points based on the calculation displayed. The first sets the hp back the way they were before the roll and the second sets them as displayed in the calculation (an undo/redo). The next 4 are the standard DND apply damage buttons but **do not** take into account resistance/immunity.
+  * "+ damage card": If included, a chat card is sent to the GM which includes each target that had damage applied with details of the damage, any immunities/resistances and some buttons. The first button sets the target hit points based on the calculation displayed. The dropdown controls how the damage is applied, "Calc" means take into account damage immunity/resistance etc. multipliers change the amount of damage applied but **do not** take into account resistance/immunity.
 
 
 * **Apply Damage immunities** Midi-qol will use the target’s resistance/immunity/vulnerability settings for each type of damage in the attack and calculate how much of the damage applies. If "+physical" is set midi-qol will look at the item that did the attack to see if the damage is magical or not according to the following:

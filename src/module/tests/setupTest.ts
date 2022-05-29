@@ -5,12 +5,13 @@ const actor1Name = "actor1";
 const actor2Name = "actor2";
 const target1Name = "Orc1";
 const target2Name = "Orc2";
+const target3Name = "Skeleton1";
 
 export async function busyWait(seconds: number) {
   await (new Promise(resolve => setTimeout(resolve, seconds * 1000)));
 }
 export async function resetActors() {
-  for (let name of [actor1Name, actor2Name, target1Name, target2Name]) {
+  for (let name of [actor1Name, actor2Name, target1Name, target2Name, target3Name]) {
     const a = getActor(name);
     await a.update({ "data.attributes.hp.value": getProperty(a.data.data, "attributes.hp.max") });
   }
@@ -355,6 +356,42 @@ async function registerTests() {
             assert.equal(newHp, oldHp - 10);
             return true;
           });
+          it("applies activation condition", async function () {
+            await resetActors();
+            const actor = getActor(actor2Name);
+            const target2: any = getToken(target2Name);
+            const target3: any = getToken(target3Name);
+            game.user?.updateTokenTargets([target2?.id ?? "", target3?.id ?? ""]);
+            const target2hp = target2?.actor?.data.data.attributes.hp.value;
+            const target3hp = target3?.actor?.data.data.attributes.hp.value;
+            await completeItemRoll(actor.items.getName("MODTest")); // does 10 + 10 to undead
+            const condition2 = target2.actor.effects.contents.filter(ef => ef.data.label === "Frightened");
+            const condition3 = target3.actor.effects.contents.filter(ef => ef.data.label === "Frightened");
+            if (condition2.length) await target2.actor.deleteEmbeddedDocuments("ActiveEffect", condition2.map(ae => ae.id))
+            if (condition3.length) await target3.actor.deleteEmbeddedDocuments("ActiveEffect", condition3.map(ae => ae.id))
+            assert.equal(target2hp - 10, target2?.actor?.data.data.attributes.hp.value, "non undead takes 10 hp");
+            assert.equal(target3hp - 40, target3?.actor?.data.data.attributes.hp.value, "undead takes 20 hp"); // 20hp + vulnerability
+            assert.equal(condition2.length, 0, "Frghtened not applied to non undead");
+            assert.equal(condition3.length, 1, "Frightened applied to undead");
+          });
+          it("applies condition/other damage - no activation", async function () {
+            await resetActors();
+            const actor = getActor(actor2Name);
+            const target2: any = getToken(target2Name);
+            const target3: any = getToken(target3Name);
+            game.user?.updateTokenTargets([target2?.id ?? "", target3?.id ?? ""]);
+            const target2hp = target2?.actor?.data.data.attributes.hp.value;
+            const target3hp = target3?.actor?.data.data.attributes.hp.value;
+            await completeItemRoll(actor.items.getName("MODTestNoActivation")); // does 10 + 10 to undead
+            const condition2 = target2.actor.effects.contents.filter(ef => ef.data.label === "Frightened");
+            const condition3 = target3.actor.effects.contents.filter(ef => ef.data.label === "Frightened");
+            if (condition2.length) await target2.actor.deleteEmbeddedDocuments("ActiveEffect", condition2.map(ae => ae.id))
+            if (condition3.length) await target3.actor.deleteEmbeddedDocuments("ActiveEffect", condition3.map(ae => ae.id))
+            assert.equal(target2hp - 20, target2?.actor?.data.data.attributes.hp.value, "non undead takes 10 hp");
+            assert.equal(target3hp - 40, target3?.actor?.data.data.attributes.hp.value, "undead takes 20 hp"); // 20hp + vulnerability
+            assert.equal(condition2.length, 1, "Frghtened applied to non undead");
+            assert.equal(condition3.length, 1, "Frightened applied to undead");
+          });
         });
         describe("Macro Roll Tests", async function () {
           it("runs macro exucute", async function () {
@@ -425,7 +462,7 @@ async function registerTests() {
             await actor.deleteEmbeddedDocuments("ActiveEffect", hasEffects.map(e => e.id))
             console.log(macroPasses);
             // Test for all passes except "all" and "template placed"
-            assert.equal(macroPasses.length, Object.keys(game.i18n.translations["midi-qol"]["onUseMacroOptions"]).length - 2);
+            assert.equal(macroPasses.length, Object.keys(game.i18n.translations["midi-qol"]["onUseMacroOptions"]).length - 2, "on use macro pass length");
           })
 
           it("Calls item onUseMacros", async function () {

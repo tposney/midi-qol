@@ -138,7 +138,7 @@ async function doRollSkill(wrapped, ...args) {
     // result = await wrapped.call(this, skillId, procOptions);
     result = await wrapped(skillId, procOptions);
   }
-  const flavor = result.options.flavor;
+  const flavor = result.options?.flavor;
   const maxflags = getProperty(this.data.flags, "midi-qol.max") ?? {};
   const maxValue = (maxflags.skill && (maxflags.skill.all || maxflags.check[skillId])) ?? false;
   if (maxValue && Number.isNumeric(maxValue)) {
@@ -358,7 +358,7 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     result = await wrapped(abilityId, procOptions);
   }
   const maxFlags = getProperty(this.data.flags, "midi-qol.max.ability") ?? {};
-  const flavor = result.options.flavor;
+  const flavor = result.options?.flavor;
   const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId])) ?? false
   if (maxValue && Number.isNumeric(maxValue)) {
     result.terms[0].modifiers.unshift(`max${maxValue}`);

@@ -37,8 +37,10 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     } else if (game.user?.targets?.size ?? 0 > 0) workflow.targets = validTargetTokens(game.user?.targets);
     if (workflow?.attackRoll && workflow.currentState === WORKFLOWSTATES.ROLLFINISHED) { // we are re-rolling the attack.
       workflow.damageRoll = undefined;
-      await Workflow.removeAttackDamageButtons(this.id)
-      workflow.itemCardId = (await showItemCard.bind(this)(false, workflow, false, true)).id;
+      await Workflow.removeAttackDamageButtons(this.id);
+      if (workflow.damageRollCount > 0) { // re-rolling damage counts as new damage
+        workflow.itemCardId = (await showItemCard.bind(this)(false, workflow, false, true)).id;
+      }
     }
   } else if (workflow.workflowType === "BetterRollsWorkflow") {
     workflow.rollOptions = options;
@@ -95,6 +97,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
   const wrappedRollStart = Date.now();
   workflow.attackRollCount += 1;
+  if (workflow.attackRollCount > 1) workflow.damageRollCount = 0;
   const wrappedOptions = mergeObject(options, {
     chatMessage: (["TrapWorkflow", "Workflow"].includes(workflow.workflowType)) ? false : options.chatMessage,
     fastForward: workflow.rollOptions.fastForwardAttack || options.fastForward,
@@ -112,10 +115,10 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     const existing = (wrappedOptions.dialogOptions && wrappedOptions.dialogOptions["adv-reminder"]?.message) ?? "";
     advHTML = `${existing}<div class=\"adv-reminder-messages\">\n    <div>${advHTML}</div>\n</div>\n`;
     wrappedOptions.dialogOptions = {
-      "adv-reminder": {message: advHTML}
-    }    
+      "adv-reminder": { message: advHTML }
+    }
   }
-  
+
   let result: Roll = await wrapped(
     wrappedOptions,
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
@@ -264,7 +267,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   let result: Roll;
   if (!workflow.rollOptions.other) {
     const damageRollOptions = mergeObject(options, {
-      fastForward: workflow.rollOptions.fastForwardDamage || workflow.workflowOptions.autoFastDamage, 
+      fastForward: workflow.rollOptions.fastForwardDamage || workflow.workflowOptions.autoFastDamage,
       chatMessage: false
     },
       { overwrite: true, insertKeys: true, insertValues: true });
@@ -385,38 +388,38 @@ async function newResolveLateTargeting(item: CONFIG.Item.documentClassl, overRid
   const workflow = Workflow.getWorkflow(item?.uuid);
   if (!overRideSetting && !getLateTargeting(workflow)) return true;
 
-    // enable target mode
-    const controls: any = ui.controls;
-    controls.activeControl = "token"
-    controls.controls[0].activeTool = "target"
-    await controls.render();
-  
+  // enable target mode
+  const controls: any = ui.controls;
+  controls.activeControl = "token"
+  controls.controls[0].activeTool = "target"
+  await controls.render();
 
-    const wasMaximized = !(item.actor.sheet?._minimized);
-    // Hide the sheet that originated the preview
-    if (wasMaximized) await item.actor.sheet.minimize();
-  
-    let targets = new Promise((resolve, reject)  => {
-      // no timeout since there is a dialog to close
-      // create target dialog which updates the target display
-      let lateTargeting = new LateTargetingDialog(item.actor, item, game.user, {callback: resolve}).render(true);
-      // hook for exit target mode
-      const hookId = Hooks.on("renderSceneControls", (app, html, data) => {
-        if (app.activeControl === "token" && data.controls[0].activeTool === "target") return;
-        resolve(true);
-        //@ts-ignore
-        lateTargeting.close();
-        Hooks.off("renderSceneControls", hookId)
 
-      });
+  const wasMaximized = !(item.actor.sheet?._minimized);
+  // Hide the sheet that originated the preview
+  if (wasMaximized) await item.actor.sheet.minimize();
+
+  let targets = new Promise((resolve, reject) => {
+    // no timeout since there is a dialog to close
+    // create target dialog which updates the target display
+    let lateTargeting = new LateTargetingDialog(item.actor, item, game.user, { callback: resolve }).render(true);
+    // hook for exit target mode
+    const hookId = Hooks.on("renderSceneControls", (app, html, data) => {
+      if (app.activeControl === "token" && data.controls[0].activeTool === "target") return;
+      resolve(true);
+      //@ts-ignore
+      lateTargeting.close();
+      Hooks.off("renderSceneControls", hookId)
+
     });
-    let shouldContinue = await targets;
-    if (wasMaximized) await item.actor.sheet.maximize();
-    controls.activeControl = "token"
-    controls.controls[0].activeTool = "select"
-    await controls.render();
-    // if (game.user?.targets.size === 0) shouldContinue = false;
-    return shouldContinue ? true : false;
+  });
+  let shouldContinue = await targets;
+  if (wasMaximized) await item.actor.sheet.maximize();
+  controls.activeControl = "token"
+  controls.controls[0].activeTool = "select"
+  await controls.render();
+  // if (game.user?.targets.size === 0) shouldContinue = false;
+  return shouldContinue ? true : false;
 }
 
 async function resolveLateTargeting(item: any) {
@@ -450,7 +453,7 @@ async function resolveLateTargeting(item: any) {
   if (wasMaximized) await item.actor.sheet.maximize()
 }
 
-export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event, workflowOptions: {lateTargeting: undefined}}) {
+export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event, workflowOptions: { lateTargeting: undefined } }) {
   const itemRollStart = Date.now()
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
@@ -467,7 +470,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const isAoESpell = this.hasAreaTarget;
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
   const shouldCheckLateTargeting = ["weapon", "feat", "spell"].includes(this.data.type) && (options.workflowOptions?.lateTargeting ?? getLateTargeting());
-                               
+
   if (shouldCheckLateTargeting && !isRangeSpell && !isAoESpell) {
 
     // normal targeting and auto rolling attack so allow late targeting
@@ -489,7 +492,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
     if (canDoLateTargeting) {
       if (!(await newResolveLateTargeting(this, true)))
-      return null;
+        return null;
     }
   }
   const myTargets = game.user?.targets && validTargetTokens(game.user?.targets);
@@ -543,9 +546,9 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     }
   }
 
-  const needsConcentration = this.data.data.components?.concentration 
-                              || this.data.flags.midiProperties?.concentration
-                              || this.data.data.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
+  const needsConcentration = this.data.data.components?.concentration
+    || this.data.flags.midiProperties?.concentration
+    || this.data.data.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
   const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
   if (needsConcentration && checkConcentration) {
     const concentrationEffect = getConcentrationEffect(this.actor);
@@ -561,7 +564,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       });
       if (!shouldAllowRoll) return; // user aborted spell
     }
-  } 
+  }
 
   if (!shouldAllowRoll) {
     return null;
@@ -589,7 +592,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   workflow.noAutoDamage = showFullCard;
   workflow.noAutoAttack = showFullCard;
   const consume = this.data.data.consume;
-  if ( consume?.type === "ammo" ) {
+  if (consume?.type === "ammo") {
     workflow.ammo = this.actor.items.get(consume.target);
   }
   if (installedModules.get("levelsvolumetrictemplates")) {
@@ -597,19 +600,19 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     // installedModules.get("levels").nextTemplateHeight = workflow.templateElevation ?? 0;
     installedModules.get("levels").templateElevation = true;
   }
-  
+
   let itemUsesReaction = false;
   const hasReaction = await hasUsedReaction(this.actor);
   if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type)) {
     itemUsesReaction = true;
   }
   let inCombat = isInCombat(workflow.actor);
-  
+
   const checkReactionAOO = configSettings.recordAOO === "all" || (configSettings.recordAOO === this.actor.type)
 
   // inCombat used by reactions, bonus actions and AOO checking - only evaluate it once since it's expensiveish
-  if (checkReactionAOO || needsReactionCheck(this.actor) || configSettings.enforceBonusActions !== "none" 
-        || configSettings.enforceReactions !== "none") {
+  if (checkReactionAOO || needsReactionCheck(this.actor) || configSettings.enforceBonusActions !== "none"
+    || configSettings.enforceReactions !== "none") {
     inCombat = isInCombat(workflow.actor);
   }
   if (checkReactionAOO && !itemUsesReaction && this.hasAttack) {
@@ -624,10 +627,10 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     let shouldRoll = false;
     let d = await Dialog.confirm({
       title: i18n("midi-qol.EnforceReactions.Title"),
-      content: i18n( "midi-qol.EnforceReactions.Content"),
+      content: i18n("midi-qol.EnforceReactions.Content"),
       yes: () => { shouldRoll = true },
     });
-   if (!shouldRoll) return; // user aborted roll TODO should the workflow be deleted?
+    if (!shouldRoll) return; // user aborted roll TODO should the workflow be deleted?
   }
 
   const hasBonusAction = await hasUsedBonusAction(this.actor);
@@ -640,10 +643,10 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     let shouldRoll = false;
     let d = await Dialog.confirm({
       title: i18n("midi-qol.EnforceBonusActions.Title"),
-      content: i18n( "midi-qol.EnforceBonusActions.Content"),
+      content: i18n("midi-qol.EnforceBonusActions.Content"),
       yes: () => { shouldRoll = true },
     });
-   if (!shouldRoll) return; // user aborted roll TODO should the workflow be deleted?
+    if (!shouldRoll) return; // user aborted roll TODO should the workflow be deleted?
   }
 
   if (await asyncHooksCall("midi-qol.preItemRoll", workflow) === false || await asyncHooksCall(`midi-qol.preItemRoll.${this.uuid}`, workflow) === false) {
@@ -667,7 +670,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
   if (configureDialog) {
     if (this.type === "spell") {
-      if (["both", "spell"].includes(isAutoConsumeResource(workflow)) && !workflow.rollOptions.fastForward) {
+      if (["both", "spell"].includes(isAutoConsumeResource(workflow))) { // && !workflow.rollOptions.fastForward) {
         configureDialog = false;
         // Check that there is a spell slot of the right level
         const spells = this.actor.data.data.spells;
@@ -693,8 +696,8 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return null;
   }
 
-  if (itemUsesBonusAction && !hasBonusAction && configSettings.enforceBonusActions !== "none" && inCombat) await setBonusActionUsed(this.actor); 
-  if (itemUsesReaction && !hasReaction && configSettings.enforceReactions !== "none" && inCombat) await setReactionUsed(this.actor); 
+  if (itemUsesBonusAction && !hasBonusAction && configSettings.enforceBonusActions !== "none" && inCombat) await setBonusActionUsed(this.actor);
+  if (itemUsesReaction && !hasReaction && configSettings.enforceReactions !== "none" && inCombat) await setReactionUsed(this.actor);
 
   if (needsConcentration && checkConcentration) {
     const concentrationEffect = getConcentrationEffect(this.actor);
@@ -947,8 +950,8 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
             //@ts-ignore
             z: token.data.elevation
           }
-          const p2z = installedModules.get("levels")?.lastTokenForTemplate.data.elevation 
-                      ?? installedModules.get("levels")?.nextTemplateHeight ?? 0;
+          const p2z = installedModules.get("levels")?.lastTokenForTemplate.data.elevation
+            ?? installedModules.get("levels")?.nextTemplateHeight ?? 0;
           let p2 = {
             x: tx, y: ty,
             //@ts-ignore
@@ -1000,9 +1003,11 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   if (game.user?.targets.size === 0 && templateDocument?.object) {
     //@ts-ignore
     const mTemplate: MeasuredTemplate = templateDocument.object;
-    if (mTemplate.shape) templateTokens({ x: templateDocument.data.x, y: templateDocument.data.y, shape: mTemplate.shape, distance: mTemplate.data.distance })
+    if (mTemplate.shape)
+      templateTokens({ x: templateDocument.data.x, y: templateDocument.data.y, shape: mTemplate.shape, distance: mTemplate.data.distance })
     else {
       let { shape, distance } = computeTemplateShapeDistance(templateDocument)
+      if (debugEnabled > 0) warn(`selectTargets computed shape ${shape} distance${distance}`)
       templateTokens({ x: templateDocument.data.x, y: templateDocument.data.y, shape, distance });
     }
   }
@@ -1036,6 +1041,20 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
 };
 
+export function activationConditionToUse(workflow: Workflow ) {
+  let conditionToUse: string | undefined = undefined;
+  let conditionFlagToUse: string | undefined = undefined;
+  if (this.data.type === "spell" && configSettings.rollOtherSpellDamage === "activation" ) {
+      return workflow.otherDamageItem?.data.data.activation?.condition
+  } else if (["rwak", "mwak"].includes(this.data.data.actionType) && configSettings.rollOtherDamage === "activation") {
+      return workflow.otherDamageItem?.data.data.activation?.condition;
+  }
+  if (workflow.otherDamageItem?.data.flags?.midiProperties?.rollOther)
+    return workflow.otherDamageItem?.data.data.activation?.condition;
+  return undefined;
+}
+
+// TODO work out this in new setup
 export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: string, conditionFlagSpell: string) {
   let rollOtherDamage = false;
   let conditionToUse: string | undefined = undefined;
@@ -1061,8 +1080,10 @@ export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: s
   }
 
   //@ts-ignore
+  /* other damage is always rolled bu application of the damage is selective
   if (rollOtherDamage && conditionFlagToUse === "activation") {
     rollOtherDamage = evalActivationCondition(workflow, conditionToUse)
   }
+  */
   return rollOtherDamage;
 }

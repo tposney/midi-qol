@@ -39,7 +39,7 @@ export async function timedExecuteAsGM(toDo: string, data: any) {
   const start = Date.now();
   data.playerId = game.user?.id;
   const returnValue = await socketlibSocket.executeAsGM(toDo, data);
-  log(`executeAsGM: ${toDo} elapsed: ${Date.now() - start}`)
+  log(`executeAsGM: ${toDo} elapsed: ${Date.now() - start}ms`)
   return returnValue;
 }
 
@@ -47,7 +47,7 @@ export async function timedAwaitExecuteAsGM(toDo: string, data: any) {
   if (!debugCallTiming) return await socketlibSocket.executeAsGM(toDo, data);
   const start = Date.now();
   const returnValue = await socketlibSocket.executeAsGM(toDo, data);
-  log(`await executeAsGM: ${toDo} elapsed: ${Date.now() - start}`)
+  log(`await executeAsGM: ${toDo} elapsed: ${Date.now() - start}ms`)
   return returnValue;
 }
 
@@ -323,7 +323,7 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
     if (data.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", data.flagTags);
     ChatMessage.create(chatData);
   }
-  log(`createPlayerReverseDamageCard elapsed: ${Date.now() - startTime}`)
+  log(`createPlayerReverseDamageCard elapsed: ${Date.now() - startTime}ms`)
 }
   
   // Fetch the token, then use the tokenData.actor.id
@@ -362,7 +362,7 @@ async function createGMReverseDamageCard (data: { damageList: any; autoApplyDama
     if (data.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", data.flagTags);
     ChatMessage.create(chatData);
   }
-  log(`createGMReverseDamageCard elapsed: ${Date.now() - startTime}`)
+  log(`createGMReverseDamageCard elapsed: ${Date.now() - startTime}ms`)
 }
 
 async function doClick(event: { stopPropagation: () => void; }, actorUuid: any, totalDamage: any, mult: any) {

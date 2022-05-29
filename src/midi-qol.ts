@@ -103,6 +103,10 @@ export let cleanSpellName = (name: string): string => {
 /* ------------------------------------ */
 /* Initialize module					*/
 /* ------------------------------------ */
+Hooks.once("levelsReady", function () {
+  //@ts-ignore
+  installedModules.set("levels", _levels)
+});
 
 Hooks.once('init', async function () {
   console.log('midi-qol | Initializing midi-qol');
@@ -236,8 +240,7 @@ Hooks.once('ready', function () {
   }
   OnUseMacroOptions.setOptions(MQOnUseOptions);
   MidiSounds.midiSoundsReadyHooks();
-  //@ts-ignore
-  if (installedModules.get("levels") && typeof _levels !== "undefined") installedModules.set("levels", _levels);
+
 
   setupMidiQOLApi();
 
@@ -264,10 +267,10 @@ Hooks.once('ready', function () {
   if (midiSoundSettingsBackup) game.settings.set("midi-qol", "MidiSoundSettings-backup", midiSoundSettingsBackup)
 
   // Make midi-qol targets hoverable
-  $(document).on("mouseover", ".midi-qol-target-name", (e)=>{
+  $(document).on("mouseover", ".midi-qol-target-name", (e) => {
     const tokenid = e.currentTarget.id
     const tokenObj = canvas?.tokens?.get(tokenid)
-    if(!tokenObj) return;
+    if (!tokenObj) return;
     //@ts-ignore
     tokenObj._hover = true
   });
@@ -279,7 +282,7 @@ Hooks.once('ready', function () {
 
 
 
-import { setupMidiTests } from './module/tests/setupTest.js';
+import { busyWait, setupMidiTests } from './module/tests/setupTest.js';
 Hooks.once("midi-qol.midiReady", () => {
   setupMidiTests();
 });
@@ -530,6 +533,8 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.optional.NAME.ac`);
   midiFlags.push(`flags.midi-qol.optional.NAME.criticalDamage`);
   midiFlags.push(`flags.midi-qol.optional.Name.onUse`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.macroToCall`);
+
 
   midiFlags.push(`flags.midi-qol.uncanny-dodge`);
   midiFlags.push(`flags.midi-qol.OverTime`);
@@ -560,6 +565,6 @@ function setupMidiFlags() {
       }
       return false;
     };
-    initDAE().then(value => {if (!value) console.error(`midi-qol | initDae settomgs failed`)});
+    initDAE().then(value => { if (!value) console.error(`midi-qol | initDae settomgs failed`) });
   }
 }

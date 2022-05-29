@@ -228,7 +228,7 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
         if (!(magicalDamage || adamantineDamage) && trait.includes("adamant")) trait = trait.concat("bludgeoning", "slashing", "piercing")
       }
       if (!magicalDamage && trait.find(t => t === "nonmagic")) totalMult = totalMult * mult;
-      else if (magicalDamage && trait.find(t => t === "magic")) totalMult = totalMult * mult;
+      else if (magicalDamage && trait.find(t => t === "magic") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (item?.type === "power" && trait.includes("power") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
@@ -242,7 +242,281 @@ export async function applyTokenDamage(damageDetail, totalDamage, theTargets, it
   return applyTokenDamageMany([damageDetail], [totalDamage], theTargets, item, [saves], { existingDamage: options.existingDamage, superSavers: [options.superSavers], semiSuperSavers: [options.semiSuperSavers], workflow: options.workflow });
 }
 
+export interface applyDamageDetails {
+  label: string;
+  damageDetail: any[];
+  damageTotal: number;
+  saves?: Set<Token | TokenDocument>;
+  superSavers?: Set<Token | TokenDocument>;
+  semiSuperSavers?: Set<Token | TokenDocument>;
+}
+export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDetails[], theTargets: Set<Token | TokenDocument>, item: any, options: { existingDamage: any[][], workflow: Workflow | undefined } = { existingDamage: [], workflow: undefined }): Promise<any[]> {
+  let damageList: any[] = [];
+  let targetNames: string[] = [];
+  let appliedDamage;
+  let workflow: any = options.workflow ?? {};
+  if (debugEnabled > 0) warn("Apply token damage ", applyDamageDetails, theTargets, item, workflow)
+  if (!theTargets || theTargets.size === 0) {
+    workflow.currentState = WORKFLOWSTATES.ROLLFINISHED;
+    // probably called from refresh - don't do anything
+    return [];
+  }
+  const damageDetailArr = applyDamageDetails.map(a => a.damageDetail);
+  const highestOnlyDR = false;
+  let totalDamage = applyDamageDetails.reduce((a, b) => a + (b.damageTotal ?? 0), 0)
+  let totalAppliedDamage = 0;
+  let appliedTempHP = 0;
+  const itemSaveMultiplier = getSaveMultiplierForItem(item);
+  for (let t of theTargets) {
+    //@ts-ignore
+    const targetToken: Token = t instanceof TokenDocument ? t.object : t;
+    //@ts-ignore
+    const targetTokenDocument: TokenDocument = t instanceof TokenDocument ? t : t.document;
+
+    if (!targetTokenDocument || !targetTokenDocument.actor) continue;
+    let targetActor: any = targetTokenDocument.actor;
+
+    appliedDamage = 0;
+    appliedTempHP = 0;
+    let DRAll = 0;
+    // damage absorption:
+    const flags = getProperty(targetActor.data.flags, "midi-qol.absorption");
+    let absorptions: string[] = [];
+    if (flags) {
+      absorptions = Object.keys(flags)
+    }
+    const firstDamageHealing = applyDamageDetails[0].damageDetail && ["healing", "temphp"].includes(applyDamageDetails[0].damageDetail[0]?.type);
+    const isHealing = ("heal" === workflow?.item?.data.data.actionType) || firstDamageHealing;
+    const noDamageReactions = (item?.hasSave && item.data.flags?.midiProperties?.nodam && workflow.saves?.has(t));
+    const noProvokeReaction = workflow.item && getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction");
+    if (totalDamage > 0 && workflow && !isHealing && !noDamageReactions && !noProvokeReaction && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
+      // log("Calling do reactions with ", t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } })
+      let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } });
+    }
+    const uncannyDodge = getProperty(targetActor, "data.flags.midi-qol.uncanny-dodge") && workflow.item?.hasAttack;
+    if (game.system.id === "sw5e" && targetActor?.type === "starship") {
+      // TODO: maybe expand this to work with characters as well?
+      // Starship damage resistance applies only to attacks
+      if (item && ["mwak", "rwak"].includes(item?.data.data.actionType)) {
+        DRAll = getProperty(t, "actor.data.data.attributes.equip.armor.dr") ?? 0;;
+      }
+    } else if (getProperty(targetActor.data, "flags.midi-qol.DR.all") !== undefined)
+      DRAll = (new Roll((getProperty(targetActor.data, "flags.midi-qol.DR.all") || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+    if (item?.hasAttack && getProperty(targetActor.data, `flags.midi-qol.DR.${item?.data.data.actionType}`)) {
+      DRAll += (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.${item?.data.data.actionType}`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+    }
+    const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["mgc"]);
+    const silverDamage = magicalDamage || (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["sil"]);
+    const adamantineDamage = magicalDamage || (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["ada"]);
+
+    let AR = 0; // Armor reduction for challenge mode armor etc.
+    const ac = targetActor.data.data.attributes.ac;
+    let damageDetail;
+    let damageDetailResolved: any[] = [];
+    for (let i = 0; i < applyDamageDetails.length; i++) {
+      if (workflow.activationFails?.has(targetTokenDocument.uuid) && applyDamageDetails[i].label === "otherDamage") continue; // don't apply ofther damage is activaitonFails includes the token
+      damageDetail = duplicate(applyDamageDetails[i].damageDetail ?? []);
+      let attackRoll = workflow.attackTotal;
+      let saves = applyDamageDetails[i].saves ?? new Set();
+      let superSavers: Set<Token | TokenDocument> = applyDamageDetails[i].superSavers ?? new Set();
+      let semiSuperSavers: Set<Token | TokenDocument> = applyDamageDetails[i].semiSuperSavers ?? new Set();
+      var dmgType;
+
+      // This is overall Damage Reduction
+      let maxDR = 0;
+
+      if (checkRule("challengeModeArmor") && checkRule("challengeModeArmorScale")) {
+        AR = workflow.isCritical ? 0 : ac.AR;
+      } else if (checkRule("challengeModeArmor") && attackRoll) {
+        AR = ac.AR;
+      } else AR = 0;
+      let maxDRIndex = -1;
+
+      for (let [index, damageDetailItem] of damageDetail.entries()) {
+        if (checkRule("challengeModeArmor") && checkRule("challengeModeArmorScale") && attackRoll && workflow.hitTargetsEC.has(t)) {
+          //scale te damage detail for a glancing blow - only for the first damage list? or all?
+          const scale = getProperty(targetActor.data, "flags.midi-qol.challengeModeScale");
+          damageDetailItem.damage *= scale;
+        }
+      }
+      let nonMagicalDRUsed = false;
+      let nonPhysicalDRUsed = false;
+      let nonSilverDRUsed = false;
+      let nonAdamantineDRUsed = false;
+      let physicalDRUsed = false;
+
+      // Calculate the Damage Reductions for each damage type
+      for (let [index, damageDetailItem] of damageDetail.entries()) {
+        let { damage, type } = damageDetailItem;
+        type = type ?? MQdefaultDamageType;
+        if (absorptions.includes(type)) {
+          type = "healing";
+          damageDetailItem.type = "healing"
+        }
+        let DRType = 0;
+        if (type.toLowerCase() !== "temphp") dmgType = type.toLowerCase();
+        // Pick the highest DR applicable to the damage type being inflicted.
+        if (getProperty(targetActor.data, `flags.midi-qol.DR.${type}`)) {
+          DRType = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.${type}`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+        }
+        if (DRType === 0 && !nonMagicalDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
+          const DR = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.non-magical`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          nonMagicalDRUsed = DR > DRType;
+          DRType = Math.max(DRType, DR);
+        }
+        if (DRType === 0 && !nonSilverDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !silverDamage) {
+          const DR = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.non-silver`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          nonSilverDRUsed = DR > DRType;
+          DRType = Math.max(DRType, DR);
+        }
+        if (DRType === 0 && !nonAdamantineDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !adamantineDamage) {
+          const DR = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.non-adamantine`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0
+          nonAdamantineDRUsed = DR > DRType;
+          DRType = Math.max(DRType, DR);
+        }
+        if (DRType === 0 && !physicalDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(targetActor.data, `flags.midi-qol.DR.physical`)) {
+          const DR = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.physical`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          physicalDRUsed = DR > DRType;
+          DRType = Math.max(DRType, DR);
+        }
+        if (DRType === 0 && !nonPhysicalDRUsed && !["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(targetActor.data, `flags.midi-qol.DR.non-physical`)) {
+          const DR = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.non-physical`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          nonPhysicalDRUsed = DR > DRType;
+          DRType = Math.max(DRType, DR);
+        }
+        DRType = Math.min(damage, DRType);
+        // We have the DRType for the current damage type
+        if (DRType >= maxDR) {
+          maxDR = DRType;
+          maxDRIndex = index;
+        }
+        damageDetailItem.DR = DRType;
+      }
+
+      if (DRAll > 0 && DRAll < maxDR && checkRule("maxDRValue")) DRAll = 0;
+      let DRAllRemaining = Math.max(DRAll, 0);
+      // Now apportion DRAll to each damage type if required
+      for (let [index, damageDetailItem] of damageDetail.entries()) {
+        let { damage, type, DR } = damageDetailItem;
+        if (checkRule("maxDRValue")) {
+          if (index !== maxDRIndex) {
+            damageDetailItem.DR = 0;
+            DR = 0;
+          } else if (DRAll > maxDR) {
+            damageDetailItem.DR = 0;
+            DR = 0;
+          }
+        }
+        if (DR < damage && DRAllRemaining > 0) {
+          damageDetailItem.DR = Math.min(damage, DR + DRAllRemaining);
+          DRAllRemaining = Math.max(0, DRAllRemaining + DR - damage);
+        }
+        // Apply AR here
+      }
+
+      for (let [index, damageDetailItem] of damageDetail.entries()) {
+        let { damage, type, DR } = damageDetailItem;
+        let mult = saves.has(t) ? itemSaveMultiplier : 1;
+        if (superSavers.has(t) && itemSaveMultiplier === 0.5) {
+          mult = saves.has(t) ? 0 : 0.5;
+        }
+        if (semiSuperSavers.has(t) && itemSaveMultiplier === 0.5)
+          mult = saves.has(t) ? 0 : 1;
+
+        // TODO this should end up getting removed when the prepare data is done. Currently depends on 1Reaction expiry.
+        if (uncannyDodge) mult = mult / 2;
+
+        if (!type) type = MQdefaultDamageType;
+        const resMult = getTraitMult(targetActor, type, item);
+        mult = mult * resMult;
+        damageDetailItem.damageMultiplier = mult;
+        if (!["healing", "temphp"].includes(type)) damage -= DR; // Damage reduction does not apply to healing
+        let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
+
+        if (type.includes("temphp")) {
+          appliedTempHP += typeDamage
+        } else {
+          appliedDamage += typeDamage
+        }
+
+        // TODO: consider mwak damage reduction - we have the workflow so should be possible
+      }
+      damageDetailResolved = damageDetailResolved.concat(damageDetail);
+      if (debugEnabled > 0) console.warn("midi-qol | Damage Details plus resistance/save multiplier for ", targetActor.data.name, duplicate(damageDetail))
+    }
+    if (DRAll < 0) { // negative DR is extra damage
+      damageDetailResolved = damageDetailResolved.concat({ damage: -DRAll, type: "DR", DR: 0 });
+      appliedDamage -= DRAll;
+      totalDamage -= DRAll;
+    }
+    //@ts-ignore CONFIG.DND5E
+    if (!Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType)) {
+      totalDamage = Math.max(totalDamage, 0);
+      appliedDamage = Math.max(appliedDamage, 0);
+    }
+    //@ts-ignore
+    if (AR > 0 && appliedDamage > 0 && !Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType) && checkRule("challengeModeArmor")) {
+      totalDamage = appliedDamage;
+      if (checkRule("challengeModeArmorScale") || workflow.hitTargetsEC.has(t))
+        appliedDamage = Math.max(0, appliedDamage - AR)
+    }
+
+    totalAppliedDamage += appliedDamage;
+    if (!dmgType) dmgType = "temphp";
+    if (!["healing", "temphp"].includes(dmgType) && getProperty(targetActor.data, `flags.midi-qol.DR.final`)) {
+      let DRType = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.final`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+      appliedDamage = Math.max(0, appliedDamage - DRType)
+    }
+
+    // Deal with vehicle damage threshold.
+    if (appliedDamage > 0 && appliedDamage < (targetActor.data.data.attributes.hp.dt ?? 0)) appliedDamage = 0;
+    let ditem: any = calculateDamage(targetActor, appliedDamage, targetToken, totalDamage, dmgType, options.existingDamage);
+    ditem.tempDamage = ditem.tempDamage + appliedTempHP;
+    if (appliedTempHP <= 0) { // tmphealing applied to actor does not add only gets the max
+      ditem.newTempHP = Math.max(ditem.newTempHP, -appliedTempHP);
+    } else {
+      ditem.newTempHP = Math.max(0, ditem.newTempHP - appliedTempHP)
+    }
+    ditem.damageDetail = duplicate(damageDetailArr);
+    const damageData = duplicate(ditem);
+    damageData.damageDetail = damageDetailResolved;
+    await asyncHooksCallAll("midi-qol.damageApplied", t, { item, workflow, damageData });
+    damageList.push(ditem);
+    targetNames.push(t.name)
+  }
+  if (theTargets.size > 0) {
+    await timedAwaitExecuteAsGM("createReverseDamageCard", {
+      autoApplyDamage: configSettings.autoApplyDamage,
+      sender: game.user?.name,
+      actorId: workflow.actor?.id,
+      charName: workflow.actor?.name ?? game?.user?.name,
+      damageList: damageList,
+      targetNames,
+      chatCardId: workflow.itemCardId,
+      flagTags: workflow?.flagTags
+    })
+  }
+  if (configSettings.keepRollStats) {
+    gameStats.addDamage(totalAppliedDamage, totalDamage, theTargets.size, item)
+  }
+  return damageList;
+};
+
 export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[], semiSuperSavers: Set<any>[], workflow: Workflow | undefined } = { existingDamage: [], superSavers: [], semiSuperSavers: [], workflow: undefined }): Promise<any[]> {
+  const mappedDamageDetailArray: applyDamageDetails[] = damageDetailArr.map((dd, i) => {
+    return {
+      label: "test",
+      damageDetail: dd,
+      damageTotal: totalDamageArr[i],
+      saves: savesArr[i],
+      superSavers: options.superSavers[i],
+      semiSuperSavers: options.semiSuperSavers[i]
+    }
+  })
+  return newApplyTokenDamageMany(mappedDamageDetailArray, theTargets, item, options)
+}
+
+export async function oldapplyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[], semiSuperSavers: Set<any>[], workflow: Workflow | undefined } = { existingDamage: [], superSavers: [], semiSuperSavers: [], workflow: undefined }): Promise<any[]> {
   let damageList: any[] = [];
   let targetNames: string[] = [];
   let appliedDamage;
@@ -528,7 +802,24 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   // if (["rwak", "mwak"].includes(item?.data.data.actionType) && configSettings.rollOtherDamage !== "none") {
   if (workflow.shouldRollOtherDamage) {
     if ((workflow.otherDamageFormula ?? "") !== "" && configSettings.singleConcentrationRoll) {
-      appliedDamage = await applyTokenDamageMany(
+      appliedDamage = await newApplyTokenDamageMany(
+        [
+          { label: "defaultDamage", damageDetail: workflow.damageDetail, damageTotal: workflow.damageTotal },
+          {
+            label: "otherDamage",
+            damageDetail: workflow.otherDamageDetail,
+            damageTotal: workflow.otherDamageTotal,
+            saves: workflow.saves,
+            superSavers: workflow.superSavers,
+            semiSuperSavers: workflow.semiSuperSavers
+          },
+          { label: "bonusDamage", damageDetail: workflow.bonusDamageDetail, damageTotal: workflow.bonusDamageTotal }
+        ],
+        theTargets,
+        item,
+        { existingDamage: [], workflow }
+      );
+      /* appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.otherDamageDetail ?? [], workflow.bonusDamageDetail ?? []],
         [workflow.damageTotal, workflow.otherDamageTotal ?? 0, workflow.bonusDamageTotal ?? 0],
         theTargets,
@@ -539,10 +830,19 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           superSavers: [new Set(), workflow.superSavers, new Set()],
           semiSuperSavers: [new Set(), workflow.semiSuperSavers, new Set()],
           workflow
-        });
+        });*/
     } else {
-      let savesToUse = (workflow.otherDamageFormula ?? "") !== "" ? new Set() : workflow.saves;
-      appliedDamage = await applyTokenDamageMany(
+      let savesToUse = (workflow.otherDamageFormula ?? "") !== "" ? undefined : workflow.saves;
+      appliedDamage = await newApplyTokenDamageMany(
+        [
+          { label: "defaultDamage", damageDetail: workflow.damageDetail, damageTotal: workflow.damageTotal, saves: savesToUse },
+          { label: "bonusDamage", damageDetail: workflow.bonusDamageDetail, damageTotal: workflow.bonusDamageTotal, saves: savesToUse }
+        ],
+        theTargets,
+        item,
+        { existingDamage: [], workflow }
+      );
+      /* appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
         [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
         theTargets,
@@ -553,10 +853,24 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           superSavers: [workflow.superSavers, workflow.superSavers],
           semiSuperSavers: [workflow.semiSuperSavers, workflow.semiSuperSavers],
           workflow
-        });
+        }); */
 
       if (workflow.otherDamageRoll) {
+        appliedDamage = await newApplyTokenDamageMany(
+          [{
+            label: "otherDamage",
+            damageDetail: workflow.otherDamageDetail,
+            damageTotal: workflow.otherDamageTotal,
+            saves: workflow.saves,
+            superSavers: workflow.superSavers,
+            semiSuperSavers: workflow.semiSuperSavers
+          }],
+          theTargets,
+          item,
+          { existingDamage: [], workflow }
+        );
         // assume pervious damage applied and then calc extra damage
+        /*
         appliedDamage = await applyTokenDamage(
           workflow.otherDamageDetail,
           workflow.otherDamageTotal,
@@ -565,9 +879,37 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           workflow.saves,
           { existingDamage: appliedDamage, superSavers: workflow.superSavers, semiSuperSavers: workflow.semiSuperSavers, workflow }
         );
+        */
       }
     }
   } else {
+    appliedDamage = await newApplyTokenDamageMany(
+      [
+        {
+          label: "defaultDamage",
+          damageDetail: workflow.damageDetail,
+          damageTotal: workflow.damageTotal,
+          saves: workflow.saves,
+          superSavers: workflow.superSavers,
+          semiSuperSavers: workflow.semiSuperSavers
+        },
+
+        {
+          label: "bonusDamage",
+          damageDetail: workflow.bonusDamageDetail,
+          damageTotal: workflow.bonusDamageTotal,
+          saves: workflow.saves,
+          superSavers: workflow.superSavers,
+          semiSuperSavers: workflow.semiSuperSavers
+        },
+      ],
+      theTargets,
+      item,
+      {
+        existingDamage: [],
+        workflow
+      });
+    /*
     appliedDamage = await applyTokenDamageMany(
       [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
       [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
@@ -580,6 +922,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         semiSuperSavers: [workflow.semiSuperSavers, workflow.semiSuperSavers],
         workflow
       });
+      */
   }
   workflow.damageList = appliedDamage;
 
@@ -712,7 +1055,7 @@ export function requestPCActiveDefence(player, actor, advantage, saveItemNname, 
 }
 
 export function midiCustomEffect(actor, change) {
-if (typeof change?.key !== "string") return true;
+  if (typeof change?.key !== "string") return true;
   if (!change.key?.startsWith("flags.midi-qol")) return true;
   const variableKeys = ["flags.midi-qol.OverTime", "flags.midi-qol.optional"]; // These have trailing data in the change key change.key values and should always just be a string
   if (change.key === "flags.midi-qol.onUseMacroName") {
@@ -726,7 +1069,7 @@ if (typeof change?.key !== "string") return true;
       macroString = [currentFlag, extraFlag].join(",");
     setProperty(actor.data, "flags.midi-qol.onUseMacroName", macroString)
     return true;
-  } else if (variableKeys.some(k => change.key.startsWith(k))) { 
+  } else if (variableKeys.some(k => change.key.startsWith(k))) {
     setProperty(actor.data, change.key, change.value);
   } else if (typeof change.value === "string") {
     let val: any;
@@ -741,7 +1084,7 @@ if (typeof change?.key !== "string") return true;
       }
       setProperty(actor.data, change.key, val);
     } catch (err) {
-      console.warn(`midi-qol custom flag eval error ${change.key} ${change.value}`, err)
+      console.warn(`midi-qol | custom flag eval error ${change.key} ${change.value}`, err)
     }
   } else {
     setProperty(actor.data, change.key, change.value)
@@ -1890,12 +2233,15 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
         case "reroll-min": newRoll = await this[rollId].reroll({ async: true, minimize: true }); break;
         case "success": newRoll = await new Roll("99").evaluate({ async: true }); break;
         default:
-          if (flagSelector.startsWith("damage.") && getProperty(this.actor.data, `${button.key}.criticalDamage`)) {
+          if (button.value.startsWith("replace ")) {
+            const rollParts = button.value.split(" ");
+            newRoll = new Roll(rollParts.slice(1).join(" "), (this.item ?? this.actor).getRollData());
+          } else if (flagSelector.startsWith("damage.") && getProperty(this.actor.data, `${button.key}.criticalDamage`)) {
             const rollOptions = { critical: (this.isCritical || this.rollOptions.critical) };
             //@ts-ignore DamageRoll
             newRoll = new CONFIG.Dice.DamageRoll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData(), rollOptions);
           } else {
-            newRoll = new Roll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData());
+            newRoll = new Roll(`${this[rollId].result} + ${button.value}`, (this.item ?? this.actor).getRollData());
           }
           newRoll = await newRoll.evaluate({ async: true });
           break;
@@ -1926,6 +2272,12 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       this[rollId] = newRoll;
       this[rollTotalId] = newRoll.total;
       this[rollHTMLId] = await midiRenderRoll(newRoll);
+      const macroToCall = getProperty(this.actor, `data.${bonusFlags}.macroToCall`);
+      if (macroToCall) {
+        const macroData = this.getMacroData();
+        this.callMacro(this.item, macroToCall, macroData)
+      }
+
       dialog.data.rollHTML = this[rollHTMLId];
       await removeEffectGranting(this.actor, button.key);
       bonusFlags = bonusFlags.filter(bf => bf !== button.key)
@@ -2466,15 +2818,17 @@ function mySafeEval(expression: string, sandbox: any) {
 };
 
 // Same as 
-export function evalActivationCondition(workflow: Workflow, condition: string | undefined): boolean {
+export function evalActivationCondition(workflow: Workflow, condition: string | undefined, target: Token | TokenDocument): boolean {
   if (condition === undefined || condition === "") return true;
   let returnValue;
   const rollData = workflow.otherDamageItem?.getRollData();
-  rollData.target = workflow.hitTargets.values().next()?.value;
+  rollData.target = target; //workflow.hitTargets.values().next()?.value;
   rollData.workflow = workflow;
   if (rollData.target) {
     rollData.target = rollData.target.actor.getRollData();
-    if (rollData.target.details.race ?? "" !== "") rollData.raceOrType = rollData.target.details.race.toLocaleLowerCase();
+    if (rollData.target.details.type?.value) rollData.raceOrType = rollData.target.details.type?.value.toLocaleLowerCase() ?? "";
+
+    // if (rollData.target.details.race ?? "" !== "") rollData.raceOrType = rollData.target.details.race.toLocaleLowerCase();
     else rollData.raceOrType = rollData.target.details.type?.value.toLocaleLowerCase() ?? "";
   }
   let expression = condition ?? "";
@@ -2550,7 +2904,7 @@ export function computeTemplateShapeDistance(templateDocument: MeasuredTemplateD
       //@ts-ignore
       shape = templateDocument._object._getRayShape(direction, distance, width);
   }
-  return { shape, distance };
+  return { shape, distance: templateDocument.data.distance };
 }
 
 var _enableNotifications = true;

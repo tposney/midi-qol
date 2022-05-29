@@ -1,5 +1,23 @@
+### 0.9.56
+* **Breaking** Changes to activaition conditions and application of other damage and applying active effects. Rather than checking the first target for application of other damage/effects each target is processed separately.
+  - Other damage (if enabled) is ALWAYS rolled, but only applied to targets who match the activation condition.
+  -  So a dragon slayer (assuming multiple targets) will always roll the "other" damage, but only apply it to targets that are 'dragons'. Similarly Mace of Disruption will only apply the Frightened condition to undead/fiend targets.
+* Possibly **breaking**. Midi-qol no longer depends on advanced macros (or core macros) for item macro execution.
+* Fix for dr/di/dv.traits.all resisting healing damage.
+* Fix for extra item card being shown in various cases when using attack/damage buttons in the chat log.
+* Added replace <roll expression> to optonal bonus settings. This will replace the existing roll with <roll expression> which is just a normal roll expression, e.g.
+   ```
+   flags.midi-qol.optional.NAME.attack.all OVERRIDE replace 11 + @mod + @prof
+   ```
+  will replace the existing roll with 11 + @mod + @prof, which is the average for a 1d20 roll.
+* Added flags.midi-qol.optional.Name.macroToCall OVERRIDE <macroname> | ItemMacro | ItemMacro.<itemName>, which will be called when an optional bonus roll is clicked. ItemMacro will refer to the item that created the bonus roll.
+* Fix? for undefined roll.options throwing an error.
+* Fix for possible failed initialisation when levels installed.
+* Fix for edge case of using levels volumetric templates, token magic template effects and the template NOT selecting any targets, incorrectly selecting many targets.
+* Fixed pt-BR.json.
+
 ### 0.9.55
-* Fix for inadvertant breaking of overTime effects.
+* Fix for inadvertent breaking of overTime effects.
 
 ###  0.9.54
 * Fix for localisation problems with armour/weapon proficiencies.
