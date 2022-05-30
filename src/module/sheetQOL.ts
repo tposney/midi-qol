@@ -17,7 +17,7 @@ const knownSheets = {
   ActorSheet5eNPC: ".item .item-image",
   DNDBeyondCharacterSheet5e: ".item .item-name .item-image",
   // Tidy5eSheet: ".item .item-image",
-  Tidy5eNPC: ".item .item-image",
+  // Tidy5eNPC: ".item .item-image",
   MonsterBlock5e: ".item .item-name",
   "sw5e.ActorSheet5eNPC": ".item .item-name"
   //  Sky5eSheet: ".item .item-image",
@@ -52,9 +52,9 @@ let enableSheetQOL = (app, html, data) => {
       addItemSheetButtons(app, html, data);
     }
   }
-  if (configSettings.allowUseMacro) {
+  if (configSettings.allowActorUseMacro) {
   // Add actor macros
-    html.find(".traits").prepend(`<div class="form-group">
+    html.find('.config-button[data-action="flags"').parent().parent().append(`<div class="form-fields">
       <label>${i18n("midi-qol.ActorOnUseMacros")}</label>
       <a class="config-button midiqol-onuse-macros" data-action="midi-onuse-macros" title="midi onuse macros">
         <i class="fas fa-cog"></i>

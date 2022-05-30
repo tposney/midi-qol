@@ -1,3 +1,117 @@
+### 0.9.56
+* **Breaking** Changes to activaition conditions and application of other damage and applying active effects. Rather than checking the first target for application of other damage/effects each target is processed separately.
+  - Other damage (if enabled) is ALWAYS rolled, but only applied to targets who match the activation condition.
+  -  So a dragon slayer (assuming multiple targets) will always roll the "other" damage, but only apply it to targets that are 'dragons'. Similarly Mace of Disruption will only apply the Frightened condition to undead/fiend targets.
+* Possibly **breaking**. Midi-qol no longer depends on advanced macros (or core macros) for item macro execution.
+* Fix for dr/di/dv.traits.all resisting healing damage.
+* Fix for extra item card being shown in various cases when using attack/damage buttons in the chat log.
+* Added replace <roll expression> to optonal bonus settings. This will replace the existing roll with <roll expression> which is just a normal roll expression, e.g.
+   ```
+   flags.midi-qol.optional.NAME.attack.all OVERRIDE replace 11 + @mod + @prof
+   ```
+  will replace the existing roll with 11 + @mod + @prof, which is the average for a 1d20 roll.
+* Added flags.midi-qol.optional.Name.macroToCall OVERRIDE <macroname> | ItemMacro | ItemMacro.<itemName>, which will be called when an optional bonus roll is clicked. ItemMacro will refer to the item that created the bonus roll.
+* Fix? for undefined roll.options throwing an error.
+* Fix for possible failed initialisation when levels installed.
+* Fix for edge case of using levels volumetric templates, token magic template effects and the template NOT selecting any targets, incorrectly selecting many targets.
+* Fixed pt-BR.json.
+
+### 0.9.55
+* Fix for inadvertent breaking of overTime effects.
+
+###  0.9.54
+* Fix for localisation problems with armour/weapon proficiencies.
+* Fix for ammo usage for items that don't roll an attack.
+* Fix for damage configuration dialog to pass all arguments to wrapped function.
+* Preferred mode for setting flags.midi-qol.xxxx (if the flag is meant to be a boolean field) is now CUSTOM, which will correctly set values to the correct type. Setting a midi-flag to 0/1/true/false via other modes will always result in the flag being treated as true. For non-boolean fields you can leave the mode as override.
+* Enhancement to optional rolls count. "turn" remains unchanged - meaning once per round which is confusing. Added two new options "each-turn", which means the roll can be made each combat tracker turn, and "each-round", which means the bonus can be rolled once per round (the same as the current "turn").
+* If DSN enabled, using Monks token bar for saves, auto checking concentration enabled and the check was forced by an item with a saving throw, the concentration check would always fail - fixed.
+* For macro writers, added MidiQOL.action queue, a foundry semaphore based single thread for actions to be done, useful if you are queuing actor/token updates and want to ensure they are executed strictly in order.
+
+
+### 0.9.53
+* DAE 0.10.13 adds support for condition immunity matching the effect label to the condition immunity and disabling the effect.
+* Added magicVulnerability (the reverse of magicResistance) saves against magic are made at disadvantage.
+* Fixed typo in magicResistance auto complete data (magiResistance -> magicResistance).
+* max/min rolls will now display the roll flavor (type of roll).
+* Fix to initiative advantage flags not working in dnd5e 1.6
+* Updated ja.json thanks @Brother Sharp
+* Display full roll in optional bonus dialog (tooltip expansion now works).
+* Will remove support for ChangeLog module - if you want to see the changelong on updates use Module Management+.
+
+### 0.9.52
+* Added workflowOption.critical that can be passed to item.roll() or MidiQOL.completeItemRoll(item, optons) to force the damage roll for the item to be a critical roll. The complete critical damage process is applied to the roll.
+* Updated the Sneak Attack Item to work in dnd5e 1.6
+* Fix for not showing Advantage Reminders' Damage  reminder messages - thanks @kaelad.
+* Fix for some midi sample items being out of date. Especially Sneak Attack/Rakish Audacity.
+* Fix for uncanny dodge to require the attacking item to have an attack.
+* fix for MidiQOL.applyTokenDmage failing with .has undefined error.
+
+**Breaking Change** to flags.midi-qol.min/flags.midi-qol.max. The value field is now **numeric** and the sense of max/min has **swapped** so that the displayed dice roll modifier matches the field name. The feature now allows you to implement various minimum/maximum results for skill/save/check rolls.
+  flags.midi-qol.max and flags.midi-qol.min
+  flags.midi-qol.min/max.ability.all OVERRIDE value
+  flags.midi-qol.min/max.ability.save.all/dex/str/etc OVERRIDE value
+  flags.midi-qol.min/max.ability.check.all/dex/str/etc OVERRIDE value
+  flags.midi-qol.min/max.skill.all/acr/per/prc etc OVERRIDE value
+
+  The flags support modifying saving throws, ability checks and skill rolls. min means that each the d20 roll will be at LEAST value, max mean that the d20 will be at MOST value. The value field must be numeric, you can force lookups by using   ``[[@abilities.dex.value]]`` for example.
+
+  As before flags.midi-qol.ability.check does **NOT** affect skill rolls, you need to specify both changes in an effect.
+
+  To replicate the previous behaviour (almost) of max and min flags use
+    flags.midi-qol.max... -> flags.midi-qol.min... OVERRIDE 20
+    flags.midi-qol.min... -> flags.midi-qol.max... OVERRIDE 1
+
+### 0.9.51
+* Fix for actor onUseMacro editor failing to open on some characters.
+* Added bardic inspiration for dnd5e 1.6 using the new scale fields. (much simpler). You must migrate you actor to the new dnd 1.6 advancement for this to work.
+* Update of bardic inspiration to activate for skill rolls as well (oversight on my part).
+* No damage on save spells will not trigger a reaction damaged if the target saves.
+* When using an item with ammunition, if the ammunition has a saving throw that will be used to determining the saving throw for the effect, as will active effects. So an exploding arrow with a save and damage can be used in a mundane bow with no save and should behave as expected.
+
+### 0.9.50
+* Fix for Items compendium opening with no icons.
+* Split the auto consume config, to allow auto consume spell slots/resources/both/none.
+* Hovering on targets in midi cards now auto selects them, rather than requiring clicking. Thanks @theripper93 
+
+### 0.9.49
+* added midi-qol advantage/disadvantage attribution for attack rolls to the ADV-Reminders module display (attack rolls only).
+* Guard the DAE setup calls to wait for DAE setup to be complete - seems to cause a problem in at least one game.
+* Fix for overTime effects not applying damage.
+* Fix for levels not installed.
+
+### 0.9.48
+* Added MidiQOL.doOverTimeEffect(actor: Actor5e, effect: ActiveEffect, turnStart: boolean), which will perform the overtime processing for the passed effect, turnStart === true, do turn=start changes, false do turn=end changes. The effect does not need to be present on the actor to work, but can be.
+* Fix for rolling tool checks not supporting alt/ctrl/T.
+* Fix for concentration advantage bug - thanks @kampffrosch94.
+* Added support for different sounds to be played for characters/npcs in midi custom sounds.
+* Added support for weapon subtypes in midi custom sounds. Set the weapon "base type" on the item sheet to whatever you want and you can specify weapon sub types in the sound config to be any of the valid base types. 
+* Existing sound config should be automatically migrated and midi makes a backup of your existing settings. You can restore the old settings via (after rollback of the midi version)
+```js 
+game.settings.set("midi-qol", "MidiSoundSettings", game.settings.get("midi-qol", "MidiSoundSettings-backup"));
+```
+* Added flags.midi-qol.optional.NAME.criticalDamage which allows optional bonus damage to do critical damage.
+* Fix for editing actor onUseMacros duplicating active effect created onUsemacros.
+
+### 0.9.47
+* Fix for token hud rolling bug introduced in 0.9.46
+
+### 0.9.46
+* Restore the order or arguments for actor.data.flags.midi-qol.onUseMacro to be macro name, macro pass - thanks @Elwin
+* Fix for typo in template targeting walls block test.
+* Fix for CE active and non player tokens -> 0 hp, not marking dead in combat tracker.
+* Fix for player damage card not obscuring actor name if CUB hid name settings enabled.
+* Change to ``item.roll(options: {workflowOptions: {lateTargeting: true/false}})`` behaviour. The lateTargeting setting (if passed) will override the midi-qol module settings, so you can force enable/disable late targeting for a particular item roll.
+
+### 0.9.45
+* Added exploding dice option for critical hit dice.
+* Fix for levels module not initialising if no canvas is defined throwing an error.
+* Fix for rpg damage numbers and unlinked tokens.
+* Fix for applying concentration even if spell aborted via preItemRoll on use macro call.
+* Added notification if item use blocked by preItem roll macro.
+* Adding actor onUseMacro edtiing as a separate configuration options.
+* Clean up for levelsvolumetrictemplates. If the modules is enabled, midi defers to it for targeting calculations and ignores the midi walls block settings (levelsvolumetictemplates has it's own setting for walls block).
+
 ### 0.9.44
 * Fix for levels (the module) and template placement heights.
 * Add advantage attribution as part of the dice tooltip. Works with formula as tooltip or not. This is very experimental.

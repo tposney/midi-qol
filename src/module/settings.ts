@@ -1,4 +1,5 @@
 import { _mergeUpdate } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/utils/helpers.mjs";
+import { config } from "@league-of-foundry-developers/foundry-vtt-types/src/types/augments/simple-peer";
 import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, debugEnabled, geti18nTranslations } from "../midi-qol.js";
 import { ConfigPanel} from "./apps/ConfigPanel.js"
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
@@ -20,6 +21,8 @@ export var enableWorkflow: boolean;
 export var dragDropTargeting: boolean;
 export var lateTargeting: boolean;
 export var midiSoundSettings: any = {};
+export var midiSoundSettingsBackup: any = undefined;
+
 
 const defaultKeyMapping = {
   "DND5E.Advantage": "altKey", 
@@ -33,6 +36,7 @@ class ConfigSettings {
   addDead: boolean = false;
   addWounded: number = 0;
   allowUseMacro: boolean = false;
+  allowActorUseMacro: boolean = false;
   autoApplyDamage: string = "none";
   playerDamageCard: string = "none";
   autoCEEffects: string = "none";
@@ -45,7 +49,7 @@ class ConfigSettings {
   autoTarget: string = "none";
   checkSaveText: boolean = false;
   concentrationAutomation: boolean = false;
-  consumeResource: boolean = false;
+  consumeResource: string = "none";
   convenientEffectsReaction: string = "Reaction";
   criticalSound: string = "";
   customSoundsPlaylist: string = "none";
@@ -67,7 +71,7 @@ class ConfigSettings {
   gmAutoDamage: string = "none";
   gmAutoFastForwardAttack: boolean = false;
   gmAutoFastForwardDamage: boolean =  false;
-  gmConsumeResource = false;
+  gmConsumeResource: string = "none";
   gmDoReactions: string = "all";
   gmHide3dDice: boolean = false;
   gmLateTargeting: boolean = false;
@@ -81,6 +85,7 @@ class ConfigSettings {
   mergeCard: boolean = false;
   mergeCardCondensed: boolean = false;
   optionalRulesEnabled: boolean = false;
+  paranoidGM : boolean = false;
   playerRollSaves: string = "none";
   playerSaveTimeout: number = 0;
   playerStatsOnly: boolean = false;
@@ -224,6 +229,11 @@ export async function importSettingsFromJSON(json) {
 }
 export let fetchSoundSettings = () => {
   midiSoundSettings = game.settings.get("midi-qol", "MidiSoundSettings") ?? {};
+  if (midiSoundSettings.version === undefined) {
+    midiSoundSettingsBackup = duplicate(midiSoundSettings);
+    midiSoundSettings = {"any": midiSoundSettings};
+    midiSoundSettings.version = "0.9.48";
+  }
 }
 
 export let fetchParams = () => {
@@ -248,8 +258,8 @@ export let fetchParams = () => {
   if (configSettings.promptDamageRoll === undefined) configSettings.promptDamageRoll = false;
   if (configSettings.gmHide3dDice === undefined) configSettings.gmHide3dDice = false;
   if (configSettings.ghostRolls === undefined) configSettings.ghostRolls = false;
-  if (configSettings.gmConsumeResource === undefined) configSettings.gmConsumeResource = false;
-  if (configSettings.consumeResource === undefined) configSettings.consumeResource = false;
+  if (typeof configSettings.gmConsumeResource !== "string") configSettings.gmConsumeResource = "none";
+  if (typeof configSettings.consumeResource !== "string") configSettings.consumeResource = "none";
   if (!configSettings.enableddbGL) configSettings.enableddbGL = false;
   if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
   if (!configSettings.gmLateTargeting) configSettings.gmLateTargeting = false;
@@ -274,6 +284,7 @@ export let fetchParams = () => {
   if (configSettings.rollAlternate === false) configSettings.rollAlternate = "off";
   //@ts-ignore
   if (configSettings.rollAlternate === true) configSettings.rollAlternate = "formula";
+  if (configSettings.allowActorUseMacro === undefined) configSettings.allowActorUseMacro = configSettings.allowUseMacro;
 
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
@@ -287,6 +298,7 @@ export let fetchParams = () => {
 
   if (configSettings.addWounded === undefined) configSettings.addWounded = 0;
   if (configSettings.addDead === undefined) configSettings.addDead = false;
+  if (configSettings.paranoidGM === undefined) configSettings.paranoidGM = false;
   if (typeof configSettings.requiresTargets !== "string") configSettings.requiresTargets = "none";
   configSettings.optionalRules = mergeObject({
       invisAdvantage: true,
@@ -437,6 +449,13 @@ const settings = [
     type: Object,
     default: midiSoundSettings,
     onChange: fetchSoundSettings,
+    config: false
+  },
+  {
+    name: "MidiSoundSettings-backup",
+    scope: "world",
+    type: Object,
+    default: {},
     config: false
   }
 ];

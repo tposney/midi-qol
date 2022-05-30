@@ -4,7 +4,7 @@ import { log } from "../midi-qol.js";
 import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { itemJSONData, overTimeJSONData } from "./Hooks.js";
+import { itemJSONData, midiFlagTypes, overTimeJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
@@ -84,7 +84,7 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
   const validTypes = Object.entries(CONFIG.DND5E.damageTypes).deepFlatten().concat(Object.entries(CONFIG.DND5E.healingTypes).deepFlatten())
 
   evalString = "";
-  let damageType: string | undefined = "";
+  let damageType: string | undefined = defaultType;
   let numberTermFound = false; // We won't evaluate until at least 1 numeric term is found
   while (partPos < rollTerms.length) {
     // Accumulate the text for each of the terms until we have enough to eval
@@ -93,10 +93,10 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
     if (evalTerm instanceof DiceTerm) {
       // this is a dice roll
       evalString += evalTerm.total;
-      damageType = evalTerm.options?.flavor;
+      damageType = evalTerm.options?.flavor || damageType;
       numberTermFound = true;
     } else if (evalTerm instanceof Die) { // special case for better rolls that does not return a proper roll
-      damageType = evalTerm.options?.flavor;
+      damageType = evalTerm.options?.flavor || damageType;
       numberTermFound = true;
       evalString += evalTerm.total;
     } else if (evalTerm instanceof NumericTerm) {
@@ -113,7 +113,7 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
           damageParts[damageType || defaultType] = (damageParts[damageType || defaultType] || 0) + result;
           // reset for the next term - we don't know how many there will be
           evalString = "";
-          damageType = "";
+          damageType = defaultType;
           numberTermFound = false;
           evalString = evalTerm.operator;
         } else { // what to do with parenthetical term or others?
@@ -133,15 +133,14 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
   return damageList;
 }
 
-export function getSelfTarget(actor): Token | undefined {
-  if (actor.token) return actor.token;
+export function getSelfTarget(actor): Token | TokenDocument | undefined {
+  if (actor.token) return actor.token.object; //actor.token is a token document.
   const speaker = ChatMessage.getSpeaker({ actor })
   if (speaker.token) return canvas?.tokens?.get(speaker.token);
-  //@ts-ignore this is a token document not a token ??
   return new CONFIG.Token.documentClass(actor.getTokenData(), { actor });
 }
 
-export function getSelfTargetSet(actor): Set<Token> {
+export function getSelfTargetSet(actor): Set<Token | TokenDocument> {
   const selfTarget = getSelfTarget(actor);
   if (selfTarget) return new Set([selfTarget]);
   return new Set();
@@ -211,7 +210,7 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   if (dmgTypeString !== "") {
     // if not checking all damage counts as magical
     let magicalDamage = item?.data.data.properties?.mgc || item?.data.flags.midiProperties?.magicdam;
-    magicalDamage = magicalDamage || (configSettings.requireMagical === "off" &&  item?.data.data.attackBonus > 0);
+    magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && item?.data.data.attackBonus > 0);
     magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && item?.data.type !== "weapon");
     magicalDamage = magicalDamage || (configSettings.requireMagical === "nonspell" && item?.data.type === "spell");
     const silverDamage = item?.data.data.properties?.sil;
@@ -221,7 +220,7 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
     if (game.system.id === "sw5e" && actor.type === "starship" && actor.data.data.attributes.hp.tenp > 0) {
       traitList = [{ type: "sdi", mult: 0 }, { type: "sdr", mult: 0.5 }, { type: "sdv", mult: 2 }];
     }
-    for (let { type, mult } of traitList ) {
+    for (let { type, mult } of traitList) {
       let trait = actor.data.data.traits[type].value;
       if (configSettings.damageImmunities === "immunityPhysical") {
         if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
@@ -229,7 +228,7 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
         if (!(magicalDamage || adamantineDamage) && trait.includes("adamant")) trait = trait.concat("bludgeoning", "slashing", "piercing")
       }
       if (!magicalDamage && trait.find(t => t === "nonmagic")) totalMult = totalMult * mult;
-      else if (magicalDamage && trait.find(t => t === "magic")) totalMult = totalMult * mult;
+      else if (magicalDamage && trait.find(t => t === "magic") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (item?.type === "power" && trait.includes("power") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
@@ -239,11 +238,285 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
   // Check the custom immunities
 };
 
-export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any>, semiSuperSavers: Set<any>, workflow: Workflow | undefined} = { existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined }): Promise<any[]> {
+export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any>, semiSuperSavers: Set<any>, workflow: Workflow | undefined } = { existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined }): Promise<any[]> {
   return applyTokenDamageMany([damageDetail], [totalDamage], theTargets, item, [saves], { existingDamage: options.existingDamage, superSavers: [options.superSavers], semiSuperSavers: [options.semiSuperSavers], workflow: options.workflow });
 }
 
+export interface applyDamageDetails {
+  label: string;
+  damageDetail: any[];
+  damageTotal: number;
+  saves?: Set<Token | TokenDocument>;
+  superSavers?: Set<Token | TokenDocument>;
+  semiSuperSavers?: Set<Token | TokenDocument>;
+}
+export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDetails[], theTargets: Set<Token | TokenDocument>, item: any, options: { existingDamage: any[][], workflow: Workflow | undefined } = { existingDamage: [], workflow: undefined }): Promise<any[]> {
+  let damageList: any[] = [];
+  let targetNames: string[] = [];
+  let appliedDamage;
+  let workflow: any = options.workflow ?? {};
+  if (debugEnabled > 0) warn("Apply token damage ", applyDamageDetails, theTargets, item, workflow)
+  if (!theTargets || theTargets.size === 0) {
+    workflow.currentState = WORKFLOWSTATES.ROLLFINISHED;
+    // probably called from refresh - don't do anything
+    return [];
+  }
+  const damageDetailArr = applyDamageDetails.map(a => a.damageDetail);
+  const highestOnlyDR = false;
+  let totalDamage = applyDamageDetails.reduce((a, b) => a + (b.damageTotal ?? 0), 0)
+  let totalAppliedDamage = 0;
+  let appliedTempHP = 0;
+  const itemSaveMultiplier = getSaveMultiplierForItem(item);
+  for (let t of theTargets) {
+    //@ts-ignore
+    const targetToken: Token = t instanceof TokenDocument ? t.object : t;
+    //@ts-ignore
+    const targetTokenDocument: TokenDocument = t instanceof TokenDocument ? t : t.document;
+
+    if (!targetTokenDocument || !targetTokenDocument.actor) continue;
+    let targetActor: any = targetTokenDocument.actor;
+
+    appliedDamage = 0;
+    appliedTempHP = 0;
+    let DRAll = 0;
+    // damage absorption:
+    const flags = getProperty(targetActor.data.flags, "midi-qol.absorption");
+    let absorptions: string[] = [];
+    if (flags) {
+      absorptions = Object.keys(flags)
+    }
+    const firstDamageHealing = applyDamageDetails[0].damageDetail && ["healing", "temphp"].includes(applyDamageDetails[0].damageDetail[0]?.type);
+    const isHealing = ("heal" === workflow?.item?.data.data.actionType) || firstDamageHealing;
+    const noDamageReactions = (item?.hasSave && item.data.flags?.midiProperties?.nodam && workflow.saves?.has(t));
+    const noProvokeReaction = workflow.item && getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction");
+    if (totalDamage > 0 && workflow && !isHealing && !noDamageReactions && !noProvokeReaction && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
+      // log("Calling do reactions with ", t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } })
+      let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } });
+    }
+    const uncannyDodge = getProperty(targetActor, "data.flags.midi-qol.uncanny-dodge") && workflow.item?.hasAttack;
+    if (game.system.id === "sw5e" && targetActor?.type === "starship") {
+      // TODO: maybe expand this to work with characters as well?
+      // Starship damage resistance applies only to attacks
+      if (item && ["mwak", "rwak"].includes(item?.data.data.actionType)) {
+        DRAll = getProperty(t, "actor.data.data.attributes.equip.armor.dr") ?? 0;;
+      }
+    } else if (getProperty(targetActor.data, "flags.midi-qol.DR.all") !== undefined)
+      DRAll = (new Roll((getProperty(targetActor.data, "flags.midi-qol.DR.all") || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+    if (item?.hasAttack && getProperty(targetActor.data, `flags.midi-qol.DR.${item?.data.data.actionType}`)) {
+      DRAll += (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.${item?.data.data.actionType}`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+    }
+    const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["mgc"]);
+    const silverDamage = magicalDamage || (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["sil"]);
+    const adamantineDamage = magicalDamage || (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["ada"]);
+
+    let AR = 0; // Armor reduction for challenge mode armor etc.
+    const ac = targetActor.data.data.attributes.ac;
+    let damageDetail;
+    let damageDetailResolved: any[] = [];
+    for (let i = 0; i < applyDamageDetails.length; i++) {
+      if (workflow.activationFails?.has(targetTokenDocument.uuid) && applyDamageDetails[i].label === "otherDamage") continue; // don't apply ofther damage is activaitonFails includes the token
+      damageDetail = duplicate(applyDamageDetails[i].damageDetail ?? []);
+      let attackRoll = workflow.attackTotal;
+      let saves = applyDamageDetails[i].saves ?? new Set();
+      let superSavers: Set<Token | TokenDocument> = applyDamageDetails[i].superSavers ?? new Set();
+      let semiSuperSavers: Set<Token | TokenDocument> = applyDamageDetails[i].semiSuperSavers ?? new Set();
+      var dmgType;
+
+      // This is overall Damage Reduction
+      let maxDR = 0;
+
+      if (checkRule("challengeModeArmor") && checkRule("challengeModeArmorScale")) {
+        AR = workflow.isCritical ? 0 : ac.AR;
+      } else if (checkRule("challengeModeArmor") && attackRoll) {
+        AR = ac.AR;
+      } else AR = 0;
+      let maxDRIndex = -1;
+
+      for (let [index, damageDetailItem] of damageDetail.entries()) {
+        if (checkRule("challengeModeArmor") && checkRule("challengeModeArmorScale") && attackRoll && workflow.hitTargetsEC.has(t)) {
+          //scale te damage detail for a glancing blow - only for the first damage list? or all?
+          const scale = getProperty(targetActor.data, "flags.midi-qol.challengeModeScale");
+          damageDetailItem.damage *= scale;
+        }
+      }
+      let nonMagicalDRUsed = false;
+      let nonPhysicalDRUsed = false;
+      let nonSilverDRUsed = false;
+      let nonAdamantineDRUsed = false;
+      let physicalDRUsed = false;
+
+      // Calculate the Damage Reductions for each damage type
+      for (let [index, damageDetailItem] of damageDetail.entries()) {
+        let { damage, type } = damageDetailItem;
+        type = type ?? MQdefaultDamageType;
+        if (absorptions.includes(type)) {
+          type = "healing";
+          damageDetailItem.type = "healing"
+        }
+        let DRType = 0;
+        if (type.toLowerCase() !== "temphp") dmgType = type.toLowerCase();
+        // Pick the highest DR applicable to the damage type being inflicted.
+        if (getProperty(targetActor.data, `flags.midi-qol.DR.${type}`)) {
+          DRType = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.${type}`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+        }
+        if (DRType === 0 && !nonMagicalDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
+          const DR = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.non-magical`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          nonMagicalDRUsed = DR > DRType;
+          DRType = Math.max(DRType, DR);
+        }
+        if (DRType === 0 && !nonSilverDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !silverDamage) {
+          const DR = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.non-silver`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          nonSilverDRUsed = DR > DRType;
+          DRType = Math.max(DRType, DR);
+        }
+        if (DRType === 0 && !nonAdamantineDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !adamantineDamage) {
+          const DR = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.non-adamantine`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0
+          nonAdamantineDRUsed = DR > DRType;
+          DRType = Math.max(DRType, DR);
+        }
+        if (DRType === 0 && !physicalDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(targetActor.data, `flags.midi-qol.DR.physical`)) {
+          const DR = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.physical`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          physicalDRUsed = DR > DRType;
+          DRType = Math.max(DRType, DR);
+        }
+        if (DRType === 0 && !nonPhysicalDRUsed && !["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(targetActor.data, `flags.midi-qol.DR.non-physical`)) {
+          const DR = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.non-physical`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          nonPhysicalDRUsed = DR > DRType;
+          DRType = Math.max(DRType, DR);
+        }
+        DRType = Math.min(damage, DRType);
+        // We have the DRType for the current damage type
+        if (DRType >= maxDR) {
+          maxDR = DRType;
+          maxDRIndex = index;
+        }
+        damageDetailItem.DR = DRType;
+      }
+
+      if (DRAll > 0 && DRAll < maxDR && checkRule("maxDRValue")) DRAll = 0;
+      let DRAllRemaining = Math.max(DRAll, 0);
+      // Now apportion DRAll to each damage type if required
+      for (let [index, damageDetailItem] of damageDetail.entries()) {
+        let { damage, type, DR } = damageDetailItem;
+        if (checkRule("maxDRValue")) {
+          if (index !== maxDRIndex) {
+            damageDetailItem.DR = 0;
+            DR = 0;
+          } else if (DRAll > maxDR) {
+            damageDetailItem.DR = 0;
+            DR = 0;
+          }
+        }
+        if (DR < damage && DRAllRemaining > 0) {
+          damageDetailItem.DR = Math.min(damage, DR + DRAllRemaining);
+          DRAllRemaining = Math.max(0, DRAllRemaining + DR - damage);
+        }
+        // Apply AR here
+      }
+
+      for (let [index, damageDetailItem] of damageDetail.entries()) {
+        let { damage, type, DR } = damageDetailItem;
+        let mult = saves.has(t) ? itemSaveMultiplier : 1;
+        if (superSavers.has(t) && itemSaveMultiplier === 0.5) {
+          mult = saves.has(t) ? 0 : 0.5;
+        }
+        if (semiSuperSavers.has(t) && itemSaveMultiplier === 0.5)
+          mult = saves.has(t) ? 0 : 1;
+
+        // TODO this should end up getting removed when the prepare data is done. Currently depends on 1Reaction expiry.
+        if (uncannyDodge) mult = mult / 2;
+
+        if (!type) type = MQdefaultDamageType;
+        const resMult = getTraitMult(targetActor, type, item);
+        mult = mult * resMult;
+        damageDetailItem.damageMultiplier = mult;
+        if (!["healing", "temphp"].includes(type)) damage -= DR; // Damage reduction does not apply to healing
+        let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
+
+        if (type.includes("temphp")) {
+          appliedTempHP += typeDamage
+        } else {
+          appliedDamage += typeDamage
+        }
+
+        // TODO: consider mwak damage reduction - we have the workflow so should be possible
+      }
+      damageDetailResolved = damageDetailResolved.concat(damageDetail);
+      if (debugEnabled > 0) console.warn("midi-qol | Damage Details plus resistance/save multiplier for ", targetActor.data.name, duplicate(damageDetail))
+    }
+    if (DRAll < 0) { // negative DR is extra damage
+      damageDetailResolved = damageDetailResolved.concat({ damage: -DRAll, type: "DR", DR: 0 });
+      appliedDamage -= DRAll;
+      totalDamage -= DRAll;
+    }
+    //@ts-ignore CONFIG.DND5E
+    if (!Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType)) {
+      totalDamage = Math.max(totalDamage, 0);
+      appliedDamage = Math.max(appliedDamage, 0);
+    }
+    //@ts-ignore
+    if (AR > 0 && appliedDamage > 0 && !Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType) && checkRule("challengeModeArmor")) {
+      totalDamage = appliedDamage;
+      if (checkRule("challengeModeArmorScale") || workflow.hitTargetsEC.has(t))
+        appliedDamage = Math.max(0, appliedDamage - AR)
+    }
+
+    totalAppliedDamage += appliedDamage;
+    if (!dmgType) dmgType = "temphp";
+    if (!["healing", "temphp"].includes(dmgType) && getProperty(targetActor.data, `flags.midi-qol.DR.final`)) {
+      let DRType = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.final`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+      appliedDamage = Math.max(0, appliedDamage - DRType)
+    }
+
+    // Deal with vehicle damage threshold.
+    if (appliedDamage > 0 && appliedDamage < (targetActor.data.data.attributes.hp.dt ?? 0)) appliedDamage = 0;
+    let ditem: any = calculateDamage(targetActor, appliedDamage, targetToken, totalDamage, dmgType, options.existingDamage);
+    ditem.tempDamage = ditem.tempDamage + appliedTempHP;
+    if (appliedTempHP <= 0) { // tmphealing applied to actor does not add only gets the max
+      ditem.newTempHP = Math.max(ditem.newTempHP, -appliedTempHP);
+    } else {
+      ditem.newTempHP = Math.max(0, ditem.newTempHP - appliedTempHP)
+    }
+    ditem.damageDetail = duplicate(damageDetailArr);
+    const damageData = duplicate(ditem);
+    damageData.damageDetail = damageDetailResolved;
+    await asyncHooksCallAll("midi-qol.damageApplied", t, { item, workflow, damageData });
+    damageList.push(ditem);
+    targetNames.push(t.name)
+  }
+  if (theTargets.size > 0) {
+    await timedAwaitExecuteAsGM("createReverseDamageCard", {
+      autoApplyDamage: configSettings.autoApplyDamage,
+      sender: game.user?.name,
+      actorId: workflow.actor?.id,
+      charName: workflow.actor?.name ?? game?.user?.name,
+      damageList: damageList,
+      targetNames,
+      chatCardId: workflow.itemCardId,
+      flagTags: workflow?.flagTags
+    })
+  }
+  if (configSettings.keepRollStats) {
+    gameStats.addDamage(totalAppliedDamage, totalDamage, theTargets.size, item)
+  }
+  return damageList;
+};
+
 export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[], semiSuperSavers: Set<any>[], workflow: Workflow | undefined } = { existingDamage: [], superSavers: [], semiSuperSavers: [], workflow: undefined }): Promise<any[]> {
+  const mappedDamageDetailArray: applyDamageDetails[] = damageDetailArr.map((dd, i) => {
+    return {
+      label: "test",
+      damageDetail: dd,
+      damageTotal: totalDamageArr[i],
+      saves: savesArr[i],
+      superSavers: options.superSavers[i],
+      semiSuperSavers: options.semiSuperSavers[i]
+    }
+  })
+  return newApplyTokenDamageMany(mappedDamageDetailArray, theTargets, item, options)
+}
+
+export async function oldapplyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[], semiSuperSavers: Set<any>[], workflow: Workflow | undefined } = { existingDamage: [], superSavers: [], semiSuperSavers: [], workflow: undefined }): Promise<any[]> {
   let damageList: any[] = [];
   let targetNames: string[] = [];
   let appliedDamage;
@@ -263,6 +536,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
   for (let t of theTargets) {
     let a = t?.actor;
     if (!a) continue;
+
     appliedDamage = 0;
     appliedTempHP = 0;
     let DRAll = 0;
@@ -274,13 +548,13 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     }
     const firstDamageHealing = damageDetailArr[0] && ["healing", "temphp"].includes(damageDetailArr[0][0]?.type);
     const isHealing = ("heal" === workflow?.item?.data.data.actionType) || firstDamageHealing;
-    //@ts-ignore
-    if (workflow && !isHealing && workflow.item && !getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction")
-      && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
+    const noDamageReactions = (item?.hasSave && item.data.flags?.midiProperties?.nodam && workflow.saves?.has(t));
+    const noProvokeReaction = workflow.item && getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction");
+    if (totalDamage > 0 && workflow && !isHealing && !noDamageReactions && !noProvokeReaction && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
       // log("Calling do reactions with ", t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } })
-      //@ts-ignore
       let result = await doReactions(t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } });
     }
+    const uncannyDodge = getProperty(a, "data.flags.midi-qol.uncanny-dodge") && workflow.item?.hasAttack;
     if (game.system.id === "sw5e" && t.actor.type === "starship") {
       // TODO: maybe expand this to work with characters as well?
       // Starship damage resistance applies only to attacks
@@ -410,11 +684,8 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
           mult = saves.has(t) ? 0 : 1;
 
         // TODO this should end up getting removed when the prepare data is done. Currently depends on 1Reaction expiry.
-        if (getProperty(t.actor, "data.flags.midi-qol.uncanny-dodge") && mult >= 0 
-              //@ts-ignore DND5E
-              && Object.keys(CONFIG.DND5E.damageTypes).includes(type)) {
-          mult = mult / 2;
-        }
+        if (uncannyDodge) mult = mult / 2;
+
         if (!type) type = MQdefaultDamageType;
         const resMult = getTraitMult(a, type, item);
         mult = mult * resMult;
@@ -478,6 +749,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     await timedAwaitExecuteAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
+      actorId: workflow.actor?.id,
       charName: workflow.actor?.name ?? game?.user?.name,
       damageList: damageList,
       targetNames,
@@ -530,7 +802,24 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   // if (["rwak", "mwak"].includes(item?.data.data.actionType) && configSettings.rollOtherDamage !== "none") {
   if (workflow.shouldRollOtherDamage) {
     if ((workflow.otherDamageFormula ?? "") !== "" && configSettings.singleConcentrationRoll) {
-      appliedDamage = await applyTokenDamageMany(
+      appliedDamage = await newApplyTokenDamageMany(
+        [
+          { label: "defaultDamage", damageDetail: workflow.damageDetail, damageTotal: workflow.damageTotal },
+          {
+            label: "otherDamage",
+            damageDetail: workflow.otherDamageDetail,
+            damageTotal: workflow.otherDamageTotal,
+            saves: workflow.saves,
+            superSavers: workflow.superSavers,
+            semiSuperSavers: workflow.semiSuperSavers
+          },
+          { label: "bonusDamage", damageDetail: workflow.bonusDamageDetail, damageTotal: workflow.bonusDamageTotal }
+        ],
+        theTargets,
+        item,
+        { existingDamage: [], workflow }
+      );
+      /* appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.otherDamageDetail ?? [], workflow.bonusDamageDetail ?? []],
         [workflow.damageTotal, workflow.otherDamageTotal ?? 0, workflow.bonusDamageTotal ?? 0],
         theTargets,
@@ -541,10 +830,19 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           superSavers: [new Set(), workflow.superSavers, new Set()],
           semiSuperSavers: [new Set(), workflow.semiSuperSavers, new Set()],
           workflow
-        });
+        });*/
     } else {
-      let savesToUse = (workflow.otherDamageFormula ?? "") !== "" ? new Set() : workflow.saves;
-      appliedDamage = await applyTokenDamageMany(
+      let savesToUse = (workflow.otherDamageFormula ?? "") !== "" ? undefined : workflow.saves;
+      appliedDamage = await newApplyTokenDamageMany(
+        [
+          { label: "defaultDamage", damageDetail: workflow.damageDetail, damageTotal: workflow.damageTotal, saves: savesToUse },
+          { label: "bonusDamage", damageDetail: workflow.bonusDamageDetail, damageTotal: workflow.bonusDamageTotal, saves: savesToUse }
+        ],
+        theTargets,
+        item,
+        { existingDamage: [], workflow }
+      );
+      /* appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
         [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
         theTargets,
@@ -555,10 +853,24 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           superSavers: [workflow.superSavers, workflow.superSavers],
           semiSuperSavers: [workflow.semiSuperSavers, workflow.semiSuperSavers],
           workflow
-        });
+        }); */
 
       if (workflow.otherDamageRoll) {
+        appliedDamage = await newApplyTokenDamageMany(
+          [{
+            label: "otherDamage",
+            damageDetail: workflow.otherDamageDetail,
+            damageTotal: workflow.otherDamageTotal,
+            saves: workflow.saves,
+            superSavers: workflow.superSavers,
+            semiSuperSavers: workflow.semiSuperSavers
+          }],
+          theTargets,
+          item,
+          { existingDamage: [], workflow }
+        );
         // assume pervious damage applied and then calc extra damage
+        /*
         appliedDamage = await applyTokenDamage(
           workflow.otherDamageDetail,
           workflow.otherDamageTotal,
@@ -567,9 +879,37 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           workflow.saves,
           { existingDamage: appliedDamage, superSavers: workflow.superSavers, semiSuperSavers: workflow.semiSuperSavers, workflow }
         );
+        */
       }
     }
   } else {
+    appliedDamage = await newApplyTokenDamageMany(
+      [
+        {
+          label: "defaultDamage",
+          damageDetail: workflow.damageDetail,
+          damageTotal: workflow.damageTotal,
+          saves: workflow.saves,
+          superSavers: workflow.superSavers,
+          semiSuperSavers: workflow.semiSuperSavers
+        },
+
+        {
+          label: "bonusDamage",
+          damageDetail: workflow.bonusDamageDetail,
+          damageTotal: workflow.bonusDamageTotal,
+          saves: workflow.saves,
+          superSavers: workflow.superSavers,
+          semiSuperSavers: workflow.semiSuperSavers
+        },
+      ],
+      theTargets,
+      item,
+      {
+        existingDamage: [],
+        workflow
+      });
+    /*
     appliedDamage = await applyTokenDamageMany(
       [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
       [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
@@ -582,6 +922,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
         semiSuperSavers: [workflow.semiSuperSavers, workflow.semiSuperSavers],
         workflow
       });
+      */
   }
   workflow.damageList = appliedDamage;
 
@@ -716,37 +1057,50 @@ export function requestPCActiveDefence(player, actor, advantage, saveItemNname, 
 export function midiCustomEffect(actor, change) {
   if (typeof change?.key !== "string") return true;
   if (!change.key?.startsWith("flags.midi-qol")) return true;
+  const variableKeys = ["flags.midi-qol.OverTime", "flags.midi-qol.optional"]; // These have trailing data in the change key change.key values and should always just be a string
   if (change.key === "flags.midi-qol.onUseMacroName") {
     const args = change.value.split(",")?.map(arg => arg.trim());
-    if (args.length !== 2) return true;
-    const onUseMacro = OnUseMacro.parsePart([args[0], args[1]]);
-    const macroItems = getProperty(actor.data, "flags.midi-qol.actorOnUseMacroParts")?.items ?? [];
-    macroItems.push(onUseMacro);
-    setProperty(actor.data, "flags.midi-qol.onUseMacroParts.items", macroItems);
-    const macroString = macroItems.map(oum => oum.toString()).join(",");
+    const currentFlag = getProperty(actor.data, "flags.midi-qol.onUseMacroName") ?? "";
+    const extraFlag = `[${args[1]}]${args[0]}`;
+    let macroString;
+    if (currentFlag.length === 0)
+      macroString = extraFlag;
+    else
+      macroString = [currentFlag, extraFlag].join(",");
     setProperty(actor.data, "flags.midi-qol.onUseMacroName", macroString)
     return true;
-  } else {
-    //@ts-ignore
-    const val = Number.isNumeric(change.value) ? parseInt(change.value) : 1;
+  } else if (variableKeys.some(k => change.key.startsWith(k))) {
     setProperty(actor.data, change.key, change.value);
+  } else if (typeof change.value === "string") {
+    let val: any;
+    try {
+      switch (midiFlagTypes[change.key]) {
+        case "string":
+          val = change.value; break;
+        case "number":
+          val = Number.isNumeric(change.value) ? JSON.parse(change.value) : 0; break;
+        default: // boolean by default
+          val = JSON.parse(change.value) ? true : false;
+      }
+      setProperty(actor.data, change.key, val);
+    } catch (err) {
+      console.warn(`midi-qol | custom flag eval error ${change.key} ${change.value}`, err)
+    }
+  } else {
+    setProperty(actor.data, change.key, change.value)
   }
   return true;
 }
 
 export function checkImmunity(candidate, data, options, user) {
+  // Not using this in preference to marking effect unavailable
   const parent: Actor | undefined = candidate.parent;
   if (!parent || !(parent instanceof CONFIG.Actor.documentClass)) return true;
 
   //@ts-ignore .traits
   const ci = parent.data.data.traits?.ci?.value;
-  const statusId = (data.flags?.core?.statusId ?? "no effect").toLocaleLowerCase();
-  const returnvalue = !(ci.length && ci.find(c => statusId.endsWith(c)));
-  if (!returnvalue) {
-    candidate.data.update({ "disabled": true })
-    // TODO find out why returning false for pre create does not work for synthetic tokens?
-    // foundry issue 5930 - stopgap in dae to disable the effect
-  }
+  const statusId = (data.label ?? "no effect").toLocaleLowerCase();
+  const returnvalue = !(ci.length && ci.some(c => c === statusId));
   return returnvalue;
 }
 
@@ -782,230 +1136,235 @@ function replaceAtFields(value, context, options: { blankValue: string | number,
 export async function processOverTime(wrapped, data, options, user) {
   if (data.round === undefined && data.turn === undefined) return wrapped(data, options, user);
   try {
-    let prev = (this.current.round ?? 0) * 100 + (this.current.turn ?? 0);
-    let testTurn = this.current.turn ?? 0;
-    let testRound = this.current.round ?? 0;
-    const last = (data.round ?? this.current.round) * 100 + (data.turn ?? this.current.turn);
+    await expirePerTurnBonusActions(this);
+    await _processOverTime(this, data, options, user)
+  } catch (err) {
+    error("processOverTime", err)
+  } finally {
+    return wrapped(data, options, user);
+  }
+}
 
-    // These changed since overtime moved to _preUpdate function instead of hook
-    // const prev = (combat.previous.round ?? 0) * 100 + (combat.previous.turn ?? 0);
-    // let testTurn = combat.previous.turn ?? 0;
-    // let testRound = combat.previous.round ?? 0;
-    // const last = (combat.current.round ?? 0) * 100 + (combat.current.turn ?? 0);
+export async function doOverTimeEffect(actor, effect, startTurn: boolean = true) {
+  const endTurn = !startTurn;
+  if (effect.data.disabled) return;
+  const auraFlags = effect.data.flags?.ActiveAuras ?? {};
+  if (auraFlags.isAura && auraFlags.ignoreSelf) return;
+  const rollData = actor.getRollData();
+  if (!rollData.flags) rollData.flags = actor.data.flags;
+  rollData.flags.midiqol = rollData.flags["midi-qol"];
+  const changes = effect.data.changes.filter(change => change.key.startsWith("flags.midi-qol.OverTime"));
+  if (changes.length > 0) for (let change of changes) {
+    // flags.midi-qol.OverTime turn=start/end, damageRoll=rollspec, damageType=string, saveDC=number, saveAbility=str/dex/etc, damageBeforeSave=true/[false], label="String"
+    let spec = change.value;
+    spec = replaceAtFields(spec, rollData, { blankValue: 0, maxIterations: 3 });
+    spec = spec.replace(/\s*=\s*/g, "=");
+    spec = spec.replace(/\s*,\s*/g, ",");
+    spec = spec.replace("\n", "");
+    let parts;
+    if (spec.includes("#")) parts = spec.split("#");
+    else parts = spec.split(",");
+    let details: any = {};
+    for (let part of parts) {
+      const p = part.split("=");
+      details[p[0]] = p.slice(1).join("=");
+    }
+    if (details.turn === undefined) details.turn = "start";
+    if (details.applyCondition || details.condition) {
+      let applyCondition = details.applyCondition ?? details.condition; // maintin support for condition
+      let value = replaceAtFields(applyCondition, rollData, { blankValue: 0, maxIterations: 3 });
+      let result;
+      try {
+        result = Roll.safeEval(value);
+      } catch (err) {
+        console.warn("midi-qol | error when evaluating overtime apply condition - assuming true", value, err)
+        result = true;
+      }
+      if (!result) continue;
+    }
 
-    let toTest = prev;
-    let count = 0;
-    while (toTest <= last && count < 200) { // step through each turn from prev to current
-      count += 1; // make sure we don't do an infinite loop
-      const actor = this.turns[testTurn]?.actor;
-      const endTurn = toTest < last;
-      const startTurn = toTest > prev;
+    const changeTurnStart = details.turn === "start" ?? false;
+    const changeTurnEnd = details.turn === "end" ?? false;
+    if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart)) {
+      const label = (details.label ?? "Damage Over Time").replace(/"/g, "");
+      let saveDC;
+      try {
+        const value = replaceAtFields(details.saveDC, rollData, { blankValue: 0, maxIterations: 3 });
+        saveDC = Roll.safeEval(value);
+      } catch (err) { saveDC = -1 }
+      let saveAbility = (details.saveAbility ?? "").toLocaleLowerCase();
+      const saveDamage = details.saveDamage ?? "nodamage";
+      const saveMagic = JSON.parse(details.saveMagic ?? "false"); //parse the saving throw true/false
+      const damageRoll = details.damageRoll;
+      const damageType = details.damageType ?? "piercing";
+      const itemName = details.itemName;
+      const saveRemove = JSON.parse(details.saveRemove ?? "true");
+      const damageBeforeSave = JSON.parse(details.damageBeforeSave ?? "false");
+      const macroToCall = details.macro;
+      const rollType = details.rollType;
+      const killAnim = JSON.parse(details.killAnim ?? "false");
 
-      // Remove reaction used status from each combatant
-      if (actor && toTest !== prev) {
-        if (await hasUsedReaction(actor)) removeReactionUsed(actor);
-        if (await hasUsedBonusAction(actor)) removeBonusActionUsed(actor);
+      if (debugEnabled > 0) warn(`Overtime provided data is `, details);
+      if (debugEnabled > 0) warn(`OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
+
+      let itemData: any = duplicate(overTimeJSONData);
+      if (typeof itemName === "string") {
+        if (itemName.startsWith("Actor.")) {
+          const localName = itemName.replace("Actor.", "")
+          const theItem = actor.items.getName(localName);
+          if (theItem) itemData = theItem.data.toObject();
+        } else {
+          const theItem = game.items?.getName(itemName);
+          if (theItem) itemData = theItem.data.toObject();
+        }
+      }
+      itemData.img = effect.data.icon;
+      itemData.data.save.dc = saveDC;
+      itemData.data.save.ability = saveAbility;
+      itemData.data.save.scaling = "flat";
+      setProperty(itemData, "flags.midi-qol.noProvokeReaction", true);
+      if (saveMagic) {
+        itemData.type = "spell";
+        itemData.data.preparation = { mode: "atwill" }
+      }
+      if (rollType === "check") {
+        itemData.data.actionType = "abil";
+      }
+      if (rollType === "skill") { // skill checks for this is a fiddle - set a midi flag so that the midi save roll will pick it up.
+        itemData.data.actionType = "save";
+        //@ts-ignore
+        let skillId = CONFIG.DND5E.skills[saveAbility];
+        if (!skillId) {
+          // @ts-ignore
+          const hasEntry = Object.values(CONFIG.DND5E.skills).map(id => id.toLowerCase()).includes(saveAbility)
+          if (hasEntry) {
+            //@ts-ignore
+            saveAbility = Object.keys(CONFIG.DND5E.skills).find(id => CONFIG.DND5E.skills[id].toLocaleLowerCase() === saveAbility)
+          }
+        }
+        setProperty(itemData, "flags.midi-qol.overTimeSkillRoll", saveAbility)
       }
 
-      // Remove any per turn optional bonus effects
-      const midiFlags: any = getProperty(actor.data, "flags.midi-qol");
-      if (actor && toTest !== prev && midiFlags) {
-        if (midiFlags.optional) {
-          for (let key of Object.keys(midiFlags.optional)) {
-            if (midiFlags.optional[key].used) {
-              await actor.setFlag("midi-qol", `optional.${key}.used`, false)
-            }
-          }
+      if (damageBeforeSave || saveDamage === "fulldamage") {
+        //@ts-ignore
+        setProperty(itemData.flags, "midiProperties.fulldam", true);
+      } else if (saveDamage === "halfdamage" || !damageRoll) {
+        //@ts-ignore
+        setProperty(itemData.flags, "midiProperties.halfdam", true);
+      } else {
+        //@ts-ignore
+        setProperty(itemData.flags, "midiProperties.nodam", true);
+      }
+      itemData.name = label;
+      //@ts-ignore
+      itemData._id = randomID();
+      // roll the damage and save....
+      const theTargetToken = getSelfTarget(actor);
+      const theTargetId = (theTargetToken instanceof Token) ? theTargetToken?.document.id : theTargetToken?.id;
+      const theTargetUuid = (theTargetToken instanceof Token) ? theTargetToken?.document.uuid : theTargetToken?.uuid;
+      if (game.user?.isGM && theTargetId) game.user.updateTokenTargets([theTargetId]);
+
+      if (damageRoll) {
+        let damageRollString = damageRoll;
+        let stackCount = effect.data.flags.dae?.stacks ?? 1;
+        if (globalThis.EffectCounter && theTargetToken) {
+          const counter = globalThis.EffectCounter.findCounter(theTargetToken, effect.data.icon)
+          if (counter) stackCount = counter.getValue();
+        }
+        for (let i = 1; i < stackCount; i++)
+          damageRollString = `${damageRollString} + ${damageRoll}`;
+        //@ts-ignore
+        itemData.data.damage.parts = [[damageRollString, damageType]];
+      }
+      setProperty(itemData.flags, "midi-qol.forceCEOff", true);
+      if (killAnim) setProperty(itemData.flags, "autoanimations.killAnim", true)
+      if (macroToCall) {
+        setProperty(itemData, "flags.midi-qol.onUseMacroName", macroToCall);
+        setProperty(itemData, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macroToCall));
+      }
+      let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
+      if (saveRemove && saveDC > -1)
+        overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id };
+
+      if (details.removeCondition) {
+        let value = replaceAtFields(details.removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
+        let remove;
+        try {
+          remove = Roll.safeEval(value);
+        } catch (err) {
+          console.warn("midi-qol | error when evaluating overtime remove condition - assuming true", value, err)
+          remove = true;
+        }
+        if (remove) {
+          overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id }
         }
       }
 
-      if (actor) {
-        let rollData = actor.getRollData();
-        if (!rollData.flags) rollData.flags = actor.data.flags;
-        rollData.flags.midiqol = rollData.flags["midi-qol"];
-        for (let effect of actor.effects) {
-          if (effect.data.disabled) continue;
-          const auraFlags = effect.data.flags?.ActiveAuras ?? {};
-          if (auraFlags.isAura && auraFlags.ignoreSelf) continue;
-          const changes = effect.data.changes.filter(change => change.key.startsWith("flags.midi-qol.OverTime"));
-          if (changes.length > 0) for (let change of changes) {
-            // flags.midi-qol.OverTime turn=start/end, damageRoll=rollspec, damageType=string, saveDC=number, saveAbility=str/dex/etc, damageBeforeSave=true/[false], label="String"
-            let spec = change.value;
-            spec = replaceAtFields(spec, rollData, { blankValue: 0, maxIterations: 3 });
-            spec = spec.replace(/\s*=\s*/g, "=");
-            spec = spec.replace(/\s*,\s*/g, ",");
-            spec = spec.replace("\n", "");
-            let parts;
-            if (spec.includes("#")) parts = spec.split("#");
-            else parts = spec.split(",");
-            let details: any = {};
-            for (let part of parts) {
-              const p = part.split("=");
-              details[p[0]] = p.slice(1).join("=");
-            }
-            if (details.turn === undefined) details.turn = "start";
-            if (details.applyCondition || details.condition) {
-              let applyCondition = details.applyCondition ?? details.condition; // maintin support for condition
-              let value = replaceAtFields(applyCondition, rollData, { blankValue: 0, maxIterations: 3 });
-              let result;
-              try {
-                result = Roll.safeEval(value);
-              } catch (err) {
-                console.warn("midi-qol | error when evaluating overtime apply condition - assuming true", value, err)
-                result = true;
-              }
-              if (!result) continue;
-            }
-
-            const changeTurnStart = details.turn === "start" ?? false;
-            const changeTurnEnd = details.turn === "end" ?? false;
-            if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart)) {
-              const label = (details.label ?? "Damage Over Time").replace(/"/g, "");
-              let saveDC;
-              try {
-                const value = replaceAtFields(details.saveDC, rollData, { blankValue: 0, maxIterations: 3 });
-                saveDC = Roll.safeEval(value);
-              } catch (err) { saveDC = -1 }
-              let saveAbility = (details.saveAbility ?? "").toLocaleLowerCase();
-              const saveDamage = details.saveDamage ?? "nodamage";
-              const saveMagic = JSON.parse(details.saveMagic ?? "false"); //parse the saving throw true/false
-              const damageRoll = details.damageRoll;
-              const damageType = details.damageType ?? "piercing";
-              const itemName = details.itemName;
-              const saveRemove = JSON.parse(details.saveRemove ?? "true");
-              const damageBeforeSave = JSON.parse(details.damageBeforeSave ?? "false");
-              const macroToCall = details.macro;
-              const rollType = details.rollType;
-              const killAnim = JSON.parse(details.killAnim ?? "false");
-
-              if (debugEnabled > 0) warn(`Overtime provided data is `, details);
-              if (debugEnabled > 0) warn(`OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
-
-              let itemData: any = duplicate(overTimeJSONData);
-              if (typeof itemName === "string") {
-                if (itemName.startsWith("Actor.")) {
-                  const localName = itemName.replace("Actor.", "")
-                  const theItem = actor.items.getName(localName);
-                  if (theItem) itemData = theItem.data.toObject();
-                } else {
-                  const theItem = game.items?.getName(itemName);
-                  if (theItem) itemData = theItem.data.toObject();
-                }
-              }
-              itemData.img = effect.data.icon;
-              itemData.data.save.dc = saveDC;
-              itemData.data.save.ability = saveAbility;
-              itemData.data.save.scaling = "flat";
-              setProperty(itemData, "flags.midi-qol.noProvokeReaction", true);
-              if (saveMagic) {
-                itemData.type = "spell";
-                itemData.data.preparation = { mode: "atwill" }
-              }
-              if (rollType === "check") {
-                itemData.data.actionType = "abil";
-              }
-              if (rollType === "skill") { // skill checks for this is a fiddle - set a midi flag so that the midi save roll will pick it up.
-                itemData.data.actionType = "save";
-                //@ts-ignore
-                let skillId = CONFIG.DND5E.skills[saveAbility];
-                if (!skillId) {
-                  // @ts-ignore
-                  const hasEntry = Object.values(CONFIG.DND5E.skills).map(id => id.toLowerCase()).includes(saveAbility)
-                  if (hasEntry) {
-                    //@ts-ignore
-                    saveAbility = Object.keys(CONFIG.DND5E.skills).find(id => CONFIG.DND5E.skills[id].toLocaleLowerCase() === saveAbility)
-                  }
-                }
-                setProperty(itemData, "flags.midi-qol.overTimeSkillRoll", saveAbility)
-              }
-
-              if (damageBeforeSave || saveDamage === "fulldamage") {
-                //@ts-ignore
-                setProperty(itemData.flags, "midiProperties.fulldam", true);
-              } else if (saveDamage === "halfdamage" || !damageRoll ) {
-                //@ts-ignore
-                setProperty(itemData.flags, "midiProperties.halfdam", true);
-              } else {
-                //@ts-ignore
-                setProperty(itemData.flags, "midiProperties.nodam", true);
-              }
-              itemData.name = label;
-              //@ts-ignore
-              itemData._id = randomID();
-              // roll the damage and save....
-              const theTargetToken = getSelfTarget(actor);
-              const theTargetId = theTargetToken?.document ? theTargetToken?.document.id : theTargetToken?.id;
-              const theTargetUuid = theTargetToken?.document ? theTargetToken?.document.uuid : theTargetToken?.uuid;
-              if (game.user?.isGM && theTargetId) game.user.updateTokenTargets([theTargetId]);
-
-              if (damageRoll) {
-                let damageRollString = damageRoll;
-                let stackCount = effect.data.flags.dae?.stacks ?? 1;
-                if (globalThis.EffectCounter && theTargetToken) {
-                  const counter = globalThis.EffectCounter.findCounter(theTargetToken, effect.data.icon)
-                  if (counter) stackCount = counter.getValue();
-                }
-                for (let i = 1; i < stackCount; i++)
-                  damageRollString = `${damageRollString} + ${damageRoll}`;
-                //@ts-ignore
-                itemData.data.damage.parts = [[damageRollString, damageType]];
-              }
-              setProperty(itemData.flags, "midi-qol.forceCEOff", true);
-              if (killAnim) setProperty(itemData.flags, "autoanimations.killAnim", true)
-              if (macroToCall) {
-                setProperty(itemData, "flags.midi-qol.onUseMacroName", macroToCall);
-                setProperty(itemData, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macroToCall));
-              }
-              let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
-              if (saveRemove && saveDC > -1)
-                overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id };
-  
-              if (details.removeCondition) {
-                let value = replaceAtFields(details.removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
-                let remove;
-                try {
-                  remove = Roll.safeEval(value);
-                } catch (err) {
-                  console.warn("midi-qol | error when evaluating overtime remove condition - assuming true", value, err)
-                  remove = true;
-                }
-                if (remove) {
-                  overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id }
-                }
-              }
-
-              try {
-                const options = {
-                  showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid],
-                  workflowOptions: { lateTargeting: false, autoRollDamage: "onHit", autoFastDamage: true }
-                };
-                await completeItemRoll(ownedItem, options); // worried about multiple effects in flight so do one at a time
-              } finally {
-              }
-            }
-          }
-        }
+      try {
+        const options = {
+          showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid],
+          workflowOptions: { lateTargeting: false, autoRollDamage: "onHit", autoFastDamage: true }
+        };
+        await completeItemRoll(ownedItem, options); // worried about multiple effects in flight so do one at a time
+      } finally {
       }
-      testTurn += 1;
-      if (testTurn === this.turns.length) {
-        testTurn = 0;
-        testRound += 1;
-        toTest = testRound * 100;
-      } else toTest += 1;
     }
   }
-  catch (err) {
-    error("processOverTime", err)
-  }
-  finally {
-    return wrapped(data, options, user);
+}
+
+export async function _processOverTime(combat, data, options, user) {
+  let prev = (combat.current.round ?? 0) * 100 + (combat.current.turn ?? 0);
+  let testTurn = combat.current.turn ?? 0;
+  let testRound = combat.current.round ?? 0;
+  const last = (data.round ?? combat.current.round) * 100 + (data.turn ?? combat.current.turn);
+
+  // These changed since overtime moved to _preUpdate function instead of hook
+  // const prev = (combat.previous.round ?? 0) * 100 + (combat.previous.turn ?? 0);
+  // let testTurn = combat.previous.turn ?? 0;
+  // let testRound = combat.previous.round ?? 0;
+  // const last = (combat.current.round ?? 0) * 100 + (combat.current.turn ?? 0);
+
+  let toTest = prev;
+  let count = 0;
+  while (toTest <= last && count < 200) { // step through each turn from prev to current
+    count += 1; // make sure we don't do an infinite loop
+    const actor = combat.turns[testTurn]?.actor;
+    const endTurn = toTest < last;
+    const startTurn = toTest > prev;
+
+    // Remove reaction used status from each combatant
+    if (actor && toTest !== prev) {
+      if (await hasUsedReaction(actor)) removeReactionUsed(actor);
+      if (await hasUsedBonusAction(actor)) removeBonusActionUsed(actor);
+    }
+
+    // Remove any per turn optional bonus effects
+    const midiFlags: any = getProperty(actor.data, "flags.midi-qol");
+    if (actor && toTest !== prev && midiFlags) {
+      if (midiFlags.optional) {
+        for (let key of Object.keys(midiFlags.optional)) {
+          if (midiFlags.optional[key].used) {
+            await actor.setFlag("midi-qol", `optional.${key}.used`, false)
+          }
+        }
+      }
+    }
+
+    if (actor) for (let effect of actor.effects) await doOverTimeEffect(actor, effect, startTurn);
+
+    testTurn += 1;
+    if (testTurn === combat.turns.length) {
+      testTurn = 0;
+      testRound += 1;
+      toTest = testRound * 100;
+    } else toTest += 1;
   }
 }
 
 export async function completeItemRoll(item, options: any = { checkGMstatus: false }) {
   let theItem = item;
   if (!(item instanceof CONFIG.Item.documentClass)) {
-    theItem = new CONFIG.Item.documentClass(await item.item.data(), {parent: item.actor})
+    theItem = new CONFIG.Item.documentClass(await item.item.data(), { parent: item.actor })
   }
 
   if (game.user?.isGM || !options.checkGMStatus) {
@@ -1105,35 +1464,35 @@ export function getSurroundingHexes(token: Token) {
   for (let r = 0; r < 11; r++) {
     surrounds[r] = new Array(11);
   }
-  for (let c = -5; c <= 5; c++) 
-    for (let r = -5; r <=5; r++) {
+  for (let c = -5; c <= 5; c++)
+    for (let r = -5; r <= 5; r++) {
       const row = start[0] + r;
       const col = start[1] + c
-      let [x1,y1] = canvas?.grid?.grid?.getPixelsFromGridPosition(row, col) ?? [0,0];
+      let [x1, y1] = canvas?.grid?.grid?.getPixelsFromGridPosition(row, col) ?? [0, 0];
       let [x, y] = canvas?.grid?.getCenter(x1, y1) ?? [0, 0];
       if (!x && !y) continue;
-        const distance = distancePointToken({x, y}, token);
-        surrounds[r+5][c+5] = ({r:row,c:col,d: distance})
-  }
-//  for (let r = -5; r <=5; r++)
-//  console.error("Surrounds are ", ...surrounds[r+5]);
+      const distance = distancePointToken({ x, y }, token);
+      surrounds[r + 5][c + 5] = ({ r: row, c: col, d: distance })
+    }
+  //  for (let r = -5; r <=5; r++)
+  //  console.error("Surrounds are ", ...surrounds[r+5]);
   const filtered = surrounds.map(row => row.filter(ent => {
     const entDist = ent.d / (canvas?.dimensions?.distance ?? 5);
     const tokenWidth = token.data.width / 2;
     // console.error(ent.r, ent.c, ent.d, entDist, tokenWidth)
     if (token.data.width % 2)
-      return entDist >= tokenWidth  && entDist <= tokenWidth + 0.5
-    else return entDist >= tokenWidth  && entDist < tokenWidth + 0.5
+      return entDist >= tokenWidth && entDist <= tokenWidth + 0.5
+    else return entDist >= tokenWidth && entDist < tokenWidth + 0.5
   }));
   const hlt = canvas?.grid?.highlightLayers["mylayer"] || canvas?.grid?.addHighlightLayer("mylayer");
   hlt?.clear();
 
-  for (let a of filtered) if(a.length !== 0) { 
+  for (let a of filtered) if (a.length !== 0) {
     a.forEach(item => {
-      let [x, y] = canvas?.grid?.grid?.getPixelsFromGridPosition(item.r, item.c) ?? [0,0];
+      let [x, y] = canvas?.grid?.grid?.getPixelsFromGridPosition(item.r, item.c) ?? [0, 0];
       // console.error("highlighting ", x, y, item.r, item.c)
       //@ts-ignore
-      canvas?.grid?.highlightPosition("mylayer", {x, y, color: game?.user?.color});
+      canvas?.grid?.highlightPosition("mylayer", { x, y, color: game?.user?.color });
     })
     // console.error(...a);
   }
@@ -1150,17 +1509,17 @@ export function distancePointToken({ x, y, elevation = 0 }, token, wallblocking 
   const t2StartX = -Math.max(0, token.data.width - 1);
   const t2StartY = -Math.max(0, token.data.heidght - 1);
   var d, r, segments: { ray: Ray }[] = [], rdistance, distance;
-  const [row, col] = canvas.grid.grid?.getGridPositionFromPixels(x,y) || [0,0];
-  const [xbase,ybase] = canvas.grid.grid?.getPixelsFromGridPosition(row, col) || [0,0];
-  const [xc,yc] = canvas.grid.grid?.getCenter(xbase, ybase) || [0,0];
+  const [row, col] = canvas.grid.grid?.getGridPositionFromPixels(x, y) || [0, 0];
+  const [xbase, ybase] = canvas.grid.grid?.getPixelsFromGridPosition(row, col) || [0, 0];
+  const [xc, yc] = canvas.grid.grid?.getCenter(xbase, ybase) || [0, 0];
   // const snappedOrigin = canvas?.grid?.getSnappedPosition(x,y)
   const origin = new PIXI.Point(x, y);
   const tokenCenter = token.center;
   const ray: Ray = new Ray(origin, tokenCenter)
-  distance = canvas?.grid?.grid?.measureDistances([{ray}], { gridSpaces: false })[0];
+  distance = canvas?.grid?.grid?.measureDistances([{ ray }], { gridSpaces: false })[0];
   distance = Math.max(0, distance);
   return distance;
-  }
+}
 
 export function getDistanceSimple(t1: Token, t2: Token, includeCover, wallBlocking = false) {
   return getDistance(t1, t2, includeCover, wallBlocking).distance;
@@ -1212,7 +1571,7 @@ export function getDistance(t1: Token, t2: Token, includeCover, wallblocking = f
               z: t2.data.elevation
             }
             //@ts-ignore
-            if (_levels.testCollision(p1, p2, "sight")) continue;
+            if (_levels?.testCollision(p1, p2, "sight")) continue;
           } else if (wallblocking) {
             // TODO use four point rule and work out cover
             switch (configSettings.optionalRules.wallsBlockRange) {
@@ -1296,7 +1655,7 @@ export function checkRange(actor, item, tokenId, targets): string {
 
   let range = itemData.range?.value || 0;
   let longRange = itemData.range?.long || 0;
-  if (getProperty(actor.data, "flags.midi-qol.sharpShooter") && range < longRange) range = longRange ;
+  if (getProperty(actor.data, "flags.midi-qol.sharpShooter") && range < longRange) range = longRange;
   if (itemData.range.units === "touch") {
     range = canvas?.dimensions?.distance ?? 5;
     longRange = 0;
@@ -1337,7 +1696,7 @@ export function isAutoFastDamage(workflow: Workflow | undefined = undefined): bo
   return game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward)
 }
 
-export function isAutoConsumeResource(workflow: Workflow | undefined = undefined): boolean {
+export function isAutoConsumeResource(workflow: Workflow | undefined = undefined): string {
   if (workflow?.workflowOptions.autoConsumeResource !== undefined) return workflow?.workflowOptions.autoConsumeResource;
   return game.user?.isGM ? configSettings.gmConsumeResource : configSettings.consumeResource;
 }
@@ -1383,12 +1742,12 @@ export function getRemoveDamageButtons() {
     ["all", "damage"].includes(configSettings.removeButtons);
 }
 
-export function getReactionSetting(player: User | undefined): string {
+export function getReactionSetting(player: User | null | undefined): string {
   if (!player) return "none";
   return player.isGM ? configSettings.gmDoReactions : configSettings.doReactions;
 }
 
-export function getTokenPlayerName(token: Token) {
+export function getTokenPlayerName(token: TokenDocument) {
   if (!token) return game.user?.name;
   if (!installedModules.get("combat-utility-belt")) return token.name;
   if (!game.settings.get("combat-utility-belt", "enableHideNPCNames")) return token.name;
@@ -1643,7 +2002,7 @@ export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<T
   return new Set(normalTokens.concat(synthTokens));
 }
 
-export function MQfromUuid(uuid) {
+export function MQfromUuid(uuid): any | null {
   if (!uuid || uuid === "") return null;
   let parts = uuid.split(".");
   let doc;
@@ -1663,14 +2022,18 @@ export function MQfromUuid(uuid) {
   return doc || null;
 }
 
-export function MQfromActorUuid(uuid) {
+export function MQfromActorUuid(uuid): any | null {
   let doc = MQfromUuid(uuid);
-  if (doc instanceof CONFIG.Token.documentClass) doc = doc.actor;
-  return doc || null;
+  //@ts-ignore doc.actor: any rather than Actor
+  if (doc instanceof CONFIG.Token.documentClass) return doc.actor;
+  if (doc instanceof CONFIG.Actor.documentClass) return doc;
+  return null;
 }
 
 
 class RollModifyDialog extends Application {
+  rollExpanded: boolean;
+
   data: {
     actor: Actor5e,
     flags: string[],
@@ -1689,8 +2052,11 @@ class RollModifyDialog extends Application {
   }
 
   constructor(data, options) {
+    options.height = "auto";
+    options.resizable = true;
     super(options);
     this.data = data;
+    this.rollExpanded = false;
   }
 
   static get defaultOptions() {
@@ -1718,7 +2084,7 @@ class RollModifyDialog extends Application {
         const labelDetail = Roll.replaceFormulaData(value, this.data.actor.getRollData())
         obj[randomID()] = {
           icon: '<i class="fas fa-dice-d20"></i>',
-//          label: (flagData.label ?? "Bonus") + `  (${getProperty(flagData, this.data.flagSelector) ?? "0"})`,
+          //          label: (flagData.label ?? "Bonus") + `  (${getProperty(flagData, this.data.flagSelector) ?? "0"})`,
           label: (flagData.label ?? "Bonus") + `  (${labelDetail})`,
           value,
           key: flag,
@@ -1730,11 +2096,11 @@ class RollModifyDialog extends Application {
       const allSelector = selector.join(".");
       value = getProperty(flagData, allSelector);
       if (value) {
-        const labelDetail = Roll.replaceFormulaData(value, this.data.actor.getRollData())
+        const labelDetail = Roll.replaceFormulaData(value, this.data.actor.getRollData());
 
         obj[randomID()] = {
           icon: '<i class="fas fa-dice-d20"></i>',
-//          label: (flagData.label ?? "Bonus") + `  (${getProperty(flagData, allSelector) ?? "0"})`,
+          //          label: (flagData.label ?? "Bonus") + `  (${getProperty(flagData, allSelector) ?? "0"})`,
           label: (flagData.label ?? "Bonus") + `  (${labelDetail})`,
           value,
           key: flag,
@@ -1743,9 +2109,11 @@ class RollModifyDialog extends Application {
       }
       return obj;
     }, {})
-    this.data.content = $(await midiRenderRoll(this.data.currentRoll));
+    // this.data.content = await midiRenderRoll(this.data.currentRoll);
+    //@ts-ignore
+    // this.data.content = await this.data.currentRoll.render();
     return {
-      content: this.data.rollHTML,
+      content: await midiRenderRoll(this.data.currentRoll),
       buttons: this.data.buttons
     }
   }
@@ -1753,6 +2121,22 @@ class RollModifyDialog extends Application {
   activateListeners(html) {
     html.find(".dialog-button").click(this._onClickButton.bind(this));
     $(document).on('keydown.chooseDefault', this._onKeyDown.bind(this));
+    html.on("click", ".dice-roll", this._onDiceRollClick.bind(this));
+  }
+
+  _onDiceRollClick(event) {
+    event.preventDefault();
+    // Toggle the message flag
+    let roll = event.currentTarget;
+    this.rollExpanded = !this.rollExpanded
+
+    // Expand or collapse tooltips
+    const tooltips = roll.querySelectorAll(".dice-tooltip");
+    for (let tip of tooltips) {
+      if (this.rollExpanded) $(tip).slideDown(200);
+      else $(tip).slideUp(200);
+      tip.classList.toggle("expanded", this.rollExpanded);
+    }
   }
 
   _onClickButton(event) {
@@ -1807,7 +2191,7 @@ export async function processAttackRollBonusFlags() { // bound to workflow
     .map(flag => `flags.midi-qol.optional.${flag}`);
   if (bonusFlags.length > 0) {
     this.attackRollHTML = await midiRenderRoll(this.attackRoll);
-    await bonusDialog.bind(this)(bonusFlags, attackBonus, false, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, "attackRoll", "attackTotal", "attackRollHTML")
+    await bonusDialog.bind(this)(bonusFlags, attackBonus, true, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, "attackRoll", "attackTotal", "attackRollHTML")
   }
   return this.attackRoll;
 }
@@ -1849,7 +2233,16 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
         case "reroll-min": newRoll = await this[rollId].reroll({ async: true, minimize: true }); break;
         case "success": newRoll = await new Roll("99").evaluate({ async: true }); break;
         default:
-          newRoll = new Roll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData());
+          if (button.value.startsWith("replace ")) {
+            const rollParts = button.value.split(" ");
+            newRoll = new Roll(rollParts.slice(1).join(" "), (this.item ?? this.actor).getRollData());
+          } else if (flagSelector.startsWith("damage.") && getProperty(this.actor.data, `${button.key}.criticalDamage`)) {
+            const rollOptions = { critical: (this.isCritical || this.rollOptions.critical) };
+            //@ts-ignore DamageRoll
+            newRoll = new CONFIG.Dice.DamageRoll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData(), rollOptions);
+          } else {
+            newRoll = new Roll(`${this[rollId].result} + ${button.value}`, (this.item ?? this.actor).getRollData());
+          }
           newRoll = await newRoll.evaluate({ async: true });
           break;
       }
@@ -1879,6 +2272,12 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       this[rollId] = newRoll;
       this[rollTotalId] = newRoll.total;
       this[rollHTMLId] = await midiRenderRoll(newRoll);
+      const macroToCall = getProperty(this.actor, `data.${bonusFlags}.macroToCall`);
+      if (macroToCall) {
+        const macroData = this.getMacroData();
+        this.callMacro(this.item, macroToCall, macroData)
+      }
+
       dialog.data.rollHTML = this[rollHTMLId];
       await removeEffectGranting(this.actor, button.key);
       bonusFlags = bonusFlags.filter(bf => bf !== button.key)
@@ -1921,7 +2320,7 @@ export function getOptionalCountRemaining(actor: Actor5e, flag: string) {
   const countValue = getProperty(actor.data, flag);
   if (!countValue) return 1;
 
-  if (countValue === "turn" && game.combat) {
+  if (["turn", "each-round", "each-turn"].includes(countValue) && game.combat) {
     const usedFlag = flag.replace(".count", ".used");
     // check for the flag
     if (getProperty(actor.data, usedFlag)) return 0;
@@ -1963,11 +2362,9 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
       update[`data.${key}`] = charges;
       return actor.update(update);
     }
-  } else if ("turn" === count.value) {
+  } else if (["turn", "each-round", "each-turn"].includes(count.value)) {
     const flagKey = `${changeKey}.used`.replace("flags.midi-qol.", "");
     await actor.setFlag("midi-qol", flagKey, true);
-  } else if (count.value === "every") {
-
   } else if (count.value === "reaction") {
     setReactionUsed(actor);
   }
@@ -2058,7 +2455,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   }
 
   if (await hasUsedReaction(target.actor) && needsReactionCheck(target.actor)) return noResult;
-  let player = playerFor(target);
+  let player = playerFor(target.document);
   if (getReactionSetting(player) === "none") return noResult;
   if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
   if (!player) return noResult;
@@ -2068,7 +2465,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   try {
     reactions = target.actor.items.filter(item => itemReaction(item, triggerType, maxLevel));
     if (getReactionSetting(player) === "allMI") {
-        reactions = reactions.concat(await getMagicItemReactions(target.actor, triggerType));
+      reactions = reactions.concat(await getMagicItemReactions(target.actor, triggerType));
     }
     reactions = reactions.length;
   } finally {
@@ -2093,7 +2490,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   };
 
   if (configSettings.showReactionChatMessage) {
-    const player = playerFor(target)?.id ?? "";
+    const player = playerFor(target.document)?.id ?? "";
     if (configSettings.enableddbGL && installedModules.get("ddb-game-log")) {
       const workflow = Workflow.getWorkflow(options?.item?.uuid);
       if (workflow?.flagTags) chatData.flags = workflow.flagTags;
@@ -2120,15 +2517,19 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
 
   return await new Promise((resolve) => {
     // set a timeout for taking over the roll
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
+      warn("doReactions | player timeout expired ", player?.name)
       resolve(noResult);
     }, (configSettings.reactionTimeout || 30) * 1000);
     // Complier does not realise player can't be undefined to get here
-    player && requestReactions(target, player, triggerTokenUuid, content, triggerType, resolve, chatMessage, options)
+    player && requestReactions(target, player, triggerTokenUuid, content, triggerType, resolve, chatMessage, options).then(() => {
+      clearTimeout(timeoutId);
+    })
   })
 }
 
 export async function requestReactions(target: Token, player: User, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, resolve: ({ }) => void, chatPromptMessage: ChatMessage, options: {} = {}) {
+  const startTime = Date.now();
   const result = (await socketlibSocket.executeAsUser("chooseReactions", player.id, {
     tokenUuid: target.document?.uuid ?? target.uuid,
     reactionFlavor,
@@ -2136,11 +2537,14 @@ export async function requestReactions(target: Token, player: User, triggerToken
     triggerType,
     options
   }));
+  const endTime = Date.now();
+  warn("request reactions returned after ", endTime - startTime, result);
   resolve(result);
   if (chatPromptMessage) chatPromptMessage.delete();
 }
 
 export async function promptReactions(tokenUuid: string, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, options: any = {}) {
+  const startTime = Date.now();
   const target: Token = MQfromUuid(tokenUuid);
   const actor: Actor | null = target.actor;
   if (!actor) return;
@@ -2152,8 +2556,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
   enableNotifications(false);
   try {
     reactionItems = actor.items.filter(item => itemReaction(item, triggerType, maxLevel));
-    //@ts-ignore game.user type
-    if (getReactionSetting(game.user) === "allMI")
+    if (getReactionSetting(game?.user) === "allMI")
       reactionItems = reactionItems.concat(await getMagicItemReactions(actor, triggerType));
   } finally {
     enableNotifications(true);
@@ -2163,7 +2566,9 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
       console.warn("midi-qol | Reaction processing cancelled by Hook");
       return { name: "Filter" };
     }
-    result = await reactionDialog(actor, triggerTokenUuid, reactionItems, reactionFlavor, triggerType, options)
+    result = await reactionDialog(actor, triggerTokenUuid, reactionItems, reactionFlavor, triggerType, options);
+    const endTime = Date.now();
+    warn("prompt reactions reaction processing returned after ", endTime - startTime, result)
     if (result.uuid) return result; //TODO look at multiple choices here
   }
   if (!midiFlags) return { name: "None" };
@@ -2185,12 +2590,16 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
     const preBounsRollTotal = data.roll.total;
     //@ts-ignore attributes
     await bonusDialog.bind(data)(bonusFlags, "ac", true, `${actor.name} - ${i18n("DND5E.AC")} ${actor.data.data.attributes.ac.value}`, "roll", "rollTotal", "rollHTML")
+    const endTime = Date.now();
+    warn("prompt reactions returned via bonus dialog ", endTime - startTime)
     return { name: actor.name, uuid: actor.uuid, ac: data.roll.total };
   }
+  const endTime = Date.now();
+  warn("prompt reactions returned no result ", endTime - startTime)
   return { name: "None" };
 }
 
-export function playerFor(target: Token): User | undefined {
+export function playerFor(target: TokenDocument): User | undefined {
   return playerForActor(target.actor ?? undefined);
 }
 
@@ -2216,7 +2625,12 @@ export function playerForActor(actor: Actor | undefined): User | undefined {
 
 export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | undefined, reactionItems: any[], rollFlavor: string, triggerType: string, options: any) {
   return new Promise((resolve, reject) => {
-    const callback = async (dialog, button) => {
+    let timeoutId = setTimeout(() => {
+      dialog.close();
+      resolve({});
+    }, ((configSettings.reactionTimeout || 30) - 1) * 1000);
+    const callback = async function (dialog, button) {
+      clearTimeout(timeoutId);
       const item = reactionItems.find(i => i.id === button.key);
       // await setReactionUsed(actor);
       // No need to set reaction effect since using item will do so.
@@ -2227,7 +2641,7 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
       await completeItemRoll(item, itemRollOptions);
       actor.prepareData();
       resolve({ name: item.name, uuid: item.uuid })
-    }
+    };
 
     const dialog = new ReactionDialog({
       actor,
@@ -2240,16 +2654,16 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
     }, {
       width: 400
     });
-    setTimeout(() => {
-      dialog.close();
-      resolve({});
-    }, (configSettings.reactionTimeout - 1) * 1000);
+
     dialog.render(true);
   });
 }
 
 
 class ReactionDialog extends Application {
+  startTime: number;
+  endTime: number;
+
   data: {
     actor: Actor5e,
     items: Item[],
@@ -2263,6 +2677,7 @@ class ReactionDialog extends Application {
 
   constructor(data, options) {
     super(options);
+    this.startTime = Date.now();
     this.data = data;
     this.data.completed = false
   }
@@ -2305,12 +2720,14 @@ class ReactionDialog extends Application {
   _onClickButton(event) {
     const id = event.currentTarget.dataset.button;
     const button = this.data.buttons[id];
+    warn("Reaction dialog button clicked", id, button, Date.now() - this.startTime)
     this.submit(button);
   }
 
   _onKeyDown(event) {
     // Close dialog
     if (event.key === "Escape" || event.key === "Enter") {
+      warn("Reaction Dialog onKeyDown esc/enter pressed", event.key, Date.now() - this.startTime);
       event.preventDefault();
       event.stopPropagation();
       this.data.completed = true;
@@ -2321,6 +2738,7 @@ class ReactionDialog extends Application {
 
   async submit(button) {
     try {
+      warn("ReacitonDialog submit", Date.now() - this.startTime, button.callback)
       if (button.callback) {
         this.data.completed = true;
         await button.callback(this, button)
@@ -2336,6 +2754,7 @@ class ReactionDialog extends Application {
   }
 
   async close() {
+    warn("Reaction Dialog close ", Date.now() - this.startTime, this.data.completed)
     if (!this.data.completed && this.data.close) {
       this.data.close({ name: "Close", uuid: undefined });
     }
@@ -2399,15 +2818,17 @@ function mySafeEval(expression: string, sandbox: any) {
 };
 
 // Same as 
-export function evalActivationCondition(workflow: Workflow, condition: string | undefined): boolean {
+export function evalActivationCondition(workflow: Workflow, condition: string | undefined, target: Token | TokenDocument): boolean {
   if (condition === undefined || condition === "") return true;
   let returnValue;
   const rollData = workflow.otherDamageItem?.getRollData();
-  rollData.target = workflow.hitTargets.values().next()?.value;
+  rollData.target = target; //workflow.hitTargets.values().next()?.value;
   rollData.workflow = workflow;
   if (rollData.target) {
     rollData.target = rollData.target.actor.getRollData();
-    if (rollData.target.details.race ?? "" !== "") rollData.raceOrType = rollData.target.details.race.toLocaleLowerCase();
+    if (rollData.target.details.type?.value) rollData.raceOrType = rollData.target.details.type?.value.toLocaleLowerCase() ?? "";
+
+    // if (rollData.target.details.race ?? "" !== "") rollData.raceOrType = rollData.target.details.race.toLocaleLowerCase();
     else rollData.raceOrType = rollData.target.details.type?.value.toLocaleLowerCase() ?? "";
   }
   let expression = condition ?? "";
@@ -2483,7 +2904,7 @@ export function computeTemplateShapeDistance(templateDocument: MeasuredTemplateD
       //@ts-ignore
       shape = templateDocument._object._getRayShape(direction, distance, width);
   }
-  return { shape, distance };
+  return { shape, distance: templateDocument.data.distance };
 }
 
 var _enableNotifications = true;
@@ -2564,6 +2985,23 @@ export async function hasUsedReaction(actor: Actor) {
   return false;
 }
 
+
+export async function expirePerTurnBonusActions(combat: Combat) {
+  const optionalFlagRe = /flags.midi-qol.optional.[^.]+.count$/;
+  for (let combatant of combat.turns) {
+    const actor = combatant.actor;
+    if (actor) {
+      for (let effect of actor.effects) {
+        for (let change of effect.data.changes) {
+          if (change.key.match(optionalFlagRe) && change.value === "each-turn") {
+            actor.unsetFlag("midi-qol", change.key.replace(/.count$/, ".used").replace("flags.midi-qol.", ""));
+          }
+        }
+      }
+    }
+  }
+}
+
 export async function hasUsedBonusAction(actor: Actor) {
   if (actor.getFlag("midi-qol", "bonusActionCombatRound")) return true;
   if (getConvenientEffectsBonusAction()) {
@@ -2600,15 +3038,15 @@ export function mergeKeyboardOptions(options: any, pressedKeys: Options | undefi
 }
 
 export async function asyncHooksCallAll(hook, ...args) {
-  if ( CONFIG.debug.hooks ) {
+  if (CONFIG.debug.hooks) {
     console.log(`DEBUG | midi-qol async Calling ${hook} hook with args:`);
     console.log(args);
   }
   //@ts-ignore
-  if ( !Hooks._hooks.hasOwnProperty(hook) ) return true;
+  if (!Hooks._hooks.hasOwnProperty(hook)) return true;
   //@ts-ignore
   const fns = new Array(...Hooks._hooks[hook]);
-  for ( let fn of fns ) {
+  for (let fn of fns) {
     //TODO see if this might be better as a Promises.all
     //@ts-ignore
     await Hooks._call(hook, fn, args);
@@ -2617,18 +3055,18 @@ export async function asyncHooksCallAll(hook, ...args) {
 }
 
 export async function asyncHooksCall(hook, ...args) {
-  if ( CONFIG.debug.hooks ) {
+  if (CONFIG.debug.hooks) {
     console.log(`DEBUG | midi-qol aysnc Calling ${hook} hook with args:`);
     console.log(args);
   }
   //@ts-ignore
-  if ( !Hooks._hooks.hasOwnProperty(hook) ) return true;
+  if (!Hooks._hooks.hasOwnProperty(hook)) return true;
   //@ts-ignore
   const fns = new Array(...Hooks._hooks[hook]);
-  for ( let fn of fns ) {
+  for (let fn of fns) {
     //@ts-ignore
     let callAdditional = await Hooks._call(hook, fn, args);
-    if ( callAdditional === false ) return false;
+    if (callAdditional === false) return false;
   }
   return true;
 }
@@ -2646,8 +3084,8 @@ export function addAdvAttribution(html: string, advAttribution: any = undefined)
 export async function midiRenderRoll(roll: Roll | undefined) {
   if (!roll) return "";
   switch (configSettings.rollAlternate) {
-    case "formula": 
-    case "formulaadv": return roll.render({template: "modules/midi-qol/templates/rollAlternate.html"});
+    case "formula":
+    case "formulaadv": return roll.render({ template: "modules/midi-qol/templates/rollAlternate.html" });
     case "adv":
     case "off":
     default: return roll.render(); // "off"
@@ -2729,7 +3167,7 @@ export async function computeFlankedStatus(target): Promise<boolean> {
   return false;
 }
 
-export function computeFlankingStatus(token, target): boolean{
+export function computeFlankingStatus(token, target): boolean {
   if (!checkRule("checkFlanking") || checkRule("checkFlanking") === "off") return false;
   if (!canvas) return false;
   if (!token) return false;
@@ -2748,8 +3186,8 @@ export function computeFlankingStatus(token, target): boolean{
     let gridH = canvas?.grid?.h ?? 100;
     const tl = { x: target.x, y: target.y };
     const tr = { x: target.x + target.data.width * gridW, y: target.y };
-    const bl = { x: target.x, y: target.y + target.data.height * gridH};
-    const br = { x: target.x + target.data.width * gridW, y: target.y + target.data.height * gridH};
+    const bl = { x: target.x, y: target.y + target.data.height * gridH };
+    const br = { x: target.x + target.data.width * gridW, y: target.y + target.data.height * gridH };
     const top: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, tr.x, tr.y];
     const bottom: [x0: number, y0: number, x1: number, y1: number] = [bl.x, bl.y, br.x, br.y];
     const left: [x0: number, y0: number, x1: number, y1: number] = [tl.x, tl.y, bl.x, bl.y];
@@ -2766,7 +3204,7 @@ export function computeFlankingStatus(token, target): boolean{
       if (actor?.data.data.attrbutes?.hp?.value <= 0) continue;
       if (installedModules.get("dfreds-convenient-effects")) {
         //@ts-ignore
-        if (actor?.effects.some(ef=>ef.data.label === game.dfreds.effects._incapacitated.name)) continue;
+        if (actor?.effects.some(ef => ef.data.label === game.dfreds.effects._incapacitated.name)) continue;
       }
 
       const allyStartX = ally.data.width >= 1 ? 0.5 : ally.data.width / 2;
@@ -2796,7 +3234,7 @@ export function computeFlankingStatus(token, target): boolean{
     let grid: HexagonalGrid = canvas?.grid?.grid;
     const tokenRowCol = grid.getGridPositionFromPixels(token.center.x, token.center.y);
     const targetRowCol = grid.getGridPositionFromPixels(target.center.x, target.center.y);
-    const allAdjacent: [number,number][] = [];
+    const allAdjacent: [number, number][] = [];
     for (let ally of allies) {
       let allyRowCol = grid?.getGridPositionFromPixels(ally.center.x, ally.center.y);
     }
@@ -2813,9 +3251,9 @@ export async function markFlanking(token, target): Promise<boolean> {
   if (["ceonly", "ceadv"].includes(checkRule("checkFlanking"))) {
     needsFlanking = computeFlankingStatus(token, target);
     if (installedModules.get("dfreds-convenient-effects")) {
-    //@ts-ignore
-    const CEFlanking = game.dfreds.effects._flanking;
-    if (!CEFlanking) return needsFlanking;
+      //@ts-ignore
+      const CEFlanking = game.dfreds.effects._flanking;
+      if (!CEFlanking) return needsFlanking;
       //@ts-ignore
       const hasFlanking = await game.dfreds.effectInterface?.hasEffectApplied(CEFlanking.name, token.actor.uuid)
       if (needsFlanking && !hasFlanking) {
@@ -2863,9 +3301,9 @@ export async function checkflanking(user: User, target: Token, targeted: boolean
 
 export function getChanges(actorOrItem, key: string) {
   return actorOrItem.effects.contents
-  .flat()
-  .map(e=>e.data.changes)
-  .flat()
-  .filter(c=>c.key.includes(key))
-  .sort((a,b) => a.key < b.key? -1 : 1)
+    .flat()
+    .map(e => e.data.changes)
+    .flat()
+    .filter(c => c.key.includes(key))
+    .sort((a, b) => a.key < b.key ? -1 : 1)
 }

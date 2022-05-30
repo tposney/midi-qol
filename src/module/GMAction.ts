@@ -7,9 +7,13 @@ import { Workflow, WORKFLOWSTATES } from "./workflow.js";
 export var socketlibSocket: any = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
 
+function paranoidCheck(action: string, actor: any, data: any): boolean {
+  return true;
+}
 export async function removeEffects(data: { actorUuid: string; effects: string[]; options: {}}) {
   const actor = MQfromActorUuid(data.actorUuid);
-  await actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects, data.options)
+  if (configSettings.paranoidGM && !paranoidCheck("removeEffects", actor, data)) return "gmBlocked";
+  return await actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects, data.options)
 }
 
 export async function createEffects(data: { actorUuid: string, effects: any[] }) {
@@ -33,8 +37,9 @@ export function GMupdateEntityStats(data: { id: any; currentStats: any; }) {
 export async function timedExecuteAsGM(toDo: string, data: any) {
   if (!debugCallTiming) return socketlibSocket.executeAsGM(toDo, data);
   const start = Date.now();
+  data.playerId = game.user?.id;
   const returnValue = await socketlibSocket.executeAsGM(toDo, data);
-  log(`executeAsGM: ${toDo} elapsed: ${Date.now() - start}`)
+  log(`executeAsGM: ${toDo} elapsed: ${Date.now() - start}ms`)
   return returnValue;
 }
 
@@ -42,7 +47,7 @@ export async function timedAwaitExecuteAsGM(toDo: string, data: any) {
   if (!debugCallTiming) return await socketlibSocket.executeAsGM(toDo, data);
   const start = Date.now();
   const returnValue = await socketlibSocket.executeAsGM(toDo, data);
-  log(`await executeAsGM: ${toDo} elapsed: ${Date.now() - start}`)
+  log(`await executeAsGM: ${toDo} elapsed: ${Date.now() - start}ms`)
   return returnValue;
 }
 
@@ -186,7 +191,7 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
     });
 }
 
-async function createReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string }) {
+async function createReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string }) {
   createPlayerDamageCard(data);
   return createGMReverseDamageCard(data);
 }
@@ -279,7 +284,7 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
   return promises;
 }
 // Fetch the token, then use the tokenData.actor.id
-async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string }) {
+async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string }) {
   if (configSettings.playerDamageCard === "none" ) return;
   let showNPC = ["npcplayerresults", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
   let playerButtons = ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
@@ -303,15 +308,13 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
   templateData.needsButtonAll = damageList.length > 1;
   //@ts-ignore
   templateData.playerButtons = templateData.playerButtons && templateData.damageList.some(listItem => listItem.isCharacter)
-  //@ts-ignore
-  if (debugEnabled > 0) warn("GM action results are ", results)
   if (["yesCard", "noCard", "yesCardNPC"].includes(data.autoApplyDamage)) {
     const content = await renderTemplate("modules/midi-qol/templates/damage-results-player.html", templateData);
     const speaker: any = ChatMessage.getSpeaker();
     speaker.alias = data.sender;
     let chatData: any = {
       user: game.user?.id,
-      speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: game.user?.id },
+      speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: game.user?.id, actor: data.actorId },
       content: content,
       // whisper: ChatMessage.getWhisperRecipients("players").filter(u => u.active).map(u => u.id),
       type: CONST.CHAT_MESSAGE_TYPES.OTHER,
@@ -320,7 +323,7 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
     if (data.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", data.flagTags);
     ChatMessage.create(chatData);
   }
-  log(`createPlayerReverseDamageCard elapsed: ${Date.now() - startTime}`)
+  log(`createPlayerReverseDamageCard elapsed: ${Date.now() - startTime}ms`)
 }
   
   // Fetch the token, then use the tokenData.actor.id
@@ -359,7 +362,7 @@ async function createGMReverseDamageCard (data: { damageList: any; autoApplyDama
     if (data.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", data.flagTags);
     ChatMessage.create(chatData);
   }
-  log(`createGMReverseDamageCard elapsed: ${Date.now() - startTime}`)
+  log(`createGMReverseDamageCard elapsed: ${Date.now() - startTime}ms`)
 }
 
 async function doClick(event: { stopPropagation: () => void; }, actorUuid: any, totalDamage: any, mult: any) {
@@ -386,7 +389,7 @@ export let processUndoDamageCard = (message, html, data) => {
         if (!actorUuid) return;
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP}`, actor);
-        await actor.update({ "data.attributes.hp.temp": oldTempHP ?? 0, "data.attributes.hp.value": oldHP ?? 0 }, { dhp: (oldHP ?? 0) - (actor.data.data.attributes.hp.value ?? 0) });
+        await actor?.update({ "data.attributes.hp.temp": oldTempHP ?? 0, "data.attributes.hp.value": oldHP ?? 0 }, { dhp: (oldHP ?? 0) - (actor.data.data.attributes.hp.value ?? 0) });
         ev.stopPropagation();
       }
     })();
@@ -399,7 +402,7 @@ export let processUndoDamageCard = (message, html, data) => {
         if (!actorUuid) return;
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP to ${newTempHP} and ${newHP}`);
-        await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.data.data.attributes.hp.value });
+        await actor?.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.data.data.attributes.hp.value });
         ev.stopPropagation();
       }
     })();

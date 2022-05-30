@@ -3,7 +3,7 @@ export class OnUseMacros {
 
   constructor(onUseMacros: any = null){
     if (typeof onUseMacros === "string") {
-      this.items = onUseMacros?.split(',')?.filter((value: string) => value.trim().length > 0)?.map((macro: string) => new OnUseMacro(macro)) ?? [];
+      this.items = onUseMacros?.split(',')?.filter((value: string) => value.trim().length > 0)?.map((macro: string) => new OnUseMacro(macro));
     } else {
       this.items = [];
     }
@@ -114,5 +114,11 @@ async function _onMacroControl(event){
 
 export function getCurrentMacros(object): OnUseMacros {
   const macroField = getProperty(object, "data.flags.midi-qol.onUseMacroParts");
+  return macroField;
+}
+
+export function getCurrentSourceMacros(object): OnUseMacros {
+  const macroField = new OnUseMacros(getProperty(object, "data._source.flags.midi-qol.onUseMacroParts") ?? null)
+  // const macroField = getProperty(object, "data._source.flags.midi-qol.onUseMacroParts");
   return macroField;
 }

@@ -82,7 +82,9 @@ export class ConfigPanel extends FormApplication {
       customSoundOptions: game.playlists?.get(configSettings.customSoundsPlaylist)?.sounds.reduce((acc, s) => { acc[s.id] = s.name; return acc }, { "none": "" }),
       rollSoundOptions: CONFIG.sounds,
       isBetterRolls: installedModules.get("betterrolls5e"),
-      rollAlternateOptions: geti18nOptions("RollAlternateOptions")
+      rollAlternateOptions: geti18nOptions("RollAlternateOptions"),
+      ConsumeResourceOptions: geti18nOptions("ConsumeResourceOptions")
+
     };
 
     if (debugEnabled > 0) warn("Config Panel: getdata ", data)

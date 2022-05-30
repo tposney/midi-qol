@@ -11,13 +11,15 @@
         <table>
           <tr>
             <td></td>
+            <td>Char Type</td>
             <td>Item Type</td>
             <td>Sub Type</td>
             <td>Event</td>
             <td>Playlist</td>
             <td>Sound</td>
           </tr>
-          {{#each midiSoundSettings as |categorySettings category|}}
+          {{#each midiSoundSettings as |characterSettings chartype|}}
+          {{#each characterSettings as |categorySettings category|}}
           {{#each categorySettings as |settings subtype|}}
           {{#each settings as |setting action|}}
           <tr>
@@ -28,9 +30,20 @@
             </td>
             <td>
               <div class="form-group category">
+                <select name="chartype" data-dtype="String">
+                  {{#select chartype}}
+                  {{#each ../../../../characterTypes as |label val|}}
+                  <option value="{{val}}">{{label}}</option>
+                  {{/each}}
+                  {{/select}}
+                </select>
+              </div>
+            </td>
+            <td>
+              <div class="form-group category">
                 <select name="category" data-dtype="String">
                   {{#select category}}
-                  {{#each ../../../itemTypes as |label val|}}
+                  {{#each ../../../../itemTypes as |label val|}}
                   <option value="{{val}}">{{label}}</option>
                   {{/each}}
                   {{/select}}
@@ -41,7 +54,7 @@
               <div class="form-group subtype">
                 <select name="subtype" data-dtype="String">
                   {{#select subtype}}
-                  {{#each (lookup ../../../subTypes category) as |label val|}}
+                  {{#each (lookup ../../../../subTypes category) as |label val|}}
                   <option value="{{val}}">{{label}}</option>
                   {{/each}}
                   {{/select}}
@@ -52,7 +65,7 @@
               <div class="action">
                 <select name="action" data-dtype="String">
                   {{#select action}}
-                  {{#each ../../../actionTypes as |label val|}}
+                  {{#each ../../../../actionTypes as |label val|}}
                   <option value="{{val}}">{{label}}</option>
                   {{/each}}
                   {{/select}}
@@ -63,7 +76,7 @@
               <div class="playlistName">
                 <select name="playlistName" data-dtype="String">
                   {{#select setting.playlistName}}
-                  {{#each ../../../playlists as |label val|}}
+                  {{#each ../../../../playlists as |label val|}}
                   <option value="{{val}}">{{val}}</option>
                   {{/each}}
                   {{/select}}
@@ -74,7 +87,7 @@
               <div class="soundName">
                 <select name="soundName" data-dtype="String">
                   {{#select setting.soundName}}
-                  {{#each (lookup ../../../playlists setting.playlistName) as |label val|}}
+                  {{#each (lookup ../../../../playlists setting.playlistName) as |label val|}}
                   <option value="{{val}}">{{label}}</option>
                   {{/each}}
                   {{/select}}
@@ -83,6 +96,7 @@
             </td>
           </tr>
       </div>
+      {{/each}}
       {{/each}}
       {{/each}}
       {{/each}}

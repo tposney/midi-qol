@@ -21,8 +21,13 @@
 
         <div class="form-group">
           <label>{{localize "midi-qol.ConsumeResource.Name"}}</label>
-          <input type="checkbox" name="gmConsumeResource" data-dtype="Boolean" {{checked
-            configSettings.gmConsumeResource}} />
+          <select name="gmConsumeResource" data-dtype="String">
+            {{#select configSettings.gmConsumeResource}}
+            {{#each ConsumeResourceOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.ConsumeResource.Hint"}}</div>
 
@@ -105,11 +110,15 @@
           <input type="checkbox" name="autoRollAttack" data-dtype="Boolean" {{checked configSettings.autoRollAttack}} />
         </div>
 
-
         <div class="form-group">
           <label>{{localize "midi-qol.ConsumeResource.Name"}}</label>
-          <input type="checkbox" name="consumeResource" data-dtype="Boolean" {{checked
-            configSettings.consumeResource}} />
+          <select name="consumeResource" data-dtype="String">
+            {{#select configSettings.consumeResource}}
+            {{#each ConsumeResourceOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.ConsumeResource.Hint"}}</div>
 
@@ -193,6 +202,11 @@
       <!-- Specials -->
       <div class="midi-qol-box"> {{ localize "midi-qol.Special"}}
 
+        <div class="form-group allowActorUseMacro">
+          <label>{{localize "midi-qol.AllowActorUseMacro.Name"}}</label>
+          <input id="allowActorUseMacro" type="checkbox" name="allowActorUseMacro" data-dtype="Boolean" {{checked
+            configSettings.allowActorUseMacro}} />
+        </div>
         <div class="form-group allowUseMacro">
           <label>{{localize "midi-qol.AllowUseMacro.Name"}}</label>
           <input id="allowUseMacro" type="checkbox" name="allowUseMacro" data-dtype="Boolean" {{checked

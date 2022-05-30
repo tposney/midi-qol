@@ -36,13 +36,15 @@ export class SoundConfigPanel extends FormApplication {
   getData(options) {
     let data:any = super.getData(options)
     //@ts-ignore
-    const dndConfig = CONFIG.DND5E;
-    data.weaponSubtypes = mergeObject({any: "Any", none: "None"}, dndConfig.weaponTypes);
-    data.equipmentSubtypes = mergeObject({any: "Any"}, dndConfig.equipmentTypes);
-    data.consumableSubTypes = mergeObject({any: "Any"}, dndConfig.consumableTypes);
-    data.spellSubtypes = mergeObject({any: "Any"}, dndConfig.spellSchools);
-    data.toolSubtypes = mergeObject({any: "Any"}, dndConfig.toolTypes);
+    let systemConfig = (game.system.id === "dnd5e") ? CONFIG.DND5E :  CONFIG.SW5E;
+    data.weaponSubtypes = mergeObject({any: "Any", none: "None"}, systemConfig.weaponTypes);
+    data.weaponSubtypes = mergeObject(data.weaponSubtypes, MidiSounds.weaponBaseTypes);
+    data.equipmentSubtypes = mergeObject({any: "Any"}, systemConfig.equipmentTypes);
+    data.consumableSubTypes = mergeObject({any: "Any"}, systemConfig.consumableTypes);
+    data.spellSubtypes = mergeObject({any: "Any"}, systemConfig.spellSchools);
+    data.toolSubtypes = mergeObject({any: "Any"}, systemConfig.toolTypes);
     data.defaultSubtypes = {any: "Any"};
+    data.characterTypes = {any: "Any", npc: "NPC", character: "Character", "none": "None"};
     data.subTypes = {
       "weapon": data.weaponSubtypes,
       "equipment": data.equipmentSubtypes,
@@ -87,7 +89,7 @@ export class SoundConfigPanel extends FormApplication {
         break;
       case "add":
         formData = this._getSubmitData();
-        for (let key of ["action", "category", "playlistName", "soundName", "subtype"]) {
+        for (let key of ["chartype", "action", "category", "playlistName", "soundName", "subtype"]) {
           if (!formData[key]) formData[key] = [];
           if (typeof formData[key] === "string") formData[key] = [formData[key]];
           formData[key].push("none");
@@ -98,24 +100,27 @@ export class SoundConfigPanel extends FormApplication {
   async _updateObject(event, formData) {
     if (!game.user?.can("SETTINGS_MODIFY")) return;
     formData = expandObject(formData);
-    const settings = {};
-    if (formData.category) {
-      if (typeof formData.category === "string") {
-        for (let key of ["action", "category", "playlistName", "soundName", "subtype"]) {
+    const settings: any = {};
+    if (formData.chartype) {
+      if (typeof formData.chartype === "string") {
+        for (let key of ["chartype", "action", "category", "playlistName", "soundName", "subtype"]) {
           formData[key] = [formData[key]];
         }
       }
-      for (let i = 0; i < formData.category?.length ?? 0; i++) {
+      for (let i = 0; i < formData.chartype?.length ?? 0; i++) {
+        const chartype = formData.chartype[i];
         const category = formData.category[i];
         const subtype = formData.subtype[i];
         const action = formData.action[i];
         const playlistName = formData.playlistName[i];
         const soundName = formData.soundName[i];
-        if (!settings[category]) settings[category] = {};
-        if (!settings[category][subtype]) settings[category][subtype] = {};
-        settings[category][subtype][action] = { playlistName, soundName };
+        if (!settings[chartype]) settings[chartype] = {};
+        if (!settings[chartype][category]) settings[chartype][category] = {};
+        if (!settings[chartype][category][subtype]) settings[chartype][category][subtype] = {};
+        settings[chartype][category][subtype][action] = { playlistName, soundName };
       }
     }
+    settings.version = "0.9.48";
     await game.settings.set("midi-qol", "MidiSoundSettings", settings);
   }
 

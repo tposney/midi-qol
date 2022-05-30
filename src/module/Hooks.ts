@@ -1,7 +1,7 @@
-import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
 import { deleteItemEffects, processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, processOverTime, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, checkflanking } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, checkflanking, MQfromActorUuid } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
@@ -9,6 +9,8 @@ import { preUpdateItemActorOnUseMacro } from "./patching.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
+export var midiFlagTypes: {} = {};
+
 
 
 export let readyHooks = async () => {
@@ -33,6 +35,21 @@ export let readyHooks = async () => {
       return specialDuration?.includes("isMoved");
     }) ?? [];
     if (expiredEffects.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", expiredEffects.map(ef => ef.id), { "expiry-reason": "midi-qol:isMoved" });
+    // Check for marked token moving
+    const markedEffects = actor.effects.filter(ef => ef.data.changes.some(c => c.key === "flags.midi-qol.marked"));
+    if (markedEffects.length > 0) {
+      markedEffects.forEach(ef => {
+        if (ef.data.origin) {
+          const sourceItem = MQfromUuid(ef.data.origin);
+          if (sourceItem) {
+            const sourceActor = sourceItem.parent;
+            if (sourceActor) {
+              // find reaction items that are designated as mark moved
+            }
+          }
+        }
+      })
+    }
   })
 
   Hooks.on("targetToken", debounce(checkflanking, 150));
@@ -69,7 +86,7 @@ export let readyHooks = async () => {
       const saveTargets = game.user?.targets;
       const theTargetToken = getSelfTarget(actor);
       itemData.data.target.type = "self";
-      const theTarget = theTargetToken?.document ? theTargetToken?.document.id : theTargetToken?.id;
+      const theTarget = theTargetToken instanceof Token ? theTargetToken?.document.id : theTargetToken?.id;
       if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
       let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor })
       if (configSettings.displaySaveDC) {
@@ -161,6 +178,7 @@ export let readyHooks = async () => {
   })
 
   Hooks.on("restCompleted", restManager);
+  Hooks.on("dnd5e.restCompleted", restManager);
 
   // Concentration Check is rolled as an item roll so we need an item.
   if (installedModules.get("combat-utility-belt")) {
@@ -225,21 +243,22 @@ export function initHooks() {
     hideStuffHandler(message, html, data);
   })
 
-  Hooks.on("midi-qol.RollComplete", (workflow) => {
+  Hooks.on("midi-qol.RollComplete", async (workflow) => {
     const wfuuid = workflow.uuid;
 
     if (overTimeEffectsToDelete[wfuuid]) {
       if (workflow.saves.size === 1 || !workflow.hasSave) {
         let effectId = overTimeEffectsToDelete[wfuuid].effectId;
         let actor = overTimeEffectsToDelete[wfuuid].actor;
-        actor.deleteEmbeddedDocuments("ActiveEffect", [effectId]), { "expiry-reason": "midi-qol:overTime" };
+        await actor.deleteEmbeddedDocuments("ActiveEffect", [effectId]), { "expiry-reason": "midi-qol:overTime" };
       }
       delete overTimeEffectsToDelete[wfuuid];
     }
     if (debugEnabled > 1) debug("Finished the roll", wfuuid)
   })
+  setupMidiFlagTypes();
   Hooks.on("applyActiveEffect", midiCustomEffect);
-  Hooks.on("preCreateActiveEffect", checkImmunity);
+  // Hooks.on("preCreateActiveEffect", checkImmunity); Disabled in lieu of having effect marked suppressed
   Hooks.on("preUpdateItem",  preUpdateItemActorOnUseMacro);
   Hooks.on("preUpdateActor", preUpdateItemActorOnUseMacro)
   Hooks.on("renderItemSheet", (app, html, data) => {
@@ -282,7 +301,7 @@ export function initHooks() {
     }
     //@ts-ignore
     const midiProps = CONFIG.DND5E.midiProperties;
-    if (app.object && ["spell", "feat", "weapon"].includes(app.object.type)) {
+    if (app.object && ["spell", "feat", "weapon", "consumable"].includes(app.object.type)) {
       const data = app.object.data;
       if (data.flags.midiProperties === undefined) {
         data.flags.midiProperties = {};
@@ -357,7 +376,57 @@ export function initHooks() {
     return true;
   })
 }
+function setupMidiFlagTypes() {
 
+  let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
+
+  attackTypes.forEach(at => {
+    midiFlagTypes[`flags.midi-qol.DR.${at}`] = "number"
+  //  midiFlagTypes[`flags.midi-qol.optional.NAME.attack.${at}`] = "string"
+  //  midiFlagTypes[`flags.midi-qol.optional.NAME.damage.${at}`] = "string"
+  });
+  midiFlagTypes["flags.midi-qol.onUseMacroName"] = "string";
+
+
+  //@ts-ignore CONFIG.DND5E
+  Object.keys(CONFIG.DND5E.abilities).forEach(abl => {
+    // midiFlagTypes[`flags.midi-qol.optional.NAME.save.${abl}`] = "string";
+    // midiFlagTypes[`flags.midi-qol.optional.NAME.check.${abl}`] = "string";
+
+  })
+
+  //@ts-ignore CONFIG.DND5E
+  Object.keys(CONFIG.DND5E.skills).forEach(skill => {
+    // midiFlagTypes[`flags.midi-qol.optional.NAME.skill.${skill}`] = "string";
+
+  })
+
+  if (game.system.id === "dnd5e") {
+     midiFlagTypes[`flags.midi-qol.DR.all`] = "string";
+     midiFlagTypes[`flags.midi-qol.DR.non-magical`] = "string";
+     midiFlagTypes[`flags.midi-qol.DR.non-silver`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-adamant`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-physical`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.final`] = "number";
+
+    //@ts-ignore CONFIG.DND5E
+    Object.keys(CONFIG.DND5E.damageResistanceTypes).forEach(dt => {
+      midiFlagTypes[`flags.midi-qol.DR.${dt}`] = "string";
+    })
+  }
+
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.attack.all`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.damage.all`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.check.all`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.save.all`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.label`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.skill.all`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.count`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.ac`] = "string";
+  // midiFlagTypes[`flags.midi-qol.optional.NAME.criticalDamage`] = "string";
+  // midiFlagTypes[`flags.midi-qol.OverTime`] = "string";
+
+}
 export function setupHooks() {
 }
 export const overTimeJSONData = {

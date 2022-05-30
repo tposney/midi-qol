@@ -11,7 +11,7 @@
  */
 
 // Import TypeScript modules
-import { registerSettings, fetchParams, configSettings, checkRule, collectSettingData, enableWorkflow, midiSoundSettings, fetchSoundSettings } from './module/settings.js';
+import { registerSettings, fetchParams, configSettings, checkRule, collectSettingData, enableWorkflow, midiSoundSettings, fetchSoundSettings, midiSoundSettingsBackup } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, installedModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, readyPatching, initPatching } from './module/patching.js';
@@ -19,7 +19,7 @@ import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Ho
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
-import { applyTokenDamage, checkNearby, completeItemRoll, distancePointToken, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getTraitMult, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
+import { applyTokenDamage, checkNearby, completeItemRoll, distancePointToken, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
@@ -41,7 +41,7 @@ declare global {
     game: any; // the type doesn't matter
   }
 }
-export function getCanvas(): Canvas | undefined{
+export function getCanvas(): Canvas | undefined {
   if (!canvas || !canvas.scene) {
     error("Canvas/Scene not ready - roll automation will not function");
     return undefined;
@@ -96,16 +96,23 @@ export const MESSAGETYPES = {
 };
 export let cleanSpellName = (name: string): string => {
   // const regex = /[^가-힣一-龠ぁ-ゔァ-ヴーa-zA-Z0-9ａ-ｚＡ-Ｚ０-９々〆〤]/g
-  const regex =  /[^가-힣一-龠ぁ-ゔァ-ヴーa-zA-Z0-9ａ-ｚＡ-Ｚ０-９а-яА-Я々〆〤]/g
+  const regex = /[^가-힣一-龠ぁ-ゔァ-ヴーa-zA-Z0-9ａ-ｚＡ-Ｚ０-９а-яА-Я々〆〤]/g
   return name.toLowerCase().replace(regex, '').replace("'", '').replace(/ /g, '');
 }
 
 /* ------------------------------------ */
 /* Initialize module					*/
 /* ------------------------------------ */
+Hooks.once("levelsReady", function () {
+  //@ts-ignore
+  installedModules.set("levels", _levels)
+});
 
 Hooks.once('init', async function () {
   console.log('midi-qol | Initializing midi-qol');
+  allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
+  if (game.system.id === "sw5e")
+    allAttackTypes = ["rwak", "mwak", "rpak", "mpak"];
   initHooks();
   // Assign custom classes and constants here
 
@@ -234,6 +241,7 @@ Hooks.once('ready', function () {
   OnUseMacroOptions.setOptions(MQOnUseOptions);
   MidiSounds.midiSoundsReadyHooks();
 
+
   setupMidiQOLApi();
 
   if (game.settings.get("midi-qol", "splashWarnings") && game.user?.isGM) {
@@ -256,16 +264,28 @@ Hooks.once('ready', function () {
   checkConcentrationSettings();
   readyHooks();
   readyPatching();
+  if (midiSoundSettingsBackup) game.settings.set("midi-qol", "MidiSoundSettings-backup", midiSoundSettingsBackup)
+
+  // Make midi-qol targets hoverable
+  $(document).on("mouseover", ".midi-qol-target-name", (e) => {
+    const tokenid = e.currentTarget.id
+    const tokenObj = canvas?.tokens?.get(tokenid)
+    if (!tokenObj) return;
+    //@ts-ignore
+    tokenObj._hover = true
+  });
+  // This seems to cause problems for localisation for the items compendium (at least for french)
+  // Try a delay before doing this - hopefully allowing localisation to complete
+  setTimeout(MidiSounds.getWeaponBaseTypes, 5000);
   Hooks.callAll("midi-qol.midiReady");
 });
 
 
-/*
-import { setupMidiTests } from './module/tests/setupTest.js';
+
+import { busyWait, setupMidiTests } from './module/tests/setupTest.js';
 Hooks.once("midi-qol.midiReady", () => {
-  setTimeout(setupMidiTests, 1000);
+  setupMidiTests();
 });
-*/
 
 // Add any additional hooks if necessary
 
@@ -278,7 +298,7 @@ function setupMidiQOLApi() {
     applyTokenDamage: applyTokenDamage
   }
   //@ts-ignore
-  window.MidiQOL = {
+  globalThis.MidiQOL = {
     getChanges,
     applyTokenDamage,
     TrapWorkflow,
@@ -286,23 +306,22 @@ function setupMidiQOLApi() {
     Workflow,
     enableWorkflow,
     configSettings: () => { return configSettings },
-    midiSoundSettings: () => {return midiSoundSettings },
+    midiSoundSettings: () => { return midiSoundSettings },
     ConfigPanel: ConfigPanel,
     getTraitMult: getTraitMult,
     getDistance: getDistanceSimple,
-    // distancePointToken: distancePointToken,
-    // getSurroundingHexes: getSurroundingHexes,
     midiFlags,
     debug,
     log,
     warn,
-    findNearby: findNearby,
-    checkNearby: checkNearby,
-    showItemInfo: showItemInfo,
-    showItemCard: showItemCard,
+    findNearby,
+    checkNearby,
+    showItemInfo,
+    showItemCard,
     gameStats,
     MQFromUuid: MQfromUuid,
-    MQfromActorUuid: MQfromActorUuid,
+    MQfromUuid,
+    MQfromActorUuid,
     getConcentrationEffect: getConcentrationEffect,
     selectTargetsForTemplate: templateTokens,
     socket: () => { return socketlibSocket },
@@ -310,8 +329,11 @@ function setupMidiQOLApi() {
     reportMidiCriticalFlags: reportMidiCriticalFlags,
     completeItemRoll: completeItemRoll,
     overTimeJSONData: overTimeJSONData,
-    MQOnUseOptions
-  }
+    MQOnUseOptions,
+    midiRenderRoll,
+    doOverTimeEffect
+  };
+  globalThis.MidiQOL.actionQueue = new Semaphore();
 }
 
 
@@ -402,11 +424,9 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.concentrationSaveBonus`);
   midiFlags.push(`flags.midi-qol.potentCantrip`);
   midiFlags.push(`flags.midi-qol.sculptSpells`);
-  midiFlags.push("flags.midi-qol.magiResistance.all")
-
-  allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
-  if (game.system.id === "sw5e")
-    allAttackTypes = ["rwak", "mwak", "rpak", "mpak"];
+  midiFlags.push(`flags.midi-qol.carefulSpells`);
+  midiFlags.push("flags.midi-qol.magicResistance.all")
+  midiFlags.push("flags.midi-qol.magicVulnerability.all")
 
   let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
 
@@ -446,7 +466,6 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.sharpShooter");
   midiFlags.push("flags.midi-qol.onUseMacroName");
 
-
   //@ts-ignore CONFIG.DND5E
   Object.keys(CONFIG.DND5E.abilities).forEach(abl => {
     midiFlags.push(`flags.midi-qol.advantage.ability.check.${abl}`);
@@ -460,18 +479,20 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.superSaver.${abl}`);
     midiFlags.push(`flags.midi-qol.semiSuperSaver.${abl}`);
     midiFlags.push(`flags.midi-qol.max.ability.save.${abl}`);
-    midiFlags.push(`flags.midi-qol.mim.ability.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.min.ability.save.${abl}`);
+    midiFlags.push(`flags.midi-qol.max.ability.check.${abl}`);
+    midiFlags.push(`flags.midi-qol.min.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.check.${abl}`);
-    midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
-    midiFlags.push(`flags.midi-qol.magiResistance.all.${abl}`);
+    midiFlags.push(`flags.midi-qol.magicResistance.all.${abl}`);
+    midiFlags.push(`flags.midi-qol.magicVulnerability.all.${abl}`);
   })
-  
+
   midiFlags.push(`flags.midi-qol.advantage.skill.all`);
   midiFlags.push(`flags.midi-qol.disadvantage.skill.all`);
   midiFlags.push(`flags.midi-qol.fail.skill.all`);
   midiFlags.push("flags.midi-qol.max.skill.all");
-  midiFlags.push("flags.midi-qol.max.skill.all");
+  midiFlags.push("flags.midi-qol.min.skill.all");
   //@ts-ignore CONFIG.DND5E
   Object.keys(CONFIG.DND5E.skills).forEach(skill => {
     midiFlags.push(`flags.midi-qol.advantage.skill.${skill}`);
@@ -510,8 +531,12 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.optional.NAME.skill.all`);
   midiFlags.push(`flags.midi-qol.optional.NAME.count`);
   midiFlags.push(`flags.midi-qol.optional.NAME.ac`);
-  midiFlags.push(`flags.midi-qol.uncanny-dodge`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.criticalDamage`);
+  midiFlags.push(`flags.midi-qol.optional.Name.onUse`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.macroToCall`);
 
+
+  midiFlags.push(`flags.midi-qol.uncanny-dodge`);
   midiFlags.push(`flags.midi-qol.OverTime`);
   midiFlags.push("flags.midi-qol.inMotion");
   //@ts-ignore
@@ -529,7 +554,17 @@ function setupMidiFlags() {
   midiFlags.push(``);
   */
   if (installedModules.get("dae")) {
-    //@ts-ignore
-    window.DAE.addAutoFields(midiFlags);
+    const initDAE = async () => {
+      for (let i = 0; i < 100; i++) {
+        if (globalThis.DAE) {
+          globalThis.DAE.addAutoFields(midiFlags);
+          return true;
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+      return false;
+    };
+    initDAE().then(value => { if (!value) console.error(`midi-qol | initDae settomgs failed`) });
   }
 }

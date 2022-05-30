@@ -278,7 +278,7 @@ You can enable auto checking of hits. Fumbles automatically miss and criticals a
 ## Damage
 * **Auto apply damage to target**
   * Yes: Damage is auto-applied to targeted tokens (**or self if self-target is specified**) that were hit or did not save, or that saved and take half damage.
-  * "+ damage card": If included, a chat card is sent to the GM which includes each target that had damage applied with details of the damage, any immunities/resistances and 6 buttons. They set the target hit points based on the calculation displayed. The first sets the hp back the way they were before the roll and the second sets them as displayed in the calculation (an undo/redo). The next 4 are the standard DND apply damage buttons but **do not** take into account resistance/immunity.
+  * "+ damage card": If included, a chat card is sent to the GM which includes each target that had damage applied with details of the damage, any immunities/resistances and some buttons. The first button sets the target hit points based on the calculation displayed. The dropdown controls how the damage is applied, "Calc" means take into account damage immunity/resistance etc. multipliers change the amount of damage applied but **do not** take into account resistance/immunity.
 
 
 * **Apply Damage immunities** Midi-qol will use the target’s resistance/immunity/vulnerability settings for each type of damage in the attack and calculate how much of the damage applies. If "+physical" is set midi-qol will look at the item that did the attack to see if the damage is magical or not according to the following:
@@ -664,6 +664,7 @@ These flags can be used to grant damage reduction to a character and can be set 
 flags.midi-qol.DR.all CUSTOM 3, will give 3 points of damage reduction to all incoming damage.
 Negative DR is not supported (i.e. to increase damage taken).  
 * flags.midi-qol.magicResistance.all/str/dex etc. Will give advantage on saves versus magical effects (spell or magic effect property set).
+* flags.midi-qol.magicVulnerabiltiy.all/str/dex etc. Will give disadvantage on saves versus effects (spell or magic effect property set).
 
 * flags.midi-qol.absorption.damageType (acid/bludgeoning etc) converts damage of that type to healing when applied to the actor with the flag set.
 
@@ -672,6 +673,14 @@ Negative DR is not supported (i.e. to increase damage taken).
 * flags.midi-qol.ignoreNearbyFoes which, when set, means disadvantage from nearby foes (optional rules) will not affect the actor.
 
 * flags.midi-qol.potentCantrip, if set cantrips cast by the actor will do 1/2 damage instead of no damage. Overrides any other damage multiplier settings.
+
+* flags.midi-qol.max and flags.midi-qol.min
+  flags.midi-qol.min/max.ability.all OVERRIDE value
+  flags.midi-qol.min/max.ability.save.all/dex/str/etc OVERRIDE value
+  flags.midi-qol.min/max.ability.check.all/dex/str/etc OVERRIDE value
+  flags.midi-qol.min/max.skill.all/acr/per/prc etc OVERRIDE value
+
+  The flags modify saving throw, ability checks and skill check rolls. min means that each dice of the d20 roll will be at LEAST value, max mean that the roll will be at MOST value. The value field must benumeric, you can force lookups by using   ``[[@abilities.dex.value]]`` for example
 
 ## Optional Bonus Effects
 Optional flags cause a dialog to be raised when an opportunity to apply the effect comes up (i.e. the player is hit by an attack).
@@ -685,8 +694,12 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
 * flags.midi-qol.optional.Name.save.all/str/dex/etc	the bonus is added after the save roll. Requires auto fast forward		
 * flags.midi-qol.optional.Name.label	label to use in the dialog		
 * flags.midi-qol.optional.Name.count	how many uses the effect has (think lucky which has 3), if absent the bonus will be single use (bardic inspiration), turn for once per turn.   
-
-You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
+  **every** - you can use the optional effect on every occurence
+  **reaction** - behaves as a reaction roll, i.e. uses up your reaction
+  **a number** - how many times the effect can be used before expiring
+  **turn** - can be used once per turn (assumes in combat)
+  **@fields** - available if the @field > 0, decrements the @field on use. 
+  You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
 
 * flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
 
@@ -694,8 +707,9 @@ Values for the optional roll bonus flags include a dice expression (added to the
 
 Generally options.Name fields do not work with better rolls due to the way it creates rolls.
 
-## Spell Sculpting: flags.midi-qol.sculptSpell
+## Spell Sculpting: flags.midi-qol.sculptSpell and flags.midi-qol.carefulSpell
 If a spell caster with flags.midi-qol.sculptSpell set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 damage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.
+If a spell caster with flags.midi-qol.carefulSpell set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and damage as if they had saved (no matter what they roll).
 
 ## flags.midi-qol.OverTime (Overtime effects)
 Intended for damage over time effects or until save effects, but can do a bunch of things.
@@ -751,9 +765,16 @@ where specification is a comma separated list of fields.
 
 ![Hold Person](pictures/HoldPerson.png)
 
+**MidiQOL.doOverTimeEffect**
+ 
+ MidiQOL.doOverTimeEffect(actor: Actor5e, effect: ActiveEffect, turnStart: boolean), which will perform the overtime processing for the passed effect, turnStart === true, do turn=start changes, false do turn=end changes.
+
+ The effect does not need to be present on the actor to be processed.
+ 
   **If you are applying the effect via using an item** @ fields are ambiguous, should they refer to the caster or the target? There are reasons to have both interpreations, an ongoing saving throw should refer to the caster, e.g. ```saveDC=@attributes.spelldc```. Regeneration has appplyCondition=@attributes.hp.value > 0, which should refer to the target.
 
   Effects transferred via item usage, require DAE and use it's evaluation to resolve the problem. Fields written as simple @ fields (``@attributes.spelldc``) ALWAYS refer to the caster.  
+
   If you want the @field to refer to the target, that requires use of a DAE feature, ``##field`` will not be evaluated on the caster, but will be converted to an ``@field`` after the effect is applied to the target. The example ``appplyCondition=@attributes.hp.value > 0`` would be written ``appplyCondition=##attributes.hp.value > 0``.
 
   Here's an example, if I add the following effect to a weapon, so that the effect is applied to the target when the weapon hits:
@@ -771,7 +792,6 @@ where specification is a comma separated list of fields.
 
 # Bugs
 probably many however....
-* flags.midi-qol.maxDamage.... are not working so don't use them.
 * Language translations are not up to date.
 
 # Notes for Macro writers
