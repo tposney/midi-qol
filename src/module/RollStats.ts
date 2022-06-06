@@ -105,10 +105,10 @@ export class RollStats {
     if (!item) return duplicate(blankStat);
     let currentStats = this.getEntityStats(id, collection);
     if (!currentStats) return null;
-    if (!currentStats.itemStats[item.id]) {
-      currentStats.itemStats[item.id] = { name: item.name, session: duplicate(blankStat) }
+    if (!currentStats.itemStats[item.name]) {
+      currentStats.itemStats[item.name] = { name: item.name, session: duplicate(blankStat) }
     }
-    return currentStats.itemStats[item.id];
+    return currentStats.itemStats[item.name];
   }
 
   rollCount;

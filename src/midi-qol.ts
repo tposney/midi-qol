@@ -19,7 +19,7 @@ import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Ho
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
-import { applyTokenDamage, checkNearby, completeItemRoll, distancePointToken, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
+import { applyTokenDamage, canSee, checkNearby, completeItemRoll, distancePointToken, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
@@ -331,7 +331,8 @@ function setupMidiQOLApi() {
     overTimeJSONData: overTimeJSONData,
     MQOnUseOptions,
     midiRenderRoll,
-    doOverTimeEffect
+    doOverTimeEffect,
+    canSee
   };
   globalThis.MidiQOL.actionQueue = new Semaphore();
 }
@@ -521,6 +522,10 @@ function setupMidiFlags() {
     Object.keys(CONFIG.DND5E.damageResistanceTypes).forEach(dt => {
       midiFlags.push(`flags.midi-qol.DR.${dt}`);
     })
+    midiFlags.push(`flags.midi-qol.DR.healing`);
+    midiFlags.push(`flags.midi-qol.DR.temphp`);
+
+
   }
 
   midiFlags.push(`flags.midi-qol.optional.NAME.attack.all`);

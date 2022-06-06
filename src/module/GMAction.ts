@@ -173,7 +173,9 @@ export async function rollAbility(data: { request: string; targetUuid: string; a
   if (data.request === "save") result = await actor.rollAbilitySave(data.ability, data.options)
   else if (data.request === "abil") result = await actor.rollAbilityTest(data.ability, data.options);
   else if (data.request === "skill") result = await actor.rollSkill(data.ability, data.options)
-  return result;
+  const resultObject = duplicate(result); // Since the return value is being sent over the wire make sure the result field is set
+  resultObject.result = result.result;
+  return resultObject;
 }
 
 export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined }) {

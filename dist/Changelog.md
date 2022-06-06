@@ -1,3 +1,17 @@
+### 0.9.57
+* Added a preview for midi-qol quick settings which allows you accept or reject the proposed changes.
+  - Cleaned up full auto/manual changes to reflect current settings.
+* Fix for damage resistance/immunity all blocking healing from weapons. (Niche case I know).
+* **Breaking** Removed support for targeting Multi Level Tokens ghost tokens - too many errors - they will now be ignored.
+* Fix for not respecting levels module template height manual setting.
+* Fix for auto applying a convenient effect, type non-stacking would apply multiple copies of the effect.
+* Fix for sometimes trying to access _levels before initialisation.
+* If an attacker is not visible to a target (i.e. not illuminated or visible via the target's sight configuration), the attacker will have advantage on attacks if the optional rule "hidden/invisible" attackers have advantage is enabled. Tokens with "Token Vision" disbled won't check visibility.
+* Fix for concentration not being removed when using better rolls.
+* Optional setting for temphp damage to count towards requiring a concentration save. It appears that RAW/RAI states that temphp damage DOES count towards breaking concentration.
+* Added don't apply CE effects to item card when global apply CE effects is "item Effects if absent CE effects", to ensure that CE effect is not applied, apply CE effects checkbox still means CE takes precedence over item active effect.
+
+
 ### 0.9.56
 * **Breaking** Changes to activaition conditions and application of other damage and applying active effects. Rather than checking the first target for application of other damage/effects each target is processed separately.
   - Other damage (if enabled) is ALWAYS rolled, but only applied to targets who match the activation condition.
@@ -10,7 +24,7 @@
    flags.midi-qol.optional.NAME.attack.all OVERRIDE replace 11 + @mod + @prof
    ```
   will replace the existing roll with 11 + @mod + @prof, which is the average for a 1d20 roll.
-* Added flags.midi-qol.optional.Name.macroToCall OVERRIDE <macroname> | ItemMacro | ItemMacro.<itemName>, which will be called when an optional bonus roll is clicked. ItemMacro will refer to the item that created the bonus roll.
+* Added flags.midi-qol.optional.Name.macroToCall OVERRIDE <macroname> | ItemMacro | ItemMacro.<itemName>, which will be called when an optional bonus roll is clicked. ItemMacro will refer to the item that created the bonus roll. Arguments are the same as for any onUse macro.
 * Fix? for undefined roll.options throwing an error.
 * Fix for possible failed initialisation when levels installed.
 * Fix for edge case of using levels volumetric templates, token magic template effects and the template NOT selecting any targets, incorrectly selecting many targets.

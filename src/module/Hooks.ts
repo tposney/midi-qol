@@ -17,11 +17,18 @@ export let readyHooks = async () => {
   // need to record the damage done since it is not available in the update actor hook
   Hooks.on("preUpdateActor", (actor, update, diff, user) => {
     const hpUpdate = getProperty(update, "data.attributes.hp.value");
-    if (hpUpdate === undefined) return true;
-
-    let hpDiff = actor.data.data.attributes.hp.value - hpUpdate;
-    if (hpUpdate >= (actor.data.data.attributes.hp.tempmax ?? 0) + actor.data.data.attributes.hp.max) hpDiff = 0;
-    actor.data.update({ "flags.midi-qol.concentration-damage": hpDiff })
+    const temphpUpdate = getProperty(update, "data.attributes.hp.temp");
+    let concHPDiff = 0;
+    if (hpUpdate !== undefined) {
+      let hpChange = actor.data.data.attributes.hp.value - hpUpdate;
+      // if (hpUpdate >= (actor.data.data.attributes.hp.tempmax ?? 0) + actor.data.data.attributes.hp.max) hpChange = 0;
+      if (hpChange > 0) concHPDiff += hpChange;
+    }
+    if (configSettings.tempHPDamageConcentrationCheck && temphpUpdate !== undefined) {
+      let temphpDiff = actor.data.data.attributes.hp.temp - temphpUpdate;
+      if (temphpDiff > 0) concHPDiff += temphpDiff
+    }
+    actor.data.update({ "flags.midi-qol.concentration-damage": concHPDiff })
     return true;
   })
 
@@ -53,7 +60,7 @@ export let readyHooks = async () => {
   })
 
   Hooks.on("targetToken", debounce(checkflanking, 150));
-  
+
   Hooks.on("ddb-game-log.pendingRoll", (data) => {
     ddbglPendingHook(data);
   });
@@ -63,12 +70,13 @@ export let readyHooks = async () => {
   Hooks.on("updateActor", async (actor, update, diff, user) => {
     if (user !== game.user?.id) return;
     const hpUpdate = getProperty(update, "data.attributes.hp.value");
-    if (hpUpdate === undefined) return true;
+    const temphpUpdate = getProperty(update, "data.attributes.hp.temp");
+    if (hpUpdate === undefined && temphpUpdate === undefined) return true;
 
     if (!configSettings.concentrationAutomation) return true;
 
-    const hpDiff = getProperty(actor.data, "flags.midi-qol.concentration-damage")
-    if (!hpDiff || hpDiff <= 0) return true;
+    let hpDiff = getProperty(actor.data, "flags.midi-qol.concentration-damage") ?? 0;
+    if (hpDiff <= 0) return true;
     // expireRollEffect.bind(actor)("Damaged", ""); - not this simple - need to think about specific damage types
     concentrationCheckItemDisplayName = i18n("midi-qol.concentrationCheckName");
     const concentrationEffect: ActiveEffect | undefined = getConcentrationEffect(actor)
@@ -259,7 +267,7 @@ export function initHooks() {
   setupMidiFlagTypes();
   Hooks.on("applyActiveEffect", midiCustomEffect);
   // Hooks.on("preCreateActiveEffect", checkImmunity); Disabled in lieu of having effect marked suppressed
-  Hooks.on("preUpdateItem",  preUpdateItemActorOnUseMacro);
+  Hooks.on("preUpdateItem", preUpdateItemActorOnUseMacro);
   Hooks.on("preUpdateActor", preUpdateItemActorOnUseMacro)
   Hooks.on("renderItemSheet", (app, html, data) => {
     const element = html.find('input[name="data.chatFlavor"]').parent().parent();
@@ -285,7 +293,7 @@ export function initHooks() {
       const ceForItem = game.dfreds.effects.all.find(e => e.name === app.object.name);
       if (ceForItem) {
         const element = html.find('input[name="data.chatFlavor"]').parent().parent();
-        if (["both", "cepri"].includes(configSettings.autoCEEffects)) {
+        if (["both", "cepri", "itempri"].includes(configSettings.autoCEEffects)) {
           const offLabel = i18n("midi-qol.convenientEffectsOff");
           const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOff") ?? false;
           const effect = `<div class="form-group"><label>${offLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOff" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`
@@ -382,8 +390,8 @@ function setupMidiFlagTypes() {
 
   attackTypes.forEach(at => {
     midiFlagTypes[`flags.midi-qol.DR.${at}`] = "number"
-  //  midiFlagTypes[`flags.midi-qol.optional.NAME.attack.${at}`] = "string"
-  //  midiFlagTypes[`flags.midi-qol.optional.NAME.damage.${at}`] = "string"
+    //  midiFlagTypes[`flags.midi-qol.optional.NAME.attack.${at}`] = "string"
+    //  midiFlagTypes[`flags.midi-qol.optional.NAME.damage.${at}`] = "string"
   });
   midiFlagTypes["flags.midi-qol.onUseMacroName"] = "string";
 
@@ -402,9 +410,9 @@ function setupMidiFlagTypes() {
   })
 
   if (game.system.id === "dnd5e") {
-     midiFlagTypes[`flags.midi-qol.DR.all`] = "string";
-     midiFlagTypes[`flags.midi-qol.DR.non-magical`] = "string";
-     midiFlagTypes[`flags.midi-qol.DR.non-silver`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.all`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-magical`] = "string";
+    midiFlagTypes[`flags.midi-qol.DR.non-silver`] = "string";
     midiFlagTypes[`flags.midi-qol.DR.non-adamant`] = "string";
     midiFlagTypes[`flags.midi-qol.DR.non-physical`] = "string";
     midiFlagTypes[`flags.midi-qol.DR.final`] = "number";

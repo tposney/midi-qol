@@ -280,19 +280,29 @@ function showDiffs(current: any, changed: any, flavor: string = "") {
     changes.push(`${key.startsWith("gm") ? "GM " : ""}${longName} <strong>${currentVal} => ${changedVal}</strong>`)
   }
   if (changes.length === 0) changes.push("No Changes");
-  let d = new Dialog({
-    title: i18n("midi-qol.QuickSettings"),
-    content: changes.join("<br>"),
-    buttons: {
-      close: {
-        icon: '<i class="fas fa-check"></i>',
-        label: "Close"
+  const dialog = new Promise((resolve, reject) => {
+    let d = new Dialog({
+      title: i18n("midi-qol.QuickSettings"),
+      content: changes.join("<br>"),
+      buttons: {
+        apply: {
+          icon: '<i class="fas fa-check"></i>',
+          label: "Apply Changes",
+          callback: () => resolve(true)
+        },
+        abort: {
+          icon: '<i class="fas fa-xmark"></i>',
+          label: "Don't Apply Changes",
+          callback: () => resolve(false)
+        }
       },
-    },
-    default: "close"
-  });
-  d.render(true);
-  warn("Quick Settings ", changes.join("\n"));
+      default: "apply",
+      close: () => resolve(false)
+    });
+    d.render(true);
+    warn("Quick Settings ", changes.join("\n"));
+  })
+  return dialog;
 }
 
 let quickSettingsDetails: any = {
@@ -313,7 +323,7 @@ let quickSettingsDetails: any = {
       gmAutoFastForwardDamage: true,
       gmRemoveButtons: "all",
       gmLateTargeting: false,
-      autoItemEffects: true,
+      autoItemEffects: "applyRemove",
       allowUseMacro: true,
     },
   },
@@ -361,7 +371,7 @@ let quickSettingsDetails: any = {
       rangeTarget: "alwaysIgnoreDefeated",
       rollNPCLinkedSaves: "auto",
       autoCEEffects: "cepri",
-      autoItemEffects: true,
+      autoItemEffects: "applyRemove",
       allowUseMacro: true,
       autoApplyDamage: "yesCard"
     },
@@ -385,7 +395,7 @@ let quickSettingsDetails: any = {
       rangeTarget: "alwaysIgnoreDefeated",
       rollNPCLinkedSaves: "chat",
       autoCEEffects: "cepri",
-      autoItemEffects: false,
+      autoItemEffects: "off",
       allowUseMacro: true,
       autoApplyDamage: "no"
     }
@@ -400,6 +410,30 @@ let quickSettingsDetails: any = {
       enforceReactions: "all",
       recordAOO: "all"
     },
+    codeChecks: (current, settings) => {
+      let changesMade = false;
+      if (current.autoCheckHit === "none") {
+        settings.autoCheckHit = "whisper";
+        changesMade = true;
+      }
+      if (current.autoCheckSaves === "none") {
+        settings.autoCheckSaves = "whisper";
+        changesMade = true;
+      }
+      if (current.playerRollSaves === "none") {
+        settings.playerRollSaves = "chat";
+        changesMade = true;
+      }
+      if (current.rollNPCLinkedSaves === "none") {
+        settings.rollNPCLinkedSaves = "chat";
+        changesMade = true;
+      }
+      if (current.autoApplyDamage === "none") {
+        settings.autoApplyDamage = "noCard";
+        changesMade = true;
+      }
+      if (changesMade) ui.notifications?.warn("midi-qol Some automation enabled to support reaction processing")
+    }
   },
   DisableReactions: {
     description: "Turn off Reaction processing",
@@ -432,7 +466,7 @@ let quickSettingsDetails: any = {
       autoApplyDamage: "noCard"
     },
     codeChecks: (current, settings) => {
-      game.settings.set("midi-qol", "AddChatDamageButtons", "gm"); 
+      game.settings.set("midi-qol", "AddChatDamageButtons", "gm");
     }
   },
   DisableConcentration: {
@@ -481,21 +515,23 @@ let quickSettingsDetails: any = {
   }
 }
 
-export async function applySettings (key: string) {
+export async function applySettings(key: string) {
   let settingsToApply = {};
   const config = quickSettingsDetails[key];
   if (config.configSettings) {
     settingsToApply = duplicate(config.configSettings);
     if (config.codeChecks) config.codeChecks(configSettings, settingsToApply)
-    showDiffs(configSettings, settingsToApply);
-    settingsToApply = mergeObject(configSettings, settingsToApply, { overwrite: true, inplace: true });
-    if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", settingsToApply);
+    if (await showDiffs(configSettings, settingsToApply)) {
+      settingsToApply = mergeObject(configSettings, settingsToApply, { overwrite: true, inplace: true });
+      if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", settingsToApply);
+  }
   } else if (config.fileName) {
     try {
       const jsonText = await fetchConfigFile(PATH + config.fileName);
       const configData = JSON.parse(jsonText);
-      importSettingsFromJSON(jsonText);
-      showDiffs(configSettings, configData.configSettings);
+      if (await showDiffs(configSettings, configData.configSettings)) {
+        importSettingsFromJSON(jsonText);
+      }
       return;
     } catch (err) {
       error("could not load config file", config.fileName, err);

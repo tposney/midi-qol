@@ -8,7 +8,7 @@ import { activationConditionToUse, selectTargets, shouldRollOtherDamage, showIte
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapcitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking, canSee } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -380,10 +380,12 @@ export class Workflow {
       case WORKFLOWSTATES.AWAITTEMPLATE:
         if (this.templateTargeting) {
           if (debugEnabled > 1) debug("Item has template; registering Hook");
+          /*
           if (installedModules.get("levels")) {
             installedModules.get("levels").templateElevation = true;
             installedModules.get("levels").nextTemplateHeight = this.templateElevation;
           }
+          */
           if (!(this instanceof BetterRollsWorkflow)) this.placeTemlateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
           if (this.needTemplate) return undefined;
         }
@@ -759,7 +761,7 @@ export class Workflow {
           let useCE = configSettings.autoCEEffects;
           const midiFlags = theItem.data.flags["midi-qol"];
           if (!theItem) return this.next(WORKFLOWSTATES.ROLLFINISHED);
-          if (midiFlags?.forceCEOff && ["both", "cepri"].includes(useCE)) useCE = "none";
+          if (midiFlags?.forceCEOff && ["both", "cepri", "itempri"].includes(useCE)) useCE = "none";
           else if (midiFlags?.forceCEOn && ["none", "itempri"].includes(useCE)) useCE = "cepri";
           const hasCE = installedModules.get("dfreds-convenient-effects")
           //@ts-ignore
@@ -785,13 +787,19 @@ export class Workflow {
                 await globalThis.DAE.doEffects(theItem, true, [token], { toggleEffect: this.item?.data.flags.midiProperties?.toggleEffect, whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions })
                 if (!this.forceApplyEffects && configSettings.autoItemEffects !== "applyLeave") await this.removeEffectsButton();
               }
-              if (ceEffect && theItem) {
+              if (ceEffect && theItem && token.actor) {
                 if (["both", "cepri"].includes(useCE) || (useCE === "itempri" && !hasItemEffect)) {
                   const metadata = this.getMacroData();
                   if (this.item?.data.flags.midiProperties?.toggleEffect) {
                     //@ts-ignore
                     await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
                   } else {
+                    // Check stacking status
+                    //@ts-ignore
+                    if ((ceEffect.flags.dae?.stackable ?? "none") === "none" && game.dfreds.effectInterface?.hasEffectApplied(theItem.name, token.actor.uuid)) {
+                      //@ts-ignore
+                      await game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });  
+                    }
                     //@ts-ignore
                     await game.dfreds.effectInterface?.addEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
                   }
@@ -911,7 +919,7 @@ export class Workflow {
       let isHidden;
       if (token && target && installedModules.get("conditional-visibility")) { // preferentially check CV isHidden
         //@ts-ignore .api
-        isHidden = game.modules.get('conditional-visibility')?.api?.canSee(target, token) === false;
+        isHidden = game.modules.get('conditional-visibility')?.api?.canSee(target, token) === false || !canSee(target, token);
       } else if (token) {
         const hidden = hasCondition(token, "hidden");
         const invisible = hasCondition(token, "invisible");
@@ -2009,6 +2017,7 @@ export class Workflow {
         if (checkBonus) {
           const rollBonus = (await new Roll(checkBonus, target.actor?.getRollData()).evaluate({ async: true })).total;
           rollTotal += rollBonus;
+          //TODO 
           rollDetail = (await new Roll(`${rollDetail.result} + ${rollBonus}`).evaluate({ async: true }));
           saved = rollTotal >= rollDC;
           if (checkRule("criticalSaves")) { // normal d20 roll/lmrtfy/monks roll
@@ -2166,8 +2175,8 @@ export class Workflow {
   }
 
   checkSuperSaver(token, ability: string) {
-    const actor = token.actor;
-    const flags = getProperty(actor.data.flags, "midi-qol.superSaver");
+    const actor = token.actor ?? {};
+    const flags = getProperty(actor, "data.flags.midi-qol.superSaver");
     if (!flags) return false;
     if (flags?.all) return true;
     if (getProperty(flags, `${ability}`)) return true;
@@ -2178,8 +2187,8 @@ export class Workflow {
   }
 
   checkSemiSuperSaver(token, ability: string) {
-    const actor = token.actor;
-    const flags = getProperty(actor.data.flags, "midi-qol.semiSuperSaver");
+    const actor = token.actor ?? {};
+    const flags = getProperty(actor, "data.flags.midi-qol.semiSuperSaver");
     if (!flags) return false;
     if (flags?.all) return true;
     if (getProperty(flags, `${ability}`)) return true;
@@ -2300,7 +2309,9 @@ export class Workflow {
           // check to see if the roll hit the target
           if ((isHit || isHitEC || this.iscritical) && this.item?.hasAttack && this.attackRoll && targetToken !== null && !getProperty(this, "item.data.flags.midi-qol.noProvokeReaction")) {
             //@ts-ignore
-            const result = await doReactions(targetToken instanceof Token ? targetToken : targetToken.object, this.tokenUuid, this.attackRoll, "reaction", { item: this.item, workflowOptions: mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true }) });
+            const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { item: this.item, workflowOptions: mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true }) });
+
+            //const result = await doReactions(targetToken instanceof Token ? targetToken : targetToken.object, this.tokenUuid, this.attackRoll, "reaction", { item: this.item, workflowOptions: mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true }) });
             if (result?.name) {
               targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
             }

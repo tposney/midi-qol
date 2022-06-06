@@ -383,8 +383,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   return result;
 }
 
-//@ts-ignore .Item
-async function newResolveLateTargeting(item: CONFIG.Item.documentClassl, overRideSetting = false): boolean {
+async function newResolveLateTargeting(item: any, overRideSetting = false): Promise<boolean> {
   const workflow = Workflow.getWorkflow(item?.uuid);
   if (!overRideSetting && !getLateTargeting(workflow)) return true;
 
@@ -575,6 +574,10 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   let workflow: Workflow;
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
     if (!this.id) this.data._id = randomID();
+    if (needsConcentration && checkConcentration) { 
+      const concentrationEffect = getConcentrationEffect(this.actor);
+      if (concentrationEffect) await removeConcentration(this.actor); 
+    }
     workflow = new BetterRollsWorkflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
     // options.createMessage = true;
     const result = await wrapped(options);
@@ -594,11 +597,6 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const consume = this.data.data.consume;
   if (consume?.type === "ammo") {
     workflow.ammo = this.actor.items.get(consume.target);
-  }
-  if (installedModules.get("levelsvolumetrictemplates")) {
-    installedModules.get("levels").lastTokenForTemplate = workflow.token;
-    // installedModules.get("levels").nextTemplateHeight = workflow.templateElevation ?? 0;
-    installedModules.get("levels").templateElevation = true;
   }
 
   let itemUsesReaction = false;
@@ -701,27 +699,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
   if (needsConcentration && checkConcentration) {
     const concentrationEffect = getConcentrationEffect(this.actor);
-    if (concentrationEffect) {
-      const concentrationData = this.actor.getFlag("midi-qol", "concentration-data");
-      if (!concentrationData) return;
-      try {
-        await this.actor.unsetFlag("midi-qol", "concentration-data")
-        if (concentrationData.templates) {
-          for (let templateUuid of concentrationData.templates) {
-            const template = await fromUuid(templateUuid);
-            if (template) await template.delete();
-          }
-        }
-        for (let removeUuid of concentrationData.removeUuids) {
-          const entity = await fromUuid(removeUuid);
-          if (entity) await entity.delete(); // TODO check if this needs to be run as GM
-        }
-        await deleteItemEffects({ ignore: [], targets: concentrationData.targets, origin: concentrationData.uuid });
-        // await concentrationEffect.delete();
-      } catch (err) {
-        error("error when attempting to remove concentration ", err)
-      }
-    }
+    if (concentrationEffect) await removeConcentration(this.actor);
   }
 
 
@@ -819,6 +797,27 @@ export async function showItemInfo() {
   return ChatMessage.create(chatData);
 }
 
+export async function removeConcentration(actor: Actor) {
+  try {
+    const concentrationData: any = actor.getFlag("midi-qol", "concentration-data");
+    if (!concentrationData) return;
+    await actor.unsetFlag("midi-qol", "concentration-data")
+    if (concentrationData.templates) {
+      for (let templateUuid of concentrationData.templates) {
+        const template = await fromUuid(templateUuid);
+        if (template) await template.delete();
+      }
+    }
+    for (let removeUuid of concentrationData.removeUuids) {
+      const entity = await fromUuid(removeUuid);
+      if (entity) await entity.delete(); // TODO check if this needs to be run as GM
+    }
+    await deleteItemEffects({ ignore: [], targets: concentrationData.targets, origin: concentrationData.uuid });
+    // await concentrationEffect.delete();
+  } catch (err) {
+    error("error when attempting to remove concentration ", err)
+  }
+}
 
 export async function showItemCard(showFullCard: boolean, workflow: Workflow, minimalCard = false, createMessage = true) {
   if (debugEnabled > 0) warn("show item card ", this, this.actor, this.actor.token, showFullCard, workflow);
@@ -944,7 +943,11 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
         }
         const r = new Ray({ x: tx, y: ty }, { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y });
 
-        if (configSettings.optionalRules.wallsBlockRange === "centerLevels" && installedModules.get("levels")) {
+        // If volumetric templates installed always leave targeting to it.
+        if (
+          configSettings.optionalRules.wallsBlockRange === "centerLevels" 
+          && installedModules.get("levels")
+          && !installedModules.get("levelsvolumetrictemplates")) {
           let p1 = {
             x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y,
             //@ts-ignore
@@ -961,7 +964,7 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
           //@ts-ignore
           contains = contains && !installedModules.get("levels").testCollision(p1, p2, "collision");
           //@ts-ignore
-        } else {
+        } else if (!installedModules.get("levelsvolumetrictemplates")) {
           contains = !canvas?.walls?.checkCollision(r);
         }
       }
@@ -1000,7 +1003,7 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   if (user !== game.user?.id) {
     return true;
   }
-  if (game.user?.targets.size === 0 && templateDocument?.object) {
+  if (game.user?.targets.size === 0 && templateDocument?.object && !installedModules.get("levelsvolumetrictemplates")) {
     //@ts-ignore
     const mTemplate: MeasuredTemplate = templateDocument.object;
     if (mTemplate.shape)
@@ -1041,13 +1044,13 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
 };
 
-export function activationConditionToUse(workflow: Workflow ) {
+export function activationConditionToUse(workflow: Workflow) {
   let conditionToUse: string | undefined = undefined;
   let conditionFlagToUse: string | undefined = undefined;
-  if (this.data.type === "spell" && configSettings.rollOtherSpellDamage === "activation" ) {
-      return workflow.otherDamageItem?.data.data.activation?.condition
+  if (this.data.type === "spell" && configSettings.rollOtherSpellDamage === "activation") {
+    return workflow.otherDamageItem?.data.data.activation?.condition
   } else if (["rwak", "mwak"].includes(this.data.data.actionType) && configSettings.rollOtherDamage === "activation") {
-      return workflow.otherDamageItem?.data.data.activation?.condition;
+    return workflow.otherDamageItem?.data.data.activation?.condition;
   }
   if (workflow.otherDamageItem?.data.flags?.midiProperties?.rollOther)
     return workflow.otherDamageItem?.data.data.activation?.condition;

@@ -227,7 +227,7 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
         if (!(magicalDamage || silverDamage) && trait.includes("silver")) trait = trait.concat("bludgeoning", "slashing", "piercing")
         if (!(magicalDamage || adamantineDamage) && trait.includes("adamant")) trait = trait.concat("bludgeoning", "slashing", "piercing")
       }
-      if (!magicalDamage && trait.find(t => t === "nonmagic")) totalMult = totalMult * mult;
+      if (!magicalDamage && trait.find(t => t === "nonmagic") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (magicalDamage && trait.find(t => t === "magic") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
       else if (item?.type === "power" && trait.includes("power") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
@@ -269,7 +269,7 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
   const itemSaveMultiplier = getSaveMultiplierForItem(item);
   for (let t of theTargets) {
     //@ts-ignore
-    const targetToken: Token = t instanceof TokenDocument ? t.object : t;
+    const targetToken: Token = (t instanceof TokenDocument ? t.object : t) ?? t;
     //@ts-ignore
     const targetTokenDocument: TokenDocument = t instanceof TokenDocument ? t : t.document;
 
@@ -431,6 +431,7 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
         mult = mult * resMult;
         damageDetailItem.damageMultiplier = mult;
         if (!["healing", "temphp"].includes(type)) damage -= DR; // Damage reduction does not apply to healing
+        //        else damage -= DR;
         let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
 
         if (type.includes("temphp")) {
@@ -1854,16 +1855,8 @@ export async function addConcentration(options: { workflow: Workflow }) {
       }
     }
     return await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
-    setTimeout(
-      () => {
-        actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
-      }, 100);
-    return true;
-    // return await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
   }
 }
-
-//  the second setting the flag for the macro to be called when damaging an opponent
 
 /** 
  * Find tokens nearby
@@ -1897,7 +1890,7 @@ export function checkNearby(disposition: number | null, token: Token | undefined
 export function hasCondition(token, condition: string) {
   if (!token) return false;
   const localCondition = i18n(`midi-qol.${condition}`);
-  if (installedModules.get("conditional-visibility") && getProperty((token.actor.data.flags), `conditional-visibility.${condition}`)) return true;
+  if (installedModules.get("conditional-visibility") && token.actor && getProperty((token.actor.data.flags), `conditional-visibility.${condition}`)) return true;
   return false;
 }
 
@@ -1990,14 +1983,21 @@ export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<T
   if (!game.modules.get("multilevel-tokens")?.active) return tokenSet;
   const multiLevelTokens = [...tokenSet].filter(t => getProperty(t.data, "flags.multilevel-tokens"));
   //@ts-ignore t.data.flags
-  const nonLocalTokens = multiLevelTokens.filter(t => canvas.tokens?.get(t.data.flags["multilevel-tokens"].stoken))
+  // const localTokens = multiLevelTokens.filter(t => canvas.tokens?.get(t.data.flags["multilevel-tokens"].stoken))
   let normalTokens = [...tokenSet].filter(a => a.actor);
-  // return new Set(normalTokens);
-  let tokenData;
-  let synthTokens = nonLocalTokens.map(t => {
+  multiLevelTokens.forEach(mlt => {
+    ui.notifications?.warn(`midi-qol You cannot target Multi Level Token ${mlt.name}`);
+  })
+  return new Set(normalTokens);
+  // TODO revisit this to see if the rest of midi can work with MLT
+  let synthTokens = multiLevelTokens.map(t => {
     const mlFlags: any = t.data.flags["multilevel-tokens"];
-    const token = MQfromUuid(`Scene.${mlFlags.sscene}.Token.${mlFlags.stoken}`);
-    return token;
+    let tokenDocument = MQfromUuid(`Scene.${mlFlags.sscene ?? canvas?.scene?.id}.Token.${mlFlags.stoken}`);
+    tokenDocument = deepClone(tokenDocument);
+    tokenDocument.data.x = t.x;
+    tokenDocument.data.y = t.y;
+    t.document = tokenDocument;
+    return t;
   });
   return new Set(normalTokens.concat(synthTokens));
 }
@@ -2455,7 +2455,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   }
 
   if (await hasUsedReaction(target.actor) && needsReactionCheck(target.actor)) return noResult;
-  let player = playerFor(target.document);
+  let player = playerFor(target.document ?? target);
   if (getReactionSetting(player) === "none") return noResult;
   if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
   if (!player) return noResult;
@@ -2600,7 +2600,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
 }
 
 export function playerFor(target: TokenDocument): User | undefined {
-  return playerForActor(target.actor ?? undefined);
+  return playerForActor(target.actor ?? undefined); // just here for syntax checker
 }
 
 export function playerForActor(actor: Actor | undefined): User | undefined {
@@ -3116,7 +3116,7 @@ export async function computeFlankedStatus(target): Promise<boolean> {
         //@ts-ignore
         const CEFlanked = game.dfreds.effects._flanked;
         //@ts-ignore
-        const hasFlanked = CEFlanked && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.name, token.actor.uuid);
+        const hasFlanked = token.actor && CEFlanked && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.name, token.actor.uuid);
         if (hasFlanked) continue;
       }
       // Loop through each square covered by attacker and ally
@@ -3255,11 +3255,11 @@ export async function markFlanking(token, target): Promise<boolean> {
       const CEFlanking = game.dfreds.effects._flanking;
       if (!CEFlanking) return needsFlanking;
       //@ts-ignore
-      const hasFlanking = await game.dfreds.effectInterface?.hasEffectApplied(CEFlanking.name, token.actor.uuid)
-      if (needsFlanking && !hasFlanking) {
+      const hasFlanking = token.actor && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanking.name, token.actor.uuid)
+      if (needsFlanking && !hasFlanking && token.actor) {
         //@ts-ignore
         await game.dfreds.effectInterface?.addEffect({ effectName: CEFlanking.name, uuid: token.actor.uuid });
-      } else if (!needsFlanking && hasFlanking) {
+      } else if (!needsFlanking && hasFlanking && token.actor) {
         //@ts-ignore
         await game.dfreds.effectInterface?.removeEffect({ effectName: CEFlanking.name, uuid: token.actor.uuid });
       }
@@ -3273,11 +3273,11 @@ export async function markFlanking(token, target): Promise<boolean> {
       if (!CEFlanked) return false;
       const needsFlanked = await computeFlankedStatus(target);
       //@ts-ignore
-      const hasFlanked = await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.name, target.actor.uuid);
-      if (needsFlanked && !hasFlanked) {
+      const hasFlanked = token.actor && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.name, target.actor.uuid);
+      if (needsFlanked && !hasFlanked && token.actor) {
         //@ts-ignore
         await game.dfreds.effectInterface?.addEffect({ effectName: CEFlanked.name, uuid: target.actor.uuid });
-      } else if (!needsFlanked && hasFlanked) {
+      } else if (!needsFlanked && hasFlanked && token.actor) {
         //@ts-ignore
         await game.dfreds.effectInterface?.removeEffect({ effectName: CEFlanked.name, uuid: target.actor.uuid });
       }
@@ -3306,4 +3306,68 @@ export function getChanges(actorOrItem, key: string) {
     .flat()
     .filter(c => c.key.includes(key))
     .sort((a, b) => a.key < b.key ? -1 : 1)
+}
+
+/**
+ * 
+ * @param token 
+ * @param target 
+ * 
+ * @returns {boolean}
+ */
+
+export function canSee(tokenEntity: Token | TokenDocument, targetEntity: Token | TokenDocument): boolean {
+//TODO - requires rewrite for v10
+  //@ts-ignore
+  let target: Token = targetEntity instanceof TokenDocument ? targetEntity.object : targetEntity;
+  //@ts-ignore
+  let token: Token = tokenEntity instanceof TokenDocument ? tokenEntity.object : tokenEntity;
+  if (!token || !target) return true;
+  const targetPoint = target.center;
+  const visionSource = token.vision;
+  if (!token.vision.active) return true; //TODO work out what to do with tokens with no vision
+  const lightSources = canvas?.lighting?.sources;
+
+  // Determine the array of offset points to test
+  const t = Math.min(target.w, target.h) / 4;
+
+  const offsets = t > 0 ? [[0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t]] : [[0, 0]];
+  const points = offsets.map(o => new PIXI.Point(targetPoint.x + o[0], targetPoint.y + o[1]));
+  // If the point is entirely inside the buffer region, it may be hidden from view
+  // if (!target._inBuffer && !points.some(p => canvas?.dimensions?.sceneRect.contains(p.x, p.y))) return false;
+
+  // Check each point for one which provides both LOS and FOV membership
+  const returnValue = points.some(p => {
+    let hasLOS = false;
+    let hasFOV = false;
+    let requireFOV = !canvas?.lighting?.globalLight;
+
+    if (!hasLOS || (!hasFOV && requireFOV)) {   // Do we need to test for LOS?
+      if (visionSource?.los?.contains(p.x, p.y)) {
+        hasLOS = true;
+        if (!hasFOV && requireFOV) {            // Do we need to test for FOV?
+          if (visionSource?.fov?.contains(p.x, p.y)) hasFOV = true;
+        }
+      }
+    }
+    if (hasLOS && (!requireFOV || hasFOV)) {    // Did we satisfy all required conditions?
+      return true;
+    }
+
+    // Check light sources
+    for (let source of lightSources?.values() ?? []) {
+      if (!source.active) continue;
+      //@ts-ignore
+      if ( source.containsPoint(p) ) {
+        //@ts-ignore
+        if ( source.data.vision ) hasLOS = true;
+        hasFOV = true;
+      }
+      if ( hasLOS && (!requireFOV || hasFOV) ) return true;
+    }
+    return false;
+  });
+
+return returnValue;
+  
 }

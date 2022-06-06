@@ -475,18 +475,6 @@ function _midiATIRefresh(template) {
       //@ts-ignore
       if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && tk.actor?.data.data.attributes.hp.value <= 0)
         return false;
-      //  - check for walls collision if required - handled by volumetic templates 
-      //@ts-ignore
-      /*
-      if (["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && installedModules.get("levels").testCollision(
-        //@ts-ignore
-        { x: tk.x, y: tk.y, z: tk.data.elevation },
-        { x: template.x, y: template.y, z: template.data.flags.levels?.elevation ?? 0 },
-        "sight")
-      ) {
-        return false;
-      }
-      */
       return true;
     })
 

@@ -139,7 +139,6 @@ If you are using Better Rolls (which is a great module), midi-qol takes over onc
 **(Thanks to @simone for his help)**
 Midi-qol is mostly compatible with magic-items. The only issue is that spell templates for spells in a magic item are not auto-placed on casting. Once placed everything works as expected. Spells/features that can be rolled will work.  
 Items that create changes by being present in the characters inventory (i.e. passive/transfer effects) won't behave as expected since they are actually held in the characters inventory, this includes transfer active effects.  
-Reaction processing won't recongise Magic Item spells.
 
 ## Mess
  Midi-qol and Mess dnd5e effects are not compatible. Template effects and the other features of that excellent module should work. If you want Mess attack/damage cards don't use midi-qol.  
@@ -562,7 +561,7 @@ If the target token has the SRD feat "Magic Resistance" or a custom damage resis
 All of these effects expire at the end of the combat if no other duration is specified.
 
 ## Reactions
-If the config settings for reaction checks is enabled midi will check a target that is hit by an attack for any items/feautres/spells that have an activation type of reaction and prompt the target if they want to use any of their reactions, which will then initiate a midi workflow for that item/feature/spell targeting the attacker (so hellish rebuke for example works). Currently does not support spells from magic items.
+If the config settings for reaction checks is enabled midi will check a target that is hit by an attack for any items/feautres/spells that have an activation type of reaction and prompt the target if they want to use any of their reactions, which will then initiate a midi workflow for that item/feature/spell targeting the attacker (so hellish rebuke for example works). 
 
 Reaction spells must be prepared (if preparation is required for the spell) and you must have a spell slot of the appropriate level available for the spell to be included in the list of possible reactions.
 
@@ -575,6 +574,10 @@ Items in the SRD have the activation type set to reaction for reaction spells/fe
 If the item being used for the attack/or to cause damage has the flag (item.data.flags.midi-qol.noProvokeReaction set, it won't trigger reactions).
 
 Reaction processing is much clearer when convenient effects is installed as there is a visual indicator when a reaction has been used.
+
+Reaction processing **REQUIRE** some automation to be enabled. 
+  - Type "reaction" requires **auto check hits** to be enabled.
+  - Type "reaction damaged" requires **auto check hits** (if the damaging item has an attack), **auto check saves** (if the damaging item has a saving throw) and **auto apply dmage** to all be enabled. Otherwise the attackd player can roll the item themselves.
 
 Optional rule, **Record Oppotunity Attacks**.
   * If an actor who is in comabt makes an attack roll when it is not their turn in the combat tracker reaction marker will be applied (if using CE) and recording that they have used their reaction for the round. Settings are:

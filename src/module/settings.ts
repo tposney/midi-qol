@@ -111,6 +111,7 @@ class ConfigSettings {
   spellHitSound: string = "";
   spellUseSound: string = "";
   spellUseSoundRanged: string = "";
+  tempHPDamageConcentrationCheck: boolean = false;
   toggleOptionalRules: boolean = false;
   useCustomSounds: boolean = true;
   usePlayerPortrait: boolean = false;
@@ -300,6 +301,7 @@ export let fetchParams = () => {
   if (configSettings.addDead === undefined) configSettings.addDead = false;
   if (configSettings.paranoidGM === undefined) configSettings.paranoidGM = false;
   if (typeof configSettings.requiresTargets !== "string") configSettings.requiresTargets = "none";
+  if (configSettings.tempHPDamageConcentrationCheck === undefined) configSettings.tempHPDamageConcentrationCheck = false;
   configSettings.optionalRules = mergeObject({
       invisAdvantage: true,
       checkRange: true,
