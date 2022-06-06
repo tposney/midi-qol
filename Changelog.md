@@ -6,7 +6,7 @@
 * Fix for not respecting levels module template height manual setting.
 * Fix for auto applying a convenient effect, type non-stacking would apply multiple copies of the effect.
 * Fix for sometimes trying to access _levels before initialisation.
-* If an attacker is not visible to a target (i.e. not illuminated or visible via the target's sight configuration), the attacker will have advantage on attacks if the optional rule "hidden/invisible" attackers have advantage is enabled. Tokens with "Token Vision" disbled won't check visibility.
+* If an attacker is not visible to a target (i.e. not illuminated or visible via the target's sight configuration), the attacker will have advantage on attacks if the optional rule "hidden/invisible" attackers have advantage is enabled. Tokens with "Token Vision" disabled won't check visibility.
 * Fix for concentration not being removed when using better rolls.
 * Optional setting for temphp damage to count towards requiring a concentration save. It appears that RAW/RAI states that temphp damage DOES count towards breaking concentration.
 * Added don't apply CE effects to item card when global apply CE effects is "item Effects if absent CE effects", to ensure that CE effect is not applied, apply CE effects checkbox still means CE takes precedence over item active effect.
