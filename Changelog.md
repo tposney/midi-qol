@@ -10,6 +10,7 @@
 * Fix for concentration not being removed when using better rolls.
 * Optional setting for temphp damage to count towards requiring a concentration save. It appears that RAW/RAI states that temphp damage DOES count towards breaking concentration.
 * Added don't apply CE effects to item card when global apply CE effects is "item Effects if absent CE effects", to ensure that CE effect is not applied, apply CE effects checkbox still means CE takes precedence over item active effect.
+* Update fr.json
 
 
 ### 0.9.56
