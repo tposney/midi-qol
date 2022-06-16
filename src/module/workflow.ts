@@ -12,7 +12,6 @@ import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultipl
 import { OnUseMacros } from "./apps/Item.js";
 import { procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
-import { collapseTextChangeRangesAcrossMultipleVersions } from "typescript";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -199,7 +198,7 @@ export class Workflow {
   constructor(actor: Actor5e, item: Item5e, speaker, targets, options: any = {}) {
     this.actor = actor;
     this.item = item;
-    if (Workflow.getWorkflow(item?.uuid)) {
+    if (Workflow.getWorkflow(item?.uuid) && !(this instanceof DummyWorkflow)) {
       const existing = Workflow.getWorkflow(item.uuid);
       if (!([WORKFLOWSTATES.ROLLFINISHED, WORKFLOWSTATES.WAITFORDAMAGEROLL].includes(existing.currentState)) && existing.itemCardId) {
         game.messages?.get(existing.itemCardId)?.delete();
@@ -207,7 +206,7 @@ export class Workflow {
       Workflow.removeWorkflow(item.uuid);
     }
 
-    if (!this.item) {
+    if (!this.item || this instanceof DummyWorkflow) {
       this.itemId = randomID();
       this.uuid = this.itemId
     } else {
@@ -276,7 +275,7 @@ export class Workflow {
     this.onUseCalled = false;
     this.effectsAlreadyExpired = [];
     this.reactionUpdates = new Set();
-    Workflow._workflows[this.uuid] = this;
+    if (!(this instanceof DummyWorkflow)) Workflow._workflows[this.uuid] = this;
     this.needTemplate = this.item?.hasAreaTarget;
     this.stateList = [];
     this.attackRolled = false;
@@ -464,7 +463,6 @@ export class Workflow {
           return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
         }
         if (this.noAutoAttack) return undefined;
-
         this.autoRollAttack = this.rollOptions.advantage || this.rollOptions.disadvantage || getAutoRollAttack();
         if (this.rollOptions?.fastForwardSet) this.autoRollAttack = true;
         if (this.rollOptions.rollToggle) this.autoRollAttack = !this.autoRollAttack;
@@ -485,6 +483,7 @@ export class Workflow {
             await chatMessage?.update({ "content": content });
           } else if (!chatMessage) error("no chat message")
         }
+
         if (configSettings.allowUseMacro) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
         }
@@ -494,25 +493,29 @@ export class Workflow {
         return undefined;
 
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
+
         if (await asyncHooksCall("midi-qol.preAttackRollComplete", this) === false) {
           return undefined;
         };
+
         if (this.item && await asyncHooksCall(`midi-qol.preAttackRollComplete.${this.item.uuid}`, this) === false) {
           return undefined;
         };
+
         const attackRollCompleteStartTime = Date.now();
         const attackBonusMacro = getProperty(this.actor.data.flags, `${game.system.id}.AttackBonusMacro`);
         if (configSettings.allowUseMacro && attackBonusMacro) {
           // await this.rollAttackBonus(attackBonusMacro);
         }
-        this.processAttackRoll();
 
+        this.processAttackRoll();
         await asyncHooksCallAll("midi-qol.preCheckHits", this);
         if (this.item) await asyncHooksCallAll(`midi-qol.preCheckHits.${this.item.uuid}`, this);
 
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preCheckHits"), "OnUse", "preCheckHits");
         }
+        this.processAttackRoll();
         if (configSettings.autoCheckHit !== "none") {
           await this.checkHits();
           await this.displayAttackRoll(configSettings.mergeCard);
@@ -523,14 +526,14 @@ export class Workflow {
         } else {
           await this.displayAttackRoll(configSettings.mergeCard);
         }
-        if (checkRule("removeHiddenInvis")) removeHiddenInvis.bind(this)();
+        if (checkRule("removeHiddenInvis")) await removeHiddenInvis.bind(this)();
         const attackExpiries = [
           "isAttacked"
         ];
         await this.expireTargetEffects(attackExpiries)
         // We only roll damage on a hit. but we missed everyone so all over, unless we had no one targetted
         await asyncHooksCallAll("midi-qol.AttackRollComplete", this);
-        if (this.item) await asyncHooksCallAll(`midi-qol.AttackRollComplete.${this.item.uuid}`, this);
+        if (this.item) await asyncHooksCallAll(`midi-qol.AttackRollComplete.${this.uuid}`, this);
 
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("postAttackRoll"), "OnUse", "postAttackRoll");
@@ -561,6 +564,7 @@ export class Workflow {
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preDamageRoll"), "OnUse", "preDamageRoll");
         }
+
         if (this.noAutoDamage) return; // we are emulating the standard card specially.
 
         if (this.shouldRollDamage) {
@@ -571,6 +575,7 @@ export class Workflow {
           }
 
           this.rollOptions.spellLevel = this.itemLevel;
+
           await this.item.rollDamage(this.rollOptions);
           return undefined;
         } else {
@@ -656,6 +661,8 @@ export class Workflow {
         }
 
         if (configSettings.autoCheckSaves !== "none") {
+          await asyncHooksCallAll("midi-qol.preCheckSaves", this);
+          if (this.item) await asyncHooksCallAll(`midi-qol.preCheckSaves.${this.item?.uuid}`, this);
           //@ts-ignore ._hooks not defined
           if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks._hooks["renderChatMessage"]?.length)
           // setup to process saving throws as generated
@@ -673,6 +680,8 @@ export class Workflow {
 
           //@ts-ignore ._hooks not defined
           if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks._hooks["renderChatMessage"]?.length)
+          await asyncHooksCallAll("midi-qol.postCheckSaves", this);
+          if (this.item) await asyncHooksCallAll(`midi-qol.postCheckSaves.${this.item?.uuid}`, this);
           await this.displaySaves(configSettings.autoCheckSaves === "whisper", configSettings.mergeCard);
         } else {// has saves but we are not checking so do nothing with the damage
           await this.expireTargetEffects(["isAttacked"])
@@ -916,14 +925,24 @@ export class Workflow {
     if (checkRule("invisAdvantage")) {
       const token: Token | undefined = canvas?.tokens?.get(this.tokenId);
       const target: Token | undefined = this.targets.values().next().value;
-      let isHidden;
-      if (token && target && installedModules.get("conditional-visibility")) { // preferentially check CV isHidden
-        //@ts-ignore .api
-        isHidden = game.modules.get('conditional-visibility')?.api?.canSee(target, token) === false || !canSee(target, token);
+      let isHidden = false;;
+      if (token && target) { // preferentially check CV isHidden
+        if (installedModules.get("conditional-visibility")) {
+          //@ts-ignore .api if cond vis active it will work out the vision rules for a token
+          isHidden = game.modules.get('conditional-visibility')?.api?.canSee(target, token) === false;
+        } else { // no cond vis so just assume can't see hidden or invis attacker
+          const hidden = hasCondition(token, "hidden");
+          const invisible = hasCondition(token, "invisible");
+
+          isHidden = hidden || invisible;
+        }
+
+        isHidden = isHidden || !canSee(target, token); // just check normal foundry sight rules
+
       } else if (token) {
         const hidden = hasCondition(token, "hidden");
         const invisible = hasCondition(token, "invisible");
-        isHidden = hidden || invisible
+        isHidden = hidden || invisible;
       }
       this.advantage = this.advantage || isHidden;
       if (isHidden) this.attackAdvAttribution["ADV:hidden"] = true;
@@ -1399,9 +1418,11 @@ export class Workflow {
         const isD20 = (d.faces === 20);
         if (isD20) {
           // Highlight successes and failures
-          if ((d.options.critical && d.total >= d.options.critical) || this.isCritical) {
+          // if ((d.options.critical && d.total >= d.options.critical) || this.isCritical) {
+          if (this.isCritical) {
             content = content.replace('dice-total', 'dice-total critical');
-          } else if ((d.options.fumble && d.total <= d.options.fumble) || this.isFumble) {
+          // } else if ((d.options.fumble && d.total <= d.options.fumble) || this.isFumble) {
+          } else if (this.isFumble) {
             content = content.replace('dice-total', 'dice-total fumble');
           } else if (d.options.target) {
             if ((this.attackRoll?.total || 0) >= d.options.target) content = content.replace('dice-total', 'dice-total success');
@@ -1441,11 +1462,6 @@ export class Workflow {
       //@ts-ignore CONFIG.SW5E
       allDamageTypes = mergeObject(CONFIG.SW5E.damageTypes, CONFIG.SW5E.healingTypes, { inplace: false });
     return `(${this.damageDetail.filter(d => d.damage !== 0).map(d => allDamageTypes[d.type])})`;
-    /*
-        return `(${this.item?.data.data.damage.parts
-          .map(a => (allDamageTypes[a[1]] || allDamageTypes[this.defaultDamageType ?? ""] || MQdefaultDamageType)).join(",")
-          || this.defaultDamageType || MQdefaultDamageType})`;
-          */
   }
 
   async displayDamageRoll(doMerge) {
@@ -2242,8 +2258,11 @@ export class Workflow {
     }
     //@ts-ignore .options.critical undefined
     this.isCritical = this.diceRoll >= this.attackRoll.terms[0].options.critical;
-    //@ts-ignore .fumble undefined
-    this.isFumble = this.diceRoll <= this.attackRoll.terms[0].options.fumble;
+    const midiFumble = this.item && (getProperty(this.item.data, "flags.midi-qol.fumbleThreshold") ?? 1);
+    if (!Number.isNumeric(midiFumble)) {
+      //@ts-ignore .fumble undefined
+      this.isFumble = this.diceRoll <= this.attackRoll.terms[0].options.fumble;
+    } else this.isFumble = this.diceRoll <= midiFumble;
     this.attackTotal = this.attackRoll.total ?? 0;
     if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble);
   }
@@ -2350,7 +2369,9 @@ export class Workflow {
       let hitScale = 100;
       if (checkRule("challengeModeArmorScale") && !this.isCritical) hitScale = Math.floor((getProperty(targetToken.actor?.data ?? {}, "flags.midi-qol.challengeModeScale") ?? 1) * 100);
       let hitString;
-      if (this.isCritical) hitString = i18n("midi-qol.criticals");
+      if (game.user?.isGM && ["hitDamage", "all"].includes(configSettings.hideRollDetails) && (this.isCritical || this.isHit || this.isHitEC)) hitString = i18n("midi-qol.hits");
+      else if (this.isCritical) hitString = i18n("midi-qol.criticals");
+      else if (game.user?.isGM && this.isFumble && ["hitDamage", "all"].includes(configSettings.hideRollDetails)) hitString = i18n("midi-qol.misses");
       else if (this.isFumble) hitString = i18n("midi-qol.fumbles");
       else if (isHit) hitString = i18n("midi-qol.hits");
       else if (isHitEC && checkRule("challengeModeArmor") && checkRule("challengeModeArmorScale")) hitString = `${i18n("midi-qol.hitsEC")} (${hitScale}%)`;
@@ -2895,7 +2916,7 @@ export class BetterRollsWorkflow extends Workflow {
 
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
         this.effectsAlreadyExpired = [];
-        if (checkRule("removeHiddenInvis")) removeHiddenInvis.bind(this)();
+        if (checkRule("removeHiddenInvis")) await removeHiddenInvis.bind(this)();
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preCheckhits"), "OnUse", "preCheckhits");
         }
@@ -2924,6 +2945,7 @@ export class BetterRollsWorkflow extends Workflow {
           // wait for damage roll
           return;
         }
+
         if (this.shouldRollDamage) {
           this.roll?.rollDamage();
         }
@@ -3044,7 +3066,7 @@ export class DDBGameLogWorkflow extends Workflow {
 
       case WORKFLOWSTATES.ATTACKROLLCOMPLETE:
         this.effectsAlreadyExpired = [];
-        if (checkRule("removeHiddenInvis")) removeHiddenInvis.bind(this)();
+        if (checkRule("removeHiddenInvis")) await removeHiddenInvis.bind(this)();
         await asyncHooksCallAll("midi-qol.preCheckHits", this);
         if (this.item) await asyncHooksCallAll(`midi-qol.preCheckHits.${this.item.uuid}`, this);
 
@@ -3136,7 +3158,7 @@ export class DDBGameLogWorkflow extends Workflow {
   }
 }
 
-export class DummyWorkflow extends BetterRollsWorkflow {
+export class DummyWorkflow extends Workflow {
   constructor(actor: Actor5e, item: Item5e, speaker, targets, options: any) {
     super(actor, item, speaker, targets, options);
     this.advantage = options?.advantage;
@@ -3144,9 +3166,21 @@ export class DummyWorkflow extends BetterRollsWorkflow {
     this.rollOptions.fastForward = options?.fastForward;
     this.rollOptions.fastForwardKey = options?.fastFowrd;
   }
-
+  async simulateAttack(target: Token) {
+    this.targets = new Set([target]);
+    this.advantage = false;
+    this.disadvantage = false;
+    await this.checkAttackAdvantage()
+    this.attackRoll = await this.item?.rollAttack({fastForward: true, chatMessage: false})
+    const maxroll = (await this.attackRoll?.reroll({maximize: true}))?.total;
+    const minroll = (await this.attackRoll?.reroll({minimize: true}))?.total;
+    this.expectedAttackRoll = ((maxroll || 0) + (minroll || 0))/2;
+    if (this.advantage) this.expectedAttackRoll += 3.325;
+    if (this.disadvantage) this.expectedAttackRoll -= 3.325;
+    return this;
+  }
   async _next(newState: number) {
-    Workflow.removeWorkflow(this.item.id);
-    return await 0;
+    // Workflow.removeWorkflow(this.item.id);
+    // return await 0;
   }
 }

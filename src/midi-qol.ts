@@ -18,7 +18,7 @@ import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, re
 import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Hooks.js';
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
-import { TrapWorkflow, DamageOnlyWorkflow, Workflow } from './module/workflow.js';
+import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow } from './module/workflow.js';
 import { applyTokenDamage, canSee, checkNearby, completeItemRoll, distancePointToken, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
@@ -304,6 +304,7 @@ function setupMidiQOLApi() {
     TrapWorkflow,
     DamageOnlyWorkflow,
     Workflow,
+    DummyWorkflow,
     enableWorkflow,
     configSettings: () => { return configSettings },
     midiSoundSettings: () => { return midiSoundSettings },

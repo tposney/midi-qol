@@ -72,6 +72,11 @@
   ],
   "minimumCoreVersion": "9",
   "compatibleCoreVersion": "9",
+  "compatibility": {
+    "minimum": 9,
+    "verified": 9,
+    "maximum": 9
+  },
   "minimumSystemVersion": "1.5.0",
   "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",
   "flags": {

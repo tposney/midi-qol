@@ -747,7 +747,7 @@ export function readyPatching() {
 
 export let visionPatching = () => {
   //@ts-ignore game.verison
-  const patchVision = isNewerVersion(game.version ? game.version : game.data.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
+  const patchVision = isNewerVersion(game.version ?? game.data?.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
   if (patchVision) {
     ui.notifications?.warn("Player control vision is deprecated please use the module Your Tokens Visible")
     console.warn("midi-qol | Player control vision is deprecated please use the module Your Tokens Visible")

@@ -350,10 +350,13 @@ async function registerTests() {
             const oldHp = target?.actor?.data.data.attributes.hp.value;
             game.user?.updateTokenTargets([target?.id ?? ""]);
             setProperty(actor.data.flags, "midi-qol.advantage.all", true);
+            //@ts-ignore .abilities
+            assert.ok(actor.data.data.abilities.str.mod > 0, "non zero str mod")
             await completeItemRoll(actor.items.getName("AppliesDamage"));
             setProperty(actor.data.flags, "midi-qol.advantage.all", undefined);
             const newHp = target?.actor?.data.data.attributes.hp.value;
-            assert.equal(newHp, oldHp - 10);
+            //@ts-ignore
+            assert.equal(newHp, oldHp - 10 -actor.data.data.abilities.str.mod);
             return true;
           });
           it("applies activation condition", async function () {

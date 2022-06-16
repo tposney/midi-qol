@@ -1,3 +1,21 @@
+### 0.9.58
+* Some changes to hidden invisibility giving advantage
+  - Hidden/Invisibility advantage check will use Conditional Invisibility if installed to determine if a target is visible.
+  - Hidden/Invisibility check will always check if the attacker is visible according to foundry vision rules.
+  - If conditional visibility is not installed a hidden/invisible token (CUB/CE conditions) will have advantage.
+* If you are not displaying the roll details or only showing hit/miss for the attack roll then the hits display will only show hit or miss (not critically hits). Also critical hits/fumbles will not be highlighted, you'll just see hit/miss.
+* Support for overriding the fumble threshold for attack rolls per item. If not blank midi will use the value in "Fumble Threshold" as the fumble value for the roll. A threshold less than or equal to 0 means the attack roll can never fumble.
+* Fix for raceOrType being incorrectly set for characters
+* Fix for spiritual weapon in sample itmes compendium to remove the extra proficiency bonus applied to attack rolls.
+* Added some more hooks during workflow processing
+  * Hooks.callAll("midi-qol.preCheckSaves", worfklow) - called before auto checking saving throws
+  * Hooks.callAll(`midi-qol.preCheckSaves.${item.uuid}`, worfklow) - called before auto checking saving throws
+  * Hooks.callAll("midi-qol.postCheckSaves", worfklow) - called after auto checking saving throws but before displayin who saved. Allows modifaction of who did/did not save.
+  * Hooks.callAll(`midi-qol.postCheckSaves.${item.uuid}`, worfklow) - called after auto checking saving throws but before displayin who saved. Allows modifaction of who did/did not save.
+  * Added DummyWorkflow, which is an initialised workflow that does no actions. Will be usefule for macro writers who want to check conditions/advantage and so on.
+    - Support simulateRoll(target: Token). Will update the workflow with an attack roll, set advantage/disadvantage (and advantageAttribution) and set workflow.expectedAttackRoll to the expected value of the attack roll.
+
+
 ### 0.9.57
 * Added a preview for midi-qol quick settings which allows you accept or reject the proposed changes.
   - Cleaned up full auto/manual changes to reflect current settings.

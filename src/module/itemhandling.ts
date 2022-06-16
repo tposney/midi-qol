@@ -193,6 +193,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
 export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, powerLevel = null, versatile = null, options = {} } = {}) {
   const pressedKeys = globalThis.MidiKeyManager.pressedKeys; // record the key state if needed
   let workflow = Workflow.getWorkflow(this.uuid);
+
   if (workflow?.workflowType === "BetterRollsWorkflow") {
     workflow.rollOptions = options;
     //@ts-ignore .fastForward
@@ -279,7 +280,10 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       event: {},
       options: damageRollOptions
     };
+    // There was an interaction with condtional visibility (I think doing an acgtor update which means sometimes the prepareData did not complete)
+    if (installedModules.get("conditional-visibility")) this.actor.prepareDerivedData(); 
     result = await wrapped(damageRollData);
+
     if (debugCallTiming) log(`wrapped item.rollDamage():  elapsed ${Date.now() - wrappedRollStart}ms`);
   } else {
     //@ts-ignore
@@ -704,7 +708,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
 
   if (debugCallTiming) log(`wrapped item.roll() elapsed ${Date.now() - wrappedRollStart}ms`);
-  /* need to get spell level from the html returned in result */
+  // need to get spell level from the html returned in result
   if (this.type === "spell") {
     //TODO look to use returned data when available
     let spellStuff = result.content?.match(/.*data-spell-level="(.*)">/);

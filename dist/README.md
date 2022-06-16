@@ -738,7 +738,7 @@ where specification is a comma separated list of fields.
   * macro="World Macro Name" call the macro as part of the damage application stage, where name must be a world macro, the macro is passed the results of rolling the overTime item, which will include damage done, saving throws made etc, as if it were an OnUse macro of the Overtime item roll.
 
   If the effect is configured to be stackable with a stack count, of say 2, the damage will 3d6 + 3d6.
-  *label=string - displayed when rolling the saving throw
+  * label=string - displayed when rolling the saving throw
 
   The most common use for overtime effects is damage over time effects. However you can include an OverTime effect with just a save can be used to apply any other changes (in the same active effect) until a save is made (Hold Person).
 
@@ -842,8 +842,10 @@ The passed workflow is "live" so changes will affect subsequent actions. In part
   * Hooks.callAll("midi-qol.AttackRollComplete", worfklow) - Called after the attack roll is made and hits are checked, but before damage is rolled.
   * Hookls.callAll("midi-qol.preCheckHits", workflow) - called before checking hits.
   *  Hooks.call("midi-qol.preDamageRoll", workflow) - called immediately before the item damage roll is made. If the hook returns false, the roll is aborted.
-  * Hooks.callAll("midi-qol.preDamageRollComplete", worfklow) - called before the damage roll processing starts        
+  * Hooks.callAll("midi-qol.preDamageRollComplete", worfklow) - called before the damage roll processing starts
   * Hooks.callAll("midi-qol.damageRollComplete", worfklow) - called after damage application is complete. The targets may not have their hit points updated when this call is made since the hit point update is farmed off to a gm client
+  * Hooks.callAll("midi-qol.preCheckSaves", worfklow) - called before auto checking saving throws
+  * Hooks.callAll("midi-qol.postCheckSaves", worfklow) - called after auto checking saving throws but before displayin who saved. Allows modifaction of who did/did not save.
   * Hooks.call("midi-qol.preApplyDynamicEffects", workflow) - called before applying active effects. If the call returns false the rest of the workflow is marked complete.
   *  Hooks.callAll("midi-qol.RollComplete", worfklow); - called after the workflow is completed.
 

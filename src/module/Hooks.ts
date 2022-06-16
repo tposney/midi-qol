@@ -271,6 +271,14 @@ export function initHooks() {
   Hooks.on("preUpdateActor", preUpdateItemActorOnUseMacro)
   Hooks.on("renderItemSheet", (app, html, data) => {
     const element = html.find('input[name="data.chatFlavor"]').parent().parent();
+    const criticalElement = html.find('input[name="data.critical.threshold"]');
+    element.append('<h3 class="form-header">Midi Qol Fields</h3>');
+    if (criticalElement.length > 0) {
+      let currentFumble = getProperty(app.object.data, "flags.midi-qol.fumbleThreshold");
+      const labelText = i18n("midi-qol.FumbleThreshold");
+      const fumbleThreshold = `<div class="form-group"><label>${labelText}</label><div class="form-fields"><input type="Number" name="flags.midi-qol.fumbleThreshold" value="${currentFumble}"/></div></div>`;
+      element.append(fumbleThreshold);
+    }
     if (configSettings.allowUseMacro) {
       const labelText = i18n("midi-qol.onUseMacroLabel");
       const macros = new OnUseMacros(getProperty(app.object.data, "flags.midi-qol.onUseMacroName"));

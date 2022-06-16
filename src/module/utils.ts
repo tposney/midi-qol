@@ -974,7 +974,8 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
     } else {
       advantage = (advantage === true ? 1 : advantage === false ? -1 : 0);
     }
-    let mode = isNewerVersion(game.data.version, "0.9.236") ? "publicroll" : "roll";
+    //@ts-ignore
+    let mode = isNewerVersion(game.version ?? game.data.version, "0.9.236") ? "publicroll" : "roll";
     if (player.isGM && configSettings.autoCheckSaves !== "allShow") {
       mode = "blindroll";
     }
@@ -1027,7 +1028,8 @@ export function requestPCActiveDefence(player, actor, advantage, saveItemNname, 
   } else {
     advantage = (advantage === true ? 1 : advantage === false ? -1 : 0);
   }
-  let mode = isNewerVersion(game.data.version, "0.9.236") ? "publicroll" : "roll";
+  //@ts-ignore
+  let mode = isNewerVersion(game.version ?? game.data.version, "0.9.236") ? "publicroll" : "roll";
   if (player.isGM && configSettings.autoCheckSaves !== "allShow") {
     mode = "selfroll";
   }
@@ -1890,7 +1892,15 @@ export function checkNearby(disposition: number | null, token: Token | undefined
 export function hasCondition(token, condition: string) {
   if (!token) return false;
   const localCondition = i18n(`midi-qol.${condition}`);
-  if (installedModules.get("conditional-visibility") && token.actor && getProperty((token.actor.data.flags), `conditional-visibility.${condition}`)) return true;
+  //@ts-ignore
+  if (installedModules.get("conditional-visibility") && token.actor && game.modules.get('conditional-visibility').api.hasCondition(token, condition)) return true;
+  //@ts-ignore
+  const cub = game.cub;
+  if (installedModules.get("combat-utility-belt") && cub.hasCondition("Invisible", [token], {warn: false})) return true;
+  if (installedModules.get("combat-utility-belt") && cub.hasCondition("Hidden", [token], {warn: false})) return true;
+  //@ts-ignore
+  const CEInt = game.dfreds.effectInterface;
+  if (installedModules.get("dfreds-convenient-effects") && CEInt.hasEffectApplied(condition, token.actor.uuid)) return true;
   return false;
 }
 
@@ -1911,14 +1921,30 @@ export async function removeCondition(condition: string) {
 export async function removeTokenCondition(token, condition: string) {
   if (!token) return;
   //@ts-ignore
-  const CV = window.ConditionalVisibility;
+  const CV: any = game.modules.get("conditional-visibility");
   const localCondition = i18n(`midi-qol.${condition}`);
+
+  // if (CV?.active) await CV.api.forceToBeVisible(token);
+  /*
   if (condition === "hidden") {
-    CV?.unHide([token]);
-  } else CV?.setCondition([token], condition, false);
-  if (installedModules.get("combat-utility-belt")) {// && game.cub.getCondition(localCondition)) {
-    //@ts-ignore game.cub
-    game.cub.removeCondition(localCondition, token, { warn: false });
+    await CV?.unHide([token]);
+  } else await CV?.setCondition([token], condition, true);
+  */
+
+  //@ts-ignore game.cub
+  const CUB = game.cub;
+  if (installedModules.get("combat-utility-belt") && CUB.hasCondition(localCondition, [token], {warn: false})) {
+    await CUB.removeCondition(localCondition, token, { warn: false });
+  }
+  //@ts-ignore
+  const CEInt = game.dfreds.effectInterface;
+  if (installedModules.get("dfreds-convenient-effects")) {
+    if (CEInt.hasEffectApplied(localCondition, token.uuid))
+      await CEInt.removeEffect({effectName: localCondition, uuid: token.actor.uuid});
+    for (let cvLabel of ["Invisible (CV)", "Stealth (CV)"]) {
+      if (CEInt.hasEffectApplied(cvLabel, token.actor.uuid))
+        await CEInt.removeEffect({effectName: cvLabel, uuid: token.actor.uuid})
+    }
   }
 }
 
@@ -2782,7 +2808,7 @@ export function reportMidiCriticalFlags() {
       }
     }
   }
-  console.log("Items with midi critical flags set  are\n", ...(report.map(s => s + "\n")));
+  console.log("Items with midi critical flags set are\n", ...(report.map(s => s + "\n")));
 }
 
 /**
@@ -2827,9 +2853,7 @@ export function evalActivationCondition(workflow: Workflow, condition: string | 
   if (rollData.target) {
     rollData.target = rollData.target.actor.getRollData();
     if (rollData.target.details.type?.value) rollData.raceOrType = rollData.target.details.type?.value.toLocaleLowerCase() ?? "";
-
-    // if (rollData.target.details.race ?? "" !== "") rollData.raceOrType = rollData.target.details.race.toLocaleLowerCase();
-    else rollData.raceOrType = rollData.target.details.type?.value.toLocaleLowerCase() ?? "";
+    else rollData.raceOrType = rollData.target.details.race?.toLocaleLowerCase() ?? "";
   }
   let expression = condition ?? "";
 
@@ -2851,14 +2875,14 @@ export function evalActivationCondition(workflow: Workflow, condition: string | 
           for (let t of v) {
             if (!t.actor || !t.document) newV.add(t);
             else {
-              const newT = duplicate(t.document.data._source);
-              newT.actor = duplicate(t.actor.data._source);
+              const newT = deepClone(t.document);
+              newT.actor = deepClone(t.actor);
               newV.add(newT)
             }
           }
           copyWorkflow[k] = newV;
-        } else if (k === "item") copyWorkflow[k] = duplicate(workflow[k].data._source);
-        else if (k === "actor") copyWorkflow[k] = duplicate(workflow[k].data._source);
+        } else if (k === "item") copyWorkflow[k] = deepClone(workflow[k]).data;
+        else if (k === "actor") copyWorkflow[k] = deepClone(workflow[k]).data;
         else {
           try {
             copyWorkflow[k] = v ? duplicate(v) : undefined;

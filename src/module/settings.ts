@@ -166,7 +166,8 @@ export function collectSettingData() {
   };
   data.flags["exportSource"] = {
     system: game.system.id,
-    coreVersion: game.data.version,
+    //@ts-ignore
+    coreVersion: game.version ?? game.data?.version,
     systemVersion: game.system.data.version
   };
   data.flags["modules"] = {

@@ -1,3 +1,21 @@
+### 0.9.58
+* Some changes to hidden invisibility giving advantage
+  - Hidden/Invisibility advantage check will use Conditional Invisibility if installed to determine if a target is visible.
+  - Hidden/Invisibility check will always check if the attacker is visible according to foundry vision rules.
+  - If conditional visibility is not installed a hidden/invisible token (CUB/CE conditions) will have advantage.
+* If you are not displaying the roll details or only showing hit/miss for the attack roll then the hits display will only show hit or miss (not critically hits). Also critical hits/fumbles will not be highlighted, you'll just see hit/miss.
+* Support for overriding the fumble threshold for attack rolls per item. If not blank midi will use the value in "Fumble Threshold" as the fumble value for the roll. A threshold less than or equal to 0 means the attack roll can never fumble.
+* Fix for raceOrType being incorrectly set for characters
+* Fix for spiritual weapon in sample itmes compendium to remove the extra proficiency bonus applied to attack rolls.
+* Added some more hooks during workflow processing
+  * Hooks.callAll("midi-qol.preCheckSaves", worfklow) - called before auto checking saving throws
+  * Hooks.callAll(`midi-qol.preCheckSaves.${item.uuid}`, worfklow) - called before auto checking saving throws
+  * Hooks.callAll("midi-qol.postCheckSaves", worfklow) - called after auto checking saving throws but before displayin who saved. Allows modifaction of who did/did not save.
+  * Hooks.callAll(`midi-qol.postCheckSaves.${item.uuid}`, worfklow) - called after auto checking saving throws but before displayin who saved. Allows modifaction of who did/did not save.
+  * Added DummyWorkflow, which is an initialised workflow that does no actions. Will be usefule for macro writers who want to check conditions/advantage and so on.
+    - Support simulateRoll(target: Token). Will update the workflow with an attack roll, set advantage/disadvantage (and advantageAttribution) and set workflow.expectedAttackRoll to the expected value of the attack roll.
+
+
 ### 0.9.57
 * Added a preview for midi-qol quick settings which allows you accept or reject the proposed changes.
   - Cleaned up full auto/manual changes to reflect current settings.
@@ -6,10 +24,11 @@
 * Fix for not respecting levels module template height manual setting.
 * Fix for auto applying a convenient effect, type non-stacking would apply multiple copies of the effect.
 * Fix for sometimes trying to access _levels before initialisation.
-* If an attacker is not visible to a target (i.e. not illuminated or visible via the target's sight configuration), the attacker will have advantage on attacks if the optional rule "hidden/invisible" attackers have advantage is enabled. Tokens with "Token Vision" disbled won't check visibility.
+* If an attacker is not visible to a target (i.e. not illuminated or visible via the target's sight configuration), the attacker will have advantage on attacks if the optional rule "hidden/invisible" attackers have advantage is enabled. Tokens with "Token Vision" disabled won't check visibility.
 * Fix for concentration not being removed when using better rolls.
 * Optional setting for temphp damage to count towards requiring a concentration save. It appears that RAW/RAI states that temphp damage DOES count towards breaking concentration.
 * Added don't apply CE effects to item card when global apply CE effects is "item Effects if absent CE effects", to ensure that CE effect is not applied, apply CE effects checkbox still means CE takes precedence over item active effect.
+* Update fr.json
 
 
 ### 0.9.56
