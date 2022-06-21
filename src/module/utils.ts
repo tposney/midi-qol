@@ -1,7 +1,7 @@
 import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, overTimeEffectsToDelete, geti18nOptions } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, lateTargeting } from "./settings.js";
 import { log } from "../midi-qol.js";
-import { BetterRollsWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
+import { BetterRollsWorkflow, DummyWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { itemJSONData, midiFlagTypes, overTimeJSONData } from "./Hooks.js";
@@ -1899,7 +1899,7 @@ export function hasCondition(token, condition: string) {
   if (installedModules.get("combat-utility-belt") && cub.hasCondition("Invisible", [token], {warn: false})) return true;
   if (installedModules.get("combat-utility-belt") && cub.hasCondition("Hidden", [token], {warn: false})) return true;
   //@ts-ignore
-  const CEInt = game.dfreds.effectInterface;
+  const CEInt = game.dfreds?.effectInterface;
   if (installedModules.get("dfreds-convenient-effects") && CEInt.hasEffectApplied(condition, token.actor.uuid)) return true;
   return false;
 }
@@ -1936,9 +1936,10 @@ export async function removeTokenCondition(token, condition: string) {
   if (installedModules.get("combat-utility-belt") && CUB.hasCondition(localCondition, [token], {warn: false})) {
     await CUB.removeCondition(localCondition, token, { warn: false });
   }
-  //@ts-ignore
-  const CEInt = game.dfreds.effectInterface;
+
   if (installedModules.get("dfreds-convenient-effects")) {
+    //@ts-ignore
+    const CEInt = game.dfreds?.effectInterface;
     if (CEInt.hasEffectApplied(localCondition, token.uuid))
       await CEInt.removeEffect({effectName: localCondition, uuid: token.actor.uuid});
     for (let cvLabel of ["Invisible (CV)", "Stealth (CV)"]) {
@@ -2190,8 +2191,8 @@ class RollModifyDialog extends Application {
       }
       // this.close();
     } catch (err) {
-      ui.notifications?.error(err);
-      throw new Error(err);
+      ui.notifications?.error("midi-qol | Optional flag roll error see console for details ");
+      error(err);
     }
   }
 
@@ -2300,8 +2301,13 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       this[rollHTMLId] = await midiRenderRoll(newRoll);
       const macroToCall = getProperty(this.actor, `data.${bonusFlags}.macroToCall`);
       if (macroToCall) {
-        const macroData = this.getMacroData();
-        this.callMacro(this.item, macroToCall, macroData)
+        if (this instanceof Workflow) {
+          const macroData = this.getMacroData();
+          this.callMacro(this.item, macroToCall, macroData)
+        } else if (this.actor) {
+          const dummyWorkflow = new DummyWorkflow(this.actor, null, ChatMessage.getSpeaker({actor: this.actor}), [], {});
+          dummyWorkflow.callMacro(null, macroToCall, dummyWorkflow.getMacroData())
+        } else console.warn(`midi-qol | RollModifyDialog no way to call macro ${macroToCall}`)
       }
 
       dialog.data.rollHTML = this[rollHTMLId];
@@ -2876,7 +2882,8 @@ export function evalActivationCondition(workflow: Workflow, condition: string | 
             if (!t.actor || !t.document) newV.add(t);
             else {
               const newT = deepClone(t.document);
-              newT.actor = deepClone(t.actor);
+              // Should not be necessary
+              // newT.actor = deepClone(t.actor);
               newV.add(newT)
             }
           }

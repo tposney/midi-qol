@@ -1,3 +1,9 @@
+### 0.9.59
+* Fix for inadvertantly requiring convenient effects to be installed.
+* Fix for flags.midi-qol.optional.NAME.macroToCall throwing an error when applied to saving throws/checks, only world macros and ItemMacro."Item Name" are supported, ItemMacro will have no effect.
+* Added flags.midi-qol.grants.critical.range, set the vale of the effect to be the maximum range an attacker can be from the target to get an auto critical attack. Useful for the paralysed condition.
+* Fix for throwing an error in certain activation condition evaluations.
+
 ### 0.9.58
 * Some changes to hidden invisibility giving advantage
   - Hidden/Invisibility advantage check will use Conditional Invisibility if installed to determine if a target is visible.

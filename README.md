@@ -69,7 +69,7 @@ You have to have these, period.
 
 ## Almost Required
 You can probably survive without these but midi pretty much assumes they are installed.
-* Advanced Macros
+* Advanced Macros **No longer required**
 * DAE
 * Times-up - for automated expiry of effects. If you don't use combat expriy then you can use about-time instead.
 * Simple calendar - to manage the game clock
@@ -130,7 +130,7 @@ There is an additional check box available on the item sheet, for items that hav
 - Midi-qol will use levels volumetric template target calculations if installed.
 
 ## Furnace (deprecated for Foundry 0.8.x - Use Advanced Macros)
-If you intend to make use of any of the macro features in midi-qol you will need to install the Advanced Macros module.
+If you intend to make use of any of the macro features in midi-qol you will need to install the Advanced Macros module. As of 0.9.56 there is no dependency on advanced macros/furnace.
 
 ## Better Rolls
 If you are using Better Rolls (which is a great module), midi-qol takes over once the hit/damage card is placed by Better Rolls. This means that resource consumption, template placement, critical/fumble determination are **all** handled by Better Rolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage, and calls active effects. When using Better rolls flags.midi-qol should be applied.
@@ -202,6 +202,9 @@ This module keeps very detailed stats about each encounter you run and is fully 
 If you dont't fastforward rolls this does a good job of hihglightimg the default advantage/disadvantage/critical status of a roll.  
 Reminders also lets you highlight when a saving throw might meed advantage which midi can't process (e.g. advantage on poison saves).  
 Thanks to @kaelad for highlighting a midi problem, as of 0.9.11 midi is compatible with Advamtage Reminder for attack and damage rolls.
+
+## GM Paranoia
+Midi-qol is not compatible with GM paranoia.
 
 # Short Guide to configuration settings
 The heading says short, but it really isn't.

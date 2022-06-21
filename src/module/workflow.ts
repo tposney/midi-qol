@@ -1004,9 +1004,11 @@ export class Workflow {
       const fails = firstTarget.actor?.data.flags["midi-qol"]?.fail?.critical ?? {};
       if (grants.all || grants[attackType]) this.critFlagSet = true;
       if (fails.all || fails[attackType]) this.noCritFlagSet = true;
+      if (Number.isNumeric(grants.range) && getDistanceSimple(firstTarget, this.token, false, false) <= Number(grants.range))
+        this.critFlagSet = true;
+      this.isCritical = this.isCritical || this.critFlagSet;
+      if (this.noCritFlagSet) this.isCritical = false;
     }
-    this.isCritical = this.isCritical || this.critFlagSet;
-    if (this.noCritFlagSet) this.isCritical = false;
   }
 
   checkAbilityAdvantage() {
@@ -1253,7 +1255,7 @@ export class Workflow {
       hitTargetsEC,
       hitTargetUuids,
       hitTargetUuidsEC,
-      id: this.item.id,
+      id: this.item?.id,
       isCritical: this.rollOptions.critical || this.isCritical,
       isFumble: this.isFumble,
       isVersatile: this.rollOptions.versatile || this.isVersatile,
@@ -1311,7 +1313,8 @@ export class Workflow {
       if (name.startsWith(MQItemMacroLabel)) { // special short circuit eval for itemMacro since it can be execute as GM
         var itemMacro;
         //  item = this.item;
-        if (name === MQItemMacroLabel) {
+        if (name === MQItemMacroLabel ) {
+          if (!item) return {};
           itemMacro = getProperty(item.data.flags, "itemacro.macro");
           macroData.sourceItemUuid = item?.uuid;
         } else {

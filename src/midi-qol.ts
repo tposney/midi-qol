@@ -419,6 +419,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.grants.attack.success.all`);
   midiFlags.push(`flags.midi-qol.grants.attack.bonus.all`);
   midiFlags.push(`flags.midi-qol.grants.critical.all`);
+  midiFlags.push(`flags.midi-qol.grants.critical.range`);
   midiFlags.push(`flags.midi-qol.fail.critical.all`);
   midiFlags.push(`flags.midi-qol.advantage.concentration`)
   midiFlags.push(`flags.midi-qol.disadvantage.concentration`)

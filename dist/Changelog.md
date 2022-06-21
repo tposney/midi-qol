@@ -1,3 +1,9 @@
+### 0.9.59
+* Fix for inadvertantly requiring convenient effects to be installed.
+* Fix for flags.midi-qol.optional.NAME.macroToCall throwing an error when applied to saving throws/checks, only world macros and ItemMacro."Item Name" are supported, ItemMacro will have no effect.
+* Added flags.midi-qol.grants.critical.range, set the vale of the effect to be the maximum range an attacker can be from the target to get an auto critical attack. Useful for the paralysed condition.
+* Fix for throwing an error in certain activation condition evaluations.
+
 ### 0.9.58
 * Some changes to hidden invisibility giving advantage
   - Hidden/Invisibility advantage check will use Conditional Invisibility if installed to determine if a target is visible.
@@ -6,13 +12,13 @@
 * If you are not displaying the roll details or only showing hit/miss for the attack roll then the hits display will only show hit or miss (not critically hits). Also critical hits/fumbles will not be highlighted, you'll just see hit/miss.
 * Support for overriding the fumble threshold for attack rolls per item. If not blank midi will use the value in "Fumble Threshold" as the fumble value for the roll. A threshold less than or equal to 0 means the attack roll can never fumble.
 * Fix for raceOrType being incorrectly set for characters
-* Fix for spiritual weapon in sample itmes compendium to remove the extra proficiency bonus applied to attack rolls.
+* Fix for spiritual weapon in sample items compendium to remove the extra proficiency bonus applied to attack rolls.
 * Added some more hooks during workflow processing
   * Hooks.callAll("midi-qol.preCheckSaves", worfklow) - called before auto checking saving throws
   * Hooks.callAll(`midi-qol.preCheckSaves.${item.uuid}`, worfklow) - called before auto checking saving throws
-  * Hooks.callAll("midi-qol.postCheckSaves", worfklow) - called after auto checking saving throws but before displayin who saved. Allows modifaction of who did/did not save.
-  * Hooks.callAll(`midi-qol.postCheckSaves.${item.uuid}`, worfklow) - called after auto checking saving throws but before displayin who saved. Allows modifaction of who did/did not save.
-  * Added DummyWorkflow, which is an initialised workflow that does no actions. Will be usefule for macro writers who want to check conditions/advantage and so on.
+  * Hooks.callAll("midi-qol.postCheckSaves", worfklow) - called after auto checking saving throws but before displaying who saved. Allows modification of who did/did not save.
+  * Hooks.callAll(`midi-qol.postCheckSaves.${item.uuid}`, worfklow) - called after auto checking saving throws but before displaying who saved. Allows modification of who did/did not save.
+  * Added DummyWorkflow, which is an initialised workflow that does no actions. Will be useful for macro writers who want to check conditions/advantage and so on.
     - Support simulateRoll(target: Token). Will update the workflow with an attack roll, set advantage/disadvantage (and advantageAttribution) and set workflow.expectedAttackRoll to the expected value of the attack roll.
 
 
