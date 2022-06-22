@@ -1,3 +1,8 @@
+### 0.9.60
+* Put back ability to run chat macros as onUse macros.
+* Added item uuid to onUse macros args[0].item/itemData
+* applyTokenDamage will now work with the onuse macros args[0].item/itemData
+
 ### 0.9.59
 * Fix for inadvertantly requiring convenient effects to be installed.
 * Fix for flags.midi-qol.optional.NAME.macroToCall throwing an error when applied to saving throws/checks, only world macros and ItemMacro."Item Name" are supported, ItemMacro will have no effect.

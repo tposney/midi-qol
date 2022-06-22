@@ -807,7 +807,7 @@ export class Workflow {
                     //@ts-ignore
                     if ((ceEffect.flags.dae?.stackable ?? "none") === "none" && game.dfreds.effectInterface?.hasEffectApplied(theItem.name, token.actor.uuid)) {
                       //@ts-ignore
-                      await game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });  
+                      await game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
                     }
                     //@ts-ignore
                     await game.dfreds.effectInterface?.addEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
@@ -1223,7 +1223,7 @@ export class Workflow {
       semiSuperSaverUuids.push(save instanceof Token ? save.document?.uuid : save.uuid);
     };
     const itemData = this.item?.data.toObject(false);
-
+    itemData.uuid = this.item?.uuid; // provide the uuid so the actual item can be recovered
     return {
       actor: this.actor.data,
       actorData: this.actor.data,
@@ -1313,7 +1313,7 @@ export class Workflow {
       if (name.startsWith(MQItemMacroLabel)) { // special short circuit eval for itemMacro since it can be execute as GM
         var itemMacro;
         //  item = this.item;
-        if (name === MQItemMacroLabel ) {
+        if (name === MQItemMacroLabel) {
           if (!item) return {};
           itemMacro = getProperty(item.data.flags, "itemacro.macro");
           macroData.sourceItemUuid = item?.uuid;
@@ -1345,11 +1345,17 @@ export class Workflow {
           }
         }
         macroCommand = itemMacro?.data.command ?? `console.warn('midi-qol | no item macro found for ${name}')`;
-      } else {
+      } else { // get a world macro.
+        const macro = game.macros?.getName(name);
+        if (macro?.data.type === "chat") {
+          macro.execute(); // use the core foundry processing for chat macros
+          return {}
+        }
         macroData.speaker = this.speaker;
         macroData.actor = this.actor;
-        macroCommand = game.macros?.getName(name)?.data.command ?? `console.warn('midi-qol | no macro ${name} found')`;
+        macroCommand = macro?.data.command ?? `console.warn('midi-qol | no macro ${name} found')`;
       }
+
       const speaker = this.speaker;
       const actor = this.actor;
       const token = canvas?.tokens?.get(this.tokenId);
@@ -1424,7 +1430,7 @@ export class Workflow {
           // if ((d.options.critical && d.total >= d.options.critical) || this.isCritical) {
           if (this.isCritical) {
             content = content.replace('dice-total', 'dice-total critical');
-          // } else if ((d.options.fumble && d.total <= d.options.fumble) || this.isFumble) {
+            // } else if ((d.options.fumble && d.total <= d.options.fumble) || this.isFumble) {
           } else if (this.isFumble) {
             content = content.replace('dice-total', 'dice-total fumble');
           } else if (d.options.target) {
@@ -1754,7 +1760,7 @@ export class Workflow {
   /**
    * update this.saves to be a Set of successful saves from the set of tokens this.hitTargets and failed saves to be the complement
    */
-  async checkSaves(whisper = false) {
+  async checkSaves(whisper = false, simulate = false) {
     this.saves = new Set();
     this.criticalSaves = new Set();
     this.fumbleSaves = new Set();
@@ -1793,10 +1799,11 @@ export class Workflow {
     let rollAbility = this.saveItem.data.data.save.ability;
     // make sure saving throws are renabled.
 
-    const playerMonksTB = installedModules.get("monks-tokenbar") && configSettings.playerRollSaves === "mtb";
+    const playerMonksTB = !simulate && installedModules.get("monks-tokenbar") && configSettings.playerRollSaves === "mtb";
     let monkRequestsPlayer: any[] = [];
     let monkRequestsGM: any[] = [];
     let showRoll = configSettings.autoCheckSaves === "allShow";
+    if (simulate) showRoll = false;
     try {
       const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
 
@@ -1852,6 +1859,7 @@ export class Workflow {
         var player = playerFor(target);
         if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
         let promptPlayer = (!player?.isGM && configSettings.playerRollSaves !== "none");
+        if (simulate) promptPlayer = false;
         let GMprompt;
         let gmMonksTB;
         if (player?.isGM) {
@@ -1860,6 +1868,11 @@ export class Workflow {
           gmMonksTB = installedModules.get("monks-tokenbar") && monksTBSetting;
           GMprompt = (targetDocument.isLinked ? configSettings.rollNPCLinkedSaves : configSettings.rollNPCSaves);
           promptPlayer = GMprompt !== "auto";
+          if (simulate) {
+            gmMonksTB = false;
+            GMprompt = false;
+            promptPlayer = false;
+          }
         }
         if (isFriendly && this.saveItem.data.data.description.value.includes(i18n("midi-qol.autoFailFriendly"))) {
           promises.push(new Promise((resolve) => {
@@ -1933,8 +1946,8 @@ export class Workflow {
             targetUuid: target.actor.uuid,
             request: rollType,
             ability: this.saveItem.data.data.save.ability,
-            showRoll: whisper,
-            options: { messageData: { user: owner?.id }, chatMessage: showRoll, rollMode: whisper ? "gmroll" : "gmroll", mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true },
+            showRoll: whisper && !simulate,
+            options: { simulate, messageData: { user: owner?.id }, chatMessage: showRoll, rollMode: whisper ? "gmroll" : "gmroll", mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true },
           }));
         }
       }
@@ -3173,11 +3186,17 @@ export class DummyWorkflow extends Workflow {
     this.targets = new Set([target]);
     this.advantage = false;
     this.disadvantage = false;
-    await this.checkAttackAdvantage()
-    this.attackRoll = await this.item?.rollAttack({fastForward: true, chatMessage: false})
-    const maxroll = (await this.attackRoll?.reroll({maximize: true}))?.total;
-    const minroll = (await this.attackRoll?.reroll({minimize: true}))?.total;
-    this.expectedAttackRoll = ((maxroll || 0) + (minroll || 0))/2;
+    await this.checkAttackAdvantage();
+    // Block updates to quantity
+    const hookId = Hooks.on("preUpdateItem", (item, update, options, user) => { return update.data?.quantity === undefined });
+    try {
+      this.attackRoll = await this.item?.rollAttack({ fastForward: true, chatMessage: false, isDummy: true })
+    } finally {
+      Hooks.off("preUpdateItem", hookId)
+    }
+    const maxroll = (await this.attackRoll?.reroll({ maximize: true }))?.total;
+    const minroll = (await this.attackRoll?.reroll({ minimize: true }))?.total;
+    this.expectedAttackRoll = ((maxroll || 0) + (minroll || 0)) / 2;
     if (this.advantage) this.expectedAttackRoll += 3.325;
     if (this.disadvantage) this.expectedAttackRoll -= 3.325;
     return this;
@@ -3186,4 +3205,23 @@ export class DummyWorkflow extends Workflow {
     // Workflow.removeWorkflow(this.item.id);
     // return await 0;
   }
+  async simulateSave(targets: Token[]) {
+    this.targets = new Set(targets);
+    this.hitTargets = new Set(targets)
+    await this.checkSaves(true, true);
+    for (let result of this.saveResults) {
+      // const result = this.saveResults[0];
+      result.saveAdvantage = result.options.advantageMode === 1;
+      result.saveDisadvantage = result.options.advantageMode === -1;
+      result.saveRoll = await new Roll(result.formula).roll();
+      const maxroll = (await result.saveRoll?.reroll({ maximize: true }))?.total;
+      const minroll = (await result.saveRoll?.reroll({ minimize: true }))?.total;
+      result.expectedSaveRoll = ((maxroll || 0) + (minroll || 0)) / 2;
+      if (result.saveAdvantage) result.expectedSaveRoll += 3.325;
+      if (result.saveDisadvantage) result.expectedSaveRoll -= 3.325;
+      // this.simulatedSaveResults.push(result);
+    }
+    return this;
+  }
 }
+

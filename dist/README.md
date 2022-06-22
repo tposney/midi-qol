@@ -876,6 +876,11 @@ if (trapToken) await trapToken.update({"hidden" : true});
 * midi-qol supports a DamageOnlyWorkflow to support items/spells with special damage rolls. Divine Smite is a good example, the damage depends on whether the target is a fiend/undead. This is my implementation, which assumes it is activated via midi-qol's onUse macro field.
 I have created a spell called "Divine Smite", with no saving throw or damage or attack, (although you can have such things) which has an onUse macro set to Divine Smite, included in the sample items compendium. (see the onUse macro details below). The total damage field passed in is only used in the final display on the apply damage card, the individual damage elements are all taken from the damageRoll.
 
+* midi-qol supports a DummyWorkflow which exists to allow you create a workflow to call some of the workflow functions and supports two features
+  - async simulateAttack(token: Token) - simulate an attack roll of the workflow item on the specified target, working out pluses/advantage/disadvantage and also setting workflow.expectedSaveRoll to be the expected value of the attack roll.
+  - async simulateSaves(tokens: [Token]). Simulates saving throws for the passed array of tokens, will take into account bonuses/magic resitance/advantage etc. results returned as workflow.saveResults: [{saveRoll: Roll, saveAdvantage: boolean, saveDisadvantage: boolean, expectedSaveRoll: number}]
+  - the simulate functions won't work with BetterRolls
+  
 ```js
 let target = await fromUuid(args[0].hitTargetUuids[0] ?? "");
 let numDice = 1 + args[0].spellLevel;

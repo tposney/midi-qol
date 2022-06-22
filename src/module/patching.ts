@@ -109,7 +109,7 @@ async function bonusCheck(actor, result: Roll, category, detail): Promise<Roll> 
 }
 
 async function doRollSkill(wrapped, ...args) {
-  let [skillId, options = { event: {}, parts: [], avantage: false, disadvantage: false }] = args;
+  let [skillId, options = { event: {}, parts: [], avantage: false, disadvantage: false, simulate: false }] = args;
   const chatMessage = options.chatMessage;
   // options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
   mergeKeyboardOptions(options, mapSpeedKeys(null, "ability"));
@@ -153,10 +153,9 @@ async function doRollSkill(wrapped, ...args) {
     //@ts-ignore
     result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
   }
-  let newResult = await bonusCheck(this, result, "skill", skillId);
-  // const abl = this.data.data.skills[skillId].ability;
-  // if (newResult === result) newResult = await bonusCheck(this, result, "check", abl);
-  result = newResult;
+  if (!options.simulate) {
+    result = await bonusCheck(this, result, "skill", skillId);
+  }
   if (chatMessage !== false && result) {
     const args = { "speaker": getSpeaker(this), flavor };
     setProperty(args, `flags.${game.system.id}.roll`, { type: "skill", skillId });
@@ -319,7 +318,7 @@ async function rollAbilityTest(wrapped, ...args) {
 }
 
 async function doAbilityRoll(wrapped, rollType: string, ...args) {
-  let [abilityId, options = { event: {}, parts: [], chatMessage: undefined }] = args;
+  let [abilityId, options = { event: {}, parts: [], chatMessage: undefined, simulate: false }] = args;
   if (procAutoFail(this, rollType, abilityId)) {
     options.parts = ["-100"];
   }
@@ -374,7 +373,7 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
   }
 
-  result = await bonusCheck(this, result, rollType, abilityId)
+  if (!options.simulate) result = await bonusCheck(this, result, rollType, abilityId)
   if (chatMessage !== false && result) {
     const args: any = { "speaker": getSpeaker(this), flavor };
     setProperty(args, `flags.${game.system.id}.roll`, { type: rollType, abilityId });
@@ -495,40 +494,43 @@ function midiATRefresh(wrapped) {
 
 export function _prepareDerivedData(wrapped, ...args) {
   wrapped(...args);
+  try {
+    if (checkRule("challengeModeArmor")) {
+      const armorDetails = this.data.data.attributes.ac ?? {};
+      const ac = armorDetails?.value ?? 10;
+      const equippedArmor = armorDetails.equippedArmor;
+      let armorAC = equippedArmor?.data.data.armor.value ?? 10;
+      const equippedShield = armorDetails.equippedShield;
+      const shieldAC = equippedShield?.data.data.armor.value ?? 0;
 
-  if (checkRule("challengeModeArmor")) {
-    const armorDetails = this.data.data.attributes.ac ?? {};
-    const ac = armorDetails?.value ?? 10;
-    const equippedArmor = armorDetails.equippedArmor;
-    let armorAC = equippedArmor?.data.data.armor.value ?? 10;
-    const equippedShield = armorDetails.equippedShield;
-    const shieldAC = equippedShield?.data.data.armor.value ?? 0;
-
-    if (checkRule("challengeModeArrmorScale")) {
-      switch (armorDetails.calc) {
-        case 'flat':
-          armorAC = (ac.flat ?? 10) - this.data.data.abilities.dex.mod;
-          break;
-        case 'draconic': armorAC = 13; break;
-        case 'natural': armorAC = (armorDetails.value ?? 10) - this.data.data.abilities.dex.mod; break;
-        case 'custom': armorAC = equippedArmor?.data.data.armor.value ?? 10; break;
-        case 'mage': armorAC = 13; break; // perhaps this should be 10 if mage armor is magic bonus
-        case 'unarmoredMonk': armorAC = 10; break;
-        case 'unarmoredBarb': armorAC = 10; break;
-        default:
-        case 'default': armorAC = armorDetails.equippedArmor?.data.data.armor.value ?? 10; break;
-      };
-      const armorReduction = armorAC - 10 + shieldAC;
-      const ec = ac - armorReduction;
-      this.data.data.attributes.ac.EC = ec;
-      this.data.data.attributes.ac.AR = armorReduction;;
-    } else {
-      let dexMod = this.data.data.abilities.dex.mod;
-      if (equippedArmor?.data.data.armor.type === "heavy") dexMod = 0;
-      if (equippedArmor?.data.data.armor.type === "medium") dexMod = Math.min(dexMod, 2)
-      this.data.data.attributes.ac.EC = 10 + dexMod + shieldAC;
-      this.data.data.attributes.ac.AR = ac - 10 - dexMod;
+      if (checkRule("challengeModeArrmorScale")) {
+        switch (armorDetails.calc) {
+          case 'flat':
+            armorAC = (ac.flat ?? 10) - this.data.data.abilities.dex.mod;
+            break;
+          case 'draconic': armorAC = 13; break;
+          case 'natural': armorAC = (armorDetails.value ?? 10) - this.data.data.abilities.dex.mod; break;
+          case 'custom': armorAC = equippedArmor?.data.data.armor.value ?? 10; break;
+          case 'mage': armorAC = 13; break; // perhaps this should be 10 if mage armor is magic bonus
+          case 'unarmoredMonk': armorAC = 10; break;
+          case 'unarmoredBarb': armorAC = 10; break;
+          default:
+          case 'default': armorAC = armorDetails.equippedArmor?.data.data.armor.value ?? 10; break;
+        };
+        const armorReduction = armorAC - 10 + shieldAC;
+        const ec = ac - armorReduction;
+        this.data.data.attributes.ac.EC = ec;
+        this.data.data.attributes.ac.AR = armorReduction;;
+      } else {
+        let dexMod = this.data.data.abilities.dex.mod;
+        if (equippedArmor?.data.data.armor.type === "heavy") dexMod = 0;
+        if (equippedArmor?.data.data.armor.type === "medium") dexMod = Math.min(dexMod, 2)
+        this.data.data.attributes.ac.EC = 10 + dexMod + shieldAC;
+        this.data.data.attributes.ac.AR = ac - 10 - dexMod;
+      }
     }
+  } catch (err) {
+    console.warn("midi-qol failed to prepare derived data", err)
   }
 }
 
@@ -542,19 +544,25 @@ export function initPatching() {
 
 export function prepareOnUseMacroData(wrapped, ...args) {
   wrapped(...args);
-  const macros = getProperty(this.data, 'flags.midi-qol.onUseMacroName');
-  setProperty(this.data, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macros ?? null));
+  try {
+    const macros = getProperty(this.data, 'flags.midi-qol.onUseMacroName');
+    setProperty(this.data, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macros ?? null));
+  } catch (err) {
+    console.warn("midi-qol | failed to prepare onUse macro data", err)
+  }
 }
 
 // This can replace the ItemSheetSubmit solution when in v9 
 export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user) {
-  const macroParts = getProperty(changes, "flags.midi-qol.onUseMacroParts");
-  if (!macroParts) return true;
   try {
+    const macroParts = getProperty(changes, "flags.midi-qol.onUseMacroParts");
+    if (!macroParts) return true;
+
     const macroString = macroParts.items.map(oum => oum.toString()).join(",");
     changes.flags["midi-qol"].onUseMacroName = macroString;
     delete changes.flags["midi-qol"].onUseMacroParts;
   } catch (err) {
+    console.warn("midi-qol | faild in preUpdateItemActor onUse Macro", err)
   }
   return true;
 };
@@ -628,20 +636,19 @@ export function _getInitiativeFormula(wrapped) {
 
 async function _preDeleteActiveEffect(wrapped, ...args) {
   try {
+    if ((this.parent instanceof CONFIG.Actor.documentClass)) {
+      let [options, user] = args;
 
-    if (!(this.parent instanceof CONFIG.Actor.documentClass)) return;
-    let [options, user] = args;
+      // Handle removal of reaction effect
+      if (installedModules.get("dfreds-convenient-effects") && getConvenientEffectsReaction()?._id === this.data.flags?.core?.statusId) {
+        await this.parent.unsetFlag("midi-qol", "reactionCombatRound");
+      }
 
-    // Handle removal of reaction effect
-    if (installedModules.get("dfreds-convenient-effects") && getConvenientEffectsReaction()?._id === this.data.flags?.core?.statusId) {
-      await this.parent.unsetFlag("midi-qol", "reactionCombatRound");
+      // Handle removal of bonus action effect
+      if (installedModules.get("dfreds-convenient-effects") && getConvenientEffectsBonusAction()?._id === this.data.flags?.core?.statusId) {
+        await this.parent.unsetFlag("midi-qol", "bonusActionCombatRound");
+      }
     }
-
-    // Handle removal of bonus action effect
-    if (installedModules.get("dfreds-convenient-effects") && getConvenientEffectsBonusAction()?._id === this.data.flags?.core?.statusId) {
-      await this.parent.unsetFlag("midi-qol", "bonusActionCombatRound");
-    }
-
   } catch (err) {
     console.warn("midi-qol | error deleteing concentration effects: ", err)
   } finally {
@@ -863,7 +870,7 @@ class CustomizeDamageFormula {
   static formula: string;
   static async configureDialog(wrapped, ...args) {
     // If the option is not enabled, return the original function - as an alternative register\unregister would be possible
-    const [{title, defaultRollMode, defaultCritical, template, allowCritical}, options ] = args;
+    const [{ title, defaultRollMode, defaultCritical, template, allowCritical }, options] = args;
     // Render the Dialog inner HTML
     const content = await renderTemplate(
       //@ts-ignore

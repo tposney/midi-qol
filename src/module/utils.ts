@@ -261,6 +261,15 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
     // probably called from refresh - don't do anything
     return [];
   }
+  if (!(item instanceof CONFIG.Item.documentClass)) {
+    if (workflow && workflow.item) item = workflow.item;
+    else if (item?.uuid) {
+      item = MQfromUuid(item.uuid);
+    } else if (item) {
+      error("ApplyTokenDamage item must be of type Item or null/undefined");
+      return [];
+    }
+  }
   const damageDetailArr = applyDamageDetails.map(a => a.damageDetail);
   const highestOnlyDR = false;
   let totalDamage = applyDamageDetails.reduce((a, b) => a + (b.damageTotal ?? 0), 0)
@@ -933,7 +942,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
 export let getSaveMultiplierForItem = (item: Item) => {
   // find a better way for this ? perhaps item property
   if (!item) return 1;
-  const itemData: any = item.data;
+  const itemData: any = (item instanceof CONFIG.Item.documentClass) ? item.data : item;
   //@ts-ignore
   if (item.actor && item.type === "spell" && item.data.data.level === 0) { // cantrip
     const midiFlags = getProperty(item.actor.data.flags, "midi-qol");

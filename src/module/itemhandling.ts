@@ -7,8 +7,8 @@ import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
 import { deleteItemEffects } from "./GMAction.js";
 
-export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true, fastForward: false, advantage: false, disadvantage: false, dialogOptions: {} }) {
-  let workflow: Workflow | undefined = Workflow.getWorkflow(this.uuid);
+export async function doAttackRoll(wrapped, options = { event: { shiftKey: false, altKey: false, ctrlKey: false, metaKey: false }, versatile: false, resetAdvantage: false, chatMessage: undefined, createWorkflow: true, fastForward: false, advantage: false, disadvantage: false, dialogOptions: {}, isDummy: false }) {
+  let workflow: Workflow | undefined = options.isDummy ? undefined : Workflow.getWorkflow(this.uuid);
   // if rerolling the attack re-record the rollToggle key.
   if (workflow?.attackRoll) {
     workflow.advantage = false;
@@ -19,7 +19,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.itemRollToggle), { overwrite: true, insertValues: true, insertKeys: true });
   }
   //@ts-ignore
-  if (CONFIG.debug.keybindings) {
+  if (CONFIG.debug.keybindings && workflow) {
     log("itemhandling doAttackRoll: workflow.rolloptions", workflow.rollOption);
     log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.itemRollToggle));
   }
