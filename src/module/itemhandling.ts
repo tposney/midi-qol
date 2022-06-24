@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, midiRenderRoll, addAdvAttribution } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, midiRenderRoll, addAdvAttribution, getSystemCONFIG } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
@@ -118,7 +118,6 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
       "adv-reminder": { message: advHTML }
     }
   }
-
   let result: Roll = await wrapped(
     wrappedOptions,
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
@@ -326,11 +325,17 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   }
   if (!configSettings.mergeCard) {
     let actionFlavor;
-    if (game.system.id === "dnd5e") {
-      actionFlavor = game.i18n.localize(this.data.data.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
-    } else {
-      actionFlavor = game.i18n.localize(this.data.data.actionType === "heal" ? "SW5E.Healing" : "SW5E.DamageRoll");
-    }
+    switch (game.system.id) {
+      case "sw5e":
+        actionFlavor = game.i18n.localize(this.data.data.actionType === "heal" ? "SW5E.Healing" : "SW5E.DamageRoll");
+        break;
+      case "n5e":
+        actionFlavor = game.i18n.localize(this.data.data.actionType === "heal" ? "N5E.Healing" : "N5E.DamageRoll");
+        break;
+      case "dnd5e": 
+      default:
+        actionFlavor = game.i18n.localize(this.data.data.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
+      }
 
     const title = `${this.name} - ${actionFlavor}`;
     const speaker = getSpeaker(this.actor);
@@ -519,7 +524,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     if (speaker.token && checkRange(this.actor, this, speaker.token, myTargets) === "fail")
       return null;
   }
-  if (game.system.id === "dnd5e" && requiresTargets && myTargets && myTargets.size > allowedTargets) {
+  if ((game.system.id === "dnd5e" || game.system.id === "n5e") && requiresTargets && myTargets && myTargets.size > allowedTargets) {
     ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
     if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat("midi-qol.midi-qol.wrongNumberTargets", { allowedTargets })}`)
     return null;
@@ -774,7 +779,7 @@ export async function showItemInfo() {
     configSettings,
     hideItemDetails: false,
     hasEffects: false,
-    isMerge: false
+    isMerge: false,
   };
 
   const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
@@ -825,7 +830,7 @@ export async function removeConcentration(actor: Actor) {
 
 export async function showItemCard(showFullCard: boolean, workflow: Workflow, minimalCard = false, createMessage = true) {
   if (debugEnabled > 0) warn("show item card ", this, this.actor, this.actor.token, showFullCard, workflow);
-
+  const systemString = game.system.id.toUpperCase();
   let token = this.actor.token;
   if (!token) token = this.actor.getActiveTokens()[0];
   let needAttackButton = !workflow.someEventKeySet() && !configSettings.autoRollAttack;
@@ -841,9 +846,9 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned))
     || !configSettings.itemTypeList.includes(this.type);
   const hasEffects = !["applyNoButton"].includes(configSettings.autoItemEffects) && workflow.hasDAE && workflow.workflowType === "Workflow" && this.data.effects.find(ae => !ae.transfer);
-  let dmgBtnText = (this.data?.data?.actionType === "heal") ? i18n("DND5E.Healing") : i18n("DND5E.Damage");
+  let dmgBtnText = (this.data?.data?.actionType === "heal") ? i18n(`${systemString}.Healing`) : i18n(`${systemString}.Damage`);
   if (workflow.rollOptions.fastForwardDamage) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
-  let versaBtnText = i18n("DND5E.Versatile");
+  let versaBtnText = i18n(`${systemString}.Versatile`);
   if (workflow.rollOptions.fastForwardDamage) versaBtnText += ` ${i18n("midi-qol.fastForward")}`;
   const templateData = {
     actor: this.actor,
@@ -870,7 +875,13 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     versaBtnText,
     showProperties: workflow.workflowType === "Workflow",
     hasEffects,
-    isMerge: configSettings.mergeCard
+    isMerge: configSettings.mergeCard,
+    RequiredMaterials: i18n(`${systemString}.RequiredMaterials`),
+    Attack: i18n(`${systemString}.Attack`),
+    SavingThrow: i18n(`${systemString}.SavingThrow`),
+    OtherFormula: i18n(`${systemString}.OtherFormula`),
+    PlaceTemplate: i18n(`${systemString}.PlaceTemplate`),
+    Use: i18n(`${systemString}.Use`)
   }
   const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
   const template = `modules/midi-qol/templates/${templateType}-card.html`;
@@ -1074,8 +1085,7 @@ export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: s
   } else if (["rwak", "mwak"].includes(this.data.data.actionType) && conditionFlagWeapon !== "none") {
     rollOtherDamage =
       (conditionFlagWeapon === "ifSave" && workflow.otherDamageItem.hasSave) ||
-      //@ts-ignore DND5E
-      ((conditionFlagWeapon === "activation") && (this.data.data.attunement !== CONFIG.DND5E.attunementTypes.REQUIRED));
+      ((conditionFlagWeapon === "activation") && (this.data.data.attunement !== getSystemCONFIG().attunementTypes.REQUIRED));
     conditionFlagToUse = conditionFlagWeapon;
     conditionToUse = workflow.otherDamageItem?.data.data.activation?.condition
   }

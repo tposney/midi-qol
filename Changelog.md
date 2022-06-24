@@ -1,3 +1,13 @@
+### 0.9.61
+* Fix for sw5e chat cards.
+* Fix for exploding dice criticals when using ammo.
+* Added optional rule setting to expire attack/hit/action special duration effects as soon as the roll is done, instead of waiting for the damage roll before removing.
+* Added flags.midi-qol.optional.NAME.save.fail/check.fail/skill.fail which will trigger when a midi initiated (i.e. in response to an weapon/spell use) save/check/skill roll is failed.  Useful for features that allow you to reroll failed saving throws, e.g. indomitable feat. Can be used with all of the other optional.NAME flags to handle resource consumption etc.
+  - If you trigger a saving throw through LMRTY/Monks Token bar directly, rather than rolling an item, the optional.NAME.save.fail will not fire.
+* Added additional option for optional.NAME.count ItemUses.ItemName, which will use the value of the uses field for the item name ItemName (which must be on the actor), it means you don't need to use a resources entry for these any more.
+* Added sample class feature Indomitable, which is setup to allow rerolling a save when failed (if the save is initiated by midi-qol) and will consume the Indomitable item's uses.
+* Added new optional setting to ignore preparedness/spell slots when choosing reaction spells. Useful if using some other system for casting spells. Usually this should be off.
+
 ### 0.9.60
 * Put back ability to run chat macros as onUse macros.
 * Added item uuid to onUse macros args[0].item/itemData

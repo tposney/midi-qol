@@ -1,7 +1,7 @@
 import { log, warn, debug, i18n, error, getCanvas, i18nFormat } from "../midi-qol.js";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, notificationNotify, processOverTime } from "./utils.js";
+import { bonusDialog, ConvenientEffectsHasEffect, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, notificationNotify, processOverTime } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -51,7 +51,7 @@ function collectBonusFlags(actor, category, detail): any[] {
       .filter(flag => {
         const checkFlag = actor.data.flags["midi-qol"].optional[flag][category];
         if (!checkFlag) return false;
-        if (!(typeof checkFlag === "string" || checkFlag[detail] || checkFlag["all"])) return false;
+        if (!(typeof checkFlag === "string" || checkFlag[detail] || (detail !== "fail" && checkFlag["all"]))) return false;
         if (!actor.data.flags["midi-qol"].optional[flag].count) return true;
         return getOptionalCountRemainingShortFlag(actor, flag) > 0;
       })
@@ -65,7 +65,7 @@ function collectBonusFlags(actor, category, detail): any[] {
   return [];
 }
 
-async function bonusCheck(actor, result: Roll, category, detail): Promise<Roll> {
+export async function bonusCheck(actor, result: Roll, category, detail): Promise<Roll> {
   if (!installedModules.get("betterrolls5e")) {
     let bonusFlags = collectBonusFlags(actor, category, detail);
     /* casues strange behaviour when enabled 
@@ -74,6 +74,8 @@ async function bonusCheck(actor, result: Roll, category, detail): Promise<Roll> 
       bonusFlags = bonusFlags.concat(collectBonusFlags(actor, "check", "abl"));
     }
     */
+
+    console.error("bonus check ", category, detail)
     if (bonusFlags.length > 0) {
       const data = {
         actor,
@@ -84,15 +86,17 @@ async function bonusCheck(actor, result: Roll, category, detail): Promise<Roll> 
         detail: detail
       }
       let title;
+      let config = getSystemCONFIG();
+      let systemString = game.system.id.toUpperCase();
       switch (category) {
         //@ts-ignore
-        case "check": title = i18nFormat("DND5E.AbilityPromptTitle", { ability: CONFIG.DND5E.abilities[detail] });
+        case "check": title = i18nFormat(`${systemString}.AbilityPromptTitle`, { ability: config.abilities[detail] ?? "" });
           break;
         //@ts-ignore
-        case "save": title = i18nFormat("DND5E.SavePromptTitle", { ability: CONFIG.DND5E.abilities[detail] });
+        case "save": title = i18nFormat(`${systemString}.SavePromptTitle`, { ability: config.abilities[detail] ?? "" });
           break;
         //@ts-ignore
-        case "skill": title = i18nFormat("DND5E.SkillPromptTitle", { skill: CONFIG.DND5E.skills[detail] });
+        case "skill": title = i18nFormat(`${systemString}.SkillPromptTitle`, { skill: config.skills[detail] ?? "" });
           break;
       }
       await bonusDialog.bind(data)(
@@ -196,6 +200,10 @@ function configureDamage(wrapped) {
     if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
     this.terms.push(...extra.terms);
   }
+    // strip tailing operator terms
+    while (this.terms.length && this.terms[this.terms.length-1] instanceof OperatorTerm) 
+      this.terms.pop();
+
   for (let [i, term] of this.terms.entries()) {
     // Multiply dice terms
     if (term instanceof DiceTerm) {
@@ -607,7 +615,7 @@ export function _getInitiativeFormula(wrapped) {
   // Construct initiative formula parts
   let nd = 1;
   let mods = "";
-  if (game.system.id === "dnd5e" && actor.getFlag("dnd5e", "halflingLucky")) mods += "r1=1";
+  if ((game.system.id === "dnd5e" || game.system.id === "n5e") && actor.getFlag("dnd5e", "halflingLucky")) mods += "r1=1";
   if (adv && !disadv) {
     nd = 2;
     mods += "kh";
@@ -737,9 +745,9 @@ async function _preUpdateActor(wrapped, update, options, user) {
 
 export function readyPatching() {
   // TODO remove this when v9 default
-  if (game.system.id === "dnd5e") {
-    libWrapper.register("midi-qol", "game.dnd5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
-    libWrapper.register("midi-qol", "game.dnd5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
+  if (game.system.id === "dnd5e" || game.system.id === "n5e") {
+    libWrapper.register("midi-qol", `game.${game.system.id}.applications.ItemSheet5e.prototype._getSubmitData`, itemSheetGetSubmitData, "WRAPPER");
+    libWrapper.register("midi-qol", `game.${game.system.id}.canvas.AbilityTemplate.prototype.refresh`, midiATRefresh, "WRAPPER");
   } else { // TDOD find out what itemsheet5e is called in sw5e
     libWrapper.register("midi-qol", "game.sw5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
     libWrapper.register("midi-qol", "game.sw5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
@@ -781,7 +789,7 @@ export let itemPatching = () => {
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.roll", doItemRoll, "MIXED");
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
-  if (game.system.id === "dnd5e")
+  if (game.system.id === "dnd5e" || game.system.id === "n5e")
     libWrapper.register("midi-qol", "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
   configureDamageRollDialog();
 };

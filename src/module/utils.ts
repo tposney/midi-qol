@@ -80,8 +80,7 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
 
   // process the rest of the roll as a sequence of terms.
   // Each might have a damage flavour so we do them expression by expression
-  //@ts-ignore CONFIG.DND5E
-  const validTypes = Object.entries(CONFIG.DND5E.damageTypes).deepFlatten().concat(Object.entries(CONFIG.DND5E.healingTypes).deepFlatten())
+  const validTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
 
   evalString = "";
   let damageType: string | undefined = defaultType;
@@ -215,10 +214,10 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
     magicalDamage = magicalDamage || (configSettings.requireMagical === "nonspell" && item?.data.type === "spell");
     const silverDamage = item?.data.data.properties?.sil;
     const adamantineDamage = item?.data.data.properties?.ada;
-    let traitList = [{ type: "di", mult: 0 }, { type: "dr", mult: 0.5 }, { type: "dv", mult: 2 }];
+    let traitList = [{ type: "di", mult: 0 }, { type: "dr", mult: configSettings.damageResistanceMultiplier }, { type: "dv", mult: configSettings.damageVulnerabilityMultiplier }];
     // for sw5e use sdi/sdr/sdv instead of di/dr/dv
     if (game.system.id === "sw5e" && actor.type === "starship" && actor.data.data.attributes.hp.tenp > 0) {
-      traitList = [{ type: "sdi", mult: 0 }, { type: "sdr", mult: 0.5 }, { type: "sdv", mult: 2 }];
+      traitList = [{ type: "sdi", mult: 0 }, { type: "sdr", mult: configSettings.damageResistanceMultiplier }, { type: "sdv", mult: configSettings.damageVulnerabilityMultiplier }];
     }
     for (let { type, mult } of traitList) {
       let trait = actor.data.data.traits[type].value;
@@ -299,7 +298,8 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
     const noDamageReactions = (item?.hasSave && item.data.flags?.midiProperties?.nodam && workflow.saves?.has(t));
     const noProvokeReaction = workflow.item && getProperty(workflow.item.data, "flags.midi-qol.noProvokeReaction");
     if (totalDamage > 0 && workflow && !isHealing && !noDamageReactions && !noProvokeReaction && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
-      // log("Calling do reactions with ", t, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } })
+      // TODO check that the targetToken is actually taking damage
+      // Consider checking the save multiplier for the item as a first step
       let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid } });
     }
     const uncannyDodge = getProperty(targetActor, "data.flags.midi-qol.uncanny-dodge") && workflow.item?.hasAttack;
@@ -459,13 +459,12 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
       appliedDamage -= DRAll;
       totalDamage -= DRAll;
     }
-    //@ts-ignore CONFIG.DND5E
-    if (!Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType)) {
+    if (!Object.keys(getSystemCONFIG().healingTypes).includes(dmgType)) {
       totalDamage = Math.max(totalDamage, 0);
       appliedDamage = Math.max(appliedDamage, 0);
     }
     //@ts-ignore
-    if (AR > 0 && appliedDamage > 0 && !Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType) && checkRule("challengeModeArmor")) {
+    if (AR > 0 && appliedDamage > 0 && !Object.keys(getSystemCONFIG.healingTypes).includes(dmgType) && checkRule("challengeModeArmor")) {
       totalDamage = appliedDamage;
       if (checkRule("challengeModeArmorScale") || workflow.hitTargetsEC.has(t))
         appliedDamage = Math.max(0, appliedDamage - AR)
@@ -719,13 +718,11 @@ export async function oldapplyTokenDamageMany(damageDetailArr, totalDamageArr, t
       appliedDamage -= DRAll;
       totalDamage -= DRAll;
     }
-    //@ts-ignore CONFIG.DND5E
-    if (!Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType)) {
+    if (!Object.keys(getSystemCONFIG().healingTypes).includes(dmgType)) {
       totalDamage = Math.max(totalDamage, 0);
       appliedDamage = Math.max(appliedDamage, 0);
     }
-    //@ts-ignore
-    if (AR > 0 && appliedDamage > 0 && !Object.keys(CONFIG.DND5E.healingTypes).includes(dmgType) && checkRule("challengeModeArmor")) {
+    if (AR > 0 && appliedDamage > 0 && !Object.keys(getSystemCONFIG().healingTypes).includes(dmgType) && checkRule("challengeModeArmor")) {
       totalDamage = appliedDamage;
       if (checkRule("challengeModeArmorScale") || workflow.hitTargetsEC.has(t))
         appliedDamage = Math.max(0, appliedDamage - AR)
@@ -1015,8 +1012,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
     LMRTFY.onMessage(socketData);
   } else { // display a chat message to the user telling them to save
     let actorName = actor.name;
-    //@ts-ignore CONFIG.DND5E
-    let content = ` ${actorName} ${configSettings.displaySaveDC ? "DC " + dc : ""} ${CONFIG.DND5E.abilities[ability]} ${i18n("midi-qol.saving-throw")}`;
+    let content = ` ${actorName} ${configSettings.displaySaveDC ? "DC " + dc : ""} ${getSystemCONFIG().abilities[ability]} ${i18n("midi-qol.saving-throw")}`;
     content = content + (advantage ? ` (${i18n("DND5E.Advantage")})` : "") + ` - ${flavor}`;
     const chatData = {
       content,
@@ -1244,14 +1240,12 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true)
       }
       if (rollType === "skill") { // skill checks for this is a fiddle - set a midi flag so that the midi save roll will pick it up.
         itemData.data.actionType = "save";
-        //@ts-ignore
-        let skillId = CONFIG.DND5E.skills[saveAbility];
+        let skillId = getSystemCONFIG().skills[saveAbility];
         if (!skillId) {
-          // @ts-ignore
-          const hasEntry = Object.values(CONFIG.DND5E.skills).map(id => id.toLowerCase()).includes(saveAbility)
+          //@ts-ignore
+          const hasEntry = Object.values(getSystemCONFIG().skills).map(id => id.toLowerCase()).includes(saveAbility)
           if (hasEntry) {
-            //@ts-ignore
-            saveAbility = Object.keys(CONFIG.DND5E.skills).find(id => CONFIG.DND5E.skills[id].toLocaleLowerCase() === saveAbility)
+            saveAbility = Object.keys(getSystemCONFIG().skills).find(id => getSystemCONFIG().skills[id].toLocaleLowerCase() === saveAbility)
           }
         }
         setProperty(itemData, "flags.midi-qol.overTimeSkillRoll", saveAbility)
@@ -1905,8 +1899,8 @@ export function hasCondition(token, condition: string) {
   if (installedModules.get("conditional-visibility") && token.actor && game.modules.get('conditional-visibility').api.hasCondition(token, condition)) return true;
   //@ts-ignore
   const cub = game.cub;
-  if (installedModules.get("combat-utility-belt") && cub.hasCondition("Invisible", [token], {warn: false})) return true;
-  if (installedModules.get("combat-utility-belt") && cub.hasCondition("Hidden", [token], {warn: false})) return true;
+  if (installedModules.get("combat-utility-belt") && cub.hasCondition("Invisible", [token], { warn: false })) return true;
+  if (installedModules.get("combat-utility-belt") && cub.hasCondition("Hidden", [token], { warn: false })) return true;
   //@ts-ignore
   const CEInt = game.dfreds?.effectInterface;
   if (installedModules.get("dfreds-convenient-effects") && CEInt.hasEffectApplied(condition, token.actor.uuid)) return true;
@@ -1942,7 +1936,7 @@ export async function removeTokenCondition(token, condition: string) {
 
   //@ts-ignore game.cub
   const CUB = game.cub;
-  if (installedModules.get("combat-utility-belt") && CUB.hasCondition(localCondition, [token], {warn: false})) {
+  if (installedModules.get("combat-utility-belt") && CUB.hasCondition(localCondition, [token], { warn: false })) {
     await CUB.removeCondition(localCondition, token, { warn: false });
   }
 
@@ -1950,10 +1944,10 @@ export async function removeTokenCondition(token, condition: string) {
     //@ts-ignore
     const CEInt = game.dfreds?.effectInterface;
     if (CEInt.hasEffectApplied(localCondition, token.uuid))
-      await CEInt.removeEffect({effectName: localCondition, uuid: token.actor.uuid});
+      await CEInt.removeEffect({ effectName: localCondition, uuid: token.actor.uuid });
     for (let cvLabel of ["Invisible (CV)", "Stealth (CV)"]) {
       if (CEInt.hasEffectApplied(cvLabel, token.actor.uuid))
-        await CEInt.removeEffect({effectName: cvLabel, uuid: token.actor.uuid})
+        await CEInt.removeEffect({ effectName: cvLabel, uuid: token.actor.uuid })
     }
   }
 }
@@ -2314,7 +2308,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
           const macroData = this.getMacroData();
           this.callMacro(this.item, macroToCall, macroData)
         } else if (this.actor) {
-          const dummyWorkflow = new DummyWorkflow(this.actor, null, ChatMessage.getSpeaker({actor: this.actor}), [], {});
+          const dummyWorkflow = new DummyWorkflow(this.actor, null, ChatMessage.getSpeaker({ actor: this.actor }), [], {});
           dummyWorkflow.callMacro(null, macroToCall, dummyWorkflow.getMacroData())
         } else console.warn(`midi-qol | RollModifyDialog no way to call macro ${macroToCall}`)
       }
@@ -2370,6 +2364,11 @@ export function getOptionalCountRemaining(actor: Actor5e, flag: string) {
     return actor.getFlag("midi-qol", "reactionCombatRound") && needsReactionCheck(actor) ? 0 : 1;
   } else if (countValue === "every") return 1;
   if (Number.isNumeric(countValue)) return countValue;
+  if (countValue.startsWith("ItemUses.")) {
+    const itemName = countValue.split(".")[1];
+    const item = actor.items.getName(itemName);
+    return item?.data.data.uses.value;
+  }
   if (countValue.startsWith("@")) {
     let result = getProperty(actor.data.data, countValue.slice(1))
     return result;
@@ -2392,6 +2391,15 @@ export async function removeEffectGranting(actor: Actor5e, changeKey: string) {
       count.value = `${count.value - 1}`; // must be a string
       actor.updateEmbeddedDocuments("ActiveEffect", [effectData], { "expiry-reason": "midi-qol:optionalConsumed" })
     }
+  } else if (count.value.startsWith("ItemUses.")) { 
+    const itemName = count.value.split(".")[1];
+    const item = actor.items.getName(itemName);
+    if (!item) {
+      ui.notifications?.warn(`midi-qol | could not decrement uses for ${itemName} on actor ${actor.name}`);
+      console.warn(`midi-qol | could not decrement uses for ${itemName} on actor ${actor.name}`);
+      return;
+    }
+    await item.update({"data.uses.value": Math.max(0, item.data.data.uses.value - 1)})
   } else if (count.value.startsWith("@")) {
     let key = count.value.slice(1);
     if (key.startsWith("data.")) key = key.replace("data.", "")
@@ -2437,6 +2445,7 @@ export function isConcentrating(actor: Actor5e): undefined | ActiveEffect {
 }
 
 function maxCastLevel(actor) {
+  if (configSettings.ignoreSpellReactionRestriction) return 9;
   const spells = actor.data.data.spells;
   if (!spells) return 0;
   let pactLevel = spells.pact?.value ? spells.pact?.level : 0;
@@ -2471,13 +2480,13 @@ function itemReaction(item, triggerType, maxLevel) {
   //@ts-ignore activation
   if (item.data.data.activation?.type !== triggerType) return false;
   if (item.type === "spell") {
+    if (configSettings.ignoreSpellReactionRestriction) return true;
     if (item.data.data.preparation.mode === "atwill") return true;
     if (item.data.data.level === 0) return true;
     if (item.data.data.preparation?.prepared !== true && item.data.data.preparation?.mode === "prepared") return false;
     if (item.data.data.preparation.mode !== "innate") return item.data.data.level <= maxLevel;
   }
-  //@ts-ignore DND5E
-  if (item.data.data.attunement === CONFIG.DND5E.attunementTypes.REQUIRED) return false;
+  if (item.data.data.attunement === getSystemCONFIG().attunementTypes.REQUIRED) return false;
   if (!item._getUsageUpdates({ consumeRecharge: item.data.data.recharge?.value, consumeResource: true, consumeSpellLevel: false, consumeUsage: item.data.data.uses?.max > 0, consumeQuantity: item.type === "consumable" })) return false;
   return true;
 }
@@ -3357,7 +3366,7 @@ export function getChanges(actorOrItem, key: string) {
  */
 
 export function canSee(tokenEntity: Token | TokenDocument, targetEntity: Token | TokenDocument): boolean {
-//TODO - requires rewrite for v10
+  //TODO - requires rewrite for v10
   //@ts-ignore
   let target: Token = targetEntity instanceof TokenDocument ? targetEntity.object : targetEntity;
   //@ts-ignore
@@ -3398,16 +3407,27 @@ export function canSee(tokenEntity: Token | TokenDocument, targetEntity: Token |
     for (let source of lightSources?.values() ?? []) {
       if (!source.active) continue;
       //@ts-ignore
-      if ( source.containsPoint(p) ) {
+      if (source.containsPoint(p)) {
         //@ts-ignore
-        if ( source.data.vision ) hasLOS = true;
+        if (source.data.vision) hasLOS = true;
         hasFOV = true;
       }
-      if ( hasLOS && (!requireFOV || hasFOV) ) return true;
+      if (hasLOS && (!requireFOV || hasFOV)) return true;
     }
     return false;
   });
 
-return returnValue;
-  
+  return returnValue;
+
+}
+export function getSystemCONFIG(): any {
+  switch (game.system.id) {
+    //@ts-ignore .
+    case "dnd5e": return CONFIG.DND5E;
+    //@ts-ignore .
+    case "sw5e": return CONFIG.DND5E;
+    //@ts-ignore .
+    case "n5e": return CONFIG.N5E;
+    default: return {};
+  }
 }

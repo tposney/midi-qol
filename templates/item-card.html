@@ -15,13 +15,13 @@
     {{#unless hideItemDetails}}
     {{{data.description.value}}}
     {{#if data.materials.value}}
-    <p><strong>{{ localize "DND5E.RequiredMaterials" }}.</strong> {{data.materials.value}}</p>
+    <p><strong>{{ RequiredMaterials }}</strong> {{data.materials.value}}</p>
     {{/if}}
     {{/unless}}
   </div>
 
   <div class="card-buttons">
-    {{#if hasAttack}}<button data-action="attack">{{ localize "DND5E.Attack" }}</button>{{/if}}
+    {{#if hasAttack}}<button data-action="attack">{{ Attack }}</button>{{/if}}
 
     {{#if condensed}}
     <div class="flexrow 2">
@@ -55,7 +55,7 @@
 
     {{#if hasDamage}}
     <button data-action="damage">
-      {{ dmgBtnText}}
+      {{ dmgBtnText }}
     </button>
     {{/if}}
 
@@ -65,20 +65,20 @@
 
     {{#if hasSave}}
     <button data-action="save" data-ability="{{data.save.ability}}">
-      {{ localize "DND5E.SavingThrow" }} {{labels.save}}
+      {{ SavingThrow }} {{labels.save}}
     </button>
     {{/if}}
 
     {{#if data.formula}}
-    <button data-action="formula">{{ localize "DND5E.OtherFormula"}}</button>
+    <button data-action="formula">{{ OtherFormula }}</button>
     {{/if}}
 
     {{#if hasAreaTarget}}
-    <button data-action="placeTemplate">{{ localize "DND5E.PlaceTemplate" }}</button>
+    <button data-action="placeTemplate">{{ PlaceTemplate }}</button>
     {{/if}}
 
     {{#if isTool}}
-    <button data-action="toolCheck" data-ability="{{data.ability.value}}">{{ localize "DND5E.Use" }} {{item.name}}</button>
+    <button data-action="toolCheck" data-ability="{{data.ability.value}}">{{ Use }} {{item.name}}</button>
     {{/if}}
     
     {{#if hasEffects}}

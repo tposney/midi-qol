@@ -54,6 +54,8 @@ class ConfigSettings {
   criticalSound: string = "";
   customSoundsPlaylist: string = "none";
   damageImmunities: string = "none";
+  damageResistanceMultiplier: number = 0.5;
+  damageVulnerabilityMultiplier: number = 2;
   defaultSaveMult: number = 0.5;
   diceSound: string = "";
   displayHitResultNumeric:boolean = true;
@@ -77,6 +79,7 @@ class ConfigSettings {
   gmLateTargeting: boolean = false;
   gmRemoveButtons: string = "all"; 
   hideRollDetails: string = "none";
+  ignoreSpellReactionRestriction: boolean = false;
   itemRollStartWorkflow: boolean = false;
   itemTypeList: any = null;
   itemUseSound: string = "";
@@ -134,7 +137,8 @@ class ConfigSettings {
     activeDefence: false,
     challengModeArmor: false,
     checkFlanking: "off",
-    optionalCritRule: -1
+    optionalCritRule: -1,
+    actionSpecialDurationImmediate: false
   };
 }
 
@@ -202,7 +206,6 @@ export function collectSettingData() {
         scripts: mdata.scripts,
         esmodules: mdata.esmodules,
         socket: mdata.socket
-
       }
     });
     return data;
@@ -318,7 +321,9 @@ export let fetchParams = () => {
       challengeModeArmor: false,
       challengeModeArmorScale: false,
       checkFlanking: "off",
-      optionalCritRule: -1
+      optionalCritRule: -1,
+      actionSpecialDurationImmediate: false
+
     }, configSettings.optionalRules ?? {}, {overwrite: true, insertKeys: true, insertValues: true});
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
   if (configSettings.optionalRules.checkFlanking === true) configSettings.optionalRules.checkFlanking = "ceadv";
@@ -338,6 +343,10 @@ export let fetchParams = () => {
     configSettings.itemTypeList = itemList;
   }
   if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;
+  if (configSettings.ignoreSpellReactionRestriction === undefined) configSettings.ignoreSpellReactionRestriction = false;
+  if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
+  if (configSettings.damageVulnerabilityMultiplier === undefined) configSettings.damageVulnerabilityMultiplier = 2;
+
   configSettings.quickSettings = true;
   enableWorkflow = Boolean(game.settings.get("midi-qol", "EnableWorkflow"));
   if (debugEnabled > 0) warn("Fetch Params Loading", configSettings);

@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
 import { deleteItemEffects, processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, checkflanking, MQfromActorUuid } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, checkflanking, MQfromActorUuid, getSystemCONFIG } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
@@ -315,8 +315,10 @@ export function initHooks() {
         }
       }
     }
+    let config = getSystemCONFIG();
+
     //@ts-ignore
-    const midiProps = CONFIG.DND5E.midiProperties;
+    const midiProps = config.midiProperties;
     if (app.object && ["spell", "feat", "weapon", "consumable"].includes(app.object.type)) {
       const data = app.object.data;
       if (data.flags.midiProperties === undefined) {
@@ -350,7 +352,7 @@ export function initHooks() {
       const templateData = {
          data: app.object.data,
          //@ts-ignore
-         config: CONFIG.DND5E
+         config
       }
       
       renderTemplate("modules/midi-qol/templates/midiProperties.html", templateData).then(template => {
@@ -393,7 +395,7 @@ export function initHooks() {
   })
 }
 function setupMidiFlagTypes() {
-
+  let config: any = getSystemCONFIG();
   let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
 
   attackTypes.forEach(at => {
@@ -403,16 +405,13 @@ function setupMidiFlagTypes() {
   });
   midiFlagTypes["flags.midi-qol.onUseMacroName"] = "string";
 
-
-  //@ts-ignore CONFIG.DND5E
-  Object.keys(CONFIG.DND5E.abilities).forEach(abl => {
+  Object.keys(config.abilities).forEach(abl => {
     // midiFlagTypes[`flags.midi-qol.optional.NAME.save.${abl}`] = "string";
     // midiFlagTypes[`flags.midi-qol.optional.NAME.check.${abl}`] = "string";
 
   })
 
-  //@ts-ignore CONFIG.DND5E
-  Object.keys(CONFIG.DND5E.skills).forEach(skill => {
+  Object.keys(config.skills).forEach(skill => {
     // midiFlagTypes[`flags.midi-qol.optional.NAME.skill.${skill}`] = "string";
 
   })
@@ -425,8 +424,7 @@ function setupMidiFlagTypes() {
     midiFlagTypes[`flags.midi-qol.DR.non-physical`] = "string";
     midiFlagTypes[`flags.midi-qol.DR.final`] = "number";
 
-    //@ts-ignore CONFIG.DND5E
-    Object.keys(CONFIG.DND5E.damageResistanceTypes).forEach(dt => {
+    Object.keys(config.damageResistanceTypes).forEach(dt => {
       midiFlagTypes[`flags.midi-qol.DR.${dt}`] = "string";
     })
   }

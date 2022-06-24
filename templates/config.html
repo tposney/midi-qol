@@ -406,6 +406,18 @@
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.DamageImmunities.Hint"}}</div>
 
+        <div class="form-group flexrow">
+          <label style="width:100%; flex-grow:10;">{{localize "midi-qol.DamageResistanceMultiplier.Name"}}</label>
+          <input style="width:10%; flex-shrink:20;" type="number" step="any" name="damageResistanceMultiplier"
+            value="{{configSettings.damageResistanceMultiplier}}" data-dtype="Number" />
+        </div>
+
+        <div class="form-group flexrow">
+          <label style="width:100%; flex-grow:10;">{{localize "midi-qol.DamageVulnerabilityMultiplier.Name"}}</label>
+          <input style="width:10%; flex-shrink:20;" type="number" step="any" name="damageVulnerabilityMultiplier"
+            value="{{configSettings.damageVulnerabilityMultiplier}}" data-dtype="Number" />
+        </div>
+        
         <div class="form-group">
           <label>{{localize "midi-qol.RequireMagical.Name"}}</label>
           <select name="requireMagical" data-dtype="String">
@@ -657,6 +669,14 @@
             {{/select}}
           </select>
         </div>
+
+        <div class="form-group IgnoreSpellReactionRestriction">
+          <label>{{localize "midi-qol.IgnoreSpellReactionRestriction.Name"}}</label>
+          <input id="ignoreSpellReactionRestriction" type="checkbox" name="ignoreSpellReactionRestriction" data-dtype="Boolean"
+            {{checked configSettings.ignoreSpellReactionRestriction}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.IgnoreSpellReactionRestriction.Hint"}}</div>
+
         <div class="form-group">
           <label>{{localize "midi-qol.EnforceReactions.Name"}}</label>
           <select name="enforceReactions" data-dtype="String">
@@ -704,7 +724,13 @@
           {{/unless}}
           {{#if configSettings.optionalRulesEnabled}}
 
-
+          <div class="form-group">
+            <label>{{localize "midi-qol.ActionSpecialDurationImmediate.Name"}}</label>
+            <input type="checkbox" name="optionalRules.actionSpecialDurationImmediate" data-dtype="Boolean" {{checked
+              configSettings.optionalRules.actionSpecialDurationImmediate}} />
+          </div>
+          <div class="midi-qol-faint">{{localize "midi-qol.ActionSpecialDurationImmediate.Hint"}}</div>
+          
           <div class="form-group">
             <label>{{localize "midi-qol.Incapacitated.Name"}}</label>
             <input type="checkbox" name="optionalRules.incapacitated" data-dtype="Boolean" {{checked

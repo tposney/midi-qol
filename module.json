@@ -2,7 +2,7 @@
   "name": "{{name}}",
   "title": "{{title}}",
   "description": "{{description}}",
-  "system": ["dnd5e", "sw5e"],
+  "system": ["dnd5e", "sw5e", "n5e"],
   "version": "{{version}}",
   "authors": [{"name": "tposney"}],
   "socket": true,
@@ -77,7 +77,6 @@
     "verified": 9,
     "maximum": 9
   },
-  "minimumSystemVersion": "1.5.0",
   "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",
   "flags": {
     "allowBugReporter": true

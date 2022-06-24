@@ -56,6 +56,8 @@ You can make most of the changes that midi-qol supports for critical hits via th
 
 You will need to experiment to cofirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
 
+Midi-qol supports exploding dice for critical hit dice if enabled.
+
 # Changelog
 https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
 
@@ -288,6 +290,8 @@ You can enable auto checking of hits. Fumbles automatically miss and criticals a
     * not a weapon: the damage is assumed to be magical
     * a weapon has an attack bonus > 0: it is assumed to be magical
     * a weapon has the "Magical" property set: attacks are considered magical. (The magical property for weapons only exists if midi-qol is enabled)
+
+You can configure how much resistance reduces damage or how much vulnerability increases damage. Defaults to the dnd setting of 0.5 and 2. These figures multiply the damage done of the aprropriate type by the multiplier
 * **Auto apply item effects to target** If the item had dynamic effects which are currently active as specified and the target was hit and did not save; OR did not save; OR there are no attacks or saves: dynamic effects is called to apply the active effects to each such target. This includes self if a self target is specified.
 
 ### **Roll Other formula for rwak/mwak** **Roll Other formula for spells**
@@ -568,6 +572,8 @@ If the config settings for reaction checks is enabled midi will check a target t
 
 Reaction spells must be prepared (if preparation is required for the spell) and you must have a spell slot of the appropriate level available for the spell to be included in the list of possible reactions.
 
+There is an optional configuration on the optional tab to remove this restriction, if using some other mecanism to determine if a spell can be cast, e.g. spell points.
+
 Instead of triggering on attacks reactions can trigger on damage application (e.g. hellish rebuke).
 
 Midi supports 3 activation types, reaction (triggers if hit), reaction damage (triggers if damaged), reaction manual (midi will ignore this when prompting for reactions).
@@ -694,10 +700,10 @@ Optional flags cause a dialog to be raised when an opportunity to apply the effe
 An optional attack bonus prompts the attacker after the attack roll is made, but before the attack is adjudicated, givin the attacker the option to modify the roll. Effects last for one application unless the count flag is set.
 
 * flags.midi-qol.optional.Name.damage.all/mwak/rwak/msak/rsak	bonus to apply to damage done. This does not work with better rolls active.
-* flags.midi-qol.optional.Name.skill.all/per/prc/item etc	bonus to apply to skill rolls
+* flags.midi-qol.optional.Name.skill.all/fail/per/prc/item etc	bonus to apply to skill rolls
 * flags.midi-qol.optional.Name.attack.all/mwak/rwak/msak/rsak	the bonus is added after the attack roll		
-* flags.midi-qol.optional.Name.check.all/str/dex/etcthe bonus is added after theability check roll		
-* flags.midi-qol.optional.Name.save.all/str/dex/etc	the bonus is added after the save roll. Requires auto fast forward		
+* flags.midi-qol.optional.Name.check.all/fail/str/dex/etcthe bonus is added after theability check roll		
+* flags.midi-qol.optional.Name.save.all/fail/str/dex/etc	the bonus is added after the save roll. Requires auto fast forward		
 * flags.midi-qol.optional.Name.label	label to use in the dialog		
 * flags.midi-qol.optional.Name.count	how many uses the effect has (think lucky which has 3), if absent the bonus will be single use (bardic inspiration), turn for once per turn.   
   **every** - you can use the optional effect on every occurence

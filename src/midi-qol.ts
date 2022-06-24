@@ -19,7 +19,7 @@ import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Ho
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow } from './module/workflow.js';
-import { applyTokenDamage, canSee, checkNearby, completeItemRoll, distancePointToken, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
+import { applyTokenDamage, canSee, checkNearby, completeItemRoll, distancePointToken, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getSystemCONFIG, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
@@ -154,9 +154,10 @@ Hooks.once('setup', function () {
   if (MQItemMacroLabel === "midi-qol.ItemMacroText") MQItemMacroLabel = "ItemMacro";
   MQDeferMacroLabel = i18n("midi-qol.DeferText");
   if (MQDeferMacroLabel === "midi-qol.DeferText") MQDeferMacroLabel = "[Defer]";
-  if (game.system.id === "dnd5e") {
-    //@ts-ignore CONFIG.DND5E
-    let config = CONFIG.DND5E
+  
+  let config = getSystemCONFIG();
+
+  if (game.system.id === "dnd5e" || game.system.id === "n5e") {
     config.midiProperties = {};
     config.midiProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
     config.midiProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
@@ -181,8 +182,6 @@ Hooks.once('setup', function () {
     config.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
     config.abilityActivationTypes["reactionmanual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
   } else { // sw5e
-    //@ts-ignore CONFIG.DND5E
-    let config = CONFIG.DND5E
     config.midiProperties = {};
     config.midiProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
     config.midiProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
@@ -202,8 +201,7 @@ Hooks.once('setup', function () {
   }
 
   if (configSettings.allowUseMacro) {
-    //@ts-ignore CONFIG.DND5E
-    CONFIG.DND5E.characterFlags["DamageBonusMacro"] = {
+    config.characterFlags["DamageBonusMacro"] = {
       hint: i18n("midi-qol.DamageMacro.Hint"),
       name: i18n("midi-qol.DamageMacro.Name"),
       placeholder: "",
@@ -403,6 +401,7 @@ function doRoll(event = { shiftKey: false, ctrlKey: false, altKey: false, metaKe
 }
 
 function setupMidiFlags() {
+  let config = getSystemCONFIG();
   midiFlags.push("flags.midi-qol.advantage.all")
   midiFlags.push("flags.midi-qol.disadvantage.all")
   midiFlags.push("flags.midi-qol.advantage.attack.all")
@@ -469,8 +468,7 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.sharpShooter");
   midiFlags.push("flags.midi-qol.onUseMacroName");
 
-  //@ts-ignore CONFIG.DND5E
-  Object.keys(CONFIG.DND5E.abilities).forEach(abl => {
+  Object.keys(config.abilities).forEach(abl => {
     midiFlags.push(`flags.midi-qol.advantage.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.disadvantage.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.advantage.ability.save.${abl}`);
@@ -496,8 +494,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.fail.skill.all`);
   midiFlags.push("flags.midi-qol.max.skill.all");
   midiFlags.push("flags.midi-qol.min.skill.all");
-  //@ts-ignore CONFIG.DND5E
-  Object.keys(CONFIG.DND5E.skills).forEach(skill => {
+  Object.keys(config.skills).forEach(skill => {
     midiFlags.push(`flags.midi-qol.advantage.skill.${skill}`);
     midiFlags.push(`flags.midi-qol.disadvantage.skill.${skill}`);
     midiFlags.push(`flags.midi-qol.fail.skill.${skill}`);
@@ -520,8 +517,7 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.DR.non-physical`);
     midiFlags.push(`flags.midi-qol.DR.final`);
 
-    //@ts-ignore CONFIG.DND5E
-    Object.keys(CONFIG.DND5E.damageResistanceTypes).forEach(dt => {
+    Object.keys(config.damageResistanceTypes).forEach(dt => {
       midiFlags.push(`flags.midi-qol.DR.${dt}`);
     })
     midiFlags.push(`flags.midi-qol.DR.healing`);
@@ -534,8 +530,11 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.optional.NAME.damage.all`);
   midiFlags.push(`flags.midi-qol.optional.NAME.check.all`);
   midiFlags.push(`flags.midi-qol.optional.NAME.save.all`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.check.fail`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.save.fail`);
   midiFlags.push(`flags.midi-qol.optional.NAME.label`);
   midiFlags.push(`flags.midi-qol.optional.NAME.skill.all`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.skill.fail`);
   midiFlags.push(`flags.midi-qol.optional.NAME.count`);
   midiFlags.push(`flags.midi-qol.optional.NAME.ac`);
   midiFlags.push(`flags.midi-qol.optional.NAME.criticalDamage`);
@@ -547,7 +546,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.OverTime`);
   midiFlags.push("flags.midi-qol.inMotion");
   //@ts-ignore
-  const damageTypes = Object.keys(CONFIG.SW5E?.damageTypes ?? CONFIG.DND5E.damageTypes);
+  const damageTypes = Object.keys(config.damageTypes); 
   for (let key of damageTypes) {
     midiFlags.push(`flags.midi-qol.absorption.${key}`);
   }
