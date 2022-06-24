@@ -59,11 +59,10 @@ This allows effects to be applied to nearby tokens without having to trigger any
 ### Conguration overview
 First enable combat automation in the midi-qol settings.
 The next sections cover configuring how that combat automation works, midi refers to a attack or spell cast as a workflow. You need to click on the workflow settings to manage the next set of settings.
-#### Configure targeting
-![Targetings](GettingStartedPics/Targeting.png)
+
 #### Configure attack and damage rolls
 Midi has several concepts that can be confusing to first time users.
-* FastForward - if a roll is fastforwared the confuguation dialog for that roll will be skipped when midi does the roll. For attack and damage that means the advantage/disadvantage/normal/critial dialog is skipped.
+* FastForward - if a roll is fastforwared the configuration dialog for that roll will be skipped when midi does the roll. For attack and damage that means the advantage/disadvantage/normal/critial dialog is skipped.
 * Auto roll - dnd5e creates a chat card with attack and damage buttons when you roll an item (click on the icon next to the item in the character sheet). If a roll is "auto rolled" midi will behave as if the button had been clicked.
 * Modifier keys (formerly known as speed keys). When you click on a chat card button (let assume attack) you can hold Control (disadvantage) or Alt (advantage) to skip the roll dialog and use the modifer key settings. Midi allows you to press the alt/ctrl key when clicking on the character sheet icon to auto roll the attack with advantage/disadvantage. You can configure the midi-qol keys from Configure Controls in foundry settings section.
 
@@ -78,10 +77,12 @@ This works fine if you are doing an ordinary attack but sometimes you want to do
 ##### GM Tab
 ![GM Attack](GettingStartedPics/GM_Settings.png)  
 Auto Roll Attack: if ticked GM attack rolls will be auto rolled.
-Skip Consume resource dialog: If ticked the resource consumption dialog will be skipped and default answer used, for spells this means casting at the base level.
+Skip Consume resource dialog: If ticked the resource consumption dialog will be skipped and default answers used, for spells this means casting at the base level.
 Late Targeting: By default midi uses the targets selected when you click the attack button. Late targeting allows you to modify the targets after the 
 ##### Player Tab
-![Player Attack](GettingStartedPics/Player%020Settings.png)
+![Player Attack](GettingStartedPics/Player Settings.png)
+#### Configure targeting
+![Targetings](GettingStartedPics/Targeting.png)
 #### Configure checking hits
 ![Hits](GettingStartedPics/Hits.png)
 #### Configure checking saves
@@ -95,6 +96,8 @@ Late Targeting: By default midi uses the targets selected when you click the att
 ### Advanced(ish) features
 #### Configure Concentration
 ![Concentration](GettingStartedPics/Concentration.png)
+Midi-qol can automate the application of concentration, warning players when casting spell would break concentration and force a concentration save when a concentrating actor is damaged.
+
 #### Configure Reactions
 
 ## Now What

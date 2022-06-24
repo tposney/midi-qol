@@ -2046,12 +2046,8 @@ export class Workflow {
       if (isCritical) this.criticalSaves.add(target);
       if (!result.isBR && !saved) {
         //@ts-ignore
-        console.error(result, result instanceof CONFIG.Dice.D20Roll, rollTotal, CONFIG.Dice.D20Roll.fromJSON(JSON.stringify(result)));
-        //@ts-ignore
         if (!(result instanceof CONFIG.Dice.D20Roll)) result = CONFIG.Dice.D20Roll.fromJSON(JSON.stringify(result));
         const newRoll = await bonusCheck(target.actor, result, rollType, "fail")
-        //@ts-ignore
-        console.error(newRoll, newRoll instanceof CONFIG.Dice.D20Roll, rollTotal, CONFIG.Dice.D20Roll.fromJSON(JSON.stringify(result)));
         rollTotal = newRoll.total;
         rollDetail = newRoll;
         saved = rollTotal >= rollDC;

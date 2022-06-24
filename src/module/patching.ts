@@ -75,7 +75,6 @@ export async function bonusCheck(actor, result: Roll, category, detail): Promise
     }
     */
 
-    console.error("bonus check ", category, detail)
     if (bonusFlags.length > 0) {
       const data = {
         actor,

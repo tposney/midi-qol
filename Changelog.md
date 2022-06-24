@@ -2,6 +2,7 @@
 * Fix for sw5e chat cards.
 * Fix for exploding dice criticals when using ammo.
 * Added optional rule setting to expire attack/hit/action special duration effects as soon as the roll is done, instead of waiting for the damage roll before removing.
+* Added damage settings to configur how much vulnerability increases damage or resistance reduces damage - set on the workflow tab. Defaults to dnd5e 2 time and 1/2 damage.
 * Added flags.midi-qol.optional.NAME.save.fail/check.fail/skill.fail which will trigger when a midi initiated (i.e. in response to an weapon/spell use) save/check/skill roll is failed.  Useful for features that allow you to reroll failed saving throws, e.g. indomitable feat. Can be used with all of the other optional.NAME flags to handle resource consumption etc.
   - If you trigger a saving throw through LMRTY/Monks Token bar directly, rather than rolling an item, the optional.NAME.save.fail will not fire.
 * Added additional option for optional.NAME.count ItemUses.ItemName, which will use the value of the uses field for the item name ItemName (which must be on the actor), it means you don't need to use a resources entry for these any more.
