@@ -339,7 +339,7 @@ let quickSettingsDetails: any = {
     },
   },
   PlayerAuto: {
-    description: "Player Attack/Dmage Roll: Automatic",
+    description: "Player Attack/Damage Roll: Automatic",
     configSettings: {
       autoRollAttack: true,
       autoRollDamage: "onHit",
@@ -349,7 +349,7 @@ let quickSettingsDetails: any = {
     },
   },
   PlayerManual: {
-    description: "Player Attack/Dmage Roll: Manual",
+    description: "Player Attack/Damage Roll: Manual",
     configSettings: {
       autoRollAttack: false,
       autoRollDamage: "none",
@@ -461,7 +461,7 @@ let quickSettingsDetails: any = {
     }
   },
   NoDamageApplication: {
-    description: "Allow GM to fudge damage application (display but no auto apply",
+    description: "Allow GM to fudge damage application (display but no auto apply)",
     configSettings: {
       autoApplyDamage: "noCard"
     },
