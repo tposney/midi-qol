@@ -461,7 +461,7 @@ let quickSettingsDetails: any = {
     }
   },
   NoDamageApplication: {
-    description: "Allow GM to fudge damage application (display but no auto apply",
+    description: "Allow GM to fudge damage application (display but no auto apply)",
     configSettings: {
       autoApplyDamage: "noCard"
     },
