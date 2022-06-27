@@ -1166,7 +1166,7 @@ The file success-drums.ogg distributed with this module is licensed under the fo
 Licensed under the Crative Commons v3.0: https://creativecommons.org/licenses/by/3.0/legalcode
 Obtained from https://freesound.org/people/LittleRobotSoundFactory/sounds/270467/ It has been converted from .wav to .ogg format.
 
-The file drinkng.wav distributed with this module is licensed under the following terms:
+The file drink.wav distributed with this module is licensed under the following terms:
 Licensed under the Crative Commons v3.0: https://creativecommons.org/licenses/by/3.0/legalcode
 Obtained from. https://freesound.org/people/dersuperanton/sounds/433645/ Not changes have been made to the file.
 
