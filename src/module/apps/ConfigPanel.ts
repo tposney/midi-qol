@@ -261,7 +261,7 @@ async function fetchConfigFile(filename: string | undefined): Promise<string> {
   });
 }
 
-function showDiffs(current: any, changed: any, flavor: string = "") {
+function showDiffs(current: any, changed: any, flavor: string = "", title: string = "") {
   const diffs = diffObject(changed, current, { inner: true });
   const changes: string[] = [];
   for (let key of Object.keys(diffs)) {
@@ -281,8 +281,11 @@ function showDiffs(current: any, changed: any, flavor: string = "") {
   }
   if (changes.length === 0) changes.push("No Changes");
   const dialog = new Promise((resolve, reject) => {
+    let dialogTitle;
+    if (title !== "") dialogTitle = `${i18n("midi-qol.QuickSettings")} - ${title}`;
+    else dialogTitle = i18n("midi-qol.QuickSettings");
     let d = new Dialog({
-      title: i18n("midi-qol.QuickSettings"),
+      title: dialogTitle,
       content: changes.join("<br>"),
       buttons: {
         apply: {
@@ -308,14 +311,17 @@ function showDiffs(current: any, changed: any, flavor: string = "") {
 let quickSettingsDetails: any = {
   FullAuto: {
     description: "Full Automation: As few button presses as possible",
+    shortDescription: "Full Automation",
     fileName: "midi-qol-full-auto.json",
   },
   FullManual: {
     description: "No Automation: All rolls manual",
+    shortDescription: "No Automation",
     fileName: "midi-qol-manual.json"
   },
   GMAuto: {
     description: "GM Attack/Damage: Automatic",
+    shortDescription: "GM Attack/Damage: Automatic",
     configSettings: {
       gmAutoAttack: true,
       gmAutoDamage: "onHit",
@@ -329,6 +335,7 @@ let quickSettingsDetails: any = {
   },
   GMManual: {
     description: "GM Attack/Damage: Manual",
+    shortDescription: "GM Attack/Damage: Manual",
     configSettings: {
       gmAutoAttack: false,
       gmAutoDamage: "none",
@@ -340,6 +347,7 @@ let quickSettingsDetails: any = {
   },
   PlayerAuto: {
     description: "Player Attack/Damage Roll: Automatic",
+    shortDescription: "Player Attack/Damage Roll: Automatic",
     configSettings: {
       autoRollAttack: true,
       autoRollDamage: "onHit",
@@ -350,6 +358,7 @@ let quickSettingsDetails: any = {
   },
   PlayerManual: {
     description: "Player Attack/Damage Roll: Manual",
+    shortDescription: "Player Attack/Damage Roll: Manual",
     configSettings: {
       autoRollAttack: false,
       autoRollDamage: "none",
@@ -360,6 +369,7 @@ let quickSettingsDetails: any = {
   },
   DamageAuto: {
     description: "Automatic Hits/Saves/damage application",
+    shortDescription: "Auto. Hits/Saves/dmg. application",
     configSettings: {
       autoCheckHit: "all",
       autoCheckSaves: "all",
@@ -385,6 +395,7 @@ let quickSettingsDetails: any = {
   },
   DamageManual: {
     description: "No Hits/Saves/damage application automation",
+    shortDescription: "No Hits/Saves/dmg. app. automation",
     configSettings: {
       autoCheckHit: "none",
       autoCheckSaves: "none",
@@ -402,6 +413,7 @@ let quickSettingsDetails: any = {
   },
   EnableReactions: {
     description: "Turn on Reaction processing",
+    shortDescription: "Turn on Reaction processing",
     configSettings: {
       "doReactions": "all",
       "gmDoReactions": "all",
@@ -437,6 +449,7 @@ let quickSettingsDetails: any = {
   },
   DisableReactions: {
     description: "Turn off Reaction processing",
+    shortDescription: "Turn off Reaction processing",
     configSettings: {
       doReactions: "none",
       gmDoReactions: "none",
@@ -448,6 +461,7 @@ let quickSettingsDetails: any = {
   },
   EnableConcentration: {
     description: "Enable Concentration Automation",
+    shortDescription: "Enable Concentration Automation",
     configSettings: {
       removeConcentration: true,
       concentrationAutomation: true,
@@ -462,6 +476,7 @@ let quickSettingsDetails: any = {
   },
   NoDamageApplication: {
     description: "Allow GM to fudge damage application (display but no auto apply)",
+    shortDescription: "Allow GM to fudge damage application",
     configSettings: {
       autoApplyDamage: "noCard"
     },
@@ -471,6 +486,7 @@ let quickSettingsDetails: any = {
   },
   DisableConcentration: {
     description: "Disable Concentration Automation",
+    shortDescription: "Disable Concentration Automation",
     configSettings: {
       removeConcentration: false,
       concentrationAutomation: false,
@@ -480,6 +496,7 @@ let quickSettingsDetails: any = {
 
   SecretSquirrel: {
     description: "Secret Squirrel: Hide most GM roll info from players",
+    shortDescription: "Secret Squirrel",
     configSettings: {
       hideRollDetails: "all",
       displaySaveDC: false,
@@ -497,7 +514,8 @@ let quickSettingsDetails: any = {
     }
   },
   FullDisclosure: {
-    description: "Full Discolsure: Players see the details of all GM rolls and the results",
+    description: "Full Disclosure: Players see the details of all GM rolls and the results",
+    shortDescription: "Full Disclosure",
     configSettings: {
       hideRollDetails: "none",
       displaySaveDC: true,
@@ -521,7 +539,7 @@ export async function applySettings(key: string) {
   if (config.configSettings) {
     settingsToApply = duplicate(config.configSettings);
     if (config.codeChecks) config.codeChecks(configSettings, settingsToApply)
-    if (await showDiffs(configSettings, settingsToApply)) {
+    if (await showDiffs(configSettings, settingsToApply, "", config.shortDescription)) {
       settingsToApply = mergeObject(configSettings, settingsToApply, { overwrite: true, inplace: true });
       if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", settingsToApply);
   }
@@ -529,13 +547,13 @@ export async function applySettings(key: string) {
     try {
       const jsonText = await fetchConfigFile(PATH + config.fileName);
       const configData = JSON.parse(jsonText);
-      if (await showDiffs(configSettings, configData.configSettings)) {
+      if (await showDiffs(configSettings, configData.configSettings, "" , config.shortDescription)) {
         importSettingsFromJSON(jsonText);
       }
       return;
     } catch (err) {
       error("could not load config file", config.fileName, err);
     }
-    log(`Loaded ${config.fileName} verion ${config.version}`);
+    log(`Loaded ${config.fileName} version ${config.version}`);
   } else return;
 }
