@@ -32,7 +32,7 @@ export class ActorOnUseMacrosConfig extends FormApplication {
 
   async _updateObject(event, data) {
     await this.object.setFlag("midi-qol", "onUseMacroParts", {items: data.onUseMacroParts});
-    // don't need to update onUseMacroname since the preUpdate hook will do this
+    // don't need to update onUseMacroName since the preUpdate hook will do this
     this.render();
   }
 

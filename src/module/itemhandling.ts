@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapcitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, midiRenderRoll, addAdvAttribution, getSystemCONFIG } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, midiRenderRoll, addAdvAttribution, getSystemCONFIG } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
@@ -72,7 +72,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
       messageData: {
         speaker: getSpeaker(this.actor)
       }
-    }, { oveerwrite: true, insertKeys: true, insertValues: true }));
+    }, { overwrite: true, insertKeys: true, insertValues: true }));
     return workflow.activeDefence(this, result);
   }
   let advantage = options.advantage || workflow?.advantage || workflow?.rollOptions.advantage || workflow?.workflowOptions.advantage || workflow.flankingAdvantage;
@@ -176,7 +176,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     workflow.targets = validTargetTokens(game.user?.targets);
   }
   if (!result) { // attack roll failed.
-    error("Itemhandling rollAttack failed")
+    error("itemhandling.rollAttack failed")
     return;
   }
   // workflow.attackRoll = result; already set
@@ -258,7 +258,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   if (debugEnabled > 0) warn("rolling damage  ", this.name, this);
 
   if (await asyncHooksCall("midi-qol.preDamageRoll", workflow) === false || await asyncHooksCall(`midi-qol.preDamageRoll.${this.uuid}`, workflow) === false) {
-    console.warn("midi-qol | Damaage roll blocked via pre-hook");
+    console.warn("midi-qol | Damage roll blocked via pre-hook");
     return;
   }
 
@@ -279,7 +279,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       event: {},
       options: damageRollOptions
     };
-    // There was an interaction with condtional visibility (I think doing an acgtor update which means sometimes the prepareData did not complete)
+    // There was an interaction with condtional visibility (I think doing an actor update which means sometimes the prepareData did not complete)
     if (installedModules.get("conditional-visibility")) this.actor.prepareDerivedData(); 
     result = await wrapped(damageRollData);
 
@@ -471,7 +471,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return await wrapped(options);
   }
 
-  if (checkRule("incapacitated") && checkIncapcitated(this.actor, this, null)) return;
+  if (checkRule("incapacitated") && checkIncapacitated(this.actor, this, null)) return;
 
   const pressedKeys = duplicate(globalThis.MidiKeyManager.pressedKeys);
   const isRangeSpell = ["ft", "m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
@@ -507,8 +507,8 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   let shouldAllowRoll = !requiresTargets // we don't care about targets
     || ((myTargets?.size || 0) > 0) // there are some target selected
     || (this.data.data.target?.type === "self") // self target
-    || isAoESpell // area effectspell and we will auto target
-    || isRangeSpell // rangetarget and will autotarget
+    || isAoESpell // area effect spell and we will auto target
+    || isRangeSpell // range target and will autotarget
     || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
 
   if (requiresTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && (myTargets?.size || 0) === 0) {
@@ -600,7 +600,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   */
   workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile || workflow.isVersatile;
-  // if showing a full card we don't want to auto roll attcks or damage.
+  // if showing a full card we don't want to auto roll attacks or damage.
   workflow.noAutoDamage = showFullCard;
   workflow.noAutoAttack = showFullCard;
   const consume = this.data.data.consume;
@@ -729,7 +729,6 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
   workflow.processAttackEventOptions();
   await workflow.checkAttackAdvantage();
-  const needAttckButton = !workflow.someEventKeySet() && !getAutoRollAttack();
   workflow.showCard = true;
   if (workflow.showCard) {
     let item = this;
@@ -919,7 +918,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   if (!this.actor.items.has(this.id)) { // deals with using temp items in overtime effects
     chatData.flags[`${game.system.id}.itemData`] = this.data;
   }
-  // Temp items (id undefined) or consumables that were removed need itemdata set.
+  // Temp items (id undefined) or consumables that were removed need itemData set.
   if (!this.id || (this.data.type === "consumable" && !this.actor.items.has(this.id))) {
     chatData.flags[`${game.system.id}.itemData`] = this.data;
   }
@@ -1097,7 +1096,7 @@ export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: s
   }
 
   //@ts-ignore
-  /* other damage is always rolled bu application of the damage is selective
+  /* other damage is always rolled, but application of the damage is selective
   if (rollOtherDamage && conditionFlagToUse === "activation") {
     rollOtherDamage = evalActivationCondition(workflow, conditionToUse)
   }

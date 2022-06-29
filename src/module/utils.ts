@@ -34,7 +34,6 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
     if (partPos >= rollTerms.length) continue;
     // TODO look at replacing this with a map/reduce
     if (debugEnabled > 1) debug("CreateDamageList: single Spec is ", spec, type, item)
-    //@ts-ignore replaceFromulaData - blank out @field - do this to avoid @XXXX not found
     let formula = Roll.replaceFormulaData(spec, rollData, { missing: "0", warn: false });
     // TODO - need to do the .evaluate else the expression is not useful 
     // However will be a problem longer term when async not supported?? What to do
@@ -53,7 +52,7 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
       // rolls can have extra operator terms if mods are negative so test is
       // if the current roll term is an operator but the next damage spec term is not 
       // add the operator term to the eval string and advance the roll term counter
-      // evemtually rollTerms[partPos] will become undefined so it can't run forever
+      // eventually rollTerms[partPos] will become undefined so it can't run forever
       while (rollTerms[partPos] instanceof CONFIG.Dice.termTypes.OperatorTerm &&
         !(dmgSpec.terms[i] instanceof CONFIG.Dice.termTypes.OperatorTerm)) {
         evalString += rollTerms[partPos].total;
@@ -160,7 +159,7 @@ export function calculateDamage(a: Actor, appliedDamage, t: Token, totalDamage, 
     tmp = parseInt(hp.temp) || 0;
   }
   let value = Math.floor(appliedDamage);
-  if (dmgType.includes("temphp")) { // only relavent for healing of tmp HP
+  if (dmgType.includes("temphp")) { // only relevent for healing of tmp HP
     var newTemp = Math.max(tmp, -value, 0);
     var newHP: number = oldHP;
   } else {
@@ -323,7 +322,7 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
     let damageDetail;
     let damageDetailResolved: any[] = [];
     for (let i = 0; i < applyDamageDetails.length; i++) {
-      if (workflow.activationFails?.has(targetTokenDocument.uuid) && applyDamageDetails[i].label === "otherDamage") continue; // don't apply ofther damage is activaitonFails includes the token
+      if (workflow.activationFails?.has(targetTokenDocument.uuid) && applyDamageDetails[i].label === "otherDamage") continue; // don't apply other damage is activationFails includes the token
       damageDetail = duplicate(applyDamageDetails[i].damageDetail ?? []);
       let attackRoll = workflow.attackTotal;
       let saves = applyDamageDetails[i].saves ?? new Set();
@@ -481,7 +480,7 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
     if (appliedDamage > 0 && appliedDamage < (targetActor.data.data.attributes.hp.dt ?? 0)) appliedDamage = 0;
     let ditem: any = calculateDamage(targetActor, appliedDamage, targetToken, totalDamage, dmgType, options.existingDamage);
     ditem.tempDamage = ditem.tempDamage + appliedTempHP;
-    if (appliedTempHP <= 0) { // tmphealing applied to actor does not add only gets the max
+    if (appliedTempHP <= 0) { // temp healing applied to actor does not add only gets the max
       ditem.newTempHP = Math.max(ditem.newTempHP, -appliedTempHP);
     } else {
       ditem.newTempHP = Math.max(0, ditem.newTempHP - appliedTempHP)
@@ -791,7 +790,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     await expireMyEffects.bind(workflow)(effectsToExpire);
   }
 
-  warn("ddamge pre merge are ", workflow.damageDetail, workflow.bonusDamageDetail);
+  warn("damge details pre merge are ", workflow.damageDetail, workflow.bonusDamageDetail);
   let totalDamage = 0;
   let merged = workflow.damageDetail.concat(workflow.bonusDamageDetail ?? []).reduce((acc, item) => {
     acc[item.type] = (acc[item.type] ?? 0) + item.damage;
@@ -801,7 +800,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   totalDamage = newDetail.reduce((acc, value) => acc + value.damage, 0);
   workflow.damageDetail = newDetail;
   workflow.damageTotal = totalDamage;
-  warn("merged damage details is  ", newDetail);
+  warn("merged damage details are  ", newDetail);
   workflow.bonusDamageDetail = undefined;
   workflow.bonusDamageTotal = undefined;
   // TODO come back and remove bonusDamage from the args to applyTokenDamageMany
@@ -876,7 +875,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           item,
           { existingDamage: [], workflow }
         );
-        // assume pervious damage applied and then calc extra damage
+        // assume previous damage applied and then calc extra damage
         /*
         appliedDamage = await applyTokenDamage(
           workflow.otherDamageDetail,
@@ -1024,7 +1023,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
   }
 }
 
-export function requestPCActiveDefence(player, actor, advantage, saveItemNname, rollDC, formula, requestId) {
+export function requestPCActiveDefence(player, actor, advantage, saveItemName, rollDC, formula, requestId) {
   const useUuid = true; // for  LMRTFY
   const actorId = useUuid ? actor.uuid : actor.id;
   if (!player.isGM) {
@@ -1038,7 +1037,7 @@ export function requestPCActiveDefence(player, actor, advantage, saveItemNname, 
   if (player.isGM && configSettings.autoCheckSaves !== "allShow") {
     mode = "selfroll";
   }
-  let message = `${saveItemNname} ${configSettings.displaySaveDC ? "DC " + rollDC : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
+  let message = `${saveItemName} ${configSettings.displaySaveDC ? "DC " + rollDC : ""} ${i18n("midi-qol.ActiveDefenceString")}`;
   // Send a message for LMRTFY to do a save.
   const socketData = {
     "abilities": [],
@@ -1129,7 +1128,7 @@ function replaceAtFields(value, context, options: { blankValue: string | number,
   if (!value.includes("@")) return value;
   let re = /@[\w\.]+/g
   let result = duplicate(value);
-  result = result.replace("@item.level", "@itemLevel") // fix for outdate item.level
+  result = result.replace("@item.level", "@itemLevel") // fix for outdated item.level
   result = result.replace("@flags.midi-qol", "@flags.midiqol");
   // Remove @data references allow a little bit of recursive lookup
   do {
@@ -1179,7 +1178,7 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true)
     }
     if (details.turn === undefined) details.turn = "start";
     if (details.applyCondition || details.condition) {
-      let applyCondition = details.applyCondition ?? details.condition; // maintin support for condition
+      let applyCondition = details.applyCondition ?? details.condition; // maintain support for condition
       let value = replaceAtFields(applyCondition, rollData, { blankValue: 0, maxIterations: 3 });
       let result;
       try {
@@ -1408,7 +1407,7 @@ export async function completeItemRoll(item, options: any = { checkGMstatus: fal
       }
     })
   } else {
-    const targetUuids = options.targetUuids ? options.targetUuids : Array.from(game.user?.targets || []).map(t => t.document.uuid); // game.user.targets is alway a set of tokens
+    const targetUuids = options.targetUuids ? options.targetUuids : Array.from(game.user?.targets || []).map(t => t.document.uuid); // game.user.targets is always a set of tokens
     const data = {
       itemData: theItem.toObject(),
       actorUuid: theItem.parent.uuid,
@@ -1435,7 +1434,7 @@ export function untargetAllTokens(...args) {
   }
 }
 
-export function checkIncapcitated(actor: Actor, item: Item | undefined = undefined, event: any) {
+export function checkIncapacitated(actor: Actor, item: Item | undefined = undefined, event: any) {
   const actorData: any = actor.data;
   if (actorData?.data.attributes?.hp?.value <= 0) {
     log(`minor-qol | ${actor.name} is incapacitated`)
@@ -2498,7 +2497,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   if (checkRule("incapacitated")) {
     try {
       enableNotifications(false);
-      if (checkIncapcitated(target.actor, undefined, undefined)) return noResult;
+      if (checkIncapacitated(target.actor, undefined, undefined)) return noResult;
     } finally {
       enableNotifications(true);
     }
@@ -2571,7 +2570,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
       warn("doReactions | player timeout expired ", player?.name)
       resolve(noResult);
     }, (configSettings.reactionTimeout || 30) * 1000);
-    // Complier does not realise player can't be undefined to get here
+    // Compiler does not realise player can't be undefined to get here
     player && requestReactions(target, player, triggerTokenUuid, content, triggerType, resolve, chatMessage, options).then(() => {
       clearTimeout(timeoutId);
     })
@@ -2637,7 +2636,6 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
       rollHTML: reactionFlavor,
       rollTotal: acRoll.total,
     }
-    const preBounsRollTotal = data.roll.total;
     //@ts-ignore attributes
     await bonusDialog.bind(data)(bonusFlags, "ac", true, `${actor.name} - ${i18n("DND5E.AC")} ${actor.data.data.attributes.ac.value}`, "roll", "rollTotal", "rollHTML")
     const endTime = Date.now();
@@ -2685,7 +2683,7 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
       // await setReactionUsed(actor);
       // No need to set reaction effect since using item will do so.
       dialog.close();
-      // options = mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStaus: false}, {overwrite: true});
+      // options = mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStatus: false}, {overwrite: true});
       options.lateTargeting = false;
       const itemRollOptions = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, checkGMStatus: false, targetUuids: [triggerTokenUuid], workflowOptions: options };
       await completeItemRoll(item, itemRollOptions);
@@ -2788,7 +2786,7 @@ class ReactionDialog extends Application {
 
   async submit(button) {
     try {
-      warn("ReacitonDialog submit", Date.now() - this.startTime, button.callback)
+      warn("ReactionDialog submit", Date.now() - this.startTime, button.callback)
       if (button.callback) {
         this.data.completed = true;
         await button.callback(this, button)
@@ -2860,7 +2858,7 @@ function mySafeEval(expression: string, sandbox: any) {
     const evl = new Function('sandbox', src);
     result = evl(mergeObject(sandbox, Roll.MATH_PROXY));
   } catch (err) {
-    console.warn("midi-qol | expression evaluaton failed ", err);
+    console.warn("midi-qol | expression evaluation failed ", err);
     result = undefined;
   }
   if (Number.isNumeric(result)) return Number(result)
@@ -2890,7 +2888,7 @@ export function evalActivationCondition(workflow: Workflow, condition: string | 
       for (let [k, v] of Object.entries(workflow)) {
         if (!["actor", "item", "templateElevation", "speaker", "tokenUuid", "saveDisplayFlavor", "itemId", "item",
           "itemUuid", "uuid", "itemLevel", "currentState",
-          "isCritical", "isFumble", "vestatile",
+          "isCritical", "isFumble", "vesatile",
           "targets", "hitTargets",
           "diceRoll", "attackRoll", "attackTotal", "damageRoll", "damageTotal", "otherDamageRoll", "otherDamageDetail", "damageDetail",
           "saves", "superSavers", "semiSuperSavers", "failedSaves", "advantageSaves"].includes(k)) continue;
@@ -3105,7 +3103,7 @@ export async function asyncHooksCallAll(hook, ...args) {
 
 export async function asyncHooksCall(hook, ...args) {
   if (CONFIG.debug.hooks) {
-    console.log(`DEBUG | midi-qol aysnc Calling ${hook} hook with args:`);
+    console.log(`DEBUG | midi-qol async Calling ${hook} hook with args:`);
     console.log(args);
   }
   //@ts-ignore

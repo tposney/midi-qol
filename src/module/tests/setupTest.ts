@@ -29,7 +29,7 @@ export function getActor(tokenName): Actor {
     return token.actor;
   };
   const actor = game.actors?.getName(tokenName);
-  if (!actor) throw new Error(`No shuch actor ${tokenName}`)
+  if (!actor) throw new Error(`No such actor ${tokenName}`)
   actor?.prepareData();
   return actor;
 }
@@ -143,7 +143,7 @@ async function registerTests() {
           });
 
         });
-        describe("inititiative rolls", function () {
+        describe("initiative rolls", function () {
           it("rolls a normal initiative roll", async function () {
             const rollResult: Promise<Roll> = new Promise(async (resolve) => {
               Hooks.once("createChatMessage", function (chatMessage) {
@@ -293,7 +293,7 @@ async function registerTests() {
             return completeItemRoll(item).then(workflow => assert.ok(!!workflow));
           });
 
-          it("applies cub conditons", async function () {
+          it("applies cub conditions", async function () {
             let results: any;
             //@ts-ignore
             const cubInterface: any = game?.cub;
@@ -374,7 +374,7 @@ async function registerTests() {
             if (condition3.length) await target3.actor.deleteEmbeddedDocuments("ActiveEffect", condition3.map(ae => ae.id))
             assert.equal(target2hp - 10, target2?.actor?.data.data.attributes.hp.value, "non undead takes 10 hp");
             assert.equal(target3hp - 40, target3?.actor?.data.data.attributes.hp.value, "undead takes 20 hp"); // 20hp + vulnerability
-            assert.equal(condition2.length, 0, "Frghtened not applied to non undead");
+            assert.equal(condition2.length, 0, "Frightened not applied to non undead");
             assert.equal(condition3.length, 1, "Frightened applied to undead");
           });
           it("applies condition/other damage - no activation", async function () {
@@ -397,7 +397,7 @@ async function registerTests() {
           });
         });
         describe("Macro Roll Tests", async function () {
-          it("runs macro exucute", async function () {
+          it("runs macro execute", async function () {
             const target = getToken(target1Name);
             const actor = getActor(actor2Name);
             assert.ok(actor);
@@ -464,7 +464,7 @@ async function registerTests() {
             assert.ok(hasEffects);
             await actor.deleteEmbeddedDocuments("ActiveEffect", hasEffects.map(e => e.id))
             console.log(macroPasses);
-            // Test for all passes except "all" and "template placed"
+            // Test for all passes except "all", "template placed"
             assert.equal(macroPasses.length, Object.keys(game.i18n.translations["midi-qol"]["onUseMacroOptions"]).length - 2, "on use macro pass length");
           })
 
@@ -506,7 +506,7 @@ async function registerTests() {
           })
         });
       },
-      { displayName: "Midi Conidition Immunity Tests" },
+      { displayName: "Midi Condition Immunity Tests" },
     );
     globalThis.quench.registerBatch(
       "quench.midi-qol.overTimeTests",

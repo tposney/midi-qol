@@ -63,7 +63,7 @@ export class MidiKeyManager {
     keyboardManager?.downKeys.delete(context.key);
     // Open debugging group
     if (debug.keybindings) {
-      console.group(`[${context.up ? 'UP' : 'DOWN'}] Checking for keybinds that respond to ${context.modifiers}+${context.key}`);
+      console.group(`[${context.up ? 'UP' : 'DOWN'}] Checking for keybindings that respond to ${context.modifiers}+${context.key}`);
       console.dir(context);
       //@ts-ignore
       console.log("midi-qol | keyboard handler removing key pressed status for ", context.key)
@@ -74,7 +74,7 @@ export class MidiKeyManager {
     const actions = KeyboardManager._getMatchingActions(context);
     if (actions.length === 0) {
       if (debug.keybindings) {
-        console.log("No matching keybinds");
+        console.log("No matching keybindings");
         console.groupEnd();
       }
       return;
@@ -153,7 +153,7 @@ export class MidiKeyManager {
         { key: "AltLeft" },
         { key: "AltRight" },
       ],
-      onDown: () => { this._adv = true; this.track("adv dowm"); return false; },
+      onDown: () => { this._adv = true; this.track("adv down"); return false; },
       onUp: () => { this._adv = false; this.track("adv up"); return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
@@ -165,7 +165,7 @@ export class MidiKeyManager {
         { key: "ControlLeft" },
         { key: "ControlRight" },
         { key: "MetaLeft"},
-        { key: "MetaRigt"}
+        { key: "MetaRight"}
       ],
       onDown: () => { this._dis = true; this.track("dis down"); return false; },
       onUp: () => { this._dis = false; this.track("dis up"); return false; },
@@ -178,7 +178,7 @@ export class MidiKeyManager {
       hint: "midi-qol.NoOptionalRules.Hint",
       editable: [
       ],
-      onDown: () => { configSettings.toggleOptionalRules = true; this.track("no opt rules dowm"); return false; },
+      onDown: () => { configSettings.toggleOptionalRules = true; this.track("no opt rules down"); return false; },
       onUp: () => { configSettings.toggleOptionalRules = false; this.track("no opt rules up"); return false; },
       restricted: true,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
@@ -191,7 +191,7 @@ export class MidiKeyManager {
         { key: "ShiftLeft" },
         { key: "ShiftRight" }
       ],
-      onDown: () => { this._vers = true; this.track("versatile dowm");return false; },
+      onDown: () => { this._vers = true; this.track("versatile down");return false; },
       onUp: () => { this._vers = false; this.track("versatile up"); return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
@@ -221,7 +221,7 @@ export class MidiKeyManager {
         { key: "MetaRigt"}
 
       ],
-      onDown: () => { this._critical = true; this.track("crit dowm"); return false; },
+      onDown: () => { this._critical = true; this.track("crit down"); return false; },
       onUp: () => { this._critical = false; this.track("crit up"); return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence

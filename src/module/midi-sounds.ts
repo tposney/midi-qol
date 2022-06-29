@@ -5,14 +5,14 @@ import { Workflow } from "./workflow.js";
 
 interface rollSpec {
   actorType: string // any,npc,character
-  itemType: string; // weapon/spell/equipment/consumeable
+  itemType: string; // weapon/spell/equipment/consumable
   itemSubtype: string;
   weaponSubType: string;
   actionType: string;
   rollType: string; // itemRoll, attackRoll, damageRoll, consume, cast, 
   resultType: string; // critical/fumble/success/fail/normal
   playlistName: string;
-  soundName: string; // soundname or random
+  soundName: string; // soundName or random
 }
 export class MidiSounds {
   static midiSoundSpecs: {};
@@ -103,7 +103,7 @@ export class MidiSounds {
     const packname = game.system.id === "dnd5e" ? config.DND5E?.sourcePacks.ITEMS : config.SW5E?.sourcePacks.ITEMS;
     if (packname) {
       const packObject = game.packs.get(packname);
-      //@ts-ignore getindex 0 parrams
+      //@ts-ignore getindex 0 params
       await packObject?.getIndex({ fields: ["data.armor.type", "data.toolType", "data.weaponType", "img"] });
 
       const weaponTypes = game.system.id === "dnd5e" ? Object.keys(config.DND5E.weaponTypes) : Object.keys(config.SW5E.weaponTypes);;

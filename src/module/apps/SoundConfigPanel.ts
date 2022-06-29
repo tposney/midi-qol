@@ -65,7 +65,7 @@ export class SoundConfigPanel extends FormApplication {
     data.itemTypes = Object.keys(itemTypes).reduce((list, key) => {list[key] = i18n(itemTypes[key]); return list}, {});
     data.midiSoundSettings = duplicate(midiSoundSettings);
     data.SoundSettingsBlurb = geti18nOptions("SoundSettingsBlurb");
-    data.quickSettingsOptions = {creeatePlaylist: "Create Sample Playlist", basic: "Basic Settings", detailed: "Detailed Settings", full: "Full Settings"};
+    data.quickSettingsOptions = {createPlaylist: "Create Sample Playlist", basic: "Basic Settings", detailed: "Detailed Settings", full: "Full Settings"};
     data.playlists = game.playlists?.reduce((acc, pl:any) => {
       acc[pl.name] = pl.sounds.reduce((list, sound) => {
         list[sound.name] = sound.name; return list}, {}); 
@@ -146,7 +146,7 @@ export class SoundConfigPanel extends FormApplication {
     html.find(".import-quick-setting").on("click", function (event) {
       const key = event.currentTarget.id;
       switch(key) {
-        case "creeatePlaylist": MidiSounds.createDefaultPlayList().then(() => this.render(true)); break
+        case "createPlaylist": MidiSounds.createDefaultPlayList().then(() => this.render(true)); break
         case "basic": MidiSounds.setupBasicSounds().then(() => this.render(true)); break;
         case "detailed": MidiSounds.setupDetailedSounds().then(() => this.render(true)); break;
         case "full": MidiSounds.setupFullSounds().then(() => this.render(true)); break;

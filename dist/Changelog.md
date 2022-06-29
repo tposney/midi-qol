@@ -1,11 +1,19 @@
+### 0.9.62
+* Added an extra macro pass for item macros. damageBonus - this is called when midi is evaluating damage bonus macros (the actor wide bonus damage macros) so that you can have complex bonus damage behaviour for an item as well as for the actor.
+  - The macro should return an object like ```{damageRoll: "2d6[acid]+1d8[fire], flavor: "my special damage}```
+  - For example special critical damage for the item that can't be handled with either the dnd5e or mid-qol critical damage rules. 
+  - Another way to handle doing extra damage under certain conditions instead of using the roll other damage feature.
+* Reinstated ability to display hit/miss and if the attack is critical as well as hit/miss not showing critical attack
+* Lots of spelling corrections in lots of documents - thanks various contributors.
+
 ### 0.9.61
 * Fix for sw5e chat cards.
 * Fix for exploding dice criticals when using ammo.
 * Added optional rule setting to expire attack/hit/action special duration effects as soon as the roll is done, instead of waiting for the damage roll before removing.
-* Added damage settings to configur how much vulnerability increases damage or resistance reduces damage - set on the workflow tab. Defaults to dnd5e 2 time and 1/2 damage.
-* Added flags.midi-qol.optional.NAME.save.fail/check.fail/skill.fail which will trigger when a midi initiated (i.e. in response to an weapon/spell use) save/check/skill roll is failed.  Useful for features that allow you to reroll failed saving throws, e.g. indomitable feat. Can be used with all of the other optional.NAME flags to handle resource consumption etc.
+* Added damage settings to configure how much vulnerability increases damage or resistance reduces damage - set on the workflow tab. Defaults to dnd5e 2 time and 1/2 damage.
+* Added flags.midi-qol.optional.NAME.save.fail/check.fail/skill.fail which will trigger when a midi initiated (i.e. in response to a weapon/spell use) save/check/skill roll is failed.  Useful for features that allow you to reroll failed saving throws, e.g. indomitable feat. Can be used with all of the other optional.NAME flags to handle resource consumption etc.
   - If you trigger a saving throw through LMRTY/Monks Token bar directly, rather than rolling an item, the optional.NAME.save.fail will not fire.
-* Added additional option for optional.NAME.count ItemUses.ItemName, which will use the value of the uses field for the item name ItemName (which must be on the actor), it means you don't need to use a resources entry for these any more.
+* Added additional option for optional.NAME.count ItemUses.ItemName, which will use the value of the `uses` field for the item name ItemName (which must be on the actor), it means you don't need to use a resources entry for these any longer.
 * Added sample class feature Indomitable, which is setup to allow rerolling a save when failed (if the save is initiated by midi-qol) and will consume the Indomitable item's uses.
 * Added new optional setting to ignore preparedness/spell slots when choosing reaction spells. Useful if using some other system for casting spells. Usually this should be off.
 
@@ -15,7 +23,7 @@
 * applyTokenDamage will now work with the onuse macros args[0].item/itemData
 
 ### 0.9.59
-* Fix for inadvertantly requiring convenient effects to be installed.
+* Fix for inadvertently requiring convenient effects to be installed.
 * Fix for flags.midi-qol.optional.NAME.macroToCall throwing an error when applied to saving throws/checks, only world macros and ItemMacro."Item Name" are supported, ItemMacro will have no effect.
 * Added flags.midi-qol.grants.critical.range, set the vale of the effect to be the maximum range an attacker can be from the target to get an auto critical attack. Useful for the paralysed condition.
 * Fix for throwing an error in certain activation condition evaluations.
@@ -30,16 +38,16 @@
 * Fix for raceOrType being incorrectly set for characters
 * Fix for spiritual weapon in sample items compendium to remove the extra proficiency bonus applied to attack rolls.
 * Added some more hooks during workflow processing
-  * Hooks.callAll("midi-qol.preCheckSaves", worfklow) - called before auto checking saving throws
-  * Hooks.callAll(`midi-qol.preCheckSaves.${item.uuid}`, worfklow) - called before auto checking saving throws
-  * Hooks.callAll("midi-qol.postCheckSaves", worfklow) - called after auto checking saving throws but before displaying who saved. Allows modification of who did/did not save.
-  * Hooks.callAll(`midi-qol.postCheckSaves.${item.uuid}`, worfklow) - called after auto checking saving throws but before displaying who saved. Allows modification of who did/did not save.
+  * Hooks.callAll("midi-qol.preCheckSaves", workflow) - called before auto checking saving throws
+  * Hooks.callAll(`midi-qol.preCheckSaves.${item.uuid}`, workflow) - called before auto checking saving throws
+  * Hooks.callAll("midi-qol.postCheckSaves", workflow) - called after auto checking saving throws but before displaying who saved. Allows modification of who did/did not save.
+  * Hooks.callAll(`midi-qol.postCheckSaves.${item.uuid}`, workflow) - called after auto checking saving throws but before displaying who saved. Allows modification of who did/did not save.
   * Added DummyWorkflow, which is an initialised workflow that does no actions. Will be useful for macro writers who want to check conditions/advantage and so on.
     - Support simulateRoll(target: Token). Will update the workflow with an attack roll, set advantage/disadvantage (and advantageAttribution) and set workflow.expectedAttackRoll to the expected value of the attack roll.
 
 
 ### 0.9.57
-* Added a preview for midi-qol quick settings which allows you accept or reject the proposed changes.
+* Added a preview for midi-qol quick settings which allows you to accept or reject the proposed changes.
   - Cleaned up full auto/manual changes to reflect current settings.
 * Fix for damage resistance/immunity all blocking healing from weapons. (Niche case I know).
 * **Breaking** Removed support for targeting Multi Level Tokens ghost tokens - too many errors - they will now be ignored.
@@ -54,13 +62,13 @@
 
 
 ### 0.9.56
-* **Breaking** Changes to activaition conditions and application of other damage and applying active effects. Rather than checking the first target for application of other damage/effects each target is processed separately.
-  - Other damage (if enabled) is ALWAYS rolled, but only applied to targets who match the activation condition.
+* **Breaking** Changes to activation conditions and application of other damage and applying active effects. Rather than checking the first target for application of other damage/effects each target is processed separately.
+  - Other damage (if enabled) is ALWAYS rolled, but only applied to targets that match the activation condition.
   -  So a dragon slayer (assuming multiple targets) will always roll the "other" damage, but only apply it to targets that are 'dragons'. Similarly Mace of Disruption will only apply the Frightened condition to undead/fiend targets.
 * Possibly **breaking**. Midi-qol no longer depends on advanced macros (or core macros) for item macro execution.
 * Fix for dr/di/dv.traits.all resisting healing damage.
 * Fix for extra item card being shown in various cases when using attack/damage buttons in the chat log.
-* Added replace <roll expression> to optonal bonus settings. This will replace the existing roll with <roll expression> which is just a normal roll expression, e.g.
+* Added replace <roll expression> to optional bonus settings. This will replace the existing roll with <roll expression> which is just a normal roll expression, e.g.
    ```
    flags.midi-qol.optional.NAME.attack.all OVERRIDE replace 11 + @mod + @prof
    ```
@@ -92,7 +100,7 @@
 * Fix to initiative advantage flags not working in dnd5e 1.6
 * Updated ja.json thanks @Brother Sharp
 * Display full roll in optional bonus dialog (tooltip expansion now works).
-* Will remove support for ChangeLog module - if you want to see the changelong on updates use Module Management+.
+* Will remove support for ChangeLog module - if you want to see the changelog on updates use Module Management+.
 
 ### 0.9.52
 * Added workflowOption.critical that can be passed to item.roll() or MidiQOL.completeItemRoll(item, optons) to force the damage roll for the item to be a critical roll. The complete critical damage process is applied to the roll.
@@ -100,14 +108,14 @@
 * Fix for not showing Advantage Reminders' Damage  reminder messages - thanks @kaelad.
 * Fix for some midi sample items being out of date. Especially Sneak Attack/Rakish Audacity.
 * Fix for uncanny dodge to require the attacking item to have an attack.
-* fix for MidiQOL.applyTokenDmage failing with .has undefined error.
+* fix for MidiQOL.applyTokenDamage failing with .has undefined error.
 
 **Breaking Change** to flags.midi-qol.min/flags.midi-qol.max. The value field is now **numeric** and the sense of max/min has **swapped** so that the displayed dice roll modifier matches the field name. The feature now allows you to implement various minimum/maximum results for skill/save/check rolls.
   flags.midi-qol.max and flags.midi-qol.min
   flags.midi-qol.min/max.ability.all OVERRIDE value
-  flags.midi-qol.min/max.ability.save.all/dex/str/etc OVERRIDE value
-  flags.midi-qol.min/max.ability.check.all/dex/str/etc OVERRIDE value
-  flags.midi-qol.min/max.skill.all/acr/per/prc etc OVERRIDE value
+  flags.midi-qol.min/max.ability.save.all/dex/str/etc. OVERRIDE value
+  flags.midi-qol.min/max.ability.check.all/dex/str/etc. OVERRIDE value
+  flags.midi-qol.min/max.skill.all/acr/per/prc/etc. OVERRIDE value
 
   The flags support modifying saving throws, ability checks and skill rolls. min means that each the d20 roll will be at LEAST value, max mean that the d20 will be at MOST value. The value field must be numeric, you can force lookups by using   ``[[@abilities.dex.value]]`` for example.
 
@@ -119,7 +127,7 @@
 
 ### 0.9.51
 * Fix for actor onUseMacro editor failing to open on some characters.
-* Added bardic inspiration for dnd5e 1.6 using the new scale fields. (much simpler). You must migrate you actor to the new dnd 1.6 advancement for this to work.
+* Added bardic inspiration for dnd5e 1.6 using the new scale fields. (much simpler). You must migrate your actor to the new dnd 1.6 advancement for this to work.
 * Update of bardic inspiration to activate for skill rolls as well (oversight on my part).
 * No damage on save spells will not trigger a reaction damaged if the target saves.
 * When using an item with ammunition, if the ammunition has a saving throw that will be used to determining the saving throw for the effect, as will active effects. So an exploding arrow with a save and damage can be used in a mundane bow with no save and should behave as expected.
@@ -164,13 +172,13 @@ game.settings.set("midi-qol", "MidiSoundSettings", game.settings.get("midi-qol",
 * Fix for rpg damage numbers and unlinked tokens.
 * Fix for applying concentration even if spell aborted via preItemRoll on use macro call.
 * Added notification if item use blocked by preItem roll macro.
-* Adding actor onUseMacro edtiing as a separate configuration options.
-* Clean up for levelsvolumetrictemplates. If the modules is enabled, midi defers to it for targeting calculations and ignores the midi walls block settings (levelsvolumetictemplates has it's own setting for walls block).
+* Adding actor onUseMacro editing as a separate configuration options.
+* Clean up for levelsvolumetrictemplates. If the modules is enabled, midi defers to it for targeting calculations and ignores the midi walls block settings (levelsvolumetrictemplates has it's own setting for walls block).
 
 ### 0.9.44
 * Fix for levels (the module) and template placement heights.
 * Add advantage attribution as part of the dice tooltip. Works with formula as tooltip or not. This is very experimental.
-* Check Vehicle motionless and flat ac when in motion to determing hits. Added flags.midi-qol.inMotion to mark a vehicle in motion.
+* Check Vehicle motionless and flat ac when in motion to determining hits. Added flags.midi-qol.inMotion to mark a vehicle in motion.
 * Fix for sw5e starship sdi,sdr,sdv handling.
 * Fix for actor onUse macros with spaces in name/specification
 * Added sample feature Blessed Healer, that uses an actor onUse macro to do the bonus healing. Does not require modifying any spells to have the effect applied.
@@ -182,7 +190,7 @@ game.settings.set("midi-qol", "MidiSoundSettings", game.settings.get("midi-qol",
 * Fix for accidental translation of spell component flags when language is not english.
 * FIx for concentration advantage and disadvantage not cancelling out.
 * Clarification: enabling concentration checks forces allow onUse macros to be true, since it is required for concentration automation.
-* Rough cut of attack roll advantage/disaadvantage attribution, displayed as console warning. Not really usable yet.
+* Rough cut of attack roll advantage/disadvantage attribution, displayed as console warning. Not really usable yet.
 
 ### 0.9.42
 * Sigh - another fix for DamageOnlyWorkflows.
@@ -192,14 +200,14 @@ game.settings.set("midi-qol", "MidiSoundSettings", game.settings.get("midi-qol",
 
 ### 0.9.41
 * Support for Conditional Visibility hidden/invisible conditions for advantage/disadvantage.
-* Support for application of CV effects is via Convenient Effects, so you need convenient effects/DAE to be able to implement the invisiblity spell. Midi-qol sample items updated to support CV and CV convenient effects. It is suggested that you toggle the CV effects to be "status effects".
-* Some tweaks to spiritual weapon to make it a little more friendly to use. You no longer need to define a "Slash" attack on the spiritual weapon actor, all of the damge rolls etc will be configured when the item is summoned.
+* Support for application of CV effects is via Convenient Effects, so you need convenient effects/DAE to be able to implement the invisibility spell. Midi-qol sample items updated to support CV and CV convenient effects. It is suggested that you toggle the CV effects to be "status effects".
+* Some tweaks to spiritual weapon to make it a little more friendly to use. You no longer need to define a "Slash" attack on the spiritual weapon actor, all of the damage rolls etc. will be configured when the item is summoned.
 * Added Lay on Hands with resource consumption, dialog for how many points to use etc.
 * Added flags.mid-qol.magicResistance.all/dex/str/etc.
-* For macro writers: Added support for workflow.workflowOptions.lateTargeting, autoConsumeResource etc to set per workflow whether to allow late targeting, prompt for resource consumption. These are useful in preItemRoll macros to configure the workflow to behave a certain way. See lay on hands sample item which skips dialog to consume resources.
+* For macro writers: Added support for workflow.workflowOptions.lateTargeting, autoConsumeResource etc. to set per workflow whether to allow late targeting, prompt for resource consumption. These are useful in preItemRoll macros to configure the workflow to behave a certain way. See lay on hands sample item which skips dialog to consume resources.
 * Fix for overtime effects that call a macro when a non-gm advances the combat tracker.
 * **Breaking** All reaction used tracking/prompting, bonus action tracking/prompting bonus actions, attacks of opportunity tracking are now only performed if the actor is in combat.
-* Added actor based onUse macros. Behaves exactly the same as item onUse macros. You can specify a global macro, identified by name, ItemMacro which refers to the workflow item (not useful), or ItemMacro.item name, (probably the most useful) which allows you add specific item macro calls for any item roll.
+* Added actor based onUse macros. Behaves exactly the same as item onUse macros. You can specify a global macro, identified by name, ItemMacro which refers to the workflow item (not useful), or ItemMacro.item name, (probably the most useful) which allows you to add specific item macro calls for any item roll.
 * Can be configured from the Actor sheet or via ...
 * Added flags.midi-qol.onUseMacroName CUSTOM macroName,macroPass - which will cause the specified macro (world macro name, ItemMacro, or ItemMacro.macro name) to be called when midi-qol gets to the workflow point specified by macroPass.
 * Fix for damageOnlyWorkflow and BetterRollsWorkflow throwing an error in getTraitMulti.
@@ -210,7 +218,7 @@ game.settings.set("midi-qol", "MidiSoundSettings", game.settings.get("midi-qol",
   - New options are off (same as previous disabled), "non-spell" all items except spells will do non-magical damage unless the per item midi-qol flag (or weapon magic property) is set to true.
   - "all" All items will do non-magical damage unless they have the magical damage property set.
   - I expect that most people will want "requires magical" to be set to non-spell and make sure that non-spells that do magical damage will have the magical property set.
-* Added dr/dv/di for "Magical Damage" and "Non Magical Damage", where magical/non-magical is determined as above. 
+* Added dr/dv/di for "Magical Damage" and "Non-Magical Damage", where magical/non-magical is determined as above. 
 * Fix some errors being thrown when applying effects due to midiProperties and not removing the apply effects buttons in some cases.
 
 ### 0.9.39
@@ -221,7 +229,7 @@ game.settings.set("midi-qol", "MidiSoundSettings", game.settings.get("midi-qol",
   - CE Flanked. The flanked target gets the CE "Flanked" condition, rather than the attacker getting flanking. Checking to see if a token is flanked is done whenever the token is targeted or an attack is rolled.
   - CE Flanked No Conga. Flanked tokens cannot contribute to flanking other tokens, meaning the flanking conga line can't form.
 * Support for new item flag, Toggle Effect, each use of the item will toggle any associated active effects/convenient effects. One use to turn on, next use turns off. This can be a viable alternative to passive effects where you click to enable and click again to remove. Should also simply a range of effects currently done as macro.execute/macro.itemMacro where the on/off cases just enable/remove effects. For active effects (as opposed to convenient effects) toggling requires DAE 0.10.01.
-* Added a players version of the GM's damage card. Can be configured separately to GM card to show/not show damage done to NPCs, and show/not show damage done to players (with the option to provide apply damage buttons that the players can use themselves - instead of the DM applying damage). If players try to apply damage to a token they don't own an error (non fatal) will be thrown.
+* Added a player's version of the GM's damage card. Can be configured separately to GM card to show/not show damage done to NPCs, and show/not show damage done to players (with the option to provide apply damage buttons that the players can use themselves - instead of the DM applying damage). If players try to apply damage to a token they don't own an error (non fatal) will be thrown.
   - Showing the damage applied to NPCs will show the damage resistances of the target in the target tool-tip. But since players will see the modified damage done, it's not that much extra information.
 * Added option to "apply item effects" apply the effects but do not display apply effects buttons. In case players have twitchy fingers and hit the apply effects button when they shouldn't.
 
@@ -234,7 +242,7 @@ game.settings.set("midi-qol", "MidiSoundSettings", game.settings.get("midi-qol",
 ### 0.9.36
 * Fixed bug when checking spell slots available for reaction spells with 0 pact slots available.
 * Add flags.midi-qol.sharpShooter which removes long range disadvantage on ranged attacks.
-* flags.midi-qol.grants.attack.bonus.all/mwak etc now accept roll expressions not just numbers.
+* flags.midi-qol.grants.attack.bonus.all/mwak etc. now accept roll expressions not just numbers.
 * Two new properties for items. 
   - magical damage - the item does magical damage for checking immunity/resistance.
   - magical effect - the item counts as magical for checking advantage on saving throws with magic resistance (previously was just for spells).
@@ -251,14 +259,14 @@ game.settings.set("midi-qol", "MidiSoundSettings", game.settings.get("midi-qol",
 ### 0.9.34
 * Some changes to flanking. 
   - Only applies to mwak/msak.
-  - Flanking is only applied if you have a token selected on screen when making the attack The attack will proceed but flanking will not be checked.
+  - Flanking is only applied if you have a token selected on screen when making the attack. The attack will proceed but flanking will not be checked.
   - if convenient effects is enabled midi adds convenient effects flanking indicator. The indicator is updated when you target a single enemy (and have a token selected) or roll an attack. 
-  - if you target an enemy and then move your token the flanking indicator might be wrong - it will be corrected when you roll or re target - this is an efficiency consideration so that flanking is not computed too often.
+  - if you target an enemy and then move your token the flanking indicator might be wrong - it will be corrected when you roll or retarget - this is an efficiency consideration so that flanking is not computed too often.
   - Allies with the convenient effects effect "Incapacitated" are ignored for flanking as well as those with 0 hp.
   - Flanking does not work with hex grids.
 * Fix for flanking check enabled and some edge cases throwing an error if no target selected.
 * **Breaking** Midi critical damage settings now always include per item critical extra dice.
-* Removed extra call to Hooks.call("preDamageRoll) in workflow.ts. Thanks @Elwin#1410
+* Removed extra call to Hooks.call("preDamageRoll") in workflow.ts. Thanks @Elwin#1410
 * Fix for max damage causing critical rolls to double the number of dice it should.
 * When using a reaction from a magic item provided spell/feature the user is prompted with the use charges dialog.
 
@@ -317,7 +325,7 @@ Existing custom sounds will be disabled.
 
   **Actions**
     * Item Roll is checked when the item is first rolled to chat.
-    * attack/rwak/mwak/msak/rsak/hit/miss/critical/fumble etc are checked after the attack roll is complete and hits have been checked
+    * attack/rwak/mwak/msak/rsak/hit/miss/critical/fumble etc. are checked after the attack roll is complete and hits have been checked
     * Damage/damage:type are checked after the damage roll is complete.
 
   * Custom sounds be configured from the Configure Midi Sounds panel immediately below the midi workflow panel on module config settings. Custom sounds are only active if the Enable Custom Sounds is checked on the misc tab of workflow settings.
@@ -339,14 +347,14 @@ Existing custom sounds will be disabled.
 * Tracking of bonus actions as well as reaction usage. Enabling enforce reactions also enabled checking bonus action usage.
 * **Experimental** support for getting reaction items/features from magic items. Enable from the reaction settings on the optional tab.
 * **For macro writers** Support for async Hook functions. For any of the midi-qol.XXXXX hooks, you can pass an async function and midi-qol will await the function call.
-* **For macro writers** When midi expires an effect as an options[expriy-reason] is set to a string "midi-qol:reason", describing the reason which you can process as you wish.
+* **For macro writers** When midi expires an effect as an options[expiry-reason] is set to a string "midi-qol:reason", describing the reason which you can process as you wish.
 * **Potentially breaking** Implemented fulldam/halfdam/nodam/critOther for weapons/spells/features rather than just weapons and this change replaces the weapon properties that were previously created by midi-qol.
   - Weapons with the old properties set should continue to work and the first time you edit the item it will auto migrate to the new data scheme (but of course there might be bugs).
-  - Setting fulldam etc check box for a spell/feature/weapon will take precedence over the text description search. If none are set the text description will still take place.
+  - Setting fulldam etc. check box for a spell/feature/weapon will take precedence over the text description search. If none are set the text description will still take place.
   - Added concentration property for any weapon/feature/spell (allows you to specify that concentration should be set when rolling the item via a check box) This is in addition to the now deprecated activation condition === Concentration.
 
 ### 0.9.26
-  * Added missing flags.midi-qol.optional.NAME.save.dex/wis etc to auto complete fields 
+  * Added missing flags.midi-qol.optional.NAME.save.dex/wis etc. to auto complete fields 
   * Added "every" option to count fields, means you can use the effect every time it matches without it ever expiring.
   * Fix for rolling tools with late targeting enabled.
   * Concentration will be applied to the user of an item (even if all targets saved) if the item places a measured template and has non-instantaneous duration - wall of fire/thorns etc.
@@ -377,7 +385,7 @@ Existing custom sounds will be disabled.
   * Tidy up so that late targeting does not apply when doing reactions, concentration saving throws or overtime effects.
   * Late targeting window now appears next to the chat log so that you are well position to hit the damage button if required.
   * Reactions now prompt for spell level when casting reaction spells and the reaction executes on the correct player client.
-  * Damage bonus macro damage is now added to base weapon damage by type before checking resistance/immunity (with a minimum of 0), so if you have 2 lots of piercing one that does 3 points and a bonus damage macro providing 5 the total damage of 8 will be applied (as it was before). If you have damage resistance to piercing the damage applied will be 4 points, instead of 3 points as it would have been when the damage resistance was calculated on each slashing damage and then added together. Should you wish to implement (who knows why) damage bonus macros that reduce damage, i.e. you do 1d4 less piercing damage because your're eyesight is bad, the damage bonus macro can return "-1d4[piercing]"
+  * Damage bonus macro damage is now added to base weapon damage by type before checking resistance/immunity (with a minimum of 0), so if you have 2 lots of piercing one that does 3 points and a bonus damage macro providing 5 the total damage of 8 will be applied (as it was before). If you have damage resistance to piercing the damage applied will be 4 points, instead of 3 points as it would have been when the damage resistance was calculated on each slashing damage and then added together. Should you wish to implement (who knows why) damage bonus macros that reduce damage, i.e. you do 1d4 less piercing damage because your eyesight is bad, the damage bonus macro can return "-1d4[piercing]"
 
 ### 0.9.22
   * Fix for empty combat causing all attack rolls error.
@@ -401,7 +409,7 @@ Existing custom sounds will be disabled.
   * If enforce reactions is enabled and you have used your reaction for the round you won't be prompted to choose a reaction when hit/damaged until the reaction marker is cleared.
 
 ### 0.9.19
-  * **breaking** flags.midi-qol.optional.NAME.check will no logner be triggered for skill checks. To trigger both skills and ability checks add both flags.midi-qol.optional.NAME.check and flags.midi-qol.optional.NAME.skill to the active effect.
+  * **breaking** flags.midi-qol.optional.NAME.check will no longer be triggered for skill checks. To trigger both skills and ability checks add both flags.midi-qol.optional.NAME.check and flags.midi-qol.optional.NAME.skill to the active effect.
     - This prevents some confusing behaviour when trying to combine with other effects.
   * Fix for over zealously hiding roll formula from players.
   * Fix for always hiding roll details when using betterrolls5e.
@@ -410,8 +418,8 @@ Existing custom sounds will be disabled.
   * Another fix for players ending their own turn when overtime effects are present (causing the combat tracker to not update).
   * When Enforce Reactions is set to "Do Not Check" you can take as many reactions as you want - i.e will get prompted any time you might take a reaction.
   * Added reroll-kh, reroll-kl to optional.NAME.xxx effects. Will keep the higher/lower of the rerolled and original roll.
-  * Ability saves/check/skills optiona.NAME effects will now send a message to chat indicating the roll.
-  * Ability saves/check/skills optiona.NAME effects dialog will remain open as long as there are valid optional flags available.
+  * Ability saves/check/skills optional.NAME effects will now send a message to chat indicating the roll.
+  * Ability saves/check/skills optional.NAME effects dialog will remain open as long as there are valid optional flags available.
   * onUse macro (postDamageRoll) supports modifying the workflows damage roll, details in Readme.
   * Update Lucky to reflect the new reroll-kh facility.
 
@@ -424,18 +432,18 @@ Existing custom sounds will be disabled.
   * Aborting the casting of a concentration spell by closing the spell slot usage dialog no longer removes concentration if it already existed.
   * Fix for magic resistance and concentration advantage. Broken with the move to new key mapping. 
     - When using LMRTFY + query the display will not include magic resistance/concentration advantage/disadvantage, however the roll query will correctly set the default option.
-    - When using LMRTFY, all sources of advantage/disadvantage will be merged and the advantage/disadvantage LMRTFY will refelect those sources.
+    - When using LMRTFY, all sources of advantage/disadvantage will be merged and the advantage/disadvantage LMRTFY will reflect those sources.
     - When using Monk's token bar magic resistance/concentration check advantage won't be set - you'll have to manually hit atl/control as required. Other sources of advantage/disadvantage work.
   * Some cleanup on blind rolls and hiding of rolls.
     - If the player makes a blind gm roll, instead of seeing nothing in chat, they will see the Item card, but attack and damage will be "Rolled" and they will not see the results of the roll.
     - If you are not using auto roll attack/damage and do a blind gm roll instead of being unable to complete the roll the attack/damage buttons will be displayed on the chat card, but when you roll the results of the roll will be "Rolled".
     -  I've changed "Really Hide Private Rolls" to a per client setting so each player can decide if they want the "X privately rolled some dice" message or not. As a reminder the "Rally Hide Private Rolls" setting only refers to core dnd5e attack/damage/save/skill rolls. When using the merge card attack/damage roll cards are never displayed.
-  * Optional rule incapacitated now checks before the item is rolled so that you won't have to answer questions and the discover that you can't do the roll. Similarly reactions won't be prompted for inacapacitated actors.
+  * Optional rule incapacitated now checks before the item is rolled so that you won't have to answer questions and the discover that you can't do the roll. Similarly reactions won't be prompted for incapacitated actors.
   * Added deflect missiles to sample item compendium - deals with the damage reduction part.
 
   * Some enhancements to reaction processing. All reaction processing settings have moved to the Optional settings tab.
     - Reaction processing is much clearer when convenient effects is installed as there is a visual indicator when a reaction has been used.
-    - New optional rule, "Record Oppotunity Attacks". If an actor who is in comabt makes an attack roll when it is not their turn in the combat tracker a reaction marker will be applied (if using CE) and record that they have used their reaction for the round. Settings are:
+    - New optional rule, "Record Oppotunity Attacks". If an actor who is in combat makes an attack roll when it is not their turn in the combat tracker a reaction marker will be applied (if using CE) and record that they have used their reaction for the round. Settings are:
       - None: don't check this
       - Characters: record this for characters but not NPCs
       - All: record for all actors.
@@ -444,12 +452,12 @@ Existing custom sounds will be disabled.
     - Reactions are now tested via either the convenient effects reaction effect or midi's internal reaction tracker, midi automatically applies both. Both are reset at the start of the actors turn or when the CE reaction is removed.
     - If an actor is not in combat attacks won't be recorded as reactions.
     - The test for in combat covers all combats, not just the current combat.
-    * To help macro writers creating reacion items, args[0] now contains an additional field, workflowOptions which includes some data from the attack that triggered the reaction.
+    * To help macro writers creating reaction items, args[0] now contains an additional field, workflowOptions which includes some data from the attack that triggered the reaction.
       - workflowOptions.sourceActorUuid: the uuid of the actor that triggered the reaction, fetch the actor via fromUuid.
       - workflowOptions.sourceItemUuid: the uuid of the item that triggered the reaction, feth the item via fromUuid.
       - workflowOptions.triggerTokenUuid: the uuid of the toekn that triggered the reaction, fetch the token via fromUuid.
       - workflowOptions.damageTotal: the total damage of the attack (if a reaction damaged reaction).
-      - workflowOptions.damageDetail: the detail of the damage done which is an arry of {damage: number, type: string}. Where the string is piercing, fire etc.
+      - workflowOptions.damageDetail: the detail of the damage done which is an array of {damage: number, type: string}. Where the string is piercing, fire etc.
       - Be aware when writing macros that if the item is rolled from the character sheet these fields will not be populated.
     - **warning** There has been quite a lot of refactoring of the reaction management code so errors could well be present.
     - If you were part way through a combat with reactions used and update midi you might see some odd behaviour until at least one round has been completed.
@@ -499,7 +507,7 @@ Existing custom sounds will be disabled.
 ### 0.9.12
 * Fix for typo in reaction processing for reaction manual.
 * Fix for trapworkflows - again.
-* Removed requirement for itemData being passed to damageonlyworflows to trigger bonus features.
+* Removed requirement for itemData being passed to DamageOnlywWorkflow to trigger bonus features.
 * Fix for challenge mode armor AC.AR/AC/ER not being modifiable from active effects.
 * Fix for macro.execute to make sure actor and token are available inside the macro.
 * Small tweak if you are not auto rolling damage. If the roll is not complete(i.e. you have not rolled damage) you ca re-roll the attack and the chat card will update (i.e. you forgot advantage or some such) and the workflow will continue form then on. The only change is that the chat card will update rather, than displaying another chat card
@@ -507,13 +515,13 @@ Existing custom sounds will be disabled.
 ### 0.9.11
 * Fix for TrapWorkflow setter only error.
 * Fix for showing hit result to players (when it should be hidden) when merge card not being used.
-* Fix for broken flags.midi-qol.crticial.EVERYTHING., fags.midi-qol.grants.critical.EVERYTHING. These flags only apply if exactly one target is hit.
+* Fix for broken flags.midi-qol.critical.EVERYTHING., fags.midi-qol.grants.critical.EVERYTHING. These flags only apply if exactly one target is hit.
 * Fix for stuck advantage/disadvantage when rerolling an item from the chat card.
-* Allow optional.Name.skill.acr etc to trigger only on acrobatics etc skill rolls
-* Allow optional.Name.save.dex etc to trigger only of dex etc saving throws.
-* Allow optional.Name.check.dex etc to trigger only of dex etc ability checks.
+* Allow optional.Name.skill.acr etc. to trigger only on acrobatics etc. skill rolls
+* Allow optional.Name.save.dex etc. to trigger only of dex etc. saving throws.
+* Allow optional.Name.check.dex etc. to trigger only of dex etc. ability checks.
 * Support reroll-max and reroll-min in flags.midi-qol.optional.NAME.XXX to reroll with max or min dice,
-* Added flags.midi-qol.max.damage.all.mwak/etc which forces maximum rolls on all dice terms. (grants to follow)
+* Added flags.midi-qol.max.damage.all.mwak/etc. which forces maximum rolls on all dice terms. (grants to follow)
 * Added flags.midi-qol.max/min.ability.check/save/skill.all/abilityid/skillId to maximise check/save/skill rolls.
 * Pass through dialogOptions in rollDamage and rollAttack.
 * Don't pass a null event to any of the item roll calls.
@@ -543,7 +551,7 @@ Existing custom sounds will be disabled.
   
 ### 0.9.07
   * Turns out restricted key bindings did not mean what I thought they did. So the world key mappings setting is temporarily disabled no matter what you set it to and key bindings are per client until further notice.
-  * Trying a new fix for sticky keys. I've not seen any adverse effects, but there might be - if so disabe it.
+  * Trying a new fix for sticky keys. I've not seen any adverse effects, but there might be - if so disable it.
 
 ### 0.9.06
   * Fix for "midi - qol" text error and others.
@@ -556,7 +564,7 @@ Existing custom sounds will be disabled.
   * Notification warnings on load are only shown to the GM.
   * Added config setting Fix Sticky Keys. If enabled midi attempts to fix the cases where adv/dis get stuck "on". Tested specifically with Token Action Hud. If it causes issues you can disable it.
   * Updated ja.json - thanks @Brother Sharp
-  * Slight enhancement to the applicaiton of convenient effects when using items.
+  * Slight enhancement to the application of convenient effects when using items.
     - There are 3 options in the workflow setting, Don't Apply, CE take priority, both CE and Item Effects.
     - The first and 3rd settings are pretty obvious. The second option means apply the CE effect if it exists and otherwise apply the item effecs.
     - The apply CE/don't apply CE checkboxes on the item card have slightly different semantics.
@@ -564,12 +572,12 @@ Existing custom sounds will be disabled.
       - Apply CE Checked means, Don't Apply => CE has priority, CE has priority and Apply both are unchanged.
 
 ### 0.9.04
-  * Fix for broken better rolls automation being brokwn.
+  * Fix for broken better rolls automation being broken.
     - Midi keyboard shortcuts do not apply for attack/damage when better rolls is active.
 
 ### 0.9.03
   * Fixed a number of edge cases when processing alt/ctl/shift that were causing problems.
-  * As a side effec token action hud seems to be working agagin.
+  * As a side effec token action hud seems to be working again.
   * Fixed a problem with flags.midi-qol.grants.critical.all/mwak etc.
   * Fix for bug introduced in 0.9.02 for saving throws in overtime effects.
   * Fix for bug introduced in 0.9.02 when rolling versatile damage. 
@@ -577,7 +585,7 @@ Existing custom sounds will be disabled.
   * Fix for bardic inspiration valor (and any optional effect that can increase AC).
 
 ### 0.9.02
-  * Added the promised flags.midi-qol.DR.mwak etc to the auto complete list.
+  * Added the promised flags.midi-qol.DR.mwak etc. to the auto complete list.
   * flags.midi-qol.DR.all now supports negative values to deal extra damage when being attacked.
   * midi-qol will now call "midi-qol.XXXX.itemUuid" as well as "midi-qol.XXXX", so you can have multiple rolls in flight and wait on the item specific Hook to be called.
   * Target tooltip on midi-damage card now includes DR settings as well as dr/di/dv.
@@ -587,10 +595,10 @@ Existing custom sounds will be disabled.
     - By default these settings are **per user** so have to be set up for each player. There is a midi setting World Key Mappings (misc tab) which, if checked, will force all clients to use the GM settings (changes to World Key Mappings requires a reload).
     - This change has required quite a lot of internal changes and it almost certain there are cases I have not tested - so don't upgrade 5 minutes before game time. v0.9.01 is available for re-installation.
     - Out of the box the configurations are (almost) the default midi-qol settings, so if you didn't use speed keys you should not notice much difference.
-    - There is a new accelerator toggle roll ("T" by defualt) which when held when clicking will toggle  auto roll/fast forward for both the initial click and subsequent chat card button presses. This is an extension of the previous adv+ disadv functionality which is not created by default. You can configure the toggle key to use ctrl/alt if you wish.
+    - There is a new accelerator toggle roll ("T" by default) which when held when clicking will toggle  auto roll/fast forward for both the initial click and subsequent chat card button presses. This is an extension of the previous adv+ disadv functionality which is not created by default. You can configure the toggle key to use ctrl/alt if you wish.
     - The existing Caps-Lock functions can't be supported in core key mappings so use "T" instead.
     - Critical now supports "C" for critical in addition to the default Control Key
-    - versatile damgae is V+click as well as Shift+click.
+    - versatile damage is V+click as well as Shift+click.
     * You can choose to roll "Other Damage" instead of normal or versatile damage via the "O" key when pressing the item icon. IF using this and you have roll other damage on rwak/mwak set, make sure to roll other damage to "Activation condition" and set the activation condition to false in the item. So that rolling the item won't auto roll the "Other" Damage in addition to the normal damage.
     - Foundry core supports differentiating between left and right ctrl/shift/alt keys, so you have more options to configure things as you wish.
 
@@ -602,9 +610,9 @@ Existing custom sounds will be disabled.
 * Use dnd5e bleeding effect for wounded is convenient effects not installed.
 * Added new option "log call timing" which will send some elapsed time log messages to the console.log.
 * Support for convenient effects "reaction". If convenient effects is enabled midi will apply the reaction effect when a reaction item is used (either manually or via reaction dialog), remove the reaction marker at the start of the the actors turn and not prompt/allow reaction items to be used if a reaction has already been taken this turn.
-* Added flags.midi-qol.grants.attack.bonus.all/rwak etc which adds a simple numeric bonus to attacker's rolls when checking hits against that target. The chat card does not refelct the bonus.
+* Added flags.midi-qol.grants.attack.bonus.all/rwak etc. which adds a simple numeric bonus to attacker's rolls when checking hits against that target. The chat card does not reflect the bonus.
   e.g. flags.mid-qol.grants.attack.bonus.all OVERRIDE 5 means that all attacks against the actor will get +5 when adjudicating hits. A natural 1 will still miss.
-* Added flags.midi-qol.grants.attack.success.all/rwak etc which means attacks against the actor will always succeed
+* Added flags.midi-qol.grants.attack.success.all/rwak etc. which means attacks against the actor will always succeed
 * New option for optional effects. If the effect has flags.midi-qol.optional.NAME.count OVERRIDE turn (instead of a number or @field), then the optional effect will be presented once per round (if in combat). Once triggered the actor must be in combat for the count to get reset at the start of their turn, or you can update flags.midi-qol.optional.NAME.used to false. If there is no active combat the effect will be presented each time it might be used.
   - The idea is that some optional rules allow you to do bonus damage once per round and now these can be modelled.
   - Also the effect wont be automatically deleted when used like the other count options. Use a timeout or special expiry to remove the effect.
@@ -612,7 +620,7 @@ Existing custom sounds will be disabled.
 * **BREAKING** midi-qol now requires dnd5e 1.5.0 or later
 
 ### 0.8.105
-* Mark player owned tokens as unsconcious when hp reaches 0, rather than defeated.
+* Mark player owned tokens as unconscious when hp reaches 0, rather than defeated.
 * Overtime effects use the globalThis.EffectCounter count if present for rolling damage.
 
 ### 0.8.104
@@ -675,10 +683,10 @@ Existing custom sounds will be disabled.
   - token + targeting will be selected in the controls tab, 
   - the character sheet will be minimised and midi will wait for you to target tokens.
   - You signal that you are ready by changing the control selection to anything other than token targeting.
-  - The sheet will be restoed and the workflow continue.
+  - The sheet will be restored and the workflow continue.
 
 **Known Issues**. If the item does not have any targets, you will still have to complete the targeting process by clicking away from token targeting.
-This is rreally intended for players who really, really can't get the hang of targeting before they do the roll.
+This is really intended for players who really, really can't get the hang of targeting before they do the roll.
 
 ### 0.8.95
 * Reactions now check for resource availability and spell slot availability. (Probably some bugs in this).
@@ -761,7 +769,7 @@ damageData:
     postActiveEffects
   - all is special, being called with each value of args[0].macroPass. You can differentiate by checking ```args[0].macroPass``` to decide which ones to act on.
   - You can specify (for example):
-    ```[postAttackRoll]ItemMacro, [postDmageApplication]ItemMacro``` for multiple passes, or use All
+    ```[postAttackRoll]ItemMacro, [postDamageApplication]ItemMacro``` for multiple passes, or use All
   - The default pass is "postActiveEffects", to correspond to the existing behaviour.
   * Note: if you are creating a damage only workflow in your macro it is best to run it in "postActiveEffects". 
   * Note: For better rolls the preAttackRoll, preDamageRoll don't really mean anything.
@@ -787,17 +795,17 @@ damageData:
 * Fix for ddbgl breakage in 0.8.87
 
 ### 0.8.87
-* Fix for (I think) longstanding bug that if monster saving rolls would be displayed to plaers - even if midi setting was to hide them.
-* Fix to Spirit Guardians to not create multiple sequencer/Automated animations effects. Midi smaple items are in folders if compendium folders is enabled.
+* Fix for (I think) longstanding bug that if monster saving rolls would be displayed to players - even if midi setting was to hide them.
+* Fix to Spirit Guardians to not create multiple sequencer/Automated animations effects. Midi sample items are in folders if compendium folders is enabled.
 * Correction DF Quality of Life is the template targeting preview module (apologies to @flamewave000 for the wrong attribution).
-* Change so that if player reacitons are enabled and no logged in player with ownership of the actor exists, the GM will be prompted to do the player's reaction rolls.
+* Change so that if player reactions are enabled and no logged in player with ownership of the actor exists, the GM will be prompted to do the player's reaction rolls.
 * Fixed a problem where midi was trying to get unconnected players to roll saves. It simply would not take no for an answer.
 * Fix for divine smite in v9.
 
 * Experimental - first cut integration with ddb-game-logs. **You need to be a patreon of ddb-game-log for this to work**. Requires a yet to be released version of ddb-game-log.
   - Midi will accept attack/damage/saving throw rolls from ddb-game-log. If you roll an attack or roll damage for a feature with no attack, midi will create a workflow and check hits/saves and apply damage using the ddb-game-log rolls.
   - The link is one way, from dnd beyond to midi and there is no feedback from midi-qol to update dnd-beyond, like changing hit points or active effects.
-  - Since the character settings are taken from dnd beyond NONE of the midi-qol advantage/disadvantage settings will apply to the roll. Similarly with damage rolls none of the foundry local bonuses etc will apply. Simple summary, everything relating to the dnd beyond generated rolls (attack, damage and saves) is taken from dnd beyond.
+  - Since the character settings are taken from dnd beyond NONE of the midi-qol advantage/disadvantage settings will apply to the roll. Similarly with damage rolls none of the foundry local bonuses etc. will apply. Simple summary, everything relating to the dnd beyond generated rolls (attack, damage and saves) is taken from dnd beyond.
   - If you want to use dnd beyond saving throws make sure the auto roll save setting is "Chat Message".
   - Hits/saves/Damage application will take into account the foundry's copy of values for AC, etc.
   - If set, midi will add damage buttons to ddb-game-log damage rolls which function exactly as for non game-log rolls.
@@ -831,7 +839,7 @@ Supports the following:
   - Spell level scaling is supported automatically.
   - If using automated animations, only the initial cast will spawn the automated animation, which is VERY pretty by the way.
   - Works with better rolls.
-Not Supported: picking tokens to be exlcuded, the spell will only target enemies.
+Not Supported: picking tokens to be excluded, the spell will only target enemies.
 
 ### 0.8.84
 * Fix for triggering reactions (Hellish Rebuke) when someone heals you.
@@ -839,20 +847,20 @@ Not Supported: picking tokens to be exlcuded, the spell will only target enemies
 
 ### 0.8.83
 * Fix for better rolls activation condition processing.
-* Added non magical silver physical damage resistance/immunity/vulnerability, which is bypassed by magical and silvered weapons.
-* Fix for removing cocnentration effects when one of the target tokens has been removed from the scene.
+* Added non-magical silver physical damage resistance/immunity/vulnerability, which is bypassed by magical and silvered weapons.
+* Fix for removing concentration effects when one of the target tokens has been removed from the scene.
 * Monk's token bar saves now displays the DC based on the midi midi show DC setting.
 * Fix for bug introduced in 0.8.81 with critical damage configuration - if you have Default DND5e as you setting, midi would incorrectly interpret that as no damage bonus.
 * Fix for 1Reaction effects not expiring on a missed attack.
 * Fix for localisation problem if using midi's concentration effect (i.e. no CUB/Convenient Effects).
 * Addition to reactions. As well as triggering on attacks, reactions can trigger on damage application. Midi uses the activation condition of the item to work out which one is applicable.  
-Most feats/spells have a blank activation conditon and midi will treat those as attack triggered reactions, or if the localised string attacked is in the activation condition.  
+Most feats/spells have a blank activation condition and midi will treat those as attack triggered reactions, or if the localised string attacked is in the activation condition.  
 
-Hellish Rebuke, for example, has "Which you take in response to being **damaged** by a creature within 60 feet of you that you can see", and midi will tirgger those with the word damage in the activation conditon when a character is damaged. (Hellish rebuke is a special one since it triggers only if you took damage).
+Hellish Rebuke, for example, has "Which you take in response to being **damaged** by a creature within 60 feet of you that you can see", and midi will trigger those with the word damage in the activation condition when a character is damaged. (Hellish rebuke is a special one since it triggers only if you took damage).
 
-* Added new item field "Active Effect Condtion". If set the activation condition must evaluate to true for the active effect to be applied. The saving throw if any must also be failed for the effect to be applied. For example, the included mace of disruption does additional damage to undead and if an undead fails it's save it is frightened. By setting the Activation Condition and Active Effect Activation Condition to checked only undead will suffer extra damage and be set frightened if they fail the save.
+* Added new item field "Active Effect condition". If set the activation condition must evaluate to true for the active effect to be applied. The saving throw if any must also be failed for the effect to be applied. For example, the included mace of disruption does additional damage to undead and if an undead fails it's save it is frightened. By setting the Activation Condition and Active Effect Activation Condition to checked only undead will suffer extra damage and be set frightened if they fail the save.
 
-* Implemented Optional Rule: Challenge Mode Armor. See the readme.md for more information. My testing indicates that this is extremly unfavourable to higher level tank characters, dramatically increasing the amount of damage they take. I have implemented a modified version that, 1) scales the damage from an EC hit and 2) Armor provides damage reduction equal to the AR for all hits.
+* Implemented Optional Rule: Challenge Mode Armor. See the readme.md for more information. My testing indicates that this is extremely unfavourable to higher level tank characters, dramatically increasing the amount of damage they take. I have implemented a modified version that, 1) scales the damage from an EC hit and 2) Armor provides damage reduction equal to the AR for all hits.
 
 ### 0.8.82
 * Fix for better rolls and merge card throwing an error.
@@ -918,14 +926,14 @@ exactly as auto applying effects does.
 * Attempted fix for effects with a duration of 1Reaction not always expiring, issue does not occur in 0.9
 * Fixed an obscure bug when checking concentration and updating HP > hp.max treating the update as damage.
 * **BREAKING** For ranged area of effect spells, with or without a template if range type is set to "special", the caster won't be targeted.
-* new DamageOnlyWorkflow() reutrns a Promise which when awaited has the completed workflow with damage applied fields filled in etc.
+* new DamageOnlyWorkflow() returns a Promise which when awaited has the completed workflow with damage applied fields filled in etc.
 * Preliminary review of 0.9.x compatibility and seems ok (famous last words). 
 * update ja.json - thanks @Brother Sharp
 
 ### 0.8.73
 * A little tidying of active defence rolls so that duplicate rolls are not performed.
 * Fix for midi-qol.RollComplete firing too early in the workflow.
-* Added fumbleSaves/criticalSaves: Set<Token> to workflow, and fumbleSaves,criticalSaves,fumbleSaveUuids, criticlSaveUuids to onUse/damageBonus macro arguments.
+* Added fumbleSaves/criticalSaves: Set<Token> to workflow, and fumbleSaves,criticalSaves,fumbleSaveUuids, criticalSaveUuids to onUse/damageBonus macro arguments.
 ### 0.8.72
 * Fix for active defence error in ac defence roll calculation.
 * Added support for ItemMacro.UUID in DamageBonusMacros and OnUse macros to refernce item macros for items not in your inventory.
@@ -936,26 +944,26 @@ exactly as auto applying effects does.
 ### 0.8.70
 * Fix for damage type none and better rolls (would always do 0 damage).
 * Fix for expiry of type isSave, isCheck, isSkill when doing auto saves/checks/skill rolls.
-* Expirmental: Support for the Active Defence variant rule. Enable via optional rules setting Active Defence. Requires LIMRTFY and does **not** work with better rolls. 
+* Experimental: Support for the Active Defence variant rule. Enable via optional rules setting Active Defence. Requires LIMRTFY and does **not** work with better rolls. 
   * Active defence has attacked players roll a defence roll instead of the GM rolling an attack roll, which is meant to keep player engagement up. https://media.wizards.com/2015/downloads/dnd/UA5_VariantRules.pdf
   - If active defence is enabled then when the GM attacks instead of rolling an attack roll for the attacker, the defender is prompted to make a defence roll. The DC of the roll is 11 + the attackers bonus and the roll formula is 1d20 + AC - 10, which means the outcome is identical to an attack roll but instead the defender rolls.
-  - As released this had identicial behaviour to the standard rolls with the exception that each player effectively has a individual attack roll made against them.
+  - As released this had identical behaviour to the standard rolls with the exception that each player effectively has a individual attack roll made against them.
   - Advantage/disadvantage are correctly processed with attacker advantage meaning defender disadvantage.
   - A fumbled defence roll is a critical hit and a critical defence roll is a fumbled attack, midi checks the attacking weapon for the correct critical hit/fumble rolls.
   - Timeout for player interaction is taken form the saving throw player timeout.
   - Display of the defence roll DC on the defenders prompt is taken from the saving throws display DC setting.
   - Issues: There is only one critical result supported, so if multiple targets are attacked they will all have critical damage rolled against them or none. (future might support individual results)
-  - There is only 1 advantaage/disadvantage setting applied, that of the first defender (same as current midi-qol). Future enhancement will use per character advantage/disadvantage settings.
+  - There is only 1 advantage/disadvantage setting applied, that of the first defender (same as current midi-qol). Future enhancement will use per character advantage/disadvantage settings.
   - Only works for mwak/rwak/rsak/msak.
 
 ### 0.8.69
 **Changes coming in dnd5e 1.5**:
-* dnd5e 1.5 includes per weapon critical threshold and bonus critical damage dice. There is now a configuration setting to enable/disable the midi-qol field on the item sheet. Once dnd5e 1.5 is released, you are stongly encouraged to migrate to the dnd5e setting and disable the midi-qol flag, via Use Midi Critical in the configuration settings. Soon, I will remove the midi-qol field completely. You can run ```MidiQOL.reportMidiCriticalFlags()``` from the console to see which actors/tokens have the midi-qol critical setting defined.
-* Enhanced dnd5e critical damage effects. You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). You will need to experiment to cofirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
+* dnd5e 1.5 includes per weapon critical threshold and bonus critical damage dice. There is now a configuration setting to enable/disable the midi-qol field on the item sheet. Once dnd5e 1.5 is released, you are strongly encouraged to migrate to the dnd5e setting and disable the midi-qol flag, via Use Midi Critical in the configuration settings. Soon, I will remove the midi-qol field completely. You can run ```MidiQOL.reportMidiCriticalFlags()``` from the console to see which actors/tokens have the midi-qol critical setting defined.
+* Enhanced dnd5e critical damage effects. You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). You will need to experiment to confirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
 
 ### 0.8.68
 * Fix for betterrolls and OverTime effects not rolling damage correctly/at all.
-* Fix for bettereolls saving throws not being detected in chat message saves workflow.
+* Fix for betterolls saving throws not being detected in chat message saves workflow.
 * Overtime effects saveDC now supports expressions rather than just numbers/field lookups. No dice expressions.
 * Fix for reaction checks throwing an error if no midi-qol flags are set on the actor.
 
@@ -963,17 +971,17 @@ exactly as auto applying effects does.
 * Fixes for template targeting and various module interactions.
 
 ### 0.8.64
-* Added healing and temp helaing to resistance/immunity/vulnerability types so that actor can be immune to healing.
+* Added healing and temp healing to resistance/immunity/vulnerability types so that actor can be immune to healing.
 * ~~Fix for template placing not working.~~
 
 ### 0.8.63
 * Fix for OverTime effects - now supports stacking of the same effect (should be regarded as experimental).
 * Added the ability to use # instead of , to separate OverTime fields. You have to use one or the other for the whole OverTime field.
 * Fix for BonusDamageRoll rolls and dice so nice not being displayed.
-* new MidiQOL.completeItemRoll function. Can use with  ```await MidiQOL.completeItemRoll(ownedItem, options)``` which will return the worfklow when the entire roll is complete and damage (if any) applied.
+* new MidiQOL.completeItemRoll function. Can use with  ```await MidiQOL.completeItemRoll(ownedItem, options)``` which will return the workflow when the entire roll is complete and damage (if any) applied.
 * Template targeting clean up. 
   - If using levels you can set the midi-qol optional rule setting to check + levels, which will check template overage including height and levels walls blocking for all attacks. The midi template height check is VERY naive and in addition to 2d targeting simply checks a sphere centered on the template origin and if further away it is considered out of range.
-  - If you want proper volumetic templates use the levelsvolumetrictemplates module (patreon) which does a great job of working out how much of the token is in the template and midi uses the result of that calculation. This version supports walls blocking for volumetric templates and uses volumetric templates for the preview targeting.
+  - If you want proper volumetric templates use the levelsvolumetrictemplates module (patreon) which does a great job of working out how much of the token is in the template and midi uses the result of that calculation. This version supports walls blocking for volumetric templates and uses volumetric templates for the preview targeting.
   - Midi also supports the levels "place next template at this height" setting from the left hand hud and if not set, will cast at the tokens current LoS height.
   - If levels is installed midi will use levels' check collision code, which deals with wall heights.
   
@@ -989,12 +997,12 @@ exactly as auto applying effects does.
 * Be a bit more aggressive about adding concentration, for spells like wall of flame, stinking cloud which are AoE but might not target anyone when cast.
 * Clarification: If a spell has concentration it will only be applied AFTER the roll is complete, which includes rolling damage if the item has damage, e.g. SRD Hunter's Mark.
 * Updated Branding Smite to remove concentration when attack is made (as well as actor effect).
-* Added MidiQOL.getConcentrationEffect(actor) which will return the concenttation active effect for the curent passed actor, suitable for MidiQOL.getConcenttrationEffect(actor)?.delete() to remove concentration from an actor.
+* Added MidiQOL.getConcentrationEffect(actor) which will return the concentration active effect for the curent passed actor, suitable for MidiQOL.getConcenttrationEffect(actor)?.delete() to remove concentration from an actor.
 
 ### 0.8.61
 * Various/significant concentration fixes if you have combat-utility-belt AND/OR convenient effects installed or none. Symptoms included, duplicated concentration saves required, not removing concentration, generally breaking.
 * Optional rule for saving throws auto save/fail on critical roll/fumble
-* Updated Flaming sphere. After a lot of testing, removing the item on expriy/removal of concentration was causing many bugs, which are not present in 0.9. Until then the summoned sphere will not be auto deleted, everything else should work.
+* Updated Flaming sphere. After a lot of testing, removing the item on expiry/removal of concentration was causing many bugs, which are not present in 0.9. Until then the summoned sphere will not be auto deleted, everything else should work.
 * Small fix for potentCantrip if the actor had no other midi-flags set.
 
 ### 0.8.60
@@ -1005,12 +1013,12 @@ Clarification, overtime effects share some features with other active effects.
   - if an overtime effect is applied as a passive effect (think regenerate) then using @fields will evaluate in the scope of the actor that has the effect and be evaluated each turn, no processing is done when creating the effect on the actor.
   - if the overtime effects is applied as a non-transfer effect (i.e. the result of a failed save or an attack that hits) @fields will evaluate in the scope of the caster exactly once when the effect is applied to the target, and ##fields will apply in the scope of the target each time the effect is tested.
   Example: a character with 50 HP with a spell, cast at level 3,  has a applied effect attacks a beast with 20 hp, then a removeCondition (for example) of
-  ```@attributes.hp.value < 30 && @spellLevel > 2``` will evaluate to ```50 < 20 && 3 > 2``` before the effect is created on the target actor and will always be false. Of special usefulness is an expression like ```damageRoll=(@spellLevel)d4```, which is evalated when applying the effect and returns an expression like (3)d4 if the spell was cast at level 3.
+  ```@attributes.hp.value < 30 && @spellLevel > 2``` will evaluate to ```50 < 20 && 3 > 2``` before the effect is created on the target actor and will always be false. Of special usefulness is an expression like ```damageRoll=(@spellLevel)d4```, which is evaluated when applying the effect and returns an expression like (3)d4 if the spell was cast at level 3.
   ```##attributes.hp.value < 30``` will evaluate to ```@attributes.hp.value < 30``` and will be evaluated each round until the targets hp are less than 30.
   The ## versus @ behaviour is standard for DAE/Midi active effects.
 
 ### 0.8.59
-* improve condition immunity behaviour. If you try to apply a condition whose statusId (usually name) matches a condition immunity application will be blocked. (For unlinked tokens this is not possible so the condtion is marked as disabled).
+* improve condition immunity behaviour. If you try to apply a condition whose statusId (usually name) matches a condition immunity application will be blocked. (For unlinked tokens this is not possible so the condition is marked as disabled).
 * Fix for not applying empty effects (for tracking expiry).
 Sample Items:
 Added Longsword of sharpness.
@@ -1021,7 +1029,7 @@ Added Acid Arrow.
 * Fixed ranged target selection to support meters. Sorry about that, and I live in a metric country - hangs head in shame.
 * Some updates to activation conditions.
   * Since it is so common @raceOrType, will return the targets race (if there is one) or the targets type, in lowercase.
-  @worflow provides access to the midi-qol workflow that caused the roll.
+  @wokrflow provides access to the midi-qol workflow that caused the roll.
 * Fix for saving throws not being rolled at all.
 Sample items:
 Longsword of Lifestealing (has an itemMacro).
@@ -1033,7 +1041,7 @@ Longsword of Lifestealing (has an itemMacro).
 * Fix for broken configure settings dialog (oops).
 
 ### 0.8.55
-* If concentration is set to inactive, taking damage won't trigger a consitution saving throw. I'm not sure it really makes sense to set concentration inactive, but I don't see that it causes any problems and can be convenient when tweakingg Hit Points.
+* If concentration is set to inactive, taking damage won't trigger a constitution saving throw. I'm not sure it really makes sense to set concentration inactive, but I don't see that it causes any problems and can be convenient when tweakingg Hit Points.
 * A fix for OverTime removeCondition which was not being evaluated correctly.
 * Added flags.midi-qol.potentCantrip, if enabled cantrip saves always do 1/2 damage instead of (possibly) no damage.
 *  Fixed a reference to deleteOwnedItem for 0.9 compatibility.
@@ -1052,22 +1060,22 @@ midi will evaluate the activation condition as an expression, providing, the act
 will only roll if the target has a type of dragon. 
 **An empty activation condition** will evaluate as true. If you don't want a specfic weapon to roll Other Damage set Activation Condition false.
 
-You can add the above conditon to the SRD slayer items to make the bonus damage automated based on target type.
+You can add the above condition to the SRD slayer items to make the bonus damage automated based on target type.
 
 If the weapon rolling the attack has ammunition AND the weapon does not have it's own Other Roll defined, the activation condition, Other roll and saving throw from the ammunition will be used. (Arrow of Slaying). **This does not work with Better Rolls (and probably wont)**
 
-There is a new weapon property "Crit Other Roll" which if set means that the "Other Damage" roll will be rolled as critical if the base roll is critical. Previosly Other Damage would never roll critical damage. You can decide if your Arrow of Slaying can do critical damage or not. **This does not work with Better Rolls** (yet)
+There is a new weapon property "Crit Other Roll" which if set means that the "Other Damage" roll will be rolled as critical if the base roll is critical. Previously Other Damage would never roll critical damage. You can decide if your Arrow of Slaying can do critical damage or not. **This does not work with Better Rolls** (yet)
 
 * Added a few new items to the sample compendium,
   * Flaming Sphere, this does pretty much everything the spell is supposed to do. Requires Active Auras and DAE. (Treat it as experimental - as I have not tried it in game yet).
   * Dragon Slayer LongSword. Example of simple activation roll other damage.
-  * Arrow of Slaying (Dragon). Example of ammuniton other roll damage, use it by adding to the character and setting the bow's ammunition to arrow of slaying.
+  * Arrow of Slaying (Dragon). Example of ammunition other roll damage, use it by adding to the character and setting the bow's ammunition to arrow of slaying.
 
 * Updated ko.json - thanks @klo
 
 ### 0.8.54
 * Fix for Sorcerer's Apprentice OverTime bug. If you have an overtime effect with a label equal to a convenient effect's name AND you are auto applying convenient effects the effect would be applied repeatedly, 1->2->4->8 etc.
-* Added OverTime removeCondition=expression which if true will remove the effect. (renamed condition to applyCondtion - but supports the existing condition label as well).
+* Added OverTime removeCondition=expression which if true will remove the effect. (renamed condition to applyCondition - but supports the existing condition label as well).
 * Oops - I managed to remove a check in one of the previous updates which means OverTime effects are applied for each user logged in. Fixed.
 
 ### 0.8.53
@@ -1077,17 +1085,17 @@ There is a new weapon property "Crit Other Roll" which if set means that the "Ot
 
 ### 0.8.52
 * Allow flags.midi-qol.OverTime.NAME (name optional) will allow multiple effects to be recorded on the actor (with or without NAME the effects will still be processed - this is just cosmetic).
-* Support rollType = check (default is save) in OverTime speicifcation, roll an ability check instead of an ability save.
+* Support rollType = check (default is save) in OverTime specification, roll an ability check instead of an ability save.
 * Clarification:
-  * "healing" and "temphp" work as damage types doing the obvious - healing damage is a way to implment regeneration. 
+  * "healing" and "temphp" work as damage types doing the obvious - healing damage is a way to implement regeneration. 
   * @field replacement on overtime active effects only works if DAE is enabled.
 * Fix for longsword of wounding doing an unnecessary saving throw. Fix for Hold Person not being removed on a save.
-* Addition of regeneration feature which adds HP at the start of the turn. If the optional rule for incapacited targets is enabled HP will be regenerated only if the actor has at least 1 HP.
+* Addition of regeneration feature which adds HP at the start of the turn. If the optional rule for incapacitated targets is enabled HP will be regenerated only if the actor has at least 1 HP.
 * The ability to do a reaction now resets at the start of an actors next turn.
-* Rewrite of Damage Reduction. Should now do something sensible when apportioning damage reduction across attacks with multiple damage types. It is not obvious what should happen in all cases so expect some confusion on this one - don't update 2 minutes before game time. The tests I've done suggest it is doing something sensible. I've enqbled a developer console warning message detailing the DR apportionment midi has done.
+* Rewrite of Damage Reduction. Should now do something sensible when apportioning damage reduction across attacks with multiple damage types. It is not obvious what should happen in all cases so expect some confusion on this one - don't update 2 minutes before game time. The tests I've done suggest it is doing something sensible. I've enabled a developer console warning message detailing the DR apportionment midi has done.
 * Update for sheet buttons on Better NPC sheets, thanks @mejari (gitlab).
 * Only display ChangeLogs module warning once per midi-qol update.
-* Comcenration: If a spell/item with concentration has an attack/save only apply concentration to the attack/caster if there are hit targets or some failed saves.
+* Concentration: If a spell/item with concentration has an attack/save only apply concentration to the attack/caster if there are hit targets or some failed saves.
 
 ### 0.8.51
 * Fix for midi-qol OverTime boolean flags processing which was broken.
@@ -1115,7 +1123,7 @@ flags.midi-qol.OverTime OVERRIDE specification
 where specification is a comma separated list of fields.
   * turn=start/end (check at the start or end of the actor's turn) The only required field.
   Saving Throw: the entire active effect will be removed when the saving throw is made (or the effect duration expires)
-  * saveAbility=dex/con/etc The actor's ability to use for rolling the saving throw
+  * saveAbility=dex/con/etc. The actor's ability to use for rolling the saving throw
   * saveDC=number
   * saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
   * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is made.
@@ -1151,7 +1159,7 @@ where specification is a comma separated list of fields.
 * Added additional option for GM saves. You can specify auto/prompted rolls for linked/unlinked tokens separately. So boss tokens (which might be linked) will can get special treatment for saving throws.
 * Added flags.midi-qol.ignoreNearbyFoes which, when set, means disadvantage from nearby foes wont affect the actor.
 * Fall back to midi-qol internal concentration when convenient effects/cub not setup as expected.
-* Added support for the levels moudle collision checking (which incorporates wall height/floors etc) - in walls block settings (optional rules - center + Levels). This works for templates and range checking. If levelsvolumetrictemplates is installed it will take over the template checking.
+* Added support for the levels module collision checking (which incorporates wall height/floors etc) - in walls block settings (optional rules - center + Levels). This works for templates and range checking. If levelsvolumetrictemplates is installed it will take over the template checking.
 * Support for levels-autocover (choose check + levels in option rules).
 * Support for levelsvolumetrictemplates when auto-targeting templates.
 * Added flags.midi-qol.concentrationSaveBonus, a roll expression, which is added to any midi-qol rolled concentration saves (auto, letme, monks, prompted). The roll will display without the bonus on roll card, but the save result display will reflect the bonus. The revised saving throw formula is available in the tooltip on the save results card.
@@ -1216,12 +1224,12 @@ Notes: When calculating walls blocking and cover you can either use levels-autoc
 
 ## 0.8.41
 * Fix for speed keys not working.
-* Revers better rolls skill/save/check changes - until I can find a beter solution
+* Revers better rolls skill/save/check changes - until I can find a better solution
 
 ## 0.8.40
-* Added MidiQOL.selectTargetsForTemplate(MeasuredTemplate). If you have a MesasuredTemplateDocument you need to pass templateDocument.object.
+* Added MidiQOL.selectTargetsForTemplate(MeasuredTemplate). If you have a MeasuredTemplateDocument you need to pass templateDocument.object.
 * Fix for scaling MagicItems
-* Fix for concentration checks not removing concentration with better rolls eneabled.
+* Fix for concentration checks not removing concentration with better rolls enabled.
 * FIx for concentration application when nothing hits.
 * Fix for distance measuring when token is < 1 square wide or high
 * Fix for skill/save/check rolls with better rolls enabled not rolling dual dice. As a side effect of this change flags.midi-qol.optional.Name.save/check/skill will have no effect when using better rolls.
@@ -1246,7 +1254,7 @@ Hooks.call("midi-qol.ReactionFilter", (itemlist) => {})
 * Fix for re-rolls in better rolls not picking up new targets.
 * Added critical threshold per item. Can be set as item.data.flags.midi-qol.criticalThreshold or from the item sheet. Will override the actor critical threshold if lower. Disabled for better rolls.
 * Fix for concentration check on unlinked tokens.
-* Fix for special duration isDamage.damageType not expiring when taking dmaage if saved.
+* Fix for special duration isDamage.damageType not expiring when taking damage if saved.
 * Fix for double damage critical damage setting.
 * Added option for convenient effects module support. If enabled midi-qol will search for a "convenient effect" with the same name as the item rolled and apply any effects to the targets. (Experimental)
 
@@ -1265,9 +1273,9 @@ Hooks.call("midi-qol.ReactionFilter", (itemlist) => {})
 ## 0.8.35
 * Fix for not displaying versatile button.
 * Fix for players control visible tokens conflict with other modules. (the conflict with levels will go away, but players control visible tokens will not function with levels).
-* Fix for another DamageOnlyWorfklow edge case throwing an error.
+* Fix for another DamageOnlyWorkflow edge case throwing an error.
 * Fix for concentration throwing an error when DAE not installed (DAE is required for concentration to work properly). Fix for concentration icon not being displayed.
-* Added option to hide saving throw totals on save ccard.
+* Added option to hide saving throw totals on save card.
 * Fix for distance measure not using center of tokens.
 
 ## 0.8.34
@@ -1293,7 +1301,7 @@ Hooks.call("midi-qol.ReactionFilter", (itemlist) => {})
 * updated es.json
 * Added special duration "isMoved" - the effect will expire if the token is moved. Requires DAE 0.8.31
 * Fix for player sees invisible tokens warning - which caused lots of warnings about socketlib/libwrapper.
-* Fix for DamagaeOnlyWorflows without a passed item causing errors.
+* Fix for DamagaeOnlywokrflows without a passed item causing errors.
 
 ## 0.8.31
 * Fix for not using token/actor names in skill checks/ability saves/ability check rolls.
@@ -1312,7 +1320,7 @@ Known issues: An attack that removes concentration that also should marks the ta
 * Fix for reaction checks causing an error when no GM is connected.
 * Fix for DamageOnly workflow throwing an error on item card creation.
 * Added support for special duration 1Hit.mwak/rwak/msak/rsak to expire when a hit with a particular type of attack is made. Useful for some of the various paladin smites.
-* Added targetUuids, hitTargetUuis, saveUuids, superSaverUuids and failedSaveUUids to the args[0] argument to onUse/DamageMacro macro calls.
+* Added targetUuids, hitTargetUuids, saveUuids, superSaverUuids and failedSaveUUids to the args[0] argument to onUse/DamageMacro macro calls.
 * Ability bonus effects (bardic inspiration etc) can now specify an effect of success which means the roll will bet set to 99 - useful for effects that turn a failure into a save.
 * flags.midi-qol.optional.NAME.count now support @fields, so you can consume a resource, like legendary resistance (@resources.legres.value). Sample legendary resistance included.
 * Added a different Lucky feature "Luck (Recharge)" which consumes resource points (tertiary in the sample). Resource details are updated by the active effect so luck recharges on a long rest. Just drag the Lucky (Recharge) item to the character and Luck should just work, recharging on a long rest.
@@ -1338,7 +1346,7 @@ Forgot to push changes to concentration check item. Updated.
 * 1st stage refactor of better rolls processing, should reduce some odd race conditions (but not all).
 * Slight rejig of concentration handling.
 * Some timing fixes for reaction rolls.
-* Fix for checking reactions on worflows without an attack roll - i.e. DamageOnlyWorkflows.
+* Fix for checking reactions on wokrflows without an attack roll - i.e. DamageOnlyWorkflows.
 
 ## 0.8.26
 * Maybe fix for not picking the correct d20 roll when rolled with advantage on reaction processing.
@@ -1359,7 +1367,7 @@ Forgot to push changes to concentration check item. Updated.
 In this first release reactions are ONLY checked when a target is hit, but before the attack roll is displayed (better rolls always displays the attack roll). The code searches the target's items for those with an activation of "reaction" and displays a dialog allowing you to choose one to use which is then rolled.
 
 For example:
-* Hellish rebuke the player doing the attack, target whoever hit the player and choose hellsih rebuke from the dialog. (TODO auto target the attacker)
+* Hellish Rebuke the player doing the attack, target whoever hit the player and choose Hellsih Rebuke from the dialog. (TODO auto target the attacker)
 * Shield spell and your AC will be updated BEFORE the to hit check is finalised. So a hit can be turned into a miss.
 * Reactions that only apply for the duration of the attack, require a little bit of setup (for example uncanny dodge included in the sample items compendium). Reactions are active effects with the special duration of "1 reaction". 
 * Such effects expire at the end of the roll that triggered the reaction. You set these up like any other effect, making sure the item target is self, create the effects you want and give them the special duration (make sure they are NOT transfer effects).
@@ -1384,7 +1392,7 @@ Fix release for duplicate attack roll cards being shown.
 * Fix for applying active effects via manual effect button.
 * Added option for auto targeting to ignore targets with 0 or less HP (i.e. defeated).
 * Fixed  hunter's mark (again).
-* Fir asynch LMRTFY _makeRoll patching.
+* Fir async LMRTFY _makeRoll patching.
 * I needed GM inspiration in my game so created an Item (GM Inspiration) that the GM can drop onto an actors character sheet. When the item is used it grants advantage on the next roll and removes the item from the actors inventory. (Does work with better rolls)
 * First cut solution for Bardic Inspiration and others, such as Lucky,
 
@@ -1398,12 +1406,12 @@ Fix release for duplicate attack roll cards being shown.
   - flags.midi-qol.optional.Name.save - the bonus is added after the save roll. Requires auto fast forward 
   - flags.midi-qol.optional.Name.check - the bonus is added after the ability check roll
   - flags.midi-qol.optional.Name.label - label to use in the dialog
-  - flags.midi-qol.optional.Name.count - how many uses the effect has (think lukcy which has 3), if absent the bonus will be single use (bardic inspiration)
+  - flags.midi-qol.optional.Name.count - how many uses the effect has (think lucky which has 3), if absent the bonus will be single use (bardic inspiration)
 
 This should be regarded as experimental since there are certain to be changes over time.
 Known Issues:
 * Does not work with better rolls - yet. Not sure if it's possible but will investigate.
-* The dice roll does not display the inital dice roll with dice so nice, so with dice so nice only the last bonus roll will be displayed. Will be fixed in a later release.
+* The dice roll does not display the initial dice roll with dice so nice, so with dice so nice only the last bonus roll will be displayed. Will be fixed in a later release.
 * Pending a change to LMRTFY, unlinked tokens only apply optional effects if they are present on the base actor. Monks token bar and auto rolls take the bonus into account for unlinked tokens.
 
 * Sample Bardic Inspiration and Lucky feats are included in the "MidiQOL Sample Items" compendium included with the module.
@@ -1413,7 +1421,7 @@ Known Issues:
   - When Inspiration is present the recipient will be prompted with a dialog to add the bardic inspiration roll on attack/save/check rolls. 
   - The inspiration dice correctly reflect the bards level when applying the effect. A little  fancy footwork was required to get that to work - see the Bardic Inspiration Dice passive effect for how to do that. You need dae for this to work.
   - If you don't use dae then use Bardic Inspirtion (No DAE) and modify the dice settings yourself.
-  - Once used, the Inspiration effeect is removed from the target character and no more prompts are shown.
+  - Once used, the Inspiration effect is removed from the target character and no more prompts are shown.
   
   * How to use Lucky. 
   - Currently you muse "use" the feature at the start of the day - a later release will fix this to reapply after a long rest.
@@ -1429,7 +1437,7 @@ Possible Issues:
 * Fix for rolling magic item spells when not auto rolling attack/damage.
 * Added import/export midi-qol settings.
 * Fixed really hide private rolls and GM sees all hidden rolls.
-* If GM sees all hidden rolls is enabled the "privately rolled some dice" message will have it's contents dispayed to the GM. Really hid private/hidden rolls will disable the "privately rolled some dice" messages from being shown
+* If GM sees all hidden rolls is enabled the "privately rolled some dice" message will have it's contents displayed to the GM. Really hid private/hidden rolls will disable the "privately rolled some dice" messages from being shown
 
 **As of version 0.8.19** you can export your midi-qol settings to a json file. When posting a midi-qol bug report please export your settings and add the json file to the report.
 
@@ -1448,7 +1456,7 @@ Possible Issues:
 * Fix for edge case on OnUseMacro
 
 ## 0.8.14 
-* Fix for displaying hits when attacking, not using merge cards, and only showing gm the results which would generate a player does not have permission to create chat messsage.
+* Fix for displaying hits when attacking, not using merge cards, and only showing gm the results which would generate a player does not have permission to create chat message.
 * Fix for DamageOnlyWorkflow passed itemData with active effects in place.
 
 ## 0.8.13
@@ -1487,7 +1495,7 @@ Possible Issues:
 
 ## 0.8.7
 * Fix a typo/bug in show Gm all whispered messages.
-* Fix a bug not allowing you to set the default save modifieer.
+* Fix a bug not allowing you to set the default save modifier.
 * Changed Requires Targets to accept never (never require targets), "in combat" (only required if in combat), "always" (you must always have a target select when rolling something that requires targets).
 
 ## 0.8.6
@@ -1502,8 +1510,8 @@ Possible Issues:
 
 
 ## 0.8.4
-* Fix for DF Manual Rolls - no longer request roll to be entered twice. Requires ciritical damage to be dnd5e default (fix pending for critical damage).
-* Fix for token tooltip showing dmaage resistance/immunity/vulnerabilty not being dislayed on damage card.
+* Fix for DF Manual Rolls - no longer request roll to be entered twice. Requires critical damage to be dnd5e default (fix pending for critical damage).
+* Fix for token tooltip showing damage resistance/immunity/vulnerabilty not being dislayed on damage card.
 * [BRAKING] Setting saving throw roll time out to 0 means that the system will NEVER auto roll the save for the player. If saves are not rolled (either auto or by request) they will never be resolved. This will help in the some cases where players incorrectly place templates.
 * Added support for Monks Token Bar saving throws. Can be for players or NPCs. There is no timeout supported for this. The GM can always click on the roll if they get tired of waiting. Monk's token bar rolls do not support setting of advantage by midi-qol.
 * Fix for DamageOnlyWorkflow error when initialising with no item.
@@ -1513,7 +1521,7 @@ Possible Issues:
 * Fix for error when displaying player character avatar image in damage card.
 * Added two hooks, midi-qol.preAttackRoll and midi-qol.preDamageRoll, which are called just before the call to item.rollAttack and item.rollDamage. They are passed the item and the workflow, both as "live" objects so changes will affect the roll that is about to be done. return true for the roll to continue and false for the toll to be aborted. 
 * Compatability with BetterRolls 1.1.14-beta seems to work, but only limited testing.
-* Players control invisible tokens seems to be working. The player vision set is the union of all their owned tokens and they can see invisble tokens they own.
+* Players control invisible tokens seems to be working. The player vision set is the union of all their owned tokens and they can see invisible tokens they own.
 * Update lmrtfy patch so that the current version works with midi-qol.
 * Fix for calling item macros where the macro name includes "." characters.
 * Verified midi works with advanced-macros (instead of/as well as furnace).
@@ -1611,7 +1619,7 @@ First implementation for 0.8.3 and dnd 1.3.0 both required.
 
 ## 0.3.100
 * Fix for data.traits.dr.all double counting resistance to spells.
-* Added flags.midi-qol.DR.non-physical damage reduction, for damage which is not bludgeoning,slasing or piercing.
+* Added flags.midi-qol.DR.non-physical damage reduction, for damage which is not bludgeoning, slashing or piercing.
 * [BREAKING] added dependency on socketlib
 * fix for damage card not displaying webm icons.
 * Updated DamageOnlyWorkflow to support damage types in the roll passed, i.e.  
@@ -1689,10 +1697,10 @@ will pick up the correct damage types. Any terms that have no damage attached wi
 ## 0.3.89
 * New optional rule to only choose the best Damage Reduction instead of adding all damage reductions together when applying damage.
 * Optional rules work with better rolls. There is a "problem" that if a rule blocks a roll you will get a libWrapper warning. This has no impact on the result, but can be annoying.
-* Expanded special durations  to includes skill checks and ability tests. All of these trigger when the roll is made, whether you are attacked or not. Save Success and Save Failure only trigger is you are attacked and need to make a save as a consequnce of that.
+* Expanded special durations  to includes skill checks and ability tests. All of these trigger when the roll is made, whether you are attacked or not. Save Success and Save Failure only trigger is you are attacked and need to make a save as a consequence of that.
 * Fix for isAttacked special duration not triggering on missed attacks.
 * Call midi-qol.DamageRollComplete as soon as the damage roll has been done, rather than waiting for saves.
-* Added option for onUseMacros to return {haltEffectsAppication: true} to prevent active effects being applied.
+* Added option for onUseMacros to return {haltEffectsApplication: true} to prevent active effects being applied.
 * Added templateId to arguments passed to onUse/DamageBonus macros in case they want to do something with it.
 * updated ja.json - thanks @Brother Sharp
 
@@ -1726,35 +1734,35 @@ updated en.json
 
 [BREAKING] Saving throw multipliers has been reviewed and **some changes were made**.
 * TL;DR if you don't know about save multipliers, just ignore this section, the default works like it used to and is pretty much what you'd expect.
-  * There is a new config setting, default save multipler (defaults to 0.5). If there are no special overrides then a saving throw will do damage * defaultSaveMultiplier damage. When set to 0.5 saving will do 1/2 dmaage, like most cases for dnd.
+  * There is a new config setting, default save multipler (defaults to 0.5). If there are no special overrides then a saving throw will do damage * defaultSaveMultiplier damage. When set to 0.5 saving will do 1/2 damage, like most cases for dnd.
   * There are a number of ways to overide the default multiplier.
-  * If the item description includes the text "no damage on save" (or the localized equivalent) then a save will do no damage.
-  * If the setting "search spell description" is set, items with the text "half as much damage" (or the localized equivalent) will do 1/2 damage on a save ignoring the defalt multiplier. If the text is not found the save will use the defaultSaveMultiplier.
+  * If the item description includes the text "no damage on save" (or the localised equivalent) then a save will do no damage.
+  * If the setting "search spell description" is set, items with the text "half as much damage" (or the localised equivalent) will do 1/2 damage on a save ignoring the defalt multiplier. If the text is not found the save will use the defaultSaveMultiplier.
   * For weapons (only) there are weapon properties for 1/2, full or no damage saves. These properties override any other settings. If not present the save multiplier will be worked out as above. 
   * For weapons (only) the save multiplier appplies to the whole damage roll **UNLESS**...
-    * You have enabled "Roll other damage on mwak/rwak" (which is intended sepcifically to support attacks that have base damage + extra damage with a save). If the weapon has a save specified **AND** the weapon has an Other Damage formula, the saving throw multiplier applies to the Other damage and the base damage is applied as full damage.
+    * You have enabled "Roll other damage on mwak/rwak" (which is intended specifically to support attacks that have base damage + extra damage with a save). If the weapon has a save specified **AND** the weapon has an Other Damage formula, the saving throw multiplier applies to the Other damage and the base damage is applied as full damage.
     * Because of the way the SRD monsters have been setup, (i.e. extra damage as versatile damage and the the versatile property not set) the versatile formula will be treated as Other Damage if there is no Other Damage formula and the weapon property "versatile" is not set. 
     * For BetterRolls you have to enter the damage into the Other field and enable roll Other in the better rolls settings. Midi will pick up this damage and apply the saving throw result against it.
     
-If you are just using standard items you can just leave things at the defualt and most saves will do 1/2 damage as you'd expect, monsters (like a giant spider) will (if Roll Other Damage is enabled) do base weapon damage and have a save applied to the bonus damage.
+If you are just using standard items you can just leave things at the default and most saves will do 1/2 damage as you'd expect, monsters (like a giant spider) will (if Roll Other Damage is enabled) do base weapon damage and have a save applied to the bonus damage.
 
-For those who have a lot of weapons set up with a save and want the default damage on save to be full damage (which is what a pervious version enabled when search spell description was enabled) just edit the items and set the save to full damage save (preferred) or set the default save multiplier to 1;
+For those who have a lot of weapons set up with a save and want the default damage on save to be full damage (which is what a previous version enabled when search spell description was enabled) just edit the items and set the save to full damage save (preferred) or set the default save multiplier to 1;
 
 
 ## 0.3.82 fix for saves not working if speed rolls not enabled.
 
 ## 0.3.81
-* Clean up keyboard hadling for saves/checks/skill rolls to align with the rest of the midi key settings. See the readme.md for more details.
+* Clean up keyboard handling for saves/checks/skill rolls to align with the rest of the midi key settings. See the readme.md for more details.
 * catch a couple of edge cases that were throwing some errors.
-[removed] [BREAKING] If better rolls is enabled there is a new workflow option. Item roll starts workflow, which if enabled will allow MagicItems spells to work as normal, applying damage etc BUT better rolls item buttons (standard roll etc) will not work as intended. If disabled better rolls item buttons will work as intended but MagicItems spells will not do any auto rolls but better rolls buttons will function as intended. You can't have both, default is disabled.
+[removed] [BREAKING] If better rolls is enabled there is a new workflow option. Item roll starts workflow, which if enabled will allow MagicItems spells to work as normal, applying damage etc. BUT better rolls item buttons (standard roll etc) will not work as intended. If disabled better rolls item buttons will work as intended but MagicItems spells will not do any auto rolls but better rolls buttons will function as intended. You can't have both, default is disabled.
 * [BREAKING] Removed preRollChecks setting. All features of that setting can be enabled from the optional rules settings page.
 * [UNBREAKING] for AoE spells (measured template placed) default behaviour is that caster WILL be targeted. Only if the range units field is set to "Special" will the caster be ignored. This means items from the SRD will work as written.
 
 ## 0.3.80
 [removed] [BREAKING] Measured templates now target the caster ONLY if range has type "any", othewise the csater won't be targeted by the AoE template.
-* Added special durations for specific daamage type, expires if the target takes damage of the specific type.  
+* Added special durations for specific damage type, expires if the target takes damage of the specific type.  
 * Added special duration isSave. Effect expires if the character makes a saving throw in response to an item usage against it. Also added ability type specific expiry on save.  
-Not really sure how useful the ability/dagmage type expriry options but at least 1 person has asked for them both.  requires latest DAE to work.
+Not really sure how useful the ability/damage type expriry options but at least 1 person has asked for them both.  requires latest DAE to work.
 * Added special durations save.success and save.failure.
 * Added flags.midi-qol.advantage.concentration which gives advantage to concentration checks.
 * Fix for other damage rolls with saves and dual concentration rolls always doing 1/2 damage on save.
@@ -1778,15 +1786,15 @@ The combined effect of these seems to reduce memory growth a bit.
 * Fix for saves display not being shown in non-merge cards when no player characters are doing a saving throw.  
 * Fix for causing DND5E Helpers to display cover checks twice.
 * Clean up attack/damage buttons when no longer active.
-* Slight change to check range optional rule. Melee weapons with the "Thrown" property will check the range/longrange the same as for ranged attacks. They will also incur disadvantage if a foe is nearby, again as if a ranged attack. If you want a pure melee version, create a second item with melee and 5ft ranage and disable the thrown property.
+* Slight change to check range optional rule. Melee weapons with the "Thrown" property will check the range/longrange the same as for ranged attacks. They will also incur disadvantage if a foe is nearby, again as if a ranged attack. If you want a pure melee version, create a second item with melee and 5ft range and disable the thrown property.
 * Added an additional optional parameter to TrapWorkflow templateLocation
 ```
   templateLocation: {x: number, y: number, direction: number, removeDelay: number};
 ```
 As well as x,y position and direction you can now specify a delay in real time seconds (not game time seconds) after whih the template will be removed. Gives a nice effect for, say burning hands, which flashes the cone of fire then removes it removeDelay seconds later.
-* Suport for midi-qol advantage/disadvantage flags in BettereRolls **1.3.11** and later for attacks, ability saves and checks and skill checks.
-* In response to popular demand (well 1 person at least) and becuase I like stats, I've added roll statistics to midi-qol. This is a first cut, so do not expect perfection. 
-* To launch the stats dislplay:
+* Support for midi-qol advantage/disadvantage flags in BetterRolls **1.3.11** and later for attacks, ability saves and checks and skill checks.
+* In response to popular demand (well 1 person at least) and because I like stats, I've added roll statistics to midi-qol. This is a first cut, so do not expect perfection. 
+* To launch the stats display:
   * as GM you can choose show stats from the midi-qol misc settings configuration,
     * or create a macro with the following command, which will work for players and GMs
     ```
@@ -1813,7 +1821,7 @@ updated ja.json, thanks to Brother Sharp and @louge
 
 ## 0.3.72 
 * Fix for better rolls processing of criticals, was deciding critical when it shouldn't.
-* Fix for disavantage due to nearby foes on ranged attacks.
+* Fix for disadvantage due to nearby foes on ranged attacks.
 * Added advantage/disadvantage display for all saving throws, not just magic resistant ones.
 * Put chat card damage buttons back to overlay, I think the opening up and closing was just too distracting.
 * Display Dice So Nice dice rolls for bonus damage rolls as well.
@@ -1826,7 +1834,7 @@ updated ja.json, thanks to Brother Sharp and @louge
 * Fix for removing measured templates on concentration expiry when no tokens were targeted by the template.
 * Fix for not auto targeting itty bitty tokens when placing measured templates. The halflings of the world will rue the day.
 * Added "faster" short circuit eval for ItemMacro calls.
-* A change to the damage chat card. Instead of a pletheroa of buttons a new streamlined display which shows the icon of the token that was damaged (which can be clicked on to hightlight the token on the map), a summary fo the damge done, and a drop down list of buttons. Calc means the damage after applying immunities and the numeric multipliers refer to the base rolled damage. The tick applies the currently selected mulitplier's damage and the undo always puts the character back to the HP before the attack.
+* A change to the damage chat card. Instead of a plethero of buttons a new streamlined display which shows the icon of the token that was damaged (which can be clicked on to highlight the token on the map), a summary fo the damage done, and a drop down list of buttons. Calc means the damage after applying immunities and the numeric multipliers refer to the base rolled damage. The tick applies the currently selected multiplier's damage and the undo always puts the character back to the HP before the attack.
 So if the damage was 18 hit points and resistances reduced that to 9, the MQoL multiplier will apply 9 points, the 1X 18, the 2X 36 and the heal will heal the character of 18 points of damage.
 * **Many thanks to @Engranado for providing this.**
 
@@ -1843,24 +1851,24 @@ So if the damage was 18 hit points and resistances reduced that to 9, the MQoL m
 
 
 ## 0.3.70
-* Cleaned up display when re-rolling dmage from an existing card. No longer displays old damage on the card while waiting for the roll.
+* Cleaned up display when re-rolling damage from an existing card. No longer displays old damage on the card while waiting for the roll.
 * Provided support for having both bonus damage and rollOtherDamage for things like bite poison damage. If on the merge card both will appear as separate lines, otherwise separate cards.
-* Fixed hit and save display ignorind show to gm/player settings for non-merged card rolls.
+* Fixed hit and save display ignoring show to gm/player settings for non-merged card rolls.
 * Fixed Bonus damage macro rolling by removing dependency on other damage roll setting.
 * Display all flavors returned from damageBonusMacro
 * Fix for hits/saves display ignoring the workflow display setting if not using merged card.
 * Fix for not fast forwarding skill rolls.
 * Support for flags.midi-qol.maxDamage.all/flags.midi-qol.maxDamage.rwka/mwak/heal/spell.... which, for non-critical hits, means damage rolls for base damage roll wil be maximum, for actions of the specified type.
-* Cleaned up 0.5/full/no damage saves for weapons. If rollOtherDameage is disabled, the item setting will apply to the base damage rolled. If rollOtherDamge is enabled, the base weapon damage will ALWAYS be full damage and the save modifier will apply to the otherDamageRoll damage.
+* Cleaned up 0.5/full/no damage saves for weapons. If rollOtherDamage is disabled, the item setting will apply to the base damage rolled. If rollOtherDamage is enabled, the base weapon damage will ALWAYS be full damage and the save modifier will apply to the otherDamageRoll damage.
 * Put back token selection in saves display (same behaviour as hits/damage cards)
 
 * Better Rolls support got some love.
-  * Concentration is now fully supported (except that when caasting a spell requiring concentration no prompt is given to the user, concentration is just removed).
+  * Concentration is now fully supported (except that when casting a spell requiring concentration no prompt is given to the user, concentration is just removed).
   * Cleaned up damage parsing, should be solid now. Won't include "Other" damage in base rolls.
   * If you disable "auto apply item effects" a button will added to the better rolls chat card to allow you to apply the effects to TARGETED tokens. This means you can apply effects even if not using auto damage/saves.
   * Support rollOtherDamage for mwak/rwak and uses the Other field from the better rolls card.
-  * Support for damageBonusMacro. Damage will appear as a spearate card.
-  * Critical hit, advantage and disadvantage are populated from the Better Rolls card so whould more accurately represent the better rolls data.
+  * Support for damageBonusMacro. Damage will appear as a separate card.
+  * Critical hit, advantage and disadvantage are populated from the Better Rolls card so would more accurately represent the better rolls data.
 
 
 ## 0.3.69
@@ -1869,13 +1877,13 @@ Added advantage/disadvantage to data passed to onUse/Damage bonus macros.
 ## 0.3.68
 * A small rearrangement of the onuse/damagebonus macro calling.
 * export of midi-qol.getDistance(t1, t2, wallsBlock: boolean). Which will return the straight line distance between two tokens allowing for tokens larger than size 1.
-* "Fix" for placing rectangular templates and auto targeting, now treats the origin of the template as the center of the template for checking blocking walls. Fixes and incompatibility with dnd5e helpers that replaces circle templates with equivlently size rectangular templates.
+* "Fix" for placing rectangular templates and auto targeting, now treats the origin of the template as the center of the template for checking blocking walls. Fixes and incompatibility with dnd5e helpers that replaces circle templates with equivalently size rectangular templates.
 
 ## 0.3.67
-* Checking you have tokens targeted now checks the number of tokens targeted.A target type of creature will use the number specified in the spell details and defaults to unlimitted if not specified.
-* An addition to TrapWorkflow. Instead of taking {x: xpos, y: ypos}, it will now accept {x: xpos, y: ypos, direciton: rotation_angle_degrees} for placed templates. Previously direction was hard coded to 0 degrees.
+* Checking you have tokens targeted now checks the number of tokens targeted.A target type of creature will use the number specified in the spell details and defaults to unlimited if not specified.
+* An addition to TrapWorkflow. Instead of taking {x: xpos, y: ypos}, it will now accept {x: xpos, y: ypos, direction: rotation_angle_degrees} for placed templates. Previously direction was hard coded to 0 degrees.
 * search spell description is now a case insensitive check and handles "&" escaped utf-8 characters in the description.
-* when rolling the attack/damage rolls again, on an existing workflow a new chat card is generated. This works well if you pop out the standard roll and use that to keep rolling damage for repeated damage spells. This also fixs the edge case of rolling a standard roll and having attack/damage keep updating the first card.
+* when rolling the attack/damage rolls again, on an existing workflow a new chat card is generated. This works well if you pop out the standard roll and use that to keep rolling damage for repeated damage spells. This also fixes the edge case of rolling a standard roll and having attack/damage keep updating the first card.
 * onUse macro will now support a comma separated list of macros to call.
 * Put back the special evaluation of (expr)dX for damage bonuses. It turns out this is important for critical damage rolls. 2d6 as a damage bonus will get doubled when rolling a critical hit, but (ceil(@class.rogue.level/2))d6 wont.
 
@@ -1884,12 +1892,12 @@ Added advantage/disadvantage to data passed to onUse/Damage bonus macros.
 * midi-qol will capture the return value (**not possible for execute as GM macros**) and examine the return data (for example) {damageRoll: "1d4[piercing], flavor: "a string"}.
   * The damageRoll fields for each macro called will be concatenated tor form a single roll expression, which is evaluated in the context of the actor doing the attack, and used to populate the otherDamage field which is included in the final damage application. You should specify the damage type so that midi can work out what sort of damage is being added, if no type is specified it will default to the damage type of the first damage roll in the item definition.
   * The macro does not have to return a damage bonus and can do anything you want, it is simply called each time you are about to do damage.
-  * This is compatible with better rolls, but the damage display is (currently) a spearate card.
+  * This is compatible with better rolls, but the damage display is (currently) a separate card.
 * Adding damage this way is expensive since it requires a macro compilation and execution each time you do damage. If you can add the damage via bonuses.mwak.damage you should do so.
-* Why? If you are using automaation, effects like hunter's mark which require conditional bonuses to be applied in the event you are hitting the marked target can't be handled well. If you are not automating, you just need to remember to add 1d6, but when the roll is being auto calculated/applied you don't get the option. So either you need to always prompt for a bonus (and hope you remember) or the bonus damage needs to be calculated for you.
+* Why? If you are using automation, effects like hunter's mark which require conditional bonuses to be applied in the event you are hitting the marked target can't be handled well. If you are not automating, you just need to remember to add 1d6, but when the roll is being auto calculated/applied you don't get the option. So either you need to always prompt for a bonus (and hope you remember) or the bonus damage needs to be calculated for you.
 * Most information about the attack/damage rolled so far is available, so you can customise critical damage beyond the extra dice allowed in the bonus critical dice field.
 
-* Here is a sample hunter's mark onUse and damageBonus macro: (If you are not familiar with args[0].value, please see the readme).  The onUse part sets up the active effects required and the damageBOnus part calculates the additonal damage.
+* Here is a sample hunter's mark onUse and damageBonus macro: (If you are not familiar with args[0].value, please see the readme).  The onUse part sets up the active effects required and the damageBOnus part calculates the additonial damage.
 
 The macro checks an actor flag "midi-qol.huntersMark" to get the tokenId of the marked target. 
 The flag midi-qol.huntersMark has to be set via the Hunter's Mark spell. The combined macro looks like this:
@@ -1955,8 +1963,8 @@ Please update DAE as well.
 ## 0.3.63
 * A couple of fixes for sw5e.
 * Updated ja.json thanks @louge
-* A new option for hiding DM attck rolls (only works with the merged card). "Show Attack D20", players will only see the d20 result, not the roll total, so they get a feel of how good the monster is. This simulates what the players could see at the table (i.e. see the dice roll) but not know what the total is. Otherwise this option behaves the same as Hide Rol Fomula.
-* DamageOnlyWorflow will now display all of the targets as normal hit targets so you can see who took damage.
+* A new option for hiding DM attack rolls (only works with the merged card). "Show Attack D20", players will only see the d20 result, not the roll total, so they get a feel of how good the monster is. This simulates what the players could see at the table (i.e. see the dice roll) but not know what the total is. Otherwise this option behaves the same as Hide Rol Fomula.
+* DamageOnlywokrflow will now display all of the targets as normal hit targets so you can see who took damage.
 * Support (I think) all of the CUB name replacement options in midi-qol. Names changed on hit/save cards remain changed once the card is placed no matter what you change the settings to. midi-qol uses the CUB options to do name hiding. Midi hideNPCNames removed.
 * Fix for data.abilities.str/dex/.../.dc CUSTOM not updating display of spell DCs.
 * Initial support for **concentration automation**. The is dependent on DAE and Combat utility belt being installed and of the right version and **requires** CUB concentration automation to be disabled.
@@ -1971,28 +1979,28 @@ Features: (see the full change log for more details).
   * No changes are required to any spells/effects for this to work, it keys off the concentration attribute in the spell details.
   * Expect bugs....
 
-* Some more detail on concentation automation:
+* Some more detail on concentration automation:
   * Caveats:
   * CUB concentration automation is NOT comaptible with midi-qol concentration automation. Midi-checks the settings and will disable CUB concentrator if you accept.
-  * Midi-qol REQUIRES that CUB be installed and the "Concentrating" condition be setup for midi-qol concentation automation to work. Midi shows a dialog if this is not the case. 
+  * Midi-qol REQUIRES that CUB be installed and the "Concentrating" condition be setup for midi-qol concentration automation to work. Midi shows a dialog if this is not the case. 
   * Midi will use the CUB concentrating condition when applying concentration (so you can add extra effects if you like, change the name/icon or whatever).
   * Midi-qol concentration automation will add an item to your world items, "Concnentration Check - Midi QOL". It is required for concentration automation and will be recreated as required each time you start the world if midi-qol concentration automation is enabled.
 * DAE 0.2.43 is REQUIRED for this version, a notification will be shown and concentration and auto application of effects wont work if DAE not installed. So upgrade/install DAE if you use those features.
-* A farily recent version of CUB must also be installed and active.
+* A fairly recent version of CUB must also be installed and active.
 
 * Features:
   * Enabled via config setting (near auto check saves)
   * If you cast a spell that requires concentration when you already have concentration, the caster is asked to confirm before casting the new spell and the previous concentration is removed.
   * If a token takes damage and doesn't save concentration is removed. The save will be rolled as a "Concentration Check" item and your settings for token saves will be used, i.e. auto roll/LMRTFY etc.
   * If the spell that caused concentration expires concentration is removed
-  * Concentration can be removed from the token effects HUD and will work as expected gme.cub.removeCondition("Concnetrating", tokens) will also trigger the rest of concentration remvoal.
+  * Concentration can be removed from the token effects HUD and will work as expected gme.cub.removeCondition("Concnetrating", tokens) will also trigger the rest of concentration removal.
   * If concentration is removed any effects due to the spell on any tokens (self + targets) are removed.
   * If concentration is removed any measured templates associated with the spell are removed.
   * No changes are required to any spells/effects for this to work, it keys off the concentration attribute in the spell details.
 
-* Note this is a first implementation and a) there will be bugs and b) it is quite slow and needs substanital optimisation and c) there will be bugs.
+* Note this is a first implementation and a) there will be bugs and b) it is quite slow and needs substanitial optimisation and c) there will be bugs.
 * Better rolls support is limited (and possibly buggy). There is no query for existing concentration, existing concentration is simply removed.
-* For the name replacement on midi hit/save cards I have implemented what I guess the funcitonality to be. But I have created the behaviour from scratch so might have missed something.
+* For the name replacement on midi hit/save cards I have implemented what I guess the functionality to be. But I have created the behaviour from scratch so might have missed something.
 
 
 ## 0.3.62
@@ -2008,21 +2016,21 @@ Features: (see the full change log for more details).
 * Fix for possible race condition when expiring specialDuration effects that could cause the effect to be deleted more than once, resulting in server deleted 0 ActiveEffects messages.
 * Support for additional argument in the DamageOnlyWorkflow (userOther: boolean, defaults to true) to specify which slot to use on the item card, if it is passed. If true the damage from the roll will be placed immediately below the attack roll, otherwise it will be placed in the normal damage area.
 * If CUB is installed and active midi-qol will use CUBs hostile name replacement for hit/save cards. A future release will remove the midi-setting entirely since there is no reason to use midi's hide name if not using CUB hide names.
-* New option to DamageOnlyWorkflow, it you pass itemCardId: "new" together with itemData as itemData: itemData, a new chat card for the item will be created and the dmage inserted into the chatcard. (consider this experimental).
+* New option to DamageOnlyWorkflow, it you pass itemCardId: "new" together with itemData as itemData: itemData, a new chat card for the item will be created and the damage inserted into the chat card. (consider this experimental).
 * Fix for rolling self targeted items when no token for the actor exists in the current scene.
 * Fix for rolling items if no scene exists in the world.
-* Fix for not displaing damage total when 0 damage was rolled.
+* Fix for not displaying damage total when 0 damage was rolled.
 
 
 ## 0.3.60
 * Now requires dnd5e/sw5e 1.2.3 or later.
 * Fix for critical key not being detected for some damage rolls.
-* Fix with perfect-vision to not infinte loop.
+* Fix with perfect-vision to not infinite loop.
 * Fix for healing damage bonus in other languages not working.
 * Fix for Damage vs Healing displayed for healing action types on the item card button.
 * Improved (?) behaviour on the 1attack/1hit/isDamaged/isAttacked expiries. There may be some missed edge cases.
 * startNextTurn/endNextTurn expiry moved to times-up.
-* Implement 5/5/5 distance calcs for ranged area trgeting.
+* Implement 5/5/5 distance calcs for ranged area targeting.
 
 
 ## 0.3.59
@@ -2030,7 +2038,7 @@ Fix for rwak/mwak and applying Other/versatile damage always rolling something e
 
 ## 0.3.58
 Fix for 0.3.57 release bug.
-Fix for trap worfklow not fastforwarding.
+Fix for trap workflow not fastforwarding.
 
 ## 0.3.57
 Fix for self targeted attack/action/hit durations. This required quite a few changes in the workflow so it's possible some cases are not covered so be warned.
@@ -2043,7 +2051,7 @@ Fix for self targeted attack/action/hit durations. This required quite a few cha
 * fix for LMRTFY override to fix libWrapper problem.
 * fix for Other rolls sometimes not displaying saving throws.
 * [BREAKING] Change to remove buttons settings to configure attack/damage buttons for GM/Player. You need to reset the settings.
-* [BREAKING] If auto roll damage is none and no targets were hit or selected the workflow will complete (triggering effect expiry). If you want to have the dmage buttons available enable it from the workflow (disable remove damage buttons on completion), you will still need to manually apply damage.
+* [BREAKING] If auto roll damage is none and no targets were hit or selected the workflow will complete (triggering effect expiry). If you want to have the damage buttons available enable it from the workflow (disable remove damage buttons on completion), you will still need to manually apply damage.
 * Addition to onUseMacros arguments. Since it is quite possible to have race issues when calling a macro that applies damage to targets as part of an item attack, for onUseMacros args[0].damageList provides a snapshot of the damage/HP totals in the roll so far. In particular if creating a damageOnlyWorkflow you can pass the damageList to the constructor to have the workflow take those values into account. 
 ```
   new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "piercing", [target], damageRoll, {flavor: "Giant Slayer bonus damage", damageList: args[0].damageList});
@@ -2061,20 +2069,20 @@ Fix for self targeted attack/action/hit durations. This required quite a few cha
 * [BREAKING] New feature for action type rwak/mwak that have a saving throw. The "Other" formula will be rolled as additional damage. (This required some changes to the damage application logic so should be considered experimental as well)
   * Default is 1/2 damage on save, but you can set the noDamSave or FullDamSave flags to modify the behaviour.
   * The saving throw has no effect on base weapon damage, it always does full damage if the attack hits.
-  * You can specify the Other formula as 3d6[poision] and the extra damage will be treated as poison damage for damage resistances/immunities/vulnerabilities.
+  * You can specify the Other formula as 3d6[poison] and the extra damage will be treated as poison damage for damage resistances/immunities/vulnerabilities.
 
 * [BREAKINGish] Workflows remain active after completion. This means that you can reroll attacks/damage for an item. (This should be considered a little bit "experimental") Because workflows can be restarted there is now much better support for Popped out item cards. A workflow remains viable until another workflow with the same item is started, then it will fail.
   * Popped out item cards. If you pop out the chat card whatever buttons have not been removed remain active (see also setting to keep buttons). So if you pop out magic missile (before the damage is rolled) you can roll the damage multiple times and the damage is applied.  
   * The same applies for attacks and saves. If auto applying damage new damage cards will be created for each set of applied damage. 
   * If the item has an attack and you change targets between one roll and the next the new targets will be used. This does not yet work for damage only items (I need to think about it a bit more).
-  * The initial item chat card is updated with new hits/damage. This can be a problem if the display scrolls too far befor you want to roll again.
-  * New config settings to help with popped out messages, attack/damage buttons can remain active for both player and GM, and will restart the workflow from that point, so rolling the damage again will re-reoll the damage and apply it to the targets.  
+  * The initial item chat card is updated with new hits/damage. This can be a problem if the display scrolls too far beforeyou want to roll again.
+  * New config settings to help with popped out messages, attack/damage buttons can remain active for both player and GM, and will restart the workflow from that point, so rolling the damage again will re-roll the damage and apply it to the targets.  
 
 One obvious use case is that if you auto roll everything, adv-dis the roll to get a complete chat card, and then pop out the card and you can re-roll as often as you want.
 
 * Fix to mark workflow settings as global so that DF Settings Clarity does not report workflow settings are per user.
 
-* Support for "Spell Damage" resistance type (resistance/immunity/vulnberability). Any damage from an item of type "spell" will be checked against this resistance/immmunity/vulnerability and if present will change the damage by a factor of 0.5/0/2. You can only get one such multiplier per category, so resistance to "Spell Damage" and Fire will result in a single 0.5 multiplier. The is useful for things like Aura of Warding.  
+* Support for "Spell Damage" resistance type (resistance/immunity/vulnerability). Any damage from an item of type "spell" will be checked against this resistance/immunity/vulnerability and if present will change the damage by a factor of 0.5/0/2. You can only get one such multiplier per category, so resistance to "Spell Damage" and Fire will result in a single 0.5 multiplier. The is useful for things like Aura of Warding.  
 This is separate to the existing magic resistance support, which gives advantage on saving throws, which remains unchanged.
 
 ## 0.3.53
@@ -2092,7 +2100,7 @@ Fix for versatile button MIA.
 * Fix for error being thrown for items that do not have a damage roll.  
 [BREAKING] If the action type for an item is blank (so that the damage rolls are not displayed when edited) then no damage button will be displayed/rolled.  
 * Yet more advantage/disadvantage/critical changes/improvements (sorry, but hopefully this is the last one).  
-Chat card buttons should correctly reflect the status for adnvantage/disadvantage/critical that midi-qol thinks when displaying the buttons (i.e. not auto rolling) and includes looking at various advantage/disadvantage/grants/critical flags.  
+Chat card buttons should correctly reflect the status for advantage/disadvantage/critical that midi-qol thinks when displaying the buttons (i.e. not auto rolling) and includes looking at various advantage/disadvantage/grants/critical flags.  
 
 Fast forwarding has been cleaned up/changed.
 
@@ -2121,17 +2129,17 @@ I'm sure there will be some workflow that someone uses for whom the changes are 
 ## 0.3.49
 * Revamped DM roll flags (again), due to the various interactions that people had with the workflow settings. There are now 4 gm settings:
   * GM Auto Roll Attack: If true the attack roll will be auto rolled for the GM if set.
-  * GM Auto fast forward attack rolls: If true the GM attack rolls will be auto fastforarded. Key modifiers are supported.
+  * GM Auto fast forward attack rolls: If true the GM attack rolls will be auto fastforwarded. Key modifiers are supported.
   * GM Auto Roll Damage. Options are never, attack hits, always.
-  * GM Auto Fast Forward damage: If true roll will be auto fast forwarded. Will pick up whether the attack was critical or not and will recongnise critical and No critical keys if the roll was not auto rolled.
+  * GM Auto Fast Forward damage: If true roll will be auto fast forwarded. Will pick up whether the attack was critical or not and will recognise critical and No critical keys if the roll was not auto rolled.
 
 ## 0.3.48
-* More tinkering with dadmage critical rolls. If an attack is critical and damage rolls are auto fastforwarded it will use the critical status from the attack roll.
+* More tinkering with dadamage critical rolls. If an attack is critical and damage rolls are auto fastforwarded it will use the critical status from the attack roll.
 * If not auto rolling damage rolls and auto fast forwarding damage rolls pressing the disadvantage key (ctrl by default) will force the roll to be a normal roll.  
 As always there are likely to be some workflow behaviours that I have not tested so ping me if there are any problems.
-* [BREAKING] Split GMFullAuto into GM auto roll attack and GM auto roll damage. GMAutoRollDamage ignores other module settings and will auto roll damage for all GM damage rolls if true and will never auto roll if false. I have to thwart a particular bahaviour in my world where players decide to use the shield spell based on how much damage the attack does, but still want their attacks to auto roll damage if they hit.
-* Fix for ptentially choosing wrong dice in advantage/disadvantage roll checks.
-* [BREAKING] removal of the midi-qol created magical flag for weapons - it is now created by default in dnd5e 1.2.1. It appears the properties have the same id so it should mvoe across seamlessly.
+* [BREAKING] Split GMFullAuto into GM auto roll attack and GM auto roll damage. GMAutoRollDamage ignores other module settings and will auto roll damage for all GM damage rolls if true and will never auto roll if false. I have to thwart a particular behaviour in my world where players decide to use the shield spell based on how much damage the attack does, but still want their attacks to auto roll damage if they hit.
+* Fix for potentially choosing wrong dice in advantage/disadvantage roll checks.
+* [BREAKING] removal of the midi-qol created magical flag for weapons - it is now created by default in dnd5e 1.2.1. It appears the properties have the same id so it should move across seamlessly.
 * release of dnd5e 1.2.1 fixed an issue when rolling critical damage via the standard damage dialog. The roll will correctly be rolled as critical if selected. This should fix the issue with modifying critical damage according to the midi-qol settings.
 * Support for GM LMRTFY save option, which does a LMRTFY + query for NPC saves to the GM. This allows the GM to specify advantage/disadvantage if not auto fastforwarding saves. 
 
@@ -2152,7 +2160,7 @@ First implementation of critical damage flags.
 * flags.midi-qol.noCritical.mwak/rwak/msak/rsak/...
 * flags.midi-qol.maxRoll.all  
 * flags.midi-qol.maxRoll.mwak/rwak/msak/rsak/...
-* flags.midi-qol.maxRoll.heal heal damage rolls are always maximized - think "Supreme Healing"
+* flags.midi-qol.maxRoll.heal heal damage rolls are always maximised - think "Supreme Healing"
 
 These force the damage roll from attacks by the actor that has the effect to be critical.  
 
@@ -2160,10 +2168,10 @@ The following grants/fail flags apply ONLY if it is the single target of the att
 These flags force/disable critical hits when a single target has been hit.  
 * flags.midi-qol.grants.critical.all  // All damage rolls are critical  
 * flags.midi-qol.grants.critical.mwak/rwak/msak/rsak/other  
-If there is a single target (which has the effect) and the attack hit, upgrade the attack to a critical attack. (Think unconcious)  
-* flags.midi-qol.fail.critical.all  // no dmage rolls are critical  
+If there is a single target (which has the effect) and the attack hit, upgrade the attack to a critical attack. (Think unconscious)  
+* flags.midi-qol.fail.critical.all  // no damage rolls are critical  
 * flags.midi-qol.fail.critical.mwak/rwak/msak/rsak/other   
-Cause attack on the target to not be critical. (Think adamanitne armor)  
+Cause attack on the target to not be critical. (Think adamantine armor)  
 
 
 ## 0.3.45  
@@ -2179,7 +2187,7 @@ Fix for multilevel tokens throwing an error
 * Fix for spell scaling not working if not auto rolling damage.  
 * Fix for AOE magic items spells throwing an error.   
 * Fix for ammo damage after libwrapper installed.
-* Included merge request to refrain from deleting non-special duration effects at combat end. Thanks @DangereosrDan.  
+* Included merge request to refrain from deleting non-special duration effects at combat end. Thanks @DangerousrDan.  
 The first 2 fixes required a change to how keyboard event processing is done. As far as I can tell there are no problems, but there are too many workflow variations for me to test them all, so a bug (or many) is possible.  
 Don't update just before game time.
 
@@ -2188,11 +2196,11 @@ fix for versatile shortcut being ignored.
 
 ## 0.3.41  
 fix for spell scaling not working  
-fix for item roll errors when initially rolling - broken universe etc (I hope)  
+fix for item roll errors when initially rolling - broken universe etc. (I hope)  
 
 ## 0.3.40  
 * Fix for trapworkflow calling onUse macro twice.  
-* Some more clean up of crtical/advantage settings in workflows. Dont pass an event, use optins values  
+* Some more clean up of critical/advantage settings in workflows. Dont pass an event, use optins values  
 * Fix for modifying critical damage on all workflow paths  
 Fix for perfect vision incompatibility thanks to the module author for the fix.
 Deprecation notice: The player controls invisible tokens setting will be removed in a subsequent release since the "conditional visibility" module does a much better job.  
@@ -2213,7 +2221,7 @@ Deprecation notice: The player controls invisible tokens setting will be removed
 * fix for LMRTFY and speed item roll mappings.
 * fix for change from actor.useSpell changes and upscaling of spells.
 * use new item.getSaveDC() for spell saves.
-* added a new paramter to item.roll({createWorkflow: true}). If you se this to false when calling item.roll a workflow will not be initiated - useful if you have macros that do a complete roll and you don't want midi-qol to start automation for the item roll.
+* added a new parameter to item.roll({createWorkflow: true}). If you se this to false when calling item.roll a workflow will not be initiated - useful if you have macros that do a complete roll and you don't want midi-qol to start automation for the item roll.
 
 
 ## 0.3.35
@@ -2221,9 +2229,9 @@ Deprecation notice: The player controls invisible tokens setting will be removed
 * added support for configurable list of items that have item details displayed
 * added current token's tokenId as argument to onUseMacro data.
 
-[BREAKING] change to special expiry effects: (Reuqires DAE 0.2.27)
+[BREAKING] change to special expiry effects: (Requires DAE 0.2.27)
 * removed from item duration (too cluttered)
-* added as option field in Effect Duration panel. (You must use DAE effect editor). The special expriy conditions apply in addition to the normal duration.
+* added as option field in Effect Duration panel. (You must use DAE effect editor). The special expiry conditions apply in addition to the normal duration.
 * Added support for isAttacked and isDamaged expiry conditions.
 Example: Guiding Bolt. Start wi th the SRD guiding bolt spell 
   * Bring up the DAE editor and add an effect.
@@ -2237,11 +2245,11 @@ Example: Guiding Bolt. Start wi th the SRD guiding bolt spell
 
 ## 0.3.34
 * Slight fix to self targets, should now work without targeting self
-* added flags.midi-qol.advantage.attack.dex/str/wis etc to give advantage on dex/str/wis etc mwak/rwak
-* added flags.midi-qol.disadvantage.attack.dex/str/wis etc to give disadvantage on dex/str/wis etc mwak/rwak
+* added flags.midi-qol.advantage.attack.dex/str/wis etc. to give advantage on dex/str/wis etc. mwak/rwak
+* added flags.midi-qol.disadvantage.attack.dex/str/wis etc. to give disadvantage on dex/str/wis etc. mwak/rwak
 [BREAKING] "enable workflow automation" is now a client setting, rather than a world setting. This means that players can choose workflow enabled or not independently of the GM and must set it for their client. Default is workflow automation enabled.
 * Fix for aborted attack/damage rolls advancing the workflow. Attack/damage buttons remain active until a roll is made (either auto or manual) or a new item roll for that item is started.
-* Process damage flavor data for bonus damage (traits/situational bonus) when calclulating damage types, so a bonus of 1d6[Fire] will be recognised as fire damage. If no damage flavor is specified ti will be treated as having a flavor euqal to the first damage type in the item spec.
+* Process damage flavor data for bonus damage (traits/situational bonus) when calculating damage types, so a bonus of 1d6[Fire] will be recognised as fire damage. If no damage flavor is specified ti will be treated as having a flavor euqal to the first damage type in the item spec.
 * Correctly bucket damage types so that multiple damage elements are added before resitances are applied.
 * Fix a bug in speed rolls for ability saves/checks ignoring the accelerator keys (introduced in 0.3.33)
 
@@ -2271,7 +2279,7 @@ flags.midi-qol.DR.fire
 flags.midi-qol.DR.force
 flags.midi-qol.DR.lightning
 etc
-These flags can be set by active effects and are evaluated after derived fields are calculated, so things like dex.mod etc ar available.
+These flags can be set by active effects and are evaluated after derived fields are calculated, so things like dex.mod etc. ar available.
 
 * fix for templates and large tokens.
 * fix for npcs requiring players to roll saves.
@@ -2281,7 +2289,7 @@ These flags can be set by active effects and are evaluated after derived fields 
 
 ## 0.3.32
 Add damage all/restore all buttons to damage card.
-Hightlight/select enabled for damage card as well as hits card.
+Highlight/select enabled for damage card as well as hits card.
 Fix for trap workflow not fastforwarding damage rolls
 Don't error if target token has no actor data.
 Added a "No Damage" damage type for spells like sleep where the applied damage is always 0.
@@ -2294,7 +2302,7 @@ Process events passed to item.roll({event}), which got dropped by mistake
 * Fix bug in critical damage roll handling of "max base damage".
 * Improve, but not completely fix, case of odd number of dice in critical rolls and max crit damage. 
 * Correctly pass critical key to feats/spells that do not have an attack roll.
-* Fix for speed key setting and advnantage/disadvantage flags not working together.
+* Fix for speed key setting and advantage/disadvantage flags not working together.
 * Export MidiQOL.doCritModify(roll), which will adjust the roll according to the midi-qol critical damage settings. Useful for macro writers writing damage macros that want to deal with critical damage consistently with the midi-qol game settings.
 * Call Hooks.callAll("midi-qol.AttackRollComplete",.... when the attack roll is complete for a workflow. This allows processing if the attack missed and/or damage is not rolled.
 
@@ -2326,11 +2334,11 @@ Fix bug for trap workflow and better rolls workflow when no event passed to cons
 * Auto fail on ability check flows through to skill rolls for dependent skills.
 * Fix for altKey undefined on skill checks and no speedRolls.
 * Fix for saves prompting user for adv/disadv/normal when no speed rolls enabled.
-* In the quest to provide ever more arcane key combination support, Capslock now acts as an auto fastforward for atttack rolls (like adv+disadv). 
+* In the quest to provide ever more arcane key combination support, Capslock now acts as an auto fastforward for attack rolls (like adv+disadv). 
 * First installment of:
   flags.midi-qol.fail.spell.all disable all spell casting for the character
   flags.midi-qol.fail.spell.vocal fail casting of spells with vocal components (intended for silenced characters0)
-  flags.midi-qol.fail.spell.somatic - perhaps useful for restratined characters or some such.
+  flags.midi-qol.fail.spell.somatic - perhaps useful for restrained characters or some such.
   flags.midi-qol.fail.spell.material (Can't think when this might be used but added it for completeness)
 
 ## 0.3.26
@@ -2353,7 +2361,7 @@ Added info button to inventory buttons - just shows item info.
 * updated ko.json thanks @KLO
 
 ## 0.3.23
-* Support settings config permissions from user permissions, i.e. trusted players instead of only GM ussers.
+* Support settings config permissions from user permissions, i.e. trusted players instead of only GM users.
 * Blind rolls no longer show the hits card except to the GM.
 * Don't prompt for critical/normal damage in TrapWorkflow.
 * Fix for empty description field causing a problem on saves.
@@ -2384,7 +2392,7 @@ Currently no named field support in DAE, but any active effect can set the flag 
   
 
 ## 0.3.22
-* Added option for GM to auto fastword rolls always, ignoring the rest of the module settings. Intended for GMs who want their players to hit the various roll buttons but skip for their rolls. 
+* Added option for GM to auto fastforword rolls always, ignoring the rest of the module settings. Intended for GMs who want their players to hit the various roll buttons but skip for their rolls. 
 * updated ko.json thans @KLO
 
 ## 0.3.21
@@ -2397,17 +2405,17 @@ Fix for broken saving throws
 * Added drag and drop targeting. If you drag a spell/weapon to a target token the token will be targeted and the attack rolled, as if you had targeted and rolled from the character sheet. Thanks to @grape
 * Hopefully fix the chat log scroll problem?
 * Really hide rolls no longer hides legitimate whisper messages.
-* Added on use macro field to the item sheet, plus a setting on the workflow settings to enable it. If a macro name is present then after the roll is complete the macro is called with the following args, the macro is always called, whether you hit or miss or the target saved. Calling the macro does not create any active effects on the target, it is just rune. Use the targets/hitTargets/saves/failedDsaves to work out which tokens to use. :
+* Added on use macro field to the item sheet, plus a setting on the workflow settings to enable it. If a macro name is present then after the roll is complete the macro is called with the following args, the macro is always called, whether you hit or miss or the target saved. Calling the macro does not create any active effects on the target, it is just rune. Use the targets/hitTargets/saves/failed saves to work out which tokens to use. :
                 actor: the attacking actors data
                 item: the attacking item data
                 targets: an array of target actors' data
                 hitTargets: an array of the hit targets' data
                 saves: am array pf the saved targets data
-                failedSaves: an array of the falied saves targets's data
+                failedSaves: an array of the failed saves targets's data
                 damageRoll: the damage roll if any
                 attackRoll: the attack roll if any
                 itemCardId: the id of the item card used to display the roll
-                isCritical: ciritcal hit?
+                isCritical: critical hit?
                 isFumble: fumble?
                 spellLevel: the spell level if any
                 damageTotal: the total damage applied
@@ -2415,6 +2423,7 @@ Fix for broken saving throws
 This should make adding special weapon/spell effects actions much easier.
 
 ## 0.3.17
+
 * Fix for merge cards and dice so nice immediately display card.
 * See owned hidden tokens. When token is hidden does not emit light - this is on purpose and contrary to dnd5e spell. Give them a torch token if you want to.
 * Some changes to support times-up
@@ -2433,10 +2442,10 @@ Yet another fix for speed mappings. Should finally squash the ctrlKey error and 
 
 ## 0.3.11
 * Fix for broken key mapping editing and aligned control|Cmd since on some mac keyboards ctrl-click does not work, use CMD click instead.
-* Fix for saving throws beind displayed even if you asked them not to be.
+* Fix for saving throws being displayed even if you asked them not to be.
 
 ## 0.3.10
-Fix for bug with better rolls and ctl/alt etc handling.
+Fix for bug with better rolls and ctl/alt etc. handling.
 Include updated cn.json
 
 ## 0.3.9
@@ -2447,15 +2456,15 @@ If speed rolls are on you need to assign the keys yourself, however you can use 
 * advantage key modifier, defaults to ALT/Meta
 * disadvantage key modifier, defaults to CTRL
 * versatile key modifier, defaults to Shift.
-* critical damage modifer, defaults to ALT/Meta.
-* fast-forward key (turn any attack or damage roll into a fastforwarded one) advnantage+disadvantage.  
+* critical damage modifier, defaults to ALT/Meta.
+* fast-forward key (turn any attack or damage roll into a fastforwarded one) advantage+disadvantage.  
 If you assign a key multiple meanings the behaviour is going to be confusing at best.
 
 * A hack for the trap workflow due to tokens not updating in a timely fashion. At least that is what I think the cause is.
 
 * A fix for a bug where message.data.user was being incorrectly set.
 
-* Fixes for Damage Only workflows: This is only relevant to people writing macros. There is a new pararmater you can pass to your macro, @itemCardId, which refers to the item card that triggered the macro (i.e. weapon attack spell cast). If you pass that id to the DamageOnlyWorkflow constructor the damage will be inserted into the item card if you are using merged rolls.
+* Fixes for Damage Only workflows: This is only relevant to people writing macros. There is a new pararmeter you can pass to your macro, @itemCardId, which refers to the item card that triggered the macro (i.e. weapon attack spell cast). If you pass that id to the DamageOnlyWorkflow constructor the damage will be inserted into the item card if you are using merged rolls.
 
 For Example:
 macro.execute "Divine Smite" @target @item.level @itemCardId
@@ -2479,7 +2488,7 @@ Player control invisible tokens not working. **DO NOT USE**
 
 ## 0.3.7
 * Fix for dice so nice 3d dice rolling and combo card message display.
-* Support iten.roll({versatile: boolean}) as an option for midi-qol to roll versatile attacks, useful for macro writers who want to trigger a midi-qol workflow.
+* Support item.roll({versatile: boolean}) as an option for midi-qol to roll versatile attacks, useful for macro writers who want to trigger a midi-qol workflow.
 * Allow midi-qol combo cards to be popped out from chat. Only the first attack/damage for the card will trigger a workflow with auto rolls and damage application, so damage application will require you to use the chat damage buttons for subsequent rolls.
 * Change the default damage type to "none" instead of healing. Healing spells seem to be correct now, so it might be safe to go back to none. If your healing spells start doing damage, check the damage type specified (not the action type since midi-qol only looks at the damage type)
 
@@ -2499,7 +2508,7 @@ a few little bug fixes
 ## 0.3.3
 * It turns out there is a bug in midi-qol and better rolls for hidden/blind/private rolls when using the combo card. There are 2 solutions,
 1. Don't use the combo card
-2. Enable force hide rolls (bnew option) which also fixes the problem and lets you use the combo card with better rolls and still hide from nosy players.
+2. Enable force hide rolls (new option) which also fixes the problem and lets you use the combo card with better rolls and still hide from nosy players.
 * New setting "Force Hide Rolls", if set any hidden roll (blind/gm only/self) will not be displayed at all on clients that can't see the roll. The code for this is based (stolen) from the actually private rolls module by felix.mueller.86@web.de and all credit to him for solving this problem for me. I have included the code in midi-qol simply because it solves a particular problem that otherwise I could not fix.
 * Chat Notifications from Moerill. This excellent module has a small incompatibility with midi-qol, namely private/gm/blind rolls appear in full in the notification window. Enable force hide rolls to fix this. There remains a problem with dice-so-nice, chat notifications and combo rolls. I'll look into this in future.
 * If you are hiding roll details from the players and using dice-so-nice 3d dice a smart player can examine the dice rolled and deduce the aggregate pluses from the dice rolled compared to the dice total displayed. In 0.3.3 if roll details are to be hidden then the dice rolled on the players screen will be random meaning they cannot deduce the actual pluses from the 3d dice. This may confuse some players who see a d20 roll of 6 but it is reported as a critical. I'll take feedback on this feature to see if it is generally useful.
@@ -2510,13 +2519,13 @@ a few little bug fixes
 very little bug fix release for damage-only workflows
 
 ## 0.3.1
-Port minor-qol pre-roll chakecs to midi-qol. Checks for attack range and incapacity.
+Port minor-qol pre-roll checks to midi-qol. Checks for attack range and incapacity.
 Fix auto targeting for ranged spells/attacks.
 Fix for temporary hp healing.
 
 ## 0.3.0
 * fix for better rolls and hiding cards incorrectly.
-* re-organize trap workflow to request saves before rolling damage
+* re-organise trap workflow to request saves before rolling damage
 * improve healing string display to use DND5E
 ## 0.2.10 
 * fix for self rolls
@@ -2542,9 +2551,9 @@ Fix for temporary hp healing.
   * A tiny selection of sounds is distributed with the module and are available in Data/modules/midi-qol/sounds and can be used to setup a playlist. 
   * Item use sounds are available for combo/non-combo rolls. dice/critical/fumble only for COMBO card.
   * **See the readme.md** for sample settings I use. (Item playlist is a playlist that you will have to create).
-* New setting. Hide roll details. When selected the GM can choose how much of the GM's attack/damage roll to hide from players, none, formula (just the formula is hidden), all - plyaers only receive notification that a roll was done. (combo card only)
+* New setting. Hide roll details. When selected the GM can choose how much of the GM's attack/damage roll to hide from players, none, formula (just the formula is hidden), all - players only receive notification that a roll was done. (combo card only)
 * Update to Damage Only workflow to support combo cards. The damage only workflow will add to the existing chat card for the item. This means you can have an item and, via a macro, do custom damage and it all looks like a standard roll, see Readme.md for an example. If the macro is an item macro the item is self contained. (Macro application requires dynamicitems).
-* Localisation imrpovements. Note for trasnalators, options in the config settings are now localisable. Each option has two parts a lower case string that must not be touched and descriptive text that can be changed, e.g. "onHit": "Attack Hits" - do not change "onHit", but feel free to change "Attack Hits". I have added English versions of these to all language files so that the options won't be blank.
+* Localisation improvements. Note for translators, options in the config settings are now localisable. Each option has two parts a lower case string that must not be touched and descriptive text that can be changed, e.g. "onHit": "Attack Hits" - do not change "onHit", but feel free to change "Attack Hits". I have added English versions of these to all language files so that the options won't be blank.
 * Big update to the readme to cover settings.
 **Bug Fixes**:
 * Fixed a bug so that doing damage does not require the GM to be on the same scene.
@@ -2555,11 +2564,11 @@ Fix for temporary hp healing.
 * Always display the item icon in the combo card since it takes up no more room.
 * Fix edge case where item card not displayed for items with no effects.
 * Added DamageOnlyWorkflow(actor: Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token])  
-Useful for writing macros that have custom damage effects. E.g. Divine Smite that checks target type. This version does not createa a combo card.
+Useful for writing macros that have custom damage effects. E.g. Divine Smite that checks target type. This version does not create a a combo card.
 * Added auto fast forward for ability saves/checks option, if speed item rolls enabled. Treat ability saves/checks as if Shift was pressed.
 * Corrected icons on damage card, which were all the same.
 * Corrected incompatibility with MagicItems and speed rolls. If you attempted to speed roll a magic item (i.e. roll the staff attack for a Staff of the Woodlands) the speed item keys would not be passed through, this has been fixed.
-* Allow selective removal of item details, to allow showing of PC tiem descriptions but to hide NPC item descriptions also allow force display of item card. Display an item card if nothing else was being displayed when rolling and item (e.g. no attacks/saves/damage).
+* Allow selective removal of item details, to allow showing of PC item descriptions but to hide NPC item descriptions also allow force display of item card. Display an item card if nothing else was being displayed when rolling and item (e.g. no attacks/saves/damage).
 * Setting to hide the DC of a saving throw from players in chat cards, chat message prompts and LMRTFY requests.
 * Fixed regression that caused speed rolls to get stuck on spell cast (hot fixed to 0.2.6)
 * Return a promise resolving to the result of item.roll() as the result of actor.useSpell()
@@ -2567,7 +2576,7 @@ Useful for writing macros that have custom damage effects. E.g. Divine Smite tha
 ## 0.2.6
 * Now requires foundry dnd 0.9.6 or later
 * Damage buttons for combo card. Significant update to the undo damage card. You can have the card displayed even if damage is not applied, which gives details of all the hit targets and the damage to be applied. There are now 6 buttons per target, reverse and apply the computed damage which sets the hit points/temp hit points before/after the damage. Then the four normal buttons for each target. These buttons apply directly to the appropriate token, no need to select the target to apply damage. Works for GM only but since players cant apply damage to most tokens it should not matter.
-* Users can choose their own sounds via file picker for normal attacks, criticals and fumbles. (Meerge Card Only and not better rolls)
+* Users can choose their own sounds via file picker for normal attacks, criticals and fumbles. (Merge Card Only and not better rolls)
 * Added option to remove item description from the chat card. This is in addition/instead of the system setting to hide the item description.
 * Added an option to hide saving throw DC on chat cards and requests to players to save. For DMs who want a sense of mystery. (Merge Card)
 * Added damage types to damage roll display (combo card) instead of the useless heading "Damage".
@@ -2596,7 +2605,7 @@ Support a TrapWorkflow, triggered by
 ```
 new MidiQOL.TrapWorkflow(actor, item, [targets], {x:number, y:number})
 ```
-Which will roll the atack/and or damage and apply to the passed targets. If the item has an area template it will be placed at x,y and targets auto selected inside the template.
+Which will roll the attack/and or damage and apply to the passed targets. If the item has an area template it will be placed at x,y and targets auto selected inside the template.
 Sample DoTrapAttack replacement:
 ```
   let tactor = game.actors.entities.find(a => a.name === args[0])
@@ -2613,9 +2622,9 @@ For those wanting to hide the item description, just use the system setting "Col
 
 ## v0.2.4
 * Compatible with 0.6.6
-* Remove attack/damage buttons as they are "used" even if not using ombo card.
+* Remove attack/damage buttons as they are "used" even if not using combo card.
 * Put back ctl/alt/shift clicking on character sheet removed in 0.2.3
-* With shift being verstatile attacks, now CTL-ALT substitutes for the "default" fast forward shift.
+* With shift being  versatile attacks, now CTL-ALT substitutes for the "default" fast forward shift.
 * Chat damage button disabled until other rolls complete, like attack or placing a template. Corrects problem case of rolling damage before rolling attacks. If you try to roll damage while waiting for a template or attack roll you will get an warning notification.
 * Identified, but have not fixed, MESS incompatibility, including with placed templates.
 * Improved? background colored player names when highlighting cards.
@@ -2623,17 +2632,17 @@ For those wanting to hide the item description, just use the system setting "Col
   * Disable auto roll damage.
   * Let mess place the template
   * then roll damage.
-* Set user on auto-rolled ability saving throws thanks @spoider
+* Set user on auto-rolled ability saving throws thanks @ spider
 * Disable damage-only workflow until a better solution is found. This will inactivate divine-smite spell in dynamic-effects.
 
 ## v0.2.3
-* If player rolled saves is enabled and a token is required to save that has default owner pemission (in addition to tokens ownd by a player) a player will be chosen to roll for that token.
+* If player rolled saves is enabled and a token is required to save that has default owner pemission (in addition to tokens  owned by a player) a player will be chosen to roll for that token.
 * In merge cards critical hits/fumbles are now highlighted.
 * Added a new weapon property "Magical" which is also checked when determining if weapon's attack is magical for damage resistance.
 * Corrected a typo in the non-magical damage resistance check. Thanks @Jibby
 * Fixed a bug that added all possible buttons to almost every chat card.
 * Fixed "inventory button" standard roll to work exactly like a standard roll with no auto rolling.
-* Coloring of chat card borders/names now gives npc rolls a GM color instead of the player color if the playere initiated the roll. Mainly relevant for saving throw rolls triggered by a player causing the NPC to save.
+* Coloring of chat card borders/names now gives npc rolls a GM color instead of the player color if the  player initiated the roll. Mainly relevant for saving throw rolls triggered by a player causing the NPC to save.
 * Fix for webm tokens causing an error.
 * Added require targets flag in config settings. If enabled items that require pre selected targets won't be allowed to proceed without a target being selected. (Better rolls not supported)
 
@@ -2643,13 +2652,13 @@ Made sure all paths are relative paths.
 ## v0.2.1
 * Fix a saving throw bug where the first player saving throw was hidden.
 * Fix a race condition that could case saving throw rolls to fail
-* Fix an innacurate identification of a damage only workflow.
+* Fix an  inaccurate identification of a damage only workflow.
 * Added the ability to set the token name text color OR background color when highlighting chat cards.
 * Fixed inability to set range targeting flag.
 
 ## v0.2.0 [BREAKING]
 * A big change to speed item rolls and auto shift click.  
-Speed item rolls now makes no changes to the character sheet, and does not need module suport to work with token bars/macro hot bar. Instead when it is enabled the mouse event is recorded when you do the roll. **The meaning of the keys have changed**:  
+Speed item rolls now makes no changes to the character sheet, and does not need module support to work with token bars/macro hot bar. Instead when it is enabled the mouse event is recorded when you do the roll. **The meaning of the keys have changed**:  
   * ctrl = disadvantage attack
   * alt = advantage attack
   * shift means use versatile damage and ctrl/alt still work. I think this is a big improvement BUT **this is a change from both minor-qol and midi-qol. If it causes too much angst I will put back (as an option) the previous behaviour.**  
@@ -2662,4 +2671,4 @@ Speed item rolls now makes no changes to the character sheet, and does not need 
 ## v0.1.1
 Fixes a bug in better rolls spellcasting.
 Fixed a couple of localisation omissions.
-If you have merge cards on for better rolls the saving throw results are not displayed - diable merge card for better rolls.
+If you have merge cards on for better rolls the saving throw results are not displayed - disable merge card for better rolls.

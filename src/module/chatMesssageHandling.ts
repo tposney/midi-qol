@@ -85,7 +85,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   const brFlags: any = flags?.betterrolls5e;
   if (!brFlags) return true;
   //@ts-ignore
-  if (debugEnabled > 1) debug("process precratebetteerrollscard ", message.data, installedModules["betterrolls5e"], message.data.content?.startsWith('<div class="dnd5e red-full chat-card"'))
+  if (debugEnabled > 1) debug("process preCreateBetterRollsCard ", message.data, installedModules["betterrolls5e"], message.data.content?.startsWith('<div class="dnd5e red-full chat-card"'))
 
   let actorId = brFlags.actorId;
   let tokenId = brFlags.tokenId;
@@ -148,7 +148,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   }
   // TODO find out how to set the ammo  workflow.ammo = this._ammo;
 
-  //@ts-ignore udpate
+  //@ts-ignore update
   const targets = (item?.data.data.target?.type === "self") ? new Set([token]) : new Set(game.user?.targets);
 
   if (!workflow) workflow = new BetterRollsWorkflow(actor, item, message.data.speaker, targets, null);
@@ -195,7 +195,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
   // Workflow will be advanced when the better rolls card is displayed.
   // Workflow.removeWorkflow(workflow.uuid);
   workflow.needItemCard = false;
-  // check activaiton condition and remove other damage if required
+  // check activation condition and remove other damage if required
   workflow.shouldRollOtherDamage = shouldRollOtherDamage.bind(item)(workflow, configSettings.rollOtherDamage, configSettings.rollOtherSpellDamage);
   if (!workflow.shouldRollOtherDamage) {
     otherDamageList = [];
@@ -289,7 +289,7 @@ export let nsaMessageHandler = (message, data, ...args) => {
   let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u => u.active)?.map(u => u.id);
   let currentIds = message.data.whisper.map(u => typeof (u) === "string" ? u : u.id);
   gmIds = gmIds.filter(id => !currentIds.includes(id));
-  if (debugEnabled > 1) debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmids ", gmIds)
+  if (debugEnabled > 1) debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmIds ", gmIds)
   if (gmIds.length > 0) message.data.update({ "whisper": currentIds.concat(gmIds) });
   // TODO check this data.whisper = data.whisper.concat(gmIds);
   return true;
@@ -385,7 +385,7 @@ export let hideStuffHandler = (message, html, data) => {
     ids.hover(_onTargetHover, _onTargetHoverOut)
     ids.click(_onTargetSelect);
 
-    if ($(html).find(".midi-qol-player-damage-card").length) html.hide();
+    if (configSettings.hidePlayerDamageCard && $(html).find(".midi-qol-player-damage-card").length) html.hide();
 
     if ($(html).find(".midi-qol-hits-display").length) {
       if (configSettings.mergeCard) {
@@ -425,7 +425,7 @@ export let hideStuffHandler = (message, html, data) => {
     html.find(".midi-qol-save-tooltip").hide();
     // if not showing saving throw total hide from players
     if (configSettings.autoCheckSaves === "allNoRoll") html.find(".midi-qol-save-total").hide();
-    // Hide the save dc if rquired
+    // Hide the save dc if required
     if (!configSettings.displaySaveDC) {
       html.find(".midi-qol-saveDC").hide();
     }
@@ -487,16 +487,18 @@ export let hideStuffHandler = (message, html, data) => {
           html.find(".midi-qol-bonus-roll").find(".dice-tooltip").remove();
           html.find(".midi-qol-bonus-roll").find(".dice-formula").remove();
           /* TODO remove this pending feedback
-                html.find(".midi-qol-damge-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
+                html.find(".midi-qol-damage-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
                 html.find(".midi-qol-other-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
                 html.find(".midi-qol-bonus-roll").find(".dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
           */
-        } else if (d20AttackRoll && configSettings.hideRollDetails === "hitDamage") {
+        } else if (d20AttackRoll && ["hitDamage", "hitCriticalDamage"].includes(configSettings.hideRollDetails)) {
           const hitFlag = getProperty(message.data.flags, "midi-qol.isHit");
           const hitString = hitFlag === undefined ? "" : hitFlag ? i18n("midi-qol.hits") : i18n("midi-qol.misses");
           html.find(".midi-qol-attack-roll .dice-total").text(`${hitString}`);
-          html.find(".midi-qol-attack-roll .dice-total").removeClass("critical");
-          html.find(".midi-qol-attack-roll .dice-total").removeClass("fumble");
+          if (configSettings.hideRollDetails === "hitDamage") {
+            html.find(".midi-qol-attack-roll .dice-total").removeClass("critical");
+            html.find(".midi-qol-attack-roll .dice-total").removeClass("fumble");
+          }
 
           html.find(".midi-qol-other-roll").find(".dice-tooltip").remove();
           html.find(".midi-qol-other-roll").find(".dice-formula").remove();
@@ -613,7 +615,7 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
   setButtonClick(`.dice-total-half-${tag}-button`, 0.5);
   setButtonClick(`.dice-total-double-${tag}-button`, 2);
   setButtonClick(`.dice-total-full-${tag}-healing-button`, -1);
-  // logic to only show the buttons when the mouse is within the chatcard and a token is selected
+  // logic to only show the buttons when the mouse is within the chat card and a token is selected
   html.find('.dmgBtn-container-mqol').hide();
   $(html).hover(evIn => {
     if (canvas?.tokens?.controlled && canvas.tokens.controlled.length > 0) {
@@ -673,7 +675,7 @@ export async function onChatCardAction(event) {
     const storedData = message?.getFlag(game.system.id, "itemData");
     //@ts-ignore
     item = storedData ? new CONFIG.Item.documentClass(storedData, { parent: actor }) : actor.items.get(card.dataset.itemId);
-    if (!item) { // TODO investigate why this is occuring
+    if (!item) { // TODO investigate why this is occurring
       // return ui.notifications.error(game.i18n.format("DND5E.ActionWarningNoItem", {item: card.dataset.itemId, name: actor.name}))
     }
   }
@@ -719,7 +721,7 @@ export function ddbglPendingFired(data) {
     warn(" ddb-game-log hook could not find actor");
     return;
   }
-  // find the player who controls the charcter.
+  // find the player who controls the character.
   let player;
   if (token) {
     player = playerFor(token);
@@ -739,7 +741,7 @@ export function ddbglPendingFired(data) {
   if (actionType === "attack") workflow = undefined;
   //@ts-ignore .hasAttack
   if (["damage", "heal"].includes(actionType) && item.hasAttack && !workflow) {
-    warn(` ddb-game-log damage roll wihtout workflow being started ${actor.name} using ${item.name}`);
+    warn(` ddb-game-log damage roll without workflow being started ${actor.name} using ${item.name}`);
     return;
   }
   // if (workflow?.currentState !== WORKFLOWSTATES.WAITFORATTACKROLL) workflow = undefined;

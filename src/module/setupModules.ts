@@ -84,7 +84,7 @@ export function checkCubInstalled() {
 Hooks.once('libChangelogsReady', function() {
   //@ts-ignore
   libChangelogs.register("midi-qol",`
-  Support for Changelongs is being discontinued.
+  Support for Changelogs is being discontinued.
   
   If you wish to see the changelog automatically on module update please use Module Management+
 

@@ -63,7 +63,7 @@ export let setupSocket = () => {
   socketlibSocket.register("rollAbility", rollAbility);
   socketlibSocket.register("createChatMessage", createChatMessage);
   socketlibSocket.register("chooseReactions", localDoReactions);
-  socketlibSocket.register("addConvenientEffect", addConventientEffect);
+  socketlibSocket.register("addConvenientEffect", addConvenientEffect);
   socketlibSocket.register("deleteItemEffects", deleteItemEffects);
   socketlibSocket.register("createActor", createActor);
   socketlibSocket.register("deleteToken", deleteToken);
@@ -132,7 +132,7 @@ export async function deleteItemEffects(data: { targets, origin: string, ignore:
   }
   if (globalThis.Sequencer) await globalThis.Sequencer.EffectManager.endEffects({ origin })
 }
-async function addConventientEffect(options) {
+async function addConvenientEffect(options) {
   let { effectName, actorUuid, origin } = options;
   const actorToken: any = await fromUuid(actorUuid);
   const actor = actorToken?.actor ?? actorToken;

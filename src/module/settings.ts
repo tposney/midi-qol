@@ -39,6 +39,7 @@ class ConfigSettings {
   allowActorUseMacro: boolean = false;
   autoApplyDamage: string = "none";
   playerDamageCard: string = "none";
+  hidePlayerDamageCard: boolean = true;
   autoCEEffects: string = "none";
   autoCheckHit: string = "none";
   autoCheckSaves: string = "none";
@@ -184,7 +185,7 @@ export function collectSettingData() {
     dndhelpersVersions: game.modules.get("dnd5e-helpers")?.data.version,
     itemMacroVersion: game.modules.get("itemacro")?.data.version,
     lmrtfyVersion: game.modules.get("lmrtfy")?.data.version,
-    midiQolVerson: game.modules.get("midi-qol")?.data.version,
+    midiQolVersion: game.modules.get("midi-qol")?.data.version,
     monksVersion: game.modules.get("monks-tokenbar")?.data.version,
     socketlibVersion: game.modules.get("socketlib")?.data.version,
     simpleCalendarVersion: game.modules.get("foundryvtt-simple-calendar")?.data.version,
@@ -346,7 +347,7 @@ export let fetchParams = () => {
   if (configSettings.ignoreSpellReactionRestriction === undefined) configSettings.ignoreSpellReactionRestriction = false;
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
   if (configSettings.damageVulnerabilityMultiplier === undefined) configSettings.damageVulnerabilityMultiplier = 2;
-
+  if (configSettings.hidePlayerDamageCard === undefined) configSettings.hidePlayerDamageCard = true;
   configSettings.quickSettings = true;
   enableWorkflow = Boolean(game.settings.get("midi-qol", "EnableWorkflow"));
   if (debugEnabled > 0) warn("Fetch Params Loading", configSettings);

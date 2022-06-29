@@ -87,7 +87,7 @@ export class ConfigPanel extends FormApplication {
 
     };
 
-    if (debugEnabled > 0) warn("Config Panel: getdata ", data)
+    if (debugEnabled > 0) warn("Config Panel: getData ", data)
     return data;
   }
 

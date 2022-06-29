@@ -68,7 +68,7 @@ function collectBonusFlags(actor, category, detail): any[] {
 export async function bonusCheck(actor, result: Roll, category, detail): Promise<Roll> {
   if (!installedModules.get("betterrolls5e")) {
     let bonusFlags = collectBonusFlags(actor, category, detail);
-    /* casues strange behaviour when enabled 
+    /* causes strange behaviour when enabled 
     if (category === "skill") {
       const abl = actor.data.data.skills[detail].ability;
       bonusFlags = bonusFlags.concat(collectBonusFlags(actor, "check", "abl"));
@@ -112,7 +112,7 @@ export async function bonusCheck(actor, result: Roll, category, detail): Promise
 }
 
 async function doRollSkill(wrapped, ...args) {
-  let [skillId, options = { event: {}, parts: [], avantage: false, disadvantage: false, simulate: false }] = args;
+  let [skillId, options = { event: {}, parts: [], advantage: false, disadvantage: false, simulate: false }] = args;
   const chatMessage = options.chatMessage;
   // options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
   mergeKeyboardOptions(options, mapSpeedKeys(null, "ability"));
@@ -456,12 +456,12 @@ export function procAdvantageSkill(actor, skillId, options: Options): Options {
   return options;
 }
 
-let debouncedATRefreach = debounce(_midiATIRefresh, 30);
+let debouncedATRefresh = debounce(_midiATIRefresh, 30);
 function _midiATIRefresh(template) {
   if (!canvas?.tokens) return;
   if (configSettings.autoTarget === "none") return;
   if (configSettings.autoTarget === "dftemplates" && installedModules.get("df-templates"))
-    return; // df-templates will handle template tagerting.
+    return; // df-templates will handle template targeting.
   if (installedModules.get("levelsvolumetrictemplates")) {
 
     setProperty(template.data, "flags.levels.elevation",
@@ -495,7 +495,7 @@ function _midiATIRefresh(template) {
 }
 
 function midiATRefresh(wrapped) {
-  debouncedATRefreach(this);
+  debouncedATRefresh(this);
   return wrapped();
 }
 
@@ -510,7 +510,7 @@ export function _prepareDerivedData(wrapped, ...args) {
       const equippedShield = armorDetails.equippedShield;
       const shieldAC = equippedShield?.data.data.armor.value ?? 0;
 
-      if (checkRule("challengeModeArrmorScale")) {
+      if (checkRule("challengeModeArmorScale")) {
         switch (armorDetails.calc) {
           case 'flat':
             armorAC = (ac.flat ?? 10) - this.data.data.abilities.dex.mod;
@@ -569,7 +569,7 @@ export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user
     changes.flags["midi-qol"].onUseMacroName = macroString;
     delete changes.flags["midi-qol"].onUseMacroParts;
   } catch (err) {
-    console.warn("midi-qol | faild in preUpdateItemActor onUse Macro", err)
+    console.warn("midi-qol | failed in preUpdateItemActor onUse Macro", err)
   }
   return true;
 };
@@ -657,7 +657,7 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
       }
     }
   } catch (err) {
-    console.warn("midi-qol | error deleteing concentration effects: ", err)
+    console.warn("midi-qol | error deleting concentration effects: ", err)
   } finally {
     return wrapped(...args)
   }
@@ -747,7 +747,7 @@ export function readyPatching() {
   if (game.system.id === "dnd5e" || game.system.id === "n5e") {
     libWrapper.register("midi-qol", `game.${game.system.id}.applications.ItemSheet5e.prototype._getSubmitData`, itemSheetGetSubmitData, "WRAPPER");
     libWrapper.register("midi-qol", `game.${game.system.id}.canvas.AbilityTemplate.prototype.refresh`, midiATRefresh, "WRAPPER");
-  } else { // TDOD find out what itemsheet5e is called in sw5e
+  } else { // TODO find out what itemsheet5e is called in sw5e
     libWrapper.register("midi-qol", "game.sw5e.applications.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
     libWrapper.register("midi-qol", "game.sw5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
   }
@@ -760,7 +760,7 @@ export function readyPatching() {
 }
 
 export let visionPatching = () => {
-  //@ts-ignore game.verison
+  //@ts-ignore game.version
   const patchVision = isNewerVersion(game.version ?? game.data?.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
   if (patchVision) {
     ui.notifications?.warn("Player control vision is deprecated please use the module Your Tokens Visible")
@@ -867,7 +867,7 @@ export async function createRollResultFromCustomRoll(customRoll: any) {
   let diceRoll = saveEntry ? saveEntry.entries?.find((e) => !e.ignored)?.roll.terms[0].total : -1;
   let isCritical = saveEntry ? saveEntry.entries?.find((e) => !e.ignored)?.isCrit : false;
   //@ts-ignore
-  const result = await new Roll(`${saveTotal}`).evaluate({ aysnc: true });
+  const result = await new Roll(`${saveTotal}`).evaluate({ async: true });
   setProperty(result.terms[0].options, "advantage", advantage)
   setProperty(result.terms[0].options, "disadvantage", disadvantage)
   return result;

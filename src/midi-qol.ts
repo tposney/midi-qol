@@ -222,7 +222,7 @@ Hooks.once('ready', function () {
   MQOnUseOptions = i18n("midi-qol.onUseMacroOptions");
   if (typeof MQOnUseOptions === "string") MQOnUseOptions = {
     "preItemRoll": "Called before the item is rolled (*)",
-    "templatePlaced": "Only callled once a template is placed",
+    "templatePlaced": "Only called once a template is placed",
     "preambleComplete": "After targeting complete",
     "preAttackRoll": "Before Attack Roll",
     "preCheckHits": "Before Check Hits",
@@ -231,6 +231,7 @@ Hooks.once('ready', function () {
     "postSave": "After Save",
     "preDamageRoll": "Before Damage Roll",
     "postDamageRoll": "After Damage Roll",
+    "damageBonus": "return a damage bonus",
     "preDamageApplication": "Before Damage Application",
     "preActiveEffects": "Before Active Effects",
     "postActiveEffects": "After Active Effects ",
@@ -571,6 +572,6 @@ function setupMidiFlags() {
       }
       return false;
     };
-    initDAE().then(value => { if (!value) console.error(`midi-qol | initDae settomgs failed`) });
+    initDAE().then(value => { if (!value) console.error(`midi-qol | initDae settings failed`) });
   }
 }

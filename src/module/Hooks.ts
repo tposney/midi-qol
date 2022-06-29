@@ -221,7 +221,7 @@ export function initHooks() {
   })
 
   Hooks.on("createChatMessage", (message: ChatMessage, options, user) => {
-    if (debugEnabled > 1) debug("Create Chat Meesage ", message.id, message, options, user)
+    if (debugEnabled > 1) debug("Create Chat Message ", message.id, message, options, user)
     processCreateBetterRollsMessage(message, user);
     processItemCardCreation(message, user);
     processCreateDDBGLMessages(message, options, user);

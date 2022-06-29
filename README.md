@@ -945,6 +945,7 @@ There are some controls for macro writers to decide when their macro should get 
 		postDamageRoll: Called after the damage roll is made
     preSave: Called before saving throws are rolled
 		postSave: Called after saves are rolled
+    damageBonus: Called when computing the actor damage bonus but the macro is only called when the specific item is rolled
 		preDamageApplication: Called before Damage Application
 		preActiveEffects: Called before applying active effects
 		postActiveEffects: Called after applying active effects
