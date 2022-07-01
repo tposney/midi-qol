@@ -17,7 +17,11 @@
     "midi-qol.AutoCheckHit.Hint": "攻撃がヒットしたかどうかを判定し、設定した相手に結果を表示します。1つ以上の対象にヒットし、かつ自動ダメージロールが有効になっている場合は、ダメージがロールされます。無効にするとMidi-QOLは攻撃がヒットしたものとして処理を続けます。",
     "midi-qol.RequiresTargets.Name": "ターゲットの選択を要求する",
     "midi-qol.RequiresTargets.Hint": "ロール前にコマがターゲットされているかをチェックします。「常に」にすると、対象を取り得るアイテムがロールされるたびにチェックが行われます。Better Rolls環境には対応していません。",
-    "midi-qol.requiresTargetsOptions": {"none": "無効", "combat": "戦闘中のみ", "always": "常に"},
+    "midi-qol.requiresTargetsOptions": {
+        "none": "無効",
+        "combat": "戦闘中のみ",
+        "always": "常に"
+    },
     "midi-qol.AutoApplyDamage.Name": "自動的にダメージを適用する",
     "midi-qol.AutoApplyDamage.Hint": "ヒット確認が自動化されている場合のヒット対象、またはプレイヤーが選択した対象に自動でダメージを適用します。適用を巻き戻すにはダメージカードを使用します。",
     "midi-qol.PlayerDamageCard.Name": "プレイヤーに専用のダメージカードを表示する",
@@ -69,7 +73,7 @@
     "midi-qol.AutoTarget.Name": "範囲指定で対象を自動選択",
     "midi-qol.AutoTarget.Hint": "呪文等を発動したときにテンプレートを置くと、範囲内のコマを自動的にターゲットします。",
     "midi-qol._comment for translaters_noDamageonSaveSpells": "（翻訳作業者へ）FVTT v9ではarray jsonがサポートされなくなったため、以下はv9以降でのみ使用されます。",
-    "midi-qol.noDamageonSaveSpells":  [
+    "midi-qol.noDamageonSaveSpells": [
         "アシッド・スプラッシュ",
         "ソード・バースト",
         "サンダー・クラップ",
@@ -88,7 +92,7 @@
         "カタパルト",
         "アース・トレマー"
     ],
-    "midi-qol.noDamageonSaveSpellsv9" : "アシッド・スプラッシュ, ソード・バースト, サンダー・クラップ, ヴィシャス・モッカリィ, クリエイト・ボンファイア, ライトニング・ルアー, ポイズン・スプレー, コードン・オヴ・アローズ, ディスインテグレート, セイクリッド・フレイム, コードン・オヴ・アローズ, フロストバイト,  インフェステイション, トウル・ザ・デッド, ワード・オヴ・レイディアンス, カタパルト,  アース・トレマー", 
+    "midi-qol.noDamageonSaveSpellsv9": "アシッド・スプラッシュ, ソード・バースト, サンダー・クラップ, ヴィシャス・モッカリィ, クリエイト・ボンファイア, ライトニング・ルアー, ポイズン・スプレー, コードン・オヴ・アローズ, ディスインテグレート, セイクリッド・フレイム, コードン・オヴ・アローズ, フロストバイト,  インフェステイション, トウル・ザ・デッド, ワード・オヴ・レイディアンス, カタパルト,  アース・トレマー",
     "midi-qol.fullDamageText": "※セーヴ成功時も完全なダメージ",
     "midi-qol._comment for translaters_fullDamage": "（翻訳作業者へ）次の2行はMidi-QOLが呪文の説明文を検索するためのものです。",
     "midi-qol.fullDamage": "セーブ成功時も完全なダメージ",
@@ -102,7 +106,12 @@
     "midi-qol.ColoredBorders.Hint": "チャットのメッセージが、対応したプレイヤーカラーで縁取られるようになります。",
     "midi-qol.AutoEffects.Name": "アクティブ効果を自動適用する",
     "midi-qol.AutoEffects.Hint": "対象に攻撃がヒットしてセーヴに失敗したとき、あるいはセーヴが得られなかったとき、アイテムに設定されたアクティブ効果が対象に適用されます。より効果的に使うには、Dynamic Active Effects と About-Time モジュールをインストールしてください。",
-    "midi-qol.AutoEffectsOptions": {"off": "自動適用しない", "applyNoButton": "ボタンを表示せず効果を適用", "applyRemove": "効果を適用してボタンを削除", "applyLeave": "効果を適用するがボタンは残す"},
+    "midi-qol.AutoEffectsOptions": {
+        "off": "自動適用しない",
+        "applyNoButton": "ボタンを表示せず効果を適用",
+        "applyRemove": "効果を適用してボタンを削除",
+        "applyLeave": "効果を適用するがボタンは残す"
+    },
     "midi-qol.RangeTarget.Name": "遠隔攻撃/呪文を使用するとき自動的にターゲットをとる",
     "midi-qol.RangeTarget.Hint": "武器や呪文の目標欄に「クリーチャー/敵/味方」が設定されてる場合、使用者の射程内にある（条件に合致する）すべてのコマが自動的にターゲットされます。",
     "midi-qol.PlayerRollSaves.Name": "プレイヤーがセーヴする",
@@ -131,9 +140,9 @@
     "midi-qol.UseTokenNames.Hint": "チャットカードのタイトルと対象に、アクターの名前でなくコマの名前を使用します。",
     "midi-qol.CriticalDamage.Name": "クリティカルダメージの振り方",
     "midi-qol.CriticalDamage.Hint": "（FVTT v0.7.0以降）「DnD5e標準」：DnD5eの標準的なクリティカルロールです。「通常ダメージ最大化」：ダイスはそのまま出目を最大化します。「追加ダイス最大化」：追加ダイスのみ最大化します。「すべてが最大」：基本と追加のすべてのダイスを最大化します。「出目の2倍」：出目を2倍して計算します。",
-    "midi-qol.CriticalDamageChoices" : {
+    "midi-qol.CriticalDamageChoices": {
         "default": "DnD5e標準",
-        "maxDamage":  "通常ダメージ最大化",
+        "maxDamage": "通常ダメージ最大化",
         "maxCrit": "追加ダイス最大化",
         "maxAll": "すべてが最大",
         "doubleDice": "出目の2倍",
@@ -174,8 +183,17 @@
     "midi-qol.UseCustomSounds.Hint": "有効にすると、システムサウンドを独自のもので上書きします。設定は「Midiカスタムサウンド設定」から行います",
     "midi-qol:Debug.Name": "デバッグを有効にする",
     "midi-qol:Debug.Hint": "「Warnings」はアクティビティの概要を表示します。「デバッグ」はより多くの情報を表示ます。「すべて」は CONFIG.debug.hooks が有効になります。",
-    "midi-qol.DebugOptions": {"none": "なし", "warn": "警告事項", "debug": "デバッグ", "all": "すべて"},
-    "midi-qol.speedItemRollsOptions": {"off": "オフ", "on": "オン", "onCard": "オン（カードを表示）"},
+    "midi-qol.DebugOptions": {
+        "none": "なし",
+        "warn": "警告事項",
+        "debug": "デバッグ",
+        "all": "すべて"
+    },
+    "midi-qol.speedItemRollsOptions": {
+        "off": "オフ",
+        "on": "オン",
+        "onCard": "オン（カードを表示）"
+    },
     "midi-qol.autoCheckHitOptions": {
         "none": "オフ",
         "all": "結果を全員に通知",
@@ -187,18 +205,18 @@
         "damage": "ダメージロールのみ",
         "all": "攻撃とダメージ両方"
     },
-    "midi-qol.autoTargetOptions":  {
+    "midi-qol.autoTargetOptions": {
         "none": "オフ",
         "always": "常に",
         "alwaysIgnoreDefeated": "常に（敗退者は除く）",
         "wallsBlock": "壁は超えない",
         "wallsBlockIgnoreDefeated": "壁は超えない（敗退者は除く）",
-		"dftemplates": "DF Template Enhancementsを使用"
+        "dftemplates": "DF Template Enhancementsを使用"
     },
     "midi-qol.autoCheckSavesOptions": {
         "none": "オフ",
-        "allNoRoll":  "成否を全員に通知",
-        "all":  "成否を全員に通知＋達成値も表示",
+        "allNoRoll": "成否を全員に通知",
+        "all": "成否を全員に通知＋達成値も表示",
         "whisper": "結果をGMのみに通知",
         "allShow": "成否を全員に通知＋出目も表示"
     },
@@ -209,7 +227,11 @@
         "wallsBlock": "壁は越えない",
         "wallsBlockIgnoreDefeated": "壁は越えない（敗退者は除く）"
     },
-    "midi-qol.autoRollDamageOptions": {"none": "オフ", "always": "常に", "onHit": "ヒット時のみ"},
+    "midi-qol.autoRollDamageOptions": {
+        "none": "オフ",
+        "always": "常に",
+        "onHit": "ヒット時のみ"
+    },
     "midi-qol.autoApplyDamageOptions": {
         "none": "オフ",
         "noCard": "オフ（ダメージカードあり）",
@@ -290,13 +312,13 @@
     "midi-qol.HideRollDetails.Name": "GMロールの詳細を隠す",
     "midi-qol.HideRollDetails.Hint": "GMのロールのうち、何をプレイヤーに隠すか設定します。",
     "midi-qol.HideRollDetails.HintLong": {
-      "none": "オフ：なにも隠しません。",
-      "detailsDSN": "計算式は隠すが3Dダイスは表示: ロールの計算式は非表示になりますが、「Dice So Nice!」の3Dダイスは表示されます。",
-      "details": "計算式を隠す：ロールの計算式と「Dice So Nice!」の3Dダイスの双方が表示されなくなります。",
-      "d20Only": "d20の出目＋総ダメージを表示：攻撃時のd20ロールと、計算後の総ダメージのみが表示されます。",
-      "hitDamage": "命中結果＋総ダメージを表示: 攻撃のヒット/ミスに加え、計算後の総ダメージを表示します。",
-      "d20attackOnly": "d20の出目のみ表示：攻撃時のd20ロールのみが表示されます。",
-      "all": "すべて隠す：すべてのロールの詳細がプレイヤーから見えなくなります。"
+        "none": "オフ：なにも隠しません。",
+        "detailsDSN": "計算式は隠すが3Dダイスは表示: ロールの計算式は非表示になりますが、「Dice So Nice!」の3Dダイスは表示されます。",
+        "details": "計算式を隠す：ロールの計算式と「Dice So Nice!」の3Dダイスの双方が表示されなくなります。",
+        "d20Only": "d20の出目＋総ダメージを表示：攻撃時のd20ロールと、計算後の総ダメージのみが表示されます。",
+        "hitDamage": "命中結果＋総ダメージを表示: 攻撃のヒット/ミスに加え、計算後の総ダメージを表示します。",
+        "d20attackOnly": "d20の出目のみ表示：攻撃時のd20ロールのみが表示されます。",
+        "all": "すべて隠す：すべてのロールの詳細がプレイヤーから見えなくなります。"
     },
     "midi-qol.DiceRolled": "<div>ロール済</div>",
     "midi-qol.ForceHideRoll.Name": "プライベート/ブラインド/セルフロールを本当に隠す",
@@ -329,7 +351,7 @@
         "preAttackRoll": "攻撃ロール前",
         "preCheckHits": "ヒット確認前",
         "postAttackRoll": "攻撃ロール後",
-        "preSave": "セーヴ前", 
+        "preSave": "セーヴ前",
         "postSave": "セーヴ後",
         "preDamageRoll": "ダメージロール前",
         "postDamageRoll": "ダメージロール後",
@@ -355,8 +377,8 @@
     "midi-qol.spell-damage": "呪文ダメージ",
     "midi-qol.RemoveButtons.Name": "ロール後はボタンを隠す",
     "midi-qol.ActiveConcentrationSpell.Title": "精神集中の管理",
-	"midi-qol.ActiveConcentrationSpell.ContentNamed": "<p>すでに<em>@NAME@</em>の集中を維持しています。終了して続行しますか？</p>",
-	"midi-qol.ActiveConcentrationSpell.ContentGeneric": "<p>すでに集中を維持しています。終了して続行しますか？</p>",
+    "midi-qol.ActiveConcentrationSpell.ContentNamed": "<p>すでに<em>@NAME@</em>の集中を維持しています。終了して続行しますか？</p>",
+    "midi-qol.ActiveConcentrationSpell.ContentGeneric": "<p>すでに集中を維持しています。終了して続行しますか？</p>",
     "midi-qol.ConcentrationAutomation.Name": "精神集中の自動化を有効にする",
     "midi-qol.ConcentrationAutomation.Hint": "Midi-QOLを介して集中状態を管理します。自動セーヴを有効にする必要があります。有効化すると、CUBによる集中管理が無効化されます",
     "midi-qol.SingleConcentrationRoll.Name": "集中判定は一度だけ",
@@ -364,7 +386,7 @@
     "midi-qol.GMSettings": "GM",
     "midi-qol.PlayerSettings": "プレイヤー",
     "midi-qol.SoundSettings.Tab": "サウンド",
-    "midi-qol.Workflow":" ワークフロー",
+    "midi-qol.Workflow": " ワークフロー",
     "midi-qol.Misc": "そのほか",
     "midi-qol.Targeting": "ターゲット指定",
     "midi-qol.Special": "特殊",
@@ -396,7 +418,11 @@
         "dnd5eHelpersAC": "DnD5e Helpers＋AC調整"
     },
     "midi-qol.NearbyAllyRanged.Name": "（ハウスルール） 味方と隣接する敵への遠隔攻撃は不利を受ける",
-    "midi-qol.WallsBlockRangeOptions": {"none": "無効", "center": "中心点", "centerLevels": "中心点＋Levels"},
+    "midi-qol.WallsBlockRangeOptions": {
+        "none": "無効",
+        "center": "中心点",
+        "centerLevels": "中心点＋Levels"
+    },
     "midi-qol.NearbyAllyRanged.Hint": "相手がこの値（w*h）より小さい場合、味方の5ft以内にいる対象への遠隔攻撃には不利がつきます。0を指定すると無効になります。",
     "midi-qol.Incapacitated.Name": "無力状態のアクターはアクションやリアクションができない",
     "midi-qol.RemoveHiddenInvis.Name": "攻撃は隠れ身/不可視状態を解除する（要CUBまたはConditional Visibility）",
@@ -425,9 +451,13 @@
     "midi-qol.ShowStats": "統計ウィンドウの表示",
     "midi-qol.DefaultSaveMult.Name": "標準のセーヴィング・スロー倍率",
     "midi-qol.DefaultSaveMult.Hint": "セーヴを伴う攻撃おいて、その成功時に元のダメージにかかる基本の減少倍率を指定します。デフォルトは0.5で、つまりセーヴ成功時は半減ダメージとなります。変更はこれら倍率の仕組みについて理解のうえで行ってください。",
-	"midi-qol.RequireMagical.Name": "魔法ダメージには“魔法的”プロパティが必要",
-	"midi-qol.RequireMagical.Hint": "武器の“魔法的”プロパティ、またはMidi-QOLの“非魔法的”プロパティによって、そのアイテムが魔法ダメージを与えるかどうかを設定できます。プロパティを設定しない場合のデフォルト動作は次のとおり。「オフ」では武器以外のアイテムと、攻撃ボーナスが0以上の武器が魔法ダメージを与えます。「呪文のみ」では呪文だけが魔法ダメージを与えます。「すべて非魔法」では、すべてのアイテムのダメージが非魔法として扱われます。",
-    "midi-qol.RequireMagicalOptions": {"off": "オフ（武器以外は魔法扱い）", "nonspell": "呪文のみ", "allitems": "すべて非魔法"},
+    "midi-qol.RequireMagical.Name": "魔法ダメージには“魔法的”プロパティが必要",
+    "midi-qol.RequireMagical.Hint": "武器の“魔法的”プロパティ、またはMidi-QOLの“非魔法的”プロパティによって、そのアイテムが魔法ダメージを与えるかどうかを設定できます。プロパティを設定しない場合のデフォルト動作は次のとおり。「オフ」では武器以外のアイテムと、攻撃ボーナスが0以上の武器が魔法ダメージを与えます。「呪文のみ」では呪文だけが魔法ダメージを与えます。「すべて非魔法」では、すべてのアイテムのダメージが非魔法として扱われます。",
+    "midi-qol.RequireMagicalOptions": {
+        "off": "オフ（武器以外は魔法扱い）",
+        "nonspell": "呪文のみ",
+        "allitems": "すべて非魔法"
+    },
     "midi-qol.RemoveConcentration.Name": "セーヴ失敗時の集中自動解除",
     "midi-qol.RemoveConcentration.Hint": "被ダメージ時のセーヴに失敗すると、精神集中状態が自動で解除されます。",
     "midi-qol.UsePlayerPortrait.Name": "チャットカードにポートレートを使用する",
@@ -441,7 +471,7 @@
     "midi-qol.flags.midi-qol.bardicInspiration": "バードの声援",
     "midi-qol.ExportJSon": "ロール統計をjsonファイルにエクスポート",
     "midi-qol.ExportCSV": "ロール統計をcsvファイルにエクスポート",
-    "midi-qol.AutoCEEffectsOptions" : {
+    "midi-qol.AutoCEEffectsOptions": {
         "none": "適用しない",
         "itempri": "Convenient Effectsがなければアイテムの効果を適用する",
         "cepri": "アイテムに効果がなければConvenient Effectsを適用する",
@@ -462,20 +492,25 @@
     "midi-qol.convenientEffectsOff": "Convenient Effectを適用しない",
     "midi-qol.ConsumeResource.Name": "リソース消費ダイアログをスキップする",
     "midi-qol.ConsumeResource.Hint": "有効にすると、適切なレベルの呪文スロットがない場合や、クリック時に有利＋不利キーが押された場合を除き、リソース消費ダイアログ（標準リソースや呪文スロットの選択＋テンプレート配置）の表示をスキップします。",
-    "midi-qol.ConsumeResourceOptions": {"none": "自動消費を無効化", "spell": "呪文スロットは自動消費", "item": "リソース / 使用回数は自動消費", "both": "リソース / 使用回数 / 呪文スロットを自動消費"},
+    "midi-qol.ConsumeResourceOptions": {
+        "none": "自動消費を無効化",
+        "spell": "呪文スロットは自動消費",
+        "item": "リソース / 使用回数は自動消費",
+        "both": "リソース / 使用回数 / 呪文スロットを自動消費"
+    },
     "midi-qol.ChallengeModeArmor.Name": "チャレンジモードACを有効にする",
     "midi-qol.ChallengeModeArmorScale.Name": "ハウスルール版チャレンジモードACを有効にする",
     "midi-qol.ChallengeModeArmor.Hint": "チャレンジモードのアーマールールを使用します（詳しくはReadmeを参照のこと）。",
     "midi-qol.ChallengeModeArmorScale.Hint": "修正されたチャレンジモードのアーマールール使用します（要チャレンジモードACの有効化 / 詳しくはReadmeを参照のこと）。",
-	"midi-qol.NonSilverPhysical": "非銀製武器",
-	"midi-qol.NonAdamantinePhysical": "非アダマンティン製武器",
+    "midi-qol.NonSilverPhysical": "非銀製武器",
+    "midi-qol.NonAdamantinePhysical": "非アダマンティン製武器",
     "midi-qol.NonMagical": "非魔法的",
     "midi-qol.Magical": "魔法的",
     "midi-qol.EffectActivation": "アクティブ効果適用の「使用条件」に真（true）を求める",
     "midi-qol.HPUpdated": "HP更新",
     "midi-qol.HPNPCUpdated": "HP更新（NPC）",
     "midi-qol.HPNotUpdated": "HP非更新",
-    "midi-qol.reactionDamaged": "ダメージ" ,
+    "midi-qol.reactionDamaged": "ダメージ",
     "midi-qol.reactionManual": "マニュアル",
     "midi-qol.ddbGL.Name": "ddb-game-logサポートの有効化",
     "midi-qol.ddbGL.Hint": "ddb-game-logからの攻撃/ダメージ/セーヴロールを受け入れ、Midi-QOLのワークフローに渡します。",
@@ -519,8 +554,14 @@
         "4": "より良い設定例がありましたら、ぜひ提案をお願いします。"
     },
     "midi-qol.Reaction.Title": "リアクションの管理",
-    "midi-qol.GMDoReactionsOptions": { "all": "オン", "none": "オフ" },
-    "midi-qol.DoReactionsOptions": { "all": "オン", "none": "オフ" },
+    "midi-qol.GMDoReactionsOptions": {
+        "all": "オン",
+        "none": "オフ"
+    },
+    "midi-qol.DoReactionsOptions": {
+        "all": "オン",
+        "none": "オフ"
+    },
     "midi-qol.ShowReactionAttackRoll.Name": "攻撃ロールの表示",
     "midi-qol.ShowReactionAttackRollOptions": {
         "none": "命中時のみ",
@@ -546,7 +587,7 @@
     "midi-qol.EnforceReactions.Name": "使用済リアクションの通知",
     "midi-qol.EnforceReactions.Hint": "リアクション/ボーナスアクションが使用済のとき、それが必要なアイテムを使用すると通知が表示されるようになります。",
     "midi-qol.EnforceBonusActions.Name": "使用済ボーナスアクションの通知",
-	"midi-qol.EnforceBonusActions.Hint": "ボーナスアクションが使用済のとき、それが必要なアイテムを使用すると通知が表示されるようになります。",
+    "midi-qol.EnforceBonusActions.Hint": "ボーナスアクションが使用済のとき、それが必要なアイテムを使用すると通知が表示されるようになります。",
     "midi-qol.EnforceReactionsOptions": {
         "none": "通知しない",
         "character": "キャラクターのみ",
@@ -562,23 +603,35 @@
     "midi-qol.SoundSettings.Hint": "アイテムロール時のMidiカスタムサウンドを設定します。",
     "midi-qol.SoundSettings.Label": "Midiカスタムサウンド設定",
     "midi-qol.SoundSettingsBlurb": {
-      "1": "【はじめに】",
-      "2": "「Create Sample playlist」を選択すると、いくつかのサウンドが登録されたプレイリスト「Midi Item Sounds」が作成されます。",
-      "3": "次に「Basic Settings」を選択し、登録される設定をまず試してください。",
-      "4": "そのほかのボタンには、より複雑なサウンド設定の例が登録されています。"
-  },
-  "midi-qol.AddRow": "列の追加",
-  "midi-qol.CheckFlanking.Name": "挟撃オプションを有効にする",
-  "midi-qol.CheckFlanking.Hint": "自分と味方によって挟まれた相手を攻撃するとき、有利で判定を行うようにできます。攻撃側に有利をつけ、Convenient Effectsの挟撃効果を適用するのか、もしくは対象にConvenient Effectsの被挟撃効果を適用するのか、どちらで処理するかを指定してください。",
-  "midi-qol.CheckFlankingOptions":  {"off": "なし", "ceonly": "攻撃側へのCE挟撃効果のみ", "advonly": "攻撃側への有利のみ", "ceadv": "攻撃側のCE挟撃効果＋有利", "ceflanked": "対象へのCE被挟撃効果のみ", "ceflankedNoconga": "対象へのCE被挟撃＋挟撃に参加できない"},
-  "midi-qol.RollAlternate.Name": "ロール式をツールチップに移動する",
-  "midi-qol.RollAlternate.Hint": "代替ダメージのロール式をツールチップに表示します。またオプションで有利フラグ追加します。",
-  "midi-qol.RollAlternateOptions": {"off": "標準のツールチップ", "formula": "ロール式→ツールチップ", "adv": "有利フラグ", "formulaadv": "ロール式→ツールチップ＋有利フラグ"}, 
-  "midi-qol.OptionalCritRule.Name": "（ハウスルール）ACとの差分値でクリティカルを判定する",
-  "midi-qol.OptionalCritRule.Hint": "ACをこの値だけ上回った攻撃をクリティカルとして扱います。無効にする場合は“-1”を指定してください。",
-  "midi-qol.ActorOnUseMacros": "使用時マクロ（アクター）",
-  "midi-qol.MacroPass": "マクロパス",
-  "midi-qol.MacroName": "マクロ名",
-  "midi-qol.DamageRolled": "ロール済",
-  "midi-qol.DamageApplied": "適用済"
+        "1": "【はじめに】",
+        "2": "「Create Sample playlist」を選択すると、いくつかのサウンドが登録されたプレイリスト「Midi Item Sounds」が作成されます。",
+        "3": "次に「Basic Settings」を選択し、登録される設定をまず試してください。",
+        "4": "そのほかのボタンには、より複雑なサウンド設定の例が登録されています。"
+    },
+    "midi-qol.AddRow": "列の追加",
+    "midi-qol.CheckFlanking.Name": "挟撃オプションを有効にする",
+    "midi-qol.CheckFlanking.Hint": "自分と味方によって挟まれた相手を攻撃するとき、有利で判定を行うようにできます。攻撃側に有利をつけ、Convenient Effectsの挟撃効果を適用するのか、もしくは対象にConvenient Effectsの被挟撃効果を適用するのか、どちらで処理するかを指定してください。",
+    "midi-qol.CheckFlankingOptions": {
+        "off": "なし",
+        "ceonly": "攻撃側へのCE挟撃効果のみ",
+        "advonly": "攻撃側への有利のみ",
+        "ceadv": "攻撃側のCE挟撃効果＋有利",
+        "ceflanked": "対象へのCE被挟撃効果のみ",
+        "ceflankedNoconga": "対象へのCE被挟撃＋挟撃に参加できない"
+    },
+    "midi-qol.RollAlternate.Name": "ロール式をツールチップに移動する",
+    "midi-qol.RollAlternate.Hint": "代替ダメージのロール式をツールチップに表示します。またオプションで有利フラグ追加します。",
+    "midi-qol.RollAlternateOptions": {
+        "off": "標準のツールチップ",
+        "formula": "ロール式→ツールチップ",
+        "adv": "有利フラグ",
+        "formulaadv": "ロール式→ツールチップ＋有利フラグ"
+    },
+    "midi-qol.OptionalCritRule.Name": "（ハウスルール）ACとの差分値でクリティカルを判定する",
+    "midi-qol.OptionalCritRule.Hint": "ACをこの値だけ上回った攻撃をクリティカルとして扱います。無効にする場合は“-1”を指定してください。",
+    "midi-qol.ActorOnUseMacros": "使用時マクロ（アクター）",
+    "midi-qol.MacroPass": "マクロパス",
+    "midi-qol.MacroName": "マクロ名",
+    "midi-qol.DamageRolled": "ロール済",
+    "midi-qol.DamageApplied": "適用済"
 }

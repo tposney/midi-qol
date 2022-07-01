@@ -33,15 +33,15 @@
     "midi-qol.AutoRemoveTargets.Hint": "Welche Ziele sollen am Ende deines Zuges automatisch abgewählt werden?",
     "midi-qol.buttons.roll": "Standardwurf",
     "midi-qol.buttons.attack": "Angriff",
-	  "midi-qol.buttons.saveDC": "Rettungswurf SG",
-	  "midi-qol.buttons.saveAndDamage": "Würfle (Rettungswurf & Schaden)",
-	  "midi-qol.buttons.attackAndDamage": "Würfle (Angriff & Schaden)",
-	  "midi-qol.buttons.damage": "Schaden",
-	  "midi-qol.buttons.altDamage": "Alt. Schaden",
+    "midi-qol.buttons.saveDC": "Rettungswurf SG",
+    "midi-qol.buttons.saveAndDamage": "Würfle (Rettungswurf & Schaden)",
+    "midi-qol.buttons.attackAndDamage": "Würfle (Angriff & Schaden)",
+    "midi-qol.buttons.damage": "Schaden",
+    "midi-qol.buttons.altDamage": "Alt. Schaden",
     "midi-qol.buttons.extraDamage": "Zusätz. Schaden",
     "midi-qol.buttons.versatileDamage": "Vielseitiger Schaden",
     "midi-qol.buttons.versatileAttack": "Vielseitiger Angriff",
-	  "midi-qol.buttons.info": "Info",
+    "midi-qol.buttons.info": "Info",
     "midi-qol.buttons.itemUse": "Gebrauch",
     "midi-qol.reallyDelete": "Dieses Element wirklich löschen",
     "midi-qol.sure": "Bist du sicher?",
@@ -58,8 +58,42 @@
     "midi-qol.HideNPCNames.Hint": "Namen von Token in Treffer/Rettungswurf Chat-Nachrichten ausblenden",
     "midi-qol.AutoTarget.Name": "Automatisches Zielen beim Zeichnen von Schablonen",
     "midi-qol.AutoTarget.Hint": "Beim Platzieren einer Schablone (z.B. Zauber) werden Token innerhalb der Schablone automatisch als Ziel markiert.",
-    "midi-qol.noDamageonSaveSpells" : ["Acid Splash", "Säurespritzer", "Sword Burst", " Schwertexplosion", "Thunderclap", "Donnerschlag", "Vicious Mockery", "Gehässiger Spot", "Create Bonfire", "Lagerfeuer erschaffen", "Lightning Lure", "Blitzköder", "Poison Spray", "Gift versprühen", "Cordon of Arrow", "Pfeilspalier", "Disintegrate", "Auflösung", "Sacred Flame", "Heilige Flamme", "Cordon of Arrows", "Frostbite", "Erfrierung", "Infestation", "Befall", "Toll the Dead", "Totenläuten", "Word of Radiance", "Wort des Strahlens", "Catapult", "Katapult", "Earth Tremor", "Erdrütteln"],
-    "midi-qol.noDamage" : "Kein Schaden bei Rettungswürfen",
+    "midi-qol.noDamageonSaveSpells": [
+        "Acid Splash",
+        "Säurespritzer",
+        "Sword Burst",
+        " Schwertexplosion",
+        "Thunderclap",
+        "Donnerschlag",
+        "Vicious Mockery",
+        "Gehässiger Spot",
+        "Create Bonfire",
+        "Lagerfeuer erschaffen",
+        "Lightning Lure",
+        "Blitzköder",
+        "Poison Spray",
+        "Gift versprühen",
+        "Cordon of Arrow",
+        "Pfeilspalier",
+        "Disintegrate",
+        "Auflösung",
+        "Sacred Flame",
+        "Heilige Flamme",
+        "Cordon of Arrows",
+        "Frostbite",
+        "Erfrierung",
+        "Infestation",
+        "Befall",
+        "Toll the Dead",
+        "Totenläuten",
+        "Word of Radiance",
+        "Wort des Strahlens",
+        "Catapult",
+        "Katapult",
+        "Earth Tremor",
+        "Erdrütteln"
+    ],
+    "midi-qol.noDamage": "Kein Schaden bei Rettungswürfen",
     "midi-qol.undoDamageFrom": "Widerrufe angewandte Schäden von ",
     "midi-qol.noGM": "Kein GM-Benutzer verbunden, Effekte/Aktualisierung der Trefferpunkte können nicht an angewendet werden",
     "midi-qol.noSelection": "Kein Token/Actor ausgewählt",
@@ -86,8 +120,8 @@
     "midi-qol.noSaveTargets": "Keine Ziele für Rettungswürfe",
     "midi-qol.UseTokenNames.Name": "Chat-Karten verwenden Tokennamen",
     "midi-qol.UseTokenNames.Hint": "Chatkartentitel und Zielnamen verwenden den Tokennamen und nicht den Akteurnamen",
-    "midi-qol.CriticalDamage.Name" : "Festlegen, wie kritische Schäden gewürfelt werden",
-    "midi-qol.CriticalDamage.Hint" : "erfordert Foundry 0.7.0 oder höher. DND5e Default - Standard dnd5e kritischer Wurf, Base max only - nur Grundwaffenwürfel, aber maximiert, max critical dice- Würfel für kritischen Schaden maximiert, max all Dice - Waffenschaden + kritischer Schaden maximiert",
+    "midi-qol.CriticalDamage.Name": "Festlegen, wie kritische Schäden gewürfelt werden",
+    "midi-qol.CriticalDamage.Hint": "erfordert Foundry 0.7.0 oder höher. DND5e Default - Standard dnd5e kritischer Wurf, Base max only - nur Grundwaffenwürfel, aber maximiert, max critical dice- Würfel für kritischen Schaden maximiert, max all Dice - Waffenschaden + kritischer Schaden maximiert",
     "midi-qol.MergeCard.Name": "Würfe zu einer Karte zusammenführen",
     "midi-qol.MergeCard.Hint": "Angriff, Treffer, Schaden, Rettungswürfe in einer einzigen Chatkarte zusammenfassen",
     "midi-qol.MergeCardCondensed.Name": "Angriffs-/Schadenswürfe komprimieren",
@@ -117,18 +151,73 @@
     "midi-qol.UseCustomSounds.Hint": "Falls eingestellt, werden die Systemgeräusche mit den unten aufgeführten Geräuschen überschrieben",
     "midi-qol:Debug.Name": "Debuggen aktivieren",
     "midi-qol:Debug.Hint": "'Warnings' gibt einen Überblick über die Aktivität, 'debug' fügt mehr Informationen hinzu und 'all' schaltet auch CONFIG.debug.hooks ein",
-    "midi-qol.speedItemRollsOptions": {"off": "Off", "on": "On", "onCard": "On + Show Item Card"},
-    "midi-qol.autoCheckHitOptions": {"none": "None", "all": "Check - all see result", "whisper": "Check - only GM sees"},
-    "midi-qol.clickOptions": {"off": "Off", "attack": "Attack Rolls Only", "damage": "Damage Rolls Only", "all": "Attack and Damage"},
-    "midi-qol.autoTargetOptions": {"none": "None", "always": "Always", "wallsBlock": "Walls Block"},
-    "midi-qol.autoCheckSavesOptions": {"none": "Off", "all":  "Save - All see result", "whisper": "Save - only GM sees", "allShow": "Save - All see Result + Rolls"},
-    "midi-qol.autoRollDamageOptions": {"none": "Never", "always":  "Always", "onHit": "Attack Hits"},
-    "midi-qol.autoApplyDamageOptions": {"none": "No", "noCard": "No + damage card", "yes": "Yes", "yesCard": "Yes + damage card"},
-    "midi-qol.damageImmunitiesOptions": {"none": "Never", "immunityDefult": "apply immuniites", "immunityPhysical": "apply immunities + physical"},
-    "midi-qol.showItemDetailsOptions": {"none": "None", "cardOnly": "Card Only", "pc": "Card + Details: PC Only", "all": "Card + Details: NPC + PC"},
-    "midi-qol.AutoRemoveTargetsOptions": {"none": "Never", "dead": "untarget dead after roll", "allGM": "untarget dead and all GM", "all": "untarget all at end of turn"},
-    "midi-qol.ColoredBordersOptions": {"none": "None", "borders": "Borders Only", "borderNamesText": "Border + Name Text", "borderNamesBackground": "Border + Name Background"},
-    "midi-qol.hideRollDetailsOptions": {"none": "None", "details": "Roll Formula", "detailsDSN": "Roll Formula + DSN dice", "all": "Entire Roll"},
+    "midi-qol.speedItemRollsOptions": {
+        "off": "Off",
+        "on": "On",
+        "onCard": "On + Show Item Card"
+    },
+    "midi-qol.autoCheckHitOptions": {
+        "none": "None",
+        "all": "Check - all see result",
+        "whisper": "Check - only GM sees"
+    },
+    "midi-qol.clickOptions": {
+        "off": "Off",
+        "attack": "Attack Rolls Only",
+        "damage": "Damage Rolls Only",
+        "all": "Attack and Damage"
+    },
+    "midi-qol.autoTargetOptions": {
+        "none": "None",
+        "always": "Always",
+        "wallsBlock": "Walls Block"
+    },
+    "midi-qol.autoCheckSavesOptions": {
+        "none": "Off",
+        "all": "Save - All see result",
+        "whisper": "Save - only GM sees",
+        "allShow": "Save - All see Result + Rolls"
+    },
+    "midi-qol.autoRollDamageOptions": {
+        "none": "Never",
+        "always": "Always",
+        "onHit": "Attack Hits"
+    },
+    "midi-qol.autoApplyDamageOptions": {
+        "none": "No",
+        "noCard": "No + damage card",
+        "yes": "Yes",
+        "yesCard": "Yes + damage card"
+    },
+    "midi-qol.damageImmunitiesOptions": {
+        "none": "Never",
+        "immunityDefult": "apply immuniites",
+        "immunityPhysical": "apply immunities + physical"
+    },
+    "midi-qol.showItemDetailsOptions": {
+        "none": "None",
+        "cardOnly": "Card Only",
+        "pc": "Card + Details: PC Only",
+        "all": "Card + Details: NPC + PC"
+    },
+    "midi-qol.AutoRemoveTargetsOptions": {
+        "none": "Never",
+        "dead": "untarget dead after roll",
+        "allGM": "untarget dead and all GM",
+        "all": "untarget all at end of turn"
+    },
+    "midi-qol.ColoredBordersOptions": {
+        "none": "None",
+        "borders": "Borders Only",
+        "borderNamesText": "Border + Name Text",
+        "borderNamesBackground": "Border + Name Background"
+    },
+    "midi-qol.hideRollDetailsOptions": {
+        "none": "None",
+        "details": "Roll Formula",
+        "detailsDSN": "Roll Formula + DSN dice",
+        "all": "Entire Roll"
+    },
     "midi-qol.potion": "Potion",
     "midi-qol.HideRollDetails.Name": "Würfeldetails ausblenden",
     "midi-qol.HideRollDetails.Hint": "Festlegen, wieviel bei GM-Würfen vor den Spielern versteckt werden soll. Roll Details + DSN bedeutet, dass die Spieler zufällige DSN-Würfel sehen, so dass sie keine Monsterbonusse aus den DSN-Würfeln ableiten können.",
@@ -152,5 +241,5 @@
     "midi-qol.DragDropTarget.Hint": "Erlaubt das Ziehen eines Gegenstandes auf ein Token, um dieses anzugreifen",
     "midi-qol.GMFullAuto.Name": "GM würfelt Angriff/Schaden automatisch",
     "midi-qol.GMFullAuto.Hint": "Falls aktiviert ignorieren GM-Würfe die Workflow-Einstellungen und würfeln Angriffe und Schäden automatisch",
-	"midi-qol.midi-none": "Kein Schaden"
+    "midi-qol.midi-none": "Kein Schaden"
 }
