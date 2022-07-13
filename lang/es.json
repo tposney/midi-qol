@@ -17,14 +17,23 @@
     "midi-qol.AutoCheckHit.Hint": "Comprobar si una tirada de ataque acierta a los objetivos seleccionados - el daño se tira si da a uno o más objetivos y auto tirar daño está activado. Si no lo está, midi-qol asume que el ataque acierta y sigue con las tiradas.",
     "midi-qol.RequireTargets.Name": "Requerir objetivo seleccionado",
     "midi-qol.RequireTargets.Hint": "Requiere que los tokens sean objetivo antes de las tiradas. Nunca lo ignora, En combate significa sólo en combate y Siempre cada vez que se tire un elemento con objetivos. No funciona con better rolls",
-    "midi-qol.requiresTargetsOptions": {"none": "Nunca", "combat": "En combate", "always": "Siempre"},
+    "midi-qol.requiresTargetsOptions": {
+        "none": "Nunca",
+        "combat": "En combate",
+        "always": "Siempre"
+    },
     "midi-qol.AutoApplyDamage.Name": "Aplicar daño automáticamente al objetivo",
     "midi-qol.AutoApplyDamage.Hint": "Aplica daño automáticamente a los objetivos impactados (si auto comprobar impacto está activado) o a objetivos seleccionados por el usuario.",
     "midi-qol.ItemRollButtons.Name": "Añadir botones de ataque/daño a la lista de elementos en el inventario.",
     "midi-qol.ItemRollButtons.Hint": "Añade botones de ataque/daño a la descripción de elementos - estos botones soportan las teclas ctr-alt-shift para saltarse el diálogo.",
     "midi-qol.AddChatDamageButtons.Name": "Añadir botones de daño en el chat",
     "midi-qol.AddChatDamageButtons.Hint": "Añade botones de daño a cualquier mensaje de tirada de ataque - al hacer click se aplica del daño a los tokens seleccionados (NO OBJETIVOS) (igual que el menú desplegable).",
-    "midi-qol.AddChatDamageButtonsOptions": {"none": "Nunca", "gm": "Añadir botones para el GM", "pc": "Añadir botones para los jugadores", "both": "Añadir botones para todos"},
+    "midi-qol.AddChatDamageButtonsOptions": {
+        "none": "Nunca",
+        "gm": "Añadir botones para el GM",
+        "pc": "Añadir botones para los jugadores",
+        "both": "Añadir botones para todos"
+    },
     "midi-qol.AutoRollDamage.Name": "Auto tirar daño",
     "midi-qol.AutoRollDamage.Hint": "Tira el daño automáticamente cuando se hace una tirada de ataque. Si auto tirar daño se pone en 'ataque acierta', tirará el daño si no hay objetivos seleccionados, el ataque acierta (ver auto comprobar impacto, o si no está activado auto comprobar impacto).",
     "midi-qol.AutoCheckSaves.Name": "Auto comprobar TS",
@@ -35,15 +44,15 @@
     "midi-qol.AutoRemoveTargets.Hint": "Al final de tu turno, elige qué objetivos deseleccionar automáticamente.",
     "midi-qol.buttons.roll": "Tirada estándar",
     "midi-qol.buttons.attack": "Ataque",
-	  "midi-qol.buttons.saveDC": "CD de TS",
-	  "midi-qol.buttons.saveAndDamage": "Tirada (TS y Daño)",
-	  "midi-qol.buttons.attackAndDamage": "Tirada (Ataq y Daño)",
-	  "midi-qol.buttons.damage": "Daño",
-	  "midi-qol.buttons.altDamage": "Daño alt.",
+    "midi-qol.buttons.saveDC": "CD de TS",
+    "midi-qol.buttons.saveAndDamage": "Tirada (TS y Daño)",
+    "midi-qol.buttons.attackAndDamage": "Tirada (Ataq y Daño)",
+    "midi-qol.buttons.damage": "Daño",
+    "midi-qol.buttons.altDamage": "Daño alt.",
     "midi-qol.buttons.extraDamage": "Daño extra",
     "midi-qol.buttons.versatileDamage": "Daño vers.",
     "midi-qol.buttons.versatileAttack": "Ataque vers.",
-	  "midi-qol.buttons.info": "Info",
+    "midi-qol.buttons.info": "Info",
     "midi-qol.buttons.itemUse": "Usar",
     "midi-qol.reallyDelete": "Eliminar este item",
     "midi-qol.sure": "¿Seguro?",
@@ -60,8 +69,43 @@
     "midi-qol.HideNPCNames.Hint": "Oculta los nombres de los tokens en los mensajes del chat de tiradas.",
     "midi-qol.AutoTarget.Name": "Seleccionar objetivos al poner plantillas",
     "midi-qol.AutoTarget.Hint": "Cuando se pone una plantilla (p. ej. con conjuros), selecciona como objetivos a los tokens que estén dentro.",
-    "midi-qol.noDamageonSaveSpells" : ["Acid Splash", "Sword Burst", "Thunderclap", "Vicious Mockery", "Create Bonfire", "Lightning Lure", "Poison Spray", "Cordon of Arrow", "Disintegrate", "Sacred Flame", "Cordon of Arrows", "Frostbite", "Infestation", "Toll the Dead", "Word of Radiance", "Catapult", "Earth Tremor", "Salpicadura ácida", "Estallido de espadas", "Palmada atronadora", "Burla dañina", "Burla viciosa", "Crear hoguera", "Atracción del relámpago", "Salpicadura ácida", "Cordón de flechas", "Desintegrar", "Llama sagrada", "Toque helado", "Infestación", "Tocar a los muertos", "Palabra de resplandor", "Catapulta", "Temblor de tierra"],
-    "midi-qol.noDamage" : "No recibe daño si supera la TS",
+    "midi-qol.noDamageonSaveSpells": [
+        "Acid Splash",
+        "Sword Burst",
+        "Thunderclap",
+        "Vicious Mockery",
+        "Create Bonfire",
+        "Lightning Lure",
+        "Poison Spray",
+        "Cordon of Arrow",
+        "Disintegrate",
+        "Sacred Flame",
+        "Cordon of Arrows",
+        "Frostbite",
+        "Infestation",
+        "Toll the Dead",
+        "Word of Radiance",
+        "Catapult",
+        "Earth Tremor",
+        "Salpicadura ácida",
+        "Estallido de espadas",
+        "Palmada atronadora",
+        "Burla dañina",
+        "Burla viciosa",
+        "Crear hoguera",
+        "Atracción del relámpago",
+        "Salpicadura ácida",
+        "Cordón de flechas",
+        "Desintegrar",
+        "Llama sagrada",
+        "Toque helado",
+        "Infestación",
+        "Tocar a los muertos",
+        "Palabra de resplandor",
+        "Catapulta",
+        "Temblor de tierra"
+    ],
+    "midi-qol.noDamage": "No recibe daño si supera la TS",
     "midi-qol.undoDamageFrom": "Deshacer el daño aplicado de ",
     "midi-qol.noGM": "Los usuarios sin permisos de GM no pueden aplicar efectos/actualizar los PG",
     "midi-qol.noSelection": "No se ha seleccionado ningún token/actor",
@@ -91,8 +135,8 @@
     "midi-qol.noSaveTargets": "No hay objetivos para la TS",
     "midi-qol.UseTokenNames.Name": "Las tarjetas del chat usan el nombre del token",
     "midi-qol.UseTokenNames.Hint": "Los títulos de las tarjetas del chat y los nombres de los objetivos usan el nombre del token en lugar del actor.",
-    "midi-qol.CriticalDamage.Name" : "Elige cómo lanzar el daño crítico",
-    "midi-qol.CriticalDamage.Hint" : "Necesita Foundry 0.7.0 mínimo. DND5e default - Tirada de crítico estándar, base max only - solo dados base pero con tirada más alta, -max critical dice - Dado crítico maximizado, max all dice- Todos los dados de arma + crít máximos.",
+    "midi-qol.CriticalDamage.Name": "Elige cómo lanzar el daño crítico",
+    "midi-qol.CriticalDamage.Hint": "Necesita Foundry 0.7.0 mínimo. DND5e default - Tirada de crítico estándar, base max only - solo dados base pero con tirada más alta, -max critical dice - Dado crítico maximizado, max all dice- Todos los dados de arma + crít máximos.",
     "midi-qol.MergeCard.Name": "Combinar tiradas en una tarjeta",
     "midi-qol.MergeCard.Hint": "Combina ataque, impactos, daño, y TS en una única tarjeta en el chat.",
     "midi-qol.MergeCardCondensed.Name": "Condensar tiradas de ataque/daño",
@@ -125,27 +169,114 @@
     "midi-qol.UseCustomSounds.Hint": "Si se activa, sobreescribe los sonidos de sistema con los sonidos de más abajo.",
     "midi-qol.Debug.Name": "Activar Debug",
     "midi-qol.Debug.Hint": "'Warnings' da una visión general de la actividad, 'debug' añade más info, y 'all' activa también CONFIG.debug.hooks",
-    "midi-qol.speedItemRollsOptions": {"off": "Off", "on": "On", "onCard": "On + Mostrar tarjeta del item"},
-    "midi-qol.autoCheckHitOptions": {"none": "Ninguno", "all": "Comprobar - todos ven el resultado", "whisper": "Comprobar - solo lo ve el GM"},
-    "midi-qol.clickOptions": {"off": "Off", "attack": "Solo las tiradas de ataque", "damage": "Solo las tiradas de daño", "all": "Ataque y daño"},
-    "midi-qol.autoTargetOptions": {"none": "Ninguno", "always": "Siempre", "wallsBlock": "Las paredes bloquean"},
-    "midi-qol.autoCheckSavesOptions": {"none": "Off", "all":  "TS - Todos ven el resultado", "whisper": "TS - solo el GM lo ve", "allShow": "TS - Todos ven resultado+tiradas"},
-    "midi-qol.rangeTargetOptions": {"none": "Nunca", "always": "Siempre", "alwaysIgnoreDefeated": "Siempre - Ignorar derrotados", "wallsBlock": "Los muros bloquean", "wallsBlockIgnoreDefeated": "Los muros bloquean - Ignorar derrotados"},
-    "midi-qol.autoRollDamageOptions": {"none": "Nunca", "always":  "Siempre", "onHit": "El ataque acierta"},
-    "midi-qol.autoApplyDamageOptions": {"none": "No", "noCard": "No + tarjeta de daño", "yes": "Sí", "yesCard": "Sí + Tarjeta de daño"},
-    "midi-qol.removeButtonsOptions": {"off": "Off", "attack": "Solo ataque", "damage": "Solo daño", "all": "Ataque y daño"},
-    "midi-qol.damageImmunitiesOptions": {"none": "Nunca", "immunityDefult": "aplicar inmunidades", "immunityPhysical": "aplicar inmunidades+físico"},
-    "midi-qol.showItemDetailsOptions": {"none": "Ninguno", "cardOnly": "Solo tarjeta", "pc": "Tarjeta + Detalles: solo PJs", "all": "Tarjeta + Detalles: PNJs + PJs"},
-    "midi-qol.rollNPCSavesOptions": {"auto": "Auto",  "letme": "Let Me Roll That For You"},
-    "midi-qol.playerRollSavesOptions": {"none": "Ninguno",  "letme": "Let Me Roll That For You", "letmeQuery": "LMRTFY + Querey", "chat": "Mensaje de chat"},
-    "midi-qol.playerRollSavesOptionsReduced": {"none": "Ninguno",  "letme": "Let Me Roll That For You", "chat": "Mensaje en el chat"},
-    "midi-qol.AutoRemoveTargetsOptions": {"none": "Nunca", "dead": "Deseleccionar muertos tras la tirada", "allGM": "Deseleccionar muertos y todos GM", "all": "Deseleccionar todos al acabar el turno"},
-    "midi-qol.ColoredBordersOptions": {"none": "Ninguno", "borders": "Solo bordes", "borderNamesText": "Bordes + Nombre (texto)", "borderNamesBackground": "Borde + Nombre (fondo)"},
-    "midi-qol.hideRollDetailsOptions": {"none": "Ninguno", "details": "Fórmula de la tirada", "all": "Tirada entera"},
-    "midi-qol.GMDoReactionsOptions": {"all": "On", "none": "off"},
-    "midi-qol.DoReactionsOptions": {"all": "On", "none": "off"},
+    "midi-qol.speedItemRollsOptions": {
+        "off": "Off",
+        "on": "On",
+        "onCard": "On + Mostrar tarjeta del item"
+    },
+    "midi-qol.autoCheckHitOptions": {
+        "none": "Ninguno",
+        "all": "Comprobar - todos ven el resultado",
+        "whisper": "Comprobar - solo lo ve el GM"
+    },
+    "midi-qol.clickOptions": {
+        "off": "Off",
+        "attack": "Solo las tiradas de ataque",
+        "damage": "Solo las tiradas de daño",
+        "all": "Ataque y daño"
+    },
+    "midi-qol.autoTargetOptions": {
+        "none": "Ninguno",
+        "always": "Siempre",
+        "wallsBlock": "Las paredes bloquean"
+    },
+    "midi-qol.autoCheckSavesOptions": {
+        "none": "Off",
+        "all": "TS - Todos ven el resultado",
+        "whisper": "TS - solo el GM lo ve",
+        "allShow": "TS - Todos ven resultado+tiradas"
+    },
+    "midi-qol.rangeTargetOptions": {
+        "none": "Nunca",
+        "always": "Siempre",
+        "alwaysIgnoreDefeated": "Siempre - Ignorar derrotados",
+        "wallsBlock": "Los muros bloquean",
+        "wallsBlockIgnoreDefeated": "Los muros bloquean - Ignorar derrotados"
+    },
+    "midi-qol.autoRollDamageOptions": {
+        "none": "Nunca",
+        "always": "Siempre",
+        "onHit": "El ataque acierta"
+    },
+    "midi-qol.autoApplyDamageOptions": {
+        "none": "No",
+        "noCard": "No + tarjeta de daño",
+        "yes": "Sí",
+        "yesCard": "Sí + Tarjeta de daño"
+    },
+    "midi-qol.removeButtonsOptions": {
+        "off": "Off",
+        "attack": "Solo ataque",
+        "damage": "Solo daño",
+        "all": "Ataque y daño"
+    },
+    "midi-qol.damageImmunitiesOptions": {
+        "none": "Nunca",
+        "immunityDefult": "aplicar inmunidades",
+        "immunityPhysical": "aplicar inmunidades+físico"
+    },
+    "midi-qol.showItemDetailsOptions": {
+        "none": "Ninguno",
+        "cardOnly": "Solo tarjeta",
+        "pc": "Tarjeta + Detalles: solo PJs",
+        "all": "Tarjeta + Detalles: PNJs + PJs"
+    },
+    "midi-qol.rollNPCSavesOptions": {
+        "auto": "Auto",
+        "letme": "Let Me Roll That For You"
+    },
+    "midi-qol.playerRollSavesOptions": {
+        "none": "Ninguno",
+        "letme": "Let Me Roll That For You",
+        "letmeQuery": "LMRTFY + Querey",
+        "chat": "Mensaje de chat"
+    },
+    "midi-qol.playerRollSavesOptionsReduced": {
+        "none": "Ninguno",
+        "letme": "Let Me Roll That For You",
+        "chat": "Mensaje en el chat"
+    },
+    "midi-qol.AutoRemoveTargetsOptions": {
+        "none": "Nunca",
+        "dead": "Deseleccionar muertos tras la tirada",
+        "allGM": "Deseleccionar muertos y todos GM",
+        "all": "Deseleccionar todos al acabar el turno"
+    },
+    "midi-qol.ColoredBordersOptions": {
+        "none": "Ninguno",
+        "borders": "Solo bordes",
+        "borderNamesText": "Bordes + Nombre (texto)",
+        "borderNamesBackground": "Borde + Nombre (fondo)"
+    },
+    "midi-qol.hideRollDetailsOptions": {
+        "none": "Ninguno",
+        "details": "Fórmula de la tirada",
+        "all": "Tirada entera"
+    },
+    "midi-qol.GMDoReactionsOptions": {
+        "all": "On",
+        "none": "off"
+    },
+    "midi-qol.DoReactionsOptions": {
+        "all": "On",
+        "none": "off"
+    },
     "midi-qol.ShowReactionAttackRoll.Name": "Mostrar tirada de ataque",
-    "midi-qol.ShowReactionAttackRollOptions": {"none": "Ataque impacta", "d20": "solo la tirada d20", "all": "Tirada de ataque completa"},
+    "midi-qol.ShowReactionAttackRollOptions": {
+        "none": "Ataque impacta",
+        "d20": "solo la tirada d20",
+        "all": "Tirada de ataque completa"
+    },
     "midi-qol.DoReactions.Name": "Comprobar reacciones del JUGADOR",
     "midi-qol.DoReactions.Hint": "Dar a un actor atacado la opción de usar una reacción antes de asignar la tirada",
     "midi-qol.GMDoReactions.Name": "Comprobar reacciones de PNJ/GM",
@@ -194,7 +325,7 @@
     "midi-qol.SingleConcentrationRoll.Hint": "Si está activada y el ataque hace daño normal + una salvación + otro daño/versátil, sólo se hace una prueba de concentración para el daño combinado",
     "midi-qol.GMSettings": "GM",
     "midi-qol.PlayerSettings": "Jugador",
-    "midi-qol.Workflow":" Flujo de trabajo",
+    "midi-qol.Workflow": " Flujo de trabajo",
     "midi-qol.Misc": "Misc",
     "midi-qol.Targeting": "Objetivos",
     "midi-qol.Special": "Especiales",

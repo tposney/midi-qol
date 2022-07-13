@@ -58,8 +58,26 @@
     "midi-qol.HideNPCNames.Hint": "Nome 'nascosto' del token nei messaggi di chat/salva",
     "midi-qol.AutoTarget.Name": "Bersaglio automatico modello",
     "midi-qol.AutoTarget.Hint": "Quando si posiziona un modello (ad esempio un incantesimo), i token all'interno del modello verranno bersagliati in automatico.",
-    "midi-qol.noDamageonSaveSpells" : ["Spruzzo Acido", "Sword Burst", "Thunderclap", "Beffa Crudele", "Create Bonfire", "Lightning Lure", "Spruzzo Velenoso", "Cordon of Arrow", "Disintegrazione", "Fiamma Sacra", "Cordon of Arrows", "Frostbite", "Infestation", "Toll the Dead", "Word of Radiance", "Catapult", "Earth Tremor"],
-    "midi-qol.noDamage" : "Nessun danno su TS riuscito",
+    "midi-qol.noDamageonSaveSpells": [
+        "Spruzzo Acido",
+        "Sword Burst",
+        "Thunderclap",
+        "Beffa Crudele",
+        "Create Bonfire",
+        "Lightning Lure",
+        "Spruzzo Velenoso",
+        "Cordon of Arrow",
+        "Disintegrazione",
+        "Fiamma Sacra",
+        "Cordon of Arrows",
+        "Frostbite",
+        "Infestation",
+        "Toll the Dead",
+        "Word of Radiance",
+        "Catapult",
+        "Earth Tremor"
+    ],
+    "midi-qol.noDamage": "Nessun danno su TS riuscito",
     "midi-qol.undoDamageFrom": "Annulla il danno applicato da",
     "midi-qol.noGM": "Nessun GM connesso, impossibile applicare effetti/aggiornare i punti ferita",
     "midi-qol.noSelection": "Nessun Token/Atore selezionato",
@@ -88,8 +106,8 @@
     "midi-qol.noSaveTargets": "Nessun bersaglio per TS",
     "midi-qol.UseTokenNames.Name": "Le schede nella chat utilizzano il nome del token",
     "midi-qol.UseTokenNames.Hint": "Le intestazioni delle schede nella chat e i nomi dei bersagli utilizzano il nome del token anziché il nome dell'attore",
-    "midi-qol.CriticalDamage.Name" : "Scegli come tirare il danno critico",
-    "midi-qol.CriticalDamage.Hint" : "richiede Foundry ver.  0.7.0 o successive. DND5e Default - tiro critico standard dnd5e, solo base max - solo dadi arma base ma tutti massimizzati, dadi critici max - dadi critici massimizzati, max tutti i dadi - dadi critici arma massimizzati",
+    "midi-qol.CriticalDamage.Name": "Scegli come tirare il danno critico",
+    "midi-qol.CriticalDamage.Hint": "richiede Foundry ver.  0.7.0 o successive. DND5e Default - tiro critico standard dnd5e, solo base max - solo dadi arma base ma tutti massimizzati, dadi critici max - dadi critici massimizzati, max tutti i dadi - dadi critici arma massimizzati",
     "midi-qol.MergeCard.Name": "Unisci i tiri in un'unica scheda",
     "midi-qol.MergeCard.Hint": "Unisci attacco, risultati, danni e salvataggi in una singola scheda nella chat",
     "midi-qol.MergeCardCondensed.Name": "Minimizza attacco/danno",
@@ -119,22 +137,90 @@
     "midi-qol.UseCustomSounds.Hint": "Se impostato sovrascriverà i suoni di sistema con i suoni seguenti.",
     "midi-qol:Debug.Name": "Abilita debug",
     "midi-qol:Debug.Hint": "\"Avvisi\" fornisce una panoramica delle attività, \"debug\" aggiunge ulteriori informazioni e \"tutto\" attiva anche CONFIG.debug.hooks",
-    "midi-qol.speedItemRollsOptions": {"off": "Disabilitato", "on": "Attivo", "onCard": "Attivo + Mostra Scheda Oggetto"},
-    "midi-qol.autoCheckHitOptions": {"none": "Disabilitato", "all": "Controlla: tutti vedono il risultato", "whisper": "Controlla - solo il GM vede"},
-    "midi-qol.clickOptions": {"off": "Disabilitato", "attack": "Solo Tiri per Colpire", "damage": "Solo Tiri per i Danni", "all": "Attacco e danno"},
-    "midi-qol.autoTargetOptions": {"none": "Disabilitato", "always": "Sempre", "wallsBlock": "Le Mura Bloccano"},
-    "midi-qol.autoCheckSavesOptions": {"none": "Disabilitato", "all":  "TS - Tutti vedono il risultato", "whisper": "TS - Solo il GM vede", "allShow": "Salva - Tutti vedono i risultati + tiri"},
-    "midi-qol.autoRollDamageOptions": {"none": "Mai", "always":  "Sempre", "onHit": "Colpisce"},
-    "midi-qol.autoApplyDamageOptions": {"none": "No", "noCard": "No + scheda danno", "yes": "Si", "yesCard": "Si + scheda danno"},
-    "midi-qol.damageImmunitiesOptions": {"none": "Mai", "immunityDefult": "Applicare le Immunità", "immunityPhysical": "Applicare le Immunità + fisiche"},
-    "midi-qol.showItemDetailsOptions": {"none": "Disabilitato", "cardOnly": "Solo Scheda", "pc": "Scheda + Dettagli: Solo PG", "all": "Scheda + Dettagli: PNG + PG"},
-    "midi-qol.rollNPCSavesOptions": {"auto": "Auto",  "letme": "Let Me Roll That For You"},
-    "midi-qol.playerRollSavesOptions": {"none": "Disabilitato",  "letme": "Let Me Roll That For You", "letmeQuery": "LMRTFY + Query", "chat": "Messaggio Chat"},
-    "midi-qol.playerRollSavesOptionsReduced": {"none": "Disabilitato",  "letme": "Let Me Roll That For You", "chat": "Messaggio Chat"},
-    "midi-qol.AutoRemoveTargetsOptions": {"none": "Mai", "dead": "rimuovi bersaglio sui morti dopo il tiro", "allGM": "rimuovi bersaglio morti e tutti i GM", "all": "rimuovi bersaglio a tutti alla fine del turno"},
-    "midi-qol.ColoredBordersOptions": {"none": "Disabilitato", "borders": "Solo i Bordi", "borderNamesText": "Bordi + Testo Nome", "borderNamesBackground": "Bordo + Sfondo Nome"},
-    "midi-qol.hideRollDetailsOptions": {"none": "Disabilitato", "details": "Formula Tiro", "d20Only": "Mostra il d20 d'attacco + Danno Totale", "d20AttackOnly": "Mostra solo il d20 d'attacco", "all": "Intero Tiro"},
-        "midi-qol.potion": "Pozione",
+    "midi-qol.speedItemRollsOptions": {
+        "off": "Disabilitato",
+        "on": "Attivo",
+        "onCard": "Attivo + Mostra Scheda Oggetto"
+    },
+    "midi-qol.autoCheckHitOptions": {
+        "none": "Disabilitato",
+        "all": "Controlla: tutti vedono il risultato",
+        "whisper": "Controlla - solo il GM vede"
+    },
+    "midi-qol.clickOptions": {
+        "off": "Disabilitato",
+        "attack": "Solo Tiri per Colpire",
+        "damage": "Solo Tiri per i Danni",
+        "all": "Attacco e danno"
+    },
+    "midi-qol.autoTargetOptions": {
+        "none": "Disabilitato",
+        "always": "Sempre",
+        "wallsBlock": "Le Mura Bloccano"
+    },
+    "midi-qol.autoCheckSavesOptions": {
+        "none": "Disabilitato",
+        "all": "TS - Tutti vedono il risultato",
+        "whisper": "TS - Solo il GM vede",
+        "allShow": "Salva - Tutti vedono i risultati + tiri"
+    },
+    "midi-qol.autoRollDamageOptions": {
+        "none": "Mai",
+        "always": "Sempre",
+        "onHit": "Colpisce"
+    },
+    "midi-qol.autoApplyDamageOptions": {
+        "none": "No",
+        "noCard": "No + scheda danno",
+        "yes": "Si",
+        "yesCard": "Si + scheda danno"
+    },
+    "midi-qol.damageImmunitiesOptions": {
+        "none": "Mai",
+        "immunityDefult": "Applicare le Immunità",
+        "immunityPhysical": "Applicare le Immunità + fisiche"
+    },
+    "midi-qol.showItemDetailsOptions": {
+        "none": "Disabilitato",
+        "cardOnly": "Solo Scheda",
+        "pc": "Scheda + Dettagli: Solo PG",
+        "all": "Scheda + Dettagli: PNG + PG"
+    },
+    "midi-qol.rollNPCSavesOptions": {
+        "auto": "Auto",
+        "letme": "Let Me Roll That For You"
+    },
+    "midi-qol.playerRollSavesOptions": {
+        "none": "Disabilitato",
+        "letme": "Let Me Roll That For You",
+        "letmeQuery": "LMRTFY + Query",
+        "chat": "Messaggio Chat"
+    },
+    "midi-qol.playerRollSavesOptionsReduced": {
+        "none": "Disabilitato",
+        "letme": "Let Me Roll That For You",
+        "chat": "Messaggio Chat"
+    },
+    "midi-qol.AutoRemoveTargetsOptions": {
+        "none": "Mai",
+        "dead": "rimuovi bersaglio sui morti dopo il tiro",
+        "allGM": "rimuovi bersaglio morti e tutti i GM",
+        "all": "rimuovi bersaglio a tutti alla fine del turno"
+    },
+    "midi-qol.ColoredBordersOptions": {
+        "none": "Disabilitato",
+        "borders": "Solo i Bordi",
+        "borderNamesText": "Bordi + Testo Nome",
+        "borderNamesBackground": "Bordo + Sfondo Nome"
+    },
+    "midi-qol.hideRollDetailsOptions": {
+        "none": "Disabilitato",
+        "details": "Formula Tiro",
+        "d20Only": "Mostra il d20 d'attacco + Danno Totale",
+        "d20AttackOnly": "Mostra solo il d20 d'attacco",
+        "all": "Intero Tiro"
+    },
+    "midi-qol.potion": "Pozione",
     "midi-qol.HideRollDetails.Name": "Nascondi dettagli del tiro",
     "midi-qol.HideRollDetails.Hint": "Mostra quanto dei tiri del GM nascondere ai giocatori. Mostra il d20 d'attacco permette di far visualizzare solo il tiro del dado (esclusi modificatori). Danno Totale mostra solo il risultato finale del tiro di danni. Formula tiro mostra solo il risultato del tiro d'attacco (inclusi i modificatori)",
     "midi-qol.DiceRolled": "<div>Tirato</div>",
