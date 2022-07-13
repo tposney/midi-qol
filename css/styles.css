@@ -9,7 +9,7 @@
 }
 
 .local-qol-flavor-text {
-    font-size: 12px
+  font-size: 12px
 }
 
 .dice-total.dmgBtn-mqol {
@@ -32,18 +32,24 @@
 }
 
 .dmgBtn-container-mqol button {
-    height: 100% !important;
-    margin: 1px !important;
-    padding: 0;
+  height: 100% !important;
+  margin: 1px !important;
+  padding: 0;
 }
 
 .dmgBtn-container-mqol button > i {
-    font-weight: bold;
-    margin: 0;
+  font-weight: bold;
+  margin: 0;
 }
 
 .dmgBtn-container-mqol .dice-total-full-damage-button {
 	margin-left: 0 !important;
+}
+
+.dmgBtn-container-mqol .dice-total-half-damage-button,
+.dmgBtn-container-mqol .dice-total-double-damage-button
+{
+  font-size: 0.8em !important;
 }
 
 .dmgBtn-container-mqol .dice-total-full-damage-healing-button {
@@ -65,9 +71,9 @@
 }
 
 .dmgBtn-container-mqol {
-    display: flex !important;
-    opacity: 0;
-    transition: opacity 0.2s ease-in-out 0.7s;
+  display: flex !important;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out 0.7s;
 }
 
 .dmgBtn-container-mqol:hover {
