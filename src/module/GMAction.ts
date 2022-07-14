@@ -3,6 +3,7 @@ import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTi
 import { completeItemRoll, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMesssageHandling.js";
 import { Workflow, WORKFLOWSTATES } from "./workflow.js";
+import { bonusCheck } from "./patching.js";
 
 export var socketlibSocket: any = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
@@ -70,8 +71,16 @@ export let setupSocket = () => {
   socketlibSocket.register("ddbglPendingFired", ddbglPendingFired);
   socketlibSocket.register("completeItemRoll", _completeItemRoll);
   socketlibSocket.register("applyEffects", _applyEffects);
+  socketlibSocket.register("bonusCheck", _bonusCheck)
 };
 
+export async function _bonusCheck(data: {actorUuid, result, rollType, selector}) {
+  const tokenOrActor: any = await fromUuid(data.actorUuid);
+  const actor = tokenOrActor?.actor ?? tokenOrActor;
+  const roll = Roll.fromJSON(data.result);
+  if (actor) return await bonusCheck(actor, roll, data.rollType, data.selector);
+  else return null;
+}
 export async function _applyEffects(data: { workflowId: string, targets: string[] }) {
   let result;
   try {
@@ -110,7 +119,7 @@ async function deleteToken(data: { tokenUuid: string }) {
     token.delete();
   }
 }
-export async function deleteItemEffects(data: { targets, origin: string, ignore: string[] }) {
+export async function deleteItemEffects(data: { targets, origin: string, ignore: string[], ignoreTransfer: boolean }) {
   let { targets, origin, ignore } = data;
   for (let idData of targets) {
     let actor = idData.tokenUuid ? MQfromActorUuid(idData.tokenUuid) : idData.actorUuid ? MQfromUuid(idData.actorUuid) : undefined;
@@ -119,7 +128,7 @@ export async function deleteItemEffects(data: { targets, origin: string, ignore:
       warn("could not find actor for ", idData.tokenUuid);
       continue;
     }
-    const effectsToDelete = actor?.effects?.filter(ef => ef.data.origin === origin && !ignore.includes(ef.uuid));
+    const effectsToDelete = actor?.effects?.filter(ef => ef.data.origin === origin && !ignore.includes(ef.uuid) && (!data.ignoreTransfer || ef.data.flags?.dae?.transfer === false));
     if (effectsToDelete?.length > 0) {
       try {
         await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToDelete.map(ef => ef.id));
@@ -193,12 +202,12 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
     });
 }
 
-async function createReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string }) {
+async function createReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any }) {
   createPlayerDamageCard(data);
   return createGMReverseDamageCard(data);
 }
 
-async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: string; flagTags: any }, templateData, tokenIdList, createPromises: boolean = false, showNPC: boolean = true): Promise<Promise<any>[]> 
+async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any }, templateData, tokenIdList, createPromises: boolean = false, showNPC: boolean = true): Promise<Promise<any>[]> 
 {
   const damageList = data.damageList;
   let promises: Promise<any>[] = [];
@@ -210,7 +219,7 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
     let actor;
     if (tokenUuid) {
       tokenDocument = MQfromUuid(tokenUuid);
-      actor = tokenDocument.actor;
+      actor = tokenDocument?.actor ?? tokenDocument ?? MQfromActorUuid(actorUuid);
     }
     else
       actor = MQfromActorUuid(actorUuid)
@@ -223,8 +232,9 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
     let newHP = Math.max(0, oldHP - hpDamage);
     if (createPromises && ["yes", "yesCard", "yesCardNPC"].includes(data.autoApplyDamage)) {
       if ((newHP !== oldHP || newTempHP !== oldTempHP) && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
+        const updateContext = mergeObject({ dhp: -appliedDamage }, data.updateContext ?? {});
         //@ts-ignore
-        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem }, { dhp: -appliedDamage }));
+        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem }, updateContext));
       }
     }
     tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP, damageItem });
@@ -261,7 +271,8 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
       oldTempHP,
       oldHP,
       buttonId: tokenUuid,
-      iconPrefix: (data.autoApplyDamage === "yesCardNPC" && actor.type === "character") ? "*" : ""
+      iconPrefix: (data.autoApplyDamage === "yesCardNPC" && actor.type === "character") ? "*" : "",
+      updateContext: data.updateContext
     };
 
     ["di", "dv", "dr"].forEach(trait => {
@@ -286,7 +297,15 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
   return promises;
 }
 // Fetch the token, then use the tokenData.actor.id
-async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string }) {
+async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any}) {
+  let shouldShow = true;
+  if (configSettings.playerCardDamageDifferent) {
+    shouldShow = false;
+    for (let damageItem of data.damageList) {
+      if (damageItem.totalDamage !== damageItem.appliedDamage) shouldShow = true;
+    }
+  }
+  if (!shouldShow) return;
   if (configSettings.playerDamageCard === "none" ) return;
   let showNPC = ["npcplayerresults", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
   let playerButtons = ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
@@ -329,7 +348,7 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
 }
   
   // Fetch the token, then use the tokenData.actor.id
-async function createGMReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any }) {
+async function createGMReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any }) {
   const damageList = data.damageList;
   let actor: { update: (arg0: { "data.attributes.hp.temp": any; "data.attributes.hp.value": number; "flags.dae.damageApplied": any; damageItem: any[] }) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
   const startTime = Date.now();
@@ -367,17 +386,18 @@ async function createGMReverseDamageCard (data: { damageList: any; autoApplyDama
   log(`createGMReverseDamageCard elapsed: ${Date.now() - startTime}ms`)
 }
 
-async function doClick(event: { stopPropagation: () => void; }, actorUuid: any, totalDamage: any, mult: any) {
+async function doClick(event: { stopPropagation: () => void; }, actorUuid: any, totalDamage: any, mult: any, data: any) {
   let actor = MQfromActorUuid(actorUuid);
   log(`Applying ${totalDamage} mult ${mult} HP to ${actor.name}`);
-  await actor.applyDamage(totalDamage, mult);
+  await actor.applyDamage(totalDamage, mult, data);
   event.stopPropagation();
 }
 
-async function doMidiClick(ev: any, actorUuid: any, newTempHP: any, newHP: any) {
+async function doMidiClick(ev: any, actorUuid: any, newTempHP: any, newHP: any, mult: number, data: any) {
   let actor = MQfromActorUuid(actorUuid);
   log(`Setting HP to ${newTempHP} and ${newHP}`);
-  await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP }, { dhp: (newHP - actor.data.data.attributes.hp.value) });
+  const updateContext = mergeObject({ dhp: (newHP - actor.data.data.attributes.hp.value)}, data.updateContext);
+  await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP }, updateContext);
 }
 
 export let processUndoDamageCard = (message, html, data) => {
@@ -391,7 +411,7 @@ export let processUndoDamageCard = (message, html, data) => {
         if (!actorUuid) return;
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP}`, actor);
-        await actor?.update({ "data.attributes.hp.temp": oldTempHP ?? 0, "data.attributes.hp.value": oldHP ?? 0 }, { dhp: (oldHP ?? 0) - (actor.data.data.attributes.hp.value ?? 0) });
+        await actor?.update({ "data.attributes.hp.temp": oldTempHP ?? 0, "data.attributes.hp.value": oldHP ?? 0 }, { dhp: (oldHP ?? 0) - (actor.data.data.attributes.hp.value ?? 0) }, data.updateContext);
         ev.stopPropagation();
       }
     })();
@@ -404,7 +424,7 @@ export let processUndoDamageCard = (message, html, data) => {
         if (!actorUuid) return;
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP to ${newTempHP} and ${newHP}`);
-        await actor?.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.data.data.attributes.hp.value });
+        await actor?.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.data.data.attributes.hp.value }, data.updateContext );
         ev.stopPropagation();
       }
     })();
@@ -418,7 +438,7 @@ export let processUndoDamageCard = (message, html, data) => {
       (async () => {
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
-        await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP }, { dhp: oldHP - actor.data.data.attributes.hp.value });
+        await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP }, { dhp: oldHP - actor.data.data.attributes.hp.value }, data.updateContext );
         ev.stopPropagation();
       })();
     });
@@ -442,9 +462,9 @@ export let processUndoDamageCard = (message, html, data) => {
 
       const mults = { "-1": -1, "x1": 1, "x0.25": 0.25, "x0.5": 0.5, "x2": 2 };
       if (multiplier === "calc")
-        button.click(async (ev: any) => await doMidiClick(ev, actorUuid, newTempHP, newHP));
+        button.click(async (ev: any) => await doMidiClick(ev, actorUuid, newTempHP, newHP, 1, data));
       else if (mults[multiplier])
-        button.click(async (ev: any) => await doClick(ev, actorUuid, totalDamage, mults[multiplier]));
+        button.click(async (ev: any) => await doClick(ev, actorUuid, totalDamage, mults[multiplier], data));
     });
   })
   return true;

@@ -80,14 +80,3 @@ export function checkCubInstalled() {
     d.render(true);
   }
 }
-
-Hooks.once('libChangelogsReady', function() {
-  //@ts-ignore
-  libChangelogs.register("midi-qol",`
-  Support for Changelogs is being discontinued.
-  
-  If you wish to see the changelog automatically on module update please use Module Management+
-
-  [Full Changelog](https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md)`,
-  "minor")
-})

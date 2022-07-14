@@ -81,7 +81,7 @@ export let readyHooks = async () => {
     concentrationCheckItemDisplayName = i18n("midi-qol.concentrationCheckName");
     const concentrationEffect: ActiveEffect | undefined = getConcentrationEffect(actor)
     if (!concentrationEffect) return true;
-    if (actor.data.data.attributes.hp.value === 0) {
+    if (actor.data.data.attributes.hp.value <= 0) {
       concentrationEffect.delete();
     } else {
       const itemData = duplicate(itemJSONData);
@@ -177,7 +177,7 @@ export let readyHooks = async () => {
           const entity = await fromUuid(removeUuid);
           if (entity) await entity.delete(); // TODO check if this needs to be run as GM
         }
-        await deleteItemEffects({ ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid });
+        await deleteItemEffects({ ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true });
       } catch (err) {
         error("error when attempting to remove concentration ", err)
       }
@@ -185,7 +185,7 @@ export let readyHooks = async () => {
     changeFunc();
   })
 
-  Hooks.on("restCompleted", restManager);
+  // Hooks.on("restCompleted", restManager); I think this means 1.6 is required.
   Hooks.on("dnd5e.restCompleted", restManager);
 
   // Concentration Check is rolled as an item roll so we need an item.
@@ -203,6 +203,7 @@ export function restManager(actor, result) {
   if (!actor || !result) return;
   removeReactionUsed(actor); // remove reaction used for a rest
   removeBonusActionUsed(actor);
+  console.error("rest manager ", actor, result)
   const myExpiredEffects = actor.effects.filter(ef => {
     const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
     return specialDuration && ((result.longRest && specialDuration.includes(`longRest`))
@@ -268,7 +269,7 @@ export function initHooks() {
   Hooks.on("applyActiveEffect", midiCustomEffect);
   // Hooks.on("preCreateActiveEffect", checkImmunity); Disabled in lieu of having effect marked suppressed
   Hooks.on("preUpdateItem", preUpdateItemActorOnUseMacro);
-  Hooks.on("preUpdateActor", preUpdateItemActorOnUseMacro)
+  Hooks.on("preUpdateActor", preUpdateItemActorOnUseMacro);
   Hooks.on("renderItemSheet", (app, html, data) => {
     const element = html.find('input[name="data.chatFlavor"]').parent().parent();
     const criticalElement = html.find('input[name="data.critical.threshold"]');

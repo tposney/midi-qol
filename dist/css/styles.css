@@ -12,18 +12,42 @@
     font-size: 12px
 }
 
+.dice-total.dmgBtn-mqol {
+	transition: color 0.2s ease-in-out 0.7s;
+}
+
+.dice-total.dmgBtn-mqol:hover {
+  color: transparent;
+  transition: color 0.2s ease-in-out 0s;
+}
+
 .dmgBtn-container-mqol {
-	text-align: center;
 	position: absolute;
 	left: 0;
+	top: 0;
 	right: 0;
-	top: -5px;
-	bottom: 4px;
-  padding: 0 1px;
-	display: flex;
-	justify-content: space-between;
-  align-items: center;
+	bottom: 0;
+	align-items: center;
 	z-index: 1;
+}
+
+.dmgBtn-container-mqol button {
+    height: 100% !important;
+    margin: 1px !important;
+    padding: 0;
+}
+
+.dmgBtn-container-mqol button > i {
+    font-weight: bold;
+    margin: 0;
+}
+
+.dmgBtn-container-mqol .dice-total-full-damage-button {
+	margin-left: 0 !important;
+}
+
+.dmgBtn-container-mqol .dice-total-full-damage-healing-button {
+	margin-right: 0 !important;
 }
 
 .column-button-container-mqol {
@@ -40,16 +64,13 @@
   flex-direction: column;
 }
 
-.dmgBtn-container-mqol{
+.dmgBtn-container-mqol {
     display: flex !important;
-  opacity: 0;
-  padding: 0.1rem !important; 
-  justify-content: space-around !important; 
-  transition: opacity 0.2s ease-in-out 0.7s;
-
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out 0.7s;
 }
 
-.dmgBtn-container-mqol:hover{
+.dmgBtn-container-mqol:hover {
   opacity: 1;
   transition: opacity 0.2s ease-in-out 0s;
 }

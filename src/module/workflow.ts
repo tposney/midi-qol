@@ -10,7 +10,7 @@ import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
 import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking, canSee, getSystemCONFIG } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
-import { bonusCheck, procAdvantage, procAutoFail } from "./patching.js";
+import { bonusCheck, collectBonusFlags, procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
@@ -1103,8 +1103,10 @@ export class Workflow {
     for (let target of this.targets) {
       const expiredEffects: (string | null)[] | undefined = target.actor?.effects?.filter(ef => {
         const wasAttacked = this.item?.hasAttack;
-        const wasDamaged = itemHasDamage(this.item) && (this.hitTargets?.has(target) || this.hitTargetsEC.has(target)); //TODO this test will fail for damage only workflows - need to check the damage rolled instead
+        //TODO this test will fail for damage only workflows - need to check the damage rolled instead
         const wasHit = this.hitTargets?.has(target) || this.hitTargetsEC?.has(target);
+        //@ts-ignore token.document
+        const wasDamaged = wasHit && this.damageList && (this.damageList.find(dl => dl.tokenUuid === (target.uuid ?? target.document.uuid) && dl.appliedDamage > 0));
         const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
         if (!specialDuration) return false;
         //TODO this is going to grab all the special damage types as well which is no good.
@@ -1170,7 +1172,10 @@ export class Workflow {
       this.bonusDamageDetail = [];
     }
     if (this.bonusDamageRoll !== null) {
-      if (dice3dEnabled() && configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)) {
+      if (dice3dEnabled()
+        && configSettings.mergeCard
+        && !(configSettings.gmHide3dDice && game.user?.isGM)
+        && !(this.actor?.isNpc && game.settings.get("dice-so-nice", "hideNpcRolls"))) {
         let whisperIds: User[] = [];
         const rollMode = game.settings.get("core", "rollMode");
         if ((configSettings.hideRollDetails !== "none" && game.user?.isGM) || rollMode === "blindroll") {
@@ -1379,7 +1384,7 @@ export class Workflow {
         }
         macroData.speaker = this.speaker;
         macroData.actor = this.actor;
-        macroCommand = macro?.data.command ?? `console.warn('midi-qol | no macro ${name} found')`;
+        macroCommand = macro?.data.command ?? `console.warn("midi-qol | no macro ${name} found")`;
       }
 
       const speaker = this.speaker;
@@ -1438,10 +1443,21 @@ export class Workflow {
       //let searchRe = /<div class="midi-qol-attack-roll">.*?<\/div>/;
       let searchRe = /<div class="midi-qol-attack-roll">[\s\S]*?<div class="end-midi-qol-attack-roll">/
       let options: any = this.attackRoll?.terms[0].options;
-      this.advantage = options.advantage;
-      this.disadvantage = options.disadvantage;
+      //@ts-ignore advantageMode - advantageMode is set when the roll is actually done, options.advantage/disadvantage are what are passed into the roll
+      const advantageMode = this.attackRoll?.options?.advantageMode;
+      if (advantageMode !== undefined) {
+        this.advantage = advantageMode === 1;
+        this.disadvantage = advantageMode === -1;
+      }else {
+        this.advantage = options.advantage;
+        this.disadvantage = options.disadvantage;
+      }
+      // const attackString = this.advantage ? i18n(`${this.systemString}.Advantage`) : this.disadvantage ? i18n(`${this.systemString}.Disadvantage`) : i18n(`${this.systemString}.Attack`)
+      
       const attackString = this.advantage ? i18n(`${this.systemString}.Advantage`) : this.disadvantage ? i18n(`${this.systemString}.Disadvantage`) : i18n(`${this.systemString}.Attack`)
+
       let replaceString = `<div class="midi-qol-attack-roll"><div style="text-align:center" >${attackString}</div>${this.attackRollHTML}<div class="end-midi-qol-attack-roll">`
+      
       content = content.replace(searchRe, replaceString);
       if (this.attackRollCount > 1) {
         const attackButtonRe = /<button data-action="attack">(\[\d*\] )*([^<]+)<\/button>/;
@@ -1890,12 +1906,9 @@ export class Workflow {
           }
         }
         if (isFriendly && this.saveItem.data.data.description.value.includes(i18n("midi-qol.autoFailFriendly"))) {
+          const failure = await new Roll("-1").roll();
           promises.push(new Promise((resolve) => {
-            resolve({
-              total: -1,
-              formula: "1d20",
-              terms: [{ options: { advantage: false, disadvantage: false } }]
-            });
+            resolve(failure);
           }));
         } else if ((!player?.isGM && playerMonksTB) || (player?.isGM && gmMonksTB)) {
           promises.push(new Promise((resolve) => {
@@ -2055,9 +2068,27 @@ export class Workflow {
       if (!result.isBR && !saved) {
         //@ts-ignore
         if (!(result instanceof CONFIG.Dice.D20Roll)) result = CONFIG.Dice.D20Roll.fromJSON(JSON.stringify(result));
-        const newRoll = await bonusCheck(target.actor, result, rollType, "fail")
-        rollTotal = newRoll.total;
-        rollDetail = newRoll;
+        // const newRoll = await bonusCheck(target.actor, result, rollType, "fail")
+        if (collectBonusFlags(target.actor, rollType, "fail").length > 0) {
+          let owner: User | undefined = playerFor(target);
+          if (!owner?.active) owner = game.users?.find((u: User) => u.isGM && u.active);
+          if (owner) {
+            let newRoll;
+            if (owner?.isGM) {
+              newRoll = await bonusCheck(target.actor, result, rollType, "fail")
+            } else {
+              newRoll = await socketlibSocket.executeAsUser("bonusCheck", owner?.id, {
+                actorUuid: target.actor.uuid,
+                result: JSON.stringify(result.toJSON()),
+                rollType,
+                selector: "fail"
+              });
+
+            }
+            rollTotal = newRoll.total;
+            rollDetail = newRoll;
+          }
+        }
         saved = rollTotal >= rollDC;
         const dterm: DiceTerm = rollDetail.terms[0];
         const diceRoll = dterm?.results?.find(result => result.active)?.result ?? (rollDetail.total);
@@ -2712,7 +2743,7 @@ export class DamageOnlyWorkflow extends Workflow {
         this.hitTargets = new Set(this.targets);
         this.hitTargetsEC = new Set();
         this.applicationTargets = new Set(this.targets);
-        this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, this.item, new Set(), { existingDamage: this.damageList, superSavers: new Set(), semiSuperSavers: new Set(), workflow: this })
+        this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, this.item, new Set(), { existingDamage: this.damageList, superSavers: new Set(), semiSuperSavers: new Set(), workflow: this, updateContext: undefined })
         await super._next(WORKFLOWSTATES.ROLLFINISHED);
 
         Workflow.removeWorkflow(this.uuid);

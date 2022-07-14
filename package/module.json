@@ -3,7 +3,7 @@
   "title": "Midi QOL",
   "description": "Automates rolling weapon/spell attacks and applying damage",
   "system": ["dnd5e", "sw5e", "n5e"],
-  "version": "0.9.62",
+  "version": "0.9.63",
   "authors": [{"name": "tposney"}],
   "socket": true,
   "scripts": [],
@@ -83,5 +83,5 @@
   },
   "url": "https://gitlab.com/tposney/midi-qol",
   "manifest": "https://gitlab.com/tposney/midi-qol/raw/master/package/module.json",
-  "download": "https://gitlab.com/tposney/midi-qol/raw/master/package/midi-qol-v0.9.62.zip"
+  "download": "https://gitlab.com/tposney/midi-qol/raw/master/package/midi-qol-v0.9.63.zip"
 }

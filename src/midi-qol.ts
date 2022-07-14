@@ -19,7 +19,7 @@ import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Ho
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow } from './module/workflow.js';
-import { applyTokenDamage, canSee, checkNearby, completeItemRoll, distancePointToken, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getSystemCONFIG, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags } from './module/utils.js';
+import { applyTokenDamage, canSee, checkNearby, completeItemRoll, distancePointToken, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getSystemCONFIG, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags, tokenForActor } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
@@ -154,7 +154,7 @@ Hooks.once('setup', function () {
   if (MQItemMacroLabel === "midi-qol.ItemMacroText") MQItemMacroLabel = "ItemMacro";
   MQDeferMacroLabel = i18n("midi-qol.DeferText");
   if (MQDeferMacroLabel === "midi-qol.DeferText") MQDeferMacroLabel = "[Defer]";
-  
+
   let config = getSystemCONFIG();
 
   if (game.system.id === "dnd5e" || game.system.id === "n5e") {
@@ -168,6 +168,7 @@ Hooks.once('setup', function () {
     config.midiProperties["magiceffect"] = i18n("midi-qol.magicalEffectProp");
     config.midiProperties["concentration"] = i18n("midi-qol.concentrationEffectProp");
     config.midiProperties["toggleEffect"] = i18n("midi-qol.toggleEffectProp");
+    config.midiProperties["selfEffect"] = i18n("midi-qol.selfActiveEffectProp");
 
     config.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
     config.damageResistanceTypes["silver"] = i18n("midi-qol.NonSilverPhysical");
@@ -332,7 +333,8 @@ function setupMidiQOLApi() {
     MQOnUseOptions,
     midiRenderRoll,
     doOverTimeEffect,
-    canSee
+    canSee, 
+    tokenForActor
   };
   globalThis.MidiQOL.actionQueue = new Semaphore();
 }
@@ -528,6 +530,7 @@ function setupMidiFlags() {
   }
 
   midiFlags.push(`flags.midi-qol.optional.NAME.attack.all`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.attack.fail`);
   midiFlags.push(`flags.midi-qol.optional.NAME.damage.all`);
   midiFlags.push(`flags.midi-qol.optional.NAME.check.all`);
   midiFlags.push(`flags.midi-qol.optional.NAME.save.all`);
@@ -547,7 +550,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.OverTime`);
   midiFlags.push("flags.midi-qol.inMotion");
   //@ts-ignore
-  const damageTypes = Object.keys(config.damageTypes); 
+  const damageTypes = Object.keys(config.damageTypes);
   for (let key of damageTypes) {
     midiFlags.push(`flags.midi-qol.absorption.${key}`);
   }
@@ -573,5 +576,44 @@ function setupMidiFlags() {
       return false;
     };
     initDAE().then(value => { if (!value) console.error(`midi-qol | initDae settings failed`) });
+  }
+}
+
+// Revisit to find out how to set execute as GM
+const MQMacros = [
+  {
+    name: "MidiQOL.UpdateHP",
+    commandText: `
+    // Macro Auto created by midi-qol
+    const theActor = await fromUuid(args[0]);
+    if (!theActor || isNaN(args[1])) return;
+    await theActor.update({"data.attributes.hp.value": Number(args[1])}, {onUpdateCalled: true});`
+  }
+
+]
+export function createMidiMacros() {
+  if (game?.user?.isGM) {
+    for (let macroSpec of MQMacros) {
+      let macro = game.macros?.getName(macroSpec.name);
+      while (macro) {
+        macro.delete();
+        macro = game.macros?.getName(macroSpec.name);
+      }
+      const macroData = {
+        _id: null,
+        name: macroSpec.name,
+        type: 'script',
+        author: game.user.id,
+        img: 'icons/svg/dice-target.svg',
+        scope: 'global',
+        command: macroSpec.commandText,
+        folder: null,
+        sort: 0,
+        permission: {
+          default: 0,
+        },
+        flags: {},
+      };
+    }
   }
 }

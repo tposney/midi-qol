@@ -44,7 +44,7 @@ export interface Options {
   fastForwardAbility: boolean | undefined,
 };
 
-function collectBonusFlags(actor, category, detail): any[] {
+export function collectBonusFlags(actor, category, detail): any[] {
   if (!installedModules.get("betterrolls5e")) {
     let useDetail = false;
     const bonusFlags = Object.keys(actor.data.flags["midi-qol"]?.optional ?? [])
@@ -698,8 +698,8 @@ async function checkWounded(actor, update, options, user) {
         await token.toggleEffect(bleeding.icon, { overlay: false, active: needsWounded })
     }
   }
-  if (configSettings.addDead) {
-    const needsDead = hpUpdate === 0;
+  if (configSettings.addDead !== "none") {
+    const needsDead = hpUpdate <= 0;
     if (installedModules.get("dfreds-convenient-effects") && game.settings.get("dfreds-convenient-effects", "modifyStatusEffects") !== "none") {
       const effectName = actor.hasPlayerOwner ? getConvenientEffectsUnconscious().name : getConvenientEffectsDead().name;
       const hasEffect = await ConvenientEffectsHasEffect(effectName, actor.uuid);
@@ -712,7 +712,7 @@ async function checkWounded(actor, update, options, user) {
           if (combatant) await combatant.update({ defeated: needsDead })
         }
         //@ts-ignore
-        await game.dfreds?.effectInterface.toggleEffect(effectName, { overlay: true, uuids: [actor.uuid] });
+        await game.dfreds?.effectInterface.toggleEffect(effectName, { overlay: configSettings.addDead === "overlay", uuids: [actor.uuid] });
       }
     }
     else {

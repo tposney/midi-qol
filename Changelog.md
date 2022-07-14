@@ -1,3 +1,25 @@
+### **midi-qol**0.9.63
+* Added flags.midi-qol.optional.NAME.attack.fail which will trigger if the attack failed - intended for stroke of luck or similar.
+* Fix for indomitable feat so that prompt to use indomitable is displayed on player's client rather than attacker's client.
+* Fix for evasion (superSavers) not working with certain midi-qol settings.
+* Respect Dice So Nice setting to not roll 3d dice for NPCs.
+* Update sample item Deflect Missile.
+  - The item has been configured to consume Ki points as defined by the dnd5e (1.6) monk class advancement. (you will need to edit the item when first applied to the actor setup the ki consumption).
+  - Support firing the missile back if caught. Firing back will consume a Ki point.
+  - If the attacking item has ammunition specified, the ammunition will be used for the return attack, if not the base item will be used. So if you are using ammunition make sure that the ammunition specifies the damage for the ranged weapon attack.
+* Added Arcane Ward to sample items. This uses tempHp to implement the ward. Ward expires on long rest and will be recharged by casting abjuration spells.
+* Added Warding Bond, requires DAE 0.10.21. See DAE readme/changelog for more details. This  item requires the GM damage card to be displayed to work (auto apply damage will auto apply warding bond damage).
+* Re-implemented Hunter's Mark to showcase new DAE 0.10.21 feature - you do not need to use the new one. You must rename to Hunter's Mark when equipped to a character.
+* Added Simple Warding Bond (example item only) to share damage dealt between two actors (requires DAE 0.10.21).
+* When not fast forwarding attack rolls adjust the attack roll advantage/disadvantage flavor to match that selected on the roll dialog.
+* New setting for player damage cards to only show the player damage card if the rolled damage is different to the applied damage.
+* Updated setting for marking actors defeated, you can specify overlay (big icon) or icon (like other status effects)
+* **BREAKING** isDamaged special duration will now only expire if the target actually takes damage from the attack. immunity/damage reduction that reduces the damage to 0 will cause the effect to stay.
+* **BREAKING** Midi property rollOtherDam will now check that the item is set to attunement not required/attuned before applying other damage.
+* **BREAKING** Fixed an error where removing concentration would remove transfer (passive) effects from the actor.
+* Updated ja.json. Thanks @Brother Sharp
+
+
 ### 0.9.62
 * Added an extra macro pass for item macros. damageBonus - this is called when midi is evaluating damage bonus macros (the actor wide bonus damage macros) so that you can have complex bonus damage behaviour for an item as well as for the actor.
   - The macro should return an object like ```{damageRoll: "2d6[acid]+1d8[fire], flavor: "my special damage}```
@@ -9,7 +31,7 @@
 ### 0.9.61
 * Fix for sw5e chat cards.
 * Fix for exploding dice criticals when using ammo.
-* Added optional rule setting to expire attack/hit/action special duration effects as soon as the roll is done, instead of waiting for the damage roll before removing.
+* Added optional rule setting to expire attack/hit/action special duration effects as soon as the roll is done, instead of waiting for the damage roll before removing. Be careful with this since it may break macros that depend on the timing of effect removal.
 * Added damage settings to configure how much vulnerability increases damage or resistance reduces damage - set on the workflow tab. Defaults to dnd5e 2 time and 1/2 damage.
 * Added flags.midi-qol.optional.NAME.save.fail/check.fail/skill.fail which will trigger when a midi initiated (i.e. in response to a weapon/spell use) save/check/skill roll is failed.  Useful for features that allow you to reroll failed saving throws, e.g. indomitable feat. Can be used with all of the other optional.NAME flags to handle resource consumption etc.
   - If you trigger a saving throw through LMRTY/Monks Token bar directly, rather than rolling an item, the optional.NAME.save.fail will not fire.

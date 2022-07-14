@@ -153,7 +153,10 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     const critical = rawRoll >= options.critical;
     gameStats.addAttackRoll({ rawRoll, total, fumble, critical }, this);
   }
-  if (dice3dEnabled() && configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)) {
+  if (dice3dEnabled() 
+      && configSettings.mergeCard 
+      && !(configSettings.gmHide3dDice && game.user?.isGM)
+      && !(this.parent?.isNpc && game.settings.get("dice-so-nice", "hideNpcRolls"))) {
     let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((["details", "hitDamage", "all"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
@@ -357,7 +360,10 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     }
   }
 
-  if (dice3dEnabled() && configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)) {
+  if (dice3dEnabled() 
+      && configSettings.mergeCard 
+      && !(configSettings.gmHide3dDice && game.user?.isGM)
+      && !(this.parent?.isNpc && game.settings.get("dice-so-nice", "hideNpcRolls"))) {
     let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
@@ -461,12 +467,13 @@ async function resolveLateTargeting(item: any) {
   if (wasMaximized) await item.actor.sheet.maximize()
 }
 
-export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event, workflowOptions: { lateTargeting: undefined } }) {
+export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event, workflowOptions: { lateTargeting: undefined, notReaction: false } }) {
   const itemRollStart = Date.now()
   let showFullCard = options?.showFullCard ?? false;
   let createWorkflow = options?.createWorkflow ?? true;
   let versatile = options?.versatile ?? false;
   let configureDialog = options?.configureDialog ?? true;
+  if (options.workflowOptions === undefined) options.workflowOptions = { lateTargeting: undefined, notReaction: false };
   if (!enableWorkflow || createWorkflow === false) {
     return await wrapped(options);
   }
@@ -610,7 +617,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
   let itemUsesReaction = false;
   const hasReaction = await hasUsedReaction(this.actor);
-  if (["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type)) {
+  if (!options.workflowOptions.notReaction && ["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type)) {
     itemUsesReaction = true;
   }
   let inCombat = isInCombat(workflow.actor);
@@ -622,7 +629,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     || configSettings.enforceReactions !== "none") {
     inCombat = isInCombat(workflow.actor);
   }
-  if (checkReactionAOO && !itemUsesReaction && this.hasAttack) {
+  if (!options.workflowOptions.notReaction && checkReactionAOO && !itemUsesReaction && this.hasAttack) {
     let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
     const isTurn = activeCombatants?.includes(workflow.tokenId)
     if (!isTurn && inCombat) itemUsesReaction = true;
@@ -820,7 +827,7 @@ export async function removeConcentration(actor: Actor) {
       const entity = await fromUuid(removeUuid);
       if (entity) await entity.delete(); // TODO check if this needs to be run as GM
     }
-    await deleteItemEffects({ ignore: [], targets: concentrationData.targets, origin: concentrationData.uuid });
+    await deleteItemEffects({ ignore: [], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true });
     // await concentrationEffect.delete();
   } catch (err) {
     error("error when attempting to remove concentration ", err)
@@ -1088,8 +1095,7 @@ export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: s
     conditionFlagToUse = conditionFlagWeapon;
     conditionToUse = workflow.otherDamageItem?.data.data.activation?.condition
   }
-
-  if (workflow.otherDamageItem?.data.flags?.midiProperties?.rollOther) {
+  if (workflow.otherDamageItem?.data.flags?.midiProperties?.rollOther && this.data.data.attunement !== getSystemCONFIG().attunementTypes.REQUIRED) {
     rollOtherDamage = true;
     conditionToUse = workflow.otherDamageItem?.data.data.activation?.condition
     conditionFlagToUse = "activation"

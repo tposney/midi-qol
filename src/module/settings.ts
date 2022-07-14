@@ -33,12 +33,13 @@ const defaultKeyMapping = {
 
 class ConfigSettings {
   // fullAuto: boolean = false;
-  addDead: boolean = false;
+  addDead: string = "none";
   addWounded: number = 0;
   allowUseMacro: boolean = false;
   allowActorUseMacro: boolean = false;
   autoApplyDamage: string = "none";
   playerDamageCard: string = "none";
+  playerCardDamageDifferent: boolean = false;
   hidePlayerDamageCard: boolean = true;
   autoCEEffects: string = "none";
   autoCheckHit: string = "none";
@@ -283,7 +284,7 @@ export let fetchParams = () => {
   //@ts-ignore
   if (configSettings.autoItemEffects === true) configSettings.autoItemEffects = "applyRemove";
   if (configSettings.playerDamageCard === undefined) configSettings.playerDamageCard = "none";
-
+  if (configSettings.playerCardDamageDifferent === undefined) configSettings.playerCardDamageDifferent = true;
   if (configSettings.displayHitResultNumeric === undefined) configSettings.displayHitResultNumeric = false;
   if (configSettings.rollAlternate === undefined) configSettings.rollAlternate = "off";
   //@ts-ignore
@@ -303,7 +304,8 @@ export let fetchParams = () => {
  // migrateExistingSounds();
 
   if (configSettings.addWounded === undefined) configSettings.addWounded = 0;
-  if (configSettings.addDead === undefined) configSettings.addDead = false;
+  if (!configSettings.addDead) configSettings.addDead = "none";
+  if (typeof configSettings.addDead === "boolean" && configSettings.addDead) configSettings.addDead = "overlay"
   if (configSettings.paranoidGM === undefined) configSettings.paranoidGM = false;
   if (typeof configSettings.requiresTargets !== "string") configSettings.requiresTargets = "none";
   if (configSettings.tempHPDamageConcentrationCheck === undefined) configSettings.tempHPDamageConcentrationCheck = false;
@@ -348,6 +350,7 @@ export let fetchParams = () => {
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
   if (configSettings.damageVulnerabilityMultiplier === undefined) configSettings.damageVulnerabilityMultiplier = 2;
   if (configSettings.hidePlayerDamageCard === undefined) configSettings.hidePlayerDamageCard = true;
+  configSettings.hidePlayerDamageCard = false;
   configSettings.quickSettings = true;
   enableWorkflow = Boolean(game.settings.get("midi-qol", "EnableWorkflow"));
   if (debugEnabled > 0) warn("Fetch Params Loading", configSettings);

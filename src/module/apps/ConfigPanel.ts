@@ -83,8 +83,8 @@ export class ConfigPanel extends FormApplication {
       rollSoundOptions: CONFIG.sounds,
       isBetterRolls: installedModules.get("betterrolls5e"),
       rollAlternateOptions: geti18nOptions("RollAlternateOptions"),
-      ConsumeResourceOptions: geti18nOptions("ConsumeResourceOptions")
-
+      ConsumeResourceOptions: geti18nOptions("ConsumeResourceOptions"),
+      AddDeadOptions: geti18nOptions("AddDeadOptions")
     };
 
     if (debugEnabled > 0) warn("Config Panel: getData ", data)
