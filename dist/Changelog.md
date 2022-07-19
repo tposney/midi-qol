@@ -1,4 +1,18 @@
-### **midi-qol**0.9.63
+### 0.9.64
+
+* Added special duration for rolling Initiative to remove an effect.
+* Fixed a bug in export stats for item/actor names that contain a ",".
+* corrected pt-br.json which was causing an error in DAE editing items in pt-br.
+* corrected check for lateTargeting to include all items that have a target that do not have AoE targeting.
+* Reaction now respects the optional "check incapacitated" setting, rather than blanked stopping reactions when hp <= 0.
+* added async function doContentrationCheck(actor: Actor5e, saveDC: number), which will roll a full concnetration check, removing concentration if failed, use via
+```js
+await MidiQOL.doConcentrationCheck(actor, 15);
+```
+* First part of support for 0 cost reaction items. If the activation cost of an item is 0 reaction/reaction damaged the reaction will be available to use even if the target has used it's reaction for the turn and using the item will not flag the actor as having used a reaction. 
+* added workflow.setAttackRoll, workflow.setDamageRoll, workflow.setBonusDamageRoll, setOtherDamageRollworkflow which will set the appropriate roll, the total for the roll and correctly create the HTML for the roll. Mainly for macro writers who want to change the rolls in onUseMacros/Hooks.call.
+
+### 0.9.63
 * Added flags.midi-qol.optional.NAME.attack.fail which will trigger if the attack failed - intended for stroke of luck or similar.
 * Fix for indomitable feat so that prompt to use indomitable is displayed on player's client rather than attacker's client.
 * Fix for evasion (superSavers) not working with certain midi-qol settings.

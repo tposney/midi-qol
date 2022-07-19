@@ -587,7 +587,7 @@ If the item being used for the attack/or to cause damage has the flag (item.data
 
 Reaction processing is much clearer when convenient effects is installed as there is a visual indicator when a reaction has been used.
 
-Reaction processing **REQUIRE** some automation to be enabled. 
+Reaction processing **REQUIRES** some automation to be enabled. 
   - Type "reaction" requires **auto check hits** to be enabled.
   - Type "reaction damaged" requires **auto check hits** (if the damaging item has an attack), **auto check saves** (if the damaging item has a saving throw) and **auto apply damage** to all be enabled. Otherwise the attacked player can roll the item themselves.
 
@@ -710,11 +710,11 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
 * flags.midi-qol.optional.Name.save.all/fail/str/dex/etc	the bonus is added after the save roll. Requires auto fast-forward		
 * flags.midi-qol.optional.Name.label	label to use in the dialog		
 * flags.midi-qol.optional.Name.count	how many uses the effect has (think lucky which has 3), if absent the bonus will be single use (bardic inspiration), turn for once per turn.   
-  **every** - you can use the optional effect on every occurence
-  **reaction** - behaves as a reaction roll, i.e. uses up your reaction
-  **a number** - how many times the effect can be used before expiring
-  **turn** - can be used once per turn (assumes in combat)
-  **@fields** - available if the @field > 0, decrements the @field on use. 
+  - **every** - you can use the optional effect on every occurence
+  - **reaction** - behaves as a reaction roll, i.e. uses up your reaction
+  - **a number** - how many times the effect can be used before expiring
+  - **turn** - can be used once per turn (assumes in combat)
+  - **@fields** - available if the @field > 0, decrements the @field on use. 
   You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
 
 * flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
@@ -862,7 +862,8 @@ The passed workflow is "live" so changes will affect subsequent actions. In part
   * Hooks.call("midi-qol.preApplyDynamicEffects", workflow) - called before applying active effects. If the call returns false the rest of the workflow is marked complete.
   *  Hooks.callAll("midi-qol.RollComplete", workflow); - called after the workflow is completed.
 
-* midi-qol supports a TrapWorkflow, triggered by
+## TrapWorkflow
+midi-qol supports a TrapWorkflow, triggered by
 ```
 new MidiQOL.TrapWorkflow(actor, item, [targets], {x:number, y:number})
 ```
@@ -882,15 +883,10 @@ templateLocation.removeDelay = parseInt(args[3]) || 2;
 new MidiQOL.TrapWorkflow(tactor, item, [token], templateLocation)
 if (trapToken) await trapToken.update({"hidden" : true});
 ```
-
+## DamageOnlyWorkflow
 * midi-qol supports a DamageOnlyWorkflow to support items/spells with special damage rolls. Divine Smite is a good example, the damage depends on whether the target is a fiend/undead. This is my implementation, which assumes it is activated via midi-qol's onUse macro field.
 I have created a spell called "Divine Smite", with no saving throw or damage or attack, (although you can have such things) which has an onUse macro set to Divine Smite, included in the sample items compendium. (see the onUse macro details below). The total damage field passed in is only used in the final display on the apply damage card, the individual damage elements are all taken from the damageRoll.
 
-* midi-qol supports a DummyWorkflow which exists to allow you to create a workflow to call some of the workflow functions and supports two features
-  - async simulateAttack(token: Token) - simulate an attack roll of the workflow item on the specified target, working out pluses/advantage/disadvantage and also setting workflow.expectedSaveRoll to be the expected value of the attack roll.
-  - async simulateSaves(tokens: [Token]). Simulates saving throws for the passed array of tokens, will take into account bonuses/magic resistance/advantage etc. results returned as workflow.saveResults: [{saveRoll: Roll, saveAdvantage: boolean, saveDisadvantage: boolean, expectedSaveRoll: number}]
-  - the simulate functions won't work with BetterRolls
-  
 ```js
 let target = await fromUuid(args[0].hitTargetUuids[0] ?? "");
 let numDice = 1 + args[0].spellLevel;
@@ -911,6 +907,12 @@ The args[0].itemCardId passes the id of the item card that caused the macro to b
 The itemCardId field is used to append the damage result to the item card that rolled the onUse macro (in this case the Divine Smite spell).
 
 You can use this feature to roll custom damage via a macro for any item - just leave the item damage blank and roll the damage in a macro and then pass the itemCardId to the DamageOnlyWorkflow.
+
+## DummyWorkflow
+* midi-qol supports a DummyWorkflow which exists to allow you to create a workflow to call some of the workflow functions and supports two features
+  - async simulateAttack(token: Token) - simulate an attack roll of the workflow item on the specified target, working out pluses/advantage/disadvantage and also setting workflow.expectedSaveRoll to be the expected value of the attack roll.
+  - async simulateSaves(tokens: [Token]). Simulates saving throws for the passed array of tokens, will take into account bonuses/magic resistance/advantage etc. results returned as workflow.saveResults: [{saveRoll: Roll, saveAdvantage: boolean, saveDisadvantage: boolean, expectedSaveRoll: number}]
+  - the simulate functions won't work with BetterRolls
 
 ## OnUse Macro(per Item) and Damage Bonus Macro (actor special traits) fields
 

@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
 import { deleteItemEffects, processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, checkflanking, MQfromActorUuid, getSystemCONFIG } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, checkflanking, MQfromActorUuid, getSystemCONFIG, expireRollEffect, completeItemRoll, doConcentrationCheck } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
@@ -65,7 +65,7 @@ export let readyHooks = async () => {
     ddbglPendingHook(data);
   });
 
-  // Handle updates to the characters HP
+    // Handle updates to the characters HP
   // Handle concentration checks
   Hooks.on("updateActor", async (actor, update, diff, user) => {
     if (user !== game.user?.id) return;
@@ -86,35 +86,8 @@ export let readyHooks = async () => {
     } else {
       const itemData = duplicate(itemJSONData);
       const saveDC = Math.max(10, Math.floor(hpDiff / 2));
-      itemData.data.save.dc = saveDC;
-      itemData.data.save.ability = "con";
-      itemData.data.save.scaling = "flat";
-      itemData.name = concentrationCheckItemDisplayName;
-      // actor took damage and is concentrating....
-      const saveTargets = game.user?.targets;
-      const theTargetToken = getSelfTarget(actor);
-      itemData.data.target.type = "self";
-      const theTarget = theTargetToken instanceof Token ? theTargetToken?.document.id : theTargetToken?.id;
-      if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
-      let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor })
-      if (configSettings.displaySaveDC) {
-        //@ts-ignore 
-        ownedItem.getSaveDC()
-      }
-      try {
-        if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
-          //@ts-ignore
-          // await ownedItem.roll({ vanilla: false, showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false })
-          await globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC, workflowOptions: { lateTargeting: false } }).toMessage();
-        } else {
-          //@ts-ignore
-          await ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: false } })
-        }
-      } finally {
-        if (saveTargets && game.user) game.user.targets = saveTargets;
-      }
+      doConcentrationCheck(actor, saveDC);
     }
-
     return true;
   });
 
@@ -203,7 +176,6 @@ export function restManager(actor, result) {
   if (!actor || !result) return;
   removeReactionUsed(actor); // remove reaction used for a rest
   removeBonusActionUsed(actor);
-  console.error("rest manager ", actor, result)
   const myExpiredEffects = actor.effects.filter(ef => {
     const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
     return specialDuration && ((result.longRest && specialDuration.includes(`longRest`))
@@ -270,6 +242,11 @@ export function initHooks() {
   // Hooks.on("preCreateActiveEffect", checkImmunity); Disabled in lieu of having effect marked suppressed
   Hooks.on("preUpdateItem", preUpdateItemActorOnUseMacro);
   Hooks.on("preUpdateActor", preUpdateItemActorOnUseMacro);
+  Hooks.on("updateCombatant", (combatant, updates, options, user) => {
+    if (game?.user?.id !== user) return true;
+    if (combatant.actor && updates.initiative) expireRollEffect.bind(combatant.actor)("Initiative", "none");
+    return true;
+  });
   Hooks.on("renderItemSheet", (app, html, data) => {
     const element = html.find('input[name="data.chatFlavor"]').parent().parent();
     const criticalElement = html.find('input[name="data.critical.threshold"]');

@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, evalActivationCondition, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTarget, getSelfTargetSet, getSpeaker, getUnitDist, isAutoFastAttack, isAutoFastDamage, isAutoConsumeResource, itemHasDamage, itemIsVersatile, playerFor, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, getConvenientEffectsReaction, getOptionalCountRemainingShortFlag, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, midiRenderRoll, addAdvAttribution, getSystemCONFIG } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
@@ -138,7 +138,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   const minflags = getProperty(this.data.flags, "midi-qol.min") ?? {};
   if ((minflags.attack && (minflags.attack.all || minflags.attack[this.data.data.actionType])) ?? false)
     result = await result.reroll({ minimize: true })
-  workflow.attackRoll = result;
+  await workflow.setAttackRoll(result);
   workflow.ammo = this._ammo;
   result = await processAttackRollBonusFlags.bind(workflow)();
   if (!configSettings.mergeCard) result.toMessage({
@@ -182,8 +182,6 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     error("itemhandling.rollAttack failed")
     return;
   }
-  // workflow.attackRoll = result; already set
-  workflow.attackRollHTML = await midiRenderRoll(result);
   if (["formulaadv", "adv"].includes(configSettings.rollAlternate))
     workflow.attackRollHTML = addAdvAttribution(workflow.attackRollHTML, workflow.attackAdvAttribution)
   if (debugCallTiming) log(`final item.rollAttack():  elapsed ${Date.now() - attackRollStart}ms`);
@@ -304,11 +302,9 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     result = await new Roll(result.formula).roll({ minimize: true });
   // need to do this nonsense since the returned roll _formula has a trailing + for ammo
   result = Roll.fromJSON(JSON.stringify(result.toJSON()))
-  workflow.damageRoll = result;
-  workflow.damageTotal = Number(result.total);
-  workflow.damageRollHTML = await midiRenderRoll(result);
+  await workflow.setDamageRoll(result);
   result = await processDamageRollBonusFlags.bind(workflow)();
-
+  // await workflow.setDamageRoll(result);
   let otherResult: Roll | undefined = undefined;
   workflow.shouldRollOtherDamage = shouldRollOtherDamage.bind(this)(workflow, configSettings.rollOtherDamage, configSettings.rollOtherSpellDamage);
   if (workflow.shouldRollOtherDamage) {
@@ -387,9 +383,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   }
 
 
-  workflow.otherDamageRoll = otherResult;
-  workflow.otherDamageTotal = otherResult?.total;
-  workflow.otherDamageHTML = await midiRenderRoll(otherResult);
+  if (otherResult) await workflow.setOtherDamageRoll(otherResult)
   workflow.bonusDamageRoll = null;
   workflow.bonusDamageHTML = null;
   if (debugCallTiming) log(`item.rollDamage():  elapsed ${Date.now() - damageRollStart}ms`);
@@ -484,7 +478,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const isRangeSpell = ["ft", "m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
-  const shouldCheckLateTargeting = ["weapon", "feat", "spell"].includes(this.data.type) && (options.workflowOptions?.lateTargeting ?? getLateTargeting());
+  const shouldCheckLateTargeting = (this.hasTarget && !this.hasAreaTarget) && (options.workflowOptions?.lateTargeting ?? getLateTargeting());
 
   if (shouldCheckLateTargeting && !isRangeSpell && !isAoESpell) {
 
@@ -617,7 +611,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
   let itemUsesReaction = false;
   const hasReaction = await hasUsedReaction(this.actor);
-  if (!options.workflowOptions.notReaction && ["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type)) {
+  if (!options.workflowOptions.notReaction && ["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type) && this.data.data.activation?.cost > 0) {
     itemUsesReaction = true;
   }
   let inCombat = isInCombat(workflow.actor);

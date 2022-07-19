@@ -1161,9 +1161,7 @@ export class Workflow {
     if (formula === "") return;
     try {
       const roll = await (new Roll(formula, this.actor.getRollData()).evaluate({ async: true }));
-      this.bonusDamageRoll = roll;
-      this.bonusDamageTotal = roll.total;
-      this.bonusDamageHTML = await midiRenderRoll(roll);
+      await this.setBonusDamageRoll(roll);
       this.bonusDamageFlavor = flavor ?? "";
       this.bonusDamageDetail = createDamageList({ roll: this.bonusDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
     } catch (err) {
@@ -2410,7 +2408,7 @@ export class Workflow {
             if (targetEC) targetEC = targetActor.data.data.attributes.ac.EC + bonusAC;
             if (result.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
             if (targetEC) targetEC = targetAC - targetAR;
-            isHit = attackTotal >= targetAC || this.isCritical;
+            isHit = (attackTotal >= targetAC || this.isCritical) && result.name !== "missed";
             if (checkRule("challengeModeArmor")) isHit = this.attackTotal >= targetAC || this.isCritical;
             if (targetEC) isHitEC = checkRule("challengeModeArmor") && this.attackTotal <= targetAC && this.attackTotal >= targetEC;
           }
@@ -2669,6 +2667,28 @@ export class Workflow {
       i++;
     }
   }
+  async setAttackRoll(roll: Roll) {
+      this.attackRoll = roll;
+      this.attackTotal = roll.total ?? 0;
+      this.attackRollHTML = await midiRenderRoll(roll);
+  }
+  async setDamageRoll(roll: Roll) {
+    this.damageRoll = roll;
+    this.damageTotal = roll.total ?? 0;
+    this.damageRollHTML = await midiRenderRoll(roll);
+  }
+  async setBonusDamageRoll(roll: Roll) {
+    this.bonusDamageRoll = roll;
+    this.bonusDamageTotal = roll.total ?? 0;
+    this.bonusDamageHTML = await midiRenderRoll(roll);
+  }
+
+  async setOtherDamageRoll(roll: Roll) {
+    this.otherDamageRoll = roll;
+    this.otherDamageTotal = roll.total ?? 0;
+    this.otherDamageHTML = await midiRenderRoll(roll);
+
+  }
 }
 
 export class DamageOnlyWorkflow extends Workflow {
@@ -2725,8 +2745,7 @@ export class DamageOnlyWorkflow extends Workflow {
         await this.displayHits(whisperCard, configSettings.mergeCard && this.itemCardId);
 
         if (this.actor) { // Hacky process bonus flags
-          this.damageRoll = await processDamageRollBonusFlags.bind(this)();
-          this.damageTotal = this.damageRoll?.total ?? 0;
+          await this.setDamageRoll(await processDamageRollBonusFlags.bind(this)());
           this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
         }
 
@@ -2934,6 +2953,7 @@ export class TrapWorkflow extends Workflow {
     }
   }
 }
+
 export class BetterRollsWorkflow extends Workflow {
   betterRollsHookId: number;
   _roll: any;

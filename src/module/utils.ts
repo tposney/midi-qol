@@ -4,7 +4,7 @@ import { log } from "../midi-qol.js";
 import { BetterRollsWorkflow, DummyWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { itemJSONData, midiFlagTypes, overTimeJSONData } from "./Hooks.js";
+import { concentrationCheckItemDisplayName, itemJSONData, midiFlagTypes, overTimeJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
@@ -841,18 +841,22 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       let savesToUse = (workflow.otherDamageFormula ?? "") !== "" ? undefined : workflow.saves;
       appliedDamage = await newApplyTokenDamageMany(
         [
-          { label: "defaultDamage", 
-          damageDetail: workflow.damageDetail, 
-          damageTotal: workflow.damageTotal, 
-          saves: savesToUse, 
-          superSavers: workflow.superSavers, 
-          semiSuperSavers: workflow.semiSuperSavers },
-          { label: "bonusDamage", 
-          damageDetail: workflow.bonusDamageDetail, 
-          damageTotal: workflow.bonusDamageTotal, 
-          saves: savesToUse,
-          superSavers: workflow.superSavers, 
-          semiSuperSavers: workflow.semiSuperSavers },
+          {
+            label: "defaultDamage",
+            damageDetail: workflow.damageDetail,
+            damageTotal: workflow.damageTotal,
+            saves: savesToUse,
+            superSavers: workflow.superSavers,
+            semiSuperSavers: workflow.semiSuperSavers
+          },
+          {
+            label: "bonusDamage",
+            damageDetail: workflow.bonusDamageDetail,
+            damageTotal: workflow.bonusDamageTotal,
+            saves: savesToUse,
+            superSavers: workflow.superSavers,
+            semiSuperSavers: workflow.semiSuperSavers
+          },
 
         ],
         theTargets,
@@ -1415,7 +1419,7 @@ export async function completeItemRoll(item, options: any = { checkGMstatus: fal
       } else if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process  
         globalThis.BetterRolls.rollItem(theItem, { itemData: item.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: options.saveDC }).toMessage()
       } else {
-        const result = item.roll(options).then(result => {if (!result) resolve(result)});
+        const result = item.roll(options).then(result => { if (!result) resolve(result) });
       }
     })
   } else {
@@ -1954,7 +1958,7 @@ export async function removeTokenCondition(token, condition: string) {
   if (installedModules.get("dfreds-convenient-effects")) {
     //@ts-ignore
     const CEInt = game.dfreds?.effectInterface;
-    if (CEInt.hasEffectApplied(localCondition, token.uuid))
+    if (CEInt.hasEffectApplied(localCondition, token.document.uuid ?? token.uuid))
       await CEInt.removeEffect({ effectName: localCondition, uuid: token.actor.uuid });
     for (let cvLabel of ["Invisible (CV)", "Stealth (CV)"]) {
       if (CEInt.hasEffectApplied(cvLabel, token.actor.uuid))
@@ -2258,7 +2262,7 @@ export async function processAttackRollBonusFlags() { // bound to workflow
   return this.attackRoll;
 }
 
-export async function processDamageRollBonusFlags() { // bound to a workflow
+export async function processDamageRollBonusFlags(): Promise<Roll> { // bound to a workflow
   let damageBonus = "damage.all";
   if (this.item) damageBonus = `damage.${this.item.data.data.actionType}`;
   const optionalFlags = getProperty(this, "actor.data.flags.midi-qol.optional") ?? {};
@@ -2498,10 +2502,10 @@ async function getMagicItemReactions(actor: Actor, triggerType: string): Promise
     for (let magicItem of magicItemActor.items) {
       for (let ownedItem of magicItem.ownedEntries) {
         try {
-        const theItem = await ownedItem.item.data()
-        if (theItem.data.activation.type === triggerType) {
-          items.push(ownedItem);
-        }
+          const theItem = await ownedItem.item.data()
+          if (theItem.data.activation.type === triggerType) {
+            items.push(ownedItem);
+          }
         } catch (err) {
           console.warn("midi-qol | err fetching magic item ", ownedItem, err);
         }
@@ -2513,9 +2517,10 @@ async function getMagicItemReactions(actor: Actor, triggerType: string): Promise
   return items;
 }
 
-function itemReaction(item, triggerType, maxLevel) {
+function itemReaction(item, triggerType, maxLevel, onlyZeroCost) {
   //@ts-ignore activation
   if (item.data.data.activation?.type !== triggerType) return false;
+  if (item.data.data.activation?.cost > 0 && onlyZeroCost) return false;
   if (item.type === "spell") {
     if (configSettings.ignoreSpellReactionRestriction) return true;
     if (item.data.data.preparation.mode === "atwill") return true;
@@ -2531,7 +2536,7 @@ function itemReaction(item, triggerType, maxLevel) {
 export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string, options: any = {}): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
   const noResult = { name: undefined, uuid: undefined, ac: undefined };
   //@ts-ignore attributes
-  if (!target.actor || !target.actor.data.flags || target.actor.data.data.attributes.hp.value <= 0) return noResult;
+  if (!target.actor || !target.actor.data.flags) return noResult;
   if (checkRule("incapacitated")) {
     try {
       enableNotifications(false);
@@ -2541,7 +2546,9 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
     }
   }
 
-  if (await hasUsedReaction(target.actor) && needsReactionCheck(target.actor)) return noResult;
+  // TODO if hasUsedReactions only allow 0 activation cost reactions
+  const usedReaction = await hasUsedReaction(target.actor);
+  // if (usedReaction && needsReactionCheck(target.actor)) return noResult;
   let player = playerFor(target.document ?? target);
   if (getReactionSetting(player) === "none") return noResult;
   if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
@@ -2550,7 +2557,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   enableNotifications(false);
   let reactions;
   try {
-    reactions = target.actor.items.filter(item => itemReaction(item, triggerType, maxLevel));
+    reactions = target.actor.items.filter(item => itemReaction(item, triggerType, maxLevel, usedReaction));
     if (getReactionSetting(player) === "allMI") {
       reactions = reactions.concat(await getMagicItemReactions(target.actor, triggerType));
     }
@@ -2559,14 +2566,16 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
     enableNotifications(true);
   }
 
-  const midiFlags: any = target.actor.data.flags["midi-qol"];
-  reactions = reactions + Object.keys(midiFlags?.optional ?? [])
-    .filter(flag => {
-      if (triggerType !== "reaction" || !midiFlags?.optional[flag].ac) return false;
-      if (!midiFlags?.optional[flag].count) return true;
-      return getOptionalCountRemainingShortFlag(target.actor, flag) > 0;
-    }).length
-
+  // if (usedReaction) return noResult;
+  if (!usedReaction) {
+    const midiFlags: any = target.actor.data.flags["midi-qol"];
+    reactions = reactions + Object.keys(midiFlags?.optional ?? [])
+      .filter(flag => {
+        if (triggerType !== "reaction" || !midiFlags?.optional[flag].ac) return false;
+        if (!midiFlags?.optional[flag].count) return true;
+        return getOptionalCountRemainingShortFlag(target.actor, flag) > 0;
+      }).length
+  }
   if (reactions <= 0) return noResult;
   const promptString = triggerType === "reactiondamage" ? "midi-qol.reactionFlavorDamage" : "midi-qol.reactionFlavorAttack";
   let chatMessage;
@@ -2635,14 +2644,15 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
   const target: Token = MQfromUuid(tokenUuid);
   const actor: Actor | null = target.actor;
   if (!actor) return;
-  if (await hasUsedReaction(actor) && needsReactionCheck(actor)) return false;
+  const usedReaction = await hasUsedReaction(actor);
+  // if ( usedReaction && needsReactionCheck(actor)) return false;
   const midiFlags: any = getProperty(actor, "data.flags.midi-qol");
   let result;
   let reactionItems;
   const maxLevel = maxCastLevel(target.actor);
   enableNotifications(false);
   try {
-    reactionItems = actor.items.filter(item => itemReaction(item, triggerType, maxLevel));
+    reactionItems = actor.items.filter(item => itemReaction(item, triggerType, maxLevel, usedReaction));
     if (getReactionSetting(game?.user) === "allMI")
       reactionItems = reactionItems.concat(await getMagicItemReactions(actor, triggerType));
   } finally {
@@ -2658,6 +2668,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
     warn("prompt reactions reaction processing returned after ", endTime - startTime, result)
     if (result.uuid) return result; //TODO look at multiple choices here
   }
+  if (usedReaction) return { name: "None" };
   if (!midiFlags) return { name: "None" };
   const bonusFlags = Object.keys(midiFlags?.optional ?? {})
     .filter(flag => {
@@ -2723,7 +2734,7 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
       dialog.close();
       // options = mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStatus: false}, {overwrite: true});
       options.lateTargeting = false;
-      const itemRollOptions = mergeObject(options, { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, checkGMStatus: false, targetUuids: [triggerTokenUuid]});
+      const itemRollOptions = mergeObject(options, { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, checkGMStatus: false, targetUuids: [triggerTokenUuid] });
       await completeItemRoll(item, itemRollOptions);
       actor.prepareData();
       resolve({ name: item.name, uuid: item.uuid })
@@ -3156,7 +3167,7 @@ export async function asyncHooksCall(hook, ...args) {
   return true;
 }
 
-export function addAdvAttribution(html: string, advAttribution: any = undefined) {
+export function addAdvAttribution(html: any, advAttribution: any = undefined) {
   // <section class="tooltip-part">
   let advHtml: string = "";
   if (advAttribution && Object.keys(advAttribution).length > 0) {
@@ -3470,7 +3481,42 @@ export function getSystemCONFIG(): any {
 
 export function tokenForActor(actor): Token | undefined {
   const tokens = actor.getActiveTokens();
-  if ( !tokens.length ) return undefined;
+  if (!tokens.length) return undefined;
   const controlled = tokens.filter(t => t._controlled);
   return controlled.length ? controlled.shift() : tokens.shift();
+}
+
+
+export async function doConcentrationCheck(actor, saveDC) {
+  const itemData = duplicate(itemJSONData);
+  let result;
+  itemData.data.save.dc = saveDC;
+  itemData.data.save.ability = "con";
+  itemData.data.save.scaling = "flat";
+  itemData.name = concentrationCheckItemDisplayName;
+  // actor took damage and is concentrating....
+  const saveTargets = game.user?.targets;
+  const theTargetToken = getSelfTarget(actor);
+  itemData.data.target.type = "self";
+  const theTarget = theTargetToken instanceof Token ? theTargetToken?.document.id : theTargetToken?.id;
+  if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
+  let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor })
+  if (configSettings.displaySaveDC) {
+    //@ts-ignore 
+    ownedItem.getSaveDC()
+  }
+  try {
+    if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.data.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
+      //@ts-ignore
+      // await ownedItem.roll({ vanilla: false, showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false })
+      await globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.data, vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC, workflowOptions: { lateTargeting: false } }).toMessage();
+    } else {
+      //@ts-ignore
+      result = await completeItemRoll(ownedItem, { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: false } })
+      // await ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: false } })
+    }
+  } finally {
+    if (saveTargets && game.user) game.user.targets = saveTargets;
+    return result;
+  }
 }

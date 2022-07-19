@@ -494,12 +494,12 @@ async function registerTests() {
             await ceInterface.addEffect({ effectName: "Paralyzed", uuid: actor.uuid });
             assert.ok(await ceInterface.hasEffectApplied("Paralyzed", actor?.uuid));
             const theEffect: ActiveEffect | undefined = actor.effects.find(ef => ef.data.label === "Paralyzed");
-            assert(theEffect);
-            assert(!theEffect?.data.disabled);
+            assert.ok(theEffect);
+            assert.ok(!theEffect?.data.disabled);
             await actor.update({ "data.traits.ci.value": ["paralyzed"] });
-            assert(theEffect?.data.disabled);
+            assert.ok(theEffect?.data.disabled);
             await actor.update({ "data.traits.ci.value": [] });
-            assert(!theEffect?.data.disabled);
+            assert.ok(!theEffect?.data.disabled);
             await ceInterface.removeEffect({ effectName: "Paralyzed", uuid: actor.uuid });
             assert.ok(!(await ceInterface.hasEffectApplied("Paralyzed", actor?.uuid)));
 
