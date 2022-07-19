@@ -1,5 +1,4 @@
 ### 0.9.64
-
 * Added special duration for rolling Initiative to remove an effect.
 * Fixed a bug in export stats for item/actor names that contain a ",".
 * corrected pt-br.json which was causing an error in DAE editing items in pt-br.
