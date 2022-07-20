@@ -128,7 +128,7 @@ export async function deleteItemEffects(data: { targets, origin: string, ignore:
       warn("could not find actor for ", idData.tokenUuid);
       continue;
     }
-    const effectsToDelete = actor?.effects?.filter(ef => ef.data.origin === origin && !ignore.includes(ef.uuid) && (!data.ignoreTransfer || ef.data.flags?.dae?.transfer === false));
+    const effectsToDelete = actor?.effects?.filter(ef => ef.data.origin === origin && !ignore.includes(ef.uuid) && (!data.ignoreTransfer || ef.data.flags?.dae?.transfer !== true));
     if (effectsToDelete?.length > 0) {
       try {
         await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToDelete.map(ef => ef.id));

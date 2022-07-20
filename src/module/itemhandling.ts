@@ -1,4 +1,4 @@
-import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming } from "../midi-qol.js";
+import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming, allAttackTypes } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
 import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG } from "./utils.js";
@@ -156,7 +156,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   if (dice3dEnabled() 
       && configSettings.mergeCard 
       && !(configSettings.gmHide3dDice && game.user?.isGM)
-      && !(this.parent?.isNpc && game.settings.get("dice-so-nice", "hideNpcRolls"))) {
+      && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"))) {
     let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((["details", "hitDamage", "all"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
@@ -359,7 +359,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   if (dice3dEnabled() 
       && configSettings.mergeCard 
       && !(configSettings.gmHide3dDice && game.user?.isGM)
-      && !(this.parent?.isNpc && game.settings.get("dice-so-nice", "hideNpcRolls"))) {
+      && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"))) {
     let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
@@ -478,7 +478,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const isRangeSpell = ["ft", "m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
-  const shouldCheckLateTargeting = (this.hasTarget && !this.hasAreaTarget) && (options.workflowOptions?.lateTargeting ?? getLateTargeting());
+  const shouldCheckLateTargeting = (allAttackTypes.includes(this.data.data.actionType) || (this.hasTarget && !this.hasAreaTarget)) && (options.workflowOptions?.lateTargeting ?? getLateTargeting());
 
   if (shouldCheckLateTargeting && !isRangeSpell && !isAoESpell) {
 

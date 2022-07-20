@@ -8,7 +8,7 @@ import { activationConditionToUse, selectTargets, shouldRollOtherDamage, showIte
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking, canSee, getSystemCONFIG } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking, canSee, getSystemCONFIG, tokenForActor } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -783,7 +783,14 @@ export class Workflow {
           const hasCE = installedModules.get("dfreds-convenient-effects")
           //@ts-ignore
           const ceEffect = hasCE ? game.dfreds.effects.all.find(e => e.name === theItem?.name) : undefined;
+          const ceTargetEffect = ceEffect && !ceEffect?.flags.dae?.selfTarget;
+          const ceSelfEffect = ceEffect && ceEffect?.flags.dae?.selfTarget;
           const hasItemEffect = this.hasDAE && theItem?.effects?.some(ef => ef.data?.transfer === false);
+          const selfEffects = theItem.effects.filter(ef => getProperty(ef.data, "flags.dae.selfTarget") && !getProperty(ef.data, "flags.dae.transfer"));
+          const targetEffects = theItem.effects.filter(ef => !getProperty(ef.data, "flags.dae.selfTarget") && !getProperty(ef.data, "flags.dae.transfer"));
+          const hasItemTargetEffects = hasItemEffect && targetEffects.length > 0;
+          const hasItemSelfEffects = hasItemEffect && selfEffects.length > 0;
+          let anyActivationTrue = false;
 
           if (!this.forceApplyEffects) {
             this.applicationTargets = new Set();
@@ -793,38 +800,68 @@ export class Workflow {
               // TODO EC add in all EC targets that took damage
             } else this.applicationTargets = this.targets;
           }
-          for (let token of this.applicationTargets) {
-            let applyCondition = true;
-            if (getProperty(theItem, "data.flags.midi-qol.effectActivation")) {
-              applyCondition = evalActivationCondition(this, getProperty(theItem, "data.data.activation.condition") ?? "", token);
-            }
 
-            if (applyCondition || this.forceApplyEffects) {
-              if (hasItemEffect && (!ceEffect || ["none", "both", "itempri"].includes(useCE))) {
-                await globalThis.DAE.doEffects(theItem, true, [token], { toggleEffect: this.item?.data.flags.midiProperties?.toggleEffect, whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions })
-                if (!this.forceApplyEffects && configSettings.autoItemEffects !== "applyLeave") await this.removeEffectsButton();
-              }
-              if (ceEffect && theItem && token.actor) {
-                if (["both", "cepri"].includes(useCE) || (useCE === "itempri" && !hasItemEffect)) {
-                  const metadata = this.getMacroData();
-                  if (this.item?.data.flags.midiProperties?.toggleEffect) {
-                    //@ts-ignore
-                    await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
-                  } else {
-                    // Check stacking status
-                    //@ts-ignore
-                    if ((ceEffect.flags.dae?.stackable ?? "none") === "none" && game.dfreds.effectInterface?.hasEffectApplied(theItem.name, token.actor.uuid)) {
+          if (hasItemTargetEffects || ceTargetEffect) {
+            for (let token of this.applicationTargets) {
+              let applyCondition = true;
+              if (getProperty(theItem, "data.flags.midi-qol.effectActivation"))
+                applyCondition = evalActivationCondition(this, getProperty(theItem, "data.data.activation.condition") ?? "", token);
+              anyActivationTrue = anyActivationTrue || applyCondition;
+              if (applyCondition || this.forceApplyEffects) {
+                if (hasItemTargetEffects && (!ceTargetEffect || ["none", "both", "itempri"].includes(useCE))) {
+                  await globalThis.DAE.doEffects(theItem, true, [token], { toggleEffect: this.item?.data.flags.midiProperties?.toggleEffect, whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions, selfEffects: false })
+                  if (!this.forceApplyEffects && configSettings.autoItemEffects !== "applyLeave") await this.removeEffectsButton();
+                }
+                if (ceTargetEffect && theItem && token.actor) {
+                  if (["both", "cepri"].includes(useCE) || (useCE === "itempri" && !hasItemTargetEffects)) {
+                    const metadata = this.getMacroData();
+                    if (this.item?.data.flags.midiProperties?.toggleEffect) {
                       //@ts-ignore
-                      await game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
+                      await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
+                    } else {
+                      // Check stacking status
+                      //@ts-ignore
+                      if ((ceEffect.flags.dae?.stackable ?? "none") === "none" && game.dfreds.effectInterface?.hasEffectApplied(theItem.name, token.actor.uuid)) {
+                        //@ts-ignore
+                        await game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
+                      }
+                      //@ts-ignore
+                      await game.dfreds.effectInterface?.addEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
                     }
-                    //@ts-ignore
-                    await game.dfreds.effectInterface?.addEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
                   }
                 }
               }
             }
           }
+          // anyActivaiton is true for no activation condition or true if any of the token conditions matched.
+          anyActivationTrue = !getProperty(theItem, "data.flags.midi-qol.effectActivation") 
+            || (getProperty(theItem, "data.data.activation.condition") !== "" ? anyActivationTrue : true);
+          if (this.applicationTargets.size > 0 && anyActivationTrue && (hasItemSelfEffects || ceSelfEffect)) {
+
+            if (hasItemSelfEffects && (!ceSelfEffect || ["none", "both", "itempri"].includes(useCE))) {
+              await globalThis.DAE.doEffects(theItem, true, [tokenForActor(this.actor)], { toggleEffect: this.item?.data.flags.midiProperties?.toggleEffect, whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions, selfEffects: true })
+            }
+            if (ceSelfEffect && theItem && this.actor) {
+              if (["both", "cepri"].includes(useCE) || (useCE === "itempri" && !hasItemSelfEffects)) {
+                const metadata = this.getMacroData();
+                if (this.item?.data.flags.midiProperties?.toggleEffect) {
+                  //@ts-ignore
+                  await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuid: this.actor.uuid, origin: theItem?.uuid, metadata });
+                } else {
+                  // Check stacking status
+                  //@ts-ignore
+                  if ((ceEffect.flags.dae?.stackable ?? "none") === "none" && game.dfreds.effectInterface?.hasEffectApplied(theItem.name, this.actor.uuid)) {
+                    //@ts-ignore
+                    await game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: this.actor.uuid, origin: theItem?.uuid, metadata });
+                  }
+                  //@ts-ignore
+                  await game.dfreds.effectInterface?.addEffect({ effectName: theItem.name, uuid: this.actor.uuid, origin: theItem?.uuid, metadata });
+                }
+              }
+            }
+          } 
         }
+
         if (debugCallTiming) log(`applyActiveEffects elapsed ${Date.now() - applyDynamicEffectsStartTime}ms`)
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
@@ -1446,16 +1483,16 @@ export class Workflow {
       if (advantageMode !== undefined) {
         this.advantage = advantageMode === 1;
         this.disadvantage = advantageMode === -1;
-      }else {
+      } else {
         this.advantage = options.advantage;
         this.disadvantage = options.disadvantage;
       }
       // const attackString = this.advantage ? i18n(`${this.systemString}.Advantage`) : this.disadvantage ? i18n(`${this.systemString}.Disadvantage`) : i18n(`${this.systemString}.Attack`)
-      
+
       const attackString = this.advantage ? i18n(`${this.systemString}.Advantage`) : this.disadvantage ? i18n(`${this.systemString}.Disadvantage`) : i18n(`${this.systemString}.Attack`)
 
       let replaceString = `<div class="midi-qol-attack-roll"><div style="text-align:center" >${attackString}</div>${this.attackRollHTML}<div class="end-midi-qol-attack-roll">`
-      
+
       content = content.replace(searchRe, replaceString);
       if (this.attackRollCount > 1) {
         const attackButtonRe = /<button data-action="attack">(\[\d*\] )*([^<]+)<\/button>/;
@@ -2668,9 +2705,9 @@ export class Workflow {
     }
   }
   async setAttackRoll(roll: Roll) {
-      this.attackRoll = roll;
-      this.attackTotal = roll.total ?? 0;
-      this.attackRollHTML = await midiRenderRoll(roll);
+    this.attackRoll = roll;
+    this.attackTotal = roll.total ?? 0;
+    this.attackRollHTML = await midiRenderRoll(roll);
   }
   async setDamageRoll(roll: Roll) {
     this.damageRoll = roll;

@@ -42,22 +42,7 @@ export let readyHooks = async () => {
       return specialDuration?.includes("isMoved");
     }) ?? [];
     if (expiredEffects.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", expiredEffects.map(ef => ef.id), { "expiry-reason": "midi-qol:isMoved" });
-    // Check for marked token moving
-    const markedEffects = actor.effects.filter(ef => ef.data.changes.some(c => c.key === "flags.midi-qol.marked"));
-    if (markedEffects.length > 0) {
-      markedEffects.forEach(ef => {
-        if (ef.data.origin) {
-          const sourceItem = MQfromUuid(ef.data.origin);
-          if (sourceItem) {
-            const sourceActor = sourceItem.parent;
-            if (sourceActor) {
-              // find reaction items that are designated as mark moved
-            }
-          }
-        }
-      })
-    }
-  })
+  });
 
   Hooks.on("targetToken", debounce(checkflanking, 150));
 
@@ -111,9 +96,7 @@ export let readyHooks = async () => {
     let gmToUse = game.users?.find(u => u.isGM && u.active);
     if (gmToUse?.id !== game.user?.id) return;
     if (!(effect.parent instanceof CONFIG.Actor.documentClass)) return;
-
     let changeFunc = async () => {
-
       const checkConcentration = globalThis.MidiQOL?.configSettings()?.concentrationAutomation;
       if (!checkConcentration) return;
       let concentrationLabel: any = i18n("midi-qol.Concentrating");

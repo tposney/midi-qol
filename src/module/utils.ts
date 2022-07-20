@@ -7,9 +7,9 @@ import { installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName, itemJSONData, midiFlagTypes, overTimeJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
-import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
+import {  OnUseMacros } from "./apps/Item.js";
 import { Options } from "./patching.js";
-import { EndOfLineState } from "typescript";
+import { SETUP_VIEWS } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/constants.mjs";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -1812,7 +1812,8 @@ export async function addConcentration(options: { workflow: Workflow }) {
     statusEffect = CONFIG.statusEffects.find(se => se.id === "Convenient Effect: Concentrating");
   }
   if (!statusEffect && installedModules.get("combat-utility-belt")) {
-    statusEffect = CONFIG.statusEffects.find(se => se.id === "combat-utility-belt.concentrating" || se.id === "combat-utility-belt.concentration");
+    const conditionName = game.settings.get("combat-utility-belt", "concentratorConditionName")
+    statusEffect = CONFIG.statusEffects.find(se => se.id.startsWith("combat-utility-belt") && se.label == conditionName);
   }
   if (statusEffect) { // found a cub or convenient status effect.
     const itemDuration = item?.data.data.duration;
@@ -1835,6 +1836,8 @@ export async function addConcentration(options: { workflow: Workflow }) {
     }
     statusEffect.origin = item?.uuid
     setProperty(statusEffect.flags, "midi-qol.isConcentration", statusEffect.origin);
+    setProperty(statusEffect.flags, "dae.transfer", false);
+    setProperty(statusEffect, "data.transfer", false);
 
     const existing = selfTarget.actor?.effects.find(e => e.getFlag("core", "statusId") === statusEffect.id);
     if (!existing) {
@@ -1859,7 +1862,10 @@ export async function addConcentration(options: { workflow: Workflow }) {
       icon: itemJSONData.img,
       label: concentrationName,
       duration: {},
-      flags: { "midi-qol": { isConcentration: item?.uuid } }
+      flags: {
+        "midi-qol": { isConcentration: item?.uuid },
+        "dae": { transfer: false }
+      }
     }
     if (installedModules.get("dae")) {
       const convertedDuration = globalThis.DAE.convertDuration(item.data.data.duration, inCombat);
@@ -2896,7 +2902,8 @@ export function getConcentrationEffect(actor): ActiveEffect | undefined {
   } else if (game.modules.get("combat-utility-belt")?.active) {
     concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
   }
-  return actor.effects.contents.find(i => i.data.label === concentrationLabel);
+  const result = actor.effects.contents.find(i => i.data.label === concentrationLabel);
+  return result;
 }
 
 function mySafeEval(expression: string, sandbox: any) {
