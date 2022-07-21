@@ -8,6 +8,7 @@
   - The activationCondition will be considered true (for selfTarget effects) if it evaluated true for any of the targets, the require activation condition setting for active effects applies to selfTargetEffects.
   - This means an item can have a mix of effects, some applied to the targets and some to the actor using the item, by having more than one effect on the item you can mix and match self target versus ordinary effects.
   - Convenient effects can be marked self target if you wish and will behave as you might expect.
+  -  If the item only has effects that targets user of the item, you can continue setting target self in the item details, no need to change.
 
 ### 0.9.64
 * Added special duration for rolling Initiative to remove an effect.
