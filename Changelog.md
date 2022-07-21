@@ -1,3 +1,6 @@
+### 0.9.66
+* Fix for new Hunter's Mark.
+
 ### 0.9.65
 * updated Arcane Ward that does not use temphp to manage the ward - requires DAE 0.10.24. The modification to damage is applied AFTER the damage card is created, so will not include the ward damage reduction.
 * Fix for concentration removal not expiring convenient effects.
