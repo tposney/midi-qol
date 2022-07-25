@@ -313,9 +313,15 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
     if (item?.hasAttack && getProperty(targetActor.data, `flags.midi-qol.DR.${item?.data.data.actionType}`)) {
       DRAll += (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.${item?.data.data.actionType}`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
     }
-    const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["mgc"]);
+    // const magicalDamage = (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["mgc"]);
+    let magicalDamage = item?.data.data.properties?.mgc || item?.data.flags.midiProperties?.magicdam;
+    magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && item?.data.data.attackBonus > 0);
+    magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && item?.data.type !== "weapon");
+    magicalDamage = magicalDamage || (configSettings.requireMagical === "nonspell" && item?.data.type === "spell");
+
     const silverDamage = magicalDamage || (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["sil"]);
     const adamantineDamage = magicalDamage || (item?.type !== "weapon" || item?.data.data.attackBonus > 0 || item?.data.data.properties["ada"]);
+    const physicalDamage = !magicalDamage;
 
     let AR = 0; // Armor reduction for challenge mode armor etc.
     const ac = targetActor.data.data.attributes.ac;
@@ -382,12 +388,12 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
           nonAdamantineDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
         }
-        if (DRType === 0 && !physicalDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(targetActor.data, `flags.midi-qol.DR.physical`)) {
+        if (DRType === 0 && !physicalDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && physicalDamage && getProperty(targetActor.data, `flags.midi-qol.DR.physical`)) {
           const DR = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.physical`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
           physicalDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
         }
-        if (DRType === 0 && !nonPhysicalDRUsed && !["bludgeoning", "slashing", "piercing"].includes(type) && getProperty(targetActor.data, `flags.midi-qol.DR.non-physical`)) {
+        if (DRType === 0 && !nonPhysicalDRUsed && !["bludgeoning", "slashing", "piercing"].includes(type) && !physicalDamage &&  getProperty(targetActor.data, `flags.midi-qol.DR.non-physical`)) {
           const DR = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.non-physical`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
           nonPhysicalDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);

@@ -93,7 +93,7 @@
     "gmLateTargeting": false,
     "lateTargeting": false,
     "addWounded": 50,
-    "addDead": true,
+    "addDead": "overlay",
     "convenientEffectsReaction": "Reaction",
     "fixStickyKeys": true,
     "autoFailSavesFriendly": false,

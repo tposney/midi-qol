@@ -1,3 +1,8 @@
+### 0.9.67 
+* Fix for damage reduction calculations for magical/non-magical/physical cases.
+* Fix for sample settings "addDead" in full auto/full manual sample comfigs.
+* Alternate version of Arcane Ward that uses a resource to store the ward strength/max.
+
 ### 0.9.66
 * Fix for new Hunter's Mark.
 
