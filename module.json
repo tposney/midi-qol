@@ -1,23 +1,43 @@
 {
-  "name": "{{name}}",
+  "id": "{{name}}",
   "title": "{{title}}",
   "description": "{{description}}",
-  "system": ["dnd5e", "sw5e", "n5e"],
+  "systems": [
+    {
+      "id": "dnd5e",
+      "type": "system",
+      "compatibility": {
+        "minimum": "2.0.0",
+        "verified": "2.0.0-"
+      }
+    },
+    {
+      "id": "sw5e",
+      "type": "system",
+      "compatibility": {
+        "minimum": "1.5.0",
+        "verified": "1.5.0-"
+      }
+    },
+    {
+      "id": "n5e",
+      "type": "system"
+    }
+  ],
   "version": "{{version}}",
   "authors": [{"name": "tposney"}],
   "socket": true,
   "scripts": [],
   "esmodules": ["src/midi-qol.js"],
   "styles": ["css/styles.css"],
-  "dependencies": [
-    {
-    "name": "socketlib", "type": "module"
+  "relationships": { "requires": 
+    [{
+    "id": "socketlib", "type": "module"
     },
     {
-    "name": "lib-wrapper", "type": "module"
-    }
-
-  ],
+    "id": "lib-wrapper", "type": "module"
+    }]
+  },
   "packs": [
     {
       "name": "midiqol-sample-items",
@@ -73,15 +93,16 @@
   "minimumCoreVersion": "9",
   "compatibleCoreVersion": "9",
   "compatibility": {
-    "minimum": 9,
-    "verified": 9,
-    "maximum": 9
+    "minimum": 10,
+    "verified": 10,
+    "maximum": 10
   },
   "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",
   "flags": {
     "allowBugReporter": true
   },
   "url": "https://gitlab.com/tposney/midi-qol",
-  "manifest": "https://gitlab.com/tposney/midi-qol/raw/master/package/module.json",
-  "download": "https://gitlab.com/tposney/midi-qol/raw/master/package/midi-qol-v{{version}}.zip"
+  "manifest": "https://gitlab.com/tposney/midi-qol/raw/v10/package/module.json",
+  "download": "https://gitlab.com/tposney/midi-qol/raw/v10/package/midi-qol-v{{version}}.zip",
+  "changelog": "https://gitlab.com/tposney/midi-qol/raw/v10/Changelog.md"
 }

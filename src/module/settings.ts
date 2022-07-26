@@ -173,30 +173,45 @@ export function collectSettingData() {
   data.flags["exportSource"] = {
     system: game.system.id,
     //@ts-ignore
-    coreVersion: game.version ?? game.data?.version,
-    systemVersion: game.system.data.version
+    coreVersion: game.version ?? game?.version,
+    //@ts-ignore version v10
+    systemVersion: game.system.version
   };
   data.flags["modules"] = {
-    abouttimeVersion: game.modules.get("about-time")?.data.version,
-    betterRollsVersion: game.modules.get("betterrolls5e")?.data.version,
-    cubVersion: game.modules.get("combat-utility-belt")?.data.version,
-    condvisVersion: game.modules.get("conditional-visibility")?.data.version,
-    daeVersion: game.modules.get("dae")?.data.version,
-    DSNversion: game.modules.get("dice-so-nice")?.data.version,
-    dndhelpersVersions: game.modules.get("dnd5e-helpers")?.data.version,
-    itemMacroVersion: game.modules.get("itemacro")?.data.version,
-    lmrtfyVersion: game.modules.get("lmrtfy")?.data.version,
-    midiQolVersion: game.modules.get("midi-qol")?.data.version,
-    monksVersion: game.modules.get("monks-tokenbar")?.data.version,
-    socketlibVersion: game.modules.get("socketlib")?.data.version,
-    simpleCalendarVersion: game.modules.get("foundryvtt-simple-calendar")?.data.version,
-    timesUpVersion: game.modules.get("times-up")?.data.version
+    //@ts-ignore version v10
+    abouttimeVersion: game.modules.get("about-time")?.version,
+    //@ts-ignore version v10
+    betterRollsVersion: game.modules.get("betterrolls5e")?.version,
+    //@ts-ignore version v10
+    cubVersion: game.modules.get("combat-utility-belt")?.version,
+    //@ts-ignore version v10
+    condvisVersion: game.modules.get("conditional-visibility")?.version,
+    //@ts-ignore version v10
+    daeVersion: game.modules.get("dae")?.version,
+    //@ts-ignore version v10
+    DSNversion: game.modules.get("dice-so-nice")?.version,
+    //@ts-ignore version v10
+    dndhelpersVersions: game.modules.get("dnd5e-helpers")?.version,
+    //@ts-ignore version v10
+    itemMacroVersion: game.modules.get("itemacro")?.version,
+    //@ts-ignore version v10
+    lmrtfyVersion: game.modules.get("lmrtfy")?.version,
+    //@ts-ignore version v10
+    midiQolVersion: game.modules.get("midi-qol")?.version,
+    //@ts-ignore version v10
+    monksVersion: game.modules.get("monks-tokenbar")?.version,
+    //@ts-ignore version v10
+    socketlibVersion: game.modules.get("socketlib")?.version,
+    //@ts-ignore version v10
+    simpleCalendarVersion: game.modules.get("foundryvtt-simple-calendar")?.version,
+    //@ts-ignore version v10
+    timesUpVersion: game.modules.get("times-up")?.version
   };
   data.flags["all-modules"] = 
   //@ts-ignore
     (new Collection(game.modules).filter(m=>m.active)).map(m => {
       //@ts-ignore
-      const mdata: any = duplicate(m.data);
+      const mdata: any = m;
       return {
         name: mdata.name,
         title: mdata.title,
@@ -350,7 +365,7 @@ export let fetchParams = () => {
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
   if (configSettings.damageVulnerabilityMultiplier === undefined) configSettings.damageVulnerabilityMultiplier = 2;
   if (configSettings.hidePlayerDamageCard === undefined) configSettings.hidePlayerDamageCard = true;
-  configSettings.hidePlayerDamageCard = false;
+  configSettings.hidePlayerDamageCard = true;
   configSettings.quickSettings = true;
   enableWorkflow = Boolean(game.settings.get("midi-qol", "EnableWorkflow"));
   if (debugEnabled > 0) warn("Fetch Params Loading", configSettings);

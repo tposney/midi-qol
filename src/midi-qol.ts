@@ -1,16 +1,3 @@
-/**
- * This is your TypeScript entry file for Foundry VTT.
- * Register custom settings, sheets, and constants using the Foundry API.
- * Change this heading to be more descriptive to your module, or remove it.
- * Author: [your name]
- * Content License: [copyright and-or license] If using an existing system
- * 					you may want to put a (link to a) license or copyright
- * 					notice here (e.g. the OGL).
- * Software License: [your license] Put your desired license here, which
- * 					 determines how others may use and modify your module
- */
-
-// Import TypeScript modules
 import { registerSettings, fetchParams, configSettings, checkRule, collectSettingData, enableWorkflow, midiSoundSettings, fetchSoundSettings, midiSoundSettingsBackup } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, installedModules, setupModules } from './module/setupModules.js';
@@ -105,10 +92,13 @@ export let cleanSpellName = (name: string): string => {
 /* ------------------------------------ */
 Hooks.once("levelsReady", function () {
   //@ts-ignore
-  installedModules.set("levels", _levels)
+  installedModules.set("levels", CONFIG.Levels.API)
 });
 
 Hooks.once('init', async function () {
+  const exclusionMacro = game.macros?.getName("Warning Exclusions for Midi");
+  if (exclusionMacro) exclusionMacro?.execute();
+
   console.log('midi-qol | Initializing midi-qol');
   allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
   if (game.system.id === "sw5e")
@@ -133,6 +123,8 @@ Hooks.once('init', async function () {
 /* Setup module							*/
 /* ------------------------------------ */
 Hooks.once('setup', function () {
+  const exclusionMacro = game.macros?.getName("Warning Exclusions for Midi");
+  if (exclusionMacro) exclusionMacro?.execute();
   // Do anything after initialization but before
   // ready
   setupSocket();
@@ -216,6 +208,9 @@ Hooks.once('setup', function () {
 /* When ready							*/
 /* ------------------------------------ */
 Hooks.once('ready', function () {
+  const exclusionMacro = game.macros?.getName("Warning Exclusions for Midi");
+  if (exclusionMacro) exclusionMacro?.execute();
+
   gameStats = new RollStats();
   actorAbilityRollPatching();
   // has to be done before setup api.
@@ -252,7 +247,7 @@ Hooks.once('ready', function () {
     }
   }
   //@ts-ignore game.version
-  if (isNewerVersion(game.version ? game.version : game.data.version, "0.8.9")) {
+  if (isNewerVersion(game.version ? game.version : game.version, "0.8.9")) {
     const noDamageSavesText: string = i18n("midi-qol.noDamageonSaveSpellsv9");
     noDamageSaves = noDamageSavesText.split(",")?.map(s => s.trim()).map(s => cleanSpellName(s));
   } else {

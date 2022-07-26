@@ -3,8 +3,8 @@
   data-actor-uuid="{{actor.uuid}}" data-item-uuid="{{itemUuid}}"
   {{#if tokenId}}data-token-id="{{tokenId}}" {{/if}} 
   {{#if tokenUuid}}data-token-uuid="{{tokenUuid}}" {{/if}} 
-  {{#if isSpell}}data-spell-level="{{item.data.level}}" {{/if}}
-  {{#if isPower}}data-power-level="{{item.data.level}}" {{/if}}>
+  {{#if isSpell}}data-spell-level="{{item.system.level}}" {{/if}}
+  {{#if isPower}}data-power-level="{{item.system.level}}" {{/if}}>
   
   <header class="card-header flexrow">
     <img src="{{item.img}}" title="{{item.name}}" width="36" height="36" />
@@ -13,9 +13,9 @@
 
   <div class="card-content">
     {{#unless hideItemDetails}}
-    {{{data.description.value}}}
-    {{#if data.materials.value}}
-    <p><strong>{{ RequiredMaterials }}</strong> {{data.materials.value}}</p>
+    {{{system.description.value}}}
+    {{#if system.materials.value}}
+    <p><strong>{{ RequiredMaterials }}</strong> {{system.materials.value}}</p>
     {{/if}}
     {{/unless}}
   </div>
@@ -64,12 +64,12 @@
     {{/if}}
 
     {{#if hasSave}}
-    <button data-action="save" data-ability="{{data.save.ability}}">
+    <button data-action="save" data-ability="{{system.save.ability}}">
       {{ SavingThrow }} {{labels.save}}
     </button>
     {{/if}}
 
-    {{#if data.formula}}
+    {{#if system.formula}}
     <button data-action="formula">{{ OtherFormula }}</button>
     {{/if}}
 
@@ -78,7 +78,7 @@
     {{/if}}
 
     {{#if isTool}}
-    <button data-action="toolCheck" data-ability="{{data.ability.value}}">{{ Use }} {{item.name}}</button>
+    <button data-action="toolCheck" data-ability="{{system.ability.value}}">{{ Use }} {{item.name}}</button>
     {{/if}}
     
     {{#if hasEffects}}
@@ -94,7 +94,7 @@
 
   <footer class="card-footer">
     {{#if showProperties}}
-    {{#each data.properties}}
+    {{#each system.properties}}
     <span>{{this}}</span>
     {{/each}}
     {{/if}}

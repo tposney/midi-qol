@@ -27,7 +27,7 @@ export class MidiSounds {
   static async playSound(playListName: string, soundName: string) {
     const { playlist, sound } = this.getSound(playListName, soundName);
     //@ts-ignore
-    if (playlist && sound) {
+    if (playlist && sound) { // TODO check this v10
       return AudioHelper.play({ src: sound.data.path, volume: sound.data.volume, autoplay: true, loop: false }, true);
     }
   }
@@ -85,12 +85,12 @@ export class MidiSounds {
     if (!item.type) return "";
     let subtype = "";
     switch (item.type) {
-      case "weapon": subtype = "weapon." + item.data.data.weaponType; break;
-      case "equipment": subtype = "equipment." + item.data.data.armor.type; break;
-      case "consumable": subtype = "consumable." + item.data.data.consumableType; break;
-      case "spell": subtype = "spell." + item.data.data.school; break;
-      case "tool": subtype = "tool." + item.data.data.toolType; break;
-      case "equipment": subtype = "equipment." + item.data.data.equipmentType; break
+      case "weapon": subtype = "weapon." + item.system.weaponType; break;
+      case "equipment": subtype = "equipment." + item.system.armor.type; break;
+      case "consumable": subtype = "consumable." + item.system.consumableType; break;
+      case "spell": subtype = "spell." + item.system.school; break;
+      case "tool": subtype = "tool." + item.system.toolType; break;
+      case "equipment": subtype = "equipment." + item.system.equipmentType; break
       default: subtype = item.type + "any";
     }
     return subtype;
@@ -103,18 +103,36 @@ export class MidiSounds {
     const packname = game.system.id === "dnd5e" ? config.DND5E?.sourcePacks.ITEMS : config.SW5E?.sourcePacks.ITEMS;
     if (packname) {
       const packObject = game.packs.get(packname);
+      // TODO check this for v10 compendia
       //@ts-ignore getindex 0 params
-      await packObject?.getIndex({ fields: ["data.armor.type", "data.toolType", "data.weaponType", "img"] });
+      await packObject?.getIndex({ fields: ["system.armor.type", "system.toolType", "system.weaponType", "img"] });
 
       const weaponTypes = game.system.id === "dnd5e" ? Object.keys(config.DND5E.weaponTypes) : Object.keys(config.SW5E.weaponTypes);;
       const sheetClass = config.Item.sheetClasses.weapon[`${game.system.id}.ItemSheet5e`].cls;
       for (let wt of weaponTypes) {
-        //@ts-ignore
-        const baseTypes = await sheetClass.prototype._getItemBaseTypes({ type: "weapon", data: { weaponType: wt } });
+        const baseTypes = await MidiSounds.getItemBaseTypes("weapon", wt);
         MidiSounds.weaponBaseTypes = mergeObject(MidiSounds.weaponBaseTypes, baseTypes)
       }
     }
     debug("Weapon base types are ", MidiSounds.weaponBaseTypes);
+  }
+
+  static async getItemBaseTypes(type: string, weaponType: string) {
+    //@ts-ignore DND5e
+    const baseIds = CONFIG.DND5E[`${type}Ids`];
+    if ( baseIds === undefined ) return {};
+
+    const typeProperty = type === "armor" ? "armor.type" : `${type}Type`;
+    const baseType = weaponType;
+
+    const items = {};
+    for ( const [name, id] of Object.entries(baseIds) ) {
+      const baseItem = await globalThis.dnd5e.applications.ProficiencySelector.getBaseItem(id);
+      if ( baseType !== foundry.utils.getProperty(baseItem.system, typeProperty) ) continue;
+      items[name] = baseItem.name;
+    }
+    //@ts-ignore lhs[1]
+    return Object.fromEntries(Object.entries(items).sort((lhs, rhs) => lhs[1].localeCompare(rhs[1])));
   }
 
   static getSpecFor(actorType, type, subtype, weaponSubType, selector) {
@@ -139,7 +157,7 @@ export class MidiSounds {
 
   static processHook(workflow, selector) {
     const subtype = this.getSubtype(workflow.item);
-    const baseType = workflow.item?.data.data.baseItem ?? "";
+    const baseType = workflow.item?.system.baseItem ?? "";
     let spec = this.getSpecFor(workflow.item?.parent?.type ?? "all", workflow.item.type, subtype, baseType, selector);
     if (!spec) return false;
     return this.playSpec(spec);
@@ -155,7 +173,7 @@ export class MidiSounds {
     Hooks.on("midi-qol.preAttackRoll", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
       if (dice3dEnabled()) {
-        await this.processHook(workflow, workflow.item.data.data.actionType);
+        await this.processHook(workflow, workflow.item.system.actionType);
       }
       return true;
     });
@@ -163,7 +181,7 @@ export class MidiSounds {
     Hooks.on("midi-qol.AttackRollComplete", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
       if (!dice3dEnabled()) {
-        await this.processHook(workflow, workflow.item.data.data.actionType);
+        await this.processHook(workflow, workflow.item.system.actionType);
       }
       if (workflow.isCritical) {
         await this.processHook(workflow, "critical")

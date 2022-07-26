@@ -49,12 +49,12 @@ export class LateTargetingDialog extends Application {
     data.targets = data.targets.map(t=> {
       return {
         name: game.user?.isGM ? t.name : getTokenPlayerName(t),
-        img: t.data.img
+        img: t.img
       }
     })
     if (this.data.item) {
-      if (this.data.item.data.data.target.type === "creature" && this.data.item.data.data.target.value)
-        data.targetCount = this.data.item.data.data.target.value;
+      if (this.data.item.system.target.type === "creature" && this.data.item.system.target.value)
+        data.targetCount = this.data.item.system.target.value;
       else data.targetCount = "";
       data.blurb = i18nFormat("midi-qol.LateTargeting.Blurb", {targetCount: data.targetCount})
     }

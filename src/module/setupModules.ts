@@ -16,7 +16,7 @@ let modules = {"about-time": "0.0",
               "socketlib": "0.0",
               "dnd5e-helpers":  "3.0.0",
               "dfreds-convenient-effects": "2.1.0",
-              "levels": "1.7.0", 
+              "levels": "3.0.6", 
               "levelsvolumetrictemplates": "0.0.0",
               "lib-changelogs": "0.0.0",
               "df-templates": "1.0.0",
@@ -26,14 +26,16 @@ export let installedModules = new Map();
 
 export let setupModules = () => {
   for (let name of Object.keys(modules)) { 
-    const modVer = game.modules.get(name)?.data.version || "0.0.0";
+    //@ts-ignore .version v10
+    const modVer = game.modules.get(name)?.version || "0.0.0";
     const neededVer = modules[name];
     const isValidVersion = isNewerVersion(modVer, neededVer) || !isNewerVersion(neededVer, modVer);
     if (!installedModules.get(name)) installedModules.set(name, game.modules.get(name)?.active && isValidVersion) 
     if (!installedModules.get(name)) {
-      if (game.modules.get(name)?.active)
-        error(`midi-qol requires ${name} to be of version ${modules[name]} or later, but it is version ${game.modules.get(name)?.data.version}`);
-      else console.warn(`midi-qol | module ${name} not active - some features disabled`)
+      if (game.modules.get(name)?.active) {
+        //@ts-ignore game.module.version
+        error(`midi-qol requires ${name} to be of version ${modules[name]} or later, but it is version ${game.modules.get(name)?.version}`);
+      } else console.warn(`midi-qol | module ${name} not active - some features disabled`)
     }
   }
   if (debugEnabled > 0)
@@ -53,7 +55,7 @@ export function checkModules() {
     ui.notifications.error("midi-qol.NoSocketLib", {permanent: true, localize: true});
   }
   //@ts-ignore
-  const midiVersion = game.modules.get("midi-qol").data.version;
+  const midiVersion = game.modules.get("midi-qol").version;
   const notificationVersion = game.settings.get("midi-qol", "notificationVersion");
 
   checkCubInstalled();

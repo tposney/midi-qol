@@ -42,7 +42,8 @@ let enableSheetQOL = (app, html, data) => {
   if (itemRollButtons) {
     if (["Tidy5eSheet", "Tidy5eNPC"].includes(app.constructor.name)) {
       if (game.modules.get("tidy5e-sheet")?.active &&
-        isNewerVersion(game.modules.get("tidy5e-sheet")?.data.version ?? "", "0.4.0") &&
+        //@ts-ignore version v10
+        isNewerVersion(game.modules.get("tidy5e-sheet")?.version ?? "", "0.4.0") &&
         game.settings.get("tidy5e-sheet", "contextRollButtons")) {
         addTidy5eItemSheetButtons(app, html, data);
       } else {
@@ -132,7 +133,7 @@ function addItemRowButton(target, app, html, data, buttonContainer) {
   let buttonsWereAdded = false;
   // Create the buttons
   let buttons = $(`<div class="item-buttons"></div>`);
-  switch (item.data.type) {
+  switch (item.type) {
     case "weapon":
     case "spell":
     case "power":
@@ -200,7 +201,8 @@ function addTidy5eItemSheetButtons(app, html, data) {
   $('.tidy5e-sheet .inventory-list:not(favorites) .item').each(function () {
 
     let buttonContainer;
-    if (isNewerVersion(game.modules.get("tidy5e-sheet")?.data.version ?? "", "0.4.17"))
+    //@ts-ignore version v10
+    if (isNewerVersion(game.modules.get("tidy5e-sheet")?.version ?? "", "0.4.17"))
       buttonContainer = $(this).find(".mod-roll-buttons");
     else
       buttonContainer = $(this).find(".item-controls");
@@ -215,7 +217,7 @@ function addTidy5eItemSheetButtons(app, html, data) {
     let buttonsWereAdded = false;
     // Create the buttons
     let buttons = $(`<div class="item-buttons"></div>`);
-    switch (item.data.type) {
+    switch (item.type) {
       case "weapon":
       case "spell":
       case "power":
@@ -309,7 +311,7 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
       let buttonsWereAdded = false;
       // Create the buttons
       let buttons = $(`<div class="item-buttons"></div>`);
-      switch (item.data.type) {
+      switch (item.type) {
           case "weapon":
           case "spell":
           case "power":

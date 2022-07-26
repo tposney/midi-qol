@@ -113,12 +113,12 @@ async function _onMacroControl(event){
 }
 
 export function getCurrentMacros(object): OnUseMacros {
-  const macroField = getProperty(object, "data.flags.midi-qol.onUseMacroParts");
+  const macroField = getProperty(object, "flags.midi-qol.onUseMacroParts");
   return macroField;
 }
 
 export function getCurrentSourceMacros(object): OnUseMacros {
-  const macroField = new OnUseMacros(getProperty(object, "data._source.flags.midi-qol.onUseMacroParts") ?? null)
-  // const macroField = getProperty(object, "data._source.flags.midi-qol.onUseMacroParts");
+  const macroField = new OnUseMacros(getProperty(object, "_source.flags.midi-qol.onUseMacroParts") ?? null)
+  // const macroField = getProperty(object, "_source.flags.midi-qol.onUseMacroParts");
   return macroField;
 }

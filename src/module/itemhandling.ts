@@ -32,7 +32,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
   }
 
   if (["Workflow"].includes(workflow.workflowType)) {
-    if (this.data.data.target?.type === self) {
+    if (this.system.target?.type === self) {
       workflow.targets = getSelfTargetSet(this.actor)
     } else if (game.user?.targets?.size ?? 0 > 0) workflow.targets = validTargetTokens(game.user?.targets);
     if (workflow?.attackRoll && workflow.currentState === WORKFLOWSTATES.ROLLFINISHED) { // we are re-rolling the attack.
@@ -108,7 +108,8 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     { insertKeys: true, overwrite: true });
   if (advantage) wrappedOptions.advantage = true;
   if (disadvantage) wrappedOptions.disadvantage = true;
-  if (!isObjectEmpty(workflow.attackAdvAttribution)) {
+  //@ts-ignore .isEmpty v10
+  if (!isEmpty(workflow.attackAdvAttribution)) {
     let advHTML: string = Object.keys(workflow.attackAdvAttribution).reduce((prev, s) => prev += `${s}<br>`, "");
     //@ts-ignore .replaceAll
     advHTML = advHTML.replaceAll("DIS:", "Disadvantage: ").replaceAll("ADV:", "Advantage: ");
@@ -132,11 +133,11 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     // we are rolling this for better rolls
     return result;
   }
-  const maxflags = getProperty(workflow.actor.data.flags, "midi-qol.max") ?? {};
-  if ((maxflags.attack && (maxflags.attack.all || maxflags.attack[this.data.data.actionType])) ?? false)
+  const maxflags = getProperty(workflow.actor.flags, "midi-qol.max") ?? {};
+  if ((maxflags.attack && (maxflags.attack.all || maxflags.attack[this.system.actionType])) ?? false)
     result = await result.reroll({ maximize: true });
-  const minflags = getProperty(this.data.flags, "midi-qol.min") ?? {};
-  if ((minflags.attack && (minflags.attack.all || minflags.attack[this.data.data.actionType])) ?? false)
+  const minflags = getProperty(this.flags, "midi-qol.min") ?? {};
+  if ((minflags.attack && (minflags.attack.all || minflags.attack[this.system.actionType])) ?? false)
     result = await result.reroll({ minimize: true })
   await workflow.setAttackRoll(result);
   workflow.ammo = this._ammo;
@@ -213,7 +214,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     if (!workflow && debugEnabled > 0) warn("Roll Damage: No workflow for item ", this.name);
     return await wrapped({ event, versatile, spellLevel, powerLevel, options })
   }
-  const midiFlags = workflow.actor.data.flags["midi-qol"]
+  const midiFlags = workflow.actor.flags["midi-qol"]
   if (workflow.currentState !== WORKFLOWSTATES.WAITFORDAMAGEROLL && workflow.noAutoAttack) {
     // allow damage roll to go ahead if it's an ordinary roll
     workflow.currentState = WORKFLOWSTATES.WAITFORDAMAGEROLL;
@@ -229,10 +230,11 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
 
   if (workflow.damageRollCount > 0) { // we are re-rolling the damage. redisplay the item card but remove the damage
     let chatMessage = game.messages?.get(workflow.itemCardId ?? "");
-    let content = (chatMessage && chatMessage.data.content) ?? "";
+    //@ts-ignore content v10
+    let content = (chatMessage && chatMessage.content) ?? "";
     let data;
     if (content) {
-      data = duplicate(chatMessage?.data);
+      data = chatMessage?.toObject(); // TODO check this v10
       content = data.content || "";
       let searchRe = /<div class="midi-qol-damage-roll">[\s\S\n\r]*<div class="end-midi-qol-damage-roll">/;
       let replaceString = `<div class="midi-qol-damage-roll"><div class="end-midi-qol-damage-roll">`
@@ -283,7 +285,6 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     // There was an interaction with condtional visibility (I think doing an actor update which means sometimes the prepareData did not complete)
     if (installedModules.get("conditional-visibility")) this.actor.prepareDerivedData(); 
     result = await wrapped(damageRollData);
-
     if (debugCallTiming) log(`wrapped item.rollDamage():  elapsed ${Date.now() - wrappedRollStart}ms`);
   } else {
     //@ts-ignore
@@ -293,12 +294,12 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   if (!result) { // user backed out of damage roll or roll failed
     return;
   }
-  const maxflags = getProperty(workflow.actor.data.flags, "midi-qol.max") ?? {};
-  if ((maxflags.damage && (maxflags.damage.all || maxflags.damage[this.data.data.actionType])) ?? false)
+  const maxflags = getProperty(workflow.actor.flags, "midi-qol.max") ?? {};
+  if ((maxflags.damage && (maxflags.damage.all || maxflags.damage[this.system.actionType])) ?? false)
     result = await new Roll(result.formula).roll({ maximize: true });
 
-  const minflags = getProperty(this.data.flags, "midi-qol.min") ?? {};
-  if ((minflags.damage && (minflags.damage.all || minflags.damage[this.data.data.actionType])) ?? false)
+  const minflags = getProperty(this.flags, "midi-qol.min") ?? {};
+  if ((minflags.damage && (minflags.damage.all || minflags.damage[this.system.actionType])) ?? false)
     result = await new Roll(result.formula).roll({ minimize: true });
   // need to do this nonsense since the returned roll _formula has a trailing + for ammo
   result = Roll.fromJSON(JSON.stringify(result.toJSON()))
@@ -313,12 +314,12 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       otherRollOptions.powerfulCritical = game.settings.get(game.system.id, "criticalDamageMaxDice");
       otherRollOptions.multiplyNumeric = game.settings.get(game.system.id, "criticalDamageModifiers");
     }
-    otherRollOptions.critical = (this.data.flags.midiProperties?.critOther ?? false) && (workflow.isCritical || workflow.rollOptions.critical);
+    otherRollOptions.critical = (this.flags.midiProperties?.critOther ?? false) && (workflow.isCritical || workflow.rollOptions.critical);
     if ((workflow.otherDamageFormula ?? "") !== "") { // other damage formula swaps in versatile if needed
       //@ts-ignore
       const otherRoll = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), otherRollOptions);
-      const maxDamage = (maxflags.damage && (maxflags.damage.all || maxflags.damage[this.data.data.actionType])) ?? false;
-      const minDamage = (minflags.damage && (minflags.damage.all || minflags.damage[this.data.data.actionType])) ?? false;
+      const maxDamage = (maxflags.damage && (maxflags.damage.all || maxflags.damage[this.system.actionType])) ?? false;
+      const minDamage = (minflags.damage && (minflags.damage.all || minflags.damage[this.system.actionType])) ?? false;
       otherResult = await otherRoll?.evaluate({ async: true, maximize: maxDamage, minimize: minDamage });
     }
   }
@@ -326,14 +327,14 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     let actionFlavor;
     switch (game.system.id) {
       case "sw5e":
-        actionFlavor = game.i18n.localize(this.data.data.actionType === "heal" ? "SW5E.Healing" : "SW5E.DamageRoll");
+        actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "SW5E.Healing" : "SW5E.DamageRoll");
         break;
       case "n5e":
-        actionFlavor = game.i18n.localize(this.data.data.actionType === "heal" ? "N5E.Healing" : "N5E.DamageRoll");
+        actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "N5E.Healing" : "N5E.DamageRoll");
         break;
       case "dnd5e": 
       default:
-        actionFlavor = game.i18n.localize(this.data.data.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
+        actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
       }
 
     const title = `${this.name} - ${actionFlavor}`;
@@ -475,15 +476,15 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (checkRule("incapacitated") && checkIncapacitated(this.actor, this, null)) return;
 
   const pressedKeys = duplicate(globalThis.MidiKeyManager.pressedKeys);
-  const isRangeSpell = ["ft", "m"].includes(this.data.data.target?.units) && ["creature", "ally", "enemy"].includes(this.data.data.target?.type);
+  const isRangeSpell = ["ft", "m"].includes(this.system.target?.units) && ["creature", "ally", "enemy"].includes(this.system.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
-  const shouldCheckLateTargeting = (allAttackTypes.includes(this.data.data.actionType) || (this.hasTarget && !this.hasAreaTarget)) && (options.workflowOptions?.lateTargeting ?? getLateTargeting());
+  const shouldCheckLateTargeting = (allAttackTypes.includes(this.system.actionType) || (this.hasTarget && !this.hasAreaTarget)) && (options.workflowOptions?.lateTargeting ?? getLateTargeting());
 
   if (shouldCheckLateTargeting && !isRangeSpell && !isAoESpell) {
 
     // normal targeting and auto rolling attack so allow late targeting
-    let canDoLateTargeting = this.data.data.target.type !== "self";
+    let canDoLateTargeting = this.system.target.type !== "self";
 
     //explicit don't do late targeting passed
     if (options.workflowOptions?.lateTargeting === false) canDoLateTargeting = false;
@@ -493,7 +494,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       canDoLateTargeting = true;
 
     // TODO look at this if range spell and not auto targeting
-    const targetDetails = this.data.data.target;
+    const targetDetails = this.system.target;
     if (false && configSettings.rangeTarget === "none" && ["ft", "m"].includes(targetDetails?.units) && ["creature", "ally", "enemy"].includes(targetDetails?.type))
       canDoLateTargeting = true;
     // TODO consider template and range spells when not template targeting?
@@ -507,18 +508,18 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const myTargets = game.user?.targets && validTargetTokens(game.user?.targets);
   let shouldAllowRoll = !requiresTargets // we don't care about targets
     || ((myTargets?.size || 0) > 0) // there are some target selected
-    || (this.data.data.target?.type === "self") // self target
+    || (this.system.target?.type === "self") // self target
     || isAoESpell // area effect spell and we will auto target
     || isRangeSpell // range target and will autotarget
     || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
 
-  if (requiresTargets && !isRangeSpell && !isAoESpell && this.data.data.target?.type === "creature" && (myTargets?.size || 0) === 0) {
+  if (requiresTargets && !isRangeSpell && !isAoESpell && this.system.target?.type === "creature" && (myTargets?.size || 0) === 0) {
     ui.notifications?.warn(i18n("midi-qol.noTargets"));
     if (debugEnabled > 0) warn(`${game.user?.name} attempted to roll with no targets selected`)
     return null;
   }
   // only allow weapon attacks against at most the specified number of targets
-  let allowedTargets = (this.data.data.target?.type === "creature" ? this.data.data.target?.value : 9999) ?? 9999
+  let allowedTargets = (this.system.target?.type === "creature" ? this.system.target?.value : 9999) ?? 9999
   let speaker = getSpeaker(this.actor);
   // do pre roll checks
   if (checkRule("checkRange") && !isAoESpell && !isRangeSpell) {
@@ -531,10 +532,10 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return null;
   }
   if (this.type === "spell" && shouldAllowRoll) {
-    const midiFlags = this.actor.data.flags["midi-qol"];
-    const needsVerbal = this.data.data.components?.vocal;
-    const needsSomatic = this.data.data.components?.somatic;
-    const needsMaterial = this.data.data.components?.material;
+    const midiFlags = this.actor.flags["midi-qol"];
+    const needsVerbal = this.system.components?.vocal;
+    const needsSomatic = this.system.components?.somatic;
+    const needsMaterial = this.system.components?.material;
 
     //TODO Consider how to disable this check for DamageOnly workflows and trap workflows
     if (midiFlags?.fail?.spell?.all) {
@@ -555,9 +556,9 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     }
   }
 
-  const needsConcentration = this.data.data.components?.concentration
-    || this.data.flags.midiProperties?.concentration
-    || this.data.data.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
+  const needsConcentration = this.system.components?.concentration
+    || this.flags.midiProperties?.concentration
+    || this.system.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
   const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
   if (needsConcentration && checkConcentration) {
     const concentrationEffect = getConcentrationEffect(this.actor);
@@ -579,11 +580,11 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return null;
   }
 
-  const targets = (this?.data.data.target?.type === "self") ? getSelfTargetSet(this.actor) : myTargets;
+  const targets = (this?.system.target?.type === "self") ? getSelfTargetSet(this.actor) : myTargets;
 
   let workflow: Workflow;
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
-    if (!this.id) this.data._id = randomID();
+    if (!this.id) this._id = randomID(); // TOOD check this v10
     if (needsConcentration && checkConcentration) { 
       const concentrationEffect = getConcentrationEffect(this.actor);
       if (concentrationEffect) await removeConcentration(this.actor); 
@@ -604,14 +605,14 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   // if showing a full card we don't want to auto roll attacks or damage.
   workflow.noAutoDamage = showFullCard;
   workflow.noAutoAttack = showFullCard;
-  const consume = this.data.data.consume;
+  const consume = this.system.consume;
   if (consume?.type === "ammo") {
     workflow.ammo = this.actor.items.get(consume.target);
   }
 
   let itemUsesReaction = false;
   const hasReaction = await hasUsedReaction(this.actor);
-  if (!options.workflowOptions.notReaction && ["reaction", "reactiondamage", "reactionmanual"].includes(this.data.data.activation?.type) && this.data.data.activation?.cost > 0) {
+  if (!options.workflowOptions.notReaction && ["reaction", "reactiondamage", "reactionmanual"].includes(this.system.activation?.type) && this.system.activation?.cost > 0) {
     itemUsesReaction = true;
   }
   let inCombat = isInCombat(workflow.actor);
@@ -643,7 +644,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
   const hasBonusAction = await hasUsedBonusAction(this.actor);
   let itemUsesBonusAction = false;
-  if (["bonus"].includes(this.data.data.activation?.type)) {
+  if (["bonus"].includes(this.system.activation?.type)) {
     itemUsesBonusAction = true;
   }
   const blockBonus = inCombat && itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(this.actor);
@@ -681,9 +682,9 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       if (["both", "spell"].includes(isAutoConsumeResource(workflow))) { // && !workflow.rollOptions.fastForward) {
         configureDialog = false;
         // Check that there is a spell slot of the right level
-        const spells = this.actor.data.data.spells;
-        if (spells[`spell${this.data.data.level}`]?.value === 0 &&
-          (spells.pact.value === 0 || spells.pact.level < this.data.data.level)) {
+        const spells = this.actor.system.spells;
+        if (spells[`spell${this.system.level}`]?.value === 0 &&
+          (spells.pact.value === 0 || spells.pact.level < this.system.level)) {
           configureDialog = true;
         }
 
@@ -718,13 +719,13 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (this.type === "spell") {
     //TODO look to use returned data when available
     let spellStuff = result.content?.match(/.*data-spell-level="(.*)">/);
-    workflow.itemLevel = parseInt(spellStuff[1]) || this.data.data.level;
+    workflow.itemLevel = parseInt(spellStuff[1]) || this.system.level;
     // if (needsConcentration) addConcentration({ workflow })
   }
   if (this.type === "power") {
     //TODO look to use returned data when available
     let spellStuff = result.content?.match(/.*data-power-level="(.*)">/);
-    workflow.itemLevel = parseInt(spellStuff[1]) || this.data.data.level;
+    workflow.itemLevel = parseInt(spellStuff[1]) || this.system.level;
     // if (needsConcentration) addConcentration({ workflow })
   }
 
@@ -733,9 +734,9 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   workflow.showCard = true;
   if (workflow.showCard) {
     let item = this;
-    if (this.data.data.level && (workflow.itemLevel !== this.data.data.level)) {
-      item = this.clone({ "data.level": workflow.itemLevel }, { keepId: true });
-      item.data.update({ _id: this.id });
+    if (this.system.level && (workflow.itemLevel !== this.system.level)) {
+      item = this.clone({ "system.level": workflow.itemLevel }, { keepId: true });
+      item.updateSource({ _id: this.id }); // TODO check this v10
       item.prepareFinalAttributes();
     }
     const showCardStart = Date.now();
@@ -762,7 +763,7 @@ export async function showItemInfo() {
     // tokenId: token?.id,
     tokenId: token?.document?.uuid ?? token?.uuid,
     tokenUuid: token?.document?.uuid ?? token?.uuid,
-    item: this.data,
+    item: this,
     itemUuid: this.uuid,
     data: this.getChatData(),
     labels: this.labels,
@@ -782,7 +783,7 @@ export async function showItemInfo() {
     isMerge: false,
   };
 
-  const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
+  const templateType = ["tool"].includes(this.type) ? this.type : "item";
   const template = `modules/midi-qol/templates/${templateType}-card.html`;
   const html = await renderTemplate(template, templateData);
 
@@ -845,8 +846,8 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   const isPlayerOwned = this.actor.hasPlayerOwner;
   const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned))
     || !configSettings.itemTypeList.includes(this.type);
-  const hasEffects = !["applyNoButton"].includes(configSettings.autoItemEffects) && workflow.hasDAE && workflow.workflowType === "Workflow" && this.data.effects.find(ae => !ae.transfer);
-  let dmgBtnText = (this.data?.data?.actionType === "heal") ? i18n(`${systemString}.Healing`) : i18n(`${systemString}.Damage`);
+  const hasEffects = !["applyNoButton"].includes(configSettings.autoItemEffects) && workflow.hasDAE && workflow.workflowType === "Workflow" && this.effects.find(ae => !ae.transfer);
+  let dmgBtnText = (this.system?.actionType === "heal") ? i18n(`${systemString}.Healing`) : i18n(`${systemString}.Damage`);
   if (workflow.rollOptions.fastForwardDamage) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
   let versaBtnText = i18n(`${systemString}.Versatile`);
   if (workflow.rollOptions.fastForwardDamage) versaBtnText += ` ${i18n("midi-qol.fastForward")}`;
@@ -855,7 +856,7 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     // tokenId: token?.id,
     tokenId: token?.document?.uuid ?? token?.uuid,
     tokenUuid: token?.document?.uuid ?? token?.uuid,
-    item: this.data,
+    item: this, // TODO check this v10
     itemUuid: this.uuid,
     data: this.getChatData(),
     labels: this.labels,
@@ -883,25 +884,25 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     PlaceTemplate: i18n(`${systemString}.PlaceTemplate`),
     Use: i18n(`${systemString}.Use`)
   }
-  const templateType = ["tool"].includes(this.data.type) ? this.data.type : "item";
+  const templateType = ["tool"].includes(this.type) ? this.type : "item";
   const template = `modules/midi-qol/templates/${templateType}-card.html`;
   const html = await renderTemplate(template, templateData);
-  if (debugEnabled > 1) debug(" Show Item Card ", configSettings.useTokenNames, (configSettings.useTokenNames && token) ? token?.data?.name : this.actor.name, token, token?.data.name, this.actor.name)
+  if (debugEnabled > 1) debug(" Show Item Card ", configSettings.useTokenNames, (configSettings.useTokenNames && token) ? token?.name : this.actor.name, token, token?.name, this.actor.name)
   let theSound = configSettings.itemUseSound;
   if (this.type === "weapon") {
     theSound = configSettings.weaponUseSound;
-    if (["rwak"].includes(this.data.data.actionType)) theSound = configSettings.weaponUseSoundRanged;
+    if (["rwak"].includes(this.system.actionType)) theSound = configSettings.weaponUseSoundRanged;
   }
   else if (["spell", "power"].includes(this.type)) {
     theSound = configSettings.spellUseSound;
-    if (["rsak", "rpak"].includes(this.data.data.actionType)) theSound = configSettings.spellUseSoundRanged;
+    if (["rsak", "rpak"].includes(this.system.actionType)) theSound = configSettings.spellUseSoundRanged;
   }
   else if (this.type === "consumable" && this.name.toLowerCase().includes(i18n("midi-qol.potion").toLowerCase())) theSound = configSettings.potionUseSound;
   const chatData = {
     user: game.user?.id,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     content: html,
-    flavor: this.data.data.chatFlavor || this.name,
+    flavor: this.system.chatFlavor || this.name,
     speaker: getSpeaker(this.actor),
     flags: {
       "midi-qol": {
@@ -917,11 +918,11 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
   };
   if (workflow.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", workflow.flagTags);
   if (!this.actor.items.has(this.id)) { // deals with using temp items in overtime effects
-    chatData.flags[`${game.system.id}.itemData`] = this.data;
+    chatData.flags[`${game.system.id}.itemData`] = this.toObject(); // TODO check this v10
   }
   // Temp items (id undefined) or consumables that were removed need itemData set.
-  if (!this.id || (this.data.type === "consumable" && !this.actor.items.has(this.id))) {
-    chatData.flags[`${game.system.id}.itemData`] = this.data;
+  if (!this.id || (this.type === "consumable" && !this.actor.items.has(this.id))) {
+    chatData.flags[`${game.system.id}.itemData`] = this.toObject(); // TODO check this v10
   }
 
   // Toggle default roll mode
@@ -933,19 +934,24 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
 }
 
 function isTokenInside(templateDetails: { x: number, y: number, shape: any, distance: number }, token: Token, wallsBlockTargeting) {
-  const grid = canvas?.scene?.data.grid;
+  //@ts-ignore grid v10
+  const grid = canvas?.scene?.grid;
   if (!grid) return false;
   const templatePos = { x: templateDetails.x, y: templateDetails.y };
 
   // Check for center of  each square the token uses.
   // e.g. for large tokens all 4 squares
-  const startX = token.data.width >= 1 ? 0.5 : (token.data.width / 2);
-  const startY = token.data.height >= 1 ? 0.5 : (token.data.height / 2);
-  for (let x = startX; x < token.data.width; x++) {
-    for (let y = startY; y < token.data.height; y++) {
+  //@ts-ignore document.width
+  const startX = token.document.width >= 1 ? 0.5 : (token.document,width / 2);
+  //@ts-ignore document.height
+  const startY = token.document.height >= 1 ? 0.5 : (token.document.height / 2);
+  //@ts-ignore document.width
+  for (let x = startX; x < token.document.width; x++) {
+    //@ts-ignore document.height
+    for (let y = startY; y < token.document.height; y++) {
       const currGrid = {
-        x: token.data.x + x * grid! - templatePos.x,
-        y: token.data.y + y * grid! - templatePos.y,
+        x: token.x + x * grid.size! - templatePos.x,
+        y: token.y + y * grid.size! - templatePos.y,
       };
       let contains = templateDetails.shape?.contains(currGrid.x, currGrid.y);
       if (contains && wallsBlockTargeting) {
@@ -966,10 +972,11 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
           let p1 = {
             x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y,
             //@ts-ignore
-            z: token.data.elevation
+            z: token.elevation
           }
-          const p2z = installedModules.get("levels")?.lastTokenForTemplate.data.elevation
-            ?? installedModules.get("levels")?.nextTemplateHeight ?? 0;
+          // installedModules.get("levels").lastTokenForTemplate.elevation no longer defined
+          //@ts-ignore .elevation CONFIG.Levels.UI v10
+          const p2z = _token?.document?.elevation ?? CONFIG.Levels.UI.nextTemplateHeight ?? 0;
           let p2 = {
             x: tx, y: ty,
             //@ts-ignore
@@ -977,10 +984,10 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
           }
           contains = getUnitDist(p2.x, p2.y, p2.z, token) <= templateDetails.distance;
           //@ts-ignore
-          contains = contains && !installedModules.get("levels").testCollision(p1, p2, "collision");
+          contains = contains && !CONFIG.Levels.API.testCollision(p1, p2, "collision");
           //@ts-ignore
         } else if (!installedModules.get("levelsvolumetrictemplates")) {
-          contains = !canvas?.walls?.checkCollision(r);
+          contains = !canvas?.walls?.checkCollision(r, {mode: "any"});
         }
       }
       // Check the distance from origin.
@@ -993,21 +1000,24 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
 export function templateTokens(templateDetails: { x: number, y: number, shape: any, distance: number }): Token[] {
   if (configSettings.autoTarget === "none") return [];
   const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget);
-  const tokens = canvas?.tokens?.placeables ?? []; //.map(t=>t.data)
+  const tokens = canvas?.tokens?.placeables ?? []; //.map(t=>t)
   let targets: string[] = [];
   const targetTokens: Token[] = [];
   for (const token of tokens) {
     if (token.actor && isTokenInside(templateDetails, token, wallsBlockTargeting)) {
-      const actorData: any = token.actor?.data;
-      if (actorData?.data.details.type?.custom === "NoTarget") continue;
-      if (["wallsBlock", "always"].includes(configSettings.autoTarget) || actorData?.data.attributes.hp.value > 0) {
-        if (token.document.id) {
+      // const actorData: any = token.actor?.data;
+      // @ts-ignore .system v10
+      if (token.actor.system.details.type?.custom === "NoTarget") continue;
+      //@ts-ignore .system
+      if (["wallsBlock", "always"].includes(configSettings.autoTarget) || token.actor.system.attributes.hp.value > 0) {
+        if (token.id) {
           targetTokens.push(token);
-          targets.push(token.document.id);
+          targets.push(token.id);
         }
       }
     }
   }
+  console.log("template tokens ", targets)
   game.user?.updateTokenTargets(targets);
   game.user?.broadcastActivity({ targets });
   return targetTokens;
@@ -1022,11 +1032,13 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
     //@ts-ignore
     const mTemplate: MeasuredTemplate = templateDocument.object;
     if (mTemplate.shape)
-      templateTokens({ x: templateDocument.data.x, y: templateDocument.data.y, shape: mTemplate.shape, distance: mTemplate.data.distance })
+      //@ts-ignore templateDocument.x, mtemplate.distance TODO check this v10
+      templateTokens({ x: templateDocument.x, y: templateDocument.y, shape: mTemplate.shape, distance: mTemplate.distance })
     else {
       let { shape, distance } = computeTemplateShapeDistance(templateDocument)
       if (debugEnabled > 0) warn(`selectTargets computed shape ${shape} distance${distance}`)
-      templateTokens({ x: templateDocument.data.x, y: templateDocument.data.y, shape, distance });
+      //@ts-ignore .x, .y v10
+      templateTokens({ x: templateDocument.x, y: templateDocument.y, shape, distance });
     }
   }
   let item = this?.item;
@@ -1039,7 +1051,7 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   }
 
   // if the item specifies a range of "special" don't target the caster.
-  let selfTarget = (item?.data.data.range?.units === "spec") ? canvas?.tokens?.get(this.tokenId) : null;
+  let selfTarget = (item?.system.range?.units === "spec") ? canvas?.tokens?.get(this.tokenId) : null;
   if (selfTarget && game.user?.targets.has(selfTarget)) {
     // we are targeted and should not be
     selfTarget.setTarget(false, { user: game.user, releaseOthers: false })
@@ -1048,7 +1060,7 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   const userTargets = game.user?.targets;
   this.targets = new Set(userTargets);
   this.hitTargets = new Set(userTargets);
-  this.templateData = templateDocument.data;
+  this.templateData = templateDocument.toObject(); // TODO check this v10
   this.needTemplate = false;
   if (this instanceof BetterRollsWorkflow) {
     if (this.needItemCard) {
@@ -1062,13 +1074,13 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
 export function activationConditionToUse(workflow: Workflow) {
   let conditionToUse: string | undefined = undefined;
   let conditionFlagToUse: string | undefined = undefined;
-  if (this.data.type === "spell" && configSettings.rollOtherSpellDamage === "activation") {
-    return workflow.otherDamageItem?.data.data.activation?.condition
-  } else if (["rwak", "mwak"].includes(this.data.data.actionType) && configSettings.rollOtherDamage === "activation") {
-    return workflow.otherDamageItem?.data.data.activation?.condition;
+  if (this.type === "spell" && configSettings.rollOtherSpellDamage === "activation") {
+    return workflow.otherDamageItem?.system.activation?.condition
+  } else if (["rwak", "mwak"].includes(this.system.actionType) && configSettings.rollOtherDamage === "activation") {
+    return workflow.otherDamageItem?.system.activation?.condition;
   }
-  if (workflow.otherDamageItem?.data.flags?.midiProperties?.rollOther)
-    return workflow.otherDamageItem?.data.data.activation?.condition;
+  if (workflow.otherDamageItem?.flags?.midiProperties?.rollOther)
+    return workflow.otherDamageItem?.system.activation?.condition;
   return undefined;
 }
 
@@ -1077,21 +1089,21 @@ export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: s
   let rollOtherDamage = false;
   let conditionToUse: string | undefined = undefined;
   let conditionFlagToUse: string | undefined = undefined;
-  if (this.data.type === "spell" && conditionFlagSpell !== "none") {
+  if (this.type === "spell" && conditionFlagSpell !== "none") {
     rollOtherDamage = (conditionFlagSpell === "ifSave" && this.hasSave)
       || conditionFlagSpell === "activation";
     conditionFlagToUse = conditionFlagSpell;
-    conditionToUse = workflow.otherDamageItem?.data.data.activation?.condition
-  } else if (["rwak", "mwak"].includes(this.data.data.actionType) && conditionFlagWeapon !== "none") {
+    conditionToUse = workflow.otherDamageItem?.system.activation?.condition
+  } else if (["rwak", "mwak"].includes(this.system.actionType) && conditionFlagWeapon !== "none") {
     rollOtherDamage =
       (conditionFlagWeapon === "ifSave" && workflow.otherDamageItem.hasSave) ||
-      ((conditionFlagWeapon === "activation") && (this.data.data.attunement !== getSystemCONFIG().attunementTypes.REQUIRED));
+      ((conditionFlagWeapon === "activation") && (this.system.attunement !== getSystemCONFIG().attunementTypes.REQUIRED));
     conditionFlagToUse = conditionFlagWeapon;
-    conditionToUse = workflow.otherDamageItem?.data.data.activation?.condition
+    conditionToUse = workflow.otherDamageItem?.system.activation?.condition
   }
-  if (workflow.otherDamageItem?.data.flags?.midiProperties?.rollOther && this.data.data.attunement !== getSystemCONFIG().attunementTypes.REQUIRED) {
+  if (workflow.otherDamageItem?.flags?.midiProperties?.rollOther && this.system.attunement !== getSystemCONFIG().attunementTypes.REQUIRED) {
     rollOtherDamage = true;
-    conditionToUse = workflow.otherDamageItem?.data.data.activation?.condition
+    conditionToUse = workflow.otherDamageItem?.system.activation?.condition
     conditionFlagToUse = "activation"
   }
 

@@ -16,19 +16,19 @@ export var midiFlagTypes: {} = {};
 export let readyHooks = async () => {
   // need to record the damage done since it is not available in the update actor hook
   Hooks.on("preUpdateActor", (actor, update, diff, user) => {
-    const hpUpdate = getProperty(update, "data.attributes.hp.value");
-    const temphpUpdate = getProperty(update, "data.attributes.hp.temp");
+    const hpUpdate = getProperty(update, "system.attributes.hp.value");
+    const temphpUpdate = getProperty(update, "system.attributes.hp.temp");
     let concHPDiff = 0;
     if (hpUpdate !== undefined) {
-      let hpChange = actor.data.data.attributes.hp.value - hpUpdate;
-      // if (hpUpdate >= (actor.data.data.attributes.hp.tempmax ?? 0) + actor.data.data.attributes.hp.max) hpChange = 0;
+      let hpChange = actor.system.attributes.hp.value - hpUpdate;
+      // if (hpUpdate >= (actor.system.attributes.hp.tempmax ?? 0) + actor.system.attributes.hp.max) hpChange = 0;
       if (hpChange > 0) concHPDiff += hpChange;
     }
     if (configSettings.tempHPDamageConcentrationCheck && temphpUpdate !== undefined) {
-      let temphpDiff = actor.data.data.attributes.hp.temp - temphpUpdate;
+      let temphpDiff = actor.system.attributes.hp.temp - temphpUpdate;
       if (temphpDiff > 0) concHPDiff += temphpDiff
     }
-    actor.data.update({ "flags.midi-qol.concentration-damage": concHPDiff })
+    actor.updateSource({ "flags.midi-qol.concentration-damage": concHPDiff })
     return true;
   })
 
@@ -38,7 +38,7 @@ export let readyHooks = async () => {
     if ((update.x || update.y) === undefined) return;
     const actor = tokenDocument.actor;
     const expiredEffects = actor?.effects.filter(ef => {
-      const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
+      const specialDuration = getProperty(ef.flags, "dae.specialDuration");
       return specialDuration?.includes("isMoved");
     }) ?? [];
     if (expiredEffects.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", expiredEffects.map(ef => ef.id), { "expiry-reason": "midi-qol:isMoved" });
@@ -54,19 +54,19 @@ export let readyHooks = async () => {
   // Handle concentration checks
   Hooks.on("updateActor", async (actor, update, diff, user) => {
     if (user !== game.user?.id) return;
-    const hpUpdate = getProperty(update, "data.attributes.hp.value");
-    const temphpUpdate = getProperty(update, "data.attributes.hp.temp");
+    const hpUpdate = getProperty(update, "system.attributes.hp.value");
+    const temphpUpdate = getProperty(update, "system.attributes.hp.temp");
     if (hpUpdate === undefined && temphpUpdate === undefined) return true;
 
     if (!configSettings.concentrationAutomation) return true;
 
-    let hpDiff = getProperty(actor.data, "flags.midi-qol.concentration-damage") ?? 0;
+    let hpDiff = getProperty(actor, "flags.midi-qol.concentration-damage") ?? 0;
     if (hpDiff <= 0) return true;
     // expireRollEffect.bind(actor)("Damaged", ""); - not this simple - need to think about specific damage types
     concentrationCheckItemDisplayName = i18n("midi-qol.concentrationCheckName");
     const concentrationEffect: ActiveEffect | undefined = getConcentrationEffect(actor)
     if (!concentrationEffect) return true;
-    if (actor.data.data.attributes.hp.value <= 0) {
+    if (actor.system.attributes.hp.value <= 0) {
       concentrationEffect.delete();
     } else {
       const itemData = duplicate(itemJSONData);
@@ -107,12 +107,13 @@ export let readyHooks = async () => {
       } else if (installedModules.get("combat-utility-belt")) {
         concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
       }
-      let isConcentration = effect.data.label === concentrationLabel;
+      let isConcentration = effect.label === concentrationLabel;
       if (!isConcentration) return;
 
       // If concentration has expired effects and times-up installed - leave it to TU.
       if (installedModules.get("times-up")) {
-        let expired = effect.data.duration?.seconds && (game.time.worldTime - effect.data.duration.startTime) >= effect.data.duration.seconds;
+        let expired = effect.duration?.seconds && (game.time.worldTime - effect.duration.startTime) >= effect.duration.seconds;
+        effect._prepareDuration(); // TODO remove this if v10 change made
         const duration = effect.duration;
         expired = expired || (duration && duration.remaining <= 0 && duration.type === "turns");
         if (expired) return;
@@ -160,7 +161,7 @@ export function restManager(actor, result) {
   removeReactionUsed(actor); // remove reaction used for a rest
   removeBonusActionUsed(actor);
   const myExpiredEffects = actor.effects.filter(ef => {
-    const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
+    const specialDuration = getProperty(ef.flags, "dae.specialDuration");
     return specialDuration && ((result.longRest && specialDuration.includes(`longRest`))
       || (result.newDay && specialDuration.includes(`newDay`))
       || specialDuration.includes(`shortRest`));
@@ -231,18 +232,18 @@ export function initHooks() {
     return true;
   });
   Hooks.on("renderItemSheet", (app, html, data) => {
-    const element = html.find('input[name="data.chatFlavor"]').parent().parent();
-    const criticalElement = html.find('input[name="data.critical.threshold"]');
+    const element = html.find('input[name="system.chatFlavor"]').parent().parent();
+    const criticalElement = html.find('input[name="system.critical.threshold"]');
     element.append('<h3 class="form-header">Midi Qol Fields</h3>');
     if (criticalElement.length > 0) {
-      let currentFumble = getProperty(app.object.data, "flags.midi-qol.fumbleThreshold");
+      let currentFumble = getProperty(app.object, "flags.midi-qol.fumbleThreshold");
       const labelText = i18n("midi-qol.FumbleThreshold");
       const fumbleThreshold = `<div class="form-group"><label>${labelText}</label><div class="form-fields"><input type="Number" name="flags.midi-qol.fumbleThreshold" value="${currentFumble}"/></div></div>`;
       element.append(fumbleThreshold);
     }
     if (configSettings.allowUseMacro) {
       const labelText = i18n("midi-qol.onUseMacroLabel");
-      const macros = new OnUseMacros(getProperty(app.object.data, "flags.midi-qol.onUseMacroName"));
+      const macros = new OnUseMacros(getProperty(app.object, "flags.midi-qol.onUseMacroName"));
       const macroField = `<h4 class="damage-header">${labelText}
   <a class="macro-control damage-control add-macro"><i class="fas fa-plus"></i></a>
 </h4>
@@ -252,7 +253,7 @@ export function initHooks() {
       element.append(macroField)
     }
     const labelText = i18n("midi-qol.EffectActivation");
-    let currentEffectActivation = getProperty(app.object.data, "flags.midi-qol.effectActivation") ?? "";
+    let currentEffectActivation = getProperty(app.object, "flags.midi-qol.effectActivation") ?? "";
     const activationField = `<div class="form-group"><label>${labelText}</label><input type="checkbox" name="flags.midi-qol.effectActivation" ${currentEffectActivation ? "checked" : ""}/> </div>`;
 
     element.append(activationField);
@@ -261,16 +262,16 @@ export function initHooks() {
       //@ts-ignore dfreds
       const ceForItem = game.dfreds.effects.all.find(e => e.name === app.object.name);
       if (ceForItem) {
-        const element = html.find('input[name="data.chatFlavor"]').parent().parent();
+        const element = html.find('input[name="system.chatFlavor"]').parent().parent();
         if (["both", "cepri", "itempri"].includes(configSettings.autoCEEffects)) {
           const offLabel = i18n("midi-qol.convenientEffectsOff");
-          const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOff") ?? false;
+          const currentEffect = getProperty(app.object, "flags.midi-qol.forceCEOff") ?? false;
           const effect = `<div class="form-group"><label>${offLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOff" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`
           element.append(effect)
         }
         if (["none", "itempri"].includes(configSettings.autoCEEffects)) {
           const onLabel = i18n("midi-qol.convenientEffectsOn");
-          const currentEffect = getProperty(app.object.data, "flags.midi-qol.forceCEOn") ?? false;
+          const currentEffect = getProperty(app.object, "flags.midi-qol.forceCEOn") ?? false;
           const effect = `<div class="form-group"><label>${onLabel}</label><input type="checkbox" name="flags.midi-qol.forceCEOn" data-dtype="Boolean" ${currentEffect ? "checked" : ""}></div>`
           element.append(effect)
         }
@@ -280,23 +281,25 @@ export function initHooks() {
 
     //@ts-ignore
     const midiProps = config.midiProperties;
+    setProperty(data, "flags.midiProperties", app.object.flags.midiProperties ?? {});
+    if (!data.flags?.midiProperties) setProperty(data, "flags.midiProperties", {});
     if (app.object && ["spell", "feat", "weapon", "consumable"].includes(app.object.type)) {
-      const data = app.object.data;
-      if (data.flags.midiProperties === undefined) {
-        data.flags.midiProperties = {};
+      const item = app.object;
+      if (item.flags.midiProperties === undefined) {
+        item.flags.midiProperties = {};
         for (let prop of Object.keys(midiProps)) {
-          if (getProperty(data.data, `properties.${prop}`) && data.flags.midiProperties[prop] === undefined) {
+          if (getProperty(item.system, `properties.${prop}`) && data.flags.midiProperties[prop] === undefined) {
             data.flags.midiProperties[prop] = true;
-            delete data.data.properties.nodam;
+            delete item.system.properties.nodam;
           }
         }
       }
-      if (data.data.properties?.fulldam !== undefined) {
-        app.object.update({
-          "data.properties.-=fulldam": null,
-          "data.properties.-=halfdam": null,
-          "data.properties.-=nodam": null,
-          "data.properties.-=critOther": null,
+      if (item.system.properties?.fulldam !== undefined) {
+        app.object.updateSource({ // TODO check this v10
+          "system.properties.-=fulldam": null,
+          "system.properties.-=halfdam": null,
+          "system.properties.-=nodam": null,
+          "system.properties.-=critOther": null,
           "flags.midiProperties": data.flags.midiProperties
         })
       }
@@ -311,7 +314,7 @@ export function initHooks() {
       newHtml += "</div></div>"
       /*
       const templateData = {
-         data: app.object.data,
+         data: app.object,
          //@ts-ignore
          config
       }
@@ -333,8 +336,9 @@ export function initHooks() {
 
   Hooks.on('dropCanvasData', function (canvas: Canvas, dropData: any) {
     if (!dragDropTargeting) return true;
-    if (dropData.type !== "Item") return true;;
-    let grid_size = canvas.scene?.data.grid
+    if (dropData.type !== "Item") return true;
+    //@ts-ignore .grid v10
+    let grid_size = canvas.scene?.grid
 
     canvas.tokens?.targetObjects({
       x: dropData.x - grid_size! / 2,
@@ -408,7 +412,7 @@ export const overTimeJSONData = {
   "name": "OverTime Item",
   "type": "weapon",
   "img": "icons/svg/aura.svg",
-  "data": {
+  "system": {
     "description": {
       "value": "",
       "chat": "",
@@ -519,7 +523,7 @@ export const itemJSONData = {
   "name": "Concentration Check - Midi QOL",
   "type": "weapon",
   "img": "./modules/midi-qol/icons/concentrate.png",
-  "data": {
+  "system": {
     "description": {
       "value": "",
       "chat": "",
@@ -637,7 +641,7 @@ export const itemJSONData = {
               for (let targetUuid of args[0].targetUuids) {
                 let target = await fromUuid(targetUuid);
                 if (MidiQOL.configSettings().removeConcentration 
-                  && (target.actor.data.data.attributes.hp.value === 0 || args[0].failedSaveUuids.find(uuid => uuid === targetUuid))) {
+                  && (target.actor.system.attributes.hp.value === 0 || args[0].failedSaveUuids.find(uuid => uuid === targetUuid))) {
                 const concentrationEffect = MidiQOL.getConcentrationEffect(target.actor);
                 if (concentrationEffect) await concentrationEffect.delete();
                 }

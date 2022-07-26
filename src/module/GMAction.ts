@@ -128,7 +128,7 @@ export async function deleteItemEffects(data: { targets, origin: string, ignore:
       warn("could not find actor for ", idData.tokenUuid);
       continue;
     }
-    const effectsToDelete = actor?.effects?.filter(ef => ef.data.origin === origin && !ignore.includes(ef.uuid) && (!data.ignoreTransfer || ef.data.flags?.dae?.transfer !== true));
+    const effectsToDelete = actor?.effects?.filter(ef => ef.origin === origin && !ignore.includes(ef.uuid) && (!data.ignoreTransfer || ef.flags?.dae?.transfer !== true));
     if (effectsToDelete?.length > 0) {
       try {
         await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToDelete.map(ef => ef.id));
@@ -233,15 +233,16 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
     if (createPromises && ["yes", "yesCard", "yesCardNPC"].includes(data.autoApplyDamage)) {
       if ((newHP !== oldHP || newTempHP !== oldTempHP) && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
         const updateContext = mergeObject({ dhp: -appliedDamage }, data.updateContext ?? {});
+        log(`updating ${actor.name} to ${newTempHP}`, updateContext)
         //@ts-ignore
-        promises.push(actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem }, updateContext));
+        promises.push(actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem }, updateContext));
       }
     }
     tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP, damageItem });
 
-    let img = tokenDocument?.data.img || actor.img;
+    let img = tokenDocument?.texture.src || actor.img;
     if (configSettings.usePlayerPortrait && actor.type === "character")
-      img = actor?.img || tokenDocument?.data.img;
+      img = actor?.img || tokenDocument?.texture.src;
     if (VideoHelper.hasVideoExtension(img)) {
       //@ts-ignore - createThumbnail not defined
       img = await game.video.createThumbnail(img, { width: 100, height: 100 });
@@ -276,14 +277,14 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
     };
 
     ["di", "dv", "dr"].forEach(trait => {
-      const traits = actor?.data.data.traits[trait]
+      const traits = actor?.system.traits[trait]
       if (traits?.custom || traits?.value.length > 0) {
         //@ts-ignore CONFIG.DND5E
         listItem[trait] = (`${traitList[trait]}: ${traits.value.map(t => CONFIG.DND5E.damageResistanceTypes[t]).join(",").concat(" " + traits?.custom)}`);
       }
     });
     //@ts-ignore
-    const actorFlags: any = actor.data.flags;
+    const actorFlags: any = actor.flags;
     const DRFlags = actorFlags["midi-qol"] ? actorFlags["midi-qol"].DR : undefined;
     if (DRFlags) {
       listItem["DR"] = "DR: ";
@@ -311,7 +312,7 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
   let playerButtons = ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
   const damageList = data.damageList;
   //@ts-ignore
-  let actor: CONFIG.Actor.documentClass; // { update: (arg0: { "data.attributes.hp.temp": any; "data.attributes.hp.value": number; "flags.dae.damageApplied": any; damageItem: any[] }) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
+  let actor: CONFIG.Actor.documentClass; // { update: (arg0: { "system.attributes.hp.temp": any; "system.attributes.hp.value": number; "flags.dae.damageApplied": any; damageItem: any[] }) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
   const startTime = Date.now();
   let tokenIdList: any[] = [];
   let templateData = {
@@ -350,7 +351,7 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
   // Fetch the token, then use the tokenData.actor.id
 async function createGMReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any }) {
   const damageList = data.damageList;
-  let actor: { update: (arg0: { "data.attributes.hp.temp": any; "data.attributes.hp.value": number; "flags.dae.damageApplied": any; damageItem: any[] }) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
+  let actor: { update: (arg0: { "system.attributes.hp.temp": any; "system.attributes.hp.value": number; "flags.dae.damageApplied": any; damageItem: any[] }) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
   const startTime = Date.now();
   let promises: Promise<any>[] = [];
   let tokenIdList: any[] = [];
@@ -396,22 +397,22 @@ async function doClick(event: { stopPropagation: () => void; }, actorUuid: any, 
 async function doMidiClick(ev: any, actorUuid: any, newTempHP: any, newHP: any, mult: number, data: any) {
   let actor = MQfromActorUuid(actorUuid);
   log(`Setting HP to ${newTempHP} and ${newHP}`);
-  const updateContext = mergeObject({ dhp: (newHP - actor.data.data.attributes.hp.value)}, data.updateContext);
-  await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP }, updateContext);
+  const updateContext = mergeObject({ dhp: (newHP - actor.system.attributes.hp.value)}, data.updateContext);
+  await actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP }, updateContext);
 }
 
 export let processUndoDamageCard = (message, html, data) => {
-  if (!message.data.flags?.midiqol?.undoDamage) return true;
+  if (!message.flags?.midiqol?.undoDamage) return true;
   let button = html.find("#all-reverse");
 
   button.click((ev: { stopPropagation: () => void; }) => {
     (async () => {
-      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem } of message.data.flags.midiqol.undoDamage) {
-        //message.data.flags.midiqol.undoDamage.forEach(async ({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem }) => {
+      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem } of message.flags.midiqol.undoDamage) {
+        //message.flags.midiqol.undoDamage.forEach(async ({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem }) => {
         if (!actorUuid) return;
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP}`, actor);
-        await actor?.update({ "data.attributes.hp.temp": oldTempHP ?? 0, "data.attributes.hp.value": oldHP ?? 0 }, { dhp: (oldHP ?? 0) - (actor.data.data.attributes.hp.value ?? 0) }, data.updateContext);
+        await actor?.update({ "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 }, { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0) }, data.updateContext);
         ev.stopPropagation();
       }
     })();
@@ -420,25 +421,25 @@ export let processUndoDamageCard = (message, html, data) => {
   button = html.find("#all-apply");
   button.click((ev: { stopPropagation: () => void; }) => {
     (async () => {
-      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem } of message.data.flags.midiqol.undoDamage) {
+      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem } of message.flags.midiqol.undoDamage) {
         if (!actorUuid) return;
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP to ${newTempHP} and ${newHP}`);
-        await actor?.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.data.data.attributes.hp.value }, data.updateContext );
+        await actor?.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.system.attributes.hp.value }, data.updateContext );
         ev.stopPropagation();
       }
     })();
   })
 
-  message.data.flags.midiqol.undoDamage.forEach(({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem }) => {
+  message.flags.midiqol.undoDamage.forEach(({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem }) => {
     if (!actorUuid) return;
     // ids should not have "." in the or it's id.class
     let button = html.find(`#reverse-${actorUuid.replaceAll(".", "")}`);
     button.click((ev: { stopPropagation: () => void; }) => {
       (async () => {
         let actor = MQfromActorUuid(actorUuid);
-        log(`Setting HP back to ${oldTempHP} and ${oldHP}`);
-        await actor.update({ "data.attributes.hp.temp": oldTempHP, "data.attributes.hp.value": oldHP }, { dhp: oldHP - actor.data.data.attributes.hp.value }, data.updateContext );
+        log(`Setting HP back to ${oldTempHP} and ${oldHP}`, data.updateContext);
+        await actor.update({ "system.attributes.hp.temp": oldTempHP, "system.attributes.hp.value": oldHP }, { dhp: oldHP - actor.system.attributes.hp.value }, data.updateContext );
         ev.stopPropagation();
       })();
     });
@@ -448,8 +449,8 @@ export let processUndoDamageCard = (message, html, data) => {
     button.click((ev: { stopPropagation: () => void; }) => {
       (async () => {
         let actor = MQfromActorUuid(actorUuid);
-        log(`Setting HP to ${newTempHP} and ${newHP}`);
-        await actor.update({ "data.attributes.hp.temp": newTempHP, "data.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.data.data.attributes.hp.value });
+        log(`Setting HP to ${newTempHP} and ${newHP}`, data.updateContext);
+        await actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.system.attributes.hp.value });
         ev.stopPropagation();
       })();
     });
