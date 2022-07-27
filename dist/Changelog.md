@@ -1,6 +1,9 @@
+### 0.9.68
+* Disable player damage card on GM client being enabled.
+
 ### 0.9.67 
 * Fix for damage reduction calculations for magical/non-magical/physical cases.
-* Fix for sample settings "addDead" in full auto/full manual sample comfigs.
+* Fix for sample settings "addDead" in full auto/full manual sample configs.
 * Alternate version of Arcane Ward that uses a resource to store the ward strength/max.
 
 ### 0.9.66

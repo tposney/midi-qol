@@ -1,3 +1,6 @@
+### 0.9.68
+* Disable player damage card on GM client being enabled.
+
 ### 0.9.67 
 * Fix for damage reduction calculations for magical/non-magical/physical cases.
 * Fix for sample settings "addDead" in full auto/full manual sample configs.
