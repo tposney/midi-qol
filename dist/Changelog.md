@@ -1,3 +1,11 @@
+### 0.9.69
+* When combat ends reactions/bonus indicators are removed from all combatants.
+* Created a gap between damage buttons so that the underlying card can be clicked to expose the roll details.
+* Fixed an error in overtime effects processing, where removeCondition would be ignored if there is no saving trhow.
+* Add notification if you try to edit the midi-qol config if roll automation is disabled.
+* Fixed an error in checking incapacitated actors.
+* Fixed an error condition if the macroName is enclosed in quotes, which is should not be.
+
 ### 0.9.68
 * Disable player damage card on GM client being enabled.
 

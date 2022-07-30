@@ -84,6 +84,7 @@ export let midiFlags: string[] = [];
 export let allAttackTypes: string[] = []
 export let gameStats: RollStats;
 export let overTimeEffectsToDelete = {};
+export let failedSaveOverTimeEffectsToDelete = {}
 export let MQItemMacroLabel: string;
 export let MQDeferMacroLabel: string;
 export let MQOnUseOptions

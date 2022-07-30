@@ -51,6 +51,12 @@
 {
   font-size: 0.8em !important;
 }
+.dmgBtn-container-mqol .dice-total-half-damage-button {
+  margin-right: 10px !important;
+}
+.dmgBtn-container-mqol .dice-total-double-damage-button {
+  margin-left: 10px !important;
+}
 
 .dmgBtn-container-mqol .dice-total-full-damage-healing-button {
   margin-right: 0 !important;

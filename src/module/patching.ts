@@ -1,7 +1,7 @@
 import { log, warn, debug, i18n, error, getCanvas, i18nFormat } from "../midi-qol.js";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, notificationNotify, processOverTime } from "./utils.js";
+import { bonusDialog, ConvenientEffectsHasEffect, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, hasUsedBonusAction, hasUsedReaction, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, notificationNotify, processOverTime, removeBonusActionUsed, removeReactionUsed } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -752,7 +752,8 @@ export function readyPatching() {
     libWrapper.register("midi-qol", "game.sw5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
   }
   libWrapper.register("midi-qol", "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
-  Notifications
+  libWrapper.register("midi-qol", "CONFIG.Combat.documentClass.prototype._preDelete", _preDeleteCombat, "WRAPPER");
+
   libWrapper.register("midi-qol", "Notifications.prototype.notify", notificationNotify, "MIXED");
   libWrapper.register("midi-qol", "Combatant.prototype._getInitiativeFormula", _getInitiativeFormula, "WRAPPER");
   libWrapper.register("midi-qol", "CONFIG.ActiveEffect.documentClass.prototype._preDelete", _preDeleteActiveEffect, "WRAPPER");
@@ -871,6 +872,21 @@ export async function createRollResultFromCustomRoll(customRoll: any) {
   setProperty(result.terms[0].options, "advantage", advantage)
   setProperty(result.terms[0].options, "disadvantage", disadvantage)
   return result;
+}
+
+export async function _preDeleteCombat(wrapped, ...args) {
+  try {
+    for (let combatant of this.combatants) {
+      if (combatant.actor) {
+      if (await hasUsedReaction(combatant.actor)) await removeReactionUsed(combatant.actor, true);
+      if (await hasUsedBonusAction(combatant.actor)) await removeBonusActionUsed(combatant.actor, true);
+      }
+    }
+  } catch (err) {
+    console.warn("midi-qol | error in preDeleteCombat ", err);
+  } finally {
+    return wrapped(...args)
+  }
 }
 
 class CustomizeDamageFormula {

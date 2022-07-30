@@ -1412,14 +1412,15 @@ export class Workflow {
         }
         macroCommand = itemMacro?.data.command ?? `console.warn('midi-qol | no item macro found for ${name}')`;
       } else { // get a world macro.
-        const macro = game.macros?.getName(name);
+        const macro = game.macros?.getName(name.replaceAll('"',''));
+        if (!macro) console.warn("midi-qol could not find macro", name);
         if (macro?.data.type === "chat") {
           macro.execute(); // use the core foundry processing for chat macros
           return {}
         }
         macroData.speaker = this.speaker;
         macroData.actor = this.actor;
-        macroCommand = macro?.data.command ?? `console.warn("midi-qol | no macro ${name} found")`;
+        macroCommand = macro?.data.command ?? `console.warn("midi-qol | no macro ${name.replaceAll('"', '')} found")`;
       }
 
       const speaker = this.speaker;

@@ -1,4 +1,4 @@
-import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, failedSaveOverTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
 import { deleteItemEffects, processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, checkflanking, MQfromActorUuid, getSystemCONFIG, expireRollEffect, completeItemRoll, doConcentrationCheck } from "./utils.js";
@@ -50,7 +50,7 @@ export let readyHooks = async () => {
     ddbglPendingHook(data);
   });
 
-    // Handle updates to the characters HP
+  // Handle updates to the characters HP
   // Handle concentration checks
   Hooks.on("updateActor", async (actor, update, diff, user) => {
     if (user !== game.user?.id) return;
@@ -195,7 +195,7 @@ export function initHooks() {
     untargetAllTokens(combat, data.options, user);
     untargetDeadTokens();
     // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
-  })
+  });
 
   Hooks.on("renderChatMessage", (message, html, data) => {
     if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);
@@ -210,16 +210,23 @@ export function initHooks() {
   Hooks.on("midi-qol.RollComplete", async (workflow) => {
     const wfuuid = workflow.uuid;
 
-    if (overTimeEffectsToDelete[wfuuid]) {
+    if (failedSaveOverTimeEffectsToDelete[wfuuid]) {
       if (workflow.saves.size === 1 || !workflow.hasSave) {
-        let effectId = overTimeEffectsToDelete[wfuuid].effectId;
-        let actor = overTimeEffectsToDelete[wfuuid].actor;
-        await actor.deleteEmbeddedDocuments("ActiveEffect", [effectId]), { "expiry-reason": "midi-qol:overTime" };
+        let effectId = failedSaveOverTimeEffectsToDelete[wfuuid].effectId;
+        let actor = failedSaveOverTimeEffectsToDelete[wfuuid].actor;
+        await actor.failedSaveOverTimeEffectsToDelete("ActiveEffect", [effectId]), { "expiry-reason": "midi-qol:overTime" };
       }
+      delete failedSaveOverTimeEffectsToDelete[wfuuid];
+    }
+    if (overTimeEffectsToDelete[wfuuid]) {
+      let effectId = overTimeEffectsToDelete[wfuuid].effectId;
+      let actor = overTimeEffectsToDelete[wfuuid].actor;
+      await actor.deleteEmbeddedDocuments("ActiveEffect", [effectId]), { "expiry-reason": "midi-qol:overTime" };
       delete overTimeEffectsToDelete[wfuuid];
     }
     if (debugEnabled > 1) debug("Finished the roll", wfuuid)
-  })
+  });
+  
   setupMidiFlagTypes();
   Hooks.on("applyActiveEffect", midiCustomEffect);
   // Hooks.on("preCreateActiveEffect", checkImmunity); Disabled in lieu of having effect marked suppressed
