@@ -1,3 +1,6 @@
+### 0.9.79
+* Fix for overtime error introduced in 0.969
+
 ### 0.9.69
 * When combat ends reactions/bonus indicators are removed from all combatants.
 * Created a gap between damage buttons so that the underlying card can be clicked to expose the roll details.
