@@ -214,7 +214,7 @@ export function initHooks() {
       if (workflow.saves.size === 1 || !workflow.hasSave) {
         let effectId = failedSaveOverTimeEffectsToDelete[wfuuid].effectId;
         let actor = failedSaveOverTimeEffectsToDelete[wfuuid].actor;
-        await actor.deleteEmbeddedDocumentsCD("ActiveEffect", [effectId]), { "expiry-reason": "midi-qol:overTime" };
+        await actor.deleteEmbeddedDocuments("ActiveEffect", [effectId]), { "expiry-reason": "midi-qol:overTime" };
       }
       delete failedSaveOverTimeEffectsToDelete[wfuuid];
     }
