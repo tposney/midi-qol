@@ -24,7 +24,7 @@
       "type": "system"
     }
   ],
-  "version": "10.0.1",
+  "version": "10.0.2",
   "authors": [{"name": "tposney"}],
   "socket": true,
   "scripts": [],
@@ -45,6 +45,7 @@
       "path": "./packs/sampleitems.db",
       "module": "world",
       "type": "Item",
+      "system": "dnd5e",
       "lang": ["en", "de"]
     }
   ],
@@ -103,6 +104,6 @@
   },
   "url": "https://gitlab.com/tposney/midi-qol",
   "manifest": "https://gitlab.com/tposney/midi-qol/raw/v10/package/module.json",
-  "download": "https://gitlab.com/tposney/midi-qol/raw/v10/package/midi-qol-v10.0.1.zip",
+  "download": "https://gitlab.com/tposney/midi-qol/raw/v10/package/midi-qol-v10.0.2.zip",
   "changelog": "https://gitlab.com/tposney/midi-qol/raw/v10/Changelog.md"
 }

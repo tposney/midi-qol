@@ -1420,7 +1420,8 @@ export class Workflow {
         }
         macroCommand = itemMacro?.command ?? itemMacro?.data?.command ?? `console.warn('midi-qol | no item macro found for ${name}')`;
       } else { // get a world macro.
-        const macro = game.macros?.getName(name);
+        const macro = game.macros?.getName(name.replaceAll('"',''));
+        if (!macro) console.warn("midi-qol could not find macro", name);
         //@ts-ignore .type v10
         if (macro?.type === "chat") {
           macro.execute(); // use the core foundry processing for chat macros
@@ -1429,7 +1430,7 @@ export class Workflow {
         macroData.speaker = this.speaker;
         macroData.actor = this.actor;
         //@ts-ignore .command v10
-        macroCommand = macro?.command ?? `console.warn("midi-qol | no macro ${name} found")`;
+        macroCommand = macro?.data.command ?? `console.warn("midi-qol | no macro ${name.replaceAll('"', '')} found")`;
       }
 
       const speaker = this.speaker;

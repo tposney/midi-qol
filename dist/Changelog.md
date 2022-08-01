@@ -1,35 +1,33 @@
 ### 0.10.01
-* v10 branch prerelease
-* This is definitely **NOT** ready for gameplay
+* v10 branch pre-release
+* This is definitely NOT ready for gameplay
   - integration with most other modules has not been deeply tested tested. And except for itemMacro I am using the current release - not a v10 branch if there is one.
-    - better-walls - not tested.
     - Combat Utility Belt - not tested
     - Convenient Effects - tested with the v9 release - seems to work,
     - DAE - tested with v10 release - seems to work
-    - Dice So Nice - tested with v9 reelase - seems to work.  (with MANY compatibility warnings) and you can't edit the dsn settings.
+    - Dice So Nice - tested with v9 release - seems to work.  (with MANY compatibility warnings) and you can't edit the dsn settings.
     - dnd5e helpers - not tested
     - Item Macro - does not work for editing macros. Using item macros in rolls works. Itemmacro v10 branch more or less works. A change for edting macros is required.
-    - levels/levels volumetric templates - tested with prerelease of levels v10 - does not work
-    - libWrapper - tested with v9 release 0 seems to work (with compatibility warnings)
+    - levels/levels volumetric templates - tested with pre-release of levels v10 - does not work
+    - libWrapper - tested with v9 release - seems to work (with compatibility warnings)
     - lmrtfy - tested with v9 release - seems to work
+    - magic items - not tested.
     - monks token bar - tested with v9 release - seems to work.
     - monaco macro editor - tested with current release - seems to work
     - socketlib - tested with v9 release - seems to work (with compatibility warnings)
     - times-up - tested with v10 relase - seems to work.
     - Token Action Hud - tested with v9 release - seems to work
+    - Token Magic - not tested.
     - df-templates - not tested
+    - wall-heights - not tested.
+
 
 * Known Issues
   * Distance checking triggers an error in foundry core - waiting on core fix.
   * Port of sample items compendium not complete - will require more work.
 
 * Changes
-  - rewrote asyncHooksCall, asyncHooksCallAll for v10 changes - useage remains the same.
-
-* Fix for damage reduction calculations for magical/non-magical/physical cases.
-* Fix for sample settings "addDead" in full auto/full manual sample comfigs.
-* Alternate version of Arcane Ward that uses a resource to store the ward strength/max.
-* Disable showing the player damage card on the GM client - was enabled for testing.
+  - rewrote asyncHooksCall, asyncHooksCallAll for v10 changes - usage remains the same.
 
 ### 0.9.65
 * updated Arcane Ward that does not use temphp to manage the ward - requires DAE 0.10.24. The modification to damage is applied AFTER the damage card is created, so will not include the ward damage reduction.

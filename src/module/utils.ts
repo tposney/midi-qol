@@ -1,4 +1,4 @@
-import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, overTimeEffectsToDelete, geti18nOptions } from "../midi-qol.js";
+import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, gameStats, debugEnabled, overTimeEffectsToDelete, geti18nOptions, failedSaveOverTimeEffectsToDelete } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, lateTargeting } from "./settings.js";
 import { log } from "../midi-qol.js";
 import { BetterRollsWorkflow, DummyWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
@@ -1071,7 +1071,7 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true)
       }
       let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
       if (saveRemove && saveDC > -1)
-        overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id };
+        failedSaveOverTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id };
 
       if (details.removeCondition) {
         let value = replaceAtFields(details.removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
@@ -1121,8 +1121,8 @@ export async function _processOverTime(combat, data, options, user) {
 
     // Remove reaction used status from each combatant
     if (actor && toTest !== prev) {
-      if (await hasUsedReaction(actor)) removeReactionUsed(actor);
-      if (await hasUsedBonusAction(actor)) removeBonusActionUsed(actor);
+      if (await hasUsedReaction(actor)) await removeReactionUsed(actor);
+      if (await hasUsedBonusAction(actor)) await removeBonusActionUsed(actor);
     }
 
     // Remove any per turn optional bonus effects
@@ -1834,22 +1834,8 @@ export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<T
 
 export function MQfromUuid(uuid): any | null {
   if (!uuid || uuid === "") return null;
-  let parts = uuid.split(".");
-  let doc;
-
-  const [docName, docId] = parts.slice(0, 2);
-  parts = parts.slice(2);
-  const collection = CONFIG[docName]?.collection.instance;
-  if (!collection) return null;
-  doc = collection.get(docId);
-
-  // Embedded Documents
-  while (doc && parts.length > 1) {
-    const [embeddedName, embeddedId] = parts.slice(0, 2);
-    doc = doc.getEmbeddedDocument(embeddedName, embeddedId);
-    parts = parts.slice(2);
-  }
-  return doc || null;
+  //@ts-ignore foundry v10 types
+ return fromUuidSync(uuid)
 }
 
 export function MQfromActorUuid(uuid): any | null {
@@ -2532,7 +2518,14 @@ export async function reactionDialog(actor: globalThis.dnd5e.documents.Actor5e, 
       dialog.close();
       // options = mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStatus: false}, {overwrite: true});
       options.lateTargeting = false;
-      const itemRollOptions = mergeObject(options, { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, checkGMStatus: false, targetUuids: [triggerTokenUuid] });
+      const itemRollOptions = mergeObject(options, { 
+        showFullCard: false, 
+        createWorkflow: true, 
+        versatile: false, 
+        configureDialog: true, 
+        checkGMStatus: false, 
+        targetUuids: [triggerTokenUuid]
+      });
       await completeItemRoll(item, itemRollOptions);
       actor.prepareData();
       resolve({ name: item.name, uuid: item.uuid })
@@ -2873,9 +2866,17 @@ export async function setBonusActionUsed(actor: Actor) {
   }
   await actor.setFlag("midi-qol", "bonusActionCombatRound", game.combat?.round);
 }
-export async function removeReactionUsed(actor: Actor) {
+export async function removeReactionUsed(actor: Actor, removeCEEffect = false) {
+  if (removeCEEffect && getConvenientEffectsReaction()) {
+    //@ts-ignore
+    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, actor.uuid)) {
+      //@ts-ignore
+      await game.dfreds.effectInterface?.removeEffect({ effectName: getConvenientEffectsReaction().name, uuid: actor.uuid });
+    }
+  }
   return await actor?.unsetFlag("midi-qol", "reactionCombatRound");
 }
+
 
 export async function hasUsedReaction(actor: Actor) {
   if (actor.getFlag("midi-qol", "reactionCombatRound")) return true;
@@ -2913,7 +2914,14 @@ export async function hasUsedBonusAction(actor: Actor) {
   return false;
 }
 
-export async function removeBonusActionUsed(actor: Actor) {
+export async function removeBonusActionUsed(actor: Actor, removeCEEffect = false) {
+  if (removeCEEffect && getConvenientEffectsBonusAction()) {
+    //@ts-ignore
+    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsBonusAction().name, actor.uuid)) {
+      //@ts-ignore
+      await game.dfreds.effectInterface?.removeEffect({ effectName: getConvenientEffectsBonusAction().name, uuid: actor.uuid });
+    }
+  }
   return await actor?.unsetFlag("midi-qol", "bonusActionCombatRound");
 }
 

@@ -1,4 +1,4 @@
-import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON } from "../settings.js"
+import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow } from "../settings.js"
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
@@ -28,6 +28,9 @@ export class ConfigPanel extends FormApplication {
   }
 
   async getData(options: any): Promise<any> {
+    if (!enableWorkflow) {
+      ui.notifications?.error("Worklow automation is not enabled")
+    }
     let wallsBlockRangeOptions = geti18nOptions("WallsBlockRangeOptions");
     if (installedModules.get("dnd5e-helpers")) {
       wallsBlockRangeOptions = geti18nOptions("WallsBlockRangeOptionsNew");
@@ -181,7 +184,9 @@ export class IemTypeSelector extends FormApplication {
 
   /** @override */
   getData(): any {
-
+    if (!enableWorkflow) {
+      ui.notifications?.error("Worklow automation is not enabled")
+    }
     // Get current values
     configSettings.itemTypeList;
 

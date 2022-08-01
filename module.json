@@ -45,6 +45,7 @@
       "path": "./packs/sampleitems.db",
       "module": "world",
       "type": "Item",
+      "system": "dnd5e",
       "lang": ["en", "de"]
     }
   ],

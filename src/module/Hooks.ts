@@ -1,4 +1,4 @@
-import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, failedSaveOverTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate } from "./chatMesssageHandling.js";
 import { deleteItemEffects, processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, getSelfTarget, MQfromUuid, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, checkflanking, MQfromActorUuid, getSystemCONFIG, expireRollEffect, completeItemRoll, doConcentrationCheck } from "./utils.js";
@@ -50,7 +50,7 @@ export let readyHooks = async () => {
     ddbglPendingHook(data);
   });
 
-    // Handle updates to the characters HP
+  // Handle updates to the characters HP
   // Handle concentration checks
   Hooks.on("updateActor", async (actor, update, diff, user) => {
     if (user !== game.user?.id) return;
@@ -175,7 +175,7 @@ export function initHooks() {
     if (debugEnabled > 1) debug("preCreateChatMessage entering", message, data, options, user)
     nsaMessageHandler(message, data, options, user);
     return true;
-  })
+  });
 
   Hooks.on("createChatMessage", (message: ChatMessage, options, user) => {
     if (debugEnabled > 1) debug("Create Chat Message ", message.id, message, options, user)
@@ -183,20 +183,20 @@ export function initHooks() {
     processItemCardCreation(message, user);
     processCreateDDBGLMessages(message, options, user);
     return true;
-  })
+  });
 
   Hooks.on("updateChatMessage", (message, update, options, user) => {
     hideRollUpdate(message, update, options, user);
     betterRollsUpdate(message, update, options, user);
     //@ts-ignore scrollBottom
     ui.chat?.scrollBottom();
-  })
+  });
 
   Hooks.on("updateCombat", (combat, data, options, user) => {
     untargetAllTokens(combat, data.options, user);
     untargetDeadTokens();
     // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
-  })
+  });
 
   Hooks.on("renderChatMessage", (message, html, data) => {
     if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);
@@ -206,21 +206,28 @@ export function initHooks() {
     hideRollRender(message, html, data);
     betterRollsButtons(message, html, data);
     hideStuffHandler(message, html, data);
-  })
+  });
 
   Hooks.on("midi-qol.RollComplete", async (workflow) => {
     const wfuuid = workflow.uuid;
 
-    if (overTimeEffectsToDelete[wfuuid]) {
+    if (failedSaveOverTimeEffectsToDelete[wfuuid]) {
       if (workflow.saves.size === 1 || !workflow.hasSave) {
-        let effectId = overTimeEffectsToDelete[wfuuid].effectId;
-        let actor = overTimeEffectsToDelete[wfuuid].actor;
+        let effectId = failedSaveOverTimeEffectsToDelete[wfuuid].effectId;
+        let actor = failedSaveOverTimeEffectsToDelete[wfuuid].actor;
         await actor.deleteEmbeddedDocuments("ActiveEffect", [effectId]), { "expiry-reason": "midi-qol:overTime" };
       }
+      delete failedSaveOverTimeEffectsToDelete[wfuuid];
+    }
+    if (overTimeEffectsToDelete[wfuuid]) {
+      let effectId = overTimeEffectsToDelete[wfuuid].effectId;
+      let actor = overTimeEffectsToDelete[wfuuid].actor;
+      await actor.deleteEmbeddedDocuments("ActiveEffect", [effectId]), { "expiry-reason": "midi-qol:overTime" };
       delete overTimeEffectsToDelete[wfuuid];
     }
     if (debugEnabled > 1) debug("Finished the roll", wfuuid)
-  })
+  });
+  
   setupMidiFlagTypes();
   Hooks.on("applyActiveEffect", midiCustomEffect);
   // Hooks.on("preCreateActiveEffect", checkImmunity); Disabled in lieu of having effect marked suppressed

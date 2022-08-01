@@ -157,7 +157,7 @@ async function registerTests() {
           it("rolls a normal initiative roll", async function () {
             const rollResult: Promise<Roll> = new Promise(async (resolve) => {
               Hooks.once("createChatMessage", function (chatMessage) {
-                resolve(chatMessage.roll)
+                resolve(chatMessage.rolls[0])
               });
 
             });
@@ -171,7 +171,7 @@ async function registerTests() {
             await actor.setFlag(game.system.id, "initiativeAdv", true);
             const rollResult: Promise<Roll> = new Promise(async (resolve) => {
               Hooks.once("createChatMessage", function (chatMessage) {
-                resolve(chatMessage.roll)
+                resolve(chatMessage.rolls[0])
               });
 
             });
@@ -187,7 +187,7 @@ async function registerTests() {
             await actor.setFlag(game.system.id, "initiativeDisadv", true);
             const rollResult: Promise<Roll> = new Promise(async (resolve) => {
               Hooks.once("createChatMessage", function (chatMessage) {
-                resolve(chatMessage.roll)
+                resolve(chatMessage.rolls[0])
               });
 
             });
