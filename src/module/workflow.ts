@@ -170,7 +170,11 @@ export class Workflow {
   }
 
   get otherDamageFormula() {
-    return (this.otherDamageItem?.data.data.formula ?? "") === "" && !this.otherDamageItem?.data.data.properties?.ver ? this.otherDamageItem?.data.data.damage.versatile : this.otherDamageItem?.data.data.formula;
+    if ((this.otherDamageItem?.data.data.formula ?? "") === "") {
+      if (this.otherDamageItem.data.type === "weapon" && !this.otherDamageItem?.data.data.properties?.ver)
+        return this.otherDamageItem?.data.data.damage.versatile;
+    }
+    return this.otherDamageItem?.data.data.formula;
   }
 
   get hasDAE() {
@@ -461,6 +465,8 @@ export class Workflow {
           }
         }
         if (!this.item.hasAttack) {
+          this.hitTargets = new Set(this.targets);
+          this.hitTargetsEC = new Set();
           return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
         }
         if (this.noAutoAttack) return undefined;
@@ -1288,7 +1294,7 @@ export class Workflow {
       semiSuperSavers.push(save instanceof Token ? save.document : save);
       semiSuperSaverUuids.push(save instanceof Token ? save.document?.uuid : save.uuid);
     };
-    const itemData = this.item?.data.toObject(false);
+    const itemData = this.item?.data.toObject(false) ?? {};
     itemData.uuid = this.item?.uuid; // provide the uuid so the actual item can be recovered
     return {
       actor: this.actor.data,
@@ -1607,10 +1613,10 @@ export class Workflow {
           type: MESSAGETYPES.DAMAGE,
           // roll: this.damageCardData.roll,
           roll: this.damageRoll?.roll,
-          damageDetail: this.damageDetail,
-          damageTotal: this.damageTotal,
-          otherDamageDetail: this.otherDamageDetail,
-          otherDamageTotal: this.otherDamageTotal,
+          damageDetail: this.useOther ? undefined : this.damageDetail,
+          damageTotal: this.useOther ? undefined : this.damageTotal,
+          otherDamageDetail: this.useOther ? this.damageDetail : this.otherDamageDetail,
+          otherDamageTotal: this.useOther ? this.damageTotal : this.otherDamageTotal,
           bonusDamageDetail: this.bonusDamageDetail,
           bonusDamageTotal: this.bonusDamageTotal,
           hideTag: this.hideTags,
@@ -2735,14 +2741,14 @@ export class DamageOnlyWorkflow extends Workflow {
     super(actor, null, ChatMessage.getSpeaker({ token }), new Set(targets), shiftOnlyEvent)
     this.itemData = options.itemData;
     // Do the supplied damageRoll
-    this.damageRoll = roll;
-    this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: damageType });
-    this.damageTotal = damageTotal;
     this.flavor = options.flavor;
     this.defaultDamageType = getSystemCONFIG().damageTypes[damageType] || damageType;
     this.damageList = options.damageList;
     this.itemCardId = options.itemCardId;
     this.useOther = options.useOther ?? true;
+    this.damageRoll = roll;
+    this.damageDetail = createDamageList({ roll, item: this.item, versatile: this.rollOptions.versatile, defaultType: damageType });
+    this.damageTotal = damageTotal;
     this.isCritical = options.isCritical ?? false;
     this.kickStart = false;
     return this.next(WORKFLOWSTATES.NONE);

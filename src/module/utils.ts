@@ -9,12 +9,11 @@ import { concentrationCheckItemDisplayName, itemJSONData, midiFlagTypes, overTim
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
 import {  OnUseMacros } from "./apps/Item.js";
 import { Options } from "./patching.js";
-import { SETUP_VIEWS } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/constants.mjs";
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
  */
-export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultDamageType }) => {
+export function createDamageList({ roll, item, versatile, defaultType = MQdefaultDamageType }): { damage: unknown; type: string; }[] {
   let damageParts = {};
   const rollTerms = roll.terms;
   let evalString = "";
@@ -25,15 +24,19 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
   // create data for a synthetic roll
   let rollData = item ? item.getRollData() : {};
   rollData.mod = 0;
-  if (debugEnabled > 1) debug("CreateDamageList: Passed roll is ", roll)
-  if (debugEnabled > 1) debug("CreateDamageList: Damage spec is ", parts)
+  if (debugEnabled > 1)
+    debug("CreateDamageList: Passed roll is ", roll);
+  if (debugEnabled > 1)
+    debug("CreateDamageList: Damage spec is ", parts);
   let partPos = 0;
 
   // If we have an item we can use it to work out each of the damage lines that are being rolled
   for (let [spec, type] of parts) { // each spec,type is one of the damage lines
-    if (partPos >= rollTerms.length) continue;
+    if (partPos >= rollTerms.length)
+      continue;
     // TODO look at replacing this with a map/reduce
-    if (debugEnabled > 1) debug("CreateDamageList: single Spec is ", spec, type, item)
+    if (debugEnabled > 1)
+      debug("CreateDamageList: single Spec is ", spec, type, item);
     let formula = Roll.replaceFormulaData(spec, rollData, { missing: "0", warn: false });
     // TODO - need to do the .evaluate else the expression is not useful 
     // However will be a problem longer term when async not supported?? What to do
@@ -41,11 +44,12 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
     try {
       dmgSpec = new Roll(formula, rollData).evaluate({ async: false });
     } catch (err) {
-      console.warn("midi-qol | Dmg spec not valid", formula)
+      console.warn("midi-qol | Dmg spec not valid", formula);
       dmgSpec = undefined;
       break;
     }
-    if (!dmgSpec || dmgSpec.terms?.length < 1) break;
+    if (!dmgSpec || dmgSpec.terms?.length < 1)
+      break;
     // dmgSpec is now a roll with the right terms (but nonsense value) to pick off the right terms from the passed roll
     // Because damage spec is rolled it drops the leading operator terms, so do that as well
     for (let i = 0; i < dmgSpec.terms.length; i++) { // grab all the terms for the current damage line
@@ -67,7 +71,7 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
     // Each damage line is added together and we can skip the operator term
     partPos += 1;
     if (evalString) {
-      let result = Roll.safeEval(evalString)
+      let result = Roll.safeEval(evalString);
       damageParts[type || defaultType] = (damageParts[type || defaultType] || 0) + result;
       evalString = "";
     }
@@ -79,7 +83,7 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
 
   // process the rest of the roll as a sequence of terms.
   // Each might have a damage flavour so we do them expression by expression
-  const validTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
+  const validTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten());
 
   evalString = "";
   let damageType: string | undefined = defaultType;
@@ -104,7 +108,7 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
     } if (evalTerm instanceof OperatorTerm) {
       if (["*", "/"].includes(evalTerm.operator)) {
         // multiply or divide keep going
-        evalString += evalTerm.total
+        evalString += evalTerm.total;
       } else if (["-", "+"].includes(evalTerm.operator)) {
         if (numberTermFound) { // we have a number and a +/- so we can eval the term (do it straight away so we get the right damage type)
           let result = Roll.safeEval(evalString);
@@ -126,8 +130,9 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
     // we can always add since the +/- will be recorded in the evalString
     damageParts[damageType || defaultType] = (damageParts[damageType || defaultType] || 0) + damage;
   }
-  const damageList = Object.entries(damageParts).map(([type, damage]) => { return { damage, type } })
-  if (debugEnabled > 1) debug("CreateDamageList: Final damage list is ", damageList)
+  const damageList = Object.entries(damageParts).map(([type, damage]) => { return { damage, type }; });
+  if (debugEnabled > 1)
+    debug("CreateDamageList: Final damage list is ", damageList);
   return damageList;
 }
 
@@ -193,12 +198,15 @@ export function calculateDamage(a: Actor, appliedDamage, t: Token, totalDamage, 
  * 
  */
 
-export let getTraitMult = (actor, dmgTypeString, item) => {
+export function getTraitMult(actor, dmgTypeString, item): number {
   dmgTypeString = dmgTypeString.toLowerCase();
   let totalMult = 1;
-  if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) totalMult = -1;
-  if (dmgTypeString.includes("midi-none")) return 0;
-  if (configSettings.damageImmunities === "none") return totalMult;
+  if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp"))
+    totalMult = -1;
+  if (dmgTypeString.includes("midi-none"))
+    return 0;
+  if (configSettings.damageImmunities === "none")
+    return totalMult;
   /*
   let attacker = item?.parent;
   if (attacker) {
@@ -221,20 +229,28 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
     for (let { type, mult } of traitList) {
       let trait = actor.data.data.traits[type].value;
       if (configSettings.damageImmunities === "immunityPhysical") {
-        if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
-        if (!(magicalDamage || silverDamage) && trait.includes("silver")) trait = trait.concat("bludgeoning", "slashing", "piercing")
-        if (!(magicalDamage || adamantineDamage) && trait.includes("adamant")) trait = trait.concat("bludgeoning", "slashing", "piercing")
+        if (!magicalDamage && trait.includes("physical"))
+          trait = trait.concat("bludgeoning", "slashing", "piercing");
+        if (!(magicalDamage || silverDamage) && trait.includes("silver"))
+          trait = trait.concat("bludgeoning", "slashing", "piercing");
+        if (!(magicalDamage || adamantineDamage) && trait.includes("adamant"))
+          trait = trait.concat("bludgeoning", "slashing", "piercing");
       }
-      if (!magicalDamage && trait.find(t => t === "nonmagic") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
-      else if (magicalDamage && trait.find(t => t === "magic") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
-      else if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
-      else if (item?.type === "power" && trait.includes("power") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
-      else if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
+      if (!magicalDamage && trait.find(t => t === "nonmagic") && !["healing", "temphp"].includes(dmgTypeString))
+        totalMult = totalMult * mult;
+      else if (magicalDamage && trait.find(t => t === "magic") && !["healing", "temphp"].includes(dmgTypeString))
+        totalMult = totalMult * mult;
+      else if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString))
+        totalMult = totalMult * mult;
+      else if (item?.type === "power" && trait.includes("power") && !["healing", "temphp"].includes(dmgTypeString))
+        totalMult = totalMult * mult;
+      else if (trait.includes(dmgTypeString))
+        totalMult = totalMult * mult;
     }
   }
   return totalMult;
   // Check the custom immunities
-};
+}
 
 export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any>, semiSuperSavers: Set<any>, workflow: Workflow | undefined, updateContext: any } = { existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined, updateContext: undefined }): Promise<any[]> {
   return applyTokenDamageMany([damageDetail], [totalDamage], theTargets, item, [saves], { existingDamage: options.existingDamage, superSavers: [options.superSavers], semiSuperSavers: [options.semiSuperSavers], workflow: options.workflow, updateContext: options.updateContext });
@@ -248,7 +264,9 @@ export interface applyDamageDetails {
   superSavers?: Set<Token | TokenDocument>;
   semiSuperSavers?: Set<Token | TokenDocument>;
 }
-export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDetails[], theTargets: Set<Token | TokenDocument>, item: any, options: { existingDamage: any[][], workflow: Workflow | undefined, updateContext: any | undefined } = { existingDamage: [], workflow: undefined, updateContext: undefined }): Promise<any[]> {
+export async function newApplyTokenDamageMany({ applyDamageDetails, theTargets, item, 
+  options = { existingDamage: [], workflow: undefined, updateContext: undefined } }: 
+  { applyDamageDetails: applyDamageDetails[]; theTargets: Set<Token | TokenDocument>; item: any; options?: { existingDamage: any[][]; workflow: Workflow | undefined; updateContext: any | undefined; }; }): Promise<any[]> {
   let damageList: any[] = [];
   let targetNames: string[] = [];
   let appliedDamage;
@@ -301,6 +319,7 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
       // Consider checking the save multiplier for the item as a first step
       let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid, sourceAmmoUuid: workflow.ammo?.uuid } });
     }
+
     const uncannyDodge = getProperty(targetActor, "data.flags.midi-qol.uncanny-dodge") && workflow.item?.hasAttack;
     if (game.system.id === "sw5e" && targetActor?.type === "starship") {
       // TODO: maybe expand this to work with characters as well?
@@ -469,7 +488,7 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
       appliedDamage = Math.max(appliedDamage, 0);
     }
     //@ts-ignore
-    if (AR > 0 && appliedDamage > 0 && !Object.keys(getSystemCONFIG.healingTypes).includes(dmgType) && checkRule("challengeModeArmor")) {
+    if (AR > 0 && appliedDamage > 0 && !Object.keys(getSystemCONFIG().healingTypes).includes(dmgType) && checkRule("challengeModeArmor")) {
       totalDamage = appliedDamage;
       if (checkRule("challengeModeArmorScale") || workflow.hitTargetsEC.has(t))
         appliedDamage = Math.max(0, appliedDamage - AR)
@@ -527,7 +546,7 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
     }
   })
   // console.error("Apply token damage", mappedDamageDetailArray, theTargets, item, options)
-  return newApplyTokenDamageMany(mappedDamageDetailArray, theTargets, item, options)
+  return newApplyTokenDamageMany({ applyDamageDetails: mappedDamageDetailArray, theTargets, item, options })
 }
 
 export async function oldapplyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[], semiSuperSavers: Set<any>[], workflow: Workflow | undefined } = { existingDamage: [], superSavers: [], semiSuperSavers: [], workflow: undefined }): Promise<any[]> {
@@ -815,22 +834,20 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   if (workflow.shouldRollOtherDamage) {
     if ((workflow.otherDamageFormula ?? "") !== "" && configSettings.singleConcentrationRoll) {
       appliedDamage = await newApplyTokenDamageMany(
-        [
-          { label: "defaultDamage", damageDetail: workflow.damageDetail, damageTotal: workflow.damageTotal },
-          {
-            label: "otherDamage",
-            damageDetail: workflow.otherDamageDetail,
-            damageTotal: workflow.otherDamageTotal,
-            saves: workflow.saves,
-            superSavers: workflow.superSavers,
-            semiSuperSavers: workflow.semiSuperSavers
-          },
-          { label: "bonusDamage", damageDetail: workflow.bonusDamageDetail, damageTotal: workflow.bonusDamageTotal }
-        ],
-        theTargets,
-        item,
-        { existingDamage: [], workflow, updateContext: undefined }
-      );
+        {
+          applyDamageDetails: [
+            { label: "defaultDamage", damageDetail: workflow.damageDetail, damageTotal: workflow.damageTotal },
+            {
+              label: "otherDamage",
+              damageDetail: workflow.otherDamageDetail,
+              damageTotal: workflow.otherDamageTotal,
+              saves: workflow.saves,
+              superSavers: workflow.superSavers,
+              semiSuperSavers: workflow.semiSuperSavers
+            },
+            { label: "bonusDamage", damageDetail: workflow.bonusDamageDetail, damageTotal: workflow.bonusDamageTotal }
+          ], theTargets, item, options: { existingDamage: [], workflow, updateContext: undefined }
+        }      );
       /* appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.otherDamageDetail ?? [], workflow.bonusDamageDetail ?? []],
         [workflow.damageTotal, workflow.otherDamageTotal ?? 0, workflow.bonusDamageTotal ?? 0],
@@ -846,29 +863,26 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     } else {
       let savesToUse = (workflow.otherDamageFormula ?? "") !== "" ? undefined : workflow.saves;
       appliedDamage = await newApplyTokenDamageMany(
-        [
-          {
-            label: "defaultDamage",
-            damageDetail: workflow.damageDetail,
-            damageTotal: workflow.damageTotal,
-            saves: savesToUse,
-            superSavers: workflow.superSavers,
-            semiSuperSavers: workflow.semiSuperSavers
-          },
-          {
-            label: "bonusDamage",
-            damageDetail: workflow.bonusDamageDetail,
-            damageTotal: workflow.bonusDamageTotal,
-            saves: savesToUse,
-            superSavers: workflow.superSavers,
-            semiSuperSavers: workflow.semiSuperSavers
-          },
-
-        ],
-        theTargets,
-        item,
-        { existingDamage: [], workflow, updateContext: undefined }
-      );
+        {
+          applyDamageDetails: [
+            {
+              label: "defaultDamage",
+              damageDetail: workflow.damageDetail,
+              damageTotal: workflow.damageTotal,
+              saves: savesToUse,
+              superSavers: workflow.superSavers,
+              semiSuperSavers: workflow.semiSuperSavers
+            },
+            {
+              label: "bonusDamage",
+              damageDetail: workflow.bonusDamageDetail,
+              damageTotal: workflow.bonusDamageTotal,
+              saves: savesToUse,
+              superSavers: workflow.superSavers,
+              semiSuperSavers: workflow.semiSuperSavers
+            },
+          ], theTargets, item, options: { existingDamage: [], workflow, updateContext: undefined }
+        }      );
       /* appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
         [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
@@ -884,18 +898,16 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
 
       if (workflow.otherDamageRoll) {
         appliedDamage = await newApplyTokenDamageMany(
-          [{
-            label: "otherDamage",
-            damageDetail: workflow.otherDamageDetail,
-            damageTotal: workflow.otherDamageTotal,
-            saves: workflow.saves,
-            superSavers: workflow.superSavers,
-            semiSuperSavers: workflow.semiSuperSavers
-          }],
-          theTargets,
-          item,
-          { existingDamage: [], workflow, updateContext: undefined }
-        );
+          {
+            applyDamageDetails: [{
+              label: "otherDamage",
+              damageDetail: workflow.otherDamageDetail,
+              damageTotal: workflow.otherDamageTotal,
+              saves: workflow.saves,
+              superSavers: workflow.superSavers,
+              semiSuperSavers: workflow.semiSuperSavers
+            }], theTargets, item, options: { existingDamage: [], workflow, updateContext: undefined }
+          }        );
         // assume previous damage applied and then calc extra damage
         /*
         appliedDamage = await applyTokenDamage(
@@ -911,31 +923,30 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     }
   } else {
     appliedDamage = await newApplyTokenDamageMany(
-      [
-        {
-          label: "defaultDamage",
-          damageDetail: workflow.damageDetail,
-          damageTotal: workflow.damageTotal,
-          saves: workflow.saves,
-          superSavers: workflow.superSavers,
-          semiSuperSavers: workflow.semiSuperSavers
-        },
-
-        {
-          label: "bonusDamage",
-          damageDetail: workflow.bonusDamageDetail,
-          damageTotal: workflow.bonusDamageTotal,
-          saves: workflow.saves,
-          superSavers: workflow.superSavers,
-          semiSuperSavers: workflow.semiSuperSavers
-        },
-      ],
-      theTargets,
-      item,
       {
-        existingDamage: [],
-        workflow,
-        updateContext: undefined
+        applyDamageDetails: [
+          {
+            label: "defaultDamage",
+            damageDetail: workflow.damageDetail,
+            damageTotal: workflow.damageTotal,
+            saves: workflow.saves,
+            superSavers: workflow.superSavers,
+            semiSuperSavers: workflow.semiSuperSavers
+          },
+
+          {
+            label: "bonusDamage",
+            damageDetail: workflow.bonusDamageDetail,
+            damageTotal: workflow.bonusDamageTotal,
+            saves: workflow.saves,
+            superSavers: workflow.superSavers,
+            semiSuperSavers: workflow.semiSuperSavers
+          },
+        ], theTargets, item, options: {
+          existingDamage: [],
+          workflow,
+          updateContext: undefined
+        }
       });
     /*
     appliedDamage = await applyTokenDamageMany(
@@ -1857,6 +1868,9 @@ export async function addConcentration(options: { workflow: Workflow }) {
   } else {
     let actor = options.workflow.actor;
     let concentrationName = i18n("midi-qol.Concentrating");
+    const existing = selfTarget.actor?.effects.find(e => e.data.label === concentrationName);
+    if (existing) return undefined; // make sure that we don't double apply concentration
+
     const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
     // const itemData = duplicate(itemJSONData);
     // const currentItem: Item = new CONFIG.Item.documentClass(itemData)
@@ -2099,7 +2113,7 @@ class RollModifyDialog extends Application {
     rollTotalId: string,
     rollHTMLId: string,
     title: string,
-    content: HTMLElement | JQuery<HTMLElement>,
+    content: HTMLElement | JQuery<HTMLElement> | string,
     currentRoll: Roll,
     rollHTML: string,
     callback: () => {},
@@ -2165,11 +2179,9 @@ class RollModifyDialog extends Application {
       }
       return obj;
     }, {})
-    // this.data.content = await midiRenderRoll(this.data.currentRoll);
-    //@ts-ignore
-    // this.data.content = await this.data.currentRoll.render();
+
     return {
-      content: await midiRenderRoll(this.data.currentRoll),
+      content: this.data.content, // This is set by the callback
       buttons: this.data.buttons
     }
   }
@@ -2215,8 +2227,8 @@ class RollModifyDialog extends Application {
     try {
       if (button.callback) {
         await button.callback(this, button);
-        await this.getData({});
-        this.render(true);
+        // await this.getData({}); Render will do a get data, doing it twice breaks the button data?
+        await this.render(true);
       }
       // this.close();
     } catch (err) {
@@ -2362,6 +2374,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       }
 
       dialog.data.rollHTML = this[rollHTMLId];
+      dialog.data.content = this[rollHTMLId];
       await removeEffectGranting(this.actor, button.key);
       bonusFlags = bonusFlags.filter(bf => bf !== button.key)
       this.actor.prepareData();

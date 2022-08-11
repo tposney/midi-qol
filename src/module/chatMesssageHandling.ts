@@ -561,7 +561,7 @@ export let chatDamageButtons = (message, html, data) => {
     const damageList = createDamageList({ roll: message.roll, item, versatile: false, defaultType: defaultDamageType });
     const totalDamage = message.roll.total;
     addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemUuid, "damage", ".dice-total", "position:relative; top:5px; color:blue");
-  } else if (getProperty(message.data, "flags.midi-qol.damageDetail")) {
+  } else if (getProperty(message.data, "flags.midi-qol.damageDetail") || getProperty(message.data, "flags.midi-qol.otherDamageDetail")) {
     let midiFlags = getProperty(message.data, "flags.midi-qol");
     addChatDamageButtonsToHTML(midiFlags.damageTotal, midiFlags.damageDetail, html, midiFlags.actorUuid, midiFlags.itemUuid, "damage", ".midi-qol-damage-roll .dice-total");
     addChatDamageButtonsToHTML(midiFlags.otherDamageTotal, midiFlags.otherDamageDetail, html, midiFlags.actorUuid, midiFlags.itemUuid, "other", ".midi-qol-other-roll .dice-total");
@@ -571,7 +571,6 @@ export let chatDamageButtons = (message, html, data) => {
 }
 
 export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemUuid, tag = "damage", toMatch = ".dice-total", style = "margin: 0px;") {
-
   if (debugEnabled > 1) debug("addChatDamageButtons", totalDamage, damageList, html, actorId, itemUuid, toMatch, html.find(toMatch))
   const btnContainer = $('<span class="dmgBtn-container-mqol"></span>');
   let btnStylingGreen = `background-color:lightgreen; ${style}`;

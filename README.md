@@ -137,6 +137,8 @@ If you intend to make use of any of the macro features in midi-qol you will need
 ## Better Rolls
 If you are using Better Rolls (which is a great module), midi-qol takes over once the hit/damage card is placed by Better Rolls. This means that resource consumption, template placement, critical/fumble determination are **all** handled by Better Rolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage, and calls active effects. When using Better rolls flags.midi-qol should be applied.
 
+**Better Rolls** is no longer receiving support so is gradually accumulating "oddities of behaviour". I am no longer actively supporting better rolls and will remove support in v10 of midi-qol
+
 ## Magic Items
 **(Thanks to @simone for his help)**
 Midi-qol is mostly compatible with magic-items. The only issue is that spell templates for spells in a magic item are not auto-placed on casting. Once placed everything works as expected. Spells/features that can be rolled will work.  

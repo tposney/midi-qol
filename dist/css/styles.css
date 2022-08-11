@@ -47,14 +47,22 @@
 }
 
 .dmgBtn-container-mqol .dice-total-half-damage-button,
-.dmgBtn-container-mqol .dice-total-double-damage-button
+.dmgBtn-container-mqol .dice-total-double-damage-button,
+.dmgBtn-container-mqol .dice-total-half-other-button,
+.dmgBtn-container-mqol .dice-total-double-other-button,
+.dmgBtn-container-mqol .dice-total-half-bonus-button,
+.dmgBtn-container-mqol .dice-total-double-bonus-button
 {
   font-size: 0.8em !important;
 }
-.dmgBtn-container-mqol .dice-total-half-damage-button {
+.dmgBtn-container-mqol .dice-total-half-damage-button,
+.dmgBtn-container-mqol .dice-total-half-other-button ,
+.dmgBtn-container-mqol .dice-total-half-bonus-button  {
   margin-right: 10px !important;
 }
-.dmgBtn-container-mqol .dice-total-double-damage-button {
+.dmgBtn-container-mqol .dice-total-double-damage-button,
+.dmgBtn-container-mqol .dice-total-double-other-button,
+.dmgBtn-container-mqol .dice-total-double-bonus-button {
   margin-left: 10px !important;
 }
 

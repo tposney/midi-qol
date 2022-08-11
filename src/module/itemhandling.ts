@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming, allAttackTypes } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG, evalActivationCondition } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
@@ -154,6 +154,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     gameStats.addAttackRoll({ rawRoll, total, fumble, critical }, this);
   }
   if (dice3dEnabled() 
+      && workflow.workflowOptions.attackRollDSN !== false
       && configSettings.mergeCard 
       && !(configSettings.gmHide3dDice && game.user?.isGM)
       && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"))) {
@@ -357,6 +358,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   }
 
   if (dice3dEnabled() 
+      && workflow.workflowOptions.damageRollDSN !== false
       && configSettings.mergeCard 
       && !(configSettings.gmHide3dDice && game.user?.isGM)
       && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"))) {
@@ -1096,10 +1098,12 @@ export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: s
   }
 
   //@ts-ignore
-  /* other damage is always rolled, but application of the damage is selective
-  if (rollOtherDamage && conditionFlagToUse === "activation") {
-    rollOtherDamage = evalActivationCondition(workflow, conditionToUse)
+  if (rollOtherDamage && conditionFlagToUse === "activation" && workflow?.hitTargets.size > 0) {
+    rollOtherDamage = false;
+    for (let target of workflow.hitTargets) {
+      rollOtherDamage = evalActivationCondition(workflow, conditionToUse, target);
+      if (rollOtherDamage) break;
+    }
   }
-  */
   return rollOtherDamage;
 }

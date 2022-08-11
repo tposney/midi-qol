@@ -141,6 +141,8 @@ async function doRollSkill(wrapped, ...args) {
     // result = await wrapped.call(this, skillId, procOptions);
     result = await wrapped(skillId, procOptions);
   }
+  if (!result) return result;
+  
   const flavor = result.options?.flavor;
   const maxflags = getProperty(this.data.flags, "midi-qol.max") ?? {};
   const maxValue = (maxflags.skill && (maxflags.skill.all || maxflags.check[skillId])) ?? false;
@@ -363,6 +365,8 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     procOptions.chatMessage = false;
     result = await wrapped(abilityId, procOptions);
   }
+  if (!result) return result;
+
   const maxFlags = getProperty(this.data.flags, "midi-qol.max.ability") ?? {};
   const flavor = result.options?.flavor;
   const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId])) ?? false
@@ -371,7 +375,6 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     //@ts-ignore
     result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
   }
-
   const minFlags = getProperty(this.data.flags, "midi-qol.min.ability") ?? {};
   const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId])) ?? false;
   if (minValue && Number.isNumeric(minValue)) {
