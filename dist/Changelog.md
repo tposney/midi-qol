@@ -1,4 +1,44 @@
-### 0.10.01
+### 10.0.3
+Bug Fixes
+* Fix for aborting saving throw when not auto checking saves causing the saving throw button to remain disabled.
+* Fixed a bug in self targeted items.
+* Fix for double concentration when no CUB/CE and not auto applying effects.
+* Fix for Challenge mode armor failing to roll damage.
+* Fix for late targeting dialog not displaying token image.
+* Fix for custom midi damage sounds not playing if dice so nice enabled.
+* Fix for optional effects not calling a macro when specified.
+* Updated some of the items to work with v10. More to come.
+
+* Roll flavors that are not dnd5e damage types now are treated as the default damage type for the item.
+* Confirming damage flavours can be upper or lower case.
+* **BREAKING** When rolling damage the diceflavor will be set to the damage for each dice roll which means DSN daamge rolls will be correctly colored and the damage type of each damage roll will be displayed in the chat card.
+
+* Added support for spell sniper, flags.dnd5e.spellSniper.
+
+* Change to roll other damage. Other damage is only rolled if required (more or less). Specifically if there is an activation condtion, "Other" damage will only be rolled if the activation condition evaluates to true on at least one of hit targets.
+* **BREAKING** Change to roll other damage. Versatile will only be rolled instead of the "Other" formula if the item is a weapon and the versatile property is not selected.
+
+* Optional effects now support count && countAlt for tracking available usage. Both must have available uses for the optional bonus to be triggered. Leaving countAlt undefined means it won't be checked.
+
+* Invisible/Hidden advantage checking now also uses core foundry's vision modes. Note that this is now RAW which state that if a target is invisible they get advantage EVEN if the target can see them. Which I think is dumb.
+* If you can't see your target (invisible/hidden) you attack at disadvantage if invisibility advantage is being checked.
+
+* Include token size in distance calculations. 
+  - Assumes a token can attack at any elevation from the token's elevation to the token's elevation plus size and that a target can be attacked at any elevation from the target's elevation to the target's elevation plus size. So a 2 * 2 token at elevation 0 can attack at 0 or 10 feet.
+* Include token size in LOS checks with levels module's LOS checking.
+* Fix for nsa message handling.
+
+* **BREAKING** If you are recording Attacks of Opportunity and an actor makes an attack of opportunity, range checking for that attack is disabled, including long range disadvantage. The logic is that at some point during the turn they must have been in range to trigger the AoO so the attack can happen, even if when the roll is done the target is out of range. This means the GM does not have to move the token back to do the attack of opportunity.
+
+### 10.0.2
+* When combat ends reactions/bonus indicators are removed from all combatants.
+* Created a gap between damage buttons so that the underlying card can be clicked to expose the roll details.
+* Fixed an error in overtime effects processing, where removeCondition would be ignored if there is no saving trhow.
+* Add notification if you try to edit the midi-qol config if roll automation is disabled.
+* Fixed an error in checking incapacitated actors.
+* Fixed an error condition if the macroName is enclosed in quotes, which is should not be.
+
+### 10.0.1
 * v10 branch pre-release
 * This is definitely NOT ready for gameplay
   - integration with most other modules has not been deeply tested tested. And except for itemMacro I am using the current release - not a v10 branch if there is one.
@@ -64,7 +104,7 @@ await MidiQOL.doConcentrationCheck(actor, 15);
   - Support firing the missile back if caught. Firing back will consume a Ki point.
   - If the attacking item has ammunition specified, the ammunition will be used for the return attack, if not the base item will be used. So if you are using ammunition make sure that the ammunition specifies the damage for the ranged weapon attack.
 * Added Arcane Ward to sample items. This uses tempHp to implement the ward. Ward expires on long rest and will be recharged by casting abjuration spells.
-* Added Warding Bond, requires DAE 0.10.21. See DAE readme/changelog for more details. This  item requires the GM damage card to be displayed to work (auto apply damage will auto apply warding bond damage).
+* Added Warding Bond, requires DAE 0.10.21. See DAE readme/changelog for more details. This item requires the GM damage card to be displayed to work (auto apply damage will auto apply warding bond damage).
 * Re-implemented Hunter's Mark to showcase new DAE 0.10.21 feature - you do not need to use the new one. You must rename to Hunter's Mark when equipped to a character.
 * Added Simple Warding Bond (example item only) to share damage dealt between two actors (requires DAE 0.10.21).
 * When not fast forwarding attack rolls adjust the attack roll advantage/disadvantage flavor to match that selected on the roll dialog.

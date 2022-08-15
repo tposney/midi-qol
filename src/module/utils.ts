@@ -6,14 +6,14 @@ import { socketlibSocket, timedAwaitExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName, itemJSONData, midiFlagTypes, overTimeJSONData } from "./Hooks.js";
 
-import {  OnUseMacros } from "./apps/Item.js";
+import { OnUseMacros } from "./apps/Item.js";
 import { Options } from "./patching.js";
 
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
  */
-export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultDamageType }) => {
+export function createDamageList({ roll, item, versatile, defaultType = MQdefaultDamageType }): { damage: unknown; type: string; }[] {
   let damageParts = {};
   const rollTerms = roll.terms;
   let evalString = "";
@@ -27,6 +27,8 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
   if (debugEnabled > 1) debug("CreateDamageList: Passed roll is ", roll)
   if (debugEnabled > 1) debug("CreateDamageList: Damage spec is ", parts)
   let partPos = 0;
+  const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
+  const allDamageTypeEntries = Object.entries(getSystemCONFIG().damageTypes).concat(Object.entries(getSystemCONFIG().healingTypes));
 
   // If we have an item we can use it to work out each of the damage lines that are being rolled
   for (let [spec, type] of parts) { // each spec,type is one of the damage lines
@@ -59,6 +61,13 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
       }
       if (rollTerms[partPos]) {
         type = rollTerms[partPos]?.options?.flavor ?? type;
+        if (rollTerms[partPos] instanceof DiceTerm || rollTerms[partPos] instanceof NumericTerm) {
+          if (!rollTerms[partPos]?.options.flavor) {
+            let typeLabel = allDamageTypeEntries?.find(e => e[0] === type);
+            typeLabel = typeLabel ? typeLabel[1] : type;
+            setProperty(rollTerms[partPos].options, "flavor", typeLabel);
+          }
+        }
         evalString += rollTerms[partPos]?.total;
       }
       partPos += 1;
@@ -78,7 +87,6 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
 
   // process the rest of the roll as a sequence of terms.
   // Each might have a damage flavour so we do them expression by expression
-  const validTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
 
   evalString = "";
   let damageType: string | undefined = defaultType;
@@ -90,13 +98,17 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
     if (evalTerm instanceof DiceTerm) {
       // this is a dice roll
       evalString += evalTerm.total;
-      damageType = evalTerm.options?.flavor || damageType;
+      const flavorType = evalTerm.options?.flavor?.toLocaleLowerCase() || damageType;
+      if (validDamageTypes.includes(flavorType)) damageType = flavorType;
       numberTermFound = true;
     } else if (evalTerm instanceof Die) { // special case for better rolls that does not return a proper roll
-      damageType = evalTerm.options?.flavor || damageType;
+      const flavorType = evalTerm.options?.flavor?.toLocaleLowerCase() || damageType;
+      if (validDamageTypes.includes(flavorType)) damageType = flavorType;
       numberTermFound = true;
       evalString += evalTerm.total;
     } else if (evalTerm instanceof NumericTerm) {
+      const flavorType = evalTerm.options?.flavor?.toLocaleLowerCase() || damageType;
+      if (validDamageTypes.includes(flavorType)) damageType = flavorType;
       evalString += evalTerm.total;
       damageType = evalTerm.options?.flavor || damageType; // record this if we get it
       numberTermFound = true;
@@ -125,20 +137,20 @@ export let createDamageList = ({ roll, item, versatile, defaultType = MQdefaultD
     // we can always add since the +/- will be recorded in the evalString
     damageParts[damageType || defaultType] = (damageParts[damageType || defaultType] || 0) + damage;
   }
-  const damageList = Object.entries(damageParts).map(([type, damage]) => { return { damage, type } })
+  const damageList = Object.entries(damageParts).map(([type, damage]) => { return { damage, type } });
   if (debugEnabled > 1) debug("CreateDamageList: Final damage list is ", damageList)
   return damageList;
 }
 
-export function getSelfTarget(actor): Token | TokenDocument | undefined {
+export async function getSelfTarget(actor): Promise<Token | TokenDocument | undefined> {
   if (actor.token) return actor.token.object; //actor.token is a token document.
   const speaker = ChatMessage.getSpeaker({ actor })
   if (speaker.token) return canvas?.tokens?.get(speaker.token);
-  return new CONFIG.Token.documentClass(actor.getTokenData(), { actor });
+  return actor.getTokenData(); // TODO test this sometime
 }
 
-export function getSelfTargetSet(actor): Set<Token | TokenDocument> {
-  const selfTarget = getSelfTarget(actor);
+export async function getSelfTargetSet(actor): Promise<Set<Token | TokenDocument>> {
+  const selfTarget = await getSelfTarget(actor);
   if (selfTarget) return new Set([selfTarget]);
   return new Set();
 }
@@ -194,7 +206,7 @@ export function calculateDamage(a: Actor, appliedDamage, t: Token, totalDamage, 
  * 
  */
 
-export let getTraitMult = (actor, dmgTypeString, item) => {
+export let getTraitMult = (actor, dmgTypeString, item): number => {
   dmgTypeString = dmgTypeString.toLowerCase();
   let totalMult = 1;
   if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) totalMult = -1;
@@ -222,23 +234,39 @@ export let getTraitMult = (actor, dmgTypeString, item) => {
     for (let { type, mult } of traitList) {
       let trait = actor.system.traits[type].value;
       if (configSettings.damageImmunities === "immunityPhysical") {
-        if (!magicalDamage && trait.includes("physical")) trait = trait.concat("bludgeoning", "slashing", "piercing")
-        if (!(magicalDamage || silverDamage) && trait.includes("silver")) trait = trait.concat("bludgeoning", "slashing", "piercing")
-        if (!(magicalDamage || adamantineDamage) && trait.includes("adamant")) trait = trait.concat("bludgeoning", "slashing", "piercing")
+        if (!magicalDamage && trait.includes("physical"))
+          trait = trait.concat("bludgeoning", "slashing", "piercing")
+        if (!(magicalDamage || silverDamage) && trait.includes("silver"))
+          trait = trait.concat("bludgeoning", "slashing", "piercing")
+        if (!(magicalDamage || adamantineDamage) && trait.includes("adamant"))
+          trait = trait.concat("bludgeoning", "slashing", "piercing")
       }
-      if (!magicalDamage && trait.find(t => t === "nonmagic") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
-      else if (magicalDamage && trait.find(t => t === "magic") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
-      else if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
-      else if (item?.type === "power" && trait.includes("power") && !["healing", "temphp"].includes(dmgTypeString)) totalMult = totalMult * mult;
-      else if (trait.includes(dmgTypeString)) totalMult = totalMult * mult;
+      if (!magicalDamage && trait.find(t => t === "nonmagic") && !["healing", "temphp"].includes(dmgTypeString))
+        totalMult = totalMult * mult;
+      else if (magicalDamage && trait.find(t => t === "magic") && !["healing", "temphp"].includes(dmgTypeString))
+        totalMult = totalMult * mult;
+      else if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString))
+        totalMult = totalMult * mult;
+      else if (item?.type === "power" && trait.includes("power") && !["healing", "temphp"].includes(dmgTypeString))
+        totalMult = totalMult * mult;
+      else if (trait.includes(dmgTypeString))
+        totalMult = totalMult * mult;
     }
   }
   return totalMult;
   // Check the custom immunities
-};
+}
 
-export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any>, semiSuperSavers: Set<any>, workflow: Workflow | undefined, updateContext: any } = { existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined, updateContext: undefined }): Promise<any[]> {
-  return applyTokenDamageMany([damageDetail], [totalDamage], theTargets, item, [saves], { existingDamage: options.existingDamage, superSavers: [options.superSavers], semiSuperSavers: [options.semiSuperSavers], workflow: options.workflow, updateContext: options.updateContext });
+export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves,
+  options: any = { existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined, updateContext: undefined, forceApply: false }): Promise<any[]> {
+  return legacyApplyTokenDamageMany([damageDetail], [totalDamage], theTargets, item, [saves], {
+    existingDamage: options.existingDamage,
+    superSavers: options.superSavers ? [options.superSavers] : [],
+    semiSuperSavers: options.semiSuperSavers ? [options.semiSuperSavers] : [],
+    workflow: options.workflow,
+    updateContext: options.updateContext,
+    forceApply: options.forceApply ?? false
+  });
 }
 
 export interface applyDamageDetails {
@@ -249,7 +277,21 @@ export interface applyDamageDetails {
   superSavers?: Set<Token | TokenDocument>;
   semiSuperSavers?: Set<Token | TokenDocument>;
 }
-export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDetails[], theTargets: Set<Token | TokenDocument>, item: any, options: { existingDamage: any[][], workflow: Workflow | undefined, updateContext: any | undefined } = { existingDamage: [], workflow: undefined, updateContext: undefined }): Promise<any[]> {
+
+export async function applyTokenDamageMany({ applyDamageDetails, theTargets, item,
+  options = { existingDamage: [], workflow: undefined, updateContext: undefined, forceApply: false } }:
+  { applyDamageDetails: applyDamageDetails[]; theTargets: Set<Token | TokenDocument>; item: any; options?: { existingDamage: any[][]; workflow: Workflow | undefined; updateContext: any | undefined; forceApply: boolean }; }): Promise<any[]> {
+
+  /*export async function applyTokenDamageMany(
+    applyDamageDetails: applyDamageDetails[], 
+    theTargets: Set<Token | TokenDocument>, 
+    item: any, 
+    options: { 
+      existingDamage: any[][], 
+      workflow: Workflow | undefined, 
+      updateContext: any | undefined, 
+      forceApply: boolean
+    } = { existingDamage: [], workflow: undefined, updateContext: undefined, forceApply: false }): Promise<any[]> { */
   let damageList: any[] = [];
   let targetNames: string[] = [];
   let appliedDamage;
@@ -297,6 +339,7 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
     const isHealing = ("heal" === workflow?.item?.system.actionType) || firstDamageHealing;
     const noDamageReactions = (item?.hasSave && item.flags?.midiProperties?.nodam && workflow.saves?.has(t));
     const noProvokeReaction = workflow.item && getProperty(workflow.item, "flags.midi-qol.noProvokeReaction");
+
     if (totalDamage > 0 && workflow && !isHealing && !noDamageReactions && !noProvokeReaction && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
       // TODO check that the targetToken is actually taking damage
       // Consider checking the save multiplier for the item as a first step
@@ -310,9 +353,9 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
         DRAll = getProperty(t, "actor.system.attributes.equip.armor.dr") ?? 0;;
       }
     } else if (getProperty(targetActor, "flags.midi-qol.DR.all") !== undefined)
-      DRAll = (new Roll((getProperty(targetActor, "flags.midi-qol.DR.all") || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+      DRAll = (new Roll((`${getProperty(targetActor, "flags.midi-qol.DR.all") || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
     if (item?.hasAttack && getProperty(targetActor, `flags.midi-qol.DR.${item?.system.actionType}`)) {
-      DRAll += (new Roll((getProperty(targetActor, `flags.midi-qol.DR.${item?.system.actionType}`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+      DRAll += (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.${item?.system.actionType}`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
     }
     // const magicalDamage = (item?.type !== "weapon" || item?.system.attackBonus > 0 || item?.system.properties["mgc"]);
     let magicalDamage = item?.system.properties?.mgc || item?.system.midiProperties?.magicdam;
@@ -372,30 +415,30 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
         if (type.toLowerCase() !== "temphp") dmgType = type.toLowerCase();
         // Pick the highest DR applicable to the damage type being inflicted.
         if (getProperty(targetActor, `flags.midi-qol.DR.${type}`)) {
-          DRType = (new Roll((getProperty(targetActor, `flags.midi-qol.DR.${type}`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          DRType = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.${type}`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
         }
         if (DRType === 0 && !nonMagicalDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
-          const DR = (new Roll((getProperty(targetActor, `flags.midi-qol.DR.non-magical`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.non-magical`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
           nonMagicalDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
         }
         if (DRType === 0 && !nonSilverDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !silverDamage) {
-          const DR = (new Roll((getProperty(targetActor, `flags.midi-qol.DR.non-silver`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.non-silver`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
           nonSilverDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
         }
         if (DRType === 0 && !nonAdamantineDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !adamantineDamage) {
-          const DR = (new Roll((getProperty(targetActor, `flags.midi-qol.DR.non-adamantine`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0
+          const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.non-adamantine`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0
           nonAdamantineDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
         }
         if (DRType === 0 && !physicalDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && physicalDamage && getProperty(targetActor, `flags.midi-qol.DR.physical`)) {
-          const DR = (new Roll((getProperty(targetActor, `flags.midi-qol.DR.physical`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.physical`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
           physicalDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
         }
         if (DRType === 0 && !nonPhysicalDRUsed && !["bludgeoning", "slashing", "piercing"].includes(type) && !physicalDamage && getProperty(targetActor, `flags.midi-qol.DR.non-physical`)) {
-          const DR = (new Roll((getProperty(targetActor, `flags.midi-qol.DR.non-physical`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.non-physical`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
           nonPhysicalDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
         }
@@ -470,7 +513,7 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
       appliedDamage = Math.max(appliedDamage, 0);
     }
     //@ts-ignore
-    if (AR > 0 && appliedDamage > 0 && !Object.keys(getSystemCONFIG.healingTypes).includes(dmgType) && checkRule("challengeModeArmor")) {
+    if (AR > 0 && appliedDamage > 0 && !Object.keys(getSystemCONFIG().healingTypes).includes(dmgType) && checkRule("challengeModeArmor")) {
       totalDamage = appliedDamage;
       if (checkRule("challengeModeArmorScale") || workflow.hitTargetsEC.has(t))
         appliedDamage = Math.max(0, appliedDamage - AR)
@@ -507,7 +550,8 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
       targetNames,
       chatCardId: workflow.itemCardId,
       flagTags: workflow?.flagTags,
-      updateContext: options?.updateContext
+      updateContext: options?.updateContext,
+      forceApply: options.forceApply
     })
   }
   if (configSettings.keepRollStats) {
@@ -516,7 +560,7 @@ export async function newApplyTokenDamageMany(applyDamageDetails: applyDamageDet
   return damageList;
 };
 
-export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[], semiSuperSavers: Set<any>[], workflow: Workflow | undefined, updateContext: any } = { existingDamage: [], superSavers: [], semiSuperSavers: [], workflow: undefined, updateContext: undefined }): Promise<any[]> {
+export async function legacyApplyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[], semiSuperSavers: Set<any>[], workflow: Workflow | undefined, updateContext: any, forceApply: any } = { existingDamage: [], superSavers: [], semiSuperSavers: [], workflow: undefined, updateContext: undefined, forceApply: undefined }): Promise<any[]> {
   const mappedDamageDetailArray: applyDamageDetails[] = damageDetailArr.map((dd, i) => {
     return {
       label: "test",
@@ -524,11 +568,12 @@ export async function applyTokenDamageMany(damageDetailArr, totalDamageArr, theT
       damageTotal: totalDamageArr[i],
       saves: savesArr[i],
       superSavers: options.superSavers[i],
-      semiSuperSavers: options.semiSuperSavers[i]
+      semiSuperSavers: options.semiSuperSavers[i],
     }
-  })
+  });
+  options.forceApply = true;
   // console.error("Apply token damage", mappedDamageDetailArray, theTargets, item, options)
-  return newApplyTokenDamageMany(mappedDamageDetailArray, theTargets, item, options)
+  return applyTokenDamageMany({ applyDamageDetails: mappedDamageDetailArray, theTargets, item, options })
 }
 
 export async function processDamageRoll(workflow: Workflow, defaultDamageType: string) {
@@ -544,7 +589,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   // Show damage buttons if enabled, but only for the applicable user and the GM
 
   let theTargets = new Set([...workflow.hitTargets, ...workflow.hitTargetsEC]);
-  if (item?.system.target?.type === "self") theTargets = getSelfTargetSet(actor) || theTargets;
+  if (item?.system.target?.type === "self") theTargets = await getSelfTargetSet(actor) || theTargets;
   let effectsToExpire: string[] = [];
   if (theTargets.size > 0 && item?.hasAttack) effectsToExpire.push("1Hit");
   if (theTargets.size > 0 && item?.hasDamage) effectsToExpire.push("DamageDealt");
@@ -570,44 +615,81 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   // if (["rwak", "mwak"].includes(item?.system.actionType) && configSettings.rollOtherDamage !== "none") {
   if (workflow.shouldRollOtherDamage) {
     if ((workflow.otherDamageFormula ?? "") !== "" && configSettings.singleConcentrationRoll) {
-      appliedDamage = await newApplyTokenDamageMany(
-        [
-          { label: "defaultDamage", damageDetail: workflow.damageDetail, damageTotal: workflow.damageTotal },
-          {
-            label: "otherDamage",
-            damageDetail: workflow.otherDamageDetail,
-            damageTotal: workflow.otherDamageTotal,
-            saves: workflow.saves,
-            superSavers: workflow.superSavers,
-            semiSuperSavers: workflow.semiSuperSavers
-          },
-          { label: "bonusDamage", damageDetail: workflow.bonusDamageDetail, damageTotal: workflow.bonusDamageTotal }
-        ],
-        theTargets,
-        item,
-        { existingDamage: [], workflow, updateContext: undefined }
-      );
-      /* appliedDamage = await applyTokenDamageMany(
-        [workflow.damageDetail, workflow.otherDamageDetail ?? [], workflow.bonusDamageDetail ?? []],
-        [workflow.damageTotal, workflow.otherDamageTotal ?? 0, workflow.bonusDamageTotal ?? 0],
-        theTargets,
-        item,
-        [new Set(), workflow.saves, new Set()],
+      appliedDamage = await applyTokenDamageMany(
         {
-          existingDamage: [],
-          superSavers: [new Set(), workflow.superSavers, new Set()],
-          semiSuperSavers: [new Set(), workflow.semiSuperSavers, new Set()],
-          workflow
-        });*/
+          applyDamageDetails: [
+            { label: "defaultDamage", damageDetail: workflow.damageDetail, damageTotal: workflow.damageTotal },
+            {
+              label: "otherDamage",
+              damageDetail: workflow.otherDamageDetail,
+              damageTotal: workflow.otherDamageTotal,
+              saves: workflow.saves,
+              superSavers: workflow.superSavers,
+              semiSuperSavers: workflow.semiSuperSavers
+            },
+            { label: "bonusDamage", damageDetail: workflow.bonusDamageDetail, damageTotal: workflow.bonusDamageTotal }
+          ],
+          theTargets,
+          item,
+          options: { existingDamage: [], workflow, updateContext: undefined, forceApply: false }
+        }
+      );
     } else {
       let savesToUse = (workflow.otherDamageFormula ?? "") !== "" ? undefined : workflow.saves;
-      appliedDamage = await newApplyTokenDamageMany(
-        [
+      appliedDamage = await applyTokenDamageMany(
+        {
+          applyDamageDetails: [
+            {
+              label: "defaultDamage",
+              damageDetail: workflow.damageDetail,
+              damageTotal: workflow.damageTotal,
+              saves: savesToUse,
+              superSavers: workflow.superSavers,
+              semiSuperSavers: workflow.semiSuperSavers
+            },
+            {
+              label: "bonusDamage",
+              damageDetail: workflow.bonusDamageDetail,
+              damageTotal: workflow.bonusDamageTotal,
+              saves: savesToUse,
+              superSavers: workflow.superSavers,
+              semiSuperSavers: workflow.semiSuperSavers
+            },
+
+          ],
+          theTargets,
+          item,
+          options: { existingDamage: [], workflow, updateContext: undefined, forceApply: false }
+        }
+      );
+      if (workflow.otherDamageRoll) {
+        // assume previous damage applied and then calc extra damage
+        appliedDamage = await applyTokenDamageMany(
+          {
+            applyDamageDetails: [{
+              label: "otherDamage",
+              damageDetail: workflow.otherDamageDetail,
+              damageTotal: workflow.otherDamageTotal,
+              saves: workflow.saves,
+              superSavers: workflow.superSavers,
+              semiSuperSavers: workflow.semiSuperSavers
+            }],
+            theTargets,
+            item,
+            options: { existingDamage: [], workflow, updateContext: undefined, forceApply: false }
+          }
+        );
+      }
+    }
+  } else {
+    appliedDamage = await applyTokenDamageMany(
+      {
+        applyDamageDetails: [
           {
             label: "defaultDamage",
             damageDetail: workflow.damageDetail,
             damageTotal: workflow.damageTotal,
-            saves: savesToUse,
+            saves: workflow.saves,
             superSavers: workflow.superSavers,
             semiSuperSavers: workflow.semiSuperSavers
           },
@@ -615,98 +697,20 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
             label: "bonusDamage",
             damageDetail: workflow.bonusDamageDetail,
             damageTotal: workflow.bonusDamageTotal,
-            saves: savesToUse,
-            superSavers: workflow.superSavers,
-            semiSuperSavers: workflow.semiSuperSavers
-          },
-
-        ],
-        theTargets,
-        item,
-        { existingDamage: [], workflow, updateContext: undefined }
-      );
-      /* appliedDamage = await applyTokenDamageMany(
-        [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
-        [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
-        theTargets,
-        item,
-        [savesToUse, savesToUse],
-        {
-          existingDamage: [],
-          superSavers: [workflow.superSavers, workflow.superSavers],
-          semiSuperSavers: [workflow.semiSuperSavers, workflow.semiSuperSavers],
-          workflow
-        }); */
-
-      if (workflow.otherDamageRoll) {
-        appliedDamage = await newApplyTokenDamageMany(
-          [{
-            label: "otherDamage",
-            damageDetail: workflow.otherDamageDetail,
-            damageTotal: workflow.otherDamageTotal,
             saves: workflow.saves,
             superSavers: workflow.superSavers,
             semiSuperSavers: workflow.semiSuperSavers
-          }],
-          theTargets,
-          item,
-          { existingDamage: [], workflow, updateContext: undefined }
-        );
-        // assume previous damage applied and then calc extra damage
-        /*
-        appliedDamage = await applyTokenDamage(
-          workflow.otherDamageDetail,
-          workflow.otherDamageTotal,
-          theTargets,
-          item,
-          workflow.saves,
-          { existingDamage: appliedDamage, superSavers: workflow.superSavers, semiSuperSavers: workflow.semiSuperSavers, workflow }
-        );
-        */
-      }
-    }
-  } else {
-    appliedDamage = await newApplyTokenDamageMany(
-      [
-        {
-          label: "defaultDamage",
-          damageDetail: workflow.damageDetail,
-          damageTotal: workflow.damageTotal,
-          saves: workflow.saves,
-          superSavers: workflow.superSavers,
-          semiSuperSavers: workflow.semiSuperSavers
-        },
-
-        {
-          label: "bonusDamage",
-          damageDetail: workflow.bonusDamageDetail,
-          damageTotal: workflow.bonusDamageTotal,
-          saves: workflow.saves,
-          superSavers: workflow.superSavers,
-          semiSuperSavers: workflow.semiSuperSavers
-        },
-      ],
-      theTargets,
-      item,
-      {
-        existingDamage: [],
-        workflow,
-        updateContext: undefined
+          },
+        ],
+        theTargets,
+        item,
+        options: {
+          existingDamage: [],
+          workflow,
+          updateContext: undefined,
+          forceApply: false
+        }
       });
-    /*
-    appliedDamage = await applyTokenDamageMany(
-      [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
-      [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
-      theTargets,
-      item,
-      [workflow.saves, workflow.saves],
-      {
-        existingDamage: [],
-        superSavers: [workflow.superSavers, workflow.superSavers],
-        semiSuperSavers: [workflow.semiSuperSavers, workflow.semiSuperSavers],
-        workflow
-      });
-      */
   }
   workflow.damageList = appliedDamage;
 
@@ -716,10 +720,9 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
 export let getSaveMultiplierForItem = (item: Item) => {
   // find a better way for this ? perhaps item property
   if (!item) return 1;
-  // const itemData: any = (item instanceof CONFIG.Item.documentClass) ? item : item;
   //@ts-ignore
   if (item.actor && item.type === "spell" && item.system.level === 0) { // cantrip
-  //@ts-ignore .flags v10
+    //@ts-ignore .flags v10
     const midiFlags = getProperty(item.actor.flags, "midi-qol");
     if (midiFlags?.potentCantrip) return 0.5;
   }
@@ -998,7 +1001,7 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true)
 
       let itemData: any = duplicate(overTimeJSONData);
       if (typeof itemName === "string") {
-        if (itemName.startsWith("Actor.")) {
+        if (itemName.startsWith("Actor.")) { // TODO check this
           const localName = itemName.replace("Actor.", "")
           const theItem = actor.items.getName(localName);
           if (theItem) itemData = theItem.toObject();
@@ -1046,7 +1049,7 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true)
       //@ts-ignore
       itemData._id = randomID();
       // roll the damage and save....
-      const theTargetToken = getSelfTarget(actor);
+      const theTargetToken = await getSelfTarget(actor);
       const theTargetId = (theTargetToken instanceof Token) ? theTargetToken?.document.id : theTargetToken?.id;
       const theTargetUuid = (theTargetToken instanceof Token) ? theTargetToken?.document.uuid : theTargetToken?.uuid;
       if (game.user?.isGM && theTargetId) game.user.updateTokenTargets([theTargetId]);
@@ -1090,7 +1093,7 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true)
       try {
         const options = {
           showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid],
-          workflowOptions: { lateTargeting: false, autoRollDamage: "onHit", autoFastDamage: true }
+          workflowOptions: { lateTargeting: "none", autoRollDamage: "onHit", autoFastDamage: true }
         };
         await completeItemRoll(ownedItem, options); // worried about multiple effects in flight so do one at a time
       } finally {
@@ -1341,6 +1344,11 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, includeCover, 
   const t1StartY = t1.document.height >= 1 ? 0.5 : t1.document.height / 2;
   const t2StartX = t2.document.width >= 1 ? 0.5 : t2.document.width / 2;
   const t2StartY = t2.document.height >= 1 ? 0.5 : t2.document.height / 2;
+  const t1Elevation = t1.document.elevation ?? 0;
+  const t2Elevation = t2.document.elevation ?? 0;
+  const t1TopElevation = t1Elevation + Math.max(t1.document.height, t1.document.width) * (canvas?.dimensions?.distance ?? 5);
+  const t2TopElevation = t2Elevation + Math.min(t2.document.height, t2.document.width) * (canvas?.dimensions?.distance ?? 5); // assume t2 is trying to make itself small
+
   var x, x1, y, y1, d, r, segments: { ray: Ray }[] = [], rdistance, distance;
   for (x = t1StartX; x < t1.document.width; x++) {
     for (y = t1StartY; y < t1.document.height; y++) {
@@ -1354,27 +1362,32 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, includeCover, 
               x: origin.x,
               y: origin.y,
               //@ts-ignore
-              z: t1.document.elevation
+              z: t1Elevation
             }
             let p2 = {
               x: dest.x,
               y: dest.y,
               //@ts-ignore
-              z: t2.document.elevation
+              z: t2Elevation
             }
             //@ts-ignore
-            if (CONFIG.Levels.API.testCollision(p1, p2, "sight")) continue;
+            const baseToBase = CONFIG.Levels.API.testCollision(p1, p2, "sight");
+            p1.z = t1TopElevation;
+            p2.z = t2TopElevation;
+            //@ts-ignore
+            const topToBase = CONFIG.Levels.API.testCollision(p1, p2, "sight");
+            if (baseToBase && topToBase) continue;
           } else if (wallblocking) {
             // TODO use four point rule and work out cover
             switch (configSettings.optionalRules.wallsBlockRange) {
               case "center":
               case "centerLevels":
-                if (canvas.walls?.checkCollision(r, {mode: "any"})) continue;
+                if (canvas.walls?.checkCollision(r, { mode: "any" })) continue;
                 break;
               case "dnd5eHelpers":
               case "dnd5eHelpersAC":
                 if (!includeCover) {
-                  if (canvas.walls?.checkCollision(r, {mode: "any"})) continue;
+                  if (canvas.walls?.checkCollision(r, { mode: "any" })) continue;
                 }
                 //@ts-ignore 
                 else if (installedModules.get("dnd5e-helpers") && window.CoverCalculator) {
@@ -1404,17 +1417,26 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, includeCover, 
   distance = rdistance[0];
   rdistance.forEach(d => { if (d < distance) distance = d; });
   if (configSettings.optionalRules.distanceIncludesHeight) {
-    let height = Math.abs((t1.document.elevation || 0) - (t2.document.elevation || 0))
+    let heightDifference = 0;
+    let t1ElevationRange = Math.max(t1.document.height, t1.document.width) * (canvas?.dimensions?.distance ?? 5);
+    if (Math.abs(t2Elevation - t1Elevation) < t1ElevationRange) {
+      // token 2 is within t1's size so height difference is functionally 0
+      heightDifference = 0;
+    } else if (t1Elevation < t2Elevation) { // t2 above t1
+      heightDifference = t2Elevation - t1TopElevation;
+    } else if (t1Elevation > t2Elevation) { // t1 above t2
+      heightDifference = t1Elevation - t2TopElevation;
+    }
     //@ts-ignore diagonalRule from DND5E
     const rule = canvas.grid.diagonalRule
     if (["555", "5105"].includes(rule)) {
-      let nd = Math.min(distance, height);
-      let ns = Math.abs(distance - height);
+      let nd = Math.min(distance, heightDifference);
+      let ns = Math.abs(distance - heightDifference);
       distance = nd + ns;
       let dimension = canvas?.dimensions?.distance ?? 5;
       if (rule === "5105") distance = distance + Math.floor(nd / 2 / dimension) * dimension;
 
-    } else distance = Math.sqrt(height * height + distance * distance);
+    } else distance = Math.sqrt(heightDifference * heightDifference + distance * distance);
   }
   return { distance, acBonus: coverACBonus + tokenTileACBonus }; // TODO update this with ac bonus
 };
@@ -1447,6 +1469,10 @@ export function checkRange(actor, item, tokenId, targets): string {
   let range = item.system.range?.value || 0;
   let longRange = item.system.range?.long || 0;
   if (getProperty(actor, "flags.midi-qol.sharpShooter") && range < longRange) range = longRange;
+  if (item.system.actionType === "rsak" && getProperty(actor, "flags.dnd5e.spellSniper")) {
+    range = 2 * range;
+    longRange = 2 * longRange;
+  }
   if (item.system.range.units === "touch") {
     range = canvas?.dimensions?.distance ?? 5;
     longRange = 0;
@@ -1458,7 +1484,8 @@ export function checkRange(actor, item, tokenId, targets): string {
     if (target.actor) setProperty(target.actor, "flags.midi-qol.acBonus", 0);
     const distanceDetails = getDistance(token, target, true, true);
     let distance = distanceDetails.distance;
-    if (target.actor && distanceDetails.acBonus)
+    // spell sniper ignores cover ac bonus for rsak spells
+    if (target.actor && distanceDetails.acBonus && (item?.system.actionType !== "rsak" || !getProperty(actor, "flags.dnd5e.spellSniper")))
       setProperty(target.actor, "flags.midi-qol.acBonus", distanceDetails.acBonus);
     if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
       log(`${target.name} is too far ${distance} from your character you cannot hit`)
@@ -1509,8 +1536,8 @@ export function getAutoRollAttack(workflow: Workflow | undefined = undefined): b
   return game.user?.isGM ? configSettings.gmAutoAttack : configSettings.autoRollAttack;
 }
 
-export function getLateTargeting(workflow: Workflow | undefined = undefined) {
-  if (workflow?.workflowOptions?.lateTargeting !== undefined) return workflow?.workflowOptions?.lateTargeting
+export function getLateTargeting(workflow: Workflow | undefined = undefined): String {
+  if (workflow?.workflowOptions?.lateTargeting !== undefined) return workflow?.workflowOptions?.lateTargeting;
   return game.user?.isGM ? configSettings.gmLateTargeting : lateTargeting;
 }
 
@@ -1548,7 +1575,7 @@ export function getTokenPlayerName(token: TokenDocument) {
     return getProperty(token.actor?.flags ?? {}, "combat-utility-belt.hideNameReplacement")
   if (token.actor?.hasPlayerOwner) return token.name;
   //@ts-ignore .disposition - make sure this is really a token document
-  if (!(token instanceof TokenDocument)) {throw new Error("getTokenPlayerName token document is not a token docuemnet"); }
+  if (!(token instanceof TokenDocument)) { throw new Error("getTokenPlayerName token document is not a token docuemnet"); }
   //@ts-ignore .disposition
   switch (token.disposition) {
     case -1:
@@ -1580,7 +1607,7 @@ export async function addConcentration(options: { workflow: Workflow }) {
   if (!configSettings.concentrationAutomation) return;
   const item = options.workflow.item;
   // await item.actor.unsetFlag("midi-qol", "concentration-data");
-  let selfTarget = item.actor.token ? item.actor.token.object : getSelfTarget(item.actor);
+  let selfTarget = item.actor.token ? item.actor.token.object : await getSelfTarget(item.actor);
   if (!selfTarget) return;
   let statusEffect;
   if (installedModules.get("dfreds-convenient-effects")) {
@@ -1627,6 +1654,9 @@ export async function addConcentration(options: { workflow: Workflow }) {
   } else {
     let actor = options.workflow.actor;
     let concentrationName = i18n("midi-qol.Concentrating");
+    const existing = selfTarget.actor?.effects.find(e => e.data.label === concentrationName);
+    if (existing) return undefined; // make sure that we don't double apply concentration
+
     const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
     // const itemData = duplicate(itemJSONData);
     // const currentItem: Item = new CONFIG.Item.documentClass(itemData)
@@ -1668,12 +1698,12 @@ export async function addConcentration(options: { workflow: Workflow }) {
 
 export function findNearby(disposition: number | null, token: any /*Token | undefined */, distance: number, maxSize: number | undefined = undefined): Token[] {
   if (!token) return [];
-  if (!(token instanceof Token)) {throw new Error("find nearby token is not of type token")};
+  if (!(token instanceof Token)) { throw new Error("find nearby token is not of type token") };
   if (!canvas || !canvas.scene) return [];
   //@ts-ignore .disposition v10
   let targetDisposition = token.document.disposition * (disposition ?? 0);
   let nearby = canvas.tokens?.placeables.filter(t => {
-      //@ts-ignore .height .width v10
+    //@ts-ignore .height .width v10
     if (maxSize && t.document.height * t.document.width > maxSize) return false;
     if (t.actor &&
       t.id !== token.id && // not the token
@@ -1694,16 +1724,23 @@ export function checkNearby(disposition: number | null, token: Token | undefined
 
 export function hasCondition(token, condition: string) {
   if (!token) return false;
-  const localCondition = i18n(`midi-qol.${condition}`);
+
+  //@ts-ignore specialStatusEffects
+  if (condition === "invisible" && (token.document ?? token).hasStatusEffect(CONFIG.specialStatusEffects.INVISIBLE)) return true;
+  if ((token.document ?? token).hasStatusEffect(condition)) return true;
+
   //@ts-ignore
   if (installedModules.get("conditional-visibility") && token.actor && game.modules.get('conditional-visibility').api.hasCondition(token, condition)) return true;
   //@ts-ignore
   const cub = game.cub;
-  if (installedModules.get("combat-utility-belt") && cub.hasCondition("Invisible", [token], { warn: false })) return true;
-  if (installedModules.get("combat-utility-belt") && cub.hasCondition("Hidden", [token], { warn: false })) return true;
+  if (installedModules.get("combat-utility-belt") && condition === "invisible" && cub.hasCondition("Invisible", [token], { warn: false })) return true;
+  if (installedModules.get("combat-utility-belt") && condition === "hidden" && cub.hasCondition("Hidden", [token], { warn: false })) return true;
   //@ts-ignore
   const CEInt = game.dfreds?.effectInterface;
-  if (installedModules.get("dfreds-convenient-effects") && CEInt.hasEffectApplied(condition, token.actor.uuid)) return true;
+  if (installedModules.get("dfreds-convenient-effects")) {
+    const localCondition = i18n(`midi-qol.${condition}`);
+    if (CEInt.hasEffectApplied(localCondition, token.actor.uuid)) return true;
+  }
   return false;
 }
 
@@ -1740,6 +1777,8 @@ export async function removeTokenCondition(token, condition: string) {
     await CUB.removeCondition(localCondition, token, { warn: false });
   }
 
+  //@ts-ignore specialStatusEffect v10
+  await (token.document ?? token).toggleActiveEffect({ id: CONFIG.specialStatusEffects.INVISIBLE }, { active: false });
   if (installedModules.get("dfreds-convenient-effects")) {
     //@ts-ignore
     const CEInt = game.dfreds?.effectInterface;
@@ -1788,13 +1827,18 @@ export async function expireMyEffects(effectsToExpire: string[]) {
   if (myExpiredEffects?.length > 0) await this.actor?.deleteEmbeddedDocuments("ActiveEffect", myExpiredEffects, { "expiry-reason": `midi-qol:${effectsToExpire}` });
 }
 
-export async function expireRollEffect(rolltype: string, abilityId: string) {
+export async function expireRollEffect(rolltype: string, abilityId: string, success: boolean | undefined) {
   const rollType = rolltype.charAt(0).toUpperCase() + rolltype.slice(1)
   const expiredEffects = this.effects?.filter(ef => {
     const specialDuration = getProperty(ef.flags, "dae.specialDuration");
     if (!specialDuration) return false;
     if (specialDuration.includes(`is${rollType}`)) return true;
     if (specialDuration.includes(`is${rollType}.${abilityId}`)) return true;
+    if (success === true && specialDuration.includes(`is${rollType}Success`)) return true;
+    if (success === true && specialDuration.includes(`is${rollType}Success.${abilityId}`)) return true;
+    if (success === false && specialDuration.includes(`is${rollType}Failure`)) return true;
+    if (success === false && specialDuration.includes(`is${rollType}Failure.${abilityId}`)) return true;
+
     return false;
   }).map(ef => ef.id);
   if (expiredEffects?.length > 0) {
@@ -1835,7 +1879,7 @@ export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<T
 export function MQfromUuid(uuid): any | null {
   if (!uuid || uuid === "") return null;
   //@ts-ignore foundry v10 types
- return fromUuidSync(uuid)
+  return fromUuidSync(uuid)
 }
 
 export function MQfromActorUuid(uuid): any | null {
@@ -1860,7 +1904,7 @@ class RollModifyDialog extends Application {
     rollTotalId: string,
     rollHTMLId: string,
     title: string,
-    content: HTMLElement | JQuery<HTMLElement>,
+    content: HTMLElement | JQuery<HTMLElement> | string,
     currentRoll: Roll,
     rollHTML: string,
     callback: () => {},
@@ -1891,13 +1935,13 @@ class RollModifyDialog extends Application {
   async getData(options) {
     this.data.flags = this.data.flags.filter(flagName => {
       if ((getOptionalCountRemaining(this.data.actor, `${flagName}.count`)) < 1) return false;
-      return getProperty(this.data.actor, flagName)
+      return getProperty(this.data.actor, flagName) !== undefined
     });
     if (this.data.flags.length === 0) this.close();
     this.data.buttons = this.data.flags.reduce((obj, flag) => {
       const flagData = getProperty(this.data.actor, flag);
       let value = getProperty(flagData, this.data.flagSelector);
-      if (value) {
+      if (value !== undefined) {
         const labelDetail = Roll.replaceFormulaData(value, this.data.actor.getRollData())
         obj[randomID()] = {
           icon: '<i class="fas fa-dice-d20"></i>',
@@ -1912,7 +1956,7 @@ class RollModifyDialog extends Application {
       selector[selector.length - 1] = "all";
       const allSelector = selector.join(".");
       value = getProperty(flagData, allSelector);
-      if (value) {
+      if (value !== undefined) {
         const labelDetail = Roll.replaceFormulaData(value, this.data.actor.getRollData());
 
         obj[randomID()] = {
@@ -1930,7 +1974,7 @@ class RollModifyDialog extends Application {
     //@ts-ignore
     // this.data.content = await this.data.currentRoll.render();
     return {
-      content: await midiRenderRoll(this.data.currentRoll),
+      content: this.data.content, // This is set by the callback
       buttons: this.data.buttons
     }
   }
@@ -1976,7 +2020,7 @@ class RollModifyDialog extends Application {
     try {
       if (button.callback) {
         await button.callback(this, button);
-        await this.getData({});
+        // await this.getData({}); Render will do a get data, doing it twice breaks the button data?
         this.render(true);
       }
       // this.close();
@@ -1999,8 +2043,8 @@ export async function processAttackRollBonusFlags() { // bound to workflow
   const optionalFlags = getProperty(this, "actor.flags.midi-qol.optional") ?? {};
   let bonusFlags = Object.keys(optionalFlags)
     .filter(flag => {
-      const hasAttackFlag = getProperty(this.actor.flags, `midi-qol.optional.${flag}.attack.all`) ||
-        getProperty(this.actor.flags, `midi-qol.optional.${flag}.${attackBonus}`);
+      const hasAttackFlag = getProperty(this.actor.flags, `midi-qol.optional.${flag}.attack.all`) !== undefined ||
+        getProperty(this.actor.flags, `midi-qol.optional.${flag}.${attackBonus}`) !== undefined;
       if (!hasAttackFlag) return false;
       if (!this.actor.flags["midi-qol"].optional[flag].count) return true;
       return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
@@ -2018,7 +2062,7 @@ export async function processAttackRollBonusFlags() { // bound to workflow
     if (isMiss) {
       bonusFlags = Object.keys(this.actor.flags["midi-qol"]?.optional ?? [])
         .filter(flag => {
-          const hasAttackFlag = getProperty(this.actor.flags, `midi-qol.optional.${flag}.attack.fail`);
+          const hasAttackFlag = getProperty(this.actor.flags, `midi-qol.optional.${flag}.attack.fail`) !== undefined;
           if (!hasAttackFlag) return false;
           if (!this.actor.flags["midi-qol"].optional[flag].count) return true;
           return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
@@ -2040,8 +2084,8 @@ export async function processDamageRollBonusFlags(): Promise<Roll> { // bound to
   const optionalFlags = getProperty(this, "actor.flags.midi-qol.optional") ?? {};
   const bonusFlags = Object.keys(optionalFlags)
     .filter(flag => {
-      const hasDamageFlag = getProperty(this.actor.flags, `midi-qol.optional.${flag}.damage.all`) ||
-        getProperty(this.actor.flags, `midi-qol.optional.${flag}.${damageBonus}`);
+      const hasDamageFlag = getProperty(this.actor.flags, `midi-qol.optional.${flag}.damage.all`) !== undefined||
+        getProperty(this.actor.flags, `midi-qol.optional.${flag}.${damageBonus}`) !== undefined;
       if (!hasDamageFlag) return false;
       return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
     })
@@ -2072,7 +2116,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
         case "reroll-min": newRoll = await this[rollId].reroll({ async: true, minimize: true }); break;
         case "success": newRoll = await new Roll("99").evaluate({ async: true }); break;
         default:
-          if (button.value.startsWith("replace ")) {
+          if (typeof button.value === "string" && button.value.startsWith("replace ")) {
             const rollParts = button.value.split(" ");
             newRoll = new Roll(rollParts.slice(1).join(" "), (this.item ?? this.actor).getRollData());
           } else if (flagSelector.startsWith("damage.") && getProperty(this.actor, `${button.key}.criticalDamage`)) {
@@ -2111,21 +2155,27 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       this[rollId] = newRoll;
       this[rollTotalId] = newRoll.total;
       this[rollHTMLId] = await midiRenderRoll(newRoll);
-      const macroToCall = getProperty(this.actor, `data.${bonusFlags}.macroToCall`);
+      const macroToCall = getProperty(this.actor, `${button.key}.macroToCall`).trim();
       if (macroToCall) {
         if (this instanceof Workflow) {
           const macroData = this.getMacroData();
           this.callMacro(this.item, macroToCall, macroData)
         } else if (this.actor) {
-          const dummyWorkflow = new DummyWorkflow(this.actor, null, ChatMessage.getSpeaker({ actor: this.actor }), [], {});
-          dummyWorkflow.callMacro(null, macroToCall, dummyWorkflow.getMacroData())
+          let item;
+          if (typeof macroToCall === "string" && macroToCall.startsWith("ItemMacro.")) {
+            const itemName = macroToCall.split(".").slice(1).join(".");
+            item = this.actor.items.getName(itemName);
+          }
+          const dummyWorkflow = new DummyWorkflow(this.actor, item, ChatMessage.getSpeaker({ actor: this.actor }), [], {});
+          dummyWorkflow.callMacro(item, macroToCall, dummyWorkflow.getMacroData())
         } else console.warn(`midi-qol | RollModifyDialog no way to call macro ${macroToCall}`)
       }
 
       dialog.data.rollHTML = this[rollHTMLId];
+      dialog.data.content = this[rollHTMLId];
       await removeEffectGranting(this.actor, button.key);
       bonusFlags = bonusFlags.filter(bf => bf !== button.key)
-      this.actor.prepareData();
+      // this.actor.prepareData();
       if (bonusFlags.length === 0) {
 
         dialog.close();
@@ -2159,6 +2209,8 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
 
 //@ts-ignore dnd5e v10
 export function getOptionalCountRemainingShortFlag(actor: globalThis.dnd5e.documents.Actor5e, flag: string) {
+  return getOptionalCountRemaining(actor, `flags.midi-qol.optional.${flag}.count`) && getOptionalCountRemaining(actor, `flags.midi-qol.optional.${flag}.countAlt`)
+
   return getOptionalCountRemaining(actor, `flags.midi-qol.optional.${flag}.count`)
 }
 //@ts-ignore dnd5e v10
@@ -2167,7 +2219,8 @@ export function getOptionalCountRemaining(actor: globalThis.dnd5e.documents.Acto
   if (!countValue) return 1;
 
   if (["turn", "each-round", "each-turn"].includes(countValue) && game.combat) {
-    const usedFlag = flag.replace(".count", ".used");
+    let usedFlag = flag.replace(".countAlt", ".used");
+    usedFlag = flag.replace(".count", ".used");
     // check for the flag
     if (getProperty(actor, usedFlag)) return 0;
   } else if (countValue === "reaction") {
@@ -2190,20 +2243,25 @@ export function getOptionalCountRemaining(actor: globalThis.dnd5e.documents.Acto
 //@ts-ignore dnd5e v10
 export async function removeEffectGranting(actor: globalThis.dnd5e.documents.Actor5e, changeKey: string) {
   const effect = actor.effects.find(ef => ef.changes.some(c => c.key.includes(changeKey)))
-  if (!effect) return;
+  if (effect === undefined) return;
   const effectData = effect.toObject();
 
   const count = effectData.changes.find(c => c.key.includes(changeKey) && c.key.endsWith(".count"));
+  const countAlt = effectData.changes.find(c => c.key.includes(changeKey) && c.key.endsWith(".countAlt"));
   if (!count) {
     return actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id], { "expiry-reason": "midi-qol:optionalConsumed" })
-  } else if (Number.isNumeric(count.value)) {
-    if (count.value <= 1)
+  }
+  if (Number.isNumeric(count.value) || Number.isNumeric(countAlt?.value)) {
+    if (count.value <= 1 || countAlt?.value <= 1)
       return actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id], { "expiry-reason": "midi-qol:optionalConsumed" })
-    else {
+    else if (Number.isNumeric(count.value)) {
       count.value = `${count.value - 1}`; // must be a string
-      actor.updateEmbeddedDocuments("ActiveEffect", [effectData], { "expiry-reason": "midi-qol:optionalConsumed" })
+    } else if (Number.isNumeric(countAlt?.value)) {
+      countAlt.value = `${countAlt.value - 1}`; // must be a string
     }
-  } else if (count.value.startsWith("ItemUses.")) {
+    actor.updateEmbeddedDocuments("ActiveEffect", [effectData], { "expiry-reason": "midi-qol:optionalConsumed" })
+  } 
+  if (typeof count.value === "string" && count.value.startsWith("ItemUses.")) {
     const itemName = count.value.split(".")[1];
     const item = actor.items.getName(itemName);
     if (!item) {
@@ -2211,8 +2269,21 @@ export async function removeEffectGranting(actor: globalThis.dnd5e.documents.Act
       console.warn(`midi-qol | could not decrement uses for ${itemName} on actor ${actor.name}`);
       return;
     }
-    await item.update({ "system.uses.value": Math.max(0, item.system.uses.value - 1) })
-  } else if (count.value.startsWith("@")) {
+    await item.update({ "system.uses.value": Math.max(0, item.system.uses.value - 1) });
+  }
+  if (typeof countAlt?.value === "string" && countAlt.value.startsWith("ItemUses.")) {
+    const itemName = countAlt.value.split(".")[1];
+    const item = actor.items.getName(itemName);
+    if (!item) {
+      ui.notifications?.warn(`midi-qol | could not decrement uses for ${itemName} on actor ${actor.name}`);
+      console.warn(`midi-qol | could not decrement uses for ${itemName} on actor ${actor.name}`);
+      return;
+    }
+    await item.update({ "system.uses.value": Math.max(0, item.system.uses.value - 1) });
+  }
+
+  const actorUpdates: any[] = [];
+  if (typeof count.value === "string" && count.value.startsWith("@")) {
     let key = count.value.slice(1);
     if (key.startsWith("system.")) key = key.replace("system.", "")
     // we have a @field to consume
@@ -2221,12 +2292,36 @@ export async function removeEffectGranting(actor: globalThis.dnd5e.documents.Act
       charges -= 1;
       const update = {};
       update[`system.${key}`] = charges;
-      return actor.update(update);
+      actorUpdates.push(update);
     }
-  } else if (["turn", "each-round", "each-turn"].includes(count.value)) {
+  }
+  if (typeof countAlt?.value === "string" && countAlt.value.startsWith("@")) {
+    let key = countAlt.value.slice(1);
+    if (key.startsWith("system.")) key = key.replace("system.", "")
+    // we have a @field to consume
+    let charges = getProperty(actor.system, key)
+    if (charges) {
+      charges -= 1;
+      const update = {};
+      update[`system.${key}`] = charges;
+      actorUpdates.push(update);
+    }
+  }
+  if (actorUpdates.length > 0) await actor.update(actorUpdates);
+
+  if (["turn", "each-round", "each-turn"].includes(count.value)) {
     const flagKey = `${changeKey}.used`.replace("flags.midi-qol.", "");
     await actor.setFlag("midi-qol", flagKey, true);
-  } else if (count.value === "reaction") {
+  }
+  if (["turn", "each-round", "each-turn"].includes(countAlt?.value)) {
+    const flagKey = `${changeKey}.used`.replace("flags.midi-qol.", "");
+    await actor.setFlag("midi-qol", flagKey, true);
+  }
+
+   if (count.value === "reaction") {
+    setReactionUsed(actor);
+  }
+  if (countAlt?.value === "reaction") {
     setReactionUsed(actor);
   }
 }
@@ -2238,13 +2333,13 @@ export function hasEffectGranting(actor: globalThis.dnd5e.documents.Actor5e, key
   let changeKey = `${key}.${selector}`;
   // let hasKey = actor.effects.find(ef => ef.changes.some(c => c.key === changeKey) && getOptionalCountRemainingShortFlag(actor, key) > 0)
   let hasKey = getProperty(actor, changeKey);
-  if (hasKey) return true;
+  if (hasKey !== undefined) return true;
   let allKey = selector.split(".");
   allKey[allKey.length - 1] = "all";
   changeKey = `${key}.${allKey.join(".")}`;
   // return actor.effects.find(ef => ef.changes.some(c => c.key === changeKey) && getOptionalCountRemainingShortFlag(actor, key) > 0)
   hasKey = getProperty(actor, changeKey);
-  if (hasKey) return true;
+  if (hasKey !== undefined) return true;
   return false;
 
 }
@@ -2517,17 +2612,17 @@ export async function reactionDialog(actor: globalThis.dnd5e.documents.Actor5e, 
       // No need to set reaction effect since using item will do so.
       dialog.close();
       // options = mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStatus: false}, {overwrite: true});
-      options.lateTargeting = false;
-      const itemRollOptions = mergeObject(options, { 
-        showFullCard: false, 
-        createWorkflow: true, 
-        versatile: false, 
-        configureDialog: true, 
-        checkGMStatus: false, 
+      options.lateTargeting = "none";
+      const itemRollOptions = mergeObject(options, {
+        showFullCard: false,
+        createWorkflow: true,
+        versatile: false,
+        configureDialog: true,
+        checkGMStatus: false,
         targetUuids: [triggerTokenUuid]
       });
       await completeItemRoll(item, itemRollOptions);
-      actor.prepareData();
+      // actor.prepareData();
       resolve({ name: item.name, uuid: item.uuid })
     };
 
@@ -2953,10 +3048,10 @@ export async function asyncHooksCallAll(hook, ...args) {
     console.log(args);
   }
   //@ts-ignore
-  if ( !(hook in Hooks.events) ) return true;
+  if (!(hook in Hooks.events)) return true;
 
   //@ts-ignore
-  for (let entry of Array.from(Hooks.events[hook]) ) {
+  for (let entry of Array.from(Hooks.events[hook])) {
     //TODO see if this might be better as a Promises.all
     //@ts-ignore
     await hookCall(entry, args);
@@ -2981,15 +3076,15 @@ export async function asyncHooksCall(hook, ...args) {
   return true;
 }
 function hookCall(entry, args) {
-  const {hook, id, fn, once} = entry;
-  if ( once ) Hooks.off(hook, id);
+  const { hook, id, fn, once } = entry;
+  if (once) Hooks.off(hook, id);
   try {
     return entry.fn(...args);
-  } catch(err) {
+  } catch (err) {
     const msg = `Error thrown in hooked function '${fn?.name}' for hook '${hook}'`;
     console.warn(`${vtt} | ${msg}`);
     //@ts-ignore Hooks.onError v10
-    if ( hook !== "error" ) Hooks.onError("Hooks.#call", err, {msg, hook, fn, log: "error"});
+    if (hook !== "error") Hooks.onError("Hooks.#call", err, { msg, hook, fn, log: "error" });
   }
 }
 
@@ -3099,7 +3194,7 @@ export function computeFlankingStatus(token, target): boolean {
   // console.error("Distance is ", getDistance(token, target, false, true));
   if (getDistance(token, target, false, true).distance > 5) return false;
   // an enemy's enemies are my friends.
-  const allies: any /* Token v10 */ [] = findNearby(-1, target, 5);
+  const allies: any /* Token v10 */[] = findNearby(-1, target, 5);
 
   if (allies.length === 1) return false; // length 1 means no other allies nearby
 
@@ -3248,50 +3343,27 @@ export function canSee(tokenEntity: Token | TokenDocument, targetEntity: Token |
   const targetPoint = target.center;
   const visionSource = token.vision;
   if (!token.vision.active) return true; //TODO work out what to do with tokens with no vision
-  const lightSources = canvas?.lighting?.sources;
+  //@ts-ignore lightSources
+  const lightSources = canvas?.effects?.lightSources;
 
   // Determine the array of offset points to test
   const t = Math.min(target.w, target.h) / 4;
 
   const offsets = t > 0 ? [[0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t]] : [[0, 0]];
-  const points = offsets.map(o => new PIXI.Point(targetPoint.x + o[0], targetPoint.y + o[1]));
-  // If the point is entirely inside the buffer region, it may be hidden from view
-  // if (!target._inBuffer && !points.some(p => canvas?.dimensions?.sceneRect.contains(p.x, p.y))) return false;
-
-  // Check each point for one which provides both LOS and FOV membership
-  const returnValue = points.some(p => {
-    let hasLOS = false;
-    let hasFOV = false;
-    let requireFOV = !canvas?.lighting?.globalLight;
-
-    if (!hasLOS || (!hasFOV && requireFOV)) {   // Do we need to test for LOS?
-      if (visionSource?.los?.contains(p.x, p.y)) {
-        hasLOS = true;
-        if (!hasFOV && requireFOV) {            // Do we need to test for FOV?
-          if (visionSource?.fov?.contains(p.x, p.y)) hasFOV = true;
-        }
-      }
-    }
-    if (hasLOS && (!requireFOV || hasFOV)) {    // Did we satisfy all required conditions?
-      return true;
-    }
-
-    // Check light sources
-    for (let source of lightSources?.values() ?? []) {
-      if (!source.active) continue;
-      //@ts-ignore
-      if (source.containsPoint(p)) {
-        //@ts-ignore
-        if (source.vision) hasLOS = true; // TODO check this v10
-        hasFOV = true;
-      }
-      if (hasLOS && (!requireFOV || hasFOV)) return true;
-    }
-    return false;
+  const tests = offsets.map(o => {
+    return { point: new PIXI.Point(targetPoint.x + o[0], targetPoint.y + o[1]), hasLOS: false, hasFOV: false }
   });
-
-  return returnValue;
-
+  const config = { tests, object: targetEntity };
+  //@ts-ignore
+  if (visionSource.visionMode.testVisibility.call(visionSource, config)) return true;
+  // Test light sources
+  //@ts-ignore
+  for (const lightSource of canvas.effects.lightSources.values()) {
+    if (!lightSource.active || lightSource.disabled) continue;
+    const lsResult = lightSource.testVisibility(config);
+    if (lsResult === true) return true;
+  }
+  return false;
 }
 export function getSystemCONFIG(): any {
   switch (game.system.id) {
@@ -3322,7 +3394,7 @@ export async function doConcentrationCheck(actor, saveDC) {
   itemData.name = concentrationCheckItemDisplayName;
   // actor took damage and is concentrating....
   const saveTargets = game.user?.targets;
-  const theTargetToken = getSelfTarget(actor);
+  const theTargetToken = await getSelfTarget(actor);
   itemData.system.target.type = "self";
   const theTarget = theTargetToken instanceof Token ? theTargetToken?.document.id : theTargetToken?.id;
   if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
@@ -3336,11 +3408,11 @@ export async function doConcentrationCheck(actor, saveDC) {
     if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
       //@ts-ignore
       // await ownedItem.roll({ vanilla: false, showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false })
-      await globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.toObject(), vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC, workflowOptions: { lateTargeting: false } }).toMessage();
+      await globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.toObject(), vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC, workflowOptions: { lateTargeting: "none" } }).toMessage();
     } else {
       //@ts-ignore
-      result = await completeItemRoll(ownedItem, { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: false } })
-      // await ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: false } })
+      result = await completeItemRoll(ownedItem, { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: "none" } })
+      // await ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: "none" } })
     }
   } finally {
     if (saveTargets && game.user) game.user.targets = saveTargets;

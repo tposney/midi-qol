@@ -49,7 +49,7 @@ export class LateTargetingDialog extends Application {
     data.targets = data.targets.map(t=> {
       return {
         name: game.user?.isGM ? t.name : getTokenPlayerName(t),
-        img: t.img
+        img: t.document.texture.src
       }
     })
     if (this.data.item) {

@@ -28,7 +28,7 @@ export class MidiSounds {
     const { playlist, sound } = this.getSound(playListName, soundName);
     //@ts-ignore
     if (playlist && sound) { // TODO check this v10
-      return AudioHelper.play({ src: sound.data.path, volume: sound.data.volume, autoplay: true, loop: false }, true);
+      return AudioHelper.play({ src: sound.path, volume: sound.volume, autoplay: true, loop: false }, true);
     }
   }
 
@@ -77,7 +77,7 @@ export class MidiSounds {
       const soundIndex = Math.floor(Math.random() * sounds.contents.length);
       //@ts-ignore
       const sound = playlist.sounds.contents[soundIndex];
-      return AudioHelper.play({ src: sound.data.path, volume: sound.data.volume, autoplay: true, loop: false }, true);
+      return AudioHelper.play({ src: sound.path, volume: sound.volume, autoplay: true, loop: false }, true);
     }
   }
 
@@ -120,15 +120,15 @@ export class MidiSounds {
   static async getItemBaseTypes(type: string, weaponType: string) {
     //@ts-ignore DND5e
     const baseIds = CONFIG.DND5E[`${type}Ids`];
-    if ( baseIds === undefined ) return {};
+    if (baseIds === undefined) return {};
 
     const typeProperty = type === "armor" ? "armor.type" : `${type}Type`;
     const baseType = weaponType;
 
     const items = {};
-    for ( const [name, id] of Object.entries(baseIds) ) {
+    for (const [name, id] of Object.entries(baseIds)) {
       const baseItem = await globalThis.dnd5e.applications.ProficiencySelector.getBaseItem(id);
-      if ( baseType !== foundry.utils.getProperty(baseItem.system, typeProperty) ) continue;
+      if (baseType !== foundry.utils.getProperty(baseItem.system, typeProperty)) continue;
       items[name] = baseItem.name;
     }
     //@ts-ignore lhs[1]
@@ -195,23 +195,11 @@ export class MidiSounds {
       return true;
     });
 
-    Hooks.on("midi-qol.preDamageRoll", async (workflow: Workflow) => {
-      if (!configSettings.useCustomSounds || !workflow.item) return true;
-      if (dice3dEnabled()) {
-        const result = await await this.processHook(workflow, workflow.defaultDamageType);
-        if (!result)
-          await this.processHook(workflow, "damage");
-      }
-      return true;
-    });
-
     Hooks.on("midi-qol.DamageRollComplete", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
-      if (!dice3dEnabled()) {
-        const result = await await this.processHook(workflow, workflow.defaultDamageType);
-        if (!result)
-          await this.processHook(workflow, "damage");
-      }
+      const result = await this.processHook(workflow, workflow.defaultDamageType);
+      if (!result)
+        await this.processHook(workflow, "damage");
       return true;
     });
   }

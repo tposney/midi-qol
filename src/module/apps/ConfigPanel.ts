@@ -87,7 +87,8 @@ export class ConfigPanel extends FormApplication {
       isBetterRolls: installedModules.get("betterrolls5e"),
       rollAlternateOptions: geti18nOptions("RollAlternateOptions"),
       ConsumeResourceOptions: geti18nOptions("ConsumeResourceOptions"),
-      AddDeadOptions: geti18nOptions("AddDeadOptions")
+      AddDeadOptions: geti18nOptions("AddDeadOptions"),
+      LateTargetingOptions: geti18nOptions("LateTargetingOptions")
     };
 
     if (debugEnabled > 0) warn("Config Panel: getData ", data)
@@ -333,7 +334,7 @@ let quickSettingsDetails: any = {
       gmAutoFastForwardAttack: true,
       gmAutoFastForwardDamage: true,
       gmRemoveButtons: "all",
-      gmLateTargeting: false,
+      gmLateTargeting: "none",
       autoItemEffects: "applyRemove",
       allowUseMacro: true,
     },
@@ -347,7 +348,7 @@ let quickSettingsDetails: any = {
       gmAutoFastForwardAttack: false,
       gmAutoFastForwardDamage: false,
       gmRemoveButtons: "none",
-      gmLateTargeting: false
+      gmLateTargeting: "none"
     },
   },
   PlayerAuto: {
@@ -358,7 +359,7 @@ let quickSettingsDetails: any = {
       autoRollDamage: "onHit",
       autoFastForward: "all",
       removeButtons: "all",
-      lateTargeting: false
+      lateTargeting: "none"
     },
   },
   PlayerManual: {
@@ -369,7 +370,7 @@ let quickSettingsDetails: any = {
       autoRollDamage: "none",
       autoFastForward: "none",
       removeButtons: "none",
-      lateTargeting: false
+      lateTargeting: "none"
     },
   },
   DamageAuto: {

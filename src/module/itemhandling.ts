@@ -1,7 +1,7 @@
-import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming, allAttackTypes } from "../midi-qol.js";
+import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming, allAttackTypes, failedSaveOverTimeEffectsToDelete } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG, evalActivationCondition, createDamageList } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
@@ -33,7 +33,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
 
   if (["Workflow"].includes(workflow.workflowType)) {
     if (this.system.target?.type === self) {
-      workflow.targets = getSelfTargetSet(this.actor)
+      workflow.targets = await getSelfTargetSet(this.actor)
     } else if (game.user?.targets?.size ?? 0 > 0) workflow.targets = validTargetTokens(game.user?.targets);
     if (workflow?.attackRoll && workflow.currentState === WORKFLOWSTATES.ROLLFINISHED) { // we are re-rolling the attack.
       workflow.damageRoll = undefined;
@@ -154,10 +154,12 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     const critical = rawRoll >= options.critical;
     gameStats.addAttackRoll({ rawRoll, total, fumble, critical }, this);
   }
-  if (dice3dEnabled() 
-      && configSettings.mergeCard 
-      && !(configSettings.gmHide3dDice && game.user?.isGM)
-      && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"))) {
+  if (workflow.workflowOptions.attackRollDSN === undefined && dice3dEnabled()) {
+    workflow.workflowOptions.attackRollDSN = 
+    configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)
+        && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"));
+  }
+  if (dice3dEnabled() && workflow.workflowOptions.attackRollDSN) {
     let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((["details", "hitDamage", "all"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
@@ -303,6 +305,10 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     result = await new Roll(result.formula).roll({ minimize: true });
   // need to do this nonsense since the returned roll _formula has a trailing + for ammo
   result = Roll.fromJSON(JSON.stringify(result.toJSON()))
+  if (this.system.actionType === "heal" && !Object.keys(getSystemCONFIG().healingTypes).includes(workflow.defaultDamageType ?? "")) workflow.defaultDamageType = "healing";
+  workflow.damageDetail = createDamageList({ roll: result, item: this, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType });
+
+  // createDamageList({roll: result, item:this, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType})
   await workflow.setDamageRoll(result);
   result = await processDamageRollBonusFlags.bind(workflow)();
   // await workflow.setDamageRoll(result);
@@ -357,10 +363,12 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     }
   }
 
-  if (dice3dEnabled() 
-      && configSettings.mergeCard 
-      && !(configSettings.gmHide3dDice && game.user?.isGM)
-      && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"))) {
+  if (workflow.workflowOptions.damageRollDSN === undefined && dice3dEnabled()) {
+    workflow.workflowOptions.damageRollDSN = configSettings.mergeCard 
+        && !(configSettings.gmHide3dDice && game.user?.isGM)
+        && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"))
+  }
+  if (dice3dEnabled() && workflow.workflowOptions.damageRollDSN) {
     let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
     if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
@@ -393,9 +401,11 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   return result;
 }
 
-async function newResolveLateTargeting(item: any, overRideSetting = false): Promise<boolean> {
+async function newResolveLateTargeting(item): Promise<boolean> {
   const workflow = Workflow.getWorkflow(item?.uuid);
-  if (!overRideSetting && !getLateTargeting(workflow)) return true;
+  const lateTargetingSetting = getLateTargeting(workflow);
+  if (lateTargetingSetting === "none") return true; // workflow options override the user settings
+  if (workflow && lateTargetingSetting === "noTargetsSelected" && workflow.targets.size !== 0) return true;
 
   // enable target mode
   const controls: any = ui.controls;
@@ -479,7 +489,11 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const isRangeSpell = ["ft", "m"].includes(this.system.target?.units) && ["creature", "ally", "enemy"].includes(this.system.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
-  const shouldCheckLateTargeting = (allAttackTypes.includes(this.system.actionType) || (this.hasTarget && !this.hasAreaTarget)) && (options.workflowOptions?.lateTargeting ?? getLateTargeting());
+  
+  const lateTargetingSetting = getLateTargeting();
+  const lateTargetingSet = lateTargetingSetting === "all" || (lateTargetingSetting === "noTargetsSelected" && game?.user?.targets.size === 0)
+  const shouldCheckLateTargeting = (allAttackTypes.includes(this.system.actionType) || (this.hasTarget && !this.hasAreaTarget)) 
+          && (options.workflowOptions?.lateTargeting ?? lateTargetingSet);
 
   if (shouldCheckLateTargeting && !isRangeSpell && !isAoESpell) {
 
@@ -501,7 +515,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
 
 
     if (canDoLateTargeting) {
-      if (!(await newResolveLateTargeting(this, true)))
+      if (!(await newResolveLateTargeting(this)))
         return null;
     }
   }
@@ -521,8 +535,30 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   // only allow weapon attacks against at most the specified number of targets
   let allowedTargets = (this.system.target?.type === "creature" ? this.system.target?.value : 9999) ?? 9999
   let speaker = getSpeaker(this.actor);
+  const inCombat = isInCombat(this.actor);
+  let AoO = false;
+  let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
+  const isTurn = activeCombatants?.includes(speaker.token);
+
+  const checkReactionAOO = configSettings.recordAOO === "all" || (configSettings.recordAOO === this.actor.type)
+
+  let itemUsesReaction = false;
+  const hasReaction = await hasUsedReaction(this.actor);
+
+  if (!options.workflowOptions.notReaction && ["reaction", "reactiondamage", "reactionmanual"].includes(this.system.activation?.type) && this.system.activation?.cost > 0) {
+    itemUsesReaction = true;
+  }
+  if (!options.workflowOptions.notReaction && checkReactionAOO && !itemUsesReaction && this.hasAttack) {
+    let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
+    const isTurn = activeCombatants?.includes(speaker.token)
+    if (!isTurn && inCombat) {
+      itemUsesReaction = true;
+      AoO = true;
+    }
+  }
+
   // do pre roll checks
-  if (checkRule("checkRange") && !isAoESpell && !isRangeSpell) {
+  if (checkRule("checkRange") && !isAoESpell && !isRangeSpell && !AoO) {
     if (speaker.token && checkRange(this.actor, this, speaker.token, myTargets) === "fail")
       return null;
   }
@@ -580,7 +616,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return null;
   }
 
-  const targets = (this?.system.target?.type === "self") ? getSelfTargetSet(this.actor) : myTargets;
+  const targets = (this?.system.target?.type === "self") ? await getSelfTargetSet(this.actor) : myTargets;
 
   let workflow: Workflow;
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
@@ -601,6 +637,10 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
   */
   workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
+  workflow.inCombat = inCombat ?? false;
+  workflow.isTurn = isTurn ?? false;
+  workflow.AoO = AoO;
+
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile || workflow.isVersatile;
   // if showing a full card we don't want to auto roll attacks or damage.
   workflow.noAutoDamage = showFullCard;
@@ -610,28 +650,12 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     workflow.ammo = this.actor.items.get(consume.target);
   }
 
-  let itemUsesReaction = false;
-  const hasReaction = await hasUsedReaction(this.actor);
-  if (!options.workflowOptions.notReaction && ["reaction", "reactiondamage", "reactionmanual"].includes(this.system.activation?.type) && this.system.activation?.cost > 0) {
-    itemUsesReaction = true;
-  }
-  let inCombat = isInCombat(workflow.actor);
 
-  const checkReactionAOO = configSettings.recordAOO === "all" || (configSettings.recordAOO === this.actor.type)
 
-  // inCombat used by reactions, bonus actions and AOO checking - only evaluate it once since it's expensiveish
-  if (checkReactionAOO || needsReactionCheck(this.actor) || configSettings.enforceBonusActions !== "none"
-    || configSettings.enforceReactions !== "none") {
-    inCombat = isInCombat(workflow.actor);
-  }
-  if (!options.workflowOptions.notReaction && checkReactionAOO && !itemUsesReaction && this.hasAttack) {
-    let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
-    const isTurn = activeCombatants?.includes(workflow.tokenId)
-    if (!isTurn && inCombat) itemUsesReaction = true;
-  }
+
 
   workflow.reactionQueried = false;
-  const blockReaction = itemUsesReaction && hasReaction && inCombat && needsReactionCheck(this.actor);
+  const blockReaction = itemUsesReaction && hasReaction && workflow.inCombat && needsReactionCheck(this.actor);
   if (blockReaction) {
     let shouldRoll = false;
     let d = await Dialog.confirm({
@@ -647,7 +671,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (["bonus"].includes(this.system.activation?.type)) {
     itemUsesBonusAction = true;
   }
-  const blockBonus = inCombat && itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(this.actor);
+  const blockBonus = workflow.inCombat && itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(this.actor);
   if (blockBonus) {
     let shouldRoll = false;
     let d = await Dialog.confirm({
@@ -705,8 +729,8 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     return null;
   }
 
-  if (itemUsesBonusAction && !hasBonusAction && configSettings.enforceBonusActions !== "none" && inCombat) await setBonusActionUsed(this.actor);
-  if (itemUsesReaction && !hasReaction && configSettings.enforceReactions !== "none" && inCombat) await setReactionUsed(this.actor);
+  if (itemUsesBonusAction && !hasBonusAction && configSettings.enforceBonusActions !== "none" && workflow.inCombat) await setBonusActionUsed(this.actor);
+  if (itemUsesReaction && !hasReaction && configSettings.enforceReactions !== "none" && workflow.inCombat) await setReactionUsed(this.actor);
 
   if (needsConcentration && checkConcentration) {
     const concentrationEffect = getConcentrationEffect(this.actor);
@@ -848,9 +872,9 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     || !configSettings.itemTypeList.includes(this.type);
   const hasEffects = !["applyNoButton"].includes(configSettings.autoItemEffects) && workflow.hasDAE && workflow.workflowType === "Workflow" && this.effects.find(ae => !ae.transfer);
   let dmgBtnText = (this.system?.actionType === "heal") ? i18n(`${systemString}.Healing`) : i18n(`${systemString}.Damage`);
-  if (workflow.rollOptions.fastForwardDamage) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
+  if (workflow.rollOptions.fastForwardDamage && configSettings.showFastForward) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
   let versaBtnText = i18n(`${systemString}.Versatile`);
-  if (workflow.rollOptions.fastForwardDamage) versaBtnText += ` ${i18n("midi-qol.fastForward")}`;
+  if (workflow.rollOptions.fastForwardDamage && configSettings.showFastForward) versaBtnText += ` ${i18n("midi-qol.fastForward")}`;
   const templateData = {
     actor: this.actor,
     // tokenId: token?.id,
@@ -1107,11 +1131,14 @@ export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: s
     conditionFlagToUse = "activation"
   }
 
+  // If there is only one target hit decide to roll other damage now, otherwise just roll it and choose which targets to apply it to.
   //@ts-ignore
-  /* other damage is always rolled, but application of the damage is selective
-  if (rollOtherDamage && conditionFlagToUse === "activation") {
-    rollOtherDamage = evalActivationCondition(workflow, conditionToUse)
+  if (rollOtherDamage && conditionFlagToUse === "activation" && workflow?.hitTargets.size > 0) {
+    rollOtherDamage = false;
+    for (let target of workflow.hitTargets) {
+      rollOtherDamage = evalActivationCondition(workflow, conditionToUse, target);
+      if (rollOtherDamage) break;
+    }
   }
-  */
   return rollOtherDamage;
 }

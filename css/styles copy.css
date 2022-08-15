@@ -1,0 +1,238 @@
+.dnd5e.sheet .item-buttons button {
+  font-size: 10px;
+  line-height: 12px;
+  margin: 0;
+}
+
+.dnd5e.sheet .item-buttons span {
+  padding: 0;
+}
+
+.local-qol-flavor-text {
+  font-size: 12px
+}
+
+.dice-total.dmgBtn-mqol {
+  transition: color 0.2s ease-in-out 0.7s;
+}
+
+.dice-total.dmgBtn-mqol:hover {
+  color: transparent;
+  transition: color 0.2s ease-in-out 0s;
+}
+
+.dmgBtn-container-mqol {
+  position: absolute;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  align-items: center;
+  z-index: 1;
+}
+
+.dmgBtn-container-mqol button {
+  height: 100% !important;
+  margin: 1px !important;
+  padding: 0;
+}
+
+.dmgBtn-container-mqol button > i {
+  font-weight: bold;
+  margin: 0;
+}
+
+.dmgBtn-container-mqol .dice-total-full-damage-button {
+  margin-left: 0 !important;
+}
+
+.dmgBtn-container-mqol .dice-total-half-damage-button,
+.dmgBtn-container-mqol .dice-total-double-damage-button
+{
+  font-size: 0.8em !important;
+}
+
+.dmgBtn-container-mqol .dice-total-half-damage-button {
+  margin-right: 10px !important;
+}
+
+.dmgBtn-container-mqol .dice-total-double-damage-button {
+  margin-left: 10px !important;
+}
+
+.dmgBtn-container-mqol .dice-total-full-damage-healing-button {
+  margin-right: 0 !important;
+}
+
+.column-button-container-mqol {
+  text-align: left;
+  left: 0;
+  right: 0;
+  top: -5px;
+  bottom: 4px;
+  padding: 0 1px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 1;
+  flex-direction: column;
+}
+
+.dmgBtn-container-mqol {
+  display: flex !important;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out 0.7s;
+}
+
+.dmgBtn-container-mqol:hover {
+  opacity: 1;
+  transition: opacity 0.2s ease-in-out 0s;
+}
+
+.xdice-total-full-damage-button,
+.xdice-total-half-damage-button,
+.xdice-total-double-damage-button,
+.xdice-total-full-damage-healing-button
+{
+  width: 20%;
+  height:80%;
+  font-size:24px;
+  line-height:8px;
+  background-color: 0xffffff;
+  color:white;
+}
+
+.midi-qol-flex-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: left;
+  align-items: center;
+  font-size: 14px;
+  line-height: 16px;
+}
+.midi-qol-bigger-text {
+  font-size: 14px;
+  line-height: 16px;
+}
+
+.midi-qol-flex-container > div {
+  margin: 2px;
+}
+.midi-qol-target-name:hover {
+  text-shadow: 0 0 4px red;
+}
+.midi-qol-gmonly {
+  display: none;
+}
+
+.midi-qol-box {
+  border: 2px groove #eeede0;
+  padding: 3px;
+}
+.midi-qol-nobox {
+  padding: 5px;
+  border-top: 2px groove #eeede0;
+}
+
+.midi-qol-faint {
+  color: #606060;
+}
+
+#midi-qol-item-selector .item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.midi-qol-tooltip {
+  position: relative;
+  display: inline-block;
+  border: 0px;
+  padding: 0px;
+}
+
+.midi-qol-tooltip .midi-qol-tooltiptext {
+  visibility: hidden;
+  width: max-content;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 3px ;
+
+  /* Position the tooltip */
+  position: absolute;
+  z-index: 1;
+}
+
+.midi-qol-tooltip:hover .midi-qol-tooltiptext {
+  visibility: visible;
+}
+
+* ----------------------------------------- */
+/* Dialog Window
+/* ----------------------------------------- */
+.midi-qol .dialog .dialog-content .dialog-buttons {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  justify-content: space-around;
+}
+
+.midi-qol .dialog .dialog-buttons button {
+  background: rgba(0, 0, 0, 0.1);
+  border: 2px groove #f0f0e0;
+  margin: 0 5px 0 0;
+}
+.midi-qol .dialog .dialog-buttons button:last-child {
+  margin-right: 0;
+}
+.midi-qol .dialog .dialog-buttons button.default {
+  background: rgba(0, 0, 0, 0.05);
+  border: 2px groove #c9c7b8;
+}
+
+
+/* ----------------------------------------- */
+/* On Use Macros
+/* ----------------------------------------- */
+.onusemacro-group li [name*="betterRolls5e"] {
+  display: none;
+}
+
+.column-dialog .column-dialog-buttons {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  justify-content: left;
+}
+.column-dialog .column-dialog-buttons > * {
+  flex: 1;
+}
+.column-dialog .column-dialog-buttons > .flex0 {
+  display: block;
+  flex: 0;
+}
+.column-dialog .column-dialog-buttons > .flex1 {
+  flex: 1;
+}
+.column-dialog .column-dialog-buttons > .flex2 {
+  flex: 2;
+}
+.column-dialog .column-dialog-buttons > .flex3 {
+  flex: 3;
+}
+.column-dialog .column-dialog-buttons button {
+  background: rgba(0, 0, 0, 0.1);
+  border: 2px groove var(--color-border-light-highlight);
+  margin: 0 5px 0 0;
+}
+.column-dialog .column-dialog-buttons button:last-child {
+  margin-right: 0;
+}
+.column-dialog .column-dialog-buttons button.default {
+  background: rgba(0, 0, 0, 0.05);
+  border: 2px groove var(--color-border-light-secondary);
+}

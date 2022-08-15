@@ -203,6 +203,7 @@ Hooks.once('setup', function () {
     };
   };
   setupSheetQol();
+
 });
 
 /* ------------------------------------ */
@@ -235,7 +236,12 @@ Hooks.once('ready', function () {
   }
   OnUseMacroOptions.setOptions(MQOnUseOptions);
   MidiSounds.midiSoundsReadyHooks();
-
+  getSystemCONFIG().characterFlags["spellSniper"] = {
+    name: "Spell Sniper",
+    hint: "Spell Sniper",
+    section: i18n("DND5E.Feats"),
+    type: Boolean
+  };
 
   setupMidiQOLApi();
 
@@ -269,6 +275,7 @@ Hooks.once('ready', function () {
     //@ts-ignore
     tokenObj._hover = true
   });
+
   // This seems to cause problems for localisation for the items compendium (at least for french)
   // Try a delay before doing this - hopefully allowing localisation to complete
   setTimeout(MidiSounds.getWeaponBaseTypes, 5000);
@@ -418,10 +425,12 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.grants.attack.bonus.all`);
   midiFlags.push(`flags.midi-qol.grants.critical.all`);
   midiFlags.push(`flags.midi-qol.grants.critical.range`);
+  midiFlags.push('flags.midi-qol.grants.criticalThreshold');
   midiFlags.push(`flags.midi-qol.fail.critical.all`);
   midiFlags.push(`flags.midi-qol.advantage.concentration`)
   midiFlags.push(`flags.midi-qol.disadvantage.concentration`)
   midiFlags.push("flags.midi-qol.ignoreNearbyFoes");
+  midiFlags.push("flags.midi-qol.")
   midiFlags.push(`flags.midi-qol.concentrationSaveBonus`);
   midiFlags.push(`flags.midi-qol.potentCantrip`);
   midiFlags.push(`flags.midi-qol.sculptSpells`);
@@ -536,6 +545,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.optional.NAME.skill.all`);
   midiFlags.push(`flags.midi-qol.optional.NAME.skill.fail`);
   midiFlags.push(`flags.midi-qol.optional.NAME.count`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.countAlt`);
   midiFlags.push(`flags.midi-qol.optional.NAME.ac`);
   midiFlags.push(`flags.midi-qol.optional.NAME.criticalDamage`);
   midiFlags.push(`flags.midi-qol.optional.Name.onUse`);

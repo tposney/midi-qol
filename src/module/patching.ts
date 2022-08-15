@@ -50,9 +50,9 @@ export function collectBonusFlags(actor, category, detail): any[] {
     const bonusFlags = Object.keys(actor.flags["midi-qol"]?.optional ?? [])
       .filter(flag => {
         const checkFlag = actor.flags["midi-qol"].optional[flag][category];
-        if (!checkFlag) return false;
-        if (!(typeof checkFlag === "string" || checkFlag[detail] || (detail !== "fail" && checkFlag["all"]))) return false;
-        if (!actor.flags["midi-qol"].optional[flag].count) return true;
+        if (checkFlag === undefined) return false;
+        if (!(typeof checkFlag === "string" || checkFlag[detail] || (detail !== "fail" && checkFlag["all"]) !== undefined)) return false;
+        if (actor.flags["midi-qol"].optional[flag].count === undefined) return true;
         return getOptionalCountRemainingShortFlag(actor, flag) > 0;
       })
       .map(flag => {
@@ -60,6 +60,7 @@ export function collectBonusFlags(actor, category, detail): any[] {
         if (typeof checkFlag === "string") return `flags.midi-qol.optional.${flag}`;
         else return `flags.midi-qol.optional.${flag}`;
       });
+      console.error("Bonus flags are ", bonusFlags)
     return bonusFlags;
   }
   return [];
@@ -112,8 +113,9 @@ export async function bonusCheck(actor, result: Roll, category, detail): Promise
 }
 
 async function doRollSkill(wrapped, ...args) {
-  let [skillId, options = { event: {}, parts: [], advantage: false, disadvantage: false, simulate: false }] = args;
+  let [skillId, options = { event: {}, parts: [], advantage: false, disadvantage: false, simulate: false, targetValue: undefined }] = args;
   const chatMessage = options.chatMessage;
+  const rollTarget = options.targetValue;
   // options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
   mergeKeyboardOptions(options, mapSpeedKeys(null, "ability"));
   options.event = {};
@@ -141,6 +143,8 @@ async function doRollSkill(wrapped, ...args) {
     // result = await wrapped.call(this, skillId, procOptions);
     result = await wrapped(skillId, procOptions);
   }
+  if (!result) return result;
+  
   const flavor = result.options?.flavor;
   const maxflags = getProperty(this.flags, "midi-qol.max") ?? {};
   const maxValue = (maxflags.skill && (maxflags.skill.all || maxflags.check[skillId])) ?? false;
@@ -165,7 +169,9 @@ async function doRollSkill(wrapped, ...args) {
     if (game.system.id === "sw5e") setProperty(args, "flags.sw5e.roll", { type: "skill", skillId })
     await result.toMessage(args);
   }
-  await expireRollEffect.bind(this)("Skill", skillId);
+  let success: boolean | undefined = undefined;
+  if (rollTarget !== undefined) success = result.total >= rollTarget;
+  await expireRollEffect.bind(this)("Skill", skillId, success);
   return result;
 }
 
@@ -325,7 +331,8 @@ async function rollAbilityTest(wrapped, ...args) {
 }
 
 async function doAbilityRoll(wrapped, rollType: string, ...args) {
-  let [abilityId, options = { event: {}, parts: [], chatMessage: undefined, simulate: false }] = args;
+  let [abilityId, options = { event: {}, parts: [], chatMessage: undefined, simulate: false, targetValue: undefined }] = args;
+  const rollTarget = options.targetValue;
   if (procAutoFail(this, rollType, abilityId)) {
     options.parts = ["-100"];
   }
@@ -363,6 +370,8 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     procOptions.chatMessage = false;
     result = await wrapped(abilityId, procOptions);
   }
+  if (!result) return result;
+
   const maxFlags = getProperty(this.flags, "midi-qol.max.ability") ?? {};
   const flavor = result.options?.flavor;
   const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId])) ?? false
@@ -387,7 +396,9 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     args.template = "modules/midi-qol/templates/roll.html";
     await result.toMessage(args);
   }
-  await expireRollEffect.bind(this)(rollType, abilityId);
+  let success: boolean | undefined = undefined;
+  if (rollTarget !== undefined) success = result.total >= rollTarget;
+  await expireRollEffect.bind(this)(rollType, abilityId, success);
   return result;
 }
 

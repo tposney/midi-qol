@@ -19,7 +19,7 @@ export var autoRemoveTargets: string;
 export var forceHideRoll: boolean;
 export var enableWorkflow: boolean;
 export var dragDropTargeting: boolean;
-export var lateTargeting: boolean;
+export var lateTargeting: string;
 export var midiSoundSettings: any = {};
 export var midiSoundSettingsBackup: any = undefined;
 
@@ -78,7 +78,7 @@ class ConfigSettings {
   gmConsumeResource: string = "none";
   gmDoReactions: string = "all";
   gmHide3dDice: boolean = false;
-  gmLateTargeting: boolean = false;
+  gmLateTargeting: string = "none";
   gmRemoveButtons: string = "all"; 
   hideRollDetails: string = "none";
   ignoreSpellReactionRestriction: boolean = false;
@@ -109,6 +109,7 @@ class ConfigSettings {
   rollOtherDamage: string | boolean = "none";
   rollOtherSpellDamage: string | boolean = "none";
   saveStatsEvery: number = 20;
+  showFastForward: boolean = false;
   showItemDetails: string = "";
   showReactionAttackRoll: string = "all";
   showReactionChatMessage: boolean = false;
@@ -284,7 +285,8 @@ export let fetchParams = () => {
   if (typeof configSettings.consumeResource !== "string") configSettings.consumeResource = "none";
   if (!configSettings.enableddbGL) configSettings.enableddbGL = false;
   if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
-  if (!configSettings.gmLateTargeting) configSettings.gmLateTargeting = false;
+  if (!configSettings.gmLateTargeting) configSettings.gmLateTargeting = "none";
+  if (typeof configSettings.gmLateTargeting === "boolean" && configSettings.gmLateTargeting === true) configSettings.gmLateTargeting = "all";
   if (configSettings.fixStickyKeys === undefined) configSettings.fixStickyKeys = true;
   //@ts-ignore legacy boolean value
   if (configSettings.autoCEEffects === true) configSettings.autoCEEffects = "both";
@@ -324,6 +326,7 @@ export let fetchParams = () => {
   if (configSettings.paranoidGM === undefined) configSettings.paranoidGM = false;
   if (typeof configSettings.requiresTargets !== "string") configSettings.requiresTargets = "none";
   if (configSettings.tempHPDamageConcentrationCheck === undefined) configSettings.tempHPDamageConcentrationCheck = false;
+  if (configSettings.showFastForward === undefined) configSettings.showFastForward = true;
   configSettings.optionalRules = mergeObject({
       invisAdvantage: true,
       checkRange: true,
@@ -382,7 +385,10 @@ export let fetchParams = () => {
   let debugText: string = String(game.settings.get("midi-qol", "Debug"));
   forceHideRoll = Boolean(game.settings.get("midi-qol", "ForceHideRoll"));
   dragDropTargeting = Boolean(game.settings.get("midi-qol", "DragDropTarget"));
-  lateTargeting = Boolean(game.settings.get("midi-qol", "LateTargeting"));
+  const lateTargetingSetting = game.settings.get("midi-qol", "LateTargeting");
+  if (!lateTargetingSetting) lateTargeting = "none";
+  if (lateTargetingSetting === true || lateTargetingSetting === "true") lateTargeting = "all";
+  else lateTargeting = String(lateTargetingSetting);
 
   if (game.ready) {
     configureDamageRollDialog();
@@ -407,14 +413,6 @@ const settings = [
     default: true,
     config: true,
     type: Boolean,
-    onChange: fetchParams
-  },
-  {
-    name: "LateTargeting",
-    scope: "client",
-    default: false,
-    type: Boolean,
-    config:true,
     onChange: fetchParams
   },
   {
@@ -554,6 +552,18 @@ export const registerSettings = function() {
     type: String,
     config: true,
     choices: translations["ColoredBordersOptions"],
+    onChange: fetchParams
+  });
+
+  game.settings.register("midi-qol", "LateTargeting",
+  {
+    name: "midi-qol.LateTargeting.Name",
+    hint: "midi-qol.LateTargeting.Hint",
+    scope: "client",
+    default: "none",
+    type: String,
+    config:true,
+    choices: translations["LateTargetingOptions"],
     onChange: fetchParams
   });
 

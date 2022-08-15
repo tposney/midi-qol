@@ -2,7 +2,7 @@ import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats, debugE
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { BetterRollsWorkflow, DDBGameLogWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { nsaFlag, coloredBorders, addChatDamageButtons, configSettings, forceHideRoll } from "./settings.js";
-import { createDamageList, getTraitMult, calculateDamage, MQfromUuid, MQfromActorUuid, playerFor, playerForActor } from "./utils.js";
+import { createDamageList, getTraitMult, calculateDamage, MQfromUuid, MQfromActorUuid, playerFor, playerForActor, applyTokenDamage } from "./utils.js";
 import { shouldRollOtherDamage, showItemCard } from "./itemhandling.js";
 import { socketlibSocket } from "./GMAction.js";
 export const MAESTRO_MODULE_NAME = "maestro";
@@ -292,7 +292,7 @@ export let nsaMessageHandler = (message, data, ...args) => {
   let currentIds = message.whisper.map(u => typeof (u) === "string" ? u : u.id);
   gmIds = gmIds.filter(id => !currentIds.includes(id));
   if (debugEnabled > 1) debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmIds ", gmIds)
-  if (gmIds.length > 0) message.update({ "whisper": currentIds.concat(gmIds) });
+  if (gmIds.length > 0) message.updateSource({ "whisper": currentIds.concat(gmIds) });
   // TODO check this data.whisper = data.whisper.concat(gmIds);
   return true;
 }
@@ -563,7 +563,7 @@ export let chatDamageButtons = (message, html, data) => {
     const damageList = createDamageList({ roll: message.roll, item, versatile: false, defaultType: defaultDamageType });
     const totalDamage = message.roll.total;
     addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemUuid, "damage", ".dice-total", "position:relative; top:5px; color:blue");
-  } else if (getProperty(message, "flags.midi-qol.damageDetail")) {
+  } else if (getProperty(message, "flags.midi-qol.damageDetail") || getProperty(message, "flags.midi-qol.otherDamageDetail")) {
     let midiFlags = getProperty(message, "flags.midi-qol");
     addChatDamageButtonsToHTML(midiFlags.damageTotal, midiFlags.damageDetail, html, midiFlags.actorUuid, midiFlags.itemUuid, "damage", ".midi-qol-damage-roll .dice-total");
     addChatDamageButtonsToHTML(midiFlags.otherDamageTotal, midiFlags.otherDamageDetail, html, midiFlags.actorUuid, midiFlags.itemUuid, "other", ".midi-qol-other-roll .dice-total");
@@ -598,8 +598,21 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
       ev.stopPropagation();
       // const item = game.actors.get(actorId).items.get(itemId);
       const item = MQfromUuid(itemUuid)
+      const modDamageList = duplicate(damageList).map( di => {
+        if (mult < 0) di.type = "healing";
+        else di.damage = Math.floor(di.damage * mult);
+        return di;
+      });
+
       // find solution for non-magic weapons
       let promises: Promise<any>[] = [];
+      if (canvas?.tokens) for (let t of canvas.tokens.controlled) {
+        const totalDamage = modDamageList.reduce((acc, value) => value.damage + acc, 0);
+        // export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any>, semiSuperSavers: Set<any>, workflow: Workflow | undefined, updateContext: any } = { existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined, updateContext: undefined        
+        await applyTokenDamage(modDamageList, totalDamage, new Set(canvas.tokens.controlled), item, new Set(), 
+        {  existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined, updateContext: undefined, forceApply: true });
+      }
+/*
       if (canvas?.tokens) for (let t of canvas.tokens.controlled) {
         let a: any | null = t.actor;
         if (!a) continue;
@@ -613,6 +626,7 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
       }
       let retval = await Promise.all(promises);
       return retval;
+      */
     });
   };
   setButtonClick(`.dice-total-full-${tag}-button`, 1);
@@ -848,4 +862,8 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
       workflow.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
     }
   }
+}
+
+function legacyApplyTokenDamageMany(arg0: any[], arg1: Set<Token>, arg2: null, arg3: { existingDamage: never[]; workflow: undefined; updateContext: undefined; }) {
+  throw new Error("Function not implemented.");
 }

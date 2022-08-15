@@ -146,14 +146,9 @@ async function addConvenientEffect(options) {
   const actorToken: any = await fromUuid(actorUuid);
   const actor = actorToken?.actor ?? actorToken;
 
+  console.warn("midi-qol | Deprecated. Call await game.dfreds.effectInterface?.addEffect({ effectName, uuid: actorUuid, origin }) instead")
   //@ts-ignore
-  if (game.dfreds.effectInterface) {
-    //@ts-ignore
-    await game.dfreds.effectInterface.addEffect(effectName, actoruuid, origin);
-  } else {
-    //@ts-ignore
-    await game.dfreds.effectHandler.addEffect({ effectName, actor, origin });
-  }
+  await game.dfreds.effectInterface?.addEffect({ effectName, uuid: actorUuid, origin });
 }
 
 async function localDoReactions(data: { tokenUuid: string; triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any}) {
@@ -202,12 +197,13 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
     });
 }
 
-async function createReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any }) {
+async function createReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any, forceApply: boolean }) {
   createPlayerDamageCard(data);
   return createGMReverseDamageCard(data);
 }
 
-async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any }, templateData, tokenIdList, createPromises: boolean = false, showNPC: boolean = true): Promise<Promise<any>[]> 
+async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any, forceApply: boolean }, 
+  templateData, tokenIdList, createPromises: boolean = false, showNPC: boolean = true, ): Promise<Promise<any>[]> 
 {
   const damageList = data.damageList;
   let promises: Promise<any>[] = [];
@@ -230,7 +226,7 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
     }
     if (!showNPC && !actor.hasPlayerOwner) continue;
     let newHP = Math.max(0, oldHP - hpDamage);
-    if (createPromises && ["yes", "yesCard", "yesCardNPC"].includes(data.autoApplyDamage)) {
+    if (createPromises && ["yes", "yesCard", "yesCardNPC"].includes(data.autoApplyDamage) || data.forceApply) {
       if ((newHP !== oldHP || newTempHP !== oldTempHP) && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
         const updateContext = mergeObject({ dhp: -appliedDamage }, data.updateContext ?? {});
         log(`updating ${actor.name} to ${newTempHP}`, updateContext)
@@ -298,7 +294,7 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
   return promises;
 }
 // Fetch the token, then use the tokenData.actor.id
-async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any}) {
+async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any, forceApply: boolean}) {
   let shouldShow = true;
   if (configSettings.playerCardDamageDifferent) {
     shouldShow = false;
@@ -349,7 +345,7 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
 }
   
   // Fetch the token, then use the tokenData.actor.id
-async function createGMReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any }) {
+async function createGMReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any, forceApply: boolean }) {
   const damageList = data.damageList;
   let actor: { update: (arg0: { "system.attributes.hp.temp": any; "system.attributes.hp.value": number; "flags.dae.damageApplied": any; damageItem: any[] }) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
   const startTime = Date.now();

@@ -77,6 +77,9 @@ export class Workflow {
   tokenUuid: string | undefined;  // TODO change tokenId to tokenUuid
   targets: Set<Token | TokenDocument>;
   placeTemplateHookId: number | null;
+  inCombat: boolean; // Is the item wielder in combat.
+  isTurn: boolean; // Is it the item wielder's turn.
+  AoO: boolean; // Is the attack an attack of
 
   _id: string;
   saveDisplayFlavor: string;
@@ -168,7 +171,11 @@ export class Workflow {
   }
 
   get otherDamageFormula() {
-    return (this.otherDamageItem?.system.formula ?? "") === "" && !this.otherDamageItem?.system.properties?.ver ? this.otherDamageItem?.system.damage.versatile : this.otherDamageItem?.system.formula;
+    if ((this.otherDamageItem?.system.formula ?? "") === "") {
+      if (this.otherDamageItem.type === "weapon" && !this.otherDamageItem?.system.properties?.ver)
+        return this.otherDamageItem?.system.damage.versatile;
+    }
+    return this.otherDamageItem?.system.formula;
   }
 
   get hasDAE() {
@@ -356,7 +363,7 @@ export class Workflow {
     switch (newState) {
       case WORKFLOWSTATES.NONE:
         if (this.item?.system.target?.type === "self") {
-          this.targets = getSelfTargetSet(this.actor);
+          this.targets = await getSelfTargetSet(this.actor);
           this.hitTargets = new Set(this.targets);
         }
         this.templateTargeting = configSettings.autoTarget !== "none" && this.item.hasAreaTarget;
@@ -419,7 +426,7 @@ export class Workflow {
 
       case WORKFLOWSTATES.VALIDATEROLL:
         // do pre roll checks
-        if (checkRule("checkRange")) {
+        if (checkRule("checkRange") && !this.AoO) {
           switch (checkRange(this.actor, this.item, this.tokenId, this.targets)) {
             case "fail": return this.next(WORKFLOWSTATES.ROLLFINISHED);
             case "dis": this.disadvantage = true;
@@ -462,6 +469,8 @@ export class Workflow {
           }
         }
         if (!this.item.hasAttack) {
+          this.hitTargets = new Set(this.targets);
+          this.hitTargetsEC = new Set();
           return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
         }
         if (this.noAutoAttack) return undefined;
@@ -480,7 +489,7 @@ export class Workflow {
             const hasAdvantage = this.advantage && !this.disadvantage;
             const hasDisadvantage = this.disadvantage && !this.advantage;
             let attackString = hasAdvantage ? i18n(`${this.systemString}.Advantage`) : hasDisadvantage ? i18n(`${this.systemString}.Disadvantage`) : i18n(`${this.systemString}.Attack`)
-            if (isFastRoll) attackString += ` ${i18n("midi-qol.fastForward")}`;
+            if (isFastRoll && configSettings.showFastForward) attackString += ` ${i18n("midi-qol.fastForward")}`;
             let replaceString = `<button data-action="attack">${attackString}</button>`
             content = content.replace(searchRe, replaceString);
             await chatMessage?.update({ "content": content });
@@ -598,12 +607,12 @@ export class Workflow {
             let searchRe = /<button data-action="damage">[^<]+<\/button>/;
             const damageTypeString = (this.item?.actionType === "heal") ? i18n(`${this.systemString}.Healing`) : i18n(`${this.systemString}.Damage`);
             let damageString = (this.rollOptions.critical || this.isCritical) ? i18n(`${this.systemString}.Critical`) : damageTypeString;
-            if (this.rollOptions.fastForwardDamage) damageString += ` ${i18n("midi-qol.fastForward")}`;
+            if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) damageString += ` ${i18n("midi-qol.fastForward")}`;
             let replaceString = `<button data-action="damage">${damageString}</button>`
             content = content.replace(searchRe, replaceString);
             searchRe = /<button data-action="versatile">[^<]+<\/button>/;
             damageString = i18n(`${this.systemString}.Versatile`)
-            if (this.rollOptions.fastForwardDamage) damageString += ` ${i18n("midi-qol.fastForward")}`;
+            if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) damageString += ` ${i18n("midi-qol.fastForward")}`;
             replaceString = `<button data-action="versatile">${damageString}</button>`
             content = content.replace(searchRe, replaceString);
             await chatMessage?.update({ content });
@@ -625,7 +634,7 @@ export class Workflow {
         // done here cause not needed for betterrolls workflow
         this.defaultDamageType = this.item.system.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
         if (this.item?.system.actionType === "heal" && !Object.keys(getSystemCONFIG().healingTypes).includes(this.defaultDamageType ?? "")) this.defaultDamageType = "healing";
-        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
+        // now done in itemhandling this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
 
         await asyncHooksCallAll("midi-qol.preDamageRollComplete", this)
         if (this.item) await asyncHooksCallAll(`midi-qol.preDamageRollComplete.${this.item.uuid}`, this);
@@ -837,7 +846,7 @@ export class Workflow {
             }
           }
           // anyActivaiton is true for no activation condition or true if any of the token conditions matched.
-          anyActivationTrue = !getProperty(theItem, "flags.midi-qol.effectActivation") 
+          anyActivationTrue = !getProperty(theItem, "flags.midi-qol.effectActivation")
             || (getProperty(theItem, "system.activation.condition") !== "" ? anyActivationTrue : true);
           if (this.applicationTargets.size > 0 && anyActivationTrue && (hasItemSelfEffects || ceSelfEffect)) {
 
@@ -862,7 +871,7 @@ export class Workflow {
                 }
               }
             }
-          } 
+          }
         }
 
         if (debugCallTiming) log(`applyActiveEffects elapsed ${Date.now() - applyDynamicEffectsStartTime}ms`)
@@ -984,29 +993,36 @@ export class Workflow {
     if (checkRule("invisAdvantage")) {
       const token: Token | undefined = canvas?.tokens?.get(this.tokenId);
       const target: Token | undefined = this.targets.values().next().value;
-      let isHidden = false;;
+      let isHidden = false;
       if (token && target) { // preferentially check CV isHidden
         if (installedModules.get("conditional-visibility")) {
           //@ts-ignore .api if cond vis active it will work out the vision rules for a token
           isHidden = game.modules.get('conditional-visibility')?.api?.canSee(target, token) === false;
+          //@ts-ignore .api if cond vis active it will work out the vision rules for a token
+          if (game.modules.get('conditional-visibility')?.api?.canSee(token, target) === false) {
+            log(`Disadvantage given to ${this.actor.name} due to hidden/invisible target`);
+            this.attackAdvAttribution["DIS:hidden"] = true;
+            this.disadvantage = true;
+          }
         } else { // no cond vis so just assume can't see hidden or invis attacker
           const hidden = hasCondition(token, "hidden");
-          const invisible = hasCondition(token, "invisible");
-
-          isHidden = hidden || invisible;
         }
-
-        isHidden = isHidden || !canSee(target, token); // just check normal foundry sight rules
-
+        isHidden = isHidden || !canSee(target, token); // check normal foundry sight rules
+        if (!canSee(token, target)) {
+          // Attacker can't see target so disadvantage
+          log(`Disadvantage given to ${this.actor.name} due to hidden/invisible target`);
+          this.attackAdvAttribution["DIS:hidden"] = true;
+          this.disadvantage = true;
+        }
       } else if (token) {
         const hidden = hasCondition(token, "hidden");
+        //@ts-ignore specialStatusEffects
         const invisible = hasCondition(token, "invisible");
         isHidden = hidden || invisible;
       }
       this.advantage = this.advantage || isHidden;
       if (isHidden) this.attackAdvAttribution["ADV:hidden"] = true;
-
-      if (isHidden) log(`Advantage given to ${this.actor.name} due to hidden/invisible`)
+      if (isHidden) log(`Advantage given to ${this.actor.name} due to hidden/invisible`);
     }
     // Neaarby foe gives disadvantage on ranged attacks
     if (checkRule("nearbyFoe")
@@ -1203,7 +1219,7 @@ export class Workflow {
     }
     if (formula === "") return;
     try {
-      const roll = await (new Roll(formula, this.actor.getRollData()).evaluate({ async: true }));
+      const roll = await (new Roll(formula, (this.item ?? this.actor).getRollData()).evaluate({ async: true }));
       await this.setBonusDamageRoll(roll);
       this.bonusDamageFlavor = flavor ?? "";
       this.bonusDamageDetail = createDamageList({ roll: this.bonusDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
@@ -1295,7 +1311,7 @@ export class Workflow {
       semiSuperSaverUuids.push(save instanceof Token ? save.document?.uuid : save.uuid);
     };
     // const itemData = this.item?.toObject(false); TODO think about this some more for v10
-    const itemData = this.item.toObject();
+    const itemData = this.item?.toObject() ?? {};
     itemData.data = itemData.system; // Try and support the old.data
     itemData.uuid = this.item?.uuid; // provide the uuid so the actual item can be recovered
     return {
@@ -1341,7 +1357,7 @@ export class Workflow {
       otherDamageList: this.otherDamageList,
       otherDamageTotal: this.otherDamageTotal,
       powerLevel: game.system.id === "sw5e" ? this.itemLevel : undefined,
-      rollData: this.actor.getRollData(),
+      rollData: (this.item ?? this.actor).getRollData(),
       rollOptions: this.rollOptions,
       saves,
       saveUuids,
@@ -1420,7 +1436,7 @@ export class Workflow {
         }
         macroCommand = itemMacro?.command ?? itemMacro?.data?.command ?? `console.warn('midi-qol | no item macro found for ${name}')`;
       } else { // get a world macro.
-        const macro = game.macros?.getName(name.replaceAll('"',''));
+        const macro = game.macros?.getName(name.replaceAll('"', ''));
         if (!macro) console.warn("midi-qol could not find macro", name);
         //@ts-ignore .type v10
         if (macro?.type === "chat") {
@@ -1556,7 +1572,7 @@ export class Workflow {
 
   get damageFlavor() {
     allDamageTypes = mergeObject(getSystemCONFIG().damageTypes, getSystemCONFIG().healingTypes, { inplace: false });
-    return `(${this.damageDetail.filter(d => d.damage !== 0).map(d => allDamageTypes[d.type])})`;
+    return `(${this.damageDetail.filter(d => d.damage !== 0).map(d => allDamageTypes[d.type] || d.type)})`;
   }
 
   async displayDamageRoll(doMerge) {
@@ -1622,10 +1638,10 @@ export class Workflow {
           type: MESSAGETYPES.DAMAGE,
           // roll: this.damageCardData.roll,
           roll: this.damageRoll?.roll,
-          damageDetail: this.damageDetail,
-          damageTotal: this.damageTotal,
-          otherDamageDetail: this.otherDamageDetail,
-          otherDamageTotal: this.otherDamageTotal,
+          damageDetail: this.useOther ? undefined : this.damageDetail,
+          damageTotal: this.useOther ? undefined : this.damageTotal,
+          otherDamageDetail: this.useOther ? this.damageDetail : this.otherDamageDetail,
+          otherDamageTotal: this.useOther ? this.damageTotal : this.otherDamageTotal,
           bonusDamageDetail: this.bonusDamageDetail,
           bonusDamageTotal: this.bonusDamageTotal,
           hideTag: this.hideTags,
@@ -2008,7 +2024,7 @@ export class Workflow {
                       request: rollType,
                       ability: this.saveItem.system.save.ability,
                       showRoll,
-                      options: { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true }
+                      options: { messageData: { user: playerId }, target: rollDC, chatMessage: showRoll, mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true }
                     });
                   } else {
                     result = await rollAction.bind(target.actor)(this.saveItem.system.save.ability, { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true });
@@ -2031,7 +2047,7 @@ export class Workflow {
             request: rollType,
             ability: this.saveItem.system.save.ability,
             // showRoll: whisper && !simulate,
-            options: { simulate, messageData: { user: owner?.id }, chatMessage: showRoll, rollMode: whisper ? "gmroll" : "gmroll", mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true },
+            options: { simulate, target: rollDC, messageData: { user: owner?.id }, chatMessage: showRoll, rollMode: whisper ? "gmroll" : "gmroll", mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true },
           }));
         }
       }
@@ -2386,7 +2402,13 @@ export class Workflow {
       // this.diceRoll = terms[0].results.find(d => d.active).result;
     }
     //@ts-ignore .options.critical undefined
-    this.isCritical = this.diceRoll >= this.attackRoll.terms[0].options.critical;
+    let criticalThreshold = this.attackRoll.terms[0].options.critical;
+    if (this.targets.size > 0) {
+      const midiFlags = this.targets.values().next().value.actor?.flags["midi-qol"];
+      const targetFlags = midiFlags?.grants?.criticalThreshold ?? 20;
+      criticalThreshold = Math.min(criticalThreshold, Number(targetFlags)); 
+    }
+    this.isCritical = this.diceRoll >= criticalThreshold;
     const midiFumble = this.item && (getProperty(this.item, "flags.midi-qol.fumbleThreshold") ?? 1);
     if (!Number.isNumeric(midiFumble)) {
       //@ts-ignore .fumble undefined
@@ -2404,7 +2426,7 @@ export class Workflow {
 
     // check for a hit/critical/fumble
     if (item?.system.target?.type === "self") {
-      this.targets = getSelfTargetSet(this.actor);
+      this.targets = await getSelfTargetSet(this.actor);
     }
     if (!this.useActiveDefence) {
       this.hitTargets = new Set();
@@ -2764,14 +2786,14 @@ export class DamageOnlyWorkflow extends Workflow {
     super(actor, null, ChatMessage.getSpeaker({ token }), new Set(targets), shiftOnlyEvent)
     this.itemData = options.itemData;
     // Do the supplied damageRoll
-    this.damageRoll = roll;
-    this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: damageType });
-    this.damageTotal = damageTotal;
     this.flavor = options.flavor;
     this.defaultDamageType = getSystemCONFIG().damageTypes[damageType] || damageType;
     this.damageList = options.damageList;
     this.itemCardId = options.itemCardId;
     this.useOther = options.useOther ?? true;
+    this.damageRoll = roll;
+    this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: damageType });
+    this.damageTotal = damageTotal;
     this.isCritical = options.isCritical ?? false;
     this.kickStart = false;
     return this.next(WORKFLOWSTATES.NONE);
@@ -2829,7 +2851,8 @@ export class DamageOnlyWorkflow extends Workflow {
         this.hitTargets = new Set(this.targets);
         this.hitTargetsEC = new Set();
         this.applicationTargets = new Set(this.targets);
-        this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, this.item, new Set(), { existingDamage: this.damageList, superSavers: new Set(), semiSuperSavers: new Set(), workflow: this, updateContext: undefined })
+        // TODO change this to the new apply token damage call - sigh
+        this.damageList = await applyTokenDamage(this.damageDetail, this.damageTotal, this.targets, this.item, new Set(), { existingDamage: this.damageList, superSavers: new Set(), semiSuperSavers: new Set(), workflow: this, updateContext: undefined, forceApply: false })
         await super._next(WORKFLOWSTATES.ROLLFINISHED);
 
         Workflow.removeWorkflow(this.uuid);

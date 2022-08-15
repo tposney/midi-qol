@@ -33,8 +33,13 @@
 
         <div class="form-group">
           <label>{{localize "midi-qol.LateTargeting.Name"}}</label>
-          <input type="checkbox" name="gmLateTargeting" data-dtype="Boolean" {{checked
-            configSettings.gmLateTargeting}} />
+          <select name="gmLateTargeting" data-dtype="String">
+            {{#select configSettings.gmLateTargeting}}
+            {{#each LateTargetingOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.LateTargeting.Hint"}}</div>
 
@@ -578,6 +583,14 @@
           {{/select}}
         </select>
         <div class="midi-qol-faint">{{localize "midi-qol.RollAlternate.Hint"}}</div>
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.ShowFastForward.Name"}}</label>
+          <input type="checkbox" name="showFastForward" data-dtype="Boolean" {{checked
+            configSettings.showFastForward}} />
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.ShowFastForward.Hint"}}</div>
+
       </div>
       <div class="midi-qol-box">
         <div class="form-group">

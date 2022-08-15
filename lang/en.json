@@ -407,7 +407,7 @@
     "midi-qol.Optional": "Optional",
     "midi-qol.OptionalRules.Name": "(EXPERIMENTAL) Optional Game Rules Work with better rolls, but triggers a libWrapper warning",
     "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable. Generally don't work with better rolls.",
-    "midi-qol.InvisAdvantage.Name": "Hidden/Invisible attackers have advantage on attacks (requires CUB or CV)",
+    "midi-qol.InvisAdvantage.Name": "Hidden/Invisible attackers have advantage (disadvantage if they cannot see their target) on attacks (use CV/CE/CUB and core foundy vision)",
     "midi-qol.CheckRange.Name": "Check weapon range when attacking",
     "midi-qol.NearbyFoe.Name": "Ranged attacks when a foe is closer than this have disadvantage. 0 disables",
     "midi-qol.WallsBlockRange.Name": "Walls block ranged attacks",
@@ -427,7 +427,7 @@
     },
     "midi-qol.NearbyAllyRanged.Hint": "Ranged Attacks with allies nearby (5 feet) to the target have disadvantage for targets smaller than this (w*h). 0 disables",
     "midi-qol.Incapacitated.Name": "Incapacitated actors can't take actions or reactions",
-    "midi-qol.RemoveHiddenInvis.Name": "Attacking removes hidden/invisible (requires Conditional Visibility or CUB)",
+    "midi-qol.RemoveHiddenInvis.Name": "Attacking removes hidden/invisible (use CE/CV/CUB/core foundry specialStatus )",
     "midi-qol.CriticalSaves.Name": "(House Rule) Critical/Fumble always succeed/fail for saving throws",
     "midi-qol.MaxDRValue.Name": "(House rule) Enabling this means that only the most effective Damage Reduction will apply. Off means DR accumulates",
     "midi-qol.invisible": "Invisible",
@@ -529,6 +529,11 @@
     "midi-qol.LateTargeting.Name": "Late Targeting",
     "midi-qol.LateTargeting.Hint": "When rolling with auto roll attack set, items which are not AoE, Ranged or self targeting will pause and wait for targets to be selected. Switch out of targeting mode in the controls HUD",
     "midi-qol.LateTargeting.Blurb": "Choose {targetCount} targets",
+    "midi-qol.LateTargetingOptions" : {
+      "none": "No Late Targeting",
+      "noTargetsSelected": "Late Target only if none selected",
+      "all": "Always display late targeting"
+    },
     "midi-qol.AddDead.Name": "Add effect When HP = 0",
     "midi-qol.AddDead.Hint": "NPC Add Defeated, PC Add Convenient Effect Unconscious",
     "midi-qol.AddDeadOptions": {"none": "Do Not Update", "overlay": "Add effect as overlay", "normal": "add effect as icon"},
@@ -646,5 +651,7 @@
     "midi-qol.IgnoreSpellReactionRestriction.Name": "Allow any reaction spell to be used",
     "midi-qol.IgnoreSpellReactionRestriction.Hint": "Do not require available spell slots or preparation when choosing reaction spells",
     "midi-qol.DamageVulnerabilityMultiplier.Name": "Vulnerability multiplies damage by",
-    "midi-qol.DamageResistanceMultiplier.Name": "Resistance reduces damage to "
-}
+    "midi-qol.DamageResistanceMultiplier.Name": "Resistance reduces damage to ",
+    "midi-qol.ShowFastForward.Name": "Show Fast Forward",
+    "midi-qol.ShowFastForward.Hint": "Show Fast Forward indicator on attack and damage buttons"
+  }
