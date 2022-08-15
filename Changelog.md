@@ -5,8 +5,7 @@
   ```js
   game.dfreds.effectInterface?.addEffect({ effectName, uuid: actorUuid, origin }) 
   ```
-  //@ts-ignore
-}
+
 
 ### 0.9.72
 * Fix for aborting saving throw when not auto checking saves causing the saving throw button to remain disabled.
