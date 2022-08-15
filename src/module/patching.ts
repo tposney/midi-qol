@@ -60,7 +60,6 @@ export function collectBonusFlags(actor, category, detail): any[] {
         if (typeof checkFlag === "string") return `flags.midi-qol.optional.${flag}`;
         else return `flags.midi-qol.optional.${flag}`;
       });
-      console.error("Bonus flags are ", bonusFlags)
     return bonusFlags;
   }
   return [];
