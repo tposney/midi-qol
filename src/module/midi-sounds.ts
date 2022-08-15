@@ -177,23 +177,11 @@ export class MidiSounds {
       return true;
     });
 
-    Hooks.on("midi-qol.preDamageRoll", async (workflow: Workflow) => {
-      if (!configSettings.useCustomSounds || !workflow.item) return true;
-      if (dice3dEnabled()) {
-        const result = await await this.processHook(workflow, workflow.defaultDamageType);
-        if (!result)
-          await this.processHook(workflow, "damage");
-      }
-      return true;
-    });
-
     Hooks.on("midi-qol.DamageRollComplete", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
-      if (!dice3dEnabled()) {
         const result = await await this.processHook(workflow, workflow.defaultDamageType);
         if (!result)
           await this.processHook(workflow, "damage");
-      }
       return true;
     });
   }

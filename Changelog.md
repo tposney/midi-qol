@@ -1,3 +1,13 @@
+### 0.9.73
+* Fix for optional effects not calling a macro when specified.
+* Fix for damage sounds not playing if dice so nice enabled.
+* Fix for MidiQOL.addConvenientEffect(options). But you should not use it since you can call
+  ```js
+  game.dfreds.effectInterface?.addEffect({ effectName, uuid: actorUuid, origin }) 
+  ```
+  //@ts-ignore
+}
+
 ### 0.9.72
 * Fix for aborting saving throw when not auto checking saves causing the saving throw button to remain disabled.
 * Fix for double concentration when no CUB/CE and not auto applying effects.
@@ -5,8 +15,8 @@
 * Fix for Challenge mode armor failing to roll damage.
 * Fix for absorb elements sample item not being mode custom for the effects.
 * Fix so that mob attack tool chat damage buttons work.
-* Change to roll other damage. Other damage is only rolled if required (more or less). Specifically if there is an activation condtion other damage will only be rolled if the activation condition evaluates to true on at least one of hit targets.
-* **BREAKING** Change to roll other damage. Versatile will only be rolled instead of the "Other" formula if the item is a weapon the versatile property is not selected.
+* Change to roll other damage. Other damage is only rolled if required (more or less). Specifically if there is an activation condition other damage will only be rolled if the activation condition evaluates to true on at least one of hit targets.
+* BREAKING Change to roll other damage. Versatile will only be rolled instead of the "Other" formula if the item is a weapon and the versatile property is not selected.
 
 ### 0.9.70/71
 * Fix for overtime error introduced in 0.969

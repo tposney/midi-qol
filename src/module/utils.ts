@@ -2362,7 +2362,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       this[rollId] = newRoll;
       this[rollTotalId] = newRoll.total;
       this[rollHTMLId] = await midiRenderRoll(newRoll);
-      const macroToCall = getProperty(this.actor, `data.${bonusFlags}.macroToCall`);
+      const macroToCall = getProperty(this.actor, `data.${button.key}.macroToCall`);
       if (macroToCall) {
         if (this instanceof Workflow) {
           const macroData = this.getMacroData();
@@ -2410,15 +2410,17 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
 }
 
 export function getOptionalCountRemainingShortFlag(actor: Actor5e, flag: string) {
-  return getOptionalCountRemaining(actor, `flags.midi-qol.optional.${flag}.count`)
+  return getOptionalCountRemaining(actor, `flags.midi-qol.optional.${flag}.count`) && getOptionalCountRemaining(actor, `flags.midi-qol.optional.${flag}.countAlt`)
 }
 export function getOptionalCountRemaining(actor: Actor5e, flag: string) {
   const countValue = getProperty(actor.data, flag);
   if (!countValue) return 1;
 
   if (["turn", "each-round", "each-turn"].includes(countValue) && game.combat) {
-    const usedFlag = flag.replace(".count", ".used");
+    let usedFlag = flag.replace(".countAlt", ".used");
     // check for the flag
+    usedFlag = flag.replace(".count", ".used");
+
     if (getProperty(actor.data, usedFlag)) return 0;
   } else if (countValue === "reaction") {
     // return await hasUsedReaction(actor)

@@ -146,14 +146,9 @@ async function addConvenientEffect(options) {
   const actorToken: any = await fromUuid(actorUuid);
   const actor = actorToken?.actor ?? actorToken;
 
+  console.warn("midi-qol | Deprecated. Call game.dfreds.effectInterface?.addEffect({ effectName, uuid: actorUuid, origin }) instead")
   //@ts-ignore
-  if (game.dfreds.effectInterface) {
-    //@ts-ignore
-    await game.dfreds.effectInterface.addEffect(effectName, actoruuid, origin);
-  } else {
-    //@ts-ignore
-    await game.dfreds.effectHandler.addEffect({ effectName, actor, origin });
-  }
+  await game.dfreds.effectInterface?.addEffect({ effectName, uuid: actorUuid, origin });
 }
 
 async function localDoReactions(data: { tokenUuid: string; triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any}) {
