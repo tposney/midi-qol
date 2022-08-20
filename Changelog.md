@@ -1,3 +1,18 @@
+### 09.74
+* Added expiry reason for isHit/isDamaged etc.
+* Added support for using df Walled Templates to do target selection for AoE spells.
+* Fix for unclickable drop down lists in sound config.
+* Templates created when casting AoE spells with a duration are now auto removed on spell expiry.
+* Templates drawn for instantaneous spells are removed after 1 turn or 1 second of game time.
+* Rewrote midi's critical damage handling to match the damage types for critical rolls.
+  - if maximising critial damage dice and you roll 1d4 Bludgeoning and 1d8 piercing, the damage roll will be displayed as 1d4 + 1d8 + 4 + 8 and the damage types of the maximised values will be bludgeoning and piecrcing respectively or as 1d4 + 1d8 + 1d4min4 + 1d8min8.
+  - If maxing critical dice you can either have just a flat number for the critical dice (takes less space) or roll the critical dice with the dice roll being upgraded to maximum.
+  - if you use the default dnd 5e critical damage rolling the type of the critical damage will default to the base damage for the weapon (which is not correct).
+  - Midi now respects the dnd5e setting to apply the multiplier to the fixed numeric terms of the damage roll.
+* Midi now displays the damage types for all dice rolls (via roll flavor) and uses the localised damage name, rather than the internal damage type.
+* You can use ``1d4[fire]`` or ``1d4[Fire]`` when specifiying a damage flavor, the first is the dnd5e internal label for the damage type, the second is whatever the localised version of the string is.
+* Damage types are passed to DSN for all damage roll elements.
+
 ### 0.9.73
 * Fix for optional effects not calling a macro when specified.
 * Fix for damage sounds not playing if dice so nice enabled.

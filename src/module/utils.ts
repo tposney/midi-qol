@@ -7,8 +7,28 @@ import { installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName, itemJSONData, midiFlagTypes, overTimeJSONData } from "./Hooks.js";
 //@ts-ignore
 import Actor5e from "../../../systems/dnd5e/module/actor/entity.js"
-import {  OnUseMacros } from "./apps/Item.js";
+import { OnUseMacros } from "./apps/Item.js";
 import { Options } from "./patching.js";
+
+export function getDamageType(flavorString): string | undefined {
+  const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
+  const allDamageTypeEntries = Object.entries(getSystemCONFIG().damageTypes).concat(Object.entries(getSystemCONFIG().healingTypes));
+  if (validDamageTypes.includes(flavorString)) {
+    const damageEntry: any = allDamageTypeEntries?.find(e => e[1] === flavorString);
+    return damageEntry ? damageEntry[0] : flavorString
+  }
+  return undefined;
+}
+
+export function getDamageFlavor(damageType): string | undefined {
+  const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
+  const allDamageTypeEntries = Object.entries(getSystemCONFIG().damageTypes).concat(Object.entries(getSystemCONFIG().healingTypes));
+  if (validDamageTypes.includes(damageType)) {
+    const damageEntry: any = allDamageTypeEntries?.find(e => e[0] === damageType);
+    return damageEntry ? damageEntry[1] : damageType
+  }
+  return undefined;
+}
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -24,19 +44,17 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
   // create data for a synthetic roll
   let rollData = item ? item.getRollData() : {};
   rollData.mod = 0;
-  if (debugEnabled > 1)
-    debug("CreateDamageList: Passed roll is ", roll);
-  if (debugEnabled > 1)
-    debug("CreateDamageList: Damage spec is ", parts);
+  if (debugEnabled > 1) debug("CreateDamageList: Passed roll is ", roll)
+  if (debugEnabled > 1) debug("CreateDamageList: Damage spec is ", parts)
   let partPos = 0;
+  const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
+  const allDamageTypeEntries = Object.entries(getSystemCONFIG().damageTypes).concat(Object.entries(getSystemCONFIG().healingTypes));
 
   // If we have an item we can use it to work out each of the damage lines that are being rolled
   for (let [spec, type] of parts) { // each spec,type is one of the damage lines
-    if (partPos >= rollTerms.length)
-      continue;
+    if (partPos >= rollTerms.length) continue;
     // TODO look at replacing this with a map/reduce
-    if (debugEnabled > 1)
-      debug("CreateDamageList: single Spec is ", spec, type, item);
+    if (debugEnabled > 1) debug("CreateDamageList: single Spec is ", spec, type, item)
     let formula = Roll.replaceFormulaData(spec, rollData, { missing: "0", warn: false });
     // TODO - need to do the .evaluate else the expression is not useful 
     // However will be a problem longer term when async not supported?? What to do
@@ -44,12 +62,11 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
     try {
       dmgSpec = new Roll(formula, rollData).evaluate({ async: false });
     } catch (err) {
-      console.warn("midi-qol | Dmg spec not valid", formula);
+      console.warn("midi-qol | Dmg spec not valid", formula)
       dmgSpec = undefined;
       break;
     }
-    if (!dmgSpec || dmgSpec.terms?.length < 1)
-      break;
+    if (!dmgSpec || dmgSpec.terms?.length < 1) break;
     // dmgSpec is now a roll with the right terms (but nonsense value) to pick off the right terms from the passed roll
     // Because damage spec is rolled it drops the leading operator terms, so do that as well
     for (let i = 0; i < dmgSpec.terms.length; i++) { // grab all the terms for the current damage line
@@ -63,7 +80,13 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
         partPos += 1;
       }
       if (rollTerms[partPos]) {
-        type = rollTerms[partPos]?.options?.flavor ?? type;
+        if (rollTerms[partPos] instanceof DiceTerm || rollTerms[partPos] instanceof NumericTerm) {
+          const flavorDamageType = getDamageType(rollTerms[partPos]?.options?.flavor);
+          type = flavorDamageType ?? type;
+          if (!rollTerms[partPos]?.options.flavor) {
+            setProperty(rollTerms[partPos].options, "flavor", getDamageFlavor(type));
+          }
+        }
         evalString += rollTerms[partPos]?.total;
       }
       partPos += 1;
@@ -71,7 +94,7 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
     // Each damage line is added together and we can skip the operator term
     partPos += 1;
     if (evalString) {
-      let result = Roll.safeEval(evalString);
+      let result = Roll.safeEval(evalString)
       damageParts[type || defaultType] = (damageParts[type || defaultType] || 0) + result;
       evalString = "";
     }
@@ -83,7 +106,6 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
 
   // process the rest of the roll as a sequence of terms.
   // Each might have a damage flavour so we do them expression by expression
-  const validTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten());
 
   evalString = "";
   let damageType: string | undefined = defaultType;
@@ -94,21 +116,30 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
     partPos += 1;
     if (evalTerm instanceof DiceTerm) {
       // this is a dice roll
-      evalString += evalTerm.total;
-      damageType = evalTerm.options?.flavor || damageType;
+      damageType = getDamageType(evalTerm.options?.flavor) ?? damageType;
+      if (!evalTerm?.options.flavor) {
+        setProperty(evalTerm, "options.flavor", getDamageFlavor(damageType));
+      }
       numberTermFound = true;
+      evalString += evalTerm.total;
     } else if (evalTerm instanceof Die) { // special case for better rolls that does not return a proper roll
-      damageType = evalTerm.options?.flavor || damageType;
+      damageType = getDamageType(evalTerm.options?.flavor) ?? damageType;
+      if (!evalTerm?.options.flavor) {
+        setProperty(evalTerm, "options.flavor", getDamageFlavor(damageType));
+      }
       numberTermFound = true;
       evalString += evalTerm.total;
     } else if (evalTerm instanceof NumericTerm) {
-      evalString += evalTerm.total;
-      damageType = evalTerm.options?.flavor || damageType; // record this if we get it
+      damageType = getDamageType(evalTerm.options?.flavor) ?? damageType;
+      if (!evalTerm?.options.flavor) {
+        setProperty(evalTerm, "options.flavor", getDamageFlavor(damageType));
+      }
       numberTermFound = true;
+      evalString += evalTerm.total;
     } if (evalTerm instanceof OperatorTerm) {
       if (["*", "/"].includes(evalTerm.operator)) {
         // multiply or divide keep going
-        evalString += evalTerm.total;
+        evalString += evalTerm.total
       } else if (["-", "+"].includes(evalTerm.operator)) {
         if (numberTermFound) { // we have a number and a +/- so we can eval the term (do it straight away so we get the right damage type)
           let result = Roll.safeEval(evalString);
@@ -130,9 +161,8 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
     // we can always add since the +/- will be recorded in the evalString
     damageParts[damageType || defaultType] = (damageParts[damageType || defaultType] || 0) + damage;
   }
-  const damageList = Object.entries(damageParts).map(([type, damage]) => { return { damage, type }; });
-  if (debugEnabled > 1)
-    debug("CreateDamageList: Final damage list is ", damageList);
+  const damageList = Object.entries(damageParts).map(([type, damage]) => { return { damage, type } });
+  if (debugEnabled > 1) debug("CreateDamageList: Final damage list is ", damageList)
   return damageList;
 }
 
@@ -264,8 +294,8 @@ export interface applyDamageDetails {
   superSavers?: Set<Token | TokenDocument>;
   semiSuperSavers?: Set<Token | TokenDocument>;
 }
-export async function newApplyTokenDamageMany({ applyDamageDetails, theTargets, item, 
-  options = { existingDamage: [], workflow: undefined, updateContext: undefined } }: 
+export async function newApplyTokenDamageMany({ applyDamageDetails, theTargets, item,
+  options = { existingDamage: [], workflow: undefined, updateContext: undefined } }:
   { applyDamageDetails: applyDamageDetails[]; theTargets: Set<Token | TokenDocument>; item: any; options?: { existingDamage: any[][]; workflow: Workflow | undefined; updateContext: any | undefined; }; }): Promise<any[]> {
   let damageList: any[] = [];
   let targetNames: string[] = [];
@@ -412,7 +442,7 @@ export async function newApplyTokenDamageMany({ applyDamageDetails, theTargets, 
           physicalDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
         }
-        if (DRType === 0 && !nonPhysicalDRUsed && !["bludgeoning", "slashing", "piercing"].includes(type) && !physicalDamage &&  getProperty(targetActor.data, `flags.midi-qol.DR.non-physical`)) {
+        if (DRType === 0 && !nonPhysicalDRUsed && !["bludgeoning", "slashing", "piercing"].includes(type) && !physicalDamage && getProperty(targetActor.data, `flags.midi-qol.DR.non-physical`)) {
           const DR = (new Roll((getProperty(targetActor.data, `flags.midi-qol.DR.non-physical`) || "0"), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
           nonPhysicalDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
@@ -847,7 +877,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
             },
             { label: "bonusDamage", damageDetail: workflow.bonusDamageDetail, damageTotal: workflow.bonusDamageTotal }
           ], theTargets, item, options: { existingDamage: [], workflow, updateContext: undefined }
-        }      );
+        });
       /* appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.otherDamageDetail ?? [], workflow.bonusDamageDetail ?? []],
         [workflow.damageTotal, workflow.otherDamageTotal ?? 0, workflow.bonusDamageTotal ?? 0],
@@ -882,7 +912,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
               semiSuperSavers: workflow.semiSuperSavers
             },
           ], theTargets, item, options: { existingDamage: [], workflow, updateContext: undefined }
-        }      );
+        });
       /* appliedDamage = await applyTokenDamageMany(
         [workflow.damageDetail, workflow.bonusDamageDetail ?? []],
         [workflow.damageTotal, workflow.bonusDamageTotal ?? 0],
@@ -907,7 +937,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
               superSavers: workflow.superSavers,
               semiSuperSavers: workflow.semiSuperSavers
             }], theTargets, item, options: { existingDamage: [], workflow, updateContext: undefined }
-          }        );
+          });
         // assume previous damage applied and then calc extra damage
         /*
         appliedDamage = await applyTokenDamage(
@@ -2760,13 +2790,14 @@ export async function reactionDialog(actor: Actor5e, triggerTokenUuid: string | 
       dialog.close();
       // options = mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStatus: false}, {overwrite: true});
       options.lateTargeting = false;
-      const itemRollOptions = mergeObject(options, { 
-        showFullCard: false, 
-        createWorkflow: true, 
-        versatile: false, 
-        configureDialog: true, 
-        checkGMStatus: false, 
-        targetUuids: [triggerTokenUuid] });
+      const itemRollOptions = mergeObject(options, {
+        showFullCard: false,
+        createWorkflow: true,
+        versatile: false,
+        configureDialog: true,
+        checkGMStatus: false,
+        targetUuids: [triggerTokenUuid]
+      });
       await completeItemRoll(item, itemRollOptions);
       actor.prepareData();
       resolve({ name: item.name, uuid: item.uuid })

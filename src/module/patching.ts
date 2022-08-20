@@ -188,135 +188,95 @@ function rollDeathSave(wrapped, ...args) {
   }
   return wrapped.call(this, ...args);
 }
-
 function configureDamage(wrapped) {
-  if (!this.isCritical || criticalDamage === "default") return wrapped();
-  let flatBonus = 0;
-  if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
-  if (criticalDamage === "baseDamage") this.options.criticalMultiplier = 1;
-  this.terms = this.terms.filter(term => !term.options.critOnly)
-  // Add extra critical damage term`
-  if (this.isCritical && this.options.criticalBonusDamage && !(["explode", "maxCrit", "maxAll", "baseDamage", "doubleDice"].includes(criticalDamage))) {
-    const extra = new Roll(this.options.criticalBonusDamage, this.data);
-    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
-    this.terms.push(...extra.terms);
-  }
-    // strip tailing operator terms
-    while (this.terms.length && this.terms[this.terms.length-1] instanceof OperatorTerm) 
+  if (!this.isCritical || criticalDamage === "default") {
+    if (this.terms[this.terms.length - 1] instanceof OperatorTerm)
       this.terms.pop();
+    return wrapped();
+  }
+  if (this.options.configured) return;
+  let bonusTerms: RollTerm[] = [];
+  /* criticalDamage is one of 
+    "default": "DND5e Settings Only",
+    "maxDamage": "Max Normal Damage",
+    "maxCrit": "Max Critical Dice",
+    "maxAll": "Max All Dice",
+    "doubleDice": "Double Rolled Damage",
+    "explode": "Explode critical dice",
+    "baseDamage": "No Bonus"
+  */
+  if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
+  if (criticalDamage === "baseDamage") {
+    this.options.configured = true;
+    return this;
+  };
 
   for (let [i, term] of this.terms.entries()) {
-    // Multiply dice terms
-    if (term instanceof DiceTerm) {
-      const termOptions: any = term.options;
-      termOptions.baseNumber = termOptions.baseNumber ?? term.number; // Reset back
-      term.number = termOptions.baseNumber;
-      let cm = this.options.criticalMultiplier ?? 2;
-      let cb = (this.options.criticalBonusDice && (i === 0)) ? this.options.criticalBonusDice : 0;
-      // {default: "DND5e default", maxDamage:  "base max only", maxCrit: "max critical dice", maxAll: "max all dice", doubleDice: "double dice value"},
-      switch (criticalDamage) {
-        case "maxDamage":
-          term.modifiers.push(`min${term.faces}`)
-          cm = 1;
-          flatBonus = 0;
-          break;
-        case "maxCrit":
-          flatBonus += (term.number + cb) * term.faces;
-          cm = Math.max(1, cm - 1);
-          term.alter(cm, 0);
-          break;
-        case "maxAll":
-          term.modifiers.push(`min${term.faces}`);
-          term.alter(cm, cb);
-          flatBonus = 0;
-          break;
-        case "doubleDice":
-          cm = 1;
-          break;
-        default: break;
-      }
-      termOptions.critical = true;
-    }
-
-    if (this.options.multiplyNumeric && (term instanceof NumericTerm)) {
-      // Multiply numeric terms
-      const termOptions: any = term.options;
-      termOptions.baseNumber = termOptions.baseNumber ?? term.number; // Reset back
-      term.number = termOptions.baseNumber;
-      if (this.isCritical) {
-        term.number *= (this.options.criticalMultiplier ?? 2);
-        termOptions.critical = true;
-      }
-    }
-  }
-
-  // Add powerful critical bonus
-  if (/*this.options.powerfulCritical && */ (flatBonus > 0)) {
-    this.terms.push(new OperatorTerm({ operator: "+" }));
-    //@ts-ignore
-    this.terms.push(new NumericTerm({ number: flatBonus }, { flavor: game.i18n.localize("DND5E.PowerfulCritical") }));
-  }
-  /*
-  "maxDamage": "Max Normal Damage",
-  "maxCrit": "Max Critical Dice",
-  "maxAll": "Max All Dice",
-  "doubleDice": "Double Rolled Damage",
-  "baseDamage": "No Bonus"
-*/
-
-  if (["doubleDice"].includes(criticalDamage)) {
-    const extra = new Roll(this.options.criticalBonusDamage, this.data);
-    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
-    this.terms.push(...extra.terms);
-    let newTerms: RollTerm[] = [];
-    for (let term of this.terms) {
-      if (term instanceof DiceTerm) {
-        //@ts-ignore types don't allow for optional roll in constructor
-        newTerms.push(new ParentheticalTerm({ term: `2*${term.formula}`, options: {} }))
-      } else
-        newTerms.push(term);
-    }
-    this.terms = newTerms;
-  }
-  if (["explode"].includes(criticalDamage)) {
-    let newTerms: RollTerm[] = [];
-    for (let term of this.terms) {
-      if (term instanceof DiceTerm) {
-        newTerms.push(term);
-        newTerms.push(new OperatorTerm({ operator: "+" }));
-        //@ts-ignore
-        const newTerm = new Die({ number: term.number, faces: term.faces })
-        newTerm.modifiers.push(`x${term.faces}`)
-        newTerms.push(newTerm);
-
-      } else
-        newTerms.push(term);
-    }
-    this.terms = newTerms;
-    const extra = new Roll(this.options.criticalBonusDamage, this.data);
-    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
-    /* Not sure if bonus critical dice should be exploded - since they can be done by hand
-    extra.terms.forEach(term => {
-      if (term instanceof DiceTerm) term.modifiers.push(`x${term.faces}`);
-    });
-    */
-    this.terms.push(...extra.terms);
-  }
-  // Add extra critical damage term
-  if (this.isCritical && this.options.criticalBonusDamage && ["maxCrit", "maxAll", "baseDamage"].includes(criticalDamage)) {
-    const extra = new Roll(this.options.criticalBonusDamage, this.data);
-    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
-    if (["maxCrit", "maxAll"].includes(criticalDamage)) {
-      for (let term of extra.terms) {
+    let cm = this.options.criticalMultiplier ?? 2;
+    let cb = (this.options.criticalBonusDice && (i === 0)) ? this.options.criticalBonusDice : 0;
+    switch (criticalDamage) {
+      case "maxDamage":
+        if (term instanceof DiceTerm) term.modifiers.push(`min${term.faces}`);
+        break;
+      case "maxCrit":  // Powerful critical
+      case "maxCritRoll":
         if (term instanceof DiceTerm) {
-          term.modifiers.push(`min${term.faces}`);
+          let critTerm;
+          bonusTerms.push(new OperatorTerm({ operator: "+" }));
+          if (criticalDamage === "maxCrit")
+            critTerm = new NumericTerm({ number: (term.number + cb) * term.faces });
+          else {
+            critTerm = new Die({ number: term.number + cb, faces: term.faces });
+            critTerm.modifiers = duplicate(term.modifiers);
+            critTerm.modifiers.push(`min${term.faces}`);
+          }
+          critTerm.options = term.options;
+          bonusTerms.push(critTerm);
+        } else if (term instanceof NumericTerm && this.options.multiplyNumeric) {
+          term.number *= cm;
         }
-        this.terms.push(term);
-      }
-    } else this.terms.push(...extra.terms);
+        break;
+      case "maxAll":
+        if (term instanceof DiceTerm) {
+          term.alter(cm, cb);
+          term.modifiers.push(`min${term.faces}`);
+        } else if (term instanceof NumericTerm && this.options.multiplyNumeric) {
+          term.number *= cm;
+        }
+        break;
+      case "doubleDice":
+        if (term instanceof DiceTerm) {
+          term.alter(cm, cb);
+        } else if (term instanceof NumericTerm) {
+          term.number *= cm;
+        }
+        break;
+      case "explode":
+        if (term instanceof DiceTerm) {
+          bonusTerms.push(new OperatorTerm({ operator: "+" }));
+          //@ts-ignore
+          const newTerm = new Die({ number: term.number + cb, faces: term.faces })
+          newTerm.modifiers.push(`x${term.faces}`);
+          newTerm.options = term.options;
+          // setProperty(newTerm.options, "sourceTerm", term);
+          bonusTerms.push(newTerm);
+        }
+        break;
+    }
   }
-  // Re-compile the underlying formula
+  if (bonusTerms.length > 0) this.terms.push(...bonusTerms);
+  if (this.options.criticalBonusDamage) {
+    const extra = new Roll(this.options.criticalBonusDamage, this.data);
+    for (let term of extra.terms) {
+      if (term instanceof DiceTerm || term instanceof NumericTerm)
+        if (!term.options?.flavor) term.options = this.terms[0].options;
+    }
+    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
+    this.terms.push(...extra.terms);
+  }
+  if (this.terms[this.terms.length - 1] instanceof OperatorTerm) this.terms.pop();
   this._formula = this.constructor.getFormula(this.terms);
+  this.options.configured = true;
 }
 
 export async function rollAbilitySave(wrapped, ...args) {
@@ -465,6 +425,8 @@ function _midiATIRefresh(template) {
   if (configSettings.autoTarget === "none") return;
   if (configSettings.autoTarget === "dftemplates" && installedModules.get("df-templates"))
     return; // df-templates will handle template targeting.
+    if (configSettings.autoTarget === "dfwalledTemplates" && installedModules.get("walledtemplates"))
+    return; // walled templates will handle template targeting.
   if (installedModules.get("levelsvolumetrictemplates")) {
 
     setProperty(template.data, "flags.levels.elevation",

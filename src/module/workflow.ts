@@ -8,7 +8,7 @@ import { activationConditionToUse, selectTargets, shouldRollOtherDamage, showIte
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking, canSee, getSystemCONFIG, tokenForActor } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking, canSee, getSystemCONFIG, tokenForActor, getSelfTarget } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -628,7 +628,7 @@ export class Workflow {
         // done here cause not needed for betterrolls workflow
         this.defaultDamageType = this.item.data.data.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
         if (this.item?.data.data.actionType === "heal" && !Object.keys(getSystemCONFIG().healingTypes).includes(this.defaultDamageType ?? "")) this.defaultDamageType = "healing";
-        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
+        // now done in itemhandling this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
 
         await asyncHooksCallAll("midi-qol.preDamageRollComplete", this)
         if (this.item) await asyncHooksCallAll(`midi-qol.preDamageRollComplete.${this.item.uuid}`, this);
@@ -642,10 +642,9 @@ export class Workflow {
         }
 
         this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
-        // TODO Need to do DSN stuff?
         if (this.otherDamageRoll) {
           this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
-        }
+        } else this.otherDamageDetail = [];
 
         await this.displayDamageRoll(configSettings.mergeCard);
         await asyncHooksCallAll("midi-qol.DamageRollComplete", this);
@@ -927,6 +926,35 @@ export class Workflow {
               let templates = this.templateUuid ? [this.templateUuid] : [];
               await this.actor.setFlag("midi-qol", "concentration-data", { uuid: this.item.uuid, targets: targets, templates: templates, removeUuids: [] })
             }
+          } else if (installedModules.get("dae") && this.item?.hasAreaTarget && this.templateUuid && this.item?.system.duration?.units) { // create an effect to delete the template
+            const itemDuration = this.item.system.duration;
+            let selfTarget = this.item.actor.token ? this.item.actor.token.object : await getSelfTarget(this.item.actor);
+            if (selfTarget) selfTarget = this.token;
+            if (selfTarget) {
+              const effectData = {
+                changes: [
+                  {key: "flags.dae.deleteUuid", mode: 5, value: this.templateUuid, priority: 20}, // who is marked
+                ],
+                origin: this.item?.itemUuid, //flag the effect as associated to the spell being cast
+                disabled: false,
+                icon: this.item?.img,
+                label: this.item?.name + " Template",
+                duration: {}
+              }
+              const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
+              const convertedDuration = globalThis.DAE.convertDuration(itemDuration, inCombat);
+              if (convertedDuration?.type === "seconds") {
+                effectData.duration = { seconds: convertedDuration.seconds, startTime: game.time.worldTime }
+              } else if (convertedDuration?.type === "turns") {
+                effectData.duration = {
+                  rounds: convertedDuration.rounds,
+                  turns: convertedDuration.turns,
+                  startRound: game.combat?.round,
+                  startTurn: game.combat?.turn
+                }
+              }
+              await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+            }
           }
 
           // Call onUseMacro if not already called
@@ -1172,7 +1200,8 @@ export class Workflow {
       if (expiredEffects?.length ?? 0 > 0) {
         await timedAwaitExecuteAsGM("removeEffects", {
           actorUuid: target.actor?.uuid,
-          effects: expiredEffects
+          effects: expiredEffects,
+          options: { "expiry-reason": `midi-qol:${expireList}` }
         });
       }
     }
@@ -3100,14 +3129,7 @@ export class BetterRollsWorkflow extends Workflow {
         if (damageBonusMacros) {
           await this.rollBonusDamage(damageBonusMacros);
         }
-        if (this.otherDamageRoll) {
-          const messageData = {
-            flavor: this.otherDamageFlavor ?? this.damageFlavor,
-            speaker: this.speaker
-          }
-          setProperty(messageData, `flags.${game.system.id}.roll.type`, "damage");
-
-          //  Not required as we pick up the damage from the better rolls data this.otherDamageRoll.toMessage(messageData);
+        if (!this.otherDamageRoll) {
           this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, versatile: false, defaultType: "" });
 
         } else this.otherDamageDetail = [];

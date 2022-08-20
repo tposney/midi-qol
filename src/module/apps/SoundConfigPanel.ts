@@ -123,7 +123,6 @@ export class SoundConfigPanel extends FormApplication {
     settings.version = "0.9.48";
     await game.settings.set("midi-qol", "MidiSoundSettings", settings);
   }
-
   activateListeners(html) {
     super.activateListeners(html);
     html.find(".sound-control").click(this._onSoundControl.bind(this));
@@ -133,13 +132,13 @@ export class SoundConfigPanel extends FormApplication {
     html.find(".playlistName").change(function (event) {
       this.submit({ preventClose: true }).then(() => this.render());
     }.bind(this));
-    html.find(".category").on("click", function (event) {
+    html.find(".category").change(function (event) {
       this.submit({ preventClose: true }).then(() => this.render());
     }.bind(this));
-    html.find(".action").on("click", function (event) {
+    html.find(".action").change(function (event) {
       this.submit({ preventClose: true }).then(() => this.render());
     }.bind(this));
-    html.find(".subtype").on("click", function (event) {
+    html.find(".subtype").change(function (event) {
       this.submit({ preventClose: true }).then(() => this.render());
     }.bind(this))
 
