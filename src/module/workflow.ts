@@ -926,8 +926,8 @@ export class Workflow {
               let templates = this.templateUuid ? [this.templateUuid] : [];
               await this.actor.setFlag("midi-qol", "concentration-data", { uuid: this.item.uuid, targets: targets, templates: templates, removeUuids: [] })
             }
-          } else if (installedModules.get("dae") && this.item?.hasAreaTarget && this.templateUuid && this.item?.system.duration?.units) { // create an effect to delete the template
-            const itemDuration = this.item.system.duration;
+          } else if (installedModules.get("dae") && this.item?.hasAreaTarget && this.templateUuid && this.item?.data.data.duration?.units) { // create an effect to delete the template
+            const itemDuration = this.item.data.data.duration;
             let selfTarget = this.item.actor.token ? this.item.actor.token.object : await getSelfTarget(this.item.actor);
             if (selfTarget) selfTarget = this.token;
             if (selfTarget) {
