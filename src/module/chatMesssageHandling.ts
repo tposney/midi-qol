@@ -2,7 +2,7 @@ import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats, debugE
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { BetterRollsWorkflow, DDBGameLogWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { nsaFlag, coloredBorders, addChatDamageButtons, configSettings, forceHideRoll } from "./settings.js";
-import { createDamageList, getTraitMult, calculateDamage, MQfromUuid, MQfromActorUuid, playerFor, playerForActor, applyTokenDamage } from "./utils.js";
+import { createDamageList, getTraitMult, calculateDamage, MQfromUuid, MQfromActorUuid, playerFor, playerForActor, applyTokenDamage, doOverTimeEffect, isInCombat } from "./utils.js";
 import { shouldRollOtherDamage, showItemCard } from "./itemhandling.js";
 import { socketlibSocket } from "./GMAction.js";
 export const MAESTRO_MODULE_NAME = "maestro";
@@ -286,6 +286,35 @@ export let colorChatMessageHandler = (message, html, data) => {
   return true;
 }
 
+// TODO think about monks tb on preUpdateChatMessage?
+// Also should ideally be async.
+export function checkOverTimeSaves(message, data, options, user) {
+  if (!message.rolls?.length || !["skill", "save", "check"].includes(data.flags?.dnd5e?.roll?.type)) return true;
+  let actor: Actor | undefined | null = game.actors?.get(message.speaker.actor);
+  if (message.speaker.token) {
+    actor = game.scenes?.get(message.speaker.scene)?.tokens?.get(message.speaker.token)?.actor;
+  }
+  if (!actor) return true;
+  // Check that it is the actor's turn
+  let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
+  const isTurn = activeCombatants?.includes(ChatMessage.getSpeaker({ actor })?.token);
+  const inCombat = isInCombat(actor);
+  if (!isTurn && inCombat) {
+    return true;
+  }
+
+  try {
+    let func = async (actor: Actor, rollFlags: any, roll: Roll) => {
+      //@ts-ignore .changes v10
+      for (let effect of actor.effects.filter(ef => ef.changes.some(change => change.key === "flags.midi-qol.OverTime"))) {
+        await doOverTimeEffect(actor, effect, true, { saveToUse: roll, rollFlags: data.flags?.dnd5e?.roll })
+      }
+    };
+    func(actor, data.flags.dnd5e.roll, message.rolls[0]);
+  } finally {
+    return true;
+  }
+};
 export let nsaMessageHandler = (message, data, ...args) => {
   if (!nsaFlag || !message.whisper || message.whisper.length === 0) return true;
   let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u => u.active)?.map(u => u.id);
@@ -460,8 +489,8 @@ export let hideStuffHandler = (message, html, data) => {
     html.find(".midi-qol-target-npc-GM").hide();
     if (message.user?.isGM) {
       const d20AttackRoll = getProperty(message.flags, "midi-qol.d20AttackRoll");
-
-      if (configSettings.hideRollDetails === "all") {
+      console.error("hide stuff handler ", getProperty(message.flags, "midi-qol"))
+      if (configSettings.hideRollDetails === "all" || getProperty(message.flags, "midi-qol.GMOnlyAttackRoll")) {
         html.find(".dice-tooltip").remove();
         // html.find(".midi-qol-attack-roll .dice-total").text(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
         html.find(".midi-qol-attack-roll .dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
@@ -588,8 +617,8 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
   btnContainer.append(doubleDamageButton);
   btnContainer.append(fullHealingButton);
   const toMatchElement = html.find(toMatch);
-	toMatchElement.addClass("dmgBtn-mqol");
-	toMatchElement.append(btnContainer);
+  toMatchElement.addClass("dmgBtn-mqol");
+  toMatchElement.append(btnContainer);
   // Handle button clicks
   let setButtonClick = (buttonID, mult) => {
     let button = html.find(buttonID);
@@ -598,7 +627,7 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
       ev.stopPropagation();
       // const item = game.actors.get(actorId).items.get(itemId);
       const item = MQfromUuid(itemUuid)
-      const modDamageList = duplicate(damageList).map( di => {
+      const modDamageList = duplicate(damageList).map(di => {
         if (mult < 0) di.type = "healing";
         else di.damage = Math.floor(di.damage * mult);
         return di;
@@ -609,24 +638,24 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
       if (canvas?.tokens) for (let t of canvas.tokens.controlled) {
         const totalDamage = modDamageList.reduce((acc, value) => value.damage + acc, 0);
         // export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any>, semiSuperSavers: Set<any>, workflow: Workflow | undefined, updateContext: any } = { existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined, updateContext: undefined        
-        await applyTokenDamage(modDamageList, totalDamage, new Set(canvas.tokens.controlled), item, new Set(), 
-        {  existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined, updateContext: undefined, forceApply: true });
+        await applyTokenDamage(modDamageList, totalDamage, new Set(canvas.tokens.controlled), item, new Set(),
+          { existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined, updateContext: undefined, forceApply: true });
       }
-/*
-      if (canvas?.tokens) for (let t of canvas.tokens.controlled) {
-        let a: any | null = t.actor;
-        if (!a) continue;
-        let appliedDamage = 0;
-        for (let { damage, type } of damageList) {
-          appliedDamage += Math.floor(damage * getTraitMult(a, type, item));
-        }
-        appliedDamage = Math.floor(Math.abs(appliedDamage)) * mult;
-        let damageItem = calculateDamage(a, appliedDamage, t, totalDamage, "", null);
-        promises.push(a.update({ "system.attributes.hp.temp": damageItem.newTempHP, "system.attributes.hp.value": damageItem.newHP }, { dhp: damageItem.newHP - a.system.attributes.hp.value }));
-      }
-      let retval = await Promise.all(promises);
-      return retval;
-      */
+      /*
+            if (canvas?.tokens) for (let t of canvas.tokens.controlled) {
+              let a: any | null = t.actor;
+              if (!a) continue;
+              let appliedDamage = 0;
+              for (let { damage, type } of damageList) {
+                appliedDamage += Math.floor(damage * getTraitMult(a, type, item));
+              }
+              appliedDamage = Math.floor(Math.abs(appliedDamage)) * mult;
+              let damageItem = calculateDamage(a, appliedDamage, t, totalDamage, "", null);
+              promises.push(a.update({ "system.attributes.hp.temp": damageItem.newTempHP, "system.attributes.hp.value": damageItem.newHP }, { dhp: damageItem.newHP - a.system.attributes.hp.value }));
+            }
+            let retval = await Promise.all(promises);
+            return retval;
+            */
     });
   };
   setButtonClick(`.dice-total-full-${tag}-button`, 1);

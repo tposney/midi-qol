@@ -95,17 +95,18 @@
               </div>
             </td>
           </tr>
+
+          {{/each}}
+          {{/each}}
+          {{/each}}
+          {{/each}}
+        </table>
       </div>
-      {{/each}}
-      {{/each}}
-      {{/each}}
-      {{/each}}
-      </table>
       <button type="addrow" name="addrow" class="sound-control" data-action="add">
-        <i class="fas fa-plus" ></i> {{localize "midi-qol.AddRow"}}
+        <i class="fas fa-plus"></i> {{localize "midi-qol.AddRow"}}
       </button>
-      </div>
     </div>
+
     <!-- Quick Settings Tab-->
     <div class="tab" data-tab="quicksettings" data-group="sections">
       {{#each SoundSettingsBlurb as |line lineNum|}}

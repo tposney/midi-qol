@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming, allAttackTypes, failedSaveOverTimeEffectsToDelete } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG, evalActivationCondition, createDamageList } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG, evalActivationCondition, createDamageList, getDamageType, getDamageFlavor } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
@@ -155,9 +155,9 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     gameStats.addAttackRoll({ rawRoll, total, fumble, critical }, this);
   }
   if (workflow.workflowOptions.attackRollDSN === undefined && dice3dEnabled()) {
-    workflow.workflowOptions.attackRollDSN = 
-    configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)
-        && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"));
+    workflow.workflowOptions.attackRollDSN =
+      configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)
+      && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"));
   }
   if (dice3dEnabled() && workflow.workflowOptions.attackRollDSN) {
     let whisperIds: User[] | null = null;
@@ -285,7 +285,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       options: damageRollOptions
     };
     // There was an interaction with condtional visibility (I think doing an actor update which means sometimes the prepareData did not complete)
-    if (installedModules.get("conditional-visibility")) this.actor.prepareDerivedData(); 
+    if (installedModules.get("conditional-visibility")) this.actor.prepareDerivedData();
     result = await wrapped(damageRollData);
     if (debugCallTiming) log(`wrapped item.rollDamage():  elapsed ${Date.now() - wrappedRollStart}ms`);
   } else {
@@ -304,11 +304,19 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   if ((minflags.damage && (minflags.damage.all || minflags.damage[this.system.actionType])) ?? false)
     result = await new Roll(result.formula).roll({ minimize: true });
   // need to do this nonsense since the returned roll _formula has a trailing + for ammo
-  result = Roll.fromJSON(JSON.stringify(result.toJSON()))
+
+  // result = Roll.fromJSON(JSON.stringify(result.toJSON()))
+  // I don't like the default display and it does not look good for dice so nice - fiddle the results for maximised rolls
+  for (let term of result.terms) {
+    if (term instanceof Die && term.modifiers.includes(`min${term.faces}`)) {
+      for (let result of term.results) {
+        result.result = term.faces;
+      }
+    }
+  }
   if (this.system.actionType === "heal" && !Object.keys(getSystemCONFIG().healingTypes).includes(workflow.defaultDamageType ?? "")) workflow.defaultDamageType = "healing";
   workflow.damageDetail = createDamageList({ roll: result, item: this, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType });
 
-  // createDamageList({roll: result, item:this, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType})
   await workflow.setDamageRoll(result);
   result = await processDamageRollBonusFlags.bind(workflow)();
   // await workflow.setDamageRoll(result);
@@ -338,10 +346,10 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       case "n5e":
         actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "N5E.Healing" : "N5E.DamageRoll");
         break;
-      case "dnd5e": 
+      case "dnd5e":
       default:
         actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
-      }
+    }
 
     const title = `${this.name} - ${actionFlavor}`;
     const speaker = getSpeaker(this.actor);
@@ -353,6 +361,11 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll", { type: "damage", itemId: this.id })
     result.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
     if (otherResult) {
+      for (let term of result.terms) { // put back the damage
+        if (term.options?.flavor) {
+          term.options.flavor = getDamageFlavor(term.options.flavor);
+        }
+      }
       messageData = mergeObject({
         title,
         flavor: title,
@@ -364,13 +377,18 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   }
 
   if (workflow.workflowOptions.damageRollDSN === undefined && dice3dEnabled()) {
-    workflow.workflowOptions.damageRollDSN = configSettings.mergeCard 
-        && !(configSettings.gmHide3dDice && game.user?.isGM)
-        && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"))
+    workflow.workflowOptions.damageRollDSN = configSettings.mergeCard
+      && !(configSettings.gmHide3dDice && game.user?.isGM)
+      && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"))
   }
   if (dice3dEnabled() && workflow.workflowOptions.damageRollDSN) {
     let whisperIds: User[] | null = null;
     const rollMode = game.settings.get("core", "rollMode");
+    for (let term of result.terms) { // for dsn damage types rather than flavors are required
+      if (term.options?.flavor) {
+        term.options.flavor = getDamageType(term.options.flavor);
+      }
+    }
     if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
       if (configSettings.ghostRolls) {
         //@ts-ignore ghost
@@ -386,13 +404,27 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
     }
     //@ts-ignore game.dice3d
     await game.dice3d?.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
-    if (configSettings.rollOtherDamage !== "none" && otherResult)
+    //@ts-ignore dice3d
+    if (otherResult) {
+      for (let term of otherResult.terms) { // for dsn damage types rather than flavors are required
+        if (term.options?.flavor) {
+          term.options.flavor = getDamageType(term.options.flavor);
+        }
+      }
       //@ts-ignore game.dice3d
       await game.dice3d?.showForRoll(otherResult, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+    }
   }
 
-
-  if (otherResult) await workflow.setOtherDamageRoll(otherResult)
+  if (otherResult) {
+    workflow.otherDamageDetail = createDamageList({ roll: otherResult, item: null, versatile: false, defaultType: "" });
+    for (let term of otherResult.terms) { // set the damage flavor
+      if (term.options?.flavor) {
+        term.options.flavor = getDamageFlavor(term.options.flavor);
+      }
+    }
+    await workflow.setOtherDamageRoll(otherResult);
+  }
   workflow.bonusDamageRoll = null;
   workflow.bonusDamageHTML = null;
   if (debugCallTiming) log(`item.rollDamage():  elapsed ${Date.now() - damageRollStart}ms`);
@@ -489,11 +521,11 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const isRangeSpell = ["ft", "m"].includes(this.system.target?.units) && ["creature", "ally", "enemy"].includes(this.system.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
-  
+
   const lateTargetingSetting = getLateTargeting();
   const lateTargetingSet = lateTargetingSetting === "all" || (lateTargetingSetting === "noTargetsSelected" && game?.user?.targets.size === 0)
-  const shouldCheckLateTargeting = (allAttackTypes.includes(this.system.actionType) || (this.hasTarget && !this.hasAreaTarget)) 
-          && (options.workflowOptions?.lateTargeting ?? lateTargetingSet);
+  const shouldCheckLateTargeting = (allAttackTypes.includes(this.system.actionType) || (this.hasTarget && !this.hasAreaTarget))
+    && (options.workflowOptions?.lateTargeting ?? lateTargetingSet);
 
   if (shouldCheckLateTargeting && !isRangeSpell && !isAoESpell) {
 
@@ -558,8 +590,8 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   }
 
   // do pre roll checks
-  if (checkRule("checkRange") && !isAoESpell && !isRangeSpell && !AoO) {
-    if (speaker.token && checkRange(this.actor, this, speaker.token, myTargets) === "fail")
+  if (checkRule("checkRange") && !isAoESpell && !isRangeSpell && !AoO && speaker.token) {
+    if (speaker.token && checkRange(this, canvas?.tokens?.get(speaker.token), myTargets) === "fail")
       return null;
   }
   if ((game.system.id === "dnd5e" || game.system.id === "n5e") && requiresTargets && myTargets && myTargets.size > allowedTargets) {
@@ -621,9 +653,9 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   let workflow: Workflow;
   if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
     if (!this.id) this._id = randomID(); // TOOD check this v10
-    if (needsConcentration && checkConcentration) { 
+    if (needsConcentration && checkConcentration) {
       const concentrationEffect = getConcentrationEffect(this.actor);
-      if (concentrationEffect) await removeConcentration(this.actor); 
+      if (concentrationEffect) await removeConcentration(this.actor);
     }
     workflow = new BetterRollsWorkflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
     // options.createMessage = true;
@@ -649,10 +681,6 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   if (consume?.type === "ammo") {
     workflow.ammo = this.actor.items.get(consume.target);
   }
-
-
-
-
 
   workflow.reactionQueried = false;
   const blockReaction = itemUsesReaction && hasReaction && workflow.inCombat && needsReactionCheck(this.actor);
@@ -966,7 +994,7 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
   // Check for center of  each square the token uses.
   // e.g. for large tokens all 4 squares
   //@ts-ignore document.width
-  const startX = token.document.width >= 1 ? 0.5 : (token.document,width / 2);
+  const startX = token.document.width >= 1 ? 0.5 : (token.document, width / 2);
   //@ts-ignore document.height
   const startY = token.document.height >= 1 ? 0.5 : (token.document.height / 2);
   //@ts-ignore document.width
@@ -990,7 +1018,7 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
 
         // If volumetric templates installed always leave targeting to it.
         if (
-          configSettings.optionalRules.wallsBlockRange === "centerLevels" 
+          configSettings.optionalRules.wallsBlockRange === "centerLevels"
           && installedModules.get("levels")
           && !installedModules.get("levelsvolumetrictemplates")) {
           let p1 = {
@@ -1011,7 +1039,7 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
           contains = contains && !CONFIG.Levels.API.testCollision(p1, p2, "collision");
           //@ts-ignore
         } else if (!installedModules.get("levelsvolumetrictemplates")) {
-          contains = !canvas?.walls?.checkCollision(r, {mode: "any"});
+          contains = !canvas?.walls?.checkCollision(r, { mode: "any" });
         }
       }
       // Check the distance from origin.
@@ -1113,6 +1141,7 @@ export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: s
   let rollOtherDamage = false;
   let conditionToUse: string | undefined = undefined;
   let conditionFlagToUse: string | undefined = undefined;
+  if (["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(this.system.actionType) && workflow?.hitTargets.size === 0) return false;
   if (this.type === "spell" && conditionFlagSpell !== "none") {
     rollOtherDamage = (conditionFlagSpell === "ifSave" && this.hasSave)
       || conditionFlagSpell === "activation";

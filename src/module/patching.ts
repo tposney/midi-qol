@@ -1,7 +1,7 @@
 import { log, warn, debug, i18n, error, getCanvas, i18nFormat } from "../midi-qol.js";
 import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, hasUsedBonusAction, hasUsedReaction, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, notificationNotify, processOverTime, removeBonusActionUsed, removeReactionUsed } from "./utils.js";
+import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, evalCondition, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, hasUsedBonusAction, hasUsedReaction, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, notificationNotify, processOverTime, removeBonusActionUsed, removeReactionUsed } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -143,7 +143,7 @@ async function doRollSkill(wrapped, ...args) {
     result = await wrapped(skillId, procOptions);
   }
   if (!result) return result;
-  
+
   const flavor = result.options?.flavor;
   const maxflags = getProperty(this.flags, "midi-qol.max") ?? {};
   const maxValue = (maxflags.skill && (maxflags.skill.all || maxflags.check[skillId])) ?? false;
@@ -179,13 +179,26 @@ function rollDeathSave(wrapped, ...args) {
   // options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
   mergeKeyboardOptions(options, mapSpeedKeys(null, "ability"));
   options.event = {};
-  const advFlags = getProperty(this.flags, "midi-qol")?.advantage ?? {};
-  const disFlags = getProperty(this.flags, "midi-qol")?.disadvantage ?? {};
+  const advFlags = getProperty(this.flags, "midi-qol")?.advantage;
+  const disFlags = getProperty(this.flags, "midi-qol")?.disadvantage;
+  let withAdvantage = false;
+  let withDisadvantage = false;
   options.fastForward = autoFastForwardAbilityRolls ? !options.event?.fastKey : options.event?.fastKey;
-  const withAdvantage = advFlags.deathSave || advFlags.all;
-  const withDisadvantage = disFlags.deathSave || disFlags.all;
+  if (advFlags || disFlags) {
+    const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: this });
+    if ((advFlags?.all && evalCondition(advFlags.all, conditionData))
+      || (advFlags?.deathSave && evalCondition(advFlags.deathSave, conditionData))) {
+      withAdvantage = true;
+    }
+
+    if ((disFlags?.all && evalCondition(disFlags.all, conditionData))
+      || (disFlags?.deathSave && evalCondition(disFlags.deathSave, conditionData))) {
+      withDisadvantage = true;
+    }
+  }
   options.advantage = withAdvantage && !withDisadvantage;
   options.disadvantage = withDisadvantage && !withAdvantage;
+
   if (options.advantage && options.disadvantage) {
     options.advantage = options.disadvantage = false;
   }
@@ -193,133 +206,94 @@ function rollDeathSave(wrapped, ...args) {
 }
 
 function configureDamage(wrapped) {
-  if (!this.isCritical || criticalDamage === "default") return wrapped();
-  let flatBonus = 0;
-  if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
-  if (criticalDamage === "baseDamage") this.options.criticalMultiplier = 1;
-  this.terms = this.terms.filter(term => !term.options.critOnly)
-  // Add extra critical damage term`
-  if (this.isCritical && this.options.criticalBonusDamage && !(["explode", "maxCrit", "maxAll", "baseDamage", "doubleDice"].includes(criticalDamage))) {
-    const extra = new Roll(this.options.criticalBonusDamage, this.data); // TODO check this v10
-    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
-    this.terms.push(...extra.terms);
-  }
-    // strip tailing operator terms
-    while (this.terms.length && this.terms[this.terms.length-1] instanceof OperatorTerm) 
+  if (!this.isCritical || criticalDamage === "default") {
+    if (this.terms[this.terms.length - 1] instanceof OperatorTerm)
       this.terms.pop();
+    return wrapped();
+  }
+  if (this.options.configured) return;
+  let bonusTerms: RollTerm[] = [];
+  /* criticalDamage is one of 
+    "default": "DND5e Settings Only",
+    "maxDamage": "Max Normal Damage",
+    "maxCrit": "Max Critical Dice",
+    "maxAll": "Max All Dice",
+    "doubleDice": "Double Rolled Damage",
+    "explode": "Explode critical dice",
+    "baseDamage": "No Bonus"
+  */
+  if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
+  if (criticalDamage === "baseDamage") {
+    this.options.configured = true;
+    return this;
+  };
 
   for (let [i, term] of this.terms.entries()) {
-    // Multiply dice terms
-    if (term instanceof DiceTerm) {
-      const termOptions: any = term.options;
-      termOptions.baseNumber = termOptions.baseNumber ?? term.number; // Reset back
-      term.number = termOptions.baseNumber;
-      let cm = this.options.criticalMultiplier ?? 2;
-      let cb = (this.options.criticalBonusDice && (i === 0)) ? this.options.criticalBonusDice : 0;
-      // {default: "DND5e default", maxDamage:  "base max only", maxCrit: "max critical dice", maxAll: "max all dice", doubleDice: "double dice value"},
-      switch (criticalDamage) {
-        case "maxDamage":
-          term.modifiers.push(`min${term.faces}`)
-          cm = 1;
-          flatBonus = 0;
-          break;
-        case "maxCrit":
-          flatBonus += (term.number + cb) * term.faces;
-          cm = Math.max(1, cm - 1);
-          term.alter(cm, 0);
-          break;
-        case "maxAll":
-          term.modifiers.push(`min${term.faces}`);
-          term.alter(cm, cb);
-          flatBonus = 0;
-          break;
-        case "doubleDice":
-          cm = 1;
-          break;
-        default: break;
-      }
-      termOptions.critical = true;
-    }
-
-    if (this.options.multiplyNumeric && (term instanceof NumericTerm)) {
-      // Multiply numeric terms
-      const termOptions: any = term.options;
-      termOptions.baseNumber = termOptions.baseNumber ?? term.number; // Reset back
-      term.number = termOptions.baseNumber;
-      if (this.isCritical) {
-        term.number *= (this.options.criticalMultiplier ?? 2);
-        termOptions.critical = true;
-      }
-    }
-  }
-
-  // Add powerful critical bonus
-  if (/*this.options.powerfulCritical && */ (flatBonus > 0)) {
-    this.terms.push(new OperatorTerm({ operator: "+" }));
-    //@ts-ignore
-    this.terms.push(new NumericTerm({ number: flatBonus }, { flavor: game.i18n.localize("DND5E.PowerfulCritical") }));
-  }
-  /*
-  "maxDamage": "Max Normal Damage",
-  "maxCrit": "Max Critical Dice",
-  "maxAll": "Max All Dice",
-  "doubleDice": "Double Rolled Damage",
-  "baseDamage": "No Bonus"
-*/
-
-  if (["doubleDice"].includes(criticalDamage)) {
-    const extra = new Roll(this.options.criticalBonusDamage, this.data); // TODO check this v10
-    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
-    this.terms.push(...extra.terms);
-    let newTerms: RollTerm[] = [];
-    for (let term of this.terms) {
-      if (term instanceof DiceTerm) {
-        //@ts-ignore types don't allow for optional roll in constructor
-        newTerms.push(new ParentheticalTerm({ term: `2*${term.formula}`, options: {} }))
-      } else
-        newTerms.push(term);
-    }
-    this.terms = newTerms;
-  }
-  if (["explode"].includes(criticalDamage)) {
-    let newTerms: RollTerm[] = [];
-    for (let term of this.terms) {
-      if (term instanceof DiceTerm) {
-        newTerms.push(term);
-        newTerms.push(new OperatorTerm({ operator: "+" }));
-        //@ts-ignore
-        const newTerm = new Die({ number: term.number, faces: term.faces })
-        newTerm.modifiers.push(`x${term.faces}`)
-        newTerms.push(newTerm);
-
-      } else
-        newTerms.push(term);
-    }
-    this.terms = newTerms;
-    const extra = new Roll(this.options.criticalBonusDamage, this.data); // TODO check this v10
-    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
-    /* Not sure if bonus critical dice should be exploded - since they can be done by hand
-    extra.terms.forEach(term => {
-      if (term instanceof DiceTerm) term.modifiers.push(`x${term.faces}`);
-    });
-    */
-    this.terms.push(...extra.terms);
-  }
-  // Add extra critical damage term
-  if (this.isCritical && this.options.criticalBonusDamage && ["maxCrit", "maxAll", "baseDamage"].includes(criticalDamage)) {
-    const extra = new Roll(this.options.criticalBonusDamage, this.data); // TODO check this v10
-    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
-    if (["maxCrit", "maxAll"].includes(criticalDamage)) {
-      for (let term of extra.terms) {
+    let cm = this.options.criticalMultiplier ?? 2;
+    let cb = (this.options.criticalBonusDice && (i === 0)) ? this.options.criticalBonusDice : 0;
+    switch (criticalDamage) {
+      case "maxDamage":
+        if (term instanceof DiceTerm) term.modifiers.push(`min${term.faces}`);
+        break;
+      case "maxCrit":  // Powerful critical
+      case "maxCritRoll":
         if (term instanceof DiceTerm) {
-          term.modifiers.push(`min${term.faces}`);
+          let critTerm;
+          bonusTerms.push(new OperatorTerm({ operator: "+" }));
+          if (criticalDamage === "maxCrit")
+            critTerm = new NumericTerm({ number: (term.number + cb) * term.faces });
+          else {
+            critTerm = new Die({ number: term.number + cb, faces: term.faces });
+            critTerm.modifiers = duplicate(term.modifiers);
+            critTerm.modifiers.push(`min${term.faces}`);
+          }
+          critTerm.options = term.options;
+          bonusTerms.push(critTerm);
+        } else if (term instanceof NumericTerm && this.options.multiplyNumeric) {
+          term.number *= cm;
         }
-        this.terms.push(term);
-      }
-    } else this.terms.push(...extra.terms);
+        break;
+      case "maxAll":
+        if (term instanceof DiceTerm) {
+          term.alter(cm, cb);
+          term.modifiers.push(`min${term.faces}`);
+        } else if (term instanceof NumericTerm && this.options.multiplyNumeric) {
+          term.number *= cm;
+        }
+        break;
+      case "doubleDice":
+        if (term instanceof DiceTerm) {
+          term.alter(cm, cb);
+        } else if (term instanceof NumericTerm) {
+          term.number *= cm;
+        }
+        break;
+      case "explode":
+        if (term instanceof DiceTerm) {
+          bonusTerms.push(new OperatorTerm({ operator: "+" }));
+          //@ts-ignore
+          const newTerm = new Die({ number: term.number + cb, faces: term.faces })
+          newTerm.modifiers.push(`x${term.faces}`);
+          newTerm.options = term.options;
+          // setProperty(newTerm.options, "sourceTerm", term);
+          bonusTerms.push(newTerm);
+        }
+        break;
+    }
   }
-  // Re-compile the underlying formula
+  if (bonusTerms.length > 0) this.terms.push(...bonusTerms);
+  if (this.options.criticalBonusDamage) {
+    const extra = new Roll(this.options.criticalBonusDamage, this.data);
+    for (let term of extra.terms) {
+      if (term instanceof DiceTerm || term instanceof NumericTerm)
+        if (!term.options?.flavor) term.options = this.terms[0].options;
+    }
+    if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
+    this.terms.push(...extra.terms);
+  }
+  if (this.terms[this.terms.length - 1] instanceof OperatorTerm) this.terms.pop();
   this._formula = this.constructor.getFormula(this.terms);
+  this.options.configured = true;
 }
 
 export async function rollAbilitySave(wrapped, ...args) {
@@ -398,6 +372,7 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
   let success: boolean | undefined = undefined;
   if (rollTarget !== undefined) success = result.total >= rollTarget;
   await expireRollEffect.bind(this)(rollType, abilityId, success);
+
   return result;
 }
 
@@ -425,24 +400,52 @@ export function procAutoFailSkill(actor, skillId): boolean {
 
 export function procAdvantage(actor, rollType, abilityId, options: Options | any): Options {
   const midiFlags = actor.flags["midi-qol"] ?? {};
-  const advantage = midiFlags.advantage ?? {};
-  const disadvantage = midiFlags.disadvantage ?? {};
+  const advantage = midiFlags.advantage;
+  const disadvantage = midiFlags.disadvantage;
   var withAdvantage = options.advantage;
   var withDisadvantage = options.disadvantage;
 
   //options.fastForward = options.fastForward || (autoFastForwardAbilityRolls ? !options.event?.fastKey : options.event?.fastKey);
 
   options.fastForward = options.fastForward || options.event?.fastKey;
-  if (advantage.ability || advantage.all) {
-    const rollFlags = (advantage.ability && advantage.ability[rollType]) ?? {};
-    withAdvantage = withAdvantage || advantage.all || advantage.ability.all || rollFlags.all || rollFlags[abilityId];
+  if (advantage || disadvantage) {
+    const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: this });
+    if (advantage) {
+      if (advantage.all && evalCondition(advantage.all, conditionData)) {
+        withAdvantage = true;
+      }
+      if (advantage.ability) {
+        if (advantage.ability.all && evalCondition(advantage.ability.all, conditionData)) {
+          withAdvantage = true;
+        }
+        if (advantage.ability[rollType]) {
+          if ((advantage.ability[rollType].all && evalCondition(advantage.ability[rollType].all, conditionData))
+            || (advantage.ability[rollType][abilityId] && evalCondition(advantage.ability[rollType][abilityId], conditionData))) {
+            withAdvantage = true;
+          }
+        }
+      }
+    }
+
+    if (disadvantage) {
+      if (disadvantage.all && evalCondition(disadvantage.all, conditionData)) {
+        withDisadvantage = true;
+      }
+      if (disadvantage.ability) {
+        if (disadvantage.ability.all && evalCondition(disadvantage.ability.all, conditionData)) {
+          withDisadvantage = true;
+        }
+        if (disadvantage.ability[rollType]) {
+          if ((disadvantage.ability[rollType].all && evalCondition(disadvantage.ability[rollType].all, conditionData))
+            || (disadvantage.ability[rollType][abilityId] && evalCondition(disadvantage.ability[rollType][abilityId], conditionData))) {
+            withDisadvantage = true;
+          }
+        }
+      }
+    }
   }
-  if (disadvantage.ability || disadvantage.all) {
-    const rollFlags = (disadvantage.ability && disadvantage.ability[rollType]) ?? {};
-    withDisadvantage = withDisadvantage || disadvantage.all || disadvantage.ability.all || rollFlags.all || rollFlags[abilityId];
-  }
-  options.advantage = withAdvantage;
-  options.disadvantage = withDisadvantage;
+  options.advantage = withAdvantage ?? false;
+  options.disadvantage = withDisadvantage ?? false;
   options.event = {};
   return options;
 }
@@ -453,13 +456,26 @@ export function procAdvantageSkill(actor, skillId, options: Options): Options {
   const disadvantage = midiFlags?.disadvantage;
   var withAdvantage = options.advantage;
   var withDisadvantage = options.disadvantage;
-  if (advantage?.skill) {
-    const rollFlags = advantage.skill
-    withAdvantage = withAdvantage || advantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId]);
-  }
-  if (disadvantage?.skill) {
-    const rollFlags = disadvantage.skill
-    withDisadvantage = withDisadvantage || disadvantage.all || rollFlags?.all || (rollFlags && rollFlags[skillId])
+  if (advantage || disadvantage) {
+    const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: this });
+    if (advantage?.all && evalCondition(advantage.all, conditionData)) {
+      withAdvantage = true;
+    }
+    if (advantage?.skill) {
+      if ((advantage.skill.all && evalCondition(advantage.skill.all, conditionData))
+        || (advantage.skill[skillId] && evalCondition(advantage.skill[skillId], conditionData))) {
+        withAdvantage = true;
+      }
+    }
+    if (disadvantage?.all && evalCondition(disadvantage.all, conditionData)) {
+      withDisadvantage = true;
+    }
+    if (disadvantage?.skill) {
+      if ((disadvantage.skill.all && evalCondition(disadvantage.skill.all, conditionData))
+        || (disadvantage.skill[skillId] && evalCondition(disadvantage.skill[skillId], conditionData))) {
+        withDisadvantage = true;
+      }
+    }
   }
   options.advantage = withAdvantage;
   options.disadvantage = withDisadvantage;
@@ -472,6 +488,8 @@ function _midiATIRefresh(template) {
   if (configSettings.autoTarget === "none") return;
   if (configSettings.autoTarget === "dftemplates" && installedModules.get("df-templates"))
     return; // df-templates will handle template targeting.
+  if (configSettings.autoTarget === "dfwalledTemplates" && installedModules.get("walledtemplates"))
+    return; // walled templates will handle template targeting.
   if (installedModules.get("levelsvolumetrictemplates")) {
 
     setProperty(template, "flags.levels.elevation",
@@ -611,12 +629,21 @@ export function _getInitiativeFormula(wrapped) {
   if (!actor) return "1d20";
   let disadv = actor.getFlag(game.system.id, "initiativeDisadv");
   let adv = actor.getFlag(game.system.id, "initiativeAdv");
-  const flags = actor.flags["midi-qol"];
-  if (flags && flags.advantage) {
-    adv = adv || flags.advantage.all || flags.advantage.ability?.check?.all || flags.advantage.ability?.check?.dex
-  }
-  if (flags && flags.disadvantage) {
-    disadv = disadv || flags.disadvantage.all || flags.disadvantage.ability?.check?.all || flags.disadvantage.ability?.check?.dex
+  const flags = actor.flags["midi-qol"] ?? {};
+  const advFlags = flags.advantage;
+  const disadvFlags = flags.disadvantage;
+  if (advFlags || disadvFlags) {
+    const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: actor });
+    if ((advFlags?.all && evalCondition(advFlags.all, conditionData))
+      || (advFlags?.ability?.check?.all && evalCondition(advFlags.ability.check.all, conditionData))
+      || (advFlags?.advantage?.ability?.check?.dex && evalCondition(advFlags.advantage.ability?.check?.dex, conditionData))) {
+      adv = true;
+    }
+    if ((disadvFlags?.all && evalCondition(disadvFlags.all, conditionData))
+      || (disadvFlags?.ability?.check?.all && evalCondition(disadvFlags.ability.check.all, conditionData))
+      || (disadvFlags?.disadvantage?.ability?.check?.dex && evalCondition(disadvFlags.disadvantage.ability?.check?.dex, conditionData))) {
+      disadv = true;
+    }
   }
   if (!disadv && !adv) return original;
   if (!actor) return "1d20";
@@ -891,8 +918,8 @@ export async function _preDeleteCombat(wrapped, ...args) {
   try {
     for (let combatant of this.combatants) {
       if (combatant.actor) {
-      if (await hasUsedReaction(combatant.actor)) await removeReactionUsed(combatant.actor, true);
-      if (await hasUsedBonusAction(combatant.actor)) await removeBonusActionUsed(combatant.actor, true);
+        if (await hasUsedReaction(combatant.actor)) await removeReactionUsed(combatant.actor, true);
+        if (await hasUsedBonusAction(combatant.actor)) await removeBonusActionUsed(combatant.actor, true);
       }
     }
   } catch (err) {

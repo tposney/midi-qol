@@ -7,8 +7,27 @@ import { installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName, itemJSONData, midiFlagTypes, overTimeJSONData } from "./Hooks.js";
 
 import { OnUseMacros } from "./apps/Item.js";
-import { Options } from "./patching.js";
+import { actorAbilityRollPatching, Options } from "./patching.js";
 
+export function getDamageType(flavorString): string | undefined {
+  const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
+  const allDamageTypeEntries = Object.entries(getSystemCONFIG().damageTypes).concat(Object.entries(getSystemCONFIG().healingTypes));
+  if (validDamageTypes.includes(flavorString)) {
+    const damageEntry: any = allDamageTypeEntries?.find(e => e[1] === flavorString);
+    return damageEntry ? damageEntry[0] : flavorString
+  }
+  return undefined;
+}
+
+export function getDamageFlavor(damageType): string | undefined {
+  const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
+  const allDamageTypeEntries = Object.entries(getSystemCONFIG().damageTypes).concat(Object.entries(getSystemCONFIG().healingTypes));
+  if (validDamageTypes.includes(damageType)) {
+    const damageEntry: any = allDamageTypeEntries?.find(e => e[0] === damageType);
+    return damageEntry ? damageEntry[1] : damageType
+  }
+  return undefined;
+}
 
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
@@ -40,6 +59,7 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
     // However will be a problem longer term when async not supported?? What to do
     let dmgSpec: Roll | undefined;
     try {
+      // TODO Check if we actually have to to do the roll - intermeidate terms and simplifying the roll are the two bits to think about
       dmgSpec = new Roll(formula, rollData).evaluate({ async: false });
     } catch (err) {
       console.warn("midi-qol | Dmg spec not valid", formula)
@@ -60,12 +80,11 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
         partPos += 1;
       }
       if (rollTerms[partPos]) {
-        type = rollTerms[partPos]?.options?.flavor ?? type;
         if (rollTerms[partPos] instanceof DiceTerm || rollTerms[partPos] instanceof NumericTerm) {
+          const flavorDamageType = getDamageType(rollTerms[partPos]?.options?.flavor);
+          type = flavorDamageType ?? type;
           if (!rollTerms[partPos]?.options.flavor) {
-            let typeLabel = allDamageTypeEntries?.find(e => e[0] === type);
-            typeLabel = typeLabel ? typeLabel[1] : type;
-            setProperty(rollTerms[partPos].options, "flavor", typeLabel);
+            setProperty(rollTerms[partPos].options, "flavor", getDamageFlavor(type));
           }
         }
         evalString += rollTerms[partPos]?.total;
@@ -97,21 +116,26 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
     partPos += 1;
     if (evalTerm instanceof DiceTerm) {
       // this is a dice roll
-      evalString += evalTerm.total;
-      const flavorType = evalTerm.options?.flavor?.toLocaleLowerCase() || damageType;
-      if (validDamageTypes.includes(flavorType)) damageType = flavorType;
+      damageType = getDamageType(evalTerm.options?.flavor) ?? damageType;
+      if (!evalTerm?.options.flavor) {
+        setProperty(evalTerm, "options.flavor", getDamageFlavor(damageType));
+      }
       numberTermFound = true;
+      evalString += evalTerm.total;
     } else if (evalTerm instanceof Die) { // special case for better rolls that does not return a proper roll
-      const flavorType = evalTerm.options?.flavor?.toLocaleLowerCase() || damageType;
-      if (validDamageTypes.includes(flavorType)) damageType = flavorType;
+      damageType = getDamageType(evalTerm.options?.flavor) ?? damageType;
+      if (!evalTerm?.options.flavor) {
+        setProperty(evalTerm, "options.flavor", getDamageFlavor(damageType));
+      }
       numberTermFound = true;
       evalString += evalTerm.total;
     } else if (evalTerm instanceof NumericTerm) {
-      const flavorType = evalTerm.options?.flavor?.toLocaleLowerCase() || damageType;
-      if (validDamageTypes.includes(flavorType)) damageType = flavorType;
-      evalString += evalTerm.total;
-      damageType = evalTerm.options?.flavor || damageType; // record this if we get it
+      damageType = getDamageType(evalTerm.options?.flavor) ?? damageType;
+      if (!evalTerm?.options.flavor) {
+        setProperty(evalTerm, "options.flavor", getDamageFlavor(damageType));
+      }
       numberTermFound = true;
+      evalString += evalTerm.total;
     } if (evalTerm instanceof OperatorTerm) {
       if (["*", "/"].includes(evalTerm.operator)) {
         // multiply or divide keep going
@@ -849,7 +873,14 @@ export function requestPCActiveDefence(player, actor, advantage, saveItemName, r
 export function midiCustomEffect(actor, change) {
   if (typeof change?.key !== "string") return true;
   if (!change.key?.startsWith("flags.midi-qol")) return true;
-  const variableKeys = ["flags.midi-qol.OverTime", "flags.midi-qol.optional"]; // These have trailing data in the change key change.key values and should always just be a string
+  const variableKeys = [
+    "flags.midi-qol.OverTime", 
+    "flags.midi-qol.optional", 
+    "flags.midi-qol.advantage", 
+    "flags.midi-qol.disadvantage",
+    "flags.midi-qol.grants",
+    "flags.midi-qol.fails"
+  ]; // These have trailing data in the change key change.key values and should always just be a string
   if (change.key === "flags.midi-qol.onUseMacroName") {
     const args = change.value.split(",")?.map(arg => arg.trim());
     const currentFlag = getProperty(actor, "flags.midi-qol.onUseMacroName") ?? "";
@@ -862,7 +893,10 @@ export function midiCustomEffect(actor, change) {
     setProperty(actor, "flags.midi-qol.onUseMacroName", macroString)
     return true;
   } else if (variableKeys.some(k => change.key.startsWith(k))) {
-    setProperty(actor, change.key, change.value);
+    if (typeof change.value !== "string") setProperty(actor, change.key, change.value);
+    else if (["true", "1"].includes(change.value.trim())) setProperty(actor, change.key, true);
+    else if (["false", "0"].includes(change.value.trim())) setProperty(actor, change.key, false);
+    else setProperty(actor, change.key, change.value);
   } else if (typeof change.value === "string") {
     let val: any;
     try {
@@ -937,7 +971,7 @@ export async function processOverTime(wrapped, data, options, user) {
   }
 }
 
-export async function doOverTimeEffect(actor, effect, startTurn: boolean = true) {
+export async function doOverTimeEffect(actor, effect, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined }) {
   const endTurn = !startTurn;
   if (effect.disabled) return;
   const auraFlags = effect.flags?.ActiveAuras ?? {};
@@ -977,27 +1011,43 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true)
 
     const changeTurnStart = details.turn === "start" ?? false;
     const changeTurnEnd = details.turn === "end" ?? false;
-    if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart)) {
+    const actionSave = JSON.parse(details.actionSave ?? "false");
+    if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart) || (actionSave && options.saveToUse)) {
       const label = (details.label ?? "Damage Over Time").replace(/"/g, "");
       let saveDC;
       try {
         const value = replaceAtFields(details.saveDC, rollData, { blankValue: 0, maxIterations: 3 });
         saveDC = Roll.safeEval(value);
       } catch (err) { saveDC = -1 }
-      let saveAbility = (details.saveAbility ?? "").toLocaleLowerCase();
+      const saveAbilityString = (details.saveAbility ?? "");
+      const saveAbility = (saveAbilityString.includes("|") ? saveAbilityString.split("|") : [saveAbilityString]).map(s => s.trim().toLocaleLowerCase())
       const saveDamage = details.saveDamage ?? "nodamage";
       const saveMagic = JSON.parse(details.saveMagic ?? "false"); //parse the saving throw true/false
       const damageRoll = details.damageRoll;
       const damageType = details.damageType ?? "piercing";
       const itemName = details.itemName;
-      const saveRemove = JSON.parse(details.saveRemove ?? "true");
       const damageBeforeSave = JSON.parse(details.damageBeforeSave ?? "false");
       const macroToCall = details.macro;
-      const rollType = details.rollType;
+      const rollTypeString = details.rollType ?? "save";
+      const rollType = (rollTypeString.includes("|") ? rollTypeString.split("|") : [rollTypeString]).map(s => s.trim().toLocaleLowerCase())
+
       const killAnim = JSON.parse(details.killAnim ?? "false");
+      const saveRemove = JSON.parse(details.saveRemove ?? "true");
 
       if (debugEnabled > 0) warn(`Overtime provided data is `, details);
       if (debugEnabled > 0) warn(`OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
+      if (actionSave && options.saveToUse) {
+        if (!options.rollFlags) return effect.id;
+        if (!rollType.includes(options.rollFlags.type) || !saveAbility.includes(options.rollFlags.abilityId)) return effect.id;
+        let content;
+        if (options.saveToUse.total >= saveDC) {
+          await actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id]), { "expiry-reason": "midi-qol:overTime:actionSave" };
+          content = `${effect.label} ${i18n("midi-qol.saving-throw")} ${i18n("midi-qol.save-success")}`;
+        } else
+          content = `${effect.label} ${i18n("midi-qol.saving-throw")} ${i18n("midi-qol.save-failure")}`;
+        ChatMessage.create({ content, speaker: ChatMessage.getSpeaker({ actor }) });
+        return effect.id;
+      }
 
       let itemData: any = duplicate(overTimeJSONData);
       if (typeof itemName === "string") {
@@ -1010,29 +1060,43 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true)
           if (theItem) itemData = theItem.toObject();
         }
       }
+
       itemData.img = effect.icon;
       itemData.system.save.dc = saveDC;
-      itemData.system.save.ability = saveAbility;
-      itemData.system.save.scaling = "flat";
+      itemData.system.save.scaling = rollTypeString;
       setProperty(itemData, "flags.midi-qol.noProvokeReaction", true);
       if (saveMagic) {
         itemData.type = "spell";
         itemData.system.preparation = { mode: "atwill" }
       }
-      if (rollType === "check") {
-        itemData.systsem.actionType = "abil";
-      }
-      if (rollType === "skill") { // skill checks for this is a fiddle - set a midi flag so that the midi save roll will pick it up.
+      if (rollTypeString === "save" && !actionSave) {
         itemData.system.actionType = "save";
-        let skillId = getSystemCONFIG().skills[saveAbility];
+        itemData.system.save.ability = saveAbility[0];
+
+      }
+      if (rollTypeString === "check" && !actionSave) {
+        itemData.systsem.actionType = "abil";
+        itemData.system.save.ability = saveAbility[0];
+      }
+      if (rollTypeString === "skill" && !actionSave) { // skill checks for this is a fiddle - set a midi flag so that the midi save roll will pick it up.
+        itemData.system.actionType = "save";
+        let skill = saveAbility[0];
+        let skillId = getSystemCONFIG().skills[saveAbility[0]];
         if (!skillId) {
           //@ts-ignore
           const hasEntry = Object.values(getSystemCONFIG().skills).map(id => id.toLowerCase()).includes(saveAbility)
+
           if (hasEntry) {
-            saveAbility = Object.keys(getSystemCONFIG().skills).find(id => getSystemCONFIG().skills[id].toLocaleLowerCase() === saveAbility)
+            skill = Object.keys(getSystemCONFIG().skills).find(id => getSystemCONFIG().skills[id].toLocaleLowerCase() === saveAbility[0])
           }
         }
-        setProperty(itemData, "flags.midi-qol.overTimeSkillRoll", saveAbility)
+        setProperty(itemData, "flags.midi-qol.overTimeSkillRoll", skill)
+      }
+      if (actionSave) {
+        itemData.system.actionType = "other";
+        itemData.system.save.dc = undefined;
+        itemData.system.save.ability = undefined;
+        itemData.system.save.scaling = undefined;
       }
 
       if (damageBeforeSave || saveDamage === "fulldamage") {
@@ -1073,7 +1137,7 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true)
         setProperty(itemData, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macroToCall));
       }
       let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
-      if (saveRemove && saveDC > -1)
+      if (!actionSave && saveRemove && saveDC > -1)
         failedSaveOverTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id };
 
       if (details.removeCondition) {
@@ -1089,6 +1153,7 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true)
           overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id }
         }
       }
+
 
       try {
         const options = {
@@ -1445,7 +1510,7 @@ let pointWarn = debounce(() => {
   ui.notifications?.warn("4 Point LOS check selected but dnd5e-helpers not installed")
 }, 100)
 
-export function checkRange(actor, item, tokenId, targets): string {
+export function checkRange(item, token, targets): string {
   if (!canvas || !canvas.scene) return "normal"
   // check that a range is specified at all
   if (!item.system.range) return "normal";
@@ -1454,12 +1519,13 @@ export function checkRange(actor, item, tokenId, targets): string {
   //    itemData.range.value = 5; // set default range for melee attacks
   //}
 
+  if (!token) return "fail";
+  let actor = token.actor;
   if (!item.system.range.value && !item.system.range.long && item.system.range.units !== "touch") return "normal";
   if (item.system.target?.type === "self") return "normal";
   // skip non mwak/rwak/rsak/msak types that do not specify a target type
   if (!allAttackTypes.includes(item.system.actionType) && !["creature", "ally", "enemy"].includes(item.system.target?.type)) return "normal";
 
-  let token: Token | undefined = canvas.tokens?.get(tokenId);
   if (!token) {
     if (debugEnabled > 0) warn(`${game.user?.name} no token selected cannot check range`)
     ui.notifications?.warn(`${game.user?.name} no token selected`)
@@ -1565,7 +1631,7 @@ export function getReactionSetting(player: User | null | undefined): string {
   return player.isGM ? configSettings.gmDoReactions : configSettings.doReactions;
 }
 
-export function getTokenPlayerName(token: TokenDocument) {
+export function getTokenPlayerName(token: TokenDocument | Token) {
   if (!token) return game.user?.name;
   if (!installedModules.get("combat-utility-belt")) return token.name;
   if (!game.settings.get("combat-utility-belt", "enableHideNPCNames")) return token.name;
@@ -1574,21 +1640,20 @@ export function getTokenPlayerName(token: TokenDocument) {
     //@ts-ignore .flags v10
     return getProperty(token.actor?.flags ?? {}, "combat-utility-belt.hideNameReplacement")
   if (token.actor?.hasPlayerOwner) return token.name;
-  //@ts-ignore .disposition - make sure this is really a token document
-  if (!(token instanceof TokenDocument)) { throw new Error("getTokenPlayerName token document is not a token docuemnet"); }
   //@ts-ignore .disposition
-  switch (token.disposition) {
+  switch ((token.document ?? token).disposition) {
     case -1:
       if (game.settings.get("combat-utility-belt", "enableHideHostileNames"))
         return game.settings.get("combat-utility-belt", "hostileNameReplacement")
       break;
-    case 0:
-      if (game.settings.get("combat-utility-belt", "enableHideNeutralNames"))
-        return game.settings.get("combat-utility-belt", "neutralNameReplacement")
     case 1:
+
       if (game.settings.get("combat-utility-belt", "enableHideFriendlyNames"))
         return game.settings.get("combat-utility-belt", "friendlyNameReplacement")
     default:
+    case 0:
+      if (game.settings.get("combat-utility-belt", "enableHideNeutralNames"))
+        return game.settings.get("combat-utility-belt", "neutralNameReplacement")
   }
   return token.name;
 }
@@ -2084,7 +2149,7 @@ export async function processDamageRollBonusFlags(): Promise<Roll> { // bound to
   const optionalFlags = getProperty(this, "actor.flags.midi-qol.optional") ?? {};
   const bonusFlags = Object.keys(optionalFlags)
     .filter(flag => {
-      const hasDamageFlag = getProperty(this.actor.flags, `midi-qol.optional.${flag}.damage.all`) !== undefined||
+      const hasDamageFlag = getProperty(this.actor.flags, `midi-qol.optional.${flag}.damage.all`) !== undefined ||
         getProperty(this.actor.flags, `midi-qol.optional.${flag}.${damageBonus}`) !== undefined;
       if (!hasDamageFlag) return false;
       return getOptionalCountRemainingShortFlag(this.actor, flag) > 0;
@@ -2260,7 +2325,7 @@ export async function removeEffectGranting(actor: globalThis.dnd5e.documents.Act
       countAlt.value = `${countAlt.value - 1}`; // must be a string
     }
     actor.updateEmbeddedDocuments("ActiveEffect", [effectData], { "expiry-reason": "midi-qol:optionalConsumed" })
-  } 
+  }
   if (typeof count.value === "string" && count.value.startsWith("ItemUses.")) {
     const itemName = count.value.split(".")[1];
     const item = actor.items.getName(itemName);
@@ -2318,7 +2383,7 @@ export async function removeEffectGranting(actor: globalThis.dnd5e.documents.Act
     await actor.setFlag("midi-qol", flagKey, true);
   }
 
-   if (count.value === "reaction") {
+  if (count.value === "reaction") {
     setReactionUsed(actor);
   }
   if (countAlt?.value === "reaction") {
@@ -2802,64 +2867,45 @@ function mySafeEval(expression: string, sandbox: any) {
   return result;
 };
 
-// Same as 
 export function evalActivationCondition(workflow: Workflow, condition: string | undefined, target: Token | TokenDocument): boolean {
   if (condition === undefined || condition === "") return true;
-  let returnValue;
-  const rollData = workflow.otherDamageItem?.getRollData();
-  rollData.target = target; //workflow.hitTargets.values().next()?.value;
-  rollData.workflow = workflow;
-  if (rollData.target) {
-    rollData.target = rollData.target.actor.getRollData();
-    if (rollData.target.details.type?.value) rollData.raceOrType = rollData.target.details.type?.value.toLocaleLowerCase() ?? "";
-    else rollData.raceOrType = rollData.target.details.race?.toLocaleLowerCase() ?? "";
-  }
-  let expression = condition ?? "";
+  createConditionData({workflow, target, actor: workflow.actor});
+  const returnValue = evalCondition(condition, workflow.conditionData);
+  return returnValue;
+}
 
+export function createConditionData(data: {workflow: Workflow | undefined, target: Token | TokenDocument | undefined, actor: Actor | undefined}) {
+  const rollData = data.workflow?.otherDamageItem?.getRollData() ?? data.workflow?.actor?.getRollData() ?? data.actor?.getRollData() ?? {};
   try {
-    if (expression.includes("@")) {
-      expression = Roll.replaceFormulaData(expression, rollData, { missing: "0" });
-      returnValue = mySafeEval(expression, {});
-    } else { // transform the rollData.workflow to just data
-      const copyWorkflow = {};
-      for (let [k, v] of Object.entries(workflow)) {
-        if (!["actor", "item", "templateElevation", "speaker", "tokenUuid", "saveDisplayFlavor", "itemId", "item",
-          "itemUuid", "uuid", "itemLevel", "currentState",
-          "isCritical", "isFumble", "vesatile",
-          "targets", "hitTargets",
-          "diceRoll", "attackRoll", "attackTotal", "damageRoll", "damageTotal", "otherDamageRoll", "otherDamageDetail", "damageDetail",
-          "saves", "superSavers", "semiSuperSavers", "failedSaves", "advantageSaves"].includes(k)) continue;
-        if (v instanceof Set) {
-          const newV = new Set();
-          for (let t of v) {
-            if (!t.actor || !t.document) newV.add(t);
-            else {
-              const newT = deepClone(t.document);
-              // Should not be necessary
-              // newT.actor = deepClone(t.actor);
-              newV.add(newT)
-            }
-          }
-          copyWorkflow[k] = newV;
-        } else if (k === "item") copyWorkflow[k] = workflow[k].toObject(); // TODO check this v10
-        else if (k === "actor") copyWorkflow[k] = workflow[k].toObject(); // TODO check this v10
-        else {
-          try {
-            copyWorkflow[k] = v ? duplicate(v) : undefined;
-          } catch (err) {
-            console.warn(`midi-qol | Failed eval condition copy of ${k}`, v)
-          }
-        }
-      }
-      rollData.workflow = copyWorkflow;
-      //@ts-ignore .replaceAll
-      // expression = expression.replaceAll(".data", ""); // TODO see if this is right
-      returnValue = mySafeEval(expression, rollData);
-      warn("evalActivationCondition ", returnValue, expression, rollData);
+    if (data.target) {
+      rollData.target = data.target.actor?.getRollData();
+      if (rollData.target.details.type?.value) rollData.raceOrType = rollData.target.details.type?.value.toLocaleLowerCase() ?? "";
+      else rollData.raceOrType = rollData.target.details.race?.toLocaleLowerCase() ?? "";
     }
+    rollData.workflow = {};
+    Object.assign(rollData.workflow, data.workflow);
+  } catch (err) {
+
+  } finally {
+    if (data.workflow) data.workflow.conditionData = rollData;
+  }
+  return rollData;
+}
+
+export function evalCondition(condition: string, conditionData: any): boolean {
+  if (condition === undefined || condition === "") return true;
+  if (typeof condition !== "string") return condition;
+  let returnValue;
+  try {
+    if (condition.includes("@")) {
+      condition = Roll.replaceFormulaData(condition, conditionData, { missing: "0" });
+    }
+    returnValue = mySafeEval(condition, conditionData);
+    warn("evalActivationCondition ", returnValue, condition, conditionData);
+
   } catch (err) {
     returnValue = true;
-    console.warn(`midi-qol | activation condition (${expression}) error `, err, rollData)
+    console.warn(`midi-qol | activation condition (${condition}) error `, err, conditionData)
   }
   return returnValue;
 }

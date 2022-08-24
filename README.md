@@ -624,6 +624,8 @@ Midi-qol supports a lot of flags values that alter how attacks/casts are rolled.
 
 There is a handy spreadsheet that has a table of flags plus explanation thanks to (dstein766) https://docs.google.com/spreadsheets/d/1Vze_sJhhMwLZDj1IKI5w1pvfuynUO8wxE2j8AwNbnHE/edit?usp=sharing
 
+As 0f 10.0.4 a number of flags have been enhanced to accept a condition expression as well as/instead of true/false. This allows you to model "the character has advantage on attacks against dragons" and so on. Details of the types have been added to the spreadsheet.
+
 flags.midi-qol...... need to be set via **CUSTOM** or **OVERRIDE**. Core foundry behaviour (as of 0.8.something) ignores **ADD** if the target value is undefined. Flags are undefined until set, so add does not work.
 
 * flags.midi-qol.advantage.all  - gives advantage as if all of the settings below were set
@@ -779,6 +781,8 @@ where specification is a comma separated list of fields.
   There several "traps" for use of @fields. If the effect is created on the actor via transfer effects or hand editing of the effect the @ fields refer to the actor which has the effect.
 
   It turns out that overtime effects have lots of applications. One that is not obvious is that you can use the overtime effect as a switch to turn on and off other effects. If you have one effect with multiple changes, one of which is an OverTime effect, they will ALL be applied and ALL removed on a save. Here's a Hold Person, which has an overtime effect for the save and a payload of applying the paralyzed status effect to a target.  
+
+  There are quite a lot of effects that require a targer to use its action to try and save against the effect. You can add actionSave=true which means overtime effects won't auto roll the save, rather it waits for the actor to roll an appropriate save when it is the actor's turn (just roll the save from the character sheet). This allows you to support "the character can use its action to save against the effect". Simply add actionSave=true to the overtime effect definiton and mid will watch for saving throws on the actors turn (rather than rolling the save automatically) and if the type matches the overtime efffect it will check the roll versus the saveDC and remove the effect if the save is successful.
 
 ![Hold Person](pictures/HoldPerson.png)
 

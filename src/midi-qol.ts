@@ -6,7 +6,7 @@ import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Ho
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow } from './module/workflow.js';
-import { applyTokenDamage, canSee, checkNearby, completeItemRoll, distancePointToken, doConcentrationCheck, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getSystemCONFIG, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags, tokenForActor } from './module/utils.js';
+import { applyTokenDamage, canSee, checkNearby, checkRange, completeItemRoll, distancePointToken, doConcentrationCheck, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getSystemCONFIG, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags, tokenForActor } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
@@ -97,9 +97,6 @@ Hooks.once("levelsReady", function () {
 });
 
 Hooks.once('init', async function () {
-  const exclusionMacro = game.macros?.getName("Warning Exclusions for Midi");
-  if (exclusionMacro) exclusionMacro?.execute();
-
   console.log('midi-qol | Initializing midi-qol');
   allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
   if (game.system.id === "sw5e")
@@ -124,8 +121,6 @@ Hooks.once('init', async function () {
 /* Setup module							*/
 /* ------------------------------------ */
 Hooks.once('setup', function () {
-  const exclusionMacro = game.macros?.getName("Warning Exclusions for Midi");
-  if (exclusionMacro) exclusionMacro?.execute();
   // Do anything after initialization but before
   // ready
   setupSocket();
@@ -301,43 +296,44 @@ function setupMidiQOLApi() {
   }
   //@ts-ignore
   globalThis.MidiQOL = {
-    getChanges,
     applyTokenDamage,
-    TrapWorkflow,
+    canSee, 
+    checkNearby,
+    checkRange,
+    checkRule: checkRule,
+    completeItemRoll: completeItemRoll,
+    ConfigPanel: ConfigPanel,
+    configSettings: () => { return configSettings },
     DamageOnlyWorkflow,
-    Workflow,
+    debug,
+    doConcentrationCheck,
+    doOverTimeEffect,
     DummyWorkflow,
     enableWorkflow,
-    configSettings: () => { return configSettings },
-    midiSoundSettings: () => { return midiSoundSettings },
-    ConfigPanel: ConfigPanel,
-    getTraitMult: getTraitMult,
-    getDistance: getDistanceSimple,
-    midiFlags,
-    debug,
-    log,
-    warn,
     findNearby,
-    checkNearby,
-    showItemInfo,
-    showItemCard,
     gameStats,
-    MQFromUuid: MQfromUuid,
-    MQfromUuid,
-    MQfromActorUuid,
+    getChanges,
     getConcentrationEffect: getConcentrationEffect,
-    selectTargetsForTemplate: templateTokens,
-    socket: () => { return socketlibSocket },
-    checkRule: checkRule,
-    reportMidiCriticalFlags: reportMidiCriticalFlags,
-    completeItemRoll: completeItemRoll,
-    overTimeJSONData,
-    MQOnUseOptions,
+    getDistance: getDistanceSimple,
+    getTraitMult: getTraitMult,
+    log,
+    midiFlags,
     midiRenderRoll,
-    doOverTimeEffect,
-    canSee, 
+    midiSoundSettings: () => { return midiSoundSettings },
+    MQfromActorUuid,
+    MQfromUuid,
+    MQFromUuid: MQfromUuid,
+    MQOnUseOptions,
+    overTimeJSONData,
+    reportMidiCriticalFlags: reportMidiCriticalFlags,
+    selectTargetsForTemplate: templateTokens,
+    showItemCard,
+    showItemInfo,
+    socket: () => { return socketlibSocket },
     tokenForActor,
-    doConcentrationCheck
+    TrapWorkflow,
+    warn,
+    Workflow
   };
   globalThis.MidiQOL.actionQueue = new Semaphore();
 }
@@ -493,7 +489,7 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.min.ability.check.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.save.${abl}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.check.${abl}`);
-    midiFlags.push(`flags.midi-qol.magicResistance.all.${abl}`);
+    midiFlags.push(`flags.midi-qol.magicResistance.${abl}`);
     midiFlags.push(`flags.midi-qol.magicVulnerability.all.${abl}`);
   })
 

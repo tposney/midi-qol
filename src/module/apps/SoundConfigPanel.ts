@@ -74,6 +74,7 @@ export class SoundConfigPanel extends FormApplication {
       return acc}, {})
     // data.playlists = game.playlists?.reduce((acc, pl: any) => {acc[pl.name] = pl.name; return acc}, {});
     data.actionTypes = MidiSounds.ActionTypes();
+
     return data;
   }
 
@@ -133,13 +134,13 @@ export class SoundConfigPanel extends FormApplication {
     html.find(".playlistName").change(function (event) {
       this.submit({ preventClose: true }).then(() => this.render());
     }.bind(this));
-    html.find(".category").on("click", function (event) {
+    html.find(".category").change(function (event) {
       this.submit({ preventClose: true }).then(() => this.render());
     }.bind(this));
-    html.find(".action").on("click", function (event) {
+    html.find(".action").change(function (event) {
       this.submit({ preventClose: true }).then(() => this.render());
     }.bind(this));
-    html.find(".subtype").on("click", function (event) {
+    html.find(".subtype").change(function (event) {
       this.submit({ preventClose: true }).then(() => this.render());
     }.bind(this))
 

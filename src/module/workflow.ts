@@ -3,7 +3,7 @@ import { activationConditionToUse, selectTargets, shouldRollOtherDamage, showIte
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking, canSee, getSystemCONFIG, tokenForActor } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeHiddenInvis, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking, canSee, getSystemCONFIG, tokenForActor, getSelfTarget, createConditionData, evalCondition } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -162,7 +162,7 @@ export class Workflow {
   }
 
   get otherDamageItem() {
-    if (this.item.system.formula ?? "" !== "") return this.item;
+    if (this.item?.system.formula ?? "" !== "") return this.item;
     if (this.ammo && (this.ammo?.system.formula ?? "") !== "") return this.ammo;
     return this.item;
     let item = this.item;
@@ -426,8 +426,8 @@ export class Workflow {
 
       case WORKFLOWSTATES.VALIDATEROLL:
         // do pre roll checks
-        if (checkRule("checkRange") && !this.AoO) {
-          switch (checkRange(this.actor, this.item, this.tokenId, this.targets)) {
+        if (checkRule("checkRange") && !this.AoO && this.tokenId) {
+          switch (checkRange(this.item, canvas?.tokens?.get(this.tokenId), this.targets)) {
             case "fail": return this.next(WORKFLOWSTATES.ROLLFINISHED);
             case "dis": this.disadvantage = true;
               this.attackAdvAttribution["DIS:range"] = true;
@@ -529,6 +529,8 @@ export class Workflow {
         }
         this.processAttackRoll();
         if (configSettings.autoCheckHit !== "none") {
+          await this.displayAttackRoll(configSettings.mergeCard, { GMOnlyAttackRoll: true });
+
           await this.checkHits();
           await this.displayAttackRoll(configSettings.mergeCard);
 
@@ -648,10 +650,10 @@ export class Workflow {
         }
 
         this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
-        // TODO Need to do DSN stuff?
-        if (this.otherDamageRoll) {
+        if (!this.otherDamageRoll) this.otherDamageDetail = [];
+        if (this.otherDamageRoll) { // TODO look at removeing this.
           this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
-        }
+        } else this.otherDamageDetail = [];
 
         await this.displayDamageRoll(configSettings.mergeCard);
         await asyncHooksCallAll("midi-qol.DamageRollComplete", this);
@@ -822,7 +824,6 @@ export class Workflow {
               if (applyCondition || this.forceApplyEffects) {
                 if (hasItemTargetEffects && (!ceTargetEffect || ["none", "both", "itempri"].includes(useCE))) {
                   await globalThis.DAE.doEffects(theItem, true, [token], { toggleEffect: this.item?.flags.midiProperties?.toggleEffect, whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions, selfEffects: false })
-                  if (!this.forceApplyEffects && configSettings.autoItemEffects !== "applyLeave") await this.removeEffectsButton();
                 }
                 if (ceTargetEffect && theItem && token.actor) {
                   if (["both", "cepri"].includes(useCE) || (useCE === "itempri" && !hasItemTargetEffects)) {
@@ -842,6 +843,7 @@ export class Workflow {
                     }
                   }
                 }
+                if (!this.forceApplyEffects && configSettings.autoItemEffects !== "applyLeave") await this.removeEffectsButton();
               }
             }
           }
@@ -934,6 +936,45 @@ export class Workflow {
               let templates = this.templateUuid ? [this.templateUuid] : [];
               await this.actor.setFlag("midi-qol", "concentration-data", { uuid: this.item.uuid, targets: targets, templates: templates, removeUuids: [] })
             }
+          } else if (installedModules.get("dae") && this.item?.hasAreaTarget && this.templateUuid && this.item?.system.duration?.units) { // create an effect to delete the template
+            const itemDuration = this.item.system.duration;
+            let selfTarget = this.item.actor.token ? this.item.actor.token.object : await getSelfTarget(this.item.actor);
+            if (selfTarget) selfTarget = this.token;
+            let effectData;
+            const templateString = " " + i18n("midi-qol.MeasuredTemplate");
+            if (selfTarget) {
+              let effect = this.item.actor.effects.find(ef => ef.label === this.item.name + templateString);
+              if (effect) { // effect already applied
+                const newChanges = duplicate(effect.changes);
+                newChanges.push({ key: "flags.dae.deleteUuid", mode: 5, value: this.templateUuid, priority: 20 });
+                await effect.update({ changes: newChanges });
+              } else {
+                effectData = {
+                  origin: this.item?.uuid, //flag the effect as associated to the spell being cast
+                  disabled: false,
+                  icon: this.item?.img,
+                  label: this.item?.name + templateString,
+                  duration: {},
+                  changes: [
+                    { key: "flags.dae.deleteUuid", mode: 5, value: this.templateUuid, priority: 20 }, // who is marked
+                  ]
+                };
+
+                const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
+                const convertedDuration = globalThis.DAE.convertDuration(itemDuration, inCombat);
+                if (convertedDuration?.type === "seconds") {
+                  effectData.duration = { seconds: convertedDuration.seconds, startTime: game.time.worldTime }
+                } else if (convertedDuration?.type === "turns") {
+                  effectData.duration = {
+                    rounds: convertedDuration.rounds,
+                    turns: convertedDuration.turns,
+                    startRound: game.combat?.round,
+                    startTurn: game.combat?.turn
+                  }
+                }
+                await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+              }
+            }
           }
 
           // Call onUseMacro if not already called
@@ -975,19 +1016,40 @@ export class Workflow {
     const disadvantage = midiFlags?.disadvantage;
     const actType = this.item?.system?.actionType || "none"
 
-    if (advantage) {
-      const withAdvantage = advantage.all || advantage.attack?.all || (advantage.attack && advantage.attack[actType]);
-      if (advantage.all) this.attackAdvAttribution["ADV:all"] = true;
-      if (advantage.attack?.all) this.attackAdvAttribution["ADV:attack.all"] = true;
-      if (advantage.attack && advantage.attack[actType]) this.attackAdvAttribution[`ADV.attack.${actType}`] = true;
-      this.advantage = this.advantage || withAdvantage;
-    }
-    if (disadvantage) {
-      const withDisadvantage = disadvantage.all || disadvantage.attack?.all || (disadvantage.attack && disadvantage.attack[actType]);
-      if (disadvantage.all) this.attackAdvAttribution["DIS:all"] = true;
-      if (disadvantage.attack?.all) this.attackAdvAttribution["DIS:attack.all"] = true;
-      if (disadvantage.attack && disadvantage.attack[actType]) this.attackAdvAttribution[`DIS:attack.${actType}`] = true;
-      this.disadvantage = this.disadvantage || withDisadvantage;
+    if (advantage || disadvantage) {
+      const target: Token = this.targets.values().next().value;
+      const conditionData = createConditionData({workflow: this, target, actor: this.actor});
+
+      if (advantage) {
+        if (advantage.all && evalCondition(advantage.all, conditionData)) {
+          this.advantage = true;
+          this.attackAdvAttribution["ADV:all"] = true;
+        }
+        if (advantage.attack?.all && evalCondition(advantage.attack.all, conditionData)) {
+          this.attackAdvAttribution["ADV:attack.all"] = true;
+          this.advantage = true;
+        }
+        if (advantage.attack && advantage.attack[actType] && evalCondition(advantage.attack[actType], conditionData)) {
+          this.attackAdvAttribution[`ADV.attack.${actType}`] = true;
+          this.advantage = true;
+        }
+      }
+      if (disadvantage) {
+        const withDisadvantage = disadvantage.all || disadvantage.attack?.all || (disadvantage.attack && disadvantage.attack[actType]);
+        if (disadvantage.all && evalCondition(disadvantage.all, conditionData)) {
+          this.attackAdvAttribution["DIS:all"] = true;
+          this.disadvantage = true;
+        }
+        if (disadvantage.attack?.all && evalCondition(disadvantage.attack.all, conditionData)) {
+          this.attackAdvAttribution["DIS:attack.all"] = true;
+          this.disadvantage = true;
+        }
+        if (disadvantage.attack && disadvantage.attack[actType] && evalCondition(disadvantage.attack[actType], conditionData)) {
+          this.attackAdvAttribution[`DIS:attack.${actType}`] = true;
+          this.disadvantage = true;
+        }
+      }
+      this.checkAbilityAdvantage();
     }
     // TODO Hidden should check the target to see if they notice them?
     if (checkRule("invisAdvantage")) {
@@ -1042,7 +1104,6 @@ export class Workflow {
       }
       this.disadvantage = this.disadvantage || nearbyFoe;
     }
-    this.checkAbilityAdvantage();
     this.checkTargetAdvantage();
   }
 
@@ -1068,33 +1129,74 @@ export class Workflow {
     const attackType = this.item?.system.actionType;
     this.critFlagSet = false;
     this.noCritFlagSet = false;
-    this.critFlagSet = criticalFlags.all || criticalFlags[attackType];
-    this.noCritFlagSet = noCriticalFlags.all || noCriticalFlags[attackType];
+
+    const target: Token = this.hitTargets.values().next().value
+    if (criticalFlags || noCriticalFlags) {
+      const target: Token = this.hitTargets.values().next().value
+      const conditionData = createConditionData({workflow: this, target, actor: this.actor});
+      if (criticalFlags) {
+        if (criticalFlags?.all && evalCondition(criticalFlags.all, conditionData)) {
+          this.critFlagSet = true;
+        }
+        if (criticalFlags[attackType] && evalCondition(criticalFlags[attackType], conditionData)) {
+          this.critFlagSet = true;
+        }
+        if (noCriticalFlags) {
+          if (noCriticalFlags?.all && evalCondition(noCriticalFlags.all, conditionData)) {
+            this.noCritFlagSet = true;
+          }
+          if (noCriticalFlags[attackType] && evalCondition(noCriticalFlags[attackType], conditionData)) {
+            this.noCritFlagSet = true;
+          }
+        }
+      }
+    }
 
     // check target critical/nocritical
     if (this.hitTargets.size === 1) {
       const firstTarget = this.hitTargets.values().next().value;
       const grants = firstTarget.actor?.flags["midi-qol"]?.grants?.critical ?? {};
       const fails = firstTarget.actor?.flags["midi-qol"]?.fail?.critical ?? {};
-      if (grants.all || grants[attackType]) this.critFlagSet = true;
-      if (fails.all || fails[attackType]) this.noCritFlagSet = true;
-      if (Number.isNumeric(grants.range) && getDistanceSimple(firstTarget, this.token, false, false) <= Number(grants.range))
-        this.critFlagSet = true;
-      this.isCritical = this.isCritical || this.critFlagSet;
-      if (this.noCritFlagSet) this.isCritical = false;
+      if (grants || fails) {
+        if (Number.isNumeric(grants.range) && getDistanceSimple(firstTarget, this.token, false, false) <= Number(grants.range)) {
+          this.critFlagSet = true;
+        }
+        const conditionData = createConditionData({workflow: this, target: firstTarget, actor: this.actor});
+        if (grants.all && evalCondition(grants.all, conditionData)) {
+          this.critFlagSet = true;
+        }
+        if (grants[attackType] && evalCondition(grants[attackType], conditionData)) {
+          this.critFlagSet = true;
+
+        }
+        if (fails.all && evalCondition(fails.all, conditionData)) {
+          this.noCritFlagSet = true;
+        }
+        if (fails[attackType] && evalCondition(fails[attackType], conditionData)) {
+          this.noCritFlagSet = true;
+        }
+      }
     }
+    this.isCritical = this.isCritical || this.critFlagSet;
+    if (this.noCritFlagSet) this.isCritical = false;
   }
 
   checkAbilityAdvantage() {
     if (!["mwak", "rwak"].includes(this.item?.system.actionType)) return;
     let ability = this.item?.system.ability;
     if (ability === "") ability = this.item?.system.properties?.fin ? "dex" : "str";
-    this.advantage = this.advantage || getProperty(this.actor, `flags.midi-qol.advantage.attack.${ability}`);
-    if (getProperty(this.actor, `flags.midi-qol.advantage.attack.${ability}`))
-      this.attackAdvAttribution[`ADV:attack.${ability}`] = true;
-    this.disadvantage = this.disadvantage || getProperty(this.actor, `flags.midi-qol.disadvantage.attack.${ability}`);
-    if (getProperty(this.actor, `flags.midi-qol.disadvantage.attack.${ability}`))
-      this.attackAdvAttribution[`DIS:attack.${ability}`] = true;;
+    if (getProperty(this.actor, `flags.midi-qol.advantage.attack.${ability}`)) {
+      if (evalCondition(getProperty(this.actor, `flags.midi-qol.advantage.attack.${ability}`), this.conditionData)) {
+        this.advantage = true;
+        this.attackAdvAttribution[`ADV:attack.${ability}`] = true;
+      }
+    }
+    if (getProperty(this.actor, `flags.midi-qol.disadvantage.attack.${ability}`)) {
+      if (evalCondition(getProperty(this.actor, `flags.midi-qol.disadvantage.attack.${ability}`), this.conditionData)) {
+        this.disadvantage = true;
+        this.attackAdvAttribution[`DIS:attack.${ability}`] = true;
+      }
+    }
   }
 
   async checkFlankingAdvantage(): Promise<boolean> {
@@ -1119,9 +1221,8 @@ export class Workflow {
     if (!this.targets?.size) return;
     const actionType = this.item?.system.actionType;
     const firstTarget = this.targets.values().next().value;
-    const firstTargetHeight = firstTarget.document?.height ?? firstTarget.height;
     if (checkRule("nearbyAllyRanged") > 0 && ["rwak", "rsak", "rpak"].includes(actionType)) {
-      if (firstTarget.width * firstTargetHeight < Number(checkRule("nearbyAllyRanged"))) {
+      if (firstTarget.data.width * firstTarget.data.height < Number(checkRule("nearbyAllyRanged"))) {
         //TODO change this to TokenDocument
         const nearbyAlly = checkNearby(-1, firstTarget, 5); // targets near a friend that is not too big
         // TODO include thrown weapons in check
@@ -1138,21 +1239,35 @@ export class Workflow {
     if (!grants) return;
     if (!["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) return;
     const attackAdvantage = grants.advantage?.attack || {};
-    const grantsAdvantage = grants.all || attackAdvantage.all || attackAdvantage[actionType];
-    if (grants.all)
-      this.attackAdvAttribution[`ADV:grants.all`] = true;;
-    if (attackAdvantage.all)
+    let grantsAdvantage;
+    const conditionData = createConditionData({workflow: this, target: this.token, actor: this.actor});
+    if (grants.advantage?.all && evalCondition(grants.advantage.all, conditionData)) {
+      grantsAdvantage = true;
+      this.attackAdvAttribution[`ADV:grants.advantage.all`] = true;;
+    }
+    if (attackAdvantage.all && evalCondition(attackAdvantage.all, conditionData)) {
+      grantsAdvantage = true;
       this.attackAdvAttribution[`ADV:grants.attack.all`] = true;
-    if (attackAdvantage[actionType])
+    }
+    if (attackAdvantage[actionType] && evalCondition(attackAdvantage[actionType], conditionData)) {
+      grantsAdvantage = true;
       this.attackAdvAttribution[`ADV:grants.attack.${actionType}`] = true;
+    }
+
     const attackDisadvantage = grants.disadvantage?.attack || {};
-    const grantsDisadvantage = grants.all || attackDisadvantage.all || attackDisadvantage[actionType];
-    if (grants.all)
-      this.attackAdvAttribution[`DIS:grants.all`] = true;;
-    if (attackDisadvantage.all)
+    let grantsDisadvantage;
+    if (grants.disadvantage?.all && evalCondition(grants.disadvantage.all, conditionData)) {
+      grantsDisadvantage = true;
+      this.attackAdvAttribution[`DIS:grants.disadvantage.all`] = true;
+    }
+    if (attackDisadvantage.all && evalCondition(attackDisadvantage.all, conditionData)) {
+      grantsDisadvantage = true;
       this.attackAdvAttribution[`DIS:grants.attack.all`] = true;
-    if (attackDisadvantage[actionType])
+    }
+    if (attackDisadvantage[actionType] && evalCondition(attackDisadvantage[actionType], conditionData)) {
+      grantsDisadvantage = true;
       this.attackAdvAttribution[`DIS:grants.attack.${actionType}`] = true;
+    }
     this.advantage = this.advantage || grantsAdvantage;
     this.disadvantage = this.disadvantage || grantsDisadvantage;
   }
@@ -1188,7 +1303,8 @@ export class Workflow {
       if (expiredEffects?.length ?? 0 > 0) {
         await timedAwaitExecuteAsGM("removeEffects", {
           actorUuid: target.actor?.uuid,
-          effects: expiredEffects
+          effects: expiredEffects,
+          options: { "expiry-reason": `midi-qol:${expireList}` }
         });
       }
     }
@@ -1479,7 +1595,7 @@ export class Workflow {
   }
 
 
-  async displayAttackRoll(doMerge) {
+  async displayAttackRoll(doMerge, displayOptions: any = {}) {
     const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId ?? "");
     //@ts-ignore .content v10
     let content = (chatMessage && duplicate(chatMessage.content)) || "";
@@ -1562,7 +1678,8 @@ export class Workflow {
           isFumble: this.isFumble,
           isHit: this.hitTargets.size > 0,
           isHitEC: this.hitTargetsEC.size > 0,
-          d20AttackRoll: this.d20AttackRoll
+          d20AttackRoll: this.d20AttackRoll,
+          GMOnlyAttackRoll: displayOptions.GMOnlyAttackRoll ?? false
         }
       }, { overwrite: true, inplace: false }
       )
@@ -1947,8 +2064,16 @@ export class Workflow {
         if (settingsOptions.advantage) advantage = true;
         if (settingsOptions.disadvantage) advantage = false;
         if (this.saveItem.flags["midi-qol"]?.isConcentrationCheck) {
-          const concAdv = (advantage === true) || getProperty(target.actor.flags, "midi-qol.advantage.concentration");
-          const concDisadv = (advantage === false) || getProperty(target.actor.flags, "midi-qol.disadvantage.concentration");
+          const concAdvFlag = getProperty(target.actor.flags, "midi-qol.advantage.concentration");
+          const concDisadvFlag = getProperty(target.actor.flags, "midi-qol.disadvantage.concentration");
+          let concAdv = advantage === true;
+          let concDisadv = advantage === false;
+          if (concAdvFlag || concDisadvFlag) {
+            const conditionData = this.createConditionData(this, this.token);
+            if (concAdvFlag && evalCondition(concAdvFlag, conditionData)) concAdv = true;
+            if (concDisadvFlag && evalCondition(concDisadvFlag, conditionData)) concDisadv = true;
+          }
+
           if (concAdv && !concDisadv) {
             advantage = true;
             this.advantageSaves.add(target);
@@ -2406,7 +2531,7 @@ export class Workflow {
     if (this.targets.size > 0) {
       const midiFlags = this.targets.values().next().value.actor?.flags["midi-qol"];
       const targetFlags = midiFlags?.grants?.criticalThreshold ?? 20;
-      criticalThreshold = Math.min(criticalThreshold, Number(targetFlags)); 
+      criticalThreshold = Math.min(criticalThreshold, Number(targetFlags));
     }
     this.isCritical = this.diceRoll >= criticalThreshold;
     const midiFumble = this.item && (getProperty(this.item, "flags.midi-qol.fumbleThreshold") ?? 1);
@@ -2447,7 +2572,7 @@ export class Workflow {
       let hitResultNumeric;
       let targetEC = targetActor.system.attributes.ac.EC ?? 0;
       let targetAR = targetActor.system.attributes.ac.AR ?? 0;
-      const bonusAC = getProperty(targetActor, "flags.midi-qol.acBonus") ?? 0;
+      const bonusAC = Number(getProperty(targetActor, "flags.midi-qol.acBonus")) ?? 0;
 
       isHit = false;
       isHitEC = false;
@@ -2459,7 +2584,6 @@ export class Workflow {
       } else {
         targetAC += bonusAC;
         const midiFlagsAttackBonus = getProperty(targetActor, "flags.midi-qol.grants.attack.bonus");
-        const midiFlagsAttackSuccess = getProperty(targetActor, "flags.midi-qol.grants.attack.success");
         if (!this.isFumble) {
           if (midiFlagsAttackBonus) {
             // if (Number.isNumeric(midiFlagsAttackBonus.all)) attackTotal +=  Number.parseInt(midiFlagsAttackBonus.all);
@@ -2482,7 +2606,6 @@ export class Workflow {
             //@ts-ignore
             const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { item: this.item, workflowOptions: mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true }) });
 
-            //const result = await doReactions(targetToken instanceof Token ? targetToken : targetToken.object, this.tokenUuid, this.attackRoll, "reaction", { item: this.item, workflowOptions: mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true }) });
             if (result?.name) {
               targetActor.prepareData(); // allow for any items applied to the actor - like shield spell
             }
@@ -2501,9 +2624,18 @@ export class Workflow {
           }
           hitResultNumeric = this.isCritical ? "++" : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
         }
-        if (midiFlagsAttackSuccess && (midiFlagsAttackSuccess.all || midiFlagsAttackSuccess[item.system.actionType])) {
-          isHit = true;
-          isHitEC = false;
+        const midiFlagsAttackSuccess = getProperty(targetActor, "flags.midi-qol.grants.attack.success");
+
+        if (midiFlagsAttackSuccess) {
+          const conditionData = createConditionData({workflow: this, target: this.token, actor: this.actor});
+          if (midiFlagsAttackSuccess.all && evalCondition(midiFlagsAttackSuccess.all, conditionData)) {
+            isHit = true;
+            isHitEC = false;
+          }
+          if (midiFlagsAttackSuccess[item.system.actionType] && evalCondition(midiFlagsAttackSuccess[item.system.actionType], conditionData)) {
+            isHit = true;
+            isHitEC = false;
+          }
         }
         let scale = 100;
         if (checkRule("challengeModeArmorScale") && !this.isCritical) scale = Math.floor((this.attackTotal - targetEC + 1) / ((targetActor?.system.attributes.ac.AR ?? 0) + 1) * 10) / 10;
@@ -2784,7 +2916,7 @@ export class DamageOnlyWorkflow extends Workflow {
   constructor(actor: globalThis.dnd5e.documents.Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll,
     options: { flavor: string, itemCardId: string, damageList: [], useOther: boolean, itemData: {}, isCritical: boolean }) {
     super(actor, null, ChatMessage.getSpeaker({ token }), new Set(targets), shiftOnlyEvent)
-    this.itemData = options.itemData;
+    this.itemData = options.itemData ? duplicate(options.itemData) : undefined;
     // Do the supplied damageRoll
     this.flavor = options.flavor;
     this.defaultDamageType = getSystemCONFIG().damageTypes[damageType] || damageType;
@@ -3148,17 +3280,8 @@ export class BetterRollsWorkflow extends Workflow {
         if (damageBonusMacros) {
           await this.rollBonusDamage(damageBonusMacros);
         }
-        if (this.otherDamageRoll) {
-          const messageData = {
-            flavor: this.otherDamageFlavor ?? this.damageFlavor,
-            speaker: this.speaker
-          }
-          setProperty(messageData, `flags.${game.system.id}.roll.type`, "damage");
-
-          //  Not required as we pick up the damage from the better rolls data this.otherDamageRoll.toMessage(messageData);
-          this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, versatile: false, defaultType: "" });
-
-        } else this.otherDamageDetail = [];
+        if (!this.otherDamageRoll) this.otherDamageDetail = [];
+        //TODO see if we need to set otherDamage
         if (this.bonusDamageRoll) {
           const messageData = {
             flavor: this.bonusDamageFlavor,

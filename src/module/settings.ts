@@ -117,6 +117,7 @@ class ConfigSettings {
   spellHitSound: string = "";
   spellUseSound: string = "";
   spellUseSoundRanged: string = "";
+  syrinToken: string | undefined = undefined;
   tempHPDamageConcentrationCheck: boolean = false;
   toggleOptionalRules: boolean = false;
   useCustomSounds: boolean = true;
