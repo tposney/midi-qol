@@ -416,7 +416,9 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.noCritical.all")
   midiFlags.push("flags.midi-qol.fail.all")
   midiFlags.push("flags.midi-qol.fail.attack.all")
+  midiFlags.push(`flags.midi-qol.grants.advantage.all`);
   midiFlags.push(`flags.midi-qol.grants.advantage.attack.all`);
+  midiFlags.push(`flags.midi-qol.grants.disadvantage.all`);
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
   // TODO work out how to do grants damage.max
   midiFlags.push(`flags.midi-qol.grants.attack.success.all`);

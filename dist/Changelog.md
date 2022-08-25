@@ -1,3 +1,11 @@
+### 0.9.76
+* If you have an effect "<Item Name> Template" on the item midi will use that as a base to create the remove template effect, so you can put special durations etc in the effect.
+* Added flags.midi-qol.grants.advantage.all and flags.midi-qol.grants.disadvantage.all to the auto compete list.
+* Fix for missing attack check in midi-sounds.
+* Fix for dragon slayer longsword not properly checing attunement.
+* Tiny change to support DAE change now using suppression instead of disablign effects when not equipped/attuned - in line with core dnd5e now.
+* Updated ja.json - thanks @Brother Sharp
+
 ### 0.9.75
 * Fix for a v10 bit of code left in by mistake.
 

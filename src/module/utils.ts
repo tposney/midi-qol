@@ -1217,7 +1217,8 @@ export async function processOverTime(wrapped, data, options, user) {
 
 export async function doOverTimeEffect(actor, effect, startTurn: boolean = true) {
   const endTurn = !startTurn;
-  if (effect.data.disabled) return;
+  //@ts-ignore isSuppressed
+  if (effect.data.disabled || effect.isSuppressed) return;
   const auraFlags = effect.data.flags?.ActiveAuras ?? {};
   if (auraFlags.isAura && auraFlags.ignoreSelf) return;
   const rollData = actor.getRollData();

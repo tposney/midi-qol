@@ -154,16 +154,18 @@ export class MidiSounds {
 
     Hooks.on("midi-qol.preAttackRoll", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
-      if (dice3dEnabled()) {
-        await this.processHook(workflow, workflow.item.data.data.actionType);
+      if (dice3dEnabled() 
+        && workflow.item.hasAttack && !await this.processHook(workflow, workflow.item.data.data.actionType)) {
+        await this.processHook(workflow, "attack");
       }
       return true;
     });
 
     Hooks.on("midi-qol.AttackRollComplete", async (workflow: Workflow) => {
       if (!configSettings.useCustomSounds || !workflow.item) return true;
-      if (!dice3dEnabled()) {
-        await this.processHook(workflow, workflow.item.data.data.actionType);
+      if (!dice3dEnabled() 
+        && workflow.item.hatAttack && !await this.processHook(workflow, workflow.item.data.data.actionType)) {
+          await this.processHook(workflow, "attack");
       }
       if (workflow.isCritical) {
         await this.processHook(workflow, "critical")

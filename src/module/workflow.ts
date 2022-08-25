@@ -839,7 +839,7 @@ export class Workflow {
             }
           }
           // anyActivaiton is true for no activation condition or true if any of the token conditions matched.
-          anyActivationTrue = !getProperty(theItem, "data.flags.midi-qol.effectActivation") 
+          anyActivationTrue = !getProperty(theItem, "data.flags.midi-qol.effectActivation")
             || (getProperty(theItem, "data.data.activation.condition") !== "" ? anyActivationTrue : true);
           if (this.applicationTargets.size > 0 && anyActivationTrue && (hasItemSelfEffects || ceSelfEffect)) {
 
@@ -864,7 +864,7 @@ export class Workflow {
                 }
               }
             }
-          } 
+          }
         }
 
         if (debugCallTiming) log(`applyActiveEffects elapsed ${Date.now() - applyDynamicEffectsStartTime}ms`)
@@ -930,30 +930,38 @@ export class Workflow {
             const itemDuration = this.item.data.data.duration;
             let selfTarget = this.item.actor.token ? this.item.actor.token.object : await getSelfTarget(this.item.actor);
             if (selfTarget) selfTarget = this.token;
+            let effectData;
             if (selfTarget) {
-              const effectData = {
-                changes: [
-                  {key: "flags.dae.deleteUuid", mode: 5, value: this.templateUuid, priority: 20}, // who is marked
-                ],
-                origin: this.item?.itemUuid, //flag the effect as associated to the spell being cast
-                disabled: false,
-                icon: this.item?.img,
-                label: this.item?.name + " Template",
-                duration: {}
-              }
-              const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
-              const convertedDuration = globalThis.DAE.convertDuration(itemDuration, inCombat);
-              if (convertedDuration?.type === "seconds") {
-                effectData.duration = { seconds: convertedDuration.seconds, startTime: game.time.worldTime }
-              } else if (convertedDuration?.type === "turns") {
-                effectData.duration = {
-                  rounds: convertedDuration.rounds,
-                  turns: convertedDuration.turns,
-                  startRound: game.combat?.round,
-                  startTurn: game.combat?.turn
+              let effect = this.item.actor.effects.find(ef => ef.datalabel === this.item.name + " Template");
+              if (effect) { // effect already applied
+                const newChanges = duplicate(effect.changes);
+                newChanges.push({ key: "flags.dae.deleteUuid", mode: 5, value: this.templateUuid, priority: 20 });
+                await effect.update({ changes: newChanges });
+              } else {
+                effectData = {
+                  origin: this.item?.uuid, //flag the effect as associated to the spell being cast
+                  disabled: false,
+                  icon: this.item?.img,
+                  label: this.item?.name + " Template",
+                  duration: {},
+                  changes: [
+                    { key: "flags.dae.deleteUuid", mode: 5, value: this.templateUuid, priority: 20 }, // who is marked
+                  ]
+                };
+                const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
+                const convertedDuration = globalThis.DAE.convertDuration(itemDuration, inCombat);
+                if (convertedDuration?.type === "seconds") {
+                  effectData.duration = { seconds: convertedDuration.seconds, startTime: game.time.worldTime }
+                } else if (convertedDuration?.type === "turns") {
+                  effectData.duration = {
+                    rounds: convertedDuration.rounds,
+                    turns: convertedDuration.turns,
+                    startRound: game.combat?.round,
+                    startTurn: game.combat?.turn
+                  }
                 }
+                await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
               }
-              await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
             }
           }
 
@@ -1151,13 +1159,20 @@ export class Workflow {
     if (!grants) return;
     if (!["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) return;
     const attackAdvantage = grants.advantage?.attack || {};
-    const grantsAdvantage = grants.all || attackAdvantage.all || attackAdvantage[actionType];
-    if (grants.all)
+    let grantsAdvantage;
+    if (grants.advantage?.all && evalActivationCondition(this, grants.advantage.all, this.token)) {
+      grantsAdvantage = true;
       this.attackAdvAttribution[`ADV:grants.all`] = true;;
-    if (attackAdvantage.all)
+    }
+    if (attackAdvantage.all && evalActivationCondition(this, attackAdvantage.all, this.token)) {
+      grantsAdvantage = true;
       this.attackAdvAttribution[`ADV:grants.attack.all`] = true;
-    if (attackAdvantage[actionType])
+    }
+    if (attackAdvantage[actionType] && evalActivationCondition(this, attackAdvantage[actionType], this.token)) {
+      grantsAdvantage = true;
       this.attackAdvAttribution[`ADV:grants.attack.${actionType}`] = true;
+    }
+
     const attackDisadvantage = grants.disadvantage?.attack || {};
     const grantsDisadvantage = grants.all || attackDisadvantage.all || attackDisadvantage[actionType];
     if (grants.all)
@@ -1447,7 +1462,7 @@ export class Workflow {
         }
         macroCommand = itemMacro?.data.command ?? `console.warn('midi-qol | no item macro found for ${name}')`;
       } else { // get a world macro.
-        const macro = game.macros?.getName(name.replaceAll('"',''));
+        const macro = game.macros?.getName(name.replaceAll('"', ''));
         if (!macro) console.warn("midi-qol could not find macro", name);
         if (macro?.data.type === "chat") {
           macro.execute(); // use the core foundry processing for chat macros
@@ -3122,16 +3137,20 @@ export class BetterRollsWorkflow extends Workflow {
         if (this.critflagSet) {
           this.roll?.forceCrit();
         }
+
         if (configSettings.allowUseMacro && this.item?.data.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("postDamageRoll"), "OnUse", "postDamageRoll");
         }
+
         const damageBonusMacros = this.getDamageBonusMacros();
         if (damageBonusMacros) {
           await this.rollBonusDamage(damageBonusMacros);
         }
+
         if (this.otherDamageRoll) {
           this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, versatile: false, defaultType: "" });
         } else this.otherDamageDetail = [];
+
         if (this.bonusDamageRoll) {
           const messageData = {
             flavor: this.bonusDamageFlavor,
