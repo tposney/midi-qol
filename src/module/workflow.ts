@@ -3129,9 +3129,8 @@ export class BetterRollsWorkflow extends Workflow {
         if (damageBonusMacros) {
           await this.rollBonusDamage(damageBonusMacros);
         }
-        if (!this.otherDamageRoll) {
+        if (this.otherDamageRoll) {
           this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, versatile: false, defaultType: "" });
-
         } else this.otherDamageDetail = [];
         if (this.bonusDamageRoll) {
           const messageData = {
