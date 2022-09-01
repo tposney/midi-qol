@@ -2442,7 +2442,9 @@ export class Workflow {
       let targetActor: Actor5e = targetToken.actor;
       if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
       let targetAC = Number.parseInt(targetActor.data.data.attributes.ac.value ?? 10);
-      if (targetActor.type === "vehicle") {
+      const hasWJ = installedModules.get("wjmais");
+      const wjVehicle = hasWJ ? getProperty(targetActor.data, "flags.wjmais.crew.min") != null : false;
+      if (targetActor.type === "vehicle" && !wjVehicle) {
         const inMotion = getProperty(targetActor.data, "flags.midi-qol.inMotion");
         if (inMotion) targetAC = Number.parseInt(targetActor.data.data.attributes.ac.flat ?? 10);
         else targetAC = Number.parseInt(targetActor.data.data.attributes.ac.motionless ?? 10);
