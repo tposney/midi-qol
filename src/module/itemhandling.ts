@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming, allAttackTypes, failedSaveOverTimeEffectsToDelete } from "../midi-qol.js";
 import { BetterRollsWorkflow, defaultRollOptions, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG, evalActivationCondition, createDamageList, getDamageType, getDamageFlavor } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG, evalActivationCondition, createDamageList, getDamageType, getDamageFlavor, getOptionalCountRemainingShortFlag, completeItemUse } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
@@ -433,18 +433,13 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
   return result;
 }
 
-async function newResolveLateTargeting(item): Promise<boolean> {
+async function resolveLateTargeting(item): Promise<boolean> {
   const workflow = Workflow.getWorkflow(item?.uuid);
   const lateTargetingSetting = getLateTargeting(workflow);
   if (lateTargetingSetting === "none") return true; // workflow options override the user settings
   if (workflow && lateTargetingSetting === "noTargetsSelected" && workflow.targets.size !== 0) return true;
 
-  // enable target mode
-  const controls: any = ui.controls;
-  controls.activeControl = "token"
-  controls.controls[0].activeTool = "target"
-  await controls.render();
-
+  ui.controls?.initialize({tool: "target", control: "token"})
 
   const wasMaximized = !(item.actor.sheet?._minimized);
   // Hide the sheet that originated the preview
@@ -454,65 +449,43 @@ async function newResolveLateTargeting(item): Promise<boolean> {
     // no timeout since there is a dialog to close
     // create target dialog which updates the target display
     let lateTargeting = new LateTargetingDialog(item.actor, item, game.user, { callback: resolve }).render(true);
-    // hook for exit target mode
-    const hookId = Hooks.on("renderSceneControls", (app, html, data) => {
-      if (app.activeControl === "token" && data.controls[0].activeTool === "target") return;
-      resolve(true);
-      //@ts-ignore
-      lateTargeting.close();
-      Hooks.off("renderSceneControls", hookId)
-
-    });
   });
   let shouldContinue = await targets;
   if (wasMaximized) await item.actor.sheet.maximize();
-  controls.activeControl = "token"
-  controls.controls[0].activeTool = "select"
-  await controls.render();
-  // if (game.user?.targets.size === 0) shouldContinue = false;
+
   return shouldContinue ? true : false;
 }
 
-async function resolveLateTargeting(item: any) {
-  if (!getLateTargeting()) return;
-
-  // clear targets?
-
-  // enable target mode
-  const controls: any = ui.controls;
-  controls.activeControl = "token"
-  controls.controls[0].activeTool = "target"
-  await controls.render();
-
-  const wasMaximized = !(item.actor.sheet?._minimized);
-  // Hide the sheet that originated the preview
-  if (wasMaximized) await item.actor.sheet.minimize();
-
-  let targets = new Promise((resolve, reject) => {
-    // hook for exit target mode
-    const timeoutId = setTimeout(() => {
-      resolve(false);
-    }, 30000); // TODO maybe make this a config option
-    const hookId = Hooks.on("renderSceneControls", (app, html, data) => {
-      if (app.activeControl === "token" && data.controls[0].activeTool === "target") return;
-      Hooks.off("renderSceneControls", hookId)
-      clearTimeout(timeoutId)
-      resolve(true);
-    });
-  });
-  await targets;
-  if (wasMaximized) await item.actor.sheet.maximize()
-}
-
-export async function doItemRoll(wrapped, options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: true, createMessage: undefined, event, workflowOptions: { lateTargeting: undefined, notReaction: false } }) {
+export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
+//  if (configSettings.mergeCard && (configSettings.attackPerTarget === true || options.workflowOptions?.attackPerTarget === true) && this.hasAttack && options?.singleTarget !== true && game?.user?.targets) {
+  if ((configSettings.attackPerTarget === true || options.workflowOptions?.attackPerTarget === true) && this.hasAttack && options?.singleTarget !== true && game?.user?.targets) {
+    const lateTargetingSetting = getLateTargeting();
+    let lateTargetingSet = lateTargetingSetting === "all" || (lateTargetingSetting === "noTargetsSelected" && game?.user?.targets.size === 0)
+    if (options.woprkflowOptions?.lateTargeting && options.workflowOptions?.lateTargeting !== "none") lateTargetingSet = true;
+    if (game.user.targets.size === 0 && lateTargetingSet) await resolveLateTargeting(this);
+    const targets: Token[] = [];
+    for (let target of game?.user?.targets) targets.push(target);
+    for (let target of targets) {
+      const newOptions = mergeObject(options, {singleTarget: true, targetUuids: [target.document.uuid], workflowOptions: {lateTargeting: false}}, {inplace: false, overwrite: true});
+      await completeItemUse(this, {}, newOptions)
+    }
+    return;
+  }
+  options = mergeObject({
+    showFullCard: false, 
+    createWorkflow: true, 
+    versatile: false, 
+    configureDialog: true, 
+    createMessage: true, 
+    event, 
+    workflowOptions: { lateTargeting: undefined, notReaction: false }
+  }, options);
   const itemRollStart = Date.now()
   let showFullCard = options?.showFullCard ?? false;
-  let createWorkflow = options?.createWorkflow ?? true;
+  let createWorkflow =  options?.createWorkflow ?? true;
   let versatile = options?.versatile ?? false;
-  let configureDialog = options?.configureDialog ?? true;
-  if (options.workflowOptions === undefined) options.workflowOptions = { lateTargeting: undefined, notReaction: false };
   if (!enableWorkflow || createWorkflow === false) {
-    return await wrapped(options);
+    return await wrapped(config, options);
   }
 
   if (checkRule("incapacitated") && checkIncapacitated(this.actor, this, null)) return;
@@ -525,7 +498,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
   const lateTargetingSetting = getLateTargeting();
   const lateTargetingSet = lateTargetingSetting === "all" || (lateTargetingSetting === "noTargetsSelected" && game?.user?.targets.size === 0)
   const shouldCheckLateTargeting = (allAttackTypes.includes(this.system.actionType) || (this.hasTarget && !this.hasAreaTarget))
-    && (options.workflowOptions?.lateTargeting ?? lateTargetingSet);
+    && ((options.worflowOptions?.lateTargeting ? (options.workflowOptions?.lateTargeting !== "none") : lateTargetingSet));
 
   if (shouldCheckLateTargeting && !isRangeSpell && !isAoESpell) {
 
@@ -533,7 +506,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     let canDoLateTargeting = this.system.target.type !== "self";
 
     //explicit don't do late targeting passed
-    if (options.workflowOptions?.lateTargeting === false) canDoLateTargeting = false;
+    if (options.workflowOptions?.lateTargeting === "none") canDoLateTargeting = false;
 
     // TODO look at this if AoE spell and not auto targeting need to work out how to deal with template placement
     if (false && isAoESpell && configSettings.autoTarget === "none")
@@ -545,9 +518,8 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       canDoLateTargeting = true;
     // TODO consider template and range spells when not template targeting?
 
-
     if (canDoLateTargeting) {
-      if (!(await newResolveLateTargeting(this)))
+      if (!(await resolveLateTargeting(this)))
         return null;
     }
   }
@@ -657,9 +629,9 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
       const concentrationEffect = getConcentrationEffect(this.actor);
       if (concentrationEffect) await removeConcentration(this.actor);
     }
-    workflow = new BetterRollsWorkflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
-    // options.createMessage = true;
-    const result = await wrapped(options);
+    workflow = new BetterRollsWorkflow(this.actor, this, speaker, targets, { event: config.event || options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
+    options.createMessage = true;
+    const result = await wrapped(config, options);
     return result;
   }
   workflow = Workflow.getWorkflow(this.uuid);
@@ -668,7 +640,7 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
   }
   */
-  workflow = new Workflow(this.actor, this, speaker, targets, { event: options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
+  workflow = new Workflow(this.actor, this, speaker, targets, { event: config.event || options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
   workflow.inCombat = inCombat ?? false;
   workflow.isTurn = isTurn ?? false;
   workflow.AoO = AoO;
@@ -729,30 +701,30 @@ export async function doItemRoll(wrapped, options = { showFullCard: false, creat
     }
   }
 
-  if (configureDialog) {
+  if (options.configureDialog) {
     if (this.type === "spell") {
       if (["both", "spell"].includes(isAutoConsumeResource(workflow))) { // && !workflow.rollOptions.fastForward) {
-        configureDialog = false;
+        options.configureDialog = false;
         // Check that there is a spell slot of the right level
         const spells = this.actor.system.spells;
         if (spells[`spell${this.system.level}`]?.value === 0 &&
           (spells.pact.value === 0 || spells.pact.level < this.system.level)) {
-          configureDialog = true;
+          options.configureDialog = true;
         }
 
-        if (!configureDialog && this.hasAreaTarget && this.actor?.sheet) {
+        if (!options.configureDialog && this.hasAreaTarget && this.actor?.sheet) {
           setTimeout(() => {
             this.actor?.sheet.minimize();
           }, 100)
         }
       }
-    } else configureDialog = !(["both", "item"].includes(isAutoConsumeResource(workflow)));
+    } else options.configureDialog = !(["both", "item"].includes(isAutoConsumeResource(workflow)));
   }
-
   const wrappedRollStart = Date.now();
-  let result = await wrapped({ configureDialog, rollMode: null, createMessage: false });
+  let result = await wrapped(config, mergeObject(options, {createMessage: false}, {inplace: false}));
   if (!result) {
     //TODO find the right way to clean this up
+    console.error("midi-qol | itemhandling wrapped returned ", result)
     // Workflow.removeWorkflow(workflow.id); ?
     return null;
   }
@@ -1115,12 +1087,12 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   this.templateData = templateDocument.toObject(); // TODO check this v10
   this.needTemplate = false;
   if (this instanceof BetterRollsWorkflow) {
-    if (this.needItemCard) {
-      return;
-    } else return this.next(WORKFLOWSTATES.NONE);
+    if (this.needItemCard) return;
+    else return this.next(WORKFLOWSTATES.NONE);
   }
   if (this instanceof TrapWorkflow) return;
-  return this.next(WORKFLOWSTATES.TEMPLATEPLACED);
+  this.needTemplate = false;
+  return this.next(WORKFLOWSTATES.AWAITTEMPLATE);
 };
 
 export function activationConditionToUse(workflow: Workflow) {

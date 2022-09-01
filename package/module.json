@@ -7,8 +7,8 @@
       "id": "dnd5e",
       "type": "system",
       "compatibility": {
-        "minimum": "2.0.0",
-        "verified": "2.0.0-"
+        "minimum": "2.0.1",
+        "verified": "2.0.0-alpha3"
       }
     },
     {
@@ -24,7 +24,7 @@
       "type": "system"
     }
   ],
-  "version": "10.0.4",
+  "version": "10.0.5",
   "authors": [{"name": "tposney"}],
   "socket": true,
   "scripts": [],
@@ -102,6 +102,6 @@
   },
   "url": "https://gitlab.com/tposney/midi-qol",
   "manifest": "https://gitlab.com/tposney/midi-qol/raw/v10/package/module.json",
-  "download": "https://gitlab.com/tposney/midi-qol/raw/v10/package/midi-qol-v10.0.4.zip",
+  "download": "https://gitlab.com/tposney/midi-qol/raw/v10/package/midi-qol-v10.0.5.zip",
   "changelog": "https://gitlab.com/tposney/midi-qol/raw/v10/Changelog.md"
 }

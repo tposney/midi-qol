@@ -180,6 +180,12 @@
         <div class="midi-qol-faint">{{localize "midi-qol.AutoTarget.Hint"}}</div>
 
         <div class="form-group">
+          <label>{{localize "midi-qol.AutoRemoveTemplate.Name"}}</label>
+          <input id="autoRemoveTemplate" type="checkbox" name="autoRemoveTemplate" data-dtype="Boolean" {{checked
+            configSettings.autoRemoveTemplate}} />
+        </div>
+
+        <div class="form-group">
           <label>{{localize "midi-qol.RangeTarget.Name"}}</label>
           <select name="rangeTarget" data-dtype="String">
             {{#select configSettings.rangeTarget}}
@@ -277,6 +283,12 @@
         <div class="midi-qol-faint">{{localize "midi-qol.AutoCheckHit.Hint"}}</div>
 
         <div class="form-group">
+          <label>{{localize "midi-qol.AttackPerTarget.Name"}}</label>
+          <input type="checkbox" name="attackPerTarget" data-dtype="Boolean" {{checked
+            configSettings.attackPerTarget}} />
+        </div>
+
+        <div class="form-group">
           <label>{{localize "midi-qol.DisplayHitResultNumeric.Name"}}</label>
           <input type="checkbox" name="displayHitResultNumeric" data-dtype="Boolean" {{checked
             configSettings.displayHitResultNumeric}} />
@@ -318,7 +330,7 @@
         <div class="form-group flexrow">
           <label style="width:100%; flex-grow:10;">{{localize "midi-qol.DefaultSaveMult.Name"}}</label>
           <input style="width:10%; flex-shrink:20;" type="number" step="any" name="defaultSaveMult"
-            value="{{configSettings.defaultSaveMult}}" data-dtype="Number" />
+            value="{{configSettings.defaultSaveMult}}"/>
         </div>
 
         <div class="midi-qol-faint">{{localize "midi-qol.DefaultSaveMult.Hint"}}</div>
@@ -358,8 +370,7 @@
         <div class="midi-qol-faint">{{localize "midi-qol.rollNPCSaves.Hint"}}</div>
         <div class="form-group">
           <label>{{localize "midi-qol.PlayerSaveTimeout.Name"}}</label>
-          <input type="Number" name="playerSaveTimeout" value="{{configSettings.playerSaveTimeout}}"
-            data-dtype="Number" />
+          <input type="number" name="playerSaveTimeout" value="{{configSettings.playerSaveTimeout}}"/>
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.PlayerSaveTimeout.Hint"}}</div>
       </div>
@@ -421,13 +432,13 @@
         <div class="form-group flexrow">
           <label style="width:100%; flex-grow:10;">{{localize "midi-qol.DamageResistanceMultiplier.Name"}}</label>
           <input style="width:10%; flex-shrink:20;" type="number" step="any" name="damageResistanceMultiplier"
-            value="{{configSettings.damageResistanceMultiplier}}" data-dtype="Number" />
+            value="{{configSettings.damageResistanceMultiplier}}" />
         </div>
 
         <div class="form-group flexrow">
           <label style="width:100%; flex-grow:10;">{{localize "midi-qol.DamageVulnerabilityMultiplier.Name"}}</label>
           <input style="width:10%; flex-shrink:20;" type="number" step="any" name="damageVulnerabilityMultiplier"
-            value="{{configSettings.damageVulnerabilityMultiplier}}" data-dtype="Number" />
+            value="{{configSettings.damageVulnerabilityMultiplier}}" />
         </div>
 
         <div class="form-group">
@@ -468,8 +479,7 @@
         <div class="form-group">
           <span>
             <label>{{localize "midi-qol.AddWounded.Name"}}</label>
-            <input type="Number" style="width:40px;" name="addWounded" value="{{configSettings.addWounded}}"
-              data-dtype="Number" />
+            <input type="number" style="width:40px;" name="addWounded" value="{{configSettings.addWounded}}"/>
           </span>
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.AddWounded.Hint"}}</div>
@@ -616,8 +626,7 @@
         <div class="form-group">
           <span>
             <label>{{localize "midi-qol.SaveStatsEvery.Name"}}</label>
-            <input type="Number" style="width:40px;" name="saveStatsEvery" value="{{configSettings.saveStatsEvery}}"
-              data-dtype="Number" />
+            <input type="number" style="width:40px;" name="saveStatsEvery" value="{{configSettings.saveStatsEvery}}"/>
           </span>
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.SaveStatsEvery.Hint"}}</div>
@@ -686,7 +695,7 @@
 
         <div class="form-group">
           <label>{{localize "midi-qol.ReactionTimeout.Name"}}</label>
-          <input type="Number" name="reactionTimeout" value="{{configSettings.reactionTimeout}}" data-dtype="Number" />
+          <input type="number" name="reactionTimeout" value="{{configSettings.reactionTimeout}}"/>
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.ReactionTimeout.Hint"}}</div>
 
@@ -823,8 +832,8 @@
           <div class="form-group">
             <span>
               <label>{{localize "midi-qol.NearbyFoe.Name"}}</label>
-              <input type="Number" style="width:40px;" name="optionalRules.nearbyFoe"
-                value="{{configSettings.optionalRules.nearbyFoe}}" data-dtype="Number" />
+              <input type="number" style="width:40px;" name="optionalRules.nearbyFoe"
+                value="{{configSettings.optionalRules.nearbyFoe}}"/>
             </span>
           </div>
 
@@ -843,8 +852,8 @@
           <div class="form-group">
             <span>
               <label>{{localize "midi-qol.OptionalCritRule.Name"}}</label>
-              <input type="Number" style="width:40px;" name="optionalRules.optionalCritRule"
-                value="{{configSettings.optionalRules.optionalCritRule}}" data-dtype="Number" />
+              <input type="number" style="width:40px;" name="optionalRules.optionalCritRule"
+                value="{{configSettings.optionalRules.optionalCritRule}}" />
             </span>
           </div>
           <div class="midi-qol-faint">{{localize "midi-qol.OptionalCritRule.Hint"}}</div>
@@ -852,8 +861,8 @@
           <div class="form-fields">
             <span>
               <label>{{localize "midi-qol.NearbyAllyRanged.Name"}}</label>
-              <input type="Number" style="width:40px;" name="optionalRules.nearbyAllyRanged"
-                value="{{configSettings.optionalRules.nearbyAllyRanged}}" data-dtype="Number" />
+              <input type="number" style="width:40px;" name="optionalRules.nearbyAllyRanged"
+                value="{{configSettings.optionalRules.nearbyAllyRanged}}" />
             </span>
           </div>
           <div class="midi-qol-faint">{{localize "midi-qol.NearbyAllyRanged.Hint"}}</div>

@@ -489,7 +489,6 @@ export let hideStuffHandler = (message, html, data) => {
     html.find(".midi-qol-target-npc-GM").hide();
     if (message.user?.isGM) {
       const d20AttackRoll = getProperty(message.flags, "midi-qol.d20AttackRoll");
-      console.error("hide stuff handler ", getProperty(message.flags, "midi-qol"))
       if (configSettings.hideRollDetails === "all" || getProperty(message.flags, "midi-qol.GMOnlyAttackRoll")) {
         html.find(".dice-tooltip").remove();
         // html.find(".midi-qol-attack-roll .dice-total").text(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
@@ -681,11 +680,13 @@ export function processItemCardCreation(message, user) {
     if (!workflow) return;
     if (!workflow.itemCardId) {
       workflow.itemCardId = message.id;
+      workflow.needItemCard = false;
     }
     if (workflow.kickStart) {
       workflow.kickStart = false;
       workflow.next(WORKFLOWSTATES.NONE);
     }
+    workflow.next(WORKFLOWSTATES.AWAITITEMCARD);
   }
 }
 

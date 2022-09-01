@@ -1,16 +1,45 @@
+### 10.0.5
+* Foundry 10.279/10.280 broke most of midi's roll handling and targeting. This release adjusts to the changes (I hope), but has required a rewwite of the basic item handling code, so there could be bugs.
+* Midi now **REQUIRES** foudnry 10.279+ and dnd 2.0.1 or later.
+* **BREAKING** dnd 2.0.0-alpha3 has changed the name/arguments for ``item.roll(options: any)`` to ``item.use(config: any, options: any)``, which breaks the current item.roll() wrapping behaviour. As of 10.0.5 midi will do the same. 
+* All of the elements passed in item.roll(options) will be mapped across as item.use({}, options) by dnd5e 2.0.1 and generate a deprecation warning.
+* completeItemRoll(item, options) is replaced by completItemUse(item, config, options). completeItemRoll(item, options) will call completeItemUse(item, {}, options) and generate a deprecation warning.
+* Tiny change to support DAE change now using suppression instead of disabling effects when not equipped/attuned - in line with core now.
+* Fix for not auto rolling damage ignoring critical damage settings.
+* Fix for not removing CV stealthed condition.
+* Fix for template targeting, broken in 10.279+.
+* Fix for lateTargeting, broken in 10.279+.
+* Fix for item uses, broken in 10.279+ since item.use does not return until the template is placed.
+* Fix (?) for displaying empty damage types when 0 damage is rolled.
+* Auto removing spell templates is now a configuration option.
+* Update to self apply effects, you can now choose always apply to self or apply to self if any target would receive an effect.
+* **Breaking** Remove Hidden/Invisible setting now ONLY removes the hidden/stealth condition from the character. To remove invisibility use special durations to auto remove the effect. Updated the sample invisibility/greater invisibility to work with foundry vision modes.
+* Reinstated canSee (renamed canSense) to utilise foundry vision modes. If the attacker can't be sensed by the defender the attack is with advantage, if the attacker can't sense the defender the attack is with disadvantage. 
+
+If using Convenient Effects to create invisible tokens you need to execute
+```js
+  if (game.modules.get("dfreds-convenient-effects")?.active) {
+    CONFIG.specialStatusEffects.INVISIBLE =  "Convenient Effect: Invisible";
+    CONFIG.specialStatusEffects.BLIND =  "Convenient Effect: Blinded"
+  }
+```
+to make those the foundry conditions for invisible/blinded. This works for both midi and core foundry handling of vision/blinded.
+* Added experimental support for rolling attack/damage per target, rather than a single attack/damage roll for all targets. Configured from the workflow tab.
+* Note: players control hidden tokens seems to continue to work with the new foundry vision modes. There is no reason to hide a token to make it invisible anymore, just use the foundry invisible condition.
+
 ### 10.0.4
-* Fix for apply active effects buttong being left on card.
+* Fix for apply active effects button being left on card.
 * Fix for respecting CUB hide names settings.
 * Fix for unclickable drop down lists in sound config.
-* When reaction checking, show the damage roll to the GM while reaction checking is taking place. For non GMs they will see "attack rolled" on the chat card, so they know something happened, rather than just the attack button being displayed.
+* When reaction checking, show the attack roll to the GM while reaction checking is taking place. For non GMs they will see "attack rolled" on the chat card, so they know something happened, rather than just the attack button being displayed.
 * Rewrote midi's critical damage handling to match the damage types for critical rolls.
   - if maximising critial damage dice and you roll 1d4 Bludgeoning and 1d8 piercing, the damage roll will be displayed as 1d4 + 1d8 + 4 + 8 and the damage types of the maximised values will be bludgeoning and piecrcing respectively or as 1d4 + 1d8 + 1d4min4 + 1d8min8.
   - If maxing critical dice you can either have just a flat number for the critical dice (takes less space) or roll the critical dice with the dice roll being upgraded to maximum.
   - if you use the default dnd 5e critical damage rolling the type of the critical damage will default to the base damage for the weapon (which is not correct).
   - Midi now respects the dnd5e setting to apply the multiplier to the fixed numeric terms of the damage roll.
   - With these changes I now suggest using midi's critical damage options, rather than leaving it to dnd5e.
-* Midi now displays the damage types for all dice rolls (via roll flavor) and uses the localised damage name, rather than the internal damage type.
-* You can use ``1d4[fire]`` or ``1d4[Fire]`` when specifiying a damage flavor, the first is the dnd5e internal label for the damage type, the second is whatever the localised version of the string is.
+* Midi now displays the damage types for all dice rolls (via roll flavour) and uses the localised damage name, rather than the internal damage type.
+* You can use ``1d4[fire]`` or ``1d4[Fire]`` when specifying a damage flavour, the first is the dnd5e internal label for the damage type, the second is whatever the localised version of the string is.
 * Damage types are passed to DSN for all damage roll elements.
 * Added support for using df Walled Templates to do target selection for AoE spells. (Not sure if the module is v10 ready yet).
 * Templates created when casting AoE spells with a duration are now auto removed on spell expiry.
@@ -18,7 +47,7 @@
   - If you have an effect "<Item Name> Template" on the item midi will use that as a base to create the remove template effect, so you can put special durations etc in the effect.
 * **New feature for overTime effects**. You can add actionSave=true which means overtime effects won't auto roll the save, rather it waits for the actor to roll an appropriate save when it is the actor's turn (just roll the save from the character sheet - or anything that creates a chat message saving throw - LMRTFY but not monk's token bar) and if the save is higher than the overtime effects saveDC the effect will be immediately removed. 
   - This allows you to support "the character can use its action to save against the effect".
-  - Simply add actionSave=true to the overtime effect definiton and mid will watch for saving throws on the actors turn and if the type matches the overtime efffect it will check the roll versus the saveDC and remove the effect if the save is successful.
+  - Simply add actionSave=true to the overtime effect definition and mid will watch for saving throws on the actors turn and if the type matches the overtime efffect it will check the roll versus the saveDC and remove the effect if the save is successful.
 * **Big change** flags.midi-qol.advantage/disadvantage etc will row evaluate the "value" as if it is an activation condition expression, so ``flags.midi-qol.advantage.attack.all OVERRIDE "@raceOrType".includes("dragon")`` will mean attacks against dragons will be made with advantage. The spreadsheet of flags has been updated to include all valid flags (I hope) and now specifies the type of the field. Any field marked as Activation Condition will also accept simple boolean fields.
   - There are bound to be some edge cases I've not thought about so regard this as a work in progress. The flag condition evaluation is backwards compatible with the existing true/false/0/1 behaviour.
   - Known issues: when rolling a saving throw the workflow, item and source actor are not available, so condition evaluation is limited to fields that exist on the actor doing the saving throw.

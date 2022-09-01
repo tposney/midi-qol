@@ -8,6 +8,7 @@ import { concentrationCheckItemDisplayName, itemJSONData, midiFlagTypes, overTim
 
 import { OnUseMacros } from "./apps/Item.js";
 import { actorAbilityRollPatching, Options } from "./patching.js";
+import { ModifierFlags } from "typescript";
 
 export function getDamageType(flavorString): string | undefined {
   const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
@@ -367,7 +368,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
     if (totalDamage > 0 && workflow && !isHealing && !noDamageReactions && !noProvokeReaction && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
       // TODO check that the targetToken is actually taking damage
       // Consider checking the save multiplier for the item as a first step
-      let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid, sourceAmmoUuid: workflow.ammo?.uuid } });
+      let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflow, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid, sourceAmmoUuid: workflow.ammo?.uuid } });
     }
     const uncannyDodge = getProperty(targetActor, "flags.midi-qol.uncanny-dodge") && workflow.item?.hasAttack;
     if (game.system.id === "sw5e" && targetActor?.type === "starship") {
@@ -835,7 +836,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
 export function requestPCActiveDefence(player, actor, advantage, saveItemName, rollDC, formula, requestId) {
   const useUuid = true; // for  LMRTFY
   const actorId = useUuid ? actor.uuid : actor.id;
-  if (!player.isGM) {
+  if (!player.isGM && false) {
     // TODO - reinstated the LMRTFY patch so that the event is properly passed to the roll
     advantage = 2;
   } else {
@@ -973,7 +974,7 @@ export async function processOverTime(wrapped, data, options, user) {
 
 export async function doOverTimeEffect(actor, effect, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined }) {
   const endTurn = !startTurn;
-  if (effect.disabled) return;
+  if (effect.disabled || effect.isSuppressed) return;
   const auraFlags = effect.flags?.ActiveAuras ?? {};
   if (auraFlags.isAura && auraFlags.ignoreSelf) return;
   const rollData = actor.getRollData();
@@ -1156,11 +1157,12 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true,
 
 
       try {
+
         const options = {
           showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid],
           workflowOptions: { lateTargeting: "none", autoRollDamage: "onHit", autoFastDamage: true }
         };
-        await completeItemRoll(ownedItem, options); // worried about multiple effects in flight so do one at a time
+        await completeItemUse(ownedItem, {}, options); // worried about multiple effects in flight so do one at a time
       } finally {
       }
     }
@@ -1216,7 +1218,13 @@ export async function _processOverTime(combat, data, options, user) {
   }
 }
 
-export async function completeItemRoll(item, options: any = { checkGMstatus: false }) {
+export async function completeItemRoll(item, options: any) {
+  //@ts-ignore .version
+  if (isNewerVersion(game.version, "10.278)"))
+    console.warn("midi-qol | completeItemRoll(item, options) is deprecated please use completeItemUse(item, config, options)")
+  return completeItemUse(item, {}, options);
+}
+export async function completeItemUse(item, config: any = {}, options: any = { checkGMstatus: false },) {
   let theItem = item;
   if (!(item instanceof CONFIG.Item.documentClass)) {
     // TODO magic items fetch the item call - see when v10 supported
@@ -1256,7 +1264,7 @@ export async function completeItemRoll(item, options: any = { checkGMstatus: fal
         // TODO check this v10
         globalThis.BetterRolls.rollItem(theItem, { itemData: item.toObject(), vanilla: false, adv: 0, disadv: 0, midiSaveDC: options.saveDC }).toMessage()
       } else {
-        const result = item.roll(options).then(result => { if (!result) resolve(result) });
+        const result = item.use(config, options).then(result => { if (!result) resolve(result) });
       }
     })
   } else {
@@ -1265,9 +1273,10 @@ export async function completeItemRoll(item, options: any = { checkGMstatus: fal
       itemData: theItem.toObject(),
       actorUuid: theItem.parent.uuid,
       targetUuids,
+      config,
       options
     }
-    return await timedAwaitExecuteAsGM("completeItemRoll", data)
+    return await timedAwaitExecuteAsGM("completeItemUse", data)
   }
 }
 
@@ -1719,7 +1728,7 @@ export async function addConcentration(options: { workflow: Workflow }) {
   } else {
     let actor = options.workflow.actor;
     let concentrationName = i18n("midi-qol.Concentrating");
-    const existing = selfTarget.actor?.effects.find(e => e.data.label === concentrationName);
+    const existing = selfTarget.actor?.effects.find(e => e.label === concentrationName);
     if (existing) return undefined; // make sure that we don't double apply concentration
 
     const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
@@ -1809,51 +1818,38 @@ export function hasCondition(token, condition: string) {
   return false;
 }
 
-export async function removeHiddenInvis() {
+export async function removeInvisible() {
   if (!canvas || !canvas.scene) return;
   const token: Token | undefined = canvas.tokens?.get(this.tokenId);
-  await removeTokenCondition(token, "hidden");
-  await removeTokenCondition(token, "invisible");
+  if (!token) return;
+  // 
+  await removeTokenCondition(token, i18n(`midi-qol.${"invisible"}`));
+  await removeTokenCondition(token, i18n(`conditional-visibility.${"invisible"}`));
+  //@ts-ignore
+  await (token.document ?? token).toggleActiveEffect({ id: CONFIG.specialStatusEffects.INVISIBLE }, { active: false });
   log(`Hidden/Invisibility removed for ${this.actor.name} due to attack`)
 }
 
-export async function removeCondition(condition: string) {
+export async function removeHidden() {
   if (!canvas || !canvas.scene) return;
   const token: Token | undefined = canvas.tokens?.get(this.tokenId);
-  removeTokenCondition(token, condition);
+  if (!token) return;
+  // 
+  await removeTokenCondition(token, i18n(`midi-qol.${"hidden"}`));
+  await removeTokenCondition(token, "Stealth (CV)");
+  await removeTokenCondition(token, "Stealthed (CV)");
+  await removeTokenCondition(token, i18n(`conditional-visibility.${"hidden"}`));
+  await removeTokenCondition(token, i18n(`conditional-visibility.${"stealthed"}`));
+  await removeTokenCondition(token, i18n(`conditional-visibility.${"stealth"}`));
+  //@ts-ignore
+  log(`Hidden removed for ${this.actor.name} due to attack`)
 }
 
-export async function removeTokenCondition(token, condition: string) {
+export async function removeTokenCondition(token: Token, condition: string) {
   if (!token) return;
-  //@ts-ignore
-  const CV: any = game.modules.get("conditional-visibility");
-  const localCondition = i18n(`midi-qol.${condition}`);
-
-  // if (CV?.active) await CV.api.forceToBeVisible(token);
-  /*
-  if (condition === "hidden") {
-    await CV?.unHide([token]);
-  } else await CV?.setCondition([token], condition, true);
-  */
-
-  //@ts-ignore game.cub
-  const CUB = game.cub;
-  if (installedModules.get("combat-utility-belt") && CUB.hasCondition(localCondition, [token], { warn: false })) {
-    await CUB.removeCondition(localCondition, token, { warn: false });
-  }
-
-  //@ts-ignore specialStatusEffect v10
-  await (token.document ?? token).toggleActiveEffect({ id: CONFIG.specialStatusEffects.INVISIBLE }, { active: false });
-  if (installedModules.get("dfreds-convenient-effects")) {
-    //@ts-ignore
-    const CEInt = game.dfreds?.effectInterface;
-    if (CEInt.hasEffectApplied(localCondition, token.document.uuid ?? token.uuid))
-      await CEInt.removeEffect({ effectName: localCondition, uuid: token.actor.uuid });
-    for (let cvLabel of ["Invisible (CV)", "Stealth (CV)"]) {
-      if (CEInt.hasEffectApplied(cvLabel, token.actor.uuid))
-        await CEInt.removeEffect({ effectName: cvLabel, uuid: token.actor.uuid })
-    }
-  }
+  //@ts-ignore .label v10
+  const hasEffect = token.actor?.effects.find(ef => ef.label === condition);
+  if (hasEffect) await hasEffect.delete();
 }
 
 // this = {actor, item, myExpiredEffects}
@@ -2220,7 +2216,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       this[rollId] = newRoll;
       this[rollTotalId] = newRoll.total;
       this[rollHTMLId] = await midiRenderRoll(newRoll);
-      const macroToCall = getProperty(this.actor, `${button.key}.macroToCall`).trim();
+      const macroToCall = getProperty(this.actor, `${button.key}.macroToCall`)?.trim();
       if (macroToCall) {
         if (this instanceof Workflow) {
           const macroData = this.getMacroData();
@@ -2494,28 +2490,38 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   const maxLevel = maxCastLevel(target.actor);
   enableNotifications(false);
   let reactions;
+  let reactionCount = 0;
+  let reactionItemUuidList;
   try {
     reactions = target.actor.items.filter(item => itemReaction(item, triggerType, maxLevel, usedReaction));
+    reactionItemUuidList = reactions.map(item => item.uuid);
     if (getReactionSetting(player) === "allMI") {
       reactions = reactions.concat(await getMagicItemReactions(target.actor, triggerType));
     }
-    reactions = reactions.length;
+    reactionCount = reactions.length;
   } finally {
     enableNotifications(true);
   }
+
+  // TODO Check this for magic items if that makes it to v10
+  if (!await asyncHooksCall("midi-qol.ReactionFilter", reactions, options )) {
+    console.warn("midi-qol | Reaction processing cancelled by Hook");
+    return { name: "Filter", ac: 0, uuid: undefined };
+  } else reactionItemUuidList = reactions.map(item => item.uuid);
 
   // if (usedReaction) return noResult;
   if (!usedReaction) {
     //@ts-ignore .flags v10
     const midiFlags: any = target.actor.flags["midi-qol"];
-    reactions = reactions + Object.keys(midiFlags?.optional ?? [])
+    reactions = reactionCount + Object.keys(midiFlags?.optional ?? [])
       .filter(flag => {
         if (triggerType !== "reaction" || !midiFlags?.optional[flag].ac) return false;
         if (!midiFlags?.optional[flag].count) return true;
         return getOptionalCountRemainingShortFlag(target.actor, flag) > 0;
       }).length
   }
-  if (reactions <= 0) return noResult;
+
+  if (reactionCount <= 0) return noResult;
   const promptString = triggerType === "reactiondamage" ? "midi-qol.reactionFlavorDamage" : "midi-qol.reactionFlavorAttack";
   let chatMessage;
   const reactionFlavor = game.i18n.format(promptString, { itemName: (options.item?.name ?? "unknown"), actorName: target.name });
@@ -2550,27 +2556,37 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
       content = reactionFlavor;
   }
 
+  
   return await new Promise((resolve) => {
     // set a timeout for taking over the roll
     const timeoutId = setTimeout(() => {
       warn("doReactions | player timeout expired ", player?.name)
       resolve(noResult);
     }, (configSettings.reactionTimeout || 30) * 1000);
+
     // Compiler does not realise player can't be undefined to get here
-    player && requestReactions(target, player, triggerTokenUuid, content, triggerType, resolve, chatMessage, options).then(() => {
+    player && requestReactions(target, player, triggerTokenUuid, content, triggerType, reactionItemUuidList, resolve, chatMessage, options).then(() => {
       clearTimeout(timeoutId);
     })
   })
 }
 
-export async function requestReactions(target: Token, player: User, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, resolve: ({ }) => void, chatPromptMessage: ChatMessage, options: {} = {}) {
+export async function requestReactions(target: Token, player: User, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, reactionItemUuidList: string[], resolve: ({ }) => void, chatPromptMessage: ChatMessage, options: any = {}) {
   const startTime = Date.now();
+  if (options.item && options.item instanceof CONFIG.Item.documentClass) {
+    options.itemUuid = options.item.uuid;
+    delete options.item;
+  };
+  if (options.workflow && options.workflow instanceof Workflow) 
+    options.workflow = options.workflow.getMacroData();
+
   const result = (await socketlibSocket.executeAsUser("chooseReactions", player.id, {
     tokenUuid: target.document?.uuid ?? target.uuid,
     reactionFlavor,
     triggerTokenUuid,
     triggerType,
-    options
+    options,
+    reactionItemUuidList
   }));
   const endTime = Date.now();
   warn("request reactions returned after ", endTime - startTime, result);
@@ -2578,7 +2594,7 @@ export async function requestReactions(target: Token, player: User, triggerToken
   if (chatPromptMessage) chatPromptMessage.delete();
 }
 
-export async function promptReactions(tokenUuid: string, triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, options: any = {}) {
+export async function promptReactions(tokenUuid: string, reactionItemList: string[], triggerTokenUuid: string | undefined, reactionFlavor: string, triggerType: string, options: any = {}) {
   const startTime = Date.now();
   const target: Token = MQfromUuid(tokenUuid);
   const actor: Actor | null = target.actor;
@@ -2591,17 +2607,21 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
   const maxLevel = maxCastLevel(target.actor);
   enableNotifications(false);
   try {
-    reactionItems = actor.items.filter(item => itemReaction(item, triggerType, maxLevel, usedReaction));
+    reactionItems = reactionItemList.map(uuid => MQfromUuid(uuid));
+    // reactionItems = actor.items.filter(item => itemReaction(item, triggerType, maxLevel, usedReaction));
     if (getReactionSetting(game?.user) === "allMI")
       reactionItems = reactionItems.concat(await getMagicItemReactions(actor, triggerType));
   } finally {
     enableNotifications(true);
   }
+  
   if (reactionItems.length > 0) {
-    if (!await asyncHooksCall("midi-qol.ReactionFilter", reactionItems)) {
+    /*
+    if (!await asyncHooksCall("midi-qol.ReactionFilter", reactionItems, options )) {
       console.warn("midi-qol | Reaction processing cancelled by Hook");
       return { name: "Filter" };
     }
+    */
     result = await reactionDialog(actor, triggerTokenUuid, reactionItems, reactionFlavor, triggerType, options);
     const endTime = Date.now();
     warn("prompt reactions reaction processing returned after ", endTime - startTime, result)
@@ -2617,7 +2637,7 @@ export async function promptReactions(tokenUuid: string, triggerTokenUuid: strin
     }).map(flag => `flags.midi-qol.optional.${flag}`);
   if (bonusFlags.length > 0 && triggerType === "reaction") {
     //@ts-ignore attributes
-    let acRoll = await new Roll(`${actor.system.attributes.ac.value}`).roll();
+    let acRoll = await new Roll(`${actor.system.attributes.ac.value}`).roll({async: true});
     const data = {
       actor,
       roll: acRoll,
@@ -2686,7 +2706,7 @@ export async function reactionDialog(actor: globalThis.dnd5e.documents.Actor5e, 
         checkGMStatus: false,
         targetUuids: [triggerTokenUuid]
       });
-      await completeItemRoll(item, itemRollOptions);
+      await completeItemUse(item, {}, itemRollOptions);
       // actor.prepareData();
       resolve({ name: item.name, uuid: item.uuid })
     };
@@ -3379,35 +3399,57 @@ export function getChanges(actorOrItem, key: string) {
  * @returns {boolean}
  */
 
-export function canSee(tokenEntity: Token | TokenDocument, targetEntity: Token | TokenDocument): boolean {
-  //TODO - requires rewrite for v10
+export function canSense(tokenEntity: Token | TokenDocument, targetEntity: Token | TokenDocument): boolean {
   //@ts-ignore
   let target: Token = targetEntity instanceof TokenDocument ? targetEntity.object : targetEntity;
   //@ts-ignore
   let token: Token = tokenEntity instanceof TokenDocument ? tokenEntity.object : tokenEntity;
   if (!token || !target) return true;
-  const targetPoint = target.center;
-  const visionSource = token.vision;
+
   if (!token.vision.active) return true; //TODO work out what to do with tokens with no vision
-  //@ts-ignore lightSources
-  const lightSources = canvas?.effects?.lightSources;
+
+  //@ts-ignore specialStatusEffects
+  const specialStatuses = CONFIG.specialStatusEffects;
+
 
   // Determine the array of offset points to test
   const t = Math.min(target.w, target.h) / 4;
-
+  const targetPoint = target.center;
   const offsets = t > 0 ? [[0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t]] : [[0, 0]];
-  const tests = offsets.map(o => {
-    return { point: new PIXI.Point(targetPoint.x + o[0], targetPoint.y + o[1]), hasLOS: false, hasFOV: false }
-  });
+  const tests = offsets.map(o => ({
+      point: new PIXI.Point(targetPoint.x + o[0], targetPoint.y + o[1]), 
+      los: new Map() }));
   const config = { tests, object: targetEntity };
+
+  // First test basic detection for light sources which specifically provide vision
   //@ts-ignore
-  if (visionSource.visionMode.testVisibility.call(visionSource, config)) return true;
-  // Test light sources
+  for ( const lightSource of canvas?.effects?.lightSources.values() ?? []) {
+    if ( !lightSource.data.vision || !lightSource.active || lightSource.disabled ) continue;
+    const result = lightSource.testVisibility(config);
+    if ( result === true ) return true;
+  }
+
   //@ts-ignore
-  for (const lightSource of canvas.effects.lightSources.values()) {
-    if (!lightSource.active || lightSource.disabled) continue;
-    const lsResult = lightSource.testVisibility(config);
-    if (lsResult === true) return true;
+  const tokenDetectionModes = token.detectionModes;
+  //@ts-ignore
+  const modes = CONFIG.Canvas.detectionModes;
+  //@ts-ignore v10
+  const DetectionModeCONST = DetectionMode;
+  const basic = tokenDetectionModes.find(m => m.id === DetectionModeCONST.BASIC_MODE_ID);
+  if (basic && token.vision.active) {
+    const result = modes.basicSight.testVisibility(token.vision, basic, config);
+    if (result === true) return true;
+  }
+
+  for (const detectionMode of tokenDetectionModes) {
+    if (detectionMode.id === DetectionModeCONST.BASIC_MODE_ID) continue;
+    if (!detectionMode.enabled) continue;
+    const dm = modes[detectionMode.id];
+    const result = dm?.testVisibility(token.vision, detectionMode, config)
+    if (result === true) {
+      //  TODO see if this is needed token.detectionFilter = dm.constructor.getDetectionFilter();
+      return true;
+    }
   }
   return false;
 }
@@ -3457,7 +3499,7 @@ export async function doConcentrationCheck(actor, saveDC) {
       await globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.toObject(), vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC, workflowOptions: { lateTargeting: "none" } }).toMessage();
     } else {
       //@ts-ignore
-      result = await completeItemRoll(ownedItem, { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: "none" } })
+      result = await completeItemUse(ownedItem, {}, { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: "none" } })
       // await ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: "none" } })
     }
   } finally {

@@ -429,7 +429,7 @@
   },
   "midi-qol.NearbyAllyRanged.Hint": "Ranged Attacks with allies nearby (5 feet) to the target have disadvantage for targets smaller than this (w*h). 0 disables",
   "midi-qol.Incapacitated.Name": "Incapacitated actors can't take actions or reactions",
-  "midi-qol.RemoveHiddenInvis.Name": "Attacking removes hidden/invisible (use CE/CV/CUB/core foundry specialStatus )",
+  "midi-qol.RemoveHiddenInvis.Name": "Attacking removes hidden (use CE/CV/CUB/core foundry specialStatus )",
   "midi-qol.CriticalSaves.Name": "(House Rule) Critical/Fumble always succeed/fail for saving throws",
   "midi-qol.MaxDRValue.Name": "(House rule) Enabling this means that only the most effective Damage Reduction will apply. Off means DR accumulates",
   "midi-qol.invisible": "Invisible",
@@ -660,5 +660,7 @@
   "midi-qol.DamageResistanceMultiplier.Name": "Resistance reduces damage to ",
   "midi-qol.ShowFastForward.Name": "Show Fast Forward",
   "midi-qol.ShowFastForward.Hint": "Show Fast Forward indicator on attack and damage buttons",
-  "midi-qol.MeasuredTemplate": "Template"
+  "midi-qol.MeasuredTemplate": "Template",
+  "midi-qol.AutoRemoveTemplate.Name": "Auto remove placed template on spell expiry",
+  "midi-qol.AttackPerTarget.Name": "Roll a separate attck per target"
 }

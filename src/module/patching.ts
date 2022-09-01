@@ -1,5 +1,5 @@
 import { log, warn, debug, i18n, error, getCanvas, i18nFormat } from "../midi-qol.js";
-import { doItemRoll, doAttackRoll, doDamageRoll, templateTokens } from "./itemhandling.js";
+import { doAttackRoll, doDamageRoll, templateTokens, doItemUse } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
 import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, evalCondition, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, hasUsedBonusAction, hasUsedReaction, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, notificationNotify, processOverTime, removeBonusActionUsed, removeReactionUsed } from "./utils.js";
 import { installedModules } from "./setupModules.js";
@@ -207,11 +207,11 @@ function rollDeathSave(wrapped, ...args) {
 
 function configureDamage(wrapped) {
   if (!this.isCritical || criticalDamage === "default") {
-    if (this.terms[this.terms.length - 1] instanceof OperatorTerm)
+    while (this.terms.length > 0 && this.terms[this.terms.length - 1] instanceof OperatorTerm)
       this.terms.pop();
     return wrapped();
   }
-  if (this.options.configured) return;
+  // if (this.options.configured) return; seems this is not required.
   let bonusTerms: RollTerm[] = [];
   /* criticalDamage is one of 
     "default": "DND5e Settings Only",
@@ -291,7 +291,8 @@ function configureDamage(wrapped) {
     if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
     this.terms.push(...extra.terms);
   }
-  if (this.terms[this.terms.length - 1] instanceof OperatorTerm) this.terms.pop();
+  while (this.terms.length > 0 && this.terms[this.terms.length - 1] instanceof OperatorTerm)
+    this.terms.pop();
   this._formula = this.constructor.getFormula(this.terms);
   this.options.configured = true;
 }
@@ -826,8 +827,9 @@ export function configureDamageRollDialog() {
 }
 
 export let itemPatching = () => {
-  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.roll", doItemRoll, "MIXED");
-  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
+  //@ts-ignore .version
+  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.use", doItemUse, "MIXED");
+   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
   if (game.system.id === "dnd5e" || game.system.id === "n5e")
     libWrapper.register("midi-qol", "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
@@ -884,7 +886,7 @@ export async function _makeRoll(event, rollMethod, ...args) {
       options = { advantage: true, fastForward: true };
       break;
     case 2:
-      options = { event: event }
+      options = { event }
       break;
   }
   const rollMode = game.settings.get("core", "rollMode");
@@ -895,8 +897,7 @@ export async function _makeRoll(event, rollMethod, ...args) {
   }
   game.settings.set("core", "rollMode", rollMode);
   event.currentTarget.disabled = true;
-  if (this.element.find("button").filter((i, e) => !e.disabled).length === 0)
-    this.close();
+  this._checkClose();
 }
 
 

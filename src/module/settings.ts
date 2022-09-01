@@ -37,6 +37,7 @@ class ConfigSettings {
   addWounded: number = 0;
   allowUseMacro: boolean = false;
   allowActorUseMacro: boolean = false;
+  attackPerTarget: boolean = false;
   autoApplyDamage: string = "none";
   playerDamageCard: string = "none";
   playerCardDamageDifferent: boolean = false;
@@ -46,6 +47,7 @@ class ConfigSettings {
   autoCheckSaves: string = "none";
   autoFastForward: string = "off";
   autoItemEffects: string;
+  autoRemoveTemplate: boolean;
   autoRollAttack: boolean = false;
   autoRollDamage: string = "none";
   autoTarget: string = "none";
@@ -369,6 +371,8 @@ export let fetchParams = () => {
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
   if (configSettings.damageVulnerabilityMultiplier === undefined) configSettings.damageVulnerabilityMultiplier = 2;
   if (configSettings.hidePlayerDamageCard === undefined) configSettings.hidePlayerDamageCard = true;
+  if (configSettings.attackPerTarget === undefined) configSettings.attackPerTarget = false;
+  if (configSettings.autoRemoveTemplate === undefined) configSettings.autoRemoveTemplate = true;
   configSettings.hidePlayerDamageCard = true;
   configSettings.quickSettings = true;
   enableWorkflow = Boolean(game.settings.get("midi-qol", "EnableWorkflow"));

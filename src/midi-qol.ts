@@ -6,7 +6,7 @@ import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Ho
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow } from './module/workflow.js';
-import { applyTokenDamage, canSee, checkNearby, checkRange, completeItemRoll, distancePointToken, doConcentrationCheck, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getSystemCONFIG, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags, tokenForActor } from './module/utils.js';
+import { applyTokenDamage, canSense, checkNearby, checkRange, completeItemRoll, completeItemUse, distancePointToken, doConcentrationCheck, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getSystemCONFIG, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags, tokenForActor } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
@@ -279,7 +279,7 @@ Hooks.once('ready', function () {
 
 
 
-import { busyWait, setupMidiTests } from './module/tests/setupTest.js';
+import { setupMidiTests } from './module/tests/setupTest.js';
 Hooks.once("midi-qol.midiReady", () => {
   setupMidiTests();
 });
@@ -291,18 +291,19 @@ function setupMidiQOLApi() {
 
   //@ts-ignore
   window.MinorQOL = {
-    doRoll: doRoll,
-    applyTokenDamage: applyTokenDamage
+    doRoll: () => {console.error("MinorQOL is no longer supported please use MidiQOL.doRoll")},
+    applyTokenDamage: () => {console.error("MinorQOL is no longer supported please use MidiQOL.applyTokenDamage")},
   }
   //@ts-ignore
   globalThis.MidiQOL = {
     applyTokenDamage,
-    canSee, 
+    canSense, 
     checkNearby,
     checkRange,
     checkRule: checkRule,
-    completeItemRoll: completeItemRoll,
-    ConfigPanel: ConfigPanel,
+    completeItemRoll,
+    completeItemUse,
+    ConfigPanel,
     configSettings: () => { return configSettings },
     DamageOnlyWorkflow,
     debug,
@@ -313,7 +314,7 @@ function setupMidiQOLApi() {
     findNearby,
     gameStats,
     getChanges,
-    getConcentrationEffect: getConcentrationEffect,
+    getConcentrationEffect,
     getDistance: getDistanceSimple,
     getTraitMult: getTraitMult,
     log,
@@ -404,6 +405,7 @@ function doRoll(event = { shiftKey: false, ctrlKey: false, altKey: false, metaKe
 
 function setupMidiFlags() {
   let config = getSystemCONFIG();
+  midiFlags.push("system.test.this")
   midiFlags.push("flags.midi-qol.advantage.all")
   midiFlags.push("flags.midi-qol.disadvantage.all")
   midiFlags.push("flags.midi-qol.advantage.attack.all")

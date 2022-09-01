@@ -1,6 +1,6 @@
 import { configSettings } from "./settings.js";
-import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming } from "../midi-qol.js";
-import { completeItemRoll, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
+import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming, geti18nOptions } from "../midi-qol.js";
+import { completeItemUse, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMesssageHandling.js";
 import { Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { bonusCheck } from "./patching.js";
@@ -69,7 +69,7 @@ export let setupSocket = () => {
   socketlibSocket.register("createActor", createActor);
   socketlibSocket.register("deleteToken", deleteToken);
   socketlibSocket.register("ddbglPendingFired", ddbglPendingFired);
-  socketlibSocket.register("completeItemRoll", _completeItemRoll);
+  socketlibSocket.register("completeItemUse", _completeItemUse);
   socketlibSocket.register("applyEffects", _applyEffects);
   socketlibSocket.register("bonusCheck", _bonusCheck)
 };
@@ -100,13 +100,13 @@ export async function _applyEffects(data: { workflowId: string, targets: string[
   return result;
 }
 
-async function _completeItemRoll(data: {itemData: any, actorUuid: string, options: any, targetUuids: string[]}) {
+async function _completeItemUse(data: {itemData: any, actorUuid: string, config: any, options: any, targetUuids: string[]}) {
   if (!game.user) return null;
-  let {itemData, actorUuid, options} = data;
+  let {itemData, actorUuid, config, options} = data;
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
-  const result =  await completeItemRoll(ownedItem, options);
+  const result =  await completeItemUse(ownedItem, config, options);
   return true; // can't return the workflow
 }
 async function createActor(data) {
@@ -151,8 +151,11 @@ async function addConvenientEffect(options) {
   await game.dfreds.effectInterface?.addEffect({ effectName, uuid: actorUuid, origin });
 }
 
-async function localDoReactions(data: { tokenUuid: string; triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any}) {
-  const result = await promptReactions(data.tokenUuid, data.triggerTokenUuid, data.reactionFlavor, data.triggerType, data.options)
+async function localDoReactions(data: { tokenUuid: string; reactionItemUuidList: string[], triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any}) {
+  if (data.options.itemUuid) {
+    data.options.item = MQfromUuid(data.options.itemUuid);
+  }
+  const result = await promptReactions(data.tokenUuid, data.reactionItemUuidList, data.triggerTokenUuid, data.reactionFlavor, data.triggerType, data.options)
   return result;
 }
 
