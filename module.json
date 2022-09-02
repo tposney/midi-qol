@@ -17,16 +17,6 @@
         "id": "dnd5e",
         "type": "system",
         "compatibility": {}
-      },
-      {
-        "id": "sw5e",
-        "type": "system",
-        "compatibility": {}
-      },
-      {
-        "id": "n5e",
-        "type": "system",
-        "compatibility": {}
       }
     ],
     "requires": [
