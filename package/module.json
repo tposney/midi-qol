@@ -9,28 +9,24 @@
   "scripts": [],
   "esmodules": ["src/midi-qol.js"],
   "styles": ["css/styles.css"],
-  "relationships": {
 
+
+  "relationships": {
     "systems": [
       {
         "id": "dnd5e",
         "type": "system",
-        "compatibility": {
-          "minimum": "2.0.1",
-          "verified": "2.0.1"
-        }
+        "compatibility": {}
       },
       {
         "id": "sw5e",
         "type": "system",
-        "compatibility": {
-          "minimum": "1.5.0",
-          "verified": "1.5.0-"
-        }
+        "compatibility": {}
       },
       {
         "id": "n5e",
-        "type": "system"
+        "type": "system",
+        "compatibility": {}
       }
     ],
     "requires": [
