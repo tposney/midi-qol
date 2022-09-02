@@ -10,16 +10,7 @@
   "esmodules": ["src/midi-qol.js"],
   "styles": ["css/styles.css"],
   "relationships": {
-    "requires": [
-      {
-        "id": "socketlib",
-        "type": "module"
-      },
-      {
-        "id": "lib-wrapper",
-        "type": "module"
-      }
-    ],
+
     "systems": [
       {
         "id": "dnd5e",
@@ -40,6 +31,16 @@
       {
         "id": "n5e",
         "type": "system"
+      }
+    ],
+    "requires": [
+      {
+        "id": "socketlib",
+        "type": "module"
+      },
+      {
+        "id": "lib-wrapper",
+        "type": "module"
       }
     ]
   },
