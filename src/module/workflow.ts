@@ -7,6 +7,7 @@ import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultipl
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
+import { SystemData } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/packages.mjs";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -611,7 +612,7 @@ export class Workflow {
             //@ts-ignore .content v10
             let content = chatMessage && duplicate(chatMessage.content)
             let searchRe = /<button data-action="damage">[^<]+<\/button>/;
-            const damageTypeString = (this.item?.actionType === "heal") ? i18n(`${this.systemString}.Healing`) : i18n(`${this.systemString}.Damage`);
+            const damageTypeString = (this.item?.system.actionType === "heal") ? i18n(`${this.systemString}.Healing`) : i18n(`${this.systemString}.Damage`);
             let damageString = (this.rollOptions.critical || this.isCritical) ? i18n(`${this.systemString}.Critical`) : damageTypeString;
             if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) damageString += ` ${i18n("midi-qol.fastForward")}`;
             let replaceString = `<button data-action="damage">${damageString}</button>`
@@ -1573,7 +1574,7 @@ export class Workflow {
         macroData.speaker = this.speaker;
         macroData.actor = this.actor;
         //@ts-ignore .command v10
-        macroCommand = macro?.data.command ?? `console.warn("midi-qol | no macro ${name.replaceAll('"', '')} found")`;
+        macroCommand = macro?.command ?? `console.warn("midi-qol | no macro ${name.replaceAll('"', '')} found")`;
       }
 
       const speaker = this.speaker;

@@ -1,3 +1,9 @@
+### 10.0.6
+**Important** When submitting a bug report ALWAYS include your exported (from the misc tab) midi-qol settings. I really can't work out what is going on without them.
+* Fix for not including mod in skill.ability check/ability save rolls.
+* Fix for Healing button showing as damage.
+* Fix for export settings which broke.
+
 ### 10.0.5
 * Foundry 10.279/10.280 broke most of midi's roll handling and targeting. This release adjusts to the changes (I hope), but has required a rewwite of the basic item handling code, so there could be bugs.
 * Midi now **REQUIRES** foudnry 10.279+ and dnd 2.0.1 or later.

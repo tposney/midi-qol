@@ -213,17 +213,16 @@ export function collectSettingData() {
   };
   data.flags["all-modules"] = 
   //@ts-ignore
-    (new Collection(game.modules).filter(m=>m.active)).map(m => {
-      //@ts-ignore
-      const mdata: any = m;
+    game.modules.filter(m=>m.active).map(m => {
+      const mdata = m.toObject();
       return {
         name: mdata.name,
         title: mdata.title,
         description: mdata.description,
         url: mdata.url,
         version: mdata.version,
-        minimumCoreVersion: mdata.minimumCoreVersion,
-        compatibleCoreVersion: mdata.compatibleCoreVersion,
+        compatibility: mdata.compatibility,
+        relationships: mdata.relationships,
         scripts: mdata.scripts,
         esmodules: mdata.esmodules,
         socket: mdata.socket

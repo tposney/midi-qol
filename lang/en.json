@@ -211,7 +211,7 @@
     "wallsBlock": "Walls Block",
     "wallsBlockIgnoreDefeated": "Walls Block - Ignore Defeated",
     "dftemplates": "Use DF Template Enhancements",
-    "dfwalledTemplates": "Use DF Walled Templates"
+    "dfwalledTemplates": "Use Walled Templates"
   },
   "midi-qol.autoCheckSavesOptions": {
     "none": "Off",

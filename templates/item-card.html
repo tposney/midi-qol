@@ -13,8 +13,8 @@
 
   <div class="card-content">
     {{#unless hideItemDetails}}
-    {{{system.description.value}}}
-    {{#if system.materials.value}}
+    {{{data.description.value}}}
+    {{#if data.materials.value}}
     <p><strong>{{ RequiredMaterials }}</strong> {{system.materials.value}}</p>
     {{/if}}
     {{/unless}}

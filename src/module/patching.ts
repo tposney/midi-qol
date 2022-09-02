@@ -139,6 +139,7 @@ async function doRollSkill(wrapped, ...args) {
     result = await result;
   } else {
     procOptions.chatMessage = false;
+    if (!options.parts) delete options.parts;
     // result = await wrapped.call(this, skillId, procOptions);
     result = await wrapped(skillId, procOptions);
   }
@@ -341,6 +342,7 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     if (options.chatMessage !== false && !options.vanilla) return result;
     result = await result;
   } else {
+    if (!options.parts) delete options.parts;
     procOptions.chatMessage = false;
     result = await wrapped(abilityId, procOptions);
   }
@@ -526,7 +528,6 @@ function _midiATIRefresh(template) {
 }
 
 function midiATRefresh(wrapped) {
-  console.log("midi ati refresh called ", this)
   debouncedATRefresh(this);
   return wrapped();
 }

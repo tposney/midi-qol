@@ -789,7 +789,7 @@ export async function showItemInfo() {
     tokenUuid: token?.document?.uuid ?? token?.uuid,
     item: this,
     itemUuid: this.uuid,
-    data: this.getChatData(),
+    data: await this.getChatData(),
     labels: this.labels,
     condensed: false,
     hasAttack: false,
@@ -815,6 +815,7 @@ export async function showItemInfo() {
     user: game.user?.id,
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     content: html,
+    flavor: this.system.chatFlavor || this.name,
     speaker: getSpeaker(this.actor),
     flags: {
       "core": { "canPopout": true }
@@ -882,11 +883,11 @@ export async function showItemCard(showFullCard: boolean, workflow: Workflow, mi
     tokenUuid: token?.document?.uuid ?? token?.uuid,
     item: this, // TODO check this v10
     itemUuid: this.uuid,
-    data: this.getChatData(),
+    data: await this.getChatData(),
     labels: this.labels,
     condensed: this.hasAttack && configSettings.mergeCardCondensed,
     hasAttack: !minimalCard && this.hasAttack && (showFullCard || needAttackButton),
-    isHealing: !minimalCard && this.isHealing && (showFullCard || configSettings.autoRollDamage === "none"),
+    isHealing: !minimalCard && this.isHealing && (showFullCard || configSettings.autoRollDamage !== "always"),
     hasDamage: needDamagebutton,
     isVersatile: needVersatileButton,
     isSpell: this.type === "spell",

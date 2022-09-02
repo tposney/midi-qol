@@ -10,7 +10,7 @@ Midi-qol is a module designed to help automate various parts of your game, speci
 It has LOTS of configuration options which can be daunting.
 
 # Bug reports
-**As of version 0.8.19** you can export your midi-qol settings to a json file. When posting a midi-qol bug report export your settings and add the json file to the issue. I won't look at issues without this information.
+**Important** When submitting a bug report ALWAYS include your exported (from the misc tab) midi-qol settings. I really can't work out what is going on without them.
 
 The export settings exports all of your midi-qol settings, plus a list of the active modules you have installed. No world information is exported. The list of active modules can be very useful to me in debugging.
 
