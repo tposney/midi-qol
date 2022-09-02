@@ -9,14 +9,15 @@
   "scripts": [],
   "esmodules": ["src/midi-qol.js"],
   "styles": ["css/styles.css"],
-
-
   "relationships": {
     "systems": [
       {
         "id": "dnd5e",
         "type": "system",
-        "compatibility": {}
+        "compatibility": {
+          "minimum": "2.0.1",
+          "compatible": "2.0.1"
+        }
       }
     ],
     "requires": [

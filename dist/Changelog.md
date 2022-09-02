@@ -1,3 +1,6 @@
+### 10.0.7
+* Fix for broken module.json wanting to install other systems.
+
 ### 10.0.6
 **Important** When submitting a bug report ALWAYS include your exported (from the misc tab) midi-qol settings. I really can't work out what is going on without them.
 * Fix for not including mod in skill.ability check/ability save rolls.
