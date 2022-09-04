@@ -190,11 +190,11 @@ function rollDeathSave(wrapped, ...args) {
 }
 function configureDamage(wrapped) {
   if (!this.isCritical || criticalDamage === "default") {
-    if (this.terms[this.terms.length - 1] instanceof OperatorTerm)
+    while (this.terms.length > 0 && this.terms[this.terms.length - 1] instanceof OperatorTerm)
       this.terms.pop();
     return wrapped();
   }
-  if (this.options.configured) return;
+  // if (this.options.configured) return; seems this is not needed
   let bonusTerms: RollTerm[] = [];
   /* criticalDamage is one of 
     "default": "DND5e Settings Only",
@@ -274,7 +274,7 @@ function configureDamage(wrapped) {
     if (!(extra.terms[0] instanceof OperatorTerm)) this.terms.push(new OperatorTerm({ operator: "+" }));
     this.terms.push(...extra.terms);
   }
-  if (this.terms[this.terms.length - 1] instanceof OperatorTerm) this.terms.pop();
+  while (this.terms.length > 0 && this.terms[this.terms.length - 1] instanceof OperatorTerm) this.terms.pop();
   this._formula = this.constructor.getFormula(this.terms);
   this.options.configured = true;
 }

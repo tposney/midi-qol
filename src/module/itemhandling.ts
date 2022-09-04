@@ -282,7 +282,7 @@ export async function doDamageRoll(wrapped, { event = {}, spellLevel = null, pow
       options: damageRollOptions
     };
     // There was an interaction with condtional visibility (I think doing an actor update which means sometimes the prepareData did not complete)
-    if (installedModules.get("conditional-visibility")) this.actor.prepareDerivedData();
+    // if (installedModules.get("conditional-visibility")) this.actor.prepareData();
     result = await wrapped(damageRollData);
 
     if (debugCallTiming) log(`wrapped item.rollDamage():  elapsed ${Date.now() - wrappedRollStart}ms`);

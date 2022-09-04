@@ -1,3 +1,9 @@
+### 0.9.77
+* Fix for not auto rolling damage ignoring critical damage settings.
+* Fix for not removing CV stealthed condition.
+* Fix for active defence saving throws not correctly setting advantage/disadvantage
+* Fix for optional bonus rolls that should be rolled by the GM being prompted on player clients
+
 ### 0.9.76
 * If you have an effect "<Item Name> Template" on the item midi will use that as a base to create the remove template effect, so you can put special durations etc in the effect.
 * Added flags.midi-qol.grants.advantage.all and flags.midi-qol.grants.disadvantage.all to the auto compete list.

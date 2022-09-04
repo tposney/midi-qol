@@ -736,7 +736,6 @@ export class Workflow {
                 if (!evalActivationCondition(this, activationCondition, token)) {
                   //@ts-ignore
                   this.activationFails.add(token.document.uuid);
-                  // let activationFails.add[token.document.uuid] = evalActivationCondition(this, getProperty(theItem, "data.data.activation.condition") ?? "", token);
                 }
               }
             }
@@ -782,7 +781,7 @@ export class Workflow {
           // no item, not auto effects or not module skip
           let useCE = configSettings.autoCEEffects;
           const midiFlags = theItem.data.flags["midi-qol"];
-          if (!theItem) return this.next(WORKFLOWSTATES.ROLLFINISHED);
+          if (!theItem) continue;
           if (midiFlags?.forceCEOff && ["both", "cepri", "itempri"].includes(useCE)) useCE = "none";
           else if (midiFlags?.forceCEOn && ["none", "itempri"].includes(useCE)) useCE = "cepri";
           const hasCE = installedModules.get("dfreds-convenient-effects")
@@ -808,21 +807,18 @@ export class Workflow {
 
           if (hasItemTargetEffects || ceTargetEffect) {
             for (let token of this.applicationTargets) {
-              let applyCondition = true;
-              if (getProperty(theItem, "data.flags.midi-qol.effectActivation"))
-                applyCondition = evalActivationCondition(this, getProperty(theItem, "data.data.activation.condition") ?? "", token);
+              let applyCondition = evalActivationCondition(this, getProperty(theItem, "data.data.activation.condition"), token);
               anyActivationTrue = anyActivationTrue || applyCondition;
               if (applyCondition || this.forceApplyEffects) {
                 if (hasItemTargetEffects && (!ceTargetEffect || ["none", "both", "itempri"].includes(useCE))) {
                   await globalThis.DAE.doEffects(theItem, true, [token], { toggleEffect: this.item?.data.flags.midiProperties?.toggleEffect, whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions, selfEffects: false })
-                  if (!this.forceApplyEffects && configSettings.autoItemEffects !== "applyLeave") await this.removeEffectsButton();
                 }
                 if (ceTargetEffect && theItem && token.actor) {
                   if (["both", "cepri"].includes(useCE) || (useCE === "itempri" && !hasItemTargetEffects)) {
                     const metadata = this.getMacroData();
                     if (this.item?.data.flags.midiProperties?.toggleEffect) {
                       //@ts-ignore
-                      await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
+                      await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuids: [token.actor.uuid], origin: theItem?.uuid, metadata });
                     } else {
                       // Check stacking status
                       //@ts-ignore
@@ -835,13 +831,14 @@ export class Workflow {
                     }
                   }
                 }
+                if (!this.forceApplyEffects && configSettings.autoItemEffects !== "applyLeave") await this.removeEffectsButton();
               }
             }
-          }
+          } else anyActivationTrue = true; // There were no target effects at all - special case treat this.
           // anyActivaiton is true for no activation condition or true if any of the token conditions matched.
-          anyActivationTrue = !getProperty(theItem, "data.flags.midi-qol.effectActivation")
-            || (getProperty(theItem, "data.data.activation.condition") !== "" ? anyActivationTrue : true);
-          if (this.applicationTargets.size > 0 && anyActivationTrue && (hasItemSelfEffects || ceSelfEffect)) {
+          // anyActivationTrue = anyActivationTrue || !getProperty(theItem, "data.flags.midi-qol.effectActivation");
+            const theToken = getSelfTarget(this.actor);
+            if (this.applicationTargets.size > 0 && anyActivationTrue && (hasItemSelfEffects || ceSelfEffect)) {
 
             if (hasItemSelfEffects && (!ceSelfEffect || ["none", "both", "itempri"].includes(useCE))) {
               await globalThis.DAE.doEffects(theItem, true, [tokenForActor(this.actor)], { toggleEffect: this.item?.data.flags.midiProperties?.toggleEffect, whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions, selfEffects: true })
@@ -851,7 +848,7 @@ export class Workflow {
                 const metadata = this.getMacroData();
                 if (this.item?.data.flags.midiProperties?.toggleEffect) {
                   //@ts-ignore
-                  await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuid: this.actor.uuid, origin: theItem?.uuid, metadata });
+                  await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuids: [this.actor.uuid], origin: theItem?.uuid, metadata });
                 } else {
                   // Check stacking status
                   //@ts-ignore
@@ -1160,15 +1157,15 @@ export class Workflow {
     if (!["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) return;
     const attackAdvantage = grants.advantage?.attack || {};
     let grantsAdvantage;
-    if (grants.advantage?.all && evalActivationCondition(this, grants.advantage.all, this.token)) {
+    if (grants.advantage?.all) {
       grantsAdvantage = true;
       this.attackAdvAttribution[`ADV:grants.all`] = true;;
     }
-    if (attackAdvantage.all && evalActivationCondition(this, attackAdvantage.all, this.token)) {
+    if (attackAdvantage.all) {
       grantsAdvantage = true;
       this.attackAdvAttribution[`ADV:grants.attack.all`] = true;
     }
-    if (attackAdvantage[actionType] && evalActivationCondition(this, attackAdvantage[actionType], this.token)) {
+    if (attackAdvantage[actionType]) {
       grantsAdvantage = true;
       this.attackAdvAttribution[`ADV:grants.attack.${actionType}`] = true;
     }
@@ -2160,7 +2157,7 @@ export class Workflow {
           if (!owner?.active) owner = game.users?.find((u: User) => u.isGM && u.active);
           if (owner) {
             let newRoll;
-            if (owner?.isGM) {
+            if (owner?.isGM && game.user?.isGM) {
               newRoll = await bonusCheck(target.actor, result, rollType, "fail")
             } else {
               newRoll = await socketlibSocket.executeAsUser("bonusCheck", owner?.id, {
@@ -2687,16 +2684,20 @@ export class Workflow {
       let advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.NORMAL;
 
       //@ts-ignore
-      const formula = `1d20 + ${target.actor.data.data.attributes.ac.value - 10}`;
+      let formula = `1d20 + ${target.actor.data.data.attributes.ac.value - 10}`;
       // Advantage/Disadvantage are reversed for active defence rolls.
       const wfadvantage = this.advantage || this.rollOptions.advantage;
       const wfdisadvantage = this.disadvantage || this.rollOptions.disadvantage;
       if (wfadvantage && !wfdisadvantage) {
-        advantage = false;
+        advantage = false; // reverse the sense of advantage/disadvantage for the saving throw
+        //@ts-ignore
+        formula = `2d20kl + ${target.actor.data.data.attributes.ac.value - 10}`;
         advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.DISADVANTAGE;
       } else if (!wfadvantage && wfdisadvantage) {
         advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.ADVANTAGE;
         advantage = true;
+        //@ts-ignore
+        formula = `2d20kh + ${target.actor.data.data.attributes.ac.value - 10}`;
       }
       //@ts-ignore
       var player = playerFor(target instanceof Token ? target : target.object);

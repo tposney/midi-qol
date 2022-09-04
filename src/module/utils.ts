@@ -1089,12 +1089,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
 export function requestPCActiveDefence(player, actor, advantage, saveItemName, rollDC, formula, requestId) {
   const useUuid = true; // for  LMRTFY
   const actorId = useUuid ? actor.uuid : actor.id;
-  if (!player.isGM) {
-    // TODO - reinstated the LMRTFY patch so that the event is properly passed to the roll
-    advantage = 2;
-  } else {
-    advantage = (advantage === true ? 1 : advantage === false ? -1 : 0);
-  }
+  advantage = (advantage === true ? 1 : advantage === false ? -1 : 0);
   //@ts-ignore
   let mode = isNewerVersion(game.version ?? game.data.version, "0.9.236") ? "publicroll" : "roll";
   if (player.isGM && configSettings.autoCheckSaves !== "allShow") {
@@ -1981,46 +1976,23 @@ export function hasCondition(token, condition: string) {
 export async function removeHiddenInvis() {
   if (!canvas || !canvas.scene) return;
   const token: Token | undefined = canvas.tokens?.get(this.tokenId);
-  await removeTokenCondition(token, "hidden");
-  await removeTokenCondition(token, "invisible");
+  if (!token) return;
+  // 
+  await removeTokenCondition(token, i18n(`midi-qol.${"hidden"}`));
+  await removeTokenCondition(token, i18n(`midi-qol.${"invisible"}`));
+  await removeTokenCondition(token, "Stealth (CV)");
+  await removeTokenCondition(token, "Stealthed (CV)");
+  await removeTokenCondition(token, i18n(`conditional-visibility.${"hidden"}`));
+  await removeTokenCondition(token, i18n(`conditional-visibility.${"invisible"}`));
+  await removeTokenCondition(token, i18n(`conditional-visibility.${"stealthed"}`));
+  await removeTokenCondition(token, i18n(`conditional-visibility.${"stealth"}`));
   log(`Hidden/Invisibility removed for ${this.actor.name} due to attack`)
 }
 
-export async function removeCondition(condition: string) {
-  if (!canvas || !canvas.scene) return;
-  const token: Token | undefined = canvas.tokens?.get(this.tokenId);
-  removeTokenCondition(token, condition);
-}
-
-export async function removeTokenCondition(token, condition: string) {
+export async function removeTokenCondition(token: Token, condition: string) {
   if (!token) return;
-  //@ts-ignore
-  const CV: any = game.modules.get("conditional-visibility");
-  const localCondition = i18n(`midi-qol.${condition}`);
-
-  // if (CV?.active) await CV.api.forceToBeVisible(token);
-  /*
-  if (condition === "hidden") {
-    await CV?.unHide([token]);
-  } else await CV?.setCondition([token], condition, true);
-  */
-
-  //@ts-ignore game.cub
-  const CUB = game.cub;
-  if (installedModules.get("combat-utility-belt") && CUB.hasCondition(localCondition, [token], { warn: false })) {
-    await CUB.removeCondition(localCondition, token, { warn: false });
-  }
-
-  if (installedModules.get("dfreds-convenient-effects")) {
-    //@ts-ignore
-    const CEInt = game.dfreds?.effectInterface;
-    if (CEInt.hasEffectApplied(localCondition, token.document.uuid ?? token.uuid))
-      await CEInt.removeEffect({ effectName: localCondition, uuid: token.actor.uuid });
-    for (let cvLabel of ["Invisible (CV)", "Stealth (CV)"]) {
-      if (CEInt.hasEffectApplied(cvLabel, token.actor.uuid))
-        await CEInt.removeEffect({ effectName: cvLabel, uuid: token.actor.uuid })
-    }
-  }
+  const hasEffect = token.actor?.effects.find(ef => ef.data.label === condition);
+  if (hasEffect) await hasEffect.delete();
 }
 
 // this = {actor, item, myExpiredEffects}
