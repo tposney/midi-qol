@@ -1452,12 +1452,12 @@ export class Workflow {
           }
           itemMacro = getProperty(item.data.flags, "itemacro.macro");
           macroData.sourceItemUuid = item.uuid;
-          if (!itemMacro?.data?.command) {
+          if (!(itemMacro?.command ?? itemMacro?.data?.command)) {
             if (debugEnabled > 0) warn(`could not find item macro ${name}`);
             return {};
           }
         }
-        macroCommand = itemMacro?.data.command ?? `console.warn('midi-qol | no item macro found for ${name}')`;
+        macroCommand = itemMacro?.command ?? itemMacro?.data?.command ?? `console.warn('midi-qol | no item macro found for ${name}')`;
       } else { // get a world macro.
         const macro = game.macros?.getName(name.replaceAll('"', ''));
         if (!macro) console.warn("midi-qol could not find macro", name);
