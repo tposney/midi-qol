@@ -1,4 +1,4 @@
-import { registerSettings, fetchParams, configSettings, checkRule, collectSettingData, enableWorkflow, midiSoundSettings, fetchSoundSettings, midiSoundSettingsBackup } from './module/settings.js';
+import { registerSettings, fetchParams, configSettings, checkRule, collectSettingData, enableWorkflow, midiSoundSettings, fetchSoundSettings, midiSoundSettingsBackup, disableWorkflowAutomation } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, installedModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, readyPatching, initPatching } from './module/patching.js';
@@ -6,7 +6,7 @@ import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Ho
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow } from './module/workflow.js';
-import { applyTokenDamage, canSense, checkNearby, checkRange, completeItemRoll, completeItemUse, distancePointToken, doConcentrationCheck, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getSystemCONFIG, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags, tokenForActor } from './module/utils.js';
+import { addConcentration, applyTokenDamage, canSense, checkNearby, checkRange, completeItemRoll, completeItemUse, distancePointToken, doConcentrationCheck, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistance, getDistanceSimple, getSurroundingHexes, getSystemCONFIG, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags, tokenForActor } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemCard, showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
@@ -274,6 +274,16 @@ Hooks.once('ready', function () {
   // This seems to cause problems for localisation for the items compendium (at least for french)
   // Try a delay before doing this - hopefully allowing localisation to complete
   setTimeout(MidiSounds.getWeaponBaseTypes, 5000);
+  if (installedModules.get("betterrolls5e")) {
+    //@ts-ignore console:
+    ui.notifications?.error("midi-qol automation disabled", {permanent: true, console: true})
+    //@ts-ignore console:
+    ui.notifications?.error("Please make sure betterrolls5e is disabled", {permanent: true, console: true})
+    //@ts-ignore console:
+    ui.notifications?.error("Until further notice better rolls is NOT compatible with midi-qol", {permanent: true, console: true})
+    disableWorkflowAutomation();
+    setTimeout(disableWorkflowAutomation, 2000)
+  }
   Hooks.callAll("midi-qol.midiReady");
 });
 
@@ -296,6 +306,7 @@ function setupMidiQOLApi() {
   }
   //@ts-ignore
   globalThis.MidiQOL = {
+    addConcentration,
     applyTokenDamage,
     canSense, 
     checkNearby,
@@ -334,7 +345,7 @@ function setupMidiQOLApi() {
     tokenForActor,
     TrapWorkflow,
     warn,
-    Workflow
+    Workflow,
   };
   globalThis.MidiQOL.actionQueue = new Semaphore();
 }
@@ -591,7 +602,7 @@ const MQMacros = [
     // Macro Auto created by midi-qol
     const theActor = await fromUuid(args[0]);
     if (!theActor || isNaN(args[1])) return;
-    await theActor.update({"data.attributes.hp.value": Number(args[1])}, {onUpdateCalled: true});`
+    await theActor.update({"system.attributes.hp.value": Number(args[1])}, {onUpdateCalled: true});`
   }
 
 ]

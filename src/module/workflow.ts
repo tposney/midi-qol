@@ -3,7 +3,7 @@ import { activationConditionToUse, selectTargets, shouldRollOtherDamage, showIte
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeInvisible, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking, canSense, getSystemCONFIG, tokenForActor, getSelfTarget, createConditionData, evalCondition, removeHidden } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeInvisible, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking, canSense, getSystemCONFIG, tokenForActor, getSelfTarget, createConditionData, evalCondition, removeHidden, ConcentrationData } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -931,23 +931,12 @@ export class Workflow {
           // items that leave a template laying around for an extended period generally should have concentration
           const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
           if (hasConcentration && checkConcentration) {
-            await addConcentration({ workflow: this });
-
-            if (this.actor && this.applicationTargets) {
-              let targets: { tokenUuid: string | undefined, actorUuid: string | undefined }[] = [];
-              const selfTargetUuid = this.actor.uuid;
-              let selfTargeted = false;
-              for (let hit of this.applicationTargets) {
-                const hitUuid = hit.document?.uuid ?? hit.uuid;
-                const actorUuid = hit.actor.uuid;
-                targets.push({ tokenUuid: hitUuid, actorUuid });
-                if (selfTargetUuid === actorUuid) selfTargeted = true;
-              }
-
-              if (!selfTargeted) targets.push({ tokenUuid: this.tokenUuid, actorUuid: this.actor.uuid })
-              let templates = this.templateUuid ? [this.templateUuid] : [];
-              await this.actor.setFlag("midi-qol", "concentration-data", { uuid: this.item.uuid, targets: targets, templates: templates, removeUuids: [] })
-            }
+            const concentrationData: ConcentrationData = {
+              item: this.item,
+              targets: this.applicationTargets,
+              templateUuid: this.templateUuid
+            };
+            await addConcentration(this.actor, concentrationData);
           } else if (installedModules.get("dae") && this.item?.hasAreaTarget && this.templateUuid && this.item?.system.duration?.units && configSettings.autoRemoveTemplate) { // create an effect to delete the template
             const itemDuration = this.item.system.duration;
             let selfTarget = this.item.actor.token ? this.item.actor.token.object : await getSelfTarget(this.item.actor);
@@ -1234,7 +1223,7 @@ export class Workflow {
     const actionType = this.item?.system.actionType;
     const firstTarget = this.targets.values().next().value;
     if (checkRule("nearbyAllyRanged") > 0 && ["rwak", "rsak", "rpak"].includes(actionType)) {
-      if (firstTarget.data.width * firstTarget.data.height < Number(checkRule("nearbyAllyRanged"))) {
+      if ((firstTarget.document ?? firstTarget).width * (firstTarget.document ?? firstTarget).height < Number(checkRule("nearbyAllyRanged"))) {
         //TODO change this to TokenDocument
         const nearbyAlly = checkNearby(-1, firstTarget, 5); // targets near a friend that is not too big
         // TODO include thrown weapons in check
@@ -2285,7 +2274,7 @@ export class Workflow {
           if (!owner?.active) owner = game.users?.find((u: User) => u.isGM && u.active);
           if (owner) {
             let newRoll;
-            if (owner?.isGM) {
+            if (owner?.isGM && game.user?.isGM) {
               newRoll = await bonusCheck(target.actor, result, rollType, "fail")
             } else {
               newRoll = await socketlibSocket.executeAsUser("bonusCheck", owner?.id, {
@@ -2577,8 +2566,7 @@ export class Workflow {
       let targetActor: globalThis.dnd5e.documents.Actor5e = targetToken.actor;
       if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
       let targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10);
-      const hasWJ = installedModules.get("wjmais");
-      const wjVehicle = hasWJ ? getProperty(targetActor, "flags.wjmais.crew.min") != null : false;
+      const wjVehicle = installedModules.get("wjmais") ? getProperty(targetActor, "flags.wjmais.crew.min") != null : false;
       if (targetActor.type === "vehicle" && !wjVehicle) {
         const inMotion = getProperty(targetActor, "flags.midi-qol.inMotion");
         if (inMotion) targetAC = Number.parseInt(targetActor.system.attributes.ac.flat ?? 10);
@@ -2587,7 +2575,7 @@ export class Workflow {
       let hitResultNumeric;
       let targetEC = targetActor.system.attributes.ac.EC ?? 0;
       let targetAR = targetActor.system.attributes.ac.AR ?? 0;
-      const bonusAC = Number(getProperty(targetActor, "flags.midi-qol.acBonus")) ?? 0;
+      const bonusAC = Number(getProperty(targetActor, "flags.midi-qol.acBonus") ?? 0);
 
       isHit = false;
       isHitEC = false;

@@ -1,3 +1,33 @@
+### 10.0.8
+* Fix for template targeting small tokens (width < 1).
+* Fix for drag and drop targeting.
+* Include merge to support Wild Jammer vehicles module.
+* Fix for optional bonus rolls that should be rolled by the GM being prompted on player clients
+* Clarification: When using activation conditions (either from an item or a midi-qol.flags setting), you can use the ``@details.alignment`` form, in which case the expression must be enclosed in ``""`` marks if it is a string or you can just use the expresssion ``details.alignment``. Here is an example:
+``details.alignment==="Lawful Neutral"``
+vs
+``"@details.alignment"==="Lawful Neutral"``
+or
+``["fiend", "undead"].includes(raceOrType)``
+vs
+``["fiend", "undead"].includes("@raceOrType")``
+* Clarification: as of foundry 10.284/dnd5e 2.0.2 better rolls and midi-qol are not compatible (that may change with a subsequent release of better rolls but I'm not sure). If Better rolls is installed midi-qol will throw a notification error.
+* Added better rolls warning and midi automation disable if better rolls active.
+* Support for 3rd party concentration application/removal.
+  - "Concentration Automation" enabled will apply concentration on use of an item with the item property concentration.
+  - "Remove concentration on failed save" will perform the standard dnd5e concentration roll when damage is taken.
+  - if remove concentration on failed save is not checked the save will be rolled and reported but concentration will not be removed.
+  - If MidiQOL.configSettings().noConcnetrationDamageCheck is true midi will NOT do a concentration saving throw. (There is no UI for this flags, it has to be set programatically).
+  - Midi now exports the additional function:
+    - MidiQOL.addConcentration(actor, {item: Item, targets: Set<Token>,templateUuid: string});
+  - To remove concentration you need to do which can be triggered however you want
+  ```js
+   const concentrationEffect = MidiQOL.getConcentrationEffect(actor);
+  if (concentrationEffect) await concentrationEffect.delete();
+  ```
+
+
+
 ### 10.0.7
 * Fix for broken module.json wanting to install other systems.
 

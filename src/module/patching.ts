@@ -304,7 +304,68 @@ export async function rollAbilitySave(wrapped, ...args) {
 async function rollAbilityTest(wrapped, ...args) {
   return doAbilityRoll.bind(this)(wrapped, "check", ...args);
 }
+/* TODO come back to this when/if hooks are async 
+function preHookAbilityRoll(item: Item, rollData: any, abilityId: string, rollType: string) {
+  const rollTarget = rollData.targetValue;
+  if (procAutoFail(this, rollType, abilityId)) {
+    rollData.parts.push(["-100"]);
+  }
+  const chatMessage = rollData.chatMessage;
+  const keyOptions = mapSpeedKeys(null, "ability");
+  if (rollData.mapKeys !== false) {
+    if (keyOptions?.advantage === true) rollData.advantage = rollData.advantage || keyOptions.advantage;
+    if (keyOptions?.disadvantage === true) rollData.disadvantage = rollData.disadvantage || keyOptions.disadvantage;
+    if (keyOptions?.fastForwardAbility === true) rollData.fastForward = rollData.fastForward || keyOptions.fastForwardAbility;
+  }
+  // Hack for MTB bug
+  if (rollData.event?.advantage) rollData.advantage = rollData.event.advantage || rollData.advantage;
+  if (rollData.event?.disadvantage) rollData.disadvantage = rollData.event.disadvantage || rollData.disadvantage;
 
+  rollData.event = {};
+
+  let procOptions: any = procAdvantage(this, rollType, abilityId, rollData);
+  if (procOptions.advantage && procOptions.disadvantage) {
+    rollData.advantage = false;
+    rollData.disadvantage = false;
+  }
+
+  setProperty(rollData, "midi-qol", {chatMessage, simulate: rollData.simulate})
+  rollData.chatMessage = false;
+  
+  return true;
+}
+
+function rollAbilitySaveHook(item: Item, roll: any , abilityId: string, rollType: string) { 
+  const maxFlags = getProperty(this.flags, "midi-qol.max.ability") ?? {};
+  const flavor = roll.options?.flavor;
+  const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId])) ?? false
+  if (maxValue && Number.isNumeric(maxValue)) {
+    roll.terms[0].modifiers.unshift(`max${maxValue}`);
+    //@ts-ignore
+    result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
+  }
+
+  const minFlags = getProperty(this.flags, "midi-qol.min.ability") ?? {};
+  const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId])) ?? false;
+  if (minValue && Number.isNumeric(minValue)) {
+    roll.terms[0].modifiers.unshift(`min${minValue}`);
+    //@ts-ignore
+    roll = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
+  }
+
+  if (!roll.options.simulate) roll = await bonusCheck(this, roll, rollType, abilityId)
+  if (roll.options.chatMessage !== false && roll) {
+    const args: any = { "speaker": getSpeaker(this), flavor };
+    setProperty(args, `flags.${game.system.id}.roll`, { type: rollType, abilityId });
+    args.template = "modules/midi-qol/templates/roll.html";
+    await roll.toMessage(args);
+  }
+  let success: boolean | undefined = undefined;
+  if (roll.options.rollTarget !== undefined) success = roll.total >= roll.ootions.rollTarget;
+  await expireRollEffect.bind(this)(rollType, abilityId, success);
+
+}
+*/
 async function doAbilityRoll(wrapped, rollType: string, ...args) {
   let [abilityId, options = { event: {}, parts: [], chatMessage: undefined, simulate: false, targetValue: undefined }] = args;
   const rollTarget = options.targetValue;
@@ -830,7 +891,7 @@ export function configureDamageRollDialog() {
 export let itemPatching = () => {
   //@ts-ignore .version
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.use", doItemUse, "MIXED");
-   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
+  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
   if (game.system.id === "dnd5e" || game.system.id === "n5e")
     libWrapper.register("midi-qol", "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");

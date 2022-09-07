@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, failedSaveOverTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate, checkOverTimeSaves } from "./chatMesssageHandling.js";
 import { deleteItemEffects, processUndoDamageCard, timedAwaitExecuteAsGM } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, MQfromUuid, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, checkflanking, MQfromActorUuid, getSystemCONFIG, expireRollEffect, completeItemRoll, doConcentrationCheck } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, MQfromUuid, checkImmunity, getConcentrationEffect, applyTokenDamage, getConvenientEffectsUnconscious, ConvenientEffectsHasEffect, getConvenientEffectsDead, removeReactionUsed, removeBonusActionUsed, checkflanking, MQfromActorUuid, getSystemCONFIG, expireRollEffect, completeItemRoll, doConcentrationCheck, doMidiConcentrationCheck } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
@@ -59,6 +59,7 @@ export let readyHooks = async () => {
     if (hpUpdate === undefined && temphpUpdate === undefined) return true;
 
     if (!configSettings.concentrationAutomation) return true;
+    if (configSettings.noConcnetrationDamageCheck) return true;
 
     let hpDiff = getProperty(actor, "flags.midi-qol.concentration-damage") ?? 0;
     if (hpDiff <= 0) return true;
@@ -71,7 +72,7 @@ export let readyHooks = async () => {
     } else {
       const itemData = duplicate(itemJSONData);
       const saveDC = Math.max(10, Math.floor(hpDiff / 2));
-      doConcentrationCheck(actor, saveDC);
+      doMidiConcentrationCheck(actor, saveDC);
     }
     return true;
   });
@@ -345,28 +346,27 @@ export function initHooks() {
   Hooks.on('dropCanvasData', function (canvas: Canvas, dropData: any) {
     if (!dragDropTargeting) return true;
     if (dropData.type !== "Item") return true;
+    if (!canvas?.grid?.grid) return;
     //@ts-ignore .grid v10
     let grid_size = canvas.scene?.grid
-
-    canvas.tokens?.targetObjects({
-      x: dropData.x - grid_size! / 2,
-      y: dropData.y - grid_size! / 2,
-      height: grid_size!,
-      width: grid_size!
-    });
-
-    let actor: Actor | undefined | null = game.actors?.get(dropData.actorId);
-    if (dropData.tokenId) {
-      let token = canvas.tokens?.get(dropData.tokenId)
-      if (token) actor = token.actor;
+    let coords = canvas.grid.grid.getPixelsFromGridPosition(...canvas.grid.grid.getGridPositionFromPixels(dropData.x, dropData.y));
+    const targetCount = canvas.tokens?.targetObjects({
+      x: coords[0],
+      y: coords[1],
+      height: grid_size?.size!,
+      width: grid_size?.size!
+    }, {releaseOthers: true});
+    if (targetCount === 0) {
+      ui.notifications?.warn("No target selected");
+      return true;
     }
-    const item = actor && actor.items.get(dropData.data._id);
-    if (!actor || !item) error("actor / item broke ", actor, item);
-    //@ts-ignore roll
-    item?.roll();
+    const item = MQfromUuid(dropData.uuid)
+    if (!item) error("actor / item broke ", item);
+    item?.use();
     return true;
   })
 }
+
 function setupMidiFlagTypes() {
   let config: any = getSystemCONFIG();
   let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
@@ -537,6 +537,72 @@ export const itemJSONData = {
       "chat": "",
       "unidentified": ""
     },
+
+    "activation": {
+      "type": "special",
+      "cost": 0,
+      "condition": ""
+    },
+    "target": {
+      "type": ""
+    },
+    "ability": "",
+    "actionType": "save",
+    "attackBonus": 0,
+    "chatFlavor": "",
+    "weaponType": "simpleM",
+    "proficient": false,
+    "attributes": {
+      "spelldc": 10
+    }
+  },
+  "effects": [],
+  "sort": 0,
+  "flags": {
+    "midi-qol": {
+      "onUseMacroName": "ItemMacro",
+      "isConcentrationCheck": true
+    },
+    "itemacro": {
+      "macro": {
+
+          "_id": null,
+          "name": "Concentration Check - Midi QOL",
+          "type": "script",
+          "author": "devnIbfBHb74U9Zv",
+          "img": "icons/svg/dice-target.svg",
+          "scope": "global",
+          "command": `
+              if (MidiQOL.configSettings().autoCheckSaves === 'none') return;
+              for (let targetUuid of args[0].targetUuids) {
+                let target = await fromUuid(targetUuid);
+                if (MidiQOL.configSettings().removeConcentration 
+                  && (target.actor.system.attributes.hp.value === 0 || args[0].failedSaveUuids.find(uuid => uuid === targetUuid))) {
+                const concentrationEffect = MidiQOL.getConcentrationEffect(target.actor);
+                if (concentrationEffect) await concentrationEffect.delete();
+                }
+              }`,
+          "folder": null,
+          "sort": 0,
+          "permission": {
+            "default": 0
+          },
+          "flags": {}
+        }
+    },
+  }
+}
+/*
+export const itemJSONDataSave = {
+  "name": "Concentration Check - Midi QOL",
+  "type": "weapon",
+  "img": "./modules/midi-qol/icons/concentrate.png",
+  "system": {
+    "description": {
+      "value": "",
+      "chat": "",
+      "unidentified": ""
+    },
     "source": "",
     "quantity": 1,
     "weight": 0,
@@ -671,3 +737,4 @@ export const itemJSONData = {
     },
   }
 }
+*/

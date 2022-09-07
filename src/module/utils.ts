@@ -8,7 +8,7 @@ import { concentrationCheckItemDisplayName, itemJSONData, midiFlagTypes, overTim
 
 import { OnUseMacros } from "./apps/Item.js";
 import { actorAbilityRollPatching, Options } from "./patching.js";
-import { ModifierFlags } from "typescript";
+import { ModifierFlags, reduceEachTrailingCommentRange } from "typescript";
 
 export function getDamageType(flavorString): string | undefined {
   const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
@@ -1676,12 +1676,20 @@ export function getSpeaker(actor) {
   return speaker
 }
 
+export interface ConcentrationData {
+  item: any;
+  targets: Set<Token>;
+  templateUuid: string;
+}
+export async function addConcentration(actor, concentrationData: ConcentrationData) {
+  await addConcentrationEffect(actor, concentrationData );
+  await setConcentrationData(actor, concentrationData);
+}
 // Add the concentration marker to the character and update the duration if possible
-export async function addConcentration(options: { workflow: Workflow }) {
-  if (!configSettings.concentrationAutomation) return;
-  const item = options.workflow.item;
+export async function addConcentrationEffect(actor, concentrationData: ConcentrationData) {
+  const item = concentrationData.item;
   // await item.actor.unsetFlag("midi-qol", "concentration-data");
-  let selfTarget = item.actor.token ? item.actor.token.object : await getSelfTarget(item.actor);
+  let selfTarget = actor.token ? actor.token.object : await getSelfTarget(actor);
   if (!selfTarget) return;
   let statusEffect;
   if (installedModules.get("dfreds-convenient-effects")) {
@@ -1726,14 +1734,11 @@ export async function addConcentration(options: { workflow: Workflow }) {
     }
     return true;
   } else {
-    let actor = options.workflow.actor;
     let concentrationName = i18n("midi-qol.Concentrating");
     const existing = selfTarget.actor?.effects.find(e => e.label === concentrationName);
     if (existing) return undefined; // make sure that we don't double apply concentration
 
     const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
-    // const itemData = duplicate(itemJSONData);
-    // const currentItem: Item = new CONFIG.Item.documentClass(itemData)
     const effectData = {
       changes: [],
       origin: item.uuid, //flag the effect as associated to the spell being cast
@@ -1760,6 +1765,27 @@ export async function addConcentration(options: { workflow: Workflow }) {
       }
     }
     return await actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
+  }
+}
+
+export async function setConcentrationData(actor, concentrationData: ConcentrationData) {
+  if (actor && concentrationData.targets) {
+    let targets: { tokenUuid: string | undefined, actorUuid: string | undefined }[] = [];
+    const selfTargetUuid = actor.uuid;
+    let selfTargeted = false;
+    for (let hit of concentrationData.targets) {
+      const tokenUuid = hit.document?.uuid ?? hit.uuid;
+      const actorUuid = hit.actor?.uuid ?? "";
+      targets.push({ tokenUuid, actorUuid });
+      if (selfTargetUuid === actorUuid) selfTargeted = true;
+    }
+
+    if (!selfTargeted) {
+      let selfTarget = actor.token ? actor.token.object : await getSelfTarget(actor);
+      targets.push({ tokenUuid: selfTarget.uuid, actorUuid: actor.uuid })
+    }
+    let templates = concentrationData.templateUuid ? [concentrationData.templateUuid] : [];
+    await actor.setFlag("midi-qol", "concentration-data", { uuid: concentrationData.item.uuid, targets: targets, templates: templates, removeUuids: [] })
   }
 }
 
@@ -3472,18 +3498,22 @@ export function tokenForActor(actor): Token | undefined {
   return controlled.length ? controlled.shift() : tokens.shift();
 }
 
-
-export async function doConcentrationCheck(actor, saveDC) {
+export async function doMidiConcentrationCheck(actor, saveDC) {
+  if (configSettings.noConcnetrationDamageCheck) return;
   const itemData = duplicate(itemJSONData);
+  setProperty(itemData, "system.save.dc", saveDC);
+  setProperty(itemData, "system.save.ability", "con");
+  setProperty(itemData, "system.save.scaling", "flat");
+  setProperty(itemData, "name", concentrationCheckItemDisplayName);
+  setProperty(itemData, "system.target.type", "self");
+  return doConcentrationCheck(actor, itemData)
+}
+
+export async function doConcentrationCheck(actor, itemData) {
   let result;
-  itemData.system.save.dc = saveDC;
-  itemData.system.save.ability = "con";
-  itemData.system.save.scaling = "flat";
-  itemData.name = concentrationCheckItemDisplayName;
   // actor took damage and is concentrating....
   const saveTargets = game.user?.targets;
   const theTargetToken = await getSelfTarget(actor);
-  itemData.system.target.type = "self";
   const theTarget = theTargetToken instanceof Token ? theTargetToken?.document.id : theTargetToken?.id;
   if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor })

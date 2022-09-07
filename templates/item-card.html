@@ -15,7 +15,7 @@
     {{#unless hideItemDetails}}
     {{{data.description.value}}}
     {{#if data.materials.value}}
-    <p><strong>{{ RequiredMaterials }}</strong> {{system.materials.value}}</p>
+    <p><strong>{{ RequiredMaterials }}</strong> {{data.materials.value}}</p>
     {{/if}}
     {{/unless}}
   </div>
@@ -64,7 +64,7 @@
     {{/if}}
 
     {{#if hasSave}}
-    <button data-action="save" data-ability="{{system.save.ability}}">
+    <button data-action="save" data-ability="{{data.save.ability}}">
       {{ SavingThrow }} {{labels.save}}
     </button>
     {{/if}}

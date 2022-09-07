@@ -121,6 +121,7 @@ class ConfigSettings {
   spellUseSoundRanged: string = "";
   syrinToken: string | undefined = undefined;
   tempHPDamageConcentrationCheck: boolean = false;
+  noConcnetrationDamageCheck: boolean = false;
   toggleOptionalRules: boolean = false;
   useCustomSounds: boolean = true;
   usePlayerPortrait: boolean = false;
@@ -648,6 +649,10 @@ export const registerSettings = function() {
     config: false,
     default: true
   })
+}
+
+export function disableWorkflowAutomation() {
+  enableWorkflow = false;
 }
 /*
 export function migrateExistingSounds() {

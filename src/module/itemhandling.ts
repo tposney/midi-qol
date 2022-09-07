@@ -189,7 +189,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
     workflow.attackRollHTML = addAdvAttribution(workflow.attackRollHTML, workflow.attackAdvAttribution)
   if (debugCallTiming) log(`final item.rollAttack():  elapsed ${Date.now() - attackRollStart}ms`);
 
-  workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
+  await workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);
   return result;
 }
 
@@ -493,7 +493,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
   const pressedKeys = duplicate(globalThis.MidiKeyManager.pressedKeys);
   const isRangeSpell = ["ft", "m"].includes(this.system.target?.units) && ["creature", "ally", "enemy"].includes(this.system.target?.type);
   const isAoESpell = this.hasAreaTarget;
-  const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && game.combat);
+  const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && (game.combat ?? null) !== null);
 
   const lateTargetingSetting = getLateTargeting();
   const lateTargetingSet = lateTargetingSetting === "all" || (lateTargetingSetting === "noTargetsSelected" && game?.user?.targets.size === 0)
@@ -724,7 +724,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
   let result = await wrapped(config, mergeObject(options, {createMessage: false}, {inplace: false}));
   if (!result) {
     //TODO find the right way to clean this up
-    console.error("midi-qol | itemhandling wrapped returned ", result)
+    console.warn("midi-qol | itemhandling wrapped returned ", result)
     // Workflow.removeWorkflow(workflow.id); ?
     return null;
   }
@@ -967,7 +967,7 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
   // Check for center of  each square the token uses.
   // e.g. for large tokens all 4 squares
   //@ts-ignore document.width
-  const startX = token.document.width >= 1 ? 0.5 : (token.document, width / 2);
+  const startX = token.document.width >= 1 ? 0.5 : (token.document.width / 2);
   //@ts-ignore document.height
   const startY = token.document.height >= 1 ? 0.5 : (token.document.height / 2);
   //@ts-ignore document.width

@@ -681,6 +681,10 @@ export function processItemCardCreation(message, user) {
     if (!workflow.itemCardId) {
       workflow.itemCardId = message.id;
       workflow.needItemCard = false;
+    } else { // already had an item card so it is a reroll do advance the state will happen automatically
+      workflow.itemCardId = message.id;
+      workflow.needItemCard = false;
+      return;
     }
     if (workflow.kickStart) {
       workflow.kickStart = false;

@@ -1,6 +1,6 @@
 import { debug, error, debugEnabled, i18n } from "../midi-qol.js";
 import { log } from "../midi-qol.js";
-import { configSettings } from "./settings.js";
+import { configSettings, disableWorkflowAutomation, enableWorkflow } from "./settings.js";
 
 let modules = {"about-time": "0.0", 
               "betterrolls5e": "1.6.6", 
