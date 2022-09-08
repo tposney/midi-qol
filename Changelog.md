@@ -1,3 +1,10 @@
+### 10.0.9
+* Support multiple damage types in item damage lines/versatile damage.
+* Fix for incorrectly processing negative damage items (like -1d4);
+* Fix for incapacitated check in flanking checks.
+* Fix for overtime effects failing to roll saves.
+
+
 ### 10.0.8
 * Fix for template targeting small tokens (width < 1).
 * Fix for drag and drop targeting.
@@ -25,8 +32,6 @@ vs
    const concentrationEffect = MidiQOL.getConcentrationEffect(actor);
   if (concentrationEffect) await concentrationEffect.delete();
   ```
-
-
 
 ### 10.0.7
 * Fix for broken module.json wanting to install other systems.

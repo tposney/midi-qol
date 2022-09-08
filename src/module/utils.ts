@@ -77,24 +77,30 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
       // eventually rollTerms[partPos] will become undefined so it can't run forever
       while (rollTerms[partPos] instanceof CONFIG.Dice.termTypes.OperatorTerm &&
         !(dmgSpec.terms[i] instanceof CONFIG.Dice.termTypes.OperatorTerm)) {
-        evalString += rollTerms[partPos].total;
+        evalString += rollTerms[partPos].operator + " ";
         partPos += 1;
       }
       if (rollTerms[partPos]) {
+        if (rollTerms[partPos] instanceof OperatorTerm) {
+          evalString += rollTerms[partPos].operator + " ";
+        }
         if (rollTerms[partPos] instanceof DiceTerm || rollTerms[partPos] instanceof NumericTerm) {
           const flavorDamageType = getDamageType(rollTerms[partPos]?.options?.flavor);
           type = flavorDamageType ?? type;
           if (!rollTerms[partPos]?.options.flavor) {
             setProperty(rollTerms[partPos].options, "flavor", getDamageFlavor(type));
           }
+          evalString += rollTerms[partPos]?.total;
+          let result = Roll.safeEval(evalString)
+          damageParts[type || defaultType] = (damageParts[type || defaultType] || 0) + result;
+          evalString = "";
         }
-        evalString += rollTerms[partPos]?.total;
       }
       partPos += 1;
     }
     // Each damage line is added together and we can skip the operator term
     partPos += 1;
-    if (evalString) {
+    if (evalString !== "") {
       let result = Roll.safeEval(evalString)
       damageParts[type || defaultType] = (damageParts[type || defaultType] || 0) + result;
       evalString = "";
@@ -163,7 +169,7 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
     damageParts[damageType || defaultType] = (damageParts[damageType || defaultType] || 0) + damage;
   }
   const damageList = Object.entries(damageParts).map(([type, damage]) => { return { damage, type } });
-  if (debugEnabled > 1) debug("CreateDamageList: Final damage list is ", damageList)
+  if (debugEnabled > 1) debug("CreateDamageList: Final damage list is ", damageList);
   return damageList;
 }
 
@@ -338,7 +344,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
   }
   const damageDetailArr = applyDamageDetails.map(a => a.damageDetail);
   const highestOnlyDR = false;
-  let totalDamage = applyDamageDetails.reduce((a, b) => a + (b.damageTotal ?? 0), 0)
+  let totalDamage = applyDamageDetails.reduce((a, b) => a + (b.damageTotal ?? 0), 0);
   let totalAppliedDamage = 0;
   let appliedTempHP = 0;
   const itemSaveMultiplier = getSaveMultiplierForItem(item);
@@ -628,6 +634,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     acc[item.type] = (acc[item.type] ?? 0) + item.damage;
     return acc;
   }, {});
+  //TODO come back and decide if -ve damage per type should be allowed, no in the case of 1d4 -2, yes? in the case of -1d4[fire]
   const newDetail = Object.keys(merged).map((key) => { return { damage: Math.max(0, merged[key]), type: key } });
   totalDamage = newDetail.reduce((acc, value) => acc + value.damage, 0);
   workflow.damageDetail = newDetail;
@@ -1064,7 +1071,7 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true,
 
       itemData.img = effect.icon;
       itemData.system.save.dc = saveDC;
-      itemData.system.save.scaling = rollTypeString;
+      itemData.system.save.scaling = "flat";
       setProperty(itemData, "flags.midi-qol.noProvokeReaction", true);
       if (saveMagic) {
         itemData.type = "spell";
@@ -2916,6 +2923,7 @@ function mySafeEval(expression: string, sandbox: any) {
 export function evalActivationCondition(workflow: Workflow, condition: string | undefined, target: Token | TokenDocument): boolean {
   if (condition === undefined || condition === "") return true;
   createConditionData({workflow, target, actor: workflow.actor});
+  console.error("Condition data is ", workflow.conditionData)
   const returnValue = evalCondition(condition, workflow.conditionData);
   return returnValue;
 }
@@ -3237,7 +3245,7 @@ export async function computeFlankedStatus(target): Promise<boolean> {
         if (actor?.system.attrbutes?.hp?.value <= 0) continue;
         if (installedModules.get("dfreds-convenient-effects")) {
           //@ts-ignore
-          if (actor?.effects.some(ef => ef.document.label === game.dfreds.effects._incapacitated.name)) continue;
+          if (actor?.effects.some(ef => ef.label === game.dfreds.effects._incapacitated.name)) continue;
         }
         if (checkRule("checkFlanking") === "ceflankedNoconga" && installedModules.get("dfreds-convenient-effects")) {
           //@ts-ignore
