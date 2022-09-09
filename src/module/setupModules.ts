@@ -21,7 +21,8 @@ let modules = {"about-time": "0.0",
               "lib-changelogs": "0.0.0",
               "df-templates": "1.0.0",
               "walledtemplates": "0.0.0",
-              "ddb-game-log": "0.0.0"
+              "ddb-game-log": "0.0.0",
+              "wjmais": "0.0.0"
             };
 export let installedModules = new Map();
 
