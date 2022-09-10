@@ -1,5 +1,9 @@
+### 0.9.79
+* Added wildjammer merge
+
 ### 0.9.78
 * Fix for midi faling to find item macros with item macro 1.7.4
+
 ### 0.9.77
 * Fix for not auto rolling damage ignoring critical damage settings.
 * Fix for not removing CV stealthed condition.
