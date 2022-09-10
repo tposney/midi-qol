@@ -296,7 +296,7 @@ export async function applyTokenDamage(damageDetail, totalDamage, theTargets, it
     semiSuperSavers: options.semiSuperSavers ? [options.semiSuperSavers] : [],
     workflow: options.workflow,
     updateContext: options.updateContext,
-    forceApply: options.forceApply ?? false
+    forceApply: options.forceApply ?? true
   });
 }
 
@@ -311,18 +311,7 @@ export interface applyDamageDetails {
 
 export async function applyTokenDamageMany({ applyDamageDetails, theTargets, item,
   options = { existingDamage: [], workflow: undefined, updateContext: undefined, forceApply: false } }:
-  { applyDamageDetails: applyDamageDetails[]; theTargets: Set<Token | TokenDocument>; item: any; options?: { existingDamage: any[][]; workflow: Workflow | undefined; updateContext: any | undefined; forceApply: boolean }; }): Promise<any[]> {
-
-  /*export async function applyTokenDamageMany(
-    applyDamageDetails: applyDamageDetails[], 
-    theTargets: Set<Token | TokenDocument>, 
-    item: any, 
-    options: { 
-      existingDamage: any[][], 
-      workflow: Workflow | undefined, 
-      updateContext: any | undefined, 
-      forceApply: boolean
-    } = { existingDamage: [], workflow: undefined, updateContext: undefined, forceApply: false }): Promise<any[]> { */
+    { applyDamageDetails: applyDamageDetails[]; theTargets: Set<Token | TokenDocument>; item: any; options?: { existingDamage: any[][]; workflow: Workflow | undefined; updateContext: any | undefined; forceApply: boolean }; }): Promise<any[]> {
   let damageList: any[] = [];
   let targetNames: string[] = [];
   let appliedDamage;
@@ -591,7 +580,9 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
   return damageList;
 };
 
-export async function legacyApplyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr, options: { existingDamage: any[][], superSavers: Set<any>[], semiSuperSavers: Set<any>[], workflow: Workflow | undefined, updateContext: any, forceApply: any } = { existingDamage: [], superSavers: [], semiSuperSavers: [], workflow: undefined, updateContext: undefined, forceApply: undefined }): Promise<any[]> {
+export async function legacyApplyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr, 
+    options: { existingDamage: any[][], superSavers: Set<any>[], semiSuperSavers: Set<any>[], workflow: Workflow | undefined, updateContext: any, forceApply: any } 
+      = { existingDamage: [], superSavers: [], semiSuperSavers: [], workflow: undefined, updateContext: undefined, forceApply: false }): Promise<any[]> {
   const mappedDamageDetailArray: applyDamageDetails[] = damageDetailArr.map((dd, i) => {
     return {
       label: "test",
@@ -602,8 +593,6 @@ export async function legacyApplyTokenDamageMany(damageDetailArr, totalDamageArr
       semiSuperSavers: options.semiSuperSavers[i],
     }
   });
-  options.forceApply = true;
-  // console.error("Apply token damage", mappedDamageDetailArray, theTargets, item, options)
   return applyTokenDamageMany({ applyDamageDetails: mappedDamageDetailArray, theTargets, item, options })
 }
 
@@ -2269,8 +2258,8 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       dialog.data.content = this[rollHTMLId];
       await removeEffectGranting(this.actor, button.key);
       bonusFlags = bonusFlags.filter(bf => bf !== button.key)
-      // this.actor.prepareData();
-      if (bonusFlags.length === 0) {
+      // this.actor.reset();
+      if (bonusFlags.length === 0) { 
 
         dialog.close();
         resolve(null);
@@ -2740,7 +2729,7 @@ export async function reactionDialog(actor: globalThis.dnd5e.documents.Actor5e, 
         targetUuids: [triggerTokenUuid]
       });
       await completeItemUse(item, {}, itemRollOptions);
-      // actor.prepareData();
+      // actor.reset();
       resolve({ name: item.name, uuid: item.uuid })
     };
 
@@ -2923,7 +2912,6 @@ function mySafeEval(expression: string, sandbox: any) {
 export function evalActivationCondition(workflow: Workflow, condition: string | undefined, target: Token | TokenDocument): boolean {
   if (condition === undefined || condition === "") return true;
   createConditionData({workflow, target, actor: workflow.actor});
-  console.error("Condition data is ", workflow.conditionData)
   const returnValue = evalCondition(condition, workflow.conditionData);
   return returnValue;
 }

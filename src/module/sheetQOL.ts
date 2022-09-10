@@ -306,7 +306,7 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
       if (!item)
           return;
       let actor = app.object;
-      let chatData = item.getChatData();
+      let chatData = item.getChatData(); // needs to be awaited/thenned
       let targetHTML = $(event.target.parentNode.parentNode);
       let buttonTarget = targetHTML.find(".item-buttons");
       if (buttonTarget.length > 0)

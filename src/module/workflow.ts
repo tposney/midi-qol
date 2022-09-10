@@ -1428,12 +1428,12 @@ export class Workflow {
       semiSuperSaverUuids.push(save instanceof Token ? save.document?.uuid : save.uuid);
     };
     // const itemData = this.item?.toObject(false); TODO think about this some more for v10
-    const itemData = this.item?.toObject() ?? {};
+    const itemData = this.item?.toObject(false) ?? {};
     itemData.data = itemData.system; // Try and support the old.data
     itemData.uuid = this.item?.uuid; // provide the uuid so the actual item can be recovered
     return {
       actor: this.actor,
-      actorData: this.actor,
+      actorData: this.actor.toObject(false),
       actorUuid: this.actor.uuid,
       advantage: this.advantage,
       attackD20: this.diceRoll,
@@ -1465,7 +1465,7 @@ export class Workflow {
       id: this.item?.id,
       isCritical: this.rollOptions.critical || this.isCritical || this.workflowOptions.isCritical,
       isFumble: this.isFumble,
-      isVersatile: this.rollOptions.verFsatile || this.isVersatile || this.workflowOptions.isVersatile,
+      isVersatile: this.rollOptions.versatile || this.isVersatile || this.workflowOptions.isVersatile,
       item: itemData,
       itemCardId: this.itemCardId,
       itemData,

@@ -1,3 +1,10 @@
+### 10.0.10
+* Remove debug accidentally left in.
+* Fix for typo in versatile processing.
+* Fix for DamageOnlyWorkflow and applyTokenDamage ignoring midi-settings for damage application
+* Almost all sample items updated for v10 - test will be tonight in my game
+
+
 ### 10.0.9
 * Support multiple damage types in item damage lines/versatile damage.
 * Fix for incorrectly processing negative damage items (like -1d4);

@@ -608,7 +608,8 @@ export const registerSettings = function() {
     default: false,
     config: true,
     type: Boolean,
-    onChange: (value) => {window.location.reload()}
+    //@ts-ignore v10
+    requiresReload: true
   });
 
   game.settings.register("midi-qol", "Debug", {

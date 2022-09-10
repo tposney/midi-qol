@@ -22,7 +22,8 @@ let modules = {"about-time": "0.0",
               "df-templates": "1.0.0",
               "walledtemplates": "0.0.0",
               "ddb-game-log": "0.0.0",
-              "wjmais": "0.0.0"
+              "wjmais": "0.0.0",
+              "ready-set-roll-5e": "1.2.0"
             };
 export let installedModules = new Map();
 

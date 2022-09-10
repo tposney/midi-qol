@@ -229,7 +229,7 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
     }
     if (!showNPC && !actor.hasPlayerOwner) continue;
     let newHP = Math.max(0, oldHP - hpDamage);
-    if (createPromises && ["yes", "yesCard", "yesCardNPC"].includes(data.autoApplyDamage) || data.forceApply) {
+    if (createPromises && (["yes", "yesCard", "yesCardNPC"].includes(data.autoApplyDamage) || data.forceApply)) {
       if ((newHP !== oldHP || newTempHP !== oldTempHP) && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
         const updateContext = mergeObject({ dhp: -appliedDamage }, data.updateContext ?? {});
         log(`updating ${actor.name} to ${newTempHP}`, updateContext)
@@ -355,7 +355,7 @@ async function createGMReverseDamageCard (data: { damageList: any; autoApplyDama
   let promises: Promise<any>[] = [];
   let tokenIdList: any[] = [];
   let templateData = {
-    damageApplied: ["yes", "yesCard"].includes(data.autoApplyDamage) ? 
+    damageApplied: (["yes", "yesCard"].includes(data.autoApplyDamage) || data.forceApply) ? 
             i18n("midi-qol.HPUpdated") : 
             data.autoApplyDamage === "yesCardNPC" ? i18n("midi-qol.HPNPCUpdated") : i18n("midi-qol.HPNotUpdated"),
     damageList: [],

@@ -11,8 +11,7 @@ var d20Roll;
 
 function _isVisionSource(wrapped) {
   const isVisionSource = wrapped();
-  //@ts-ignore TODO check .hidden v10
-  if (this.document.hidden && !game.user.isGM && this.actor?.testUserPermission(game.user, "OWNER")) {
+  if (this.document.hidden && !game.user?.isGM && this.actor?.testUserPermission(game.user, "OWNER")) {
     return true;
   }
   return isVisionSource;
