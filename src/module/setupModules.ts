@@ -3,7 +3,6 @@ import { log } from "../midi-qol.js";
 import { configSettings, disableWorkflowAutomation, enableWorkflow } from "./settings.js";
 
 let modules = {"about-time": "0.0", 
-              "betterrolls5e": "1.6.6", 
               "dice-so-nice": "4.1.1", 
               "itemacro": "1.0.0", 
               "lmrtfy": "0.9",

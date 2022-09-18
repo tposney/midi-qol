@@ -439,7 +439,10 @@ async function resolveLateTargeting(item): Promise<boolean> {
   if (lateTargetingSetting === "none") return true; // workflow options override the user settings
   if (workflow && lateTargetingSetting === "noTargetsSelected" && workflow.targets.size !== 0) return true;
 
-  ui.controls?.initialize({tool: "target", control: "token"})
+  const savedSettings = { control: ui.controls?.control?.name, tool: ui.controls?.tool };
+  const savedActiveLayer = canvas?.activeLayer;
+  await canvas?.tokens?.activate();
+  ui.controls?.initialize({ tool: "target", control: "token" })
 
   const wasMaximized = !(item.actor.sheet?._minimized);
   // Hide the sheet that originated the preview
@@ -451,13 +454,119 @@ async function resolveLateTargeting(item): Promise<boolean> {
     let lateTargeting = new LateTargetingDialog(item.actor, item, game.user, { callback: resolve }).render(true);
   });
   let shouldContinue = await targets;
+  if (savedActiveLayer) await savedActiveLayer.activate();
+  if (savedSettings.control && savedSettings.tool)
+    //@ts-ignore savedSettings.tool is really a string
+    ui.controls?.initialize(savedSettings);
   if (wasMaximized) await item.actor.sheet.maximize();
 
   return shouldContinue ? true : false;
 }
+export function doItemUsePreRollChecks(item, config, options): boolean {
+  // if doing multi attacks - return false and queue multi rolls
+  if ((configSettings.attackPerTarget === true || options.workflowOptions?.attackPerTarget === true) && this.hasAttack && options?.singleTarget !== true && game?.user?.targets) {
+    let multiAttack = async () => {
+      const lateTargetingSetting = getLateTargeting();
+      let lateTargetingSet = lateTargetingSetting === "all" || (lateTargetingSetting === "noTargetsSelected" && game?.user?.targets.size === 0)
+      if (options.woprkflowOptions?.lateTargeting && options.workflowOptions?.lateTargeting !== "none") lateTargetingSet = true;
+      if (game.user?.targets.size === 0 && lateTargetingSet) await resolveLateTargeting(this);
+      const targets: Token[] = [];
+      for (let target of (game?.user?.targets ?? [])) targets.push(target);
+      for (let target of targets) {
+        const newOptions = mergeObject(options, { singleTarget: true, targetUuids: [target.document.uuid], workflowOptions: { lateTargeting: false } }, { inplace: false, overwrite: true });
+        await completeItemUse(this, {}, newOptions);
+      }
+    }
+    multiAttack();
+    return false;
+  }
 
+  options = mergeObject({
+    showFullCard: false,
+    createWorkflow: true,
+    versatile: false,
+    configureDialog: true,
+    createMessage: true,
+    event,
+    workflowOptions: { lateTargeting: undefined, notReaction: false }
+  }, options);
+  const itemRollStart = Date.now()
+  let showFullCard = options?.showFullCard ?? false;
+  let createWorkflow = options?.createWorkflow ?? true;
+  let versatile = options?.versatile ?? false;
+  if (!enableWorkflow || createWorkflow === false) {
+    return true;
+  }
+  if (checkRule("incapacitated") && checkIncapacitated(this.actor, this, null)) return false;
+  const pressedKeys = duplicate(globalThis.MidiKeyManager.pressedKeys);
+  const isRangeSpell = ["ft", "m"].includes(this.system.target?.units) && ["creature", "ally", "enemy"].includes(this.system.target?.type);
+  const isAoESpell = this.hasAreaTarget;
+  const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && (game.combat ?? null) !== null);
+
+  const lateTargetingSetting = getLateTargeting();
+  const lateTargetingSet = lateTargetingSetting === "all" || (lateTargetingSetting === "noTargetsSelected" && game?.user?.targets.size === 0)
+  const shouldCheckLateTargeting = (allAttackTypes.includes(this.system.actionType) || (this.hasTarget && !this.hasAreaTarget))
+    && ((options.worflowOptions?.lateTargeting ? (options.workflowOptions?.lateTargeting !== "none") : lateTargetingSet));
+
+  if (shouldCheckLateTargeting && !isRangeSpell && !isAoESpell) {
+
+    // normal targeting and auto rolling attack so allow late targeting
+    let canDoLateTargeting = this.system.target.type !== "self";
+
+    //explicit don't do late targeting passed
+    if (options.workflowOptions?.lateTargeting === "none") canDoLateTargeting = false;
+
+    // TODO look at this if AoE spell and not auto targeting need to work out how to deal with template placement
+    if (false && isAoESpell && configSettings.autoTarget === "none")
+      canDoLateTargeting = true;
+
+    // TODO look at this if range spell and not auto targeting
+    const targetDetails = this.system.target;
+    if (false && configSettings.rangeTarget === "none" && ["ft", "m"].includes(targetDetails?.units) && ["creature", "ally", "enemy"].includes(targetDetails?.type))
+      canDoLateTargeting = true;
+    // TODO consider template and range spells when not template targeting?
+
+    if (canDoLateTargeting) {
+      const resolveTargeting = async () => {
+        if (!(await resolveLateTargeting(this)))
+          return;
+        // redo roll setting no late targeting
+        options.workflowOptions.lateTargeting = false;
+        await this.use(config, options);
+      }
+      resolveTargeting();
+      return false;
+    }
+
+  }
+  const myTargets = game.user?.targets && validTargetTokens(game.user?.targets);
+  let shouldAllowRoll = !requiresTargets // we don't care about targets
+    || ((myTargets?.size || 0) > 0) // there are some target selected
+    || (this.system.target?.type === "self") // self target
+    || isAoESpell // area effect spell and we will auto target
+    || isRangeSpell // range target and will autotarget
+    || (!this.hasAttack && !itemHasDamage(this) && !this.hasSave); // does not do anything - need to chck dynamic effects
+
+  if (requiresTargets && !isRangeSpell && !isAoESpell && this.system.target?.type === "creature" && (myTargets?.size || 0) === 0) {
+    ui.notifications?.warn(i18n("midi-qol.noTargets"));
+    if (debugEnabled > 0) warn(`${game.user?.name} attempted to roll with no targets selected`)
+    return false;
+  }
+  // only allow weapon attacks against at most the specified number of targets
+  let allowedTargets = (this.system.target?.type === "creature" ? this.system.target?.value : 9999) ?? 9999
+  let speaker = getSpeaker(this.actor);
+  const inCombat = isInCombat(this.actor);
+  let AoO = false;
+  let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
+  const isTurn = activeCombatants?.includes(speaker.token);
+
+  const checkReactionAOO = configSettings.recordAOO === "all" || (configSettings.recordAOO === this.actor.type)
+
+  let itemUsesReaction = false;
+  return true;
+}
 export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
-//  if (configSettings.mergeCard && (configSettings.attackPerTarget === true || options.workflowOptions?.attackPerTarget === true) && this.hasAttack && options?.singleTarget !== true && game?.user?.targets) {
+  //  if (configSettings.mergeCard && (configSettings.attackPerTarget === true || options.workflowOptions?.attackPerTarget === true) && this.hasAttack && options?.singleTarget !== true && game?.user?.targets) {
   if ((configSettings.attackPerTarget === true || options.workflowOptions?.attackPerTarget === true) && this.hasAttack && options?.singleTarget !== true && game?.user?.targets) {
     const lateTargetingSetting = getLateTargeting();
     let lateTargetingSet = lateTargetingSetting === "all" || (lateTargetingSetting === "noTargetsSelected" && game?.user?.targets.size === 0)
@@ -466,23 +575,23 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
     const targets: Token[] = [];
     for (let target of game?.user?.targets) targets.push(target);
     for (let target of targets) {
-      const newOptions = mergeObject(options, {singleTarget: true, targetUuids: [target.document.uuid], workflowOptions: {lateTargeting: false}}, {inplace: false, overwrite: true});
+      const newOptions = mergeObject(options, { singleTarget: true, targetUuids: [target.document.uuid], workflowOptions: { lateTargeting: false } }, { inplace: false, overwrite: true });
       await completeItemUse(this, {}, newOptions)
     }
     return;
   }
   options = mergeObject({
-    showFullCard: false, 
-    createWorkflow: true, 
-    versatile: false, 
-    configureDialog: true, 
-    createMessage: true, 
-    event, 
+    showFullCard: false,
+    createWorkflow: true,
+    versatile: false,
+    configureDialog: true,
+    createMessage: true,
+    event,
     workflowOptions: { lateTargeting: undefined, notReaction: false }
   }, options);
   const itemRollStart = Date.now()
   let showFullCard = options?.showFullCard ?? false;
-  let createWorkflow =  options?.createWorkflow ?? true;
+  let createWorkflow = options?.createWorkflow ?? true;
   let versatile = options?.versatile ?? false;
   if (!enableWorkflow || createWorkflow === false) {
     return await wrapped(config, options);
@@ -534,7 +643,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
   if (requiresTargets && !isRangeSpell && !isAoESpell && this.system.target?.type === "creature" && (myTargets?.size || 0) === 0) {
     ui.notifications?.warn(i18n("midi-qol.noTargets"));
     if (debugEnabled > 0) warn(`${game.user?.name} attempted to roll with no targets selected`)
-    return null;
+    return false;
   }
   // only allow weapon attacks against at most the specified number of targets
   let allowedTargets = (this.system.target?.type === "creature" ? this.system.target?.value : 9999) ?? 9999
@@ -623,13 +732,13 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
   const targets = (this?.system.target?.type === "self") ? await getSelfTargetSet(this.actor) : myTargets;
 
   let workflow: Workflow;
-  if (installedModules.get("betterrolls5e")) { // better rolls will handle the item roll
+  if (installedModules.get("ready-set-roll-5e")) { // better rolls will handle the item roll
     if (!this.id) this._id = randomID(); // TOOD check this v10
     if (needsConcentration && checkConcentration) {
       const concentrationEffect = getConcentrationEffect(this.actor);
       if (concentrationEffect) await removeConcentration(this.actor);
     }
-    workflow = new BetterRollsWorkflow(this.actor, this, speaker, targets, { event: config.event || options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
+    workflow = new Workflow(this.actor, this, speaker, targets, { event: config.event || options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
     options.createMessage = true;
     const result = await wrapped(config, options);
     return result;
@@ -721,7 +830,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
     } else options.configureDialog = !(["both", "item"].includes(isAutoConsumeResource(workflow)));
   }
   const wrappedRollStart = Date.now();
-  let result = await wrapped(config, mergeObject(options, {createMessage: false}, {inplace: false}));
+  let result = await wrapped(config, mergeObject(options, { createMessage: false }, { inplace: false }));
   if (!result) {
     //TODO find the right way to clean this up
     console.warn("midi-qol | itemhandling wrapped returned ", result)

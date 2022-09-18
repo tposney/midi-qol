@@ -688,7 +688,7 @@ export function processItemCardCreation(message, user) {
     }
     if (workflow.kickStart) {
       workflow.kickStart = false;
-      workflow.next(WORKFLOWSTATES.NONE);
+      return workflow.next(WORKFLOWSTATES.NONE);
     }
     workflow.next(WORKFLOWSTATES.AWAITITEMCARD);
   }

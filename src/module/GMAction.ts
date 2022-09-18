@@ -19,6 +19,9 @@ export async function removeEffects(data: { actorUuid: string; effects: string[]
 
 export async function createEffects(data: { actorUuid: string, effects: any[] }) {
   const actor = MQfromActorUuid(data.actorUuid);
+  for (let effect of data.effects) { // override default foundry behaviour of blank being transfer
+    if (effect.transfer === undefined) effect.transfer = false;
+  }
   await actor?.createEmbeddedDocuments("ActiveEffect", data.effects)
 }
 
@@ -128,7 +131,9 @@ export async function deleteItemEffects(data: { targets, origin: string, ignore:
       warn("could not find actor for ", idData.tokenUuid);
       continue;
     }
-    const effectsToDelete = actor?.effects?.filter(ef => ef.origin === origin && !ignore.includes(ef.uuid) && (!data.ignoreTransfer || ef.flags?.dae?.transfer !== true));
+    const effectsToDelete = actor?.effects?.filter(ef => {
+      return ef.origin === origin && !ignore.includes(ef.uuid) && (!data.ignoreTransfer || ef.flags?.dae?.transfer !== true)
+    });
     if (effectsToDelete?.length > 0) {
       try {
         await actor.deleteEmbeddedDocuments("ActiveEffect", effectsToDelete.map(ef => ef.id));
@@ -232,7 +237,6 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
     if (createPromises && (["yes", "yesCard", "yesCardNPC"].includes(data.autoApplyDamage) || data.forceApply)) {
       if ((newHP !== oldHP || newTempHP !== oldTempHP) && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
         const updateContext = mergeObject({ dhp: -appliedDamage }, data.updateContext ?? {});
-        log(`updating ${actor.name} to ${newTempHP}`, updateContext)
         //@ts-ignore
         promises.push(actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem }, updateContext));
       }

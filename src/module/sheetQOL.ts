@@ -36,7 +36,7 @@ let enableSheetQOL = (app, html, data) => {
   if (itemDeleteCheck) {
     // remove current handler - this is a bit clunky since it results in a case with no delete handler
     $(html).find(".item-delete").off("click");
-    $(html).find(".item-delete").click({ app, data: data }, itemDeleteHandler);
+    html.find(".item-delete").click({ app, data: data }, itemDeleteHandler);
   }
   let rollTag = knownSheets[app.constructor.name] ? knownSheets[app.constructor.name] : defaultTag;
   if (itemRollButtons) {

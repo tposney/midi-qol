@@ -1,9 +1,19 @@
+### 10.0.11
+* restore active layer and ui control/target when using late targeting.
+* Fix for incorrectly processing DR.physical when a magical weapon is used.
+* FIx for MidiQOL.createEffects creating transfer effects by default. If you want to create transfer effects set transfer: true in the effect data.
+* Change the point at which preDamageApplication onUse macro is called - now called after damageList is created so you can examine per token damage details. Sample item Mace of disruption uses this to destroy targets that have 25 of less HP after the damage is applied, by upgrading the damage done.
+* Added CONFIG and CONST to the fields available to activation conditions - so you can now check item.attunement !== CONFIG.DND5E.attunementTypes.REQUIRED instead of the more opaque (but much shorter) 1.
+* Fix for ranged targeting.
+* Fix for intermittent failure of template targeting.
+* Fix for error thrown when making saving throws with debug enabled.
+* Sample items compendium pack updated for foundry v10. (Items are marked at 10.0.10). Make sure to check the description for items that need to be renamed on equip.
+
 ### 10.0.10
 * Remove debug accidentally left in.
 * Fix for typo in versatile processing.
 * Fix for DamageOnlyWorkflow and applyTokenDamage ignoring midi-settings for damage application
-* Almost all sample items updated for v10 - test will be tonight in my game
-
+* ~~Almost all sample items updated for v10 - test will be tonight in my game~~
 
 ### 10.0.9
 * Support multiple damage types in item damage lines/versatile damage.

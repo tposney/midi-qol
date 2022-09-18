@@ -311,9 +311,9 @@ export class Workflow {
       }
     }
     if (!(this instanceof BetterRollsWorkflow)) this.placeTemplateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
-    this.needTemplate = this.item?.hasAreaTarget ?? false;
+    this.needTemplate = (configSettings.autoTarget !== "none" && this.item?.hasAreaTarget) ?? false;
     this.needItemCard = true;
-    this.kickStart = false;
+    this.kickStart = true;
   }
 
   public someEventKeySet() {
@@ -377,7 +377,6 @@ export class Workflow {
         this.templateTargeting = configSettings.autoTarget !== "none" && this.item.hasAreaTarget;
         if (debugEnabled > 1) debug(state, configSettings.autoTarget, this.item.hasAreaTarget);
         if (this.templateTargeting) {
-          game.user?.updateTokenTargets([]); // clear out the targets
           return this.next(WORKFLOWSTATES.AWAITTEMPLATE);
         }
         const targetDetails = this.item.system.target;
@@ -690,8 +689,8 @@ export class Workflow {
         if (configSettings.autoCheckSaves !== "none") {
           await asyncHooksCallAll("midi-qol.preCheckSaves", this);
           if (this.item) await asyncHooksCallAll(`midi-qol.preCheckSaves.${this.item?.uuid}`, this);
-          //@ts-ignore ._hooks not defined
-          if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks._hooks["renderChatMessage"]?.length)
+          //@ts-ignore .events not defined
+          if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessage"]?.length)
           // setup to process saving throws as generated
           let hookId = Hooks.on("renderChatMessage", this.processSaveRoll.bind(this));
           // let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
@@ -705,8 +704,8 @@ export class Workflow {
           }
           if (debugEnabled > 1) debug("Check Saves: ", this.saveRequests, this.saveTimeouts, this.saves);
 
-          //@ts-ignore ._hooks not defined
-          if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks._hooks["renderChatMessage"]?.length)
+          //@ts-ignore .events not defined
+          if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessage"]?.length)
           await asyncHooksCallAll("midi-qol.postCheckSaves", this);
           if (this.item) await asyncHooksCallAll(`midi-qol.postCheckSaves.${this.item?.uuid}`, this);
           await this.displaySaves(configSettings.autoCheckSaves === "whisper", configSettings.mergeCard);
@@ -725,10 +724,12 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.ALLROLLSCOMPLETE);
 
       case WORKFLOWSTATES.ALLROLLSCOMPLETE:
+        /*
         if (configSettings.allowUseMacro && this.item?.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preDamageApplication"), "OnUse", "preDamageApplication");
         }
-
+        */
+       
         this.applicationTargets = new Set();
         if (this.saveItem.hasSave) this.applicationTargets = this.failedSaves;
         else if (this.item.hasAttack) {
@@ -1427,7 +1428,6 @@ export class Workflow {
       semiSuperSavers.push(save instanceof Token ? save.document : save);
       semiSuperSaverUuids.push(save instanceof Token ? save.document?.uuid : save.uuid);
     };
-    // const itemData = this.item?.toObject(false); TODO think about this some more for v10
     const itemData = this.item?.toObject(false) ?? {};
     itemData.data = itemData.system; // Try and support the old.data
     itemData.uuid = this.item?.uuid; // provide the uuid so the actual item can be recovered
@@ -2071,7 +2071,8 @@ export class Workflow {
           let concAdv = advantage === true;
           let concDisadv = advantage === false;
           if (concAdvFlag || concDisadvFlag) {
-            const conditionData = this.createConditionData(this, this.token);
+            //@ts-ignore
+            const conditionData = createConditionData({workflow: this, token: target, actor: target.actor });
             if (concAdvFlag && evalCondition(concAdvFlag, conditionData)) concAdv = true;
             if (concDisadvFlag && evalCondition(concDisadvFlag, conditionData)) concDisadv = true;
           }
@@ -2241,7 +2242,7 @@ export class Workflow {
       if (result?.terms[0]?.options?.disadvantage) this.disadvantageSaves.add(target);
       let isFumble = false;
       let isCritical = false;
-      if (rollDetail?.terms && !result.isBR && rollDetail.terms[0]) { // normal d20 roll/lmrtfy/monks roll
+      if (rollDetail?.terms && !result?.isBR && rollDetail.terms[0]) { // normal d20 roll/lmrtfy/monks roll
         const dterm: DiceTerm = rollDetail.terms[0];
         const diceRoll = dterm?.results?.find(result => result.active)?.result ?? (rollDetail.total);
         //@ts-ignore
@@ -2265,7 +2266,7 @@ export class Workflow {
         saved = true;
       }
       if (isCritical) this.criticalSaves.add(target);
-      if (!result.isBR && !saved) {
+      if (!result?.isBR && !saved) {
         //@ts-ignore
         if (!(result instanceof CONFIG.Dice.D20Roll)) result = CONFIG.Dice.D20Roll.fromJSON(JSON.stringify(result));
         // const newRoll = await bonusCheck(target.actor, result, rollType, "fail")
@@ -3050,7 +3051,7 @@ export class TrapWorkflow extends Workflow {
         //@ts-ignore
         // this.placeTemplateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
         const TemplateClass = game[game.system.id].canvas.AbilityTemplate;
-        const templateData = TemplateClass.fromItem(this.item).toObject(); // TODO check this v10
+        const templateData = TemplateClass.fromItem(this.item).toObject(false); // TODO check this v10
         // template.draw();
         // get the x and y position from the trapped token
         templateData.x = this.templateLocation.x || 0;
@@ -3121,8 +3122,8 @@ export class TrapWorkflow extends Workflow {
           //          Hooks.off("renderChatMessage", brHookId);
           Hooks.off("updateChatMessage", monksId)
         }
-        //@ts-ignore ._hooks not defined
-        if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks._hooks["renderChatMessage"]?.length)
+        //@ts-ignore .events not defined
+        if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessage"]?.length)
         await this.displaySaves(configSettings.autoCheckSaves === "whisper", configSettings.mergeCard);
         return this.next(WORKFLOWSTATES.SAVESCOMPLETE);
 

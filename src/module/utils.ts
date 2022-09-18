@@ -385,7 +385,6 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
 
     const silverDamage = magicalDamage || (item?.type !== "weapon" || item?.system.attackBonus > 0 || item?.system.properties["sil"]);
     const adamantineDamage = magicalDamage || (item?.type !== "weapon" || item?.system.attackBonus > 0 || item?.system.properties["ada"]);
-    const physicalDamage = !magicalDamage;
 
     let AR = 0; // Armor reduction for challenge mode armor etc.
     const ac = targetActor.system.attributes.ac;
@@ -427,6 +426,8 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
       for (let [index, damageDetailItem] of damageDetail.entries()) {
         let { damage, type } = damageDetailItem;
         type = type ?? MQdefaultDamageType;
+        const physicalDamage = ["bludgeoning", "slashing", "piercing"].includes(type);
+
         if (absorptions.includes(type)) {
           type = "healing";
           damageDetailItem.type = "healing"
@@ -437,27 +438,27 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
         if (getProperty(targetActor, `flags.midi-qol.DR.${type}`)) {
           DRType = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.${type}`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
         }
-        if (DRType === 0 && !nonMagicalDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !magicalDamage) {
+        if (!nonMagicalDRUsed && physicalDamage && !magicalDamage) {
           const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.non-magical`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
           nonMagicalDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
         }
-        if (DRType === 0 && !nonSilverDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !silverDamage) {
+        if (!nonSilverDRUsed && physicalDamage && !silverDamage) {
           const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.non-silver`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
           nonSilverDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
         }
-        if (DRType === 0 && !nonAdamantineDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && !adamantineDamage) {
+        if (!nonAdamantineDRUsed && physicalDamage && !adamantineDamage) {
           const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.non-adamantine`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0
           nonAdamantineDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
         }
-        if (DRType === 0 && !physicalDRUsed && ["bludgeoning", "slashing", "piercing"].includes(type) && physicalDamage && getProperty(targetActor, `flags.midi-qol.DR.physical`)) {
+        if (!physicalDRUsed && physicalDamage) {
           const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.physical`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
           physicalDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
         }
-        if (DRType === 0 && !nonPhysicalDRUsed && !["bludgeoning", "slashing", "piercing"].includes(type) && !physicalDamage && getProperty(targetActor, `flags.midi-qol.DR.non-physical`)) {
+        if (!nonPhysicalDRUsed && !physicalDamage) {
           const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.non-physical`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
           nonPhysicalDRUsed = DR > DRType;
           DRType = Math.max(DRType, DR);
@@ -561,6 +562,10 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
     targetNames.push(t.name)
   }
   if (theTargets.size > 0) {
+    if (workflow && configSettings.allowUseMacro && workflow.item?.flags) {
+      workflow.damageList = damageList;
+      await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preDamageApplication"), "OnUse", "preDamageApplication");
+    }
     await timedAwaitExecuteAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
@@ -617,7 +622,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     await expireMyEffects.bind(workflow)(effectsToExpire);
   }
 
-  warn("damge details pre merge are ", workflow.damageDetail, workflow.bonusDamageDetail);
+  warn("damage details pre merge are ", workflow.damageDetail, workflow.bonusDamageDetail);
   let totalDamage = 0;
   let merged = workflow.damageDetail.concat(workflow.bonusDamageDetail ?? []).reduce((acc, item) => {
     acc[item.type] = (acc[item.type] ?? 0) + item.damage;
@@ -1539,6 +1544,31 @@ export function checkRange(item, token, targets): string {
 
   let range = item.system.range?.value || 0;
   let longRange = item.system.range?.long || 0;
+  if (item.system.range?.units) {
+    switch (item.system.range.units) {
+      case "mi": // miles - assume grid units are feet or miles - ignore furlongs/chains whatever
+        //@ts-ignore
+        if (["feet", "ft"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
+          range *= 5280;
+          longRange *= 5280;
+        //@ts-ignore
+      } else if (["yards", "yd", "yds"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
+          range *= 1760;
+          longRange *= 1760;
+        }
+        break;
+      case "km": // kilometeres - assume grid units are meters or kilometers
+        //@ts-ignore
+        if (["meter", "m", "meters", "metre", "metres"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
+          range *= 1000;
+          longRange *= 1000;
+        }
+        break;
+      // "none" "self" "ft" "m" "any" "spec":
+      default:
+         break;
+    }
+  }
   if (getProperty(actor, "flags.midi-qol.sharpShooter") && range < longRange) range = longRange;
   if (item.system.actionType === "rsak" && getProperty(actor, "flags.dnd5e.spellSniper")) {
     range = 2 * range;
@@ -2926,6 +2956,8 @@ export function createConditionData(data: {workflow: Workflow | undefined, targe
     }
     rollData.workflow = {};
     Object.assign(rollData.workflow, data.workflow);
+    rollData.CONFIG = CONFIG;
+    rollData.CONST = CONST;
   } catch (err) {
 
   } finally {
