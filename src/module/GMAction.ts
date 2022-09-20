@@ -19,6 +19,9 @@ export async function removeEffects(data: { actorUuid: string; effects: string[]
 
 export async function createEffects(data: { actorUuid: string, effects: any[] }) {
   const actor = MQfromActorUuid(data.actorUuid);
+  for (let effect of data.effects) {
+    if (effect.transfer === undefined) effect.transfer = false;
+  }
   await actor?.createEmbeddedDocuments("ActiveEffect", data.effects)
 }
 

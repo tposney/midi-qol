@@ -1,3 +1,6 @@
+### 0.9.80
+* Critical damage "No Bonus" renamed to Only Weapon Extra Critical and means the only bonus to ciriticals comes from the weaspons extra critical damage field.
+
 ### 0.9.79
 * Added wildjammer merge
 

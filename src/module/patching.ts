@@ -206,10 +206,6 @@ function configureDamage(wrapped) {
     "baseDamage": "No Bonus"
   */
   if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
-  if (criticalDamage === "baseDamage") {
-    this.options.configured = true;
-    return this;
-  };
 
   for (let [i, term] of this.terms.entries()) {
     let cm = this.options.criticalMultiplier ?? 2;
@@ -261,6 +257,9 @@ function configureDamage(wrapped) {
           // setProperty(newTerm.options, "sourceTerm", term);
           bonusTerms.push(newTerm);
         }
+        break;
+      case "baseDamage":
+      default:
         break;
     }
   }
