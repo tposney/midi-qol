@@ -109,26 +109,24 @@ export let readyHooks = async () => {
       }
       let isConcentration = effect.data.label === concentrationLabel;
       if (!isConcentration) return;
-
-      // If concentration has expired effects and times-up installed - leave it to TU.
-      if (installedModules.get("times-up")) {
-        let expired = effect.data.duration?.seconds && (game.time.worldTime - effect.data.duration.startTime) >= effect.data.duration.seconds;
-        const duration = effect.duration;
-        expired = expired || (duration && duration.remaining <= 0 && duration.type === "turns");
-        if (expired) return;
-      }
       // Handle removal of concentration
       const actor = effect.parent;
       const concentrationData = actor.getFlag("midi-qol", "concentration-data");
       if (!concentrationData) return;
+
+      // Remove templates
+      if (concentrationData.templates) {
+        for (let templateUuid of concentrationData.templates) {
+          const template = await fromUuid(templateUuid);
+          if (template) await template.delete();
+        }
+      }
+
+      // Times up will remove expiring effects so don't double up.
+      if (installedModules.get("times-up") && effect.duration.remaining <= 0) return;
+
       try {
         await actor.unsetFlag("midi-qol", "concentration-data")
-        if (concentrationData.templates) {
-          for (let templateUuid of concentrationData.templates) {
-            const template = await fromUuid(templateUuid);
-            if (template) await template.delete();
-          }
-        }
         for (let removeUuid of concentrationData.removeUuids) {
           const entity = await fromUuid(removeUuid);
           if (entity) await entity.delete(); // TODO check if this needs to be run as GM
@@ -226,7 +224,7 @@ export function initHooks() {
     }
     if (debugEnabled > 1) debug("Finished the roll", wfuuid)
   });
-  
+
   setupMidiFlagTypes();
   Hooks.on("applyActiveEffect", midiCustomEffect);
   // Hooks.on("preCreateActiveEffect", checkImmunity); Disabled in lieu of having effect marked suppressed
