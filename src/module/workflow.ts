@@ -1184,14 +1184,16 @@ export class Workflow {
 
   async expireTargetEffects(expireList: string[]) {
     for (let target of this.targets) {
-      const expiredEffects: (string | null)[] | undefined = target.actor?.effects?.filter(ef => {
-        const wasAttacked = this.item?.hasAttack;
-        //TODO this test will fail for damage only workflows - need to check the damage rolled instead
-        const wasHit = this.hitTargets?.has(target) || this.hitTargetsEC?.has(target);
-        //@ts-ignore token.document
-        const wasDamaged = wasHit && this.damageList && (this.damageList.find(dl => dl.tokenUuid === (target.uuid ?? target.document.uuid) && dl.appliedDamage > 0));
+      if (!target.actor?.effects) continue;
+      const expiredEffects: (string | null)[] = target.actor?.effects?.filter(ef => {
         const specialDuration = getProperty(ef.data.flags, "dae.specialDuration");
         if (!specialDuration) return false;
+        const wasAttacked = this.item?.hasAttack;
+        //TODO this test will fail for damage only workflows - need to check the damage rolled instead
+        const wasHit = (this.item ? wasAttacked : true) && (this.hitTargets?.has(target) || this.hitTargetsEC?.has(target));
+        //@ts-ignore token.document
+        const wasDamaged = wasHit && this.damageList && (this.damageList.find(dl => dl.tokenUuid === (target.uuid ?? target.document.uuid) && dl.appliedDamage > 0));
+
         //TODO this is going to grab all the special damage types as well which is no good.
         if ((expireList.includes("isAttacked") && specialDuration.includes("isAttacked") && wasAttacked)
           || (expireList.includes("isDamaged") && specialDuration.includes("isDamaged") && wasDamaged)
@@ -1209,7 +1211,7 @@ export class Workflow {
         if (this.saveItem.hasSave && expireList.includes(`isSaveFailure`) && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) return true;
         return false;
       }).map(ef => ef.id);
-      if (expiredEffects?.length ?? 0 > 0) {
+      if (expiredEffects?.length > 0) {
         await timedAwaitExecuteAsGM("removeEffects", {
           actorUuid: target.actor?.uuid,
           effects: expiredEffects,

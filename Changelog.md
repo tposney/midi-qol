@@ -1,3 +1,6 @@
+### 0.9.82
+* Fix for "isHit" special duration expiring whenever the character takes damage (i.e. cure wounds spell).
+
 ### 0.9.81
 * Fix for templates not being removed on concentration timed expiry.
 
