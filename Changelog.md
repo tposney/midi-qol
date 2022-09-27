@@ -5,8 +5,8 @@
 * Fix for optional effects not consuming resources. (Lucky is an example).
 * Fix for isHit special duration expiring whenever the character takes damage/healing (i.e. cure wounds spell).
 * Fix for overtime effect removal not working when players end their turn (rather than GM advancing combat tracker).
-* Adde Chill Touch to the sample items compenidum, supports no healing and disadvantage by undead against caster. Has no macros, all done with flags evaluation. Creates two effects since there are two different expiry durations for the effects.
-* Added targetId and targetUuid to the fields availalbe for activation conditions, saves nasty workflow... expressions. See Chill Touch.
+* Added Chill Touch to the sample items compendium, supports no healing and disadvantage by undead against caster. Has no macros, all done with flags evaluation. Creates two effects since there are two different expiry duration for the effects.
+* Added targetId and targetUuid to the fields available for activation conditions, saves nasty workflow... expressions. See Chill Touch.
 * multilevel-tokens 1.6.0 now supports targeting of MLT cloned tokens for targeting/damage/effects so I've removed the restriction on targeting/attack MLT cloned tokens. There are some issues when applying complex active effects (hiding token, tokenMagic effects etc) and scrolling text on tokens to unlinked tokens which I've not investigated too deeply, targeting/damage application/vanilla effects seem to work.
 
 * **Breaking** DnD 2.0.3 introduces damage bypasses for magical/silver/adamantine weapons.
