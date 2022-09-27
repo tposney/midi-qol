@@ -5,16 +5,16 @@
 * Fix for optional effects not consuming resources. (Lucky is an example).
 * Fix for isHit special duration expiring whenever the character takes damage/healing (i.e. cure wounds spell).
 * Fix for overtime effect removal not working when players end their turn (rather than GM advancing combat tracker).
-* Adde Chill Touch to the sample items compenidum, supports no healing and disadvantage by undead against caster. Has no macros, all done with flags evaluation. Creates two effects since there are two different expiry durations for the effects.
-* Added targetId and targetUuid to the fields availalbe for activation conditions, saves nasty workflow... expressions. See Chill Touch.
+* Added Chill Touch to the sample items compendium, supports no healing and disadvantage by undead against caster. Has no macros, all done with flags evaluation. Creates two effects since there are two different expiry duration for the effects.
+* Added targetId and targetUuid to the fields available for activation conditions, saves nasty workflow... expressions. See Chill Touch.
 * multilevel-tokens 1.6.0 now supports targeting of MLT cloned tokens for targeting/damage/effects so I've removed the restriction on targeting/attack MLT cloned tokens. There are some issues when applying complex active effects (hiding token, tokenMagic effects etc) and scrolling text on tokens to unlinked tokens which I've not investigated too deeply, targeting/damage application/vanilla effects seem to work.
 
-* **Breaking** DnD 2.0.3 introduces damage bypasses for magical/silver/adamantine weapons.
+* **Breaking** DnD 2.0.3 introduces damage bypasses for magical/silver/adamant weapons.
   - Midi supports the new dnd5e bypasses when calculating damage applied.
-  - Any of the existing midi extended list of immunity/reistance/vulnerability already setup on an actor will continue to work.
+  - Any of the existing midi extended list of immunity/resistance/vulnerability already setup on an actor will continue to work.
   - From 10.0.12 any of the midi extended immunity/resistance/vulnerability settings must be entered as custom values and the name must match exactly when editing di/dr/dv by hand in the custom field ["Spell Damage", "Non-Magical Damage", "Magical Damage", "Healing", "Healing (Temporary)"]
-  - There is no longer any need (and it is strongly discouraged) to use midi's physical/non-magical/non-silvered/non-adamantine damage reistance types since they can be represented in core dnd5e.
-  - DAE has been updated to support the changed dr/di/dv scheme, including dr/di/dv.bypasses. dr/di/dv.value will only support damage types, not the extended damage resitance types, dr/di/dv.custom now provides a drop down for choosing the custom field.
+  - There is no longer any need (and it is strongly discouraged) to use midi's physical/non-magical/non-silvered/non-adamantine damage resistance types since they can be represented in core dnd5e.
+  - DAE has been updated to support the changed dr/di/dv scheme, including dr/di/dv.bypasses. dr/di/dv.value will only support damage types, not the extended damage resistance types, dr/di/dv.custom now provides a drop down for choosing the custom field.
 
   - When you edit the trait (di/dr/dv) on an actor midi will migrate existing traits to the new scheme automatically.
     - non-silver/non-magical/non-adamantine/physical will map to the new dnd5e scheme.
