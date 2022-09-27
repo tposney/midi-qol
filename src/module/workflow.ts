@@ -3,9 +3,9 @@ import { activationConditionToUse, selectTargets, shouldRollOtherDamage, showIte
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeInvisible, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking, canSense, getSystemCONFIG, tokenForActor, getSelfTarget, createConditionData, evalCondition, removeHidden, ConcentrationData } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, removeInvisible, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, getLateTargeting, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, findNearby, MQfromUuid, midiRenderRoll, markFlanking, canSense, getSystemCONFIG, tokenForActor, getSelfTarget, createConditionData, evalCondition, removeHidden, ConcentrationData, hasDAE } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
-import { bonusCheck, collectBonusFlags, procAdvantage, procAutoFail } from "./patching.js";
+import { bonusCheck, collectBonusFlags, defaultRollOptions, Options, procAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { SystemData } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/packages.mjs";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
@@ -40,14 +40,6 @@ function stateToLabel(state: number) {
   let theState = Object.entries(WORKFLOWSTATES).find(a => a[1] === state);
   return theState ? theState[0] : "Bad State";
 }
-
-export const defaultRollOptions = {
-  advantage: false,
-  disadvantage: false,
-  versatile: false,
-  fastForward: false,
-  other: false
-};
 
 class WorkflowState {
   constructor(state, undoData) {
@@ -180,13 +172,6 @@ export class Workflow {
     return this.otherDamageItem?.system.formula;
   }
 
-  get hasDAE() {
-    return installedModules.get("dae") && (
-      this.item?.effects?.some(ef => ef?.transfer === false)
-      || this.ammo?.effects?.some(ef => ef?.transfer === false)
-    );
-  }
-
   static initActions(actions: {}) {
     Workflow._actions = actions;
   }
@@ -250,16 +235,11 @@ export class Workflow {
     this.damageCardData = undefined;
     this.event = options?.event;
     this.capsLock = options?.event?.getModifierState && options?.event.getModifierState("CapsLock");
-    this.rollOptions = { advantage: false, disadvantage: false, versatile: false, critical: false, fastForward: false, rollToggle: false };
     this.pressedKeys = options?.pressedKeys;
-    if (this.pressedKeys) {
-      if (this.item?.hasAttack || this.item?.type === "tool")
-        this.rollOptions = mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "attack"), { overwrite: true });
-      else
-        this.rollOptions = mergeObject(this.rollOptions, mapSpeedKeys(options.pressedKeys, "damage"), { overwrite: true });
-    }
+    if (options.pressedKeys) this.rollOptions = mapSpeedKeys(options.pressedKeys, "attack");
+    this.rollOptions = mergeObject(this.rollOptions ?? defaultRollOptions, { autoRollAttack: getAutoRollAttack() || options?.pressedKeys?.rollToggle, autoRollDaamge: getAutoRollDamage() || options?.pressedKeys?.rollToggle}, {overwrite: true}); 
     this.itemRollToggle = options?.pressedKeys?.rollToggle ?? false;
-    this.noOptionalRules = options?.pressedKeys?.noOptionalRules ?? false;
+    this.noOptionalRules = options?.noOptionalRules ?? false;
     this.attackRollCount = 0;
     this.damageRollCount = 0;
     this.advantage = undefined;
@@ -318,6 +298,9 @@ export class Workflow {
 
   public someEventKeySet() {
     return this.event?.shiftKey || this.event?.altKey || this.event?.ctrlKey || this.event?.metaKey;
+  }
+  public someAutoRollEventKeySet() {
+    return this.event?.altKey || this.event?.ctrlKey || this.event?.metaKey;
   }
 
   static async removeAttackDamageButtons(id) {
@@ -478,9 +461,9 @@ export class Workflow {
           return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
         }
         if (this.noAutoAttack) return undefined;
-        this.autoRollAttack = this.rollOptions.advantage || this.rollOptions.disadvantage || getAutoRollAttack();
-        if (this.rollOptions?.fastForwardSet) this.autoRollAttack = true;
-        if (this.rollOptions.rollToggle) this.autoRollAttack = !this.autoRollAttack;
+        this.autoRollAttack = this.rollOptions.advantage || this.rollOptions.disadvantage || this.rollOptions.autoRollAttack;
+//        if (this.rollOptions?.fastForwardSet) this.autoRollAttack = true;
+//        if (this.rollOptions.rollToggle) this.autoRollAttack = !this.autoRollAttack;
         // if (!this.autoRollAttack) this.autoRollAttack = (getAutoRollAttack() && !this.rollOptions.rollToggle) || (!getAutoRollAttack() && this.rollOptions.rollToggle)
         if (!this.autoRollAttack) {
           const chatMessage: ChatMessage | undefined = game.messages?.get(this.itemCardId ?? "");
@@ -804,7 +787,7 @@ export class Workflow {
           //@ts-ignore
           const ceEffect = hasCE ? game.dfreds.effects.all.find(e => e.name === theItem?.name) : undefined;
           const ceTargetEffect = ceEffect && !(ceEffect?.flags.dae?.selfTarget || ceEffect?.flags.dae?.selfTargetAlways);
-          const hasItemEffect = this.hasDAE && theItem?.effects.some(ef => ef.transfer !== true);
+          const hasItemEffect = hasDAE(this) && theItem?.effects.some(ef => ef.transfer !== true);
           const itemSelfEffects = theItem?.effects.filter(ef => (ef.flags?.dae?.selfTarget || ef.flags?.dae?.selfTargetAlways) && !ef.transfer) ?? [];
           const itemTargetEffects = theItem?.effects?.filter(ef => !ef.flags?.dae?.selfTargetAlways && !ef.flags?.dae?.selfTarget && ef.transfer !== true) ?? [];
           const hasItemTargetEffects = hasItemEffect && itemTargetEffects.length > 0;
@@ -1009,6 +992,7 @@ export class Workflow {
     this.advantageSaves = new Set();
     this.disadvantageSaves = new Set();
     this.saveDisplayData = [];
+    this.saveresults = [];
   };
 
   public async checkAttackAdvantage() {
@@ -1112,7 +1096,9 @@ export class Workflow {
   public processDamageEventOptions() {
     if (this.workflowType === "TrapWorkflow") {
       this.rollOptions.fastForward = true;
+      this.rollOptions.autoRollAttack = true;
       this.rollOptions.fastForwardAttack = true;
+      this.rollOptions.autoRollDamage = true;
       this.rollOptions.fastForwardDamage = true;
     }
   }
@@ -1276,21 +1262,22 @@ export class Workflow {
 
   async expireTargetEffects(expireList: string[]) {
     for (let target of this.targets) {
-      const expiredEffects: (string | null)[] | undefined = target.actor?.effects?.filter(ef => {
-        const wasAttacked = this.item?.hasAttack;
-        //TODO this test will fail for damage only workflows - need to check the damage rolled instead
-        const wasHit = this.hitTargets?.has(target) || this.hitTargetsEC?.has(target);
-        //@ts-ignore token.document
-        const wasDamaged = wasHit && this.damageList && (this.damageList.find(dl => dl.tokenUuid === (target.uuid ?? target.document.uuid) && dl.appliedDamage > 0));
+      if (!target.actor?.effects) continue; // nothing to expire
+      const expiredEffects: (string | null)[] = target.actor?.effects.filter(ef => {
         //@ts-ignore .flags v10
         const specialDuration = getProperty(ef.flags, "dae.specialDuration");
         if (!specialDuration) return false;
+        const wasAttacked = this.item?.hasAttack;
+        //TODO this test will fail for damage only workflows - need to check the damage rolled instead
+        const wasHit = (this.item ? wasAttacked : true) && (this.hitTargets?.has(target) || this.hitTargetsEC?.has(target));
+        //@ts-ignore token.document
+        const wasDamaged = wasHit && this.damageList && (this.damageList.find(dl => dl.tokenUuid === (target.uuid ?? target.document.uuid) && dl.appliedDamage > 0));
         //TODO this is going to grab all the special damage types as well which is no good.
-        if ((expireList.includes("isAttacked") && specialDuration.includes("isAttacked") && wasAttacked)
-          || (expireList.includes("isDamaged") && specialDuration.includes("isDamaged") && wasDamaged)
-          || (expireList.includes("isHit") && specialDuration.includes("isHit") && wasHit))
+        if ((wasAttacked &&  expireList.includes("isAttacked") && specialDuration.includes("isAttacked"))
+          || (wasDamaged && expireList.includes("isDamaged") && specialDuration.includes("isDamaged"))
+          || (wasHit && expireList.includes("isHit") && specialDuration.includes("isHit")))
           return true;
-        if ((expireList.includes("1Reaction") && specialDuration.includes("1Reaction")) && target.actor?.uuid !== this.actor.uuid) return true;
+        if ((target.actor?.uuid !== this.actor.uuid && expireList.includes("1Reaction") && specialDuration.includes("1Reaction"))) return true;
         for (let dt of this.damageDetail) {
           if (expireList.includes(`isDamaged`) && wasDamaged && specialDuration.includes(`isDamaged.${dt.type}`)) return true;
         }
@@ -1302,7 +1289,7 @@ export class Workflow {
         if (this.saveItem.hasSave && expireList.includes(`isSaveFailure`) && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) return true;
         return false;
       }).map(ef => ef.id);
-      if (expiredEffects?.length ?? 0 > 0) {
+      if (expiredEffects.length > 0) {
         await timedAwaitExecuteAsGM("removeEffects", {
           actorUuid: target.actor?.uuid,
           effects: expiredEffects,
@@ -2923,7 +2910,8 @@ export class DamageOnlyWorkflow extends Workflow {
   //@ts-ignore dnd5e v10
   constructor(actor: globalThis.dnd5e.documents.Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll,
     options: { flavor: string, itemCardId: string, damageList: [], useOther: boolean, itemData: {}, isCritical: boolean }) {
-    super(actor, null, ChatMessage.getSpeaker({ token }), new Set(targets), shiftOnlyEvent)
+    //@ts-ignore getSpeaker requires a token document
+    super(actor, null, ChatMessage.getSpeaker({ token: (token.document ??  token) }), new Set(targets), shiftOnlyEvent)
     this.itemData = options.itemData ? duplicate(options.itemData) : undefined;
     // Do the supplied damageRoll
     this.flavor = options.flavor;

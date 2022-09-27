@@ -322,7 +322,6 @@ export let nsaMessageHandler = (message, data, ...args) => {
   gmIds = gmIds.filter(id => !currentIds.includes(id));
   if (debugEnabled > 1) debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmIds ", gmIds)
   if (gmIds.length > 0) message.updateSource({ "whisper": currentIds.concat(gmIds) });
-  // TODO check this data.whisper = data.whisper.concat(gmIds);
   return true;
 }
 
@@ -674,6 +673,7 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
 }
 
 export function processItemCardCreation(message, user) {
+  if (game.settings.get("midi-qol", "itemUseHooks")) return;
   const midiFlags = message.flags["midi-qol"];
   if (user === game.user?.id && midiFlags?.workflowId) { // check to see if it is a workflow
     const workflow = Workflow.getWorkflow(midiFlags.workflowId);

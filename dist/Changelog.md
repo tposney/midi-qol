@@ -1,3 +1,29 @@
+### 10.0.12
+**Breaking** 10.0.12 **requires** dnd5e 2.0.3 or later and won't activate without it.
+* Fixed a bug where templates were sometimes not removed with concentration if concentration expired.
+* Change to DR (damage reduction behaviour). Negative DR (meaning extra damage) is always applied in full if there is damage of the appropriate type. so flags.midi-qol.DR.mwak OVERRIDE -10 means any melee weapon attack will do an extra 10 points of damage. This is independent of other DR that may be present on the actor.
+* Fix for optional effects not consuming resources. (Lucky is an example).
+* Fix for isHit special duration expiring whenever the character takes damage/healing (i.e. cure wounds spell).
+* Fix for overtime effect removal not working when players end their turn (rather than GM advancing combat tracker).
+* Adde Chill Touch to the sample items compenidum, supports no healing and disadvantage by undead against caster. Has no macros, all done with flags evaluation. Creates two effects since there are two different expiry durations for the effects.
+* Added targetId and targetUuid to the fields availalbe for activation conditions, saves nasty workflow... expressions. See Chill Touch.
+* multilevel-tokens 1.6.0 now supports targeting of MLT cloned tokens for targeting/damage/effects so I've removed the restriction on targeting/attack MLT cloned tokens. There are some issues when applying complex active effects (hiding token, tokenMagic effects etc) and scrolling text on tokens to unlinked tokens which I've not investigated too deeply, targeting/damage application/vanilla effects seem to work.
+
+* **Breaking** DnD 2.0.3 introduces damage bypasses for magical/silver/adamantine weapons.
+  - Midi supports the new dnd5e bypasses when calculating damage applied.
+  - Any of the existing midi extended list of immunity/reistance/vulnerability already setup on an actor will continue to work.
+  - From 10.0.12 any of the midi extended immunity/resistance/vulnerability settings must be entered as custom values and the name must match exactly when editing di/dr/dv by hand in the custom field ["Spell Damage", "Non-Magical Damage", "Magical Damage", "Healing", "Healing (Temporary)"]
+  - There is no longer any need (and it is strongly discouraged) to use midi's physical/non-magical/non-silvered/non-adamantine damage reistance types since they can be represented in core dnd5e.
+  - DAE has been updated to support the changed dr/di/dv scheme, including dr/di/dv.bypasses. dr/di/dv.value will only support damage types, not the extended damage resitance types, dr/di/dv.custom now provides a drop down for choosing the custom field.
+
+  - When you edit the trait (di/dr/dv) on an actor midi will migrate existing traits to the new scheme automatically.
+    - non-silver/non-magical/non-adamantine/physical will map to the new dnd5e scheme.
+    - others will be mapped to custom damage resistances.
+  - TL;DR
+    - you don't need to do anything, all damage resistance/immunity/vulnerability should continue to work.
+    - If you want to edit those you will need to populate the Custom damage fields.
+    - Existing traits.di/dr/dv will be migrated on first edit of the actor.
+
 ### 10.0.11
 * restore active layer and ui control/target when using late targeting.
 * Fix for incorrectly processing DR.physical when a magical weapon is used.
@@ -108,7 +134,7 @@ to make those the foundry conditions for invisible/blinded. This works for both 
 * **New feature for overTime effects**. You can add actionSave=true which means overtime effects won't auto roll the save, rather it waits for the actor to roll an appropriate save when it is the actor's turn (just roll the save from the character sheet - or anything that creates a chat message saving throw - LMRTFY but not monk's token bar) and if the save is higher than the overtime effects saveDC the effect will be immediately removed. 
   - This allows you to support "the character can use its action to save against the effect".
   - Simply add actionSave=true to the overtime effect definition and mid will watch for saving throws on the actors turn and if the type matches the overtime efffect it will check the roll versus the saveDC and remove the effect if the save is successful.
-* **Big change** flags.midi-qol.advantage/disadvantage etc will row evaluate the "value" as if it is an activation condition expression, so ``flags.midi-qol.advantage.attack.all OVERRIDE "@raceOrType".includes("dragon")`` will mean attacks against dragons will be made with advantage. The spreadsheet of flags has been updated to include all valid flags (I hope) and now specifies the type of the field. Any field marked as Activation Condition will also accept simple boolean fields.
+* **Big change** flags.midi-qol.advantage/disadvantage etc will row evaluate the "value" as if it is an activation condition expression, so ``flags.midi-qol.advantage.attack.all CUSTOM "@raceOrType".includes("dragon")`` will mean attacks against dragons will be made with advantage. The spreadsheet of flags has been updated to include all valid flags (I hope) and now specifies the type of the field. Any field marked as Activation Condition will also accept simple boolean fields.
   - There are bound to be some edge cases I've not thought about so regard this as a work in progress. The flag condition evaluation is backwards compatible with the existing true/false/0/1 behaviour.
   - Known issues: when rolling a saving throw the workflow, item and source actor are not available, so condition evaluation is limited to fields that exist on the actor doing the saving throw.
 

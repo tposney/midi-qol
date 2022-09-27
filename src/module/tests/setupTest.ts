@@ -102,7 +102,6 @@ async function registerTests() {
 
         describe("skill roll tests", function () {
           it("roll perception - 1 dice", function () {
-            console.log("Actor flags are ", duplicate(actor.flags))
             return actor.rollSkill("prc", { chatMessage: false, fastForward: true })
               // .then(skillRoll => { actor.prepareData(); assert.equal(skillRoll.terms[0].number, 1) });
               .then(skillRoll => { actor.prepareData(); expect(skillRoll.terms[0].number).to.equal(1) });
@@ -155,7 +154,7 @@ async function registerTests() {
         });
         describe("initiative rolls", function () {
           it("rolls a normal initiative roll", async function () {
-            const rollResult: Promise<Roll> = new Promise(async (resolve) => {
+            const rollResult: Promise<Roll> = new Promise((resolve) => {
               Hooks.once("createChatMessage", function (chatMessage) {
                 resolve(chatMessage.rolls[0])
               });
@@ -169,7 +168,7 @@ async function registerTests() {
           });
           it("rolls an advantage initiative roll", async function () {
             await actor.setFlag(game.system.id, "initiativeAdv", true);
-            const rollResult: Promise<Roll> = new Promise(async (resolve) => {
+            const rollResult: Promise<Roll> = new Promise((resolve) => {
               Hooks.once("createChatMessage", function (chatMessage) {
                 resolve(chatMessage.rolls[0])
               });
@@ -421,10 +420,10 @@ async function registerTests() {
             try {
               //@ts-ignore .label v10
               let hasEffect: any[] = actor.effects.filter(a => a.label === "Macro Execute Test") ?? [];
-              if (hasEffect?.length > 0) actor.deleteEmbeddedDocuments("ActiveEffect", hasEffect.map(e => e.id))
+              if (hasEffect?.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", hasEffect.map(e => e.id))
               //@ts-ignore .label v10
               hasEffect = target?.actor?.effects.filter(a => a.label === "Macro Execute Test") ?? [];
-              if (hasEffect?.length > 0) target?.actor?.deleteEmbeddedDocuments("ActiveEffect", hasEffect.map(e => e.id));
+              if (hasEffect?.length > 0) await target?.actor?.deleteEmbeddedDocuments("ActiveEffect", hasEffect.map(e => e.id));
               game.user?.updateTokenTargets([target?.id ?? ""]);
               await completeItemUse(actor.items.getName("Macro Execute Test"));
               //@ts-ignore .flags v10
@@ -449,7 +448,7 @@ async function registerTests() {
             return true;
           });
           it("tests macro.tokenMagic", async function () {
-            this.timeout(5000);
+            this.timeout(10000);
             const actor = getActor(actor1Name);
             const effectData = { 
               label: "test effect", 
@@ -460,19 +459,22 @@ async function registerTests() {
             //@ts-ignore .label v10
             assert.ok(actor.effects.find(ef=>ef.label === effectData.label));
             await busyWait(3);
-            const actorToken = canvas?.tokens?.placeables.find(t=> t.name === actor.token?.name ?? actor.name)
+            const actorToken = canvas?.tokens?.placeables.find(t=> t.name === (actor.token?.name ?? actor.name))
             assert.ok(actorToken, "found actor token");
             assert.ok(globalThis.TokenMagic.hasFilterId(actorToken,"blur"), "applied blur effect");
             await actor.deleteEmbeddedDocuments("ActiveEffect", theEffects.map(ef=>ef.id));
+            await busyWait(3);
+            assert.equal(globalThis.TokenMagic.hasFilterId(actorToken,"blur"), false, "test blur");
             return true;
           });
-          it("tests blur removal", async function() {
+/*          it("tests blur removal", async function() {
             const actor = getActor(actor1Name);
             const actorToken = canvas?.tokens?.placeables.find(t=> t.name === actor.token?.name)
-            this.retries(5);
+            this.retries(10);
             await busyWait(1);
             assert.equal(globalThis.TokenMagic.hasFilterId(actorToken,"blur"), false, "test blur");
           });
+*/
         });
         describe("onUse Macro Tests", async function () {
           it("Calls actor onUseMacros", async function () {
@@ -488,19 +490,22 @@ async function registerTests() {
             let hasEffects: any = actor.effects.filter(a => a.label === "OnUseMacroTest") ?? [];
             assert.ok(hasEffects);
             await actor.deleteEmbeddedDocuments("ActiveEffect", hasEffects.map(e => e.id))
-            console.log(macroPasses);
+            // console.log(macroPasses);
+            // console.log(Object.keys(game.i18n.translations["midi-qol"]["onUseMacroOptions"]))
             // Test for all passes except "all", "template placed"
-            assert.equal(macroPasses.length, Object.keys(game.i18n.translations["midi-qol"]["onUseMacroOptions"]).length - 1, "on use macro pass length");
+            assert.equal(macroPasses.length, Object.keys(game.i18n.translations["midi-qol"]["onUseMacroOptions"]).length - 2, "on use macro pass length");
           })
 
           it("Calls item onUseMacros", async function () {
             const actor = getActor(actor2Name);
             const macroPasses: string[] = [];
+            const expectedPasses = ['preItemRoll', 'preambleComplete', 'preSave', 'postSave', 'preActiveEffects', 'postActiveEffects'];
             const hookid = Hooks.on("Item OnUseMacroTest", (pass: string) => macroPasses.push(pass));
             await completeItemUse(actor.items.getName("Item OnUseMacroTest"));
             Hooks.off("OnUseMacroTest", hookid);
-            console.log(macroPasses);
-            assert.equal(JSON.stringify(macroPasses), JSON.stringify(['preItemRoll', "templatePlaced", 'preambleComplete', 'preSave', 'postSave', 'preDamageApplication', 'preActiveEffects', 'postActiveEffects']));
+            // console.log(macroPasses);
+            // console.log(expectedPasses)
+            assert.equal(JSON.stringify(macroPasses), JSON.stringify(expectedPasses));
           });
         });
       },

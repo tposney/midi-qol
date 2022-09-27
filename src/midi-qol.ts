@@ -231,12 +231,14 @@ Hooks.once('ready', function () {
   }
   OnUseMacroOptions.setOptions(MQOnUseOptions);
   MidiSounds.midiSoundsReadyHooks();
-  getSystemCONFIG().characterFlags["spellSniper"] = {
-    name: "Spell Sniper",
-    hint: "Spell Sniper",
-    section: i18n("DND5E.Feats"),
-    type: Boolean
-  };
+  if (game.system.id === "dnd5e") {
+    getSystemCONFIG().characterFlags["spellSniper"] = {
+      name: "Spell Sniper",
+      hint: "Spell Sniper",
+      section: i18n("DND5E.Feats"),
+      type: Boolean
+    };
+  }
 
   setupMidiQOLApi();
 
@@ -276,11 +278,11 @@ Hooks.once('ready', function () {
   setTimeout(MidiSounds.getWeaponBaseTypes, 5000);
   if (installedModules.get("betterrolls5e")) {
     //@ts-ignore console:
-    ui.notifications?.error("midi-qol automation disabled", {permanent: true, console: true})
+    ui.notifications?.error("midi-qol automation disabled", { permanent: true, console: true })
     //@ts-ignore console:
-    ui.notifications?.error("Please make sure betterrolls5e is disabled", {permanent: true, console: true})
+    ui.notifications?.error("Please make sure betterrolls5e is disabled", { permanent: true, console: true })
     //@ts-ignore console:
-    ui.notifications?.error("Until further notice better rolls is NOT compatible with midi-qol", {permanent: true, console: true})
+    ui.notifications?.error("Until further notice better rolls is NOT compatible with midi-qol", { permanent: true, console: true })
     disableWorkflowAutomation();
     setTimeout(disableWorkflowAutomation, 2000)
   }
@@ -301,14 +303,14 @@ function setupMidiQOLApi() {
 
   //@ts-ignore
   window.MinorQOL = {
-    doRoll: () => {console.error("MinorQOL is no longer supported please use MidiQOL.doRoll")},
-    applyTokenDamage: () => {console.error("MinorQOL is no longer supported please use MidiQOL.applyTokenDamage")},
+    doRoll: () => { console.error("MinorQOL is no longer supported please use MidiQOL.doRoll") },
+    applyTokenDamage: () => { console.error("MinorQOL is no longer supported please use MidiQOL.applyTokenDamage") },
   }
   //@ts-ignore
   globalThis.MidiQOL = {
     addConcentration,
     applyTokenDamage,
-    canSense, 
+    canSense,
     checkNearby,
     checkRange,
     checkRule: checkRule,

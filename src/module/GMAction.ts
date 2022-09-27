@@ -1,6 +1,6 @@
 import { configSettings } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming, geti18nOptions } from "../midi-qol.js";
-import { completeItemUse, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
+import { completeItemUse, gmOverTimeEffect, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMesssageHandling.js";
 import { Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { bonusCheck } from "./patching.js";
@@ -75,7 +75,15 @@ export let setupSocket = () => {
   socketlibSocket.register("completeItemUse", _completeItemUse);
   socketlibSocket.register("applyEffects", _applyEffects);
   socketlibSocket.register("bonusCheck", _bonusCheck)
+  socketlibSocket.register("gmOverTimeEffect", _gmOverTimeEffect)
 };
+
+export async function _gmOverTimeEffect(data:{ actorUuid, effectUuid, startTurn, options}) {
+  const actor = MQfromActorUuid(data.actorUuid);
+  const effect = MQfromUuid(data.effectUuid)
+  console.log("Called _gmOvertime", actor.name, effect.label)
+  return await gmOverTimeEffect(actor, effect, data.startTurn, data.options)
+}
 
 export async function _bonusCheck(data: {actorUuid, result, rollType, selector}) {
   const tokenOrActor: any = await fromUuid(data.actorUuid);
@@ -103,15 +111,18 @@ export async function _applyEffects(data: { workflowId: string, targets: string[
   return result;
 }
 
-async function _completeItemUse(data: {itemData: any, actorUuid: string, config: any, options: any, targetUuids: string[]}) {
+async function _completeItemUse(data: {
+  itemData: any, actorUuid: string, config: any, options: any, targetUuids: string[]}) {
   if (!game.user) return null;
   let {itemData, actorUuid, config, options} = data;
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
-  let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
-  const result =  await completeItemUse(ownedItem, config, options);
+  //@ts-ignore v10
+  let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor, keepId: true });
+  const workflow =  await completeItemUse(ownedItem, config, options);
   return true; // can't return the workflow
 }
+
 async function createActor(data) {
   await CONFIG.Actor.documentClass.createDocuments([data.actorData]);
 }

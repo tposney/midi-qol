@@ -177,7 +177,7 @@ export async function getSelfTarget(actor): Promise<Token | TokenDocument | unde
   if (actor.token) return actor.token.object; //actor.token is a token document.
   const speaker = ChatMessage.getSpeaker({ actor })
   if (speaker.token) return canvas?.tokens?.get(speaker.token);
-  return actor.getTokenData(); // TODO test this sometime
+  throw new error("Could not get a target for self");
 }
 
 export async function getSelfTargetSet(actor): Promise<Set<Token | TokenDocument>> {
@@ -243,12 +243,8 @@ export let getTraitMult = (actor, dmgTypeString, item): number => {
   if (dmgTypeString.includes("healing") || dmgTypeString.includes("temphp")) totalMult = -1;
   if (dmgTypeString.includes("midi-none")) return 0;
   if (configSettings.damageImmunities === "none") return totalMult;
-  /*
-  let attacker = item?.parent;
-  if (attacker) {
-    const ignoreFlags = getProperty(attacker.flags, "midi-qol.ignoreTrait"
-  }
-  */
+  const phsyicalDamageTypes = Object.keys(getSystemCONFIG().physicalDamageTypes);
+
   if (dmgTypeString !== "") {
     // if not checking all damage counts as magical
     let magicalDamage = item?.system.properties?.mgc || item?.flags.midiProperties?.magicdam;
@@ -257,30 +253,68 @@ export let getTraitMult = (actor, dmgTypeString, item): number => {
     magicalDamage = magicalDamage || (configSettings.requireMagical === "nonspell" && item?.type === "spell");
     const silverDamage = item?.system.properties?.sil;
     const adamantineDamage = item?.system.properties?.ada;
+    const physicalDamage = phsyicalDamageTypes.includes(dmgTypeString);
+
     let traitList = [{ type: "di", mult: 0 }, { type: "dr", mult: configSettings.damageResistanceMultiplier }, { type: "dv", mult: configSettings.damageVulnerabilityMultiplier }];
     // for sw5e use sdi/sdr/sdv instead of di/dr/dv
     if (game.system.id === "sw5e" && actor.type === "starship" && actor.system.attributes.hp.tenp > 0) {
       traitList = [{ type: "sdi", mult: 0 }, { type: "sdr", mult: configSettings.damageResistanceMultiplier }, { type: "sdv", mult: configSettings.damageVulnerabilityMultiplier }];
     }
     for (let { type, mult } of traitList) {
-      let trait = actor.system.traits[type].value;
+      let trait = duplicate(actor.system.traits[type].value);
+      let customs: string[] = [];
+      if (actor.system.traits[type].custom.length > 0) {
+        customs = actor.system.traits[type].custom.split(";").map(s => s.trim())
+      }
+      const bypasses = actor.system.traits[type].bypasses;
+      // process new bypasses settings
+      if (magicalDamage && physicalDamage && bypasses.includes("mgc")) continue; // magical damage bypass of trait.
+      if (adamantineDamage && physicalDamage && bypasses.includes("ada")) continue;
+      if (silverDamage && physicalDamage && bypasses.includes("sil")) continue;
+
+      // process new custom field versions
+      if (!["healing", "temphp"].includes(dmgTypeString)) {
+        if (!magicalDamage && (trait.includes("nonmagic") || customs.includes(getSystemCONFIG().damageResistanceTypes["nonmagic"])))
+          totalMult = totalMult * mult;
+        else if (magicalDamage && trait.includes("magic")) {
+          totalMult = totalMult * mult;
+          continue;
+        }
+        else if (item?.type === "spell" && trait.includes("spell")) {
+          totalMult = totalMult * mult;
+          continue;
+        } else if (item?.type === "power" && trait.includes("power")) {
+          totalMult = totalMult * mult;
+          continue;
+        }
+        if (customs.length > 0) {
+          if (!magicalDamage && (customs.includes("nonmagic") || customs.includes(getSystemCONFIG().damageResistanceTypes["nonmagic"]))) {
+            totalMult = totalMult * mult;
+            continue;
+          } else if (magicalDamage && (customs.includes("magic") || customs.includes(getSystemCONFIG().damageResistanceTypes["magic"]))) {
+            totalMult = totalMult * mult;
+            continue;
+          } else if (item?.type === "spell" && (customs.includes("spell") || customs.includes(getSystemCONFIG().damageResistanceTypes["spell"]))) {
+            totalMult = totalMult * mult;
+            continue;
+          } else if (item?.type === "power" && (customs.includes("power") || customs.includes(getSystemCONFIG().damageResistanceTypes["power"]))) {
+            totalMult = totalMult * mult;
+            continue;
+          }
+        }
+      }
+
+      // Support old style leftover settings
       if (configSettings.damageImmunities === "immunityPhysical") {
         if (!magicalDamage && trait.includes("physical"))
-          trait = trait.concat("bludgeoning", "slashing", "piercing")
+          trait = trait.concat(phsyicalDamageTypes)
         if (!(magicalDamage || silverDamage) && trait.includes("silver"))
-          trait = trait.concat("bludgeoning", "slashing", "piercing")
+          trait = trait.concat(phsyicalDamageTypes)
         if (!(magicalDamage || adamantineDamage) && trait.includes("adamant"))
-          trait = trait.concat("bludgeoning", "slashing", "piercing")
+          trait = trait.concat(phsyicalDamageTypes)
       }
-      if (!magicalDamage && trait.find(t => t === "nonmagic") && !["healing", "temphp"].includes(dmgTypeString))
-        totalMult = totalMult * mult;
-      else if (magicalDamage && trait.find(t => t === "magic") && !["healing", "temphp"].includes(dmgTypeString))
-        totalMult = totalMult * mult;
-      else if (item?.type === "spell" && trait.includes("spell") && !["healing", "temphp"].includes(dmgTypeString))
-        totalMult = totalMult * mult;
-      else if (item?.type === "power" && trait.includes("power") && !["healing", "temphp"].includes(dmgTypeString))
-        totalMult = totalMult * mult;
-      else if (trait.includes(dmgTypeString))
+
+      if (trait.includes(dmgTypeString))
         totalMult = totalMult * mult;
     }
   }
@@ -311,7 +345,7 @@ export interface applyDamageDetails {
 
 export async function applyTokenDamageMany({ applyDamageDetails, theTargets, item,
   options = { existingDamage: [], workflow: undefined, updateContext: undefined, forceApply: false } }:
-    { applyDamageDetails: applyDamageDetails[]; theTargets: Set<Token | TokenDocument>; item: any; options?: { existingDamage: any[][]; workflow: Workflow | undefined; updateContext: any | undefined; forceApply: boolean }; }): Promise<any[]> {
+  { applyDamageDetails: applyDamageDetails[]; theTargets: Set<Token | TokenDocument>; item: any; options?: { existingDamage: any[][]; workflow: Workflow | undefined; updateContext: any | undefined; forceApply: boolean }; }): Promise<any[]> {
   let damageList: any[] = [];
   let targetNames: string[] = [];
   let appliedDamage;
@@ -370,6 +404,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
       // TODO: maybe expand this to work with characters as well?
       // Starship damage resistance applies only to attacks
       if (item && ["mwak", "rwak"].includes(item?.system.actionType)) {
+        // This should be a roll?
         DRAll = getProperty(t, "actor.system.attributes.equip.armor.dr") ?? 0;;
       }
     } else if (getProperty(targetActor, "flags.midi-qol.DR.all") !== undefined)
@@ -400,7 +435,8 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
       var dmgType;
 
       // This is overall Damage Reduction
-      let maxDR = 0;
+      let maxDR = Number.NEGATIVE_INFINITY;
+      ;
 
       if (checkRule("challengeModeArmor") && checkRule("challengeModeArmorScale")) {
         AR = workflow.isCritical ? 0 : ac.AR;
@@ -437,31 +473,55 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
         // Pick the highest DR applicable to the damage type being inflicted.
         if (getProperty(targetActor, `flags.midi-qol.DR.${type}`)) {
           DRType = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.${type}`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
+          if (DRType < 0) {
+            damageDetailItem.damage -= DRType;
+            DRType = 0;
+          }
         }
-        if (!nonMagicalDRUsed && physicalDamage && !magicalDamage) {
+        if (!nonMagicalDRUsed && physicalDamage && !magicalDamage && getProperty(targetActor, `flags.midi-qol.DR.non-magical`)) {
           const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.non-magical`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
-          nonMagicalDRUsed = DR > DRType;
-          DRType = Math.max(DRType, DR);
+          if (DR < 0) {
+            damageDetailItem.damage -= DR;
+          } else {
+            nonMagicalDRUsed = DR > DRType;
+            DRType = Math.max(DRType, DR);
+          }
         }
-        if (!nonSilverDRUsed && physicalDamage && !silverDamage) {
+        if (!nonSilverDRUsed && physicalDamage && !silverDamage && getProperty(targetActor, `flags.midi-qol.DR.non-silver`)) {
           const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.non-silver`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
-          nonSilverDRUsed = DR > DRType;
-          DRType = Math.max(DRType, DR);
+          if (DR < 0) {
+            damageDetailItem.damage -= DR;
+          } else {
+            nonSilverDRUsed = DR > DRType;
+            DRType = Math.max(DRType, DR);
+          }
         }
-        if (!nonAdamantineDRUsed && physicalDamage && !adamantineDamage) {
+        if (!nonAdamantineDRUsed && physicalDamage && !adamantineDamage && getProperty(targetActor, `flags.midi-qol.DR.non-adamantine`)) {
           const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.non-adamantine`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0
-          nonAdamantineDRUsed = DR > DRType;
-          DRType = Math.max(DRType, DR);
+          if (DR < 0) {
+            damageDetailItem.damage -= DR;
+          } else {
+            nonAdamantineDRUsed = DR > DRType;
+            DRType = Math.max(DRType, DR);
+          }
         }
-        if (!physicalDRUsed && physicalDamage) {
+        if (!physicalDRUsed && physicalDamage && getProperty(targetActor, `flags.midi-qol.DR.physical`)) {
           const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.physical`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
-          physicalDRUsed = DR > DRType;
-          DRType = Math.max(DRType, DR);
+          if (DR < 0) {
+            damageDetailItem.damage -= DR;
+          } else {
+            physicalDRUsed = DR > DRType;
+            DRType = Math.max(DRType, DR);
+          }
         }
-        if (!nonPhysicalDRUsed && !physicalDamage) {
+        if (!nonPhysicalDRUsed && !physicalDamage && getProperty(targetActor, `flags.midi-qol.DR.non-physical`)) {
           const DR = (new Roll((`${getProperty(targetActor, `flags.midi-qol.DR.non-physical`) || "0"}`), targetActor.getRollData())).evaluate({ async: false }).total ?? 0;
-          nonPhysicalDRUsed = DR > DRType;
-          DRType = Math.max(DRType, DR);
+          if (DR < 0) {
+            damageDetailItem.damage -= DR;
+          } else {
+            nonPhysicalDRUsed = DR > DRType;
+            DRType = Math.max(DRType, DR);
+          }
         }
         DRType = Math.min(damage, DRType);
         // We have the DRType for the current damage type
@@ -585,9 +645,9 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
   return damageList;
 };
 
-export async function legacyApplyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr, 
-    options: { existingDamage: any[][], superSavers: Set<any>[], semiSuperSavers: Set<any>[], workflow: Workflow | undefined, updateContext: any, forceApply: any } 
-      = { existingDamage: [], superSavers: [], semiSuperSavers: [], workflow: undefined, updateContext: undefined, forceApply: false }): Promise<any[]> {
+export async function legacyApplyTokenDamageMany(damageDetailArr, totalDamageArr, theTargets, item, savesArr,
+  options: { existingDamage: any[][], superSavers: Set<any>[], semiSuperSavers: Set<any>[], workflow: Workflow | undefined, updateContext: any, forceApply: any }
+    = { existingDamage: [], superSavers: [], semiSuperSavers: [], workflow: undefined, updateContext: undefined, forceApply: false }): Promise<any[]> {
   const mappedDamageDetailArray: applyDamageDetails[] = damageDetailArr.map((dd, i) => {
     return {
       label: "test",
@@ -876,9 +936,9 @@ export function midiCustomEffect(actor, change) {
   if (typeof change?.key !== "string") return true;
   if (!change.key?.startsWith("flags.midi-qol")) return true;
   const variableKeys = [
-    "flags.midi-qol.OverTime", 
-    "flags.midi-qol.optional", 
-    "flags.midi-qol.advantage", 
+    "flags.midi-qol.OverTime",
+    "flags.midi-qol.optional",
+    "flags.midi-qol.advantage",
     "flags.midi-qol.disadvantage",
     "flags.midi-qol.grants",
     "flags.midi-qol.fails"
@@ -974,6 +1034,12 @@ export async function processOverTime(wrapped, data, options, user) {
 }
 
 export async function doOverTimeEffect(actor, effect, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined }) {
+  if (game.user?.isGM)
+    return gmOverTimeEffect(actor, effect, startTurn, options);
+  return socketlibSocket.executeAsGM("gmOverTimeEffect", {actorUuid: actor.uuid, effectUuid: effect.uuid, startTurn, options})
+}
+
+export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined }) {
   const endTurn = !startTurn;
   if (effect.disabled || effect.isSuppressed) return;
   const auraFlags = effect.flags?.ActiveAuras ?? {};
@@ -1118,7 +1184,7 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true,
       const theTargetToken = await getSelfTarget(actor);
       const theTargetId = (theTargetToken instanceof Token) ? theTargetToken?.document.id : theTargetToken?.id;
       const theTargetUuid = (theTargetToken instanceof Token) ? theTargetToken?.document.uuid : theTargetToken?.uuid;
-      if (game.user?.isGM && theTargetId) game.user.updateTokenTargets([theTargetId]);
+      if (game.user && theTargetId) game.user.updateTokenTargets([theTargetId]);
 
       if (damageRoll) {
         let damageRollString = damageRoll;
@@ -1155,10 +1221,7 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true,
           overTimeEffectsToDelete[ownedItem.uuid] = { actor, effectId: effect.id }
         }
       }
-
-
       try {
-
         const options = {
           showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid],
           workflowOptions: { lateTargeting: "none", autoRollDamage: "onHit", autoFastDamage: true }
@@ -1208,8 +1271,10 @@ export async function _processOverTime(combat, data, options, user) {
       }
     }
 
-    if (actor) for (let effect of actor.effects) await doOverTimeEffect(actor, effect, startTurn);
-
+    if (actor) for (let effect of actor.effects) {
+      if (effect.changes.some(change => change.key.startsWith("flags.midi-qol.OverTime")))
+        await doOverTimeEffect(actor, effect, startTurn);
+    }
     testTurn += 1;
     if (testTurn === combat.turns.length) {
       testTurn = 0;
@@ -1258,6 +1323,7 @@ export async function completeItemUse(item, config: any = {}, options: any = { c
         resolve(workflow);
       });
 
+
       if (item.magicItem) {
         item.magicItem.magicItemActor.roll(item.magicItem.id, item.id)
         //@ts-ignore .version v10
@@ -1265,13 +1331,17 @@ export async function completeItemUse(item, config: any = {}, options: any = { c
         // TODO check this v10
         globalThis.BetterRolls.rollItem(theItem, { itemData: item.toObject(), vanilla: false, adv: 0, disadv: 0, midiSaveDC: options.saveDC }).toMessage()
       } else {
-        const result = item.use(config, options).then(result => { if (!result) resolve(result) });
+        if (game.settings.get("midi-qol", "itemUseHooks")) { // Since first call aalways fails can't check the result
+          item.use(config, options)
+        } else {
+          item.use(config, options).then(result => { if (!result) resolve(result) });
+        }
       }
     })
   } else {
     const targetUuids = options.targetUuids ? options.targetUuids : Array.from(game.user?.targets || []).map(t => t.document.uuid); // game.user.targets is always a set of tokens
     const data = {
-      itemData: theItem.toObject(),
+      itemData: theItem.toObject(false),
       actorUuid: theItem.parent.uuid,
       targetUuids,
       config,
@@ -1551,8 +1621,8 @@ export function checkRange(item, token, targets): string {
         if (["feet", "ft"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
           range *= 5280;
           longRange *= 5280;
-        //@ts-ignore
-      } else if (["yards", "yd", "yds"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
+          //@ts-ignore
+        } else if (["yards", "yd", "yds"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
           range *= 1760;
           longRange *= 1760;
         }
@@ -1566,7 +1636,7 @@ export function checkRange(item, token, targets): string {
         break;
       // "none" "self" "ft" "m" "any" "spec":
       default:
-         break;
+        break;
     }
   }
   if (getProperty(actor, "flags.midi-qol.sharpShooter") && range < longRange) range = longRange;
@@ -1708,7 +1778,7 @@ export interface ConcentrationData {
   templateUuid: string;
 }
 export async function addConcentration(actor, concentrationData: ConcentrationData) {
-  await addConcentrationEffect(actor, concentrationData );
+  await addConcentrationEffect(actor, concentrationData);
   await setConcentrationData(actor, concentrationData);
 }
 // Add the concentration marker to the character and update the duration if possible
@@ -1965,28 +2035,7 @@ export async function expireRollEffect(rolltype: string, abilityId: string, succ
 
 // TODO revisit the whole synth token piece. find out why USERTARGETS is not
 export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<Token> {
-  if (!canvas || !canvas.scene) return tokenSet;
-  if (!tokenSet) return new Set();
-  if (!game.modules.get("multilevel-tokens")?.active) return tokenSet;
-  const multiLevelTokens = [...tokenSet].filter(t => getProperty(t.document, "flags.multilevel-tokens"));
-  //@ts-ignore t.document.flags
-  // const localTokens = multiLevelTokens.filter(t => canvas.tokens?.get(t.document.flags["multilevel-tokens"].stoken))
-  let normalTokens = [...tokenSet].filter(a => a.actor);
-  multiLevelTokens.forEach(mlt => {
-    ui.notifications?.warn(`midi-qol You cannot target Multi Level Token ${mlt.name}`);
-  })
-  return new Set(normalTokens);
-  // TODO revisit this to see if the rest of midi can work with MLT
-  let synthTokens = multiLevelTokens.map(t => {
-    const mlFlags: any = t.flags["multilevel-tokens"];
-    let tokenDocument = MQfromUuid(`Scene.${mlFlags.sscene ?? canvas?.scene?.id}.Token.${mlFlags.stoken}`);
-    tokenDocument = deepClone(tokenDocument);
-    tokenDocument.x = t.x;
-    tokenDocument.y = t.y;
-    t.document = tokenDocument;
-    return t;
-  });
-  return new Set(normalTokens.concat(synthTokens));
+  return tokenSet.filter(tk => tk.actor);
 }
 
 export function MQfromUuid(uuid): any | null {
@@ -2289,7 +2338,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       await removeEffectGranting(this.actor, button.key);
       bonusFlags = bonusFlags.filter(bf => bf !== button.key)
       // this.actor.reset();
-      if (bonusFlags.length === 0) { 
+      if (bonusFlags.length === 0) {
 
         dialog.close();
         resolve(null);
@@ -2395,32 +2444,29 @@ export async function removeEffectGranting(actor: globalThis.dnd5e.documents.Act
     await item.update({ "system.uses.value": Math.max(0, item.system.uses.value - 1) });
   }
 
-  const actorUpdates: any[] = [];
+  const actorUpdates: any = {};
   if (typeof count.value === "string" && count.value.startsWith("@")) {
     let key = count.value.slice(1);
     if (key.startsWith("system.")) key = key.replace("system.", "")
-    // we have a @field to consume
+    // we have an @field to consume
     let charges = getProperty(actor.system, key)
     if (charges) {
       charges -= 1;
-      const update = {};
-      update[`system.${key}`] = charges;
-      actorUpdates.push(update);
+      actorUpdates[`system.${key}`] = charges;
     }
   }
   if (typeof countAlt?.value === "string" && countAlt.value.startsWith("@")) {
     let key = countAlt.value.slice(1);
     if (key.startsWith("system.")) key = key.replace("system.", "")
-    // we have a @field to consume
+    // we have an @field to consume
     let charges = getProperty(actor.system, key)
     if (charges) {
       charges -= 1;
-      const update = {};
-      update[`system.${key}`] = charges;
-      actorUpdates.push(update);
+      actorUpdates[`system.${key}`] = charges;
     }
   }
-  if (actorUpdates.length > 0) await actor.update(actorUpdates);
+  //@ts-ignore v10 isEmpty
+  if (!isEmpty(actorUpdates)) await actor.update(actorUpdates);
 
   if (["turn", "each-round", "each-turn"].includes(count.value)) {
     const flagKey = `${changeKey}.used`.replace("flags.midi-qol.", "");
@@ -2556,7 +2602,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   }
 
   // TODO Check this for magic items if that makes it to v10
-  if (!await asyncHooksCall("midi-qol.ReactionFilter", reactions, options )) {
+  if (!await asyncHooksCall("midi-qol.ReactionFilter", reactions, options)) {
     console.warn("midi-qol | Reaction processing cancelled by Hook");
     return { name: "Filter", ac: 0, uuid: undefined };
   } else reactionItemUuidList = reactions.map(item => item.uuid);
@@ -2608,7 +2654,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
       content = reactionFlavor;
   }
 
-  
+
   return await new Promise((resolve) => {
     // set a timeout for taking over the roll
     const timeoutId = setTimeout(() => {
@@ -2629,7 +2675,7 @@ export async function requestReactions(target: Token, player: User, triggerToken
     options.itemUuid = options.item.uuid;
     delete options.item;
   };
-  if (options.workflow && options.workflow instanceof Workflow) 
+  if (options.workflow && options.workflow instanceof Workflow)
     options.workflow = options.workflow.getMacroData();
 
   const result = (await socketlibSocket.executeAsUser("chooseReactions", player.id, {
@@ -2666,7 +2712,7 @@ export async function promptReactions(tokenUuid: string, reactionItemList: strin
   } finally {
     enableNotifications(true);
   }
-  
+
   if (reactionItems.length > 0) {
     /*
     if (!await asyncHooksCall("midi-qol.ReactionFilter", reactionItems, options )) {
@@ -2689,7 +2735,7 @@ export async function promptReactions(tokenUuid: string, reactionItemList: strin
     }).map(flag => `flags.midi-qol.optional.${flag}`);
   if (bonusFlags.length > 0 && triggerType === "reaction") {
     //@ts-ignore attributes
-    let acRoll = await new Roll(`${actor.system.attributes.ac.value}`).roll({async: true});
+    let acRoll = await new Roll(`${actor.system.attributes.ac.value}`).roll({ async: true });
     const data = {
       actor,
       roll: acRoll,
@@ -2941,19 +2987,23 @@ function mySafeEval(expression: string, sandbox: any) {
 
 export function evalActivationCondition(workflow: Workflow, condition: string | undefined, target: Token | TokenDocument): boolean {
   if (condition === undefined || condition === "") return true;
-  createConditionData({workflow, target, actor: workflow.actor});
+  createConditionData({ workflow, target, actor: workflow.actor });
   const returnValue = evalCondition(condition, workflow.conditionData);
   return returnValue;
 }
 
-export function createConditionData(data: {workflow: Workflow | undefined, target: Token | TokenDocument | undefined, actor: Actor | undefined}) {
+export function createConditionData(data: { workflow: Workflow | undefined, target: Token | TokenDocument | undefined, actor: Actor | undefined }) {
   const rollData = data.workflow?.otherDamageItem?.getRollData() ?? data.workflow?.actor?.getRollData() ?? data.actor?.getRollData() ?? {};
   try {
     if (data.target) {
       rollData.target = data.target.actor?.getRollData();
+      if (data.target instanceof Token) rollData.targetUuid = data.target.document.uuid
+      else rollData.targetUuid = data.target.uuid;
+      rollData.targetId = data.target.id;
       if (rollData.target.details.type?.value) rollData.raceOrType = rollData.target.details.type?.value.toLocaleLowerCase() ?? "";
       else rollData.raceOrType = rollData.target.details.race?.toLocaleLowerCase() ?? "";
     }
+    console.error("Roll data is ", duplicate(rollData));
     rollData.workflow = {};
     Object.assign(rollData.workflow, data.workflow);
     rollData.CONFIG = CONFIG;
@@ -3471,16 +3521,17 @@ export function canSense(tokenEntity: Token | TokenDocument, targetEntity: Token
   const targetPoint = target.center;
   const offsets = t > 0 ? [[0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t]] : [[0, 0]];
   const tests = offsets.map(o => ({
-      point: new PIXI.Point(targetPoint.x + o[0], targetPoint.y + o[1]), 
-      los: new Map() }));
+    point: new PIXI.Point(targetPoint.x + o[0], targetPoint.y + o[1]),
+    los: new Map()
+  }));
   const config = { tests, object: targetEntity };
 
   // First test basic detection for light sources which specifically provide vision
   //@ts-ignore
-  for ( const lightSource of canvas?.effects?.lightSources.values() ?? []) {
-    if ( !lightSource.data.vision || !lightSource.active || lightSource.disabled ) continue;
+  for (const lightSource of canvas?.effects?.lightSources.values() ?? []) {
+    if (!lightSource.data.vision || !lightSource.active || lightSource.disabled) continue;
     const result = lightSource.testVisibility(config);
-    if ( result === true ) return true;
+    if (result === true) return true;
   }
 
   //@ts-ignore
@@ -3564,4 +3615,11 @@ export async function doConcentrationCheck(actor, itemData) {
     if (saveTargets && game.user) game.user.targets = saveTargets;
     return result;
   }
+}
+
+export function hasDAE(workflow: Workflow) {
+  return installedModules.get("dae") && (
+    workflow.item?.effects?.some(ef => ef?.transfer === false)
+    || workflow.ammo?.effects?.some(ef => ef?.transfer === false)
+  );
 }

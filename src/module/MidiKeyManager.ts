@@ -30,6 +30,8 @@ export class MidiKeyManager {
     fastForwardAbility: undefined,
     fastForwardDamage: undefined,
     fastForwardAttack: undefined,
+    autoRollAttack: undefined,
+    autoRollDamage: undefined
   };
 
   constructor() {
@@ -95,7 +97,7 @@ export class MidiKeyManager {
     if (debug.keybindings) console.groupEnd();
   }
   getstate(): Options {
-    return {
+    const state: Options =  {
       advantage: this._rollToggle ? false: this._adv,
       disadvantage: this._rollToggle ? false : this._dis,
       versatile: this._vers,
@@ -109,8 +111,12 @@ export class MidiKeyManager {
       parts: undefined,
       chatMessage: undefined,
       critical: this._critical,
+      autoRollAttack: undefined,
+      autoRollDamage: false,
       event: {},
     }
+    state.autoRollAttack = state.advantage || state.disadvantage || state.fastForwardAttack;
+    return state;
   }
   get pressedKeys(): Options {
     if (configSettings.fixStickyKeys) {
@@ -259,10 +265,10 @@ export class MidiKeyManager {
   }
 }
 
-export function mapSpeedKeys(keys, type: string, forceToggle = false): Options | undefined {
+export function mapSpeedKeys(keys: Options | undefined, type: string, forceToggle = false): Options | undefined {
   // if (installedModules.get("betterrolls5e")) return undefined;
 
-  const pressedKeys = duplicate(keys ?? globalThis.MidiKeyManager.pressedKeys);
+  const pressedKeys = deepClone(keys ?? globalThis.MidiKeyManager.pressedKeys);
   let hasToggle = pressedKeys.rollToggle || forceToggle;
   if (pressedKeys.rollToggle && forceToggle) hasToggle = false;
   switch (type) {
@@ -281,7 +287,7 @@ export function mapSpeedKeys(keys, type: string, forceToggle = false): Options |
       pressedKeys.fastForwardDamage = (hasToggle ? !isAutoFastDamage() : isAutoFastDamage()) || pressedKeys.critical;
       if (pressedKeys.fastForwardSet) pressedKeys.fastForwardDamage = true;
       if (pressedKeys.fastForward) pressedKeys.fastForwardDamage = true;
-
+      if (pressedKeys.critical) pressedKeys.autoRollDaamge = true;
       pressedKeys.advantage = undefined;
       pressedKeys.disadvantage = undefined;
       break;
@@ -294,11 +300,11 @@ export function mapSpeedKeys(keys, type: string, forceToggle = false): Options |
       pressedKeys.fastForward = pressedKeys.fastForwardAttack;
       pressedKeys.critical = false;
       pressedKeys.fastForwardDamage = hasToggle ? !isAutoFastDamage() : isAutoFastDamage();
+      if (pressedKeys.advantage || pressedKeys.disadvantage) pressedKeys.autoRollAttack = true;
       if (pressedKeys.advantage && pressedKeys.disadvantage) {
         pressedKeys.advantage = false;
         pressedKeys.disadvantage = false;
       }
-
       break;
   }
   return pressedKeys;

@@ -69,7 +69,7 @@
     </button>
     {{/if}}
 
-    {{#if system.formula}}
+    {{#if data.formula}}
     <button data-action="formula">{{ OtherFormula }}</button>
     {{/if}}
 
@@ -94,7 +94,7 @@
 
   <footer class="card-footer">
     {{#if showProperties}}
-    {{#each system.properties}}
+    {{#each data.properties}}
     <span>{{this}}</span>
     {{/each}}
     {{/if}}

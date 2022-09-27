@@ -137,8 +137,8 @@
   "midi-qol.noSaveTargets": "No targets to save",
   "midi-qol.UseTokenNames.Name": "Chat cards use token name",
   "midi-qol.UseTokenNames.Hint": "Chat card titles and target names use the token name rather than the actor name",
-  "midi-qol.CriticalDamage.Name": "Choose how to roll critical damage",
-  "midi-qol.CriticalDamage.Hint": "requires foundry 0.7.0 or later. DND5e Default - standard dnd5e critical roll, base max only - base weapon dice only (no critical dice) but all maximised, max critical dice - critical dice maximised, max all dice - weapon + critical dice maximised, double dice value - result of dice x2",
+  "midi-qol.CriticalDamage.Name": "Choose critical damage",
+  "midi-qol.CriticalDamage.Hint": "DND5e Settings Only - standard dnd5e critical roll, Max Normal Damage - base weapon dice only (no critical dice) but all maximised, Max Critical Dice - critical dice maximised, Max All Dice - item + critical dice maximised, double dice value - result of dice x2, Explode Critical Dice - roll normal critical exploding any critical dice, Only Weapon Extra Critical - the only bonus damage for critical is from the item extra critical field",
   "midi-qol.CriticalDamageChoices": {
     "default": "DND5e Settings Only",
     "maxDamage": "Max Normal Damage",
@@ -147,7 +147,7 @@
     "maxAll": "Max All Dice",
     "doubleDice": "Double Rolled Damage",
     "explode": "Explode critical dice",
-    "baseDamage": "No Bonus"
+    "baseDamage": "Only Weapon Extra Critical"
   },
   "midi-qol.MergeCard.Name": "Merge Rolls to one card",
   "midi-qol.MergeCard.Hint": "Merge Attack, Hits, Damage, Saves to a single chat card",
@@ -509,8 +509,8 @@
   "midi-qol.ChallengeModeArmorScale.Hint": "Requires Challenge Mode Armor enabled. Implements a modified challenge mode armor rules - see the readme for more information",
   "midi-qol.NonSilverPhysical": "Non-Silver Physical",
   "midi-qol.NonAdamantinePhysical": "Non-Adamantine Physical",
-  "midi-qol.NonMagical": "Non-Magical",
-  "midi-qol.Magical": "Magical",
+  "midi-qol.NonMagical": "Non-Magical Damage",
+  "midi-qol.Magical": "Magical Damage",
   "midi-qol.EffectActivation": "Activation Condition true required for effect activation",
   "midi-qol.HPUpdated": "HP Updated",
   "midi-qol.HPNPCUpdated": "NPC HP Updated",
@@ -663,5 +663,7 @@
   "midi-qol.ShowFastForward.Hint": "Show Fast Forward indicator on attack and damage buttons",
   "midi-qol.MeasuredTemplate": "Template",
   "midi-qol.AutoRemoveTemplate.Name": "Auto remove placed template on spell expiry",
-  "midi-qol.AttackPerTarget.Name": "Roll a separate attck per target"
+  "midi-qol.AttackPerTarget.Name": "Roll a separate attck per target",
+  "midi-qol.itemUseHooks.Name": "Utilise Item Hooks",
+  "midi-qol.itemUseHooks.Hint": "Do NOT set this - used for author's testing"
 }

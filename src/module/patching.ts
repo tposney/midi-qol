@@ -1,5 +1,5 @@
 import { log, warn, debug, i18n, error, getCanvas, i18nFormat } from "../midi-qol.js";
-import { doAttackRoll, doDamageRoll, templateTokens, doItemUse } from "./itemhandling.js";
+import { doAttackRoll, doDamageRoll, templateTokens, doItemUse, preItemUseHook, preDisplayCardHook, preItemUsageConsumptionHook, useItemHook, displayCardHook } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
 import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, evalCondition, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, hasUsedBonusAction, hasUsedReaction, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, notificationNotify, processOverTime, removeBonusActionUsed, removeReactionUsed } from "./utils.js";
 import { installedModules } from "./setupModules.js";
@@ -38,9 +38,29 @@ export interface Options {
   other: boolean | undefined,
   versatile: boolean | undefined,
   critical: boolean | undefined,
+  autoRollAttack: boolean | undefined,
+  autoRollDamage: boolean | undefined,
   fastForwardAttack: boolean | undefined,
   fastForwardDamage: boolean | undefined,
   fastForwardAbility: boolean | undefined,
+};
+export const defaultRollOptions: Options = {
+  event: undefined,
+  advantage: false,
+  disadvantage: false,
+  fastForward: false,
+  fastForwardSet: false,
+  parts: undefined,
+  chatMessage: undefined,
+  rollToggle: undefined,
+  other: undefined,
+  versatile: false,
+  critical: false,
+  autoRollAttack: false,
+  autoRollDamage: false,
+  fastForwardAttack: false,
+  fastForwardDamage: false,
+  fastForwardAbility: false
 };
 
 export function collectBonusFlags(actor, category, detail): any[] {
@@ -115,7 +135,7 @@ async function doRollSkill(wrapped, ...args) {
   const chatMessage = options.chatMessage;
   const rollTarget = options.targetValue;
   // options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
-  mergeKeyboardOptions(options, mapSpeedKeys(null, "ability"));
+  mergeKeyboardOptions(options, mapSpeedKeys(undefined, "ability"));
   options.event = {};
   let procOptions: Options = procAdvantage(this, "check", this.system.skills[skillId].ability, options)
   procOptions = procAdvantageSkill(this, skillId, procOptions);
@@ -138,7 +158,7 @@ async function doRollSkill(wrapped, ...args) {
     result = await result;
   } else {
     procOptions.chatMessage = false;
-    if (!options.parts) delete options.parts;
+    if (!procOptions.parts || procOptions.parts.length === 0) delete procOptions.parts;
     // result = await wrapped.call(this, skillId, procOptions);
     result = await wrapped(skillId, procOptions);
   }
@@ -177,7 +197,7 @@ async function doRollSkill(wrapped, ...args) {
 function rollDeathSave(wrapped, ...args) {
   let [options] = args;
   // options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
-  mergeKeyboardOptions(options, mapSpeedKeys(null, "ability"));
+  mergeKeyboardOptions(options, mapSpeedKeys(undefined, "ability"));
   options.event = {};
   const advFlags = getProperty(this.flags, "midi-qol")?.advantage;
   const disFlags = getProperty(this.flags, "midi-qol")?.disadvantage;
@@ -223,10 +243,6 @@ function configureDamage(wrapped) {
     "baseDamage": "No Bonus"
   */
   if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
-  if (criticalDamage === "baseDamage") {
-    this.options.configured = true;
-    return this;
-  };
 
   for (let [i, term] of this.terms.entries()) {
     let cm = this.options.criticalMultiplier ?? 2;
@@ -278,6 +294,9 @@ function configureDamage(wrapped) {
           // setProperty(newTerm.options, "sourceTerm", term);
           bonusTerms.push(newTerm);
         }
+        break;
+      case "baseDamage":
+      default:
         break;
     }
   }
@@ -372,7 +391,7 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     options.parts = ["-100"];
   }
   const chatMessage = options.chatMessage;
-  const keyOptions = mapSpeedKeys(null, "ability");
+  const keyOptions = mapSpeedKeys(undefined, "ability");
   if (options.mapKeys !== false) {
     if (keyOptions?.advantage === true) options.advantage = options.advantage || keyOptions.advantage;
     if (keyOptions?.disadvantage === true) options.disadvantage = options.disadvantage || keyOptions.disadvantage;
@@ -402,7 +421,7 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     if (options.chatMessage !== false && !options.vanilla) return result;
     result = await result;
   } else {
-    if (!options.parts) delete options.parts;
+    if (!options.parts || procOptions.parts.length === 0) delete options.parts;
     procOptions.chatMessage = false;
     result = await wrapped(abilityId, procOptions);
   }
@@ -638,15 +657,26 @@ export function initPatching() {
   libWrapper = globalThis.libWrapper;
   libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
   // For new onuse macros stuff.
-  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.prepareData", prepareOnUseMacroData, "WRAPPER");
-  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareData", prepareOnUseMacroData, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.prepareData", itemPrepareData, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareData", actorPrepareData, "WRAPPER");
+}
+export function actorPrepareData(wrapped) {
+  try {
+    wrapped();
+    prepareOnUseMacroData(this);
+  } catch (err) {
+  }
 }
 
-export function prepareOnUseMacroData(wrapped, ...args) {
-  wrapped(...args);
+export function itemPrepareData(wrapped) {
+  wrapped();
+  prepareOnUseMacroData(this);
+}
+
+export function prepareOnUseMacroData(actorOrItem) {
   try {
-    const macros = getProperty(this, 'flags.midi-qol.onUseMacroName');
-    setProperty(this, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macros ?? null));
+    const macros = getProperty(actorOrItem, 'flags.midi-qol.onUseMacroName');
+    setProperty(actorOrItem, "flags.midi-qol.onUseMacroParts", new OnUseMacros(macros ?? null));
   } catch (err) {
     console.warn("midi-qol | failed to prepare onUse macro data", err)
   }
@@ -860,6 +890,7 @@ export function readyPatching() {
   libWrapper.register("midi-qol", "Combatant.prototype._getInitiativeFormula", _getInitiativeFormula, "WRAPPER");
   libWrapper.register("midi-qol", "CONFIG.ActiveEffect.documentClass.prototype._preDelete", _preDeleteActiveEffect, "WRAPPER");
   libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype._preUpdate", _preUpdateActor, "WRAPPER");
+  libWrapper.register("midi-qol", "game.system.applications.DamageTraitSelector.prototype.getData", preDamageTraitSelectorGetData, "WRAPPER");
 }
 
 export let visionPatching = () => {
@@ -888,10 +919,21 @@ export function configureDamageRollDialog() {
 }
 
 export let itemPatching = () => {
-  //@ts-ignore .version
-  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.use", doItemUse, "MIXED");
-  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
-  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
+  if (game.settings.get("midi-qol", "itemUseHooks")) {
+    Hooks.on("dnd5e.preUseItem", preItemUseHook);
+    Hooks.on("dnd5e.preDisplayCard", preDisplayCardHook);
+    Hooks.on("dnd5e.displayCard", displayCardHook);
+    Hooks.on("dnd5e.preItemUsageConsumption", preItemUsageConsumptionHook);
+    Hooks.on("dnd5e.useItem", useItemHook);
+    libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
+    libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
+
+  } else {
+    //@ts-ignore .version
+    libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.use", doItemUse, "MIXED");
+    libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
+    libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
+  }
   if (game.system.id === "dnd5e" || game.system.id === "n5e")
     libWrapper.register("midi-qol", "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
   configureDamageRollDialog();
@@ -1132,4 +1174,113 @@ class CustomizeDamageFormula {
     })
   }
 
+}
+
+export function migrateTraits(actor) {
+  try {
+    const baseData = actor.toObject(true);
+    for (let traitId of ["di", "dr", "dv", "sdi", "sdr", "sdv"]) {
+      let trait = actor.system.traits[traitId];
+      let baseTrait = baseData.system.traits[traitId];
+      console.error("Base Trait are ", baseTrait);
+      trait.value = [];
+      if (!trait) continue;
+      for (let traitString of baseTrait.value) {
+        switch (traitString) {
+          case "silver":
+            if (!trait.bypasses.includes("sil")) trait.bypasses.push("sil");
+            addPhysicalDamages(trait.value);
+            trait.value = removeTraitValue(trait.value, "silver");
+            log(`${actor.name} mapping "Silver" to ${trait.value}, ${trait.bypasses}`)
+            break
+          case "adamant":
+            if (!trait.bypasses.includes("ada")) trait.bypasses.push("ada");
+            addPhysicalDamages(trait.value);
+            trait.value = removeTraitValue(trait.value, "adamant");
+            log(`${actor.name} mapping "Adamantine" to ${trait.value}, ${trait.bypasses}`)
+            break
+          case "physical":
+            addPhysicalDamages(trait.value);
+            trait.value = removeTraitValue(trait.value, "physical");
+            log(`${actor.name} mapping "Physical" to ${trait.value}, ${trait.bypasses}`)
+            break;
+          case "nonmagic":
+            addPhysicalDamages(trait.value);
+            if (!trait.bypasses.includes("mgc")) trait.bypasses.push("mgc");
+            trait.value = removeTraitValue(trait.value, "nonmagic");
+            log(`${actor.name} mapping "nongamic" to ${trait.custom}`)
+            break;
+          case "spell":
+            trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.spell-damage"));
+            trait.value = removeTraitValue(trait.value, "spell");
+            log(`${actor.name} mapping "spell" to ${trait.custom}`)
+            break
+          case "power":
+            trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.power-damage"));
+            trait.value = removeTraitValue(trait.value, "power");
+            log(`${actor.name} mapping "power" to ${trait.custom}`)
+            break
+          case "magic":
+            trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.Magical"));
+            trait.value = removeTraitValue(trait.value, "magic");
+            log(`${actor.name} mapping "magic" to ${trait.custom}`)
+            break
+          case "healing":
+            trait.custom = addCustomTrait(trait.custom, getSystemCONFIG().healingTypes.healing);
+            trait.value = removeTraitValue(trait.value, "healing");
+            log(`${actor.name} mapping "healing" to ${trait.custom}`)
+            break
+          case "temphp":
+            trait.custom = addCustomTrait(trait.custom, getSystemCONFIG().healingTypes.temphp);
+            trait.value = removeTraitValue(trait.value, "temphp");
+            log(`${actor.name} mapping "temphp" to ${trait.custom}`)
+            break
+          default:
+            trait.value.push(traitString);
+        }
+      }
+    }
+
+  } catch (err) {
+    console.warn("midi-qol | migrate traits error ", this, err)
+  } finally {
+  }
+}
+
+function removeTraitValue(traitValue: string[], toRemove): string[] {
+  const position = traitValue.indexOf(toRemove);
+  if (position !== -1) return traitValue.splice(position, 1);
+  return traitValue;
+}
+
+function addPhysicalDamages(traitValue) {
+  const phsyicalDamageTypes = Object.keys(getSystemCONFIG().physicalDamageTypes);
+  for (let dt of phsyicalDamageTypes) {
+    if (!traitValue.includes(dt)) traitValue.push(dt);
+  }
+}
+
+function addCustomTrait(customTraits: string, customTrait: string): string {
+  console.log("Adding custom trait ", customTrait, customTraits)
+  if (customTraits.length === 0) {
+    return customTrait;
+  }
+  const traitList = customTraits.split(";").map(s => s.trim());
+  if (traitList.includes(customTrait)) return customTraits;
+  traitList.push(customTrait);
+  return traitList.join("; ");
+}
+
+function preDamageTraitSelectorGetData(wrapped) {
+  try {
+      // migrate di/dr/dv and strip out active effect data.
+      console.error("pre migrate traits", duplicate(this.object.system.traits));
+      if (this.object instanceof Actor) migrateTraits(this.object);
+      console.error("pre migrate traits", duplicate(this.object.system.traits));
+  } catch(err) {
+    console.error("migrate traits error", err)
+  } finally {
+    return wrapped();
+  }
+  
 }

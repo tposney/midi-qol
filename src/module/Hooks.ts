@@ -15,7 +15,7 @@ export var midiFlagTypes: {} = {};
 
 export let readyHooks = async () => {
   // need to record the damage done since it is not available in the update actor hook
-  Hooks.on("preUpdateActor", (actor, update, diff, user) => {
+  Hooks.on("preUpdateActor", (actor, update, options, user) => {
     const hpUpdate = getProperty(update, "system.attributes.hp.value");
     const temphpUpdate = getProperty(update, "system.attributes.hp.temp");
     let concHPDiff = 0;
@@ -111,26 +111,26 @@ export let readyHooks = async () => {
       let isConcentration = effect.label === concentrationLabel;
       if (!isConcentration) return;
 
-      // If concentration has expired effects and times-up installed - leave it to TU.
-      if (installedModules.get("times-up")) {
-        let expired = effect.duration?.seconds && (game.time.worldTime - effect.duration.startTime) >= effect.duration.seconds;
-        effect._prepareDuration(); // TODO remove this if v10 change made
-        const duration = effect.duration;
-        expired = expired || (duration && duration.remaining <= 0 && duration.type === "turns");
-        if (expired) return;
-      }
       // Handle removal of concentration
       const actor = effect.parent;
       const concentrationData = actor.getFlag("midi-qol", "concentration-data");
       if (!concentrationData) return;
-      try {
-        await actor.unsetFlag("midi-qol", "concentration-data")
+
+      // Remove templates
         if (concentrationData.templates) {
           for (let templateUuid of concentrationData.templates) {
             const template = await fromUuid(templateUuid);
             if (template) await template.delete();
           }
         }
+      // If concentration has expired effects and times-up installed - leave removing effects to TU.
+      if (installedModules.get("times-up")) {
+        effect._prepareDuration(); // TODO remove this if v10 change made
+        if (effect.duration.remaining <= 0) return;
+      }
+
+      try {
+        await actor.unsetFlag("midi-qol", "concentration-data")
         for (let removeUuid of concentrationData.removeUuids) {
           const entity = await fromUuid(removeUuid);
           if (entity) await entity.delete(); // TODO check if this needs to be run as GM
@@ -592,149 +592,3 @@ export const itemJSONData = {
     },
   }
 }
-/*
-export const itemJSONDataSave = {
-  "name": "Concentration Check - Midi QOL",
-  "type": "weapon",
-  "img": "./modules/midi-qol/icons/concentrate.png",
-  "system": {
-    "description": {
-      "value": "",
-      "chat": "",
-      "unidentified": ""
-    },
-    "source": "",
-    "quantity": 1,
-    "weight": 0,
-    "price": 0,
-    "attuned": false,
-    "attunement": 0,
-    "equipped": false,
-    "rarity": "",
-    "identified": true,
-    "activation": {
-      "type": "special",
-      "cost": 0,
-      "condition": ""
-    },
-    "duration": {
-      "value": null,
-      "units": ""
-    },
-    "target": {
-      "value": null,
-      "width": null,
-      "units": "",
-      "type": "creature"
-    },
-    "range": {
-      "value": null,
-      "long": null,
-      "units": ""
-    },
-    "uses": {
-      "value": 0,
-      "max": "0",
-      "per": ""
-    },
-    "consume": {
-      "type": "",
-      "target": "",
-      "amount": null
-    },
-    "ability": "",
-    "actionType": "save",
-    "attackBonus": 0,
-    "chatFlavor": "",
-    "critical": null,
-    "damage": {
-      "parts": [],
-      "versatile": ""
-    },
-    "formula": "",
-    "save": {
-      "ability": "con",
-      "dc": 10,
-      "scaling": "flat"
-    },
-    "armor": {
-      "value": 10
-    },
-    "hp": {
-      "value": 0,
-      "max": 0,
-      "dt": null,
-      "conditions": ""
-    },
-    "weaponType": "simpleM",
-    "properties": {
-      "ada": false,
-      "amm": false,
-      "fin": false,
-      "fir": false,
-      "foc": false,
-      "hvy": false,
-      "lgt": false,
-      "lod": false,
-      "mgc": false,
-      "rch": false,
-      "rel": false,
-      "ret": false,
-      "sil": false,
-      "spc": false,
-      "thr": false,
-      "two": false,
-      "ver": false,
-      "nodam": false,
-      "fulldam": false,
-      "halfdam": true
-    },
-    "proficient": false,
-    "attributes": {
-      "spelldc": 10
-    }
-  },
-  "effects": [],
-  "sort": 0,
-  "flags": {
-    "midi-qol": {
-      "onUseMacroName": "ItemMacro",
-      "isConcentrationCheck": true
-    },
-    "itemacro": {
-      "macro": {
-        "data": {
-          "_id": null,
-          "name": "Concentration Check - Midi QOL",
-          "type": "script",
-          "author": "devnIbfBHb74U9Zv",
-          "img": "icons/svg/dice-target.svg",
-          "scope": "global",
-          "command": `
-              if (MidiQOL.configSettings().autoCheckSaves === 'none') return;
-              for (let targetUuid of args[0].targetUuids) {
-                let target = await fromUuid(targetUuid);
-                if (MidiQOL.configSettings().removeConcentration 
-                  && (target.actor.system.attributes.hp.value === 0 || args[0].failedSaveUuids.find(uuid => uuid === targetUuid))) {
-                const concentrationEffect = MidiQOL.getConcentrationEffect(target.actor);
-                if (concentrationEffect) await concentrationEffect.delete();
-                }
-              }`,
-          "folder": null,
-          "sort": 0,
-          "permission": {
-            "default": 0
-          },
-          "flags": {}
-        }
-      }
-    },
-    "exportSource": {
-      "world": "testWorld",
-      "system": "dnd5e",
-      "coreVersion": "0.8.8",
-      "systemVersion": "1.3.6"
-    },
-  }
-}
-*/

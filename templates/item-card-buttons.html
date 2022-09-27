@@ -1,0 +1,78 @@
+<div class="card-buttons" {{#if tokenUuid}}data-token-uuid="{{tokenUuid}}" {{/if}} data-actor-uuid="{{actor.uuid}}"
+  data-item-uuid="{{itemUuid}}" {{#if isPower}}data-power-level="{{item.system.level}}" {{/if}}>
+  {{#if hasAttack}}<button data-action="attack">{{ Attack }}</button>{{/if}}
+
+  {{#if condensed}}
+  <div class="flexrow 2">
+    <div class="midi-qol-attack-roll">
+      <div class="end-midi-qol-attack-roll"></div>
+    </div>
+    <div class="midi-qol-damage-roll">
+      <div class="end-midi-qol-damage-roll"></div>
+    </div>
+  </div>
+  {{else}}
+  <div>
+    <div class="flexrow 1">
+      <div class="midi-qol-attack-roll">
+        <div class="end-midi-qol-attack-roll"></div>
+      </div>
+    </div>
+    <div class="flexrow 1">
+      <div class="midi-qol-damage-roll">
+        <div class="end-midi-qol-damage-roll"></div>
+      </div>
+    </div>
+  </div>
+  {{/if}}
+  <div class="flexrow 1">
+    <div class="midi-qol-bonus-roll">
+      <div class="end-midi-qol-bonus-roll"></div>
+    </div>
+  </div>
+  <div class="flexrow 1">
+    <div class="midi-qol-other-roll">
+      <div class="end-midi-qol-other-roll"></div>
+    </div>
+  </div>
+
+  {{#if hasDamage}}
+  <button data-action="damage">
+    {{ dmgBtnText }}
+  </button>
+  {{/if}}
+
+  {{#if isVersatile}}
+  <button data-action="versatile">{{ versaBtnText }}</button>
+  {{/if}}
+
+  {{#if hasSave}}
+  <button data-action="save" data-ability="{{data.save.ability}}">
+    {{ SavingThrow }} {{labels.save}}
+  </button>
+  {{/if}}
+
+  {{#if data.formula}}
+  <button data-action="formula">{{ OtherFormula }}</button>
+  {{/if}}
+
+  {{#if hasAreaTarget}}
+  <button data-action="placeTemplate">{{ PlaceTemplate }}</button>
+  {{/if}}
+
+  {{#if isTool}}
+  <button data-action="toolCheck" data-ability="{{system.ability.value}}">{{ Use }} {{item.name}}</button>
+  {{/if}}
+
+  {{#if hasEffects}}
+  <button data-action="applyEffects">{{ localize "midi-qol.ApplyEffects" }}</button>
+  {{/if}}
+  {{#if isMerge}}
+  <div class="midi-qol-hits-display">
+    <div class="end-midi-qol-hits-display"></div>
+  </div>
+  <div class="midi-qol-saves-display">
+    <div class="end-midi-qol-saves-display"></div>
+  </div>
+  {{/if}}
+</div>

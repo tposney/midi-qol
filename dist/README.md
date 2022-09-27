@@ -49,8 +49,7 @@ Over time I have come up with some items that I use in my game, which I think ot
 [TOC]
 
 # Changes in dnd5e 1.5:
-## Weapon Critical Threshold
-* dnd5e 1.5 includes per weapon critical threshold and bonus critical damage dice. There is now a configuration setting to enable/disable the midi-qol field on the item sheet. You are strongly encouraged to migrate to the dnd5e setting and disable the midi-qol flag, via Use Midi Critical in the configuration settings. Soon, I will remove the midi-qol field completely. You can run ```MidiQOL.reportMidiCriticalFlags()``` from the console to see which actors/tokens have the midi-qol critical setting defined.
+
 ## Enhanced dnd5e critical damage effects. 
 You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). If you want to use the dnd5e critical damage fields set the midi-qol critical damage to "dnd5e default"
 
@@ -744,9 +743,10 @@ where specification is a comma separated list of fields.
   * rollType=check/save/skill (default save), roll an ability check, save or skill.
   * saveAbility=dex/con/etc prc/perception etc. The actor's ability/skill to use for rolling the saving throw
   * saveDC=number
-  * added saveDamage=halfdamage/nodamage/fulldamage - default nodamage
-  * added saveRemove=true/false - remove effect on save - default true.
+  * saveDamage=halfdamage/nodamage/fulldamage - default nodamage
+  * saveRemove=true/false - remove effect on save - default true.
   * saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
+  * actionSave=true/false. If true midi won't roll the save but leave it to the player. See discussion below.
   * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is failed.
   Damage:
   * damageRoll=roll expression, e.g. 3d6

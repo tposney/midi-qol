@@ -650,6 +650,16 @@ export const registerSettings = function() {
     config: false,
     default: true
   })
+
+  game.settings.register("midi-qol", "itemUseHooks", {
+    name: "midi-qol.itemUseHooks.Name",
+    hint: "midi-qol.itemUseHooks.Hint",
+    type: Boolean,
+    config: true,
+    default: false,
+    //@ts-ignore v10
+    requiresReload: true
+  })
 }
 
 export function disableWorkflowAutomation() {
