@@ -929,9 +929,9 @@ export class Workflow {
             if (selfTarget) selfTarget = this.token;
             let effectData;
             if (selfTarget) {
-              let effect = this.item.actor.effects.find(ef => ef.datalabel === this.item.name + " Template");
+              let effect = this.item.actor.effects.find(ef => ef.data.label === this.item.name + " Template");
               if (effect) { // effect already applied
-                const newChanges = duplicate(effect.changes);
+                const newChanges = duplicate(effect.data.changes);
                 newChanges.push({ key: "flags.dae.deleteUuid", mode: 5, value: this.templateUuid, priority: 20 });
                 await effect.update({ changes: newChanges });
               } else {

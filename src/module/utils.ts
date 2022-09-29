@@ -2936,7 +2936,7 @@ export function getConcentrationEffect(actor): ActiveEffect | undefined {
   return result;
 }
 
-function mySafeEval(expression: string, sandbox: any) {
+function mySafeEval(expression: string, sandbox: any, onErrorReturn: boolean | undefined = undefined) {
   let result;
   try {
 
@@ -2945,7 +2945,7 @@ function mySafeEval(expression: string, sandbox: any) {
     result = evl(mergeObject(sandbox, Roll.MATH_PROXY));
   } catch (err) {
     console.warn("midi-qol | expression evaluation failed ", err);
-    result = undefined;
+    result = onErrorReturn;
   }
   if (Number.isNumeric(result)) return Number(result)
   return result;
@@ -3003,7 +3003,7 @@ export function evalActivationCondition(workflow: Workflow, condition: string | 
       rollData.workflow = copyWorkflow;
       //@ts-ignore .replaceAll
       // expression = expression.replaceAll(".data", ""); // TODO see if this is right
-      returnValue = mySafeEval(expression, rollData);
+      returnValue = mySafeEval(expression, rollData, true);
       warn("evalActivationCondition ", returnValue, expression, rollData);
     }
   } catch (err) {
