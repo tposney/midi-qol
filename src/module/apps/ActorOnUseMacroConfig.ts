@@ -42,8 +42,9 @@ export class ActorOnUseMacrosConfig extends FormApplication {
     //@ts-ignore .object v10
     let data = foundry.utils.expandObject(fd.object);
     if ( updateData ) foundry.utils.mergeObject(data, updateData);
+    data.onUseMacroParts = Array.from(Object.values(data.onUseMacroParts?? {}));
     //@ts-ignore
-    data.onUseMacroParts = Array.from(Object.values(data.onUseMacroParts ?? {})).map(oumData => OnUseMacro.parsePart([oumData.macroName, oumData.option]));
+    // data.onUseMacroParts = Array.from(Object.values(data.onUseMacroParts ?? {})).map(oumData => OnUseMacro.parsePart([oumData.macroName, oumData.option]));
     return data;
   }
 

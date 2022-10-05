@@ -11,7 +11,7 @@ export class ConfigPanel extends FormApplication {
       title: game.i18n.localize("midi-qol.ConfigTitle"),
       template: "modules/midi-qol/templates/config.html",
       id: "midi-qol-settings",
-      width: 520,
+      width: 800,
       height: "auto",
       closeOnSubmit: true,
       scrollY: [".tab.workflow"],

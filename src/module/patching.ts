@@ -682,13 +682,11 @@ export function prepareOnUseMacroData(actorOrItem) {
   }
 }
 
-// This can replace the ItemSheetSubmit solution when in v9 
 export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user) {
   try {
     const macroParts = getProperty(changes, "flags.midi-qol.onUseMacroParts");
     if (!macroParts) return true;
-
-    const macroString = macroParts.items.map(oum => oum.toString()).join(",");
+    let macroString = OnUseMacros.parseParts(macroParts).items.map(oum => oum.toString()).join(",");
     changes.flags["midi-qol"].onUseMacroName = macroString;
     delete changes.flags["midi-qol"].onUseMacroParts;
   } catch (err) {
@@ -696,24 +694,6 @@ export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user
   }
   return true;
 };
-
-// TODO this is not needed for v9.
-function itemSheetGetSubmitData(wrapped, ...args) {
-  let data = wrapped(...args);
-  data = expandObject(data);
-  try {
-    const macroParts: any = getProperty(data, "flags.midi-qol.onUseMacroParts");
-    if (macroParts) {
-      const macros = OnUseMacros.parseParts(macroParts)
-      delete data.flags["midi-qol"].onUseMacroParts;
-      data.flags["midi-qol"].onUseMacroName = macros.toString();
-    }
-  } catch (err) {
-    warn("onUseMacro update processing ", err)
-  } finally {
-    return flattenObject(data);
-  }
-}
 
 export function _getInitiativeFormula(wrapped) {
   const original = wrapped();
@@ -875,12 +855,9 @@ async function _preUpdateActor(wrapped, update, options, user) {
 }
 
 export function readyPatching() {
-  // TODO remove this when v9 default
   if (game.system.id === "dnd5e" || game.system.id === "n5e") {
-    libWrapper.register("midi-qol", `game.${game.system.id}.applications.item.ItemSheet5e.prototype._getSubmitData`, itemSheetGetSubmitData, "WRAPPER");
     libWrapper.register("midi-qol", `game.${game.system.id}.canvas.AbilityTemplate.prototype.refresh`, midiATRefresh, "WRAPPER");
   } else { // TODO find out what itemsheet5e is called in sw5e TODO work out how this is set for sw5e v10
-    libWrapper.register("midi-qol", "game.sw5e.applications.Item.ItemSheet5e.prototype._getSubmitData", itemSheetGetSubmitData, "WRAPPER");
     libWrapper.register("midi-qol", "game.sw5e.canvas.AbilityTemplate.prototype.refresh", midiATRefresh, "WRAPPER");
   }
   libWrapper.register("midi-qol", "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
@@ -1182,7 +1159,6 @@ export function migrateTraits(actor) {
     for (let traitId of ["di", "dr", "dv", "sdi", "sdr", "sdv"]) {
       let trait = actor.system.traits[traitId];
       let baseTrait = baseData.system.traits[traitId];
-      console.error("Base Trait are ", baseTrait);
       trait.value = [];
       if (!trait) continue;
       for (let traitString of baseTrait.value) {
@@ -1274,9 +1250,7 @@ function addCustomTrait(customTraits: string, customTrait: string): string {
 function preDamageTraitSelectorGetData(wrapped) {
   try {
       // migrate di/dr/dv and strip out active effect data.
-      console.error("pre migrate traits", duplicate(this.object.system.traits));
       if (this.object instanceof Actor) migrateTraits(this.object);
-      console.error("pre migrate traits", duplicate(this.object.system.traits));
   } catch(err) {
     console.error("migrate traits error", err)
   } finally {

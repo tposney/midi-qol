@@ -58,6 +58,7 @@ class ConfigSettings {
   criticalSound: string = "";
   customSoundsPlaylist: string = "none";
   damageImmunities: string = "none";
+  damageImmunityMultiplier: number = 0.0;
   damageResistanceMultiplier: number = 0.5;
   damageVulnerabilityMultiplier: number = 2;
   defaultSaveMult: number = 0.5;
@@ -150,6 +151,11 @@ class ConfigSettings {
 }
 
 export var configSettings = new ConfigSettings();
+
+export function checkMechanic(mechanic: string): boolean {
+  if (configSettings.toggleOptionalRules) return false;
+  return configSettings.optionalRules[mechanic];
+}
 
 export function checkRule(rule: string) {
   let rulesEnabled = configSettings.optionalRulesEnabled;
@@ -368,6 +374,7 @@ export let fetchParams = () => {
   }
   if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;
   if (configSettings.ignoreSpellReactionRestriction === undefined) configSettings.ignoreSpellReactionRestriction = false;
+  if (configSettings.damageImmunityMultiplier === undefined) configSettings.damageImmunityMultiplier = 0.0;
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
   if (configSettings.damageVulnerabilityMultiplier === undefined) configSettings.damageVulnerabilityMultiplier = 2;
   if (configSettings.hidePlayerDamageCard === undefined) configSettings.hidePlayerDamageCard = true;

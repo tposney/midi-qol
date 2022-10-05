@@ -287,7 +287,7 @@ export function mapSpeedKeys(keys: Options | undefined, type: string, forceToggl
       pressedKeys.fastForwardDamage = (hasToggle ? !isAutoFastDamage() : isAutoFastDamage()) || pressedKeys.critical;
       if (pressedKeys.fastForwardSet) pressedKeys.fastForwardDamage = true;
       if (pressedKeys.fastForward) pressedKeys.fastForwardDamage = true;
-      if (pressedKeys.critical) pressedKeys.autoRollDaamge = true;
+      if (pressedKeys.critical) pressedKeys.autoRollDamage = true;
       pressedKeys.advantage = undefined;
       pressedKeys.disadvantage = undefined;
       break;

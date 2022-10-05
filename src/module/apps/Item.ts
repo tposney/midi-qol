@@ -11,7 +11,7 @@ export class OnUseMacros {
 
   static parseParts(parts) {
     const macros = new OnUseMacros();
-    Object.keys(parts).map(x => parts[x]).forEach(x => macros.items.push(OnUseMacro.parsePart(x)));
+    parts.items.forEach(x => macros.items.push(OnUseMacro.parsePart(x)));
     return macros;
   }
 
@@ -45,10 +45,10 @@ export class OnUseMacro {
         this.option = "postActiveEffects";
     }
 
-    static parsePart(parts: [string, string]) {
+    static parsePart(parts: {macroName: string, option: string | undefined}) {
       const m =  new OnUseMacro();
-      m.macroName = parts[0]
-      m.option = parts[1] ?? m.option;
+      m.macroName = parts.macroName;
+      m.option = parts.option ?? m.option;
       return m;
     }
 

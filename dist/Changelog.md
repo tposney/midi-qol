@@ -1,3 +1,16 @@
+### 10.0.13
+* Gratuitous changes to midi-qol config panel - first step to adding some more game mechanics changes, like legendar/lair action count resets at combat update or moving those to another module and removing them if I make a module for those.
+* Fix for wrong error thrown when doing self target effects with no token on the canvas.
+* Any effect applied via using an item will populate (on the effect):
+flags["midi-qol"].castData with {baseLevel: number, castLevel: number, itemUuid: string}.
+  - Also works for convenient effects applied by midi when using an item.
+* Added config option for damage immunity to specify the amount of damage passed through, like damage resistance - in case you do not want immunity to be quite so immune. So a value of 0.25 means 25% of the damage will get through if immune to the damage type. (Default 0). If you want a creature to be immune to the first (say) 10 points of slashing damage create an effect and use flags.midi-qol.DR.slashing OVERRIDE 10 - or flags.midi-qol.DR.phsyical OVERRIDE 10 for all slashing/bludgeoning/piercing.
+* Added support for combat utility belt and reactions/bonus actions. If Convenient Effects is not installed midi will look at the CUB conditions and if there is a condtition whose name is the localised text of DND5E.Reaction(Reaction)/DND5E.BonusAction(Bonus Action) it will be applied/removed to/from the actor when use of a reaction/bonus action is recorded.
+* Sample items updated to use dae 10.0.9 feature where ItemMacro (as a flag value - e.g. damage bonus macros) does not need to specify a name, on application of the effect (passive or active) ItemMacro will be mapped to ItemMacro.<item.uuid> which will fetch the correct macro rather than a name match. (Hunter's Mark and Sneak Attack)
+* Fix for broken Shillelagh cantrip macro.
+* Fix for Actor onUseMacros not saving when edited.
+* Fix for nearby foe disadvantage for thrown weapons when standing next to an opponent, assume attacker will use the weapon as a melee weapon instead.
+
 ### 10.0.12
 **Breaking** 10.0.12 **requires** dnd5e 2.0.3 or later and won't activate without it.
 * Fixed a bug where templates were sometimes not removed with concentration if concentration expired.

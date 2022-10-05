@@ -91,7 +91,8 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
             setProperty(rollTerms[partPos].options, "flavor", getDamageFlavor(type));
           }
           evalString += rollTerms[partPos]?.total;
-          let result = Roll.safeEval(evalString)
+          // let result = Roll.safeEval(evalString);
+          let result = new Roll(evalString).evaluate({ async: false }).total;
           damageParts[type || defaultType] = (damageParts[type || defaultType] || 0) + result;
           evalString = "";
         }
@@ -101,7 +102,9 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
     // Each damage line is added together and we can skip the operator term
     partPos += 1;
     if (evalString !== "") {
-      let result = Roll.safeEval(evalString)
+      // let result = Roll.safeEval(evalString);
+      let result = new Roll(evalString).evaluate({ async: false }).total;
+
       damageParts[type || defaultType] = (damageParts[type || defaultType] || 0) + result;
       evalString = "";
     }
@@ -173,15 +176,20 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
   return damageList;
 }
 
-export async function getSelfTarget(actor): Promise<Token | TokenDocument | undefined> {
+export function getSelfTarget(actor): Token {
   if (actor.token) return actor.token.object; //actor.token is a token document.
+  const token = tokenForActor(actor);
+  if (token) return token;
+  /*
   const speaker = ChatMessage.getSpeaker({ actor })
   if (speaker.token) return canvas?.tokens?.get(speaker.token);
-  throw new error("Could not get a target for self");
+  // return new Token(await actor.getTokenDocument())
+  */
+  throw new Error(`Could not get a target for self ${actor.name}`);
 }
 
-export async function getSelfTargetSet(actor): Promise<Set<Token | TokenDocument>> {
-  const selfTarget = await getSelfTarget(actor);
+export function getSelfTargetSet(actor): Set<Token> {
+  const selfTarget = getSelfTarget(actor);
   if (selfTarget) return new Set([selfTarget]);
   return new Set();
 }
@@ -255,7 +263,10 @@ export let getTraitMult = (actor, dmgTypeString, item): number => {
     const adamantineDamage = item?.system.properties?.ada;
     const physicalDamage = phsyicalDamageTypes.includes(dmgTypeString);
 
-    let traitList = [{ type: "di", mult: 0 }, { type: "dr", mult: configSettings.damageResistanceMultiplier }, { type: "dv", mult: configSettings.damageVulnerabilityMultiplier }];
+    let traitList = [
+      { type: "di", mult: configSettings.damageImmunityMultiplier }, 
+      { type: "dr", mult: configSettings.damageResistanceMultiplier }, 
+      { type: "dv", mult: configSettings.damageVulnerabilityMultiplier }];
     // for sw5e use sdi/sdr/sdv instead of di/dr/dv
     if (game.system.id === "sw5e" && actor.type === "starship" && actor.system.attributes.hp.tenp > 0) {
       traitList = [{ type: "sdi", mult: 0 }, { type: "sdr", mult: configSettings.damageResistanceMultiplier }, { type: "sdv", mult: configSettings.damageVulnerabilityMultiplier }];
@@ -263,10 +274,10 @@ export let getTraitMult = (actor, dmgTypeString, item): number => {
     for (let { type, mult } of traitList) {
       let trait = duplicate(actor.system.traits[type].value);
       let customs: string[] = [];
-      if (actor.system.traits[type].custom.length > 0) {
+      if (actor.system.traits[type].custom?.length > 0) {
         customs = actor.system.traits[type].custom.split(";").map(s => s.trim())
       }
-      const bypasses = actor.system.traits[type].bypasses;
+      const bypasses = actor.system.traits[type].bypasses ?? [];
       // process new bypasses settings
       if (magicalDamage && physicalDamage && bypasses.includes("mgc")) continue; // magical damage bypass of trait.
       if (adamantineDamage && physicalDamage && bypasses.includes("ada")) continue;
@@ -674,7 +685,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   // Show damage buttons if enabled, but only for the applicable user and the GM
 
   let theTargets = new Set([...workflow.hitTargets, ...workflow.hitTargetsEC]);
-  if (item?.system.target?.type === "self") theTargets = await getSelfTargetSet(actor) || theTargets;
+  if (item?.system.target?.type === "self") theTargets = getSelfTargetSet(actor) || theTargets;
   let effectsToExpire: string[] = [];
   if (theTargets.size > 0 && item?.hasAttack) effectsToExpire.push("1Hit");
   if (theTargets.size > 0 && item?.hasDamage) effectsToExpire.push("DamageDealt");
@@ -1036,7 +1047,7 @@ export async function processOverTime(wrapped, data, options, user) {
 export async function doOverTimeEffect(actor, effect, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined }) {
   if (game.user?.isGM)
     return gmOverTimeEffect(actor, effect, startTurn, options);
-  return socketlibSocket.executeAsGM("gmOverTimeEffect", {actorUuid: actor.uuid, effectUuid: effect.uuid, startTurn, options})
+  return socketlibSocket.executeAsGM("gmOverTimeEffect", { actorUuid: actor.uuid, effectUuid: effect.uuid, startTurn, options })
 }
 
 export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined }) {
@@ -1181,9 +1192,9 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       //@ts-ignore
       itemData._id = randomID();
       // roll the damage and save....
-      const theTargetToken = await getSelfTarget(actor);
-      const theTargetId = (theTargetToken instanceof Token) ? theTargetToken?.document.id : theTargetToken?.id;
-      const theTargetUuid = (theTargetToken instanceof Token) ? theTargetToken?.document.uuid : theTargetToken?.uuid;
+      const theTargetToken = getSelfTarget(actor);
+      const theTargetId = theTargetToken?.document.id;
+      const theTargetUuid = theTargetToken?.document.uuid;
       if (game.user && theTargetId) game.user.updateTokenTargets([theTargetId]);
 
       if (damageRoll) {
@@ -1785,7 +1796,7 @@ export async function addConcentration(actor, concentrationData: ConcentrationDa
 export async function addConcentrationEffect(actor, concentrationData: ConcentrationData) {
   const item = concentrationData.item;
   // await item.actor.unsetFlag("midi-qol", "concentration-data");
-  let selfTarget = actor.token ? actor.token.object : await getSelfTarget(actor);
+  let selfTarget = actor.token ? actor.token.object : getSelfTarget(actor);
   if (!selfTarget) return;
   let statusEffect;
   if (installedModules.get("dfreds-convenient-effects")) {
@@ -1877,7 +1888,7 @@ export async function setConcentrationData(actor, concentrationData: Concentrati
     }
 
     if (!selfTargeted) {
-      let selfTarget = actor.token ? actor.token.object : await getSelfTarget(actor);
+      let selfTarget = actor.token ? actor.token.object : getSelfTarget(actor);
       targets.push({ tokenUuid: selfTarget.uuid, actorUuid: actor.uuid })
     }
     let templates = concentrationData.templateUuid ? [concentrationData.templateUuid] : [];
@@ -2970,7 +2981,7 @@ export function getConcentrationEffect(actor): ActiveEffect | undefined {
   return result;
 }
 
-function mySafeEval(expression: string, sandbox: any) {
+function mySafeEval(expression: string, sandbox: any, onErrorReturn: boolean | undefined = undefined) {
   let result;
   try {
 
@@ -2979,7 +2990,7 @@ function mySafeEval(expression: string, sandbox: any) {
     result = evl(mergeObject(sandbox, Roll.MATH_PROXY));
   } catch (err) {
     console.warn("midi-qol | expression evaluation failed ", err);
-    result = undefined;
+    result = onErrorReturn;
   }
   if (Number.isNumeric(result)) return Number(result)
   return result;
@@ -3003,7 +3014,7 @@ export function createConditionData(data: { workflow: Workflow | undefined, targ
       if (rollData.target.details.type?.value) rollData.raceOrType = rollData.target.details.type?.value.toLocaleLowerCase() ?? "";
       else rollData.raceOrType = rollData.target.details.race?.toLocaleLowerCase() ?? "";
     }
-    console.error("Roll data is ", duplicate(rollData));
+    rollData.humanoid = ["humnan", "humanoid", "elven", "elf", "half-elf", "dwarf", "dwarven", "halfing", "gnome", "tiefling"];
     rollData.workflow = {};
     Object.assign(rollData.workflow, data.workflow);
     rollData.CONFIG = CONFIG;
@@ -3024,7 +3035,7 @@ export function evalCondition(condition: string, conditionData: any): boolean {
     if (condition.includes("@")) {
       condition = Roll.replaceFormulaData(condition, conditionData, { missing: "0" });
     }
-    returnValue = mySafeEval(condition, conditionData);
+    returnValue = mySafeEval(condition, conditionData, true);
     warn("evalActivationCondition ", returnValue, condition, conditionData);
 
   } catch (err) {
@@ -3117,27 +3128,40 @@ export function isInCombat(actor: Actor) {
 }
 
 export async function setReactionUsed(actor: Actor) {
+  let effect;
   if (getConvenientEffectsReaction()) {
     //@ts-ignore
     await game.dfreds?.effectInterface.addEffect({ effectName: getConvenientEffectsReaction().name, uuid: actor.uuid });
+  } else if (installedModules.get("combat-utility-belt") && (effect = CONFIG.statusEffects.find(se => se.label === i18n("DND5E.Reaction")))) {
+    actor.createEmbeddedDocuments("ActiveEffect", [effect]);
   }
   await actor.setFlag("midi-qol", "reactionCombatRound", game.combat?.round);
 }
 
 export async function setBonusActionUsed(actor: Actor) {
+  let effect;
   if (getConvenientEffectsBonusAction()) {
     //@ts-ignore
     await game.dfreds?.effectInterface.addEffect({ effectName: getConvenientEffectsBonusAction().name, uuid: actor.uuid });
+  } else if (installedModules.get("combat-utility-belt") && (effect = CONFIG.statusEffects.find(se => se.label === i18n("DND5E.BonusAction")))) {
+    actor.createEmbeddedDocuments("ActiveEffect", [effect]);
   }
   await actor.setFlag("midi-qol", "bonusActionCombatRound", game.combat?.round);
 }
+
 export async function removeReactionUsed(actor: Actor, removeCEEffect = false) {
+  let effect;
   if (removeCEEffect && getConvenientEffectsReaction()) {
     //@ts-ignore
     if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, actor.uuid)) {
       //@ts-ignore
       await game.dfreds.effectInterface?.removeEffect({ effectName: getConvenientEffectsReaction().name, uuid: actor.uuid });
     }
+  }
+  if (installedModules.get("combat-utility-belt")) {
+    //@ts-ignore
+    const effect = actor.effects.contents.find(ef => ef.label === i18n("DND5E.Reaction"));
+    await effect?.delete();
   }
   return await actor?.unsetFlag("midi-qol", "reactionCombatRound");
 }
@@ -3146,8 +3170,12 @@ export async function removeReactionUsed(actor: Actor, removeCEEffect = false) {
 export async function hasUsedReaction(actor: Actor) {
   if (actor.getFlag("midi-qol", "reactionCombatRound")) return true;
   if (getConvenientEffectsReaction()) {
-    //@ts-ignore
+    //@ts-expect-error .dfreds
     if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, actor.uuid)) return true;
+  }
+  //@ts-expect-error .label
+  if (installedModules.get("combat-utility-belt") && actor.effects.contents.some(ef => ef.label === i18n("DND5E.Reaction"))) {
+    return true;
   }
   return false;
 }
@@ -3176,6 +3204,10 @@ export async function hasUsedBonusAction(actor: Actor) {
     //@ts-ignore
     if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsBonusAction().name, actor.uuid)) return true;
   }
+  //@ts-expect-error .label
+  if (installedModules.get("combat-utility-belt") && actor.effects.contents.some(ef => ef.label === i18n("DND5E.Reaction"))) {
+    return true;
+  }
   return false;
 }
 
@@ -3185,6 +3217,11 @@ export async function removeBonusActionUsed(actor: Actor, removeCEEffect = false
     if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsBonusAction().name, actor.uuid)) {
       //@ts-ignore
       await game.dfreds.effectInterface?.removeEffect({ effectName: getConvenientEffectsBonusAction().name, uuid: actor.uuid });
+    }
+    if (installedModules.get("combat-utility-belt")) {
+      //@ts-ignore
+      const effect = actor.effects.contents.find(ef => ef.label === i18n("DND5E.BonusAction"));
+      await effect?.delete();
     }
   }
   return await actor?.unsetFlag("midi-qol", "bonusActionCombatRound");
@@ -3592,8 +3629,8 @@ export async function doConcentrationCheck(actor, itemData) {
   let result;
   // actor took damage and is concentrating....
   const saveTargets = game.user?.targets;
-  const theTargetToken = await getSelfTarget(actor);
-  const theTarget = theTargetToken instanceof Token ? theTargetToken?.document.id : theTargetToken?.id;
+  const theTargetToken = getSelfTarget(actor);
+  const theTarget = theTargetToken?.document.id;
   if (game.user && theTarget) game.user.updateTokenTargets([theTarget]);
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor })
   if (configSettings.displaySaveDC) {

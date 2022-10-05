@@ -35,7 +35,7 @@ export async function doAttackRoll(wrapped, options = { event: { shiftKey: false
 
   if (["Workflow"].includes(workflow.workflowType)) {
     if (this.system.target?.type === self) {
-      workflow.targets = await getSelfTargetSet(this.actor)
+      workflow.targets = getSelfTargetSet(this.actor)
     } else if (game.user?.targets?.size ?? 0 > 0) workflow.targets = validTargetTokens(game.user?.targets);
     if (workflow?.attackRoll && workflow.currentState === WORKFLOWSTATES.ROLLFINISHED) { // we are re-rolling the attack.
       workflow.damageRoll = undefined;
@@ -831,7 +831,7 @@ export function preItemUseHook(item, config, options): boolean {
       if (!shouldRoll) return blockRoll(item, workflow); // user aborted roll TODO should the workflow be deleted?
     }
 
-    const targets = (item?.system.target?.type === "self") ? await getSelfTargetSet(item.actor) : myTargets;
+    const targets = (item?.system.target?.type === "self") ? getSelfTargetSet(item.actor) : myTargets;
 
     if (installedModules.get("ready-set-roll-5e")) { // better rolls will handle the item roll
       if (!item.id) item._id = randomID(); // TOOD check this v10
@@ -1102,7 +1102,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
     return null;
   }
 
-  const targets = (this?.system.target?.type === "self") ? await getSelfTargetSet(this.actor) : myTargets;
+  const targets = (this?.system.target?.type === "self") ? getSelfTargetSet(this.actor) : myTargets;
 
   let workflow: Workflow;
   if (installedModules.get("ready-set-roll-5e")) { // better rolls will handle the item roll

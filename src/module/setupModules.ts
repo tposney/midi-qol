@@ -2,29 +2,30 @@ import { debug, error, debugEnabled, i18n } from "../midi-qol.js";
 import { log } from "../midi-qol.js";
 import { configSettings, disableWorkflowAutomation, enableWorkflow } from "./settings.js";
 
-let modules = {"about-time": "0.0", 
-              "dice-so-nice": "4.1.1", 
-              "itemacro": "1.0.0", 
-              "lmrtfy": "0.9",
-              "lib-wrapper": "1.3.5",
-              "dae": "0.9.05",
-              "combat-utility-belt": "1.3.8",
-              "times-up": "0.1.2",
-              "conditional-visibility": "0.0",
-              "monks-tokenbar": "1.0.55",
-              "socketlib": "0.0",
-              "dnd5e-helpers":  "3.0.0",
-              "dfreds-convenient-effects": "2.1.0",
-              "levels": "3.0.6", 
-              "levelsvolumetrictemplates": "0.0.0",
-              "lib-changelogs": "0.0.0",
-              "df-templates": "1.0.0",
-              "walledtemplates": "0.0.0",
-              "ddb-game-log": "0.0.0",
-              "wjmais": "0.0.0",
-              "ready-set-roll-5e": "1.2.0",
-              "multilevel-tokens": "1.6.0"
-            };
+const modules = {
+  "about-time": "0.0", 
+  "combat-utility-belt": "1.3.8",
+  "conditional-visibility": "0.0",
+  "dae": "10.0.9",
+  "ddb-game-log": "0.0.0",
+  "df-templates": "1.0.0",
+  "dfreds-convenient-effects": "2.1.0",
+  "dice-so-nice": "4.1.1", 
+  "dnd5e-helpers":  "3.0.0",
+  "itemacro": "1.0.0", 
+  "levels": "3.0.6", 
+  "levelsvolumetrictemplates": "0.0.0",
+  "lib-changelogs": "0.0.0",
+  "lib-wrapper": "1.3.5",
+  "lmrtfy": "0.9",
+  "monks-tokenbar": "1.0.55",
+  "multilevel-tokens": "1.6.0",
+  "ready-set-roll-5e": "1.2.0",
+  "socketlib": "0.0",
+  "times-up": "0.1.2",
+  "walledtemplates": "0.0.0",
+  "wjmais": "0.0.0",
+};
 export let installedModules = new Map();
 
 export let setupModules = () => {

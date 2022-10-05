@@ -4,6 +4,7 @@ import { showItemInfo } from "./itemhandling.js";
 import { itemHasDamage, itemIsVersatile } from "./utils.js";
 import { activateMacroListeners } from "./apps/Item.js";
 import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
+import { Workflow } from "./workflow.js";
 
 
 const knownSheets = {
@@ -167,25 +168,26 @@ function addItemRowButton(target, app, html, data, buttonContainer) {
         ev.preventDefault();
         ev.stopPropagation();
         if (debugEnabled > 1) debug("roll handler ", ev.target.dataset.action);
-        let event = { shiftKey: ev.shiftKey == true, ctrlKey: ev.ctrlKey === true, metaKey: ev.metaKey === true, altKey: ev.altKey === true };
+        // let event = { shiftKey: ev.shiftKey == true, ctrlKey: ev.ctrlKey === true, metaKey: ev.metaKey === true, altKey: ev.altKey === true };
         // If speed rolls are off
         switch (ev.target.dataset.action) {
           case "attack":
-            await item.rollAttack({ event, versatile: false, resetAdvantage: true });
+            await item.rollAttack({ versatile: false, resetAdvantage: true });
             break;
           case "damage":
-            await item.rollDamage({ event, versatile: false });
+            await item.rollDamage({ versatile: false });
             break;
           case "versatileDamage":
-            await item.rollDamage({ event, versatile: true });
+            await item.rollDamage({ versatile: true });
             break;
           case "consume":
-            await item.use({}, { event });
+            await item.use({}, { });
             break;
           case "toolCheck":
-            await item.rollToolCheck({ event });
+            await item.rollToolCheck({ });
             break;
           case "basicRoll":
+            Workflow.removeWorkflow(item.uuid);
             item.use({}, { configureDialog: true, showFullCard: true });
             break;
           case "info":

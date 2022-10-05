@@ -145,8 +145,10 @@ Hooks.once('setup', function () {
 
   let config = getSystemCONFIG();
 
+  
   if (game.system.id === "dnd5e" || game.system.id === "n5e") {
     config.midiProperties = {};
+    // Add additonal vision types? How to modify token properties doing this.
     config.midiProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
     config.midiProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
     config.midiProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp");
@@ -158,12 +160,14 @@ Hooks.once('setup', function () {
     config.midiProperties["toggleEffect"] = i18n("midi-qol.toggleEffectProp");
 
     config.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
+    // sliver, adamant, spell, nonmagic, magic are all deprecated and should only appear as custom
     config.damageResistanceTypes["silver"] = i18n("midi-qol.NonSilverPhysical");
     config.damageResistanceTypes["adamant"] = i18n("midi-qol.NonAdamantinePhysical");
     config.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
     config.damageResistanceTypes["nonmagic"] = i18n("midi-qol.NonMagical");
     config.damageResistanceTypes["magic"] = i18n("midi-qol.Magical");
-
+    config.damageResistanceTypes["healing"] = config.healingTypes.healing;
+    config.damageResistanceTypes["temphp"] = config.healingTypes.temphp;
     config.damageResistanceTypes["healing"] = config.healingTypes.healing;
     config.damageResistanceTypes["temphp"] = config.healingTypes.temphp;
 
@@ -179,11 +183,7 @@ Hooks.once('setup', function () {
     config.midiProperties["concentration"] = i18n("midi-qol.concentrationActivationCondition");
 
     config.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
-    config.damageResistanceTypes["silver"] = i18n("midi-qol.nonSilverPhysical");
-    config.damageResistanceTypes["adamant"] = i18n("midi-qol.nonAdamantinePhysical");
-    config.damageResistanceTypes["spell"] = i18n("midi-qol.spell-damage");
-    config.damageResistanceTypes["healing"] = config.healingTypes.healing;
-    config.damageResistanceTypes["temphp"] = config.healingTypes.temphp;
+
     config.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
     config.abilityActivationTypes["reactionmanual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
   }
@@ -244,7 +244,7 @@ Hooks.once('ready', function () {
 
   if (game.settings.get("midi-qol", "splashWarnings") && game.user?.isGM) {
     if (game.user?.isGM && !installedModules.get("dae")) {
-      ui.notifications?.warn("Midi-qol requires DAE to be installed and at least version 0.9.05 or many automation effects won't work");
+      ui.notifications?.warn("Midi-qol requires DAE to be installed and at least version 10.0.9 or many automation effects won't work");
     }
     if (game.user?.isGM && game.modules.get("betterrolls5e")?.active && !installedModules.get("betterrolls5e")) {
       ui.notifications?.warn("Midi QOL requires better rolls to be version 1.6.6 or later");
