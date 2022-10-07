@@ -684,12 +684,27 @@ export function prepareOnUseMacroData(actorOrItem) {
 
 export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user) {
   try {
-    const macroParts = getProperty(changes, "flags.midi-qol.onUseMacroParts");
-    if (!macroParts) return true;
+    const macroParts = getProperty(itemOrActor, "flags.midi-qol.onUseMacroParts");
+    const macroChanges = getProperty(changes, "flags.midi-qol.onUseMacroParts") ?? {};
+    //@ts-ignore
+    if (isEmpty(macroChanges)) return true;
+
+    for (let keyString in macroChanges.items) {
+      const key = Number(keyString);
+      if(!macroParts.items[key]) 
+        macroParts.items.push(OnUseMacro.parsePart({
+          macroName: macroChanges.items[key]?.macroName ?? "", 
+          option: macroChanges.items[key]?.option ?? ""}))
+      if (macroChanges.items[key].macroName) macroParts.items[key].macroName = macroChanges.items[key].macroName;
+      if (macroChanges.items[key].option) macroParts.items[key].option = macroChanges.items[key].option;
+    }
     let macroString = OnUseMacros.parseParts(macroParts).items.map(oum => oum.toString()).join(",");
     changes.flags["midi-qol"].onUseMacroName = macroString;
     delete changes.flags["midi-qol"].onUseMacroParts;
+    itemOrActor.updateSource({"flags.midi-qol.-=onUseMacroParts": null});
   } catch (err) {
+    delete changes.flags["midi-qol"].onUseMacroParts;
+    itemOrActor.updateSource({"flags.midi-qol.-=onUseMacroParts": null});
     console.warn("midi-qol | failed in preUpdateItemActor onUse Macro", err)
   }
   return true;

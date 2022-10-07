@@ -9,13 +9,13 @@
   </header>
     <div class="midi-qol-box">
       <ol class="changes-list">
-        {{#each onUseMacroParts}}
-        <li class="effect-change macro-change flexrow">
+        {{#each onUseMacroParts.items}}
+        <li class="effect-change macro-change flexrow data-macroPart={{@index}}">
           <div class = "key">
-          <input type="text" name="onUseMacroParts.{{@index}}.macroName" value="{{this.macroName}}">
+          <input type="text" name="onUseMacroParts.items.{{@index}}.macroName" value="{{this.macroName}}">
           </div>
           <div class="value">
-          <select name="onUseMacroParts.{{@index}}.option" data-dtype="String">
+          <select name="onUseMacroParts.items.{{@index}}.option" data-dtype="String">
             {{#select this.option}}
             {{#each ../MacroPassOptions as |label val|}}
             <option value="{{val}}">{{label}}</option>

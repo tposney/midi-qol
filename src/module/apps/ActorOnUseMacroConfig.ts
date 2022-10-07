@@ -1,5 +1,5 @@
 import { geti18nOptions, i18n } from "../../midi-qol.js";
-import { activateMacroListeners, getCurrentMacros, getCurrentSourceMacros, OnUseMacro, OnUseMacros } from "./Item.js";
+import { getCurrentMacros, OnUseMacros } from "./Item.js";
 
 export class ActorOnUseMacrosConfig extends FormApplication {
   object: any;
@@ -24,14 +24,14 @@ export class ActorOnUseMacrosConfig extends FormApplication {
   async getData(options) {
     let data: any = await super.getData(options);
     data.onUseMacroName = getProperty(this.object._source, "flags.midi-qol.onUseMacroName");
-    if (data.onUseMacroName !== undefined) data.onUseMacroParts = new OnUseMacros(data.onUseMacroName).items;
-    else data.onUseMacroParts = new OnUseMacros(null).items;
+    if (data.onUseMacroName !== undefined) data.onUseMacroParts = new OnUseMacros(data.onUseMacroName);
+    else data.onUseMacroParts = new OnUseMacros(null);
     data.MacroPassOptions = geti18nOptions("onUseMacroOptions");
     return data;
   }
 
   async _updateObject(event, data) {
-    await this.object.setFlag("midi-qol", "onUseMacroParts", {items: data.onUseMacroParts});
+    await this.object.setFlag("midi-qol", "onUseMacroParts", data.onUseMacroParts);
     // don't need to update onUseMacroName since the preUpdate hook will do this
     this.render();
   }
@@ -42,9 +42,6 @@ export class ActorOnUseMacrosConfig extends FormApplication {
     //@ts-ignore .object v10
     let data = foundry.utils.expandObject(fd.object);
     if ( updateData ) foundry.utils.mergeObject(data, updateData);
-    data.onUseMacroParts = Array.from(Object.values(data.onUseMacroParts?? {}));
-    //@ts-ignore
-    // data.onUseMacroParts = Array.from(Object.values(data.onUseMacroParts ?? {})).map(oumData => OnUseMacro.parsePart([oumData.macroName, oumData.option]));
     return data;
   }
 
@@ -62,20 +59,18 @@ export class ActorOnUseMacrosConfig extends FormApplication {
     if ( a.classList.contains("add-macro") ) {
       const macros = getCurrentMacros(this.object);
       const index = macros.items.length;
-      // await this._onSubmit(event);  // Submit any unsaved changes
-      // macros.items.push(new OnUseMacro());
-      
-      return this.submit({preventClose: true, updateData: {
-        [`onUseMacroParts.${index}`]: {macroName: "",  option: "postActiveEffects"}
-      //@ts-ignore
-      }}).then(() => this.render(true));
+      await this._onSubmit(event);  // Submit any unsaved changes
+      const updateData =  {};
+      updateData[`onUseMacroParts.items.${index}`] = {macroName: "",  option: "postActiveEffects"};
+      return this.submit({preventClose: true, updateData})?.then(() => this.render(true));
     }
   
     // Remove a macro component
     if ( a.classList.contains("delete-macro") ) {
-      a.closest(".macro-change").remove();
-      //@ts-ignore
-      return this.submit({preventClose: true}).then(() => this.render(true));
+      const li = a.closest(".macro-change");
+      const macros = getCurrentMacros(this.object);
+      macros.items.splice(Number(li.dataset.macroPart), 1);
+      return this.object.update({"flags.midi-qol.onUseMacroName": macros.toString()}).then(() => this.render(true));
     }
   }
 }

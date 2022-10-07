@@ -3014,7 +3014,7 @@ export function createConditionData(data: { workflow: Workflow | undefined, targ
       if (rollData.target.details.type?.value) rollData.raceOrType = rollData.target.details.type?.value.toLocaleLowerCase() ?? "";
       else rollData.raceOrType = rollData.target.details.race?.toLocaleLowerCase() ?? "";
     }
-    rollData.humanoid = ["humnan", "humanoid", "elven", "elf", "half-elf", "dwarf", "dwarven", "halfing", "gnome", "tiefling"];
+    rollData.humanoid = ["human", "humanoid", "elven", "elf", "half-elf", "dwarf", "dwarven", "halfing", "gnome", "tiefling"];
     rollData.workflow = {};
     Object.assign(rollData.workflow, data.workflow);
     rollData.CONFIG = CONFIG;

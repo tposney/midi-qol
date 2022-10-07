@@ -1,3 +1,7 @@
+### 10.0.14
+* Fix for item/actor onUseMacro editing.
+* Fix for typo in humanoid list.
+
 ### 10.0.13
 * Gratuitous changes to midi-qol config panel - first step to adding some more game mechanics changes, like legendar/lair action count resets at combat update or moving those to another module and removing them if I make a module for those.
 * Fix for wrong error thrown when doing self target effects with no token on the canvas.

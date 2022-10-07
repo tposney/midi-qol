@@ -59,8 +59,8 @@ export class OnUseMacro {
     public toListItem (index: Number, macroOptions: OnUseMacroOptions) {    
       const options = OnUseMacroOptions.getOptions?.reduce((opts: string, x: {option: string, label: string}) => opts += `<option value="${x.option}" ${x.option === this.option ? 'selected' : ''}>${x.label}</option>`, "");
       return `<li class="damage-part flexrow" data-midiqol-macro-part="${index}">
-    <input type="text" name="flags.midi-qol.onUseMacroParts.${index}.0" value="${this.macroName}">
-    <select name="flags.midi-qol.onUseMacroParts.${index}.1">
+    <input type="text" name="flags.midi-qol.onUseMacroParts.items.${index}.macroName" value="${this.macroName}">
+    <select name="flags.midi-qol.onUseMacroParts.items.${index}.option">
       ${options}
     </select>
 
@@ -118,7 +118,7 @@ export function getCurrentMacros(object): OnUseMacros {
 }
 
 export function getCurrentSourceMacros(object): OnUseMacros {
-  const macroField = new OnUseMacros(getProperty(object, "_source.flags.midi-qol.onUseMacroParts") ?? null)
+  const macroField = new OnUseMacros(getProperty(object, "_source.flags.midi-qol.onUseMacroName") ?? null)
   // const macroField = getProperty(object, "_source.flags.midi-qol.onUseMacroParts");
   return macroField;
 }
