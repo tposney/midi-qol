@@ -87,6 +87,7 @@ You can probably survive without these but midi pretty much assumes they are ins
 * **libChangeLogs** - will show the midi change log when it changes.
 * **DF QoL** - If you want template targeting to work as written in the rules, install this and enable it for template targeting. (apologies to @flamewave000 for the mislabelling)
 * **Warp Gate** - Some of the sample items use warp gate to summon tokens (Flaming Sphere, Spiritual Weapon).
+* **Build-A-Bonus** This moudle allows more complex bonuses to be calculated than dae/midi support by default. The bonus can be attached to an actor/item/active effect.
 
 ## Good To Have
 * **Active Token Lighting.** Allows tokens to emit light
@@ -305,15 +306,18 @@ Magic items that roll additional damage if a particular condition is true (slaye
 
 midi will evaluate the activation condition as an expression, providing, the actor, item and target actor's (@target) roll data. For example:
 ```
-    "@target.details.type.value".includes("dragon")
+    target.details.type.value.includes("dragon")
 ```
 will only roll if the target has a type of dragon. 
 
+The evaluation of conditions has changed, You do not need to put @ in front of fields, but still can. If the field is a a string then @ fields must be enclosed in quotes, i.e. "@target.details.type.value".includes("dragon").
+
+
 Specifically midi will populate the expression data with:
-* casting actor, anything from actor.data.data (direct via @field, e.g. @attributes...),
-* casting actor, anything from actor.data.flags (via @flags....),
+* casting actor, anything from actor.system (direct via @field, e.g. @attributes...),
+* casting actor, anything from actor.flags (via @flags....),
 * anything from item.data.data (via @item.damage.),
-* anything from the target.actor.data.data, via (@target.abilities etc),
+* anything from the target.actor.system, via (@target.abilities etc),
 * anything from the workflow itself (via @workflow.attackRoll etc).
 
 **An empty activation condition** will evaluate as true. If you don't want a specific weapon to roll Other Damage set Activation Condition false.
@@ -938,6 +942,8 @@ which will call the specified macro on the specified macroPass. macroPass is tak
 The field should contain ONLY the macro name, or the string "ItemMacro" or "ItemMacro.ItemName". 
   - "ItemMacro" means it will call the item macro for the item for the workflow. 
   - "ItemMacro.ItemName" allows you to lookup by name another item that the actor for the workflow has.  
+  - Compendium.scope.compendiumName.macroName/macroId means fetch the macro form the specified compendium, either by name or Id.
+  
 You may specify the point at in the workflow when the macro is called.  
 The macro will be called with args[0] containing the current state information for the workflow (see below).
 There are some controls for macro writers to decide when their macro should get executed. 

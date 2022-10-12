@@ -117,6 +117,7 @@ class ConfigSettings {
   showReactionAttackRoll: string = "all";
   showReactionChatMessage: boolean = false;
   singleConcentrationRoll: boolean = true;
+  skillAbilityCheckAdvantage: boolean = true;
   spellHitSound: string = "";
   spellUseSound: string = "";
   spellUseSoundRanged: string = "";
@@ -318,7 +319,7 @@ export let fetchParams = () => {
   //@ts-ignore
   if (configSettings.rollAlternate === true) configSettings.rollAlternate = "formula";
   if (configSettings.allowActorUseMacro === undefined) configSettings.allowActorUseMacro = configSettings.allowUseMacro;
-
+  if (configSettings.skillAbilityCheckAdvantage === undefined) configSettings.skillAbilityCheckAdvantage = true;
   if (!configSettings.keyMapping 
     || !configSettings.keyMapping["DND5E.Advantage"] 
     || !configSettings.keyMapping["DND5E.Disadvantage"]
@@ -336,7 +337,7 @@ export let fetchParams = () => {
   if (typeof configSettings.requiresTargets !== "string") configSettings.requiresTargets = "none";
   if (configSettings.tempHPDamageConcentrationCheck === undefined) configSettings.tempHPDamageConcentrationCheck = false;
   if (configSettings.showFastForward === undefined) configSettings.showFastForward = true;
-  configSettings.optionalRules = mergeObject({
+  configSettings.optionalRules = mergeObject({ // eventually split this into mechanics and rules
       invisAdvantage: true,
       checkRange: true,
       wallsBlockRange: "center",

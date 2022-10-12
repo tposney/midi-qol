@@ -172,23 +172,23 @@ function addItemRowButton(target, app, html, data, buttonContainer) {
         // If speed rolls are off
         switch (ev.target.dataset.action) {
           case "attack":
-            await item.rollAttack({ versatile: false, resetAdvantage: true });
+            await item.rollAttack( { event: ev, versatile: false, resetAdvantage: true, systemCard: true });
             break;
           case "damage":
-            await item.rollDamage({ versatile: false });
+            await item.rollDamage({event: ev,  versatile: false, systemCard: true });
             break;
           case "versatileDamage":
-            await item.rollDamage({ versatile: true });
+            await item.rollDamage({event: ev,  versatile: true, systemCard: true });
             break;
           case "consume":
-            await item.use({}, { });
+            await item.use({event: ev, systemCard: true}, { });
             break;
           case "toolCheck":
-            await item.rollToolCheck({ });
+            await item.rollToolCheck({event: ev, systemCard: true  });
             break;
           case "basicRoll":
             Workflow.removeWorkflow(item.uuid);
-            item.use({}, { configureDialog: true, showFullCard: true });
+            item.use({}, { event: ev, configureDialog: true, systemCard: true });
             break;
           case "info":
             await showItemInfo.bind(item)();
@@ -258,22 +258,23 @@ function addTidy5eItemSheetButtons(app, html, data) {
           // If speed rolls are off
           switch (ev.target.dataset.action) {
             case "attack":
-              await item.rollAttack({ event, versatile: false });
+              await item.rollAttack({ event, versatile: false, systemCard: true });
               break;
             case "damage":
-              await item.rollDamage({ event, versatile: false });
+              await item.rollDamage({ event, versatile: false, systemCard: true});
               break;
             case "versatileDamage":
-              await item.rollDamage({ event, versatile: true });
+              await item.rollDamage({ event, versatile: true, systemCard: true });
               break;
             case "consume":
-              await item.roll({ event });
+              await item.use({ event, systemCard: true });
               break;
             case "toolCheck":
-              await item.rollToolCheck({ event });
+              await item.rollToolCheck({ event, systemCard: true });
               break;
             case "basicRoll":
-              await item.use({ showFullCard: true });
+              Workflow.removeWorkflow(item.uuid);
+              item.use({}, { event, configureDialog: true, systemCard: true });
               break;
             case "info":
               await showItemInfo.bind(item)();

@@ -264,8 +264,8 @@ export let getTraitMult = (actor, dmgTypeString, item): number => {
     const physicalDamage = phsyicalDamageTypes.includes(dmgTypeString);
 
     let traitList = [
-      { type: "di", mult: configSettings.damageImmunityMultiplier }, 
-      { type: "dr", mult: configSettings.damageResistanceMultiplier }, 
+      { type: "di", mult: configSettings.damageImmunityMultiplier },
+      { type: "dr", mult: configSettings.damageResistanceMultiplier },
       { type: "dv", mult: configSettings.damageVulnerabilityMultiplier }];
     // for sw5e use sdi/sdr/sdv instead of di/dr/dv
     if (game.system.id === "sw5e" && actor.type === "starship" && actor.system.attributes.hp.tenp > 0) {
@@ -1234,7 +1234,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       }
       try {
         const options = {
-          showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid],
+          systemCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid],
           workflowOptions: { lateTargeting: "none", autoRollDamage: "onHit", autoFastDamage: true }
         };
         await completeItemUse(ownedItem, {}, options); // worried about multiple effects in flight so do one at a time
@@ -1342,7 +1342,7 @@ export async function completeItemUse(item, config: any = {}, options: any = { c
         // TODO check this v10
         globalThis.BetterRolls.rollItem(theItem, { itemData: item.toObject(), vanilla: false, adv: 0, disadv: 0, midiSaveDC: options.saveDC }).toMessage()
       } else {
-        if (game.settings.get("midi-qol", "itemUseHooks")) { // Since first call aalways fails can't check the result
+        if (game.settings.get("midi-qol", "itemUseHooks")) { // Since first call always fails can't check the result
           item.use(config, options)
         } else {
           item.use(config, options).then(result => { if (!result) resolve(result) });
@@ -1903,8 +1903,10 @@ export async function setConcentrationData(actor, concentrationData: Concentrati
  * @param {number} distance in game units to consider near
  */
 
+
 export function findNearby(disposition: number | null, token: any /*Token | undefined */, distance: number, maxSize: number | undefined = undefined): Token[] {
   if (!token) return [];
+  if (typeof token === "string") token = MQfromUuid(token).object;
   if (!(token instanceof Token)) { throw new Error("find nearby token is not of type token") };
   if (!canvas || !canvas.scene) return [];
   //@ts-ignore .disposition v10
@@ -1926,7 +1928,7 @@ export function findNearby(disposition: number | null, token: any /*Token | unde
 }
 
 export function checkNearby(disposition: number | null, token: Token | undefined, distance: number): boolean {
-  return findNearby(disposition, token, distance).length !== 0;;
+  return findNearby(disposition, token, distance).length !== 0;
 }
 
 export function hasCondition(token, condition: string) {
@@ -2808,7 +2810,7 @@ export async function reactionDialog(actor: globalThis.dnd5e.documents.Actor5e, 
       // options = mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStatus: false}, {overwrite: true});
       options.lateTargeting = "none";
       const itemRollOptions = mergeObject(options, {
-        showFullCard: false,
+        systemCard: false,
         createWorkflow: true,
         versatile: false,
         configureDialog: true,
@@ -2987,7 +2989,9 @@ function mySafeEval(expression: string, sandbox: any, onErrorReturn: boolean | u
 
     const src = 'with (sandbox) { return ' + expression + '}';
     const evl = new Function('sandbox', src);
-    result = evl(mergeObject(sandbox, Roll.MATH_PROXY));
+    sandbox = mergeObject(sandbox, Roll.MATH_PROXY);
+    sandbox = mergeObject(sandbox, { findNearby });
+    result = evl(sandbox);
   } catch (err) {
     console.warn("midi-qol | expression evaluation failed ", err);
     result = onErrorReturn;
@@ -3015,6 +3019,8 @@ export function createConditionData(data: { workflow: Workflow | undefined, targ
       else rollData.raceOrType = rollData.target.details.race?.toLocaleLowerCase() ?? "";
     }
     rollData.humanoid = ["human", "humanoid", "elven", "elf", "half-elf", "dwarf", "dwarven", "halfing", "gnome", "tiefling"];
+    rollData.tokenUuid = data.workflow?.tokenUuid;
+    rollData.tokenId = data.workflow?.tokenId;
     rollData.workflow = {};
     Object.assign(rollData.workflow, data.workflow);
     rollData.CONFIG = CONFIG;
@@ -3641,12 +3647,12 @@ export async function doConcentrationCheck(actor, itemData) {
     //@ts-ignore version v10
     if (installedModules.get("betterrolls5e") && isNewerVersion(game.modules.get("betterrolls5e")?.version ?? "", "1.3.10")) { // better rolls breaks the normal roll process
       //@ts-ignore
-      // await ownedItem.roll({ vanilla: false, showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false })
+      // await ownedItem.roll({ vanilla: false, systemCard: false, createWorkflow: true, versatile: false, configureDialog: false })
       await globalThis.BetterRolls.rollItem(ownedItem, { itemData: ownedItem.toObject(), vanilla: false, adv: 0, disadv: 0, midiSaveDC: saveDC, workflowOptions: { lateTargeting: "none" } }).toMessage();
     } else {
       //@ts-ignore
-      result = await completeItemUse(ownedItem, {}, { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: "none" } })
-      // await ownedItem.roll({ showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: "none" } })
+      result = await completeItemUse(ownedItem, {}, { systemCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: "none" } })
+      // await ownedItem.roll({ systemCard: false, createWorkflow: true, versatile: false, configureDialog: false, workflowOptions: { lateTargeting: "none" } })
     }
   } finally {
     if (saveTargets && game.user) game.user.targets = saveTargets;

@@ -1,11 +1,12 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, failedSaveOverTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate, checkOverTimeSaves } from "./chatMesssageHandling.js";
-import { deleteItemEffects, processUndoDamageCard } from "./GMAction.js";
+import { deleteItemEffects, processUndoDamageCard, socketlibSocket } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, MQfromUuid, getConcentrationEffect, removeReactionUsed, removeBonusActionUsed, checkflanking, getSystemCONFIG, expireRollEffect, doMidiConcentrationCheck } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
-import { preUpdateItemActorOnUseMacro } from "./patching.js";
+import {  preRollAbilitySaveHook, preUpdateItemActorOnUseMacro, rollAbilitySaveHook, rollAbilityTestHook } from "./patching.js";
+import { preItemUseHook, preDisplayCardHook, preItemUsageConsumptionHook, useItemHook, preRollAttackHook, preRollDamageHook, rollAttackHook, rollDamageHook } from "./itemhandling.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -135,17 +136,32 @@ export let readyHooks = async () => {
           const entity = await fromUuid(removeUuid);
           if (entity) await entity.delete(); // TODO check if this needs to be run as GM
         }
-        await deleteItemEffects({ ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true });
+        await socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [effect.uuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true });
       } catch (err) {
         error("error when attempting to remove concentration ", err)
       }
     };
-    changeFunc();
+    // changeFunc();
   })
 
   // Hooks.on("restCompleted", restManager); I think this means 1.6 is required.
   Hooks.on("dnd5e.restCompleted", restManager);
 
+  if (game.settings.get("midi-qol", "itemUseHooks") && game.system.id === "dnd5e") {
+    Hooks.on("dnd5e.preUseItem", preItemUseHook);
+    Hooks.on("dnd5e.preItemUsageConsumption", preItemUsageConsumptionHook);
+    Hooks.on("dnd5e.useItem", useItemHook);
+    Hooks.on("dnd5e.preDisplayCard", preDisplayCardHook);
+    // Hooks.on("dnd5e.displayCard", displayCardHook); - displayCard is wrapped instead.
+    Hooks.on("dnd5epreRollAttack", preRollAttackHook);
+    Hooks.on("dnd5e.rollAttack", rollAttackHook)
+    Hooks.on("dnd5epreRollAttack", preRollDamageHook);
+    Hooks.on("dnd5e.rollAttack", rollDamageHook)
+    Hooks.on("dnd5e.preRollAbilitySave", preRollAbilitySaveHook);
+    Hooks.on("dnd5e.preRollAbiltiyTest", preRollAbilitySaveHook);
+    Hooks.on("dnd5e.rollAbilitySave", rollAbilitySaveHook);
+    Hooks.on("dnd5e.rollAbilityTest", rollAbilityTestHook)
+  }
   // Concentration Check is rolled as an item roll so we need an item.
   if (installedModules.get("combat-utility-belt")) {
     //@ts-ignore game.cub

@@ -1,10 +1,11 @@
 import { log, warn, debug, i18n, error, getCanvas, i18nFormat } from "../midi-qol.js";
-import { doAttackRoll, doDamageRoll, templateTokens, doItemUse, preItemUseHook, preDisplayCardHook, preItemUsageConsumptionHook, useItemHook, displayCardHook } from "./itemhandling.js";
+import { doAttackRoll, doDamageRoll, templateTokens, doItemUse, preItemUseHook, preDisplayCardHook, preItemUsageConsumptionHook, useItemHook, displayCardHook, wrappedDisplayCard } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
 import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, evalCondition, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, hasUsedBonusAction, hasUsedReaction, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, notificationNotify, processOverTime, removeBonusActionUsed, removeReactionUsed } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
+import { socketlibSocket } from "./GMAction.js";
 let libWrapper;
 
 var d20Roll;
@@ -42,7 +43,7 @@ export interface Options {
   autoRollDamage: boolean | undefined,
   fastForwardAttack: boolean | undefined,
   fastForwardDamage: boolean | undefined,
-  fastForwardAbility: boolean | undefined,
+  fastForwardAbility: boolean | undefined
 };
 export const defaultRollOptions: Options = {
   event: undefined,
@@ -137,13 +138,20 @@ async function doRollSkill(wrapped, ...args) {
   // options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
   mergeKeyboardOptions(options, mapSpeedKeys(undefined, "ability"));
   options.event = {};
-  let procOptions: Options = procAdvantage(this, "check", this.system.skills[skillId].ability, options)
+  let procOptions = options;
+  if (configSettings.skillAbilityCheckAdvantage) {
+    procOptions = procAbilityAdvantage(this, "check", this.system.skills[skillId].ability, options)
+
+    // options = procAbilityAdvantage(actor, "check", actor.system.skills[skillId].ability, options)
+  }
+  // let procOptions: Options = procAbilityAdvantage(this, "check", this.system.skills[skillId].ability, options)
   procOptions = procAdvantageSkill(this, skillId, procOptions);
   if (procOptions.advantage && procOptions.disadvantage) {
     procOptions.advantage = false;
     procOptions.disadvantage = false;
   }
-  if (procAutoFailSkill(this, skillId) || procAutoFail(this, "check", this.system.skills[skillId].ability)) {
+  if (procAutoFailSkill(this, skillId) 
+  || (configSettings.skillAbilityCheckAdvantage && procAutoFail(this, "check", this.system.skills[skillId].ability))) {
     options.parts = ["-100"];
   }
 
@@ -315,75 +323,6 @@ function configureDamage(wrapped) {
   this._formula = this.constructor.getFormula(this.terms);
   this.options.configured = true;
 }
-
-export async function rollAbilitySave(wrapped, ...args) {
-  return doAbilityRoll.bind(this)(wrapped, "save", ...args);
-}
-async function rollAbilityTest(wrapped, ...args) {
-  return doAbilityRoll.bind(this)(wrapped, "check", ...args);
-}
-/* TODO come back to this when/if hooks are async 
-function preHookAbilityRoll(item: Item, rollData: any, abilityId: string, rollType: string) {
-  const rollTarget = rollData.targetValue;
-  if (procAutoFail(this, rollType, abilityId)) {
-    rollData.parts.push(["-100"]);
-  }
-  const chatMessage = rollData.chatMessage;
-  const keyOptions = mapSpeedKeys(null, "ability");
-  if (rollData.mapKeys !== false) {
-    if (keyOptions?.advantage === true) rollData.advantage = rollData.advantage || keyOptions.advantage;
-    if (keyOptions?.disadvantage === true) rollData.disadvantage = rollData.disadvantage || keyOptions.disadvantage;
-    if (keyOptions?.fastForwardAbility === true) rollData.fastForward = rollData.fastForward || keyOptions.fastForwardAbility;
-  }
-  // Hack for MTB bug
-  if (rollData.event?.advantage) rollData.advantage = rollData.event.advantage || rollData.advantage;
-  if (rollData.event?.disadvantage) rollData.disadvantage = rollData.event.disadvantage || rollData.disadvantage;
-
-  rollData.event = {};
-
-  let procOptions: any = procAdvantage(this, rollType, abilityId, rollData);
-  if (procOptions.advantage && procOptions.disadvantage) {
-    rollData.advantage = false;
-    rollData.disadvantage = false;
-  }
-
-  setProperty(rollData, "midi-qol", {chatMessage, simulate: rollData.simulate})
-  rollData.chatMessage = false;
-  
-  return true;
-}
-
-function rollAbilitySaveHook(item: Item, roll: any , abilityId: string, rollType: string) { 
-  const maxFlags = getProperty(this.flags, "midi-qol.max.ability") ?? {};
-  const flavor = roll.options?.flavor;
-  const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId])) ?? false
-  if (maxValue && Number.isNumeric(maxValue)) {
-    roll.terms[0].modifiers.unshift(`max${maxValue}`);
-    //@ts-ignore
-    result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
-  }
-
-  const minFlags = getProperty(this.flags, "midi-qol.min.ability") ?? {};
-  const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId])) ?? false;
-  if (minValue && Number.isNumeric(minValue)) {
-    roll.terms[0].modifiers.unshift(`min${minValue}`);
-    //@ts-ignore
-    roll = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
-  }
-
-  if (!roll.options.simulate) roll = await bonusCheck(this, roll, rollType, abilityId)
-  if (roll.options.chatMessage !== false && roll) {
-    const args: any = { "speaker": getSpeaker(this), flavor };
-    setProperty(args, `flags.${game.system.id}.roll`, { type: rollType, abilityId });
-    args.template = "modules/midi-qol/templates/roll.html";
-    await roll.toMessage(args);
-  }
-  let success: boolean | undefined = undefined;
-  if (roll.options.rollTarget !== undefined) success = roll.total >= roll.ootions.rollTarget;
-  await expireRollEffect.bind(this)(rollType, abilityId, success);
-
-}
-*/
 async function doAbilityRoll(wrapped, rollType: string, ...args) {
   let [abilityId, options = { event: {}, parts: [], chatMessage: undefined, simulate: false, targetValue: undefined }] = args;
   const rollTarget = options.targetValue;
@@ -404,27 +343,16 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
 
   options.event = {};
 
-  let procOptions: any = procAdvantage(this, rollType, abilityId, options);
+  let procOptions: any = procAbilityAdvantage(this, rollType, abilityId, options);
   if (procOptions.advantage && procOptions.disadvantage) {
     procOptions.advantage = false;
     procOptions.disadvantage = false;
   }
 
   let result;
-  // if (installedModules.get("betterrolls5e") && options.chatMessage !== false) {
-  if (installedModules.get("betterrolls5e")) {
-    let event = {};
-    if (procOptions.advantage) { options.advantage = true; event = { shiftKey: true } };
-    if (procOptions.disadvantage) { options.disadvantage = true; event = { ctrlKey: true } };
-    options.event = event;
-    result = wrapped(abilityId, options);
-    if (options.chatMessage !== false && !options.vanilla) return result;
-    result = await result;
-  } else {
-    if (!options.parts || procOptions.parts.length === 0) delete options.parts;
-    procOptions.chatMessage = false;
-    result = await wrapped(abilityId, procOptions);
-  }
+  if (!options.parts || procOptions.parts.length === 0) delete options.parts;
+  procOptions.chatMessage = false;
+  result = await wrapped(abilityId, procOptions);
   if (!result) return result;
 
   const maxFlags = getProperty(this.flags, "midi-qol.max.ability") ?? {};
@@ -457,6 +385,91 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
 
   return result;
 }
+export async function rollAbilitySave(wrapped, ...args) {
+  return doAbilityRoll.bind(this)(wrapped, "save", ...args);
+}
+async function rollAbilityTest(wrapped, ...args) {
+  return doAbilityRoll.bind(this)(wrapped, "check", ...args);
+}
+
+export function preRollAbilitySaveHook(item: Item, rollData: any, abilityId: string) {
+  return doPreRollAbilityHook.bind("save", item, rollData, abilityId);
+}
+
+export function rollAbilitySaveHook(item, roll, abilityId) {
+  return doRollAbilityHook("save", item, roll, abilityId)
+}
+
+export function preRollAbilityTestHook(item: Item, rollData: any, abilityId: string) {
+  return doPreRollAbilityHook.bind(this)("check", item, rollData, abilityId);
+}
+
+export function rollAbilityTestHook(item, roll, abilityId) {
+  return doRollAbilityHook("check", item, roll, abilityId)
+}
+
+async function doPreRollAbilityHook(rollType: string, item, rollData: any, abilityId: string) {
+  const rollTarget = rollData.targetValue;
+  if (procAutoFail(this, rollType, abilityId)) {
+    rollData.parts = ["-100"];
+  }
+  const chatMessage = rollData.chatMessage;
+  const keyOptions = mapSpeedKeys(undefined, "ability");
+  if (rollData.mapKeys !== false) {
+    if (keyOptions?.advantage === true) rollData.advantage = rollData.advantage || keyOptions.advantage;
+    if (keyOptions?.disadvantage === true) rollData.disadvantage = rollData.disadvantage || keyOptions.disadvantage;
+    if (keyOptions?.fastForwardAbility === true) rollData.fastForward = rollData.fastForward || keyOptions.fastForwardAbility;
+  }
+
+  // Hack for MTB bug
+  if (rollData.event?.advantage) rollData.advantage = rollData.event.advantage || rollData.advantage;
+  if (rollData.event?.disadvantage) rollData.disadvantage = rollData.event.disadvantage || rollData.disadvantage;
+
+  rollData.event = {};
+
+  let procOptions: any = procAbilityAdvantage(this, rollType, abilityId, rollData);
+  if (procOptions.advantage && procOptions.disadvantage) {
+    procOptions.advantage = false;
+    procOptions.disadvantage = false;
+  }
+
+  let result;
+  if (!rollData.parts || procOptions.parts.length === 0) delete rollData.parts;
+  rollData = mergeObject(rollData, procOptions);
+  if (chatMessage !== false && result) {
+    rollData.template = "modules/midi-qol/templates/roll.html";
+  }
+  return true;
+}
+
+function doRollAbilityHook(rollType, item, roll: any /* D20Roll */, abilityId: string) {
+  const maxFlags = getProperty(item.flags, "midi-qol.max.ability") ?? {};
+  let result = roll;
+  const flavor = result.options?.flavor;
+  const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId])) ?? false
+  if (maxValue && Number.isNumeric(maxValue)) {
+    result.terms[0].modifiers.unshift(`max${maxValue}`);
+    //@ts-ignore
+    result = new Roll(Roll.getFormula(result.terms)).evaluate({ async: false });
+  }
+
+  const minFlags = getProperty(item.flags, "midi-qol.min.ability") ?? {};
+  const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId])) ?? false;
+  if (minValue && Number.isNumeric(minValue)) {
+    result.terms[0].modifiers.unshift(`min${minValue}`);
+    result = new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
+  }
+
+  if (!roll.options.simulate) result = /* await  show stopper for this */ bonusCheck(this, result, rollType, abilityId)
+
+  let success: boolean | undefined = undefined;
+  const rollTarget = roll.options.targetValue;
+  if (rollTarget !== undefined) success = result.total >= rollTarget;
+    /* await - maybe ok */ expireRollEffect.bind(this)(rollType, abilityId, success);
+
+  return result;
+}
+
 
 export function procAutoFail(actor, rollType: string, abilityId: string): boolean {
   const midiFlags = actor.flags["midi-qol"] ?? {};
@@ -480,7 +493,7 @@ export function procAutoFailSkill(actor, skillId): boolean {
   return false;
 }
 
-export function procAdvantage(actor, rollType, abilityId, options: Options | any): Options {
+export function procAbilityAdvantage(actor, rollType, abilityId, options: Options | any): Options {
   const midiFlags = actor.flags["midi-qol"] ?? {};
   const advantage = midiFlags.advantage;
   const disadvantage = midiFlags.disadvantage;
@@ -691,20 +704,21 @@ export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user
 
     for (let keyString in macroChanges.items) {
       const key = Number(keyString);
-      if(!macroParts.items[key]) 
+      if (!macroParts.items[key])
         macroParts.items.push(OnUseMacro.parsePart({
-          macroName: macroChanges.items[key]?.macroName ?? "", 
-          option: macroChanges.items[key]?.option ?? ""}))
+          macroName: macroChanges.items[key]?.macroName ?? "",
+          option: macroChanges.items[key]?.option ?? ""
+        }))
       if (macroChanges.items[key].macroName) macroParts.items[key].macroName = macroChanges.items[key].macroName;
       if (macroChanges.items[key].option) macroParts.items[key].option = macroChanges.items[key].option;
     }
     let macroString = OnUseMacros.parseParts(macroParts).items.map(oum => oum.toString()).join(",");
     changes.flags["midi-qol"].onUseMacroName = macroString;
     delete changes.flags["midi-qol"].onUseMacroParts;
-    itemOrActor.updateSource({"flags.midi-qol.-=onUseMacroParts": null});
+    itemOrActor.updateSource({ "flags.midi-qol.-=onUseMacroParts": null });
   } catch (err) {
     delete changes.flags["midi-qol"].onUseMacroParts;
-    itemOrActor.updateSource({"flags.midi-qol.-=onUseMacroParts": null});
+    itemOrActor.updateSource({ "flags.midi-qol.-=onUseMacroParts": null });
     console.warn("midi-qol | failed in preUpdateItemActor onUse Macro", err)
   }
   return true;
@@ -772,6 +786,7 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
   try {
     if ((this.parent instanceof CONFIG.Actor.documentClass)) {
       let [options, user] = args;
+      const effect = this;
 
       // Handle removal of reaction effect
       if (installedModules.get("dfreds-convenient-effects") && getConvenientEffectsReaction()?._id === this.flags?.core?.statusId) {
@@ -782,12 +797,52 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
       if (installedModules.get("dfreds-convenient-effects") && getConvenientEffectsBonusAction()?._id === this.flags?.core?.statusId) {
         await this.parent.unsetFlag("midi-qol", "bonusActionCombatRound");
       }
+
+      if (!(effect.parent instanceof CONFIG.Actor.documentClass)) return;
+      const checkConcentration = globalThis.MidiQOL?.configSettings()?.concentrationAutomation;
+      if (!checkConcentration) return;
+      let concentrationLabel: any = i18n("midi-qol.Concentrating");
+      if (installedModules.get("dfreds-convenient-effects")) {
+        let concentrationId = "Convenient Effect: Concentrating";
+        let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
+        if (statusEffect) concentrationLabel = statusEffect.label;
+      } else if (installedModules.get("combat-utility-belt")) {
+        concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
+      }
+      let isConcentration = effect.label === concentrationLabel;
+      if (!isConcentration) return;
+      await removeConcentration(effect.parent, this.uuid)
     }
   } catch (err) {
-    console.warn("midi-qol | error deleting concentration effects: ", err)
+    console.warn("midi-qol | error deleting effect: ", err)
   } finally {
     return wrapped(...args)
   }
+}
+
+export async function removeConcentration(actor: Actor, concentrationUuid: string) {
+  let result;
+  try {
+    const concentrationData: any = actor.getFlag("midi-qol", "concentration-data");
+    if (!concentrationData) {
+      return;
+    }
+    await actor.unsetFlag("midi-qol", "concentration-data");
+    if (concentrationData.templates) {
+      for (let templateUuid of concentrationData.templates) {
+        const template = await fromUuid(templateUuid);
+        if (template) await template.delete();
+      }
+    }
+    for (let removeUuid of concentrationData.removeUuids) {
+      const entity = await fromUuid(removeUuid);
+      if (entity) await entity.delete(); // TODO check if this needs to be run as GM
+    }
+    result = await socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [concentrationUuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true });
+  } catch (err) {
+    error("error when attempting to remove concentration ", err)
+  }
+  return result;
 }
 
 async function zeroHPExpiry(actor, update, options, user) {
@@ -911,20 +966,16 @@ export function configureDamageRollDialog() {
 }
 
 export let itemPatching = () => {
-  if (game.settings.get("midi-qol", "itemUseHooks")) {
-    Hooks.on("dnd5e.preUseItem", preItemUseHook);
-    Hooks.on("dnd5e.preDisplayCard", preDisplayCardHook);
-    Hooks.on("dnd5e.displayCard", displayCardHook);
-    Hooks.on("dnd5e.preItemUsageConsumption", preItemUsageConsumptionHook);
-    Hooks.on("dnd5e.useItem", useItemHook);
-    libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
-    libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
-
-  } else {
+  if (!game.settings.get("midi-qol", "itemUseHooks")) {
     //@ts-ignore .version
     libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.use", doItemUse, "MIXED");
     libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
     libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
+    libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.displayCard", wrappedDisplayCard, "MIXED");
+  } else {
+    libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollAttack", doAttackRoll, "MIXED");
+    libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollDamage", doDamageRoll, "MIXED");
+    libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.displayCard", wrappedDisplayCard, "MIXED");
   }
   if (game.system.id === "dnd5e" || game.system.id === "n5e")
     libWrapper.register("midi-qol", "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
@@ -932,12 +983,14 @@ export let itemPatching = () => {
 };
 
 export let actorAbilityRollPatching = () => {
-  log("Patching rollAbilitySave")
-  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollAbilitySave", rollAbilitySave, "WRAPPER");
+  if (!game.settings.get("midi-qol", "itemUseHooks")) {
+    log("Patching rollAbilitySave")
+    libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollAbilitySave", rollAbilitySave, "WRAPPER");
 
-  log("Patching rollAbilityTest")
-  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollAbilityTest", rollAbilityTest, "WRAPPER");
-
+    log("Patching rollAbilityTest")
+    libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollAbilityTest", rollAbilityTest, "WRAPPER");
+  }
+  // TODO come back and add these
   log("Patching rollSkill");
   libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollSkill", doRollSkill, "WRAPPER");
 
@@ -1264,12 +1317,12 @@ function addCustomTrait(customTraits: string, customTrait: string): string {
 
 function preDamageTraitSelectorGetData(wrapped) {
   try {
-      // migrate di/dr/dv and strip out active effect data.
-      if (this.object instanceof Actor) migrateTraits(this.object);
-  } catch(err) {
+    // migrate di/dr/dv and strip out active effect data.
+    if (this.object instanceof Actor) migrateTraits(this.object);
+  } catch (err) {
     console.error("migrate traits error", err)
   } finally {
     return wrapped();
   }
-  
+
 }

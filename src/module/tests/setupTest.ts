@@ -158,7 +158,6 @@ async function registerTests() {
               Hooks.once("createChatMessage", function (chatMessage) {
                 resolve(chatMessage.rolls[0])
               });
-
             });
             const combat = await actor.rollInitiative({ createCombatants: true, rerollInitiative: true });
             await combat.delete();
@@ -478,10 +477,12 @@ async function registerTests() {
         });
         describe("onUse Macro Tests", async function () {
           it("Calls actor onUseMacros", async function () {
+            this.timeout(3000); // why is 2 seconds not enough?
             const actor = getActor(actor2Name);
             const macroPasses: string[] = [];
             const hookid = Hooks.on("OnUseMacroTest", (pass: string) => macroPasses.push(pass));
             await completeItemUse(actor.items.getName("OnUseMacroTest")); // Apply the effect
+            //@ts-ignore
             const target = getToken(target2Name);
             game.user?.updateTokenTargets([target?.id ?? ""]);
             await completeItemUse(actor.items.getName("Longsword")); // Apply the effect
@@ -492,14 +493,14 @@ async function registerTests() {
             await actor.deleteEmbeddedDocuments("ActiveEffect", hasEffects.map(e => e.id))
             // console.log(macroPasses);
             // console.log(Object.keys(game.i18n.translations["midi-qol"]["onUseMacroOptions"]))
-            // Test for all passes except "all", "template placed"
-            assert.equal(macroPasses.length, Object.keys(game.i18n.translations["midi-qol"]["onUseMacroOptions"]).length - 2, "on use macro pass length");
+            // Test for all passes except "all"
+            assert.equal(macroPasses.length, Object.keys(game.i18n.translations["midi-qol"]["onUseMacroOptions"]).length - 1, "on use macro pass length");
           })
 
           it("Calls item onUseMacros", async function () {
             const actor = getActor(actor2Name);
             const macroPasses: string[] = [];
-            const expectedPasses = ['preItemRoll', 'preambleComplete', 'preSave', 'postSave', 'preActiveEffects', 'postActiveEffects'];
+            const expectedPasses = ['preItemRoll', 'templatePlaced', 'preambleComplete', 'preSave', 'postSave', 'preActiveEffects', 'postActiveEffects'];
             const hookid = Hooks.on("Item OnUseMacroTest", (pass: string) => macroPasses.push(pass));
             await completeItemUse(actor.items.getName("Item OnUseMacroTest"));
             Hooks.off("OnUseMacroTest", hookid);

@@ -34,7 +34,7 @@ export class MidiKeyManager {
     autoRollDamage: undefined
   };
 
-  constructor() {
+  resetKeyState() {
     this._adv = false;
     this._dis = false;
     this._vers = false;
@@ -43,6 +43,9 @@ export class MidiKeyManager {
     this._fastForward = false;
     this._fastForwardSet = false;
     this._critical = false;
+  }
+  constructor() {
+    this.resetKeyState();
     window.addEventListener('keyup', (event) => this.handleKeyUpEvent(event));
   }
 

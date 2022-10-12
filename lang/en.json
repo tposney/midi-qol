@@ -668,5 +668,7 @@
   "midi-qol.AutoRemoveTemplate.Name": "Auto remove placed template on spell expiry",
   "midi-qol.AttackPerTarget.Name": "Roll a separate attck per target",
   "midi-qol.itemUseHooks.Name": "Utilise Item Hooks",
-  "midi-qol.itemUseHooks.Hint": "Do NOT set this - used for author's testing"
+  "midi-qol.itemUseHooks.Hint": "Do NOT set this - used for author's testing",
+  "midi-qol.SkillAbilityCheckAdvantage.Name": "Ability Check Advantage give Skill Advantage",
+  "midi-qol.SkillAbilityCheckAdvantage.Hint": "If an actor has advantage/disadvatnage on ability checks, skills based on that ability also have advatnage/disadvantage"
 }

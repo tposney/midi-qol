@@ -1,15 +1,38 @@
+### 10.0.15
+* findNearby now accepts a tokenUuid or a token.
+* added findNearby to activation condition evaluation, so 
+```
+flags.midi-qol.disadvantage.attack.rwak CUSTOM findNearby(-1, tokenUuid, 5, 0).length > 0
+```
+will give disadvantage on ranged weapon attacks if there is a foe within 5 feet (the same as the midi-qol optional rule - but less efficient) or
+```
+flags.midi-qol.disadvantage.concentration CUSTOM findNearby(-1, tokenUuid, 5, 0).length > 0
+```
+will give disadvantage on concentration saves if there is a foe within 5 feet.
+* Fix for rage not processing mwak with default ability.
+* Minor fixes for magic items/confirmation that midi + magicItems works in v10.
+* Change to item rolling, midi now overrides the default item card.
+* Fix for concentration removal throwing an error "No permission".
+* Fixed an odd race condition when removing concentration when casting another concentration spell.
+* Update behaviour of inventory item attack/damage buttons to replicate the behaviour of standard chat card buttons and using core dnd5e accelerator keys.
+* Fix for incorrect highlighting of critical success when rolling tool checks.
+* I am making build-a-bonus a recommended module for midi-qol, because it provides some great functionality. The sample item's compendium will assume build-a-bonus is installed. This is most obvious for aura effects.
+* For settings in the config settings mechanics section enabling optional rules is not required. Similary, if those settings were already enabled but rendered inactive due to the optional rules setting, they will now be active. So check those settings.
+* Macro references, actor/item onUseMacros can now refer directly to compendium macros - a name like Compendium.scope.packName.macroName or Compendium.scope.packName.macroId (e.g. Compendium.dae.premadeitems.echo) will fetch the macro from the compendium and execute it. If there is more than one match the "first" will be used.
+* Added mechanics setting for advantage with ability checks giving advantage on corresponding skill rolls or not - default true.
+
 ### 10.0.14
 * Fix for item/actor onUseMacro editing.
 * Fix for typo in humanoid list.
 
 ### 10.0.13
-* Gratuitous changes to midi-qol config panel - first step to adding some more game mechanics changes, like legendar/lair action count resets at combat update or moving those to another module and removing them if I make a module for those.
+* Gratuitous changes to midi-qol config panel - first step to adding some more game mechanics changes, like legendary/lair action count resets at combat update or moving those to another module and removing them if I make a module for those.
 * Fix for wrong error thrown when doing self target effects with no token on the canvas.
 * Any effect applied via using an item will populate (on the effect):
 flags["midi-qol"].castData with {baseLevel: number, castLevel: number, itemUuid: string}.
   - Also works for convenient effects applied by midi when using an item.
 * Added config option for damage immunity to specify the amount of damage passed through, like damage resistance - in case you do not want immunity to be quite so immune. So a value of 0.25 means 25% of the damage will get through if immune to the damage type. (Default 0). If you want a creature to be immune to the first (say) 10 points of slashing damage create an effect and use flags.midi-qol.DR.slashing OVERRIDE 10 - or flags.midi-qol.DR.phsyical OVERRIDE 10 for all slashing/bludgeoning/piercing.
-* Added support for combat utility belt and reactions/bonus actions. If Convenient Effects is not installed midi will look at the CUB conditions and if there is a condtition whose name is the localised text of DND5E.Reaction(Reaction)/DND5E.BonusAction(Bonus Action) it will be applied/removed to/from the actor when use of a reaction/bonus action is recorded.
+* Added support for combat utility belt and reactions/bonus actions. If Convenient Effects is not installed midi will look at the CUB conditions and if there is a condition whose name is the localised text of DND5E.Reaction(Reaction)/DND5E.BonusAction(Bonus Action) it will be applied/removed to/from the actor when use of a reaction/bonus action is recorded.
 * Sample items updated to use dae 10.0.9 feature where ItemMacro (as a flag value - e.g. damage bonus macros) does not need to specify a name, on application of the effect (passive or active) ItemMacro will be mapped to ItemMacro.<item.uuid> which will fetch the correct macro rather than a name match. (Hunter's Mark and Sneak Attack)
 * Fix for broken Shillelagh cantrip macro.
 * Fix for Actor onUseMacros not saving when edited.

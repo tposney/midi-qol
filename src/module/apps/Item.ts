@@ -11,7 +11,7 @@ export class OnUseMacros {
 
   static parseParts(parts) {
     const macros = new OnUseMacros();
-    parts.items.forEach(x => macros.items.push(OnUseMacro.parsePart(x)));
+    parts.items?.forEach(x => macros.items.push(OnUseMacro.parsePart(x)));
     return macros;
   }
 

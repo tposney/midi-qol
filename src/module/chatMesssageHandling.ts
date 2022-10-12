@@ -1,9 +1,9 @@
-import { debug, log, warn, i18n, error, MESSAGETYPES, timelog, gameStats, debugEnabled, MQdefaultDamageType, i18nFormat } from "../midi-qol.js";
+import { debug, warn, i18n, error, gameStats, debugEnabled, MQdefaultDamageType, i18nFormat } from "../midi-qol.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { BetterRollsWorkflow, DDBGameLogWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { nsaFlag, coloredBorders, addChatDamageButtons, configSettings, forceHideRoll } from "./settings.js";
-import { createDamageList, getTraitMult, calculateDamage, MQfromUuid, MQfromActorUuid, playerFor, playerForActor, applyTokenDamage, doOverTimeEffect, isInCombat } from "./utils.js";
-import { shouldRollOtherDamage, showItemCard } from "./itemhandling.js";
+import { createDamageList, MQfromUuid, playerFor, playerForActor, applyTokenDamage, doOverTimeEffect, isInCombat } from "./utils.js";
+import { shouldRollOtherDamage } from "./itemhandling.js";
 import { socketlibSocket } from "./GMAction.js";
 export const MAESTRO_MODULE_NAME = "maestro";
 export const MODULE_LABEL = "Maestro";
@@ -607,11 +607,13 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
   let btnStylingRed = `background-color:lightcoral; ${style}`;
   const fullDamageButton = $(`<button class="dice-total-full-${tag}-button" style="${btnStylingRed}"><i class="fas fa-user-minus" title="Click to apply up to ${totalDamage} damage to selected token(s)."></i></button>`);
   const halfDamageButton = $(`<button class="dice-total-half-${tag}-button" style="${btnStylingRed}"><i title="Click to apply up to ${Math.floor(totalDamage / 2)} damage to selected token(s).">&frac12;</i></button>`);
+  const quarterDamageButton = $(`<button class="dice-total-quarter-${tag}-button" style="${btnStylingRed}"><i title="Click to apply up to ${Math.floor(totalDamage / 4)} damage to selected token(s).">&frac14;</i></button>`);
   const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button" style="${btnStylingRed}"><i title="Click to apply up to ${totalDamage * 2} damage to selected token(s).">x2</i></button>`);
   const fullHealingButton = $(`<button class="dice-total-full-${tag}-healing-button" style="${btnStylingGreen}"><i class="fas fa-user-plus" title="Click to heal up to ${totalDamage} to selected token(s)."></i></button>`);
 
   btnContainer.append(fullDamageButton);
   btnContainer.append(halfDamageButton);
+  if (!configSettings.mergeCardCondensed) btnContainer.append(quarterDamageButton);
   btnContainer.append(doubleDamageButton);
   btnContainer.append(fullHealingButton);
   const toMatchElement = html.find(toMatch);
@@ -633,32 +635,18 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
 
       // find solution for non-magic weapons
       let promises: Promise<any>[] = [];
-      if (canvas?.tokens) for (let t of canvas.tokens.controlled) {
+      if (canvas?.tokens?.controlled && canvas?.tokens?.controlled?.length > 0) {
         const totalDamage = modDamageList.reduce((acc, value) => value.damage + acc, 0);
-        // export async function applyTokenDamage(damageDetail, totalDamage, theTargets, item, saves, options: { existingDamage: any[], superSavers: Set<any>, semiSuperSavers: Set<any>, workflow: Workflow | undefined, updateContext: any } = { existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined, updateContext: undefined        
         await applyTokenDamage(modDamageList, totalDamage, new Set(canvas.tokens.controlled), item, new Set(),
           { existingDamage: [], superSavers: new Set(), semiSuperSavers: new Set(), workflow: undefined, updateContext: undefined, forceApply: true });
       }
-      /*
-            if (canvas?.tokens) for (let t of canvas.tokens.controlled) {
-              let a: any | null = t.actor;
-              if (!a) continue;
-              let appliedDamage = 0;
-              for (let { damage, type } of damageList) {
-                appliedDamage += Math.floor(damage * getTraitMult(a, type, item));
-              }
-              appliedDamage = Math.floor(Math.abs(appliedDamage)) * mult;
-              let damageItem = calculateDamage(a, appliedDamage, t, totalDamage, "", null);
-              promises.push(a.update({ "system.attributes.hp.temp": damageItem.newTempHP, "system.attributes.hp.value": damageItem.newHP }, { dhp: damageItem.newHP - a.system.attributes.hp.value }));
-            }
-            let retval = await Promise.all(promises);
-            return retval;
-            */
     });
   };
   setButtonClick(`.dice-total-full-${tag}-button`, 1);
   setButtonClick(`.dice-total-half-${tag}-button`, 0.5);
   setButtonClick(`.dice-total-double-${tag}-button`, 2);
+  setButtonClick(`.dice-total-quarter-${tag}-button`, 0.25);
+
   setButtonClick(`.dice-total-full-${tag}-healing-button`, -1);
   // logic to only show the buttons when the mouse is within the chat card and a token is selected
   html.find('.dmgBtn-container-mqol').hide();
@@ -807,7 +795,10 @@ export function ddbglPendingFired(data) {
     }
     //@ts-ignore
     workflow = new DDBGameLogWorkflow(actor, item, speaker, game.user.targets, {});
-    showItemCard.bind(item)(false, workflow, false, true);
+    //@ts-ignore .displayCard
+    item.displayCard({showFullCard: false, workflow, createMessage: false, defaultCard: true});
+    // showItemCard.bind(item)(false, workflow, false, true);
+
     return;
   }
 
