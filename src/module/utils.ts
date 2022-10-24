@@ -180,12 +180,11 @@ export function getSelfTarget(actor): Token {
   if (actor.token) return actor.token.object; //actor.token is a token document.
   const token = tokenForActor(actor);
   if (token) return token;
-  /*
-  const speaker = ChatMessage.getSpeaker({ actor })
-  if (speaker.token) return canvas?.tokens?.get(speaker.token);
-  // return new Token(await actor.getTokenDocument())
-  */
-  throw new Error(`Could not get a target for self ${actor.name}`);
+ const tokenData = actor.prototypeToken.toObject();
+ tokenData.actorId = actor.id;
+ const cls = getDocumentClass("Token");
+ //@ts-expect-error
+ return new cls(tokenData, {actor});
 }
 
 export function getSelfTargetSet(actor): Set<Token> {
@@ -873,7 +872,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
       message = `${configSettings.displaySaveDC ? "DC " + dc : ""} ${flavor}`;
     // Send a message for LMRTFY to do a save.
     const socketData = {
-      user: player.id,
+      user: player.id, 
       actors: [actorId],
       abilities: rollType === "abil" ? [ability] : [],
       saves: rollType === "save" ? [ability] : [],
@@ -957,6 +956,7 @@ export function midiCustomEffect(actor, change) {
   if (change.key === "flags.midi-qol.onUseMacroName") {
     const args = change.value.split(",")?.map(arg => arg.trim());
     const currentFlag = getProperty(actor, "flags.midi-qol.onUseMacroName") ?? "";
+
     const extraFlag = `[${args[1]}]${args[0]}`;
     let macroString;
     if (currentFlag.length === 0)
@@ -1055,7 +1055,8 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
   if (effect.disabled || effect.isSuppressed) return;
   const auraFlags = effect.flags?.ActiveAuras ?? {};
   if (auraFlags.isAura && auraFlags.ignoreSelf) return;
-  const rollData = actor.getRollData();
+  const rollData = createConditionData({actor, workflow: undefined, target: undefined});
+  // const rollData = actor.getRollData();
   if (!rollData.flags) rollData.flags = actor.flags;
   rollData.flags.midiqol = rollData.flags["midi-qol"];
   const changes = effect.changes.filter(change => change.key.startsWith("flags.midi-qol.OverTime"));
@@ -1080,7 +1081,8 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       let value = replaceAtFields(applyCondition, rollData, { blankValue: 0, maxIterations: 3 });
       let result;
       try {
-        result = Roll.safeEval(value);
+        result = evalCondition(value, rollData);
+        // result = Roll.safeEval(value);
       } catch (err) {
         console.warn("midi-qol | error when evaluating overtime apply condition - assuming true", value, err)
         result = true;
@@ -1223,7 +1225,8 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
         let value = replaceAtFields(details.removeCondition, rollData, { blankValue: 0, maxIterations: 3 });
         let remove;
         try {
-          remove = Roll.safeEval(value);
+          remove = evalCondition(value, rollData);
+          // remove = Roll.safeEval(value);
         } catch (err) {
           console.warn("midi-qol | error when evaluating overtime remove condition - assuming true", value, err)
           remove = true;
@@ -1487,7 +1490,9 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, includeCover, 
   let tokenTileACBonus = 0;
   let coverData;
   if (!canvas.grid || !canvas.dimensions) noResult;
-  if (!t1 || !t2) return noResult
+  if (!t1 || !t2) return noResult;
+  if (t1 instanceof TokenDocument) t1 = t1.object;
+  if (t2 instanceof TokenDocument) t2 = t2.object;
   if (!canvas || !canvas.grid || !canvas.dimensions) return noResult;
   //@ts-ignore
   if (window.CoverCalculator && includeCover && ["dnd5eHelpers", "dnd5eHelpersAC"].includes(configSettings.optionalRules.wallsBlockRange)) {
@@ -1907,7 +1912,7 @@ export async function setConcentrationData(actor, concentrationData: Concentrati
 export function findNearby(disposition: number | null, token: any /*Token | undefined */, distance: number, maxSize: number | undefined = undefined): Token[] {
   if (!token) return [];
   if (typeof token === "string") token = MQfromUuid(token).object;
-  if (!(token instanceof Token)) { throw new Error("find nearby token is not of type token") };
+  if (!(token instanceof Token)) { throw new Error("find nearby token is not of type token or the token uuid is invalid") };
   if (!canvas || !canvas.scene) return [];
   //@ts-ignore .disposition v10
   let targetDisposition = token.document.disposition * (disposition ?? 0);
@@ -2789,7 +2794,7 @@ export function playerForActor(actor: Actor | undefined): User | undefined {
     // does anyone have default owner permission who is active
     user = game.users?.players.find(p => p.active && ownwership[p.id] === OWNERSHIP_LEVELS.INHERIT)
   }
-  // if all else fails it's and active gm.
+  // if all else fails it's an active gm.
   if (!user) user = game.users?.find(p => p.isGM && p.active);
   return user;
 }
@@ -3008,7 +3013,9 @@ export function evalActivationCondition(workflow: Workflow, condition: string | 
 }
 
 export function createConditionData(data: { workflow: Workflow | undefined, target: Token | TokenDocument | undefined, actor: Actor | undefined }) {
-  const rollData = data.workflow?.otherDamageItem?.getRollData() ?? data.workflow?.actor?.getRollData() ?? data.actor?.getRollData() ?? {};
+  const actor = data.workflow?.actor ?? data.actor;
+  const rollData = data.workflow?.otherDamageItem?.getRollData() ?? actor?.getRollData() ?? {};
+
   try {
     if (data.target) {
       rollData.target = data.target.actor?.getRollData();
@@ -3022,7 +3029,8 @@ export function createConditionData(data: { workflow: Workflow | undefined, targ
     rollData.tokenUuid = data.workflow?.tokenUuid;
     rollData.tokenId = data.workflow?.tokenId;
     rollData.workflow = {};
-    Object.assign(rollData.workflow, data.workflow);
+    rollData.effects = actor?.effects;
+    if (data.workflow) Object.assign(rollData.workflow, data.workflow);
     rollData.CONFIG = CONFIG;
     rollData.CONST = CONST;
   } catch (err) {
@@ -3109,9 +3117,14 @@ export function getConvenientEffectsDead() {
   return game.dfreds?.effects?._dead;
 }
 
-export async function ConvenientEffectsHasEffect(effectName: string, uuid: string) {
+export async function ConvenientEffectsHasEffect(effectName: string, actor: Actor, ignoreInactive: boolean = true) {
+  if (ignoreInactive) {
   //@ts-ignore
-  return game.dfreds.effectInterface.hasEffectApplied(effectName, uuid);
+  return game.dfreds.effectInterface.hasEffectApplied(effectName, actor.uuid);
+  } else {
+    //@ts-expect-error .label
+    return actor.effects.find(ef => ef.label === effectName) !== undefined;
+  }
 }
 
 export function isInCombat(actor: Actor) {

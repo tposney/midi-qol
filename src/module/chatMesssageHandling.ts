@@ -587,8 +587,8 @@ export let chatDamageButtons = (message, html, data) => {
     // find the item => workflow => damageList, totalDamage
     const defaultDamageType = (item?.system.damage.parts[0] && item?.system.damage?.parts[0][1]) ?? "bludgeoning";
     // TODO fix this for versatile damage
-    const damageList = createDamageList({ roll: message.roll, item, versatile: false, defaultType: defaultDamageType });
-    const totalDamage = message.roll.total;
+    const damageList = createDamageList({ roll: message.rolls[0], item, versatile: false, defaultType: defaultDamageType });
+    const totalDamage = message.rolls[0].total;
     addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemUuid, "damage", ".dice-total", "position:relative; top:5px; color:blue");
   } else if (getProperty(message, "flags.midi-qol.damageDetail") || getProperty(message, "flags.midi-qol.otherDamageDetail")) {
     let midiFlags = getProperty(message, "flags.midi-qol");
@@ -605,15 +605,16 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
   const btnContainer = $('<span class="dmgBtn-container-mqol"></span>');
   let btnStylingGreen = `background-color:lightgreen; ${style}`;
   let btnStylingRed = `background-color:lightcoral; ${style}`;
-  const fullDamageButton = $(`<button class="dice-total-full-${tag}-button" style="${btnStylingRed}"><i class="fas fa-user-minus" title="Click to apply up to ${totalDamage} damage to selected token(s)."></i></button>`);
-  const halfDamageButton = $(`<button class="dice-total-half-${tag}-button" style="${btnStylingRed}"><i title="Click to apply up to ${Math.floor(totalDamage / 2)} damage to selected token(s).">&frac12;</i></button>`);
-  const quarterDamageButton = $(`<button class="dice-total-quarter-${tag}-button" style="${btnStylingRed}"><i title="Click to apply up to ${Math.floor(totalDamage / 4)} damage to selected token(s).">&frac14;</i></button>`);
-  const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button" style="${btnStylingRed}"><i title="Click to apply up to ${totalDamage * 2} damage to selected token(s).">x2</i></button>`);
-  const fullHealingButton = $(`<button class="dice-total-full-${tag}-healing-button" style="${btnStylingGreen}"><i class="fas fa-user-plus" title="Click to heal up to ${totalDamage} to selected token(s)."></i></button>`);
+  const fullDamageButton = $(`<button class="dice-total-full-${tag}-button dice-total-full-button" style="${btnStylingRed}"><i class="fas fa-user-minus" title="Click to apply up to ${totalDamage} damage to selected token(s)."></i></button>`);
+  const halfDamageButton = $(`<button class="dice-total-half-${tag}-button dice-total-half-button" style="${btnStylingRed}"><i title="Click to apply up to ${Math.floor(totalDamage / 2)} damage to selected token(s).">&frac12;</i></button>`);
+  const quarterDamageButton = $(`<button class="dice-total-quarter-${tag}-button dice-total-quarter-button" style="${btnStylingRed}"><i title="Click to apply up to ${Math.floor(totalDamage / 4)} damage to selected token(s).">&frac14;</i></button>`);
+  const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button dice-total-double-button" style="${btnStylingRed}"><i title="Click to apply up to ${totalDamage * 2} damage to selected token(s).">x2</i></button>`);
+  const fullHealingButton = $(`<button class="dice-total-full-${tag}-healing-button dice-total-healing-button" style="${btnStylingGreen}"><i class="fas fa-user-plus" title="Click to heal up to ${totalDamage} to selected token(s)."></i></button>`);
 
   btnContainer.append(fullDamageButton);
   btnContainer.append(halfDamageButton);
-  if (!configSettings.mergeCardCondensed) btnContainer.append(quarterDamageButton);
+  // if (!configSettings.mergeCardCondensed) btnContainer.append(quarterDamageButton);
+  btnContainer.append(quarterDamageButton);
   btnContainer.append(doubleDamageButton);
   btnContainer.append(fullHealingButton);
   const toMatchElement = html.find(toMatch);

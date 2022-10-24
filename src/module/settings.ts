@@ -395,6 +395,9 @@ export let fetchParams = () => {
   addChatDamageButtons = String(game.settings.get("midi-qol", "AddChatDamageButtons"))
   autoFastForwardAbilityRolls = Boolean(game.settings.get("midi-qol", "AutoFastForwardAbilityRolls"));
   autoRemoveTargets = String(game.settings.get("midi-qol", "AutoRemoveTargets"));
+  if (autoRemoveTargets === "allGM") {
+    autoRemoveTargets = game.user?.isGM ? "all" : "dead";
+  }
   let debugText: string = String(game.settings.get("midi-qol", "Debug"));
   forceHideRoll = Boolean(game.settings.get("midi-qol", "ForceHideRoll"));
   dragDropTargeting = Boolean(game.settings.get("midi-qol", "DragDropTarget"));
@@ -583,7 +586,7 @@ export const registerSettings = function() {
   game.settings.register("midi-qol", "AutoRemoveTargets", {
     name: "midi-qol.AutoRemoveTargets.Name",
     hint: "midi-qol.AutoRemoveTargets.Hint",
-    scope: "world",
+    scope: "client",
     default: "dead",
     type: String,
     config: true,

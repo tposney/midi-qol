@@ -247,9 +247,9 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
     let newHP = Math.max(0, oldHP - hpDamage);
     if (createPromises && (["yes", "yesCard", "yesCardNPC"].includes(data.autoApplyDamage) || data.forceApply)) {
       if ((newHP !== oldHP || newTempHP !== oldTempHP) && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
-        const updateContext = mergeObject({ dhp: -appliedDamage }, data.updateContext ?? {});
+        const updateContext = mergeObject({ dhp: -appliedDamage, damageItem }, data.updateContext ?? {});
         //@ts-ignore
-        promises.push(actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage, damageItem }, updateContext));
+        promises.push(actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage}, updateContext));
       }
     }
     tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP, damageItem });
@@ -404,7 +404,7 @@ async function createGMReverseDamageCard (data: { damageList: any; autoApplyDama
 async function doClick(event: { stopPropagation: () => void; }, actorUuid: any, totalDamage: any, mult: any, data: any) {
   let actor = MQfromActorUuid(actorUuid);
   log(`Applying ${totalDamage} mult ${mult} HP to ${actor.name}`);
-  await actor.applyDamage(totalDamage, mult, data);
+  await actor.applyDamage(totalDamage, mult);
   event.stopPropagation();
 }
 
@@ -423,10 +423,10 @@ export let processUndoDamageCard = (message, html, data) => {
     (async () => {
       for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem } of message.flags.midiqol.undoDamage) {
         //message.flags.midiqol.undoDamage.forEach(async ({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem }) => {
-        if (!actorUuid) return;
+        if (!actorUuid) continue;
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP}`, actor);
-        await actor?.update({ "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 }, { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0) }, data.updateContext);
+        await actor?.update({ "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 }, { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0), damageItem});
         ev.stopPropagation();
       }
     })();
@@ -436,10 +436,10 @@ export let processUndoDamageCard = (message, html, data) => {
   button.click((ev: { stopPropagation: () => void; }) => {
     (async () => {
       for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem } of message.flags.midiqol.undoDamage) {
-        if (!actorUuid) return;
+        if (!actorUuid) continue;
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP to ${newTempHP} and ${newHP}`);
-        await actor?.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.system.attributes.hp.value }, data.updateContext );
+        await actor?.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, }, { dhp: newHP - actor.system.attributes.hp.value, damageItem });
         ev.stopPropagation();
       }
     })();
@@ -453,7 +453,7 @@ export let processUndoDamageCard = (message, html, data) => {
       (async () => {
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP}`, data.updateContext);
-        await actor.update({ "system.attributes.hp.temp": oldTempHP, "system.attributes.hp.value": oldHP }, { dhp: oldHP - actor.system.attributes.hp.value }, data.updateContext );
+        await actor.update({ "system.attributes.hp.temp": oldTempHP, "system.attributes.hp.value": oldHP }, { dhp: oldHP - actor.system.attributes.hp.value, damageItem });
         ev.stopPropagation();
       })();
     });
@@ -464,7 +464,7 @@ export let processUndoDamageCard = (message, html, data) => {
       (async () => {
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP to ${newTempHP} and ${newHP}`, data.updateContext);
-        await actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, damageItem }, { dhp: newHP - actor.system.attributes.hp.value });
+        await actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP }, { dhp: newHP - actor.system.attributes.hp.value, damageItem });
         ev.stopPropagation();
       })();
     });

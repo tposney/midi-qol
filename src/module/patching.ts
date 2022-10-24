@@ -1,7 +1,7 @@
 import { log, warn, debug, i18n, error, getCanvas, i18nFormat } from "../midi-qol.js";
 import { doAttackRoll, doDamageRoll, templateTokens, doItemUse, preItemUseHook, preDisplayCardHook, preItemUsageConsumptionHook, useItemHook, displayCardHook, wrappedDisplayCard } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, evalCondition, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, hasUsedBonusAction, hasUsedReaction, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, notificationNotify, processOverTime, removeBonusActionUsed, removeReactionUsed } from "./utils.js";
+import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, evalCondition, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, hasUsedBonusAction, hasUsedReaction, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, MQfromUuid, notificationNotify, processOverTime, removeBonusActionUsed, removeReactionUsed } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -150,8 +150,8 @@ async function doRollSkill(wrapped, ...args) {
     procOptions.advantage = false;
     procOptions.disadvantage = false;
   }
-  if (procAutoFailSkill(this, skillId) 
-  || (configSettings.skillAbilityCheckAdvantage && procAutoFail(this, "check", this.system.skills[skillId].ability))) {
+  if (procAutoFailSkill(this, skillId)
+    || (configSettings.skillAbilityCheckAdvantage && procAutoFail(this, "check", this.system.skills[skillId].ability))) {
     options.parts = ["-100"];
   }
 
@@ -798,7 +798,6 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
         await this.parent.unsetFlag("midi-qol", "bonusActionCombatRound");
       }
 
-      if (!(effect.parent instanceof CONFIG.Actor.documentClass)) return;
       const checkConcentration = globalThis.MidiQOL?.configSettings()?.concentrationAutomation;
       if (!checkConcentration) return;
       let concentrationLabel: any = i18n("midi-qol.Concentrating");
@@ -810,8 +809,28 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
         concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
       }
       let isConcentration = effect.label === concentrationLabel;
-      if (!isConcentration) return;
-      await removeConcentration(effect.parent, this.uuid)
+      const origin = MQfromUuid(effect.origin);
+      if (isConcentration) await removeConcentration(effect.parent, this.uuid);
+      else if (origin instanceof CONFIG.Item.documentClass && origin.parent instanceof CONFIG.Actor.documentClass) {
+        const sourceActor = origin.parent;
+        const concentrationData = getProperty(origin.parent, "flags.midi-qol.concentration-data");
+        if (concentrationData) {
+          const concentrationTargets = concentrationData.targets.filter(target =>
+            target.tokenUuid !== effect.parent.uuid && target.actorUuid !== effect.parent.uuid);
+
+          if (concentrationTargets.length <= 1
+            && concentrationTargets.length < concentrationData.targets.length
+            && concentrationData.templates.length === 0
+            && concentrationData.removeUuids.length === 0) {
+            // non concentration effects left
+            await removeConcentration(origin.parent, this.uuid);
+          } else if (concentrationData.targets.length !== concentrationTargets) {
+            // update the concentration data
+            concentrationData.targets = concentrationTargets;
+            await origin.parent.setFlag("midi-qol", "concentration-data", concentrationData);
+          }
+        }
+      }
     }
   } catch (err) {
     console.warn("midi-qol | error deleting effect: ", err)
@@ -866,7 +885,7 @@ async function checkWounded(actor, update, options, user) {
     const woundedLevel = attributes.hp.max * configSettings.addWounded / 100;
     const needsWounded = hpUpdate > 0 && hpUpdate < woundedLevel
     if (installedModules.get("dfreds-convenient-effects") && CEWounded) {
-      const wounded = await ConvenientEffectsHasEffect(CEWounded.name, actor.uuid);
+      const wounded = await ConvenientEffectsHasEffect(CEWounded.name, actor, false);
       if (wounded !== needsWounded) {
         //@ts-ignore
         await game.dfreds?.effectInterface.toggleEffect(CEWounded.name, { overlay: false, uuids: [actor.uuid] });
@@ -883,10 +902,10 @@ async function checkWounded(actor, update, options, user) {
   if (configSettings.addDead !== "none") {
     const needsDead = hpUpdate <= 0;
     if (installedModules.get("dfreds-convenient-effects") && game.settings.get("dfreds-convenient-effects", "modifyStatusEffects") !== "none") {
-      const effectName = actor.hasPlayerOwner ? getConvenientEffectsUnconscious().name : getConvenientEffectsDead().name;
-      const hasEffect = await ConvenientEffectsHasEffect(effectName, actor.uuid);
+      const effectName = ( actor.type === "character" || actor.hasPlayerOwner) ? getConvenientEffectsUnconscious().name : getConvenientEffectsDead().name;
+      const hasEffect = await ConvenientEffectsHasEffect(effectName, actor, false);
       if ((needsDead !== hasEffect)) {
-        if (!actor.hasPlayerOwner) { // For CE dnd5e does not treat dead as dead for the combat tracker so update it by hand as well
+        if (actor.type !== "character" && !actor.hasPlayerOwner) { // For CE dnd5e does not treat dead as dead for the combat tracker so update it by hand as well
           let combatant;
           if (actor.token) combatant = game.combat?.getCombatantByToken(actor.token.id);
           //@ts-ignore
@@ -902,10 +921,10 @@ async function checkWounded(actor, update, options, user) {
       const controlled = tokens.filter(t => t._controlled);
       const token = controlled.length ? controlled.shift() : tokens.shift();
       if (token) {
-        if (actor.hasPlayerOwner) {
-          await token.toggleEffect("/icons/svg/unconscious.svg", { overlay: true, active: needsDead });
+        if (actor.type === "character" || actor.hasPlayerOwner) {
+          await token.toggleEffect("/icons/svg/unconscious.svg", { overlay: configSettings.addDead === "overlay", active: needsDead });
         } else {
-          await token.toggleEffect(CONFIG.controlIcons.defeated, { overlay: true, active: needsDead });
+          await token.toggleEffect(CONFIG.controlIcons.defeated, { overlay: configSettings.addDead === "overlay", active: needsDead });
         }
       }
     }
@@ -982,6 +1001,31 @@ export let itemPatching = () => {
   configureDamageRollDialog();
 };
 
+export async function preDeleteTemplate(templateDocument, options, user) {
+  try {
+    const uuid = getProperty(templateDocument, "flags.midi-qol.originUuid");
+    const actor = MQfromUuid(uuid)?.actor;
+    if (!(actor instanceof CONFIG.Actor.documentClass)) return true;
+    const concentrationData = getProperty(actor, "flags.midi-qol.concentration-data");
+    if (!concentrationData) return true;
+    const concentrationTemplates = concentrationData.templates.filter(templateUuid => templateUuid !== templateDocument.uuid);
+    // if (concentrationTemplates.length === concentrationData.templates.length) return true;
+    if (concentrationTemplates.length === 0
+      && concentrationData.targets.length === 1
+      && concentrationData.removeUuids.length === 0) {
+      // non concentration effects left
+      await removeConcentration(actor, "no ignore");
+    } else if (concentrationData.templates.length === 1) {
+      // update the concentration templates
+      concentrationData.templates = concentrationTemplates;
+      await actor.setFlag("midi-qol", "concentration-data", concentrationData);
+    }
+  } catch (err) {
+  } finally {
+    return true;
+  }
+};
+
 export let actorAbilityRollPatching = () => {
   if (!game.settings.get("midi-qol", "itemUseHooks")) {
     log("Patching rollAbilitySave")
@@ -1003,11 +1047,42 @@ export function patchLMRTFY() {
   if (installedModules.get("lmrtfy")) {
     log("Patching lmrtfy")
     libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "OVERRIDE");
+    libWrapper.register("midi-qol", "LMRTFY.onMessage", LMRTFYOnMessage, "OVERRIDE");
+
     // the _tagMessage has been updated in LMRTFY libWrapper.register("midi-qol", "LMRTFYRoller.prototype._tagMessage", _tagMessage, "OVERRIDE");
     // libWrapper.register("midi-qol", "ChatMessage.create", filterChatMessageCreate, "WRAPPER")
   }
 }
 
+function LMRTFYOnMessage(data: any) {
+  //console.log("LMRTF got message: ", data)
+  console.log("MY LMRTFY ON MESSAGE")
+  if (data.user === "character" &&
+      (!game.user?.character || !data.actors.includes(game.user.character.id))) {
+      return;
+  } else if (!["character", "tokens"].includes(data.user) && data.user !== game.user?.id) {
+      return;
+  }
+  
+  let actors: (Actor | undefined)[] = [];
+  if (data.user === "character") {
+      actors = [game?.user?.character];
+  } else if (data.user === "tokens") {
+    //@ts-expect-error
+      actors = canvas?.tokens?.controlled.map(t => t.actor).filter(a => data.actors.includes(a?.id)) ?? [];
+  } else {
+      actors = data.actors.map(aid => MQfromActorUuid(aid));
+  }
+  actors = actors.filter(a => a);
+  
+  // remove player characters from GM's requests
+  if (game.user?.isGM && data.user !== game.user.id) {
+      actors = actors.filter(a => !a?.hasPlayerOwner);
+  }        
+  if (actors.length === 0) return;
+  //@ts-ignore
+  new LMRTFYRoller(actors, data).render(true);
+}
 function filterChatMessageCreate(wrapped, data: any, context: any) {
   if (!(data instanceof Array)) data = [data]
   for (let messageData of data) {

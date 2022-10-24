@@ -189,6 +189,8 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
   workflow.inCombat = inCombat ?? false;
   workflow.isTurn = isTurn ?? false;
   workflow.AoO = AoO;
+  workflow.config = config;
+  workflow.options = options;
 
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile || workflow.isVersatile;
   // if showing a full card we don't want to auto roll attacks or damage.
@@ -271,7 +273,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
   workflow.showCard = true;
   const wrappedRollStart = Date.now();
   // let result = await wrapped(config, mergeObject(options, { createMessage: false }, { inplace: false }));
-  let result = await wrapped(config, mergeObject(options, { workflowId: workflow.id }, { inplace: false }));
+  let result = await wrapped(workflow.config, mergeObject(options, { workflowId: workflow.id }, { inplace: false }));
 
   if (!result) {
     //TODO find the right way to clean this up
@@ -613,9 +615,10 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
     }
   }
   if (this.system.actionType === "heal" && !Object.keys(getSystemCONFIG().healingTypes).includes(workflow.defaultDamageType ?? "")) workflow.defaultDamageType = "healing";
-  workflow.damageDetail = createDamageList({ roll: result, item: this, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType });
-
+  if (configSettings.mergeCard) 
+    workflow.damageDetail = createDamageList({ roll: result, item: this, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType });
   await workflow.setDamageRoll(result);
+
   result = await processDamageRollBonusFlags.bind(workflow)();
   // await workflow.setDamageRoll(result);
   let otherResult: Roll | undefined = undefined;
@@ -658,6 +661,9 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
     }, { "flags.dnd5e.roll": { type: "damage", itemId: this.id } });
     if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll", { type: "damage", itemId: this.id })
     result.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
+    workflow.damageDetail = createDamageList({ roll: result, item: this, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType });
+    workflow.setDamageRoll(result);
+
     if (otherResult) {
       for (let term of result.terms) { // put back the damage
         if (term.options?.flavor) {
@@ -1681,7 +1687,6 @@ export function templateTokens(templateDetails: { x: number, y: number, shape: a
       }
     }
   }
-  console.log("template tokens ", targets)
   game.user?.updateTokenTargets(targets);
   game.user?.broadcastActivity({ targets });
   return targetTokens;
@@ -1709,6 +1714,7 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   let targeting = configSettings.autoTarget;
   this.templateId = templateDocument?.id;
   this.templateUuid = templateDocument?.uuid;
+  templateDocument.setFlag("midi-qol", "originUuid", this.uuid); // set a refernce back to the item that created the template.
   if (targeting === "none") { // this is no good
     Hooks.callAll("midi-qol-targeted", this.targets);
     return true;

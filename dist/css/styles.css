@@ -42,26 +42,25 @@
   margin: 0;
 }
 
-.dmgBtn-container-mqol .dice-total-full-damage-button {
+.dmgBtn-container-mqol .dice-total-full-button {
   margin-left: 0 !important;
 }
 
-.dmgBtn-container-mqol .dice-total-half-damage-button,
-.dmgBtn-container-mqol .dice-total-double-damage-button
+.dmgBtn-container-mqol .dice-total-half-button,
+.dmgBtn-container-mqol .dice-total-double-button,
+.dmgBtn-container-mqol .dice-quarter-button
 {
   font-size: 0.8em !important;
 }
 
-.dmgBtn-container-mqol .dice-total-half-damage-button {
+.dmgBtn-container-mqol .dice-total-double-button {
+  font-size: 0.8em !important;
   margin-right: 10px !important;
 }
 
-.dmgBtn-container-mqol .dice-total-double-damage-button {
-  margin-left: 10px !important;
-}
-
-.dmgBtn-container-mqol .dice-total-full-damage-healing-button {
+.dmgBtn-container-mqol .dice-total-full-healing-button {
   margin-right: 0 !important;
+  margin-left: 10px !important;
 }
 
 .column-button-container-mqol {

@@ -1,3 +1,21 @@
+### 10.0.16
+* **BREAKING** untarget at end of turn is now a per client setting, so that each player can decide if they want to untarget at the end of the turn. The deprecated setting "untarget dead and all GM" will be matched to untarget dead (for non GM) and untarget all for the GM. You can use one of the force setting modules to ensure the client settings are correctly configured.
+* Cleaned up styling of damage buttons to ensure there is a gap to reveal the damage roll tooltip.
+* Overtime effects now support the same expressions as flag condition do.
+* Added effects (the source actors effects) to the available data in evaluating conditions, so a condition could be
+``flags.midi-qol.disadvantage.attack.all CUSTOM effects.some(ef=>ef.label==="Restrained")``
+* Small change to concentration processing. If the last active effect/template associated with the concentration effect is removed concentration will be removed. For example, if you bless 2 characters and then bless is removed from both of those characters, concentration will be removed from the caster.
+* Fix for getSelfTarget throwing an error when there is no token for the actor on the current scene.
+* Added Melf's Minute Meteors to sample items compendium. This uses the new (10.0.10) dae feature to create an item on the caster which does the meteor attacks. There is a spell Melf's Minute Meteors which grabs the Melf's Minute Meteors feature from the compendium and creates it on the caster with the correct duration. On expiry of the spell the feature is automatically removed.
+* Added some sorcery features to the sample items compendium, Font of Magic (required for the other features), Quickened Spell and Twinned Spell. All need to have the resource consumption set to Font Of Magic in the feature details. Font of Magic macro stolen from @Zhell with a few tweaks. 
+  - Font of Magic handles conversion of spell slots to/from sorcery points (and stores the number of sorcery points).
+  - Quickened spell prompts to select the spell to be cast and then changes the casting time to a bonus action.
+  - Twinned spell allows you to choose two targets, then which spell to cast.
+* Added a few playful items to the sample items compendium (i.e. they sort of work but are not perfect), goggles of night, bullseye lantern and lantern of revealing.
+  - Goggles of night grant light amplification when equipped (rather than dark vision cause it looks cool). This item is really just for fun until ATE is ready to do it properly.
+  - Bullseye lantern is pretty self explanatory. Activated by using the item (set it to consume oil flasks if you are into tracking such things).
+  - Lantern of Revealing. This is not actually correct, it only grants see invisible to the holder of the lantern, rather than all tokens in the light range (will need to wait for AA to do this correclty). Activate by using the item and set it to consume oil flasks if you are into tracking such things.
+
 ### 10.0.15
 * findNearby now accepts a tokenUuid or a token.
 * added findNearby to activation condition evaluation, so 
@@ -20,6 +38,8 @@ will give disadvantage on concentration saves if there is a foe within 5 feet.
 * For settings in the config settings mechanics section enabling optional rules is not required. Similary, if those settings were already enabled but rendered inactive due to the optional rules setting, they will now be active. So check those settings.
 * Macro references, actor/item onUseMacros can now refer directly to compendium macros - a name like Compendium.scope.packName.macroName or Compendium.scope.packName.macroId (e.g. Compendium.dae.premadeitems.echo) will fetch the macro from the compendium and execute it. If there is more than one match the "first" will be used.
 * Added mechanics setting for advantage with ability checks giving advantage on corresponding skill rolls or not - default true.
+* Stop damage rolls from having the damage type appended to each term of the roll.
+
 
 ### 10.0.14
 * Fix for item/actor onUseMacro editing.

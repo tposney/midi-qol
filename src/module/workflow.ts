@@ -911,7 +911,7 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.ROLLFINISHED);
 
       case WORKFLOWSTATES.ROLLFINISHED:
-        globalThis.MidiKeyManager.resetKeyState();
+        // globalThis.MidiKeyManager.resetKeyState();
         if (this.placeTemplateHookId) Hooks.off("createMeasuredTemplate", this.placeTemplateHookId)
 
         if (!this.aborted) {
@@ -1517,7 +1517,8 @@ export class Workflow {
       tokenId: this.tokenId,
       tokenUuid: this.tokenUuid,
       uuid: this.uuid,
-      workflowOptions: this.workflowOptions
+      workflowOptions: this.workflowOptions,
+      workflow: this
     }
   }
 
@@ -2148,7 +2149,7 @@ export class Workflow {
         }
 
         var player = playerFor(target);
-        if (!player) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
+        if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
         let promptPlayer = (!player?.isGM && configSettings.playerRollSaves !== "none");
         if (simulate) promptPlayer = false;
         let GMprompt;

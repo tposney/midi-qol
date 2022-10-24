@@ -5,7 +5,7 @@ import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, MQfromUuid, ge
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
-import {  preRollAbilitySaveHook, preUpdateItemActorOnUseMacro, rollAbilitySaveHook, rollAbilityTestHook } from "./patching.js";
+import {  preDeleteTemplate, preRollAbilitySaveHook, preUpdateItemActorOnUseMacro, rollAbilitySaveHook, rollAbilityTestHook } from "./patching.js";
 import { preItemUseHook, preDisplayCardHook, preItemUsageConsumptionHook, useItemHook, preRollAttackHook, preRollDamageHook, rollAttackHook, rollDamageHook } from "./itemhandling.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
@@ -50,6 +50,8 @@ export let readyHooks = async () => {
   Hooks.on("ddb-game-log.pendingRoll", (data) => {
     ddbglPendingHook(data);
   });
+
+  Hooks.on("preDeleteMeasuredTemplate", preDeleteTemplate);
 
   // Handle updates to the characters HP
   // Handle concentration checks
@@ -98,6 +100,9 @@ export let readyHooks = async () => {
     let gmToUse = game.users?.find(u => u.isGM && u.active);
     if (gmToUse?.id !== game.user?.id) return;
     if (!(effect.parent instanceof CONFIG.Actor.documentClass)) return;
+    let updateConcentration = async() => {
+
+    }
     let changeFunc = async () => {
       const checkConcentration = globalThis.MidiQOL?.configSettings()?.concentrationAutomation;
       if (!checkConcentration) return;

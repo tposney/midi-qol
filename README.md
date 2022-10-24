@@ -906,7 +906,7 @@ if (numDice > 5) numDice = 5;
 let undead = ["undead", "fiend"].some(type => (target?.actor.data.data.details.type?.value || "").toLowerCase().includes(type));
 if (undead) numDice += 1;
 if (args[0].isCritical) numDice = numDice * 2;
-let damageRoll = new Roll(`${numDice}d8`).roll();
+let damageRoll = await new Roll(`${numDice}d8`).roll({async: true});
 new MidiQOL.DamageOnlyWorkflow(actor, token, damageRoll.total, "radiant", target ? [target] : [], damageRoll, {flavor: "Divine Smite - Damage Roll (Radiant)", itemCardId: args[0].itemCardId})
 ```
 
@@ -943,7 +943,7 @@ The field should contain ONLY the macro name, or the string "ItemMacro" or "Item
   - "ItemMacro" means it will call the item macro for the item for the workflow. 
   - "ItemMacro.ItemName" allows you to lookup by name another item that the actor for the workflow has.  
   - Compendium.scope.compendiumName.macroName/macroId means fetch the macro form the specified compendium, either by name or Id.
-  
+
 You may specify the point at in the workflow when the macro is called.  
 The macro will be called with args[0] containing the current state information for the workflow (see below).
 There are some controls for macro writers to decide when their macro should get executed. 
@@ -988,15 +988,15 @@ There are some controls for macro writers to decide when their macro should get 
   const workflow = MidiQOL.Workflow.getWorkflow(args[0].uuid)
   workflow.XXX = .....
   ```
+
   * Remember that if the macro is an "Execute as GM" macro the macro may execute on a different client and the workflow may not be defined, i.e. the Workflow.getWorkflow may return undefined.
 
   * If you want to change the damage roll of a weapon have your macro run at the postDamageRoll onUse pass and do something like (this will work with better rolls - the damage will be changed, but the chat card for the item won't update)
-  ```
+  ```js
   if (args[0].tag === "OnUse" && args[0].macroPass === "postDamageRoll") {
     let workflow = MidiQOL.Workflow.getWorkflow(args[0].uuid); // this gets a copy of the "live" workflow
-    workflow.damageRoll = await new Roll("1d10").roll();
-    workflow.damageTotal = workflow.damageRoll.total;
-    workflow.damageRollHTML = await workflow.damageRoll.render();
+    const damageRoll = await new Roll("1d10").roll({async: true});
+    workflow.setDamageRoll(damageRoll);
   }
   ```
   which will replace the items normal damage roll with your custom roll.
@@ -1069,6 +1069,19 @@ hitContent is just html, so you could insert whatever you want in any of the div
 ## Some Tricks you can do...
 This is just a place where I'll write down some ideas that I think are cute. I'll assume that DAE/times-up is available as well.
 
+* dnd5e 2.0.3 includes hooks for just about every stage of item rolling, attack rolling and damage rolling. You can use these hooks to directly impact the roll which gives a great deal of flexibility and removes much of the need for the midi hooks/macro calls.
+For example, to replace the damage roll of an item you can do the following
+  - create a preItemRoll onuse macro, regiester the Hooks globally
+```js
+      const preDamageRollHookId = Hooks.on("dnd5e.preRollDamage", (rolledItem, rollConfig) => {
+        if (rolledItem !== item) return;
+        try {
+          rollConfig.parts = ["2d20[fire]"];
+        } finally {
+          Hooks.off("dnd5e.preRollDamage", preDamageRollHookId);
+        }
+      });
+```
 * DAE has an option, Force Display on Token which enables passive effects to display the effect image on the token when active similarly to how non-transfer effects behave.
 
 * Activation Conditions can be useful to tailor effects without requiring additional macro code. Activation Condition is checked when the config setting for Roll Other Damage is set to activation and allows fine-tuning of bonus damage, think slayer items. The Active Effect Condition allows you to apply active effects to targets, e.g. mace of disruption only frightens undead, use ```['fiend', 'undead'].includes('@raceOrType')``` to only apply active effects to undead.
