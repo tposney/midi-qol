@@ -1,3 +1,6 @@
+### 10.0.18
+* Include correct fix for stack overflow
+
 ### 10.0.17
 * Fix for bug when processing onUseMacro edits.
 * Fix for Shillelagh not setting magical property or spellcasting modifier. Thanks @OokOok

@@ -1,3 +1,16 @@
+### 10.0.18
+* Include correct fix for stack overflow
+
+### 10.0.17
+* Fix for bug when processing onUseMacro edits.
+* Fix for Shillelagh not setting magical property or spellcasting modifier. Thanks @OokOok
+* Fix for Branding Smite under certain midi-qol settings. Thanks @OokOok.
+* Fix for Chill Touch, creates damage immunity to healing instead of resistance. Thanks @OokOok
+* Removing concentration when removing effects/templates is now configurable.
+* Fix for walls blocking not working with current foundry version for both ranged attacks and template placement.
+* Fix for chat message coloring not integrating with some other modules.
+* Fix for reaction processing throwing a call stack exceeded.
+
 ### 10.0.16
 * **BREAKING** untarget at end of turn is now a per client setting, so that each player can decide if they want to untarget at the end of the turn. The deprecated setting "untarget dead and all GM" will be matched to untarget dead (for non GM) and untarget all for the GM. You can use one of the force setting modules to ensure the client settings are correctly configured.
 * Cleaned up styling of damage buttons to ensure there is a gap to reveal the damage roll tooltip.

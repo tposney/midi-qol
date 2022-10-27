@@ -2701,6 +2701,8 @@ export async function requestReactions(target: Token, player: User, triggerToken
   if (options.workflow && options.workflow instanceof Workflow)
     options.workflow = options.workflow.macroDataToObject(options.workflow.getMacroDataObject());
   */
+  if (options.workflow) delete options.workflow;
+  
   const result = await socketlibSocket.executeAsUser("chooseReactions", player.id, {
     tokenUuid: target.document?.uuid ?? target.uuid,
     reactionFlavor,
