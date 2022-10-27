@@ -510,6 +510,19 @@
             configSettings.tempHPDamageConcentrationCheck}} />
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.TempHPDamageConcentrationCheck.Hint"}}</div>
+
+
+        <div class="form-group">
+          <label>{{localize "midi-qol.RemoveConcentrationEffects.Name"}}</label>
+          <select name="removeConcentrationEffects" data-dtype="String">
+            {{#select configSettings.removeConcentrationEffects}}
+            {{#each RemoveConcentrationEffectsOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.RemoveConcentrationEffects.Hint"}}</div>
       </div>
     </div>
     <!-- Reactions tab-->

@@ -1657,7 +1657,9 @@ function isTokenInside(templateDetails: { x: number, y: number, shape: any, dist
           contains = contains && !CONFIG.Levels.API.testCollision(p1, p2, "collision");
           //@ts-ignore
         } else if (!installedModules.get("levelsvolumetrictemplates")) {
-          contains = !canvas?.walls?.checkCollision(r, { mode: "any" });
+          //@ts-expect-error
+          contains = !CONFIG.Canvas.losBackend.testCollision({ x: tx, y: ty },  { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y }, {mode: "any", type: "move"})
+          // contains = !canvas?.walls?.checkCollision(r, { mode: "any" });
         }
       }
       // Check the distance from origin.

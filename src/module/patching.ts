@@ -702,15 +702,18 @@ export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user
     //@ts-ignore
     if (isEmpty(macroChanges)) return true;
 
-    for (let keyString in macroChanges.items) {
-      const key = Number(keyString);
-      if (!macroParts.items[key])
-        macroParts.items.push(OnUseMacro.parsePart({
-          macroName: macroChanges.items[key]?.macroName ?? "",
-          option: macroChanges.items[key]?.option ?? ""
-        }))
-      if (macroChanges.items[key].macroName) macroParts.items[key].macroName = macroChanges.items[key].macroName;
-      if (macroChanges.items[key].option) macroParts.items[key].option = macroChanges.items[key].option;
+    if (!Array.isArray(macroChanges.items)) { // we have an update from editing the macro changes
+      for (let keyString in macroChanges.items) {
+        const key = Number(keyString);
+        if (Number.isNaN(key)) continue; // just in case
+        if (!macroParts.items[key])
+          macroParts.items.push(OnUseMacro.parsePart({
+            macroName: macroChanges.items[key]?.macroName ?? "",
+            option: macroChanges.items[key]?.option ?? ""
+          }))
+        if (macroChanges.items[key].macroName) macroParts.items[key].macroName = macroChanges.items[key].macroName;
+        if (macroChanges.items[key].option) macroParts.items[key].option = macroChanges.items[key].option;
+      }
     }
     let macroString = OnUseMacros.parseParts(macroParts).items.map(oum => oum.toString()).join(",");
     changes.flags["midi-qol"].onUseMacroName = macroString;
@@ -818,7 +821,8 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
           const concentrationTargets = concentrationData.targets.filter(target =>
             target.tokenUuid !== effect.parent.uuid && target.actorUuid !== effect.parent.uuid);
 
-          if (concentrationTargets.length <= 1
+          if (["effects", "effectsTemplates"].includes(configSettings.removeConcentrationEffects)
+            && concentrationTargets.length <= 1
             && concentrationTargets.length < concentrationData.targets.length
             && concentrationData.templates.length === 0
             && concentrationData.removeUuids.length === 0) {
@@ -902,7 +906,7 @@ async function checkWounded(actor, update, options, user) {
   if (configSettings.addDead !== "none") {
     const needsDead = hpUpdate <= 0;
     if (installedModules.get("dfreds-convenient-effects") && game.settings.get("dfreds-convenient-effects", "modifyStatusEffects") !== "none") {
-      const effectName = ( actor.type === "character" || actor.hasPlayerOwner) ? getConvenientEffectsUnconscious().name : getConvenientEffectsDead().name;
+      const effectName = (actor.type === "character" || actor.hasPlayerOwner) ? getConvenientEffectsUnconscious().name : getConvenientEffectsDead().name;
       const hasEffect = await ConvenientEffectsHasEffect(effectName, actor, false);
       if ((needsDead !== hasEffect)) {
         if (actor.type !== "character" && !actor.hasPlayerOwner) { // For CE dnd5e does not treat dead as dead for the combat tracker so update it by hand as well
@@ -1012,10 +1016,12 @@ export async function preDeleteTemplate(templateDocument, options, user) {
     // if (concentrationTemplates.length === concentrationData.templates.length) return true;
     if (concentrationTemplates.length === 0
       && concentrationData.targets.length === 1
-      && concentrationData.removeUuids.length === 0) {
+      && concentrationData.removeUuids.length === 0
+      && ["effectsTemplates"].includes(configSettings.removeConcentrationEffects)
+      ) {
       // non concentration effects left
       await removeConcentration(actor, "no ignore");
-    } else if (concentrationData.templates.length === 1) {
+    } else if (concentrationData.templates.length >= 1) {
       // update the concentration templates
       concentrationData.templates = concentrationTemplates;
       await actor.setFlag("midi-qol", "concentration-data", concentrationData);
@@ -1058,27 +1064,27 @@ function LMRTFYOnMessage(data: any) {
   //console.log("LMRTF got message: ", data)
   console.log("MY LMRTFY ON MESSAGE")
   if (data.user === "character" &&
-      (!game.user?.character || !data.actors.includes(game.user.character.id))) {
-      return;
+    (!game.user?.character || !data.actors.includes(game.user.character.id))) {
+    return;
   } else if (!["character", "tokens"].includes(data.user) && data.user !== game.user?.id) {
-      return;
+    return;
   }
-  
+
   let actors: (Actor | undefined)[] = [];
   if (data.user === "character") {
-      actors = [game?.user?.character];
+    actors = [game?.user?.character];
   } else if (data.user === "tokens") {
     //@ts-expect-error
-      actors = canvas?.tokens?.controlled.map(t => t.actor).filter(a => data.actors.includes(a?.id)) ?? [];
+    actors = canvas?.tokens?.controlled.map(t => t.actor).filter(a => data.actors.includes(a?.id)) ?? [];
   } else {
-      actors = data.actors.map(aid => MQfromActorUuid(aid));
+    actors = data.actors.map(aid => MQfromActorUuid(aid));
   }
   actors = actors.filter(a => a);
-  
+
   // remove player characters from GM's requests
   if (game.user?.isGM && data.user !== game.user.id) {
-      actors = actors.filter(a => !a?.hasPlayerOwner);
-  }        
+    actors = actors.filter(a => !a?.hasPlayerOwner);
+  }
   if (actors.length === 0) return;
   //@ts-ignore
   new LMRTFYRoller(actors, data).render(true);

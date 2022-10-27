@@ -271,17 +271,15 @@ export let colorChatMessageHandler = (message, html, data) => {
   if (!user) return true;
   //@ts-ignore .color not defined
   html[0].style.borderColor = user.color;
-  // const oldColor = html[0].children[0].children[0].style.backgroundColor;
-  const oldColor = html[0].children[0].children[0].style.backgroundColor;
+  const sender = html.find('.message-sender')[0];
   if (coloredBorders === "borderNamesBackground") {
-    html[0].children[0].children[0].style["text-shadow"] = `1px 1px 1px #FFFFFF`;
+    sender.style["text-shadow"] = `1px 1px 1px #FFFFFF`;
     //@ts-ignore .color not defined
-    html[0].children[0].children[0].style.backgroundColor = user.color;
+    sender.style.backgroundColor = user.color;
   } else if (coloredBorders === "borderNamesText") {
     //@ts-ignore .color not defined
-    html[0].children[0].children[0].style["text-shadow"] = `1px 1px 1px ${html[0].children[0].children[0].style.color}`;
-    //@ts-ignore .color not defined
-    html[0].children[0].children[0].style.color = user.color;
+    sender.style.color = user.color;
+    sender.style["text-shadow"] = `1px 1px 1px ${sender.style.color}`;
   }
   return true;
 }

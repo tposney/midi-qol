@@ -105,6 +105,7 @@ class ConfigSettings {
   recordAOO = "none";
   removeButtons: string = "all";
   removeConcentration: boolean = true;
+  removeConcentrationEffects: string = "effects";
   requireMagical: string = "off";
   requiresTargets: string = "none";
   rollNPCLinkedSaves: string = "auto";
@@ -381,6 +382,7 @@ export let fetchParams = () => {
   if (configSettings.hidePlayerDamageCard === undefined) configSettings.hidePlayerDamageCard = true;
   if (configSettings.attackPerTarget === undefined) configSettings.attackPerTarget = false;
   if (configSettings.autoRemoveTemplate === undefined) configSettings.autoRemoveTemplate = true;
+  if (configSettings.removeConcentrationEffects === "undefined") configSettings.removeConcentrationEffects = "effects";
   configSettings.hidePlayerDamageCard = true;
   configSettings.quickSettings = true;
   enableWorkflow = Boolean(game.settings.get("midi-qol", "EnableWorkflow"));

@@ -1475,31 +1475,25 @@ export function distancePointToken({ x, y, elevation = 0 }, token, wallblocking 
   return distance;
 }
 
-export function getDistanceSimple(t1: Token, t2: Token, includeCover, wallBlocking = false) {
-  return getDistance(t1, t2, includeCover, wallBlocking).distance;
+export function getDistanceSimpleOld(t1: Token, t2: Token, incoludeCover, wallBlocking = false) {
+  return getDistance(t1, t2, wallBlocking);
+}
+export function getDistanceSimple(t1: Token, t2: Token, wallBlocking = false) {
+  return getDistance(t1, t2, wallBlocking);
 }
 /** takes two tokens of any size and calculates the distance between them
 *** gets the shortest distance betwen two tokens taking into account both tokens size
 *** if wallblocking is set then wall are checked
 **/
 //TODO change this to TokenData
-export function getDistance(t1: any /*Token*/, t2: any /*Token*/, includeCover, wallblocking = false): { distance: number, acBonus: number | undefined } {
+export function getDistance(t1: any /*Token*/, t2: any /*Token*/, wallblocking = false): number {
   const noResult = { distance: -1, acBonus: undefined }
-  if (!canvas || !canvas.scene) return noResult;
-  let coverACBonus = 0;
-  let tokenTileACBonus = 0;
-  let coverData;
+  if (!canvas || !canvas.scene) return -1;
   if (!canvas.grid || !canvas.dimensions) noResult;
-  if (!t1 || !t2) return noResult;
+  if (!t1 || !t2) return -1;
   if (t1 instanceof TokenDocument) t1 = t1.object;
   if (t2 instanceof TokenDocument) t2 = t2.object;
-  if (!canvas || !canvas.grid || !canvas.dimensions) return noResult;
-  //@ts-ignore
-  if (window.CoverCalculator && includeCover && ["dnd5eHelpers", "dnd5eHelpersAC"].includes(configSettings.optionalRules.wallsBlockRange)) {
-    //@ts-ignore TODO this is being called in the wrong spot (should not do the loops if using this)
-    coverData = CoverCalculator.Cover(t1, t2);
-    if (coverData?.data.results.cover === 3) return noResult;
-  }
+  if (!canvas || !canvas.grid || !canvas.dimensions) return -1;
 
   const t1StartX = t1.document.width >= 1 ? 0.5 : t1.document.width / 2;
   const t1StartY = t1.document.height >= 1 ? 0.5 : t1.document.height / 2;
@@ -1517,7 +1511,9 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, includeCover, 
       for (x1 = t2StartX; x1 < t2.document.width; x1++) {
         for (y1 = t2StartY; y1 < t2.document.height; y1++) {
           const dest = new PIXI.Point(...canvas.grid.getCenter(Math.round(t2.document.x + (canvas.dimensions.size * x1)), Math.round(t2.document.y + (canvas.dimensions.size * y1))));
-          const r = new Ray(origin, dest)
+          const r = new Ray(origin, dest);
+          // //@ts-expect-error
+          // TODO include auto cover calcs in checking console.error(AutoCover.calculateCover(t1, t2));
           if (wallblocking && configSettings.optionalRules.wallsBlockRange === "centerLevels" && installedModules.get("levels")) {
             let p1 = {
               x: origin.x,
@@ -1543,23 +1539,11 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, includeCover, 
             switch (configSettings.optionalRules.wallsBlockRange) {
               case "center":
               case "centerLevels":
-                if (canvas.walls?.checkCollision(r, { mode: "any" })) continue;
-                break;
               case "dnd5eHelpers":
               case "dnd5eHelpersAC":
-                if (!includeCover) {
-                  if (canvas.walls?.checkCollision(r, { mode: "any" })) continue;
-                }
-                //@ts-ignore 
-                else if (installedModules.get("dnd5e-helpers") && window.CoverCalculator) {
-                  //@ts-ignore TODO this is being called in the wrong spot (should not do the loops if using this)
-                  if (coverData.data.results.cover === 3) continue; // TODO check this v10
-                  if (configSettings.optionalRules.wallsBlockRange === "dnd5eHelpersAC") coverACBonus = -coverData.data.results.value;
-                } else {
-                  pointWarn();
-                  // ui.notifications?.warn("dnd5e helpers LOS check selected but dnd5e-helpers not installed")
-                  if (canvas.walls?.checkCollision(r)) continue;
-                }
+                    //@ts-expect-error
+                const collisionCheck = CONFIG.Canvas.losBackend.testCollision(origin, dest, {mode: "any", type:"sight"})
+                if (collisionCheck) continue;
                 break;
               case "none":
               default:
@@ -1571,7 +1555,7 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, includeCover, 
     }
   }
   if (segments.length === 0) {
-    return noResult;
+    return -1;
   }
   //@ts-ignore
   rdistance = segments.map(ray => canvas.grid.measureDistances([ray], { gridSpaces: true })[0]);
@@ -1599,7 +1583,7 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, includeCover, 
 
     } else distance = Math.sqrt(heightDifference * heightDifference + distance * distance);
   }
-  return { distance, acBonus: coverACBonus + tokenTileACBonus }; // TODO update this with ac bonus
+  return distance; // TODO update this with ac bonus
 };
 
 let pointWarn = debounce(() => {
@@ -1669,11 +1653,10 @@ export function checkRange(item, token, targets): string {
     if (target === token) continue;
     // check the range
     if (target.actor) setProperty(target.actor, "flags.midi-qol.acBonus", 0);
-    const distanceDetails = getDistance(token, target, true, true);
-    let distance = distanceDetails.distance;
+    const distance = getDistance(token, target, true);
     // spell sniper ignores cover ac bonus for rsak spells
-    if (target.actor && distanceDetails.acBonus && (item?.system.actionType !== "rsak" || !getProperty(actor, "flags.dnd5e.spellSniper")))
-      setProperty(target.actor, "flags.midi-qol.acBonus", distanceDetails.acBonus);
+
+
     if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
       log(`${target.name} is too far ${distance} from your character you cannot hit`)
       ui.notifications?.warn(`${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`)
@@ -1689,6 +1672,27 @@ export function checkRange(item, token, targets): string {
   return "normal";
 }
 
+export function computeCoverBonus(attacker: Token | TokenDocument, target: Token | TokenDocument) {
+  let coverBonus = 0;
+  //@ts-expect-error .Levels
+  let levelsAPI = CONFIG.Levels?.API;
+  if (levelsAPI) {
+    //@ts-expect-error
+    const coverData = AutoCover.calculateCover(attacker, target);
+    if (!coverData.isTokenCover) return 0;
+    //@ts-expect-error
+    const coverDetail = AutoCover.getCoverData()[coverData.cover];
+    let acBonus = 0;
+    if (coverData.cover === 0) acBonus = 5;
+    else if (coverData.cover === 1) acBonus = 2;
+    console.warn("For token ", attacker.name, " attacking ", target.name, " cover data is ", coverData, coverDetail)
+    return acBonus;
+  }
+  if (target.actor && coverBonus)
+    setProperty(target, "actor.flags.midi-qol.acBonus", coverBonus);
+  return coverBonus;
+
+}
 export function isAutoFastAttack(workflow: Workflow | undefined = undefined): boolean {
   if (workflow?.workflowOptions?.autoFastAttack !== undefined) return workflow.workflowOptions.autoFastAttack;
   if (workflow && workflow.workflowType === "DummyWorkflow") return workflow.rollOptions.fastForward;
@@ -1925,7 +1929,7 @@ export function findNearby(disposition: number | null, token: any /*Token | unde
       t.actor.system.attributes?.hp?.value > 0 && // not incapacitated
       //@ts-ignore .disposition v10      
       (disposition === null || t.document.disposition === targetDisposition)) {
-      const tokenDistance = getDistance(t, token, false, true).distance;
+      const tokenDistance = getDistance(t, token, true);
       return 0 < tokenDistance && tokenDistance <= distance
     } else return false;
   });
@@ -2693,17 +2697,18 @@ export async function requestReactions(target: Token, player: User, triggerToken
     options.itemUuid = options.item.uuid;
     delete options.item;
   };
+  /* TODO come back and look at this - adda 80k to the message.
   if (options.workflow && options.workflow instanceof Workflow)
-    options.workflow = options.workflow.getMacroData();
-
-  const result = (await socketlibSocket.executeAsUser("chooseReactions", player.id, {
+    options.workflow = options.workflow.macroDataToObject(options.workflow.getMacroDataObject());
+  */
+  const result = await socketlibSocket.executeAsUser("chooseReactions", player.id, {
     tokenUuid: target.document?.uuid ?? target.uuid,
     reactionFlavor,
     triggerTokenUuid,
     triggerType,
     options,
     reactionItemUuidList
-  }));
+  });
   const endTime = Date.now();
   warn("request reactions returned after ", endTime - startTime, result);
   resolve(result);
@@ -2998,7 +3003,7 @@ function mySafeEval(expression: string, sandbox: any, onErrorReturn: boolean | u
     sandbox = mergeObject(sandbox, { findNearby });
     result = evl(sandbox);
   } catch (err) {
-    console.warn("midi-qol | expression evaluation failed ", err);
+    console.warn("midi-qol | expression evaluation failed ", expression, err);
     result = onErrorReturn;
   }
   if (Number.isNumeric(result)) return Number(result)
@@ -3418,7 +3423,7 @@ export function computeFlankingStatus(token, target): boolean {
   // Find all tokens hostile to the target
   if (!target) return false;
   // console.error("Distance is ", getDistance(token, target, false, true));
-  if (getDistance(token, target, false, true).distance > 5) return false;
+  if (getDistance(token, target, true) > 5) return false;
   // an enemy's enemies are my friends.
   const allies: any /* Token v10 */[] = findNearby(-1, target, 5);
 

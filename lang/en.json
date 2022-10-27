@@ -388,6 +388,13 @@
   "midi-qol.SingleConcentrationRoll.Hint": "If enabled and the attack is rolling normal damage + a save + other/versatile damage only roll a single concentration check for the combined damage",
   "midi-qol.TempHPDamageConcentrationCheck.Name": "Temporary HP Concentration Check",
   "midi-qol.TempHPDamageConcentrationCheck.Hint": "If enabled loss of temporary HP will trigger a concentration check",
+  "midi-qol.RemoveConcentrationEffects.Name": "Remove concentration when effecs removed",
+  "midi-qol.RemoveConcentrationEffects.Hint": "Check when effects (effects & templates) are removed. If all effects and templates for the concentration spell/feature have been removed remove concentrtion",
+  "midi-qol.RemoveConcentrationEffectsOptions" : {
+    "none": "Never",
+    "effects": "Check Effects",
+    "effectsTemplates": "Check Effects and Templates"
+  },
   "midi-qol.GMSettings": "GM",
   "midi-qol.PlayerSettings": "Player",
   "midi-qol.SoundSettings.Tab": "Sounds",

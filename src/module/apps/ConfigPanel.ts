@@ -88,7 +88,8 @@ export class ConfigPanel extends FormApplication {
       rollAlternateOptions: geti18nOptions("RollAlternateOptions"),
       ConsumeResourceOptions: geti18nOptions("ConsumeResourceOptions"),
       AddDeadOptions: geti18nOptions("AddDeadOptions"),
-      LateTargetingOptions: geti18nOptions("LateTargetingOptions")
+      LateTargetingOptions: geti18nOptions("LateTargetingOptions"),
+      RemoveConcentrationEffectsOptions: geti18nOptions("RemoveConcentrationEffectsOptions")
     };
 
     if (debugEnabled > 0) warn("Config Panel: getData ", data)
