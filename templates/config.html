@@ -686,6 +686,18 @@
         <div class="midi-qol-faint">{{localize "midi-qol.WallsBlockRange.Hint"}}</div>
 
         <div class="form-group">
+          <label>{{localize "midi-qol.CoverCalculation.Name"}}</label>
+          <select name="optionalRules.coverCalculation" data-dtype="String">
+            {{#select configSettings.optionalRules.coverCalculation}}
+            {{#each CoverCalculationOptions as |label val|}}
+            <option value="{{val}}">{{label}}</option>
+            {{/each}}
+            {{/select}}
+          </select>
+        </div>
+        <div class="midi-qol-faint">{{localize "midi-qol.CoverCalculation.Hint"}}</div>
+
+        <div class="form-group">
           <label>{{localize "midi-qol.DistanceIncludesHeight.Name"}}</label>
           <input type="checkbox" name="optionalRules.distanceIncludesHeight" data-dtype="Boolean" {{checked
             configSettings.optionalRules.distanceIncludesHeight}} />

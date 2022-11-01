@@ -1,7 +1,7 @@
 import { registerSettings, fetchParams, configSettings, checkRule, enableWorkflow, midiSoundSettings, fetchSoundSettings, midiSoundSettingsBackup, disableWorkflowAutomation } from './module/settings.js';
 import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, installedModules, setupModules } from './module/setupModules.js';
-import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, readyPatching, initPatching } from './module/patching.js';
+import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, readyPatching, initPatching, addDiceTermModifiers } from './module/patching.js';
 import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Hooks.js';
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
@@ -113,6 +113,7 @@ Hooks.once('init', async function () {
   preloadTemplates();
   // Register custom sheets (if any)
   initPatching();
+  addDiceTermModifiers();
   globalThis.MidiKeyManager = new MidiKeyManager();
   globalThis.MidiKeyManager.initKeyMappings();
 });
@@ -158,6 +159,7 @@ Hooks.once('setup', function () {
     config.midiProperties["magiceffect"] = i18n("midi-qol.magicalEffectProp");
     config.midiProperties["concentration"] = i18n("midi-qol.concentrationEffectProp");
     config.midiProperties["toggleEffect"] = i18n("midi-qol.toggleEffectProp");
+    config.midiProperties["ignoreTotalCover"] = i18n("midi-qol.ignoreTotalCover")
 
     config.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
     // sliver, adamant, spell, nonmagic, magic are all deprecated and should only appear as custom
@@ -242,6 +244,15 @@ Hooks.once('ready', function () {
 
   setupMidiQOLApi();
 
+  if (game.user?.isGM) {
+    if (installedModules.get("levelsautocover") && configSettings.optionalRules.coverCalculation === "levelsautocover" && !game.settings.get("levelsautocover", "apiMode")) {
+      game.settings.set("levelsautocover", "apiMode", true)
+      if (game.user?.isGM)
+        ui.notifications?.warn("midi-qol | setting levels auto cover to api mode", {permanent: true})
+    } else if (installedModules.get("levelsautocover") && configSettings.optionalRules.coverCalculation !== "levelsautocover" && game.settings.get("levelsautocover", "apiMode")) {
+      ui.notifications?.warn("midi-qol | Levels Auto Cover is in API mode but midi is not using levels auto cover - you may wish to disable api mode", {permanent: true})
+    }
+  }
   if (game.settings.get("midi-qol", "splashWarnings") && game.user?.isGM) {
     if (game.user?.isGM && !installedModules.get("dae")) {
       ui.notifications?.warn("Midi-qol requires DAE to be installed and at least version 10.0.9 or many automation effects won't work");
@@ -559,7 +570,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.optional.NAME.count`);
   midiFlags.push(`flags.midi-qol.optional.NAME.countAlt`);
   midiFlags.push(`flags.midi-qol.optional.NAME.ac`);
-  midiFlags.push(`flags.midi-qol.optional.NAME.criticalDamage`);
+//   midiFlags.push(`flags.midi-qol.optional.NAME.criticalDamage`);
   midiFlags.push(`flags.midi-qol.optional.Name.onUse`);
   midiFlags.push(`flags.midi-qol.optional.NAME.macroToCall`);
 

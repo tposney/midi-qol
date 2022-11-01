@@ -202,35 +202,23 @@ async function doRollSkill(wrapped, ...args) {
   return result;
 }
 
-function rollDeathSave(wrapped, ...args) {
-  let [options] = args;
-  // options = foundry.utils.mergeObject(options, mapSpeedKeys(null, "ability"), { inplace: false, overwrite: true });
-  mergeKeyboardOptions(options, mapSpeedKeys(undefined, "ability"));
-  options.event = {};
-  const advFlags = getProperty(this.flags, "midi-qol")?.advantage;
-  const disFlags = getProperty(this.flags, "midi-qol")?.disadvantage;
-  let withAdvantage = false;
-  let withDisadvantage = false;
-  options.fastForward = autoFastForwardAbilityRolls ? !options.event?.fastKey : options.event?.fastKey;
-  if (advFlags || disFlags) {
-    const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: this });
-    if ((advFlags?.all && evalCondition(advFlags.all, conditionData))
-      || (advFlags?.deathSave && evalCondition(advFlags.deathSave, conditionData))) {
-      withAdvantage = true;
-    }
 
-    if ((disFlags?.all && evalCondition(disFlags.all, conditionData))
-      || (disFlags?.deathSave && evalCondition(disFlags.deathSave, conditionData))) {
-      withDisadvantage = true;
-    }
+function multiply(modifier: string) {
+  const rgx = /mx([0-9])+/;
+  const match = modifier.match(rgx);
+  if (!match) return false;
+  let [mult] = match.slice(1);
+  const multiplier = parseInt(mult);
+  for (let r of this.results) {
+    r.count = multiplier * r.result;
+    r.rerolled = true;
   }
-  options.advantage = withAdvantage && !withDisadvantage;
-  options.disadvantage = withDisadvantage && !withAdvantage;
+  return true;
+}
 
-  if (options.advantage && options.disadvantage) {
-    options.advantage = options.disadvantage = false;
-  }
-  return wrapped.call(this, ...args);
+export function addDiceTermModifiers() {
+  Die.MODIFIERS["mx"] = "multiply";
+  setProperty(Die.prototype, "multiply", multiply);
 }
 
 function configureDamage(wrapped) {
@@ -250,7 +238,7 @@ function configureDamage(wrapped) {
     "explode": "Explode critical dice",
     "baseDamage": "No Bonus"
   */
-  if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
+  // if (criticalDamage === "doubleDice") this.options.multiplyNumeric = true;
 
   for (let [i, term] of this.terms.entries()) {
     let cm = this.options.criticalMultiplier ?? 2;
@@ -287,8 +275,9 @@ function configureDamage(wrapped) {
         break;
       case "doubleDice":
         if (term instanceof DiceTerm) {
-          term.alter(cm, cb);
-        } else if (term instanceof NumericTerm) {
+          //term.alter(cm, cb);
+          term.modifiers.push("mx2");
+        } else if (term instanceof NumericTerm && this.options.multiplyNumeric) {
           term.number *= cm;
         }
         break;
@@ -406,6 +395,34 @@ export function preRollAbilityTestHook(item: Item, rollData: any, abilityId: str
 
 export function rollAbilityTestHook(item, roll, abilityId) {
   return doRollAbilityHook("check", item, roll, abilityId)
+}
+
+export function preRollDeathSaveHook(actor, rollData: any): boolean {
+  mergeKeyboardOptions(rollData ?? {}, mapSpeedKeys(undefined, "ability"));
+  const advFlags = getProperty(actor.flags, "midi-qol")?.advantage;
+  const disFlags = getProperty(actor.flags, "midi-qol")?.disadvantage;
+  let withAdvantage = false;
+  let withDisadvantage = false;
+  rollData.fastForward = autoFastForwardAbilityRolls ? !rollData.event?.fastKey : rollData.event?.fastKey;
+  if (advFlags || disFlags) {
+    const conditionData = createConditionData({ workflow: undefined, target: undefined, actor });
+    if ((advFlags?.all && evalCondition(advFlags.all, conditionData))
+      || (advFlags?.deathSave && evalCondition(advFlags.deathSave, conditionData))) {
+      withAdvantage = true;
+    }
+
+    if ((disFlags?.all && evalCondition(disFlags.all, conditionData))
+      || (disFlags?.deathSave && evalCondition(disFlags.deathSave, conditionData))) {
+      withDisadvantage = true;
+    }
+  }
+  rollData.advantage = withAdvantage && !withDisadvantage;
+  rollData.disadvantage = withDisadvantage && !withAdvantage;
+
+  if (rollData.advantage && rollData.disadvantage) {
+    rollData.advantage = rollData.disadvantage = false;
+  }
+  return true;
 }
 
 async function doPreRollAbilityHook(rollType: string, item, rollData: any, abilityId: string) {
@@ -1044,8 +1061,7 @@ export let actorAbilityRollPatching = () => {
   log("Patching rollSkill");
   libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollSkill", doRollSkill, "WRAPPER");
 
-  log("Patching rollDeathSave");
-  libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollDeathSave", rollDeathSave, "WRAPPER");
+  // 10.0.19 rollDeath save now implemented via the preRollDeathSave Hook
 }
 
 

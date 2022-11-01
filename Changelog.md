@@ -1,3 +1,24 @@
+### 10.0.19
+* **BREAKING** Updated behaviour for critical damage "Double Rolled Damage". This will now double the result of each damage dice rolled, rather than rolling each dice twice. If you want to double numeric terms as well use the DnD5e setting for that.
+* Revamped walls block ranged attacks and cover providing bonuses behaviour. Support for Simbul's Cover Calculator and Levels Auto Cover.
+* **Walls Block targeting** options are:
+  - No - walls do not block ranged attacks.
+  - Center Check - Midi will draw a line from the center of each square covered by the attacker and target, if there is at least one line with no collision the attack will be allowed to continue.
+  - Center Check + Levels - Draw a line from the centers, but take into account wall height and token height. Requires levels + wall height to be installed.
+  - Levels Auto Cover - if the amount of the token visible is less than the 3/4 cover setting (i.e. not much visible) the attack will fail.
+  - Simbul's Cover Calculator - if the cover value is full cover the attack will be fail.
+* **New Setting - Compute Cover Bonus**: You do not need to enable this if you are used to using Levels Auto Cover or Simblu's Cover Calculator, but if you want the AC to be automatically evaluated by midi you can enable it.
+    - None - do not add a cover bonus to the target AC
+    - Levels Auto Cover - check the cover percentages (as specified) and apply a bonus of 5 (3/4 cover), 2 (half cover) or 0. The cover percentage for "no cover" is either the 3rd element in the module setting (if there is one), otherwise 90% visible. To have midi use levels auto cover you should set "levels api mode" to checked in the levels auto cover config settings.
+    * Midi Spell Sniper and Sharpshooter flags negate the cover bonus.
+  * Cover calcs impact dexterity saves. This includes all types of items causing a dex save - not sure if this is right or not. Midi Spell Sniper/Sharp Shooter flags negate the cover bonus.
+  * Please note that for cover/walls blocking I simply call the API provided by the module. Cover calculations are not performed by midi, so any "odd" behaviour with cover values are probably not midi's fault.
+* Fix for infinite loop caused when dragging a starter hero to the canvas. This does not resolve the foundry errors but does stop the infinite loop.
+* Midi now uses the dnd5e Hooks for death saves, rather than wrapping the function. No difference to the end user. Over time I will look to migrate as much of midi's functionality to use the new dnd5e hooks as I can.
+* removed non-working flags.midi-qol.optional.NAME.criticalDamage
+* Fix for damage rolls like 1d4 / 2 incorrectly evaluating the applied damage.
+* Fix for flanking not working in metric worlds. Midi will now use the canvas dimensions to check adjacent squares.
+
 ### 10.0.18
 * Include correct fix for stack overflow
 

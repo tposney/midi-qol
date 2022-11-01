@@ -87,7 +87,9 @@ You can probably survive without these but midi pretty much assumes they are ins
 * **libChangeLogs** - will show the midi change log when it changes.
 * **DF QoL** - If you want template targeting to work as written in the rules, install this and enable it for template targeting. (apologies to @flamewave000 for the mislabelling)
 * **Warp Gate** - Some of the sample items use warp gate to summon tokens (Flaming Sphere, Spiritual Weapon).
-* **Build-A-Bonus** This moudle allows more complex bonuses to be calculated than dae/midi support by default. The bonus can be attached to an actor/item/active effect.
+* **Build-A-Bonus** This moudle allows more complex bonuses to be calculated than dae/midi support by default. The bonus can be attached to an actor/item/active effect. 
+* **Template Macros** Allows you to run a macro when a template is placed, very useful.
+* **Effect Macros** provides another way to trigger behaviour when an effect is applied, combat updates and so on. Allows for more complex over time type effects via macros. The down side is that it does not include all of the midi data that onUseMacros get, but you can use flags.midi-qol...., flags.dae to set some of the values you might need
 
 ## Good To Have
 * **Active Token Lighting.** Allows tokens to emit light
@@ -97,6 +99,7 @@ You can probably survive without these but midi pretty much assumes they are ins
 * **Dice So Nice.** if you like 3d dice rolling it's pretty much the only choice.
 * **Better Rolls.** if you don't like the default dnd attack/damage roll cards. Better Rolls is **mostly** compatible with midi-qol, but there are some wrinkles. I don't use the module so tend to rely on community reports for errors.
 * **FVTTEncounterStats.** If you like to keep data about all the rolls done by players/GM this module goes a lot further than the built in midi-qol roll stats. Worth a look.
+* **Simbul's Cover Calculator** or **Levels Auto Cover** enables the automatic calculation of cover bonues for 1/2, 3/4 cover.
 
 # (In)Compatibilities? ##
 As already mentioned I don't look at lots of modules, so there will be others that do/don't work with midi. As they come to my attention I'll try and update the list.
@@ -113,7 +116,7 @@ Midi-qol can use Monk's Token Bar to roll saves. **Update** adv/dis advantage fo
 ## Dfreds Quality of Life  
 Midi supports the foundry template targeting, DF Qol has support for rules as written template targeting behaviour. There is an option in midi's AoE auto target to use DF QoL's template targeting, which disables midi's internal template targeting. You should only enable one sort of template targeting since mid/df-qol will fight over who gets to do the targeting which will lead to confusing results.
 
-As of version 1.6.0, DF QoL does not seem to have a wall blocking option, so if that is important you'll need to use midi's targeting.
+As of version 1.6.0, DF QoL does not seem to have a wall blocking option, so if that is important you'll need to use midi's targeting or another module that supports both.
 
 ## Convenient Effects
 Midi supports the application of Convenient Effects spell/item effects (configuration setting - Apply Convenient Effects) and matches those by name. For example, if you cast the spell Bless midi will see if there is a convenient effect "Bless" and apply it to any targets that were hit by the spell.
@@ -135,7 +138,7 @@ There is an additional check box available on the item sheet, for items that hav
 If you intend to make use of any of the macro features in midi-qol you will need to install the Advanced Macros module. As of 0.9.56 there is no dependency on advanced macros/furnace.
 
 ## Better Rolls
-If you are using Better Rolls (which is a great module), midi-qol takes over once the hit/damage card is placed by Better Rolls. This means that resource consumption, template placement, critical/fumble determination are **all** handled by Better Rolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage, and calls active effects. When using Better rolls flags.midi-qol should be applied.
+If you are using Better Rolls (which is a great module), midi-qol takes over once the hit/damage card is placed by Better Rolls. This means that resource consumption, template placement, critical/fumble determination are **all** handled by Better Rolls before midi-qol kicks in. Midi-qol checks hits, saves, applies damage, and calls active effects. When using Better rolls flags.midi-qol should be applied. As of foundry v10/dnd5e 2.0.0 better rolls is no longer supported. At some point I will look at supporting Ready, Set, Roll (the better rolls successor).
 
 ## Magic Items
 **(Thanks to @simone for his help)**

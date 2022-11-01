@@ -422,19 +422,26 @@
   "midi-qol.CheckRange.Name": "Check weapon range when attacking",
   "midi-qol.NearbyFoe.Name": "Ranged attacks when a foe is closer than this have disadvantage. 0 disables",
   "midi-qol.WallsBlockRange.Name": "Walls block ranged attacks",
-  "midi-qol.WallsBlockRange.Hint": "Walls block ranged attacks (4 point checks require DND Helpers module)\n none = no effect, center = check center to center line, center + Levels = center check but use `levels module` to determine wall blocking, 4 point check blocked if no corner visible, 4 point check adjusts AC according to cover",
+  "midi-qol.WallsBlockRange.Hint": "Walls block ranged attacks \n No = no effect, center = check center to center line, center + Levels = center check but use `levels module` to determine wall blocking",
   "midi-qol.WallsBlockRangeOptionsNew": {
     "none": "No",
     "center": "Center Check",
     "centerLevels": "Center + Levels",
-    "dnd5eHelpers": "dnd5e helpers",
-    "dnd5eHelpersAC": "dnd5e helpers + AC"
+    "levelsautocover": "Levels Auto Cover",
+    "simbuls-cover-calculator": "Simbuls Cover Calculator"
   },
   "midi-qol.NearbyAllyRanged.Name": "(House Rule) Ranged Attacks at foes near allies have disadvantage.",
   "midi-qol.WallsBlockRangeOptions": {
     "none": "No",
     "center": "Center Check",
     "centerLevels": "Center + Levels"
+  },
+  "midi-qol.CoverCalculation.Name": "Calculate Cover",
+  "midi-qol.CoverCalculation.Hint": "Calculate AC bonus for targets in cover - settings taken from the selected module",
+  "midi-qol.CoverCalculationOptions": {
+    "none": "None",
+    "simbuls-cover-calculator": "Simbul's Cover Calculator",
+    "levelsautocover": "Levels Auto Cover"
   },
   "midi-qol.NearbyAllyRanged.Hint": "Ranged Attacks with allies nearby (5 feet) to the target have disadvantage for targets smaller than this (w*h). 0 disables",
   "midi-qol.Incapacitated.Name": "Incapacitated actors can't take actions or reactions",

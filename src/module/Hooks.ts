@@ -1,11 +1,11 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, failedSaveOverTimeEffectsToDelete } from "../midi-qol.js";
 import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuffHandler, chatDamageButtons, processItemCardCreation, hideRollUpdate, hideRollRender, onChatCardAction, betterRollsButtons, processCreateBetterRollsMessage, processCreateDDBGLMessages, ddbglPendingHook, betterRollsUpdate, checkOverTimeSaves } from "./chatMesssageHandling.js";
-import { deleteItemEffects, processUndoDamageCard, socketlibSocket } from "./GMAction.js";
+import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, MQfromUuid, getConcentrationEffect, removeReactionUsed, removeBonusActionUsed, checkflanking, getSystemCONFIG, expireRollEffect, doMidiConcentrationCheck } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
 import { configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
-import {  preDeleteTemplate, preRollAbilitySaveHook, preUpdateItemActorOnUseMacro, rollAbilitySaveHook, rollAbilityTestHook } from "./patching.js";
+import {  preDeleteTemplate, preRollAbilitySaveHook, preRollDeathSaveHook, preUpdateItemActorOnUseMacro, rollAbilitySaveHook, rollAbilityTestHook } from "./patching.js";
 import { preItemUseHook, preDisplayCardHook, preItemUsageConsumptionHook, useItemHook, preRollAttackHook, preRollDamageHook, rollAttackHook, rollDamageHook } from "./itemhandling.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
@@ -29,7 +29,7 @@ export let readyHooks = async () => {
       let temphpDiff = actor.system.attributes.hp.temp - temphpUpdate;
       if (temphpDiff > 0) concHPDiff += temphpDiff
     }
-    actor.updateSource({ "flags.midi-qol.concentration-damage": concHPDiff })
+    setProperty(update, "flags.midi-qol.concentration-damage", concHPDiff);
     return true;
   })
 
@@ -167,6 +167,7 @@ export let readyHooks = async () => {
     Hooks.on("dnd5e.rollAbilitySave", rollAbilitySaveHook);
     Hooks.on("dnd5e.rollAbilityTest", rollAbilityTestHook)
   }
+  Hooks.on("dnd5e.preRollDeathSave", preRollDeathSaveHook);
   // Concentration Check is rolled as an item roll so we need an item.
   if (installedModules.get("combat-utility-belt")) {
     //@ts-ignore game.cub

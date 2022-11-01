@@ -3,7 +3,7 @@ import { activationConditionToUse, selectTargets, shouldRollOtherDamage, templat
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls, checkMechanic } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, MQfromUuid, midiRenderRoll, markFlanking, canSense, getSystemCONFIG, tokenForActor, getSelfTarget, createConditionData, evalCondition, removeHidden, ConcentrationData, hasDAE, computeCoverBonus } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, MQfromUuid, midiRenderRoll, markFlanking, canSense, getSystemCONFIG, tokenForActor, getSelfTarget, createConditionData, evalCondition, removeHidden, ConcentrationData, hasDAE, computeCoverBonus, FULL_COVER } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, procAbilityAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys, MidiKeyManager } from "./MidiKeyManager.js";
@@ -1252,7 +1252,7 @@ export class Workflow {
     if (checkRule("nearbyAllyRanged") > 0 && ["rwak", "rsak", "rpak"].includes(actionType)) {
       if ((firstTarget.document ?? firstTarget).width * (firstTarget.document ?? firstTarget).height < Number(checkRule("nearbyAllyRanged"))) {
         //TODO change this to TokenDocument
-        const nearbyAlly = checkNearby(-1, firstTarget, 5); // targets near a friend that is not too big
+        const nearbyAlly = checkNearby(-1, firstTarget, (canvas?.dimensions?.distance ?? 5)); // targets near a friend that is not too big
         // TODO include thrown weapons in check
         if (nearbyAlly) {
           if (debugEnabled > 0) warn("ranged attack with disadvantage because target is near a friend");
@@ -1302,7 +1302,9 @@ export class Workflow {
 
   async expireTargetEffects(expireList: string[]) {
     for (let target of this.targets) {
+      const expriryReason: string[] = [];
       if (!target.actor?.effects) continue; // nothing to expire
+      let wasExpired = false;
       const expiredEffects: (string | null)[] = target.actor?.effects.filter(ef => {
         //@ts-ignore .flags v10
         const specialDuration = getProperty(ef.flags, "dae.specialDuration");
@@ -1313,27 +1315,55 @@ export class Workflow {
         //@ts-ignore token.document
         const wasDamaged = wasHit && this.damageList && (this.damageList.find(dl => dl.tokenUuid === (target.uuid ?? target.document.uuid) && dl.appliedDamage > 0));
         //TODO this is going to grab all the special damage types as well which is no good.
-        if ((wasAttacked && expireList.includes("isAttacked") && specialDuration.includes("isAttacked"))
-          || (wasDamaged && expireList.includes("isDamaged") && specialDuration.includes("isDamaged"))
-          || (wasHit && expireList.includes("isHit") && specialDuration.includes("isHit")))
-          return true;
-        if ((target.actor?.uuid !== this.actor.uuid && expireList.includes("1Reaction") && specialDuration.includes("1Reaction"))) return true;
-        for (let dt of this.damageDetail) {
-          if (expireList.includes(`isDamaged`) && wasDamaged && specialDuration.includes(`isDamaged.${dt.type}`)) return true;
+        if (wasAttacked && expireList.includes("isAttacked") && specialDuration.includes("isAttacked")) {
+          wasExpired = true;
+          expriryReason.push("isAttacked")
         }
-        if (!this.item) return false;
-        if (this.saveItem.hasSave && expireList.includes("isSaveSuccess") && specialDuration.includes(`isSaveSuccess`) && this.saves.has(target)) return true;
-        if (this.saveItem.hasSave && expireList.includes("isSaveFailure") && specialDuration.includes(`isSaveFailure`) && !this.saves.has(target)) return true;
+        if (wasDamaged && expireList.includes("isDamaged") && specialDuration.includes("isDamaged")) {
+          wasExpired = true;
+          expriryReason.push("isDamaged");
+        }
+        if (wasHit && expireList.includes("isHit") && specialDuration.includes("isHit")) {
+          wasExpired = true;
+          expriryReason.push("isHit");
+
+        }
+        if ((target.actor?.uuid !== this.actor.uuid && expireList.includes("1Reaction") && specialDuration.includes("1Reaction"))) {
+          wasExpired = true;
+          expriryReason.push("1Reaction");
+        }
+        for (let dt of this.damageDetail) {
+          if (expireList.includes(`isDamaged`) && wasDamaged && specialDuration.includes(`isDamaged.${dt.type}`)) {
+            wasExpired = true;
+            expriryReason.push(`isDamaged.${dt.type}`);
+            break;
+          }
+        }
+        if (!this.item) return wasExpired;
+        if (this.saveItem.hasSave && expireList.includes("isSaveSuccess") && specialDuration.includes(`isSaveSuccess`) && this.saves.has(target)) {
+          wasExpired = true;
+          expriryReason.push(`isSaveSuccess`);
+        }
+        if (this.saveItem.hasSave && expireList.includes("isSaveFailure") && specialDuration.includes(`isSaveFailure`) && !this.saves.has(target)) {
+          wasExpired = true;
+          expriryReason.push(`isSaveSuccess`);
+        }
         const abl = this.item?.system.save?.ability;
-        if (this.saveItem.hasSave && expireList.includes(`isSaveSuccess`) && specialDuration.includes(`isSaveSuccess.${abl}`) && this.saves.has(target)) return true;
-        if (this.saveItem.hasSave && expireList.includes(`isSaveFailure`) && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) return true;
-        return false;
+        if (this.saveItem.hasSave && expireList.includes(`isSaveSuccess`) && specialDuration.includes(`isSaveSuccess.${abl}`) && this.saves.has(target)) {
+          wasExpired = true;
+          expriryReason.push(`isSaveSuccess.${abl}`);
+        };
+        if (this.saveItem.hasSave && expireList.includes(`isSaveFailure`) && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) {
+          wasExpired = true;
+          expriryReason.push(`isSaveFailure.${abl}`);
+        };
+        return wasExpired;
       }).map(ef => ef.id);
       if (expiredEffects.length > 0) {
         await timedAwaitExecuteAsGM("removeEffects", {
           actorUuid: target.actor?.uuid,
           effects: expiredEffects,
-          options: { "expiry-reason": `midi-qol:${expireList}` }
+          options: { "expiry-reason": `midi-qol:${expriryReason}` }
         });
       }
     }
@@ -2301,7 +2331,11 @@ export class Workflow {
     this.saveResults = results;
     let i = 0;
     const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
-    // for (let target of this.hitTargets) {
+    if (this.item.hasAreaTarget && this.templateUuid) {
+      const templateDocument = await fromUuid(this.templateUuid);
+      //@ts-expect-error
+      var template = templateDocument?.object;
+    }
     for (let target of allHitTargets) {
       if (!target.actor) continue; // these were skipped when doing the rolls so they can be skipped now
       if (!results[i]) error("Token ", target, "could not roll save/check assuming 0");
@@ -2323,6 +2357,33 @@ export class Workflow {
         isCritical = result.isCritical;
         isFumble = result.isFumble;
       }
+      let coverSaveBonus = 0;
+
+      if (this.item && this.item.hasSave && this.item.system.save?.ability === "dex") {
+        if (this.item?.system.actionType === "rsak" && getProperty(this.actor, "flags.dnd5e.spellSniper"))
+          coverSaveBonus = 0;
+        else if (this.item?.system.actionType === "rwak" && getProperty(this.actor, "flags.midi-qol.sharpShooter"))
+          coverSaveBonus = 0;
+        else if (this.item.hasAreaTarget && this.templateUuid) {
+          const position = duplicate(template.center);
+          const dimensions = canvas?.dimensions;
+          if (template.document.t === "rect") {
+            position.x += template.document.width / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
+            position.y += template.document.width / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
+          }
+          coverSaveBonus = computeCoverBonus({
+              center: position,
+              document: {
+                //@ts-expect-error
+                elevation: template.document.elevation,
+                disposition: target?.document.disposition,
+              }
+          },target)
+        } else {
+          coverSaveBonus = computeCoverBonus(this.token, target);
+        }
+      }
+      rollTotal += coverSaveBonus;
       let saved = rollTotal >= rollDC;
 
       if (checkRule("criticalSaves")) { // normal d20 roll/lmrtfy/monks roll
@@ -2397,13 +2458,15 @@ export class Workflow {
       let saveString = i18n(saved ? "midi-qol.save-success" : "midi-qol.save-failure");
       let adv = "";
       if (configSettings.displaySaveAdvantage) {
-        adv = this.advantageSaves.has(target) ? `(${i18n("DND5E.Advantage")})` : "";
-        if (this.disadvantageSaves.has(target)) adv = `(${i18n("DND5E.Disadvantage")})`;
-        if (game.system.id === "sw5e") {
+        if (game.system.id === "dnd5e") {
+          adv = this.advantageSaves.has(target) ? `(${i18n("DND5E.Advantage")})` : "";
+          if (this.disadvantageSaves.has(target)) adv = `(${i18n("DND5E.Disadvantage")})`;
+        } else if (game.system.id === "sw5e") {
           adv = this.advantageSaves.has(target) ? `(${i18n("SW5E.Advantage")})` : "";
           if (this.disadvantageSaves.has(target)) adv = `(${i18n("SW5E.Disadvantage")})`;
         }
       }
+      if (coverSaveBonus) adv += `(+${coverSaveBonus} Cover)`
       let img: string = target.document?.texture?.src ?? target.actor.img ?? "";
       if (configSettings.usePlayerPortrait && target.actor.type === "character")
         img = target.actor?.img ?? target.document?.texture?.src ?? "";
@@ -2441,6 +2504,7 @@ export class Workflow {
       this.saveDisplayFlavor = `${this.item.name} <label class="midi-qol-saveDC">${DCString} ${rollDC}</label> ${getSystemCONFIG().skills[rollAbility]}`; // ${i18n(this.hitTargets.size > 1 ? "midi-qol.ability-checks" : "midi-qol.ability-check")}:
     }
   }
+
   monksSavingCheck(message, update, options, user) {
     if (!update.flags || !update.flags["monks-tokenbar"]) return true;
     const updateFlags = update.flags["monks-tokenbar"];
@@ -2652,10 +2716,7 @@ export class Workflow {
       let targetAR = targetActor.system.attributes.ac.AR ?? 0;
 
       let bonusAC = 0;
-      // bonusAC = computeCoverBonus(this.token, targetToken);
 
-      if (item?.system.actionType === "rsak" && getProperty(this.actor, "flags.dnd5e.spellSniper"))
-        bonusAC = 0;
       isHit = false;
       isHitEC = false;
       let attackTotal = this.attackTotal;
@@ -2664,7 +2725,13 @@ export class Workflow {
         isHit = this.hitTargets.has(targetToken);
         hitResultNumeric = "";
       } else {
+        if (["rsak"].includes(item?.system.actionType) && getProperty(this.actor, "flags.dnd5e.spellSniper"))
+          bonusAC = 0;
+        else if (item?.system.actionType === "rwak" && getProperty(this.actor, "flags.midi-qol.sharpShooter"))
+          bonusAC = 0;
+        else bonusAC = computeCoverBonus(this.token, targetToken);
         targetAC += bonusAC;
+
         const midiFlagsAttackBonus = getProperty(targetActor, "flags.midi-qol.grants.attack.bonus");
         if (!this.isFumble) {
           if (midiFlagsAttackBonus) {
@@ -2681,10 +2748,11 @@ export class Workflow {
           }
           if (checkRule("challengeModeArmor")) isHit = attackTotal > targetAC || this.isCritical;
           else isHit = attackTotal >= targetAC || this.isCritical;
+          if (bonusAC === FULL_COVER) isHit = false; // bonusAC will only be FULL_COVER if cover bonus checking is enabled.
 
-          if (targetEC) isHitEC = checkRule("challengeModeArmor") && attackTotal <= targetAC && attackTotal >= targetEC;
+          if (targetEC) isHitEC = checkRule("challengeModeArmor") && attackTotal <= targetAC && attackTotal >= targetEC && bonusAC !== FULL_COVER;
           // check to see if the roll hit the target
-          if ((isHit || isHitEC || this.iscritical) && this.item?.hasAttack && this.attackRoll && targetToken !== null && !getProperty(this, "item.flags.midi-qol.noProvokeReaction")) {
+          if ((isHit || isHitEC) && this.item?.hasAttack && this.attackRoll && targetToken !== null && !getProperty(this, "item.flags.midi-qol.noProvokeReaction")) {
             //@ts-ignore
             const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { item: this.item, workflow: this, workflowOptions: mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true }) });
 
@@ -2900,6 +2968,7 @@ export class Workflow {
       let advantage: boolean | undefined = undefined;
       let advantageMode = game[game.system.id].dice.D20Roll.ADV_MODE.NORMAL;
 
+      // TODO: Add in AC Bonus for cover
       //@ts-ignore
       let formula = `1d20 + ${target.actor.system.attributes.ac.value - 10}`;
       // Advantage/Disadvantage is reversed for active defence rolls.

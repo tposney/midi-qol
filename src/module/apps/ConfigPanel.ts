@@ -31,9 +31,17 @@ export class ConfigPanel extends FormApplication {
     if (!enableWorkflow) {
       ui.notifications?.error("Worklow automation is not enabled")
     }
-    let wallsBlockRangeOptions = geti18nOptions("WallsBlockRangeOptions");
-    if (installedModules.get("dnd5e-helpers")) {
-      wallsBlockRangeOptions = geti18nOptions("WallsBlockRangeOptionsNew");
+    let wallsBlockRangeOptions = geti18nOptions("WallsBlockRangeOptionsNew");
+    let CoverCalculationOptions = geti18nOptions("CoverCalculationOptions");
+    [{id: "levelsautocover", name: "'Levels Auto Cover'"}, {id:"simbuls-cover-calculator", name: "'Simbuls Cover Calculator'"}].forEach(module => {
+      if (!installedModules.get(module.id)) {
+        wallsBlockRangeOptions[module.id] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+        CoverCalculationOptions[module.id] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+      }
+    });
+    if (!installedModules.get("levels")) {
+      wallsBlockRangeOptions["centerLevels"] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing:"Levels" })}`;
+
     }
 
     let quickSettingsOptions = {};
@@ -63,6 +71,7 @@ export class ConfigPanel extends FormApplication {
       rollOtherDamageOptions: geti18nOptions("RollOtherDamageOptions"),
       showReactionAttackRollOptions: geti18nOptions("ShowReactionAttackRollOptions"),
       wallsBlockRangeOptions,
+      CoverCalculationOptions,
       AutoCEEffectsOptions: geti18nOptions("AutoCEEffectsOptions"),
       RecordAOOOptions: geti18nOptions("RecordAOOOptions"),
       EnforceReactionsOptions: geti18nOptions("EnforceReactionsOptions"),
@@ -549,12 +558,12 @@ export async function applySettings(key: string) {
     if (await showDiffs(configSettings, settingsToApply, "", config.shortDescription)) {
       settingsToApply = mergeObject(configSettings, settingsToApply, { overwrite: true, inplace: true });
       if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", settingsToApply);
-  }
+    }
   } else if (config.fileName) {
     try {
       const jsonText = await fetchConfigFile(PATH + config.fileName);
       const configData = JSON.parse(jsonText);
-      if (await showDiffs(configSettings, configData.configSettings, "" , config.shortDescription)) {
+      if (await showDiffs(configSettings, configData.configSettings, "", config.shortDescription)) {
         importSettingsFromJSON(jsonText);
       }
       return;

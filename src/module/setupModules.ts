@@ -11,9 +11,9 @@ const modules = {
   "df-templates": "1.0.0",
   "dfreds-convenient-effects": "2.1.0",
   "dice-so-nice": "4.1.1", 
-  "dnd5e-helpers":  "3.0.0",
   "itemacro": "1.0.0", 
   "levels": "3.0.6", 
+  "levelsautocover": "1.4",
   "levelsvolumetrictemplates": "0.0.0",
   "lib-changelogs": "0.0.0",
   "lib-wrapper": "1.3.5",
@@ -21,6 +21,7 @@ const modules = {
   "monks-tokenbar": "1.0.55",
   "multilevel-tokens": "1.6.0",
   "ready-set-roll-5e": "1.2.0",
+  "simbuls-cover-calculator":  "1.0.2",
   "socketlib": "0.0",
   "times-up": "0.1.2",
   "walledtemplates": "0.0.0",
@@ -42,9 +43,10 @@ export let setupModules = () => {
       } else console.warn(`midi-qol | module ${name} not active - some features disabled`)
     }
   }
-  if (debugEnabled > 0)
-  for (let module of installedModules.keys()) 
-    log(`module ${module} has valid version ${installedModules.get(module)}`);
+  if (debugEnabled > 0) {
+    for (let module of installedModules.keys()) 
+      log(`module ${module} has valid version ${installedModules.get(module)}`);
+  }
 }
 
 export function dice3dEnabled() {

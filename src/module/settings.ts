@@ -137,6 +137,7 @@ class ConfigSettings {
     invisAdvantage: true,
     checkRange: true,
     wallsBlockRange: "center",
+    coverCalculation: "none",
     nearbyFoe: 5,
     nearbyAllyRanged: 0,
     incapacitated: true,
@@ -342,6 +343,7 @@ export let fetchParams = () => {
       invisAdvantage: true,
       checkRange: true,
       wallsBlockRange: "center",
+      coverCalculation: "none",
       nearbyFoe: 5,
       nearbyAllyRanged: 0,
       incapacitated: true,
@@ -355,10 +357,11 @@ export let fetchParams = () => {
       checkFlanking: "off",
       optionalCritRule: -1,
       actionSpecialDurationImmediate: false
-
     }, configSettings.optionalRules ?? {}, {overwrite: true, insertKeys: true, insertValues: true});
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";
   if (configSettings.optionalRules.checkFlanking === true) configSettings.optionalRules.checkFlanking = "ceadv";
+  if (!configSettings.optionalRules.coverCalculation) configSettings.optionalRules.coverCalculation = "none";
+
   if (configSettings.optionalRules.checkFlanking === false) configSettings.optionalRules.checkFlanking = "off";
   if (typeof configSettings.requireMagical !== "string" && configSettings.requireMagical !== true) configSettings.requireMagical = "off";
   if (typeof configSettings.requireMagical !== "string" && configSettings.requireMagical === true) configSettings.requireMagical = "nonspell";

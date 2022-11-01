@@ -588,7 +588,7 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
     if (installedModules.get("conditional-visibility")) this.actor.prepareDerivedData();
     result = await wrapped(damageRollData);
     if (debugCallTiming) log(`wrapped item.rollDamage():  elapsed ${Date.now() - wrappedRollStart}ms`);
-  } else {
+  } else { // roll other damage instead of main damage.
     //@ts-ignore
     result = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: workflow.rollOptions.critical || workflow.isCritical });
     result = await result?.evaluate({ async: true });
@@ -603,9 +603,6 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
   const minflags = getProperty(this.flags, "midi-qol.min") ?? {};
   if ((minflags.damage && (minflags.damage.all || minflags.damage[this.system.actionType])) ?? false)
     result = await new Roll(result.formula).roll({ minimize: true });
-  // need to do this nonsense since the returned roll _formula has a trailing + for ammo
-
-  // result = Roll.fromJSON(JSON.stringify(result.toJSON()))
   // I don't like the default display and it does not look good for dice so nice - fiddle the results for maximised rolls
   for (let term of result.terms) {
     if (term instanceof Die && term.modifiers.includes(`min${term.faces}`)) {
@@ -1174,10 +1171,10 @@ export function rollAttackHook(item, roll, ammoUpdate) {
   }
   const maxflags = getProperty(workflow.actor.flags, "midi-qol.max") ?? {};
   if ((maxflags.attack && (maxflags.attack.all || maxflags.attack[this.system.actionType])) ?? false)
-    result = result.reroll({ maximize: true, async: false });
+    Object.assign(result,  result.reroll({ maximize: true, async: false }));
   const minflags = getProperty(this.flags, "midi-qol.min") ?? {};
   if ((minflags.attack && (minflags.attack.all || minflags.attack[this.system.actionType])) ?? false)
-    result = result.reroll({ minimize: true, async: false })
+    Object.assign(result, result.reroll({ minimize: true, async: false }));
   /* await*/  workflow.setAttackRoll(result); // this may not need to be awaited?
   workflow.ammo = this._ammo;
   /* This is not doable?

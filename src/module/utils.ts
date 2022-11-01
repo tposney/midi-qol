@@ -46,6 +46,7 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
   rollData.mod = 0;
   if (debugEnabled > 1) debug("CreateDamageList: Passed roll is ", roll)
   if (debugEnabled > 1) debug("CreateDamageList: Damage spec is ", parts)
+
   let partPos = 0;
   const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
   const allDamageTypeEntries = Object.entries(getSystemCONFIG().damageTypes).concat(Object.entries(getSystemCONFIG().healingTypes));
@@ -81,9 +82,11 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
         partPos += 1;
       }
       if (rollTerms[partPos]) {
+        const hasDivideMultiply = rollTerms[partPos + 1] instanceof OperatorTerm && ["/", "*"].includes(rollTerms[partPos + 1].operator);
         if (rollTerms[partPos] instanceof OperatorTerm) {
           evalString += rollTerms[partPos].operator + " ";
         }
+
         if (rollTerms[partPos] instanceof DiceTerm || rollTerms[partPos] instanceof NumericTerm) {
           const flavorDamageType = getDamageType(rollTerms[partPos]?.options?.flavor);
           type = flavorDamageType ?? type;
@@ -91,10 +94,12 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
             setProperty(rollTerms[partPos].options, "flavor", getDamageFlavor(type));
           }
           evalString += rollTerms[partPos]?.total;
-          // let result = Roll.safeEval(evalString);
-          let result = new Roll(evalString).evaluate({ async: false }).total;
-          damageParts[type || defaultType] = (damageParts[type || defaultType] || 0) + result;
-          evalString = "";
+          if (!hasDivideMultiply) {
+            // let result = Roll.safeEval(evalString);
+            let result = new Roll(evalString).evaluate({ async: false }).total;
+            damageParts[type || defaultType] = (damageParts[type || defaultType] || 0) + result;
+            evalString = "";
+          }
         }
       }
       partPos += 1;
@@ -180,11 +185,11 @@ export function getSelfTarget(actor): Token {
   if (actor.token) return actor.token.object; //actor.token is a token document.
   const token = tokenForActor(actor);
   if (token) return token;
- const tokenData = actor.prototypeToken.toObject();
- tokenData.actorId = actor.id;
- const cls = getDocumentClass("Token");
- //@ts-expect-error
- return new cls(tokenData, {actor});
+  const tokenData = actor.prototypeToken.toObject();
+  tokenData.actorId = actor.id;
+  const cls = getDocumentClass("Token");
+  //@ts-expect-error
+  return new cls(tokenData, { actor });
 }
 
 export function getSelfTargetSet(actor): Set<Token> {
@@ -872,7 +877,7 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
       message = `${configSettings.displaySaveDC ? "DC " + dc : ""} ${flavor}`;
     // Send a message for LMRTFY to do a save.
     const socketData = {
-      user: player.id, 
+      user: player.id,
       actors: [actorId],
       abilities: rollType === "abil" ? [ability] : [],
       saves: rollType === "save" ? [ability] : [],
@@ -899,7 +904,6 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
       whisper: [player]
     }
     // think about how to do this if (workflow?.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", workflow.flagTags);
-
     ChatMessage.create(chatData);
   }
 }
@@ -1055,7 +1059,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
   if (effect.disabled || effect.isSuppressed) return;
   const auraFlags = effect.flags?.ActiveAuras ?? {};
   if (auraFlags.isAura && auraFlags.ignoreSelf) return;
-  const rollData = createConditionData({actor, workflow: undefined, target: undefined});
+  const rollData = createConditionData({ actor, workflow: undefined, target: undefined });
   // const rollData = actor.getRollData();
   if (!rollData.flags) rollData.flags = actor.flags;
   rollData.flags.midiqol = rollData.flags["midi-qol"];
@@ -1304,6 +1308,7 @@ export async function completeItemRoll(item, options: any) {
     console.warn("midi-qol | completeItemRoll(item, options) is deprecated please use completeItemUse(item, config, options)")
   return completeItemUse(item, {}, options);
 }
+
 export async function completeItemUse(item, config: any = {}, options: any = { checkGMstatus: false },) {
   let theItem = item;
   if (!(item instanceof CONFIG.Item.documentClass)) {
@@ -1312,7 +1317,6 @@ export async function completeItemUse(item, config: any = {}, options: any = { c
   }
 
   if (game.user?.isGM || !options.checkGMStatus) {
-
     return new Promise((resolve) => {
       let saveTargets = Array.from(game.user?.targets ?? []).map(t => { return t.id });
       let selfTarget = false;
@@ -1336,7 +1340,6 @@ export async function completeItemUse(item, config: any = {}, options: any = { c
         }
         resolve(workflow);
       });
-
 
       if (item.magicItem) {
         item.magicItem.magicItemActor.roll(item.magicItem.id, item.id)
@@ -1485,15 +1488,14 @@ export function getDistanceSimple(t1: Token, t2: Token, wallBlocking = false) {
 *** gets the shortest distance betwen two tokens taking into account both tokens size
 *** if wallblocking is set then wall are checked
 **/
-//TODO change this to TokenData
 export function getDistance(t1: any /*Token*/, t2: any /*Token*/, wallblocking = false): number {
-  const noResult = { distance: -1, acBonus: undefined }
   if (!canvas || !canvas.scene) return -1;
-  if (!canvas.grid || !canvas.dimensions) noResult;
+  if (!canvas.grid || !canvas.dimensions) -1;
   if (!t1 || !t2) return -1;
   if (t1 instanceof TokenDocument) t1 = t1.object;
   if (t2 instanceof TokenDocument) t2 = t2.object;
   if (!canvas || !canvas.grid || !canvas.dimensions) return -1;
+
 
   const t1StartX = t1.document.width >= 1 ? 0.5 : t1.document.width / 2;
   const t1StartY = t1.document.height >= 1 ? 0.5 : t1.document.height / 2;
@@ -1503,6 +1505,25 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, wallblocking =
   const t2Elevation = t2.document.elevation ?? 0;
   const t1TopElevation = t1Elevation + Math.max(t1.document.height, t1.document.width) * (canvas?.dimensions?.distance ?? 5);
   const t2TopElevation = t2Elevation + Math.min(t2.document.height, t2.document.width) * (canvas?.dimensions?.distance ?? 5); // assume t2 is trying to make itself small
+  let coverVisible;
+  // For levels autocover and simbul's cover calculator pre-comput token cover - full cover means no attack and so return -1
+  // otherwise don't bother doing los checks they are overruled by the cover check
+  if (installedModules.get("levelsautocover") && game.settings.get("levelsautocover", "apiMode") && wallblocking && configSettings.optionalRules.wallsBlockRange == "levelsautocover") {
+
+    //@ts-expect-error
+    const levelsautocoverData = AutoCover.calculateCover(t1, t2, getLevelsAutoCoverOptions());
+    //@ts-expect-error
+    const fullCover = AutoCover.getCoverData()[0].percent;
+    coverVisible = levelsautocoverData.rawCover >= fullCover;
+    if (!coverVisible) return -1;
+    console.log("Full cover is ", fullCover, levelsautocoverData.rawCover, levelsautocoverData, t1.name, t2.name)
+  }
+  else if (globalThis.CoverCalculator && configSettings.optionalRules.wallsBlockRange === "simbuls-cover-calculator") {
+    const coverData = globalThis.CoverCalculator.Cover(t1, t2);
+    console.warn("simbuls cover calculator ", t1.name, t2.name, coverData);
+    if (coverData?.data.results.cover === 3) return -1;
+    coverVisible = true;
+  }
 
   var x, x1, y, y1, d, r, segments: { ray: Ray }[] = [], rdistance, distance;
   for (x = t1StartX; x < t1.document.width; x++) {
@@ -1512,38 +1533,53 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, wallblocking =
         for (y1 = t2StartY; y1 < t2.document.height; y1++) {
           const dest = new PIXI.Point(...canvas.grid.getCenter(Math.round(t2.document.x + (canvas.dimensions.size * x1)), Math.round(t2.document.y + (canvas.dimensions.size * y1))));
           const r = new Ray(origin, dest);
-          // //@ts-expect-error
-          // TODO include auto cover calcs in checking console.error(AutoCover.calculateCover(t1, t2));
-          if (wallblocking && configSettings.optionalRules.wallsBlockRange === "centerLevels" && installedModules.get("levels")) {
-            let p1 = {
-              x: origin.x,
-              y: origin.y,
-              //@ts-ignore
-              z: t1Elevation
-            }
-            let p2 = {
-              x: dest.x,
-              y: dest.y,
-              //@ts-ignore
-              z: t2Elevation
-            }
-            //@ts-ignore
-            const baseToBase = CONFIG.Levels.API.testCollision(p1, p2, "sight");
-            p1.z = t1TopElevation;
-            p2.z = t2TopElevation;
-            //@ts-ignore
-            const topToBase = CONFIG.Levels.API.testCollision(p1, p2, "sight");
-            if (baseToBase && topToBase) continue;
-          } else if (wallblocking) {
-            // TODO use four point rule and work out cover
+          if (wallblocking) {
             switch (configSettings.optionalRules.wallsBlockRange) {
               case "center":
-              case "centerLevels":
-              case "dnd5eHelpers":
-              case "dnd5eHelpersAC":
-                    //@ts-expect-error
-                const collisionCheck = CONFIG.Canvas.losBackend.testCollision(origin, dest, {mode: "any", type:"sight"})
+                //@ts-expect-error
+                const collisionCheck = CONFIG.Canvas.losBackend.testCollision(origin, dest, { mode: "any", type: "sight" })
                 if (collisionCheck) continue;
+                break;
+              case "centerLevels":
+                // //@ts-expect-error
+                // TODO include auto cover calcs in checking console.error(AutoCover.calculateCover(t1, t2));
+                if (configSettings.optionalRules.wallsBlockRange === "centerLevels" && installedModules.get("levels")) {
+                  if (coverVisible === false) continue;
+                  if (coverVisible === undefined) {
+                    let p1 = {
+                      x: origin.x,
+                      y: origin.y,
+                      //@ts-ignore
+                      z: t1Elevation
+                    }
+                    let p2 = {
+                      x: dest.x,
+                      y: dest.y,
+                      //@ts-ignore
+                      z: t2Elevation
+                    }
+                    if (coverVisible === undefined) {
+                      //@ts-ignore
+                      const baseToBase = CONFIG.Levels.API.testCollision(p1, p2, "sight");
+                      p1.z = t1TopElevation;
+                      p2.z = t2TopElevation;
+                      //@ts-ignore
+                      const topToBase = CONFIG.Levels.API.testCollision(p1, p2, "sight");
+                      if (baseToBase && topToBase) continue;
+                    }
+                  }
+                } else {
+                  //@ts-expect-error
+                  const collisionCheck = CONFIG.Canvas.losBackend.testCollision(origin, dest, { mode: "any", type: "sight" })
+                  if (collisionCheck) continue;
+                }
+                break;
+              case "simbuls-cover-calculator":
+                if (coverVisible === undefined) {
+                  //@ts-expect-error
+                  const collisionCheck = CONFIG.Canvas.losBackend.testCollision(origin, dest, { mode: "any", type: "sight" })
+                  if (collisionCheck) continue;
+                } else if (coverVisible === false) continue;
                 break;
               case "none":
               default:
@@ -1583,7 +1619,7 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, wallblocking =
 
     } else distance = Math.sqrt(heightDifference * heightDifference + distance * distance);
   }
-  return distance; // TODO update this with ac bonus
+  return distance;
 };
 
 let pointWarn = debounce(() => {
@@ -1652,10 +1688,7 @@ export function checkRange(item, token, targets): string {
   for (let target of targets) {
     if (target === token) continue;
     // check the range
-    if (target.actor) setProperty(target.actor, "flags.midi-qol.acBonus", 0);
-    const distance = getDistance(token, target, true);
-    // spell sniper ignores cover ac bonus for rsak spells
-
+    const distance = getDistance(token, target, configSettings.optionalRules.wallsBlockRange);
 
     if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
       log(`${target.name} is too far ${distance} from your character you cannot hit`)
@@ -1672,24 +1705,57 @@ export function checkRange(item, token, targets): string {
   return "normal";
 }
 
-export function computeCoverBonus(attacker: Token | TokenDocument, target: Token | TokenDocument) {
+function getLevelsAutoCoverOptions(): any {
+  const options: any = {};
+  options.tokensProvideCover = game.settings.get("levelsautocover", "tokensProvideCover");
+  options.ignoreFriendly = game.settings.get("levelsautocover", "ignoreFriendly");
+  options.copsesProvideCover = game.settings.get("levelsautocover", "copsesProvideCover");
+  options.tokenCoverAA = game.settings.get("levelsautocover", "tokenCoverAA");
+  // options.coverData ?? this.getCoverData();
+  options.precision = game.settings.get("levelsautocover", "coverRestriction");
+  return options;
+}
+
+export const FULL_COVER = 999;
+export const THREE_QUARTERS_COVER = 5;
+export const HALF_COVER = 2;
+
+export function computeCoverBonus(attacker: Token | TokenDocument, target: Token | TokenDocument, item: any = undefined) {
   let coverBonus = 0;
   //@ts-expect-error .Levels
   let levelsAPI = CONFIG.Levels?.API;
-  if (levelsAPI) {
-    //@ts-expect-error
-    const coverData = AutoCover.calculateCover(attacker, target);
-    if (!coverData.isTokenCover) return 0;
-    //@ts-expect-error
-    const coverDetail = AutoCover.getCoverData()[coverData.cover];
-    let acBonus = 0;
-    if (coverData.cover === 0) acBonus = 5;
-    else if (coverData.cover === 1) acBonus = 2;
-    console.warn("For token ", attacker.name, " attacking ", target.name, " cover data is ", coverData, coverDetail)
-    return acBonus;
+  switch (configSettings.optionalRules.coverCalculation) {
+    case "levelsautocover":
+      if (!installedModules.get("levelsautocover") || !game.settings.get("levelsautocover", "apiMode")) return 0;
+      //@ts-expect-error
+      const coverData = AutoCover.calculateCover(attacker, target, { DEBUG: true });
+      // const coverData = AutoCover.calculateCover(attacker, target, mergeObject(getLevelsAutoCoverOptions(), {DEBUG: true}));
+      //@ts-expect-error
+      const coverDetail = AutoCover.getCoverData();
+      if (coverData.rawCover < coverDetail[0].percent) coverBonus = FULL_COVER;
+      else if (coverData.rawCover > (coverDetail[2]?.percent ?? 90)) coverBonus = 0;
+      else if (coverData.rawCover > coverDetail[1].percent) coverBonus = HALF_COVER;
+      else if (coverData.rawCover > coverDetail[0].percent) coverBonus = THREE_QUARTERS_COVER;
+      if (coverData.obstructingToken) coverBonus = Math.max(2, coverBonus);
+      console.log("midi-qol | ComputerCoverBonus - For token ", attacker.name, " attacking ", target.name, " cover data is ", coverBonus, coverData, coverDetail)
+      break;
+    case "simbuls-cover-calculator":
+      if (!installedModules.get("simbuls-cover-calculator")) return 0;
+      if (globalThis.CoverCalculator) {
+        const coverData = globalThis.CoverCalculator.Cover(attacker, target);
+        if (coverData?.data.results.cover === 3) coverBonus = FULL_COVER;
+        else coverBonus = -coverData.data.results.value;
+        console.log("midi-qol | ComputeCover Bonus - For token ", attacker.name, " attacking ", target.name, " cover data is ", coverBonus, coverData)
+      }
+      break;
+    case "none":
+      coverBonus = 0;
+      break;
   }
-  if (target.actor && coverBonus)
-    setProperty(target, "actor.flags.midi-qol.acBonus", coverBonus);
+
+  if (item?.midiProperties["ignoreTotalCover"] && coverBonus === 99) coverBonus = THREE_QUARTERS_COVER;
+  if (target.actor)
+    setProperty(target.actor, "flags.midi-qol.acBonus", coverBonus);
   return coverBonus;
 
 }
@@ -2055,7 +2121,6 @@ export async function expireRollEffect(rolltype: string, abilityId: string, succ
   }
 }
 
-// TODO revisit the whole synth token piece. find out why USERTARGETS is not
 export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<Token> {
   return tokenSet.filter(tk => tk.actor);
 }
@@ -2555,7 +2620,6 @@ async function getMagicItemReactions(actor: Actor, triggerType: string): Promise
     for (let magicItem of magicItemActor.items) {
       for (let ownedItem of magicItem.ownedEntries) {
         try {
-          // TODO when magicitems ready see what it looks like v10
           const theItem = await ownedItem.item.data()
           if (theItem.system.activation.type === triggerType) {
             items.push(ownedItem);
@@ -2697,12 +2761,12 @@ export async function requestReactions(target: Token, player: User, triggerToken
     options.itemUuid = options.item.uuid;
     delete options.item;
   };
-  /* TODO come back and look at this - adda 80k to the message.
+  /* TODO come back and look at this - adds 80k to the message.
   if (options.workflow && options.workflow instanceof Workflow)
     options.workflow = options.workflow.macroDataToObject(options.workflow.getMacroDataObject());
   */
   if (options.workflow) delete options.workflow;
-  
+
   const result = await socketlibSocket.executeAsUser("chooseReactions", player.id, {
     tokenUuid: target.document?.uuid ?? target.uuid,
     reactionFlavor,
@@ -3126,8 +3190,8 @@ export function getConvenientEffectsDead() {
 
 export async function ConvenientEffectsHasEffect(effectName: string, actor: Actor, ignoreInactive: boolean = true) {
   if (ignoreInactive) {
-  //@ts-ignore
-  return game.dfreds.effectInterface.hasEffectApplied(effectName, actor.uuid);
+    //@ts-ignore
+    return game.dfreds.effectInterface.hasEffectApplied(effectName, actor.uuid);
   } else {
     //@ts-expect-error .label
     return actor.effects.find(ef => ef.label === effectName) !== undefined;
@@ -3345,7 +3409,7 @@ export async function midiRenderRoll(roll: Roll | undefined) {
 export async function computeFlankedStatus(target): Promise<boolean> {
   if (!checkRule("checkFlanking") || !["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking"))) return false;
   if (!canvas || !target) return false;
-  const allies: any /*Token v10*/[] = findNearby(-1, target, 5);
+  const allies: any /*Token v10*/[] = findNearby(-1, target, (canvas?.dimensions?.distance ?? 5));
   if (allies.length <= 1) return false; // length 1 means no other allies nearby
   if (canvas?.grid?.grid instanceof SquareGrid) {
     let gridW = canvas?.grid?.w ?? 100;
@@ -3424,10 +3488,9 @@ export function computeFlankingStatus(token, target): boolean {
   // For the target see how many square between this token and any friendly targets
   // Find all tokens hostile to the target
   if (!target) return false;
-  // console.error("Distance is ", getDistance(token, target, false, true));
-  if (getDistance(token, target, true) > 5) return false;
+  if (getDistance(token, target, true) > (canvas?.dimensions?.distance ?? 5)) return false;
   // an enemy's enemies are my friends.
-  const allies: any /* Token v10 */[] = findNearby(-1, target, 5);
+  const allies: any /* Token v10 */[] = findNearby(-1, target, (canvas?.dimensions?.distance ?? 5));
 
   if (allies.length === 1) return false; // length 1 means no other allies nearby
 
