@@ -1324,8 +1324,9 @@ export function migrateTraits(actor) {
     for (let traitId of ["di", "dr", "dv", "sdi", "sdr", "sdv"]) {
       let trait = actor.system.traits[traitId];
       let baseTrait = baseData.system.traits[traitId];
-      trait.value = [];
       if (!trait) continue;
+      trait.value = [];
+
       for (let traitString of baseTrait.value) {
         switch (traitString) {
           case "silver":

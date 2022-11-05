@@ -1490,7 +1490,7 @@ export function getDistanceSimple(t1: Token, t2: Token, wallBlocking = false) {
 **/
 export function getDistance(t1: any /*Token*/, t2: any /*Token*/, wallblocking = false): number {
   if (!canvas || !canvas.scene) return -1;
-  if (!canvas.grid || !canvas.dimensions) -1;
+  if (!canvas.grid || !canvas.dimensions) return -1;
   if (!t1 || !t2) return -1;
   if (t1 instanceof TokenDocument) t1 = t1.object;
   if (t2 instanceof TokenDocument) t2 = t2.object;
@@ -1728,8 +1728,8 @@ export function computeCoverBonus(attacker: Token | TokenDocument, target: Token
     case "levelsautocover":
       if (!installedModules.get("levelsautocover") || !game.settings.get("levelsautocover", "apiMode")) return 0;
       //@ts-expect-error
-      const coverData = AutoCover.calculateCover(attacker, target, { DEBUG: true });
-      // const coverData = AutoCover.calculateCover(attacker, target, mergeObject(getLevelsAutoCoverOptions(), {DEBUG: true}));
+      const coverData = AutoCover.calculateCover(attacker, target);
+      // const coverData = AutoCover.calculateCover(attacker, target, {DEBUG: true});
       //@ts-expect-error
       const coverDetail = AutoCover.getCoverData();
       if (coverData.rawCover < coverDetail[0].percent) coverBonus = FULL_COVER;

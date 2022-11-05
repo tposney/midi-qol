@@ -227,7 +227,7 @@ export class MidiKeyManager {
         { key: "ControlLeft" },
         { key: "ControlRight" },
         { key: "MetaLeft"},
-        { key: "MetaRigt"}
+        { key: "MetaRight"}
 
       ],
       onDown: () => { this._critical = true; this.track("crit down"); return false; },

@@ -1,6 +1,6 @@
-import { debug, error, debugEnabled, i18n } from "../midi-qol.js";
+import { error, debugEnabled, i18n } from "../midi-qol.js";
 import { log } from "../midi-qol.js";
-import { configSettings, disableWorkflowAutomation, enableWorkflow } from "./settings.js";
+import { configSettings } from "./settings.js";
 
 const modules = {
   "about-time": "0.0", 

@@ -1,3 +1,13 @@
+
+### 10.0.20
+* Disable levels auto cover debug.
+* Fix a bundle of typos. Thanks @Elwin
+* Fix for magically growing cover options in config panel.
+* Cleaned up handling of Advantage Reminders text. The new version will lead to some duplication which I'll have to review in the next release.
+* Disabled Simbul's Cover Calculator for AoE spell save bonus. When the required function is available in Simbul's Cover Calculator it will be auto enabled.
+* Added preTargeting onUse macro call and preTargeting Hook. This is called before any item use processing is done It is also called before the workflow is created so only very limited data is available. A dummy workflow (if a workflow does not already exist for the item) is created, with the item/actor and selected targets is passed to the macro/hook.
+* Experimental support for players (other than the one that case the spell) (i.e. GM) to place the measured template for a spell. So if a player on a "limited" machine casts a fireball the GM can place the template for them instead.
+
 ### 10.0.19
 * **BREAKING** Updated behaviour for critical damage "Double Rolled Damage". This will now double the result of each damage dice rolled, rather than rolling each dice twice. If you want to double numeric terms as well use the DnD5e setting for that.
 * Revamped walls block ranged attacks and cover providing bonuses behaviour. Support for Simbul's Cover Calculator and Levels Auto Cover.

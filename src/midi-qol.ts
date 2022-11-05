@@ -215,6 +215,7 @@ Hooks.once('ready', function () {
   // has to be done before setup api.
   MQOnUseOptions = i18n("midi-qol.onUseMacroOptions");
   if (typeof MQOnUseOptions === "string") MQOnUseOptions = {
+    "preTargeting": "Called before targeting is resolved (*)",
     "preItemRoll": "Called before the item is rolled (*)",
     "templatePlaced": "Only called once a template is placed",
     "preambleComplete": "After targeting complete",

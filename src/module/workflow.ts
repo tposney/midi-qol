@@ -1346,7 +1346,7 @@ export class Workflow {
         }
         if (this.saveItem.hasSave && expireList.includes("isSaveFailure") && specialDuration.includes(`isSaveFailure`) && !this.saves.has(target)) {
           wasExpired = true;
-          expriryReason.push(`isSaveSuccess`);
+          expriryReason.push(`isSaveFailure`);
         }
         const abl = this.item?.system.save?.ability;
         if (this.saveItem.hasSave && expireList.includes(`isSaveSuccess`) && specialDuration.includes(`isSaveSuccess.${abl}`) && this.saves.has(target)) {
@@ -1429,7 +1429,7 @@ export class Workflow {
     return;
   }
 
-  macroDataToObject(macroData: any) : any {
+  macroDataToObject(macroData: any): any {
     const data = macroData
     for (let documentsName of ["targets", "failedSaves", "criticalSaves", "fumbleSaves", "saves", "superSavers", "semiSuperSavers"]) {
       data[documentsName] = data[documentsName].map(td => td.toObject());
@@ -2371,14 +2371,25 @@ export class Workflow {
             position.x += template.document.width / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
             position.y += template.document.width / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
           }
-          coverSaveBonus = computeCoverBonus({
+          if (configSettings.optionalRules.coverCalculation === "levelsautocover" 
+            && installedModules.get("levelsautocover")) {
+            coverSaveBonus = computeCoverBonus({
               center: position,
               document: {
                 //@ts-expect-error
                 elevation: template.document.elevation,
                 disposition: target?.document.disposition,
               }
-          },target)
+            }, target);
+          } else if (configSettings.optionalRules.coverCalculation === "simbuls-cover-calculator" 
+            && globalThis.CoverCalculator.checkCoverViaCoordinates) {
+            // Special case for templaes
+            coverSaveBonus = 0;
+            const coverData = await globalThis.CoverCalculator.checkCoverViaCoordinates(
+              position.x, position.y, false, 'AoE', false, target);
+              if (coverData?.data.results.cover === 3) coverSaveBonus = FULL_COVER;
+              else coverSaveBonus = -coverData.data.results.value;
+          }
         } else {
           coverSaveBonus = computeCoverBonus(this.token, target);
         }
@@ -3183,7 +3194,7 @@ export class TrapWorkflow extends Workflow {
         this.saveTargets = validTargetTokens(game.user?.targets);
         this.effectsAlreadyExpired = [];
         this.onUseMacroCalled = false;
-        this.itemCardID = await (this.item.displayCard({ systemCard: false, worfklow: this, createMessage: true, defaultCard: true })).id;
+        this.itemCardID = await (this.item.displayCard({ systemCard: false, workflow: this, createMessage: true, defaultCard: true })).id;
 
         // this.itemCardId = (await showItemCard.bind(this.item)(false, this, true))?.id;
         //@ts-ignore TODO this is just wrong fix

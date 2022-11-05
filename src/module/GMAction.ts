@@ -76,7 +76,7 @@ export let setupSocket = () => {
   socketlibSocket.register("applyEffects", _applyEffects);
   socketlibSocket.register("bonusCheck", _bonusCheck)
   socketlibSocket.register("gmOverTimeEffect", _gmOverTimeEffect)
-};
+}
 
 export async function _gmOverTimeEffect(data:{ actorUuid, effectUuid, startTurn, options}) {
   const actor = MQfromActorUuid(data.actorUuid);

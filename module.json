@@ -18,6 +18,14 @@
           "minimum": "2.0.3",
           "compatible": "2.0.3"
         }
+      },
+      {
+        "id": "sw5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "2.0.2.2.2.5",
+          "compatible": "2.0.2.2.2.5"
+        }
       }
     ],
     "requires": [

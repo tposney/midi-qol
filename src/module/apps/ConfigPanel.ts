@@ -31,8 +31,8 @@ export class ConfigPanel extends FormApplication {
     if (!enableWorkflow) {
       ui.notifications?.error("Worklow automation is not enabled")
     }
-    let wallsBlockRangeOptions = geti18nOptions("WallsBlockRangeOptionsNew");
-    let CoverCalculationOptions = geti18nOptions("CoverCalculationOptions");
+    let wallsBlockRangeOptions = duplicate(geti18nOptions("WallsBlockRangeOptionsNew"));
+    let CoverCalculationOptions = duplicate(geti18nOptions("CoverCalculationOptions"));
     [{id: "levelsautocover", name: "'Levels Auto Cover'"}, {id:"simbuls-cover-calculator", name: "'Simbuls Cover Calculator'"}].forEach(module => {
       if (!installedModules.get(module.id)) {
         wallsBlockRangeOptions[module.id] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;

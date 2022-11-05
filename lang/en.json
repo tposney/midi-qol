@@ -70,7 +70,7 @@
   "midi-qol.HideNPCNames.Hint": "Hide token names in hit/save chat messages",
   "midi-qol.noTemplateSeen": "Template has not been placed",
   "midi-qol.AutoTarget.Name": "Auto target on template draw",
-  "midi-qol.AutoTarget.Hint": "When placing a template (e.g. spell) auto target tokens inside the template.",
+  "midi-qol.AutoTarget.Hint": "When placing a template (e.g. spell) auto target tokens inside the template. If 'Center + Levels' is set in ranged targeting Levels Volumetric Templates will be used (if installed)",
   "midi-qol._comment for translators_noDamageonSaveSpells": "In foundry v9 the array json element is no longer supported, so only the v9 version will be used",
   "midi-qol.noDamageonSaveSpells": [
     "Acid Splash",
@@ -347,6 +347,7 @@
   "midi-qol.AllowUseMacro.Hint": "When enabled adds a macro name field which will be called on use. See the Readme for the details",
   "midi-qol.onUseMacroLabel": " On Use Macros",
   "midi-qol.onUseMacroOptions": {
+    "preTargeting": "Called before targeting is resolved (*)",
     "preItemRoll": "Called before the item is rolled (*)",
     "templatePlaced": "Only called once a template is placed",
     "preambleComplete": "After targeting complete",
@@ -422,7 +423,7 @@
   "midi-qol.CheckRange.Name": "Check weapon range when attacking",
   "midi-qol.NearbyFoe.Name": "Ranged attacks when a foe is closer than this have disadvantage. 0 disables",
   "midi-qol.WallsBlockRange.Name": "Walls block ranged attacks",
-  "midi-qol.WallsBlockRange.Hint": "Walls block ranged attacks \n No = no effect, center = check center to center line, center + Levels = center check but use `levels module` to determine wall blocking",
+  "midi-qol.WallsBlockRange.Hint": "Walls block ranged attacks \n No = no effect, center = check center to center line, center + Levels = center check but use the 'levels' module to determine wall blocking. Center + Levels also means use levels volumetric templates for template targeting",
   "midi-qol.WallsBlockRangeOptionsNew": {
     "none": "No",
     "center": "Center Check",
@@ -644,14 +645,14 @@
   },
   "midi-qol.AddRow": "Add Row",
   "midi-qol.CheckFlanking.Name": "Check Flanking",
-  "midi-qol.CheckFlanking.Hint": "Check if you and your allies flank the opponent. Either gives attacker advantage and/or applies CE flanking condition to attacker OR applies CE Flanked condition to target",
+  "midi-qol.CheckFlanking.Hint": "Check if you and your allies flank the opponent. Either gives attacker advantage and/or applies <strong>CE flanking</strong> condition to <h4>attacker</h4> OR applies CE Flanked condition to target",
   "midi-qol.CheckFlankingOptions": {
     "off": "none",
     "ceonly": "Convenient Effect Flanking Only",
     "advonly": "Advantage Only",
     "ceadv": "CE Flanking + Advantage",
     "ceflanked": "CE Flanked condition only",
-    "ceflankedNoconga": "Ce Flanked + no conga line"
+    "ceflankedNoconga": "CE Flanked + no conga line"
   },
   "midi-qol.RollAlternate.Name": "Move roll formula to tooltip",
   "midi-qol.RollAlternate.Hint": "Use alternate roll display on merge card moving the roll formula to the tooltip and optionally add advantage attribution",
