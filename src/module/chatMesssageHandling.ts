@@ -585,7 +585,7 @@ export let chatDamageButtons = (message, html, data) => {
     // find the item => workflow => damageList, totalDamage
     const defaultDamageType = (item?.system.damage.parts[0] && item?.system.damage?.parts[0][1]) ?? "bludgeoning";
     // TODO fix this for versatile damage
-    const damageList = createDamageList({ roll: message.rolls[0], item, versatile: false, defaultType: defaultDamageType });
+    const damageList = createDamageList({ roll: message.rolls[0], item, ammo: null, versatile: false, defaultType: defaultDamageType });
     const totalDamage = message.rolls[0].total;
     addChatDamageButtonsToHTML(totalDamage, damageList, html, actorId, itemUuid, "damage", ".dice-total", "position:relative; top:5px; color:blue");
   } else if (getProperty(message, "flags.midi-qol.damageDetail") || getProperty(message, "flags.midi-qol.otherDamageDetail")) {

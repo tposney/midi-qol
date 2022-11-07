@@ -1,3 +1,17 @@
+### 10.0.21
+* Fix so that midi picks up the damage type for ammo items specified via the drop down list.
+* Update damage resistance etc to pickup custom damage resistance etc fields that map to an actual damage types. So to have custom damage types you need to update CONFIG.DND5E.damageTypes with your new damage type, then either also update CONFIG.DND5E.damageResistanceTypes (in which case it will appear in the drop down list) or use the custom field specifying the custom damage type as a damage flavor.  So to add a new damage type use
+```js
+CONFIG.DND5E.damageTypes["fubar"] = "Fubar";
+CONFIG.DND5E.damageResistanceTypes["fubar"] = "Fubar";
+```
+and fubar will appear in damage type dropdown and damage resistance form, or just 
+```js
+CONFIG.DND5E.damageTypes["fubar"] = "Fubar";
+```
+and fubar will appear in the damage drop down and you'll need to put fubar in the custom resitances.
+* Added No Full Cover option to item properties. If set a target can't benefit from full cover (will be downgraded to 3/4 cover for spells like Fireball that go round corners.
+* castData added to onUseMacro data args[0].
 
 ### 10.0.20
 * Disable levels auto cover debug.

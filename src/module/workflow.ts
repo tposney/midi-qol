@@ -272,6 +272,7 @@ export class Workflow {
     this.workflowOptions = options?.workflowOptions ?? {};
     this.attackAdvAttribution = {};
     this.systemString = game.system.id.toUpperCase();
+    this.initSaveResults();
 
     if (configSettings.allowUseMacro) {
       this.onUseMacros = new OnUseMacros();
@@ -640,10 +641,10 @@ export class Workflow {
           await this.rollBonusDamage(damageBonusMacros);
         }
 
-        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
+        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, ammo: this.ammo, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
         if (!this.otherDamageRoll) this.otherDamageDetail = [];
         if (this.otherDamageRoll) { // TODO look at removeing this.
-          this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
+          this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, ammo: null, versatile: false, defaultType: this.defaultDamageType });
         } else this.otherDamageDetail = [];
 
         await this.displayDamageRoll(configSettings.mergeCard);
@@ -659,8 +660,6 @@ export class Workflow {
 
       case WORKFLOWSTATES.WAITFORSAVES:
         this.initSaveResults();
-        this.saves = new Set(); // not auto checking assume no saves
-
         if (configSettings.allowUseMacro && this.item?.flags) {
           await this.callMacros(this.item, this.onUseMacros?.getMacros("preSave"), "OnUse", "preSave");
         }
@@ -809,19 +808,15 @@ export class Workflow {
             } else this.applicationTargets = this.targets;
           }
 
-          const castData = {
+          const metaData = {
             "flags": {
               "dae": { transfer: false },
               "midi-qol": {
-                castData: {
-                  baseLevel: this.item?.system.level,
-                  castLevel: this.itemLevel,
-                  itemUuid: this.itemUuid
-                }
+                castData: this.castData
               }
             }
           };
-          const metadata = this.getMacroData();
+          const macroData = this.getMacroData();
 
           if (hasItemTargetEffects || ceTargetEffect) {
             for (let token of this.applicationTargets) {
@@ -843,7 +838,7 @@ export class Workflow {
                     tokenId: this.tokenId,
                     workflowOptions: this.workflowOptions,
                     selfEffects: "none",
-                    metaData: castData
+                    metaData
                   })
                 }
 
@@ -852,18 +847,18 @@ export class Workflow {
                     const targetHasEffect = token.actor.effects.find(ef => ef.label === theItem.name);
                     if (this.item?.flags.midiProperties?.toggleEffect && targetHasEffect) {
                       //@ts-ignore
-                      await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
+                      await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuid: token.actor.uuid, origin: theItem?.uuid, metadata: macroData });
                     } else {
                       // Check stacking status
                       //@ts-ignore
                       if ((ceEffect.flags.dae?.stackable ?? "none") === "none" && game.dfreds.effectInterface?.hasEffectApplied(theItem.name, token.actor.uuid)) {
                         //@ts-ignore
-                        await game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
+                        await game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata: macroData });
                       }
-                      const effectData = mergeObject(ceEffect.convertToObject(), castData);
+                      const effectData = mergeObject(ceEffect.convertToObject(), metaData);
                       effectData.origin = this.itemUuid;
                       //@ts-ignore
-                      await game.dfreds.effectInterface?.addEffectWith({ effectData, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
+                      await game.dfreds.effectInterface?.addEffectWith({ effectData, uuid: token.actor.uuid, origin: theItem?.uuid, metadata: macroData });
                     }
                   }
                 }
@@ -883,25 +878,25 @@ export class Workflow {
           }
 
           if (selfEffectsToApply !== "none" && hasItemSelfEffects && (!ceSelfEffectToApply || ["none", "both", "itempri"].includes(useCE))) {
-            await globalThis.DAE.doEffects(theItem, true, [tokenForActor(this.actor)], { toggleEffect: this.item?.flags.midiProperties?.toggleEffect, whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions, selfEffects: selfEffectsToApply, metaData: castData })
+            await globalThis.DAE.doEffects(theItem, true, [tokenForActor(this.actor)], { toggleEffect: this.item?.flags.midiProperties?.toggleEffect, whisper: false, spellLevel: this.itemLevel, damageTotal: this.damageTotal, critical: this.isCritical, fumble: this.isFumble, itemCardId: this.itemCardId, tokenId: this.tokenId, workflowOptions: this.workflowOptions, selfEffects: selfEffectsToApply, metaData })
           }
           if (selfEffectsToApply !== "none" && ceSelfEffectToApply && theItem && this.actor) {
             if (["both", "cepri"].includes(useCE) || (useCE === "itempri" && !hasItemSelfEffects)) {
               const actorHasEffect = this.actor.effects.find(ef => ef.label === theItem.name);
               if (this.item?.flags.midiProperties?.toggleEffect && actorHasEffect) {
                 //@ts-ignore
-                await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuid: this.actor.uuid, origin: theItem?.uuid, metadata });
+                await game.dfreds.effectInterface?.toggleEffect(theItem.name, { uuid: this.actor.uuid, origin: theItem?.uuid, metadata: macroData });
               } else {
                 // Check stacking status
                 //@ts-ignore
                 if ((ceSelfEffectToApply.flags.dae?.stackable ?? "none") === "none" && game.dfreds.effectInterface?.hasEffectApplied(theItem.name, this.actor.uuid)) {
                   //@ts-ignore
-                  await game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: this.actor.uuid, origin: theItem?.uuid, metadata });
+                  await game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: this.actor.uuid, origin: theItem?.uuid, metadata: macroData });
                 }
-                const effectData = mergeObject(ceSelfEffectToApply.convertToObject(), castData);
+                const effectData = mergeObject(ceSelfEffectToApply.convertToObject(), metaData);
                 effectData.origin = this.itemUuid;
                 //@ts-ignore
-                await game.dfreds.effectInterface?.addEffectWith({ effectData, uuid: token.actor.uuid, origin: theItem?.uuid, metadata });
+                await game.dfreds.effectInterface?.addEffectWith({ effectData, uuid: token.actor.uuid, origin: theItem?.uuid, metadata: macroData });
               }
             }
           }
@@ -1030,7 +1025,7 @@ export class Workflow {
     this.advantageSaves = new Set();
     this.disadvantageSaves = new Set();
     this.saveDisplayData = [];
-    this.saveresults = [];
+    this.saveResults = [];
   };
 
   public async checkAttackAdvantage() {
@@ -1397,7 +1392,7 @@ export class Workflow {
       const roll = await (new Roll(formula, (this.item ?? this.actor).getRollData()).evaluate({ async: true }));
       await this.setBonusDamageRoll(roll);
       this.bonusDamageFlavor = flavor ?? "";
-      this.bonusDamageDetail = createDamageList({ roll: this.bonusDamageRoll, item: null, versatile: false, defaultType: this.defaultDamageType });
+      this.bonusDamageDetail = createDamageList({ roll: this.bonusDamageRoll, item: null, ammo: null, versatile: false, defaultType: this.defaultDamageType });
     } catch (err) {
       console.warn(`midi-qol | error in evaluating${formula} in bonus damage`, err);
       this.bonusDamageRoll = null;
@@ -1558,6 +1553,7 @@ export class Workflow {
       tokenUuid: this.tokenUuid,
       uuid: this.uuid,
       workflowOptions: this.workflowOptions,
+      castData: this.castData,
       workflow: this
     }
   }
@@ -3092,7 +3088,7 @@ export class DamageOnlyWorkflow extends Workflow {
     this.itemCardId = options.itemCardId;
     this.useOther = options.useOther ?? true;
     this.damageRoll = roll;
-    this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: damageType });
+    this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, ammo: null, versatile: this.rollOptions.versatile, defaultType: damageType });
     this.damageTotal = damageTotal;
     this.isCritical = options.isCritical ?? false;
     this.kickStart = false;
@@ -3138,7 +3134,7 @@ export class DamageOnlyWorkflow extends Workflow {
 
         if (this.actor) { // Hacky process bonus flags
           await this.setDamageRoll(await processDamageRollBonusFlags.bind(this)());
-          this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
+          this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, ammo: this.ammo, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
         }
 
         if (configSettings.mergeCard && this.itemCardId) {
@@ -3270,13 +3266,13 @@ export class TrapWorkflow extends Workflow {
         return await this.next(WORKFLOWSTATES.WAITFORSAVES);
 
       case WORKFLOWSTATES.WAITFORSAVES:
+        this.initSaveResults();
         if (!this.saveItem.hasSave) {
           this.saves = new Set(); // no saving throw, so no-one saves
           const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
           this.failedSaves = new Set(allHitTargets);
           return await this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
         }
-        this.initSaveResults();
         let hookId = Hooks.on("renderChatMessage", this.processSaveRoll.bind(this));
         //        let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
         let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
@@ -3316,7 +3312,7 @@ export class TrapWorkflow extends Workflow {
 
         // If the item does damage, use the same damage type as the item
         let defaultDamageType = this.item?.system.damage?.parts[0][1] || this.defaultDamageType;
-        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: defaultDamageType });
+        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, ammo: this.ammo, versatile: this.rollOptions.versatile, defaultType: defaultDamageType });
         // apply damage to targets plus saves plus immunities
         await this.displayDamageRoll(configSettings.mergeCard)
         if (debugCallTiming) log(`DamageRollComplete elapsed ${Date.now() - damageRollCompleteStartTime}ms`);
@@ -3583,13 +3579,13 @@ export class DDBGameLogWorkflow extends Workflow {
         this.defaultDamageType = this.item.system.damage?.parts[0][1] || this.defaultDamageType || MQdefaultDamageType;
         if (this.item?.system.actionType === "heal" && !Object.keys(getSystemCONFIG().healingTypes).includes(this.defaultDamageType ?? "")) this.defaultDamageType = "healing";
 
-        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
+        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, ammo: this.ammo, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
 
         const damageBonusMacros = this.getDamageBonusMacros();
         if (damageBonusMacros) {
           await this.rollBonusDamage(damageBonusMacros);
         }
-        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
+        this.damageDetail = createDamageList({ roll: this.damageRoll, item: this.item, ammo: this.ammo, versatile: this.rollOptions.versatile, defaultType: this.defaultDamageType });
         this.otherDamageDetail = [];
         if (this.bonusDamageRoll) {
           const messageData = {

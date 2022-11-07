@@ -491,8 +491,8 @@ async function registerTests() {
             let hasEffects: any = actor.effects.filter(a => a.label === "OnUseMacroTest") ?? [];
             assert.ok(hasEffects);
             await actor.deleteEmbeddedDocuments("ActiveEffect", hasEffects.map(e => e.id))
-            // console.log(macroPasses);
-            // console.log(Object.keys(game.i18n.translations["midi-qol"]["onUseMacroOptions"]))
+            console.error(macroPasses);
+            console.error(Object.keys(game.i18n.translations["midi-qol"]["onUseMacroOptions"]))
             // Test for all passes except "all"
             assert.equal(macroPasses.length, Object.keys(game.i18n.translations["midi-qol"]["onUseMacroOptions"]).length - 1, "on use macro pass length");
           })
@@ -500,7 +500,7 @@ async function registerTests() {
           it("Calls item onUseMacros", async function () {
             const actor = getActor(actor2Name);
             const macroPasses: string[] = [];
-            const expectedPasses = ['preItemRoll', 'templatePlaced', 'preambleComplete', 'preSave', 'postSave', 'preActiveEffects', 'postActiveEffects'];
+            const expectedPasses = ['preTargeting', 'preItemRoll', 'templatePlaced', 'preambleComplete', 'preSave', 'postSave', 'preActiveEffects', 'postActiveEffects'];
             const hookid = Hooks.on("Item OnUseMacroTest", (pass: string) => macroPasses.push(pass));
             await completeItemUse(actor.items.getName("Item OnUseMacroTest"));
             Hooks.off("OnUseMacroTest", hookid);

@@ -33,7 +33,7 @@ export function getDamageFlavor(damageType): string | undefined {
 /**
  *  return a list of {damage: number, type: string} for the roll and the item
  */
-export function createDamageList({ roll, item, versatile, defaultType = MQdefaultDamageType }): { damage: unknown; type: string; }[] {
+export function createDamageList({ roll, item, versatile, defaultType = MQdefaultDamageType, ammo }): { damage: unknown; type: string; }[] {
   let damageParts = {};
   const rollTerms = roll.terms;
   let evalString = "";
@@ -41,12 +41,13 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
   if (versatile && item?.system.damage.versatile) {
     parts[0][0] = item.system.damage.versatile;
   }
+  if (ammo) parts = parts.concat(ammo.system.damage.parts)
+
   // create data for a synthetic roll
   let rollData = item ? item.getRollData() : {};
   rollData.mod = 0;
   if (debugEnabled > 1) debug("CreateDamageList: Passed roll is ", roll)
   if (debugEnabled > 1) debug("CreateDamageList: Damage spec is ", parts)
-
   let partPos = 0;
   const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
   const allDamageTypeEntries = Object.entries(getSystemCONFIG().damageTypes).concat(Object.entries(getSystemCONFIG().healingTypes));
@@ -93,6 +94,8 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
           if (!rollTerms[partPos]?.options.flavor) {
             setProperty(rollTerms[partPos].options, "flavor", getDamageFlavor(type));
           }
+
+          console.error(rollTerms[partPos], type)
           evalString += rollTerms[partPos]?.total;
           if (!hasDivideMultiply) {
             // let result = Roll.safeEval(evalString);
@@ -289,6 +292,10 @@ export let getTraitMult = (actor, dmgTypeString, item): number => {
 
       // process new custom field versions
       if (!["healing", "temphp"].includes(dmgTypeString)) {
+        if (customs.includes(dmgTypeString)) {
+          totalMult = totalMult * mult;
+          continue;
+        }
         if (!magicalDamage && (trait.includes("nonmagic") || customs.includes(getSystemCONFIG().damageResistanceTypes["nonmagic"])))
           totalMult = totalMult * mult;
         else if (magicalDamage && trait.includes("magic")) {
@@ -3101,7 +3108,10 @@ export function createConditionData(data: { workflow: Workflow | undefined, targ
     rollData.tokenId = data.workflow?.tokenId;
     rollData.workflow = {};
     rollData.effects = actor?.effects;
+    rollData.workflow = {};
     if (data.workflow) Object.assign(rollData.workflow, data.workflow);
+    if (data.workflow?.actor) rollData.workflow.actor = data.workflow.actor.getRollData();
+    if (data.workflow?.item) rollData.workflow.item = data.workflow.item.getRollData();
     rollData.CONFIG = CONFIG;
     rollData.CONST = CONST;
   } catch (err) {

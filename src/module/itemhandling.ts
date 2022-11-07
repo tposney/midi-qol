@@ -214,6 +214,11 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
   workflow.AoO = AoO;
   workflow.config = config;
   workflow.options = options;
+  workflow.castData = {
+    baseLevel: this.system.level,
+    castLevel: workflow.itemLevel,
+    itemUuid: workflow.itemUuid
+  };
 
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile || workflow.isVersatile;
   // if showing a full card we don't want to auto roll attacks or damage.
@@ -237,10 +242,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
   }
 
   const hasBonusAction = await hasUsedBonusAction(this.actor);
-  let itemUsesBonusAction = false;
-  if (["bonus"].includes(this.system.activation?.type)) {
-    itemUsesBonusAction = true;
-  }
+  const itemUsesBonusAction = ["bonus"].includes(this.system.activation?.type);
   const blockBonus = workflow.inCombat && itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(this.actor);
   if (blockBonus) {
     let shouldRoll = false;
@@ -632,7 +634,7 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
   }
   if (this.system.actionType === "heal" && !Object.keys(getSystemCONFIG().healingTypes).includes(workflow.defaultDamageType ?? "")) workflow.defaultDamageType = "healing";
   if (configSettings.mergeCard)
-    workflow.damageDetail = createDamageList({ roll: result, item: this, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType });
+    workflow.damageDetail = createDamageList({ roll: result, item: this, ammo: workflow.ammo, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType });
   await workflow.setDamageRoll(result);
 
   result = await processDamageRollBonusFlags.bind(workflow)();
@@ -677,7 +679,7 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
     }, { "flags.dnd5e.roll": { type: "damage", itemId: this.id } });
     if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll", { type: "damage", itemId: this.id })
     result.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
-    workflow.damageDetail = createDamageList({ roll: result, item: this, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType });
+    workflow.damageDetail = createDamageList({ roll: result, item: this, ammo: workflow.ammo, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType });
     workflow.setDamageRoll(result);
 
     if (otherResult) {
@@ -737,7 +739,7 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
   }
 
   if (otherResult) {
-    workflow.otherDamageDetail = createDamageList({ roll: otherResult, item: null, versatile: false, defaultType: "" });
+    workflow.otherDamageDetail = createDamageList({ roll: otherResult, item: null, ammo: null, versatile: false, defaultType: "" });
     for (let term of otherResult.terms) { // set the damage flavor
       if (term.options?.flavor) {
         term.options.flavor = getDamageFlavor(term.options.flavor);
@@ -946,10 +948,7 @@ export function preItemUseHook(item, config, options): boolean {
 
     // Record bonus action
     const hasBonusAction = await hasUsedBonusAction(item.actor);
-    let itemUsesBonusAction = false;
-    if (["bonus"].includes(item.system.activation?.type)) {
-      itemUsesBonusAction = true;
-    }
+    let itemUsesBonusAction = ["bonus"].includes(item.system.activation?.type);
     const blockBonus = inCombat && itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(item.actor);
     if (blockBonus) {
       let shouldRoll = false;
@@ -979,7 +978,11 @@ export function preItemUseHook(item, config, options): boolean {
     workflow.inCombat = inCombat ?? false;
     workflow.isTurn = isTurn ?? false;
     workflow.AoO = AoO;
-
+    workflow.castData = {
+      baseLevel: this.system.level,
+      castLevel: workflow.itemLevel,
+      itemUuid: workflow.itemUuid
+    };
     workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile || workflow.isVersatile;
     // if showing a full card we don't want to auto roll attacks or damage.
     workflow.noAutoDamage = systemCard;
