@@ -1,3 +1,15 @@
+### 10.0.22
+* Fix for castdata not being set correctly
+* Fix for error thrown when using Automatic Animations to remove templates. If you are using automatic animations auto remove templates then midi's cover calculations for templates are disabled as the template is removed before midi does its checks.
+* Fix for damage reduction applied twice.
+* Fix a bug When there are no token for the actor rolling an attack with cover calculations enabled throwing an error. Now will simply ignore cover when there is no attacking token.
+* Don't remove the chat card attack button unless the setting is enabled.
+* Fix for simbul's cover calculator throwing an error when calculating LOS if the targeted tokens includes the attacking token.
+* Slight clean up of dsn ghost dice behaviour when using hide roll but show DSN dice.
+* Fix for bug not displaying damage bonus dice rolls in DSN.
+* Fix (?) for removing concentration not removing actor effects on unlinked actors.
+* Fix for infinite loop when action saves are checked. (Occurs when turn start is true and actor make a save of the correct type during their turn).
+
 ### 10.0.21
 * Fix so that midi picks up the damage type for ammo items specified via the drop down list.
 * Update damage resistance etc to pickup custom damage resistance etc fields that map to an actual damage types. So to have custom damage types you need to update CONFIG.DND5E.damageTypes with your new damage type, then either also update CONFIG.DND5E.damageResistanceTypes (in which case it will appear in the drop down list) or use the custom field specifying the custom damage type as a damage flavor.  So to add a new damage type use

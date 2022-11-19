@@ -1403,20 +1403,24 @@ export class Workflow {
         && configSettings.mergeCard
         && !(configSettings.gmHide3dDice && game.user?.isGM)
         && !(this.actor?.isNpc && game.settings.get("dice-so-nice", "hideNpcRolls"))) {
-        let whisperIds: User[] = [];
+        let whisperIds: User[] | null = null;
         const rollMode = game.settings.get("core", "rollMode");
-        if ((configSettings.hideRollDetails !== "none" && game.user?.isGM) || rollMode === "blindroll") {
+        if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
           if (configSettings.ghostRolls) {
-            //@ts-ignore ghost
             this.bonusDamageRoll.ghost = true;
           } else {
             whisperIds = ChatMessage.getWhisperRecipients("GM")
           }
         } else if (game.user && (rollMode === "selfroll" || rollMode === "gmroll")) {
-          whisperIds = ChatMessage.getWhisperRecipients("GM").concat(game.user);
-        } else whisperIds = ChatMessage.getWhisperRecipients("GM");
+          if (configSettings.hideRollDetails === "detailsDSN" && game.user?.isGM && configSettings.ghostRolls) {
+            this.bonusDamageRoll.ghost = true;
+          } else if (configSettings.hideRollDetails !== "detailsDSN" && game.user?.isGM){
+            whisperIds = ChatMessage.getWhisperRecipients("GM");
+            if (game.user) whisperIds.concat(game.user);
+          }
+        } // else whisperIds = ChatMessage.getWhisperRecipients("GM");
         if (!installedModules.get("betterrolls5e")) { // exclude better rolls since it does the roll itself
-          //@ts-ignore game.dice3d
+          //@ts-expect-error game.dice3d
           await game.dice3d.showForRoll(this.bonusDamageRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
         }
       }
@@ -2360,7 +2364,7 @@ export class Workflow {
           coverSaveBonus = 0;
         else if (this.item?.system.actionType === "rwak" && getProperty(this.actor, "flags.midi-qol.sharpShooter"))
           coverSaveBonus = 0;
-        else if (this.item.hasAreaTarget && this.templateUuid) {
+        else if (this.item.hasAreaTarget && template) {
           const position = duplicate(template.center);
           const dimensions = canvas?.dimensions;
           if (template.document.t === "rect") {
@@ -2400,7 +2404,7 @@ export class Workflow {
         saved = true;
         this.superSavers.add(target)
       }
-      if (getProperty(this.actor, "flags.midi-qol.carefulSpells") && (this.rangeTargeting || this.templateTargeting) && this.item?.system.school === "evo" && this.preSelectedTargets.has(target)) {
+      if (getProperty(this.actor, "flags.midi-qol.carefulSpells") && (this.rangeTargeting || this.templateTargeting) && this.preSelectedTargets.has(target)) {
         saved = true;
       }
       if (isCritical) this.criticalSaves.add(target);

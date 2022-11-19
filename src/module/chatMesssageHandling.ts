@@ -305,7 +305,7 @@ export function checkOverTimeSaves(message, data, options, user) {
     let func = async (actor: Actor, rollFlags: any, roll: Roll) => {
       //@ts-ignore .changes v10
       for (let effect of actor.effects.filter(ef => ef.changes.some(change => change.key === "flags.midi-qol.OverTime"))) {
-        await doOverTimeEffect(actor, effect, true, { saveToUse: roll, rollFlags: data.flags?.dnd5e?.roll })
+        await doOverTimeEffect(actor, effect, true, { saveToUse: roll, rollFlags: data.flags?.dnd5e?.roll, isActionSave: true })
       }
     };
     func(actor, data.flags.dnd5e.roll, message.rolls[0]);

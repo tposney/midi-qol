@@ -402,6 +402,7 @@ export let fetchParams = () => {
   autoRemoveTargets = String(game.settings.get("midi-qol", "AutoRemoveTargets"));
   if (autoRemoveTargets === "allGM") {
     autoRemoveTargets = game.user?.isGM ? "all" : "dead";
+    game.settings.set("midi-qol", "AutoRemoveTargets", autoRemoveTargets);
   }
   let debugText: string = String(game.settings.get("midi-qol", "Debug"));
   forceHideRoll = Boolean(game.settings.get("midi-qol", "ForceHideRoll"));

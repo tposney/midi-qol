@@ -95,7 +95,6 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
             setProperty(rollTerms[partPos].options, "flavor", getDamageFlavor(type));
           }
 
-          console.error(rollTerms[partPos], type)
           evalString += rollTerms[partPos]?.total;
           if (!hasDivideMultiply) {
             // let result = Roll.safeEval(evalString);
@@ -296,9 +295,10 @@ export let getTraitMult = (actor, dmgTypeString, item): number => {
           totalMult = totalMult * mult;
           continue;
         }
-        if (!magicalDamage && (trait.includes("nonmagic") || customs.includes(getSystemCONFIG().damageResistanceTypes["nonmagic"])))
+        if (!magicalDamage && (trait.includes("nonmagic") || customs.includes(getSystemCONFIG().damageResistanceTypes["nonmagic"]))) {
           totalMult = totalMult * mult;
-        else if (magicalDamage && trait.includes("magic")) {
+          continue;
+        } else if (magicalDamage && trait.includes("magic")) {
           totalMult = totalMult * mult;
           continue;
         }
@@ -639,13 +639,14 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
       ditem.newTempHP = Math.max(0, ditem.newTempHP - appliedTempHP)
     }
     ditem.damageDetail = duplicate(damageDetailArr);
+    ditem.critical = workflow?.isCritical;
     await asyncHooksCallAll("midi-qol.damageApplied", t, { item, workflow, ditem });
     damageList.push(ditem);
     targetNames.push(t.name)
   }
   if (theTargets.size > 0) {
+    workflow.damageList = damageList;
     if (workflow && configSettings.allowUseMacro && workflow.item?.flags) {
-      workflow.damageList = damageList;
       await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preDamageApplication"), "OnUse", "preDamageApplication");
     }
     await timedAwaitExecuteAsGM("createReverseDamageCard", {
@@ -658,7 +659,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
       chatCardId: workflow.itemCardId,
       flagTags: workflow?.flagTags,
       updateContext: options?.updateContext,
-      forceApply: options.forceApply
+      forceApply: options.forceApply,
     })
   }
   if (configSettings.keepRollStats) {
@@ -1055,7 +1056,7 @@ export async function processOverTime(wrapped, data, options, user) {
   }
 }
 
-export async function doOverTimeEffect(actor, effect, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined }) {
+export async function doOverTimeEffect(actor, effect, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined, isActionSave: false }) {
   if (game.user?.isGM)
     return gmOverTimeEffect(actor, effect, startTurn, options);
   return socketlibSocket.executeAsGM("gmOverTimeEffect", { actorUuid: actor.uuid, effectUuid: effect.uuid, startTurn, options })
@@ -1104,6 +1105,8 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
     const changeTurnStart = details.turn === "start" ?? false;
     const changeTurnEnd = details.turn === "end" ?? false;
     const actionSave = JSON.parse(details.actionSave ?? "false");
+    if (!!actionSave !== !!options.isActionSave) continue;
+
     if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart) || (actionSave && options.saveToUse)) {
       const label = (details.label ?? "Damage Over Time").replace(/"/g, "");
       let saveDC;
@@ -1249,7 +1252,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       try {
         const options = {
           systemCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid],
-          workflowOptions: { lateTargeting: "none", autoRollDamage: "onHit", autoFastDamage: true }
+          workflowOptions: { lateTargeting: "none", autoRollDamage: "onHit", autoFastDamage: true, isOverTime: true }
         };
         await completeItemUse(ownedItem, {}, options); // worried about multiple effects in flight so do one at a time
       } finally {
@@ -1297,8 +1300,10 @@ export async function _processOverTime(combat, data, options, user) {
     }
 
     if (actor) for (let effect of actor.effects) {
-      if (effect.changes.some(change => change.key.startsWith("flags.midi-qol.OverTime")))
+      if (effect.changes.some(change => change.key.startsWith("flags.midi-qol.OverTime"))) {
+        console.error("Calling dooverTime effect", actor, effect, startTurn)
         await doOverTimeEffect(actor, effect, startTurn);
+      }
     }
     testTurn += 1;
     if (testTurn === combat.turns.length) {
@@ -1526,6 +1531,7 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, wallblocking =
     console.log("Full cover is ", fullCover, levelsautocoverData.rawCover, levelsautocoverData, t1.name, t2.name)
   }
   else if (globalThis.CoverCalculator && configSettings.optionalRules.wallsBlockRange === "simbuls-cover-calculator") {
+    if (t1 === t2) return 0; // Simbul's throws an error when calculating cover for the same token
     const coverData = globalThis.CoverCalculator.Cover(t1, t2);
     console.warn("simbuls cover calculator ", t1.name, t2.name, coverData);
     if (coverData?.data.results.cover === 3) return -1;
@@ -1729,6 +1735,7 @@ export const HALF_COVER = 2;
 
 export function computeCoverBonus(attacker: Token | TokenDocument, target: Token | TokenDocument, item: any = undefined) {
   let coverBonus = 0;
+  if (!attacker) return coverBonus;
   //@ts-expect-error .Levels
   let levelsAPI = CONFIG.Levels?.API;
   switch (configSettings.optionalRules.coverCalculation) {
@@ -1750,6 +1757,10 @@ export function computeCoverBonus(attacker: Token | TokenDocument, target: Token
       if (!installedModules.get("simbuls-cover-calculator")) return 0;
       if (globalThis.CoverCalculator) {
         const coverData = globalThis.CoverCalculator.Cover(attacker, target);
+        if (attacker === target) {
+          coverBonus = 0;
+          break;
+        }
         if (coverData?.data.results.cover === 3) coverBonus = FULL_COVER;
         else coverBonus = -coverData.data.results.value;
         console.log("midi-qol | ComputeCover Bonus - For token ", attacker.name, " attacking ", target.name, " cover data is ", coverBonus, coverData)
@@ -1760,7 +1771,7 @@ export function computeCoverBonus(attacker: Token | TokenDocument, target: Token
       break;
   }
 
-  if (item?.midiProperties["ignoreTotalCover"] && coverBonus === 99) coverBonus = THREE_QUARTERS_COVER;
+  if (item?.midiProperties["ignoreTotalCover"] && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
   if (target.actor)
     setProperty(target.actor, "flags.midi-qol.acBonus", coverBonus);
   return coverBonus;

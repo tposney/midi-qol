@@ -856,7 +856,7 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
   } catch (err) {
     console.warn("midi-qol | error deleting effect: ", err)
   } finally {
-    return wrapped(...args)
+    return wrapped(...args);
   }
 }
 
@@ -878,7 +878,9 @@ export async function removeConcentration(actor: Actor, concentrationUuid: strin
       const entity = await fromUuid(removeUuid);
       if (entity) await entity.delete(); // TODO check if this needs to be run as GM
     }
-    result = await socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [concentrationUuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true });
+    if (actor.isToken)
+      setTimeout( () => socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [concentrationUuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true }), 200 )
+    else result = await socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [concentrationUuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true });
   } catch (err) {
     error("error when attempting to remove concentration ", err)
   }

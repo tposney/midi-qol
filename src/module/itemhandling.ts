@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming, allAttackTypes } from "../midi-qol.js";
 import { BetterRollsWorkflow, DummyWorkflow, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule, checkMechanic } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG, evalActivationCondition, createDamageList, getDamageType, getDamageFlavor, completeItemUse, hasDAE, tokenForActor } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG, evalActivationCondition, createDamageList, getDamageType, getDamageFlavor, completeItemUse, hasDAE, tokenForActor, getRemoveAttackButtons } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
@@ -484,17 +484,22 @@ export async function doAttackRoll(wrapped, options: any = { versatile: false, r
     const rollMode = game.settings.get("core", "rollMode");
     if ((["details", "hitDamage", "all"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
       if (configSettings.ghostRolls) {
-        //@ts-ignore ghost
+        //@ts-expect-error ghost
         workflow.attackRoll.ghost = true;
       } else {
         whisperIds = ChatMessage.getWhisperRecipients("GM")
       }
     } else if (rollMode === "selfroll" || rollMode === "gmroll") {
-      whisperIds = ChatMessage.getWhisperRecipients("GM")
-      if (game.user) whisperIds.concat(game.user);
+      if (configSettings.hideRollDetails === "detailsDSN") {
+        //@ts-expect-error ghost
+        workflow.attackRoll.ghost = true;
+      } else {
+        whisperIds = ChatMessage.getWhisperRecipients("GM");
+        if (game.user) whisperIds.concat(game.user);
+      }
     }
 
-    //@ts-ignore game.dice3d
+    //@ts-expect-error game.dice3d
     await game.dice3d?.showForRoll(workflow.attackRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
   }
 
@@ -713,7 +718,7 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
     }
     if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
       if (configSettings.ghostRolls) {
-        //@ts-ignore ghost
+        //@ts-expect-error ghost
         result.ghost = true;
         //@ts-ignore
         if (otherResult) otherResult.ghost = true;
@@ -721,8 +726,15 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
         whisperIds = ChatMessage.getWhisperRecipients("GM")
       }
     } else if (rollMode === "selfroll" || rollMode === "gmroll") {
-      whisperIds = ChatMessage.getWhisperRecipients("GM");
-      if (game.user) whisperIds.concat(game.user);
+      if (configSettings.hideRollDetails === "detailsDSN" && game.user?.isGM && configSettings.ghostRolls) {
+        //@ts-expect-error ghost
+        result.ghost = true;
+        //@ts-expect-error ghost
+        if (otherResult) otherResult.ghost = true;
+      } else {
+        whisperIds = ChatMessage.getWhisperRecipients("GM");
+        if (game.user) whisperIds.concat(game.user);
+      }
     }
     //@ts-ignore game.dice3d
     await game.dice3d?.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
@@ -1396,10 +1408,12 @@ export function preItemUsageConsumptionHook(item, config, options): boolean {
   }
   // need to get spell level from the html returned in result
   if (item.type === "spell") {
-    workflow.itemLevel = item.level
+    workflow.itemLevel = item.system.level;
+    workflow.castData.castLevel = item.system.level;
   }
   if (item.type === "power") {
-    workflow.itemLevel = item.level;
+    workflow.itemLevel = item.system.level;
+    workflow.castData.castLevel = item.system.level;
   }
 
   return true;
@@ -1432,7 +1446,7 @@ export async function wrappedDisplayCard(wrapped, options) {
   const systemString = game.system.id.toUpperCase();
   let token = tokenForActor(this.actor);
 
-  let needAttackButton = !getRemoveDamageButtons() ||
+  let needAttackButton = !getRemoveAttackButtons() ||
     (!workflow.someAutoRollEventKeySet() && !getAutoRollAttack() && !workflow.rollOptions.autoRollAttack);
   const needDamagebutton = itemHasDamage(this) && (
     (getAutoRollDamage() === "none" || workflow.rollOptions.rollToggle)
@@ -1500,7 +1514,8 @@ export async function wrappedDisplayCard(wrapped, options) {
     type: CONST.CHAT_MESSAGE_TYPES.OTHER,
     content: html,
     flavor: this.system.chatFlavor || this.name,
-    speaker: getSpeaker({ actor: this.actor, token }),
+    //@ts-expect-error token vs tokenDocument
+    speaker: ChatMessage.getSpeaker({ actor: this.actor, token: (token?.document ?? token) }),
     flags: {
       "midi-qol": {
         itemUuid: workflow.item.uuid,
@@ -1721,8 +1736,8 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   if (user !== game.user?.id && !hasWorkflow) {
     return true;
   }
-  if ((game.user?.targets.size === 0 || user !== game.user?.id) 
-      && templateDocument?.object && !installedModules.get("levelsvolumetrictemplates")) {
+  if ((game.user?.targets.size === 0 || user !== game.user?.id)
+    && templateDocument?.object && !installedModules.get("levelsvolumetrictemplates")) {
     //@ts-ignore
     const mTemplate: MeasuredTemplate = templateDocument.object;
     if (mTemplate.shape)

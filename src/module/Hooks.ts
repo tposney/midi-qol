@@ -94,7 +94,7 @@ export let readyHooks = async () => {
     }
   });
 
-  // Handle removal of concentration
+  // Handle removal of concentration - not used done in _preDeleteActiveEffect
   Hooks.on("deleteActiveEffect", (...args) => {
     let [effect, options, user] = args;
     let gmToUse = game.users?.find(u => u.isGM && u.active);
@@ -166,6 +166,8 @@ export let readyHooks = async () => {
     Hooks.on("dnd5e.preRollAbiltiyTest", preRollAbilitySaveHook);
     Hooks.on("dnd5e.rollAbilitySave", rollAbilitySaveHook);
     Hooks.on("dnd5e.rollAbilityTest", rollAbilityTestHook)
+  } else {
+    Hooks.on("dnd5e.preItemUsageConsumption", preItemUsageConsumptionHook);
   }
   Hooks.on("dnd5e.preRollDeathSave", preRollDeathSaveHook);
   // Concentration Check is rolled as an item roll so we need an item.

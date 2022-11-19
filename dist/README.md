@@ -725,6 +725,7 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
   - **turn** - can be used once per turn (assumes in combat)
   - **@fields** - available if the @field > 0, decrements the @field on use. 
   You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
+  - **ItemUses.ItemName** - Additional option for optional.NAME.count ItemUses.ItemName, which will use the value of the uses field for the item name ItemName (which must be on the actor), it means you don't need to use a resources entry for these any more. eg `ItemUses.my super duper item`
 
 * flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
 
@@ -838,7 +839,7 @@ Additional workflow processing options to itemRoll(options). You can set
 * MinorQOL.doRoll and MinorQOL.applyTokenDamage remain supported.
 * MidiQOL.applyTokenDamage is exported.
 * If you have macros that depend on being called when the roll is complete, that is still supported, both "minor-qol.RollComplete" and "midi-qol.RollComplete" as well as "midi-qol.RollComplete.ItemUuid" (where ItemUUid is the uuid of the item doing the roll) are called when the roll is finished. See also the onUse macro field which can be used to achieve similar results.
-* There is a function `async MidiQOL.completeItemRoll(item, options)` that returns a promise you can await, which will do the entire midi-qol workflow for the item before resolving. This is useful if you want to roll an item and do everything without worrying about saving throws and so on.
+* There is a function `async MidiQOL.completeItemUse(item, config, options)` that returns a promise you can await, which will do the entire midi-qol workflow for the item before resolving. This is useful if you want to roll an item and do everything without worrying about saving throws and so on.
 
 It takes the same arguments as midis item.roll:
  * showFullCard: default false
@@ -850,7 +851,7 @@ It takes the same arguments as midis item.roll:
  In addition you can specify (in options)
   * checkGMStatus: boolean, If true non-gm clients will hand the roll to a gm client.
   * targetUuids, if present the roll will target the passed list of token uuids (token.document.uuid) rather than the users (or GMS) current targets.
-  * Additional workflow processing options to completeItemRoll(item, options: {...., workflowOptions}).
+  * Additional workflow processing options to completeItemUse(item, config: {}, options: {...., workflowOptions}).
   You can set: 
   - lateTargeting: boolean to force enable/disable late targeting for the items workflow
   - autoRollAttack: boolean force enable/disable auto rolling of the attack,
@@ -1135,7 +1136,7 @@ I've included the complete macro, but the general idea is:
 - Roll the created item to do the save/damage. Uses a newish midi-qol feature that allows you to do a complete roll and complete it before continuing.
 ```js
     const options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false };
-    await MidiQOL.completeItemRoll(item, options);
+    await MidiQOL.completeItemUse(item, {}, options);
 ```
   Here's the complete item macro
 ```js
@@ -1168,7 +1169,7 @@ I've included the complete macro, but the general idea is:
     itemData.flags.autoanimations.killAnim = true;;
     const item = new CONFIG.Item.documentClass(itemData, { parent: theActor })
     const options = { showFullCard: false, createWorkflow: true, versatile: false, configureDialog: false };
-    await MidiQOL.completeItemRoll(item, options);
+    await MidiQOL.completeItemUse(item, {}, options);
 }
 ```
 * Which sort of Macro to use?
