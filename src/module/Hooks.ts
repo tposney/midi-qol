@@ -45,6 +45,11 @@ export let readyHooks = async () => {
     if (expiredEffects.length > 0) actor?.deleteEmbeddedDocuments("ActiveEffect", expiredEffects.map(ef => ef.id), { "expiry-reason": "midi-qol:isMoved" });
   });
 
+  Hooks.on("template3dUpdatePreview", (at, t) => {
+    //@ts-expect-error Volumetrictemplates
+    VolumetricTemplates.compute3Dtemplate(t);
+  });
+
   Hooks.on("targetToken", debounce(checkflanking, 150));
 
   Hooks.on("ddb-game-log.pendingRoll", (data) => {
@@ -160,14 +165,15 @@ export let readyHooks = async () => {
     // Hooks.on("dnd5e.displayCard", displayCardHook); - displayCard is wrapped instead.
     Hooks.on("dnd5epreRollAttack", preRollAttackHook);
     Hooks.on("dnd5e.rollAttack", rollAttackHook)
-    Hooks.on("dnd5epreRollAttack", preRollDamageHook);
-    Hooks.on("dnd5e.rollAttack", rollDamageHook)
+    Hooks.on("dnd5e.preRollDamage", preRollDamageHook);
+    Hooks.on("dnd5e.rollDamage", rollDamageHook)
     Hooks.on("dnd5e.preRollAbilitySave", preRollAbilitySaveHook);
     Hooks.on("dnd5e.preRollAbiltiyTest", preRollAbilitySaveHook);
     Hooks.on("dnd5e.rollAbilitySave", rollAbilitySaveHook);
     Hooks.on("dnd5e.rollAbilityTest", rollAbilityTestHook)
   } else {
     Hooks.on("dnd5e.preItemUsageConsumption", preItemUsageConsumptionHook);
+    Hooks.on("dnd5e.preRollDamage", preRollDamageHook);
   }
   Hooks.on("dnd5e.preRollDeathSave", preRollDeathSaveHook);
   // Concentration Check is rolled as an item roll so we need an item.

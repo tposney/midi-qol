@@ -438,7 +438,7 @@ export async function doAttackRoll(wrapped, options: any = { versatile: false, r
   if (wrappedOptions.critical === true || wrappedOptions.critical === false)
     wrappedOptions.critical = this.getCriticalThreshold();
   if (wrappedOptions.fumble === true || wrappedOptions.fumble === false)
-    wrappedOptions.fumble = 1;
+    delete wrappedOptions.fumble;
   let result: Roll = await wrapped(
     wrappedOptions,
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
@@ -1264,6 +1264,9 @@ export function rollAttackHook(item, roll, ammoUpdate) {
 
 // WIP
 export function preRollDamageHook(item, rollConfig) {
+  if (item.flags.midiProperties["offHandWeapon"]) {
+    rollConfig.data.mod = 0;
+  }
   return true;
 }
 
@@ -1294,10 +1297,10 @@ export function displayCardHook(item, card) {
     if (!token) token = item.actor.getActiveTokens()[0];
     let needAttackButton = !workflow.someAutoRollEventKeySet() && !getAutoRollAttack() && !workflow.rollOptions.autoRollAttack;
     const needDamagebutton = itemHasDamage(item) && (
-      (getAutoRollDamage() === "none" || workflow.rollOptions.rollToggle)
+      (["none", "saveOnly"].includes(getAutoRollDamage(workflow)) || workflow.rollOptions.rollToggle)
       || !getRemoveDamageButtons()
       || systemCard);
-    const needVersatileButton = itemIsVersatile(item) && (systemCard || getAutoRollDamage() === "none" || !getRemoveDamageButtons());
+    const needVersatileButton = itemIsVersatile(item) && (systemCard || ["none", "saveOnly"].includes(getAutoRollDamage(workflow)) || !getRemoveDamageButtons());
     //const sceneId = token?.scene && token.scene.id || canvas?.scene?.id;
     const isPlayerOwned = item.actor.hasPlayerOwner;
     const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned))
@@ -1449,10 +1452,10 @@ export async function wrappedDisplayCard(wrapped, options) {
   let needAttackButton = !getRemoveAttackButtons() ||
     (!workflow.someAutoRollEventKeySet() && !getAutoRollAttack() && !workflow.rollOptions.autoRollAttack);
   const needDamagebutton = itemHasDamage(this) && (
-    (getAutoRollDamage() === "none" || workflow.rollOptions.rollToggle)
+    (["none", "saveOnly"].includes(getAutoRollDamage(workflow)) || workflow.rollOptions.rollToggle)
     || !getRemoveDamageButtons()
     || systemCard);
-  const needVersatileButton = itemIsVersatile(this) && (systemCard || getAutoRollDamage() === "none" || !getRemoveDamageButtons());
+  const needVersatileButton = itemIsVersatile(this) && (systemCard || ["none", "saveOnly"].includes(getAutoRollDamage(workflow)) || !getRemoveDamageButtons());
   // not used const sceneId = token?.scene && token.scene.id || canvas?.scene?.id;
   const isPlayerOwned = this.actor.hasPlayerOwner;
   const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned))

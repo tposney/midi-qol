@@ -1105,7 +1105,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
     const changeTurnStart = details.turn === "start" ?? false;
     const changeTurnEnd = details.turn === "end" ?? false;
     const actionSave = JSON.parse(details.actionSave ?? "false");
-    if (!!actionSave !== !!options.isActionSave) continue;
+    if (!!!actionSave && !!options.isActionSave) continue;
 
     if ((endTurn && changeTurnEnd) || (startTurn && changeTurnStart) || (actionSave && options.saveToUse)) {
       const label = (details.label ?? "Damage Over Time").replace(/"/g, "");
@@ -1301,7 +1301,6 @@ export async function _processOverTime(combat, data, options, user) {
 
     if (actor) for (let effect of actor.effects) {
       if (effect.changes.some(change => change.key.startsWith("flags.midi-qol.OverTime"))) {
-        console.error("Calling dooverTime effect", actor, effect, startTurn)
         await doOverTimeEffect(actor, effect, startTurn);
       }
     }
@@ -2127,7 +2126,6 @@ export async function expireRollEffect(rolltype: string, abilityId: string, succ
     if (success === true && specialDuration.includes(`is${rollType}Success.${abilityId}`)) return true;
     if (success === false && specialDuration.includes(`is${rollType}Failure`)) return true;
     if (success === false && specialDuration.includes(`is${rollType}Failure.${abilityId}`)) return true;
-
     return false;
   }).map(ef => ef.id);
   if (expiredEffects?.length > 0) {

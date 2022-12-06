@@ -55,7 +55,7 @@ let enableSheetQOL = (app, html, data) => {
     }
   }
   if (configSettings.allowActorUseMacro) {
-  // Add actor macros
+    // Add actor macros
     html.find('.config-button[data-action="flags"').parent().parent().append(`<div class="form-fields">
       <label>${i18n("midi-qol.ActorOnUseMacros")}</label>
       <a class="config-button midiqol-onuse-macros" data-action="midi-onuse-macros" title="midi onuse macros">
@@ -80,8 +80,7 @@ let itemDeleteHandler = ev => {
         label: "Delete",
         callback: () => {
           let li = $(ev.currentTarget).parents(".item"), itemId = li.attr("data-item-id");
-          ev.data.app.object.items.get(itemId).delete();
-          li.slideUp(200, () => ev.data.app.render(false));
+          ev.data.app.object.deleteEmbeddedDocuments("Item", [itemId]);
         }
       },
       cancel: {
@@ -172,19 +171,19 @@ function addItemRowButton(target, app, html, data, buttonContainer) {
         // If speed rolls are off
         switch (ev.target.dataset.action) {
           case "attack":
-            await item.rollAttack( { event: ev, versatile: false, resetAdvantage: true, systemCard: true });
+            await item.rollAttack({ event: ev, versatile: false, resetAdvantage: true, systemCard: true });
             break;
           case "damage":
-            await item.rollDamage({event: ev,  versatile: false, systemCard: true });
+            await item.rollDamage({ event: ev, versatile: false, systemCard: true });
             break;
           case "versatileDamage":
-            await item.rollDamage({event: ev,  versatile: true, systemCard: true });
+            await item.rollDamage({ event: ev, versatile: true, systemCard: true });
             break;
           case "consume":
-            await item.use({event: ev, systemCard: true}, { });
+            await item.use({ event: ev, systemCard: true }, {});
             break;
           case "toolCheck":
-            await item.rollToolCheck({event: ev, systemCard: true  });
+            await item.rollToolCheck({ event: ev, systemCard: true });
             break;
           case "basicRoll":
             Workflow.removeWorkflow(item.uuid);
@@ -196,7 +195,7 @@ function addItemRowButton(target, app, html, data, buttonContainer) {
       })
     }
   });
- 
+
 }
 
 function addTidy5eItemSheetButtons(app, html, data) {
@@ -261,7 +260,7 @@ function addTidy5eItemSheetButtons(app, html, data) {
               await item.rollAttack({ event, versatile: false, systemCard: true });
               break;
             case "damage":
-              await item.rollDamage({ event, versatile: false, systemCard: true});
+              await item.rollDamage({ event, versatile: false, systemCard: true });
               break;
             case "versatileDamage":
               await item.rollDamage({ event, versatile: true, systemCard: true });
@@ -280,7 +279,7 @@ function addTidy5eItemSheetButtons(app, html, data) {
               await showItemInfo.bind(item)();
           }
         });
-      } 
+      }
     });
   });
 }

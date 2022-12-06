@@ -622,7 +622,7 @@ To help macro writers creating reaction items, args[0] contains an additional fi
 ## Item description text and saving throws
 * **"no damage on save"** (or the localized equivalent) in the item description means targets that save will take no damage. Lots of cantrips are like this. Most cantrips are already in a list that midi maintains automatically, but if your favorite spell is not in the list you can the text to the description.
 * **"full damage on save"** (or the localized equivalent) in the item description means targets that save will take full damage. This is mainly useful for attacks that do full damage on a hit and have a save to avoid the application of a condition, like the mace of disruption and the frightened condition.
-* **"auto fail friendly"** (or the localized equivalent) in the item description then tokens with the same disposition as the caster will auto fail their save. Useful for some spell effects where you don't want friends to save.
+* **"auto fail friendly"** (or the localized equivalent) in the item description then tokens with the same disposition as the caster will auto fail their save. Useful for some spell effects where you don't want friends to save. Also available as a per item property (in the midi properties).
 * If the midi-qol setting **"check spell text"** is enabled and the text "half damage on save" appears in the item description then saves will do 1/2 damage no matter what the default save modifier is set to. When set this means you can change the default modifier to whatever you like for various reasons.
 
 ## flags.midi-qol 
@@ -732,6 +732,14 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
 Values for the optional roll bonus flags include a dice expression (added to the roll), a number, reroll (rerolling the roll completely) reroll-max, reroll-min, reroll-kh (reroll with max dice, min dice, or reroll and keep the higher of the original/new roll) or success which changes the roll to 99 ensuring success.
 
 Generally options.Name fields do not work with better rolls due to the way it creates rolls.
+
+## Enhanced traits.dr/di/dv
+* Available from the special traits actor settings, or via active effects.
+* As well as supporting the dnd5e damage resistance/immunity/vulnerabiltiy settings (including the bypass settings) midi-qol provides some additional damage types that can be resisted.
+  - healing/temp healing setting this will reduce/enhance the effect of healing on the character.
+  - (these are deprecated and should not be used) non-magical-physical, non-adamantine-physical, non-silvered-physical
+  - Magical damage/Non-magical damage- resistance/etc to damage defined as magical (see the require magical property setting in the workflow tab and the per item property magical damage)
+  - Spell Damage - resistance etc to damage caused by a spell item.
 
 ## Spell Sculpting: flags.midi-qol.sculptSpell and flags.midi-qol.carefulSpell
 If a spell caster with flags.midi-qol.sculptSpell set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 damage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.

@@ -594,6 +594,7 @@ export function procAdvantageSkill(actor, skillId, options: Options): Options {
   return options;
 }
 
+
 let debouncedATRefresh = debounce(_midiATIRefresh, 30);
 function _midiATIRefresh(template) {
   if (!canvas?.tokens) return;
@@ -602,15 +603,15 @@ function _midiATIRefresh(template) {
     return; // df-templates will handle template targeting.
   if (configSettings.autoTarget === "dfwalledTemplates" && installedModules.get("walledtemplates"))
     return; // walled templates will handle template targeting.
-  if (installedModules.get("levelsvolumetrictemplates")) {
 
+  if (installedModules.get("levelsvolumetrictemplates")) {
     setProperty(template, "flags.levels.elevation",
       installedModules.get("levels").nextTemplateHeight ?? installedModules.get("levels").lastTokenForTemplate?.elevation);
     // Filter which tokens to pass - not too far wall blocking is left to levels.
     let distance = template.distance;
-    const dimensions = canvas.dimensions || { size: 1, distance: 1 };
+    const dimensions = canvas?.dimensions || { size: 1, distance: 1 };
     distance *= dimensions.size / dimensions.distance;
-    const tokensToCheck = canvas.tokens.placeables?.filter(tk => {
+    const tokensToCheck = canvas?.tokens?.placeables?.filter(tk => {
       const r: Ray = new Ray(
         { x: template.x, y: template.y },
         //@ts-ignore .width .height TODO check this v10
@@ -633,7 +634,9 @@ function _midiATIRefresh(template) {
   } else {
     const distance: number = template.distance ?? 0;
     templateTokens({ x: template.x, y: template.y, shape: template.shape, distance });
+    return true;
   }
+  return true;
 }
 
 function midiATRefresh(wrapped) {
@@ -832,22 +835,35 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
       const origin = MQfromUuid(effect.origin);
       if (isConcentration) await removeConcentration(effect.parent, this.uuid);
       else if (origin instanceof CONFIG.Item.documentClass && origin.parent instanceof CONFIG.Actor.documentClass) {
-        const sourceActor = origin.parent;
         const concentrationData = getProperty(origin.parent, "flags.midi-qol.concentration-data");
-        if (concentrationData) {
-          const concentrationTargets = concentrationData.targets.filter(target =>
-            target.tokenUuid !== effect.parent.uuid && target.actorUuid !== effect.parent.uuid);
-
+        if (concentrationData && effect.origin === concentrationData.uuid) {
+          const allConcentrationTargets = concentrationData.targets.filter(target => {
+            let actor = MQfromActorUuid(target.actorUuid);
+            const hasEffects = actor.effects.some(effect => 
+              effect.origin === concentrationData.uuid 
+              && !effect.flags.dae.transfer
+              && effect.uuid !== this.uuid);
+            return hasEffects;
+          });
+          const concentrationTargets = concentrationData.targets.filter(target => {
+            let actor = MQfromActorUuid(target.actorUuid);
+            const hasEffects = actor.effects.some(effect => 
+              effect.origin === concentrationData.uuid 
+              && !effect.flags.dae.transfer
+              && effect.uuid !== this.uuid
+              && effect.label !== concentrationLabel);
+            return hasEffects;
+          });
           if (["effects", "effectsTemplates"].includes(configSettings.removeConcentrationEffects)
-            && concentrationTargets.length <= 1
+            && concentrationTargets.length < 1
             && concentrationTargets.length < concentrationData.targets.length
             && concentrationData.templates.length === 0
             && concentrationData.removeUuids.length === 0) {
             // non concentration effects left
             await removeConcentration(origin.parent, this.uuid);
-          } else if (concentrationData.targets.length !== concentrationTargets) {
+          } else if (concentrationData.targets.length !== allConcentrationTargets.length) {
             // update the concentration data
-            concentrationData.targets = concentrationTargets;
+            concentrationData.targets = allConcentrationTargets;
             await origin.parent.setFlag("midi-qol", "concentration-data", concentrationData);
           }
         }

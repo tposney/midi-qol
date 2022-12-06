@@ -231,6 +231,7 @@
   "midi-qol.autoRollDamageOptions": {
     "none": "Never",
     "always": "Always",
+    "saveOnly": "Saving Throw Only",
     "onHit": "Damage Roll Needed"
   },
   "midi-qol.autoApplyDamageOptions": {
@@ -565,7 +566,9 @@
   "midi-qol.AddWounded.Hint": "Add Custom Convenient Effect 'Wounded' when HP are less than specified percentage of max. 0 disables.",
   "midi-qol.debugCallTiming.Name": "Log execution timing",
   "midi-qol.debugCallTiming.Hint": "Provide some log information about how long things take",
-  "midi-qol.autoFailFriendly": "auto fail friendly",
+  "midi-qol.autoFailFriendly": "Auto Fail Friendly",
+  "midi-qol.FailFriendly": "Friends Fail",
+  "midi-qol.OffHandWeapon": "Off Hand",
   "midi-qol.RollToggle.Hint": "Toggle fast/auto roll setting for attack/damage/ability Checks",
   "midi-qol.RollToggle.Name": "Roll Toggle",
   "midi-qol.FastForward.Hint": "Fast forward the next roll",

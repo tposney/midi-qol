@@ -1,3 +1,13 @@
+### 10.0.23
+* Added off hand midi property, if set weapons won't do modifier damage bonus (think two weapon fighting).
+* Added friends fail (saves) property. Exactly same behaviour as the existing string "auto fail friendly" in item description.
+* Fix for (occasional) issue with item delete check causing odd effects with tidy sheet.
+* Fix for action saves in overtime effects mis-behaving.
+* Added option to auto roll damage for items with saves only.
+* Fix to support BaBbonus fumble range.
+* Fix for incorrectly removing concentration when a actor effect is removed, only relevant if you have "remove concentration when effects removed" set to Check Effects or Check Effects + Templates
+* Updated Hunter's Mark for the case that you have multiple copies of the spell. Also correctly transfer marked status when casting the spell when the target is dead/removed, not consuming a spell slot and keeping the existing duration.
+
 ### 10.0.22
 * Fix for castdata not being set correctly
 * Fix for error thrown when using Automatic Animations to remove templates. If you are using automatic animations auto remove templates then midi's cover calculations for templates are disabled as the template is removed before midi does its checks.

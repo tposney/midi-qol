@@ -153,13 +153,15 @@ Hooks.once('setup', function () {
     config.midiProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
     config.midiProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
     config.midiProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp");
+    config.midiProperties["autoFailFriendly"] = i18n("midi-qol.FailFriendly");
     config.midiProperties["rollOther"] = i18n("midi-qol.rollOtherProp");
     config.midiProperties["critOther"] = i18n("midi-qol.otherCritProp");
+    config.midiProperties["offHandWeapon"] = i18n("midi-qol.OffHandWeapon");
     config.midiProperties["magicdam"] = i18n("midi-qol.magicalDamageProp");
     config.midiProperties["magiceffect"] = i18n("midi-qol.magicalEffectProp");
     config.midiProperties["concentration"] = i18n("midi-qol.concentrationEffectProp");
     config.midiProperties["toggleEffect"] = i18n("midi-qol.toggleEffectProp");
-    config.midiProperties["ignoreTotalCover"] = i18n("midi-qol.ignoreTotalCover")
+    config.midiProperties["ignoreTotalCover"] = i18n("midi-qol.ignoreTotalCover");
 
     config.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
     // sliver, adamant, spell, nonmagic, magic are all deprecated and should only appear as custom

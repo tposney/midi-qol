@@ -181,13 +181,14 @@ export class Workflow {
     // if ((this.itemRollToggle && getAutoRollDamage()) || !getAutoRollDamage())  return false;
     if (this.systemCard) return false;
     const normalRoll = getAutoRollDamage(this) === "always"
+      || (getAutoRollDamage(this) === "saveOnly" && this.item.hasSave && !this.item.hasAttack)
       || (getAutoRollDamage(this) !== "none" && !this.item.hasAttack)
       || (getAutoRollDamage(this) === "onHit" && (this.hitTargets.size > 0 || this.hitTargetsEC.size > 0 || this.targets.size === 0))
       || (getAutoRollDamage(this) === "onHit" && (this.hitTargetsEC.size > 0));
     return this.itemRollToggle ? !normalRoll : normalRoll;
   }
 
-  //@ts-ignore dnd5e v10
+  //@ts-expect-error dnd5e v10
   constructor(actor: globalThis.dnd5e.documents.Actor5e, item: globalThis.dnd5e.documents.Item5e, speaker, targets, options: any = {}) {
     this.actor = actor;
     this.item = item;
@@ -2206,7 +2207,9 @@ export class Workflow {
             promptPlayer = false;
           }
         }
-        if (isFriendly && this.saveItem.system.description.value.includes(i18n("midi-qol.autoFailFriendly"))) {
+        if (isFriendly && 
+          (this.saveItem.system.description.value.toLowerCase().includes(i18n("midi-qol.autoFailFriendly").toLowerCase())
+            || this.saveItem.flags.midiProperties.autoFailFriendly)) {
           const failure = await new Roll("-1").roll({ async: true });
           promises.push(new Promise((resolve) => {
             resolve(failure);
@@ -2682,7 +2685,7 @@ export class Workflow {
       criticalThreshold = Math.min(criticalThreshold, Number(targetFlags));
     }
     this.isCritical = this.diceRoll >= criticalThreshold;
-    const midiFumble = this.item && (getProperty(this.item, "flags.midi-qol.fumbleThreshold") ?? 1);
+    const midiFumble = this.item && getProperty(this.item, "flags.midi-qol.fumbleThreshold");
     if (!Number.isNumeric(midiFumble)) {
       //@ts-ignore .fumble undefined
       this.isFumble = this.diceRoll <= this.attackRoll.terms[0].options.fumble;
