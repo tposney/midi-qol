@@ -71,7 +71,7 @@
   "midi-qol.HideNPCNames.Name": "Cacher les noms des tokens",
   "midi-qol.HideNPCNames.Hint": "Cache les noms des token dans les messages du chat pour les jets d'attaque/sauvegarde",
   "midi-qol.AutoTarget.Name": "Ciblage automatique par gabarit",
-  "midi-qol.AutoTarget.Hint": "Quand un gabarit est placé (ex. par un sort), cible automatiquement les tokens dans le gabarit",
+  "midi-qol.AutoTarget.Hint": "Lorsque vous placez un modèle (par exemple un sort), les jetons de cible automatique se trouvent à l'intérieur du modèle. Si l'option 'Centre + Niveaux' est définie dans le ciblage à distance des niveaux, les modèles volumétriques seront utilisés (s'ils sont installés)",
   "midi-qol._comment for translaters_noDamageonSaveSpells": "Dans foundry v9, l'élément array json n'est plus supporté, donc seule la version v9 sera utilisée.",
   "midi-qol.noDamageonSaveSpells": [
     "Aspersion d'acide",
@@ -232,7 +232,8 @@
   "midi-qol.autoRollDamageOptions": {
     "none": "Jamais",
     "always": "Toujours",
-    "onHit": "L'attaque touche"
+    "onHit": "L'attaque touche",
+    "saveOnly": "Jet de sauvegarde uniquement"
   },
   "midi-qol.autoApplyDamageOptions": {
     "none": "Non",
@@ -362,7 +363,8 @@
     "preActiveEffects": "Avant les effets actifs",
     "postActiveEffects": "Après les effets actifs",
     "all": "Tous",
-    "damageBonus": "Renvoyer un bonus de dégâts"
+    "damageBonus": "Renvoyer un bonus de dégâts",
+    "preTargeting": "Appelé avant que le ciblage soit résolu (*)"
   },
   "midi-qol.DragDropTarget.Name": "Ciblage par glisser-déposer",
   "midi-qol.DragDropTarget.Hint": "Permettre de glisser un objet sur un token pour l'attaquer",
@@ -415,7 +417,7 @@
   "midi-qol.CheckRange.Name": "Vérifier la portée de l'arme lors d'une attaque",
   "midi-qol.NearbyFoe.Name": "Les attaques à distance lorsqu'un ennemi est plus proche que X ont un désavantage. 0 désactive",
   "midi-qol.WallsBlockRange.Name": "Les murs bloquent les attaques à distance",
-  "midi-qol.WallsBlockRange.Hint": "Les murs bloquent les attaques à distance (les vérifications à 4 points nécessitent le module DND Helpers)\n Aucun = aucun effet, Centre = vérification du centre par rapport à la ligne centrale, Centre + Levels = vérification du centre mais utilise le module `levels` pour déterminer le blocage des murs, 4 points de vérification bloqués si aucun coin n'est visible, 4 points de vérification ajustent la CA en fonction de la couverture.",
+  "midi-qol.WallsBlockRange.Hint": "Les murs bloquent les attaques à distance\nNon = aucun effet, centre = vérification du centre par rapport à la ligne centrale, centre + niveaux = vérification du centre mais utilisation du module 'niveaux' pour déterminer le blocage des murs. Centre + Niveaux signifie également utiliser les gabarits volumétriques des niveaux pour le ciblage des gabarits.",
   "midi-qol.WallsBlockRangeOptionsNew": {
     "none": "Non",
     "center": "Vérification du centre",
@@ -541,12 +543,12 @@
   "midi-qol.AddWounded.Hint": "Ajout d'un effet personnalisé Convenient Effect 'Blessé' lorsque les PV sont inférieurs au pourcentage spécifié du maximum. 0 désactivé. Vous devez créer vous-même l'effet Convenient Effect personnalisé.",
   "midi-qol.debugCallTiming.Name": "Calendrier d'exécution du journal",
   "midi-qol.debugCallTiming.Hint": "Fournir des informations sur le temps que prennent les choses",
-  "midi-qol.autoFailFriendly": "Auto-échec des amis.",
+  "midi-qol.autoFailFriendly": "Auto-échec des amis",
   "midi-qol.RollToggle.Hint": "Basculer le réglage du jet rapide/automatique pour les tests d'attaque, de dégâts et de capacité.",
   "midi-qol.RollToggle.Name": "Réglage des jets",
   "midi-qol.FastForward.Hint": "Avance rapide le jet suivant",
   "midi-qol.FastForward.Name": "Avance rapide",
-  "midi-qol.KeysAdvantage.Hint": " Lancer le dé avec avantage",
+  "midi-qol.KeysAdvantage.Hint": "Lancer le dés avec avantage",
   "midi-qol.KeysDisadvantage.Hint": " Lancer le dé avec un désavantage",
   "midi-qol.KeysCritical.Hint": "Lancez les dégâts critiques (uniquement à partir de la carte de chat)",
   "midi-qol.KeysVersatile.Hint": "Lancer les dégâts Verstatile",
@@ -620,7 +622,7 @@
   },
   "midi-qol.AddRow": "Ajouter une rangée",
   "midi-qol.CheckFlanking.Name": "Vérifier la tenaille",
-  "midi-qol.CheckFlanking.Hint": "Vérifiez si vous et vos alliés prenez en tenaille l'adversaire.",
+  "midi-qol.CheckFlanking.Hint": "Vérifiez si vous et vos alliés flanquez(pris en tenaille) l'adversaire. Soit donne l'avantage à l'attaquant et/ou applique la condition <strong>CE Pris en tenaille</strong> à <h4>attaquant</h4> OU applique la condition CE pris en tenaille à la cible.",
   "midi-qol.CheckFlankingOptions": {
     "off": "aucun",
     "ceonly": "Convenient Effect Tenaille seulement",
@@ -638,7 +640,7 @@
     "formulaadv": "Formule -> infobulle + attribution de l'avantage"
   },
   "midi-qol.OptionalCritRule.Name": "(Règle maison) Marge de Critique",
-  "midi-qol.OptionalCritRule.Hint": " Les jets d'attaques au dessus de CA + X sont critique (-1 désactive) ",
+  "midi-qol.OptionalCritRule.Hint": "Les jets d'attaques au dessus de CA + X sont critique (-1 désactive)",
   "midi-qol.ActorOnUseMacros": "Macro à l'utilisation de l'acteur",
   "midi-qol.MacroPass": "Macro Pass",
   "midi-qol.MacroName": "Nom de la macro",
@@ -691,10 +693,13 @@
   "midi-qol.CoverCalculation.Hint": "Calculer le bonus de CA pour les cibles à couvert - paramètres pris du module sélectionné",
   "midi-qol._comment for translators_DeferText": "Le texte ci-dessous est recherché par midi dans le champ onUseMacro des données de l'élément. Si vous le changez, tous les éléments avec un onUseMacro devront être modifiés pour correspondre à ce texte",
   "midi-qol._comment for translators_halfDamageAlt": "Le texte ci-dessous est recherché par Midi dans la description des sorts",
-  "midi-qol.PlayerCardDamageDifferent.Name": "Affichez la carte de dégâts du joueur si les dégâts obtenus ne correspondent pas aux dégâts appliqués pour une cible donnée.",
+  "midi-qol.PlayerCardDamageDifferent.Name": "Affichez la carte de dégâts du joueur si les dégâts obtenus ne correspondent pas aux dégâts appliqués pour une cible donnée",
   "midi-qol.noTemplateSeen": "Le gabarit n'a pas été placé",
   "midi-qol._comment for translators_noDamageonSaveSpells": "Dans foundry v9, l'élément array json n'est plus supporté, donc seule la version v9 sera utilisée.",
   "midi-qol._comment for translators_fullDamage": "Les deux lignes de texte ci-dessous sont recherchées par Midi dans la description du sort",
   "midi-qol._comment for translators_halfDamage": "Le texte ci-dessous est recherché par Midi dans la description des sorts",
-  "midi-qol._comment for translators_noDamage": "Les deux lignes de texte ci-dessous sont recherchées par Midi dans la description du sort"
+  "midi-qol._comment for translators_noDamage": "Les deux lignes de texte ci-dessous sont recherchées par Midi dans la description du sort",
+  "midi-qol.FailFriendly": "Les amis échouent",
+  "midi-qol.OffHandWeapon": "Main levée",
+  "midi-qol.ignoreTotalCover": "Pas de couverture complète"
 }
