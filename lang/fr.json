@@ -71,7 +71,7 @@
   "midi-qol.HideNPCNames.Name": "Cacher les noms des tokens",
   "midi-qol.HideNPCNames.Hint": "Cache les noms des token dans les messages du chat pour les jets d'attaque/sauvegarde",
   "midi-qol.AutoTarget.Name": "Ciblage automatique par gabarit",
-  "midi-qol.AutoTarget.Hint": "Lorsque vous placez un modèle (par exemple un sort), les jetons de cible automatique se trouvent à l'intérieur du modèle. Si l'option 'Centre + Niveaux' est définie dans le ciblage à distance des niveaux, les modèles volumétriques seront utilisés (s'ils sont installés)",
+  "midi-qol.AutoTarget.Hint": "Lorsque vous placez un modèle (par exemple un sort), les tokens sont ciblés automatiquement à l'intérieur du modèle. Si 'Centre + Levels' est défini dans le ciblage à distance, \"Levels Volumetric Templates\" sera utilisé. (Si les modules sont installés)",
   "midi-qol._comment for translaters_noDamageonSaveSpells": "Dans foundry v9, l'élément array json n'est plus supporté, donc seule la version v9 sera utilisée.",
   "midi-qol.noDamageonSaveSpells": [
     "Aspersion d'acide",
