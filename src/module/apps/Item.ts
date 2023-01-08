@@ -96,7 +96,7 @@ async function _onMacroControl(event){
 
   // Add new macro component
   if ( a.classList.contains("add-macro") ) {
-    const macros = getCurrentMacros(this.object);
+    const macros = getCurrentSourceMacros(this.object);
     await this._onSubmit(event);  // Submit any unsaved changes
     macros.items.push(new OnUseMacro());
     return this.object.update({"flags.midi-qol.onUseMacroName":  macros.toString()});
@@ -104,7 +104,7 @@ async function _onMacroControl(event){
 
   // Remove a macro component
   if ( a.classList.contains("delete-macro") ) {
-    const macros = getCurrentMacros(this.object);
+    const macros = getCurrentSourceMacros(this.object);
     await this._onSubmit(event);  // Submit any unsaved changes
     const li = a.closest(".damage-part");
     macros.items.splice(Number(li.dataset.midiqolMacroPart), 1);

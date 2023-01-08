@@ -4,6 +4,7 @@ import { configSettings } from "./settings.js";
 
 const modules = {
   "about-time": "0.0", 
+  "anonymous": "0.0.0",
   "combat-utility-belt": "1.3.8",
   "conditional-visibility": "0.0",
   "dae": "10.0.9",

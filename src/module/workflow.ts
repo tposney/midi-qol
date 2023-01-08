@@ -3,7 +3,7 @@ import { activationConditionToUse, selectTargets, shouldRollOtherDamage, templat
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls, checkMechanic } from "./settings.js";
-import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, MQfromUuid, midiRenderRoll, markFlanking, canSense, getSystemCONFIG, tokenForActor, getSelfTarget, createConditionData, evalCondition, removeHidden, ConcentrationData, hasDAE, computeCoverBonus, FULL_COVER } from "./utils.js"
+import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultiplierForItem, requestPCSave, applyTokenDamage, checkRange, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, isAutoFastDamage, getAutoRollAttack, itemHasDamage, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, getDistance, expireMyEffects, validTargetTokens, getSelfTargetSet, doReactions, playerFor, addConcentration, getDistanceSimple, requestPCActiveDefence, evalActivationCondition, playerForActor, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, MQfromUuid, midiRenderRoll, markFlanking, canSense, getSystemCONFIG, tokenForActor, getSelfTarget, createConditionData, evalCondition, removeHidden, ConcentrationData, hasDAE, computeCoverBonus, FULL_COVER, procActorSaveBonus } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, procAbilityAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys, MidiKeyManager } from "./MidiKeyManager.js";
@@ -648,10 +648,10 @@ export class Workflow {
           this.otherDamageDetail = createDamageList({ roll: this.otherDamageRoll, item: null, ammo: null, versatile: false, defaultType: this.defaultDamageType });
         } else this.otherDamageDetail = [];
 
-        await this.displayDamageRoll(configSettings.mergeCard);
         await asyncHooksCallAll("midi-qol.DamageRollComplete", this);
         if (this.item) await asyncHooksCallAll(`midi-qol.DamageRollComplete.${this.item.uuid}`, this);
         expireMyEffects.bind(this)(["1Action", "1Attack", "1Hit", "1Spell"]);
+        await this.displayDamageRoll(configSettings.mergeCard);
 
         log(`DmageRollComplete elapsed ${Date.now() - damageRollCompleteStartTime}ms`)
         if (this.isFumble) {
@@ -2188,7 +2188,6 @@ export class Workflow {
             advantage = undefined;
           }
         }
-
         var player = playerFor(target);
         if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
         let promptPlayer = (!player?.isGM && configSettings.playerRollSaves !== "none");
@@ -2209,11 +2208,10 @@ export class Workflow {
         }
         if (isFriendly && 
           (this.saveItem.system.description.value.toLowerCase().includes(i18n("midi-qol.autoFailFriendly").toLowerCase())
-            || this.saveItem.flags.midiProperties.autoFailFriendly)) {
-          const failure = await new Roll("-1").roll({ async: true });
-          promises.push(new Promise((resolve) => {
-            resolve(failure);
-          }));
+            || this.saveItem.flags.midiProperties?.autoFailFriendly)) {
+          promises.push(new Roll("-1").roll({ async: true }));
+        } else if (isFriendly && this.saveItem.flags.midiProperties?.autoSaveFriendly) {
+          promises.push(new Roll("99").roll({async: true}));
         } else if ((!player?.isGM && playerMonksTB) || (player?.isGM && gmMonksTB)) {
           promises.push(new Promise((resolve) => {
             let requestId = target.id;

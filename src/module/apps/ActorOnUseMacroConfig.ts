@@ -1,5 +1,5 @@
 import { geti18nOptions, i18n } from "../../midi-qol.js";
-import { getCurrentMacros, OnUseMacros } from "./Item.js";
+import { getCurrentMacros, getCurrentSourceMacros, OnUseMacros } from "./Item.js";
 
 export class ActorOnUseMacrosConfig extends FormApplication {
   object: any;
@@ -57,7 +57,7 @@ export class ActorOnUseMacrosConfig extends FormApplication {
   
     // Add new macro component
     if ( a.classList.contains("add-macro") ) {
-      const macros = getCurrentMacros(this.object);
+      const macros = getCurrentSourceMacros(this.object);
       const index = macros.items.length;
       await this._onSubmit(event);  // Submit any unsaved changes
       const updateData =  {};
@@ -68,7 +68,7 @@ export class ActorOnUseMacrosConfig extends FormApplication {
     // Remove a macro component
     if ( a.classList.contains("delete-macro") ) {
       const li = a.closest(".macro-change");
-      const macros = getCurrentMacros(this.object);
+      const macros = getCurrentSourceMacros(this.object);
       macros.items.splice(Number(li.dataset.macroPart), 1);
       return this.object.update({"flags.midi-qol.onUseMacroName": macros.toString()}).then(() => this.render(true));
     }

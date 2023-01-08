@@ -163,7 +163,7 @@ export let readyHooks = async () => {
     Hooks.on("dnd5e.useItem", useItemHook);
     Hooks.on("dnd5e.preDisplayCard", preDisplayCardHook);
     // Hooks.on("dnd5e.displayCard", displayCardHook); - displayCard is wrapped instead.
-    Hooks.on("dnd5epreRollAttack", preRollAttackHook);
+    Hooks.on("dnd5e.preRollAttack", preRollAttackHook);
     Hooks.on("dnd5e.rollAttack", rollAttackHook)
     Hooks.on("dnd5e.preRollDamage", preRollDamageHook);
     Hooks.on("dnd5e.rollDamage", rollDamageHook)

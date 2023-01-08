@@ -717,22 +717,26 @@ export function prepareOnUseMacroData(actorOrItem) {
 
 export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user) {
   try {
-    const macroParts = getProperty(itemOrActor, "flags.midi-qol.onUseMacroParts");
+    const macros = getProperty(itemOrActor._source, "flags.midi-qol.onUseMacroName");
+    const macroParts = new OnUseMacros(macros ??  null);
     const macroChanges = getProperty(changes, "flags.midi-qol.onUseMacroParts") ?? {};
     //@ts-ignore
     if (isEmpty(macroChanges)) return true;
 
     if (!Array.isArray(macroChanges.items)) { // we have an update from editing the macro changes
       for (let keyString in macroChanges.items) {
-        const key = Number(keyString);
+        let key = Number(keyString);
         if (Number.isNaN(key)) continue; // just in case
-        if (!macroParts.items[key])
+        if (!macroParts.items[key]) {
           macroParts.items.push(OnUseMacro.parsePart({
             macroName: macroChanges.items[key]?.macroName ?? "",
             option: macroChanges.items[key]?.option ?? ""
-          }))
-        if (macroChanges.items[key].macroName) macroParts.items[key].macroName = macroChanges.items[key].macroName;
-        if (macroChanges.items[key].option) macroParts.items[key].option = macroChanges.items[key].option;
+          }));
+          key = macroParts.items.length - 1;
+        }
+          
+        if (macroChanges.items[keyString].macroName) macroParts.items[key].macroName = macroChanges.items[keyString].macroName;
+        if (macroChanges.items[keyString].option) macroParts.items[key].option = macroChanges.items[keyString].option;
       }
     }
     let macroString = OnUseMacros.parseParts(macroParts).items.map(oum => oum.toString()).join(",");

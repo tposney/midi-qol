@@ -1,3 +1,15 @@
+### 10.0.24
+* Fix for editing actor on use macros when there is an active effect also providing an onUseMacro
+* Fix for levelsAutoCover giving too much cover.
+* Support for pool terms "{1d6+2}" in damage rolls. Due to dnd5e's treatment of pool terms, pool terms in damage rolls will NOT do critical damage.
+* Added support for the "anonymous" module. If installed it will take precedence over combat-utility-belt for hiding names in chat/hit/saves etc. The hide item details feature of anonymous works with midi-qol.
+* Fix for DamageOnlyWorkflow and cover calculations.
+* Dice so nice attack rolls display all dice even if an optional roll is triggered.
+* Added auto save friendly item property, which when set means allies of the caster/attacker will always save.
+* Fix for reaction optional flags not firing if no other reaction items are present.
+* Hooks that fire on midi-qol.DamageRollComplete can now modify the damage roll and the chat card displaying the damage will update accordingly.
+* Added ko-fi link https://ko-fi.com/tposney for those that want to support the module financlially.
+
 ### 10.0.23
 * Added off hand midi property, if set weapons won't do modifier damage bonus (think two weapon fighting).
 * Added friends fail (saves) property. Exactly same behaviour as the existing string "auto fail friendly" in item description.

@@ -154,6 +154,7 @@ Hooks.once('setup', function () {
     config.midiProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
     config.midiProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp");
     config.midiProperties["autoFailFriendly"] = i18n("midi-qol.FailFriendly");
+    config.midiProperties["autoSaveFriendly"] = i18n("midi-qol.SaveFriendly");
     config.midiProperties["rollOther"] = i18n("midi-qol.rollOtherProp");
     config.midiProperties["critOther"] = i18n("midi-qol.otherCritProp");
     config.midiProperties["offHandWeapon"] = i18n("midi-qol.OffHandWeapon");

@@ -5,7 +5,6 @@ import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRol
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
-import { deleteItemEffects, socketlibSocket } from "./GMAction.js";
 import { defaultRollOptions } from "./patching.js";
 
 export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
@@ -461,19 +460,6 @@ export async function doAttackRoll(wrapped, options: any = { versatile: false, r
     result = await result.reroll({ minimize: true })
   await workflow.setAttackRoll(result);
   workflow.ammo = this._ammo;
-  result = await processAttackRollBonusFlags.bind(workflow)();
-  if (!configSettings.mergeCard) result.toMessage({
-    speaker: getSpeaker(this.actor)
-  });
-  if (configSettings.keepRollStats) {
-    const terms = result.terms;
-    const rawRoll = Number(terms[0].total);
-    const total = result.total;
-    const options: any = terms[0].options
-    const fumble = rawRoll <= options.fumble;
-    const critical = rawRoll >= options.critical;
-    gameStats.addAttackRoll({ rawRoll, total, fumble, critical }, this);
-  }
   if (workflow.workflowOptions.attackRollDSN === undefined && dice3dEnabled()) {
     workflow.workflowOptions.attackRollDSN =
       configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)
@@ -501,6 +487,20 @@ export async function doAttackRoll(wrapped, options: any = { versatile: false, r
 
     //@ts-expect-error game.dice3d
     await game.dice3d?.showForRoll(workflow.attackRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+  }
+
+  result = await processAttackRollBonusFlags.bind(workflow)();
+  if (!configSettings.mergeCard) result.toMessage({
+    speaker: getSpeaker(this.actor)
+  });
+  if (configSettings.keepRollStats) {
+    const terms = result.terms;
+    const rawRoll = Number(terms[0].total);
+    const total = result.total;
+    const options: any = terms[0].options
+    const fumble = rawRoll <= options.fumble;
+    const critical = rawRoll >= options.critical;
+    gameStats.addAttackRoll({ rawRoll, total, fumble, critical }, this);
   }
 
   if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
@@ -771,7 +771,7 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
 export function preItemUseHook(item, config, options): boolean {
   let workflow: Workflow;
 
-  if (options.midiSEtup) return true;
+  if (options.midiSetup) return true;
   options = mergeObject({
     systemCard: false,
     createWorkflow: true,
@@ -1264,7 +1264,7 @@ export function rollAttackHook(item, roll, ammoUpdate) {
 
 // WIP
 export function preRollDamageHook(item, rollConfig) {
-  if (item.flags.midiProperties["offHandWeapon"]) {
+  if (item.flags.midiProperties?.offHandWeapon) {
     rollConfig.data.mod = 0;
   }
   return true;
@@ -1328,6 +1328,7 @@ export function displayCardHook(item, card) {
       isSpell: item.type === "spell",
       isPower: item.type === "power",
       hasSave: !minimalCard && item.hasSave && (systemCard || configSettings.autoCheckSaves === "none"),
+      hasAbilityCheck: item.hasAbilityCheck,
       hasAreaTarget: !minimalCard && item.hasAreaTarget,
       hasAttackRoll: !minimalCard && item.hasAttack,
       configSettings,
@@ -1734,11 +1735,9 @@ export function templateTokens(templateDetails: { x: number, y: number, shape: a
 
 export function selectTargets(templateDocument: MeasuredTemplateDocument, data, user) {
   //@ts-expect-error
-  const hasWorkflow = Workflow.getWorkflow(templateDocument.flags?.dnd5e?.origin);
+  const hasWorkflow = this.currentState ?? Workflow.getWorkflow(templateDocument.flags?.dnd5e?.origin);
   if (!hasWorkflow) return true;
-  if (user !== game.user?.id && !hasWorkflow) {
-    return true;
-  }
+
   if ((game.user?.targets.size === 0 || user !== game.user?.id)
     && templateDocument?.object && !installedModules.get("levelsvolumetrictemplates")) {
     //@ts-ignore

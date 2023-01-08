@@ -3,7 +3,7 @@ import { configSettings, autoRemoveTargets, checkRule, lateTargeting } from "./s
 import { log } from "../midi-qol.js";
 import { BetterRollsWorkflow, DummyWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { socketlibSocket, timedAwaitExecuteAsGM } from "./GMAction.js";
-import { installedModules } from "./setupModules.js";
+import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { concentrationCheckItemDisplayName, itemJSONData, midiFlagTypes, overTimeJSONData } from "./Hooks.js";
 
 import { OnUseMacros } from "./apps/Item.js";
@@ -103,6 +103,14 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
             evalString = "";
           }
         }
+        if (rollTerms[partPos] instanceof PoolTerm) {
+          const flavorDamageType = getDamageType(rollTerms[partPos]?.options?.flavor);
+          type = flavorDamageType ?? type;
+          if (!rollTerms[partPos]?.options.flavor) {
+            setProperty(rollTerms[partPos].options, "flavor", getDamageFlavor(type));
+          }
+          evalString += rollTerms[partPos]?.total;
+        }
       }
       partPos += 1;
     }
@@ -153,7 +161,15 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
       }
       numberTermFound = true;
       evalString += evalTerm.total;
-    } if (evalTerm instanceof OperatorTerm) {
+    } 
+    if (evalTerm instanceof PoolTerm) {
+      damageType = getDamageType(evalTerm?.options?.flavor) ?? damageType;
+      if (!evalTerm?.options.flavor) {
+        setProperty(evalTerm, "options.flavor", getDamageFlavor(damageType));
+      }
+      evalString += evalTerm.total;
+    }
+    if (evalTerm instanceof OperatorTerm) {
       if (["*", "/"].includes(evalTerm.operator)) {
         // multiply or divide keep going
         evalString += evalTerm.total
@@ -1523,11 +1539,9 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, wallblocking =
 
     //@ts-expect-error
     const levelsautocoverData = AutoCover.calculateCover(t1, t2, getLevelsAutoCoverOptions());
-    //@ts-expect-error
-    const fullCover = AutoCover.getCoverData()[0].percent;
-    coverVisible = levelsautocoverData.rawCover >= fullCover;
+    console.error("get distance ", levelsautocoverData)
+    coverVisible = levelsautocoverData.rawCover > 0;
     if (!coverVisible) return -1;
-    console.log("Full cover is ", fullCover, levelsautocoverData.rawCover, levelsautocoverData, t1.name, t2.name)
   }
   else if (globalThis.CoverCalculator && configSettings.optionalRules.wallsBlockRange === "simbuls-cover-calculator") {
     if (t1 === t2) return 0; // Simbul's throws an error when calculating cover for the same token
@@ -1741,27 +1755,28 @@ export function computeCoverBonus(attacker: Token | TokenDocument, target: Token
     case "levelsautocover":
       if (!installedModules.get("levelsautocover") || !game.settings.get("levelsautocover", "apiMode")) return 0;
       //@ts-expect-error
-      const coverData = AutoCover.calculateCover(attacker, target);
+      const coverData = AutoCover.calculateCover(attacker.document ? attacker : attacker.object, target.document ? target : target.object);
       // const coverData = AutoCover.calculateCover(attacker, target, {DEBUG: true});
       //@ts-expect-error
       const coverDetail = AutoCover.getCoverData();
-      if (coverData.rawCover < coverDetail[0].percent) coverBonus = FULL_COVER;
-      else if (coverData.rawCover > (coverDetail[2]?.percent ?? 90)) coverBonus = 0;
-      else if (coverData.rawCover > coverDetail[1].percent) coverBonus = HALF_COVER;
-      else if (coverData.rawCover > coverDetail[0].percent) coverBonus = THREE_QUARTERS_COVER;
+      if (coverData.rawCover === 0) coverBonus = FULL_COVER;
+      else if (coverData.rawCover > coverDetail[1].percent) coverBonus = 0;
+      else if (coverData.rawCover < coverDetail[0].percent) coverBonus = THREE_QUARTERS_COVER;
+      else if (coverData.rawCover < coverDetail[1].percent) coverBonus = HALF_COVER;;
       if (coverData.obstructingToken) coverBonus = Math.max(2, coverBonus);
       console.log("midi-qol | ComputerCoverBonus - For token ", attacker.name, " attacking ", target.name, " cover data is ", coverBonus, coverData, coverDetail)
       break;
     case "simbuls-cover-calculator":
       if (!installedModules.get("simbuls-cover-calculator")) return 0;
       if (globalThis.CoverCalculator) {
-        const coverData = globalThis.CoverCalculator.Cover(attacker, target);
+        //@ts-expect-error
+        const coverData = globalThis.CoverCalculator.Cover(attacker.document ? attacker : attacker.object, target);
         if (attacker === target) {
           coverBonus = 0;
           break;
         }
-        if (coverData?.data.results.cover === 3) coverBonus = FULL_COVER;
-        else coverBonus = -coverData.data.results.value;
+        if (coverData?.data?.results.cover === 3) coverBonus = FULL_COVER;
+        else coverBonus = -coverData?.data?.results.value ?? 0;
         console.log("midi-qol | ComputeCover Bonus - For token ", attacker.name, " attacking ", target.name, " cover data is ", coverBonus, coverData)
       }
       break;
@@ -1841,6 +1856,12 @@ export function getReactionSetting(player: User | null | undefined): string {
 
 export function getTokenPlayerName(token: TokenDocument | Token) {
   if (!token) return game.user?.name;
+  if (installedModules.get("anonymous")) {
+    //@ts-expect-error .api
+    const api = game.modules.get("anonymous")?.api;
+    if (api.playersSeeName(token.actor)) return token.name;
+    else return api.getName(token.actor);
+  }
   if (!installedModules.get("combat-utility-belt")) return token.name;
   if (!game.settings.get("combat-utility-belt", "enableHideNPCNames")) return token.name;
   //@ts-ignore .flags v10
@@ -2417,6 +2438,28 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
         };
         const chatMessage = await ChatMessage.create(chatData);
       }
+      if (dice3dEnabled()) {
+        let whisperIds: User[] | null = null;
+        const rollMode = game.settings.get("core", "rollMode");
+        if ((["details", "hitDamage", "all"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
+          if (configSettings.ghostRolls) {
+            newRoll.ghost = true;
+          } else {
+            whisperIds = ChatMessage.getWhisperRecipients("GM")
+          }
+        } else if (rollMode === "selfroll" || rollMode === "gmroll") {
+          if (configSettings.hideRollDetails === "detailsDSN") {
+            newRoll.ghost = true;
+          } else {
+            whisperIds = ChatMessage.getWhisperRecipients("GM");
+            if (game.user) whisperIds.concat(game.user);
+          }
+        }
+    
+        //@ts-expect-error game.dice3d
+        await game.dice3d?.showForRoll(newRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+      }
+    
       this[rollId] = newRoll;
       this[rollTotalId] = newRoll.total;
       this[rollHTMLId] = await midiRenderRoll(newRoll);
@@ -2474,6 +2517,8 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
 
 //@ts-ignore dnd5e v10
 export function getOptionalCountRemainingShortFlag(actor: globalThis.dnd5e.documents.Actor5e, flag: string) {
+  const countValue = getOptionalCountRemaining(actor, `flags.midi-qol.optional.${flag}.count`);
+  const altCountValue = getOptionalCountRemaining(actor, `flags.midi-qol.optional.${flag}.countAlt`);
   return getOptionalCountRemaining(actor, `flags.midi-qol.optional.${flag}.count`) && getOptionalCountRemaining(actor, `flags.midi-qol.optional.${flag}.countAlt`)
 
   return getOptionalCountRemaining(actor, `flags.midi-qol.optional.${flag}.count`)
@@ -2713,7 +2758,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   if (!usedReaction) {
     //@ts-ignore .flags v10
     const midiFlags: any = target.actor.flags["midi-qol"];
-    reactions = reactionCount + Object.keys(midiFlags?.optional ?? [])
+    reactionCount = reactionCount + Object.keys(midiFlags?.optional ?? [])
       .filter(flag => {
         if (triggerType !== "reaction" || !midiFlags?.optional[flag].ac) return false;
         if (!midiFlags?.optional[flag].count) return true;
@@ -3767,4 +3812,23 @@ export function hasDAE(workflow: Workflow) {
     workflow.item?.effects?.some(ef => ef?.transfer === false)
     || workflow.ammo?.effects?.some(ef => ef?.transfer === false)
   );
+}
+
+export function procActorSaveBonus(actor: Actor, rollType: string, item: Item): number {
+  if (!item) return 0;
+  //@ts-expect-error
+  const bonusFlags = actor.system.bonuses?.save;
+  if (!bonusFlags) return 0;
+  let saveBonus = 0;
+  if (bonusFlags.magic) {
+
+    return 0;
+  }
+  if (bonusFlags.spell) {
+    return 0;
+  }
+  if (bonusFlags.weapon) {
+    return 0;
+  }
+  return 0;
 }

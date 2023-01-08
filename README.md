@@ -1,6 +1,5 @@
 ## Breaking News
-### World Key Mappings don't work
-Please disable the setting which means key mappings are per client.
+Added a ko-fi donation link https://ko-fi.com/tposney
 
 ### Custom Sounds rewritten
 You will have to change your configuration
@@ -623,6 +622,8 @@ To help macro writers creating reaction items, args[0] contains an additional fi
 * **"no damage on save"** (or the localized equivalent) in the item description means targets that save will take no damage. Lots of cantrips are like this. Most cantrips are already in a list that midi maintains automatically, but if your favorite spell is not in the list you can the text to the description.
 * **"full damage on save"** (or the localized equivalent) in the item description means targets that save will take full damage. This is mainly useful for attacks that do full damage on a hit and have a save to avoid the application of a condition, like the mace of disruption and the frightened condition.
 * **"auto fail friendly"** (or the localized equivalent) in the item description then tokens with the same disposition as the caster will auto fail their save. Useful for some spell effects where you don't want friends to save. Also available as a per item property (in the midi properties).
+* **auto save friendly** An item property that means friendly targets will always save against the item.
+
 * If the midi-qol setting **"check spell text"** is enabled and the text "half damage on save" appears in the item description then saves will do 1/2 damage no matter what the default save modifier is set to. When set this means you can change the default modifier to whatever you like for various reasons.
 
 ## flags.midi-qol 

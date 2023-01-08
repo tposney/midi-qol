@@ -568,6 +568,7 @@
   "midi-qol.debugCallTiming.Hint": "Provide some log information about how long things take",
   "midi-qol.autoFailFriendly": "Auto Fail Friendly",
   "midi-qol.FailFriendly": "Friends Fail",
+  "midi-qol.SaveFriendly": "Friends Save",
   "midi-qol.OffHandWeapon": "Off Hand",
   "midi-qol.RollToggle.Hint": "Toggle fast/auto roll setting for attack/damage/ability Checks",
   "midi-qol.RollToggle.Name": "Roll Toggle",
