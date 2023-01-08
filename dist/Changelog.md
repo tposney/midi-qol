@@ -8,7 +8,7 @@
 * Added auto save friendly item property, which when set means allies of the caster/attacker will always save.
 * Fix for reaction optional flags not firing if no other reaction items are present.
 * Hooks that fire on midi-qol.DamageRollComplete can now modify the damage roll and the chat card displaying the damage will update accordingly.
-* Added ko-fi link https://ko-fi.com/tposney for those that want to support the module financlially.
+* Added ko-fi link https://ko-fi.com/tposney for those that want to support the module financially.
 
 ### 10.0.23
 * Added off hand midi property, if set weapons won't do modifier damage bonus (think two weapon fighting).
