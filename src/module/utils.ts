@@ -161,7 +161,7 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
       }
       numberTermFound = true;
       evalString += evalTerm.total;
-    } 
+    }
     if (evalTerm instanceof PoolTerm) {
       damageType = getDamageType(evalTerm?.options?.flavor) ?? damageType;
       if (!evalTerm?.options.flavor) {
@@ -294,66 +294,122 @@ export let getTraitMult = (actor, dmgTypeString, item): number => {
       traitList = [{ type: "sdi", mult: 0 }, { type: "sdr", mult: configSettings.damageResistanceMultiplier }, { type: "sdv", mult: configSettings.damageVulnerabilityMultiplier }];
     }
     for (let { type, mult } of traitList) {
-      let trait = duplicate(actor.system.traits[type].value);
+      let trait = deepClone(actor.system.traits[type].value);
       let customs: string[] = [];
       if (actor.system.traits[type].custom?.length > 0) {
         customs = actor.system.traits[type].custom.split(";").map(s => s.trim())
       }
-      const bypasses = actor.system.traits[type].bypasses ?? [];
       // process new bypasses settings
-      if (magicalDamage && physicalDamage && bypasses.includes("mgc")) continue; // magical damage bypass of trait.
-      if (adamantineDamage && physicalDamage && bypasses.includes("ada")) continue;
-      if (silverDamage && physicalDamage && bypasses.includes("sil")) continue;
-
-      // process new custom field versions
-      if (!["healing", "temphp"].includes(dmgTypeString)) {
-        if (customs.includes(dmgTypeString)) {
-          totalMult = totalMult * mult;
-          continue;
-        }
-        if (!magicalDamage && (trait.includes("nonmagic") || customs.includes(getSystemCONFIG().damageResistanceTypes["nonmagic"]))) {
-          totalMult = totalMult * mult;
-          continue;
-        } else if (magicalDamage && trait.includes("magic")) {
-          totalMult = totalMult * mult;
-          continue;
-        }
-        else if (item?.type === "spell" && trait.includes("spell")) {
-          totalMult = totalMult * mult;
-          continue;
-        } else if (item?.type === "power" && trait.includes("power")) {
-          totalMult = totalMult * mult;
-          continue;
-        }
-        if (customs.length > 0) {
-          if (!magicalDamage && (customs.includes("nonmagic") || customs.includes(getSystemCONFIG().damageResistanceTypes["nonmagic"]))) {
-            totalMult = totalMult * mult;
-            continue;
-          } else if (magicalDamage && (customs.includes("magic") || customs.includes(getSystemCONFIG().damageResistanceTypes["magic"]))) {
-            totalMult = totalMult * mult;
-            continue;
-          } else if (item?.type === "spell" && (customs.includes("spell") || customs.includes(getSystemCONFIG().damageResistanceTypes["spell"]))) {
-            totalMult = totalMult * mult;
-            continue;
-          } else if (item?.type === "power" && (customs.includes("power") || customs.includes(getSystemCONFIG().damageResistanceTypes["power"]))) {
+      //@ts-expect-error
+      if (isNewerVersion(game.system.version, "2.0.3")) {
+        const bypasses = actor.system.traits[type].bypasses ?? new Set();
+        if (magicalDamage && physicalDamage && bypasses.has("mgc")) continue; // magical damage bypass of trait.
+        if (adamantineDamage && physicalDamage && bypasses.has("ada")) continue;
+        if (silverDamage && physicalDamage && bypasses.has("sil")) continue;
+        // process new custom field versions
+        if (!["healing", "temphp"].includes(dmgTypeString)) {
+          if (customs.includes(dmgTypeString)) {
             totalMult = totalMult * mult;
             continue;
           }
+          if (!magicalDamage && (trait.has("nonmagic") || customs.includes(getSystemCONFIG().damageResistanceTypes["nonmagic"]))) {
+            totalMult = totalMult * mult;
+            continue;
+          } else if (magicalDamage && trait.has("magic")) {
+            totalMult = totalMult * mult;
+            continue;
+          }
+          else if (item?.type === "spell" && trait.has("spell")) {
+            totalMult = totalMult * mult;
+            continue;
+          } else if (item?.type === "power" && trait.has("power")) {
+            totalMult = totalMult * mult;
+            continue;
+          }
+          if (customs.length > 0) {
+            if (!magicalDamage && (customs.includes("nonmagic") || customs.includes(getSystemCONFIG().damageResistanceTypes["nonmagic"]))) {
+              totalMult = totalMult * mult;
+              continue;
+            } else if (magicalDamage && (customs.includes("magic") || customs.includes(getSystemCONFIG().damageResistanceTypes["magic"]))) {
+              totalMult = totalMult * mult;
+              continue;
+            } else if (item?.type === "spell" && (customs.includes("spell") || customs.includes(getSystemCONFIG().damageResistanceTypes["spell"]))) {
+              totalMult = totalMult * mult;
+              continue;
+            } else if (item?.type === "power" && (customs.includes("power") || customs.includes(getSystemCONFIG().damageResistanceTypes["power"]))) {
+              totalMult = totalMult * mult;
+              continue;
+            }
+          }
         }
-      }
 
-      // Support old style leftover settings
-      if (configSettings.damageImmunities === "immunityPhysical") {
-        if (!magicalDamage && trait.includes("physical"))
-          trait = trait.concat(phsyicalDamageTypes)
-        if (!(magicalDamage || silverDamage) && trait.includes("silver"))
-          trait = trait.concat(phsyicalDamageTypes)
-        if (!(magicalDamage || adamantineDamage) && trait.includes("adamant"))
-          trait = trait.concat(phsyicalDamageTypes)
-      }
+        // Support old style leftover settings
+        if (configSettings.damageImmunities === "immunityPhysical") {
+          if (!magicalDamage && trait.has("physical"))
+            trait = trait.concat(phsyicalDamageTypes)
+          if (!(magicalDamage || silverDamage) && trait.has("silver"))
+            trait = trait.concat(phsyicalDamageTypes)
+          if (!(magicalDamage || adamantineDamage) && trait.has("adamant"))
+            trait = trait.concat(phsyicalDamageTypes)
+        }
 
-      if (trait.includes(dmgTypeString))
-        totalMult = totalMult * mult;
+        if (trait.has(dmgTypeString))
+          totalMult = totalMult * mult;
+      } else {
+        const bypasses = actor.system.traits[type].bypasses ?? [];
+        if (magicalDamage && physicalDamage && bypasses.includes("mgc")) continue; // magical damage bypass of trait.
+        if (adamantineDamage && physicalDamage && bypasses.includes("ada")) continue;
+        if (silverDamage && physicalDamage && bypasses.includes("sil")) continue;
+        // process new custom field versions
+        if (!["healing", "temphp"].includes(dmgTypeString)) {
+          if (customs.includes(dmgTypeString)) {
+            totalMult = totalMult * mult;
+            continue;
+          }
+          if (!magicalDamage && (trait.includes("nonmagic") || customs.includes(getSystemCONFIG().damageResistanceTypes["nonmagic"]))) {
+            totalMult = totalMult * mult;
+            continue;
+          } else if (magicalDamage && trait.includes("magic")) {
+            totalMult = totalMult * mult;
+            continue;
+          }
+          else if (item?.type === "spell" && trait.includes("spell")) {
+            totalMult = totalMult * mult;
+            continue;
+          } else if (item?.type === "power" && trait.includes("power")) {
+            totalMult = totalMult * mult;
+            continue;
+          }
+          if (customs.length > 0) {
+            if (!magicalDamage && (customs.includes("nonmagic") || customs.includes(getSystemCONFIG().damageResistanceTypes["nonmagic"]))) {
+              totalMult = totalMult * mult;
+              continue;
+            } else if (magicalDamage && (customs.includes("magic") || customs.includes(getSystemCONFIG().damageResistanceTypes["magic"]))) {
+              totalMult = totalMult * mult;
+              continue;
+            } else if (item?.type === "spell" && (customs.includes("spell") || customs.includes(getSystemCONFIG().damageResistanceTypes["spell"]))) {
+              totalMult = totalMult * mult;
+              continue;
+            } else if (item?.type === "power" && (customs.includes("power") || customs.includes(getSystemCONFIG().damageResistanceTypes["power"]))) {
+              totalMult = totalMult * mult;
+              continue;
+            }
+          }
+        }
+
+        // Support old style leftover settings
+        if (configSettings.damageImmunities === "immunityPhysical") {
+          if (!magicalDamage && trait.includes("physical"))
+            trait = trait.concat(phsyicalDamageTypes)
+          if (!(magicalDamage || silverDamage) && trait.includes("silver"))
+            trait = trait.concat(phsyicalDamageTypes)
+          if (!(magicalDamage || adamantineDamage) && trait.includes("adamant"))
+            trait = trait.concat(phsyicalDamageTypes)
+        }
+
+        if (trait.includes(dmgTypeString))
+          totalMult = totalMult * mult;
+      }
     }
   }
   return totalMult;
@@ -2455,11 +2511,11 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
             if (game.user) whisperIds.concat(game.user);
           }
         }
-    
+
         //@ts-expect-error game.dice3d
         await game.dice3d?.showForRoll(newRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
       }
-    
+
       this[rollId] = newRoll;
       this[rollTotalId] = newRoll.total;
       this[rollHTMLId] = await midiRenderRoll(newRoll);
@@ -3414,8 +3470,12 @@ export async function asyncHooksCallAll(hook, ...args) {
   //@ts-ignore
   for (let entry of Array.from(Hooks.events[hook])) {
     //TODO see if this might be better as a Promises.all
-    //@ts-ignore
-    await hookCall(entry, args);
+    try {
+      //@ts-ignore
+      await hookCall(entry, args);
+    } catch (err) {
+      error(`hooked function for hook ${hook} threw `, err)
+    }
   }
   return true;
 }
@@ -3430,8 +3490,14 @@ export async function asyncHooksCall(hook, ...args) {
 
   //@ts-ignore
   for (let entry of Array.from(Hooks.events[hook])) {
-    //@ts-ignore
-    let callAdditional = await hookCall(entry, args);
+    let callAdditional;
+    try {
+      //@ts-ignore
+      callAdditional = await hookCall(entry, args);
+    } catch (err) {
+      error(`hooked function for hook ${hook} threw `, err);
+      callAdditional = true;
+    }
     if (callAdditional === false) return false;
   }
   return true;

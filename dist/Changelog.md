@@ -1,3 +1,11 @@
+### 10.0.25
+* Fix for dnd5e 2.1 traits changing to sets rather than arrays
+* Fix for dnd5e 2.1 changes to getBaseItem in midi-sounds throwing deprecation warning
+* Fix for dnd5e 2.1 changes to initiative handling.
+
+Changes should be backwards compatible with 2.0.3 but have not tested in detail. So only upgrate if you have moved to dnd5e 2.1.x
+
+
 ### 10.0.24
 * Fix for editing actor on use macros when there is an active effect also providing an onUseMacro
 * Fix for levelsAutoCover giving too much cover.

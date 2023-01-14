@@ -146,7 +146,7 @@ Hooks.once('setup', function () {
 
   let config = getSystemCONFIG();
 
-  
+
   if (game.system.id === "dnd5e" || game.system.id === "n5e") {
     config.midiProperties = {};
     // Add additonal vision types? How to modify token properties doing this.
@@ -176,6 +176,15 @@ Hooks.once('setup', function () {
     config.damageResistanceTypes["healing"] = config.healingTypes.healing;
     config.damageResistanceTypes["temphp"] = config.healingTypes.temphp;
 
+    //@ts-expect-error
+    if (isNewerVersion(game.system.version, "2.0.3")) {
+      //@ts-expect-error
+      game.system.config.traits.di.configKey = "damageResistanceTypes";
+      //@ts-expect-error
+      game.system.config.traits.dr.configKey = "damageResistanceTypes";
+      //@ts-expect-error
+      game.system.config.traits.dv.configKey = "damageResistanceTypes";
+    }
     config.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
     config.abilityActivationTypes["reactionmanual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
   } else { // sw5e
@@ -252,9 +261,9 @@ Hooks.once('ready', function () {
     if (installedModules.get("levelsautocover") && configSettings.optionalRules.coverCalculation === "levelsautocover" && !game.settings.get("levelsautocover", "apiMode")) {
       game.settings.set("levelsautocover", "apiMode", true)
       if (game.user?.isGM)
-        ui.notifications?.warn("midi-qol | setting levels auto cover to api mode", {permanent: true})
+        ui.notifications?.warn("midi-qol | setting levels auto cover to api mode", { permanent: true })
     } else if (installedModules.get("levelsautocover") && configSettings.optionalRules.coverCalculation !== "levelsautocover" && game.settings.get("levelsautocover", "apiMode")) {
-      ui.notifications?.warn("midi-qol | Levels Auto Cover is in API mode but midi is not using levels auto cover - you may wish to disable api mode", {permanent: true})
+      ui.notifications?.warn("midi-qol | Levels Auto Cover is in API mode but midi is not using levels auto cover - you may wish to disable api mode", { permanent: true })
     }
   }
   if (game.settings.get("midi-qol", "splashWarnings") && game.user?.isGM) {
@@ -339,7 +348,7 @@ function setupMidiQOLApi() {
     doOverTimeEffect,
     DummyWorkflow,
     enableWorkflow,
-    findNearby, 
+    findNearby,
     gameStats,
     getChanges, // (actorOrItem, key) - what effects on the actor or item target the specific key
     getConcentrationEffect,
@@ -574,7 +583,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.optional.NAME.count`);
   midiFlags.push(`flags.midi-qol.optional.NAME.countAlt`);
   midiFlags.push(`flags.midi-qol.optional.NAME.ac`);
-//   midiFlags.push(`flags.midi-qol.optional.NAME.criticalDamage`);
+  //   midiFlags.push(`flags.midi-qol.optional.NAME.criticalDamage`);
   midiFlags.push(`flags.midi-qol.optional.Name.onUse`);
   midiFlags.push(`flags.midi-qol.optional.NAME.macroToCall`);
 

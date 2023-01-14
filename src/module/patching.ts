@@ -718,7 +718,7 @@ export function prepareOnUseMacroData(actorOrItem) {
 export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user) {
   try {
     const macros = getProperty(itemOrActor._source, "flags.midi-qol.onUseMacroName");
-    const macroParts = new OnUseMacros(macros ??  null);
+    const macroParts = new OnUseMacros(macros ?? null);
     const macroChanges = getProperty(changes, "flags.midi-qol.onUseMacroParts") ?? {};
     //@ts-ignore
     if (isEmpty(macroChanges)) return true;
@@ -734,7 +734,7 @@ export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user
           }));
           key = macroParts.items.length - 1;
         }
-          
+
         if (macroChanges.items[keyString].macroName) macroParts.items[key].macroName = macroChanges.items[keyString].macroName;
         if (macroChanges.items[keyString].option) macroParts.items[key].option = macroChanges.items[keyString].option;
       }
@@ -750,6 +750,35 @@ export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user
   }
   return true;
 };
+
+export function getInitiativeRoll(wrapped, options: { advantageMode: number } = { advantageMode: 0 }) {
+  let disadv = this.getFlag(game.system.id, "initiativeDisadv");
+  let adv = this.getFlag(game.system.id, "initiativeAdv");
+  const flags = this.flags["midi-qol"] ?? {};
+  const advFlags = flags.advantage;
+  const disadvFlags = flags.disadvantage;
+  if (advFlags || disadvFlags) {
+    const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: this });
+    if ((advFlags?.all && evalCondition(advFlags.all, conditionData))
+      || (advFlags?.ability?.check?.all && evalCondition(advFlags.ability.check.all, conditionData))
+      || (advFlags?.advantage?.ability?.check?.dex && evalCondition(advFlags.advantage.ability?.check?.dex, conditionData))) {
+      //@ts-expect-error
+      adv = true || (options.advantageMode === game.dnd5e.dice.D20Roll.ADV_MODE.ADVANTAGE);
+    }
+    if ((disadvFlags?.all && evalCondition(disadvFlags.all, conditionData))
+      || (disadvFlags?.ability?.check?.all && evalCondition(disadvFlags.ability.check.all, conditionData))
+      || (disadvFlags?.disadvantage?.ability?.check?.dex && evalCondition(disadvFlags.disadvantage.ability?.check?.dex, conditionData))) {
+      //@ts-expect-error
+      disadv = true || (options.advantageMode === game.dnd5e.dice.D20Roll.ADV_MODE.DISADVANTAGE);
+    }
+  }
+  if (adv && disadv) options.advantageMode = 0;
+  //@ts-expect-error
+  else if (adv) options.advantageMode = game.dnd5e.dice.D20Roll.ADV_MODE.ADVANTAGE;
+  //@ts-expect-error
+  else if (disadv) options.advantageMode = game.dnd5e.dice.D20Roll.ADV_MODE.DISADVANTAGE;
+  return wrapped(options);
+}
 
 export function _getInitiativeFormula(wrapped) {
   const original = wrapped();
@@ -843,16 +872,16 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
         if (concentrationData && effect.origin === concentrationData.uuid) {
           const allConcentrationTargets = concentrationData.targets.filter(target => {
             let actor = MQfromActorUuid(target.actorUuid);
-            const hasEffects = actor.effects.some(effect => 
-              effect.origin === concentrationData.uuid 
+            const hasEffects = actor.effects.some(effect =>
+              effect.origin === concentrationData.uuid
               && !effect.flags.dae.transfer
               && effect.uuid !== this.uuid);
             return hasEffects;
           });
           const concentrationTargets = concentrationData.targets.filter(target => {
             let actor = MQfromActorUuid(target.actorUuid);
-            const hasEffects = actor.effects.some(effect => 
-              effect.origin === concentrationData.uuid 
+            const hasEffects = actor.effects.some(effect =>
+              effect.origin === concentrationData.uuid
               && !effect.flags.dae.transfer
               && effect.uuid !== this.uuid
               && effect.label !== concentrationLabel);
@@ -899,7 +928,7 @@ export async function removeConcentration(actor: Actor, concentrationUuid: strin
       if (entity) await entity.delete(); // TODO check if this needs to be run as GM
     }
     if (actor.isToken)
-      setTimeout( () => socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [concentrationUuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true }), 200 )
+      setTimeout(() => socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [concentrationUuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true }), 200)
     else result = await socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [concentrationUuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true });
   } catch (err) {
     error("error when attempting to remove concentration ", err)
@@ -996,7 +1025,12 @@ export function readyPatching() {
   libWrapper.register("midi-qol", "CONFIG.Combat.documentClass.prototype._preDelete", _preDeleteCombat, "WRAPPER");
 
   libWrapper.register("midi-qol", "Notifications.prototype.notify", notificationNotify, "MIXED");
-  libWrapper.register("midi-qol", "Combatant.prototype._getInitiativeFormula", _getInitiativeFormula, "WRAPPER");
+  //@ts-expect-error
+  if ((game.system.id === "dnd5e" && isNewerVersion("2.1.0", game.system.version)) || game.system.id !== "dnd5e") {
+    libWrapper.register("midi-qol", "Combatant.prototype._getInitiativeFormula", _getInitiativeFormula, "WRAPPER");
+  } else {
+    libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.getInitiativeRoll", getInitiativeRoll, "WRAPPER")
+  }
   libWrapper.register("midi-qol", "CONFIG.ActiveEffect.documentClass.prototype._preDelete", _preDeleteActiveEffect, "WRAPPER");
   libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype._preUpdate", _preUpdateActor, "WRAPPER");
   libWrapper.register("midi-qol", "game.system.applications.DamageTraitSelector.prototype.getData", preDamageTraitSelectorGetData, "WRAPPER");
@@ -1057,7 +1091,7 @@ export async function preDeleteTemplate(templateDocument, options, user) {
       && concentrationData.targets.length === 1
       && concentrationData.removeUuids.length === 0
       && ["effectsTemplates"].includes(configSettings.removeConcentrationEffects)
-      ) {
+    ) {
       // non concentration effects left
       await removeConcentration(actor, "no ignore");
     } else if (concentrationData.templates.length >= 1) {
@@ -1349,58 +1383,115 @@ export function migrateTraits(actor) {
       if (!trait) continue;
       trait.value = [];
 
-      for (let traitString of baseTrait.value) {
-        switch (traitString) {
-          case "silver":
-            if (!trait.bypasses.includes("sil")) trait.bypasses.push("sil");
-            addPhysicalDamages(trait.value);
-            trait.value = removeTraitValue(trait.value, "silver");
-            log(`${actor.name} mapping "Silver" to ${trait.value}, ${trait.bypasses}`)
-            break
-          case "adamant":
-            if (!trait.bypasses.includes("ada")) trait.bypasses.push("ada");
-            addPhysicalDamages(trait.value);
-            trait.value = removeTraitValue(trait.value, "adamant");
-            log(`${actor.name} mapping "Adamantine" to ${trait.value}, ${trait.bypasses}`)
-            break
-          case "physical":
-            addPhysicalDamages(trait.value);
-            trait.value = removeTraitValue(trait.value, "physical");
-            log(`${actor.name} mapping "Physical" to ${trait.value}, ${trait.bypasses}`)
-            break;
-          case "nonmagic":
-            addPhysicalDamages(trait.value);
-            if (!trait.bypasses.includes("mgc")) trait.bypasses.push("mgc");
-            trait.value = removeTraitValue(trait.value, "nonmagic");
-            log(`${actor.name} mapping "nongamic" to ${trait.custom}`)
-            break;
-          case "spell":
-            trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.spell-damage"));
-            trait.value = removeTraitValue(trait.value, "spell");
-            log(`${actor.name} mapping "spell" to ${trait.custom}`)
-            break
-          case "power":
-            trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.power-damage"));
-            trait.value = removeTraitValue(trait.value, "power");
-            log(`${actor.name} mapping "power" to ${trait.custom}`)
-            break
-          case "magic":
-            trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.Magical"));
-            trait.value = removeTraitValue(trait.value, "magic");
-            log(`${actor.name} mapping "magic" to ${trait.custom}`)
-            break
-          case "healing":
-            trait.custom = addCustomTrait(trait.custom, getSystemCONFIG().healingTypes.healing);
-            trait.value = removeTraitValue(trait.value, "healing");
-            log(`${actor.name} mapping "healing" to ${trait.custom}`)
-            break
-          case "temphp":
-            trait.custom = addCustomTrait(trait.custom, getSystemCONFIG().healingTypes.temphp);
-            trait.value = removeTraitValue(trait.value, "temphp");
-            log(`${actor.name} mapping "temphp" to ${trait.custom}`)
-            break
-          default:
-            trait.value.push(traitString);
+      if (trait.bypasses instanceof Set) {
+        for (let traitString of baseTrait.value) {
+          switch (traitString) {
+            case "silver":
+              trait.bypasses.add("sil");
+              addPhysicalDamages(trait.value);
+              trait.value.delete("silver");
+              log(`${actor.name} mapping "Silver" to ${trait.value}, ${trait.bypasses}`)
+              break
+            case "adamant":
+              trait.bypasses.add("ada");
+              addPhysicalDamages(trait.value);
+              trait.value.delete("adamant");
+              log(`${actor.name} mapping "Adamantine" to ${trait.value}, ${trait.bypasses}`)
+              break
+            case "physical":
+              addPhysicalDamages(trait.value);
+              trait.value.delete("physical");
+              log(`${actor.name} mapping "Physical" to ${trait.value}, ${trait.bypasses}`)
+              break;
+            case "nonmagic":
+              addPhysicalDamages(trait.value);
+              trait.bypasses.add("mgc");
+              trait.value.delete("nonmagic");
+              log(`${actor.name} mapping "nongamic" to ${trait.custom}`)
+              break;
+            case "spell":
+              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.spell-damage"));
+              trait.value.delete("spell");
+              log(`${actor.name} mapping "spell" to ${trait.custom}`)
+              break
+            case "power":
+              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.power-damage"));
+              trait.value.delete("power");
+              log(`${actor.name} mapping "power" to ${trait.custom}`)
+              break
+            case "magic":
+              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.Magical"));
+              trait.value.delete("magic");
+              log(`${actor.name} mapping "magic" to ${trait.custom}`)
+              break
+            case "healing":
+              trait.custom = addCustomTrait(trait.custom, getSystemCONFIG().healingTypes.healing);
+              trait.value.delete("healing");
+              log(`${actor.name} mapping "healing" to ${trait.custom}`)
+              break
+            case "temphp":
+              trait.custom = addCustomTrait(trait.custom, getSystemCONFIG().healingTypes.temphp);
+              trait.value.delete("temphp");
+              log(`${actor.name} mapping "temphp" to ${trait.custom}`)
+              break
+            default:
+              trait.value.add(traitString);
+          }
+        }
+      } else {
+        for (let traitString of baseTrait.value) {
+          switch (traitString) {
+            case "silver":
+              if (!trait.bypasses.includes("sil")) trait.bypasses.push("sil");
+              addPhysicalDamages(trait.value);
+              trait.value = removeTraitValue(trait.value, "silver");
+              log(`${actor.name} mapping "Silver" to ${trait.value}, ${trait.bypasses}`)
+              break
+            case "adamant":
+              if (!trait.bypasses.includes("ada")) trait.bypasses.push("ada");
+              addPhysicalDamages(trait.value);
+              trait.value = removeTraitValue(trait.value, "adamant");
+              log(`${actor.name} mapping "Adamantine" to ${trait.value}, ${trait.bypasses}`)
+              break
+            case "physical":
+              addPhysicalDamages(trait.value);
+              trait.value = removeTraitValue(trait.value, "physical");
+              log(`${actor.name} mapping "Physical" to ${trait.value}, ${trait.bypasses}`)
+              break;
+            case "nonmagic":
+              addPhysicalDamages(trait.value);
+              if (!trait.bypasses.includes("mgc")) trait.bypasses.push("mgc");
+              trait.value = removeTraitValue(trait.value, "nonmagic");
+              log(`${actor.name} mapping "nongamic" to ${trait.custom}`)
+              break;
+            case "spell":
+              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.spell-damage"));
+              trait.value = removeTraitValue(trait.value, "spell");
+              log(`${actor.name} mapping "spell" to ${trait.custom}`)
+              break
+            case "power":
+              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.power-damage"));
+              trait.value = removeTraitValue(trait.value, "power");
+              log(`${actor.name} mapping "power" to ${trait.custom}`)
+              break
+            case "magic":
+              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.Magical"));
+              trait.value = removeTraitValue(trait.value, "magic");
+              log(`${actor.name} mapping "magic" to ${trait.custom}`)
+              break
+            case "healing":
+              trait.custom = addCustomTrait(trait.custom, getSystemCONFIG().healingTypes.healing);
+              trait.value = removeTraitValue(trait.value, "healing");
+              log(`${actor.name} mapping "healing" to ${trait.custom}`)
+              break
+            case "temphp":
+              trait.custom = addCustomTrait(trait.custom, getSystemCONFIG().healingTypes.temphp);
+              trait.value = removeTraitValue(trait.value, "temphp");
+              log(`${actor.name} mapping "temphp" to ${trait.custom}`)
+              break
+            default:
+              trait.value.push(traitString);
+          }
         }
       }
     }
@@ -1411,16 +1502,22 @@ export function migrateTraits(actor) {
   }
 }
 
-function removeTraitValue(traitValue: string[], toRemove): string[] {
-  const position = traitValue.indexOf(toRemove);
-  if (position !== -1) return traitValue.splice(position, 1);
+function removeTraitValue(traitValue: string[] | Set<string>, toRemove): string[] | Set<string> {
+  if (traitValue instanceof Set) 
+    traitValue.delete(toRemove);
+  else {
+    const position = traitValue.indexOf(toRemove);
+    if (position !== -1) return traitValue.splice(position, 1);
+  }
   return traitValue;
 }
 
 function addPhysicalDamages(traitValue) {
   const phsyicalDamageTypes = Object.keys(getSystemCONFIG().physicalDamageTypes);
+
   for (let dt of phsyicalDamageTypes) {
-    if (!traitValue.includes(dt)) traitValue.push(dt);
+    if (traitValue instanceof Set) traitValue.add(dt);
+    else if (!traitValue.includes(dt)) traitValue.push(dt);
   }
 }
 

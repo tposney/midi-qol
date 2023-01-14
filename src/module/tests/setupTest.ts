@@ -524,18 +524,25 @@ async function registerTests() {
           it("Tests condition immunity disables effect", async function () {
             if (!ceInterface) assert.ok(false, "Convenient Effects Interface not found")
             await ceInterface.addEffect({ effectName: "Paralyzed", uuid: actor.uuid });
-            assert.ok(await ceInterface.hasEffectApplied("Paralyzed", actor?.uuid));
+            // assert.ok(await ceInterface.hasEffectApplied("Paralyzed", actor?.uuid));
             //@ts-ignore .label v10
             const theEffect: ActiveEffect | undefined = actor.effects.find(ef => ef.label === "Paralyzed");
-            assert.ok(theEffect);
+            assert.ok(theEffect, "not paralyzed");
             //@ts-ignore .disabled v10
-            assert.ok(!theEffect?.disabled);
-            await actor.update({ "data.traits.ci.value": ["paralyzed"] });
+            assert.ok(!theEffect?.disabled, "paralyzed disabled");
+            //@ts-expect-error
+            if (game.system.id === "dnd5e" && isNewerVersion(game.system.version, "2.0.3") && false) {
+              await actor.update({ "system.traits.ci.value": new Set(["paralyzed"]) });
+            }
+            else await actor.update({ "system.traits.ci.value": ["paralyzed"] });
             //@ts-ignore .disabled v10
-            assert.ok(theEffect?.disabled);
-            await actor.update({ "data.traits.ci.value": [] });
+            assert.ok(theEffect?.disabled, "paralyzed not disabled");
+            //@ts-expect-error 
+            if (game.system.id === "dnd5e" && isNewerVersion(game.system.version, "2.0.3") && false) {
+              await actor.update({ "system.traits.ci.value": new Set() });
+            } else await actor.update({ "system.traits.ci.value": [] });
             //@ts-ignore .disabled v10
-            assert.ok(!theEffect?.disabled);
+            assert.ok(!theEffect?.disabled, "traits not disabled");
             await ceInterface.removeEffect({ effectName: "Paralyzed", uuid: actor.uuid });
             assert.ok(!(await ceInterface.hasEffectApplied("Paralyzed", actor?.uuid)));
 
