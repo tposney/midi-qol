@@ -5,7 +5,6 @@
 
 Changes should be backwards compatible with 2.0.3 but have not tested in detail. So only upgrate if you have moved to dnd5e 2.1.x
 
-
 ### 10.0.24
 * Fix for editing actor on use macros when there is an active effect also providing an onUseMacro
 * Fix for levelsAutoCover giving too much cover.
