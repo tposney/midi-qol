@@ -292,9 +292,12 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
 
     ["di", "dv", "dr"].forEach(trait => {
       const traits = actor?.system.traits[trait]
-      if (traits?.custom || traits?.value.length > 0) {
-        //@ts-ignore CONFIG.DND5E
+      if (traits.value instanceof Array && (traits?.custom || traits?.value.length > 0)) {
+        //@ts-expect-error CONFIG.DND5E
         listItem[trait] = (`${traitList[trait]}: ${traits.value.map(t => CONFIG.DND5E.damageResistanceTypes[t]).join(",").concat(" " + traits?.custom)}`);
+      } else if (traits.value instanceof Set && (traits?.custom || traits?.value.size > 0)) {
+        const tl = traits.value.reduce((acc,v)=>{acc.push(v); return acc}, [])
+        listItem[trait] = (`${traitList[trait]}: ${tl.join(",").concat(" " + traits?.custom)}`);
       }
     });
     //@ts-ignore

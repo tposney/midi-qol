@@ -10,7 +10,7 @@
     <div class="midi-qol-box">
       <ol class="changes-list">
         {{#each onUseMacroParts.items}}
-        <li class="effect-change macro-change flexrow data-macroPart={{@index}}">
+        <li class="effect-change macro-change flexrow" data-macroPart="{{@index}}">
           <div class = "key">
           <input type="text" name="onUseMacroParts.items.{{@index}}.macroName" value="{{this.macroName}}">
           </div>

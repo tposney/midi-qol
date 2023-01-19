@@ -8,6 +8,8 @@ import { LateTargetingDialog } from "./apps/LateTargeting.js";
 import { defaultRollOptions } from "./patching.js";
 
 export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
+  const pressedKeys = duplicate(globalThis.MidiKeyManager.pressedKeys);
+
   //  if (configSettings.mergeCard && (configSettings.attackPerTarget === true || options.workflowOptions?.attackPerTarget === true) && this.hasAttack && options?.singleTarget !== true && game?.user?.targets) {
   if ((configSettings.attackPerTarget === true || options.workflowOptions?.attackPerTarget === true)
     && this.hasAttack
@@ -17,7 +19,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
     const lateTargetingSetting = getLateTargeting();
     let lateTargetingSet = lateTargetingSetting === "all" || (lateTargetingSetting === "noTargetsSelected" && game?.user?.targets.size === 0)
     if (options.woprkflowOptions?.lateTargeting && options.workflowOptions?.lateTargeting !== "none") lateTargetingSet = true;
-    if (game.user.targets.size === 0 && lateTargetingSet) await resolveLateTargeting(this);
+    if (game.user.targets.size === 0 && lateTargetingSet) await resolveLateTargeting(this, options, pressedKeys);
     const targets: Token[] = [];
     for (let target of game?.user?.targets) targets.push(target);
     for (let target of targets) {
@@ -44,7 +46,6 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
 
   if (checkMechanic("incapacitated") && checkIncapacitated(this.actor, this, null)) return;
 
-  const pressedKeys = duplicate(globalThis.MidiKeyManager.pressedKeys);
   const isRangeSpell = ["ft", "m"].includes(this.system.target?.units) && ["creature", "ally", "enemy"].includes(this.system.target?.type);
   const isAoESpell = this.hasAreaTarget;
   const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && (game.combat ?? null) !== null);
@@ -97,7 +98,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
 
 
     if (canDoLateTargeting) {
-      if (!(await resolveLateTargeting(this)))
+      if (!(await resolveLateTargeting(this, options, pressedKeys)))
         return null;
     }
   }
@@ -291,7 +292,6 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
       }
     } else options.configureDialog = !(["both", "item"].includes(isAutoConsumeResource(workflow)));
   }
-
   workflow.processAttackEventOptions();
   await workflow.checkAttackAdvantage();
   workflow.showCard = true;
@@ -333,12 +333,12 @@ export async function doAttackRoll(wrapped, options: any = { versatile: false, r
     workflow.rollOptions.rollToggle = globalThis.MidiKeyManager.pressedKeys.rollToggle;
   }
   if (workflow && !workflow.reactionQueried) {
-    workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptions.rollToggle), { overwrite: true, insertValues: true, insertKeys: true });
+    workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptions?.rollToggle), { overwrite: true, insertValues: true, insertKeys: true });
   }
   //@ts-ignore
   if (CONFIG.debug.keybindings && workflow) {
     log("itemhandling doAttackRoll: workflow.rolloptions", workflow.rollOption);
-    log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptions.rollToggle));
+    log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptions?.rollToggle));
   }
   const attackRollStart = Date.now();
   if (debugEnabled > 1) debug("Entering item attack roll ", event, workflow, Workflow._workflows);
@@ -394,7 +394,7 @@ export async function doAttackRoll(wrapped, options: any = { versatile: false, r
     }, { overwrite: true, insertKeys: true, insertValues: true }));
     return workflow.activeDefence(this, result);
   }
-  let advantage = options.advantage || workflow?.advantage || workflow?.rollOptions.advantage || workflow?.workflowOptions.advantage || workflow.flankingAdvantage;
+  let advantage = options.advantage || workflow.options.advantage || workflow?.advantage || workflow?.rollOptions.advantage || workflow?.workflowOptions.advantage || workflow.flankingAdvantage;
   // if (options.advantage)
   // workflow.attackAdvAttribution[`options.advantage`] = true;
   if (workflow.rollOptions.advantage)
@@ -402,7 +402,7 @@ export async function doAttackRoll(wrapped, options: any = { versatile: false, r
   if (workflow.flankingAdvantage)
     workflow.attackAdvAttribution[`ADV:flanking`] = true;
 
-  let disadvantage = options.disadvantage || workflow?.disadvantage || workflow?.workflowOptions.disadvantage || workflow.rollOptions.disadvantage;
+  let disadvantage = options.disadvantage || workflow.options.disadvantage || workflow?.disadvantage || workflow?.workflowOptions.disadvantage || workflow.rollOptions.disadvantage;
   // if (options.disadvantage)
   //  workflow.attackAdvAttribution[`options.disadvantage`] = true;
   if (workflow.rollOptions.disadvantage)
@@ -528,7 +528,7 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
     //@ts-ignore .fastForward
     if (options.fastForward) workflow.rollOptions.fastForwardDamage = options.fastForward;
   } else if (workflow && !workflow.shouldRollDamage) // if we did not auto roll then process any keys
-    workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(pressedKeys, "damage", workflow.rollOptions.rollToggle), { insertKeys: true, insertValues: true, overwrite: true });
+    workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(pressedKeys, "damage", workflow.rollOptions?.rollToggle), { insertKeys: true, insertValues: true, overwrite: true });
   //@ts-ignore
   if (CONFIG.debug.keybindings) {
     log("itemhandling: workflow.rolloptions", workflow.rollOption);
@@ -836,7 +836,7 @@ export function preItemUseHook(item, config, options): boolean {
       // TODO consider template and range spells when not template targeting?
 
       if (canDoLateTargeting) {
-        if (!(await resolveLateTargeting(item)))
+        if (!(await resolveLateTargeting(item, workflow, pressedKeys)))
           return blockRoll(item, workflow);
       }
     }
@@ -1072,12 +1072,12 @@ export function preRollAttackHook(item, rollConfig) {
     workflow.rollOptions.rollToggle = globalThis.MidiKeyManager.pressedKeys.rollToggle;
   }
   if (workflow && !workflow.reactionQueried) {
-    workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptions.rollToggle), { overwrite: true, insertValues: true, insertKeys: true });
+    workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptions?.rollToggle), { overwrite: true, insertValues: true, insertKeys: true });
   }
   //@ts-ignore
   if (CONFIG.debug.keybindings && workflow) {
     log("itemhandling doAttackRoll: workflow.rolloptions", workflow.rollOption);
-    log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptions.rollToggle));
+    log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptions?.rollToggle));
   }
   if (debugEnabled > 1) debug("Entering item attack roll ", event, workflow, Workflow._workflows);
   if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
@@ -1297,7 +1297,7 @@ export function displayCardHook(item, card) {
     if (!token) token = item.actor.getActiveTokens()[0];
     let needAttackButton = !workflow.someAutoRollEventKeySet() && !getAutoRollAttack() && !workflow.rollOptions.autoRollAttack;
     const needDamagebutton = itemHasDamage(item) && (
-      (["none", "saveOnly"].includes(getAutoRollDamage(workflow)) || workflow.rollOptions.rollToggle)
+      (["none", "saveOnly"].includes(getAutoRollDamage(workflow)) || workflow.rollOptions?.rollToggle)
       || !getRemoveDamageButtons()
       || systemCard);
     const needVersatileButton = itemIsVersatile(item) && (systemCard || ["none", "saveOnly"].includes(getAutoRollDamage(workflow)) || !getRemoveDamageButtons());
@@ -1453,7 +1453,7 @@ export async function wrappedDisplayCard(wrapped, options) {
   let needAttackButton = !getRemoveAttackButtons() ||
     (!workflow.someAutoRollEventKeySet() && !getAutoRollAttack() && !workflow.rollOptions.autoRollAttack);
   const needDamagebutton = itemHasDamage(this) && (
-    (["none", "saveOnly"].includes(getAutoRollDamage(workflow)) || workflow.rollOptions.rollToggle)
+    (["none", "saveOnly"].includes(getAutoRollDamage(workflow)) || workflow.rollOptions?.rollToggle)
     || !getRemoveDamageButtons()
     || systemCard);
   const needVersatileButton = itemIsVersatile(this) && (systemCard || ["none", "saveOnly"].includes(getAutoRollDamage(workflow)) || !getRemoveDamageButtons());
@@ -1557,7 +1557,7 @@ export async function wrappedDisplayCard(wrapped, options) {
   return card;
 }
 
-async function resolveLateTargeting(item): Promise<boolean> {
+async function resolveLateTargeting(item, options: any, pressedKeys: any): Promise<boolean> {
   const workflow = Workflow.getWorkflow(item?.uuid);
   const lateTargetingSetting = getLateTargeting(workflow);
   if (lateTargetingSetting === "none") return true; // workflow options override the user settings
@@ -1575,7 +1575,7 @@ async function resolveLateTargeting(item): Promise<boolean> {
   let targets = new Promise((resolve, reject) => {
     // no timeout since there is a dialog to close
     // create target dialog which updates the target display
-    let lateTargeting = new LateTargetingDialog(item.actor, item, game.user, { callback: resolve }).render(true);
+    let lateTargeting = new LateTargetingDialog(item.actor, item, game.user, { callback: resolve, workflowOptions: options, pressedKeys }).render(true);
   });
   let shouldContinue = await targets;
   if (savedActiveLayer) await savedActiveLayer.activate();

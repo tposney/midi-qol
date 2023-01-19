@@ -346,11 +346,11 @@ export let getTraitMult = (actor, dmgTypeString, item): number => {
         // Support old style leftover settings
         if (configSettings.damageImmunities === "immunityPhysical") {
           if (!magicalDamage && trait.has("physical"))
-            trait = trait.concat(phsyicalDamageTypes)
+            phsyicalDamageTypes.forEach(dt => trait.add(dt))
           if (!(magicalDamage || silverDamage) && trait.has("silver"))
-            trait = trait.concat(phsyicalDamageTypes)
+            phsyicalDamageTypes.forEach(dt => trait.add(dt))
           if (!(magicalDamage || adamantineDamage) && trait.has("adamant"))
-            trait = trait.concat(phsyicalDamageTypes)
+            phsyicalDamageTypes.forEach(dt => trait.add(dt))
         }
 
         if (trait.has(dmgTypeString))
@@ -1595,7 +1595,6 @@ export function getDistance(t1: any /*Token*/, t2: any /*Token*/, wallblocking =
 
     //@ts-expect-error
     const levelsautocoverData = AutoCover.calculateCover(t1, t2, getLevelsAutoCoverOptions());
-    console.error("get distance ", levelsautocoverData)
     coverVisible = levelsautocoverData.rawCover > 0;
     if (!coverVisible) return -1;
   }

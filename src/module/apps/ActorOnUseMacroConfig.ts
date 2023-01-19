@@ -69,7 +69,7 @@ export class ActorOnUseMacrosConfig extends FormApplication {
     if ( a.classList.contains("delete-macro") ) {
       const li = a.closest(".macro-change");
       const macros = getCurrentSourceMacros(this.object);
-      macros.items.splice(Number(li.dataset.macroPart), 1);
+      macros.items.splice(Number(li.dataset.macropart), 1);
       return this.object.update({"flags.midi-qol.onUseMacroName": macros.toString()}).then(() => this.render(true));
     }
   }

@@ -127,7 +127,7 @@ export class MidiKeyManager {
       const selector = formElements.map(el => `${el}:focus`).join(", ");
       const selectors = document.querySelectorAll(selector);
       //@ts-ignore
-      if (selectors.length > 0) selectors.forEach(selector => selector.blur())
+      // if (selectors.length > 0) selectors.forEach(selector => selector.blur())
     }
     const returnValue = this.getstate();
     this._lastReturned = returnValue;

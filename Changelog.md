@@ -1,14 +1,20 @@
+### 10.0.26
+* More fixes for changes in traits changing to Set
+* Revert minimum version to 2.0.3 to avoid midi disappearing from module list
+* Reenable support for advantage/disadvantage keys when using late targeting.
+Known Bug: Midi keyboard handling has been scrambled by a found change (not sure when) to auto release pressed keys when clicking on a button - which means cases where clicking on a form button while holding alt/ctrl/etc will be treated as a simple key press.
+
 ### 10.0.25
 * Fix for dnd5e 2.1 traits changing to sets rather than arrays
 * Fix for dnd5e 2.1 changes to getBaseItem in midi-sounds throwing deprecation warning
 * Fix for dnd5e 2.1 changes to initiative handling.
 
-Changes should be backwards compatible with 2.0.3 but have not tested in detail. So only upgrate if you have moved to dnd5e 2.1.x
+Changes should be backwards compatible with 2.0.3 but have not tested in detail. So only upgrade if you have moved to dnd5e 2.1.x
 
 ### 10.0.24
 * Fix for editing actor on use macros when there is an active effect also providing an onUseMacro
 * Fix for levelsAutoCover giving too much cover.
-* Support for pool terms "{1d6+2}" in damage rolls. Due to dnd5e's treatment of pool terms, pool terms in damage rolls will NOT do critical damage.
+* Support for pool terms "{1d6+2}" in damage rolls. Due to dnd5e's treatment of pool terms, pool terms in damage rolls will NOT do critical dbuildamage.
 * Added support for the "anonymous" module. If installed it will take precedence over combat-utility-belt for hiding names in chat/hit/saves etc. The hide item details feature of anonymous works with midi-qol.
 * Fix for DamageOnlyWorkflow and cover calculations.
 * Dice so nice attack rolls display all dice even if an optional roll is triggered.
