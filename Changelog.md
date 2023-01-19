@@ -2,6 +2,7 @@
 * More fixes for changes in traits changing to Set
 * Revert minimum version to 2.0.3 to avoid midi disappearing from module list
 * Reenable support for advantage/disadvantage keys when using late targeting.
+* Fix for always deleting first actor on use macro rather than the selected one
 Known Bug: Midi keyboard handling has been scrambled by a found change (not sure when) to auto release pressed keys when clicking on a button - which means cases where clicking on a form button while holding alt/ctrl/etc will be treated as a simple key press.
 
 ### 10.0.25
