@@ -701,5 +701,6 @@
   "midi-qol._comment for translators_noDamage": "Les deux lignes de texte ci-dessous sont recherchées par Midi dans la description du sort",
   "midi-qol.FailFriendly": "Alliés: échec",
   "midi-qol.OffHandWeapon": "Main gauche",
-  "midi-qol.ignoreTotalCover": "Pas d'abri total"
+  "midi-qol.ignoreTotalCover": "Ignore abri",
+  "midi-qol.SaveFriendly": "Alliés: Réussite"
 }
