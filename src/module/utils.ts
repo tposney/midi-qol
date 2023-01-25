@@ -788,7 +788,6 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
   totalDamage = newDetail.reduce((acc, value) => acc + value.damage, 0);
   workflow.damageDetail = newDetail;
   workflow.damageTotal = totalDamage;
-  warn("merged damage details are  ", newDetail);
   workflow.bonusDamageDetail = undefined;
   workflow.bonusDamageTotal = undefined;
   // TODO come back and remove bonusDamage from the args to applyTokenDamageMany

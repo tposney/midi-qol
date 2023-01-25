@@ -18,7 +18,7 @@ const modules = {
   "levelsvolumetrictemplates": "0.0.0",
   "lib-changelogs": "0.0.0",
   "lib-wrapper": "1.3.5",
-  "lmrtfy": "0.9",
+  "lmrtfy": "3.1.2",
   "monks-tokenbar": "1.0.55",
   "multilevel-tokens": "1.6.0",
   "ready-set-roll-5e": "1.2.0",

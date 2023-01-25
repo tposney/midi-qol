@@ -601,13 +601,15 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
 
   if (debugEnabled > 1) debug("addChatDamageButtons", totalDamage, damageList, html, actorId, itemUuid, toMatch, html.find(toMatch))
   const btnContainer = $('<span class="dmgBtn-container-mqol"></span>');
-  let btnStylingGreen = `background-color:lightgreen; ${style}`;
+  let btnStylingLimeGreen = `background-color:limegreen; ${style}`;
+  let btnStylingLightGreen = `background-color:lightgreen; ${style}`;
   let btnStylingRed = `background-color:lightcoral; ${style}`;
   const fullDamageButton = $(`<button class="dice-total-full-${tag}-button dice-total-full-button" style="${btnStylingRed}"><i class="fas fa-user-minus" title="Click to apply up to ${totalDamage} damage to selected token(s)."></i></button>`);
   const halfDamageButton = $(`<button class="dice-total-half-${tag}-button dice-total-half-button" style="${btnStylingRed}"><i title="Click to apply up to ${Math.floor(totalDamage / 2)} damage to selected token(s).">&frac12;</i></button>`);
   const quarterDamageButton = $(`<button class="dice-total-quarter-${tag}-button dice-total-quarter-button" style="${btnStylingRed}"><i title="Click to apply up to ${Math.floor(totalDamage / 4)} damage to selected token(s).">&frac14;</i></button>`);
-  const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button dice-total-double-button" style="${btnStylingRed}"><i title="Click to apply up to ${totalDamage * 2} damage to selected token(s).">x2</i></button>`);
-  const fullHealingButton = $(`<button class="dice-total-full-${tag}-healing-button dice-total-healing-button" style="${btnStylingGreen}"><i class="fas fa-user-plus" title="Click to heal up to ${totalDamage} to selected token(s)."></i></button>`);
+  const doubleDamageButton = $(`<button class="dice-total-double-${tag}-button dice-total-double-button" style="${btnStylingRed}"><i title="Click to apply up to ${totalDamage * 2} damage to selected token(s).">2</i></button>`);
+  const fullHealingButton = $(`<button class="dice-total-full-${tag}-healing-button dice-total-healing-button" style="${btnStylingLimeGreen}"><i class="fas fa-user-plus" title="Click to heal up to ${totalDamage} to selected token(s)."></i></button>`);
+  const fullTempHealingButton = $(`<button class="dice-total-full-${tag}-temp-healing-button dice-total-healing-button" style="${btnStylingLightGreen}"><i class="fas fa-user-plus" title="Click to add up to ${totalDamage} to selected token(s) temp HP."></i></button>`);
 
   btnContainer.append(fullDamageButton);
   btnContainer.append(halfDamageButton);
@@ -615,6 +617,8 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
   btnContainer.append(quarterDamageButton);
   btnContainer.append(doubleDamageButton);
   btnContainer.append(fullHealingButton);
+  btnContainer.append(fullTempHealingButton);
+
   const toMatchElement = html.find(toMatch);
   toMatchElement.addClass("dmgBtn-mqol");
   toMatchElement.append(btnContainer);
@@ -627,7 +631,8 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
       // const item = game.actors.get(actorId).items.get(itemId);
       const item = MQfromUuid(itemUuid)
       const modDamageList = duplicate(damageList).map(di => {
-        if (mult < 0) di.type = "healing";
+        if (mult === -1) di.type = "healing";
+        else if (mult === -2) di.type = "temphp";
         else di.damage = Math.floor(di.damage * mult);
         return di;
       });
@@ -647,6 +652,8 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
   setButtonClick(`.dice-total-quarter-${tag}-button`, 0.25);
 
   setButtonClick(`.dice-total-full-${tag}-healing-button`, -1);
+  setButtonClick(`.dice-total-full-${tag}-temp-healing-button`, -2);
+
   // logic to only show the buttons when the mouse is within the chat card and a token is selected
   html.find('.dmgBtn-container-mqol').hide();
   $(html).hover(evIn => {

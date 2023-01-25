@@ -17,10 +17,9 @@ export class LateTargetingDialog extends Application {
   //@ts-ignore .Actor, .Item
   constructor(actor: CONFIG.Actor.documentClass, item: CONFIG.Item.documentClass, user, options: any = {}): Application {
     super(options);
-    this.data = { actor: undefined, item: undefined, user: game.user, targets: [] }
-    this.data.actor = actor;
-    this.data.item = item;
-    this.data.user = user;
+    this.data = { actor, item, user, targets: [] }
+
+    // Handle alt/ctrl etc keypresses when completing the dialog
     this.callback = function(value) {
       setProperty(options, "workflowOptions.advantage", options.worfkflowOptions?.advantage || options.pressedKeys.advantage);
       setProperty(options, "workflowOptions.disadvantage", options.worfkflowOptions?.disadvantage || options.pressedKeys.disadvantage);
@@ -28,6 +27,7 @@ export class LateTargetingDialog extends Application {
       setProperty(options, "workflowOptions.fastForward", options.worfkflowOptions?.fastForward || options.pressedKeys.fastForward);
       return options.callback(value);
     }
+    // this.callback = options.callback;
     return this;
   }
 

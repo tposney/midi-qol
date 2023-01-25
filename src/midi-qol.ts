@@ -587,7 +587,6 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.optional.Name.onUse`);
   midiFlags.push(`flags.midi-qol.optional.NAME.macroToCall`);
 
-
   midiFlags.push(`flags.midi-qol.uncanny-dodge`);
   midiFlags.push(`flags.midi-qol.OverTime`);
   midiFlags.push("flags.midi-qol.inMotion");

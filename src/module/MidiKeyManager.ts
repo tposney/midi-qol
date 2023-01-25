@@ -266,6 +266,7 @@ export class MidiKeyManager {
       precedence: normalPrecedence
     });
   }
+
 }
 
 export function mapSpeedKeys(keys: Options | undefined, type: string, forceToggle = false): Options | undefined {

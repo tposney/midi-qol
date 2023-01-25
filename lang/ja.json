@@ -68,8 +68,9 @@
     "midi-qol.noTokens": "効果が適用できません。コマを目標選択してください。",
     "midi-qol.HideNPCNames.Name": "コマの名前を隠す",
     "midi-qol.HideNPCNames.Hint": "ヒット/セーヴ時、チャットに表示される名前を入力した文字列に置き換えます。空白はこの機能の無効化を意味します。",
+    "midi-qol.noTemplateSeen": "テンプレートが配置されていません",
     "midi-qol.AutoTarget.Name": "範囲指定で対象を自動選択",
-    "midi-qol.AutoTarget.Hint": "呪文等を発動したときにテンプレートを置くと、範囲内のコマを自動的にターゲットします。",
+    "midi-qol.AutoTarget.Hint": "呪文等を発動したときにテンプレートを置くと、範囲内のコマを自動的にターゲットします。遠隔攻撃における壁の処理で「中心点＋Levels」が選択されている場合、Levels - Volumetric Templates機能が使用されます (インストールされている場合)。",
     "midi-qol._comment for translators_noDamageonSaveSpells": "（翻訳作業者へ）FVTT v9ではarray jsonがサポートされなくなったため、以下はv9以降でのみ使用されます。",
     "midi-qol.noDamageonSaveSpells":  [
         "アシッド・スプラッシュ",
@@ -136,16 +137,17 @@
     "midi-qol.noSaveTargets": "セーヴする対象がありません。",
     "midi-qol.UseTokenNames.Name": "チャットカードにコマの名前を使用する",
     "midi-qol.UseTokenNames.Hint": "チャットカードのタイトルと対象に、アクターの名前でなくコマの名前を使用します。",
-    "midi-qol.CriticalDamage.Name": "クリティカルダメージの振り方",
-    "midi-qol.CriticalDamage.Hint": "（FVTT v0.7.0以降）「DnD5e標準」：DnD5eの標準的なクリティカルロールです。「通常ダメージ最大化」：ダイスはそのまま出目を最大化します。「追加ダイス最大化」：追加ダイスのみ最大化します。「すべてが最大」：基本と追加のすべてのダイスを最大化します。「出目の2倍」：出目を2倍して計算します。",
+    "midi-qol.CriticalDamage.Name": "クリティカルダメージの選択",
+    "midi-qol.CriticalDamage.Hint": "「DnD5e準拠」：DnD5eの標準的なクリティカルロールです。「通常ダメージ最大化」：ダイスはそのまま出目を最大化します。「追加ダイス最大化」：追加ダイスのみ最大化します。「すべてが最大」：基本と追加のすべてのダイスを最大化します。「出目の2倍」：出目を2倍して計算します。「最大出目は振り足す」：追加ダイスの出目が最大の場合、さらに振り足します。「設定した追加ダメージ」：アイテムに設定された“追加クリティカルダメージ”のみを上乗せします。",
     "midi-qol.CriticalDamageChoices" : {
-        "default": "DnD5e標準",
+        "default": "DnD5eシステム標準",
         "maxDamage":  "通常ダメージ最大化",
-        "maxCrit": "追加ダイス最大化",
+        "maxCrit": "追加ダイス最大化（ロール無）",
+        "maxCritRoll": "追加ダイス最大化（ロール有）",
         "maxAll": "すべてが最大",
         "doubleDice": "出目の2倍",
         "explode": "最大出目は振り足す",
-        "baseDamage": "ボーナスなし"
+        "baseDamage": "設定した追加ダメージ"
     },
     "midi-qol.MergeCard.Name": "ロールを1枚のチャットカードに統合する",
     "midi-qol.MergeCard.Hint": "攻撃・ヒット・ダメージ・セーヴを1枚のチャットカードに統合して表示します。",
@@ -209,7 +211,8 @@
         "alwaysIgnoreDefeated": "常に（敗退者は除く）",
         "wallsBlock": "壁は超えない",
         "wallsBlockIgnoreDefeated": "壁は超えない（敗退者は除く）",
-		"dftemplates": "DF Template Enhancementsを使用"
+		"dftemplates": "DF Template Enhancementsを使用",
+        "dfwalledTemplates": "Walled Templatesを使用"
     },
     "midi-qol.autoCheckSavesOptions": {
         "none": "オフ",
@@ -228,6 +231,7 @@
     "midi-qol.autoRollDamageOptions": {
         "none": "オフ",
         "always": "常に",
+        "saveOnly": "セーヴのみ",
         "onHit": "ヒット時のみ"
     },
     "midi-qol.autoApplyDamageOptions": {
@@ -344,6 +348,7 @@
     "midi-qol.AllowUseMacro.Hint": "有効にすると、アイテム使用時に呼び出すマクロ名を入力するフィールドがアイテムの詳細画面に追加されます。詳しくはReadmeを参照してください。",
     "midi-qol.onUseMacroLabel": "使用時のマクロ",
     "midi-qol.onUseMacroOptions": {
+        "preTargeting": "目標選択が解決される前(*)",
         "preItemRoll": "アイテムがロールされる前(*)",
         "templatePlaced": "テンプレートが配置後のみ",
         "preambleComplete": "目標選択後",
@@ -385,6 +390,13 @@
     "midi-qol.SingleConcentrationRoll.Hint": "有効にすると、攻撃が「通常ダメージ＋セーヴ＋その他の式 / 代替ダメージ」などの複合ダメージを与える場合、精神集中判定を一度だけ行うようになります。",
     "midi-qol.TempHPDamageConcentrationCheck.Name": "一時的hp減少時の集中判定",
 	"midi-qol.TempHPDamageConcentrationCheck.Hint": "有効にした場合、一時的hpへのダメージで集中判定が発生するようになります（公式の裁定ではこれが正しいそうです）。",
+    "midi-qol.RemoveConcentrationEffects.Name": "効果が削除されたとき集中も除去する",
+    "midi-qol.RemoveConcentrationEffects.Hint": "集中を要する呪文や特徴の効果（またはテンプレート）が削除されるタイミングを監視します。すべて削除されると集中も除去されます。",
+    "midi-qol.RemoveConcentrationEffectsOptions" : {
+    "none": "無効",
+    "effects": "効果を監視",
+    "effectsTemplates": "効果とテンプレートを監視"
+  },
     "midi-qol.GMSettings": "GM",
     "midi-qol.PlayerSettings": "プレイヤー",
     "midi-qol.SoundSettings.Tab": "サウンド",
@@ -405,19 +417,20 @@
     "midi-qol.AttackMacro.Hint": "攻撃ロール時に呼び出されるマクロのカンマ区切りリストです。攻撃の命中判定時に適用されます。",
     "midi-qol.DAEMidiQOL": "DAE/Midi-QOL固有",
     "midi-qol.Optional": "任意",
-    "midi-qol.OptionalRules.Name": "（実験的）選択ルール",
+    "midi-qol.OptionalRules.Name": "選択ルール",
+    "midi-qol.Mechanics": "メカニクス",
     "midi-qol.OptionalRules.Hint": "DMによっては使うかもしれないDnD5eの選択ルール。BetterRolls環境ではlibWrapperで警告が発生するかもしれません。",
-    "midi-qol.InvisAdvantage.Name": "隠れ身/不可視状態の攻撃者は有利を得る（要CUBまたはCV）",
+    "midi-qol.InvisAdvantage.Name": "隠れ身/不可視状態の攻撃者は有利（被攻撃時は不利）を得る（要CV/CE/CUBまたはコア機能の視覚）",
     "midi-qol.CheckRange.Name": "攻撃時に武器の射程を確認する",
     "midi-qol.NearbyFoe.Name": "この値より近くに敵がいるときの遠隔攻撃は不利を受ける（0で無効）",
     "midi-qol.WallsBlockRange.Name": "壁は遠隔攻撃を遮る",
-    "midi-qol.WallsBlockRange.Hint": "遠隔攻撃が壁によって遮られるかを自動判断します（「Levels」または「DnD5e Helpers」のいずれかが必要です）。\n「中心点」：コマの中心と中心を結ぶラインで判断します。「中心点＋Levels」：中心点と同様ですが、壁の判定には「Levels」モジュールを使用します。「DnD5e helpers」：コマの四隅が見えるかどうかで判定します。また遮蔽に応じたACの自動調整も可能です。",
+    "midi-qol.WallsBlockRange.Hint": "遠隔攻撃が壁によって遮られるかを自動判断します。\n「なし」：無効。「中心点」：コマの中心と中心を結ぶラインで判断します。「中心点＋Levels」：中心点と同様ですが、壁の判定には「Levels」モジュールを使用します。",
     "midi-qol.WallsBlockRangeOptionsNew": {
         "none": "無効",
         "center": "中心点",
         "centerLevels": "中心点＋Levels",
-        "dnd5eHelpers": "DnD5e Helpers",
-        "dnd5eHelpersAC": "DnD5e Helpers＋AC調整"
+        "levelsautocover": "Levels - Auto Cover",
+        "simbuls-cover-calculator": "Simbuls Cover Calculator"
     },
     "midi-qol.NearbyAllyRanged.Name": "（ハウスルール） 味方と隣接する敵への遠隔攻撃は不利を受ける",
     "midi-qol.WallsBlockRangeOptions": {
@@ -425,9 +438,16 @@
         "center": "中心点",
         "centerLevels": "中心点＋Levels"
     },
+    "midi-qol.CoverCalculation.Name": "遮蔽計算",
+    "midi-qol.CoverCalculation.Hint": "選択したモジュールを用いて対象との遮蔽を判断し、ACボーナスを自動で適用します。",
+    "midi-qol.CoverCalculationOptions": {
+        "none": "無効",
+        "simbuls-cover-calculator": "Simbul's Cover Calculator",
+        "levelsautocover": "Levels - Auto Cover"
+    },
     "midi-qol.NearbyAllyRanged.Hint": "相手がこの値（w*h）より小さい場合、味方の5ft以内にいる対象への遠隔攻撃には不利がつきます。0を指定すると無効になります。",
     "midi-qol.Incapacitated.Name": "無力状態のアクターはアクションやリアクションができない",
-    "midi-qol.RemoveHiddenInvis.Name": "攻撃は隠れ身/不可視状態を解除する（要CUBまたはConditional Visibility）",
+    "midi-qol.RemoveHiddenInvis.Name": "攻撃は隠れ身状態を解除する（要CE/CV/CUBまたはコア機能の状態変化）",
     "midi-qol.CriticalSaves.Name": "（ハウスルール）セーヴ時のクリティカル（ファンブル）は常に成功（失敗）として扱う。",
     "midi-qol.MaxDRValue.Name": "（ハウスルール）最も効果的なダメージ軽減（DR）のみを適用します。オフの場合はDRを累積して計算します。",
     "midi-qol.invisible": "不可視",
@@ -504,7 +524,7 @@
     "midi-qol.ChallengeModeArmorScale.Name": "ハウスルール版チャレンジモードACを有効にする",
     "midi-qol.ChallengeModeArmor.Hint": "チャレンジモードのアーマールールを使用します（詳しくはReadmeを参照のこと）。",
     "midi-qol.ChallengeModeArmorScale.Hint": "修正されたチャレンジモードのアーマールール使用します（要チャレンジモードACの有効化 / 詳しくはReadmeを参照のこと）。",
-	"midi-qol.NonSilverPhysical": "非銀製武器",
+	"midi-qol.NonSilverPhysical": "非銀製かつ非魔法の物理",
 	"midi-qol.NonAdamantinePhysical": "非アダマンティン製武器",
     "midi-qol.NonMagical": "非魔法的",
     "midi-qol.Magical": "魔法的",
@@ -529,15 +549,27 @@
     "midi-qol.LateTargeting.Name": "あとから目標を選択",
     "midi-qol.LateTargeting.Hint": "攻撃の自動ロールが有効なとき、「範囲攻撃」「遠隔攻撃」または目標が「自身」以外のアイテムをロールすると処理が中断され、目標選択を待つようになります。コマ操作メニューのモードを「目標選択」から別のものに切り換えると、処理が再開されます。",
     "midi-qol.LateTargeting.Blurb": "目標を {targetCount}体 選択してください。",
+    "midi-qol.LateTargetingOptions" : {
+      "none": "あとから目標選択を使用しない",
+      "noTargetsSelected": "目標選択を忘れたときのみ",
+      "all": "常に使用する"
+    },
     "midi-qol.AddDead.Name": "hpが0になったときの動作",
     "midi-qol.AddDead.Hint": "NPCに“敗北”マークが、PCに“気絶”のConvenient Effectが付与されます。",
-    "midi-qol.AddDeadOptions": {"none": "無効", "overlay": "大アイコンで効果をつける", "normal": "小アイコンで効果を付ける"},
+    "midi-qol.AddDeadOptions": {
+        "none": "無効",
+        "overlay": "大アイコンで効果をつける",
+        "normal": "小アイコンで効果を付ける"
+    },
     "midi-qol.Wounded": "重傷",
     "midi-qol.AddWounded.Name": "“重傷”状態になるhp（％指定）",
     "midi-qol.AddWounded.Hint": "hpが指定％以下になったとき、“重傷”状態を示すカスタムConvenient Effectを付与します。0を指定すると無効です。",
     "midi-qol.debugCallTiming.Name": "ログの実行タイミング",
     "midi-qol.debugCallTiming.Hint": "かかる時間についてのログ情報を提供します。",
     "midi-qol.autoFailFriendly": "友好的なら自動失敗",
+    "midi-qol.FailFriendly": "友好的なら失敗",
+    "midi-qol.SaveFriendly": "友好的なら成功",
+    "midi-qol.OffHandWeapon": "非利き手",
     "midi-qol.RollToggle.Hint": "攻撃/ダメージ/能力値判定の一括/自動ロールの切替を行います。",
     "midi-qol.RollToggle.Name": "ロールの切替",
     "midi-qol.FastForward.Hint": "次のロールを一括で処理します。",
@@ -575,6 +607,7 @@
         "all": "すべての攻撃ロール"
     },
     "midi-qol.Reactions": "リアクションの確認",
+    "midi-qol.ReactionsTab": "リアクション",
     "midi-qol.DoReactions.Name": "PCのリアクション確認",
     "midi-qol.DoReactions.Hint": "攻撃を受けたアクターは、ロール前にリアクションを使用するオプションが選択できるようになります。ヒットでトリガーされるリアクションは、ヒット確認を自動化する必要があります。ダメージの適用をトリガーにする場合は、ダメージリアクション（Readmeを参照）を使用してください。",
     "midi-qol.GMDoReactions.Name": "NPC/GMのリアクション確認",
@@ -582,10 +615,10 @@
     "midi-qol.ReactionTimeout.Hint": "リアクションを使用しないと判断するまでの待ち時間を設定します。",
     "midi-qol.NoOptionalRules.Name": "選択ルールなし",
     "midi-qol.NoOptionalRules.Hint": "このロールにおける選択ルールの適用を無効にします。",
-    "midi-qol.RecordAOO.Name": "機会攻撃を記録する",
+    "midi-qol.RecordAOO.Name": "機会攻撃を管理する",
     "midi-qol.RecordAOO.Hint": "自身のターン外で攻撃を行ったとき、コマにリアクション使用済のConvenient Effectsを付与します。",
     "midi-qol.RecordAOOOptions": {
-        "none": "記録しない",
+        "none": "管理しない",
         "character": "キャラクターのみ（通知使用時）",
         "all": "すべてのアクター（通知使用時）"
     },
@@ -646,5 +679,16 @@
     "midi-qol.IgnoreSpellReactionRestriction.Name": "リアクションでは非準備の呪文を使用できる",
     "midi-qol.IgnoreSpellReactionRestriction.Hint": "リアクションで呪文を使用するとき、呪文スロットや準備の有無を無視するようになります。",
     "midi-qol.DamageVulnerabilityMultiplier.Name": "脆弱性によって増加するダメージの倍率",
-    "midi-qol.DamageResistanceMultiplier.Name": "抵抗によって軽減されるダメージの倍率"
+    "midi-qol.DamageResistanceMultiplier.Name": "抵抗によって軽減されるダメージの倍率",
+    "midi-qol.DamageImmunityMultiplier.Name": "完全耐性によって軽減されるダメージの倍率",
+    "midi-qol.ShowFastForward.Name": "一括ロールを明示する",
+    "midi-qol.ShowFastForward.Hint": "攻撃/ダメージボタンに一括ロールのインジケータを表示します。",
+    "midi-qol.MeasuredTemplate": "テンプレート",
+    "midi-qol.AutoRemoveTemplate.Name": "持続時間が切れたテンプレートの自動削除",
+    "midi-qol.AttackPerTarget.Name": "目標ごとに1回の攻撃ロール",
+    "midi-qol.itemUseHooks.Name": "アイテムフックを利用する",
+    "midi-qol.itemUseHooks.Hint": "制作者のテスト用につき、使用しないでください。",
+    "midi-qol.SkillAbilityCheckAdvantage.Name": "能力値判定の有利は技能判定にも影響する",
+    "midi-qol.SkillAbilityCheckAdvantage.Hint": "特定の能力値判定で有利/不利を得た場合、同じ能力値に基づく技能判定においても有利/不利となります。",
+    "midi-qol.ignoreTotalCover": "完全遮蔽でない"
 }

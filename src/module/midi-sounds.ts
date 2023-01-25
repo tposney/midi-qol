@@ -127,7 +127,13 @@ export class MidiSounds {
 
     const items = {};
     for (const [name, id] of Object.entries(baseIds)) {
-      const baseItem = await globalThis.dnd5e.documents.Trait.getBaseItem(id);
+      let baseItem;
+      //@ts-expect-error
+      if (game.system.id === "dnd5e" && isNewerVersion(game.system.version, "2.0.3")) {
+        baseItem = await globalThis.dnd5e.documents.Trait.getBaseItem(id);
+      } else {
+        globalThis.dnd5e.applications.ProficiencySelector.getBaseItem(id);
+      }
       if (baseType !== foundry.utils.getProperty(baseItem.system, typeProperty)) continue;
       items[name] = baseItem.name;
     }

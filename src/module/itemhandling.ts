@@ -23,9 +23,10 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
     const targets: Token[] = [];
     for (let target of game?.user?.targets) targets.push(target);
     for (let target of targets) {
-      const newOptions = mergeObject(options, { singleTarget: true, targetUuids: [target.document.uuid], workflowOptions: { lateTargeting: false } }, { inplace: false, overwrite: true });
+      const newOptions = mergeObject(options, { singleTarget: true, targetUuids: [target.document.uuid], workflowOptions: { lateTargeting: "none" } }, { inplace: false, overwrite: true });
       await completeItemUse(this, {}, newOptions)
     }
+    Workflow.removeWorkflow(this.uuid);
     return;
   }
   options = mergeObject({
@@ -532,7 +533,7 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
   //@ts-ignore
   if (CONFIG.debug.keybindings) {
     log("itemhandling: workflow.rolloptions", workflow.rollOption);
-    log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptins.rollToggle));
+    log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptins?.rollToggle));
   }
 
   if (workflow?.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;

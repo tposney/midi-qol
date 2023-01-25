@@ -92,6 +92,7 @@ class ConfigSettings {
   keyMapping = defaultKeyMapping;
   mergeCard: boolean = false;
   mergeCardCondensed: boolean = false;
+  highlightSuccess: boolean = false;
   optionalRulesEnabled: boolean = false;
   paranoidGM : boolean = false;
   playerRollSaves: string = "none";
@@ -149,6 +150,7 @@ class ConfigSettings {
     challengModeArmor: false,
     checkFlanking: "off",
     optionalCritRule: -1,
+    criticalNat20: false,
     actionSpecialDurationImmediate: false
   };
 }
@@ -339,6 +341,7 @@ export let fetchParams = () => {
   if (typeof configSettings.requiresTargets !== "string") configSettings.requiresTargets = "none";
   if (configSettings.tempHPDamageConcentrationCheck === undefined) configSettings.tempHPDamageConcentrationCheck = false;
   if (configSettings.showFastForward === undefined) configSettings.showFastForward = true;
+  if (configSettings.highlightSuccess === undefined) configSettings.highlightSuccess = false;
   configSettings.optionalRules = mergeObject({ // eventually split this into mechanics and rules
       invisAdvantage: true,
       checkRange: true,
@@ -356,6 +359,7 @@ export let fetchParams = () => {
       challengeModeArmorScale: false,
       checkFlanking: "off",
       optionalCritRule: -1,
+      criticalNat20: false,
       actionSpecialDurationImmediate: false
     }, configSettings.optionalRules ?? {}, {overwrite: true, insertKeys: true, insertValues: true});
   if (!configSettings.optionalRules.wallsBlockRange) configSettings.optionalRules.wallsBlockRange = "center";

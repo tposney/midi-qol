@@ -2781,8 +2781,12 @@ export class Workflow {
           }
           const optionalCrits = checkRule("optionalCritRule");
           if (this.targets.size === 1 && optionalCrits !== false && optionalCrits > -1) {
+            if (checkRule("criticalNat20") && this.isCritical) {
+
+            } else {
             //@ts-ignore .attributes
-            this.isCritical = attackTotal >= (targetToken.actor?.system.attributes?.ac?.value ?? 10) + Number(checkRule("optionalCritRule"));
+              this.isCritical = attackTotal >= (targetToken.actor?.system.attributes?.ac?.value ?? 10) + Number(checkRule("optionalCritRule"));
+            }
           }
           hitResultNumeric = this.isCritical ? "++" : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
         }
@@ -2823,6 +2827,11 @@ export class Workflow {
       else if (isHitEC && checkRule("challengeModeArmor") && checkRule("challengeModeArmorScale")) hitString = `${i18n("midi-qol.hitsEC")} (${hitScale}%)`;
       else if (isHitEC) hitString = `${i18n("midi-qol.hitsEC")}`;
       else hitString = i18n("midi-qol.misses");
+      let hitStyle = "";
+      if (configSettings.highlightSuccess) {
+        if (isHit || isHitEC) hitStyle = "color: green;";
+        else hitStyle = "color: red;";
+      }
       if (attackTotal !== this.attackTotal &&
         !configSettings.displayHitResultNumeric
         && ["none", "detailsDSN", "details"].includes(configSettings.hideRollDetails)) {
@@ -2853,6 +2862,7 @@ export class Workflow {
         isPC: targetToken.actor?.hasPlayerOwner,
         target: targetToken,
         hitString,
+        hitStyle,
         attackType,
         img,
         gmName: targetToken.name,

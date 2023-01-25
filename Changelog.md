@@ -1,3 +1,14 @@
+### 10.0.27
+* When critical margin is enabled (optional rule) you can allow natural 20s to still be criticals.
+* Override default foundry behaviour so that when clicking a button on a form alt/ctrl will still work.
+* Fix for Aura of Protection using Build a Bonus.
+* Added heal temphp button to damage card in line with dnd5e apply damage menu.
+* Fix for late targeting/attack per roll interaction causing late targeting to be called multiple times.
+* Compatibility change for lmrtfy 3.1.2 (which midi now requires - or later).
+* Ability to color highlight hit/miss on hit miss display (on misc tab).
+* Fix for dnd 2.0.3 and fetching baseItem.
+* updated ja.json
+
 ### 10.0.26
 * More fixes for changes in traits changing to Set
 * Revert minimum version to 2.0.3 to avoid midi disappearing from module list

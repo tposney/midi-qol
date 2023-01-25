@@ -108,13 +108,10 @@ export async function bonusCheck(actor, result: Roll, category, detail): Promise
       let config = getSystemCONFIG();
       let systemString = game.system.id.toUpperCase();
       switch (category) {
-        //@ts-ignore
         case "check": title = i18nFormat(`${systemString}.AbilityPromptTitle`, { ability: config.abilities[detail] ?? "" });
           break;
-        //@ts-ignore
         case "save": title = i18nFormat(`${systemString}.SavePromptTitle`, { ability: config.abilities[detail] ?? "" });
           break;
-        //@ts-ignore
         case "skill": title = i18nFormat(`${systemString}.SkillPromptTitle`, { skill: config.skills[detail] ?? "" });
           break;
       }
@@ -374,6 +371,7 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
 
   return result;
 }
+
 export async function rollAbilitySave(wrapped, ...args) {
   return doAbilityRoll.bind(this)(wrapped, "save", ...args);
 }
@@ -474,7 +472,7 @@ function doRollAbilityHook(rollType, item, roll: any /* D20Roll */, abilityId: s
   const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId])) ?? false;
   if (minValue && Number.isNumeric(minValue)) {
     result.terms[0].modifiers.unshift(`min${minValue}`);
-    result = new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
+    result = new Roll(Roll.getFormula(result.terms)).evaluate({ async: false });
   }
 
   if (!roll.options.simulate) result = /* await  show stopper for this */ bonusCheck(this, result, rollType, abilityId)
@@ -692,7 +690,16 @@ export function initPatching() {
   // For new onuse macros stuff.
   libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.prepareData", itemPrepareData, "WRAPPER");
   libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.prepareData", actorPrepareData, "WRAPPER");
+  libWrapper.register("midi-qol", "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
 }
+
+export function _onFocusIn(event) {
+  const formElements = [
+    HTMLInputElement, HTMLSelectElement, HTMLTextAreaElement, HTMLOptionElement, /*HTMLButtonElement*/
+  ];
+  if ( event.target.isContentEditable || formElements.some(cls => event.target instanceof cls) ) this.releaseKeys();
+}
+
 export function actorPrepareData(wrapped) {
   try {
     wrapped();
@@ -1124,7 +1131,7 @@ export let actorAbilityRollPatching = () => {
 export function patchLMRTFY() {
   if (installedModules.get("lmrtfy")) {
     log("Patching lmrtfy")
-    libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "OVERRIDE");
+    // libWrapper.register("midi-qol", "LMRTFYRoller.prototype._makeRoll", _makeRoll, "OVERRIDE");
     libWrapper.register("midi-qol", "LMRTFY.onMessage", LMRTFYOnMessage, "OVERRIDE");
 
     // the _tagMessage has been updated in LMRTFY libWrapper.register("midi-qol", "LMRTFYRoller.prototype._tagMessage", _tagMessage, "OVERRIDE");
@@ -1174,33 +1181,35 @@ export function _tagMessage(candidate, data, options) {
   candidate.updateSource(update);
 }
 
-export async function _makeRoll(event, rollMethod, ...args) {
+export async function _makeRoll(event, rollMethod, failRoll, ...args) {
   let options;
   switch (this.advantage) {
-    case -1:
-      options = { disadvantage: true, fastForward: true };
-      break;
-    case 0:
-      options = { fastForward: true };
-      break;
-    case 1:
-      options = { advantage: true, fastForward: true };
-      break;
-    case 2:
-      options = { event }
-      break;
+      case -1:
+          options = { disadvantage: true, fastForward: true };
+          break;
+      case 0:
+          options = { fastForward: true };
+          break;
+      case 1:
+          options = { advantage: true, fastForward: true };
+          break;
+      case 2:
+          options = { event };
+          break;
   }
   const rollMode = game.settings.get("core", "rollMode");
   game.settings.set("core", "rollMode", this.mode || CONST.DICE_ROLL_MODES);
   for (let actor of this.actors) {
-    Hooks.once("preCreateChatMessage", this._tagMessage.bind(this));
-    await actor[rollMethod].call(actor, ...args, options);
+      Hooks.once("preCreateChatMessage", this._tagMessage.bind(this));
+      if (failRoll) {
+          options["parts"] = [-100];
+      }
+      await actor[rollMethod].call(actor, ...args, options);
   }
   game.settings.set("core", "rollMode", rollMode);
-  event.currentTarget.disabled = true;
+  this._disableButtons(event);
   this._checkClose();
 }
-
 
 export async function createRollResultFromCustomRoll(customRoll: any) {
   const saveEntry = customRoll.entries?.find((e) => e.type === "multiroll");
