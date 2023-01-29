@@ -699,8 +699,8 @@
   "midi-qol._comment for translators_fullDamage": "Les deux lignes de texte ci-dessous sont recherchées par Midi dans la description du sort",
   "midi-qol._comment for translators_halfDamage": "Le texte ci-dessous est recherché par Midi dans la description des sorts",
   "midi-qol._comment for translators_noDamage": "Les deux lignes de texte ci-dessous sont recherchées par Midi dans la description du sort",
-  "midi-qol.FailFriendly": "Alliés: échec",
+  "midi-qol.FailFriendly": "Amis: échec",
   "midi-qol.OffHandWeapon": "Main gauche",
   "midi-qol.ignoreTotalCover": "Ignore abri",
-  "midi-qol.SaveFriendly": "Alliés: Réussite"
+  "midi-qol.SaveFriendly": "Amis: Réussite"
 }
