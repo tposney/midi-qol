@@ -702,5 +702,9 @@
   "midi-qol.FailFriendly": "Amis: échec",
   "midi-qol.OffHandWeapon": "Main gauche",
   "midi-qol.ignoreTotalCover": "Ignore abri",
-  "midi-qol.SaveFriendly": "Amis: Réussite"
+  "midi-qol.SaveFriendly": "Amis: Réussite",
+  "midi-qol.CriticalNat20.Name": "(Règle maison) Autoriser les critiques normales",
+  "midi-qol.InitPromptTitle": "Jet d'initiative",
+  "midi-qol.HighlightSuccess.Name": "Affichage des codes couleurs des succès/échecs",
+  "midi-qol.HighlightSuccess.Hint": "Lors de l'affichage des succès et des échecs, les succès sont en vert et les échecs en rouge"
 }
