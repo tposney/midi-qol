@@ -699,8 +699,13 @@
   "midi-qol._comment for translators_fullDamage": "Les deux lignes de texte ci-dessous sont recherchées par Midi dans la description du sort",
   "midi-qol._comment for translators_halfDamage": "Le texte ci-dessous est recherché par Midi dans la description des sorts",
   "midi-qol._comment for translators_noDamage": "Les deux lignes de texte ci-dessous sont recherchées par Midi dans la description du sort",
-  "midi-qol.FailFriendly": "Alliés: échec",
+  "midi-qol.FailFriendly": "Amis: échec",
   "midi-qol.OffHandWeapon": "Main gauche",
   "midi-qol.ignoreTotalCover": "Ignore abri",
-  "midi-qol.SaveFriendly": "Alliés: Réussite"
+  "midi-qol.SaveFriendly": "Amis: Réussite",
+  "midi-qol.CriticalNat20.Name": "(Règle maison) Autoriser les critiques normales",
+  "midi-qol.InitPromptTitle": "Jet d'initiative",
+  "midi-qol.HighlightSuccess.Name": "Affichage des codes couleurs des succès/échecs",
+  "midi-qol.HighlightSuccess.Hint": "Lors de l'affichage des succès et des échecs, les succès sont en vert et les échecs en rouge",
+  "midi-qol.CriticalNat20.Hint": "Un jet au-dessus du seuil critique est toujours critique, même s'il ne satisfait pas aux exigences de marge."
 }
