@@ -115,7 +115,7 @@ export class ConfigPanel extends FormApplication {
     super.activateListeners(html)
 
     html.find(".itemTypeListEdit").on("click", event => {
-      new IemTypeSelector({}, {}).render(true)
+      new ItemTypeSelector({}, {}).render(true)
     })
     html.find(".optionalRulesEnabled").on("click", event => {
       configSettings.optionalRulesEnabled = !configSettings.optionalRulesEnabled;
@@ -162,7 +162,7 @@ export class ConfigPanel extends FormApplication {
   }
 }
 
-export class IemTypeSelector extends FormApplication {
+export class ItemTypeSelector extends FormApplication {
 
   /** @override */
   static get defaultOptions() {

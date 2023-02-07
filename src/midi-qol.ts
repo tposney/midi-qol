@@ -566,8 +566,14 @@ function setupMidiFlags() {
     })
     midiFlags.push(`flags.midi-qol.DR.healing`);
     midiFlags.push(`flags.midi-qol.DR.temphp`);
-
-
+  } else if (game.system.id === "sw5e") {
+    midiFlags.push(`flags.midi-qol.DR.all`);
+    midiFlags.push(`flags.midi-qol.DR.final`);
+    Object.keys(config.damageResistanceTypes).forEach(dt => {
+      midiFlags.push(`flags.midi-qol.DR.${dt}`);
+    })
+    midiFlags.push(`flags.midi-qol.DR.healing`);
+    midiFlags.push(`flags.midi-qol.DR.temphp`);
   }
 
   midiFlags.push(`flags.midi-qol.optional.NAME.attack.all`);

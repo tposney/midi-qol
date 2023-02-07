@@ -1,3 +1,12 @@
+### 10.0.28
+* Support decimals in ranged attack disadvantage to support metric based systems, e.g. 1.5 meteres.
+* Fix for advantage/disadvantage not using the correct visible/not visible test.
+* Fix for workflow.setAttackRoll() might break if the target has Reactions and you set the AttackRoll to a NumericTerm - thanks @thatlonelybugbear.
+* Color saves/failed saves if hightlight hits/misses/saves is set in the misc tab.
+* **Breaking** If you have attack roll per target set and attempt to roll with no targets set,midi will obey the require targets settings. So if no requirement for selecting targets before rolling is set midi will do the roll with no targets.
+* Added DR.slashing/piercing etc to sw5e.
+* Some cleanup for rolling saving throws with optional effects, removed duplicate dice so nice display, fixed interaction with LMRTFY (causing saves to not register) and updated display of the roll to show the modified roll (with pluses etc and the original dice rolls).
+
 ### 10.0.27
 * When critical margin is enabled (optional rule) you can allow natural 20s to still be criticals.
 * Override default foundry behaviour so that when clicking a button on a form alt/ctrl will still work.

@@ -2013,6 +2013,7 @@ export class Workflow {
     const noDamage = getSaveMultiplierForItem(this.saveItem) === 0 ? i18n("midi-qol.noDamageText") : "";
     const fullDamage = getSaveMultiplierForItem(this.saveItem) === 1 ? i18n("midi-qol.fullDamageText") : "";
 
+
     let templateData = {
       noDamage,
       fullDamage,
@@ -2486,7 +2487,13 @@ export class Workflow {
       if (VideoHelper.hasVideoExtension(img)) {
         img = await game.video.createThumbnail(img, { width: 100, height: 100 });
       }
+      
       let isPlayerOwned = target.actor.hasPlayerOwner;
+      let saveStyle = "";
+      if (configSettings.highlightSuccess) {
+        if (saved) saveStyle = "color: green;";
+        else saveStyle = "color: red;";
+      }
       this.saveDisplayData.push({
         gmName: target.name,
         playerName: getTokenPlayerName(target),
@@ -2497,7 +2504,8 @@ export class Workflow {
         rollTotal,
         rollDetail,
         id: target.id,
-        adv
+        adv,
+        saveStyle
       });
       i++;
     }
@@ -2573,7 +2581,7 @@ export class Workflow {
 
   processSaveRoll(message, html, data) {
     if (!this.saveRequests) return {};
-    const isLMRTFY = message.flags?.lmrtfy?.data;
+    const isLMRTFY = message.flags?.lmrtfy?.data && message.rolls;
     const ddbglFlags = message.flags && message.flags["ddb-game-log"];
     const isDDBGL = ddbglFlags?.cls === "save" && !ddbglFlags?.pending;
     if (!isLMRTFY && !isDDBGL && message.flags?.dnd5e?.roll?.type !== "save") return true;
@@ -2584,6 +2592,7 @@ export class Workflow {
 
     if (!this.saveRequests[requestId]) return true;
 
+    console.error("process save roll ", message, html, data)
     if (this.saveRequests[requestId]) {
       clearTimeout(this.saveTimeouts[requestId]);
       const handler = this.saveRequests[requestId]
@@ -2600,6 +2609,7 @@ export class Workflow {
         const formula = rollEntry.formula ?? "1d20";
         handler({ total, formula, isBR: true, isCritical: brFlags.isCrit, terms: [{ options: { advantage, disadvantage } }] });
       } else {
+        console.error("process save roll ", message, message.rolls)
         handler(message.rolls[0])
       }
     }
@@ -2686,7 +2696,7 @@ export class Workflow {
     const midiFumble = this.item && getProperty(this.item, "flags.midi-qol.fumbleThreshold");
     if (!Number.isNumeric(midiFumble)) {
       //@ts-ignore .fumble undefined
-      this.isFumble = this.diceRoll <= this.attackRoll.terms[0].options.fumble;
+      this.isFumble = this.diceRoll <= (this.attackRoll.terms[0].options.fumble ?? 1);
     } else this.isFumble = this.diceRoll <= midiFumble;
     this.attackTotal = this.attackRoll.total ?? 0;
     if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble);
@@ -3288,7 +3298,7 @@ export class TrapWorkflow extends Workflow {
           this.failedSaves = new Set(allHitTargets);
           return await this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
         }
-        let hookId = Hooks.on("renderChatMessage", this.processSaveRoll.bind(this));
+        let hookId = Hooks.on("createChatMessage", this.processSaveRoll.bind(this));
         //        let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
         let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
         try {

@@ -2459,14 +2459,22 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
           if (typeof button.value === "string" && button.value.startsWith("replace ")) {
             const rollParts = button.value.split(" ");
             newRoll = new Roll(rollParts.slice(1).join(" "), (this.item ?? this.actor).getRollData());
+            newRoll = await newRoll.evaluate({ async: true });
           } else if (flagSelector.startsWith("damage.") && getProperty(this.actor, `${button.key}.criticalDamage`)) {
             const rollOptions = { critical: (this.isCritical || this.rollOptions.critical) };
             //@ts-ignore DamageRoll
             newRoll = new CONFIG.Dice.DamageRoll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData(), rollOptions);
-          } else {
-            newRoll = new Roll(`${this[rollId].result} + ${button.value}`, (this.item ?? this.actor).getRollData());
+            newRoll = await newRoll.evaluate({ async: true });
+          } else { 
+            //@ts-expect-error
+            newRoll = CONFIG.Dice.D20Roll.fromRoll (this[rollId]);
+            newRoll.terms.push(new OperatorTerm({operator: "+"}));
+            newRoll.terms.push(new NumericTerm({number: Number(button.value)}));
+            // this[rollId].result = `${this[rollId].result} + ${Number(button.value)}`;
+            newRoll._total = this[rollId]._total + Number(button.value);
+            newRoll._formula = `${this[rollId]._formula} + ${Number(button.value)}`
+            //newRoll = new CONFIG.Dice.D20Roll(`${this[rollId].result} + ${button.value}`, (this.item ?? this.actor).getRollData(), rollOptions);
           }
-          newRoll = await newRoll.evaluate({ async: true });
           break;
       }
       if (showRoll && this.category === "ac") { // TODO do a more general fix for displaying this stuff
@@ -2480,7 +2488,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
           whisper: [player]
         };
         const chatMessage = await ChatMessage.create(chatData);
-      } else if (showRoll) {
+      } else if (showRoll && false) {
         const oldRollHTML = await this[rollId].render() ?? this[rollId].result
         const player = playerForActor(this.actor)?.id ?? "";
         const newRollHTML = reRoll ? await midiRenderRoll(reRoll) : await midiRenderRoll(newRoll);
@@ -2488,11 +2496,11 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
           // content: `${this[rollId].result} -> ${newRoll.formula} = ${newRoll.total}`,
           flavor: `${title} ${button.value}`,
           content: `${oldRollHTML}<br>${newRollHTML}`,
-          whisper: [player]
+          whisper: [player],
         };
         const chatMessage = await ChatMessage.create(chatData);
       }
-      if (dice3dEnabled()) {
+      if (dice3dEnabled() && ["attackRoll"].includes(rollId) ) {
         let whisperIds: User[] | null = null;
         const rollMode = game.settings.get("core", "rollMode");
         if ((["details", "hitDamage", "all"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
@@ -2506,13 +2514,16 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
             newRoll.ghost = true;
           } else {
             whisperIds = ChatMessage.getWhisperRecipients("GM");
-            if (game.user) whisperIds.concat(game.user);
+            // if (game.user) whisperIds.concat(game.user);
           }
         }
 
         //@ts-expect-error game.dice3d
         await game.dice3d?.showForRoll(newRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
       }
+
+      // let originalRoll = CONFIG.Dice.D20Roll.fromRoll(this[rollId]);
+      const oldRollHTML = await this[rollId].render() ?? this[rollId].result
 
       this[rollId] = newRoll;
       this[rollTotalId] = newRoll.total;
@@ -2541,7 +2552,20 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
       if (bonusFlags.length === 0) {
 
         dialog.close();
-        resolve(null);
+        resolve(newRoll);
+        if (showRoll) {
+        
+          // const oldRollHTML = await originalRoll.render() ?? this[rollId].result
+          const player = playerForActor(this.actor)?.id ?? "";
+          const newRollHTML = reRoll ? await midiRenderRoll(reRoll) : await midiRenderRoll(newRoll);
+          const chatData: any = {
+            // content: `${this[rollId].result} -> ${newRoll.formula} = ${newRoll.total}`,
+            flavor: `${title} ${button.value}`,
+            content: `${oldRollHTML}<br>${newRollHTML}`,
+            whisper: [player],
+          };
+          const chatMessage = ChatMessage.create(chatData);
+        }
       }
       dialog.data.flags = bonusFlags;
       dialog.render(true);
@@ -2848,7 +2872,12 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
       break;
     case "d20":
       //@ts-ignore
+      const theRoll = attackRoll?.terms[0]?.results ? attackRoll.terms[0].results[0].result : attackRoll?.terms[0]?.total ? attackRoll.terms[0].total : "";
+
+      /* Fix from thatLonelyBugbear when the replaced attack roll is not a true d20 roll (i.e. just a number)
+      //@ts-ignore
       const theRoll = attackRoll?.terms[0].results[0].result ?? "";
+      */
       content = `<h4>${reactionFlavor} ${rollOptions.d20} ${theRoll}</h4>`;
       break;
     default:
@@ -3763,12 +3792,40 @@ export function canSense(tokenEntity: Token | TokenDocument, targetEntity: Token
   //@ts-ignore
   let token: Token = tokenEntity instanceof TokenDocument ? tokenEntity.object : tokenEntity;
   if (!token || !target) return true;
-
-  if (!token.vision.active) return true; //TODO work out what to do with tokens with no vision
-
-  //@ts-ignore specialStatusEffects
+  if (!token.hasSight) return true;
+  if (!game.user?.isGM && !token.vision.active) {
+    token.vision.initialize({
+      x: token.center.x,
+      y: token.center.y,
+      //@ts-expect-error
+      radius: Math.clamped(token.sightRange, 0, canvas?.dimensions?.maxR ?? 0),
+      //@ts-expect-error
+      externalRadius: Math.max(token.mesh.width, token.mesh.height) / 2,
+      //@ts-expect-error
+      angle: token.document.sight.angle,
+      //@ts-expect-error
+      contrast: token.document.sight.contrast,
+      //@ts-expect-error
+      saturation: token.document.sight.saturation,
+      //@ts-expect-error
+      brightness: token.document.sight.brightness,
+      //@ts-expect-error
+      attenuation: token.document.sight.attenuation,
+      //@ts-expect-error
+      rotation: token.document.rotation,
+      //@ts-expect-error
+      visionMode: token.document.sight.visionMode,
+      //@ts-expect-error
+      color: globalThis.Color.from(token.document.sight.color),
+      //@ts-expect-error
+      isPreview: !!token._original,
+      //@ts-expect-error specialStatusEffects
+      blinded: token.document.hasStatusEffect(CONFIG.specialStatusEffects.BLIND)
+    });
+    // Don't need to do this on the GM side - return await socketlibSocket.executeAsGM("canSense", { tokenUuid: token.document.uuid, targetUuid: target.document.uuid })
+  }
+  //@ts-expect-error specialStatusEffects
   const specialStatuses = CONFIG.specialStatusEffects;
-
 
   // Determine the array of offset points to test
   const t = Math.min(target.w, target.h) / 4;
@@ -3783,7 +3840,7 @@ export function canSense(tokenEntity: Token | TokenDocument, targetEntity: Token
   // First test basic detection for light sources which specifically provide vision
   //@ts-ignore
   for (const lightSource of canvas?.effects?.lightSources.values() ?? []) {
-    if (!lightSource.data.vision || !lightSource.active || lightSource.disabled) continue;
+    if (/*!lightSource.data.vision ||*/ !lightSource.active || lightSource.disabled) continue;
     const result = lightSource.testVisibility(config);
     if (result === true) return true;
   }
@@ -3795,7 +3852,7 @@ export function canSense(tokenEntity: Token | TokenDocument, targetEntity: Token
   //@ts-ignore v10
   const DetectionModeCONST = DetectionMode;
   const basic = tokenDetectionModes.find(m => m.id === DetectionModeCONST.BASIC_MODE_ID);
-  if (basic && token.vision.active) {
+  if (basic /*&& token.vision.active*/) {
     const result = modes.basicSight.testVisibility(token.vision, basic, config);
     if (result === true) return true;
   }

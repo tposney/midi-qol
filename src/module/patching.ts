@@ -368,7 +368,6 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
   let success: boolean | undefined = undefined;
   if (rollTarget !== undefined) success = result.total >= rollTarget;
   await expireRollEffect.bind(this)(rollType, abilityId, success);
-
   return result;
 }
 
@@ -1141,7 +1140,6 @@ export function patchLMRTFY() {
 
 function LMRTFYOnMessage(data: any) {
   //console.log("LMRTF got message: ", data)
-  console.log("MY LMRTFY ON MESSAGE")
   if (data.user === "character" &&
     (!game.user?.character || !data.actors.includes(game.user.character.id))) {
     return;
@@ -1156,7 +1154,8 @@ function LMRTFYOnMessage(data: any) {
     //@ts-expect-error
     actors = canvas?.tokens?.controlled.map(t => t.actor).filter(a => data.actors.includes(a?.id)) ?? [];
   } else {
-    actors = data.actors.map(aid => MQfromActorUuid(aid));
+    //@ts-expect-error
+    actors = data.actors.map(aid => LMRTFY.fromUuid(aid));
   }
   actors = actors.filter(a => a);
 

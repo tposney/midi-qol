@@ -1,6 +1,6 @@
 import { configSettings } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming, geti18nOptions } from "../midi-qol.js";
-import { completeItemUse, gmOverTimeEffect, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
+import { canSense, completeItemUse, gmOverTimeEffect, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMesssageHandling.js";
 import { Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { bonusCheck } from "./patching.js";
@@ -74,9 +74,40 @@ export let setupSocket = () => {
   socketlibSocket.register("ddbglPendingFired", ddbglPendingFired);
   socketlibSocket.register("completeItemUse", _completeItemUse);
   socketlibSocket.register("applyEffects", _applyEffects);
-  socketlibSocket.register("bonusCheck", _bonusCheck)
-  socketlibSocket.register("gmOverTimeEffect", _gmOverTimeEffect)
+  socketlibSocket.register("bonusCheck", _bonusCheck);
+  socketlibSocket.register("gmOverTimeEffect", _gmOverTimeEffect);
+  // socketlibSocket.register("canSense", _canSense);
 }
+
+/* Seems to work doing it on the client instead.
+export async function _canSense(data: {tokenUuid, targetUuid}) {
+  //@ts-expect-error fromUuidSync
+  const token = fromUuidSync(data.tokenUuid)?.object;
+  //@ts-expect-error fromUuidSync
+  const target = fromUuidSync(data.targetUuid)?.object;
+  if (!target || !token) return true;
+  if (!token.vision.active) {
+    token.vision.initialize({
+      x: token.center.x,
+      y: token.center.y,
+      radius: Math.clamped(token.sightRange, 0, canvas?.dimensions?.maxR ?? 0),
+      externalRadius: Math.max(token.mesh.width, token.mesh.height) / 2,
+      angle: token.document.sight.angle,
+      contrast: token.document.sight.contrast,
+      saturation: token.document.sight.saturation,
+      brightness: token.document.sight.brightness,
+      attenuation: token.document.sight.attenuation,
+      rotation: token.document.rotation,
+      visionMode: token.document.sight.visionMode,
+      color: globalThis.Color.from(token.document.sight.color),
+      isPreview: !!token._original,
+      //@ts-expect-error specialStatusEffects
+      blinded: token.document.hasStatusEffect(CONFIG.specialStatusEffects.BLIND)
+    });
+  }
+  return canSense(token, target);
+}
+*/
 
 export async function _gmOverTimeEffect(data:{ actorUuid, effectUuid, startTurn, options}) {
   const actor = MQfromActorUuid(data.actorUuid);

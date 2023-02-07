@@ -162,8 +162,8 @@ export class MidiKeyManager {
         { key: "AltLeft" },
         { key: "AltRight" },
       ],
-      onDown: () => { this._adv = true; this.track("adv down"); return false; },
-      onUp: () => { this._adv = false; this.track("adv up"); return false; },
+      onDown: () => { this._adv = true; this.track("adv down"); console.error("advantage fired"); return false; },
+      onUp: () => { this._adv = false; this.track("adv up"); console.error("Advantage released"); return false; },
       restricted: worldSettings,                         // Restrict this Keybinding to gamemaster only?
       precedence: normalPrecedence
     });

@@ -22,8 +22,13 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
     if (game.user.targets.size === 0 && lateTargetingSet) await resolveLateTargeting(this, options, pressedKeys);
     const targets: Token[] = [];
     for (let target of game?.user?.targets) targets.push(target);
-    for (let target of targets) {
-      const newOptions = mergeObject(options, { singleTarget: true, targetUuids: [target.document.uuid], workflowOptions: { lateTargeting: "none" } }, { inplace: false, overwrite: true });
+    if (targets.length > 0) {
+      for (let target of targets) {
+        const newOptions = mergeObject(options, { singleTarget: true, targetUuids: [target.document.uuid], workflowOptions: { lateTargeting: "none" } }, { inplace: false, overwrite: true });
+        await completeItemUse(this, {}, newOptions)
+      }
+    } else {
+      const newOptions = mergeObject(options, { singleTarget: true, targetUuids: [], workflowOptions: { lateTargeting: "none" } }, { inplace: false, overwrite: true });
       await completeItemUse(this, {}, newOptions)
     }
     Workflow.removeWorkflow(this.uuid);
@@ -533,7 +538,7 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
   //@ts-ignore
   if (CONFIG.debug.keybindings) {
     log("itemhandling: workflow.rolloptions", workflow.rollOption);
-    log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptins?.rollToggle));
+    log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptions?.rollToggle));
   }
 
   if (workflow?.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
