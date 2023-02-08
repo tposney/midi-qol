@@ -1344,6 +1344,10 @@ export class Workflow {
           wasExpired = true;
           expriryReason.push(`isSaveFailure`);
         }
+        if (this.saveItem.hasSave && expireList.includes("isSave") && specialDuration.includes(`isSave`)) {
+          wasExpired = true;
+          expriryReason.push(`isSave`);
+        }
         const abl = this.item?.system.save?.ability;
         if (this.saveItem.hasSave && expireList.includes(`isSaveSuccess`) && specialDuration.includes(`isSaveSuccess.${abl}`) && this.saves.has(target)) {
           wasExpired = true;
@@ -1352,6 +1356,10 @@ export class Workflow {
         if (this.saveItem.hasSave && expireList.includes(`isSaveFailure`) && specialDuration.includes(`isSaveFailure.${abl}`) && !this.saves.has(target)) {
           wasExpired = true;
           expriryReason.push(`isSaveFailure.${abl}`);
+        };
+        if (this.saveItem.hasSave && expireList.includes(`isSave`) && specialDuration.includes(`isSave.${abl}`)) {
+          wasExpired = true;
+          expriryReason.push(`isSave.${abl}`);
         };
         return wasExpired;
       }).map(ef => ef.id);
