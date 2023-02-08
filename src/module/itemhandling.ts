@@ -616,8 +616,6 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
       event: {},
       options: damageRollOptions
     };
-    // There was an interaction with condtional visibility (I think doing an actor update which means sometimes the prepareData did not complete)
-    if (installedModules.get("conditional-visibility")) this.actor.prepareDerivedData();
     result = await wrapped(damageRollData);
     if (debugCallTiming) log(`wrapped item.rollDamage():  elapsed ${Date.now() - wrappedRollStart}ms`);
   } else { // roll other damage instead of main damage.

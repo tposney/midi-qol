@@ -79,7 +79,7 @@ export let setupSocket = () => {
   // socketlibSocket.register("canSense", _canSense);
 }
 
-/* Seems to work doing it on the client instead.
+// Seems to work doing it on the client instead.
 export async function _canSense(data: {tokenUuid, targetUuid}) {
   //@ts-expect-error fromUuidSync
   const token = fromUuidSync(data.tokenUuid)?.object;
@@ -107,7 +107,6 @@ export async function _canSense(data: {tokenUuid, targetUuid}) {
   }
   return canSense(token, target);
 }
-*/
 
 export async function _gmOverTimeEffect(data:{ actorUuid, effectUuid, startTurn, options}) {
   const actor = MQfromActorUuid(data.actorUuid);

@@ -201,8 +201,6 @@ export function collectSettingData() {
     //@ts-ignore version v10
     cubVersion: game.modules.get("combat-utility-belt")?.version,
     //@ts-ignore version v10
-    condvisVersion: game.modules.get("conditional-visibility")?.version,
-    //@ts-ignore version v10
     daeVersion: game.modules.get("dae")?.version,
     //@ts-ignore version v10
     DSNversion: game.modules.get("dice-so-nice")?.version,

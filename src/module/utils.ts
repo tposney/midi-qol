@@ -2088,7 +2088,7 @@ export function findNearby(disposition: number | null, token: any /*Token | unde
       //@ts-ignore .disposition v10      
       (disposition === null || t.document.disposition === targetDisposition)) {
       const tokenDistance = getDistance(t, token, true);
-      return 0 < tokenDistance && tokenDistance <= distance
+      return 0 <= tokenDistance && tokenDistance <= distance
     } else return false;
   });
   return nearby ?? [];
@@ -2105,8 +2105,6 @@ export function hasCondition(token, condition: string) {
   if (condition === "invisible" && (token.document ?? token).hasStatusEffect(CONFIG.specialStatusEffects.INVISIBLE)) return true;
   if ((token.document ?? token).hasStatusEffect(condition)) return true;
 
-  //@ts-ignore
-  if (installedModules.get("conditional-visibility") && token.actor && game.modules.get('conditional-visibility').api.hasCondition(token, condition)) return true;
   //@ts-ignore
   const cub = game.cub;
   if (installedModules.get("combat-utility-belt") && condition === "invisible" && cub.hasCondition("Invisible", [token], { warn: false })) return true;
@@ -2126,7 +2124,6 @@ export async function removeInvisible() {
   if (!token) return;
   // 
   await removeTokenCondition(token, i18n(`midi-qol.${"invisible"}`));
-  await removeTokenCondition(token, i18n(`conditional-visibility.${"invisible"}`));
   //@ts-ignore
   await (token.document ?? token).toggleActiveEffect({ id: CONFIG.specialStatusEffects.INVISIBLE }, { active: false });
   log(`Hidden/Invisibility removed for ${this.actor.name} due to attack`)
@@ -2140,9 +2137,6 @@ export async function removeHidden() {
   await removeTokenCondition(token, i18n(`midi-qol.${"hidden"}`));
   await removeTokenCondition(token, "Stealth (CV)");
   await removeTokenCondition(token, "Stealthed (CV)");
-  await removeTokenCondition(token, i18n(`conditional-visibility.${"hidden"}`));
-  await removeTokenCondition(token, i18n(`conditional-visibility.${"stealthed"}`));
-  await removeTokenCondition(token, i18n(`conditional-visibility.${"stealth"}`));
   //@ts-ignore
   log(`Hidden removed for ${this.actor.name} due to attack`)
 }
@@ -2469,11 +2463,19 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
             //@ts-expect-error
             newRoll = CONFIG.Dice.D20Roll.fromRoll (this[rollId]);
             newRoll.terms.push(new OperatorTerm({operator: "+"}));
-            newRoll.terms.push(new NumericTerm({number: Number(button.value)}));
-            // this[rollId].result = `${this[rollId].result} + ${Number(button.value)}`;
-            newRoll._total = this[rollId]._total + Number(button.value);
-            newRoll._formula = `${this[rollId]._formula} + ${Number(button.value)}`
-            //newRoll = new CONFIG.Dice.D20Roll(`${this[rollId].result} + ${button.value}`, (this.item ?? this.actor).getRollData(), rollOptions);
+            if (Number.isNumeric(button.value)) {
+              newRoll.terms.push(new NumericTerm({number: Number(button.value)}));
+              // this[rollId].result = `${this[rollId].result} + ${Number(button.value)}`;
+              newRoll._total = this[rollId]._total + Number(button.value);
+              newRoll._formula = `${this[rollId]._formula} + ${Number(button.value)}`
+            } else {
+              const tempRoll = new Roll(button.value, this.actor.getRollData());
+              await tempRoll.evaluate({async: true});
+              newRoll._total = this[rollId]._total+ tempRoll.total;
+              newRoll._formula = `${this[rollId]._formula} + ${tempRoll.formula}`
+              newRoll.terms = newRoll.terms.concat(tempRoll.terms);
+            }
+              //newRoll = new CONFIG.Dice.D20Roll(`${this[rollId].result} + ${button.value}`, (this.item ?? this.actor).getRollData(), rollOptions);
           }
           break;
       }
@@ -3793,7 +3795,8 @@ export function canSense(tokenEntity: Token | TokenDocument, targetEntity: Token
   let token: Token = tokenEntity instanceof TokenDocument ? tokenEntity.object : tokenEntity;
   if (!token || !target) return true;
   if (!token.hasSight) return true;
-  if (!game.user?.isGM && !token.vision.active) {
+  if (!token.vision.active) {
+    const sourceId = token.sourceId;
     token.vision.initialize({
       x: token.center.x,
       y: token.center.y,
@@ -3822,7 +3825,13 @@ export function canSense(tokenEntity: Token | TokenDocument, targetEntity: Token
       //@ts-expect-error specialStatusEffects
       blinded: token.document.hasStatusEffect(CONFIG.specialStatusEffects.BLIND)
     });
-    // Don't need to do this on the GM side - return await socketlibSocket.executeAsGM("canSense", { tokenUuid: token.document.uuid, targetUuid: target.document.uuid })
+    //@ts-expect-error
+    canvas?.effects?.visionSources.set(sourceId, token.vision);
+    if (!token.vision.los && game.modules.get("perfect-vision")?.active) {
+      error(`canSense los not calcluated. Can't check if ${token.name} can see ${target.name}`, token.vision);
+      return true;
+    }
+    // Seems we Don't need to do this on the GM side - return await socketlibSocket.executeAsGM("canSense", { tokenUuid: token.document.uuid, targetUuid: target.document.uuid })
   }
   //@ts-expect-error specialStatusEffects
   const specialStatuses = CONFIG.specialStatusEffects;

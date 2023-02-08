@@ -1,3 +1,10 @@
+### 10.0.29
+* Fix for optional bonuses that are roll expressions rather than just numbers.
+* Fix for findNearby not counting tokens of distance 0 from the token.
+* Hack to avoid problems with perfect vision and checking canSee
+* Looks like conditional visibility is not going to make it to v10 so I've removed support for it.
+* Added additional expiry checks - thanks @Elwin
+
 ### 10.0.28
 * Support decimals in ranged attack disadvantage to support metric based systems, e.g. 1.5 meteres.
 * Fix for advantage/disadvantage not using the correct visible/not visible test.

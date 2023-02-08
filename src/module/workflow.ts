@@ -1077,18 +1077,7 @@ export class Workflow {
       const target: Token | undefined = this.targets.values().next().value;
       let isHidden = false;
       if (token && target) { // preferentially check CV isHidden
-        if (installedModules.get("conditional-visibility")) {
-          //@ts-ignore .api if cond vis active it will work out the vision rules for a token
-          isHidden = game.modules.get('conditional-visibility')?.api?.canSee(target, token) === false;
-          //@ts-ignore .api if cond vis active it will work out the vision rules for a token
-          if (game.modules.get('conditional-visibility')?.api?.canSee(token, target) === false) {
-            log(`Disadvantage given to ${this.actor.name} due to hidden/invisible target`);
-            this.attackAdvAttribution["DIS:hidden"] = true;
-            this.disadvantage = true;
-          }
-        } else { // no cond vis so just assume can't see hidden or invis attacker
-          const hidden = hasCondition(token, "hidden");
-        }
+        const hidden = hasCondition(token, "hidden");
         isHidden = isHidden || !canSense(target, token); // check normal foundry sight rules
         if (!canSense(token, target)) {
           // Attacker can't see target so disadvantage
