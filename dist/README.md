@@ -37,7 +37,7 @@ If you have a standalone macro, or one from (say) the community macros collectio
 If you want to get fancier then change the point at which it is called and have a look at the data passed to onUse macros. Or use a `macro.execute` (some changes may be required) which is only called if active effects are applied to the target.
 
 ## MidiQOL sample items compendium
-midi-qol is an automation tool that is meant to make it possible to automate some/many facets of your game. It is not a library of items that you can plug and play into your game, there are other modules for that like the excellent **DAE SRD** and **Midi SRD**, and many great macro modules that play well with midi-qol (too many for me to list and I'm sure I don't know them all).
+midi-qol is an automation tool that is meant to make it possible to automate some/many facets of your game. It is not a library of items that you can plug and play into your game and many great macro modules that play well with midi-qol (too many for me to list and I'm sure I don't know them all).
 
 Similarly there are some excellent tools for animation effects, beyond those supported directly by dae/midi. I don't know them all and I have no doubt that there are some gems that I simply have not discovered, but do use Automated Animations in my game as well as Token Magic FX.
 
@@ -78,7 +78,7 @@ You can probably survive without these but midi pretty much assumes they are ins
 ## Highly Recommended
 * Either **LMRTFY** or **Monks Token Bar** (or both) to manage saving throws
 * Either **Convenient Effects** or **Combat Utility Belt** (or both)
-* **DAE SRD**/**Midi SRD** (lots of prebuilt items)
+* **DAE SRD**/**Midi SRD** (lots of prebuilt items) **These modules do not work with V10 so only use them for ideas, not working items**.
 * **Active Auras** - works well with midi/dae and some of the sample items require it.
 * **Token Magic** - lets you add some spiffy graphical effects to spells.
 * **SmallTime** - to make time advancement easy.
@@ -120,10 +120,10 @@ As of version 1.6.0, DF QoL does not seem to have a wall blocking option, so if 
 ## Convenient Effects
 Midi supports the application of Convenient Effects spell/item effects (configuration setting - Apply Convenient Effects) and matches those by name. For example, if you cast the spell Bless midi will see if there is a convenient effect "Bless" and apply it to any targets that were hit by the spell.
 
-If you have apply convenient effects set and use items from the DAE SRD/Midi SRD modules, **you will get a double up of the effect**. You need to choose how you want the item to behave, if using convenient effects, delete the DAE SRD effects. The double up problem is intentional, since you might wish to augment the Convenient Effect definition with your own extra effects on the item. 
+If you have apply convenient effects set and use items from the with DAE effects, **you will get a double up of the effect**. You need to choose how you want the item to behave, if using convenient effects, delete the DAE effects. The double up problem is intentional, since you might wish to augment the Convenient Effect definition with your own extra effects on the item. 
 
-If you generally use DAE SRD/Midi SRD or hand crafted effects I suggest setting apply convenient effects to false and then enabling convenient effects on an item by item basis (using the setting below).
-If you generally use convenient effects you would disable the convenient effect for the items that you want to use from DAE SRD/Midi SRD or hand crafted.
+If you generally use hand crafted effects I suggest setting apply convenient effects to false and then enabling convenient effects on an item by item basis (using the setting below).
+If you generally use convenient effects you would disable the convenient effect for the items that you want to use from DAE hand crafted effects.
 
 There is an additional check box available on the item sheet, for items that have corresponding convenient effects. The check box reverses the "apply convenient effects setting" for that item. If you have "auto apply convenient effect" set to true, the check box will disable the auto application for that one item. Similarly, if you have "auto apply convenient effect" set to false, the check box will enable the auto application for that one item. 
 

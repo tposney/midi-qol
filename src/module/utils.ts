@@ -1118,7 +1118,7 @@ function replaceAtFields(value, context, options: { blankValue: string | number,
 export async function processOverTime(wrapped, data, options, user) {
   if (data.round === undefined && data.turn === undefined) return wrapped(data, options, user);
   try {
-    await expirePerTurnBonusActions(this);
+    await socketlibSocket.executeAsGM("_gmExpirePerTurnBonusActions", this.uuid); 
     await _processOverTime(this, data, options, user)
   } catch (err) {
     error("processOverTime", err)
@@ -1364,7 +1364,8 @@ export async function _processOverTime(combat, data, options, user) {
       if (midiFlags.optional) {
         for (let key of Object.keys(midiFlags.optional)) {
           if (midiFlags.optional[key].used) {
-            await actor.setFlag("midi-qol", `optional.${key}.used`, false)
+            socketlibSocket.executeAsGM("_gmSetFlag", {actorUuid: actor.uuid, base: "midi-qol", key: `optional.${key}.used`, value: false})
+            // await actor.setFlag("midi-qol", `optional.${key}.used`, false)
           }
         }
       }
@@ -1839,7 +1840,8 @@ export function computeCoverBonus(attacker: Token | TokenDocument, target: Token
       break;
   }
 
-  if (item?.midiProperties["ignoreTotalCover"] && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
+  if (item?.flags.midiProperties["ignoreTotalCover"] && item.type === "spell") coverBonus = 0;
+  else if (item?.flags.midiProperties["ignoreTotalCover"] && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
   if (target.actor)
     setProperty(target.actor, "flags.midi-qol.acBonus", coverBonus);
   return coverBonus;
@@ -3419,9 +3421,10 @@ export async function hasUsedReaction(actor: Actor) {
   return false;
 }
 
-
-export async function expirePerTurnBonusActions(combat: Combat) {
+export async function gmExpirePerTurnBonusActions(data: {combatUuid: string}) {
   const optionalFlagRe = /flags.midi-qol.optional.[^.]+.count$/;
+  //@ts-expect-error
+  const combat = fromUuidSync(data.combatUuid);
   for (let combatant of combat.turns) {
     const actor = combatant.actor;
     if (actor) {
@@ -3429,7 +3432,7 @@ export async function expirePerTurnBonusActions(combat: Combat) {
         //@ts-ignore .changes v10
         for (let change of effect.changes) {
           if (change.key.match(optionalFlagRe) && change.value === "each-turn") {
-            actor.unsetFlag("midi-qol", change.key.replace(/.count$/, ".used").replace("flags.midi-qol.", ""));
+            await actor.unsetFlag("midi-qol", change.key.replace(/.count$/, ".used").replace("flags.midi-qol.", ""));
           }
         }
       }

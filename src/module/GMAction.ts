@@ -1,6 +1,6 @@
 import { configSettings } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming, geti18nOptions } from "../midi-qol.js";
-import { canSense, completeItemUse, gmOverTimeEffect, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
+import { canSense, completeItemUse, gmExpirePerTurnBonusActions, gmOverTimeEffect, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMesssageHandling.js";
 import { Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { bonusCheck } from "./patching.js";
@@ -76,7 +76,27 @@ export let setupSocket = () => {
   socketlibSocket.register("applyEffects", _applyEffects);
   socketlibSocket.register("bonusCheck", _bonusCheck);
   socketlibSocket.register("gmOverTimeEffect", _gmOverTimeEffect);
+  socketlibSocket.register("_gmExpirePerTurnBonusActions", gmExpirePerTurnBonusActions);
+  socketlibSocket.register("_gmUnsetFlag", _gmUnsetFlag);
+  socketlibSocket.register("_gmSetFlag", _gmSetFlag);
+
   // socketlibSocket.register("canSense", _canSense);
+}
+
+export async function _gmUnsetFlag(data: {base: string, key: string, actorUuid: string}) {
+  //@ts-expect-error
+  let actor = fromUuidSync(data.actorUuid);
+  actor = actor.actor ?? actor;
+  if (!actor) return undefined;
+  return actor.unsetFlag(data.base, data.key)
+}
+
+export async function _gmSetFlag(data: {base: string, key: string, value: any, actorUuid: string},) {
+  //@ts-expect-error
+  let actor = fromUuidSync(data.actorUuid);
+  actor = actor.actor ?? actor;
+  if (!actor) return undefined;
+  return actor.setFlag(data.base, data.key, data.value)
 }
 
 // Seems to work doing it on the client instead.
@@ -278,8 +298,10 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
     if (createPromises && (["yes", "yesCard", "yesCardNPC"].includes(data.autoApplyDamage) || data.forceApply)) {
       if ((newHP !== oldHP || newTempHP !== oldTempHP) && (data.autoApplyDamage !== "yesCardNPC" || actor.type !== "character")) {
         const updateContext = mergeObject({ dhp: -appliedDamage, damageItem }, data.updateContext ?? {});
-        //@ts-ignore
-        promises.push(actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage}, updateContext));
+        if (actor.isOwner) {
+          //@ts-ignore
+          promises.push(actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage}, updateContext));
+        }
       }
     }
     tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP, damageItem });
@@ -445,7 +467,8 @@ async function doMidiClick(ev: any, actorUuid: any, newTempHP: any, newHP: any, 
   let actor = MQfromActorUuid(actorUuid);
   log(`Setting HP to ${newTempHP} and ${newHP}`);
   const updateContext = mergeObject({ dhp: (newHP - actor.system.attributes.hp.value)}, data.updateContext);
-  await actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP }, updateContext);
+  if (actor.owner)
+    await actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP }, updateContext);
 }
 
 export let processUndoDamageCard = (message, html, data) => {
@@ -486,7 +509,7 @@ export let processUndoDamageCard = (message, html, data) => {
       (async () => {
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP}`, data.updateContext);
-        await actor.update({ "system.attributes.hp.temp": oldTempHP, "system.attributes.hp.value": oldHP }, { dhp: oldHP - actor.system.attributes.hp.value, damageItem });
+        if (actor.isOwner) await actor.update({ "system.attributes.hp.temp": oldTempHP, "system.attributes.hp.value": oldHP }, { dhp: oldHP - actor.system.attributes.hp.value, damageItem });
         ev.stopPropagation();
       })();
     });
@@ -497,7 +520,7 @@ export let processUndoDamageCard = (message, html, data) => {
       (async () => {
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP to ${newTempHP} and ${newHP}`, data.updateContext);
-        await actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP }, { dhp: newHP - actor.system.attributes.hp.value, damageItem });
+        if (actor.isOwner) await actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP }, { dhp: newHP - actor.system.attributes.hp.value, damageItem });
         ev.stopPropagation();
       })();
     });

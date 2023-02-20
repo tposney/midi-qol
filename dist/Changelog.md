@@ -1,7 +1,16 @@
+### 10.0.30
+* Fix for cases where players end turn in combat causing over time errors.
+* Fix for es.json not supporting monk's token bar saving throw option
+* Guard for players attempting to apply damage to tokens they do not own in players damage card.
+* Fix for late targeting thinking that targets were selected after using an item and then reusing it.
+* Fix for throwing an error when a malformed message is sent to the chat log and trying to color the borders/name of the message.
+* Fix for no full cover flag not applying. Spell with no full cover set will now give NO cover save bonus at all. This means you can have fireball do what it is supposed to do. To use this you must set targeting to all (without or without ignore defeated) and rely on the cover module you are using to generate the correct bonuses to saves. If targeting is not set to all walls will block the target token from being targeted at all.
+* The default branch for midi-qol is now the v10 branch.
+
 ### 10.0.29
 * Fix for optional bonuses that are roll expressions rather than just numbers.
 * Fix for findNearby not counting tokens of distance 0 from the token.
-* Hack to avoid problems with perfect vision and checking canSee
+* Hack to avoid problems with perfect vision and checking canSee.
 * Looks like conditional visibility is not going to make it to v10 so I've removed support for it.
 * Added additional expiry checks - thanks @Elwin
 

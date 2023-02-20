@@ -272,6 +272,7 @@ export let colorChatMessageHandler = (message, html, data) => {
   //@ts-ignore .color not defined
   html[0].style.borderColor = user.color;
   const sender = html.find('.message-sender')[0];
+  if (!sender) return;
   if (coloredBorders === "borderNamesBackground") {
     sender.style["text-shadow"] = `1px 1px 1px #FFFFFF`;
     //@ts-ignore .color not defined

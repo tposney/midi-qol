@@ -1565,6 +1565,7 @@ async function resolveLateTargeting(item, options: any, pressedKeys: any): Promi
   const workflow = Workflow.getWorkflow(item?.uuid);
   const lateTargetingSetting = getLateTargeting(workflow);
   if (lateTargetingSetting === "none") return true; // workflow options override the user settings
+  if (workflow) workflow.targets = new Set();
   if (workflow && lateTargetingSetting === "noTargetsSelected" && workflow.targets.size !== 0) return true;
 
   const savedSettings = { control: ui.controls?.control?.name, tool: ui.controls?.tool };

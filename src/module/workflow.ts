@@ -1078,7 +1078,7 @@ export class Workflow {
       let isHidden = false;
       if (token && target) { // preferentially check CV isHidden
         const hidden = hasCondition(token, "hidden");
-        isHidden = isHidden || !canSense(target, token); // check normal foundry sight rules
+        isHidden = hidden || !canSense(target, token); // check normal foundry sight rules
         if (!canSense(token, target)) {
           // Attacker can't see target so disadvantage
           log(`Disadvantage given to ${this.actor.name} due to hidden/invisible target`);
@@ -2274,7 +2274,7 @@ export class Workflow {
             request: rollType,
             ability: this.saveItem.system.save.ability,
             // showRoll: whisper && !simulate,
-            options: { simulate, target: rollDC, messageData: { user: owner?.id }, chatMessage: showRoll, rollMode: whisper ? "gmroll" : "gmroll", mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true },
+            options: { simulate, target: rollDC, messageData: { user: owner?.id }, chatMessage: showRoll, rollMode: whisper ? "gmroll" : "public", mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true },
           }));
         }
       }
@@ -2379,7 +2379,7 @@ export class Workflow {
                 elevation: template.document.elevation,
                 disposition: target?.document.disposition,
               }
-            }, target);
+            }, target, this.saveItem);
           } else if (configSettings.optionalRules.coverCalculation === "simbuls-cover-calculator" 
             && globalThis.CoverCalculator.checkCoverViaCoordinates) {
             // Special case for templaes
@@ -2390,7 +2390,7 @@ export class Workflow {
               else coverSaveBonus = -coverData.data.results.value;
           }
         } else {
-          coverSaveBonus = computeCoverBonus(this.token, target);
+          coverSaveBonus = computeCoverBonus(this.token, target, this.saveItem);
         }
       }
       rollTotal += coverSaveBonus;
@@ -2748,7 +2748,7 @@ export class Workflow {
           bonusAC = 0;
         else if (item?.system.actionType === "rwak" && getProperty(this.actor, "flags.midi-qol.sharpShooter"))
           bonusAC = 0;
-        else bonusAC = computeCoverBonus(this.token, targetToken);
+        else bonusAC = computeCoverBonus(this.token, targetToken, item);
         targetAC += bonusAC;
 
         const midiFlagsAttackBonus = getProperty(targetActor, "flags.midi-qol.grants.attack.bonus");
