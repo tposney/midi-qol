@@ -9,6 +9,7 @@ import { concentrationCheckItemDisplayName, itemJSONData, midiFlagTypes, overTim
 import { OnUseMacros } from "./apps/Item.js";
 import { actorAbilityRollPatching, Options } from "./patching.js";
 import { ModifierFlags, reduceEachTrailingCommentRange } from "typescript";
+import { activationConditionToUse } from "./itemhandling.js";
 
 export function getDamageType(flavorString): string | undefined {
   const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
@@ -1118,7 +1119,7 @@ function replaceAtFields(value, context, options: { blankValue: string | number,
 export async function processOverTime(wrapped, data, options, user) {
   if (data.round === undefined && data.turn === undefined) return wrapped(data, options, user);
   try {
-    await socketlibSocket.executeAsGM("_gmExpirePerTurnBonusActions", this.uuid); 
+    await socketlibSocket.executeAsGM("_gmExpirePerTurnBonusActions", {combatUuid: this.uuid}); 
     await _processOverTime(this, data, options, user)
   } catch (err) {
     error("processOverTime", err)
@@ -1840,8 +1841,8 @@ export function computeCoverBonus(attacker: Token | TokenDocument, target: Token
       break;
   }
 
-  if (item?.flags.midiProperties["ignoreTotalCover"] && item.type === "spell") coverBonus = 0;
-  else if (item?.flags.midiProperties["ignoreTotalCover"] && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
+  if (item?.flags.midiProperties.ignoreTotalCover && item.type === "spell") coverBonus = 0;
+  else if (item?.flags.midiProperties?.ignoreTotalCover && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
   if (target.actor)
     setProperty(target.actor, "flags.midi-qol.acBonus", coverBonus);
   return coverBonus;
@@ -2073,7 +2074,7 @@ export async function setConcentrationData(actor, concentrationData: Concentrati
  */
 
 
-export function findNearby(disposition: number | null, token: any /*Token | undefined */, distance: number, maxSize: number | undefined = undefined): Token[] {
+export function findNearby(disposition: number | null, token: any /*Token | undefined */, distance: number, options: {maxSize: number | undefined, includeIncapacitated: boolean | undefined} = {maxSize: 1, includeIncapacitated: false}): Token[] {
   if (!token) return [];
   if (typeof token === "string") token = MQfromUuid(token).object;
   if (!(token instanceof Token)) { throw new Error("find nearby token is not of type token or the token uuid is invalid") };
@@ -2082,11 +2083,11 @@ export function findNearby(disposition: number | null, token: any /*Token | unde
   let targetDisposition = token.document.disposition * (disposition ?? 0);
   let nearby = canvas.tokens?.placeables.filter(t => {
     //@ts-ignore .height .width v10
-    if (maxSize && t.document.height * t.document.width > maxSize) return false;
+    if (options.maxSize && t.document.height * t.document.width > options.maxSize) return false;
     if (t.actor &&
       t.id !== token.id && // not the token
       //@ts-ignore attributes
-      t.actor.system.attributes?.hp?.value > 0 && // not incapacitated
+      (options.includeIncapacitated || (t.actor.system.attributes?.hp?.value > 0)) && // not incapacitated
       //@ts-ignore .disposition v10      
       (disposition === null || t.document.disposition === targetDisposition)) {
       const tokenDistance = getDistance(t, token, true);
@@ -3567,6 +3568,20 @@ export async function midiRenderRoll(roll: Roll | undefined) {
     default: return roll.render(); // "off"
   }
 }
+export function heightIntersects(targetDocument: any /*TokenDocument*/, flankerDocument: any /*TokenDocument*/) : boolean {
+  const targetElevation = targetDocument.elevation ?? 0;
+  const flankerElevation = flankerDocument.elevation ?? 0;
+  const targetTopElevation = targetElevation + Math.max(targetDocument.height, targetDocument.width) * (canvas?.dimensions?.distance ?? 5);
+  const flankerTopElevation = flankerElevation + Math.min(flankerDocument.height, flankerDocument.width) * (canvas?.dimensions?.distance ?? 5); // assume t2 is trying to make itself small
+  /* This is for requiring the centers to intersect the height range 
+     Which is an alternative rule possiblity
+  const flankerCenter = (flankerElevation + flankerTopElevation) / 2;
+  if (flankerCenter >= targetElevation || flankerCenter <= targetTopElevation) return true;
+  return false;
+  */
+ if (flankerTopElevation < targetElevation || flankerElevation > targetTopElevation) return false;
+ return true;
+}
 
 export async function computeFlankedStatus(target): Promise<boolean> {
   if (!checkRule("checkFlanking") || !["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking"))) return false;
@@ -3588,6 +3603,7 @@ export async function computeFlankedStatus(target): Promise<boolean> {
     while (allies.length > 1) {
       const token = allies.pop();
       if (!token) break;
+      if (!heightIntersects(target.document, token.document)) continue;
       if (checkRule("checkFlanking") === "ceflankedNoconga" && installedModules.get("dfreds-convenient-effects")) {
         //@ts-ignore
         const CEFlanked = game.dfreds.effects._flanked;
@@ -3602,6 +3618,7 @@ export async function computeFlankedStatus(target): Promise<boolean> {
         if (ally.document.uuid === token.document.uuid) continue;
         const actor: any = ally.actor;
         if (actor?.system.attrbutes?.hp?.value <= 0) continue;
+        if (!heightIntersects(target.document, ally.document)) continue;
         if (installedModules.get("dfreds-convenient-effects")) {
           //@ts-ignore
           if (actor?.effects.some(ef => ef.label === game.dfreds.effects._incapacitated.name)) continue;
@@ -3650,6 +3667,7 @@ export function computeFlankingStatus(token, target): boolean {
   // For the target see how many square between this token and any friendly targets
   // Find all tokens hostile to the target
   if (!target) return false;
+  if (!heightIntersects(target.document, token.document)) return false;
   if (getDistance(token, target, true) > (canvas?.dimensions?.distance ?? 5)) return false;
   // an enemy's enemies are my friends.
   const allies: any /* Token v10 */[] = findNearby(-1, target, (canvas?.dimensions?.distance ?? 5));
@@ -3675,6 +3693,7 @@ export function computeFlankingStatus(token, target): boolean {
 
     for (let ally of allies) {
       if (ally.document.uuid === token.document.uuid) continue;
+      if (!heightIntersects(ally.document, target.document)) continue;
       const actor: any = ally.actor;
       if (actor?.system.attrbutes?.hp?.value <= 0) continue;
       if (installedModules.get("dfreds-convenient-effects")) {
@@ -3720,10 +3739,13 @@ export function computeFlankingStatus(token, target): boolean {
 
 
 export async function markFlanking(token, target): Promise<boolean> {
+  // checkFlankingStatus requires a flanking token (token) and a target
+  // checkFlankedStatus requires only a target token
   if (!canvas) return false;
   let needsFlanking = false;
-  if (!token || !target || !checkRule("checkFlanking") || checkRule["checkFlanking"] === "off") return false;
+  if (!target || !checkRule("checkFlanking") || checkRule["checkFlanking"] === "off") return false;
   if (["ceonly", "ceadv"].includes(checkRule("checkFlanking"))) {
+    if (!token) return false;
     needsFlanking = computeFlankingStatus(token, target);
     if (installedModules.get("dfreds-convenient-effects")) {
       //@ts-ignore
@@ -3740,16 +3762,18 @@ export async function markFlanking(token, target): Promise<boolean> {
       }
     }
   } else if (checkRule("checkFlanking") === "advonly") {
+    if (!token) return false;
     needsFlanking = computeFlankingStatus(token, target);
   } else if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking"))) {
+    if (!target.actor) return false;
     if (installedModules.get("dfreds-convenient-effects")) {
       //@ts-ignore
       const CEFlanked = game.dfreds.effects._flanked;
       if (!CEFlanked) return false;
       const needsFlanked = await computeFlankedStatus(target);
       //@ts-ignore
-      const hasFlanked = token.actor && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.name, target.actor.uuid);
-      if (needsFlanked && !hasFlanked && token.actor) {
+      const hasFlanked = target.actor && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.name, target.actor.uuid);
+      if (needsFlanked && !hasFlanked && target.actor) {
         //@ts-ignore
         await game.dfreds.effectInterface?.addEffect({ effectName: CEFlanked.name, uuid: target.actor.uuid });
       } else if (!needsFlanked && hasFlanked && token.actor) {
@@ -3765,11 +3789,7 @@ export async function markFlanking(token, target): Promise<boolean> {
 export async function checkflanking(user: User, target: Token, targeted: boolean): Promise<boolean> {
   if (user !== game.user) return false;
   let token = canvas?.tokens?.controlled[0];
-  if (!token) {
-    log("Flanking check: No token selected - no flanking applied");
-    return false;
-  }
-  if (user.targets.size === 1 && canvas?.tokens?.controlled.length === 1) return markFlanking(token, target);
+  if (user.targets.size === 1) return markFlanking(token, target);
   return false
 
 }

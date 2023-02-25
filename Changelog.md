@@ -1,3 +1,11 @@
+### 10.0.31
+* Midi merge cards should now be compatible with quick-reveal
+* Tool checks now benefit from optional bonuses that apply to ability checks.
+* Improved behaviour when checking flanked status and tokens are at different heights.
+* midi-qol is now compatible with and **requires** Convenient Effects v4.0.2. Backwards compatibility with previous versions is not supported.
+* **Breaking** Addition to findNearby to allow inclusion of incapacitated actors, MidiQOL.findNearby(disposition, token, distance, {maxSize, includeIncapacitated}). Only breaking if you were including a maxSize before, you'll need to use {maxSize: size} instead.
+* For @Elwin only register for the createTemplate hook if the item has areaTargets set.
+
 ### 10.0.30
 * Fix for cases where players end turn in combat causing over time errors.
 * Fix for es.json not supporting monk's token bar saving throw option

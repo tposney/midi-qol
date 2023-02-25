@@ -358,7 +358,8 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
   }
 
-  if (!options.simulate) result = await bonusCheck(this, result, rollType, abilityId)
+  if (!options.simulate) result = await bonusCheck(this, result, rollType, abilityId);
+  
   if (chatMessage !== false && result) {
     const args: any = { "speaker": getSpeaker(this), flavor };
     setProperty(args, `flags.${game.system.id}.roll`, { type: rollType, abilityId });
@@ -1122,10 +1123,27 @@ export let actorAbilityRollPatching = () => {
   // TODO come back and add these
   log("Patching rollSkill");
   libWrapper.register("midi-qol", "CONFIG.Actor.documentClass.prototype.rollSkill", doRollSkill, "WRAPPER");
+  libWrapper.register("midi-qol", "CONFIG.Item.documentClass.prototype.rollToolCheck", rollToolCheck, "WRAPPER");
 
   // 10.0.19 rollDeath save now implemented via the preRollDeathSave Hook
 }
 
+export async function rollToolCheck(wrapped, options) {
+  console.trace();
+
+  const chatMessage = options.chatMessage;
+  options.chatMessage = false;
+  let result  = await wrapped(options);
+  result = await bonusCheck(this.actor, result, "check", this.system.ability ?? "")
+  if (chatMessage !== false && result) {
+    const title = `${this.name} - ${game.i18n.localize("DND5E.ToolCheck")}`;
+    const args: any = { "speaker": getSpeaker(this.actor), title, flavor: title };
+    setProperty(args, `flags.${game.system.id}.roll`, { type: "tool", itemId: this.id, itemUuid: this.uuid });
+    args.template = "modules/midi-qol/templates/roll.html";
+    await result.toMessage(args);
+  }
+  return result;
+}
 
 export function patchLMRTFY() {
   if (installedModules.get("lmrtfy")) {

@@ -292,7 +292,7 @@ export class Workflow {
         this.item.flags.midiProperties.critOther = this.item.system.properties?.critOther;
       }
     }
-    if (!(this instanceof BetterRollsWorkflow)) this.placeTemplateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
+    if (!(this instanceof BetterRollsWorkflow && this.needTemplate)) this.placeTemplateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
     this.needTemplate = (configSettings.autoTarget !== "none" && this.item?.hasAreaTarget) ?? false;
     this.needItemCard = true;
     this.preItemUseComplete = false;
@@ -457,7 +457,7 @@ export class Workflow {
             // procOptions.fastForward = !this.rollOptions.rollToggle;
             //            this.item.rollToolCheck({ fastForward: this.rollOptions.fastForward, advantage: hasAdvantage, disadvantage: hasDisadvantage })
             const options: any = mergeObject(procOptions, { critical: this.item.getCriticalThreshold() ?? 20, fumble: 1 });
-            const result = await this.item.rollToolCheck(options)
+            const result = await this.item.rollToolCheck(options);
             return this.next(WORKFLOWSTATES.WAITFORDAMAGEROLL);
           }
         }
@@ -789,7 +789,7 @@ export class Workflow {
           else if (midiFlags?.forceCEOn && ["none", "itempri"].includes(useCE)) useCE = "cepri";
           const hasCE = installedModules.get("dfreds-convenient-effects")
           //@ts-ignore
-          const ceEffect = hasCE ? game.dfreds.effects.all.find(e => e.name === theItem?.name) : undefined;
+          const ceEffect = hasCE ? game.dfreds.effects.all.find(e => e.label === theItem?.name) : undefined;
           const ceTargetEffect = ceEffect && !(ceEffect?.flags.dae?.selfTarget || ceEffect?.flags.dae?.selfTargetAlways);
           const hasItemEffect = hasDAE(this) && theItem?.effects.some(ef => ef.transfer !== true);
           const itemSelfEffects = theItem?.effects.filter(ef => (ef.flags?.dae?.selfTarget || ef.flags?.dae?.selfTargetAlways) && !ef.transfer) ?? [];
@@ -856,7 +856,7 @@ export class Workflow {
                         //@ts-ignore
                         await game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin: theItem?.uuid, metadata: macroData });
                       }
-                      const effectData = mergeObject(ceEffect.convertToObject(), metaData);
+                      const effectData = mergeObject(ceEffect.toObject(), metaData);
                       effectData.origin = this.itemUuid;
                       //@ts-ignore
                       await game.dfreds.effectInterface?.addEffectWith({ effectData, uuid: token.actor.uuid, origin: theItem?.uuid, metadata: macroData });
@@ -894,7 +894,7 @@ export class Workflow {
                   //@ts-ignore
                   await game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: this.actor.uuid, origin: theItem?.uuid, metadata: macroData });
                 }
-                const effectData = mergeObject(ceSelfEffectToApply.convertToObject(), metaData);
+                const effectData = mergeObject(ceSelfEffectToApply.toObject(), metaData);
                 effectData.origin = this.itemUuid;
                 //@ts-ignore
                 await game.dfreds.effectInterface?.addEffectWith({ effectData, uuid: token.actor.uuid, origin: theItem?.uuid, metadata: macroData });
@@ -928,7 +928,7 @@ export class Workflow {
                 "content": content,
                 timestamp: Date.now(),
                 "flags.midi-qol.type": MESSAGETYPES.ITEM,
-                type: CONST.CHAT_MESSAGE_TYPES.OTHER,
+                type: CONST.CHAT_MESSAGE_TYPES.ROLL,
               });
             }
           }
@@ -2589,7 +2589,6 @@ export class Workflow {
 
     if (!this.saveRequests[requestId]) return true;
 
-    console.error("process save roll ", message, html, data)
     if (this.saveRequests[requestId]) {
       clearTimeout(this.saveTimeouts[requestId]);
       const handler = this.saveRequests[requestId]
@@ -2606,7 +2605,6 @@ export class Workflow {
         const formula = rollEntry.formula ?? "1d20";
         handler({ total, formula, isBR: true, isCritical: brFlags.isCrit, terms: [{ options: { advantage, disadvantage } }] });
       } else {
-        console.error("process save roll ", message, message.rolls)
         handler(message.rolls[0])
       }
     }

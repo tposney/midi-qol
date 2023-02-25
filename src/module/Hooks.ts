@@ -168,7 +168,7 @@ export let readyHooks = async () => {
     Hooks.on("dnd5e.preRollDamage", preRollDamageHook);
     Hooks.on("dnd5e.rollDamage", rollDamageHook)
     Hooks.on("dnd5e.preRollAbilitySave", preRollAbilitySaveHook);
-    Hooks.on("dnd5e.preRollAbiltiyTest", preRollAbilitySaveHook);
+    Hooks.on("dnd5e.preRollAbilityTest", preRollAbilitySaveHook);
     Hooks.on("dnd5e.rollAbilitySave", rollAbilitySaveHook);
     Hooks.on("dnd5e.rollAbilityTest", rollAbilityTestHook)
   } else {
@@ -299,7 +299,7 @@ export function initHooks() {
 
     if (installedModules.get("dfreds-convenient-effects")) {
       //@ts-ignore dfreds
-      const ceForItem = game.dfreds.effects.all.find(e => e.name === app.object.name);
+      const ceForItem = game.dfreds.effects.all.find(e => e.label === app.object.name);
       if (ceForItem) {
         const element = html.find('input[name="system.chatFlavor"]').parent().parent();
         if (["both", "cepri", "itempri"].includes(configSettings.autoCEEffects)) {

@@ -390,7 +390,7 @@ export let hideRollUpdate = (message, data, diff, id) => {
 
 export let hideStuffHandler = (message, html, data) => {
   if (debugEnabled > 1) debug("hideStuffHandler message: ", message.id, message)
-  if (getProperty(message, "flags.monks-tokenbar")) return;
+  // if (getProperty(message, "flags.monks-tokenbar")) return;
   const midiqolFlags = getProperty(message, "flags.midi-qol");
   // Hide non midi rolls which are blind and not the GM if force hide is true
   if (forceHideRoll && !midiqolFlags && message.blind && !game.user?.isGM) {
