@@ -292,8 +292,8 @@ export class Workflow {
         this.item.flags.midiProperties.critOther = this.item.system.properties?.critOther;
       }
     }
-    if (!(this instanceof BetterRollsWorkflow && this.needTemplate)) this.placeTemplateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
     this.needTemplate = (configSettings.autoTarget !== "none" && this.item?.hasAreaTarget) ?? false;
+    if (!(this instanceof BetterRollsWorkflow && this.needTemplate)) this.placeTemplateHookId = Hooks.once("createMeasuredTemplate", selectTargets.bind(this));
     this.needItemCard = true;
     this.preItemUseComplete = false;
     this.kickStart = true;

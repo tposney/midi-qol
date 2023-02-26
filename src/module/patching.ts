@@ -964,10 +964,10 @@ async function checkWounded(actor, update, options, user) {
     const woundedLevel = attributes.hp.max * configSettings.addWounded / 100;
     const needsWounded = hpUpdate > 0 && hpUpdate < woundedLevel
     if (installedModules.get("dfreds-convenient-effects") && CEWounded) {
-      const wounded = await ConvenientEffectsHasEffect(CEWounded.name, actor, false);
+      const wounded = await ConvenientEffectsHasEffect(CEWounded.label, actor, false);
       if (wounded !== needsWounded) {
         //@ts-ignore
-        await game.dfreds?.effectInterface.toggleEffect(CEWounded.name, { overlay: false, uuids: [actor.uuid] });
+        await game.dfreds?.effectInterface.toggleEffect(CEWounded.label, { overlay: false, uuids: [actor.uuid] });
       }
     } else {
       const tokens = actor.getActiveTokens();
@@ -981,7 +981,7 @@ async function checkWounded(actor, update, options, user) {
   if (configSettings.addDead !== "none") {
     const needsDead = hpUpdate <= 0;
     if (installedModules.get("dfreds-convenient-effects") && game.settings.get("dfreds-convenient-effects", "modifyStatusEffects") !== "none") {
-      const effectName = (actor.type === "character" || actor.hasPlayerOwner) ? getConvenientEffectsUnconscious().name : getConvenientEffectsDead().name;
+      const effectName = (actor.type === "character" || actor.hasPlayerOwner) ? getConvenientEffectsUnconscious().label : getConvenientEffectsDead().label
       const hasEffect = await ConvenientEffectsHasEffect(effectName, actor, false);
       if ((needsDead !== hasEffect)) {
         if (actor.type !== "character" && !actor.hasPlayerOwner) { // For CE dnd5e does not treat dead as dead for the combat tracker so update it by hand as well

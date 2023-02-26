@@ -1,3 +1,6 @@
+### 10.0.32
+* Turns out I missed quite a lot of changes needed for Convenient Effects 4.0.2. Should fix flanking, wounded/dead markingincapacitated checking. This is (hopefully) all of them.
+
 ### 10.0.31
 * Midi merge cards should now be compatible with quick-reveal
 * Tool checks now benefit from optional bonuses that apply to ability checks.

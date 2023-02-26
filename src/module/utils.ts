@@ -2074,7 +2074,7 @@ export async function setConcentrationData(actor, concentrationData: Concentrati
  */
 
 
-export function findNearby(disposition: number | null, token: any /*Token | undefined */, distance: number, options: {maxSize: number | undefined, includeIncapacitated: boolean | undefined} = {maxSize: 1, includeIncapacitated: false}): Token[] {
+export function findNearby(disposition: number | null, token: any /*Token | undefined */, distance: number, options: {maxSize: number | undefined, includeIncapacitated: boolean | undefined} = {maxSize: undefined, includeIncapacitated: false}): Token[] {
   if (!token) return [];
   if (typeof token === "string") token = MQfromUuid(token).object;
   if (!(token instanceof Token)) { throw new Error("find nearby token is not of type token or the token uuid is invalid") };
@@ -3373,7 +3373,7 @@ export async function setReactionUsed(actor: Actor) {
   let effect;
   if (getConvenientEffectsReaction()) {
     //@ts-ignore
-    await game.dfreds?.effectInterface.addEffect({ effectName: getConvenientEffectsReaction().name, uuid: actor.uuid });
+    await game.dfreds?.effectInterface.addEffect({ effectName: getConvenientEffectsReaction().label, uuid: actor.uuid });
   } else if (installedModules.get("combat-utility-belt") && (effect = CONFIG.statusEffects.find(se => se.label === i18n("DND5E.Reaction")))) {
     actor.createEmbeddedDocuments("ActiveEffect", [effect]);
   }
@@ -3384,7 +3384,7 @@ export async function setBonusActionUsed(actor: Actor) {
   let effect;
   if (getConvenientEffectsBonusAction()) {
     //@ts-ignore
-    await game.dfreds?.effectInterface.addEffect({ effectName: getConvenientEffectsBonusAction().name, uuid: actor.uuid });
+    await game.dfreds?.effectInterface.addEffect({ effectName: getConvenientEffectsBonusAction().label, uuid: actor.uuid });
   } else if (installedModules.get("combat-utility-belt") && (effect = CONFIG.statusEffects.find(se => se.label === i18n("DND5E.BonusAction")))) {
     actor.createEmbeddedDocuments("ActiveEffect", [effect]);
   }
@@ -3395,9 +3395,9 @@ export async function removeReactionUsed(actor: Actor, removeCEEffect = false) {
   let effect;
   if (removeCEEffect && getConvenientEffectsReaction()) {
     //@ts-ignore
-    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, actor.uuid)) {
+    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().label, actor.uuid)) {
       //@ts-ignore
-      await game.dfreds.effectInterface?.removeEffect({ effectName: getConvenientEffectsReaction().name, uuid: actor.uuid });
+      await game.dfreds.effectInterface?.removeEffect({ effectName: getConvenientEffectsReaction().label, uuid: actor.uuid });
     }
   }
   if (installedModules.get("combat-utility-belt")) {
@@ -3413,7 +3413,7 @@ export async function hasUsedReaction(actor: Actor) {
   if (actor.getFlag("midi-qol", "reactionCombatRound")) return true;
   if (getConvenientEffectsReaction()) {
     //@ts-expect-error .dfreds
-    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().name, actor.uuid)) return true;
+    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsReaction().label, actor.uuid)) return true;
   }
   //@ts-expect-error .label
   if (installedModules.get("combat-utility-belt") && actor.effects.contents.some(ef => ef.label === i18n("DND5E.Reaction"))) {
@@ -3445,7 +3445,7 @@ export async function hasUsedBonusAction(actor: Actor) {
   if (actor.getFlag("midi-qol", "bonusActionCombatRound")) return true;
   if (getConvenientEffectsBonusAction()) {
     //@ts-ignore
-    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsBonusAction().name, actor.uuid)) return true;
+    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsBonusAction().label, actor.uuid)) return true;
   }
   //@ts-expect-error .label
   if (installedModules.get("combat-utility-belt") && actor.effects.contents.some(ef => ef.label === i18n("DND5E.Reaction"))) {
@@ -3457,9 +3457,9 @@ export async function hasUsedBonusAction(actor: Actor) {
 export async function removeBonusActionUsed(actor: Actor, removeCEEffect = false) {
   if (removeCEEffect && getConvenientEffectsBonusAction()) {
     //@ts-ignore
-    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsBonusAction().name, actor.uuid)) {
+    if (await game.dfreds?.effectInterface.hasEffectApplied(getConvenientEffectsBonusAction().label, actor.uuid)) {
       //@ts-ignore
-      await game.dfreds.effectInterface?.removeEffect({ effectName: getConvenientEffectsBonusAction().name, uuid: actor.uuid });
+      await game.dfreds.effectInterface?.removeEffect({ effectName: getConvenientEffectsBonusAction().label, uuid: actor.uuid });
     }
     if (installedModules.get("combat-utility-belt")) {
       //@ts-ignore
@@ -3608,7 +3608,7 @@ export async function computeFlankedStatus(target): Promise<boolean> {
         //@ts-ignore
         const CEFlanked = game.dfreds.effects._flanked;
         //@ts-ignore
-        const hasFlanked = token.actor && CEFlanked && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.name, token.actor.uuid);
+        const hasFlanked = token.actor && CEFlanked && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.label, token.actor.uuid);
         if (hasFlanked) continue;
       }
       // Loop through each square covered by attacker and ally
@@ -3621,13 +3621,13 @@ export async function computeFlankedStatus(target): Promise<boolean> {
         if (!heightIntersects(target.document, ally.document)) continue;
         if (installedModules.get("dfreds-convenient-effects")) {
           //@ts-ignore
-          if (actor?.effects.some(ef => ef.label === game.dfreds.effects._incapacitated.name)) continue;
+          if (actor?.effects.some(ef => ef.label === game.dfreds.effects._incapacitated.label)) continue;
         }
         if (checkRule("checkFlanking") === "ceflankedNoconga" && installedModules.get("dfreds-convenient-effects")) {
           //@ts-ignore
           const CEFlanked = game.dfreds.effects._flanked;
           //@ts-ignore
-          const hasFlanked = CEFlanked && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.name, ally.actor.uuid);
+          const hasFlanked = CEFlanked && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.label, ally.actor.uuid);
           if (hasFlanked) continue;
         }
         const allyStartX = ally.document.width >= 1 ? 0.5 : ally.document.width / 2;
@@ -3698,7 +3698,7 @@ export function computeFlankingStatus(token, target): boolean {
       if (actor?.system.attrbutes?.hp?.value <= 0) continue;
       if (installedModules.get("dfreds-convenient-effects")) {
         //@ts-ignore
-        if (actor?.effects.some(ef => ef.label === game.dfreds.effects._incapacitated.name)) continue;
+        if (actor?.effects.some(ef => ef.label === game.dfreds.effects._incapacitated.label)) continue;
       }
 
       const allyStartX = ally.document.width >= 1 ? 0.5 : ally.document.width / 2;
@@ -3752,13 +3752,13 @@ export async function markFlanking(token, target): Promise<boolean> {
       const CEFlanking = game.dfreds.effects._flanking;
       if (!CEFlanking) return needsFlanking;
       //@ts-ignore
-      const hasFlanking = token.actor && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanking.name, token.actor.uuid)
+      const hasFlanking = token.actor && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanking.label, token.actor.uuid)
       if (needsFlanking && !hasFlanking && token.actor) {
         //@ts-ignore
-        await game.dfreds.effectInterface?.addEffect({ effectName: CEFlanking.name, uuid: token.actor.uuid });
+        await game.dfreds.effectInterface?.addEffect({ effectName: CEFlanking.label, uuid: token.actor.uuid });
       } else if (!needsFlanking && hasFlanking && token.actor) {
         //@ts-ignore
-        await game.dfreds.effectInterface?.removeEffect({ effectName: CEFlanking.name, uuid: token.actor.uuid });
+        await game.dfreds.effectInterface?.removeEffect({ effectName: CEFlanking.label, uuid: token.actor.uuid });
       }
     }
   } else if (checkRule("checkFlanking") === "advonly") {
@@ -3772,13 +3772,13 @@ export async function markFlanking(token, target): Promise<boolean> {
       if (!CEFlanked) return false;
       const needsFlanked = await computeFlankedStatus(target);
       //@ts-ignore
-      const hasFlanked = target.actor && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.name, target.actor.uuid);
+      const hasFlanked = target.actor && await game.dfreds.effectInterface?.hasEffectApplied(CEFlanked.label, target.actor.uuid);
       if (needsFlanked && !hasFlanked && target.actor) {
         //@ts-ignore
-        await game.dfreds.effectInterface?.addEffect({ effectName: CEFlanked.name, uuid: target.actor.uuid });
+        await game.dfreds.effectInterface?.addEffect({ effectName: CEFlanked.label, uuid: target.actor.uuid });
       } else if (!needsFlanked && hasFlanked && token.actor) {
         //@ts-ignore
-        await game.dfreds.effectInterface?.removeEffect({ effectName: CEFlanked.name, uuid: target.actor.uuid });
+        await game.dfreds.effectInterface?.removeEffect({ effectName: CEFlanked.label, uuid: target.actor.uuid });
       }
       return false;
     }
