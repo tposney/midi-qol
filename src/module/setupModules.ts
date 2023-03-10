@@ -9,7 +9,7 @@ const modules = {
   "dae": "10.0.9",
   "ddb-game-log": "0.0.0",
   "df-templates": "1.0.0",
-  "dfreds-convenient-effects": "4.0.2",
+  "dfreds-convenient-effects": "4.1.0",
   "dice-so-nice": "4.1.1", 
   "itemacro": "1.0.0", 
   "levels": "3.0.6", 

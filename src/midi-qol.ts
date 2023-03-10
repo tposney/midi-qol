@@ -6,7 +6,7 @@ import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Ho
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow } from './module/workflow.js';
-import { addConcentration, applyTokenDamage, canSense, checkNearby, checkRange, completeItemRoll, completeItemUse, computeCoverBonus, doConcentrationCheck, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistanceSimple, getDistanceSimpleOld, getSystemCONFIG, getTraitMult, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags, tokenForActor } from './module/utils.js';
+import { addConcentration, applyTokenDamage, canSense, checkNearby, checkRange, completeItemRoll, completeItemUse, computeCoverBonus, doConcentrationCheck, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistanceSimple, getDistanceSimpleOld, getSystemCONFIG, getTraitMult, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags, setBonusActionUsed, setReactionUsed, tokenForActor } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
@@ -185,6 +185,7 @@ Hooks.once('setup', function () {
       //@ts-expect-error
       game.system.config.traits.dv.configKey = "damageResistanceTypes";
     }
+    config.abilityActivationTypes["reactionpreattack"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionPreAttack")}`;
     config.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
     config.abilityActivationTypes["reactionmanual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
   } else { // sw5e
@@ -242,6 +243,12 @@ Hooks.once('ready', function () {
     "preDamageApplication": "Before Damage Application",
     "preActiveEffects": "Before Active Effects",
     "postActiveEffects": "After Active Effects ",
+    "isAttacked": "Actor is target of an attack",
+    "isHit": "Actor is target of a hit",
+    "isSave": "Actor rolled a save",
+    "isSaveSuccess": "Actor rolled a successful save",
+    "isSaveFailure": "Actor failed a saving throw",
+    "isDamaged": "Actor is damaged by an attack",
     "all": "All"
   }
   OnUseMacroOptions.setOptions(MQOnUseOptions);
@@ -253,6 +260,23 @@ Hooks.once('ready', function () {
       section: i18n("DND5E.Feats"),
       type: Boolean
     };
+
+    if (game.user?.isGM) {
+      const instanceId = game.settings.get("midi-qol", "instanceId");
+      //@ts-expect-error instanceId
+      if ([undefined, ""].includes(instanceId)) {
+        game.settings.set("midi-qol", "instanceId", randomID());
+      }
+      const oldVersion = game.settings.get("midi-qol", "last-run-version");
+      //@ts-expect-error version
+      const newVersion = game.modules.get("midi-qol")?.version;
+      //@ts-expect-error
+      if (isNewerVersion(newVersion, oldVersion)) {
+        console.warn(`midi-qol | instance ${game.settings.get("midi-qol", "instanceId")} version change from ${oldVersion} to ${newVersion}`);
+        game.settings.set("midi-qol", "last-run-version", newVersion);
+        // look at sending a new version has been installed.
+      }
+    }
   }
 
   setupMidiQOLApi();
@@ -340,6 +364,8 @@ function setupMidiQOLApi() {
     checkRule: checkRule,
     completeItemRoll,
     completeItemUse,
+    computeCoverBonus,
+    computeDistance: getDistanceSimple,
     ConfigPanel,
     configSettings: () => { return configSettings },
     DamageOnlyWorkflow,
@@ -353,9 +379,9 @@ function setupMidiQOLApi() {
     getChanges, // (actorOrItem, key) - what effects on the actor or item target the specific key
     getConcentrationEffect,
     getDistance: getDistanceSimpleOld,
-    computeDistance: getDistanceSimple,
-    computeCoverBonus,
     getTraitMult: getTraitMult,
+    hasUsedBonusAction,
+    hasUsedReaction,
     log,
     midiFlags,
     midiRenderRoll,
@@ -367,6 +393,8 @@ function setupMidiQOLApi() {
     overTimeJSONData,
     reportMidiCriticalFlags: reportMidiCriticalFlags,
     selectTargetsForTemplate: templateTokens,
+    setBonusActionUsed,
+    setReactionUsed,
     showItemInfo,
     socket: () => { return socketlibSocket },
     tokenForActor,
@@ -458,6 +486,8 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.grants.disadvantage.attack.all`);
   // TODO work out how to do grants damage.max
   midiFlags.push(`flags.midi-qol.grants.attack.success.all`);
+  midiFlags.push(`flags.midi-qol.grants.attack.fail.all`);
+
   midiFlags.push(`flags.midi-qol.grants.attack.bonus.all`);
   midiFlags.push(`flags.midi-qol.grants.critical.all`);
   midiFlags.push(`flags.midi-qol.grants.critical.range`);

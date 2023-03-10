@@ -223,7 +223,13 @@ export function calculateDamage(a: Actor, appliedDamage, t: Token, totalDamage, 
   let prevDamage = existingDamage?.find(ed => ed.tokenId === t.id);
   //@ts-ignore attributes
   var hp = a.system.attributes.hp;
-  var oldHP, tmp;
+  var oldHP, tmp, oldVitality, newVitality;
+  const resource = checkRule("vitalityResource");
+  if (hp.value <= 0 && resource) {
+    // Damage done to vitality rather than hp
+    oldVitality = getProperty(a, resource);
+    newVitality = Math.max(0, oldVitality - appliedDamage);
+  }
   if (prevDamage) {
     oldHP = prevDamage.newHP;
     tmp = prevDamage.newTempHP;
@@ -258,7 +264,7 @@ export function calculateDamage(a: Actor, appliedDamage, t: Token, totalDamage, 
   // TODO change tokenId, actorId to tokenUuid and actor.uuid
   return {
     tokenId, tokenUuid, actorId: a.id, actorUuid: a.uuid, tempDamage: tmp - newTemp, hpDamage: oldHP - newHP, oldTempHP: tmp, newTempHP: newTemp,
-    oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value, sceneId
+    oldHP: oldHP, newHP: newHP, totalDamage: totalDamage, appliedDamage: value, sceneId, oldVitality, newVitality
   };
 }
 
@@ -707,7 +713,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
     let ditem: any = calculateDamage(targetActor, appliedDamage, targetToken, totalDamage, dmgType, options.existingDamage);
     ditem.tempDamage = ditem.tempDamage + appliedTempHP;
     if (appliedTempHP <= 0) { // temp healing applied to actor does not add only gets the max
-      ditem.newTempHP = Math.max(ditem.newTempHP, -appliedTempHP);
+      ditem.newTempHP = Math.max(ditem.newTempHP, - appliedTempHP);
     } else {
       ditem.newTempHP = Math.max(0, ditem.newTempHP - appliedTempHP)
     }
@@ -1469,8 +1475,19 @@ export function untargetAllTokens(...args) {
 }
 
 export function checkIncapacitated(actor: Actor, item: Item | undefined = undefined, event: any) {
-  //@ts-ignore .system v10
-  if (actor?.system.attributes?.hp?.value <= 0) {
+  if (checkRule("vitalityResource") ) {
+    const vitality = getProperty(actor, checkRule("vitalityResource")) ?? 0;
+    //@ts-expect-error .system
+    if (vitality <= 0 && actor?.system.attributes?.hp?.value <= 0) {
+      log(`minor-qol | ${actor.name} is dead`)
+      ui.notifications?.warn(`${actor.name} is dead`);
+      return true;
+    }
+    return false;
+  }
+
+    //@ts-expect-error .system
+    if (actor?.system.attributes?.hp?.value <= 0) {
     log(`minor-qol | ${actor.name} is incapacitated`)
     ui.notifications?.warn(`${actor.name} is incapacitated`)
     return true;
@@ -1841,7 +1858,7 @@ export function computeCoverBonus(attacker: Token | TokenDocument, target: Token
       break;
   }
 
-  if (item?.flags.midiProperties.ignoreTotalCover && item.type === "spell") coverBonus = 0;
+  if (item?.flags.midiProperties?.ignoreTotalCover && item.type === "spell") coverBonus = 0;
   else if (item?.flags.midiProperties?.ignoreTotalCover && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
   if (target.actor)
     setProperty(target.actor, "flags.midi-qol.acBonus", coverBonus);
@@ -2452,6 +2469,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
         case "reroll-max": newRoll = await this[rollId].reroll({ async: true, maximize: true }); break;
         case "reroll-min": newRoll = await this[rollId].reroll({ async: true, minimize: true }); break;
         case "success": newRoll = await new Roll("99").evaluate({ async: true }); break;
+        case "fail": newRoll = await new Roll("-1").evaluate({async: true}); break;
         default:
           if (typeof button.value === "string" && button.value.startsWith("replace ")) {
             const rollParts = button.value.split(" ");
@@ -2796,6 +2814,8 @@ function itemReaction(item, triggerType, maxLevel, onlyZeroCost) {
 }
 
 export async function doReactions(target: Token, triggerTokenUuid: string | undefined, attackRoll: Roll, triggerType: string, options: any = {}): Promise<{ name: string | undefined, uuid: string | undefined, ac: number | undefined }> {
+  //@ts-expect-error
+  if (target instanceof TokenDocument) target = target.object;
   const noResult = { name: undefined, uuid: undefined, ac: undefined };
   //@ts-ignore attributes
   if (!target.actor || !target.actor.flags) return noResult;
@@ -2850,7 +2870,11 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   }
 
   if (reactionCount <= 0) return noResult;
-  const promptString = triggerType === "reactiondamage" ? "midi-qol.reactionFlavorDamage" : "midi-qol.reactionFlavorAttack";
+
+  let promptString = "midi-qol.reactionFlavorDamage";
+  if (triggerType === "reactionattack") promptString = "midi-qol.reactionFlavorAttack";;
+  if (triggerType === "reactionpreattack") promptString = "midi-qol.reactionFlavorPreAttack";;
+
   let chatMessage;
   const reactionFlavor = game.i18n.format(promptString, { itemName: (options.item?.name ?? "unknown"), actorName: target.name });
   const chatData: any = {
@@ -2870,7 +2894,7 @@ export async function doReactions(target: Token, triggerTokenUuid: string | unde
   // {"none": "Attack Hit", "d20": "d20 roll only", "all": "Whole Attack Roll"},
 
   let content;
-  if (triggerType === "reactiondamage") content = reactionFlavor;
+  if (["reactiondamage", "reactionpreattack"].includes(triggerType)) content = reactionFlavor;
   else switch (configSettings.showReactionAttackRoll) {
     case "all":
       content = `<h4>${reactionFlavor} - ${rollOptions.all} ${attackRoll?.total ?? ""}</h4>`;
@@ -3695,7 +3719,7 @@ export function computeFlankingStatus(token, target): boolean {
       if (ally.document.uuid === token.document.uuid) continue;
       if (!heightIntersects(ally.document, target.document)) continue;
       const actor: any = ally.actor;
-      if (actor?.system.attrbutes?.hp?.value <= 0) continue;
+      if (checkIncapacitated(actor, undefined, undefined)) continue;
       if (installedModules.get("dfreds-convenient-effects")) {
         //@ts-ignore
         if (actor?.effects.some(ef => ef.label === game.dfreds.effects._incapacitated.label)) continue;

@@ -1,4 +1,4 @@
-import { configSettings } from "./settings.js";
+import { checkRule, configSettings } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming, geti18nOptions } from "../midi-qol.js";
 import { canSense, completeItemUse, gmExpirePerTurnBonusActions, gmOverTimeEffect, MQfromActorUuid, MQfromUuid, promptReactions } from "./utils.js";
 import { ddbglPendingFired } from "./chatMesssageHandling.js";
@@ -278,7 +278,7 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
   let promises: Promise<any>[] = [];
 
   for (let damageItem of damageList) {
-    let { tokenId, tokenUuid, actorId, actorUuid, oldHP, oldTempHP, newTempHP, tempDamage, hpDamage, totalDamage, appliedDamage, sceneId } = damageItem;
+    let { tokenId, tokenUuid, actorId, actorUuid, oldHP, oldTempHP, newTempHP, tempDamage, hpDamage, totalDamage, appliedDamage, sceneId, oldVitality, newVitality } = damageItem;
 
     let tokenDocument;
     let actor;
@@ -302,9 +302,12 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
           //@ts-ignore
           promises.push(actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage}, updateContext));
         }
+      } else if (oldVitality !== newVitality && actor.isOwner) {
+        const resource = checkRule("vitalityResource");
+        if (resource) promises.push(actor.update({[resource]: newVitality}))
       }
     }
-    tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP, damageItem });
+    tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP, damageItem, oldVitality, newVitality });
 
     let img = tokenDocument?.texture.src || actor.img;
     if (configSettings.usePlayerPortrait && actor.type === "character")
@@ -337,6 +340,8 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
       newTempHP,
       oldTempHP,
       oldHP,
+      oldVitality,
+      newVitality,
       buttonId: tokenUuid,
       iconPrefix: (data.autoApplyDamage === "yesCardNPC" && actor.type === "character") ? "*" : "",
       updateContext: data.updateContext
@@ -463,12 +468,20 @@ async function doClick(event: { stopPropagation: () => void; }, actorUuid: any, 
   event.stopPropagation();
 }
 
-async function doMidiClick(ev: any, actorUuid: any, newTempHP: any, newHP: any, mult: number, data: any) {
+async function doMidiClick(ev: any, actorUuid: any, newTempHP: any, newHP: any,  newVitality: number, mult: number, data: any) {
   let actor = MQfromActorUuid(actorUuid);
   log(`Setting HP to ${newTempHP} and ${newHP}`);
-  const updateContext = mergeObject({ dhp: (newHP - actor.system.attributes.hp.value)}, data.updateContext);
-  if (actor.owner)
-    await actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP }, updateContext);
+  let updateContext = mergeObject({ dhp: (newHP - actor.system.attributes.hp.value)}, data.updateContext);
+  if (actor.isOwner) {
+    const update = { "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP };
+    if (checkRule("vitalityResource")) {
+      const resource = checkRule("vitalityResource");
+      update[resource] = newVitality;
+      const vitalityResource = getProperty(actor, resource)
+      context["dvital"] = newVitality - vitalityResource;
+    }
+    await actor?.update(update, context);
+  }
 }
 
 export let processUndoDamageCard = (message, html, data) => {
@@ -477,12 +490,20 @@ export let processUndoDamageCard = (message, html, data) => {
 
   button.click((ev: { stopPropagation: () => void; }) => {
     (async () => {
-      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem } of message.flags.midiqol.undoDamage) {
+      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageItem } of message.flags.midiqol.undoDamage) {
         //message.flags.midiqol.undoDamage.forEach(async ({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem }) => {
         if (!actorUuid) continue;
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP}`, actor);
-        await actor?.update({ "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 }, { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0), damageItem});
+        const update = { "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 }; 
+        const context = { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0), damageItem};
+        if (checkRule("vitalityResource")) {
+          const resource = checkRule("vitalityResource");
+          update[resource] = oldVitality;
+          context["dvital"] = oldVitality - newVitality;
+        }
+        await actor?.update(update, context);
+          
         ev.stopPropagation();
       }
     })();
@@ -491,17 +512,24 @@ export let processUndoDamageCard = (message, html, data) => {
   button = html.find("#all-apply");
   button.click((ev: { stopPropagation: () => void; }) => {
     (async () => {
-      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem } of message.flags.midiqol.undoDamage) {
+      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem, oldVitality, newVitality } of message.flags.midiqol.undoDamage) {
         if (!actorUuid) continue;
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP to ${newTempHP} and ${newHP}`);
-        await actor?.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, }, { dhp: newHP - actor.system.attributes.hp.value, damageItem });
+        const update = { "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP };
+        const context = { dhp: newHP - actor.system.attributes.hp.value, damageItem};
+        if (checkRule("vitalityResource")) {
+          const resource = checkRule("vitalityResource");
+          update[resource] = newVitality;
+          context["dvital"] = oldVitality - newVitality;
+        }
+        if (actor.isOwner) await actor.update(update, context);
         ev.stopPropagation();
       }
     })();
   })
 
-  message.flags.midiqol.undoDamage.forEach(({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageItem }) => {
+  message.flags.midiqol.undoDamage.forEach(({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageItem }) => {
     if (!actorUuid) return;
     // ids should not have "." in the or it's id.class
     let button = html.find(`#reverse-${actorUuid.replaceAll(".", "")}`);
@@ -509,7 +537,14 @@ export let processUndoDamageCard = (message, html, data) => {
       (async () => {
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP}`, data.updateContext);
-        if (actor.isOwner) await actor.update({ "system.attributes.hp.temp": oldTempHP, "system.attributes.hp.value": oldHP }, { dhp: oldHP - actor.system.attributes.hp.value, damageItem });
+        const update = { "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 }; 
+        const context = { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0), damageItem};
+        if (checkRule("vitalityResource")) {
+          const resource = checkRule("vitalityResource");
+          update[resource] = oldVitality;
+          context["dvital"] = newVitality - oldVitality;
+        }
+        if (actor.isOwner) await actor.update(update, context);
         ev.stopPropagation();
       })();
     });
@@ -520,7 +555,14 @@ export let processUndoDamageCard = (message, html, data) => {
       (async () => {
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP to ${newTempHP} and ${newHP}`, data.updateContext);
-        if (actor.isOwner) await actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP }, { dhp: newHP - actor.system.attributes.hp.value, damageItem });
+        const update = { "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP };
+        const context = { dhp: newHP - actor.system.attributes.hp.value, damageItem };
+        if (checkRule("vitalityResource")) {
+          const resource = checkRule("vitalityResource");
+          update[resource] = newVitality;
+          context["dvital"] = oldVitality - newVitality;
+        }
+        if (actor.isOwner) await actor.update(update, context);
         ev.stopPropagation();
       })();
     });
@@ -533,7 +575,7 @@ export let processUndoDamageCard = (message, html, data) => {
 
       const mults = { "-1": -1, "x1": 1, "x0.25": 0.25, "x0.5": 0.5, "x2": 2 };
       if (multiplier === "calc")
-        button.click(async (ev: any) => await doMidiClick(ev, actorUuid, newTempHP, newHP, 1, data));
+        button.click(async (ev: any) => await doMidiClick(ev, actorUuid, newTempHP, newHP, newVitality, 1, data));
       else if (mults[multiplier])
         button.click(async (ev: any) => await doClick(ev, actorUuid, totalDamage, mults[multiplier], data));
     });

@@ -1,3 +1,28 @@
+### 10.0.33
+* Fix for not picking up Build a bonus save dc bonuses.
+* More changes for the new version of convenient effects, not setting duration correctly.
+* Fix for DamageOnlyWorkflow not displaying item card correctly.
+* Fix for "chat message" save handling not picking up the save rolls.
+* New Reaction option, reaction Pre Attack Roll. The reaction is processed after the attack roll is initiated but BEFORE the attack is actually rolled, so that effects that impose advantage/disadvantage on the attack roller can be implemented. 
+* Sample items Warding Flare which causes the attack to be made with disadvantage; Make Miss which causes the attack to miss.
+* Fix for item.displayCard() throwing an error.
+* Added hasUsedReaction(actor), setReactionUse(actor), hasUsedBonusAction(actor), setBonusActionUsed(actor) to MidiQOL exports.
+* Updated Sneak Attack and Rakish Audacity(10.0.33) to reflect all critical damage settings when rolling a sneak attack/rakish audacity attack. This uses the dnd5e DamageRoll and dnd5e settings to do the calc so can be a useful way to do other rolls that need to be aware of critical damage.
+* **Breaking** Currently when rolling 1 attack per target all workflows are removed at the end of the roll (since the workflow refers to a single target not all the targets). Now if there is only 1 target the workflow will be left.
+
+* Added optional rule for vitality (homebrew - first release). If enabled you can specify a field in the actor (usually a resource - system.resources.primary.value) to act as a vitality pool. Once HP are exhausted damage is done to vitality, if vitality is exhausted the character is dead. Characters suffer no penalties when hp drop to 0. Any incapacitated check **should** now look for vitality of 0. Vitality cannot be healed by cure spells.
+
+* There are some additional actor onUse macro triggers (but NOT item triggers) available when the actor is the target of an attack/spell/feature use:
+  - "isAttacked": the actor is a target of an attack
+  - "isHit": the actor is a target of a hit
+  - "isSave": the actor makes a successful save in response to being targeted
+  - "isSaveSuccess": the actor makes a successful save in response to being targeted
+  - "isSaveFailure": the actor makes a failed save in response to being targeted
+  - "isDamaged": "the actor is damaged by an item roll
+  * Be aware that the macroData is passed in the same way as for all other onuse macros, so args[0].actor will be the actor that made the attack/cast the spell/used the feature.
+  * args[0].options.actor, args[0].options.token will be the actor/token that was attackd/hit/damaged etc
+  * Added item Retribution which when added to an actor does 1d12 damage to the attacker when the target is damaged. Shows how to use the new actor onUse flags and references the item macro from the compendium.
+
 ### 10.0.32
 * Turns out I missed quite a lot of changes needed for Convenient Effects 4.0.2. Should fix flanking, wounded/dead markingincapacitated checking. This is (hopefully) all of them.
 

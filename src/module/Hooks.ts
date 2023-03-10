@@ -7,6 +7,7 @@ import { configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 import {  preDeleteTemplate, preRollAbilitySaveHook, preRollDeathSaveHook, preUpdateItemActorOnUseMacro, rollAbilitySaveHook, rollAbilityTestHook } from "./patching.js";
 import { preItemUseHook, preDisplayCardHook, preItemUsageConsumptionHook, useItemHook, preRollAttackHook, preRollDamageHook, rollAttackHook, rollDamageHook } from "./itemhandling.js";
+import { Workflow } from "./workflow.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -164,17 +165,32 @@ export let readyHooks = async () => {
     Hooks.on("dnd5e.preDisplayCard", preDisplayCardHook);
     // Hooks.on("dnd5e.displayCard", displayCardHook); - displayCard is wrapped instead.
     Hooks.on("dnd5e.preRollAttack", preRollAttackHook);
+    // Hooks.on("dnd5e.preRollAttack", (item, rollConfig) => {return preRollMacro(item, rollConfig, "dnd5e.preRollttack")});
+    // Hooks.on("dnd5e.rollAttack", rollAttackMacro);
+
     Hooks.on("dnd5e.rollAttack", rollAttackHook)
-    Hooks.on("dnd5e.preRollDamage", preRollDamageHook);
+    Hooks.on("dnd5e.preRollDamage", (item, rollConfig) => {
+      preRollDamageHook(item, rollConfig)
+      // && preRollMacro(item, rollConfig, "dnd5e.preRollDamage");
+    });
+    // Hooks.on("dnd5e.rollDamage", rollDamageMacro)
     Hooks.on("dnd5e.rollDamage", rollDamageHook)
-    Hooks.on("dnd5e.preRollAbilitySave", preRollAbilitySaveHook);
-    Hooks.on("dnd5e.preRollAbilityTest", preRollAbilitySaveHook);
-    Hooks.on("dnd5e.rollAbilitySave", rollAbilitySaveHook);
-    Hooks.on("dnd5e.rollAbilityTest", rollAbilityTestHook)
+    // Hooks.on("dnd5e.preRollFormula", (item, rollConfig) => {return preRollMacro(item, rollConfig, "dnd5e.preRollFormula")});
+    // Hooks.on("dnd5e.rollFormula", rollFormulaMacro);
+    // Hooks.on("dnd5e.preRollToolCheck", (item, rollConfig) => preRollMacro(item, rollConfig, "dnd5e.preRollToolCheck"));
+    // Hooks.on("dnd5e.rollToolCheck", rollToolCheckMacro);
+    // Hooks.on("dnd5e.preRollAbilitySave", preRollAbilitySaveHook);
+    // Hooks.on("dnd5e.preRollAbilityTest", preRollAbilitySaveHook);
+    // Hooks.on("dnd5e.rollAbilitySave", rollAbilitySaveHook);
+    // Hooks.on("dnd5e.rollAbilityTest", rollAbilityTestHook)
   } else {
     Hooks.on("dnd5e.preItemUsageConsumption", preItemUsageConsumptionHook);
-    Hooks.on("dnd5e.preRollDamage", preRollDamageHook);
+    Hooks.on("dnd5e.preRollDamage", (item, rollConfig) => {
+      return preRollDamageHook(item, rollConfig)
+    });
+    // Hooks.on("dnd5e.rollDamage", rollDamageMacro);
   }
+
   Hooks.on("dnd5e.preRollDeathSave", preRollDeathSaveHook);
   // Concentration Check is rolled as an item roll so we need an item.
   if (installedModules.get("combat-utility-belt")) {
@@ -186,6 +202,63 @@ export let readyHooks = async () => {
     itemJSONData.name = concentrationCheckItemName;
   }
 }
+
+/* Not sure about if this is a good idea
+The macro write experience is janky - needing to wrap code in async () => {}
+A better solution might be to inject the Hooks.once(dnd5e.preRollAttack etc ) into the macro code
+function preRollMacro(item, rollConfig, hookTag) {
+  const workflow = Workflow.getWorkflow(item.uuid);
+  if (!workflow || !configSettings.allowActorUseMacro) return true;
+  try {
+    const results = workflow.callMacrosSync(item, workflow.onUseMacros?.getMacros(hookTag), "OnUse", hookTag, {item, rollConfig});
+    return !results.some(v => v === false)
+  } catch(err) {
+    console.warn(`midi-qol | error calling ${hookTag} macro`, err)
+  }
+  return true;
+}
+
+
+function rollAttackMacro(item, roll, ammoUpdate) {
+  const workflow = Workflow.getWorkflow(item.uuid);
+  if (!workflow || !configSettings.allowActorUseMacro) return;
+  try {
+    workflow.callMacrosSync(item, workflow.onUseMacros?.getMacros("dnd5e.rollAttack"), "OnUse", "dnd5e.rollAttack", {item, roll, ammoUpdate})
+  } catch(err) {
+    console.warn(`midi-qol | error calling dnd5e.rollAttack macro`, err)
+  }
+}
+
+function rollDamageMacro(item, roll) {
+  const workflow = Workflow.getWorkflow(item.uuid);
+  if (!workflow || !configSettings.allowActorUseMacro) return;
+  try {
+    workflow.callMacrosSync(item, workflow.onUseMacros?.getMacros("dnd5e.rollDamage"), "OnUse", "dnd5e.rollDamage", {item, roll})
+  } catch(err) {
+    console.warn(`midi-qol | error calling dnd5e.rollDamage macro`, err)
+  }
+}
+
+function rollFormulaMacro(item, roll, ammoUpdate) {
+  const workflow = Workflow.getWorkflow(item.uuid);
+  if (!workflow || !configSettings.allowActorUseMacro) return;
+  try {
+    workflow.callMacrosSync(item, workflow.onUseMacros?.getMacros("dnd5e.rollFormula"), "OnUse", "dnd5e.rollFormula", {item, roll})
+  } catch(err) {
+    console.warn(`midi-qol | error calling dnd5e.rollFormula macro`, err)
+  }
+}
+
+function rollToolCheckMacro(item, roll, ammoUpdate) {
+  const workflow = Workflow.getWorkflow(item.uuid);
+  if (!workflow || !configSettings.allowActorUseMacro) return;
+  try {
+    workflow.callMacrosSync(item, workflow.onUseMacros?.getMacros("dnd5e.rollToolCheck"), "OnUse", "dnd5e.rollToolCheck", {item, roll})
+  } catch(err) {
+    console.warn(`midi-qol | error calling dnd5e.rollToolCheck macro`, err)
+  }
+}
+*/
 
 export function restManager(actor, result) {
   if (!actor || !result) return;

@@ -1,7 +1,7 @@
 import { log, warn, debug, i18n, error, getCanvas, i18nFormat } from "../midi-qol.js";
 import { doAttackRoll, doDamageRoll, templateTokens, doItemUse, preItemUseHook, preDisplayCardHook, preItemUsageConsumptionHook, useItemHook, displayCardHook, wrappedDisplayCard } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
-import { bonusDialog, ConvenientEffectsHasEffect, createConditionData, evalCondition, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, hasUsedBonusAction, hasUsedReaction, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, MQfromUuid, notificationNotify, processOverTime, removeBonusActionUsed, removeReactionUsed } from "./utils.js";
+import { bonusDialog, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, evalCondition, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, hasUsedBonusAction, hasUsedReaction, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, MQfromUuid, notificationNotify, processOverTime, removeBonusActionUsed, removeReactionUsed } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -620,7 +620,7 @@ function _midiATIRefresh(template) {
       const centerDist = r.distance;
       if (centerDist > distance + maxExtension) return false;
       //@ts-ignore
-      if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && tk.actor?.system.attributes.hp.value <= 0)
+      if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && checkIncapacitated(tk.actor, undefined, undefined));
         return false;
       return true;
     })
@@ -702,6 +702,7 @@ export function _onFocusIn(event) {
 
 export function actorPrepareData(wrapped) {
   try {
+    setProperty(this, "flags.midi-qol.onUseMacroName", getProperty(this._source, "flags.midi-qol.onUseMacroName"));
     wrapped();
     prepareOnUseMacroData(this);
   } catch (err) {
@@ -709,6 +710,7 @@ export function actorPrepareData(wrapped) {
 }
 
 export function itemPrepareData(wrapped) {
+  setProperty(this, "flags.midi-qol.onUseMacroName", getProperty(this._source, "flags.midi-qol.onUseMacroName"));
   wrapped();
   prepareOnUseMacroData(this);
 }
@@ -955,10 +957,12 @@ async function zeroHPExpiry(actor, update, options, user) {
 
 async function checkWounded(actor, update, options, user) {
   const hpUpdate = getProperty(update, "system.attributes.hp.value");
+  const vitalityReosurce = checkRule("vitalityResource");
+  let vitalityUpdate = vitalityReosurce && getProperty(update, vitalityReosurce);
   // return wrapped(update,options,user);
-  if (hpUpdate === undefined) return;
+  if (hpUpdate === undefined && vitalityUpdate === undefined) return;
   const attributes = actor.system.attributes;
-  if (configSettings.addWounded > 0) {
+  if (configSettings.addWounded > 0 && hpUpdate) {
     //@ts-ignore
     const CEWounded = game.dfreds?.effects?._wounded
     const woundedLevel = attributes.hp.max * configSettings.addWounded / 100;
@@ -979,9 +983,13 @@ async function checkWounded(actor, update, options, user) {
     }
   }
   if (configSettings.addDead !== "none") {
-    const needsDead = hpUpdate <= 0;
+    const needsDead = vitalityReosurce ? vitalityUpdate <= 0 : hpUpdate <= 0;
     if (installedModules.get("dfreds-convenient-effects") && game.settings.get("dfreds-convenient-effects", "modifyStatusEffects") !== "none") {
-      const effectName = (actor.type === "character" || actor.hasPlayerOwner) ? getConvenientEffectsUnconscious().label : getConvenientEffectsDead().label
+      let effectName = (actor.type === "character" || actor.hasPlayerOwner) ? getConvenientEffectsUnconscious().label : getConvenientEffectsDead().label
+      if (vitalityReosurce) { // token is dead rather than unconscious
+        effectName = getConvenientEffectsDead().label;
+      }
+  
       const hasEffect = await ConvenientEffectsHasEffect(effectName, actor, false);
       if ((needsDead !== hasEffect)) {
         if (actor.type !== "character" && !actor.hasPlayerOwner) { // For CE dnd5e does not treat dead as dead for the combat tracker so update it by hand as well
@@ -1000,7 +1008,7 @@ async function checkWounded(actor, update, options, user) {
       const controlled = tokens.filter(t => t._controlled);
       const token = controlled.length ? controlled.shift() : tokens.shift();
       if (token) {
-        if (actor.type === "character" || actor.hasPlayerOwner) {
+        if ((actor.type === "character" || actor.hasPlayerOwner) && vitalityUpdate !== 0) {
           await token.toggleEffect("/icons/svg/unconscious.svg", { overlay: configSettings.addDead === "overlay", active: needsDead });
         } else {
           await token.toggleEffect(CONFIG.controlIcons.defeated, { overlay: configSettings.addDead === "overlay", active: needsDead });
@@ -1128,9 +1136,7 @@ export let actorAbilityRollPatching = () => {
   // 10.0.19 rollDeath save now implemented via the preRollDeathSave Hook
 }
 
-export async function rollToolCheck(wrapped, options) {
-  console.trace();
-
+export async function rollToolCheck(wrapped, options: any = {}) {
   const chatMessage = options.chatMessage;
   options.chatMessage = false;
   let result  = await wrapped(options);

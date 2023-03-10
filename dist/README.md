@@ -977,6 +977,9 @@ There are some controls for macro writers to decide when their macro should get 
 		postActiveEffects: Called after applying active effects
 		all: Called at each of the above
 ```
+There are some addtional actor only onUse macro triggers that can be defined for an actor that trigger when the actor is the target of an attack/spell/feature use
+
+```
   - the macro arguments have an additional parameter args[0].macroPass set to the pass being called, being one of:
     preItemRoll
     templatePlaced
@@ -993,6 +996,19 @@ There are some controls for macro writers to decide when their macro should get 
     postActiveEffects
 
   - [All] is special, being called with each value of macroPass. You can differentiate via args[0].macroPass to decide which ones to act on.
+
+  There are some additional actor onUse macro triggers (but NOT item triggers) available when the actor is the target of an attack/spell/feauture use:
+  ```
+    isAttacked: the actor is a target of an attack
+    isHit: the actor is a target of a hit
+    isSave: the actor makes a successful save in response to being targeted
+    isSaveSuccess: the actor makes a successful save in response to being targeted
+    isSaveFailure: the actor makes a failed save in response to being targeted
+    isDamaged: "the actor is damaged by an item roll
+```
+
+  - For these calls only args[0].options.actor will be the actor that was attackd/hit/damaged etc
+  
   - The default pass is "preActiveEffects", to correspond to the original onUse macro behaviour.
   * Note: if you are creating a damage only workflow in your macro it is best to run it in "postActiveEffects".
   

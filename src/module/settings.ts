@@ -151,7 +151,8 @@ class ConfigSettings {
     checkFlanking: "off",
     optionalCritRule: -1,
     criticalNat20: false,
-    actionSpecialDurationImmediate: false
+    actionSpecialDurationImmediate: false,
+    vitalityResource: "system.resources.primary"
   };
 }
 
@@ -197,7 +198,7 @@ export function collectSettingData() {
     //@ts-ignore version v10
     abouttimeVersion: game.modules.get("about-time")?.version,
     //@ts-ignore version v10
-    betterRollsVersion: game.modules.get("betterrolls5e")?.version,
+    betterRollsVersion: game.modules.get("ready-set-roll-5e")?.version,
     //@ts-ignore version v10
     cubVersion: game.modules.get("combat-utility-belt")?.version,
     //@ts-ignore version v10
@@ -678,7 +679,22 @@ export const registerSettings = function() {
     default: false,
     //@ts-ignore v10
     requiresReload: true
-  })
+  });
+
+  game.settings.register("midi-qol", "last-run-version", {
+    type: String,
+    config: false,
+    default: "0.0.0",
+    //@ts-ignore v10
+    requiresReload: true
+  });
+  game.settings.register("midi-qol", "instanceId", {
+    type: String,
+    config: false,
+    default: "",
+    //@ts-ignore v10
+    requiresReload: true
+  });
 }
 
 export function disableWorkflowAutomation() {

@@ -17,7 +17,8 @@ export class ActorOnUseMacrosConfig extends FormApplication {
       closeOnSubmit: false,
       submitOnClose: true,
       resizable: false,
-      jQuery: true
+      jQuery: true,
+      dragDrop: [{dropSelector: ".key"}]
     });
   }
 
@@ -37,6 +38,7 @@ export class ActorOnUseMacrosConfig extends FormApplication {
   }
 
   _getSubmitData(updateData={}) {
+
     //@ts-ignore
     const fd = new FormDataExtended(this.form, {editors: this.editors});
     //@ts-ignore .object v10
@@ -46,9 +48,20 @@ export class ActorOnUseMacrosConfig extends FormApplication {
   }
 
   activateListeners(html) {
+    super.activateListeners(html);
     if (this.isEditable) {
       html.find(".macro-control").click(this.onMacroControl.bind(this));    
+      // html.find(".key").onDrop = ev => this._onDrop(ev);
     }
+  }
+
+  _onDragStart(ev) {}
+
+  _onDrop(ev) {
+    ev.preventDefault();
+    //@ts-ignore
+    const data = TextEditor.getDragEventData(ev);
+    if (data.uuid) ev.target.value += data.uuid;
   }
   
   async onMacroControl(event){

@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming, allAttackTypes } from "../midi-qol.js";
 import { BetterRollsWorkflow, DummyWorkflow, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule, checkMechanic } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG, evalActivationCondition, createDamageList, getDamageType, getDamageFlavor, completeItemUse, hasDAE, tokenForActor, getRemoveAttackButtons } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG, evalActivationCondition, createDamageList, getDamageType, getDamageFlavor, completeItemUse, hasDAE, tokenForActor, getRemoveAttackButtons, doReactions } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
@@ -31,7 +31,9 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
       const newOptions = mergeObject(options, { singleTarget: true, targetUuids: [], workflowOptions: { lateTargeting: "none" } }, { inplace: false, overwrite: true });
       await completeItemUse(this, {}, newOptions)
     }
-    Workflow.removeWorkflow(this.uuid);
+    // The workflow only refers to the last target.
+    // If there was more than one should remove the workflow.
+    if (targets.length > 1) Workflow.removeWorkflow(this.uuid);
     return;
   }
   options = mergeObject({
@@ -133,7 +135,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
   let itemUsesReaction = false;
   const hasReaction = await hasUsedReaction(this.actor);
 
-  if (!options.workflowOptions.notReaction && ["reaction", "reactiondamage", "reactionmanual"].includes(this.system.activation?.type) && this.system.activation?.cost > 0) {
+  if (!options.workflowOptions.notReaction && ["reaction", "reactiondamage", "reactionmanual", "reactionpreattack"].includes(this.system.activation?.type) && this.system.activation?.cost > 0) {
     itemUsesReaction = true;
   }
   if (!options.workflowOptions.notReaction && checkReactionAOO && !itemUsesReaction && this.hasAttack) {
@@ -377,7 +379,13 @@ export async function doAttackRoll(wrapped, options: any = { versatile: false, r
     workflow.disadvantage = false;
     workflow.rollOptions = deepClone(defaultRollOptions);
   }
-
+  for (let targetToken of workflow.targets) {
+    //@ts-expect-error targetToken Type
+     const result = await doReactions(targetToken, workflow.tokenUuid, null, "reactionpreattack", { item: this.item, workflow, workflowOptions: mergeObject(workflow.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true }) });
+    if (result?.name) {
+      targetToken.actor?.prepareData(); // allow for any items applied to the actor - like shield spell
+    }
+  }
   // workflow.processAttackEventOptions();
   await workflow.checkAttackAdvantage();
 
@@ -444,6 +452,7 @@ export async function doAttackRoll(wrapped, options: any = { versatile: false, r
     wrappedOptions.critical = this.getCriticalThreshold();
   if (wrappedOptions.fumble === true || wrappedOptions.fumble === false)
     delete wrappedOptions.fumble;
+  
   let result: Roll = await wrapped(
     wrappedOptions,
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
@@ -880,7 +889,7 @@ export function preItemUseHook(item, config, options): boolean {
     let itemUsesReaction = false;
     const hasReaction = await hasUsedReaction(item.actor);
 
-    if (!options.workflowOptions.notReaction && ["reaction", "reactiondamage", "reactionmanual"].includes(item.system.activation?.type) && item.system.activation?.cost > 0) {
+    if (!options.workflowOptions.notReaction && ["reaction", "reactiondamage", "reactionmanual", "reactionpreattack"].includes(item.system.activation?.type) && item.system.activation?.cost > 0) {
       itemUsesReaction = true;
     }
 
@@ -1444,8 +1453,8 @@ function blockRoll(item, workflow) {
 
 // Override default display card method. Can't use a hook since a template is rendefed async
 export async function wrappedDisplayCard(wrapped, options) {
-  let { systemCard, workflowId, minimalCard, createMessage } = options;
-  let workflow;
+  let { systemCard, workflowId, minimalCard, createMessage, workflow } = options ?? {};
+  // let workflow = options.workflow; // Only DamageOnlyWorkflow passes this in
   if (workflowId) workflow = Workflow.getWorkflow(this.uuid);
   if (workflow) workflow.itemLevel = this.system.level;
   if (systemCard === undefined) systemCard = false;
@@ -1547,7 +1556,8 @@ export async function wrappedDisplayCard(wrapped, options) {
 
   chatData.flags = mergeObject(chatData.flags, options.flags);
   Hooks.callAll("dnd5e.preDisplayCard", this, chatData, options);
-  workflow.babbons = getProperty(chatData, "flags.babonus") ?? {};
+  workflow.babonus = getProperty(chatData, "flags.babonus") ?? {};
+  
   ChatMessage.applyRollMode(chatData, options.rollMode ?? game.settings.get("core", "rollMode"))
   const card = createMessage !== false ? ChatMessage.create(chatData) : chatData;
 
@@ -1724,7 +1734,7 @@ export function templateTokens(templateDetails: { x: number, y: number, shape: a
       // @ts-ignore .system v10
       if (token.actor.system.details.type?.custom === "NoTarget") continue;
       //@ts-ignore .system
-      if (["wallsBlock", "always"].includes(configSettings.autoTarget) || token.actor.system.attributes.hp.value > 0) {
+      if (["wallsBlock", "always"].includes(configSettings.autoTarget) || !checkIncapacitated(token.actor)) {
         if (token.id) {
           targetTokens.push(token);
           targets.push(token.id);

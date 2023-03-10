@@ -712,7 +712,7 @@
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.SkillAbilityCheckAdvantage.Hint"}}</div>
 
-    </div>
+      </div>
     </div>
 
     <!-- Optional Rules Tab-->
@@ -776,22 +776,22 @@
           </div>
 
           <div class="midi-qol-box">
-          <div class="form-group">
-            <span>
-              <label>{{localize "midi-qol.OptionalCritRule.Name"}}</label>
-              <input type="number" style="width:40px;" name="optionalRules.optionalCritRule"
-                value="{{configSettings.optionalRules.optionalCritRule}}" />
-            </span>
-          </div>
-          <div class="midi-qol-faint">{{localize "midi-qol.OptionalCritRule.Hint"}}</div>
+            <div class="form-group">
+              <span>
+                <label>{{localize "midi-qol.OptionalCritRule.Name"}}</label>
+                <input type="number" style="width:40px;" name="optionalRules.optionalCritRule"
+                  value="{{configSettings.optionalRules.optionalCritRule}}" />
+              </span>
+            </div>
+            <div class="midi-qol-faint">{{localize "midi-qol.OptionalCritRule.Hint"}}</div>
 
-          <div class="form-group">
-            <label style>{{localize "midi-qol.CriticalNat20.Name"}}</label>
-            <input type="checkbox" name="optionalRules.criticalNat20" data-dtype="Boolean" {{checked
-              configSettings.optionalRules.criticalNat20}} />
+            <div class="form-group">
+              <label style>{{localize "midi-qol.CriticalNat20.Name"}}</label>
+              <input type="checkbox" name="optionalRules.criticalNat20" data-dtype="Boolean" {{checked
+                configSettings.optionalRules.criticalNat20}} />
+            </div>
+            <div class="midi-qol-faint">{{localize "midi-qol.CriticalNat20.Hint"}}</div>
           </div>
-          <div class="midi-qol-faint">{{localize "midi-qol.CriticalNat20.Hint"}}</div>
-        </div>
           <div class="form-fields">
             <span>
               <label>{{localize "midi-qol.NearbyAllyRanged.Name"}}</label>
@@ -835,7 +835,17 @@
           </div>
           {{/if}}
         </div>
+
+        <div class="midi-qol-box">
+          <span>
+            <label>{{localize "midi-qol.OptionalRuleVitality.Name"}}</label>
+            <input type="text" name="optionalRules.vitalityResource"
+              value="{{configSettings.optionalRules.vitalityResource}}" />
+          </span>
+          <div class="midi-qol-faint">{{localize "midi-qol.OptionalRuleVitality.Hint"}}</div>
+        </div>
       </div>
+
       <div class="midi-qol-box">
         <div class="form-group">
           <label>{{localize "midi-qol.ddbGL.Name"}}</label>
