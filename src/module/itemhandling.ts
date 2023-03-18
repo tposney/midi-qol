@@ -149,7 +149,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
 
   // do pre roll checks
   if (checkRule("checkRange") && !isAoESpell && !isRangeSpell && !AoO && speaker.token) {
-    if (speaker.token && checkRange(this, canvas?.tokens?.get(speaker.token), myTargets) === "fail")
+    if (speaker.token && checkRange(this, canvas?.tokens?.get(speaker.token), myTargets).result === "fail")
       return null;
   }
   if ((game.system.id === "dnd5e" || game.system.id === "n5e") && requiresTargets && myTargets && myTargets.size > allowedTargets) {
@@ -913,7 +913,7 @@ export function preItemUseHook(item, config, options): boolean {
 
     // check range - for Attacks of Opportunity don't check range.
     if (checkRule("checkRange") && !isAoESpell && !isRangeSpell && !AoO && speaker.token) {
-      if (speaker.token && checkRange(item, canvas?.tokens?.get(speaker.token), myTargets) === "fail")
+      if (speaker.token && checkRange(item, canvas?.tokens?.get(speaker.token), myTargets).result === "fail")
         return blockRoll(item, workflow);
     }
 
