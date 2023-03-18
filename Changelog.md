@@ -1,3 +1,16 @@
+### 10.0.34
+* Fix for numeric values in concentrationSaveBonus throwing an error (i.e. 5 instead of +5).
+* Added flags.midi-qol.grants.max.damage.all/heal/mwak etc. Useful for Beacon of Hope, with flags.grants.max.damage.heal set on the target, healing actions (i.e. spells/potions/features marked as healing actions) will do max possible healing.
+* Added flags.midi-qol.grants.min.damage.all/heal/mwak etc
+As with the other flags.grants for attacks/damage rolls only the first target is checked and that is used for all targets.
+* Added rollMode to overtime effects settings. You can specify gmroll, blindroll, publicroll, selfroll and the rollmode will be applied to the overtime item roll
+* Fix for respecting the "don't auto roll ability rolls" setting when using monk's token bar.
+* Additional option for flags.midi-qol.absorption.type, you can now specify a numeric value instead of true false. The damage type will be converted to healing and the quantum of the damage will be multiplied by the specified value (e.g. flags.midi-qol.absorption.acid OVERRIDE 0.5 will convert incoming acid damage to heal 1/2 of the acid damage). Negative numbers can be specified. So flags.midi-qol.absorption.acid ADD -1.5 will cause acid damage to do 1.5 times as much damage and be of type healing so will ignore acid damage resistance/vulnerability.
+* By request included an optional game mechanic to re-roll initiative at the start of a round. **Warning** this may screw with the expiration of effects  with a duration in rounds/turns, since they will expire on the round/turn specified, even if the actor they are associated with has moved in the initiative order.
+* Fix for marking dead/unconscious misbehaving after 10.0.33
+* Added additional token actor macro calls for preApplyTargetDamage and preTargetSave, called before applying damage, but after damage is calculated so you can change the damage done, and before target saves are rolled to let you change things like advantage or bonuses etc.
+* Change to flags.midi-qol.DR.healing to allow negative values, which will increase healing. There may be some oddities if you have an item that both heals and does damage - so probably don't do that. flags.midi-qol.DR.heal (the action) is disabled, always use .healing to adjust the specific healing on the roll.
+
 ### 10.0.33
 * Fix for not picking up Build a bonus save dc bonuses.
 * More changes for the new version of convenient effects, not setting duration correctly.

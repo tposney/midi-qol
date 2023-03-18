@@ -162,7 +162,7 @@ export async function _applyEffects(data: { workflowId: string, targets: string[
 }
 
 async function _completeItemUse(data: {
-  itemData: any, actorUuid: string, config: any, options: any, targetUuids: string[]}) {
+  itemData: any, actorUuid: string, config: any, options: any, targetUuids: string[], workflowData: boolean}) {
   if (!game.user) return null;
   let {itemData, actorUuid, config, options} = data;
   let actor: any = await fromUuid(actorUuid);
@@ -170,7 +170,9 @@ async function _completeItemUse(data: {
   //@ts-ignore v10
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor, keepId: true });
   const workflow =  await completeItemUse(ownedItem, config, options);
-  return true; // can't return the workflow
+  workflow.createConditionData({workflow, actor, ownedItem});
+  if (data.options?.workflowData) return workflow.getMacroData(); // can't return the workflow
+  else return true;
 }
 
 async function createActor(data) {
@@ -251,7 +253,7 @@ export async function rollAbility(data: { request: string; targetUuid: string; a
   return resultObject;
 }
 
-export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined }) {
+export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined, isMagicSave: boolean | undefined }) {
   // let tokens = data.tokens.map((tuuid: any) => new Token(MQfromUuid(tuuid)));
 
   // TODO come back and see what things can be passed to this.
@@ -262,7 +264,8 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
       request: data.request,
       silent: data.silent,
       rollmode: data.rollMode,
-      dc: data.dc
+      dc: data.dc,
+      isMagicSave: data.isMagicSave
     });
 }
 
@@ -303,7 +306,7 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
           promises.push(actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage}, updateContext));
         }
       } else if (oldVitality !== newVitality && actor.isOwner) {
-        const resource = checkRule("vitalityResource");
+        const resource = checkRule("vitalityResource")?.trim();
         if (resource) promises.push(actor.update({[resource]: newVitality}))
       }
     }
@@ -475,7 +478,7 @@ async function doMidiClick(ev: any, actorUuid: any, newTempHP: any, newHP: any, 
   if (actor.isOwner) {
     const update = { "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP };
     if (checkRule("vitalityResource")) {
-      const resource = checkRule("vitalityResource");
+      const resource = checkRule("vitalityResource")?.trim();
       update[resource] = newVitality;
       const vitalityResource = getProperty(actor, resource)
       context["dvital"] = newVitality - vitalityResource;
@@ -498,7 +501,7 @@ export let processUndoDamageCard = (message, html, data) => {
         const update = { "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 }; 
         const context = { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0), damageItem};
         if (checkRule("vitalityResource")) {
-          const resource = checkRule("vitalityResource");
+          const resource = checkRule("vitalityResource")?.trim();
           update[resource] = oldVitality;
           context["dvital"] = oldVitality - newVitality;
         }
@@ -519,7 +522,7 @@ export let processUndoDamageCard = (message, html, data) => {
         const update = { "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP };
         const context = { dhp: newHP - actor.system.attributes.hp.value, damageItem};
         if (checkRule("vitalityResource")) {
-          const resource = checkRule("vitalityResource");
+          const resource = checkRule("vitalityResource")?.trim();
           update[resource] = newVitality;
           context["dvital"] = oldVitality - newVitality;
         }
@@ -540,7 +543,7 @@ export let processUndoDamageCard = (message, html, data) => {
         const update = { "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 }; 
         const context = { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0), damageItem};
         if (checkRule("vitalityResource")) {
-          const resource = checkRule("vitalityResource");
+          const resource = checkRule("vitalityResource")?.trim();
           update[resource] = oldVitality;
           context["dvital"] = newVitality - oldVitality;
         }
@@ -558,7 +561,7 @@ export let processUndoDamageCard = (message, html, data) => {
         const update = { "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP };
         const context = { dhp: newHP - actor.system.attributes.hp.value, damageItem };
         if (checkRule("vitalityResource")) {
-          const resource = checkRule("vitalityResource");
+          const resource = checkRule("vitalityResource")?.trim();
           update[resource] = newVitality;
           context["dvital"] = oldVitality - newVitality;
         }

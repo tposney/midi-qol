@@ -310,22 +310,24 @@ function configureDamage(wrapped) {
   this.options.configured = true;
 }
 async function doAbilityRoll(wrapped, rollType: string, ...args) {
-  let [abilityId, options = { event: {}, parts: [], chatMessage: undefined, simulate: false, targetValue: undefined }] = args;
+  let [abilityId, options = { event: {}, parts: [], chatMessage: undefined, simulate: false, targetValue: undefined, isMagicalSave: false }] = args;
   const rollTarget = options.targetValue;
   if (procAutoFail(this, rollType, abilityId)) {
     options.parts = ["-100"];
   }
+    // Hack for MTB bug
+  if (options.event?.advantage || options.event?.altKey) options.advantage = true;
+  if (options.event?.disadvantage || options.event?.ctrlKey) options.disadvantage = true;
+  if (options.fromMars5eChatCard) options.fastForward = autoFastForwardAbilityRolls;
+
   const chatMessage = options.chatMessage;
   const keyOptions = mapSpeedKeys(undefined, "ability");
   if (options.mapKeys !== false) {
     if (keyOptions?.advantage === true) options.advantage = options.advantage || keyOptions.advantage;
     if (keyOptions?.disadvantage === true) options.disadvantage = options.disadvantage || keyOptions.disadvantage;
     if (keyOptions?.fastForwardAbility === true) options.fastForward = options.fastForward || keyOptions.fastForwardAbility;
+    if (keyOptions?.advantage || keyOptions?.disadvantage) options.fastForward = true;
   }
-
-  // Hack for MTB bug
-  if (options.event?.advantage) options.advantage = options.event.advantage || options.advantage;
-  if (options.event?.disadvantage) options.disadvantage = options.event.disadvantage || options.disadvantage;
 
   options.event = {};
 
@@ -359,7 +361,7 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
   }
 
   if (!options.simulate) result = await bonusCheck(this, result, rollType, abilityId);
-  
+
   if (chatMessage !== false && result) {
     const args: any = { "speaker": getSpeaker(this), flavor };
     setProperty(args, `flags.${game.system.id}.roll`, { type: rollType, abilityId });
@@ -516,6 +518,19 @@ export function procAbilityAdvantage(actor, rollType, abilityId, options: Option
   var withDisadvantage = options.disadvantage;
 
   //options.fastForward = options.fastForward || (autoFastForwardAbilityRolls ? !options.event?.fastKey : options.event?.fastKey);
+  if (rollType === "save" && options.isMagicSave) {
+    if ((actor?.system.traits?.dr?.custom || "").includes(i18n("midi-qol.MagicResistant").trim()))
+      withAdvantage = true;;
+
+    const magicResistanceFlags = getProperty(actor, "flags.midi-qol.magicResistance");
+    if (magicResistanceFlags && (magicResistanceFlags?.all || getProperty(magicResistanceFlags, abilityId))) {
+      withAdvantage = true;
+    }
+    const magicVulnerabilityFlags = getProperty(actor, "flags.midi-qol.magicVulnerability");
+    if (magicVulnerabilityFlags && (magicVulnerabilityFlags?.all || getProperty(magicVulnerabilityFlags, abilityId))) {
+      withDisadvantage = true;
+    }
+  }
 
   options.fastForward = options.fastForward || options.event?.fastKey;
   if (advantage || disadvantage) {
@@ -621,7 +636,7 @@ function _midiATIRefresh(template) {
       if (centerDist > distance + maxExtension) return false;
       //@ts-ignore
       if (["alwaysIgnoreDefeated", "wallsBlockIgnoreDefeated"].includes(configSettings.autoTarget) && checkIncapacitated(tk.actor, undefined, undefined));
-        return false;
+      return false;
       return true;
     })
 
@@ -697,7 +712,7 @@ export function _onFocusIn(event) {
   const formElements = [
     HTMLInputElement, HTMLSelectElement, HTMLTextAreaElement, HTMLOptionElement, /*HTMLButtonElement*/
   ];
-  if ( event.target.isContentEditable || formElements.some(cls => event.target instanceof cls) ) this.releaseKeys();
+  if (event.target.isContentEditable || formElements.some(cls => event.target instanceof cls)) this.releaseKeys();
 }
 
 export function actorPrepareData(wrapped) {
@@ -957,10 +972,10 @@ async function zeroHPExpiry(actor, update, options, user) {
 
 async function checkWounded(actor, update, options, user) {
   const hpUpdate = getProperty(update, "system.attributes.hp.value");
-  const vitalityReosurce = checkRule("vitalityResource");
+  const vitalityReosurce = checkRule("vitalityResource")?.trim();
   let vitalityUpdate = vitalityReosurce && getProperty(update, vitalityReosurce);
   // return wrapped(update,options,user);
-  if (hpUpdate === undefined && vitalityUpdate === undefined) return;
+  if (hpUpdate === undefined && (!vitalityReosurce || vitalityUpdate === undefined)) return;
   const attributes = actor.system.attributes;
   if (configSettings.addWounded > 0 && hpUpdate) {
     //@ts-ignore
@@ -989,8 +1004,9 @@ async function checkWounded(actor, update, options, user) {
       if (vitalityReosurce) { // token is dead rather than unconscious
         effectName = getConvenientEffectsDead().label;
       }
-  
+
       const hasEffect = await ConvenientEffectsHasEffect(effectName, actor, false);
+      console.error("Token update ", update, hasEffect, needsDead);
       if ((needsDead !== hasEffect)) {
         if (actor.type !== "character" && !actor.hasPlayerOwner) { // For CE dnd5e does not treat dead as dead for the combat tracker so update it by hand as well
           let combatant;
@@ -1055,8 +1071,8 @@ export let visionPatching = () => {
   //@ts-ignore game.version
   const patchVision = isNewerVersion(game.version ?? game?.version, "0.7.0") && game.settings.get("midi-qol", "playerControlsInvisibleTokens")
   if (patchVision) {
-    ui.notifications?.warn("Player control vision is deprecated please use the module Your Tokens Visible")
-    console.warn("midi-qol | Player control vision is deprecated please use the module Your Tokens Visible")
+    ui.notifications?.warn("Player control vision is deprecated, use it at your own risk")
+    console.warn("midi-qol | Player control vision is deprecated, use it at your own risk")
 
     log("Patching Token._isVisionSource")
     libWrapper.register("midi-qol", "Token.prototype._isVisionSource", _isVisionSource, "WRAPPER");
@@ -1139,7 +1155,7 @@ export let actorAbilityRollPatching = () => {
 export async function rollToolCheck(wrapped, options: any = {}) {
   const chatMessage = options.chatMessage;
   options.chatMessage = false;
-  let result  = await wrapped(options);
+  let result = await wrapped(options);
   result = await bonusCheck(this.actor, result, "check", this.system.ability ?? "")
   if (chatMessage !== false && result) {
     const title = `${this.name} - ${game.i18n.localize("DND5E.ToolCheck")}`;
@@ -1207,27 +1223,27 @@ export function _tagMessage(candidate, data, options) {
 export async function _makeRoll(event, rollMethod, failRoll, ...args) {
   let options;
   switch (this.advantage) {
-      case -1:
-          options = { disadvantage: true, fastForward: true };
-          break;
-      case 0:
-          options = { fastForward: true };
-          break;
-      case 1:
-          options = { advantage: true, fastForward: true };
-          break;
-      case 2:
-          options = { event };
-          break;
+    case -1:
+      options = { disadvantage: true, fastForward: true };
+      break;
+    case 0:
+      options = { fastForward: true };
+      break;
+    case 1:
+      options = { advantage: true, fastForward: true };
+      break;
+    case 2:
+      options = { event };
+      break;
   }
   const rollMode = game.settings.get("core", "rollMode");
   game.settings.set("core", "rollMode", this.mode || CONST.DICE_ROLL_MODES);
   for (let actor of this.actors) {
-      Hooks.once("preCreateChatMessage", this._tagMessage.bind(this));
-      if (failRoll) {
-          options["parts"] = [-100];
-      }
-      await actor[rollMethod].call(actor, ...args, options);
+    Hooks.once("preCreateChatMessage", this._tagMessage.bind(this));
+    if (failRoll) {
+      options["parts"] = [-100];
+    }
+    await actor[rollMethod].call(actor, ...args, options);
   }
   game.settings.set("core", "rollMode", rollMode);
   this._disableButtons(event);
@@ -1535,7 +1551,7 @@ export function migrateTraits(actor) {
 }
 
 function removeTraitValue(traitValue: string[] | Set<string>, toRemove): string[] | Set<string> {
-  if (traitValue instanceof Set) 
+  if (traitValue instanceof Set)
     traitValue.delete(toRemove);
   else {
     const position = traitValue.indexOf(toRemove);

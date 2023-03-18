@@ -635,12 +635,22 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
   if (!result) { // user backed out of damage roll or roll failed
     return;
   }
-  const maxflags = getProperty(workflow.actor.flags, "midi-qol.max") ?? {};
-  if ((maxflags.damage && (maxflags.damage.all || maxflags.damage[this.system.actionType])) ?? false)
+  const firstTarget = workflow.targets?.values().next().value?.actor;
+  const targetMaxFlags = getProperty(firstTarget, "flags.midi-qol.grants.max.damage");
+  const maxFlags = getProperty(workflow.actor.flags, "midi-qol.max") ?? {};
+  let needsMaxDamage = maxFlags.damage && (maxFlags.damage.all || maxFlags.damage[this.system.actionType]);
+  needsMaxDamage = needsMaxDamage || (targetMaxFlags && (targetMaxFlags.all || targetMaxFlags[this.system.actionType]))
+  const targetMinFlags = getProperty(firstTarget, "flags.midi-qol.grants.min.damage");
+  const minFlags = getProperty(workflow.actor.flags, "midi-qol.min") ?? {};
+  let needsMinDamage = minFlags && (minFlags.all || minFlags[this.system.actionType]);
+  needsMinDamage = needsMinDamage || (targetMinFlags && (targetMinFlags.damage.all || targetMinFlags.damage[this.system.actionType]))
+  if (needsMaxDamage && needsMinDamage) {
+    needsMaxDamage = false;
+    needsMinDamage = false;
+  }
+  if (needsMaxDamage)
     result = await new Roll(result.formula).roll({ maximize: true });
-
-  const minflags = getProperty(this.flags, "midi-qol.min") ?? {};
-  if ((minflags.damage && (minflags.damage.all || minflags.damage[this.system.actionType])) ?? false)
+  if (needsMinDamage)
     result = await new Roll(result.formula).roll({ minimize: true });
   // I don't like the default display and it does not look good for dice so nice - fiddle the results for maximised rolls
   for (let term of result.terms) {
@@ -669,9 +679,7 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
     if ((workflow.otherDamageFormula ?? "") !== "") { // other damage formula swaps in versatile if needed
       //@ts-ignore
       const otherRoll = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), otherRollOptions);
-      const maxDamage = (maxflags.damage && (maxflags.damage.all || maxflags.damage[this.system.actionType])) ?? false;
-      const minDamage = (minflags.damage && (minflags.damage.all || minflags.damage[this.system.actionType])) ?? false;
-      otherResult = await otherRoll?.evaluate({ async: true, maximize: maxDamage, minimize: minDamage });
+      otherResult = await otherRoll?.evaluate({ async: true, maximize: needsMaxDamage, minimize: needsMinDamage });
     }
   }
   if (!configSettings.mergeCard) {
@@ -1546,9 +1554,6 @@ export async function wrappedDisplayCard(wrapped, options) {
     }
   };
   if (workflow.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", workflow.flagTags);
-  if (!this.actor.items.has(this.id)) { // deals with using temp items in overtime effects
-    chatData.flags[`${game.system.id}.itemData`] = this.toObject(); // TODO check this v10
-  }
   // Temp items (id undefined) or consumables that were removed need itemData set.
   if (!this.id || (this.type === "consumable" && !this.actor.items.has(this.id))) {
     chatData.flags[`${game.system.id}.itemData`] = this.toObject(); // TODO check this v10

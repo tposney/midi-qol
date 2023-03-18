@@ -224,7 +224,7 @@ export function calculateDamage(a: Actor, appliedDamage, t: Token, totalDamage, 
   //@ts-ignore attributes
   var hp = a.system.attributes.hp;
   var oldHP, tmp, oldVitality, newVitality;
-  const resource = checkRule("vitalityResource");
+  const resource = checkRule("vitalityResource")?.trim();
   if (hp.value <= 0 && resource) {
     // Damage done to vitality rather than hp
     oldVitality = getProperty(a, resource);
@@ -485,11 +485,8 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
     appliedTempHP = 0;
     let DRAll = 0;
     // damage absorption:
-    const flags = getProperty(targetActor.flags, "midi-qol.absorption");
-    let absorptions: string[] = [];
-    if (flags) {
-      absorptions = Object.keys(flags)
-    }
+    const absorptions = getProperty(targetActor.flags, "midi-qol.absorption") ?? {};
+
     const firstDamageHealing = applyDamageDetails[0].damageDetail && ["healing", "temphp"].includes(applyDamageDetails[0].damageDetail[0]?.type);
     const isHealing = ("heal" === workflow?.item?.system.actionType) || firstDamageHealing;
     const noDamageReactions = (item?.hasSave && item.flags?.midiProperties?.nodam && workflow.saves?.has(t));
@@ -565,7 +562,10 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
         type = type ?? MQdefaultDamageType;
         const physicalDamage = ["bludgeoning", "slashing", "piercing"].includes(type);
 
-        if (absorptions.includes(type)) {
+        if (absorptions[type] && absorptions[type] !== false) {
+          console.error("Matched absorptions", absorptions, absorptions[type]);
+          const abMult = Number.isNumeric(absorptions[type]) ? Number(absorptions[type]) : 1;
+          damageDetailItem.damage = damageDetailItem.damage * abMult;
           type = "healing";
           damageDetailItem.type = "healing"
         }
@@ -670,8 +670,10 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
         const resMult = getTraitMult(targetActor, type, item);
         mult = mult * resMult;
         damageDetailItem.damageMultiplier = mult;
+        /*
         if (!["healing", "temphp"].includes(type)) damage -= DR; // Damage reduction does not apply to healing
-        //        else damage -= DR;
+        */
+        damage -= DR;
         let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
 
         if (type.includes("temphp")) {
@@ -690,14 +692,14 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
       appliedDamage -= DRAll;
       totalDamage -= DRAll;
     }
-    if (!Object.keys(getSystemCONFIG().healingTypes).includes(dmgType)) {
+    if (false && !Object.keys(getSystemCONFIG().healingTypes).includes(dmgType)) {
       totalDamage = Math.max(totalDamage, 0);
       appliedDamage = Math.max(appliedDamage, 0);
     }
     //@ts-ignore
     if (AR > 0 && appliedDamage > 0 && !Object.keys(getSystemCONFIG().healingTypes).includes(dmgType) && checkRule("challengeModeArmor")) {
       totalDamage = appliedDamage;
-      if (checkRule("challengeModeArmorScale") || workflow.hitTargetsEC.has(t))
+      if (checkRule("challengeModeArmorScale") || workflow.hitTargetsEC.has(t)) // TODO: the hitTargetsEC test won't ever fire?
         appliedDamage = Math.max(0, appliedDamage - AR)
     }
 
@@ -937,19 +939,24 @@ export let getSaveMultiplierForItem = (item: Item) => {
   return configSettings.defaultSaveMult;
 };
 
-export function requestPCSave(ability, rollType, player, actor, advantage, flavor, dc, requestId, GMprompt) {
+export function requestPCSave(ability, rollType, player, actor, {advantage, disadvantage, flavor, dc, requestId, GMprompt, isMagicSave, magicResistance, magicVulnerability}) {
   const useUuid = true; // for  LMRTFY
   const actorId = useUuid ? actor.uuid : actor.id;
   const playerLetme = !player?.isGM && ["letme", "letmeQuery"].includes(configSettings.playerRollSaves);
   const playerLetMeQuery = "letmeQuery" === configSettings.playerRollSaves;
   const gmLetmeQuery = "letmeQuery" === GMprompt;
   const gmLetme = player.isGM && ["letme", "letmeQuery"].includes(GMprompt);
+  let rollAdvantage: number = 0;
   if (player && installedModules.get("lmrtfy") && (playerLetme || gmLetme)) {
     if (((!player.isGM && playerLetMeQuery) || (player.isGM && gmLetmeQuery))) {
       // TODO - reinstated the LMRTFY patch so that the event is properly passed to the roll
-      advantage = 2;
+      rollAdvantage = 2;
     } else {
-      advantage = (advantage === true ? 1 : advantage === false ? -1 : 0);
+      rollAdvantage = (advantage && !disadvantage ? 1 : (!advantage && disadvantage) ? -1 : 0);
+    }
+    if (isMagicSave) { // rolls done via LMRTFY won't pick up advantage when passed through and we can't pass both advantage and disadvantage
+      if (magicResistance && disadvantage) rollAdvantage = 1; // This will make the LMRTFY display wrong
+      if (magicVulnerability && advantage) rollAdvantage = -1; // This will make the LMRTFY display wrong
     }
     //@ts-ignore
     let mode = isNewerVersion(game.version ?? game.version, "0.9.236") ? "publicroll" : "roll";
@@ -968,14 +975,15 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
       abilities: rollType === "abil" ? [ability] : [],
       saves: rollType === "save" ? [ability] : [],
       skills: rollType === "skill" ? [ability] : [],
-      advantage,
+      advantage: rollAdvantage,
       mode,
       title: i18n("midi-qol.saving-throw"),
       message,
       formula: "",
       attach: { requestId },
       deathsave: false,
-      initiative: false
+      initiative: false, 
+      isMagicSave
     }
     if (debugEnabled > 1) debug("process player save ", socketData)
     game.socket?.emit('module.lmrtfy', socketData);
@@ -984,7 +992,9 @@ export function requestPCSave(ability, rollType, player, actor, advantage, flavo
   } else { // display a chat message to the user telling them to save
     let actorName = actor.name;
     let content = ` ${actorName} ${configSettings.displaySaveDC ? "DC " + dc : ""} ${getSystemCONFIG().abilities[ability]} ${i18n("midi-qol.saving-throw")}`;
-    content = content + (advantage ? ` (${i18n("DND5E.Advantage")})` : "") + ` - ${flavor}`;
+    if (advantage && !disadvantage) content = content + ` (${i18n("DND5E.Advantage")}) - ${flavor})`;
+    else if  (!advantage && disadvantage) content = content + ` (${i18n("DND5E.Disadvantage")}) - ${flavor})`;
+    else content + ` - ${flavor})`;
     const chatData = {
       content,
       whisper: [player]
@@ -1108,7 +1118,7 @@ function replaceAtFields(value, context, options: { blankValue: string | number,
   if (typeof value !== "string") return value;
   let count = 0;
   if (!value.includes("@")) return value;
-  let re = /@[\w\.]+/g
+  let re = /@[\w\._\-]+/g
   let result = duplicate(value);
   result = result.replace("@item.level", "@itemLevel") // fix for outdated item.level
   result = result.replace("@flags.midi-qol", "@flags.midiqol");
@@ -1140,7 +1150,7 @@ export async function doOverTimeEffect(actor, effect, startTurn: boolean = true,
   return socketlibSocket.executeAsGM("gmOverTimeEffect", { actorUuid: actor.uuid, effectUuid: effect.uuid, startTurn, options })
 }
 
-export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined }) {
+export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true, options: any = { saveToUse: undefined, rollFlags: undefined, rollMode: undefined }) {
   const endTurn = !startTurn;
   if (effect.disabled || effect.isSuppressed) return;
   const auraFlags = effect.flags?.ActiveAuras ?? {};
@@ -1203,6 +1213,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       const macroToCall = details.macro;
       const rollTypeString = details.rollType ?? "save";
       const rollType = (rollTypeString.includes("|") ? rollTypeString.split("|") : [rollTypeString]).map(s => s.trim().toLocaleLowerCase())
+      const rollMode = details.rollMode;
 
       const killAnim = JSON.parse(details.killAnim ?? "false");
       const saveRemove = JSON.parse(details.saveRemove ?? "true");
@@ -1329,8 +1340,8 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       }
       try {
         const options = {
-          systemCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid],
-          workflowOptions: { lateTargeting: "none", autoRollDamage: "onHit", autoFastDamage: true, isOverTime: true }
+          systemCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid], rollMode,
+          workflowOptions: { lateTargeting: "none", autoRollDamage: "onHit", autoFastDamage: true, isOverTime: true},
         };
         await completeItemUse(ownedItem, {}, options); // worried about multiple effects in flight so do one at a time
       } finally {
@@ -1476,7 +1487,7 @@ export function untargetAllTokens(...args) {
 
 export function checkIncapacitated(actor: Actor, item: Item | undefined = undefined, event: any) {
   if (checkRule("vitalityResource") ) {
-    const vitality = getProperty(actor, checkRule("vitalityResource")) ?? 0;
+    const vitality = getProperty(actor, checkRule("vitalityResource")?.trim()) ?? 0;
     //@ts-expect-error .system
     if (vitality <= 0 && actor?.system.attributes?.hp?.value <= 0) {
       log(`minor-qol | ${actor.name} is dead`)

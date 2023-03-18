@@ -3,7 +3,7 @@ import { colorChatMessageHandler, diceSoNiceHandler, nsaMessageHandler, hideStuf
 import { processUndoDamageCard, socketlibSocket } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, MQfromUuid, getConcentrationEffect, removeReactionUsed, removeBonusActionUsed, checkflanking, getSystemCONFIG, expireRollEffect, doMidiConcentrationCheck } from "./utils.js";
 import { OnUseMacros, activateMacroListeners } from "./apps/Item.js"
-import { configSettings, dragDropTargeting } from "./settings.js";
+import { checkMechanic, configSettings, dragDropTargeting } from "./settings.js";
 import { installedModules } from "./setupModules.js";
 import {  preDeleteTemplate, preRollAbilitySaveHook, preRollDeathSaveHook, preUpdateItemActorOnUseMacro, rollAbilitySaveHook, rollAbilityTestHook } from "./patching.js";
 import { preItemUseHook, preDisplayCardHook, preItemUsageConsumptionHook, useItemHook, preRollAttackHook, preRollDamageHook, rollAttackHook, rollDamageHook } from "./itemhandling.js";
@@ -190,6 +190,17 @@ export let readyHooks = async () => {
     });
     // Hooks.on("dnd5e.rollDamage", rollDamageMacro);
   }
+
+  Hooks.on("updateCombat", (combat: Combat, update, options, userId) => {
+    if (userId !== game.user?.id) return;
+    if (!update.hasOwnProperty("round")) return;
+    if (!checkMechanic("autoRerollInitiative")) return;
+    console.error(combat, combat.combatants, update, options);
+    let combatantIds: any = combat.combatants.map(c => c.id);
+    if (combat.combatants?.size > 0) {
+      combat.rollInitiative(combatantIds, {updateTurn: true}).then(() => combat.update({turn: 0}));
+    }
+  });
 
   Hooks.on("dnd5e.preRollDeathSave", preRollDeathSaveHook);
   // Concentration Check is rolled as an item roll so we need an item.

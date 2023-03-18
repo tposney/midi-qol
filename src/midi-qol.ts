@@ -245,9 +245,11 @@ Hooks.once('ready', function () {
     "postActiveEffects": "After Active Effects ",
     "isAttacked": "Actor is target of an attack",
     "isHit": "Actor is target of a hit",
+    "preTargetSave": "Target is about to roll a saving throw",
     "isSave": "Actor rolled a save",
     "isSaveSuccess": "Actor rolled a successful save",
     "isSaveFailure": "Actor failed a saving throw",
+    "preApplyTargetDamage": "Target is about to be damaged by an item",
     "isDamaged": "Actor is damaged by an attack",
     "all": "All"
   }
@@ -340,6 +342,7 @@ Hooks.once('ready', function () {
 
 
 import { setupMidiTests } from './module/tests/setupTest.js';
+import { FlowFlags } from 'typescript';
 Hooks.once("midi-qol.midiReady", () => {
   setupMidiTests();
 });
@@ -479,6 +482,8 @@ function setupMidiFlags() {
   midiFlags.push("flags.midi-qol.critical.all")
   midiFlags.push(`flags.midi-qol.max.damage.all`);
   midiFlags.push(`flags.midi-qol.min.damage.all`);
+  midiFlags.push(`flags.midi-qol.grants.max.damage.all`);
+  midiFlags.push(`flags.midi-qol.grants.min.damage.all`);
   midiFlags.push("flags.midi-qol.noCritical.all")
   midiFlags.push("flags.midi-qol.fail.all")
   midiFlags.push("flags.midi-qol.fail.attack.all")
@@ -487,7 +492,6 @@ function setupMidiFlags() {
   // TODO work out how to do grants damage.max
   midiFlags.push(`flags.midi-qol.grants.attack.success.all`);
   midiFlags.push(`flags.midi-qol.grants.attack.fail.all`);
-
   midiFlags.push(`flags.midi-qol.grants.attack.bonus.all`);
   midiFlags.push(`flags.midi-qol.grants.critical.all`);
   midiFlags.push(`flags.midi-qol.grants.critical.range`);
@@ -518,9 +522,11 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.fail.critical.${at}`);
     midiFlags.push(`flags.midi-qol.grants.attack.bonus.${at}`);
     midiFlags.push(`flags.midi-qol.grants.attack.success.${at}`);
-    midiFlags.push(`flags.midi-qol.DR.${at}`);
+    if (at !== "heal") midiFlags.push(`flags.midi-qol.DR.${at}`);
     midiFlags.push(`flags.midi-qol.max.damage.${at}`);
     midiFlags.push(`flags.midi-qol.min.damage.${at}`);
+    midiFlags.push(`flags.midi-qol.grants.max.damage.${at}`);
+    midiFlags.push(`flags.midi-qol.grants.min.damage.${at}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.attack.${at}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.damage.${at}`);
   });

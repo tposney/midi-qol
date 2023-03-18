@@ -746,8 +746,9 @@ export class Workflow {
             }
           }
         }
+        if (configSettings.allowUseMacro) this.triggerTargetMacros(["preApplyTargetDamage"], this.hitTargets);
         if (this.damageDetail.length) await processDamageRoll(this, this.damageDetail[0].type)
-        if (configSettings.allowUseMacro) this.triggerTargetMacros(["isDamaged"]);
+        if (configSettings.allowUseMacro) this.triggerTargetMacros(["isDamaged"], this.hitTargets);
         if (debugEnabled > 1) debug("all rolls complete ", this.damageDetail)
         // expire effects on targeted tokens as required
 
@@ -1292,8 +1293,8 @@ export class Workflow {
     this.disadvantage = this.disadvantage || grantsDisadvantage;
   }
 
-  async triggerTargetMacros(triggerList: string[]) {
-    for (let target of this.targets) {
+  async triggerTargetMacros(triggerList: string[], targets = this.targets) {
+    for (let target of targets) {
       const actorOnUseMacros = getProperty(target.actor ?? {}, "flags.midi-qol.onUseMacroParts") ?? new OnUseMacros();
 
       const wasAttacked = this.item?.hasAttack;
@@ -2192,6 +2193,8 @@ export class Workflow {
     let monkRequestsGM: any[] = [];
     let showRoll = configSettings.autoCheckSaves === "allShow";
     if (simulate) showRoll = false;
+    const isMagicSave =  this.saveItem?.type === "spell" || this.saveItem?.flags.midiProperties?.magiceffect || this.item?.flags.midiProperties?.magiceffect;
+
     try {
       const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
 
@@ -2200,13 +2203,17 @@ export class Workflow {
       else { // no token to use so make a guess
         actorDisposition = this.actor?.type === "npc" ? -1 : 1;
       }
+      if (configSettings.allowUseMacro) this.triggerTargetMacros(["preTargetSave"], allHitTargets);
 
       for (let target of allHitTargets) {
         let isFriendly = target.document.disposition === actorDisposition;
         if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
         let advantage: Boolean | undefined = undefined;
+        let disadvantage: Boolean | undefined = undefined;
+        let magicResistance : Boolean = false;
+        let magicVulnerability: Boolean = false;
         // If spell, check for magic resistance
-        if (this.saveItem?.type === "spell" || this.saveItem?.flags.midiProperties?.magiceffect || this.item?.flags.midiProperties?.magiceffect) {
+        if (isMagicSave) {
           // check magic resistance in custom damage reduction traits
           //@ts-ignore traits
           advantage = (target?.actor?.system.traits?.dr?.custom || "").includes(i18n("midi-qol.MagicResistant").trim());
@@ -2216,25 +2223,25 @@ export class Workflow {
           const magicResistanceFlags = getProperty(target.actor, "flags.midi-qol.magicResistance");
           if (magicResistanceFlags && (magicResistanceFlags?.all || getProperty(magicResistanceFlags, rollAbility))) {
             advantage = true;
+            magicResistance = true;
           }
           const magicVulnerabilityFlags = getProperty(target.actor, "flags.midi-qol.magicVulnerability");
           if (magicVulnerabilityFlags && (magicVulnerabilityFlags?.all || getProperty(magicVulnerabilityFlags, rollAbility))) {
-            advantage = false;
+            disadvantage = true;
+            magicVulnerability = true;
           }
 
-          if (advantage) this.advantageSaves.add(target);
-          else if (advantage === false) this.disadvantageSaves.add(target);
-          else advantage = undefined; // The value is looked at in player saves
+
           if (debugEnabled > 1) debug(`${target.actor.name} resistant to magic : ${advantage}`);
         }
         const settingsOptions = procAbilityAdvantage(target.actor, rollType, this.saveItem.system.save.ability, {});
         if (settingsOptions.advantage) advantage = true;
-        if (settingsOptions.disadvantage) advantage = false;
+        if (settingsOptions.disadvantage) disadvantage = true;
         if (this.saveItem.flags["midi-qol"]?.isConcentrationCheck) {
           const concAdvFlag = getProperty(target.actor.flags, "midi-qol.advantage.concentration");
           const concDisadvFlag = getProperty(target.actor.flags, "midi-qol.disadvantage.concentration");
-          let concAdv = advantage === true;
-          let concDisadv = advantage === false;
+          let concAdv = advantage;
+          let concDisadv = disadvantage;
           if (concAdvFlag || concDisadvFlag) {
             //@ts-ignore
             const conditionData = createConditionData({ workflow: this, token: target, actor: target.actor });
@@ -2244,14 +2251,12 @@ export class Workflow {
 
           if (concAdv && !concDisadv) {
             advantage = true;
-            this.advantageSaves.add(target);
           } else if (!concAdv && concDisadv) {
-            advantage = false;
-            this.disadvantageSaves.add(target);
-          } else {
-            advantage = undefined;
+            disadvantage = true;
           }
         }
+        if (advantage && !disadvantage) this.advantageSaves.add(target);
+        else if (disadvantage && !advantage) this.disadvantageSaves.add(target);
         var player = playerFor(target);
         if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
         let promptPlayer = (!player?.isGM && configSettings.playerRollSaves !== "none");
@@ -2270,6 +2275,7 @@ export class Workflow {
             promptPlayer = false;
           }
         }
+
         if (isFriendly &&
           (this.saveItem.system.description.value.toLowerCase().includes(i18n("midi-qol.autoFailFriendly").toLowerCase())
             || this.saveItem.flags.midiProperties?.autoFailFriendly)) {
@@ -2282,14 +2288,19 @@ export class Workflow {
             this.saveRequests[requestId] = resolve;
           }));
 
+          if (isMagicSave) { 
+            if (magicResistance && disadvantage) advantage = true;
+            if (magicVulnerability && advantage) disadvantage = true;
+          }
           const requests = player?.isGM ? monkRequestsGM : monkRequestsPlayer;
           requests.push({
             token: target.id,
-            advantage: advantage === true,
-            disadvantage: advantage === false,
-            altKey: advantage === true,
-            ctrlKey: advantage === false,
-            fastForward: false
+            advantage,
+            disadvantage,
+            // altKey: advantage === true,
+            // ctrlKey: disadvantage === true,
+            fastForward: false,
+            isMagicSave
           })
         } else if (promptPlayer && player?.active) {
           if (debugEnabled > 0) warn(`Player ${player?.name} controls actor ${target.actor.name} - requesting ${getSystemCONFIG().abilities[this.saveItem.system.save.ability]} save`);
@@ -2301,7 +2312,7 @@ export class Workflow {
             if (player && installedModules.get("lmrtfy") && (playerLetme || gmLetme)) requestId = randomID();
             this.saveRequests[requestId] = resolve;
 
-            requestPCSave(this.saveItem.system.save.ability, rollType, player, target.actor, advantage, this.saveItem.name, rollDC, requestId, GMprompt)
+            requestPCSave(this.saveItem.system.save.ability, rollType, player, target.actor, {advantage, disadvantage, flavor: this.saveItem.name, dc:rollDC, requestId, GMprompt, isMagicSave, magicResistance, magicVulnerability})
 
             // set a timeout for taking over the roll
             if (configSettings.playerSaveTimeout > 0) {
@@ -2317,10 +2328,10 @@ export class Workflow {
                       request: rollType,
                       ability: this.saveItem.system.save.ability,
                       showRoll,
-                      options: { messageData: { user: playerId }, target: rollDC, chatMessage: showRoll, mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true }
+                      options: { messageData: { user: playerId }, target: rollDC, chatMessage: showRoll, mapKeys: false, advantage, disadvantage, fastForward: true }
                     });
                   } else {
-                    result = await rollAction.bind(target.actor)(this.saveItem.system.save.ability, { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true });
+                    result = await rollAction.bind(target.actor)(this.saveItem.system.save.ability, { messageData: { user: playerId }, chatMessage: showRoll, mapKeys: false, advantage, disadvantage, fastForward: true, isMagicSave });
                   }
                   resolve(result);
                 }
@@ -2340,7 +2351,7 @@ export class Workflow {
             request: rollType,
             ability: this.saveItem.system.save.ability,
             // showRoll: whisper && !simulate,
-            options: { simulate, target: rollDC, messageData: { user: owner?.id }, chatMessage: showRoll, rollMode: whisper ? "gmroll" : "public", mapKeys: false, advantage: advantage === true, disadvantage: advantage === false, fastForward: true },
+            options: { simulate, target: rollDC, messageData: { user: owner?.id }, chatMessage: showRoll, rollMode: whisper ? "gmroll" : "public", mapKeys: false, advantage, disadvantage, fastForward: true , isMagicSave},
           }));
         }
       }
@@ -2367,13 +2378,15 @@ export class Workflow {
         tokenData: monkRequestsGM,
         request: `${rollType === "abil" ? "ability" : rollType}:${this.saveItem.system.save.ability}`,
         silent: true,
-        rollMode: whisper ? "selfroll" : "roll" // should be "publicroll" but monks does not check it
+        rollMode: whisper ? "selfroll" : "roll", // should be "publicroll" but monks does not check it
+        isMagicSave
       }
       const requestDataPlayer: any = {
         tokenData: monkRequestsPlayer,
         request: `${rollType === "abil" ? "ability" : rollType}:${this.saveItem.system.save.ability}`,
         silent: true,
-        rollMode: "roll" // should be "publicroll" but monks does not check it
+        rollMode: "roll",// should be "publicroll" but monks does not check it
+        isMagicSave
       }
       // Display dc triggers the tick/cross on monks tb
       if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) {
@@ -2403,13 +2416,19 @@ export class Workflow {
     }
     for (let target of allHitTargets) {
       if (!target.actor) continue; // these were skipped when doing the rolls so they can be skipped now
-      if (configSettings.allowUseMacro) this.triggerTargetMacros(["isSave", "isSaveSucces", "isSaveFailure"]);
+      if (configSettings.allowUseMacro) this.triggerTargetMacros(["isSave", "isSaveSucces", "isSaveFailure"], this.hitTargets);
       if (!results[i]) error("Token ", target, "could not roll save/check assuming 0");
       let result = results[i];
       let rollTotal = results[i]?.total || 0;
       let rollDetail = result;
       if (result?.terms[0]?.options?.advantage) this.advantageSaves.add(target);
+      else this.advantageSaves.delete(target);
       if (result?.terms[0]?.options?.disadvantage) this.disadvantageSaves.add(target);
+      else this.disadvantageSaves.delete(target);
+      if (this.advantageSaves.has(target) && this.disadvantageSaves.has(target)) {
+        this.advantageSaves.delete(target);
+        this.disadvantageSaves.delete(target);
+      }
       let isFumble = false;
       let isCritical = false;
       if (rollDetail?.terms && !result?.isBR && rollDetail.terms[0]) { // normal d20 roll/lmrtfy/monks roll
@@ -2515,7 +2534,7 @@ export class Workflow {
       if (this.item.flags["midi-qol"]?.isConcentrationCheck) {
         const checkBonus = getProperty(target, "actor.flags.midi-qol.concentrationSaveBonus");
         if (checkBonus) {
-          const rollBonus = (await new Roll(checkBonus, target.actor?.getRollData()).evaluate({ async: true })).total;
+          const rollBonus = (await new Roll(`${checkBonus}`, target.actor?.getRollData()).evaluate({ async: true })).total;
           rollTotal += rollBonus;
           //TODO 
           rollDetail = (await new Roll(`${rollDetail.result} + ${rollBonus}`).evaluate({ async: true }));
@@ -2956,7 +2975,7 @@ export class Workflow {
         hitResultNumeric
       };
     }
-    if (configSettings.allowUseMacro) this.triggerTargetMacros(["isHit"]);
+    if (configSettings.allowUseMacro) this.triggerTargetMacros(["isHit"], new Set([...this.hitTargets, ...this.hitTargetsEC]));
   }
 
   setRangedTargets(targetDetails) {
@@ -3178,8 +3197,11 @@ export class DamageOnlyWorkflow extends Workflow {
   constructor(actor: globalThis.dnd5e.documents.Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll,
     options: { flavor: string, itemCardId: string, damageList: [], useOther: boolean, itemData: {}, isCritical: boolean }) {
     if (!actor) actor = token.actor ?? targets[0]?.actor;
+    console.error("DOW", actor, token, damageTotal, damageType, targets, roll, options);
+    //@ts-ignore spurious error on t.object
+    const theTargets = targets.map(t => t instanceof TokenDocument ? t.object : t);
     //@ts-ignore getSpeaker requires a token document
-    super(actor, null, ChatMessage.getSpeaker({ token: (token?.document ?? token) }), new Set(targets), shiftOnlyEvent)
+    super(actor, null, ChatMessage.getSpeaker({ token: (token?.document ?? token) }), new Set(theTargets), shiftOnlyEvent)
     this.itemData = options.itemData ? duplicate(options.itemData) : undefined;
     // Do the supplied damageRoll
     this.flavor = options.flavor;

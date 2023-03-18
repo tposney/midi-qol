@@ -152,7 +152,8 @@ class ConfigSettings {
     optionalCritRule: -1,
     criticalNat20: false,
     actionSpecialDurationImmediate: false,
-    vitalityResource: "system.resources.primary"
+    vitalityResource: "system.resources.primary",
+    autoRerollInitiative: false
   };
 }
 

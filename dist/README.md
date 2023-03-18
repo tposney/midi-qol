@@ -692,7 +692,7 @@ Negative DR is not supported (i.e. to increase damage taken).
 * flags.midi-qol.magicResistance.all/str/dex etc. Will give advantage on saves versus magical effects (spell or magic effect property set).
 * flags.midi-qol.magicVulnerability.all/str/dex etc. Will give disadvantage on saves versus effects (spell or magic effect property set).
 
-* flags.midi-qol.absorption.damageType (acid/bludgeoning etc.) converts damage of that type to healing when applied to the actor with the flag set.
+* flags.midi-qol.absorption.damageType (acid/bludgeoning etc.) converts damage of that type to healing when applied to the actor with the flag set. As well as a trye/false value (set via mode CUSTOM) flags.midi-qol.absorption.type, can be a numeric value instead of true false. The damage type will be converted to healing and the quantum of the damage will be multiplied by the specified value (e.g. flags.midi-qol.absorption.acid OVERRIDE 0.5 will convert incoming acid damage to healing 1/2 of the acid damage). Negative numbers can be specified. So flags.midi-qol.absorption.acid ADD -1.5 will cause acid damage to do 1.5 times as much damage and be of type healing so will ignore acid damage resistance/vulnerability.
 
 * flags.midi-qol.superSaver.all/dex/str etc. If a save is required then the saver will take 0.5/0 damage on failed/successful save, compared to the normal 1/0.5. Useful for things like rogue's/monks evasion class feature.  
 
@@ -768,6 +768,7 @@ where specification is a comma separated list of fields.
   Damage:
   * damageRoll=roll expression, e.g. 3d6
   * damageType=piercing/bludgeoning etc. You can specify "healing" or "temphp" which apply healing or temphp. temphp will only apply if the rolled temphp > exisiting temphp. overtime healing is a way to implement regeneration.
+  * rollMode=one of gmroll, blindroll, publicroll, selfroll and the rollmode will be applied to the overtime item roll.
   * macro="World Macro Name" call the macro as part of the damage application stage, where name must be a world macro, the macro is passed the results of rolling the overTime item, which will include damage done, saving throws made etc., as if it were an OnUse macro of the Overtime item roll.
 
   If the effect is configured to be stackable with a stack count, of say 2, the damage will 3d6 + 3d6.
@@ -997,7 +998,7 @@ There are some addtional actor only onUse macro triggers that can be defined for
 
   - [All] is special, being called with each value of macroPass. You can differentiate via args[0].macroPass to decide which ones to act on.
 
-  There are some additional actor onUse macro triggers (but NOT item triggers) available when the actor is the target of an attack/spell/feauture use:
+  There are some additional actor onUse macro triggers (but NOT item triggers) available when the actor is the target of an attack/spell/feature use:
   ```
     isAttacked: the actor is a target of an attack
     isHit: the actor is a target of a hit
