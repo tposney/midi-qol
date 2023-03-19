@@ -957,6 +957,10 @@ The field should contain ONLY the macro name, or the string "ItemMacro" or "Item
   - "ItemMacro" means it will call the item macro for the item for the workflow. 
   - "ItemMacro.ItemName" allows you to lookup by name another item that the actor for the workflow has.  
   - Compendium.scope.compendiumName.macroName/macroId means fetch the macro form the specified compendium, either by name or Id.
+  - funciton.functionName where functionName is any globally accessible function, this is bound to the worklow and the following arguments are passed
+    ```js
+    functionName.bind(workflow)({ speaker, actor, token, character, item, args })
+    ```
 
 You may specify the point at in the workflow when the macro is called.  
 The macro will be called with args[0] containing the current state information for the workflow (see below).

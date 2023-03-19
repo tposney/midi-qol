@@ -1,3 +1,13 @@
+### 10.0.35
+* Bug fix for unable to roll damage/mark wounded if optional rules disabled.
+* Niche request, whereever you specify a an itemOnUseMacro or actorOnUseMacro midi now supports function.**functionName**, where function name is the name of any function available in the global scope. The function is called via
+```js
+functionName.bind(workflow)({ speaker, actor, token, character, item, args })
+```
+and gets the same argumens as would be passed to the macro function. So for example
+flags.midi-qol.onUseMacroName CUSTOM function.MidiQOL.log, preItemRoll
+* removed some left over debug error messages
+
 ### 10.0.34
 * Fix for numeric values in concentrationSaveBonus throwing an error (i.e. 5 instead of +5).
 * Added flags.midi-qol.grants.max.damage.all/heal/mwak etc. Useful for Beacon of Hope, with flags.grants.max.damage.heal set on the target, healing actions (i.e. spells/potions/features marked as healing actions) will do max possible healing.

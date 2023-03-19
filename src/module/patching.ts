@@ -972,8 +972,8 @@ async function zeroHPExpiry(actor, update, options, user) {
 
 async function checkWounded(actor, update, options, user) {
   const hpUpdate = getProperty(update, "system.attributes.hp.value");
-  const vitalityReosurce = checkRule("vitalityResource")?.trim();
-  let vitalityUpdate = vitalityReosurce && getProperty(update, vitalityReosurce);
+  const vitalityReosurce = checkRule("vitalityResource");
+  let vitalityUpdate = vitalityReosurce && getProperty(update, vitalityReosurce.trim());
   // return wrapped(update,options,user);
   if (hpUpdate === undefined && (!vitalityReosurce || vitalityUpdate === undefined)) return;
   const attributes = actor.system.attributes;
@@ -1006,7 +1006,6 @@ async function checkWounded(actor, update, options, user) {
       }
 
       const hasEffect = await ConvenientEffectsHasEffect(effectName, actor, false);
-      console.error("Token update ", update, hasEffect, needsDead);
       if ((needsDead !== hasEffect)) {
         if (actor.type !== "character" && !actor.hasPlayerOwner) { // For CE dnd5e does not treat dead as dead for the combat tracker so update it by hand as well
           let combatant;

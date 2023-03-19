@@ -224,10 +224,10 @@ export function calculateDamage(a: Actor, appliedDamage, t: Token, totalDamage, 
   //@ts-ignore attributes
   var hp = a.system.attributes.hp;
   var oldHP, tmp, oldVitality, newVitality;
-  const resource = checkRule("vitalityResource")?.trim();
+  const resource = checkRule("vitalityResource");
   if (hp.value <= 0 && resource) {
     // Damage done to vitality rather than hp
-    oldVitality = getProperty(a, resource);
+    oldVitality = getProperty(a, resource.trim());
     newVitality = Math.max(0, oldVitality - appliedDamage);
   }
   if (prevDamage) {

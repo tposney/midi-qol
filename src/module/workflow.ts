@@ -1647,7 +1647,9 @@ export class Workflow {
     if (!name) return undefined;
     let macroCommand;
     try {
-      if (name.startsWith(MQItemMacroLabel)) { // special short circuit eval for itemMacro since it can be execute as GM
+      if (name.startsWith("function.")) {
+        macroCommand = `${name.replace("function.", "").trim()}.bind(this)({ speaker, actor, token, character, item, args })`;
+      } else if (name.startsWith(MQItemMacroLabel)) { // special short circuit eval for itemMacro since it can be execute as GM
         var itemMacro;
         //  item = this.item;
         if (name === MQItemMacroLabel) {
