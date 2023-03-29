@@ -713,13 +713,14 @@ Optional flags cause a dialog to be raised when an opportunity to apply the effe
 
 An optional attack bonus prompts the attacker after the attack roll is made, but before the attack is adjudicated, giving the attacker the option to modify the roll. Effects last for one application unless the count flag is set.
 
-* flags.midi-qol.optional.Name.damage.all/mwak/rwak/msak/rsak	bonus to apply to damage done. This does not work with better rolls active.
-* flags.midi-qol.optional.Name.skill.all/fail/per/prc/item etc	bonus to apply to skill rolls
-* flags.midi-qol.optional.Name.attack.all/mwak/rwak/msak/rsak	the bonus is added after the attack roll		
-* flags.midi-qol.optional.Name.check.all/fail/str/dex/etc. the bonus is added after the ability check roll		
-* flags.midi-qol.optional.Name.save.all/fail/str/dex/etc	the bonus is added after the save roll. Requires auto fast-forward		
-* flags.midi-qol.optional.Name.label	label to use in the dialog		
-* flags.midi-qol.optional.Name.count	how many uses the effect has (think lucky which has 3), if absent the bonus will be single use (bardic inspiration), turn for once per turn.   
+* `flags.midi-qol.optional.NAME.damage.all/mwak/rwak/msak/rsak`	bonus to apply to damage done. This does not work with better rolls active.
+* `flags.midi-qol.optional.NAME.criticalDamage` which allows optional bonus damage to do critical damage.
+* `flags.midi-qol.optional.NAME.skill.all/fail/per/prc/item etc`	bonus to apply to skill rolls
+* `flags.midi-qol.optional.NAME.attack.all/mwak/rwak/msak/rsak`	the bonus is added after the attack roll		
+* `flags.midi-qol.optional.NAME.check.all/fail/str/dex/etc`. the bonus is added after the ability check roll		
+* `flags.midi-qol.optional.NAME.save.all/fail/str/dex/etc`	the bonus is added after the save roll. Requires auto fast-forward		
+* `flags.midi-qol.optional.NAME.label`	label to use in the dialog		
+* `flags.midi-qol.optional.NAME.count`	how many uses the effect has (think lucky which has 3), if absent the bonus will be single use (bardic inspiration), turn for once per turn.   
   - **every** - you can use the optional effect on every occurence
   - **reaction** - behaves as a reaction roll, i.e. uses up your reaction
   - **a number** - how many times the effect can be used before expiring
@@ -728,7 +729,9 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
   You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
   - **ItemUses.ItemName** - Additional option for optional.NAME.count ItemUses.ItemName, which will use the value of the uses field for the item name ItemName (which must be on the actor), it means you don't need to use a resources entry for these any more. eg `ItemUses.my super duper item`
 
-* flags.midi-qol.optional.Name.ac	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
+* `flags.midi-qol.optional.NAME.ac`	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)
+* `flags.midi-qol.optional.NAME.macroToCall`, which will be called when an optional bonus roll is clicked. ItemMacro will refer to the item that created the bonus roll. Arguments are the same as for any onUse macro.
+
 
 Values for the optional roll bonus flags include a dice expression (added to the roll), a number, reroll (rerolling the roll completely) reroll-max, reroll-min, reroll-kh (reroll with max dice, min dice, or reroll and keep the higher of the original/new roll) or success which changes the roll to 99 ensuring success.
 
