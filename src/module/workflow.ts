@@ -2418,7 +2418,7 @@ export class Workflow {
     }
     for (let target of allHitTargets) {
       if (!target.actor) continue; // these were skipped when doing the rolls so they can be skipped now
-      if (configSettings.allowUseMacro) this.triggerTargetMacros(["isSave", "isSaveSucces", "isSaveFailure"], this.hitTargets);
+      if (configSettings.allowUseMacro) this.triggerTargetMacros(["isSave", "isSaveSuccess", "isSaveFailure"], this.hitTargets);
       if (!results[i]) error("Token ", target, "could not roll save/check assuming 0");
       let result = results[i];
       let rollTotal = results[i]?.total || 0;
