@@ -758,13 +758,14 @@ where specification is a comma separated list of fields.
   * removeCondition=expression, if present and evaluates to true the effect is removed after the rest of the processing.
   Saving Throw: the entire active effect will be removed when the saving throw is made (or the effect duration expires)
   * rollType=check/save/skill (default save), roll an ability check, save or skill.
-  * saveAbility=dex/con/etc prc/perception etc. The actor's ability/skill to use for rolling the saving throw
+  * saveAbility=dex/con/etc prc/perception etc. The actor's ability/skill to use for rolling the saving throw. For actionSaves
   * saveDC=number
   * saveDamage=halfdamage/nodamage/fulldamage - default nodamage
   * saveRemove=true/false - remove effect on save - default true.
   * saveMagic=true/false (default false) The saving throw is treated as a "magic saving throw" for the purposes of magic resistance.
   * actionSave=true/false. If true midi won't roll the save but leave it to the player. See discussion below.
-  * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is failed.
+  * damageBeforeSave=true/false, true means the damage will be applied before the save is adjudicated (Sword of Wounding). false means the damage will only apply if the save is failed. For actionSaves you can specify more than one save type, e.g. saveAbility=dex|con, means check dex or con saving throws, similarly for abilities, saveAbility=acr|ath to allow an athletics or acrobatics roll.
+  
   Damage:
   * damageRoll=roll expression, e.g. 3d6
   * damageType=piercing/bludgeoning etc. You can specify "healing" or "temphp" which apply healing or temphp. temphp will only apply if the rolled temphp > exisiting temphp. overtime healing is a way to implement regeneration.
@@ -801,6 +802,8 @@ where specification is a comma separated list of fields.
   It turns out that overtime effects have lots of applications. One that is not obvious is that you can use the overtime effect as a switch to turn on and off other effects. If you have one effect with multiple changes, one of which is an OverTime effect, they will ALL be applied and ALL removed on a save. Here's a Hold Person, which has an overtime effect for the save and a payload of applying the paralyzed status effect to a target.  
 
   There are quite a lot of effects that require a target to use its action to try and save against the effect. You can add actionSave=true which means overtime effects won't auto roll the save, rather it waits for the actor to roll an appropriate save when it is the actor's turn (just roll the save from the character sheet). This allows you to support "the character can use its action to save against the effect". Simply add actionSave=true to the overtime effect definiton and mid will watch for saving throws on the actors turn (rather than rolling the save automatically) and if the type matches the overtime efffect it will check the roll versus the saveDC and remove the effect if the save is successful.
+
+
 
 ![Hold Person](pictures/HoldPerson.png)
 

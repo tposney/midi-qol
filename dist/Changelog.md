@@ -1,3 +1,13 @@
+### 10.0.36
+* Change so that neutral tokens NEVER contribute to flanking/flanked condition checking or get the flanking status. If you 
+want a token to contribute to flanking you must set it to be hostile to the target token.
+* Fix to allow oevertime effects action saves to support multiple skill rolls, e.g. actionSave=true, rollType=skill, saveAbility=acr|ath to allow an acrobatics or athletics check.
+* reduce number of "actor is incapacitated messages generated".
+* Fix for template spells provided by the magic items module not picking up targets.
+* Fix for flags.midi-qol.DR.all reducing healing
+* Slight change to damage application which treats the whole of the damage for the purposes of saving throws, rather than adjudicating the save per damage type (will increase damage by up to 1 point if there are two damage items each being an odd number - e.g. 3bludgeoning + 5cold and saved against, previously would be 3/2 + 5/2 = 1 + 2 = 3pts, now will be [3 + 5]/2=4 points).
+* Fix for late targeting being disabled after first roll.
+
 ### 10.0.35
 * Bug fix for unable to roll damage/mark wounded if optional rules disabled.
 * Niche request, whereever you specify a an itemOnUseMacro or actorOnUseMacro midi now supports function.**functionName**, where function name is the name of any function available in the global scope. The function is called via
@@ -20,6 +30,7 @@ As with the other flags.grants for attacks/damage rolls only the first target is
 * Fix for marking dead/unconscious misbehaving after 10.0.33
 * Added additional token actor macro calls for preApplyTargetDamage and preTargetSave, called before applying damage, but after damage is calculated so you can change the damage done, and before target saves are rolled to let you change things like advantage or bonuses etc.
 * Change to flags.midi-qol.DR.healing to allow negative values, which will increase healing. There may be some oddities if you have an item that both heals and does damage - so probably don't do that. flags.midi-qol.DR.heal (the action) is disabled, always use .healing to adjust the specific healing on the roll.
+
 
 ### 10.0.33
 * Fix for not picking up Build a bonus save dc bonuses.

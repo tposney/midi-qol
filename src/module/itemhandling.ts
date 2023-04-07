@@ -16,6 +16,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
     && options?.singleTarget !== true
     && game?.user?.targets
     && !game.settings.get("midi-qol", "itemUseHooks")) {
+    Workflow.removeWorkflow(this.uuid);
     const lateTargetingSetting = getLateTargeting();
     let lateTargetingSet = lateTargetingSetting === "all" || (lateTargetingSetting === "noTargetsSelected" && game?.user?.targets.size === 0)
     if (options.woprkflowOptions?.lateTargeting && options.workflowOptions?.lateTargeting !== "none") lateTargetingSet = true;
@@ -52,7 +53,10 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
     return await wrapped(config, options);
   }
 
-  if (checkMechanic("incapacitated") && checkIncapacitated(this.actor, this, null)) return;
+  if (checkMechanic("incapacitated") && checkIncapacitated(this.actor, this, null)) {
+    ui.notifications?.warn(`${this.actor.name} is incapacitated`)
+    return;
+  }
 
   const isRangeSpell = ["ft", "m"].includes(this.system.target?.units) && ["creature", "ally", "enemy"].includes(this.system.target?.type);
   const isAoESpell = this.hasAreaTarget;
@@ -1756,7 +1760,7 @@ export function templateTokens(templateDetails: { x: number, y: number, shape: a
 export function selectTargets(templateDocument: MeasuredTemplateDocument, data, user) {
   //@ts-expect-error
   const hasWorkflow = this.currentState ?? Workflow.getWorkflow(templateDocument.flags?.dnd5e?.origin);
-  if (!hasWorkflow) return true;
+  if (hasWorkflow === undefined) return true;
 
   if ((game.user?.targets.size === 0 || user !== game.user?.id)
     && templateDocument?.object && !installedModules.get("levelsvolumetrictemplates")) {

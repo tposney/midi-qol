@@ -647,7 +647,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
             DR = 0;
           }
         }
-        if (DR < damage && DRAllRemaining > 0) {
+        if (DR < damage && DRAllRemaining > 0 && !damageDetailItem.type.includes(["healing", "temphp"])) {
           damageDetailItem.DR = Math.min(damage, DR + DRAllRemaining);
           DRAllRemaining = Math.max(0, DRAllRemaining + DR - damage);
         }
@@ -656,6 +656,8 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
 
       for (let [index, damageDetailItem] of damageDetail.entries()) {
         let { damage, type, DR } = damageDetailItem;
+        if (!type) type = MQdefaultDamageType;
+
         let mult = saves.has(t) ? itemSaveMultiplier : 1;
         if (superSavers.has(t) && itemSaveMultiplier === 0.5) {
           mult = saves.has(t) ? 0 : 0.5;
@@ -666,7 +668,6 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
         // TODO this should end up getting removed when the prepare data is done. Currently depends on 1Reaction expiry.
         if (uncannyDodge) mult = mult / 2;
 
-        if (!type) type = MQdefaultDamageType;
         const resMult = getTraitMult(targetActor, type, item);
         mult = mult * resMult;
         damageDetailItem.damageMultiplier = mult;
@@ -675,11 +676,12 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
         */
         damage -= DR;
         let typeDamage = Math.floor(damage * Math.abs(mult)) * Math.sign(mult);
+        let typeDamageUnRounded = damage * mult;
 
         if (type.includes("temphp")) {
           appliedTempHP += typeDamage
         } else {
-          appliedDamage += typeDamage
+          appliedDamage += typeDamageUnRounded;
         }
 
         // TODO: consider mwak damage reduction - we have the workflow so should be possible
@@ -687,7 +689,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
       damageDetailResolved = damageDetailResolved.concat(damageDetail);
       if (debugEnabled > 0) console.warn("midi-qol | Damage Details plus resistance/save multiplier for ", targetActor.name, duplicate(damageDetail))
     }
-    if (DRAll < 0) { // negative DR is extra damage
+    if (DRAll < 0 && appliedDamage > -1) { // negative DR is extra damage
       damageDetailResolved = damageDetailResolved.concat({ damage: -DRAll, type: "DR", DR: 0 });
       appliedDamage -= DRAll;
       totalDamage -= DRAll;
@@ -939,7 +941,7 @@ export let getSaveMultiplierForItem = (item: Item) => {
   return configSettings.defaultSaveMult;
 };
 
-export function requestPCSave(ability, rollType, player, actor, {advantage, disadvantage, flavor, dc, requestId, GMprompt, isMagicSave, magicResistance, magicVulnerability}) {
+export function requestPCSave(ability, rollType, player, actor, { advantage, disadvantage, flavor, dc, requestId, GMprompt, isMagicSave, magicResistance, magicVulnerability }) {
   const useUuid = true; // for  LMRTFY
   const actorId = useUuid ? actor.uuid : actor.id;
   const playerLetme = !player?.isGM && ["letme", "letmeQuery"].includes(configSettings.playerRollSaves);
@@ -982,7 +984,7 @@ export function requestPCSave(ability, rollType, player, actor, {advantage, disa
       formula: "",
       attach: { requestId },
       deathsave: false,
-      initiative: false, 
+      initiative: false,
       isMagicSave
     }
     if (debugEnabled > 1) debug("process player save ", socketData)
@@ -993,7 +995,7 @@ export function requestPCSave(ability, rollType, player, actor, {advantage, disa
     let actorName = actor.name;
     let content = ` ${actorName} ${configSettings.displaySaveDC ? "DC " + dc : ""} ${getSystemCONFIG().abilities[ability]} ${i18n("midi-qol.saving-throw")}`;
     if (advantage && !disadvantage) content = content + ` (${i18n("DND5E.Advantage")}) - ${flavor})`;
-    else if  (!advantage && disadvantage) content = content + ` (${i18n("DND5E.Disadvantage")}) - ${flavor})`;
+    else if (!advantage && disadvantage) content = content + ` (${i18n("DND5E.Disadvantage")}) - ${flavor})`;
     else content + ` - ${flavor})`;
     const chatData = {
       content,
@@ -1135,7 +1137,7 @@ function replaceAtFields(value, context, options: { blankValue: string | number,
 export async function processOverTime(wrapped, data, options, user) {
   if (data.round === undefined && data.turn === undefined) return wrapped(data, options, user);
   try {
-    await socketlibSocket.executeAsGM("_gmExpirePerTurnBonusActions", {combatUuid: this.uuid}); 
+    await socketlibSocket.executeAsGM("_gmExpirePerTurnBonusActions", { combatUuid: this.uuid });
     await _processOverTime(this, data, options, user)
   } catch (err) {
     error("processOverTime", err)
@@ -1222,7 +1224,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       if (debugEnabled > 0) warn(`OverTime label=${label} startTurn=${startTurn} endTurn=${endTurn} damageBeforeSave=${damageBeforeSave} saveDC=${saveDC} saveAbility=${saveAbility} damageRoll=${damageRoll} damageType=${damageType}`);
       if (actionSave && options.saveToUse) {
         if (!options.rollFlags) return effect.id;
-        if (!rollType.includes(options.rollFlags.type) || !saveAbility.includes(options.rollFlags.abilityId)) return effect.id;
+        if (!rollType.includes(options.rollFlags.type) || !saveAbility.includes(options.rollFlags.abilityId ?? options.rollFlags.skillId)) return effect.id;
         let content;
         if (options.saveToUse.total >= saveDC) {
           await actor.deleteEmbeddedDocuments("ActiveEffect", [effect.id]), { "expiry-reason": "midi-qol:overTime:actionSave" };
@@ -1341,7 +1343,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       try {
         const options = {
           systemCard: false, createWorkflow: true, versatile: false, configureDialog: false, saveDC, checkGMStatus: true, targetUuids: [theTargetUuid], rollMode,
-          workflowOptions: { lateTargeting: "none", autoRollDamage: "onHit", autoFastDamage: true, isOverTime: true},
+          workflowOptions: { lateTargeting: "none", autoRollDamage: "onHit", autoFastDamage: true, isOverTime: true },
         };
         await completeItemUse(ownedItem, {}, options); // worried about multiple effects in flight so do one at a time
       } finally {
@@ -1382,7 +1384,7 @@ export async function _processOverTime(combat, data, options, user) {
       if (midiFlags.optional) {
         for (let key of Object.keys(midiFlags.optional)) {
           if (midiFlags.optional[key].used) {
-            socketlibSocket.executeAsGM("_gmSetFlag", {actorUuid: actor.uuid, base: "midi-qol", key: `optional.${key}.used`, value: false})
+            socketlibSocket.executeAsGM("_gmSetFlag", { actorUuid: actor.uuid, base: "midi-qol", key: `optional.${key}.used`, value: false })
             // await actor.setFlag("midi-qol", `optional.${key}.used`, false)
           }
         }
@@ -1486,25 +1488,24 @@ export function untargetAllTokens(...args) {
 }
 
 export function checkIncapacitated(actor: Actor, item: Item | undefined = undefined, event: any) {
-  if (checkRule("vitalityResource") ) {
+  if (checkRule("vitalityResource")) {
     const vitality = getProperty(actor, checkRule("vitalityResource")?.trim()) ?? 0;
     //@ts-expect-error .system
     if (vitality <= 0 && actor?.system.attributes?.hp?.value <= 0) {
-      log(`minor-qol | ${actor.name} is dead`)
-      ui.notifications?.warn(`${actor.name} is dead`);
+      log(`minor-qol | ${actor.name} is dead`);
       return true;
     }
     return false;
   }
 
-    //@ts-expect-error .system
-    if (actor?.system.attributes?.hp?.value <= 0) {
+  //@ts-expect-error .system
+  if (actor?.system.attributes?.hp?.value <= 0) {
     log(`minor-qol | ${actor.name} is incapacitated`)
-    ui.notifications?.warn(`${actor.name} is incapacitated`)
     return true;
   }
   return false;
 }
+
 export function getUnitDist(x1: number, y1: number, z1: number, token2): number {
   if (!canvas?.dimensions) return 0;
   const unitsToPixel = canvas.dimensions.size / canvas.dimensions.distance;
@@ -2102,7 +2103,7 @@ export async function setConcentrationData(actor, concentrationData: Concentrati
  */
 
 
-export function findNearby(disposition: number | null, token: any /*Token | undefined */, distance: number, options: {maxSize: number | undefined, includeIncapacitated: boolean | undefined} = {maxSize: undefined, includeIncapacitated: false}): Token[] {
+export function findNearby(disposition: number | null, token: any /*Token | undefined */, distance: number, options: { maxSize: number | undefined, includeIncapacitated: boolean | undefined } = { maxSize: undefined, includeIncapacitated: false }): Token[] {
   if (!token) return [];
   if (typeof token === "string") token = MQfromUuid(token).object;
   if (!(token instanceof Token)) { throw new Error("find nearby token is not of type token or the token uuid is invalid") };
@@ -2480,7 +2481,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
         case "reroll-max": newRoll = await this[rollId].reroll({ async: true, maximize: true }); break;
         case "reroll-min": newRoll = await this[rollId].reroll({ async: true, minimize: true }); break;
         case "success": newRoll = await new Roll("99").evaluate({ async: true }); break;
-        case "fail": newRoll = await new Roll("-1").evaluate({async: true}); break;
+        case "fail": newRoll = await new Roll("-1").evaluate({ async: true }); break;
         default:
           if (typeof button.value === "string" && button.value.startsWith("replace ")) {
             const rollParts = button.value.split(" ");
@@ -2491,23 +2492,23 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
             //@ts-ignore DamageRoll
             newRoll = new CONFIG.Dice.DamageRoll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData(), rollOptions);
             newRoll = await newRoll.evaluate({ async: true });
-          } else { 
+          } else {
             //@ts-expect-error
-            newRoll = CONFIG.Dice.D20Roll.fromRoll (this[rollId]);
-            newRoll.terms.push(new OperatorTerm({operator: "+"}));
+            newRoll = CONFIG.Dice.D20Roll.fromRoll(this[rollId]);
+            newRoll.terms.push(new OperatorTerm({ operator: "+" }));
             if (Number.isNumeric(button.value)) {
-              newRoll.terms.push(new NumericTerm({number: Number(button.value)}));
+              newRoll.terms.push(new NumericTerm({ number: Number(button.value) }));
               // this[rollId].result = `${this[rollId].result} + ${Number(button.value)}`;
               newRoll._total = this[rollId]._total + Number(button.value);
               newRoll._formula = `${this[rollId]._formula} + ${Number(button.value)}`
             } else {
               const tempRoll = new Roll(button.value, this.actor.getRollData());
-              await tempRoll.evaluate({async: true});
-              newRoll._total = this[rollId]._total+ tempRoll.total;
+              await tempRoll.evaluate({ async: true });
+              newRoll._total = this[rollId]._total + tempRoll.total;
               newRoll._formula = `${this[rollId]._formula} + ${tempRoll.formula}`
               newRoll.terms = newRoll.terms.concat(tempRoll.terms);
             }
-              //newRoll = new CONFIG.Dice.D20Roll(`${this[rollId].result} + ${button.value}`, (this.item ?? this.actor).getRollData(), rollOptions);
+            //newRoll = new CONFIG.Dice.D20Roll(`${this[rollId].result} + ${button.value}`, (this.item ?? this.actor).getRollData(), rollOptions);
           }
           break;
       }
@@ -2534,7 +2535,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
         };
         const chatMessage = await ChatMessage.create(chatData);
       }
-      if (dice3dEnabled() && ["attackRoll"].includes(rollId) ) {
+      if (dice3dEnabled() && ["attackRoll"].includes(rollId)) {
         let whisperIds: User[] | null = null;
         const rollMode = game.settings.get("core", "rollMode");
         if ((["details", "hitDamage", "all"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
@@ -2588,7 +2589,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
         dialog.close();
         resolve(newRoll);
         if (showRoll) {
-        
+
           // const oldRollHTML = await originalRoll.render() ?? this[rollId].result
           const player = playerForActor(this.actor)?.id ?? "";
           const newRollHTML = reRoll ? await midiRenderRoll(reRoll) : await midiRenderRoll(newRoll);
@@ -3457,7 +3458,7 @@ export async function hasUsedReaction(actor: Actor) {
   return false;
 }
 
-export async function gmExpirePerTurnBonusActions(data: {combatUuid: string}) {
+export async function gmExpirePerTurnBonusActions(data: { combatUuid: string }) {
   const optionalFlagRe = /flags.midi-qol.optional.[^.]+.count$/;
   //@ts-expect-error
   const combat = fromUuidSync(data.combatUuid);
@@ -3603,7 +3604,7 @@ export async function midiRenderRoll(roll: Roll | undefined) {
     default: return roll.render(); // "off"
   }
 }
-export function heightIntersects(targetDocument: any /*TokenDocument*/, flankerDocument: any /*TokenDocument*/) : boolean {
+export function heightIntersects(targetDocument: any /*TokenDocument*/, flankerDocument: any /*TokenDocument*/): boolean {
   const targetElevation = targetDocument.elevation ?? 0;
   const flankerElevation = flankerDocument.elevation ?? 0;
   const targetTopElevation = targetElevation + Math.max(targetDocument.height, targetDocument.width) * (canvas?.dimensions?.distance ?? 5);
@@ -3614,8 +3615,8 @@ export function heightIntersects(targetDocument: any /*TokenDocument*/, flankerD
   if (flankerCenter >= targetElevation || flankerCenter <= targetTopElevation) return true;
   return false;
   */
- if (flankerTopElevation < targetElevation || flankerElevation > targetTopElevation) return false;
- return true;
+  if (flankerTopElevation < targetElevation || flankerElevation > targetTopElevation) return false;
+  return true;
 }
 
 export async function computeFlankedStatus(target): Promise<boolean> {
@@ -3707,7 +3708,8 @@ export function computeFlankingStatus(token, target): boolean {
   // an enemy's enemies are my friends.
   const allies: any /* Token v10 */[] = findNearby(-1, target, (canvas?.dimensions?.distance ?? 5));
 
-  if (allies.length === 1) return false; // length 1 means no other allies nearby
+  if (!token.document.disposition) return false; // Neutral tokens can't get flanking
+  if (allies.length <= 1) return false; // length 1 means no other allies nearby
 
   if (canvas?.grid?.grid instanceof SquareGrid) {
     let gridW = canvas?.grid?.w ?? 100;

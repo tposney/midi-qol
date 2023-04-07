@@ -1300,7 +1300,7 @@ export class Workflow {
       const wasAttacked = this.item?.hasAttack;
       const wasHit = (this.item ? wasAttacked : true) && (this.hitTargets?.has(target) || this.hitTargetsEC?.has(target));
       //@ts-ignore token.document
-      const wasDamaged = wasHit && this.damageList && (this.damageList.find(dl => dl.tokenUuid === (target.uuid ?? target.document.uuid) && dl.appliedDamage > 0));
+      const wasDamaged = this.damageList && (this.damageList.find(dl => dl.tokenUuid === (target.uuid ?? target.document.uuid) && dl.appliedDamage > 0));
       if (wasAttacked && triggerList.includes("isAttacked")) {
         //@ts-ignore
         await this.callMacros(this.item,
@@ -1323,6 +1323,14 @@ export class Workflow {
           "isHit",
           { actor: target.actor, token: target });
       }
+      if (wasHit && triggerList.includes("preApplyTargetDamage")) {
+        await this.callMacros(this.item,
+          actorOnUseMacros?.getMacros("preApplyTargetDamage"),
+          "OnUse",
+          "preApplyTargetDamage",
+          { actor: target.actor, token: target });
+      }
+
       if (target.actor?.uuid !== this.actor.uuid && triggerList.includes("1Reaction")) {
       }
       if (this.saveItem?.hasSave && triggerList.includes("isSaveSuccess") && this.saves.has(target)) {
@@ -1648,7 +1656,7 @@ export class Workflow {
     let macroCommand;
     try {
       if (name.startsWith("function.")) {
-        macroCommand = `${name.replace("function.", "").trim()}.bind(this)({ speaker, actor, token, character, item, args })`;
+        macroCommand = `return await ${name.replace("function.", "").trim()}.bind(this)({ speaker, actor, token, character, item, args })`;
       } else if (name.startsWith(MQItemMacroLabel)) { // special short circuit eval for itemMacro since it can be execute as GM
         var itemMacro;
         //  item = this.item;
@@ -2136,7 +2144,7 @@ export class Workflow {
 
       const rollMode = game.settings.get("core", "rollMode");
       if (configSettings.autoCheckSaves === "whisper" || whisper || !(["roll", "publicroll"].includes(rollMode))) {
-        chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
+        chatData.whisper = ChatMessage.getWhisperRecipients("GM").filter(u => u.active).map(u=>u.id);
         chatData.messageData.user = game.user?.id; // ChatMessage.getWhisperRecipients("GM").find(u => u.active);
         if (rollMode === "blindroll") {
           chatData["blind"] = true;
@@ -2195,7 +2203,7 @@ export class Workflow {
     let monkRequestsGM: any[] = [];
     let showRoll = configSettings.autoCheckSaves === "allShow";
     if (simulate) showRoll = false;
-    const isMagicSave =  this.saveItem?.type === "spell" || this.saveItem?.flags.midiProperties?.magiceffect || this.item?.flags.midiProperties?.magiceffect;
+    const isMagicSave = this.saveItem?.type === "spell" || this.saveItem?.flags.midiProperties?.magiceffect || this.item?.flags.midiProperties?.magiceffect;
 
     try {
       const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
@@ -2212,7 +2220,7 @@ export class Workflow {
         if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
         let advantage: Boolean | undefined = undefined;
         let disadvantage: Boolean | undefined = undefined;
-        let magicResistance : Boolean = false;
+        let magicResistance: Boolean = false;
         let magicVulnerability: Boolean = false;
         // If spell, check for magic resistance
         if (isMagicSave) {
@@ -2290,7 +2298,7 @@ export class Workflow {
             this.saveRequests[requestId] = resolve;
           }));
 
-          if (isMagicSave) { 
+          if (isMagicSave) {
             if (magicResistance && disadvantage) advantage = true;
             if (magicVulnerability && advantage) disadvantage = true;
           }
@@ -2314,7 +2322,7 @@ export class Workflow {
             if (player && installedModules.get("lmrtfy") && (playerLetme || gmLetme)) requestId = randomID();
             this.saveRequests[requestId] = resolve;
 
-            requestPCSave(this.saveItem.system.save.ability, rollType, player, target.actor, {advantage, disadvantage, flavor: this.saveItem.name, dc:rollDC, requestId, GMprompt, isMagicSave, magicResistance, magicVulnerability})
+            requestPCSave(this.saveItem.system.save.ability, rollType, player, target.actor, { advantage, disadvantage, flavor: this.saveItem.name, dc: rollDC, requestId, GMprompt, isMagicSave, magicResistance, magicVulnerability })
 
             // set a timeout for taking over the roll
             if (configSettings.playerSaveTimeout > 0) {
@@ -2353,7 +2361,7 @@ export class Workflow {
             request: rollType,
             ability: this.saveItem.system.save.ability,
             // showRoll: whisper && !simulate,
-            options: { simulate, target: rollDC, messageData: { user: owner?.id }, chatMessage: showRoll, rollMode: whisper ? "gmroll" : "public", mapKeys: false, advantage, disadvantage, fastForward: true , isMagicSave},
+            options: { simulate, target: rollDC, messageData: { user: owner?.id }, chatMessage: showRoll, rollMode: whisper ? "gmroll" : "public", mapKeys: false, advantage, disadvantage, fastForward: true, isMagicSave },
           }));
         }
       }
