@@ -507,6 +507,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.carefulSpells`);
   midiFlags.push("flags.midi-qol.magicResistance.all")
   midiFlags.push("flags.midi-qol.magicVulnerability.all")
+  midiFlags.push("flags.midi-qol.rangeOverride.attack.all")
 
   let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
 
@@ -529,6 +530,7 @@ function setupMidiFlags() {
     midiFlags.push(`flags.midi-qol.grants.min.damage.${at}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.attack.${at}`);
     midiFlags.push(`flags.midi-qol.optional.NAME.damage.${at}`);
+    midiFlags.push(`flags.midi-qol.rangeOverride.attack.${at}`);
   });
   midiFlags.push("flags.midi-qol.advantage.ability.all");
   midiFlags.push("flags.midi-qol.advantage.ability.check.all");

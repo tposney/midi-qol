@@ -1737,83 +1737,143 @@ let pointWarn = debounce(() => {
   ui.notifications?.warn("4 Point LOS check selected but dnd5e-helpers not installed")
 }, 100)
 
-export function checkRange(item, token, targets): string {
-  if (!canvas || !canvas.scene) return "normal"
-  // check that a range is specified at all
-  if (!item.system.range) return "normal";
-  //TODO think about setting default range for mwak/etc
-  // if (["mwak", "msak", "mpak"].includes(itemData.actionType) && !itemData.properties?.thr) {
-  //    itemData.range.value = 5; // set default range for melee attacks
-  //}
+export function checkRange(itemIn, tokenIn, targetsIn): { result: string, attackingToken?: Token } {
+  if (!canvas || !canvas.scene) return { result: "normal" };
+  const checkRangeFunction = (item, token, targets): { result: string, reason?: string } => {
+    if (!canvas || !canvas.scene) return {
+      result: "normal",
+    }
+    // check that a range is specified at all
+    if (!item.system.range) return {
+      result: "normal",
+    };
+    //TODO think about setting default range for mwak/etc
+    // if (["mwak", "msak", "mpak"].includes(itemData.actionType) && !itemData.properties?.thr) {
+    //    itemData.range.value = 5; // set default range for melee attacks
+    //}
 
-  if (!token) return "fail";
-  let actor = token.actor;
-  if (!item.system.range.value && !item.system.range.long && item.system.range.units !== "touch") return "normal";
-  if (item.system.target?.type === "self") return "normal";
-  // skip non mwak/rwak/rsak/msak types that do not specify a target type
-  if (!allAttackTypes.includes(item.system.actionType) && !["creature", "ally", "enemy"].includes(item.system.target?.type)) return "normal";
+    if (!token) {
+      if (debugEnabled > 0) warn(`${game.user?.name} no token selected cannot check range`)
+      return {
+        result: "fail",
+        reason: `${game.user?.name} no token selected`,
+      }
+    }
 
-  if (!token) {
-    if (debugEnabled > 0) warn(`${game.user?.name} no token selected cannot check range`)
-    ui.notifications?.warn(`${game.user?.name} no token selected`)
-    return "fail";
-  }
+    let actor = token.actor;
+    if (!item.system.range.value && !item.system.range.long && item.system.range.units !== "touch") return {
+      result: "normal",
+    };
+    if (item.system.target?.type === "self") return {
+      result: "normal",
+    };
+    // skip non mwak/rwak/rsak/msak types that do not specify a target type
+    if (!allAttackTypes.includes(item.system.actionType) && !["creature", "ally", "enemy"].includes(item.system.target?.type)) return {
+      result: "normal",
+    };
 
-  let range = item.system.range?.value || 0;
-  let longRange = item.system.range?.long || 0;
-  if (item.system.range?.units) {
-    switch (item.system.range.units) {
-      case "mi": // miles - assume grid units are feet or miles - ignore furlongs/chains whatever
-        //@ts-ignore
-        if (["feet", "ft"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
-          range *= 5280;
-          longRange *= 5280;
+    let range = item.system.range?.value || 0;
+    let longRange = item.system.range?.long || 0;
+    if (item.system.range?.units) {
+      switch (item.system.range.units) {
+        case "mi": // miles - assume grid units are feet or miles - ignore furlongs/chains whatever
           //@ts-ignore
-        } else if (["yards", "yd", "yds"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
-          range *= 1760;
-          longRange *= 1760;
-        }
-        break;
-      case "km": // kilometeres - assume grid units are meters or kilometers
-        //@ts-ignore
-        if (["meter", "m", "meters", "metre", "metres"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
-          range *= 1000;
-          longRange *= 1000;
-        }
-        break;
-      // "none" "self" "ft" "m" "any" "spec":
-      default:
-        break;
+          if (["feet", "ft"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
+            range *= 5280;
+            longRange *= 5280;
+            //@ts-ignore
+          } else if (["yards", "yd", "yds"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
+            range *= 1760;
+            longRange *= 1760;
+          }
+          break;
+        case "km": // kilometeres - assume grid units are meters or kilometers
+          //@ts-ignore
+          if (["meter", "m", "meters", "metre", "metres"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
+            range *= 1000;
+            longRange *= 1000;
+          }
+          break;
+        // "none" "self" "ft" "m" "any" "spec":
+        default:
+          break;
+      }
     }
-  }
-  if (getProperty(actor, "flags.midi-qol.sharpShooter") && range < longRange) range = longRange;
-  if (item.system.actionType === "rsak" && getProperty(actor, "flags.dnd5e.spellSniper")) {
-    range = 2 * range;
-    longRange = 2 * longRange;
-  }
-  if (item.system.range.units === "touch") {
-    range = canvas?.dimensions?.distance ?? 5;
-    longRange = 0;
-  }
-  if (["mwak", "msak", "mpak"].includes(item.system.actionType) && !item.system.properties?.thr) longRange = 0;
-  for (let target of targets) {
-    if (target === token) continue;
-    // check the range
-    const distance = getDistance(token, target, configSettings.optionalRules.wallsBlockRange);
+    if (getProperty(actor, "flags.midi-qol.sharpShooter") && range < longRange) range = longRange;
+    if (item.system.actionType === "rsak" && getProperty(actor, "flags.dnd5e.spellSniper")) {
+      range = 2 * range;
+      longRange = 2 * longRange;
+    }
+    if (item.system.range.units === "touch") {
+      range = canvas?.dimensions?.distance ?? 5;
+      longRange = 0;
+    }
+    if (["mwak", "msak", "mpak"].includes(item.system.actionType) && !item.system.properties?.thr) longRange = 0;
+    for (let target of targets) {
+      if (target === token) continue;
+      // check the range
+      const distance = getDistance(token, target, configSettings.optionalRules.wallsBlockRange);
 
-    if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
-      log(`${target.name} is too far ${distance} from your character you cannot hit`)
-      ui.notifications?.warn(`${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`)
-      return "fail";
+      if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
+        log(`${target.name} is too far ${distance} from your character you cannot hit`)
+        return {
+          result: "fail",
+          reason: `${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`,
+        }
+      }
+      if (distance > range) return {
+        result: "dis",
+        reason: `${actor.name}'s target is ${Math.round(distance * 10) / 10} away and your range is only ${longRange || range}`,
+      }
+      if (distance < 0) {
+        log(`${target.name} is blocked by a wall`)
+        return {
+          result: "fail",
+          reason: `${actor.name}'s target is blocked by a wall`,
+        }
+      }
     }
-    if (distance > range) return "dis";
-    if (distance < 0) {
-      log(`${target.name} is blocked by a wall`)
-      ui.notifications?.warn(`${actor.name}'s target is blocked by a wall`)
-      return "fail";
+    return {
+      result: "normal",
     }
   }
-  return "normal";
+
+  let attackingToken = tokenIn;
+  if (!canvas || !canvas.tokens) return {
+    result: "fail",
+    attackingToken: tokenIn,
+  }
+
+  const ownedTokens = canvas.tokens.ownedTokens;
+  // Initial Check
+  // Now we loop through all owned tokens
+  let possibleAttackers: Set<Token> = targetsIn
+    // We filter out the token that is currently attacking
+    .filter(t => t.id !== tokenIn.id)
+    // We filter out tokens that are not owned by the current user
+    .filter(t => ownedTokens.some(ot => ot.id === t.id))
+    // Only allow tokens that have the flag flags.midi-qol.rangeOverride.attack.... set
+    .filter(t =>
+      t.actor?.getFlag("midi-qol", `rangeOverride.attack.${itemIn.system.actionType}`) === tokenIn.actor?.getFlag("midi-qol", `rangeOverride.attack.${itemIn.system.actionType}`)
+    );
+
+  // If we have only one token left, set that as the attacking token
+  if (possibleAttackers.size === 1) {
+    // Only one token can attack this token
+    attackingToken = possibleAttackers.values().next().value;
+    // And remove it from the targets
+    targetsIn = targetsIn.filter(t => t.id !== attackingToken.id);
+  } else if (possibleAttackers.size > 1) {
+    // Not allowed
+    ui.notifications?.warn(`You cannot attack ${tokenIn.name} with ${itemIn.name} because you have multiple tokens that can attack it`);
+    return { result: "fail" };
+  }
+
+  const { result, reason } = checkRangeFunction(itemIn, attackingToken, targetsIn);
+  if (result === "fail" && reason) {
+    ui.notifications?.warn(reason);
+  }
+  return { result, attackingToken }
 }
 
 function getLevelsAutoCoverOptions(): any {

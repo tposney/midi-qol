@@ -420,10 +420,20 @@ export class Workflow {
       case WORKFLOWSTATES.VALIDATEROLL:
         // do pre roll checks
         if (checkMechanic("checkRange") && !this.AoO && this.tokenId) {
-          switch (checkRange(this.item, canvas?.tokens?.get(this.tokenId), this.targets)) {
+          const { result, attackingToken } = checkRange(this.item, canvas?.tokens?.get(this.tokenId), this.targets);
+          switch (result) {
             case "fail": return this.next(WORKFLOWSTATES.ROLLFINISHED);
             case "dis": this.disadvantage = true;
               this.attackAdvAttribution["DIS:range"] = true;
+          }
+          if (attackingToken && attackingToken !== this.tokenId) {
+            // Remove the attacking token from the targets
+            this.targets.forEach(t => {
+              if (t === attackingToken) {
+                //@ts-ignore
+                t.setTarget(false, { releaseOthers: false });
+              }
+            });
           }
         }
         if (checkMechanic("incapacitated") && checkIncapacitated(this.actor, this.item, null)) return this.next(WORKFLOWSTATES.ROLLFINISHED);
