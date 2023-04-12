@@ -1120,11 +1120,12 @@ export class Workflow {
       let nearbyFoe;
       // special case check for thrown weapons within 5 feet, treat as a melee attack - (players will forget to set the property)
       if (this.item.system.properties?.thr) {
-        const firstTarget: Token = this.targets.values().next().value;
+        //@ts-expect-error
+        const firstTarget: Token = this.targets.first();
         const me = canvas?.tokens?.get(this.tokenId);
         if (firstTarget && me && getDistance(me, firstTarget, false) <= configSettings.optionalRules.nearbyFoe) nearbyFoe = false;
-        else nearbyFoe = checkNearby(-1, canvas?.tokens?.get(this.tokenId), configSettings.optionalRules.nearbyFoe);
-      } else nearbyFoe = checkNearby(-1, canvas?.tokens?.get(this.tokenId), configSettings.optionalRules.nearbyFoe);
+        else nearbyFoe = checkNearby(-1, canvas?.tokens?.get(this.tokenId), configSettings.optionalRules.nearbyFoe, {includeIncapacitated: false, canSee: true});
+      } else nearbyFoe = checkNearby(-1, canvas?.tokens?.get(this.tokenId), configSettings.optionalRules.nearbyFoe, {includeIncapacitated: false, canSee: true});
       if (nearbyFoe) {
         log(`Ranged attack by ${this.actor.name} at disadvantage due to nearby foe`);
         if (debugEnabled > 0) warn(`Ranged attack by ${this.actor.name} at disadvantage due to nearby foe`);
@@ -1251,7 +1252,8 @@ export class Workflow {
     if (!this.item) return;
     if (!this.targets?.size) return;
     const actionType = this.item?.system.actionType;
-    const firstTarget = this.targets.values().next().value;
+    //@ts-expect-error
+    const firstTarget = this.targets.first();
     if (checkRule("nearbyAllyRanged") > 0 && ["rwak", "rsak", "rpak"].includes(actionType)) {
       if ((firstTarget.document ?? firstTarget).width * (firstTarget.document ?? firstTarget).height < Number(checkRule("nearbyAllyRanged"))) {
         //TODO change this to TokenDocument
@@ -1338,6 +1340,13 @@ export class Workflow {
           actorOnUseMacros?.getMacros("preApplyTargetDamage"),
           "OnUse",
           "preApplyTargetDamage",
+          { actor: target.actor, token: target });
+      }
+      if (this.saveItem?.hasSave && triggerList.includes("preTargetSave") && this.saves.has(target)) {
+        await this.callMacros(this.item,
+          actorOnUseMacros?.getMacros("preTargetSave"),
+          "OnUse",
+          "preTargetSave",
           { actor: target.actor, token: target });
       }
 

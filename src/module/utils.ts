@@ -2160,10 +2160,11 @@ export async function setConcentrationData(actor, concentrationData: Concentrati
  * @param {number|null} disposition. same(1), opposite(-1), neutral(0), ignore(null) token disposition
  * @param {Token} token The token to search around
  * @param {number} distance in game units to consider near
+ * @param {options} canSee can potential target see the token, includeIcapacitated: boolean count incapacitated tokens
  */
 
 
-export function findNearby(disposition: number | null, token: any /*Token | undefined */, distance: number, options: { maxSize: number | undefined, includeIncapacitated: boolean | undefined } = { maxSize: undefined, includeIncapacitated: false }): Token[] {
+export function findNearby(disposition: number | null, token: any /*Token | undefined */, distance: number, options: { maxSize: number | undefined, includeIncapacitated: boolean | undefined, canSee: boolean | undefined} = { maxSize: undefined, includeIncapacitated: false, canSee: false }): Token[] {
   if (!token) return [];
   if (typeof token === "string") token = MQfromUuid(token).object;
   if (!(token instanceof Token)) { throw new Error("find nearby token is not of type token or the token uuid is invalid") };
@@ -2173,21 +2174,24 @@ export function findNearby(disposition: number | null, token: any /*Token | unde
   let nearby = canvas.tokens?.placeables.filter(t => {
     //@ts-ignore .height .width v10
     if (options.maxSize && t.document.height * t.document.width > options.maxSize) return false;
+    if (t.actor && checkIncapacitated && checkIncapacitated(t.actor, undefined, undefined)) return false;
+    let inRange = false;
     if (t.actor &&
       t.id !== token.id && // not the token
-      //@ts-ignore attributes
-      (options.includeIncapacitated || (t.actor.system.attributes?.hp?.value > 0)) && // not incapacitated
       //@ts-ignore .disposition v10      
       (disposition === null || t.document.disposition === targetDisposition)) {
       const tokenDistance = getDistance(t, token, true);
-      return 0 <= tokenDistance && tokenDistance <= distance
-    } else return false;
+      inRange = 0 <= tokenDistance && tokenDistance <= distance
+    } else return false; // wrong disposition
+    if (inRange && options.canSee && !canSense(t, token)) return false; // Only do the canSee check if the token is inRange
+    return inRange;
+
   });
   return nearby ?? [];
 }
 
-export function checkNearby(disposition: number | null, token: Token | undefined, distance: number): boolean {
-  return findNearby(disposition, token, distance).length !== 0;
+export function checkNearby(disposition: number | null, token: Token | undefined, distance: number, options: any = {}): boolean {
+  return findNearby(disposition, token, distance, options).length !== 0;
 }
 
 export function hasCondition(token, condition: string) {
