@@ -594,10 +594,13 @@ function setupMidiFlags() {
     });
     midiFlags.push(`flags.midi-qol.DR.all`);
     midiFlags.push(`flags.midi-qol.DR.non-magical`);
+    midiFlags.push(`flags.midi-qol.DR.non-magical-physical`);
     midiFlags.push(`flags.midi-qol.DR.non-silver`);
     midiFlags.push(`flags.midi-qol.DR.non-adamant`);
     midiFlags.push(`flags.midi-qol.DR.non-physical`);
     midiFlags.push(`flags.midi-qol.DR.final`);
+    midiFlags.push(`flags.midi-qol.damage.reroll-kh`);
+    midiFlags.push(`flags.midi-qol.damage.reroll-kl`);
 
     Object.keys(config.damageResistanceTypes).forEach(dt => {
       midiFlags.push(`flags.midi-qol.DR.${dt}`);

@@ -131,7 +131,7 @@ export async function _canSense(data: {tokenUuid, targetUuid}) {
 export async function _gmOverTimeEffect(data:{ actorUuid, effectUuid, startTurn, options}) {
   const actor = MQfromActorUuid(data.actorUuid);
   const effect = MQfromUuid(data.effectUuid)
-  console.log("Called _gmOvertime", actor.name, effect.label)
+  console.log("Called _gmOvertime", actor.name, effect.name ?? effect.label)
   return await gmOverTimeEffect(actor, effect, data.startTurn, data.options)
 }
 

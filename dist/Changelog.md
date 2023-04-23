@@ -1,3 +1,23 @@
+### 10.0.37
+* Nearby foe rule now does not include incapacitated foes and checks to see that the foe can see the target.
+* Some cleanup of using ammunition with saving throws (use the ammo name for the save). If both the original item and ammo have other damage rolls/saving throws the ammo item will be used for saving throw type/dc and other damage roll.
+* Typo fix for template placing - thanks @elwin
+* Checks for tokens being incapacitated now will check for the CE condition incapacitated and core/CE stunned condition as well.
+* Additional option for overTime effects allowIncapacitated=true|false. If true overtime effect will still be processed for incapacitated actors. Useful for effects that allow a saving throw to remove a condition, e.g. power word stun.
+* Added Power Word Stun to midi sample items compendium.
+* Added Darkvision 60ft as an example of how to use ATL effects.
+* Added two versions of goggles of night, one that follows RAW and one that uses light amplification mode since it looks very cool. Equipping the item causes the effects to be applied, unequipping removes them.
+* target macros are now awaited. Thanks @Elwin
+* If the only damage type done on an attack is "none" do not display an apply damage card. Thanks @Elwin
+* Removed midi-qol item delete check support, since it is now covered by dnd5e/core and caused a compatibility issue when deleting classes.
+* Rewrite of midi dice so nice support. Midi will now display a dice so nice 3d dice whenever it is rolled and display subsequent dice as required. So if you roll and attack roll the d20 will be immediately displayed (unless hidden by gm settings) and then any optional bonus dice will be rolled when the optional bonus is used. The final formula will include the optional bonus. This removes the case where optional bonuses would cause the d20 to be rolled again with the same value.
+* Fixed a bug with optional bonuses which reroll the d20 not triggering criticals/funmbles.
+* Fixed a bug with reactions from magic item spells.
+ * if midi is checking the special duration (all of the isXXXX special durations), the first effect that triggers will cause all subsequently applied effects to trigger as well (no matter what there special duration is). 
+* New flags.midi-qol.damage.reroll-kh, flags.midi-qol.damage.reroll-kl which will roll damage and otherFormula (if required) twice and keep the highest/lowest of the two rolls.
+* First steps for v11 compatibility. Informal tests suggest that it more or less works but is NOT ready for prime time.
+
+
 ### 10.0.36
 * Change so that neutral tokens NEVER contribute to flanking/flanked condition checking or get the flanking status. If you 
 want a token to contribute to flanking you must set it to be hostile to the target token.

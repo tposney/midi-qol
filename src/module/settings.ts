@@ -8,7 +8,6 @@ import { configureDamageRollDialog } from "./patching.js";
 
 export var itemRollButtons: boolean;
 export var criticalDamage: string;
-export var itemDeleteCheck: boolean;
 export var nsaFlag: boolean;
 export var coloredBorders: string;
 export var saveRequests = {};
@@ -177,7 +176,6 @@ export function collectSettingData() {
     midiSoundSettings,
     itemRollButtons,
     criticalDamage,
-    itemDeleteCheck,
     nsaFlag,
     coloredBorders,
     addChatDamageButtons,
@@ -253,7 +251,6 @@ export async function importSettingsFromJSON(json) {
   game.settings.set("midi-qol", "ConfigSettings", json.configSettings);
   game.settings.set("midi-qol", "ItemRollButtons", json.itemRollButtons);
   game.settings.set("midi-qol", "CriticalDamage", json.criticalDamage);
-  game.settings.set("midi-qol", "ItemDeleteCheck", json.itemDeleteCheck);
   game.settings.set("midi-qol", "showGM", json.nsaFlag);
   game.settings.set("midi-qol", "ColoredBorders", json.coloredBorders);
   game.settings.set("midi-qol", "AddChatDamageButtons", json.addChatDamageButtons);
@@ -397,7 +394,6 @@ export let fetchParams = () => {
   
   criticalDamage = String(game.settings.get("midi-qol", "CriticalDamage"));
   if (criticalDamage === "none") criticalDamage = "default";
-  itemDeleteCheck = Boolean(game.settings.get("midi-qol", "ItemDeleteCheck"));
   nsaFlag = Boolean(game.settings.get("midi-qol", "showGM"));
   coloredBorders = String(game.settings.get("midi-qol", "ColoredBorders"));
   itemRollButtons = Boolean(game.settings.get("midi-qol", "ItemRollButtons"));
@@ -446,15 +442,6 @@ const settings = [
     scope: "world",
     default: true,
     type: Boolean,
-    onChange: fetchParams
-  },
-  {
-    name: "ItemDeleteCheck",
-    scope: "client",
-    default: true,
-    type: Boolean,
-    choices: [],
-    config:true,
     onChange: fetchParams
   },
   {

@@ -234,7 +234,7 @@ If you have speed item rolls enabled **Caps-Lock** behaves as if advantage & dis
 If you assign a key multiple meanings the behaviour is going to be confusing at best.
 
 ## Display
-* **Card styles** Midi-qol supports two options for item/attack/damage/save rolls. The Merge card combines all of those rolls into a single card. If Merge card is disabled you will get a separate chat card for each roll, which is the default dnd5e look and feel. The condensed Merge card simply puts attack and damage next to each other to conserve a bit more space. The merge card is recommended.
+* **Card styles** Midi-qol supports two options for item/attack/damage/save rolls. The Merge card combines all of those rolls into a single card. If Merge card is disabled you will get a separate chat card for each roll, which is the default dnd5e look and feel. The condensed Merge card simply puts attack and damage next to each other to conserve a bit less space. The merge card is recommended.
 * **Show Item details in chat card**. You can configure whether the item details are included in the chat card. If disabled, the item description is not added to the card, you can configure which items have the info displayed. If enabled, you can use the dnd5e setting to choose if it is expanded or hidden when displayed. 
 * **Chat cards use token names**. If the field is blank actual actor/token names will be used in the chat card, hits/saves display for non-GMs. If set to a string the actual names will be replaced in the chat cards with the string. This feature is not a replacement for Combat Utility Belts hide names feature, rather it addresses those fields that CUB does not know about. For full hiding of names on cards and the tracker you need to use CUB in conjunction with midi-qol.
 * **Chat cards use token name** By default chat cards are sent with the name of the actor (i.e. "Orc"). If enabled, the name of the token will be used instead (i.e. "Orc with a terrible limp").
@@ -753,6 +753,7 @@ flags.midi-qol.OverTime OVERRIDE specification
 ```
 where specification is a comma separated list of fields.
   * turn=start/end (check at the start or end of the actor's turn) The only required field.
+  * allowIncapacitated = true | false. If true allow the item roll even if the token with the effect is incapacitated, useful for things like power word stun.
   * applyCondition=expression, if present must evaluate to true or rest of the processing will be aborted.
   e.g. applyCondition=@attributes.hp.value > 0 - for regeneration.
   * removeCondition=expression, if present and evaluates to true the effect is removed after the rest of the processing.

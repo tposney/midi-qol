@@ -1,4 +1,4 @@
-import { configSettings, itemDeleteCheck, itemRollButtons } from "./settings.js";
+import { configSettings, itemRollButtons } from "./settings.js";
 import { i18n, debug, log, warn, debugEnabled } from "../midi-qol.js";
 import { showItemInfo } from "./itemhandling.js";
 import { itemHasDamage, itemIsVersatile } from "./utils.js";
@@ -34,11 +34,7 @@ let enableSheetQOL = (app, html, data) => {
   // find out how to reinstate the original handler later.
   const defaultTag = ".item .item-image";
   //Add a check for item deletion
-  if (itemDeleteCheck) {
-    // remove current handler - this is a bit clunky since it results in a case with no delete handler
-    $(html).find(".item-delete").off("click");
-    html.find(".item-delete").click({ app, data: data }, itemDeleteHandler);
-  }
+
   let rollTag = knownSheets[app.constructor.name] ? knownSheets[app.constructor.name] : defaultTag;
   if (itemRollButtons) {
     if (["Tidy5eSheet", "Tidy5eNPC"].includes(app.constructor.name)) {
@@ -56,7 +52,7 @@ let enableSheetQOL = (app, html, data) => {
   }
   if (configSettings.allowActorUseMacro) {
     // Add actor macros
-    html.find('.config-button[data-action="flags"').parent().parent().append(`<div class="form-fields">
+    html.find('.config-button[data-action="flags').parent().parent().append(`<div class="form-fields">
       <label>${i18n("midi-qol.ActorOnUseMacros")}</label>
       <a class="config-button midiqol-onuse-macros" data-action="midi-onuse-macros" title="midi onuse macros">
         <i class="fas fa-cog"></i>
@@ -67,31 +63,6 @@ let enableSheetQOL = (app, html, data) => {
     });
   }
   return true;
-};
-let itemDeleteHandler = ev => {
-  let actor = game.actors?.get(ev.data.data.actor._id);
-  let d = new Dialog({
-    // localize this text
-    title: i18n("midi-qol.reallyDelete"),
-    content: `<p>${i18n("midi-qol.sure")}</p>`,
-    buttons: {
-      delete: {
-        icon: '<i class="fas fa-check"></i>',
-        label: "Delete",
-        callback: () => {
-          let li = $(ev.currentTarget).parents(".item"), itemId = li.attr("data-item-id");
-          ev.data.app.object.deleteEmbeddedDocuments("Item", [itemId]);
-        }
-      },
-      cancel: {
-        icon: '<i class="fas fa-times"></i>',
-        label: "Cancel",
-        callback: () => { }
-      }
-    },
-    default: "cancel"
-  });
-  d.render(true);
 };
 
 function addItemSheetButtons(app, html, data, triggeringElement = "", buttonContainer = "") {

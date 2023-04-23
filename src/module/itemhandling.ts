@@ -1,7 +1,7 @@
 import { warn, debug, error, i18n, MESSAGETYPES, i18nFormat, gameStats, debugEnabled, log, debugCallTiming, allAttackTypes } from "../midi-qol.js";
 import { BetterRollsWorkflow, DummyWorkflow, TrapWorkflow, Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { configSettings, enableWorkflow, checkRule, checkMechanic } from "./settings.js";
-import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG, evalActivationCondition, createDamageList, getDamageType, getDamageFlavor, completeItemUse, hasDAE, tokenForActor, getRemoveAttackButtons, doReactions } from "./utils.js";
+import { checkRange, computeTemplateShapeDistance, getAutoRollAttack, getAutoRollDamage, getConcentrationEffect, getLateTargeting, getRemoveDamageButtons, getSelfTargetSet, getSpeaker, getUnitDist, isAutoConsumeResource, itemHasDamage, itemIsVersatile, processAttackRollBonusFlags, processDamageRollBonusFlags, validTargetTokens, isInCombat, setReactionUsed, hasUsedReaction, checkIncapacitated, needsReactionCheck, needsBonusActionCheck, setBonusActionUsed, hasUsedBonusAction, asyncHooksCall, addAdvAttribution, getSystemCONFIG, evalActivationCondition, createDamageList, getDamageType, getDamageFlavor, completeItemUse, hasDAE, tokenForActor, getRemoveAttackButtons, doReactions, displayDSNForRoll } from "./utils.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
@@ -10,6 +10,7 @@ import { defaultRollOptions } from "./patching.js";
 export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
   const pressedKeys = duplicate(globalThis.MidiKeyManager.pressedKeys);
 
+  let tokenToUse;
   //  if (configSettings.mergeCard && (configSettings.attackPerTarget === true || options.workflowOptions?.attackPerTarget === true) && this.hasAttack && options?.singleTarget !== true && game?.user?.targets) {
   if ((configSettings.attackPerTarget === true || options.workflowOptions?.attackPerTarget === true)
     && this.hasAttack
@@ -53,7 +54,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
     return await wrapped(config, options);
   }
 
-  if (checkMechanic("incapacitated") && checkIncapacitated(this.actor, this, null)) {
+  if (!options.workflowOptions.allowIncapacitated && checkMechanic("incapacitated") && checkIncapacitated(this.actor, this, null)) {
     ui.notifications?.warn(`${this.actor.name} is incapacitated`)
     return;
   }
@@ -153,8 +154,11 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
 
   // do pre roll checks
   if (checkRule("checkRange") && !isAoESpell && !isRangeSpell && !AoO && speaker.token) {
-    if (speaker.token && checkRange(this, canvas?.tokens?.get(speaker.token), myTargets).result === "fail")
+    tokenToUse = canvas?.tokens?.get(speaker.token)
+    const { result, attackingToken } = checkRange(this, tokenToUse, myTargets)
+    if (speaker.token && result === "fail")
       return null;
+    else tokenToUse = attackingToken;
   }
   if ((game.system.id === "dnd5e" || game.system.id === "n5e") && requiresTargets && myTargets && myTargets.size > allowedTargets) {
     ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
@@ -226,6 +230,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
   workflow.AoO = AoO;
   workflow.config = config;
   workflow.options = options;
+  workflow.attackingToken = tokenToUse;
   workflow.castData = {
     baseLevel: this.system.level,
     castLevel: workflow.itemLevel,
@@ -385,7 +390,7 @@ export async function doAttackRoll(wrapped, options: any = { versatile: false, r
   }
   for (let targetToken of workflow.targets) {
     //@ts-expect-error targetToken Type
-     const result = await doReactions(targetToken, workflow.tokenUuid, null, "reactionpreattack", { item: this.item, workflow, workflowOptions: mergeObject(workflow.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true }) });
+    const result = await doReactions(targetToken, workflow.tokenUuid, null, "reactionpreattack", { item: this.item, workflow, workflowOptions: mergeObject(workflow.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true }) });
     if (result?.name) {
       targetToken.actor?.prepareData(); // allow for any items applied to the actor - like shield spell
     }
@@ -456,7 +461,8 @@ export async function doAttackRoll(wrapped, options: any = { versatile: false, r
     wrappedOptions.critical = this.getCriticalThreshold();
   if (wrappedOptions.fumble === true || wrappedOptions.fumble === false)
     delete wrappedOptions.fumble;
-  
+
+  wrappedOptions.chatMessage = false;
   let result: Roll = await wrapped(
     wrappedOptions,
     // dialogOptions: { default: defaultOption } TODO Enable this when supported in core
@@ -479,39 +485,11 @@ export async function doAttackRoll(wrapped, options: any = { versatile: false, r
     result = await result.reroll({ minimize: true })
   await workflow.setAttackRoll(result);
   workflow.ammo = this._ammo;
-  if (workflow.workflowOptions.attackRollDSN === undefined && dice3dEnabled()) {
-    workflow.workflowOptions.attackRollDSN =
-      configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)
-      && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"));
-  }
-  if (dice3dEnabled() && workflow.workflowOptions.attackRollDSN) {
-    let whisperIds: User[] | null = null;
-    const rollMode = game.settings.get("core", "rollMode");
-    if ((["details", "hitDamage", "all"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
-      if (configSettings.ghostRolls) {
-        //@ts-expect-error ghost
-        workflow.attackRoll.ghost = true;
-      } else {
-        whisperIds = ChatMessage.getWhisperRecipients("GM")
-      }
-    } else if (rollMode === "selfroll" || rollMode === "gmroll") {
-      if (configSettings.hideRollDetails === "detailsDSN") {
-        //@ts-expect-error ghost
-        workflow.attackRoll.ghost = true;
-      } else {
-        whisperIds = ChatMessage.getWhisperRecipients("GM");
-        if (game.user) whisperIds.concat(game.user);
-      }
-    }
 
-    //@ts-expect-error game.dice3d
-    await game.dice3d?.showForRoll(workflow.attackRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
-  }
+  await displayDSNForRoll(result, "attackRollD20");
 
   result = await processAttackRollBonusFlags.bind(workflow)();
-  if (!configSettings.mergeCard) result.toMessage({
-    speaker: getSpeaker(this.actor)
-  });
+
   if (configSettings.keepRollStats) {
     const terms = result.terms;
     const rawRoll = Number(terms[0].total);
@@ -615,6 +593,7 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
   const wrappedRollStart = Date.now();
   workflow.damageRollCount += 1;
   let result: Roll;
+  let result2: Roll;
   if (!workflow.rollOptions.other) {
     const damageRollOptions = mergeObject(options, {
       fastForward: workflow.rollOptions.fastForwardDamage || workflow.workflowOptions.autoFastDamage,
@@ -630,15 +609,19 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
       options: damageRollOptions
     };
     result = await wrapped(damageRollData);
+    if (getProperty(this.parent, "flags.midi-qol.damage.advantage")) result2 = await wrapped(damageRollData)
+
     if (debugCallTiming) log(`wrapped item.rollDamage():  elapsed ${Date.now() - wrappedRollStart}ms`);
   } else { // roll other damage instead of main damage.
     //@ts-ignore
     result = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: workflow.rollOptions.critical || workflow.isCritical });
     result = await result?.evaluate({ async: true });
   }
+
   if (!result) { // user backed out of damage roll or roll failed
     return;
   }
+
   const firstTarget = workflow.targets?.values().next().value?.actor;
   const targetMaxFlags = getProperty(firstTarget, "flags.midi-qol.grants.max.damage");
   const maxFlags = getProperty(workflow.actor.flags, "midi-qol.max") ?? {};
@@ -652,26 +635,67 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
     needsMaxDamage = false;
     needsMinDamage = false;
   }
+
+  let actionFlavor;
+  switch (game.system.id) {
+    case "sw5e":
+      actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "SW5E.Healing" : "SW5E.DamageRoll");
+      break;
+    case "n5e":
+      actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "N5E.Healing" : "N5E.DamageRoll");
+      break;
+    case "dnd5e":
+    default:
+      actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
+  }
+
+  const title = `${this.name} - ${actionFlavor}`;
+  const speaker = getSpeaker(this.actor);
+  let messageData = mergeObject({
+    title,
+    flavor: this.labels.damageTypes.length ? `${title} (${this.labels.damageTypes})` : title,
+    speaker,
+  }, { "flags.dnd5e.roll": { type: "damage", itemId: this.id } });
+  if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll", { type: "damage", itemId: this.id })
   if (needsMaxDamage)
     result = await new Roll(result.formula).roll({ maximize: true });
-  if (needsMinDamage)
+  else if (needsMinDamage)
     result = await new Roll(result.formula).roll({ minimize: true });
-  // I don't like the default display and it does not look good for dice so nice - fiddle the results for maximised rolls
-  for (let term of result.terms) {
-    if (term instanceof Die && term.modifiers.includes(`min${term.faces}`)) {
-      for (let result of term.results) {
-        result.result = term.faces;
+  else if (getProperty(this.parent, "flags.midi-qol.damage.reroll-kh") || getProperty(this.parent, "flags.midi-qol.damage.reroll-kl")) {
+    result2 = await result.reroll({ async: true });
+    if (result2?.total && result?.total) {
+      if ((getProperty(this.parent, "flags.midi-qol.damage.reroll-kh") && (result2?.total > result?.total)) ||
+        (getProperty(this.parent, "flags.midi-qol.damage.reroll-kl") && (result2?.total < result?.total))) {
+        [result, result2] = [result2, result];
       }
+      // display roll not being used.
+      await displayDSNForRoll(result2, "damageRoll");
+      await result2.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
     }
   }
-  if (this.system.actionType === "heal" && !Object.keys(getSystemCONFIG().healingTypes).includes(workflow.defaultDamageType ?? "")) workflow.defaultDamageType = "healing";
-  if (configSettings.mergeCard)
-    workflow.damageDetail = createDamageList({ roll: result, item: this, ammo: workflow.ammo, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType });
-  await workflow.setDamageRoll(result);
+  if (result?.total) {
+    for (let term of result.terms) {
+      // I don't like the default display and it does not look good for dice so nice - fiddle the results for maximised rolls
+      if (term instanceof Die && term.modifiers.includes(`min${term.faces}`)) {
+        for (let result of term.results) {
+          result.result = term.faces;
+        }
+      }
+    }
 
-  result = await processDamageRollBonusFlags.bind(workflow)();
+    if (this.system.actionType === "heal" && !Object.keys(getSystemCONFIG().healingTypes).includes(workflow.defaultDamageType ?? "")) workflow.defaultDamageType = "healing";
+
+    workflow.damageDetail = createDamageList({ roll: result, item: this, ammo: workflow.ammo, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType });
+    await workflow.setDamageRoll(result);
+    await displayDSNForRoll(result, "damageRoll");
+    result = await processDamageRollBonusFlags.bind(workflow)();
+    await workflow.setDamageRoll(result);
+    if (!configSettings.mergeCard) await result.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
+  }
   // await workflow.setDamageRoll(result);
   let otherResult: Roll | undefined = undefined;
+  let otherResult2: Roll | undefined = undefined;
+
   workflow.shouldRollOtherDamage = shouldRollOtherDamage.bind(this)(workflow, configSettings.rollOtherDamage, configSettings.rollOtherSpellDamage);
   if (workflow.shouldRollOtherDamage) {
     const otherRollOptions: any = {};
@@ -682,108 +706,71 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
     otherRollOptions.critical = (this.flags.midiProperties?.critOther ?? false) && (workflow.isCritical || workflow.rollOptions.critical);
     if ((workflow.otherDamageFormula ?? "") !== "") { // other damage formula swaps in versatile if needed
       //@ts-ignore
-      const otherRoll = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), otherRollOptions);
-      otherResult = await otherRoll?.evaluate({ async: true, maximize: needsMaxDamage, minimize: needsMinDamage });
-    }
-  }
-  if (!configSettings.mergeCard) {
-    let actionFlavor;
-    switch (game.system.id) {
-      case "sw5e":
-        actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "SW5E.Healing" : "SW5E.DamageRoll");
-        break;
-      case "n5e":
-        actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "N5E.Healing" : "N5E.DamageRoll");
-        break;
-      case "dnd5e":
-      default:
-        actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
-    }
-
-    const title = `${this.name} - ${actionFlavor}`;
-    const speaker = getSpeaker(this.actor);
-    let messageData = mergeObject({
-      title,
-      flavor: this.labels.damageTypes.length ? `${title} (${this.labels.damageTypes})` : title,
-      speaker,
-    }, { "flags.dnd5e.roll": { type: "damage", itemId: this.id } });
-    if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll", { type: "damage", itemId: this.id })
-    result.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
-    workflow.damageDetail = createDamageList({ roll: result, item: this, ammo: workflow.ammo, versatile: workflow.rollOptions.versatile, defaultType: workflow.defaultDamageType });
-    workflow.setDamageRoll(result);
-
-    if (otherResult) {
-      for (let term of result.terms) { // put back the damage
-        if (term.options?.flavor) {
-          term.options.flavor = getDamageFlavor(term.options.flavor);
+      let otherRollResult = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), otherRollOptions);
+      otherResult = await otherRollResult?.evaluate({ async: true, maximize: needsMaxDamage, minimize: needsMinDamage });
+      if (otherResult?.total) {
+        switch (game.system.id) {
+          case "sw5e":
+            actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "SW5E.Healing" : "SW5E.OtherFormula");
+            break;
+          case "n5e":
+            actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "N5E.Healing" : "N5E.OtherFormula");
+            break;
+          case "dnd5e":
+          default:
+            actionFlavor = game.i18n.localize(this.system.actionType === "heal" ? "DND5E.Healing" : "DND5E.OtherFormula");
         }
-      }
-      messageData = mergeObject({
-        title,
-        flavor: title,
-        speaker,
-      }, { "flags.dnd5e.roll": { type: "other", itemId: this.id } });
-      if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll", { type: "other", itemId: this.id })
-      otherResult.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") })
-    }
-  }
+        const title = `${this.name} - ${actionFlavor}`;
 
-  if (workflow.workflowOptions.damageRollDSN === undefined && dice3dEnabled()) {
-    workflow.workflowOptions.damageRollDSN = configSettings.mergeCard
-      && !(configSettings.gmHide3dDice && game.user?.isGM)
-      && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"))
-  }
-  if (dice3dEnabled() && workflow.workflowOptions.damageRollDSN) {
-    let whisperIds: User[] | null = null;
-    const rollMode = game.settings.get("core", "rollMode");
-    for (let term of result.terms) { // for dsn damage types rather than flavors are required
-      if (term.options?.flavor) {
-        term.options.flavor = getDamageType(term.options.flavor);
-      }
-    }
-    if ((!["none", "detailsDSN"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
-      if (configSettings.ghostRolls) {
-        //@ts-expect-error ghost
-        result.ghost = true;
-        //@ts-ignore
-        if (otherResult) otherResult.ghost = true;
-      } else {
-        whisperIds = ChatMessage.getWhisperRecipients("GM")
-      }
-    } else if (rollMode === "selfroll" || rollMode === "gmroll") {
-      if (configSettings.hideRollDetails === "detailsDSN" && game.user?.isGM && configSettings.ghostRolls) {
-        //@ts-expect-error ghost
-        result.ghost = true;
-        //@ts-expect-error ghost
-        if (otherResult) otherResult.ghost = true;
-      } else {
-        whisperIds = ChatMessage.getWhisperRecipients("GM");
-        if (game.user) whisperIds.concat(game.user);
-      }
-    }
-    //@ts-ignore game.dice3d
-    await game.dice3d?.showForRoll(result, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
-    //@ts-ignore dice3d
-    if (otherResult) {
-      for (let term of otherResult.terms) { // for dsn damage types rather than flavors are required
-        if (term.options?.flavor) {
-          term.options.flavor = getDamageType(term.options.flavor);
+        messageData = mergeObject({
+          title,
+          flavor: title,
+          speaker,
+        }, { "flags.dnd5e.roll": { type: "damage", itemId: this.id } });
+        if (game.system.id === "sw5e") setProperty(messageData, "flags.sw5e.roll", { type: "other", itemId: this.id })
+
+        if (
+          (getProperty(this.parent, "flags.midi-qol.damage.reroll-kh")) ||
+          (getProperty(this.parent, "flags.midi-qol.damage.reroll-kl"))) {
+          otherResult2 = await otherResult.reroll({ async: true });
+
+          if (otherResult2?.total && otherResult?.total) {
+            if ((getProperty(this.parent, "flags.midi-qol.damage.reroll-kh") && (otherResult2?.total > otherResult?.total)) ||
+              (getProperty(this.parent, "flags.midi-qol.damage.reroll-kl") && (otherResult2?.total < otherResult?.total))) {
+                [otherResult, otherResult2] = [otherResult2, otherResult];
+              }
+            // display roll not being used
+            await displayDSNForRoll(otherResult2, "damageRoll");
+            await otherResult2.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
+
+          }
         }
+
+        for (let term of otherResult.terms) {
+          // I don't like the default display and it does not look good for dice so nice - fiddle the results for maximised rolls
+          if (term instanceof Die && term.modifiers.includes(`min${term.faces}`)) {
+            for (let result of term.results) {
+              result.result = term.faces;
+            }
+          }
+          if (term.options?.flavor) {
+            term.options.flavor = getDamageType(term.options.flavor);
+          }
+        }
+
+        workflow.otherDamageDetail = createDamageList({ roll: otherResult, item: null, ammo: null, versatile: false, defaultType: "" });
+        for (let term of otherResult.terms) { // set the damage flavor
+          if (term.options?.flavor) {
+            term.options.flavor = getDamageFlavor(term.options.flavor);
+          }
+        }
+        await displayDSNForRoll(otherResult, "damageRoll");
+        if (!configSettings.mergeCard) await otherResult?.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") })
+        await workflow.setOtherDamageRoll(otherResult);
       }
-      //@ts-ignore game.dice3d
-      await game.dice3d?.showForRoll(otherResult, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
     }
   }
 
-  if (otherResult) {
-    workflow.otherDamageDetail = createDamageList({ roll: otherResult, item: null, ammo: null, versatile: false, defaultType: "" });
-    for (let term of otherResult.terms) { // set the damage flavor
-      if (term.options?.flavor) {
-        term.options.flavor = getDamageFlavor(term.options.flavor);
-      }
-    }
-    await workflow.setOtherDamageRoll(otherResult);
-  }
   workflow.bonusDamageRoll = null;
   workflow.bonusDamageHTML = null;
   if (debugCallTiming) log(`item.rollDamage():  elapsed ${Date.now() - damageRollStart}ms`);
@@ -793,501 +780,19 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
 }
 
 // WIP
-export function preItemUseHook(item, config, options): boolean {
-  let workflow: Workflow;
-
-  if (options.midiSetup) return true;
-  options = mergeObject({
-    systemCard: false,
-    createWorkflow: true,
-    versatile: false,
-    configureDialog: true,
-    createMessage: true,
-    workflowOptions: { lateTargeting: undefined, notReaction: false }
-  }, options);
-  let createWorkflow = options?.createWorkflow ?? true;
-
-  if (!enableWorkflow || createWorkflow === false || options.skipChecks) {
-    return true; // go ahead and do the normal roll
-  }
-
-  if (checkMechanic("incapacitated") && checkIncapacitated(item.actor, item, null)) return false;
-  let checks = async () => {
-    /* revisit this
-    if ((configSettings.attackPerTarget === true || options.workflowOptions?.attackPerTarget === true) && item.hasAttack && options?.singleTarget !== true && game?.user?.targets) {
-      const lateTargetingSetting = getLateTargeting();
-      let lateTargetingSet = lateTargetingSetting === "all" || (lateTargetingSetting === "noTargetsSelected" && game?.user?.targets.size === 0)
-      if (options.woprkflowOptions?.lateTargeting && options.workflowOptions?.lateTargeting !== "none") lateTargetingSet = true;
-      if (game.user.targets.size === 0 && lateTargetingSet) await resolveLateTargeting(item);
-      const targets: Token[] = [];
-      for (let target of game?.user?.targets) targets.push(target);
-      for (let target of targets) {
-        const newOptions = mergeObject(options, { singleTarget: true, targetUuids: [target.document.uuid], workflowOptions: { lateTargeting: false } }, { inplace: false, overwrite: true });
-        await completeItemUse(item, {}, newOptions)
-      }
-      return;
-    }
-    */
-
-    let systemCard = options?.systemCard ?? false;
-    let versatile = options?.versatile ?? false;
-
-    const pressedKeys = deepClone(globalThis.MidiKeyManager.pressedKeys);
-    const isRangeSpell = ["ft", "m"].includes(item.system.target?.units) && ["creature", "ally", "enemy"].includes(item.system.target?.type);
-    const isAoESpell = item.hasAreaTarget;
-    const requiresTargets = configSettings.requiresTargets === "always" || (configSettings.requiresTargets === "combat" && (game.combat ?? null) !== null);
-
-    // Handle late targeting.
-    const lateTargetingSet = getLateTargeting() === "all" || (getLateTargeting() === "noTargetsSelected" && game?.user?.targets.size === 0)
-    const shouldCheckLateTargeting = (allAttackTypes.includes(item.system.actionType) || (item.hasTarget && !item.hasAreaTarget))
-      && ((options.workflowOptions?.lateTargeting ? (options.workflowOptions?.lateTargeting !== "none") : lateTargetingSet));
-
-    if (shouldCheckLateTargeting && !isRangeSpell && !isAoESpell) {
-
-      // normal targeting and auto rolling attack so allow late targeting
-      let canDoLateTargeting = item.system.target.type !== "self";
-
-      //explicit don't do late targeting passed
-      if (options.workflowOptions?.lateTargeting === "none") canDoLateTargeting = false;
-
-      // TODO look at this if AoE spell and not auto targeting need to work out how to deal with template placement
-      if (false && isAoESpell && configSettings.autoTarget === "none")
-        canDoLateTargeting = true;
-
-      // TODO look at this if range spell and not auto targeting
-      const targetDetails = item.system.target;
-      if (false && configSettings.rangeTarget === "none" && ["ft", "m"].includes(targetDetails?.units) && ["creature", "ally", "enemy"].includes(targetDetails?.type))
-        canDoLateTargeting = true;
-      // TODO consider template and range spells when not template targeting?
-
-      if (canDoLateTargeting) {
-        if (!(await resolveLateTargeting(item, workflow, pressedKeys)))
-          return blockRoll(item, workflow);
-      }
-    }
-    const myTargets = game.user?.targets && validTargetTokens(game.user?.targets);
-
-    // Validate that we have enough/not too many targets
-    let shouldAllowRoll = !requiresTargets // we don't care about targets
-      || ((myTargets?.size || 0) > 0) // there are some target selected
-      || (item.system.target?.type === "self") // self target
-      || isAoESpell // area effect spell and we will auto target
-      || isRangeSpell // range target and will autotarget
-      || (!item.hasAttack && !itemHasDamage(item) && !item.hasSave); // does not do anything - need to chck dynamic effects
-
-    // Check we have some targets selected
-    if (requiresTargets && !isRangeSpell && !isAoESpell && item.system.target?.type === "creature" && (myTargets?.size || 0) === 0) {
-      ui.notifications?.warn(i18n("midi-qol.noTargets"));
-      if (debugEnabled > 0) warn(`${game.user?.name} attempted to roll with no targets selected`)
-      return blockRoll(item, workflow);
-    }
-    // only allow weapon attacks against at most the specified number of targets
-    let allowedTargets = (item.system.target?.type === "creature" ? item.system.target?.value : 9999) ?? 9999
-    // make sure we don't have too many targets
-    if ((game.system.id === "dnd5e" || game.system.id === "n5e") && requiresTargets && myTargets && myTargets.size > allowedTargets) {
-      ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
-      if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat("midi-qol.midi-qol.wrongNumberTargets", { allowedTargets })}`)
-      return blockRoll(item, workflow);
-    }
-
-    // Mark reaction used
-    let speaker = getSpeaker(item.actor);
-    const inCombat = isInCombat(item.actor);
-    let AoO = false;
-    let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
-    const isTurn = activeCombatants?.includes(speaker.token);
-    const checkReactionAOO = configSettings.recordAOO === "all" || (configSettings.recordAOO === item.actor.type)
-
-    let itemUsesReaction = false;
-    const hasReaction = await hasUsedReaction(item.actor);
-
-    if (!options.workflowOptions.notReaction && ["reaction", "reactiondamage", "reactionmanual", "reactionpreattack"].includes(item.system.activation?.type) && item.system.activation?.cost > 0) {
-      itemUsesReaction = true;
-    }
-
-    // Record Attack of Opportunity
-    if (!options.workflowOptions.notReaction && checkReactionAOO && !itemUsesReaction && item.hasAttack) {
-      let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
-      const isTurn = activeCombatants?.includes(speaker.token)
-      if (!isTurn && inCombat) {
-        itemUsesReaction = true;
-        AoO = true;
-      }
-    }
-
-    // check range - for Attacks of Opportunity don't check range.
-    if (checkRule("checkRange") && !isAoESpell && !isRangeSpell && !AoO && speaker.token) {
-      if (speaker.token && checkRange(item, canvas?.tokens?.get(speaker.token), myTargets).result === "fail")
-        return blockRoll(item, workflow);
-    }
-
-    // Check VSM components
-    if (item.type === "spell" && shouldAllowRoll) {
-      const midiFlags = item.actor.flags["midi-qol"];
-      const needsVerbal = item.system.components?.vocal;
-      const needsSomatic = item.system.components?.somatic;
-      const needsMaterial = item.system.components?.material;
-
-      //TODO Consider how to disable this check for DamageOnly workflows and trap workflows
-      if (midiFlags?.fail?.spell?.all) {
-        ui.notifications?.warn("You are unable to cast the spell");
-        return blockRoll(item, workflow);
-      }
-      if ((midiFlags?.fail?.spell?.verbal || midiFlags?.fail?.spell?.vocal) && needsVerbal) {
-        ui.notifications?.warn("You make no sound and the spell fails");
-        return blockRoll(item, workflow);
-      }
-      if (midiFlags?.fail?.spell?.somatic && needsSomatic) {
-        ui.notifications?.warn("You can't make the gestures and the spell fails");
-        return blockRoll(item, workflow);
-      }
-      if (midiFlags?.fail?.spell?.material && needsMaterial) {
-        ui.notifications?.warn("You can't use the material component and the spell fails");
-        return blockRoll(item, workflow);
-      }
-    }
-
-    const needsConcentration = item.system.components?.concentration
-      || item.flags.midiProperties?.concentration
-      || item.system.activation?.condition?.toLocaleLowerCase().includes(i18n("midi-qol.concentrationActivationCondition").toLocaleLowerCase());
-    const checkConcentration = configSettings.concentrationAutomation; // installedModules.get("combat-utility-belt") && configSettings.concentrationAutomation;
-    if (needsConcentration && checkConcentration) {
-      const concentrationEffect = getConcentrationEffect(item.actor);
-      if (concentrationEffect) {
-        //@ts-ignore
-        const concentrationEffectName = (concentrationEffect._sourceName && concentrationEffect._sourceName !== "None") ? concentrationEffect._sourceName : "";
-
-        shouldAllowRoll = false;
-        let d = await Dialog.confirm({
-          title: i18n("midi-qol.ActiveConcentrationSpell.Title"),
-          content: i18n(concentrationEffectName ? "midi-qol.ActiveConcentrationSpell.ContentNamed" : "midi-qol.ActiveConcentrationSpell.ContentGeneric").replace("@NAME@", concentrationEffectName),
-          yes: () => { shouldAllowRoll = true },
-        });
-        if (!shouldAllowRoll) return blockRoll(item, workflow); // user aborted spell
-      }
-    }
-
-    if (!shouldAllowRoll) {
-      return blockRoll(item, workflow);
-    }
-
-    const blockReaction = itemUsesReaction && hasReaction && inCombat && needsReactionCheck(item.actor);
-    if (blockReaction) {
-      let shouldRoll = false;
-      let d = await Dialog.confirm({
-        title: i18n("midi-qol.EnforceReactions.Title"),
-        content: i18n("midi-qol.EnforceReactions.Content"),
-        yes: () => { shouldRoll = true },
-      });
-      if (!shouldRoll) return blockRoll(item, workflow);
-      // user aborted roll TODO should the workflow be deleted?
-    }
-
-    // Record bonus action
-    const hasBonusAction = await hasUsedBonusAction(item.actor);
-    let itemUsesBonusAction = ["bonus"].includes(item.system.activation?.type);
-    const blockBonus = inCombat && itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(item.actor);
-    if (blockBonus) {
-      let shouldRoll = false;
-      let d = await Dialog.confirm({
-        title: i18n("midi-qol.EnforceBonusActions.Title"),
-        content: i18n("midi-qol.EnforceBonusActions.Content"),
-        yes: () => { shouldRoll = true },
-      });
-      if (!shouldRoll) return blockRoll(item, workflow); // user aborted roll TODO should the workflow be deleted?
-    }
-
-    const targets = (item?.system.target?.type === "self") ? getSelfTargetSet(item.actor) : myTargets;
-
-    if (installedModules.get("ready-set-roll-5ex")) { // better rolls will handle the item roll
-      if (!item.id) item._id = randomID(); // TOOD check this v10
-      if (needsConcentration && checkConcentration) {
-        const concentrationEffect = getConcentrationEffect(item.actor);
-        if (concentrationEffect) await concentrationEffect.delete();
-      }
-      workflow = new Workflow(item.actor, item, speaker, targets, { event: config.event || options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
-      options.createMessage = true;
-      // const result = await wrapped(config, options);
-      return true;
-    }
-
-    workflow = new Workflow(item.actor, item, speaker, targets, { event: config.event || options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
-    workflow.inCombat = inCombat ?? false;
-    workflow.isTurn = isTurn ?? false;
-    workflow.AoO = AoO;
-    workflow.castData = {
-      baseLevel: this.system.level,
-      castLevel: workflow.itemLevel,
-      itemUuid: workflow.itemUuid
-    };
-    workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile || workflow.isVersatile;
-    // if showing a full card we don't want to auto roll attacks or damage.
-    workflow.noAutoDamage = systemCard;
-    workflow.noAutoAttack = systemCard;
-    const consume = item.system.consume;
-    if (consume?.type === "ammo") {
-      workflow.ammo = item.actor.items.get(consume.target);
-    }
-
-    if (await asyncHooksCall("midi-qol.preItemRoll", workflow) === false || await asyncHooksCall(`midi-qol.preItemRoll.${item.uuid}`, workflow) === false) {
-      console.warn("midi-qol | attack roll blocked by preItemRoll hook");
-      return workflow.next(WORKFLOWSTATES.ROLLFINISHED)
-      // Workflow.removeWorkflow(workflow.id);
-      // return;
-    }
-    if (configSettings.allowUseMacro) {
-      const results = await workflow.callMacros(item, workflow.onUseMacros?.getMacros("preItemRoll"), "OnUse", "preItemRoll");
-
-      if (results.some(i => i === false)) {
-        console.warn("midi-qol | item roll blocked by preItemRoll macro");
-        ui.notifications?.notify(`${item.name ?? ""} use blocked by preItemRoll macro`)
-        Workflow.removeWorkflow(workflow.id);
-        return blockRoll(item, workflow);;
-      }
-    }
-
-    if (options.configureDialog) {
-      if (item.type === "spell") {
-        if (["both", "spell"].includes(isAutoConsumeResource(workflow))) { // && !workflow.rollOptions.fastForward) {
-          options.configureDialog = false;
-          // Check that there is a spell slot of the right level
-          const spells = item.actor.system.spells;
-          if (spells[`spell${item.system.level}`]?.value === 0 &&
-            (spells.pact.value === 0 || spells.pact.level < item.system.level)) {
-            options.configureDialog = true;
-          }
-        }
-      } else options.configureDialog = !(["both", "item"].includes(isAutoConsumeResource(workflow)));
-    }
-
-    if (itemUsesBonusAction && !hasBonusAction && configSettings.enforceBonusActions !== "none" && inCombat) await setBonusActionUsed(item.actor);
-    if (itemUsesReaction && !hasReaction && configSettings.enforceReactions !== "none" && inCombat) await setReactionUsed(item.actor);
-
-    if (needsConcentration && checkConcentration) {
-      const concentrationEffect = getConcentrationEffect(item.actor);
-      debugger
-      if (concentrationEffect) await concentrationEffect.delete();
-    }
-    workflow.processAttackEventOptions();
-    await workflow.checkAttackAdvantage();
-
-    return true;
-  }
-
-  checks().then((proceed) => {
-    if (proceed === true) item.use(config, mergeObject(options, { midiSetup: true }))
-  });
-  return false;
-}
+export function preItemUseHook(item, config, options): boolean { return true; }
 
 // WIP
 export function useItemHook(item, config, options, templates) {
 }
 
 //WIP
-export function preRollAttackHook(item, rollConfig) {
-  if (rollConfig.midiSetup) return true;
-
-  let workflow: Workflow = Workflow.getWorkflow(this.uuid);
-
-  // if rerolling the attack re-record the rollToggle key.
-  if (workflow?.attackRoll) {
-    workflow.advantage = false;
-    workflow.disadvantage = false;
-    workflow.rollOptions.rollToggle = globalThis.MidiKeyManager.pressedKeys.rollToggle;
-  }
-  if (workflow && !workflow.reactionQueried) {
-    workflow.rollOptions = mergeObject(workflow.rollOptions, mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptions?.rollToggle), { overwrite: true, insertValues: true, insertKeys: true });
-  }
-  //@ts-ignore
-  if (CONFIG.debug.keybindings && workflow) {
-    log("itemhandling doAttackRoll: workflow.rolloptions", workflow.rollOption);
-    log("item handling newOptions", mapSpeedKeys(globalThis.MidiKeyManager.pressedKeys, "attack", workflow.rollOptions?.rollToggle));
-  }
-  if (debugEnabled > 1) debug("Entering item attack roll ", event, workflow, Workflow._workflows);
-  if (!workflow || !enableWorkflow) { // TODO what to do with a random attack roll
-    if (enableWorkflow && debugEnabled > 0) warn("Roll Attack: No workflow for item ", this.name, this.id, event);
-    return true;
-  }
-  if (workflow && workflow instanceof DummyWorkflow) return true; // Come back to this
-
-  let setupRoll = async () => {
-    if (["Workflow"].includes(workflow.workflowType)) {
-      if (this.system.target?.type === self) {
-        workflow.targets = getSelfTargetSet(this.actor)
-      } else if (game.user?.targets?.size ?? 0 > 0) workflow.targets = validTargetTokens(game.user?.targets);
-      if (workflow?.attackRoll && workflow.currentState === WORKFLOWSTATES.ROLLFINISHED) { // we are re-rolling the attack.
-        workflow.damageRoll = undefined;
-        await Workflow.removeAttackDamageButtons(this.id);
-        if (workflow.damageRollCount > 0) { // re-rolling damage counts as new damage
-          //workflow.itemCardId = (await showItemCard.bind(this)(false, workflow, false, true)).id;
-          workflow.itemCardId = (await this.displayCard(mergeObject(rollConfig, { systemCard: false, workflow, minimalCard: false, createMessage: true }))).id;
-        }
-      }
-    } else if (workflow.workflowType === "BetterRollsWorkflow") {
-      workflow.rollOptions = rollConfig;
-      workflow.rollOptions.fastForwardAttack = rollConfig.fastForward;
-    }
-
-    if (rollConfig.resetAdvantage) {
-      workflow.advantage = false;
-      workflow.disadvantage = false;
-      workflow.rollOptions = deepClone(defaultRollOptions);
-    }
-
-    // workflow.processAttackEventOptions();
-    await workflow.checkAttackAdvantage();
-
-    if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
-    if (await asyncHooksCall("midi-qol.preAttackRoll", workflow) === false || await asyncHooksCall(`midi-qol.preAttackRoll.${this.uuid}`, workflow) === false) {
-      console.warn("midi-qol | attack roll blocked by preAttackRoll hook");
-      ;
-    }
-
-    //@ts-ignore
-    if (game.user.isGM && workflow.useActiveDefence) {
-      // Active defence we need to compute the roll to get the roll bonus and then call active defence
-      let result: Roll = this.rollAttack(mergeObject(rollConfig, {
-        advantage: false,
-        disadvantage: workflow.rollOptions.disadvantage,
-        chatMessage: false,
-        fastForward: true, // Skip the configue dialog
-        messageData: {
-          speaker: getSpeaker(this.actor)
-        },
-        midiSetup: true
-      }, { overwrite: true, insertKeys: true, insertValues: true })).then(roll => {
-        return workflow.activeDefence(this, result);
-      })
-      return false;
-    }
-    let advantage = rollConfig.advantage || workflow?.advantage || workflow?.rollOptions.advantage || workflow?.workflowOptions.advantage || workflow.flankingAdvantage;
-    // if (options.advantage)
-    // workflow.attackAdvAttribution[`options.advantage`] = true;
-    if (workflow.rollOptions.advantage)
-      workflow.attackAdvAttribution[`ADV:rollOptions`] = true;
-    if (workflow.flankingAdvantage)
-      workflow.attackAdvAttribution[`ADV:flanking`] = true;
-
-    let disadvantage = rollConfig.disadvantage || workflow?.disadvantage || workflow?.workflowOptions.disadvantage || workflow.rollOptions.disadvantage;
-    // if (options.disadvantage)
-    //  workflow.attackAdvAttribution[`options.disadvantage`] = true;
-    if (workflow.rollOptions.disadvantage)
-      workflow.attackAdvAttribution[`DIS:rollOptions`] = true;
-    if (workflow.workflowOptions.disadvantage)
-      workflow.attackAdvAttribution[`DIS:workflowOptions`] = true;
-
-    if (advantage && disadvantage) {
-      advantage = false;
-      disadvantage = false;
-    }
-    const wrappedRollStart = Date.now();
-    workflow.attackRollCount += 1;
-    if (workflow.attackRollCount > 1) workflow.damageRollCount = 0;
-    const wrappedOptions = mergeObject(rollConfig, {
-      chatMessage: (["TrapWorkflow", "Workflow"].includes(workflow.workflowType)) ? false : rollConfig.chatMessage,
-      fastForward: workflow.rollOptions.fastForwardAttack || rollConfig.fastForward,
-      messageData: {
-        speaker: getSpeaker(this.actor)
-      }
-    },
-      { insertKeys: true, overwrite: true });
-    if (advantage) wrappedOptions.advantage = true;
-    if (disadvantage) wrappedOptions.disadvantage = true;
-    //@ts-ignore .isEmpty v10
-    if (!isEmpty(workflow.attackAdvAttribution)) {
-      let advHTML: string = Object.keys(workflow.attackAdvAttribution).reduce((prev, s) => prev += `${s}<br>`, "");
-      //@ts-ignore .replaceAll
-      advHTML = advHTML.replaceAll("DIS:", "Disadvantage: ").replaceAll("ADV:", "Advantage: ");
-      const existing = (wrappedOptions.dialogOptions && wrappedOptions.dialogOptions["adv-reminder"]?.message) ?? "";
-      advHTML = `${existing}<div class=\"adv-reminder-messages\">\n    <div>${advHTML}</div>\n</div>\n`;
-      wrappedOptions.dialogOptions = {
-        "adv-reminder": { message: advHTML }
-      }
-    }
-    return true;
-  };
-  setupRoll().then(proceed => {
-    if (proceed) this.rollattack(mergeObject(rollConfig, { midiSetup: true }))
-  });
-  return false;
-
-}
+export function preRollAttackHook(item, rollConfig) { }
 
 // WIP
-export function rollAttackHook(item, roll, ammoUpdate) {
-  let workflow: Workflow = Workflow.getWorkflow(item.uuid);
-  let result = roll;
-  if (!workflow || !result) {
-    error("Expected workflow/roll to be defined?")
-    return;
-  }
-  console.warn("testing: advantage/disadvantage", workflow.attackAdvAttribution);
-  result = Roll.fromJSON(JSON.stringify(result.toJSON()))
-  if (workflow.workflowType === "BetterRollsWorkflow") {
-    // we are rolling this for better rolls
-    return result;
-  }
-  const maxflags = getProperty(workflow.actor.flags, "midi-qol.max") ?? {};
-  if ((maxflags.attack && (maxflags.attack.all || maxflags.attack[this.system.actionType])) ?? false)
-    Object.assign(result, result.reroll({ maximize: true, async: false }));
-  const minflags = getProperty(this.flags, "midi-qol.min") ?? {};
-  if ((minflags.attack && (minflags.attack.all || minflags.attack[this.system.actionType])) ?? false)
-    Object.assign(result, result.reroll({ minimize: true, async: false }));
-  /* await*/  workflow.setAttackRoll(result); // this may not need to be awaited?
-  workflow.ammo = this._ammo;
-  /* This is not doable?
-  result = await processAttackRollBonusFlags.bind(workflow)();
-  if (!configSettings.mergeCard) result.toMessage({
-    speaker: getSpeaker(this.actor)
-  });
-  */
-  if (configSettings.keepRollStats) {
-    const terms = result.terms;
-    const rawRoll = Number(terms[0].total);
-    const total = result.total;
-    const options: any = terms[0].options
-    const fumble = rawRoll <= options.fumble;
-    const critical = rawRoll >= options.critical;
-    gameStats.addAttackRoll({ rawRoll, total, fumble, critical }, this);
-  }
-  if (workflow.workflowOptions.attackRollDSN === undefined && dice3dEnabled()) {
-    workflow.workflowOptions.attackRollDSN =
-      configSettings.mergeCard && !(configSettings.gmHide3dDice && game.user?.isGM)
-      && !(this.parent?.type !== "character" && game.settings.get("dice-so-nice", "hideNpcRolls"));
-  }
-  if (dice3dEnabled() && workflow.workflowOptions.attackRollDSN) {
-    let whisperIds: User[] | null = null;
-    const rollMode = game.settings.get("core", "rollMode");
-    if ((["details", "hitDamage", "all"].includes(configSettings.hideRollDetails) && game.user?.isGM) || rollMode === "blindroll") {
-      if (configSettings.ghostRolls) {
-        //@ts-ignore ghost
-        workflow.attackRoll.ghost = true;
-      } else {
-        whisperIds = ChatMessage.getWhisperRecipients("GM")
-      }
-    } else if (rollMode === "selfroll" || rollMode === "gmroll") {
-      whisperIds = ChatMessage.getWhisperRecipients("GM")
-      if (game.user) whisperIds.concat(game.user);
-    }
+export function rollAttackHook(item, roll, ammoUpdate) { }
 
-    //@ts-ignore game.dice3d - was awaited will it matter - probably
-    game.dice3d?.showForRoll(workflow.attackRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
-  }
-
-  if (workflow.targets?.size === 0) {// no targets recorded when we started the roll grab them now
-    workflow.targets = validTargetTokens(game.user?.targets);
-  }
-  if (!result) { // attack roll failed.
-    error("itemhandling.rollAttack failed")
-    return;
-  }
-  if (["formulaadv", "adv"].includes(configSettings.rollAlternate))
-    workflow.attackRollHTML = addAdvAttribution(workflow.attackRollHTML, workflow.attackAdvAttribution)
-  workflow.next(WORKFLOWSTATES.ATTACKROLLCOMPLETE);// The timing of this could be wrong
-}
-
-// WIP
+// in use
 export function preRollDamageHook(item, rollConfig) {
   if (item.flags.midiProperties?.offHandWeapon) {
     rollConfig.data.mod = 0;
@@ -1300,134 +805,12 @@ export function rollDamageHook(item, roll) {
 }
 
 // WIP
-export function preDisplayCardHook(item, chatData, options) {
-  const workflow = Workflow.getWorkflow(item.uuid);
-  workflow.chatData = chatData;
-  workflow.displayCardOptions = options;
-}
+export function preDisplayCardHook(item, chatData, options) { }
 
 // WIP - probably not use
-export function displayCardHook(item, card) {
-  if (!(card instanceof ChatMessage)) return;
-  const workflow = Workflow.getWorkflow(item.uuid);
-  const options = workflow.displayCardOptions;
-  if (!workflow) return true;
-  let systemCard: boolean = options.systemCard ?? false;
-  let minimalCard: boolean = options.minimalCard ?? false
-  let createMessage = options.createMessage;
+export function displayCardHook(item, card) { };
 
-  async function doCard() {
-    const systemString = game.system.id.toUpperCase();
-    let token = item.actor.token;
-    if (!token) token = item.actor.getActiveTokens()[0];
-    let needAttackButton = !workflow.someAutoRollEventKeySet() && !getAutoRollAttack() && !workflow.rollOptions.autoRollAttack;
-    const needDamagebutton = itemHasDamage(item) && (
-      (["none", "saveOnly"].includes(getAutoRollDamage(workflow)) || workflow.rollOptions?.rollToggle)
-      || !getRemoveDamageButtons()
-      || systemCard);
-    const needVersatileButton = itemIsVersatile(item) && (systemCard || ["none", "saveOnly"].includes(getAutoRollDamage(workflow)) || !getRemoveDamageButtons());
-    //const sceneId = token?.scene && token.scene.id || canvas?.scene?.id;
-    const isPlayerOwned = item.actor.hasPlayerOwner;
-    const hideItemDetails = (["none", "cardOnly"].includes(configSettings.showItemDetails) || (configSettings.showItemDetails === "pc" && !isPlayerOwned))
-      || !configSettings.itemTypeList.includes(item.type);
-    const hasEffects = !["applyNoButton"].includes(configSettings.autoItemEffects) && hasDAE(workflow) /*&& workflow.workflowType === "Workflow"*/;
-    let dmgBtnText = (item.system?.actionType === "heal") ? i18n(`${systemString}.Healing`) : i18n(`${systemString}.Damage`);
-    if (workflow.rollOptions.fastForwardDamage && configSettings.showFastForward) dmgBtnText += ` ${i18n("midi-qol.fastForward")}`;
-    let versaBtnText = i18n(`${systemString}.Versatile`);
-    if (workflow.rollOptions.fastForwardDamage && configSettings.showFastForward) versaBtnText += ` ${i18n("midi-qol.fastForward")}`;
-    let chatData = workflow.chatData;
-    const templateData = {
-      actor: item.actor,
-      // tokenId: token?.id,
-      tokenId: token?.document?.uuid ?? token?.uuid,
-      tokenUuid: token?.document?.uuid ?? token?.uuid,
-      item: item.toObject(),
-      itemUuid: item.uuid,
-      data: workflow.chatData,
-      labels: item.labels,
-      condensed: item.hasAttack && configSettings.mergeCardCondensed,
-      hasAttack: !minimalCard && item.hasAttack && (systemCard || needAttackButton),
-      isHealing: !minimalCard && item.isHealing && (systemCard || configSettings.autoRollDamage !== "always"),
-      hasDamage: needDamagebutton,
-      isVersatile: needVersatileButton,
-      isSpell: item.type === "spell",
-      isPower: item.type === "power",
-      hasSave: !minimalCard && item.hasSave && (systemCard || configSettings.autoCheckSaves === "none"),
-      hasAbilityCheck: item.hasAbilityCheck,
-      hasAreaTarget: !minimalCard && item.hasAreaTarget,
-      hasAttackRoll: !minimalCard && item.hasAttack,
-      configSettings,
-      hideItemDetails,
-      dmgBtnText,
-      versaBtnText,
-      showProperties: workflow.workflowType === "Workflow",
-      hasEffects,
-      isMerge: configSettings.mergeCard,
-      RequiredMaterials: i18n(`${systemString}.RequiredMaterials`),
-      Attack: i18n(`${systemString}.Attack`),
-      SavingThrow: i18n(`${systemString}.SavingThrow`),
-      OtherFormula: i18n(`${systemString}.OtherFormula`),
-      PlaceTemplate: i18n(`${systemString}.PlaceTemplate`),
-      Use: i18n(`${systemString}.Use`)
-    }
-    const templateType = ["tool"].includes(item.type) ? item.type : "item";
-    const template = `modules/midi-qol/templates/${templateType}-card.html`;
-    const html = await renderTemplate(template, templateData);
-    if (debugEnabled > 1) debug(" Show Item Card ", configSettings.useTokenNames, (configSettings.useTokenNames && token) ? token?.name : item.actor.name, token, token?.name, item.actor.name)
-    let theSound = configSettings.itemUseSound;
-    if (item.type === "weapon") {
-      theSound = configSettings.weaponUseSound;
-      if (["rwak"].includes(item.system.actionType)) theSound = configSettings.weaponUseSoundRanged;
-    }
-    else if (["spell", "power"].includes(item.type)) {
-      theSound = configSettings.spellUseSound;
-      if (["rsak", "rpak"].includes(item.system.actionType)) theSound = configSettings.spellUseSoundRanged;
-    }
-    else if (item.type === "consumable" && item.name.toLowerCase().includes(i18n("midi-qol.potion").toLowerCase())) theSound = configSettings.potionUseSound;
-    chatData = mergeObject(chatData, {
-      user: game.user?.id,
-      type: CONST.CHAT_MESSAGE_TYPES.OTHER,
-      content: html,
-      flavor: item.system.chatFlavor || item.name,
-      speaker: getSpeaker(item.actor),
-      flags: {
-        "midi-qol": {
-          itemUuid: item.uuid,
-          actorUuid: item.actor.uuid,
-          sound: theSound,
-          type: MESSAGETYPES.ITEM,
-          itemId: item.id,
-          workflowId: item.uuid
-        },
-        "core": { "canPopout": true }
-      }
-    }, { inplace: true });
-    if (workflow.flagTags) chatData.flags = mergeObject(chatData.flags ?? {}, workflow.flagTags);
-    if (!item.actor.items.has(item.id)) { // deals with using temp items in overtime effects
-      chatData.flags[`${game.system.id}.itemData`] = item.toObject(); // TODO check this v10
-    }
-    // Temp items (id undefined) or consumables that were removed need itemData set.
-    if (!item.id || (item.type === "consumable" && !item.actor.items.has(item.id))) {
-      chatData.flags[`${game.system.id}.itemData`] = item.toObject(); // TODO check this v10
-    }
-
-    workflow.itemCardData = chatData;
-    if (createMessage) {
-      await card.update({ content: html })
-      // const result = await ChatMessage.create(chatData);
-      // console.error("Chat message create", result);
-      // workflow.itemCardId = result?.id;
-      workflow.itemCardId = card.id;
-      workflow.needItemCard = false;
-      if (workflow.kickStart) workflow.next(WORKFLOWSTATES.NONE);
-    }
-  }
-  doCard();
-  // options.createMessage = true;
-  return;
-};
-
-// WIP
+// in use
 export function preItemUsageConsumptionHook(item, config, options): boolean {
   /* Spell level can be fetched in preItemUsageConsumption */
   const workflow = Workflow.getWorkflow(item.uuid);
@@ -1566,7 +949,7 @@ export async function wrappedDisplayCard(wrapped, options) {
   chatData.flags = mergeObject(chatData.flags, options.flags);
   Hooks.callAll("dnd5e.preDisplayCard", this, chatData, options);
   workflow.babonus = getProperty(chatData, "flags.babonus") ?? {};
-  
+
   ChatMessage.applyRollMode(chatData, options.rollMode ?? game.settings.get("core", "rollMode"))
   const card = createMessage !== false ? ChatMessage.create(chatData) : chatData;
 

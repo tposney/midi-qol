@@ -180,7 +180,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
     const needsConcentration = workflow.item?.system.components?.concentration || workflow.item?.system.activation?.condition?.includes("Concentration");
     const checkConcentration = configSettings.concentrationAutomation;
     if (needsConcentration && checkConcentration) {
-      const concentrationCheck = item.actor.effects.find(i => i.label === concentrationName);
+      const concentrationCheck = item.actor.effects.find(i => (i.name || i.label) === concentrationName);
       if (concentrationCheck) concentrationCheck.delete();
       // if (needsConcentration)addConcentration({workflow});
     }
@@ -214,6 +214,7 @@ export let processCreateBetterRollsMessage = (message: ChatMessage, user: string
 }
 
 export let diceSoNiceHandler = async (message, html, data) => {
+  return;
   //@ts-ignore game.dice3d
   if (!dice3dEnabled()) return;
   if (debugEnabled > 1) debug("Dice so nice handler ", message, html, data);

@@ -1,4 +1,4 @@
-import { criticalDamage, itemDeleteCheck, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow } from "../settings.js"
+import { criticalDamage, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow } from "../settings.js"
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
@@ -44,6 +44,12 @@ export class ConfigPanel extends FormApplication {
 
     }
 
+    if (!installedModules.get("levelsautocover"))
+      CoverCalculationOptions["levelsautocover"] += " (not installed)";
+
+    if (!installedModules.get("simbuls-cover-calculator"))
+      CoverCalculationOptions["simbuls-cover-calculator"] += " (not installed)";
+    
     let quickSettingsOptions = {};
     for (let key of Object.keys(quickSettingsDetails)) {
       quickSettingsOptions[key] = quickSettingsDetails[key].description;
@@ -80,7 +86,6 @@ export class ConfigPanel extends FormApplication {
       //@ts-ignore
       itemTypeLabels: CONFIG.Item.typeLabels,
       hasConvenientEffects: installedModules.get("dfreds-convenient-effects"),
-      itemDeleteCheck,
       hideRollDetailsOptions: geti18nOptions("hideRollDetailsOptions"),
       checkFlankingOptions: geti18nOptions("CheckFlankingOptions"),
       hideRollDetailsHint: i18n("midi-qol.HideRollDetails.HintLong"),

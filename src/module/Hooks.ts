@@ -102,6 +102,7 @@ export let readyHooks = async () => {
 
   // Handle removal of concentration - not used done in _preDeleteActiveEffect
   Hooks.on("deleteActiveEffect", (...args) => {
+    return; // 
     let [effect, options, user] = args;
     let gmToUse = game.users?.find(u => u.isGM && u.active);
     if (gmToUse?.id !== game.user?.id) return;
@@ -116,11 +117,11 @@ export let readyHooks = async () => {
       if (installedModules.get("dfreds-convenient-effects")) {
         let concentrationId = "Convenient Effect: Concentrating";
         let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
-        if (statusEffect) concentrationLabel = statusEffect.label;
+        if (statusEffect) concentrationLabel = (statusEffect.name || statusEffect.label);
       } else if (installedModules.get("combat-utility-belt")) {
         concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
       }
-      let isConcentration = effect.label === concentrationLabel;
+      let isConcentration = (effect.name || effect.label) === concentrationLabel;
       if (!isConcentration) return;
 
       // Handle removal of concentration
@@ -159,22 +160,22 @@ export let readyHooks = async () => {
   Hooks.on("dnd5e.restCompleted", restManager);
 
   if (game.settings.get("midi-qol", "itemUseHooks") && game.system.id === "dnd5e") {
-    Hooks.on("dnd5e.preUseItem", preItemUseHook);
+    // Hooks.on("dnd5e.preUseItem", preItemUseHook);
     Hooks.on("dnd5e.preItemUsageConsumption", preItemUsageConsumptionHook);
-    Hooks.on("dnd5e.useItem", useItemHook);
-    Hooks.on("dnd5e.preDisplayCard", preDisplayCardHook);
+    // Hooks.on("dnd5e.useItem", useItemHook);
+    // Hooks.on("dnd5e.preDisplayCard", preDisplayCardHook);
     // Hooks.on("dnd5e.displayCard", displayCardHook); - displayCard is wrapped instead.
-    Hooks.on("dnd5e.preRollAttack", preRollAttackHook);
+    // Hooks.on("dnd5e.preRollAttack", preRollAttackHook);
     // Hooks.on("dnd5e.preRollAttack", (item, rollConfig) => {return preRollMacro(item, rollConfig, "dnd5e.preRollttack")});
     // Hooks.on("dnd5e.rollAttack", rollAttackMacro);
 
-    Hooks.on("dnd5e.rollAttack", rollAttackHook)
+    // Hooks.on("dnd5e.rollAttack", rollAttackHook)
     Hooks.on("dnd5e.preRollDamage", (item, rollConfig) => {
       preRollDamageHook(item, rollConfig)
       // && preRollMacro(item, rollConfig, "dnd5e.preRollDamage");
     });
     // Hooks.on("dnd5e.rollDamage", rollDamageMacro)
-    Hooks.on("dnd5e.rollDamage", rollDamageHook)
+    // Hooks.on("dnd5e.rollDamage", rollDamageHook)
     // Hooks.on("dnd5e.preRollFormula", (item, rollConfig) => {return preRollMacro(item, rollConfig, "dnd5e.preRollFormula")});
     // Hooks.on("dnd5e.rollFormula", rollFormulaMacro);
     // Hooks.on("dnd5e.preRollToolCheck", (item, rollConfig) => preRollMacro(item, rollConfig, "dnd5e.preRollToolCheck"));
@@ -213,63 +214,6 @@ export let readyHooks = async () => {
     itemJSONData.name = concentrationCheckItemName;
   }
 }
-
-/* Not sure about if this is a good idea
-The macro write experience is janky - needing to wrap code in async () => {}
-A better solution might be to inject the Hooks.once(dnd5e.preRollAttack etc ) into the macro code
-function preRollMacro(item, rollConfig, hookTag) {
-  const workflow = Workflow.getWorkflow(item.uuid);
-  if (!workflow || !configSettings.allowActorUseMacro) return true;
-  try {
-    const results = workflow.callMacrosSync(item, workflow.onUseMacros?.getMacros(hookTag), "OnUse", hookTag, {item, rollConfig});
-    return !results.some(v => v === false)
-  } catch(err) {
-    console.warn(`midi-qol | error calling ${hookTag} macro`, err)
-  }
-  return true;
-}
-
-
-function rollAttackMacro(item, roll, ammoUpdate) {
-  const workflow = Workflow.getWorkflow(item.uuid);
-  if (!workflow || !configSettings.allowActorUseMacro) return;
-  try {
-    workflow.callMacrosSync(item, workflow.onUseMacros?.getMacros("dnd5e.rollAttack"), "OnUse", "dnd5e.rollAttack", {item, roll, ammoUpdate})
-  } catch(err) {
-    console.warn(`midi-qol | error calling dnd5e.rollAttack macro`, err)
-  }
-}
-
-function rollDamageMacro(item, roll) {
-  const workflow = Workflow.getWorkflow(item.uuid);
-  if (!workflow || !configSettings.allowActorUseMacro) return;
-  try {
-    workflow.callMacrosSync(item, workflow.onUseMacros?.getMacros("dnd5e.rollDamage"), "OnUse", "dnd5e.rollDamage", {item, roll})
-  } catch(err) {
-    console.warn(`midi-qol | error calling dnd5e.rollDamage macro`, err)
-  }
-}
-
-function rollFormulaMacro(item, roll, ammoUpdate) {
-  const workflow = Workflow.getWorkflow(item.uuid);
-  if (!workflow || !configSettings.allowActorUseMacro) return;
-  try {
-    workflow.callMacrosSync(item, workflow.onUseMacros?.getMacros("dnd5e.rollFormula"), "OnUse", "dnd5e.rollFormula", {item, roll})
-  } catch(err) {
-    console.warn(`midi-qol | error calling dnd5e.rollFormula macro`, err)
-  }
-}
-
-function rollToolCheckMacro(item, roll, ammoUpdate) {
-  const workflow = Workflow.getWorkflow(item.uuid);
-  if (!workflow || !configSettings.allowActorUseMacro) return;
-  try {
-    workflow.callMacrosSync(item, workflow.onUseMacros?.getMacros("dnd5e.rollToolCheck"), "OnUse", "dnd5e.rollToolCheck", {item, roll})
-  } catch(err) {
-    console.warn(`midi-qol | error calling dnd5e.rollToolCheck macro`, err)
-  }
-}
-*/
 
 export function restManager(actor, result) {
   if (!actor || !result) return;
@@ -383,7 +327,7 @@ export function initHooks() {
 
     if (installedModules.get("dfreds-convenient-effects")) {
       //@ts-ignore dfreds
-      const ceForItem = game.dfreds.effects.all.find(e => e.label === app.object.name);
+      const ceForItem = game.dfreds.effects.all.find(e => (e.name || e.label) === app.object.name);
       if (ceForItem) {
         const element = html.find('input[name="system.chatFlavor"]').parent().parent();
         if (["both", "cepri", "itempri"].includes(configSettings.autoCEEffects)) {

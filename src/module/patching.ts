@@ -1,7 +1,7 @@
 import { log, warn, debug, i18n, error, getCanvas, i18nFormat } from "../midi-qol.js";
 import { doAttackRoll, doDamageRoll, templateTokens, doItemUse, preItemUseHook, preDisplayCardHook, preItemUsageConsumptionHook, useItemHook, displayCardHook, wrappedDisplayCard } from "./itemhandling.js";
 import { configSettings, autoFastForwardAbilityRolls, criticalDamage, checkRule } from "./settings.js";
-import { bonusDialog, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, evalCondition, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, hasUsedBonusAction, hasUsedReaction, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, MQfromUuid, notificationNotify, processOverTime, removeBonusActionUsed, removeReactionUsed } from "./utils.js";
+import { bonusDialog, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, evalCondition, expireRollEffect, getAutoRollAttack, getAutoRollDamage, getConvenientEffectsBonusAction, getConvenientEffectsDead, getConvenientEffectsReaction, getConvenientEffectsUnconscious, getOptionalCountRemainingShortFlag, getSpeaker, getSystemCONFIG, hasUsedBonusAction, hasUsedReaction, isAutoFastAttack, isAutoFastDamage, mergeKeyboardOptions, midiRenderRoll, MQfromActorUuid, MQfromUuid, notificationNotify, processOverTime, removeBonusActionUsed, removeReactionUsed } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
@@ -184,6 +184,7 @@ async function doRollSkill(wrapped, ...args) {
     //@ts-ignore
     result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
   }
+  if (chatMessage) displayDSNForRoll(result, "skill");
   if (!options.simulate) {
     result = await bonusCheck(this, result, "skill", skillId);
   }
@@ -342,7 +343,6 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
   procOptions.chatMessage = false;
   result = await wrapped(abilityId, procOptions);
   if (!result) return result;
-
   const maxFlags = getProperty(this.flags, "midi-qol.max.ability") ?? {};
   const flavor = result.options?.flavor;
   const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId])) ?? false
@@ -359,6 +359,7 @@ async function doAbilityRoll(wrapped, rollType: string, ...args) {
     //@ts-ignore
     result = await new Roll(Roll.getFormula(result.terms)).evaluate({ async: true });
   }
+  await displayDSNForRoll(result, rollType);
 
   if (!options.simulate) result = await bonusCheck(this, result, rollType, abilityId);
 
@@ -884,11 +885,11 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
       if (installedModules.get("dfreds-convenient-effects")) {
         let concentrationId = "Convenient Effect: Concentrating";
         let statusEffect: any = CONFIG.statusEffects.find(se => se.id === concentrationId);
-        if (statusEffect) concentrationLabel = statusEffect.label;
+        if (statusEffect) concentrationLabel = (statusEffect.name  || statusEffect.label);
       } else if (installedModules.get("combat-utility-belt")) {
         concentrationLabel = game.settings.get("combat-utility-belt", "concentratorConditionName")
       }
-      let isConcentration = effect.label === concentrationLabel;
+      let isConcentration = (effect.name || effect.label) === concentrationLabel;
       const origin = MQfromUuid(effect.origin);
       if (isConcentration) await removeConcentration(effect.parent, this.uuid);
       else if (origin instanceof CONFIG.Item.documentClass && origin.parent instanceof CONFIG.Actor.documentClass) {
@@ -908,7 +909,7 @@ async function _preDeleteActiveEffect(wrapped, ...args) {
               effect.origin === concentrationData.uuid
               && !effect.flags.dae.transfer
               && effect.uuid !== this.uuid
-              && effect.label !== concentrationLabel);
+              && (effect.name || effect.label) !== concentrationLabel);
             return hasEffects;
           });
           if (["effects", "effectsTemplates"].includes(configSettings.removeConcentrationEffects)
@@ -983,10 +984,10 @@ async function checkWounded(actor, update, options, user) {
     const woundedLevel = attributes.hp.max * configSettings.addWounded / 100;
     const needsWounded = hpUpdate > 0 && hpUpdate < woundedLevel
     if (installedModules.get("dfreds-convenient-effects") && CEWounded) {
-      const wounded = await ConvenientEffectsHasEffect(CEWounded.label, actor, false);
+      const wounded = await ConvenientEffectsHasEffect((CEWounded.name || CEWounded.label), actor, false);
       if (wounded !== needsWounded) {
         //@ts-ignore
-        await game.dfreds?.effectInterface.toggleEffect(CEWounded.label, { overlay: false, uuids: [actor.uuid] });
+        await game.dfreds?.effectInterface.toggleEffect((CEWounded.name || CEWounded.label), { overlay: false, uuids: [actor.uuid] });
       }
     } else {
       const tokens = actor.getActiveTokens();
@@ -1000,9 +1001,11 @@ async function checkWounded(actor, update, options, user) {
   if (configSettings.addDead !== "none") {
     const needsDead = vitalityReosurce ? vitalityUpdate <= 0 : hpUpdate <= 0;
     if (installedModules.get("dfreds-convenient-effects") && game.settings.get("dfreds-convenient-effects", "modifyStatusEffects") !== "none") {
-      let effectName = (actor.type === "character" || actor.hasPlayerOwner) ? getConvenientEffectsUnconscious().label : getConvenientEffectsDead().label
+      let effectName = (actor.type === "character" || actor.hasPlayerOwner) 
+        ? (getConvenientEffectsUnconscious().name || getConvenientEffectsUnconscious().label) 
+        : (getConvenientEffectsDead().name || getConvenientEffectsDead().label)
       if (vitalityReosurce) { // token is dead rather than unconscious
-        effectName = getConvenientEffectsDead().label;
+        effectName = getConvenientEffectsDead().name || getConvenientEffectsDead().label;
       }
 
       const hasEffect = await ConvenientEffectsHasEffect(effectName, actor, false);
@@ -1155,6 +1158,7 @@ export async function rollToolCheck(wrapped, options: any = {}) {
   const chatMessage = options.chatMessage;
   options.chatMessage = false;
   let result = await wrapped(options);
+  displayDSNForRoll(result, "toolCheck");
   result = await bonusCheck(this.actor, result, "check", this.system.ability ?? "")
   if (chatMessage !== false && result) {
     const title = `${this.name} - ${game.i18n.localize("DND5E.ToolCheck")}`;
