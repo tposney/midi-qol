@@ -365,7 +365,14 @@
     "all": "Tous",
     "damageBonus": "Renvoyer un bonus de dégâts",
     "preTargeting": "Appelé avant que le ciblage soit résolu (*)",
-    "isHit": "L'acteur est la cible d'un toucher"
+    "isHit": "L'acteur est la cible d'un toucher",
+    "isSaveFailure": "L'acteur a échoué à un jet de sauvegarde",
+    "preApplyTargetDamage": "La cible est sur le point d'être endommagée par un objet",
+    "isDamaged": "L'acteur est endommagé par une attaque",
+    "isAttacked": "L'acteur est la cible d'une attaque",
+    "preTargetSsave": "La cible est sur le point d'effectuer un jet de sauvegarde",
+    "isSave": "L'acteur a effectué une sauvegarde",
+    "isSaveSuccess": "L'acteur réussit sa sauvegarde"
   },
   "midi-qol.DragDropTarget.Name": "Ciblage par glisser-déposer",
   "midi-qol.DragDropTarget.Hint": "Permettre de glisser un objet sur un token pour l'attaquer",
@@ -711,5 +718,8 @@
   "midi-qol.CriticalNat20.Hint": "Un jet au-dessus du seuil critique est toujours critique, même s'il ne satisfait pas aux exigences de marge",
   "midi-qol.OptionalRuleVitality.Name": "(Règle maison) Pool de vitalité",
   "midi-qol.OptionalRuleVitality.Hint": "Lorsqu'ils sont définis à une ressource, les dégâts appliqués à une cible ayant 0 HP infligent des dégâts à la ressource vitalité. Si celle-ci atteint 0, la cible est morte",
-  "midi-qol.reactionPreAttack": "Jet de pré-attaque"
+  "midi-qol.reactionPreAttack": "Jet de pré-attaque",
+  "midi-qol.AutoRerollInitiative.Name": "Relance automatique de l'initiative",
+  "midi-qol.reactionFlavorPreAttack": "{actorName} est attaqué par {itemName} et peut utiliser une réaction",
+  "midi-qol.AutoRerollInitiative.Hint": "Relance automatique de l'initiative pour tous les combattants au début d'un nouveau round. Attention : peut interrompre les effets qui se finissent à la fin d'un tour/round"
 }
