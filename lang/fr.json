@@ -364,7 +364,8 @@
     "postActiveEffects": "Après les effets actifs ",
     "all": "Tous",
     "damageBonus": "Renvoyer un bonus de dégâts",
-    "preTargeting": "Appelé avant que le ciblage soit résolu (*)"
+    "preTargeting": "Appelé avant que le ciblage soit résolu (*)",
+    "isHit": "L'acteur est la cible d'un toucher"
   },
   "midi-qol.DragDropTarget.Name": "Ciblage par glisser-déposer",
   "midi-qol.DragDropTarget.Hint": "Permettre de glisser un objet sur un token pour l'attaquer",
@@ -707,5 +708,8 @@
   "midi-qol.InitPromptTitle": "Jet d'initiative",
   "midi-qol.HighlightSuccess.Name": "Affichage des codes couleurs des succès/échecs",
   "midi-qol.HighlightSuccess.Hint": "Lors de l'affichage des succès et des échecs, les succès sont en vert et les échecs en rouge",
-  "midi-qol.CriticalNat20.Hint": "Un jet au-dessus du seuil critique est toujours critique, même s'il ne satisfait pas aux exigences de marge."
+  "midi-qol.CriticalNat20.Hint": "Un jet au-dessus du seuil critique est toujours critique, même s'il ne satisfait pas aux exigences de marge",
+  "midi-qol.OptionalRuleVitality.Name": "(Règle maison) Pool de vitalité",
+  "midi-qol.OptionalRuleVitality.Hint": "Lorsqu'ils sont définis à une ressource, les dégâts appliqués à une cible ayant 0 HP infligent des dégâts à la ressource vitalité. Si celle-ci atteint 0, la cible est morte",
+  "midi-qol.reactionPreAttack": "Jet de pré-attaque"
 }
