@@ -1,3 +1,6 @@
+### 10.0.39
+* Put back definition of item when calling an onUse macro
+
 ### 10.0.38
 * reenable flags.midi-qol.optional.NAME.criticalDamage which allows the bonus roll in the optional field to do critical damage if the damage roll is critical.
 * Reaction processing requires "enforce reaction checking" to be all/match the actor type for midi to prompt for reactions.

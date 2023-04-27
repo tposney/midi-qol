@@ -1753,9 +1753,9 @@ export class Workflow {
       v11args["length"] = args.length;
       v11args.item = item;
       //@ts-expect-error
-      const fn = new AsyncFunction("speaker", "actor", "token", "character", "args", macroCommand)
+      const fn = new AsyncFunction("speaker", "actor", "token", "character", "item", "args", macroCommand)
       // const fn = Function("{speaker, actor, token, character, item, args}={}", body);
-      return fn.call(this, speaker, actor, token, character, v11args);
+      return fn.call(this, speaker, actor, token, character, item, v11args);
     } catch (err) {
       ui.notifications?.error(`There was an error running your macro. See the console (F12) for details`);
       error("Error evaluating macro ", err)
