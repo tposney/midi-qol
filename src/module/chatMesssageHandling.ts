@@ -631,7 +631,7 @@ export function addChatDamageButtonsToHTML(totalDamage, damageList, html, actorI
     button.click(async (ev) => {
       ev.stopPropagation();
       // const item = game.actors.get(actorId).items.get(itemId);
-      const item = MQfromUuid(itemUuid)
+      const item = MQfromUuid(itemUuid);
       const modDamageList = duplicate(damageList).map(di => {
         if (mult === -1) di.type = "healing";
         else if (mult === -2) di.type = "temphp";

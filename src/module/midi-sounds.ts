@@ -1,6 +1,7 @@
 import { debug, i18n, log } from "../midi-qol.js";
 import { configSettings, midiSoundSettings } from "./settings.js";
 import { dice3dEnabled } from "./setupModules.js";
+import { getSystemCONFIG } from "./utils.js";
 import { Workflow } from "./workflow.js";
 
 interface rollSpec {
@@ -34,38 +35,63 @@ export class MidiSounds {
 
   static ActionTypes(): any {
     //@ts-ignore
-    const config = CONFIG.DND5E;
+    const config = getSystemCONFIG();
+    const systemId = game.system.id.toUpperCase();
+    let damageEntries: any = {};
+    Object.keys(config.damageTypes).forEach(
+      key => damageEntries[key] = `${i18n(`${systemId}.Damage`)}: ${config.damageTypes[key]}`
+    );
+
+    let itemActionEntries: any = {};
+    Object.keys(config.itemActionTypes).forEach(
+      key => itemActionEntries[key] = `${i18n(`${systemId}.Action`)}: ${config.itemActionTypes[key]}`
+    );
+
+    let actionTypes = {
+      itemRoll: `${i18n("DOCUMENT.Item")} ${i18n("TABLE.Roll")}`,
+      attack: i18n(`${systemId}.AttackRoll`),
+      damage: i18n(`${systemId}.DamageRoll`),
+      critical: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.CriticalSoundName")}`,
+      fumble: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.FumbleSoundName")}`,
+      hit: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.Hits")}`,
+      miss: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.Misses")}`,
+      none: i18n("None")
+    };
+    actionTypes = mergeObject(actionTypes, itemActionEntries);
+    actionTypes = mergeObject(actionTypes, damageEntries);
+    return actionTypes;
+
     return {
       itemRoll: `${i18n("DOCUMENT.Item")} ${i18n("TABLE.Roll")}`,
-      attack: i18n("DND5E.AttackRoll"),
-      damage: i18n("DND5E.DamageRoll"),
-      critical: `${i18n("DND5E.Attack")}: ${i18n("midi-qol.CriticalSoundName")}`,
-      fumble: `${i18n("DND5E.Attack")}: ${i18n("midi-qol.FumbleSoundName")}`,
-      hit: `${i18n("DND5E.Attack")}: ${i18n("midi-qol.Hits")}`,
-      miss: `${i18n("DND5E.Attack")}: ${i18n("midi-qol.Misses")}`,
-      abil: `${i18n("DND5E.Action")}: ${config.itemActionTypes["abil"]}`,
-      heal: `${i18n("DND5E.Action")}: ${config.itemActionTypes["heal"]}`,
-      msak: `${i18n("DND5E.Action")}: ${config.itemActionTypes["msak"]}`,
-      mwak: `${i18n("DND5E.Action")}: ${config.itemActionTypes["mwak"]}`,
-      other: `${i18n("DND5E.Action")}: ${config.itemActionTypes["other"]}`,
-      rsak: `${i18n("DND5E.Action")}: ${config.itemActionTypes["rsak"]}`,
-      rwak: `${i18n("DND5E.Action")}: ${config.itemActionTypes["rwak"]}`,
-      save: `${i18n("DND5E.Action")}: ${config.itemActionTypes["save"]}`,
-      util: `${i18n("DND5E.Action")}: ${config.itemActionTypes["util"]}`,
-      acid: `${i18n("DND5E.Damage")}: ${config.damageTypes.acid}`,
-      bludgeoning: `${i18n("DND5E.Damage")}: ${config.damageTypes.bludgeoning}`,
-      cold: `${i18n("DND5E.Damage")}: ${config.damageTypes.cold}`,
-      fire: `${i18n("DND5E.Damage")}: ${config.damageTypes.fire}`,
-      force: `${i18n("DND5E.Damage")}: ${config.damageTypes.force}`,
-      lightning: `${i18n("DND5E.Damage")}: ${config.damageTypes.lightning}`,
-      necrotic: `${i18n("DND5E.Damage")}: ${config.damageTypes.necrotic}`,
-      piercing: `${i18n("DND5E.Damage")}: ${config.damageTypes.piercing}`,
-      poison: `${i18n("DND5E.Damage")}: ${config.damageTypes.poison}`,
-      psychic: `${i18n("DND5E.Damage")}: ${config.damageTypes.psychic}`,
-      radiant: `${i18n("DND5E.Damage")}: ${config.damageTypes.radiant}`,
-      slashing: `${i18n("DND5E.Damage")}: ${config.damageTypes.slashing}`,
-      thunder: `${i18n("DND5E.Damage")}: ${config.damageTypes.thunder}`,
-      "midi-none": `${i18n("DND5E.Damage")}: ${config.damageTypes["midi-none"]}`,
+      attack: i18n(`${systemId}.AttackRoll`),
+      damage: i18n(`${systemId}.DamageRoll`),
+      critical: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.CriticalSoundName")}`,
+      fumble: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.FumbleSoundName")}`,
+      hit: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.Hits")}`,
+      miss: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.Misses")}`,
+      abil: `${i18n(`${systemId}.Action`)}: ${config.itemActionTypes["abil"]}`,
+      heal: `${i18n(`${systemId}.Action`)}: ${config.itemActionTypes["heal"]}`,
+      msak: `${i18n(`${systemId}.Action`)}: ${config.itemActionTypes[`${game.system.id === "sw5e" ? "mpak" : "msak"}`]}`,
+      mwak: `${i18n(`${systemId}.Action`)}: ${config.itemActionTypes["mwak"]}`,
+      other: `${i18n(`${systemId}.Action`)}: ${config.itemActionTypes["other"]}`,
+      rsak: `${i18n(`${systemId}.Action`)}: ${config.itemActionTypes[`${game.system.id === "sw5e" ? "rpak" : "rsak"}`]}`,
+      rwak: `${i18n(`${systemId}.Action`)}: ${config.itemActionTypes["rwak"]}`,
+      save: `${i18n(`${systemId}.Action`)}: ${config.itemActionTypes["save"]}`,
+      util: `${i18n(`${systemId}.Action`)}: ${config.itemActionTypes["util"]}`,
+      acid: `${i18n(`${systemId}.Damage`)}: ${config.damageTypes.acid}`,
+      bludgeoning: `${i18n(`${systemId}.Damage`)}: ${config.damageTypes.bludgeoning}`,
+      cold: `${i18n(`${systemId}.Damage`)}: ${config.damageTypes.cold}`,
+      fire: `${i18n(`${systemId}.Damage`)}: ${config.damageTypes.fire}`,
+      force: `${i18n(`${systemId}.Damage`)}: ${config.damageTypes.force}`,
+      lightning: `${i18n(`${systemId}.Damage`)}: ${config.damageTypes.lightning}`,
+      necrotic: `${i18n(`${systemId}.Damage`)}: ${config.damageTypes.necrotic}`,
+      piercing: `${i18n(`${systemId}.Damage`)}: ${config.damageTypes.piercing}`,
+      poison: `${i18n(`${systemId}.Damage`)}: ${config.damageTypes.poison}`,
+      psychic: `${i18n(`${systemId}.Damage`)}: ${config.damageTypes.psychic}`,
+      radiant: `${i18n(`${systemId}.Damage`)}: ${config.damageTypes.radiant}`,
+      slashing: `${i18n(`${systemId}.Damage`)}: ${config.damageTypes.slashing}`,
+      thunder: `${i18n(`${systemId}.Damage`)}: ${config.damageTypes.thunder}`,
+      "midi-none": `${i18n(`${systemId}.Damage`)}: ${config.damageTypes["midi-none"]}`,
       none: i18n("None")
     }
   }
@@ -100,14 +126,14 @@ export class MidiSounds {
     MidiSounds.weaponBaseTypes = {};
     // TODO remove this if dnd5e getBaseItem bug is fixed
     const config: any = CONFIG;
-    const packname = game.system.id === "dnd5e" ? config.DND5E?.sourcePacks.ITEMS : config.SW5E?.sourcePacks.ITEMS;
+    const packname = getSystemCONFIG()?.sourcePacks.ITEMS;
     if (packname) {
       const packObject = game.packs.get(packname);
       // TODO check this for v10 compendia
       //@ts-ignore getindex 0 params
       await packObject?.getIndex({ fields: ["system.armor.type", "system.toolType", "system.weaponType", "img"] });
 
-      const weaponTypes = game.system.id === "dnd5e" ? Object.keys(config.DND5E.weaponTypes) : Object.keys(config.SW5E.weaponTypes);;
+      const weaponTypes = Object.keys(getSystemCONFIG().weaponTypes);
       const sheetClass = config.Item.sheetClasses.weapon[`${game.system.id}.ItemSheet5e`].cls;
       for (let wt of weaponTypes) {
         const baseTypes = await MidiSounds.getItemBaseTypes("weapon", wt);
@@ -118,8 +144,9 @@ export class MidiSounds {
   }
 
   static async getItemBaseTypes(type: string, weaponType: string) {
+    const ConfigSettings = getSystemCONFIG();
     //@ts-ignore DND5e
-    const baseIds = CONFIG.DND5E[`${type}Ids`];
+    const baseIds = ConfigSettings[`${type}Ids`];
     if (baseIds === undefined) return {};
 
     const typeProperty = type === "armor" ? "armor.type" : `${type}Type`;
@@ -128,14 +155,15 @@ export class MidiSounds {
     const items = {};
     for (const [name, id] of Object.entries(baseIds)) {
       let baseItem;
-      //@ts-expect-error
-      if (game.system.id === "dnd5e" && isNewerVersion(game.system.version, "2.0.3")) {
+      if (globalThis.sw5e?.documents.Trait.getBaseItem) {
+        baseItem = await globalThis.sw5e.documents.Trait.getBaseItem(id);
+      } else if (globalThis.dnd5e?.documents.Trait.getBaseItem) {
         baseItem = await globalThis.dnd5e.documents.Trait.getBaseItem(id);
       } else {
         globalThis.dnd5e.applications.ProficiencySelector.getBaseItem(id);
       }
-      if (baseType !== foundry.utils.getProperty(baseItem.system, typeProperty)) continue;
-      items[name] = baseItem.name;
+      if (baseType !== foundry.utils.getProperty(baseItem?.system, typeProperty)) continue;
+      items[name] = baseItem?.name;
     }
     //@ts-ignore lhs[1]
     return Object.fromEntries(Object.entries(items).sort((lhs, rhs) => lhs[1].localeCompare(rhs[1])));
@@ -551,7 +579,7 @@ export class MidiSounds {
     if (game.user?.can("SETTINGS_MODIFY")) await game.settings.set("midi-qol", "MidiSoundSettings", soundSettings);
   }
   static async setupBasicSounds() {
-    const soundSettings = {
+    const soundSettings: any = {
       version: "0.9.48",
       "any": {
         "all": {
@@ -599,6 +627,12 @@ export class MidiSounds {
           }
         }
       }
+    }
+    if (game.system.id === "sw5e") {
+      soundSettings.rpak = soundSettings.rsak;
+      soundSettings.mpak = soundSettings.msak;
+      delete soundSettings.rsak;
+      delete soundSettings.msak;
     }
     if (game.user?.can("SETTINGS_MODIFY")) await game.settings.set("midi-qol", "MidiSoundSettings", soundSettings);
   }

@@ -617,7 +617,6 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
     result = new CONFIG.Dice.DamageRoll(workflow.otherDamageFormula, workflow.otherDamageItem?.getRollData(), { critical: workflow.rollOptions.critical || workflow.isCritical });
     result = await result?.evaluate({ async: true });
   }
-
   if (!result) { // user backed out of damage roll or roll failed
     return;
   }
@@ -733,7 +732,6 @@ export async function doDamageRoll(wrapped, { event = {}, systemCard = false, sp
           (getProperty(this.parent, "flags.midi-qol.damage.reroll-kh")) ||
           (getProperty(this.parent, "flags.midi-qol.damage.reroll-kl"))) {
           otherResult2 = await otherResult.reroll({ async: true });
-
           if (otherResult2?.total && otherResult?.total) {
             if ((getProperty(this.parent, "flags.midi-qol.damage.reroll-kh") && (otherResult2?.total > otherResult?.total)) ||
               (getProperty(this.parent, "flags.midi-qol.damage.reroll-kl") && (otherResult2?.total < otherResult?.total))) {
@@ -877,8 +875,8 @@ export async function wrappedDisplayCard(wrapped, options) {
   const templateData = {
     actor: this.actor,
     // tokenId: token?.id,
-    tokenId: token?.actor?.token?.uuid, // v10 change tokenId is a token Uuid
-    tokenUuid: token?.document?.uuid,
+    tokenId: token?.document?.uuid ?? token?.uuid ?? null, // v10 change tokenId is a token Uuid
+    tokenUuid: token?.document?.uuid ?? token?.uuid ?? null,
     item: this, // TODO check this v10
     itemUuid: this.uuid,
     data: await this.getChatData(),
@@ -1208,7 +1206,7 @@ export function shouldRollOtherDamage(workflow: Workflow, conditionFlagWeapon: s
   let rollOtherDamage = false;
   let conditionToUse: string | undefined = undefined;
   let conditionFlagToUse: string | undefined = undefined;
-  if (["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(this.system.actionType) && workflow?.hitTargets.size === 0) return false;
+  // if (["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(this.system.actionType) && workflow?.hitTargets.size === 0) return false;
   if (this.type === "spell" && conditionFlagSpell !== "none") {
     rollOtherDamage = (conditionFlagSpell === "ifSave" && this.hasSave)
       || conditionFlagSpell === "activation";

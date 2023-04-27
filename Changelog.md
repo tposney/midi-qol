@@ -1,3 +1,11 @@
+### 10.0.38
+* reenable flags.midi-qol.optional.NAME.criticalDamage which allows the bonus roll in the optional field to do critical damage if the damage roll is critical.
+* Reaction processing requires "enforce reaction checking" to be all/match the actor type for midi to prompt for reactions.
+* Some fixes for rolling damage with other damage when no token is on the map/no token targeted.
+* Some clean up for sw5e.
+* Added await for some of the triggerTargetMacro calls - thanks @Elwin
+* Additional feature for activation conditions and roll other damage. To be able to implement features/weapons that only do damage against a specific type of creature (or other activation condition), you can put 0 damage in the damage formula (not blank) and put all the damage in the other formula. Midi will evaluate the condition (per token) and if there is damage to apply the other damage will be displayed as the main damage and applied to targets for whom the activation condition evaluates to true, make sure to set roll other damage on the item. Have a look at the sample undead smite for how to set this up.
+
 ### 10.0.37
 * Nearby foe rule now does not include incapacitated foes and checks to see that the foe can see the target.
 * Some cleanup of using ammunition with saving throws (use the ammo name for the save). If both the original item and ammo have other damage rolls/saving throws the ammo item will be used for saving throw type/dc and other damage roll.

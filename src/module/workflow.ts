@@ -758,9 +758,9 @@ export class Workflow {
             }
           }
         }
-        if (configSettings.allowUseMacro) this.triggerTargetMacros(["preApplyTargetDamage"], this.hitTargets);
-        if (this.damageDetail.length) await processDamageRoll(this, this.damageDetail[0].type)
-        if (configSettings.allowUseMacro) this.triggerTargetMacros(["isDamaged"], this.hitTargets);
+        if (configSettings.allowUseMacro) await this.triggerTargetMacros(["preApplyTargetDamage"], this.hitTargets);
+        if (this.damageDetail?.length || this.otherDamageDetail?.length) await processDamageRoll(this, this.damageDetail[0]?.type ?? this.defaultDamageType)
+        if (configSettings.allowUseMacro) await this.triggerTargetMacros(["isDamaged"], this.hitTargets);
         if (debugEnabled > 1) debug("all rolls complete ", this.damageDetail)
         // expire effects on targeted tokens as required
 
@@ -1236,7 +1236,7 @@ export class Workflow {
 
   async checkFlankingAdvantage(): Promise<boolean> {
     if (!canvas) {
-      console.warn("midi-qol | Chgit stflanking advantage abandoned - no canvas defined")
+      console.warn("midi-qol | Check flanking advantage abandoned - no canvas defined")
       return false;
     }
     this.flankingAdvantage = false;
@@ -1747,14 +1747,15 @@ export class Workflow {
         ${macroCommand}
       })()`;
       const AsyncFunction = (async function () { }).constructor;
-      const v11args = {};
+      const v11args: any = {};
       for (let i = 0; i < args.length; i++) v11args[i] = args[i];
       mergeObject(v11args, macroData);
       v11args["length"] = args.length;
+      v11args.item = item;
       //@ts-expect-error
-      const fn = new AsyncFunction("speaker", "actor", "token", "character", "item", "args", macroCommand)
+      const fn = new AsyncFunction("speaker", "actor", "token", "character", "args", macroCommand)
       // const fn = Function("{speaker, actor, token, character, item, args}={}", body);
-      return fn.call(this, speaker, actor, token, character, item, v11args);
+      return fn.call(this, speaker, actor, token, character, v11args);
     } catch (err) {
       ui.notifications?.error(`There was an error running your macro. See the console (F12) for details`);
       error("Error evaluating macro ", err)

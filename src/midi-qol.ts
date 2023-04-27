@@ -5,7 +5,7 @@ import { itemPatching, visionPatching, actorAbilityRollPatching, patchLMRTFY, re
 import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Hooks.js';
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
-import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow } from './module/workflow.js';
+import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, WORKFLOWSTATES } from './module/workflow.js';
 import { addConcentration, applyTokenDamage, canSense, checkNearby, checkRange, completeItemRoll, completeItemUse, computeCoverBonus, doConcentrationCheck, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistanceSimple, getDistanceSimpleOld, getSystemCONFIG, getTraitMult, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags, setBonusActionUsed, setReactionUsed, tokenForActor } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemInfo, templateTokens } from './module/itemhandling.js';
@@ -404,6 +404,7 @@ function setupMidiQOLApi() {
     TrapWorkflow,
     warn,
     Workflow,
+    WORKFLOWSTATES
   };
   globalThis.MidiQOL.actionQueue = new Semaphore();
 }
@@ -630,7 +631,7 @@ function setupMidiFlags() {
   midiFlags.push(`flags.midi-qol.optional.NAME.count`);
   midiFlags.push(`flags.midi-qol.optional.NAME.countAlt`);
   midiFlags.push(`flags.midi-qol.optional.NAME.ac`);
-  //   midiFlags.push(`flags.midi-qol.optional.NAME.criticalDamage`);
+  midiFlags.push(`flags.midi-qol.optional.NAME.criticalDamage`);
   midiFlags.push(`flags.midi-qol.optional.Name.onUse`);
   midiFlags.push(`flags.midi-qol.optional.NAME.macroToCall`);
 

@@ -11,7 +11,7 @@ var traitList = { di: {}, dr: {}, dv: {} };
 function paranoidCheck(action: string, actor: any, data: any): boolean {
   return true;
 }
-export async function removeEffects(data: { actorUuid: string; effects: string[]; options: {}}) {
+export async function removeEffects(data: { actorUuid: string; effects: string[]; options: {} }) {
   const actor = MQfromActorUuid(data.actorUuid);
   if (configSettings.paranoidGM && !paranoidCheck("removeEffects", actor, data)) return "gmBlocked";
   return await actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects, data.options)
@@ -83,7 +83,7 @@ export let setupSocket = () => {
   // socketlibSocket.register("canSense", _canSense);
 }
 
-export async function _gmUnsetFlag(data: {base: string, key: string, actorUuid: string}) {
+export async function _gmUnsetFlag(data: { base: string, key: string, actorUuid: string }) {
   //@ts-expect-error
   let actor = fromUuidSync(data.actorUuid);
   actor = actor.actor ?? actor;
@@ -91,7 +91,7 @@ export async function _gmUnsetFlag(data: {base: string, key: string, actorUuid: 
   return actor.unsetFlag(data.base, data.key)
 }
 
-export async function _gmSetFlag(data: {base: string, key: string, value: any, actorUuid: string},) {
+export async function _gmSetFlag(data: { base: string, key: string, value: any, actorUuid: string }) {
   //@ts-expect-error
   let actor = fromUuidSync(data.actorUuid);
   actor = actor.actor ?? actor;
@@ -100,7 +100,7 @@ export async function _gmSetFlag(data: {base: string, key: string, value: any, a
 }
 
 // Seems to work doing it on the client instead.
-export async function _canSense(data: {tokenUuid, targetUuid}) {
+export async function _canSense(data: { tokenUuid, targetUuid }) {
   //@ts-expect-error fromUuidSync
   const token = fromUuidSync(data.tokenUuid)?.object;
   //@ts-expect-error fromUuidSync
@@ -128,14 +128,14 @@ export async function _canSense(data: {tokenUuid, targetUuid}) {
   return canSense(token, target);
 }
 
-export async function _gmOverTimeEffect(data:{ actorUuid, effectUuid, startTurn, options}) {
+export async function _gmOverTimeEffect(data: { actorUuid, effectUuid, startTurn, options }) {
   const actor = MQfromActorUuid(data.actorUuid);
   const effect = MQfromUuid(data.effectUuid)
   console.log("Called _gmOvertime", actor.name, effect.name ?? effect.label)
   return await gmOverTimeEffect(actor, effect, data.startTurn, data.options)
 }
 
-export async function _bonusCheck(data: {actorUuid, result, rollType, selector}) {
+export async function _bonusCheck(data: { actorUuid, result, rollType, selector }) {
   const tokenOrActor: any = await fromUuid(data.actorUuid);
   const actor = tokenOrActor?.actor ?? tokenOrActor;
   const roll = Roll.fromJSON(data.result);
@@ -162,15 +162,16 @@ export async function _applyEffects(data: { workflowId: string, targets: string[
 }
 
 async function _completeItemUse(data: {
-  itemData: any, actorUuid: string, config: any, options: any, targetUuids: string[], workflowData: boolean}) {
+  itemData: any, actorUuid: string, config: any, options: any, targetUuids: string[], workflowData: boolean
+}) {
   if (!game.user) return null;
-  let {itemData, actorUuid, config, options} = data;
+  let { itemData, actorUuid, config, options } = data;
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
   //@ts-ignore v10
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor, keepId: true });
-  const workflow =  await completeItemUse(ownedItem, config, options);
-  workflow.createConditionData({workflow, actor, ownedItem});
+  const workflow = await completeItemUse(ownedItem, config, options);
+  workflow.createConditionData({ workflow, actor, ownedItem });
   if (data.options?.workflowData) return workflow.getMacroData(); // can't return the workflow
   else return true;
 }
@@ -219,7 +220,7 @@ async function addConvenientEffect(options) {
   await game.dfreds.effectInterface?.addEffect({ effectName, uuid: actorUuid, origin });
 }
 
-async function localDoReactions(data: { tokenUuid: string; reactionItemUuidList: string[], triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any}) {
+async function localDoReactions(data: { tokenUuid: string; reactionItemUuidList: string[], triggerTokenUuid: string, reactionFlavor: string; triggerType: string; options: any }) {
   if (data.options.itemUuid) {
     data.options.item = MQfromUuid(data.options.itemUuid);
   }
@@ -269,14 +270,13 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
     });
 }
 
-async function createReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any, forceApply: boolean }) {
+async function createReverseDamageCard(data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any, forceApply: boolean }) {
   createPlayerDamageCard(data);
   return createGMReverseDamageCard(data);
 }
 
-async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any, forceApply: boolean }, 
-  templateData, tokenIdList, createPromises: boolean = false, showNPC: boolean = true, ): Promise<Promise<any>[]> 
-{
+async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any, forceApply: boolean },
+  templateData, tokenIdList, createPromises: boolean = false, showNPC: boolean = true,): Promise<Promise<any>[]> {
   const damageList = data.damageList;
   let promises: Promise<any>[] = [];
 
@@ -303,11 +303,11 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
         const updateContext = mergeObject({ dhp: -appliedDamage, damageItem }, data.updateContext ?? {});
         if (actor.isOwner) {
           //@ts-ignore
-          promises.push(actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage}, updateContext));
+          promises.push(actor.update({ "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP, "flags.dae.damageApplied": appliedDamage }, updateContext));
         }
       } else if (oldVitality !== newVitality && actor.isOwner) {
         const resource = checkRule("vitalityResource")?.trim();
-        if (resource) promises.push(actor.update({[resource]: newVitality}))
+        if (resource) promises.push(actor.update({ [resource]: newVitality }))
       }
     }
     tokenIdList.push({ tokenId, tokenUuid, actorUuid, actorId, oldTempHP: oldTempHP, oldHP, totalDamage: Math.abs(totalDamage), newHP, newTempHP, damageItem, oldVitality, newVitality });
@@ -356,7 +356,7 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
         //@ts-expect-error CONFIG.DND5E
         listItem[trait] = (`${traitList[trait]}: ${traits.value.map(t => CONFIG.DND5E.damageResistanceTypes[t]).join(",").concat(" " + traits?.custom)}`);
       } else if (traits.value instanceof Set && (traits?.custom || traits?.value.size > 0)) {
-        const tl = traits.value.reduce((acc,v)=>{acc.push(v); return acc}, [])
+        const tl = traits.value.reduce((acc, v) => { acc.push(v); return acc }, [])
         listItem[trait] = (`${traitList[trait]}: ${tl.join(",").concat(" " + traits?.custom)}`);
       }
     });
@@ -375,7 +375,7 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
   return promises;
 }
 // Fetch the token, then use the tokenData.actor.id
-async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any, forceApply: boolean}) {
+async function createPlayerDamageCard(data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any, forceApply: boolean }) {
   let shouldShow = true;
   if (configSettings.playerCardDamageDifferent) {
     shouldShow = false;
@@ -384,7 +384,7 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
     }
   }
   if (!shouldShow) return;
-  if (configSettings.playerDamageCard === "none" ) return;
+  if (configSettings.playerDamageCard === "none") return;
   let showNPC = ["npcplayerresults", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
   let playerButtons = ["playerbuttons", "npcplayerbuttons"].includes(configSettings.playerDamageCard);
   const damageList = data.damageList;
@@ -399,11 +399,13 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
     showNPC,
     playerButtons
   };
+
   prepareDamageListItems(data, templateData, tokenIdList, false, showNPC)
   if (templateData.damageList.length === 0) {
     log("No damage data to show to player");
-    return; 
+    return;
   }
+
   templateData.needsButtonAll = damageList.length > 1;
   //@ts-ignore
   templateData.playerButtons = templateData.playerButtons && templateData.damageList.some(listItem => listItem.isCharacter)
@@ -424,18 +426,18 @@ async function createPlayerDamageCard (data: { damageList: any; autoApplyDamage:
   }
   log(`createPlayerReverseDamageCard elapsed: ${Date.now() - startTime}ms`)
 }
-  
-  // Fetch the token, then use the tokenData.actor.id
-async function createGMReverseDamageCard (data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any, forceApply: boolean }) {
+
+// Fetch the token, then use the tokenData.actor.id
+async function createGMReverseDamageCard(data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any, forceApply: boolean }) {
   const damageList = data.damageList;
   let actor: { update: (arg0: { "system.attributes.hp.temp": any; "system.attributes.hp.value": number; "flags.dae.damageApplied": any; damageItem: any[] }) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
   const startTime = Date.now();
   let promises: Promise<any>[] = [];
   let tokenIdList: any[] = [];
   let templateData = {
-    damageApplied: (["yes", "yesCard"].includes(data.autoApplyDamage) || data.forceApply) ? 
-            i18n("midi-qol.HPUpdated") : 
-            data.autoApplyDamage === "yesCardNPC" ? i18n("midi-qol.HPNPCUpdated") : i18n("midi-qol.HPNotUpdated"),
+    damageApplied: (["yes", "yesCard"].includes(data.autoApplyDamage) || data.forceApply) ?
+      i18n("midi-qol.HPUpdated") :
+      data.autoApplyDamage === "yesCardNPC" ? i18n("midi-qol.HPNPCUpdated") : i18n("midi-qol.HPNotUpdated"),
     damageList: [],
     needsButtonAll: false
   };
@@ -471,10 +473,10 @@ async function doClick(event: { stopPropagation: () => void; }, actorUuid: any, 
   event.stopPropagation();
 }
 
-async function doMidiClick(ev: any, actorUuid: any, newTempHP: any, newHP: any,  newVitality: number, mult: number, data: any) {
+async function doMidiClick(ev: any, actorUuid: any, newTempHP: any, newHP: any, newVitality: number, mult: number, data: any) {
   let actor = MQfromActorUuid(actorUuid);
   log(`Setting HP to ${newTempHP} and ${newHP}`);
-  let updateContext = mergeObject({ dhp: (newHP - actor.system.attributes.hp.value)}, data.updateContext);
+  let updateContext = mergeObject({ dhp: (newHP - actor.system.attributes.hp.value) }, data.updateContext);
   if (actor.isOwner) {
     const update = { "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP };
     if (checkRule("vitalityResource")) {
@@ -498,15 +500,15 @@ export let processUndoDamageCard = (message, html, data) => {
         if (!actorUuid) continue;
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP}`, actor);
-        const update = { "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 }; 
-        const context = { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0), damageItem};
+        const update = { "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 };
+        const context = { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0), damageItem };
         if (checkRule("vitalityResource")) {
           const resource = checkRule("vitalityResource")?.trim();
           update[resource] = oldVitality;
           context["dvital"] = oldVitality - newVitality;
         }
         await actor?.update(update, context);
-          
+
         ev.stopPropagation();
       }
     })();
@@ -520,7 +522,7 @@ export let processUndoDamageCard = (message, html, data) => {
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP to ${newTempHP} and ${newHP}`);
         const update = { "system.attributes.hp.temp": newTempHP, "system.attributes.hp.value": newHP };
-        const context = { dhp: newHP - actor.system.attributes.hp.value, damageItem};
+        const context = { dhp: newHP - actor.system.attributes.hp.value, damageItem };
         if (checkRule("vitalityResource")) {
           const resource = checkRule("vitalityResource")?.trim();
           update[resource] = newVitality;
@@ -540,8 +542,8 @@ export let processUndoDamageCard = (message, html, data) => {
       (async () => {
         let actor = MQfromActorUuid(actorUuid);
         log(`Setting HP back to ${oldTempHP} and ${oldHP}`, data.updateContext);
-        const update = { "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 }; 
-        const context = { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0), damageItem};
+        const update = { "system.attributes.hp.temp": oldTempHP ?? 0, "system.attributes.hp.value": oldHP ?? 0 };
+        const context = { dhp: (oldHP ?? 0) - (actor.system.attributes.hp.value ?? 0), damageItem };
         if (checkRule("vitalityResource")) {
           const resource = checkRule("vitalityResource")?.trim();
           update[resource] = oldVitality;
@@ -571,7 +573,7 @@ export let processUndoDamageCard = (message, html, data) => {
     });
 
     let select = html.find(`#dmg-multiplier-${actorUuid.replaceAll(".", "")}`);
-    select.change( (ev: any) => {
+    select.change((ev: any) => {
       let multiplier = html.find(`#dmg-multiplier-${actorUuid.replaceAll(".", "")}`).val();
       button = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
       button.off('click');

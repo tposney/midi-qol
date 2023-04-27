@@ -9,7 +9,7 @@ import { concentrationCheckItemDisplayName, itemJSONData, midiFlagTypes, overTim
 import { OnUseMacros } from "./apps/Item.js";
 import { actorAbilityRollPatching, Options } from "./patching.js";
 import { ModifierFlags, reduceEachTrailingCommentRange } from "typescript";
-import { activationConditionToUse } from "./itemhandling.js";
+import { activationConditionToUse, shouldRollOtherDamage } from "./itemhandling.js";
 
 export function getDamageType(flavorString): string | undefined {
   const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
@@ -36,7 +36,7 @@ export function getDamageFlavor(damageType): string | undefined {
  */
 export function createDamageList({ roll, item, versatile, defaultType = MQdefaultDamageType, ammo }): { damage: unknown; type: string; }[] {
   let damageParts = {};
-  const rollTerms = roll.terms;
+  const rollTerms = roll?.terms ?? [];;
   let evalString = "";
   let parts = duplicate(item?.system.damage.parts ?? []);
   if (versatile && item?.system.damage.versatile) {
@@ -59,7 +59,6 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
     // TODO look at replacing this with a map/reduce
     if (debugEnabled > 1) debug("CreateDamageList: single Spec is ", spec, type, item)
     let formula = Roll.replaceFormulaData(spec, rollData, { missing: "0", warn: false });
-    // TODO - need to do the .evaluate else the expression is not useful 
     // However will be a problem longer term when async not supported?? What to do
     let dmgSpec: Roll | undefined;
     try {
@@ -120,7 +119,6 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
     if (evalString !== "") {
       // let result = Roll.safeEval(evalString);
       let result = new Roll(evalString).evaluate({ async: false }).total;
-
       damageParts[type || defaultType] = (damageParts[type || defaultType] || 0) + result;
       evalString = "";
     }
@@ -190,6 +188,7 @@ export function createDamageList({ roll, item, versatile, defaultType = MQdefaul
     }
   }
   // evalString contains the terms we have not yet evaluated so do them now
+
   if (evalString) {
     const damage = Roll.safeEval(evalString);
     // we can always add since the +/- will be recorded in the evalString
@@ -450,7 +449,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
   let damageList: any[] = [];
   let targetNames: string[] = [];
   let appliedDamage;
-  let workflow: any = options.workflow ?? {};
+  let workflow: any = options.workflow;
   if (debugEnabled > 0) warn("Apply token damage ", applyDamageDetails, theTargets, item, workflow)
   if (!theTargets || theTargets.size === 0) {
     workflow.currentState = WORKFLOWSTATES.ROLLFINISHED;
@@ -466,6 +465,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
       return [];
     }
   }
+  if (item && !workflow) workflow = Workflow.getWorkflow(item.uuid);
   const damageDetailArr = applyDamageDetails.map(a => a.damageDetail);
   const highestOnlyDR = false;
   let totalDamage = applyDamageDetails.reduce((a, b) => a + (b.damageTotal ?? 0), 0);
@@ -499,7 +499,6 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
     }
     const uncannyDodge = getProperty(targetActor, "flags.midi-qol.uncanny-dodge") && workflow.item?.hasAttack;
     if (game.system.id === "sw5e" && targetActor?.type === "starship") {
-      // TODO: maybe expand this to work with characters as well?
       // Starship damage resistance applies only to attacks
       if (item && ["mwak", "rwak"].includes(item?.system.actionType)) {
         // This should be a roll?
@@ -674,7 +673,6 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
         if (semiSuperSavers.has(t) && itemSaveMultiplier === 0.5)
           mult = saves.has(t) ? 0 : 1;
 
-        // TODO this should end up getting removed when the prepare data is done. Currently depends on 1Reaction expiry.
         if (uncannyDodge) mult = mult / 2;
 
         const resMult = getTraitMult(targetActor, type, item);
@@ -726,13 +724,13 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
     let ditem: any = calculateDamage(targetActor, appliedDamage, targetToken, totalDamage, dmgType, options.existingDamage);
     ditem.tempDamage = ditem.tempDamage + appliedTempHP;
     if (appliedTempHP <= 0) { // temp healing applied to actor does not add only gets the max
-      ditem.newTempHP = Math.max(ditem.newTempHP, - appliedTempHP);
+      ditem.newTempHP = Math.max(ditem.newTempHP, -appliedTempHP);
     } else {
       ditem.newTempHP = Math.max(0, ditem.newTempHP - appliedTempHP)
     }
     ditem.damageDetail = duplicate(damageDetailArr);
     ditem.critical = workflow?.isCritical;
-    await asyncHooksCallAll("midi-qol.damageApplied", t, { item, workflow, ditem });
+    await asyncHooksCallAll("midi-qol.damageApplied", t, { item, workflow, damageItem: ditem, ditem });
     damageList.push(ditem);
     targetNames.push(t.name)
   }
@@ -803,7 +801,10 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     acc[item.type] = (acc[item.type] ?? 0) + item.damage;
     return acc;
   }, {});
-  if (Object.keys(merged).length === 1 && Object.keys(merged)[0] === "midi-none") return;
+  if ((Object.keys(merged).length === 1 && Object.keys(merged)[0] === "midi-none") && 
+      (workflow.shouldRollOtherDamage && Object.keys(workflow.otherDamageDetail).length === 1 && Object.keys(workflow.otherDamageDetail)[0] === "midi-none")
+  ) return;
+
   //TODO come back and decide if -ve damage per type should be allowed, no in the case of 1d4 -2, yes? in the case of -1d4[fire]
   const newDetail = Object.keys(merged).map((key) => { return { damage: Math.max(0, merged[key]), type: key } });
   totalDamage = newDetail.reduce((acc, value) => acc + value.damage, 0);
@@ -1488,7 +1489,7 @@ export async function completeItemUse(item, config: any = {}, options: any = { c
 
 export function untargetAllTokens(...args) {
   let combat: Combat = args[0];
-  //@ts-ignore - combat.current protected - TODO come back to this
+  //@ts-expect-error combat.current
   let prevTurn = combat.current.turn - 1;
   if (prevTurn === -1)
     prevTurn = combat.turns.length - 1;
@@ -1764,10 +1765,6 @@ export function checkRange(itemIn, tokenIn, targetsIn): { result: string, attack
     if (!item.system.range) return {
       result: "normal",
     };
-    //TODO think about setting default range for mwak/etc
-    // if (["mwak", "msak", "mpak"].includes(itemData.actionType) && !itemData.properties?.thr) {
-    //    itemData.range.value = 5; // set default range for melee attacks
-    //}
 
     if (!token) {
       if (debugEnabled > 0) warn(`${game.user?.name} no token selected cannot check range`)
@@ -2078,7 +2075,6 @@ export async function addConcentrationEffect(actor, concentrationData: Concentra
     const itemDuration = item?.system.duration;
     statusEffect = duplicate(statusEffect);
     // set the token as concentrating
-    // Update the duration of the concentration effect - TODO remove it CUB supports a duration
     if (installedModules.get("dae")) {
       const inCombat = (game.combat?.turns.some(combatant => combatant.token?.id === selfTarget.id));
       const convertedDuration = globalThis.DAE.convertDuration(itemDuration, inCombat);
@@ -2572,11 +2568,19 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
             newRoll = await newRoll.evaluate({ async: true });
             if (showDiceSoNice) await displayDSNForRoll(newRoll, rollId);
           } else if (flagSelector.startsWith("damage.") && getProperty(this.actor, `${button.key}.criticalDamage`)) {
-            const rollOptions = { critical: (this.isCritical || this.rollOptions.critical) };
+            let rollOptions = duplicate(this[rollId].options);
+            rollOptions.configured = false;
+            // rollOptions = { critical: (this.isCritical || this.rollOptions.critical), configured: false };
+            //@ts-expect-error D20Roll
+            newRoll = CONFIG.Dice.D20Roll.fromRoll(this[rollId]);
+            newRoll.terms.push(new OperatorTerm({ operator: "+" }));
             //@ts-ignore DamageRoll
-            newRoll = new CONFIG.Dice.DamageRoll(`${this[rollId].result} + ${button.value}`, this.actor.getRollData(), rollOptions);
-            newRoll = await newRoll.evaluate({ async: true });
-            if (showDiceSoNice) await displayDSNForRoll(newRoll, rollId);
+            const tempRoll = new CONFIG.Dice.DamageRoll(`${button.value}`, this.actor.getRollData(), rollOptions);
+            await tempRoll.evaluate({ async: true });
+            if (showDiceSoNice) await displayDSNForRoll(tempRoll, rollId);
+            newRoll._total = this[rollId]._total + tempRoll.total;
+            newRoll._formula = `${this[rollId]._formula} + ${tempRoll.formula}`
+            newRoll.terms = newRoll.terms.concat(tempRoll.terms);
           } else {
             //@ts-expect-error
             newRoll = CONFIG.Dice.D20Roll.fromRoll(this[rollId]);
@@ -2713,7 +2717,7 @@ export function getOptionalCountRemaining(actor: globalThis.dnd5e.documents.Acto
     let result = getProperty(actor.system, countValue.slice(1))
     return result;
   }
-  return 1; //?? TODO is this sensible? Probably yes since monks get always on optional rolls
+  return 1;
 }
 
 //@ts-ignore dnd5e v10
@@ -2816,9 +2820,7 @@ export function hasEffectGranting(actor: globalThis.dnd5e.documents.Actor5e, key
   return false;
 
 }
-
-//TODO fix this to search 
-//@ts-ignore dnd5e v10
+//@ts-expect-error dnd5e
 export function isConcentrating(actor: globalThis.dnd5e.documents.Actor5e): undefined | ActiveEffect {
   const concentrationName = installedModules.get("combat-utility-belt") && !installedModules.get("dfreds-convenient-effects")
     ? game.settings.get("combat-utility-belt", "concentratorConditionName")
@@ -3473,6 +3475,7 @@ export function isInCombat(actor: Actor) {
 }
 
 export async function setReactionUsed(actor: Actor) {
+  if (configSettings.enforceReactions !== "all" && configSettings.enforceReactions !== actor.type) return;
   let effect;
   if (getConvenientEffectsReaction()) {
     //@ts-ignore
@@ -3485,28 +3488,30 @@ export async function setReactionUsed(actor: Actor) {
 }
 
 export async function setBonusActionUsed(actor: Actor) {
+  if (configSettings.enforceBonusActions !== "all" && configSettings.enforceBonusActions !== actor.type) return;
   let effect;
   if (getConvenientEffectsBonusAction()) {
-    //@ts-ignore
+    //@ts-expect-error
     await game.dfreds?.effectInterface.addEffect({ effectName: (getConvenientEffectsBonusAction().name || getConvenientEffectsBonusAction().label), uuid: actor.uuid });
   } else if (installedModules.get("combat-utility-belt") && (effect = CONFIG.statusEffects.find(se => se.label === i18n("DND5E.BonusAction")))) {
+    // TODO V11 check se.label
     actor.createEmbeddedDocuments("ActiveEffect", [effect]);
   }
   await actor.setFlag("midi-qol", "bonusActionCombatRound", game.combat?.round);
 }
 
 export async function removeReactionUsed(actor: Actor, removeCEEffect = false) {
-  let effect;
   if (removeCEEffect && getConvenientEffectsReaction()) {
-    //@ts-ignore
-    if (await game.dfreds?.effectInterface.hasEffectApplied((getConvenientEffectsReaction().name || getConvenientEffectsReaction().label), actor.uuid)) {
-      //@ts-ignore
+      //@ts-expect-error
+      if (await game.dfreds?.effectInterface.hasEffectApplied((getConvenientEffectsReaction().name || getConvenientEffectsReaction().label), actor.uuid)) {
+      //@ts-expect-error
       await game.dfreds.effectInterface?.removeEffect({ effectName: (getConvenientEffectsReaction().name || getConvenientEffectsReaction().label), uuid: actor.uuid });
     }
   }
   if (installedModules.get("combat-utility-belt")) {
-    //@ts-ignore
-    const effect = actor.effects.contents.find(ef => (ef.name || ef.label) === i18n("DND5E.Reaction"));
+     // TODO V11 check se.label
+      //@ts-expect-error
+      const effect = actor.effects.contents.find(ef => (ef.name || ef.label) === i18n("DND5E.Reaction"));
     await effect?.delete();
   }
   return await actor?.unsetFlag("midi-qol", "reactionCombatRound");
@@ -3514,6 +3519,7 @@ export async function removeReactionUsed(actor: Actor, removeCEEffect = false) {
 
 
 export async function hasUsedReaction(actor: Actor) {
+  if (configSettings.enforceReactions !== "all" && configSettings.enforceReactions !== actor.type) return false;
   if (actor.getFlag("midi-qol", "reactionCombatRound")) return true;
   if (getConvenientEffectsReaction()) {
     //@ts-expect-error .dfreds
@@ -3546,6 +3552,8 @@ export async function gmExpirePerTurnBonusActions(data: { combatUuid: string }) 
 }
 
 export async function hasUsedBonusAction(actor: Actor) {
+  if (configSettings.enforceBonusActions !== "all" && configSettings.enforceBonusActions !== actor.type) return false;
+
   if (actor.getFlag("midi-qol", "bonusActionCombatRound")) return true;
   if (getConvenientEffectsBonusAction()) {
     //@ts-ignore
@@ -4000,7 +4008,6 @@ export function canSense(tokenEntity: Token | TokenDocument, targetEntity: Token
     const dm = modes[detectionMode.id];
     const result = dm?.testVisibility(token.vision, detectionMode, config)
     if (result === true) {
-      //  TODO see if this is needed token.detectionFilter = dm.constructor.getDetectionFilter();
       return true;
     }
   }
@@ -4019,6 +4026,7 @@ export function getSystemCONFIG(): any {
 }
 
 export function tokenForActor(actor): Token | undefined {
+  // if (actor.token) return actor.token;
   const tokens = actor.getActiveTokens();
   if (!tokens.length) return undefined;
   const controlled = tokens.filter(t => t._controlled);
