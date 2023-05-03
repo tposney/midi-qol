@@ -4,6 +4,7 @@ import { canSense, completeItemUse, gmExpirePerTurnBonusActions, gmOverTimeEffec
 import { ddbglPendingFired } from "./chatMesssageHandling.js";
 import { Workflow, WORKFLOWSTATES } from "./workflow.js";
 import { bonusCheck } from "./patching.js";
+import { queueUndoData, recordUndoData, startUndoWorkflow, updateUndoChatCards, updateUndoConcentration, _undoMostRecentWorkflow } from "./undo.js";
 
 export var socketlibSocket: any = undefined;
 var traitList = { di: {}, dr: {}, dv: {} };
@@ -79,6 +80,11 @@ export let setupSocket = () => {
   socketlibSocket.register("_gmExpirePerTurnBonusActions", gmExpirePerTurnBonusActions);
   socketlibSocket.register("_gmUnsetFlag", _gmUnsetFlag);
   socketlibSocket.register("_gmSetFlag", _gmSetFlag);
+  socketlibSocket.register("startUndoWorkflow", startUndoWorkflow);
+  socketlibSocket.register("queueUndoData", queueUndoData);
+  socketlibSocket.register("undoMostRecentWorkflow", _undoMostRecentWorkflow);
+  socketlibSocket.register("updateUndoChatCards", updateUndoChatCards);
+  socketlibSocket.register("updateUndoConcentration", updateUndoConcentration)
 
   // socketlibSocket.register("canSense", _canSense);
 }
@@ -270,9 +276,13 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
     });
 }
 
-async function createReverseDamageCard(data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any, forceApply: boolean }) {
-  createPlayerDamageCard(data);
-  return createGMReverseDamageCard(data);
+async function createReverseDamageCard(data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any, forceApply: boolean }): Promise<string[]> {
+  let cardIds:string[] = [];
+  let id = await createPlayerDamageCard(data);
+  if (id) cardIds.push(id);
+  id =  await createGMReverseDamageCard(data);
+  if (id) cardIds.push(id);
+  return cardIds;
 }
 
 async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any, forceApply: boolean },
@@ -375,8 +385,9 @@ async function prepareDamageListItems(data: { damageList: any; autoApplyDamage: 
   return promises;
 }
 // Fetch the token, then use the tokenData.actor.id
-async function createPlayerDamageCard(data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any, forceApply: boolean }) {
+async function createPlayerDamageCard(data: { damageList: any; autoApplyDamage: string; flagTags: any, sender: string, charName: string, actorId: string, updateContext: any, forceApply: boolean }): Promise<string | undefined> {
   let shouldShow = true;
+  let chatCardUuid;
   if (configSettings.playerCardDamageDifferent) {
     shouldShow = false;
     for (let damageItem of data.damageList) {
@@ -422,18 +433,20 @@ async function createPlayerDamageCard(data: { damageList: any; autoApplyDamage: 
       flags: { "midiqol": { "undoDamage": tokenIdList } }
     };
     if (data.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", data.flagTags);
-    ChatMessage.create(chatData);
+    chatCardUuid = (await ChatMessage.create(chatData))?.uuid;
   }
   log(`createPlayerReverseDamageCard elapsed: ${Date.now() - startTime}ms`)
+  return chatCardUuid;
 }
 
 // Fetch the token, then use the tokenData.actor.id
-async function createGMReverseDamageCard(data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any, forceApply: boolean }) {
+async function createGMReverseDamageCard(data: { damageList: any; autoApplyDamage: string; flagTags: any, updateContext: any, forceApply: boolean }): Promise<string | undefined> {
   const damageList = data.damageList;
   let actor: { update: (arg0: { "system.attributes.hp.temp": any; "system.attributes.hp.value": number; "flags.dae.damageApplied": any; damageItem: any[] }) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
   const startTime = Date.now();
   let promises: Promise<any>[] = [];
   let tokenIdList: any[] = [];
+  let chatCardUuid;
   let templateData = {
     damageApplied: (["yes", "yesCard"].includes(data.autoApplyDamage) || data.forceApply) ?
       i18n("midi-qol.HPUpdated") :
@@ -461,9 +474,10 @@ async function createGMReverseDamageCard(data: { damageList: any; autoApplyDamag
       flags: { "midiqol": { "undoDamage": tokenIdList } }
     };
     if (data.flagTags) chatData.flags = mergeObject(chatData.flags ?? "", data.flagTags);
-    ChatMessage.create(chatData);
+    chatCardUuid = (await ChatMessage.create(chatData))?.uuid;
   }
-  log(`createGMReverseDamageCard elapsed: ${Date.now() - startTime}ms`)
+  log(`createGMReverseDamageCard elapsed: ${Date.now() - startTime}ms`);
+  return chatCardUuid;
 }
 
 async function doClick(event: { stopPropagation: () => void; }, actorUuid: any, totalDamage: any, mult: any, data: any) {

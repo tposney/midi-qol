@@ -8,7 +8,7 @@ const target2Name = "Orc2";
 const target3Name = "Skeleton1";
 
 export async function busyWait(seconds: number) {
-  await (new Promise(resolve => setTimeout(resolve, seconds * 1000)));
+  return (new Promise(resolve => setTimeout(resolve, seconds * 1000)));
 }
 export async function resetActors() {
   for (let name of [actor1Name, actor2Name, target1Name, target2Name, target3Name]) {

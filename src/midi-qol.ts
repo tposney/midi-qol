@@ -6,7 +6,7 @@ import { initHooks, overTimeJSONData, readyHooks, setupHooks } from './module/Ho
 import { initGMActionSetup, setupSocket, socketlibSocket } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, WORKFLOWSTATES } from './module/workflow.js';
-import { addConcentration, applyTokenDamage, canSense, checkNearby, checkRange, completeItemRoll, completeItemUse, computeCoverBonus, doConcentrationCheck, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistanceSimple, getDistanceSimpleOld, getSystemCONFIG, getTraitMult, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, MQfromActorUuid, MQfromUuid, reportMidiCriticalFlags, setBonusActionUsed, setReactionUsed, tokenForActor } from './module/utils.js';
+import { addConcentration, applyTokenDamage, canSense, checkNearby, checkRange, completeItemRoll, completeItemUse, computeCoverBonus, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, findNearby, getChanges, getConcentrationEffect, getDistanceSimple, getDistanceSimpleOld, getSystemCONFIG, getTraitMult, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, MQfromActorUuid, MQfromUuid, playerFor, playerForActor, reportMidiCriticalFlags, setBonusActionUsed, setReactionUsed, tokenForActor } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { showItemInfo, templateTokens } from './module/itemhandling.js';
 import { RollStats } from './module/RollStats.js';
@@ -342,7 +342,7 @@ Hooks.once('ready', function () {
 
 
 import { setupMidiTests } from './module/tests/setupTest.js';
-import { FlowFlags } from 'typescript';
+import { showUndoQueue, undoMostRecentWorkflow } from './module/undo.js';
 Hooks.once("midi-qol.midiReady", () => {
   setupMidiTests();
 });
@@ -375,6 +375,7 @@ function setupMidiQOLApi() {
     debug,
     doConcentrationCheck,
     doOverTimeEffect,
+    displayDSNForRoll,
     DummyWorkflow,
     enableWorkflow,
     findNearby,
@@ -394,6 +395,8 @@ function setupMidiQOLApi() {
     MQFromUuid: MQfromUuid,
     MQOnUseOptions,
     overTimeJSONData,
+    playerFor,
+    playerForActor,
     reportMidiCriticalFlags: reportMidiCriticalFlags,
     selectTargetsForTemplate: templateTokens,
     setBonusActionUsed,
@@ -404,7 +407,9 @@ function setupMidiQOLApi() {
     TrapWorkflow,
     warn,
     Workflow,
-    WORKFLOWSTATES
+    WORKFLOWSTATES,
+    showUndoQueue,
+    undoMostRecentWorkflow
   };
   globalThis.MidiQOL.actionQueue = new Semaphore();
 }

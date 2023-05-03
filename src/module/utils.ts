@@ -8,8 +8,6 @@ import { concentrationCheckItemDisplayName, itemJSONData, midiFlagTypes, overTim
 
 import { OnUseMacros } from "./apps/Item.js";
 import { actorAbilityRollPatching, Options } from "./patching.js";
-import { ModifierFlags, reduceEachTrailingCommentRange } from "typescript";
-import { activationConditionToUse, shouldRollOtherDamage } from "./itemhandling.js";
 
 export function getDamageType(flavorString): string | undefined {
   const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
@@ -457,7 +455,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
     return [];
   }
   if (!(item instanceof CONFIG.Item.documentClass)) {
-    if (workflow && workflow.item) item = workflow.item;
+    if (workflow?.item) item = workflow.item;
     else if (item?.uuid) {
       item = MQfromUuid(item.uuid);
     } else if (item) {
@@ -490,14 +488,14 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
     const firstDamageHealing = applyDamageDetails[0].damageDetail && ["healing", "temphp"].includes(applyDamageDetails[0].damageDetail[0]?.type);
     const isHealing = ("heal" === workflow?.item?.system.actionType) || firstDamageHealing;
     const noDamageReactions = (item?.hasSave && item.flags?.midiProperties?.nodam && workflow.saves?.has(t));
-    const noProvokeReaction = workflow.item && getProperty(workflow.item, "flags.midi-qol.noProvokeReaction");
+    const noProvokeReaction = getProperty(workflow?.item, "flags.midi-qol.noProvokeReaction");
 
     if (totalDamage > 0 && workflow && !isHealing && !noDamageReactions && !noProvokeReaction && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
       // TODO check that the targetToken is actually taking damage
       // Consider checking the save multiplier for the item as a first step
-      let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflow, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow.item?.uuid, sourceAmmoUuid: workflow.ammo?.uuid } });
+      let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow?.item, workflow, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow?.item?.uuid, sourceAmmoUuid: workflow.ammo?.uuid } });
     }
-    const uncannyDodge = getProperty(targetActor, "flags.midi-qol.uncanny-dodge") && workflow.item?.hasAttack;
+    const uncannyDodge = getProperty(targetActor, "flags.midi-qol.uncanny-dodge") && workflow?.item?.hasAttack;
     if (game.system.id === "sw5e" && targetActor?.type === "starship") {
       // Starship damage resistance applies only to attacks
       if (item && ["mwak", "rwak"].includes(item?.system.actionType)) {
@@ -739,18 +737,23 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
     if (workflow && configSettings.allowUseMacro && workflow.item?.flags) {
       await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preDamageApplication"), "OnUse", "preDamageApplication");
     }
-    await timedAwaitExecuteAsGM("createReverseDamageCard", {
+    const chatCardUuids = await timedAwaitExecuteAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
       actorId: workflow.actor?.id,
       charName: workflow.actor?.name ?? game?.user?.name,
       damageList: damageList,
       targetNames,
-      chatCardId: workflow.itemCardId,
+      chatCardId: workflow?.itemCardId,
       flagTags: workflow?.flagTags,
       updateContext: options?.updateContext,
       forceApply: options.forceApply,
     })
+    if (configSettings.undoWorkflow) {
+      // Assumes workflow.undoData.chatCardUuids has been initialised
+      workflow.undoData.chatCardUuids = workflow.undoData.chatCardUuids.concat(chatCardUuids);
+      socketlibSocket.executeAsGM("updateUndoChatCards", workflow.undoData);
+    }
   }
   if (configSettings.keepRollStats) {
     gameStats.addDamage(totalAppliedDamage, totalDamage, theTargets.size, item)
@@ -801,8 +804,8 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     acc[item.type] = (acc[item.type] ?? 0) + item.damage;
     return acc;
   }, {});
-  if ((Object.keys(merged).length === 1 && Object.keys(merged)[0] === "midi-none") && 
-      (workflow.shouldRollOtherDamage && Object.keys(workflow.otherDamageDetail).length === 1 && Object.keys(workflow.otherDamageDetail)[0] === "midi-none")
+  if ((Object.keys(merged).length === 1 && Object.keys(merged)[0] === "midi-none") &&
+    (workflow.shouldRollOtherDamage && Object.keys(workflow.otherDamageDetail).length === 1 && Object.keys(workflow.otherDamageDetail)[0] === "midi-none")
   ) return;
 
   //TODO come back and decide if -ve damage per type should be allowed, no in the case of 1d4 -2, yes? in the case of -1d4[fire]
@@ -1455,7 +1458,6 @@ export async function completeItemUse(item, config: any = {}, options: any = { c
       Hooks.once(hookName, (workflow) => {
         if (saveTargets && game.user) {
           game.user?.updateTokenTargets(saveTargets);
-          Array.from(game.user?.targets ?? []).map(t => { return t.id });
         }
         resolve(workflow);
       });
@@ -3096,8 +3098,9 @@ export async function promptReactions(tokenUuid: string, reactionItemList: strin
   return { name: "None" };
 }
 
-export function playerFor(target: TokenDocument): User | undefined {
-  return playerForActor(target.actor ?? undefined); // just here for syntax checker
+export function playerFor(target: TokenDocument | Token): User | undefined {
+  //@ts-expect-error
+  return playerForActor(target.document?.actor ?? target.actor ?? undefined); // just here for syntax checker
 }
 
 export function playerForActor(actor: Actor | undefined): User | undefined {
@@ -3145,7 +3148,8 @@ export async function reactionDialog(actor: globalThis.dnd5e.documents.Actor5e, 
         versatile: false,
         configureDialog: true,
         checkGMStatus: false,
-        targetUuids: [triggerTokenUuid]
+        targetUuids: [triggerTokenUuid],
+        isReaction: true
       });
       await completeItemUse(item, {}, itemRollOptions);
       // actor.reset();
@@ -3502,16 +3506,16 @@ export async function setBonusActionUsed(actor: Actor) {
 
 export async function removeReactionUsed(actor: Actor, removeCEEffect = false) {
   if (removeCEEffect && getConvenientEffectsReaction()) {
-      //@ts-expect-error
-      if (await game.dfreds?.effectInterface.hasEffectApplied((getConvenientEffectsReaction().name || getConvenientEffectsReaction().label), actor.uuid)) {
+    //@ts-expect-error
+    if (await game.dfreds?.effectInterface.hasEffectApplied((getConvenientEffectsReaction().name || getConvenientEffectsReaction().label), actor.uuid)) {
       //@ts-expect-error
       await game.dfreds.effectInterface?.removeEffect({ effectName: (getConvenientEffectsReaction().name || getConvenientEffectsReaction().label), uuid: actor.uuid });
     }
   }
   if (installedModules.get("combat-utility-belt")) {
-     // TODO V11 check se.label
-      //@ts-expect-error
-      const effect = actor.effects.contents.find(ef => (ef.name || ef.label) === i18n("DND5E.Reaction"));
+    // TODO V11 check se.label
+    //@ts-expect-error
+    const effect = actor.effects.contents.find(ef => (ef.name || ef.label) === i18n("DND5E.Reaction"));
     await effect?.delete();
   }
   return await actor?.unsetFlag("midi-qol", "reactionCombatRound");
@@ -4157,8 +4161,20 @@ export async function displayDSNForRoll(roll: Roll | undefined, rollType: string
       whisperIds = ChatMessage.getWhisperRecipients("GM");
       if (rollMode !== "blindroll" && game.user) whisperIds.concat(game.user);
     }
-    //@ts-expect-error game.dice3d mark all dice as shown - so that toMessage does not trigger additional display on other clients
-    if (!hideRoll) await game.dice3d?.showForRoll(roll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+    if (!hideRoll) {
+      let displayRoll = deepClone(roll);
+      displayRoll.terms.forEach(term => {
+        if (term.options?.flavor) term.options.flavor = term.options.flavor.toLocaleLowerCase();
+      });
+      //@ts-expect-error game.dice3d mark all dice as shown - so that toMessage does not trigger additional display on other clients
+      await game.dice3d?.showForRoll(displayRoll, game.user, true, whisperIds, rollMode === "blindroll" && !game.user.isGM)
+    }
   }
   roll.dice.forEach(d => d.results.forEach(r => setProperty(r, "hidden", true)));
 }
+
+export function isReactionItem(item): boolean {
+  if (!item) return false;
+  return item.system.activation?.type?.includes("reaction");
+}
+

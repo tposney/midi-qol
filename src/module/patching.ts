@@ -952,7 +952,8 @@ export async function removeConcentration(actor: Actor, concentrationUuid: strin
       const entity = await fromUuid(removeUuid);
       if (entity) await entity.delete(); // TODO check if this needs to be run as GM
     }
-    if (actor.isToken)
+    //@ts-expect-error game.version This should just work in v11, but in v10 requires a delay to allow things to settle down.
+    if (actor.isToken && isNewerVersion("11.293", game.version))
       setTimeout(() => socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [concentrationUuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true }), 200)
     else result = await socketlibSocket.executeAsGM("deleteItemEffects", { ignore: [concentrationUuid], targets: concentrationData.targets, origin: concentrationData.uuid, ignoreTransfer: true });
   } catch (err) {

@@ -7,7 +7,7 @@ import { createDamageList, processDamageRoll, untargetDeadTokens, getSaveMultipl
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, procAbilityAdvantage, procAutoFail } from "./patching.js";
 import { mapSpeedKeys, MidiKeyManager } from "./MidiKeyManager.js";
-import { EffectDurationData } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/data.mjs/effectDurationData";
+import { saveTargetsUndoData, updateUndoConcentrationData } from "./undo.js";
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
 export let allDamageTypes;
@@ -41,21 +41,10 @@ function stateToLabel(state: number) {
   return theState ? theState[0] : "Bad State";
 }
 
-class WorkflowState {
-  constructor(state, undoData) {
-    this._state = state;
-    this._undoData = undoData
-    this._stateLabel = stateToLabel(state);
-  }
-  _state: number;
-  _undoData: any;
-  _stateLabel: string;
-}
-
 export class Workflow {
   [x: string]: any;
-  static _actions: {};
   static _workflows: {} = {};
+
   //@ts-ignore dnd5e v10
   actor: globalThis.dnd5e.documents.Actor5e;
   //@ts-ignore dnd5e v10
@@ -124,13 +113,11 @@ export class Workflow {
   displayId: string;
   //@ts-ignore dnd5e v10
   reactionUpdates: Set<globalThis.dnd5e.documents.Actor5e>;
-  stateList: WorkflowState[];
   flagTags: {} | undefined;
   onUseMacros: OnUseMacros | undefined;
 
   attackAdvAttribution: {};
-  static eventHack: any;
-
+  undoData: any = undefined;
 
   static get workflows() { return Workflow._workflows }
   static getWorkflow(id: string): Workflow {
@@ -166,10 +153,6 @@ export class Workflow {
         return this.otherDamageItem?.system.damage.versatile;
     }
     return this.otherDamageItem?.system.formula;
-  }
-
-  static initActions(actions: {}) {
-    Workflow._actions = actions;
   }
 
   public processAttackEventOptions() { }
@@ -262,13 +245,14 @@ export class Workflow {
     this.reactionUpdates = new Set();
     if (!(this instanceof DummyWorkflow)) Workflow._workflows[this.uuid] = this;
     this.needTemplate = this.item?.hasAreaTarget;
-    this.stateList = [];
     this.attackRolled = false;
     this.damageRolled = false;
     this.flagTags = undefined;
     this.workflowOptions = options?.workflowOptions ?? {};
     this.attackAdvAttribution = {};
     this.systemString = game.system.id.toUpperCase();
+    this.options = options;
+    console.error("Constructor options ", options)
     this.initSaveResults();
 
     if (configSettings.allowUseMacro) {
@@ -341,13 +325,11 @@ export class Workflow {
     return await this._next(nextState);
   }
 
-  async _next(newState: number, undoData: any = {}) {
+  async _next(newState: number) {
     this.currentState = newState;
     let items: any[] = [];
     let state = stateToLabel(newState)
     if (debugEnabled > 0) warn(this.workflowType, "_next ", state, this.id, this);
-    // this.stateList.push(new WorkflowState(newState, undoData));
-    // error(this.stateList);
     switch (newState) {
 
       case WORKFLOWSTATES.NONE:
@@ -439,6 +421,7 @@ export class Workflow {
         return this.next(WORKFLOWSTATES.PREAMBLECOMPLETE);
 
       case WORKFLOWSTATES.PREAMBLECOMPLETE:
+        if (configSettings.undoWorkflow) await saveTargetsUndoData(this);
         this.effectsAlreadyExpired = [];
         if (await asyncHooksCall("midi-qol.preambleComplete", this) === false) return;
         if (this.item && await asyncHooksCall(`midi-qol.preambleComplete.${this.item.uuid}`, this) === false) return;
@@ -975,6 +958,8 @@ export class Workflow {
               templateUuid: this.templateUuid
             };
             await addConcentration(this.actor, concentrationData);
+            // TODO update undo data with concentration data
+            if (configSettings.undoWorkflow) await updateUndoConcentrationData(this, concentrationData);
           } else if (installedModules.get("dae") && this.item?.hasAreaTarget && this.templateUuid && this.item?.system.duration?.units && configSettings.autoRemoveTemplate) { // create an effect to delete the template
             const itemDuration = this.item.system.duration;
             let selfTarget = this.item.actor.token ? this.item.actor.token.object : getSelfTarget(this.item.actor);
@@ -1743,9 +1728,7 @@ export class Workflow {
       const token = canvas?.tokens?.get(this.tokenId);
       const character = game.user?.character;
       const args = [macroData];
-      const body = `return (async () => {
-        ${macroCommand}
-      })()`;
+
       const AsyncFunction = (async function () { }).constructor;
       const v11args: any = {};
       for (let i = 0; i < args.length; i++) v11args[i] = args[i];

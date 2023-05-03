@@ -6,6 +6,7 @@ import { dice3dEnabled, installedModules } from "./setupModules.js";
 import { mapSpeedKeys } from "./MidiKeyManager.js";
 import { LateTargetingDialog } from "./apps/LateTargeting.js";
 import { defaultRollOptions } from "./patching.js";
+import { saveUndoData } from "./undo.js";
 
 export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
   const pressedKeys = duplicate(globalThis.MidiKeyManager.pressedKeys);
@@ -225,6 +226,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
   }
   */
   workflow = new Workflow(this.actor, this, speaker, targets, { event: config.event || options.event || event, pressedKeys, workflowOptions: options.workflowOptions });
+
   workflow.inCombat = inCombat ?? false;
   workflow.isTurn = isTurn ?? false;
   workflow.AoO = AoO;
@@ -236,6 +238,7 @@ export async function doItemUse(wrapped, config: any = {}, options: any = {}) {
     castLevel: workflow.itemLevel,
     itemUuid: workflow.itemUuid
   };
+  if (configSettings.undoWorkflow) await saveUndoData(workflow);
 
   workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile || workflow.isVersatile;
   // if showing a full card we don't want to auto roll attacks or damage.
@@ -375,7 +378,8 @@ export async function doAttackRoll(wrapped, options: any = { versatile: false, r
       await Workflow.removeAttackDamageButtons(this.id);
       if (workflow.damageRollCount > 0) { // re-rolling damage counts as new damage
         //workflow.itemCardId = (await showItemCard.bind(this)(false, workflow, false, true)).id;
-        workflow.itemCardId = (await this.displayCard(mergeObject(options, { systemCard: false, workflowId: workflow.id, minimalCard: false, createMessage: true }))).id;
+        const itemCard = await this.displayCard(mergeObject(options, { systemCard: false, workflowId: workflow.id, minimalCard: false, createMessage: true }));
+        workflow.itemCardId = itemCard.id;
       }
     }
   } else if (workflow.workflowType === "BetterRollsWorkflow") {
@@ -950,13 +954,6 @@ export async function wrappedDisplayCard(wrapped, options) {
 
   ChatMessage.applyRollMode(chatData, options.rollMode ?? game.settings.get("core", "rollMode"))
   const card = createMessage !== false ? ChatMessage.create(chatData) : chatData;
-
-  /*
-  let rollMode = game.settings.get("core", "rollMode");
-  if (["gmroll", "blindroll"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM");
-  if (rollMode === "blindroll") chatData["blind"] = true;
-  if (rollMode === "selfroll") chatData["whisper"] = [game.user?.id];
-  */
   Hooks.callAll("dnd5e.displayCard", this, card);
   return card;
 }

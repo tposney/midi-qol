@@ -1,9 +1,7 @@
 import { _mergeUpdate } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/utils/helpers.mjs";
-import { config } from "@league-of-foundry-developers/foundry-vtt-types/src/types/augments/simple-peer";
 import { debug, setDebugLevel, warn, i18n, checkConcentrationSettings, debugEnabled, geti18nTranslations } from "../midi-qol.js";
 import { ConfigPanel} from "./apps/ConfigPanel.js"
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
-import { MidiSounds } from "./midi-sounds.js";
 import { configureDamageRollDialog } from "./patching.js";
 
 export var itemRollButtons: boolean;
@@ -129,6 +127,7 @@ class ConfigSettings {
   useCustomSounds: boolean = true;
   usePlayerPortrait: boolean = false;
   useTokenNames: boolean = false;
+  undoWorkflow: boolean = false;
   weaponHitSound: string = "";
   weaponUseSound: string = "";
   weaponUseSoundRanged: string = "";
@@ -387,6 +386,7 @@ export let fetchParams = () => {
   if (configSettings.attackPerTarget === undefined) configSettings.attackPerTarget = false;
   if (configSettings.autoRemoveTemplate === undefined) configSettings.autoRemoveTemplate = true;
   if (configSettings.removeConcentrationEffects === "undefined") configSettings.removeConcentrationEffects = "effects";
+  if (configSettings.undoWorkflow === undefined) configSettings.undoWorkflow = false;
   configSettings.hidePlayerDamageCard = true;
   configSettings.quickSettings = true;
   enableWorkflow = Boolean(game.settings.get("midi-qol", "EnableWorkflow"));

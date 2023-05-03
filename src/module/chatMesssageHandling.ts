@@ -692,7 +692,7 @@ export function processItemCardCreation(message, user) {
 
 export async function onChatCardAction(event) {
   event.preventDefault();
-  // Extract card data
+  // Extract card data - TODO come back and clean up this nastiness
   const button = event.currentTarget;
   button.disabled = true;
   const card = button.closest(".chat-card");

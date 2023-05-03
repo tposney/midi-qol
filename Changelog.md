@@ -1,3 +1,9 @@
+### 10.0.40
+* Fix for applyTokenDamageMany with a null/undefined item.
+* Added exports of displayDSNForRoll, playerFor(token), playerForActor(actor)
+* Fix for not colorising damage rolls when using dice so nice.
+* First implementation of undo workflow. **NOT SUITABLE FOR PRIME TIME**. Enable on the mechanics tab. If enabled midi records undo data for all item rolls in a stack stored on the GM client. You can undo item rolls via MidiQOL.undoMostRecentWorkflow() which must be executed on the GM client (there is currently no UI for undoing rolls), which restores affected actors to a state before the item roll was started - dropping **ALL** subsequent changes. The stack is cleared on a game reload (currently). Resotring concentration known not to work. Non-merge card attack/damage roll cards not removed, but merge cards and damage cards are. Does support undoing reaction effects which are included in undoing the roll that triggered them. Feedback from the brave appreciated.
+
 ### 10.0.39
 * Put back definition of item when calling an onUse macro
 

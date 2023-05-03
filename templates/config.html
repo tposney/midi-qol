@@ -720,8 +720,17 @@
             configSettings.optionalRules.autoRerollInitiative}} />
         </div>
         <div class="midi-qol-faint">{{localize "midi-qol.AutoRerollInitiative.Hint"}}</div>
-
       </div>
+
+    </div>
+    <div class="midi-qol-box">
+      <div class="form-group">
+        <label>{{localize "midi-qol.UndoWorkflow.Name"}}</label>
+        <input type="checkbox" name="undoWorkflow" data-dtype="Boolean" {{checked
+          configSettings.undoWorkflow}} />
+      </div>
+      <div class="midi-qol-faint">{{localize "midi-qol.UndoWorkflow.Hint"}}</div>
+    </div>
     </div>
 
     <!-- Optional Rules Tab-->
