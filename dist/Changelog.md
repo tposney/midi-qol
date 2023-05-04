@@ -1,3 +1,7 @@
+### 10.0.41
+* Reverted original change that caused applyTokenDamage problems. Added applyTokenDamage to my test cases, so should not happen again.
+* Fix for undoWorkflow to remove flags that should be removed. Thanks @thatlonelybugbear
+
 ### 10.0.40
 * Fix for applyTokenDamageMany with a null/undefined item.
 * Added exports of displayDSNForRoll, playerFor(token), playerForActor(actor)

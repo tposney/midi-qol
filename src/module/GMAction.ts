@@ -15,7 +15,7 @@ function paranoidCheck(action: string, actor: any, data: any): boolean {
 export async function removeEffects(data: { actorUuid: string; effects: string[]; options: {} }) {
   const actor = MQfromActorUuid(data.actorUuid);
   if (configSettings.paranoidGM && !paranoidCheck("removeEffects", actor, data)) return "gmBlocked";
-  return await actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects, data.options)
+  return actor?.deleteEmbeddedDocuments("ActiveEffect", data.effects, data.options)
 }
 
 export async function createEffects(data: { actorUuid: string, effects: any[] }) {
@@ -23,12 +23,12 @@ export async function createEffects(data: { actorUuid: string, effects: any[] })
   for (let effect of data.effects) { // override default foundry behaviour of blank being transfer
     if (effect.transfer === undefined) effect.transfer = false;
   }
-  await actor?.createEmbeddedDocuments("ActiveEffect", data.effects)
+  return actor?.createEmbeddedDocuments("ActiveEffect", data.effects)
 }
 
 export async function updateEffects(data: { actorUuid: string, updates: any[] }) {
   const actor = MQfromActorUuid(data.actorUuid);
-  await actor.updateEmbeddedDocuments("ActiveEffect", data.updates);
+  return actor.updateEmbeddedDocuments("ActiveEffect", data.updates);
 }
 
 export function removeActorStats(data: { actorId: any }) {
@@ -138,7 +138,7 @@ export async function _gmOverTimeEffect(data: { actorUuid, effectUuid, startTurn
   const actor = MQfromActorUuid(data.actorUuid);
   const effect = MQfromUuid(data.effectUuid)
   console.log("Called _gmOvertime", actor.name, effect.name ?? effect.label)
-  return await gmOverTimeEffect(actor, effect, data.startTurn, data.options)
+  return gmOverTimeEffect(actor, effect, data.startTurn, data.options)
 }
 
 export async function _bonusCheck(data: { actorUuid, result, rollType, selector }) {

@@ -252,7 +252,6 @@ export class Workflow {
     this.attackAdvAttribution = {};
     this.systemString = game.system.id.toUpperCase();
     this.options = options;
-    console.error("Constructor options ", options)
     this.initSaveResults();
 
     if (configSettings.allowUseMacro) {

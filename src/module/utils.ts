@@ -8,6 +8,7 @@ import { concentrationCheckItemDisplayName, itemJSONData, midiFlagTypes, overTim
 
 import { OnUseMacros } from "./apps/Item.js";
 import { actorAbilityRollPatching, Options } from "./patching.js";
+import { isEmptyBindingElement } from "typescript";
 
 export function getDamageType(flavorString): string | undefined {
   const validDamageTypes = Object.entries(getSystemCONFIG().damageTypes).deepFlatten().concat(Object.entries(getSystemCONFIG().healingTypes).deepFlatten())
@@ -447,7 +448,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
   let damageList: any[] = [];
   let targetNames: string[] = [];
   let appliedDamage;
-  let workflow: any = options.workflow;
+  let workflow: any = options.workflow ?? {};
   if (debugEnabled > 0) warn("Apply token damage ", applyDamageDetails, theTargets, item, workflow)
   if (!theTargets || theTargets.size === 0) {
     workflow.currentState = WORKFLOWSTATES.ROLLFINISHED;
@@ -455,7 +456,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
     return [];
   }
   if (!(item instanceof CONFIG.Item.documentClass)) {
-    if (workflow?.item) item = workflow.item;
+    if (workflow.item) item = workflow.item;
     else if (item?.uuid) {
       item = MQfromUuid(item.uuid);
     } else if (item) {
@@ -463,7 +464,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
       return [];
     }
   }
-  if (item && !workflow) workflow = Workflow.getWorkflow(item.uuid);
+  if (item && !options.workflow) workflow = Workflow.getWorkflow(item.uuid) ?? {};
   const damageDetailArr = applyDamageDetails.map(a => a.damageDetail);
   const highestOnlyDR = false;
   let totalDamage = applyDamageDetails.reduce((a, b) => a + (b.damageTotal ?? 0), 0);
@@ -486,16 +487,17 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
     const absorptions = getProperty(targetActor.flags, "midi-qol.absorption") ?? {};
 
     const firstDamageHealing = applyDamageDetails[0].damageDetail && ["healing", "temphp"].includes(applyDamageDetails[0].damageDetail[0]?.type);
-    const isHealing = ("heal" === workflow?.item?.system.actionType) || firstDamageHealing;
-    const noDamageReactions = (item?.hasSave && item.flags?.midiProperties?.nodam && workflow.saves?.has(t));
-    const noProvokeReaction = getProperty(workflow?.item, "flags.midi-qol.noProvokeReaction");
+    const isHealing = ("heal" === workflow.item?.system.actionType) || firstDamageHealing;
+    const noDamageReactions = (item?.hasSave && item.flags?.midiProperties?.nodam && workflow?.saves?.has(t));
+    const noProvokeReaction = getProperty(workflow.item, "flags.midi-qol.noProvokeReaction");
 
-    if (totalDamage > 0 && workflow && !isHealing && !noDamageReactions && !noProvokeReaction && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
+    //@ts-expect-error isEmpty
+    if (totalDamage > 0 && !isEmpty(workflow) && !isHealing && !noDamageReactions && !noProvokeReaction && [Workflow, BetterRollsWorkflow].includes(workflow.constructor)) {
       // TODO check that the targetToken is actually taking damage
       // Consider checking the save multiplier for the item as a first step
-      let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow?.item, workflow, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor.uuid, sourceItemUuid: workflow?.item?.uuid, sourceAmmoUuid: workflow.ammo?.uuid } });
+      let result = await doReactions(targetToken, workflow.tokenUuid, workflow.damageRoll, "reactiondamage", { item: workflow.item, workflow, workflowOptions: { damageDetail: workflow.damageDetail, damageTotal: totalDamage, sourceActorUuid: workflow.actor?.uuid, sourceItemUuid: workflow.item?.uuid, sourceAmmoUuid: workflow.ammo?.uuid } });
     }
-    const uncannyDodge = getProperty(targetActor, "flags.midi-qol.uncanny-dodge") && workflow?.item?.hasAttack;
+    const uncannyDodge = getProperty(targetActor, "flags.midi-qol.uncanny-dodge") && workflow.item?.hasAttack;
     if (game.system.id === "sw5e" && targetActor?.type === "starship") {
       // Starship damage resistance applies only to attacks
       if (item && ["mwak", "rwak"].includes(item?.system.actionType)) {
@@ -541,7 +543,7 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
       let maxDRIndex = -1;
 
       for (let [index, damageDetailItem] of damageDetail.entries()) {
-        if (checkRule("challengeModeArmor") && checkRule("challengeModeArmorScale") && attackRoll && workflow.hitTargetsEC.has(t)) {
+        if (checkRule("challengeModeArmor") && checkRule("challengeModeArmorScale") && attackRoll && workflow.hitTargetsEC?.has(t)) {
           //scale te damage detail for a glancing blow - only for the first damage list? or all?
           const scale = getProperty(targetActor, "flags.midi-qol.challengeModeScale");
           damageDetailItem.damage *= scale;
@@ -734,7 +736,8 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
   }
   if (theTargets.size > 0) {
     workflow.damageList = damageList;
-    if (workflow && configSettings.allowUseMacro && workflow.item?.flags) {
+    //@ts-expect-error isEmpty
+    if (!isEmpty(workflow) && configSettings.allowUseMacro && workflow.item?.flags) {
       await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preDamageApplication"), "OnUse", "preDamageApplication");
     }
     const chatCardUuids = await timedAwaitExecuteAsGM("createReverseDamageCard", {
@@ -744,15 +747,17 @@ export async function applyTokenDamageMany({ applyDamageDetails, theTargets, ite
       charName: workflow.actor?.name ?? game?.user?.name,
       damageList: damageList,
       targetNames,
-      chatCardId: workflow?.itemCardId,
-      flagTags: workflow?.flagTags,
+      chatCardId: workflow.itemCardId,
+      flagTags: workflow.flagTags,
       updateContext: options?.updateContext,
       forceApply: options.forceApply,
     })
-    if (configSettings.undoWorkflow) {
+    if (workflow && configSettings.undoWorkflow) {
       // Assumes workflow.undoData.chatCardUuids has been initialised
-      workflow.undoData.chatCardUuids = workflow.undoData.chatCardUuids.concat(chatCardUuids);
-      socketlibSocket.executeAsGM("updateUndoChatCards", workflow.undoData);
+      if (workflow.undoData) {
+        workflow.undoData.chatCardUuids = workflow.undoData.chatCardUuids.concat(chatCardUuids);
+        socketlibSocket.executeAsGM("updateUndoChatCards", workflow.undoData);
+      }
     }
   }
   if (configSettings.keepRollStats) {

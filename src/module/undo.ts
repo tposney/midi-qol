@@ -39,7 +39,6 @@ export function startUndoWorkflow(undoData: any): boolean {
   undoData.tokenDocument = tokendoc.toObject();
   if (tokendoc.actorLink) { // for unlinked need to snapshot the current actor data
     undoData.actor = tokendoc.actor?.toObject();
-    console.error("start undo workflow", undoData.actor)
   }
   addQueueEntry(startedUndoDataQueue, undoData);
   return true;
@@ -60,7 +59,7 @@ export async function saveTargetsUndoData(workflow: Workflow) {
 
 export async function updateUndoConcentrationData(workflow: Workflow, concentrationData: any) {
   workflow.undoData.concentrationData = mergeObject(workflow.undoData.concentrationData, concentrationData, {overwrite: true});
-  return socketlibSocket.executeAsGM("updateUndoConcentration", workflow.undoData.concentrationData);
+  return socketlibSocket.executeAsGM("updateUndoConcentration", workflow.undoData);
 }
 
 export function updateUndoConcentration(data) {
@@ -68,7 +67,7 @@ export function updateUndoConcentration(data) {
   if (!currentUndo) {
     warn("Could not find existing entry for ", data)
   }
-  currentUndo.concentrationData = data;
+  currentUndo.concentrationData = data.concentrationData;
 }
 
 export function updateUndoChatCards(data) {
@@ -81,7 +80,7 @@ export function updateUndoChatCards(data) {
 
 // Have the gm store a snapshot of the target data.
 export async function recordUndoData(undoData: any) {
-  console.error("undo command message size is ", new TextEncoder().encode(JSON.stringify(undoData)).length);
+  // console.error("undo command message size is ", new TextEncoder().encode(JSON.stringify(undoData)).length);
   return socketlibSocket.executeAsGM("queueUndoData", undoData)
 }
 
@@ -190,6 +189,21 @@ function removeUndoItems(itemsData, actor): string[] {
   return itemsToRemove;
 }
 
+function getChanges(newData, savedData): any {
+  if (!newData && !savedData) return {};
+  const changes = flattenObject(diffObject(newData, savedData));
+  const tempChanges = flattenObject(diffObject(savedData, newData));
+  const toDelete = {};
+  for (let key of Object.keys(tempChanges)) {
+    if (!changes[key]) {
+      let parts = key.split(".");
+      parts[parts.length - 1] = "-=" + parts[parts.length -1];
+      let newKey = parts.join(".");
+      toDelete[newKey] = null
+    }
+  } 
+  return mergeObject(changes, toDelete);
+}
 export async function undoWorkflow(undoData: any) {
   //@ts-expect-error fromuuidSync
   const tokendoc = fromUuidSync(undoData.tokendocUuid);
@@ -206,19 +220,17 @@ export async function undoWorkflow(undoData: any) {
     if (tokendoc.actorLink) {
       itemsToRemove = removeUndoItems(undoData.actor.items ?? [], tokendoc.actor);
       effectsToRemove = removeUndoEffects(undoData.actor.effects ?? [], tokendoc.actor);
-      console.error("For actor ", tokendoc.name, tokendoc?.actor.toObject(), undoData.actor)
-      actorChanges = diffObject(tokendoc?.actor?.toObject() ?? {}, undoData.actor);
-      console.error("For actor ", tokendoc.name, actorChanges)
+      actorChanges = getChanges(tokendoc?.actor.toObject(), undoData.actor);
       // delete actorChanges.items;
       // delete actorChanges.effects;
     } else {
       itemsToRemove = removeUndoItems(undoData.tokenDocument.actorData.items ?? [], tokendoc.actor);
       effectsToRemove = removeUndoEffects(undoData.tokenDocument.actorData.effects ?? [], tokendoc.actor);
-      tokenChanges = diffObject(tokendoc.toObject(), undoData.tokenDocument);
+      tokenChanges = getChanges(tokendoc.toObject(), undoData.tokenDocument);
     }
+    log(`Undoing workflow for Player ${undoData.userName} Token: ${tokendoc.object.name} Item: ${undoData.itemName ?? ""}`, actorChanges, tokenChanges)
     await _undoEntry({ tokenChanges, actorChanges, effectsToRemove, itemsToRemove, tokendoc });
   }
-  log(`Undoing workflow for Player ${undoData.userName} Token: ${tokendoc.object.name} Item: ${undoData.itemName ?? ""}`)
   for (let undoEntry of undoData.targets) {
     //@ts-expect-error fromUuidSync
     const tokendoc = fromUuidSync(undoEntry.uuid);
@@ -227,15 +239,18 @@ export async function undoWorkflow(undoData: any) {
     let itemsToRemove: string[] = [];
     let actorChanges, tokenChanges;
     if (!tokendoc.actorLink) {
-      tokenChanges = diffObject(tokendoc.toObject(), undoEntry.tokenDocument);
+      tokenChanges = getChanges(tokendoc.toObject(), undoEntry.tokenDocument);
       itemsToRemove = removeUndoItems(undoEntry.tokenDocument.actorData.items ?? [], tokendoc.actor);
       effectsToRemove = removeUndoEffects(undoEntry.tokenDocument.actorData.effects ?? [], tokendoc.actor);
     } else {
       effectsToRemove = removeUndoEffects(undoEntry.actor.effects ?? [], tokendoc.actor);
       itemsToRemove = removeUndoItems(undoEntry.actor.items ?? [], tokendoc.actor);
-      actorChanges = diffObject(tokendoc.actor.toObject(), undoEntry.actor);
+      actorChanges = getChanges(tokendoc.actor.toObject(), undoEntry.actor);
     }
+
     await _undoEntry({ actorChanges, tokenChanges, effectsToRemove, itemsToRemove, tokendoc });
+    log(`Undoing workflow for Player ${undoData.userName} Target: ${tokendoc.object.name} Item: ${undoData.itemName ?? ""}`, actorChanges, tokenChanges)
+
   }
   // delete cards...
   if (undoData.itemCardId) await game.messages?.get(undoData.itemCardId)?.delete();

@@ -1,5 +1,5 @@
 import { applySettings } from "../apps/ConfigPanel.js";
-import { completeItemUse } from "../utils.js";
+import { applyTokenDamage, completeItemUse } from "../utils.js";
 
 const actor1Name = "actor1";
 const actor2Name = "actor2";
@@ -614,7 +614,7 @@ async function registerTests() {
       { displayName: "Midi Over Time Tests" }
     );
     globalThis.quench.registerBatch(
-      "quench.midi-qol.otherTests",
+      "quench.midi-qol.midi-qol.flagTests",
       (context) => {
         const { describe, it, assert } = context;
         describe("midi flag tests", async function() {
@@ -680,6 +680,26 @@ async function registerTests() {
             assert.ok(getProperty(actor, "flags.midi-qol.DR.all") === undefined)
           });
 
+        });
+      },
+      { displayName: "Midi Flag Tests" },
+    )
+    globalThis.quench.registerBatch(
+      "quench.midi-qol.midi-qol.otherTests",
+      (context) => {
+        const { describe, it, assert } = context;
+        describe("midi other tests", async function() {
+          it("tests applyTokenDamageMany", async function () {
+            await resetActors();
+            const token = getToken(target2Name);
+            const oldHp = getProperty(token?.actor ?? {}, "system.attributes.hp.value");
+
+            await applyTokenDamage([{damage:5,type:'piercing'}],5,new Set([token]),null,new Set(),{});
+            assert.equal(getProperty(token?.actor ?? {}, "system.attributes.hp.value"), oldHp - 5)
+
+            await applyTokenDamage([{damage:5,type:'healing'}],5,new Set([token]),null,new Set(),{});
+            assert.equal(getProperty(token?.actor ?? {}, "system.attributes.hp.value"), oldHp)
+          });
         });
       },
       { displayName: "Midi Other Tests" },

@@ -196,7 +196,6 @@ export let readyHooks = async () => {
     if (userId !== game.user?.id) return;
     if (!update.hasOwnProperty("round")) return;
     if (!checkMechanic("autoRerollInitiative")) return;
-    console.error(combat, combat.combatants, update, options);
     let combatantIds: any = combat.combatants.map(c => c.id);
     if (combat.combatants?.size > 0) {
       combat.rollInitiative(combatantIds, {updateTurn: true}).then(() => combat.update({turn: 0}));
