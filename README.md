@@ -1,3 +1,7 @@
+# This is not the actual midi-qol repository.
+It has been setup for me to test migrating from gitlab to github but is not up to date
+# Please go to https://giblab.com/tposney/midi-qol to report issues
+
 ## Breaking News
 Added a ko-fi donation link https://ko-fi.com/tposney
 
