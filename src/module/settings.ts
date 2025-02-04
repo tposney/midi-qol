@@ -69,10 +69,10 @@ class ConfigSettings {
   autoCheckHit: string = "none";
   autoCheckSaves: string = "none";
   autoFastForward: string = "off";
-  autoItemEffects: string;
+  autoItemEffects: string = "off";
   autoRemoveSummonedCreature: boolean = false;
-  autoRemoveTemplate: boolean;
-  autoRemoveInstantaneousTemplate: boolean;
+  autoRemoveTemplate: boolean = true;
+  autoRemoveInstantaneousTemplate: boolean = false;
   autoRollAttack: boolean = false;
   autoRollDamage: string = "none";
   autoCompleteWorkflow = false;
@@ -619,8 +619,7 @@ export let fetchParams = () => {
   if (configSettings.concentrationAutomation && game.user === game.users?.activeGM) {
     Hooks.once("ready", () => {
       if (configSettings.concentrationAutomation) {
-        //@ts-expect-error
-        ui.notifications?.warn(`Midi concentration automation is deprecated in favour of ${game.system.title} concentration checking - settings updated to use ${game.system.id} concentration`, { permanent: true })
+        ui.notifications?.warn(`Midi concentration automation is deprecated in favour of ${game.system?.title} concentration checking - settings updated to use ${game.system?.id} concentration`, { permanent: true })
       };
       configSettings.concentrationAutomation = false;
   //@ts-expect-error
@@ -985,6 +984,7 @@ export function disableWorkflowAutomation() {
 }
 
 export function safeGetGameSetting(moduleName: string, settingName: string): any | undefined {
+  // @ts-expect-error
   if (game.settings?.settings.get(`${moduleName}.${settingName}`))
   //@ts-expect-error
     return game.settings?.get(moduleName, settingName);

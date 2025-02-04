@@ -85,7 +85,7 @@ export class ConfigPanel extends FormApplication {
     };
     
    let statusEffectList = CONFIG.statusEffects.map((se) => {
-       let name = i18n(se.name ?? se.label); 
+       let name = i18n(se.name as string); 
        if (se.id.startsWith("Convenient Effect")) name = `${name} (CE)`; 
        return { id: se.id, name: name } });
 
@@ -301,7 +301,7 @@ export class ItemTypeSelector extends FormApplication {
     const choices: {} = Object.keys(CONFIG.Item.typeLabels).filter(key => !["backpack", "base"].includes(key)).reduce((acc, key) => { acc[key] = CONFIG.Item.typeLabels[key]; return acc }, {});
     for (let [k, v] of Object.entries(choices)) {
       choices[k] = {
-        label: i18n(v),
+        label: i18n(v as string),
         chosen: configSettings.itemTypeList?.includes(k)
       }
     }

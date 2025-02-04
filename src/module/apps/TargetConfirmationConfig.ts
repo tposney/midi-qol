@@ -3,7 +3,8 @@ import { configSettings, defaultTargetConfirmationSettings, targetConfirmation }
 
 export class TargetConfirmationConfig extends FormApplication {
   gridMappings: any;
-  selectedPostion: {x: number, y: number};
+  // @ts-expect-error
+  selectedPosition: {x: number, y: number};
 
   constructor(object, options) {
     super(object, options);
@@ -49,7 +50,7 @@ export class TargetConfirmationConfig extends FormApplication {
 
   activateListeners(html) {
     super.activateListeners(html);
-    const selected = Object.keys(this.gridMappings).find(key => this.gridMappings[key].x === this.selectedPostion.x && this.gridMappings[key].y === this.selectedPostion.y);  
+    const selected = Object.keys(this.gridMappings).find(key => this.gridMappings[key].x === this.selectedPosition.x && this.gridMappings[key].y === this.selectedPosition.y);  
     html.find(`#${selected}`).addClass("selected");
     html.find(".midi-enable-target-confirmation").on("click", event => {
       targetConfirmation.enabled = !targetConfirmation.enabled;
@@ -67,7 +68,7 @@ export class TargetConfirmationConfig extends FormApplication {
           other.classList.remove("selected");
         });
         item.classList.toggle("selected");
-        this.selectedPostion = this.gridMappings[item.id];
+        this.selectedPosition = this.gridMappings[item.id];
       });
     });
   }
@@ -77,13 +78,13 @@ export class TargetConfirmationConfig extends FormApplication {
 
   getData(options?: Application.RenderOptions | undefined): any {
     const data: any = super.getData(options);
-    if (!this.selectedPostion) this.selectedPostion = targetConfirmation.gridPosition ?? foundry.utils.duplicate(defaultTargetConfirmationSettings.gridPosition);
+    if (!this.selectedPosition) this.selectedPosition = targetConfirmation.gridPosition ?? foundry.utils.duplicate(defaultTargetConfirmationSettings.gridPosition);
     data.targetConfirmation = targetConfirmation;
     return data;
   }
 
   protected _onSubmit(event: Event, options: any | undefined): Promise<Partial<Record<string, unknown>>> {
-    targetConfirmation.gridPosition = this.selectedPostion;
+    targetConfirmation.gridPosition = this.selectedPosition;
     return super._onSubmit(event, options);
   }
 }

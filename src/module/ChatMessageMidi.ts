@@ -4,7 +4,7 @@ import { addChatDamageButtons, configSettings, safeGetGameSetting } from "./sett
 import { getToken } from "./utils.js";
 import { setDamageRollMinTerms } from "./activities/activityHelpers.js";
 
-export function defineChatMessageMidiClass(baseClass: any) {
+export function defineChatMessageMidiClass(baseClass: ChatMessage.ImplementationClass) {
   return class ChatMessageMidi extends baseClass /*globalThis.dnd5e.documents.ChatMessage5e*/ {
     constructor(...args) {
       super(...args);
@@ -12,11 +12,13 @@ export function defineChatMessageMidiClass(baseClass: any) {
     }
 
     get isRoll() {
+      // @ts-expect-error can't know about flags
       if (this.flags?.["midi-qol"]?.messageType) return false // do this so that dsn won't trigger
       return super.isRoll;
     }
 
     get hasRolls() {
+      // @ts-expect-error can't know about flags
       if (this.flags?.["midi-qol"].roll?.length > 0) return true;
       return super.isRoll;
     }
@@ -25,18 +27,24 @@ export function defineChatMessageMidiClass(baseClass: any) {
       return;
     }
     get canSelectTargets() {
+      // @ts-expect-error can't know about flags
       if (this.flags?.["midi-qol"]?.messageType === "attack") return true;
+      // @ts-expect-error no dnd5e-types
       return super.canSelectTargets;
     }
 
     get canApplyDamage() {
+      // @ts-expect-error can't know about flags
       if (this.flags?.["midi-qol"]?.damageDetail?.length > 0 && this.isContentVisible && !!canvas?.tokens?.controlled.length) return true;
+      // @ts-expect-error no dnd5e-types
       return super.canApplyDamage;
     }
 
     // Patch for getAssociatedItem not peparing data on items recovered from item.data
     getAssociatedItem() {
+      // @ts-expect-error no dnd5e-types
       const item = super.getAssociatedItem();
+      // @ts-expect-error can't know about flags
       if (this.flags.dnd5e?.item?.data) {
         item.prepareData();
         item.prepareFinalAttributes();
@@ -51,10 +59,13 @@ export function defineChatMessageMidiClass(baseClass: any) {
  */
     selectTargets(li, type) {
       if (!canvas?.ready) return;
+      // @ts-expect-error no dnd5e-types
       if (!foundry.utils.getProperty(this, "flags.midi-qol")) return super.selectTargets(li, type);
       const lis = li.closest("[data-message-id]").querySelectorAll(`.evaluation li.target.${type}`);
-      let targetUuids = this.getFlag("midi-qol", "targetUuids") || [];
-      let hitTargetUuids = this.getFlag("midi-qol", "hitTargetUuids") || [];
+      // @ts-expect-error can't know about flags
+      let targetUuids: string[] = this.getFlag("midi-qol", "targetUuids") || [];
+      // @ts-expect-error can't know about flags
+      let hitTargetUuids: string[] = this.getFlag("midi-qol", "hitTargetUuids") || [];
       let uuids;
       if (type === "hit") uuids = hitTargetUuids
       else uuids = targetUuids.filter(uuid => !hitTargetUuids.includes(uuid));
@@ -77,7 +88,9 @@ export function defineChatMessageMidiClass(baseClass: any) {
    * @returns {Promise}
    */
     applyChatCardDamage(li, multiplier) {
+      // @ts-expect-error can't know about flags
       const type = this.flags.dnd5e?.roll?.type;
+      // @ts-expect-error no dnd5e-types
       if (type !== undefined || !this.flags?.["midi-qol"]) return super.applyChatCardDamage(li, multiplier);
       const rollsToCheck = this.rolls.filter(r => MQDamageRollTypes.includes(foundry.utils.getProperty(r, "options.midi-qol.rollType")));
       //@ts-expect-error
@@ -88,7 +101,7 @@ export function defineChatMessageMidiClass(baseClass: any) {
       }));
       if (canvas?.tokens) {
         return Promise.all(canvas.tokens.controlled.map(t => {
-          //@ts-expect-error
+          //@ts-expect-error no dnd5e-types
           return t.actor?.applyDamage(damages, { multiplier, invertHealing: false, ignore: true });
         }));
       }
@@ -96,10 +109,10 @@ export function defineChatMessageMidiClass(baseClass: any) {
     applyChatCardTemp(li) {
       if (!canvas?.tokens) return;
       const rollsToCheck = this.rolls.filter(r => MQDamageRollTypes.includes(foundry.utils.getProperty(r, "options.midi-qol.rollType")));
-      const total = rollsToCheck.reduce((acc, roll) => acc + roll.total, 0);
+      const total = rollsToCheck.reduce((acc, roll) => acc + (roll.total ?? 0), 0);
 
       return Promise.all(canvas.tokens.controlled.map(t => {
-        //@ts-expect-error
+        //@ts-expect-error no dnd5e-types
         return t.actor?.applyTempHP(total);
       }));
     }
@@ -117,6 +130,7 @@ export function defineChatMessageMidiClass(baseClass: any) {
         let { formula, total, breakdown } = game.system.dice.aggregateDamageRolls(rolls).reduce((obj: any, r) => {
           obj.formula.push(r.formula);
           obj.total += r.total;
+          // @ts-expect-error no dnd5e-types
           obj.breakdown.push(this._simplifyDamageRoll(r));
           return obj;
         }, { formula: [], total: 0, breakdown: [] });
@@ -201,6 +215,7 @@ export function defineChatMessageMidiClass(baseClass: any) {
 
     _enrichDamageTooltip(rolls, html) {
       if (foundry.utils.getProperty(this, "flags.dnd5e.roll.type") !== undefined || !this.flags?.["midi-qol"])
+        // @ts-expect-error no dnd5e-types
         return super._enrichDamageTooltip(rolls, html);
       for (let rollType of MQDamageRollTypes) {
         const rollsToCheck = this.rolls.filter(r => foundry.utils.getProperty(r, "options.midi-qol.rollType") === rollType);
@@ -213,6 +228,7 @@ export function defineChatMessageMidiClass(baseClass: any) {
             roll.classList.add(`midi-${rType}-roll`);
             if (rType === "bonus-damage") {
               const flavor = document.createElement("div");
+              // @ts-expect-error no dnd5e-types
               const flavors = rollsToCheck.map(r => r.options.flavor ?? r.options.type);
               const bonusDamageFlavor = flavors.join(", ");
               flavor.classList.add("midi-bonus-damage-flavor");
@@ -257,7 +273,9 @@ export function defineChatMessageMidiClass(baseClass: any) {
     }
 
     _highlightCriticalSuccessFailure(html) {
+      // @ts-expect-error no dnd5e-types
       if (!this.flags?.["midi-qol"]) return super._highlightCriticalSuccessFailure(html);
+      // @ts-expect-error no dnd5e-types
       super._highlightCriticalSuccessFailure(html);
       for (let [index, d20Roll] of this.rolls.entries()) {
         const total = html.find(".dice-total")[index];
@@ -324,10 +342,12 @@ export function defineChatMessageMidiClass(baseClass: any) {
     }
 
     _enrichChatCard(html) {
+      // @ts-expect-error no dnd5e-types
       if (!foundry.utils.getProperty(this, "flags.midi-qol.messageType")) return super._enrichChatCard(html);
       if (debugEnabled > 1) warn("Enriching chat card", this.id);
       this.enrichAttackRolls(html); // This has to run first to stop errors when ChatMessage5e._enrichDamageTooltip runs
 
+      // @ts-expect-error no dnd5e-types
       super._enrichChatCard(html);
       if (this.author.isGM && (configSettings.hideRollDetails ?? "none") !== "none" && !gameUser().isGM) {
         html.querySelectorAll(".dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));

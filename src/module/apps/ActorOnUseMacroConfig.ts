@@ -3,6 +3,7 @@ import { Workflow } from "../Workflow.js";
 import { getCurrentMacros, getCurrentSourceMacros, OnUseMacros } from "./Item.js";
 
 export class ActorOnUseMacrosConfig extends FormApplication {
+  // @ts-expect-error will be replaced in v2 anyway
   object: any;
   constructor(object, options) {
     super(object, options);
@@ -39,6 +40,7 @@ export class ActorOnUseMacrosConfig extends FormApplication {
     this.render();
   }
 
+  // @ts-expect-error will be replaced in v2 anyway
   _getSubmitData(updateData={}) {
 
     //@ts-ignore

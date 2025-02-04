@@ -27,11 +27,10 @@ export function gameUsers(): Users {
 }
 export function gameUser(id?: string | undefined): User {
   if (!id) return game.user as unknown as User;
-  else return game.users.get(id) as unknown as User;
+  else return game.users?.get(id) as unknown as User;
 }
 
 export function gameSystemId() : string {
-  //@ts-expect-error
   return (game.system?.id ?? "dnd5e") as string;
 }
 export function getCanvas(): Canvas | undefined {
@@ -66,15 +65,15 @@ export const SchemaField = foundry.data.fields.SchemaField;
 export var isdndv4 = false;
 
 
-export let i18n = key => {
-  return getGame()?.i18n?.localize(key);
+export let i18n = (key: string) => {
+  return getGame()?.i18n?.localize(key) ?? key;
 };
 export function i18nSystem(key) {
   const keyHeader = gameSystemId().toUpperCase();
   return i18n(`${keyHeader}.${key}`);
 }
-export let i18nFormat = (key, data = {}) => {
-  return game.i18n?.format(key, data);
+export let i18nFormat = (key: string, data = {}) => {
+  return game.i18n?.format(key, data) ?? key;
 }
 export function geti18nOptions(key) {
   let translation: any = game.i18n?.translations[MODULE_ID] ?? {};
@@ -149,6 +148,7 @@ Hooks.once("levelsReady", function () {
 export let systemString = "DND5E"
 export let MQDamageRollTypes = ["defaultDamage", "otherDamage", "bonusDamage"];
 Hooks.once("init", () => {
+  // @ts-expect-error
   CONFIG.ChatMessage.documentClass = defineChatMessageMidiClass(CONFIG.ChatMessage.documentClass);
 });
 globalThis.MidiQOL = { checkIncapacitated };
@@ -211,6 +211,7 @@ Hooks.once('init', async function () {
     allAttackTypes = ["rwak", "mwak", "rpak", "mpak"];
   initHooks();
 
+  // @ts-expect-error no dnd5e-types
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;
 
   // globalThis.MidiQOL = { checkIncapacitated };
@@ -640,13 +641,13 @@ Hooks.once('ready', function () {
 
     if (gameUser()?.isGM && game.settings) {
       //@ts-expect-error
-      const instanceId = game.settings?.get(MODULE_ID, "instanceId");
+      const instanceId = game.settings?.get(MODULE_ID, "instanceId") as string;
       if ([undefined, ""].includes(instanceId)) {
         //@ts-expect-error
         game.settings.set(MODULE_ID, "instanceId", foundry.utils.randomID());
       }
       //@ts-expect-error
-      const oldVersion = game.settings.get(MODULE_ID, "last-run-version");
+      const oldVersion = game.settings.get(MODULE_ID, "last-run-version") as number | string;
       const newVersion = game.modules.get(MODULE_ID)?.version;
       if (foundry.utils.isNewerVersion(newVersion, oldVersion)) {
         //@ts-expect-error
@@ -1511,6 +1512,7 @@ export async function createMidiMacros() {
               continue; // already up to date
             await macro.update({
               command: macroSpec.commandText,
+              // @ts-expect-error can't know about flags
               "flags.midi-version": macroSpec.version
             });
           }
@@ -1530,6 +1532,7 @@ export async function createMidiMacros() {
             },
             flags: { "midi-version": macroSpec.version ?? "midiVersion" }
           };
+          // @ts-expect-error createDocuments bug
           await Macro.createDocuments([macroData]);
           log(`Macro ${macroData.name} created`);
         }
@@ -1552,19 +1555,19 @@ function midiOnerror(event: string | Event, source?: string | undefined, lineno?
 }
 
 export function setupMidiStatusEffects() {
+  // @ts-expect-error no dnd5e-types
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;
-  //@ts-expect-error
-  const imgSource = game.version < 12 ? "icon" : "img";
   if (!CONFIG.statusEffects.find(e => e.id === systemConcentrationId)) {
-    //@ts-expect-error name
-    CONFIG.statusEffects.push({ id: systemConcentrationId, name: i18n(`EFFECT.${SystemString}.StatusConcentrating`), [imgSource]: "systems/dnd5e/icons/svg/statuses/concentrating.svg", special: "CONCENTRATING" });
+    // @ts-expect-error not expecting special
+    CONFIG.statusEffects.push({ id: systemConcentrationId, name: i18n(`EFFECT.${SystemString}.StatusConcentrating`), img: "systems/dnd5e/icons/svg/statuses/concentrating.svg", special: "CONCENTRATING" });
   }
   // Initialise these effects so that we don't need to make a raft of code aysnc only to fetch these
   if (configSettings.enforceBonusActions !== "none") {
     if (!CONFIG.statusEffects.find(e => e._id === getStaticID("bonusaction"))) {
-      //@ts-expect-error
-      CONFIG.statusEffects.push({ id: "bonusaction", _id: getStaticID("bonusaction"), name: i18n("midi-qol.bonusActionUsed"), changes: [{ key: "flags.midi-qol.actions.bonus", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: true }], [imgSource]: "modules/midi-qol/icons/bonus-action.svg", flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } } });
+      //@ts-expect-error wants "true"
+      CONFIG.statusEffects.push({ id: "bonusaction", _id: getStaticID("bonusaction"), name: i18n("midi-qol.bonusActionUsed"), changes: [{ key: "flags.midi-qol.actions.bonus", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: true }], img: "modules/midi-qol/icons/bonus-action.svg", flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } } });
     }
+    // @ts-expect-error not expecting keepId
     ActiveEffect.implementation.fromStatusEffect("bonusaction", { keepId: true }).then(effect => {
       midiBonusActionEffect = effect
       globalThis.MidiQOL.midiBonusActionEffect = effect;
@@ -1573,9 +1576,10 @@ export function setupMidiStatusEffects() {
 
   if (configSettings.enforceReactions !== "none") {
     if (!CONFIG.statusEffects.find(e => e._id === getStaticID("reaction"))) {
-      //@ts-expect-error
-      CONFIG.statusEffects.push({ id: "reaction", _id: getStaticID("reaction"), name: i18n("midi-qol.reactionUsed"), changes: [{ key: "flags.midi-qol.actions.reaction", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: true }], [imgSource]: "modules/midi-qol/icons/reaction.svg", effectData: { transfer: false }, flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } } });
+      //@ts-expect-error wants "true"
+      CONFIG.statusEffects.push({ id: "reaction", _id: getStaticID("reaction"), name: i18n("midi-qol.reactionUsed"), changes: [{ key: "flags.midi-qol.actions.reaction", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: true }], img: "modules/midi-qol/icons/reaction.svg", effectData: { transfer: false }, flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } } });
     }
+    // @ts-expect-error not expecting keepId
     ActiveEffect.implementation.fromStatusEffect("reaction", { keepId: true }).then(effect => {
       midiReactionEffect = effect;
       globalThis.MidiQOL.midiReactionEffect = effect;

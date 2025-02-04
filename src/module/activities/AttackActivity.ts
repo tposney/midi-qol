@@ -1,4 +1,4 @@
-import { debugEnabled, warn, GameSystemConfig, debug, log, i18n, MODULE_ID, gameUser } from "../../midi-qol.js";
+import { debugEnabled, warn, GameSystemConfig, debug, log, i18n, MODULE_ID, gameUser, i18nFormat } from "../../midi-qol.js";
 import { untimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
 import { defaultRollOptions } from "../patching.js";
@@ -210,7 +210,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
             const chosenAmmunition = this.actor.items.get(ammoUpdate.id);
             const ammoQuantity = chosenAmmunition?.system.quantity;
             if (ammoQuantity === 0 && this.workflow) {
-              ui.notifications?.warn(game.i18n?.format("midi-qol.NoAmmunition", { name: chosenAmmunition?.name }));
+              ui.notifications?.warn(i18nFormat("midi-qol.NoAmmunition", { name: chosenAmmunition?.name }));
               if (this.workflow) this.workflow.abort = true;
             }
           }

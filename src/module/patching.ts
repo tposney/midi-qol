@@ -7,7 +7,6 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiAttackActivity } from "./activities/AttackActivity.js";
 import { templateTokens } from "./activities/activityHelpers.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
-import { resolveOutput } from "xstate/dist/declarations/src/utils.js";
 
 let libWrapper;
 
@@ -133,7 +132,7 @@ export async function bonusCheck(actor, result: Roll, category, detail = "", mes
       "roll",
       { messageData }
     );
-    result = newRoll;
+    if (newRoll) result = newRoll;
   }
 
   return result;
@@ -236,7 +235,6 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
     const blindSkillRoll = configSettings.rollSkillsBlind.includes("all") || configSettings.rollSkillsBlind.includes(skillId);
     if (blindSkillRoll && ["publicroll", "roll", "gmroll"].includes(rollMode)) {
       rollMode = "blindroll";
-      //@ts-expect-error
       game.settings?.set("core", "rollMode", "blindroll");
     }
     if (config.midiOptions.fastForward) dialog.configure = false;
@@ -247,8 +245,7 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
       const minValue = (minflags.skill && minflags.skill.all);
       preRollSkillHookId = Hooks.once(`${gameSystemId()}.preRollSkillV2`, (config, dialog, message) => {
         message.data ??= {};
-        //@ts-expect-error
-        if (foundry.utils.isNewerVersion("4.2", game.system?.version)) {
+        if (foundry.utils.isNewerVersion("4.2", game.system?.version ?? "")) {
           message.create = false; // TODO dnd5e 4.2 remove this
         }
         if (overtimeActorUuid)
@@ -300,7 +297,6 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
   finally {
     if (preRollSkillHookId) Hooks.off(`${gameSystemId()}.preRollSkillV2`, preRollSkillHookId);
     if (rollSkillHookId) Hooks.off(`${gameSystemId()}.postSkillRollConfiguration`, rollSkillHookId);
-    //@ts-expect-error
     if (saveRollMode) game.settings?.set("core", "rollMode", saveRollMode);
     if (oldFormat) return result?.[0];
     return result;
@@ -618,7 +614,6 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
         blindRollSetting = configSettings.rollSavesBlind.includes("all") || configSettings.rollSavesBlind.includes(abilityId);
       if (blindRollSetting) {
         rollMode = "blindroll";
-        //@ts-expect-error
         game.settings?.set("core", "rollMode", "blindroll");
         result.forEach(r => r.options.rollMode = "blindroll");
       }
@@ -642,10 +637,9 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
     }
 
     if (message.create !== false && result) {
-      //@ts-expect-error
+      //@ts-expect-error no dnd5e-types
       CONFIG.Dice.D20Roll.toMessage(result, message.data, { rollMode, create: true });
     }
-    //@ts-expect-error
     if (saveRollMode) game.settings?.set("core", "rollMode", saveRollMode);
     await expireRollEffect.bind(this)(rollType, abilityId, success);
     if (config.midiOptions.isConcentrationCheck) expireRollEffect.bind(this)("isConcentrationSave", success);
@@ -656,7 +650,6 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
   } finally {
     if (preRollAbilityHookId) Hooks.off(`${gameSystemId()}.preRoll${type}V2`, preRollAbilityHookId);
     if (rollAbilityHookId) Hooks.off(`${gameSystemId()}.post${type}RollConfiguration`, rollAbilityHookId);
-    //@ts-expect-error
     if (saveRollMode) game.settings?.set("core", "rollMode", saveRollMode);
     return oldFormat ? result?.[0] : result
   }
@@ -843,7 +836,6 @@ function _midiATIRefresh(template) {
     let distance = template.distance;
     const dimensions = canvas?.dimensions || { size: 1, distance: 1 };
     distance *= dimensions.size / dimensions.distance;
-    //@ts-expect-error
     const tokens: Token[] | undefined = canvas.tokens.placeables;
     const tokensToCheck = tokens?.filter(tk => {
       const r: Ray = new Ray(
@@ -1214,7 +1206,6 @@ export function getItemEffectsToDelete(args: { actor: Actor, origin: string, ign
     if (!actor) {
       return [];
     }
-    //@ts-expect-error
     const actorEffects: ActiveEffect[] | undefined = actor?.appliedEffects;
     effectsToDelete = actorEffects?.filter(ef => {
       if (installedModules.get("times-up")) {
@@ -1222,6 +1213,7 @@ export function getItemEffectsToDelete(args: { actor: Actor, origin: string, ign
       }
       return ef.origin === origin
         && !ignore.includes(ef.uuid)
+        // @ts-expect-error
         && (!ignoreTransfer || ef.flags?.dae?.transfer !== true)
     }).map(ef => ef.id);
     warn("getItemEffectsToDelete: effectsToDelete ", actor.name, effectsToDelete, options);
@@ -1272,28 +1264,12 @@ export async function checkWounded(actor, update, options, user) {
       const token = tokenForActor(actor);
       if (woundedStatus && token) {
         if (!needsWounded) {
-          //@ts-expect-error
-          if (game.release.generation >= 12) {
-            // Cater to the possibility that the setings changed while the effect was applied
-            //@ts-expect-error
-            await token.actor?.toggleStatusEffect(woundedStatus?.id, { overlay: true, active: false });
-            //@ts-expect-error
-            await token.actor?.toggleStatusEffect(woundedStatus?.id, { overlay: false, active: false });
-
-          } else {
-            await token.toggleEffect(woundedStatus, { overlay: true, active: false });
-            await token.toggleEffect(woundedStatus, { overlay: false, active: false });
-          }
+          // Cater to the possibility that the setings changed while the effect was applied
+          await token.actor?.toggleStatusEffect(woundedStatus?.id, { overlay: true, active: false });
+          await token.actor?.toggleStatusEffect(woundedStatus?.id, { overlay: false, active: false });
         } else {
-          //@ts-expect-error
           if (!token.document.hasStatusEffect(woundedStatus.id)) {
-            //@ts-expect-error
-            if (game.release.generation >= 12) {
-              //@ts-expect-error
-              await token.actor?.toggleStatusEffect(woundedStatus.id, { overlay: configSettings.addWoundedStyle === "overlay", active: true });
-            } else {
-              await token.toggleEffect(woundedStatus, { overlay: configSettings.addWoundedStyle === "overlay", active: true });
-            }
+            await token.actor?.toggleStatusEffect(woundedStatus.id, { overlay: configSettings.addWoundedStyle === "overlay", active: true });
           }
         }
       }
@@ -1325,10 +1301,8 @@ async function setDeadStatus(actor, options: any) {
     const isBeaten = actor.effects.find(ef => ef.name === effect?.name) !== undefined;
     if ((makeDead !== isBeaten)) {
       let combatant;
-      //@ts-expect-error
       const combat: Combat | null | undefined = game.combat;
       if (actor.token && combat) combatant = combat?.getCombatantByActor(actor);
-      //@ts-ignore
       else combatant = game.combat?.getCombatantByActor(actor.id);
       if (combatant && useDefeated) {
         await combatant.update({ defeated: makeDead })
@@ -1342,42 +1316,18 @@ async function setDeadStatus(actor, options: any) {
       }
     }
   } else if (!isConvenientEffect(effect)) {
-    //@ts-expect-error generation
-    if (game.release.generation >= 12) {
-      // V12 uses an actor
-      const isBeaten = actor.effects.find(ef => ef.name === (i18n(effect?.name ?? effect?.label ?? ""))) !== undefined;
-      if (isBeaten !== makeDead) {
-        let combatant;
-        //@ts-expect-error
-        const combat: Combat | null | undefined = game.combat;
-        if (actor.token) combatant = combat?.getCombatantByToken(actor.token.id);
-        //@ts-expect-error
-        else combatant = game.combat?.getCombatantByActor(actor.id);
-        if (combatant && useDefeated) await combatant.update({ defeated: makeDead });
-        await actor.toggleStatusEffect(effect.id, { overlay: (configSettings.addDead === "overlay") || options.overlay, active: makeDead });
-        const token = tokenForActor(actor);
-        //@ts-expect-error TODO find out why such a long delay is needed
-        setTimeout(() => token._onApplyStatusEffect(effect.id, makeDead), 1000);
-      }
-    } else {
-      let token = tokenForActor(actor); // V11 must use a token
-      if (token) {
-        const isBeaten = actor.effects.find(ef => ef.name === (i18n(effect?.name ?? effect?.label ?? ""))) !== undefined;
-        if (isBeaten !== makeDead) {
-          let combatant;
-          //@ts-expect-error
-          const combat: Combat | null | undefined = game.combat;
-          if (actor.token) combatant = combat?.getCombatantByToken(actor.token.id);
-          //@ts-expect-error
-          else combatant = game.combat?.getCombatantByActor(actor.id);
-          if (combatant && useDefeated) await combatant.update({ defeated: makeDead });
-          if (effect) {
-            await token.toggleEffect(effect, { overlay: (configSettings.addDead === "overlay" || options.overlay), active: makeDead });
-            //@ts-expect-error TODO find out why such a long delay is needed
-            setTimeout(() => token._onApplyStatusEffect(effect.id, makeDead), 1500);
-          }
-        }
-      }
+    // V12 uses an actor
+    const isBeaten = actor.effects.find(ef => ef.name === (i18n(effect?.name ?? effect?.label ?? ""))) !== undefined;
+    if (isBeaten !== makeDead) {
+      let combatant;
+      const combat: Combat | null | undefined = game.combat;
+      if (actor.token) combatant = combat?.getCombatantByToken(actor.token.id);
+      else combatant = game.combat?.getCombatantByActor(actor.id);
+      if (combatant && useDefeated) await combatant.update({ defeated: makeDead });
+      await actor.toggleStatusEffect(effect.id, { overlay: (configSettings.addDead === "overlay") || options.overlay, active: makeDead });
+      const token = tokenForActor(actor);
+      // TODO find out why such a long delay is needed
+      setTimeout(() => token?._onApplyStatusEffect(effect.id, makeDead), 1000);
     }
   }
 }
@@ -1428,9 +1378,8 @@ export function readyPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preDelete", _preDeleteCombat, "WRAPPER");
 
   libWrapper.register(MODULE_ID, "Notifications.prototype.notify", notificationNotify, "MIXED");
-  //@ts-expect-error
   const gameVersion = game.system?.version;
-  if ((gameSystemId() === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion))) {
+  if ((gameSystemId() === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion ?? ""))) {
     if (ui.notifications)
       ui.notifications.error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
     else
@@ -1565,21 +1514,21 @@ export async function challengeConcentration(wrapped, { dc = 10, ability = null 
       action: "concentration",
       dc,
     };
-    //@ts-expect-error
+    //@ts-expect-error no dnd5e-types
     if (ability && ability in game.system?.config.abilities) dataset.ability = ability;
     const config = {
       type: "concentration",
       format: "short",
       icon: true
     }
-    //@ts-expect-error
+    //@ts-expect-error no dnd5e-types
     const enrichers = game.system?.enrichers;
     return ChatMessage.implementation.create({
       content: `<div class="dnd5e chat-card request-card" data-action="concentration" data-dc="${dc}" data-type="midi-concentration">
       <div><span class="visible-dc">${enrichers.createRollLabel({ ...dataset, ...config })} ${i18n("DND5E.Roll")}</span></div>
       <div><span class="hidden-dc">${enrichers.createRollLabel({ ...dataset, ...config, hideDC: true })} ${i18n("DND5E.Roll")}</span></div>
       </div>`,
-      whisper: game.users?.filter(user => this.testUserPermission(user, "OWNER")),
+      whisper: game.users?.filter(user => this.testUserPermission(user, "OWNER")).map(user => user.id),
       speaker: ChatMessage.implementation.getSpeaker({ actor: this })
     });
   }
@@ -1636,9 +1585,11 @@ export async function checkDeleteTemplate(templateDocument, options, user) {
   if (options.undo) return;
   let origin = MQfromUuidSync(templateDocument.getFlag("dnd5e", "origin"));
   if (origin instanceof Item && origin.parent instanceof Actor) {
+    // @ts-expect-error can't know about flags
     origin = origin.parent.effects?.find(ef => ef.getFlag("dnd5e", "dependents")?.some(dep => dep.uuid === templateDocument.uuid));
   }
   if (origin instanceof ActiveEffect && !options.noConcentrationCheck && configSettings.removeConcentrationEffects !== "none") {
+    // @ts-expect-error no dnd5e-types
     if (origin?.getDependents()?.length === 0) {
       await origin.delete();
     }
@@ -1697,9 +1648,11 @@ async function _preCreateActiveEffect(wrapped, data, options, user): Promise<voi
     if (!(parent instanceof CONFIG.Actor.documentClass)) return;
     if (globalThis.MidiQOL.incapacitatedConditions.some(condition => this.statuses.has(condition))) {
       if (debugEnabled > 0) warn(`on createActiveEffect ${this.name} ${this.id} removing concentration for ${parent.name}`)
-      if (parent.system.attributes?.hp?.value > 0) {
-        await parent.endConcentration();
-      }
+        // @ts-expect-error no dnd5e-types
+        if (parent.system.attributes?.hp?.value > 0) {
+          // @ts-expect-error no dnd5e-types
+          await parent.endConcentration();
+        }
     }
   } catch (err) {
     const message = "midi-qol | error in preCreateActiveEffect";

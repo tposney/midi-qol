@@ -41,8 +41,7 @@ export class OnUseMacro {
       this.macroName = data!["macroName"].trim();
       this.option = data!["option"];
     }
-    if (this.option === undefined)
-      this.option = "postActiveEffects";
+    this.option ??= "postActiveEffects";
   }
 
   static parsePart(parts: { macroName: string, option: string | undefined }) {

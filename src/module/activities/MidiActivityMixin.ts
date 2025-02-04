@@ -87,7 +87,6 @@ export var MidiActivityMixin = Base => {
     }
 
     get macro() {
-      //@ts-expect-error
       return new Macro({ name: this.macroData.name || this.name, command: this.macroData.command, img: this.img, type: "script" });
     }
     set macro(macro: Macro) {
@@ -233,6 +232,7 @@ export var MidiActivityMixin = Base => {
       const itemData = this.item.toObject();
       delete itemData._id;
       let item = new CONFIG.Item.documentClass(itemData, { parent: actor });
+      // @ts-expect-error no dnd5e-types
       const activity = item.system.activities.get(this.id);
       delete config.midiOptions.rollAs;
       return activity.use(config, dialog, message);
@@ -477,9 +477,9 @@ export var MidiActivityMixin = Base => {
 
         if (workflow.currentAction !== workflow.WorkflowState_WaitForDamageRoll) {
           if (workflow.currentAction === workflow.WorkflowState_AwaitTemplate)
-            return ui.notifications?.warn(i18n("midi-qol.noTemplateSeen"));
+            return ui.notifications?.warn(i18n("midi-qol.noTemplateSeen")) as void;
           else if (workflow.currentAction === workflow.WorkflowState_WaitForAttackRoll)
-            return ui.notifications?.warn(i18n("midi-qol.noAttackRoll"));
+            return ui.notifications?.warn(i18n("midi-qol.noAttackRoll")) as void;
         }
 
         // TODO revisit this to see if it is still possoible to just re-roll the damage
@@ -517,7 +517,6 @@ export var MidiActivityMixin = Base => {
         if (rollConfig.ammunition) { // add ammunition properties to the damage roll
           let rollProperties = new Set(roll.options.properties);
           const ammunitionProperties = rollConfig.ammunition.system.properties;
-          //@ts-expect-error
           roll.options.properties = Array.from(rollProperties.union(ammunitionProperties));
         }
         // critical/fumble will be inserted when roll.build is called.
@@ -619,7 +618,6 @@ export var MidiActivityMixin = Base => {
             let promises = result2.map(r => displayDSNForRoll(r, "damageRoll"));
             await Promise.all(promises);
           }
-          //@ts-expect-error
           await DamageRoll.toMessage(result2, messageData, { rollMode: game.settings?.get("core", "rollMode") });
           // await result2.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
         }
@@ -916,13 +914,14 @@ export var MidiActivityMixin = Base => {
 
         let needPause = false;
         for (let tokenRef of this.targets) {
-          const target: Token | undefined = getToken(tokenRef);
+          const target: Token | null | undefined = getToken(tokenRef);
           if (!target) continue;
           if (
-            //@ts-expect-error - sight not enabled but we are treating it as if it is
+            // sight not enabled but we are treating it as if it is
             (!target.document.sight.enabled && configSettings.optionalRules.invisVision)
+            // @ts-expect-error no dnd5e-types
             || ((target.actor as Actor)?.type === "npc")
-            //@ts-expect-error - sight enabled but not the owner of the token
+            // sight enabled but not the owner of the token
             || (!target.isOwner && target.document.sight.enabled)
             || (!target.vision || !target.vision?.los)) {
             initializeVision(target);
@@ -1165,10 +1164,11 @@ export var MidiActivityMixin = Base => {
           const target = getToken(tokenRef);
           if (!target) continue;
           if (
-            //@ts-expect-error - sight not enabled but we are treating it as if it is
+            // sight not enabled but we are treating it as if it is
             (!target.document.sight.enabled && configSettings.optionalRules.invisVision)
+            // @ts-expect-error no dnd5e-types
             || ((target.actor as Actor)?.type === "npc")
-            //@ts-expect-error - sight enabled but not the owner of the token
+            // sight enabled but not the owner of the token
             || (!target.isOwner && target.document.sight.enabled)
             || (!target.vision || !target.vision?.los)) {
             initializeVision(target);
@@ -1241,10 +1241,9 @@ export var MidiActivityMixin = Base => {
         let item = this;
         let target = this.target ?? { value: 0 };
         const fudge = 0.1;
-        //@ts-expect-error
         const { width, height } = tokenToUse.document;
 
-        templateOptions.distance = Math.ceil(target.template.size + Math.max(width / 2, height / 2, 0) * (canvas?.dimensions?.distance ?? 0));
+        templateOptions.distance = Math.ceil(target.template.size + Math.max((width ?? 1) / 2, (height ?? 1) / 2, 0) * (canvas?.dimensions?.distance ?? 0));
         templateOptions.x = tokenToUse.center?.x ?? 0;
         templateOptions.y = tokenToUse.center?.y ?? 0;
         foundry.utils.setProperty(templateOptions, `flags.${MODULE_ID}.actorUuid`, actor.uuid);
@@ -1261,7 +1260,6 @@ export var MidiActivityMixin = Base => {
         if (this.item) foundry.utils.setProperty(templateData, `flags.${MODULE_ID}.itemUuid`, this.item.uuid);
         if (this.actor) foundry.utils.setProperty(templateData, `flags.${MODULE_ID}.actorUuid`, this.actor.uuid);
         if (!foundry.utils.getProperty(templateData, `flags.${gameSystemId()}.origin`)) foundry.utils.setProperty(templateData, `flags.${gameSystemId()}.origin`, this.item?.uuid);
-        // @ts-expect-error
         const templateDocuments: MeasuredTemplateDocument[] | undefined = await canvas?.scene?.createEmbeddedDocuments("MeasuredTemplate", [templateData]);
 
         if (templateDocuments && templateDocuments.length > 0) {

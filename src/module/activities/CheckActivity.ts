@@ -23,10 +23,10 @@ export function setupCheckActivity() {
 }
 function getSceneTargets() {
   if (!canvas?.tokens) return [];
-  //@ts-expect-error
   const controlledTokens: Token[] | undefined = canvas?.tokens?.controlled;
   let targets: Token[] | undefined = controlledTokens?.filter(t => t.actor);
-  if (!targets?.length && gameUser()?.character) targets = gameUser()?.character.getActiveTokens();
+  // @ts-expect-error getActiveTokens error
+  if (!targets?.length && gameUser()?.character) targets = gameUser()?.character?.getActiveTokens();
   return targets;
 }
 let defineMidiCheckActivityClass = (ActivityClass: any) => {
@@ -80,8 +80,9 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
       if (targets) for (const token of targets) {
         data.speaker = ChatMessage.getSpeaker({ scene: canvas?.scene ?? undefined, token: token.document });
         if (skill) {
-          //@ts-expect-error
-          const actor: Actor = token.actor;
+          const actor: Actor | null = token.actor;
+          if (!actor) return;
+          // @ts-expect-error no dnd5e-types
           await actor.rollSkill(skill, { ...data, ability });
         } else if (tool) {
           const checkData = { ...data, ability };
@@ -90,12 +91,14 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
             checkData.prof = item.system.prof;
             checkData.item = item;
           }
-          //@ts-expect-error
-          const actor: Actor = token.actor;
+          const actor: Actor | null = token.actor;
+          if (!actor) return;
+          // @ts-expect-error no dnd5e-types
           await actor.rollToolCheck(tool, checkData);
         } else {
-          //@ts-expect-error
-          const actor: Actor = token.actor;
+          const actor: Actor | null = token.actor;
+          if (!actor) return;
+          // @ts-expect-error no dnd5e-types
           await actor.rollAbilityTest(ability, data);
         }
       }
