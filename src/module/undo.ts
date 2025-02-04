@@ -120,6 +120,7 @@ export function startUndoWorkflow(undoData: any): boolean {
   undoData.allTargets = new Collection; // every token referenced by the workflow
   const concentrationEffect = getConcentrationEffect(actor, undoData.itemUuid);
   if (concentrationEffect) {
+    // @ts-expect-error no dnd5e-types
     for (let dependent of concentrationEffect.getDependents()) {
       let token;
       if (dependent instanceof ActiveEffect) dependent = dependent.parent;

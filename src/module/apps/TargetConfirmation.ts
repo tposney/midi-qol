@@ -15,6 +15,7 @@ export class TargetConfirmationDialog extends Application {
     targets: Token[],
     options: any
   };
+  // @ts-expect-error
   hookId: number;
 
   //@ts-ignore .Actor, .Item
@@ -89,8 +90,8 @@ export class TargetConfirmationDialog extends Application {
     for (let target of targets) {
       if (maxTargets && data.targets.length >= maxTargets) break;
       let img = target.document.texture.src;
-      if (VideoHelper.hasVideoExtension(img)) {
-        img = await game.video?.createThumbnail(img, { width: 50, height: 50 }) ?? "";
+      if (VideoHelper.hasVideoExtension(img as string)) {
+        img = await game.video?.createThumbnail(img as string, { width: 50, height: 50 }) ?? "";
       }
       const actor = this.data.activity.actor;
       const token = tokenForActor(actor);
@@ -208,7 +209,6 @@ export class TargetConfirmationDialog extends Application {
         targetName.addEventListener("click", async (event) => {
           event.stopPropagation();
           const doc = await fromUuid(event.currentTarget.dataset.uuid);
-          //@ts-expect-error .sheet
           return doc?.sheet.render(true);
         });
       }

@@ -12,7 +12,7 @@ export let colorChatMessageHandler = (message, html, data) => {
   let actorId = message.speaker.actor;
   let userId = message.author;
   let actor = game.actors?.get(actorId);
-  let user = game.users?.get(userId);
+  let user = game.users?.get(userId) as User.Implementation | undefined;
 
   if (actor) user = playerForActor(actor);
   if (!user) return true;
@@ -219,6 +219,7 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("fumble");
     }
 
+    // @ts-expect-error protected - but this isn't doing anything, is it?
     ui.chat.scrollBottom
     return;
 
@@ -307,7 +308,8 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-gmTokenName").remove();
     }
   }
-  setTimeout(() => ui.chat.scrollBottom(), 0);
+  // @ts-expect-error protected
+  setTimeout(() => ui.chat?.scrollBottom(), 0);
   return true;
 
 }
@@ -362,6 +364,7 @@ export function ddbglPendingFired(data) {
     workflow = undefined;
   }
 
+  // @ts-expect-error no dnd5e-types
   if (["damage", "heal"].includes(actionType) && item.hasAttack && !workflow) {
     warn(` ddb-game-log damage roll without workflow being started ${actor.name} using ${item.name}`);
     return;
@@ -374,8 +377,8 @@ export function ddbglPendingFired(data) {
       actor: actorId,
       alias: token?.name ?? actor.name
     }
-    //@ts-expect-error
-    workflow = new DDBGameLogWorkflow(actor, item, speaker, gameUser().targets, {});
+    workflow = new DDBGameLogWorkflow(actor, item, speaker, Array.from(gameUser().targets), {});
+    // @ts-expect-error no dnd5e-types
     item.displayCard({ showFullCard: false, workflow, createMessage: false, defaultCard: true });
     // showItemCard.bind(item)(false, workflow, false, true);
     return;

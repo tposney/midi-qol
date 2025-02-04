@@ -4,12 +4,14 @@ export class RollStatsDisplay extends FormApplication {
 
   statsHookId: number;
   playersOnly: boolean;
+  // @ts-expect-error will be replaced in v2 anyway (which I have yet to do)
   object: RollStats;
   expanded: {};
   constructor(object: any, options) {
     super(object, options);
     this.playersOnly = options.playersOnly || !game.user?.isGM || false;
     this.expanded = {};
+    // @ts-expect-error object set in super
     Object.keys(this.object.currentStats).forEach(aid => {
       this.expanded[aid] = this.playersOnly;
     })
@@ -22,7 +24,7 @@ export class RollStatsDisplay extends FormApplication {
 
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      title: game.i18n.localize("midi-qol.StatsTitle"),
+      title: i18n("midi-qol.StatsTitle"),
       template: "modules/midi-qol/templates/roll-stats.html",
       id: "midi-qol-statistics",
       width: "500",

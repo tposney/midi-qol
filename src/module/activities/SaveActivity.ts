@@ -35,7 +35,6 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
       }, { inplace: false, insertKeys: true, insertValues: true });
 
     static defineSchema() {
-      //@ts-expect-error
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField } = foundry.data.fields;
       //@ts-expect-error
       const dataModels = game.system.dataModels;

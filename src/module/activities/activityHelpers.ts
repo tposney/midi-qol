@@ -158,7 +158,6 @@ export function requiresTargetConfirmation(activity, options): boolean {
       return true;
     }
     if (targetConfirmation.allies && token && numTargets > 0 && activity.target?.affects.type !== "self") {
-      //@ts-expect-error find disposition
       if (gameUser()?.targets.some(t => t.document.disposition == token.document.disposition)) {
         if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.allies");
         return true;
@@ -256,7 +255,7 @@ export async function postTemplateConfirmTargets(activity, options, workflow): P
 }
 
 export async function resolveTargetConfirmation(activity, options: any = {}): Promise<boolean> {
-  const savedSettings = { control: ui.controls?.control?.name, tool: ui.controls?.tool };
+  const savedSettings = { control: ui.controls?.control?.name, tool: ui.controls?.tool as string | undefined };
   const savedActiveLayer = canvas?.activeLayer;
   await canvas?.tokens?.activate();
   ui.controls?.initialize({ tool: "target", control: "token" })
@@ -272,6 +271,7 @@ export async function resolveTargetConfirmation(activity, options: any = {}): Pr
     let targetConfirmation = new TargetConfirmationDialog(activity.actor, activity, game.user, options).render(true);
   });
   let shouldContinue = await targets;
+  // @ts-expect-error
   if (savedActiveLayer) await savedActiveLayer.activate();
   if (savedSettings.control && savedSettings.tool)
     ui.controls?.initialize(savedSettings);
@@ -325,7 +325,6 @@ export async function showItemInfo() {
 
   // Toggle default roll mode
   let rollMode = safeGetGameSetting("core", "rollMode") ?? "public";
-  //@ts-expect-error
   if (["gmroll", "blindroll"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
   if (rollMode === "blindroll") chatData["blind"] = true;
   if (rollMode === "selfroll") chatData["whisper"] = [gameUser()?.id];
@@ -338,7 +337,6 @@ function isTokenInside(template: MeasuredTemplate, token: Token, wallsBlockTarge
   //@ts-ignore grid v10
   const grid = canvas?.scene?.grid;
   if (!grid) return false;
-  //@ts-expect-error
   const templatePos = template.document ? { x: template.document.x, y: template.document.y } : { x: template.x, y: template.y };
   if (configSettings.optionalRules.wallsBlockRange !== "none" && hasWallBlockingCondition(token))
     return false;
@@ -392,7 +390,6 @@ function isTokenInside(template: MeasuredTemplate, token: Token, wallsBlockTarge
           //@ts-expect-error .Levels
           contains = contains && !CONFIG.Levels?.API?.testCollision(p1, p2, "collision");
         } else if (!installedModules.get("levelsvolumetrictemplates")) {
-          //@ts-expect-error polygonBackends
           contains = !CONFIG.Canvas.polygonBackends.sight.testCollision({ x: tx, y: ty }, { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y }, { mode: "any", type: "move" })
         }
       }
@@ -402,14 +399,13 @@ function isTokenInside(template: MeasuredTemplate, token: Token, wallsBlockTarge
   }
   return false;
 }
-export function isAoETargetable(targetToken, options: { selfToken?: Token | TokenDocument | string | undefined, ignoreSelf?: boolean, AoETargetType?: string, autoTarget?: string } = { ignoreSelf: false, AoETargetType: "any" }): boolean {
+export function isAoETargetable(targetToken, options: { selfToken?: Token | TokenDocument | string | null | undefined, ignoreSelf?: boolean, AoETargetType?: string, autoTarget?: string } = { ignoreSelf: false, AoETargetType: "any" }): boolean {
   if (!isTargetable(targetToken)) return false;
   const autoTarget = options.autoTarget ?? configSettings.autoTarget;
   const selfToken = getToken(options.selfToken);
   if (["wallsBlockIgnoreIncapacitated", "alwaysIgnoreIncapacitated"].includes(autoTarget) && checkIncapacitated(targetToken.actor, false, false)) return false;
   if (["wallsBlockIgnoreDefeated", "alwaysIgnoreDefeated"].includes(autoTarget) && checkDefeated(targetToken)) return false;
   if (targetToken === selfToken && options.ignoreSelf) return false;
-  //@ts-expect-error .disposition
   const selfDisposition = selfToken?.document.disposition ?? 1;
   switch (options.AoETargetType) {
     case "any":
@@ -438,12 +434,11 @@ export function isAoETargetable(targetToken, options: { selfToken?: Token | Toke
   }
 }
 
-export function templateTokens(templateDetails: MeasuredTemplate, selfTokenRef: Token | TokenDocument | string | undefined = "", ignoreSelf: boolean = false, AoETargetType: string = "any", autoTarget?: string): Token[] {
+export function templateTokens(templateDetails: MeasuredTemplate, selfTokenRef: Token | TokenDocument | string | null | undefined = "", ignoreSelf: boolean = false, AoETargetType: string = "any", autoTarget?: string): Token[] {
   if (!autoTarget) autoTarget = configSettings.autoTarget
   // deprecated if (!autoTarget) autoTarget = getAutoTarget(templateDetails.item);
   if ((autoTarget) === "none") return [];
   const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget);
-  //@ts-expect-error
   const tokens: Token[] = canvas?.tokens?.placeables ?? []; //.map(t=>t)
   const selfToken = getToken(selfTokenRef);
   let targetIds: string[] = [];
@@ -474,7 +469,7 @@ export function templateTokens(templateDetails: MeasuredTemplate, selfTokenRef: 
 
 
 // this is bound to a workflow when called - most of the time
-export function selectTargets(templateDocument: MeasuredTemplateDocument, data, user) {
+export function selectTargets(templateDocument: MeasuredTemplateDocument, data?, user?) {
   // const workflow = this?.currentAction ? this : Workflow.getWorkflow(templateDocument.flags?.dnd5e?.origin);
   const activity = this;
   if (debugEnabled > 0) warn("selectTargets ", activity, templateDocument, data, user);

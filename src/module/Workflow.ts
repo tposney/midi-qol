@@ -43,18 +43,26 @@ export class Workflow {
   tokenUuid: string | undefined;  // TODO change tokenId to tokenUuid
   targets: Set<Token | TokenDocument>;
   placeTemplateHookId: number | null;
+  // @ts-expect-error might be undefined
   inCombat: boolean; // Is the item wielder in combat.
+  // @ts-expect-error might be undefined
   isTurn: boolean; // Is it the item wielder's turn.
+  // @ts-expect-error might be undefined
   AoO: boolean; // Is the attack an attack of
+  // @ts-expect-error might be undefined
   damageList: any[];
 
   _id: string;
+  // @ts-expect-error might be undefined
   saveDisplayFlavor: string;
+  // @ts-expect-error might be undefined
   showCard: boolean;
   get id() { return this._id }
   get uuid() { return this._id }
   itemId: string;
+  // @ts-expect-error might be undefined
   itemUuid: string;
+  // @ts-expect-error might be undefined
   _currentState: number;
   public workflowAction: WorkflowState;
   isCritical: boolean;
@@ -63,10 +71,13 @@ export class Workflow {
   hitTargetsEC: Set<Token | TokenDocument>;
   attackRoll: Roll | undefined;
   diceRoll: number | undefined;
+  // @ts-expect-error might be undefined
   attackTotal: number;
   attackCardData: ChatMessage | undefined;
+  // @ts-expect-error might be undefined
   attackRollHTML: HTMLElement | JQuery<HTMLElement> | string;
   attackRollCount: number;
+  // @ts-expect-error might be undefined
   noAutoAttack: boolean; // override attack roll for standard care
 
   hitDisplayData: any;
@@ -101,14 +112,18 @@ export class Workflow {
   damageRolls: Roll[] | undefined;
   extraRolls: Roll[] | undefined;
   saveRolls: Roll[] | undefined;
+  // @ts-expect-error might be undefined
   damageTotal: number;
   rawDamageDetail: any[];
   rawOtherDamageDetail: any[];
+  // @ts-expect-error might be undefined
   rawBonusDamageDetail: any[];
+  // @ts-expect-error might be undefined
   damageRollHTML: HTMLElement | JQuery<HTMLElement> | string;
   damageRollCount: number;
   damageCardData: ChatMessage | undefined;
   defaultDamageType: string | undefined;
+  // @ts-expect-error might be undefined
   noAutoDamage: boolean; // override damage roll for damage rolls
   isVersatile: boolean;
 
@@ -118,12 +133,14 @@ export class Workflow {
   failedSaves: Set<Token | TokenDocument>;
   fumbleSaves: Set<Token | TokenDocument>;
   criticalSaves: Set<Token | TokenDocument>;
+  // @ts-expect-error might be undefined
   advantageSaves: Set<Token | TokenDocument>;
   saveRequests: any;
   saveTimeouts: any;
 
   saveDisplayData;
 
+  // @ts-expect-error might be undefined
   chatMessage: ChatMessage;
   displayId: string;
   //@ts-expect-error dnd5e v10
@@ -250,7 +267,6 @@ export class Workflow {
     }
 
     this.tokenId = speaker.token;
-    //@ts-expect-error
     const token: Token | undefined = canvas?.tokens?.get(this.tokenId);
     this.tokenUuid = token?.document?.uuid; // TODO see if this could be better
     this.token = token;
@@ -986,8 +1002,8 @@ export class Workflow {
     const targets = new Map();
     for (const token of this.targets) {
       const { name } = token;
-      //@ts-expect-error
       const { img, system, uuid } = token.actor ?? {};
+      // @ts-expect-error no dnd5e-types
       const ac = system?.attributes?.ac ?? {};
       if (uuid && Number.isNumeric(ac.value)) targets.set(uuid, { name, img, uuid, ac: ac.value });
     }
@@ -1417,7 +1433,6 @@ export class Workflow {
               const hasExisting = await CEHasEffectApplied({ effectName: ceEffect.name, uuid: (token.actor as Actor).uuid })
               if (removeExisting && hasExisting) {
                 await CERemoveEffect({ effectName: ceEffect.name, uuid: (token.actor as Actor).uuid, origin });
-                //@ ts-expect-error game.dfreds
                 // wait game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: token.actor.uuid, origin, metadata: macroData });
               }
               const effectData = foundry.utils.mergeObject(ceEffect.toObject(), metaData);
@@ -1427,18 +1442,17 @@ export class Workflow {
               }
               effectData.origin = origin;
               const effects = await CEAddEffectWith({ effectData, effectName: ceEffect.name, uuid: (token.actor as Actor).uuid, origin, overlay: false });
-              //@ ts-expect-error game.dfreds
               // const effects = await game.dfreds?.effectInterface?.addEffectWith({ effectData, uuid: token.actor.uuid, origin, metadata: macroData });
               if (this.chatCard.getFlag("dnd5e", "use.concentrationId")) {
                 const originItem = this.actor.effects.get(this.chatCard.getFlag("dnd5e", "use.concentrationId"));
                 if (!effects) {
-                  //@ts-expect-error
                   for (let effect of token.actor.effects.filter(ef => ef.origin === originItem.uuid)) {
                     if (!(originItem.getFlag("dnd5e", "dependents") ?? []).some(d => d.uuid === effect.uuid))
                       originItem.addDependent(effect);
                   }
                 } else for (let effect of effects) {
                   if (effect instanceof ActiveEffect && originItem instanceof ActiveEffect) {
+                    // @ts-expect-error no dnd5e-types
                     await originItem.addDependent(effect);
                   }
                 }
@@ -1558,21 +1572,17 @@ export class Workflow {
         const actorHasEffect = this.actor.effects.find(ef => ef.name === this.activity.name);
         if (this.item?.flags.midiProperties?.toggleEffect && actorHasEffect) {
           CEToggleEffect({ effectName: this.activity.name, uuid: this.actor.uuid, origin });
-          //@ ts-expect-error game.dfreds
           // await game.dfreds?.effectInterface?.toggleEffect(theItem.name, { uuid: this.actor.uuid, origin, metadata: macroData });
         } else {
           // Check stacking status
-          //@ ts-expect-error
           // if ((ceSelfEffectToApply.flags?.dae?.stackable ?? "none") === "none" && game.dfreds.effectInterface?.hasEffectApplied(theItem.name, this.actor.uuid)) {
           if ((ceSelfEffect.flags?.dae?.stackable ?? "none") === "none" && await CEHasEffectApplied({ effectName: this.activity.name, uuid: this.actor.uuid })) {
             await CERemoveEffect({ effectName: this.activity.name, uuid: this.actor.uuid, origin });
-            //@ ts-expect-error
             // await game.dfreds.effectInterface?.removeEffect({ effectName: theItem.name, uuid: this.actor.uuid, origin, metadata: macroData });
           }
           const effectData = foundry.utils.mergeObject(ceSelfEffect.toObject(), metaData);
           effectData.origin = origin;
           const effects = await CEAddEffectWith({ effectData, effectName: this.activity.name, uuid: this.actor.uuid, origin, overlay: false });
-          //@ ts-expect-error game.dfreds
           // const effects = await game.dfreds?.effectInterface?.addEffectWith({ effectData, uuid: this.actor.uuid, origin, metadata: macroData });
           if (this.chatCard.getFlag("dnd5e", "use.concentrationId")) {
             origin = this.actor.effects.get(this.chatCard.getFlag("dnd5e", "use.concentrationId"));
@@ -1583,6 +1593,7 @@ export class Workflow {
               }
             } else for (let effect of effects) {
               if (effect instanceof ActiveEffect && origin instanceof ActiveEffect) {
+                // @ts-expect-error no dnd5e-types
                 await origin.addDependent(effect);
               }
             }
@@ -1607,6 +1618,7 @@ export class Workflow {
     if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookid);
     if (configSettings.autoItemEffects === "applyRemove") await this.removeEffectsButton();
     // TODO see if we can delete the workflow - I think that causes problems for Crymic
+    // @ts-expect-error protected
     ui.chat?.scrollBottom();
     return this.WorkflowState_Completed;
   }
@@ -1672,6 +1684,7 @@ export class Workflow {
           const saveTargets = gameUser().targets;
           if (targetUuids?.length === 0) shouldTrigger = false;
           if (this.activity.midiProperties?.triggeredActivityConditionText && shouldTrigger) {
+            // @ts-expect-error
             const target: any = await fromUuid(targetUuids[0]);
             const condition = this.activity.midiProperties?.triggeredActivityConditionText;
             const conditionData = createConditionData({ workflow: this, activity: this.activity, item: this.item, target });
@@ -1732,6 +1745,7 @@ export class Workflow {
         const targettokenUuid = (targetToken.actor as Actor).uuid;
         if (!targettokenUuid) continue;
         let img = targetToken.document?.texture.src ?? (targetToken.actor as Actor).img;
+        // @ts-expect-error no dnd5e-types
         if (configSettings.usePlayerPortrait && (targetToken.actor as Actor).type === "character") {
           img = (targetToken.actor as Actor).img ?? targetToken.document?.texture.src;
         }
@@ -1774,6 +1788,7 @@ export class Workflow {
     if (hasConcentration && template && this.chatCard.getFlag("dnd5e", "use.concentrationId")) {
       let origin = this.actor.effects.get(this.chatCard.getFlag("dnd5e", "use.concentrationId"));
       if (origin instanceof ActiveEffect) {
+        // @ts-expect-error no dnd5e-types
         await origin.addDependent(this.template);
       }
     } else if (installedModules.get("dae") && activityHasAreaTarget(this.activity) && template
@@ -1823,6 +1838,7 @@ export class Workflow {
     if (hasConcentration && this.summonedCreatures && configSettings.autoRemoveSummonedCreature) {
       let origin = this.actor.effects.get(this.chatCard.getFlag("dnd5e", "use.concentrationId"));
       if (origin instanceof ActiveEffect) {
+        // @ts-expect-error no dnd5e-types
         await origin.addDependent(...this.summonedCreatures);
       }
     } else if (configSettings.autoRemoveSummonedCreature && this.summonedCreatures) {
@@ -1990,9 +2006,10 @@ export class Workflow {
     // Check hidden
     if (checkRule("hiddenAdvantage") && checkRule("HiddenAdvantage") !== "none" && target) {
       if (checkRule("hiddenAdvantage") === "perceptive" && installedModules.get("perceptive")?.active) {
-        //@ts-expect-error .api
-        const perceptiveApi = game.modules.get("perceptive")?.api;
+        const perceptiveApi = game.modules?.get("perceptive")?.api;
+        // @ts-expect-error
         const tokenSpotted = await perceptiveApi?.isSpottedby(token, target, { LOS: false, Range: true, Effects: true, Hidden: false, canbeSpotted: true }) ?? true;
+        // @ts-expect-error
         const targetSpotted = await perceptiveApi?.isSpottedby(target, token, { LOS: false, Range: true, Effects: true, Hidden: false, canbeSpotted: true }) ?? true;
         if (!tokenSpotted) {
           this.attackAdvAttribution.add("ADV:hidden");
@@ -2105,7 +2122,9 @@ export class Workflow {
     // check target critical/nocritical
     if (this.hitTargets.size === 1) {
       const firstTarget = this.hitTargets.first();
+      // @ts-expect-error can't know about flags
       const grants = (firstTarget?.actor as Actor)?.flags[MODULE_ID]?.grants?.critical ?? {};
+      // @ts-expect-error can't know about flags
       const fails = (firstTarget?.actor as Actor)?.flags[MODULE_ID]?.fail?.critical ?? {};
       if (grants || fails) {
         if (Number.isNumeric(grants.range) && computeDistance(firstTarget, this.token, { wallsBlock: false }) <= Number(grants.range)) {
@@ -2178,7 +2197,7 @@ export class Workflow {
     const firstTarget = getToken(firstTargetDocument);
     if (!firstTargetDocument || !firstTarget) return;
     if (checkRule("nearbyAllyRanged") > 0 && ["rwak", "rsak", "rpak"].includes(actionType)) {
-      if (firstTargetDocument.width * firstTargetDocument.height < Number(checkRule("nearbyAllyRanged"))) {
+      if ((firstTargetDocument.width ?? 1) * (firstTargetDocument.height ?? 1) < Number(checkRule("nearbyAllyRanged"))) {
         const nearbyAlly = checkNearby(-1, firstTarget, (canvas?.dimensions?.distance ?? 5)); // targets near a friend that is not too big
         // TODO include thrown weapons in check
         if (nearbyAlly) {
@@ -2511,6 +2530,7 @@ export class Workflow {
               if (!damageRoll) continue;
               damageType = getDamageType(damageType);
               if (!damageType && flavor && getDamageType(flavor)) damageType = getDamageType(flavor);
+              // @ts-expect-error no dnd5e-types
               if (!damageType && this.damageRolls) damageType = this.damageRolls[0].options?.type;
               if (!damageType) damageType = MQdefaultDamageType;
 
@@ -2736,6 +2756,7 @@ export class Workflow {
     let macroActivity = this.activity;
     let macroEntity;
     if (uuid?.length > 0) {
+      // @ts-expect-error
       macroEntity = await fromUuid(uuid);
     }
     if (macroEntity) {
@@ -2782,6 +2803,7 @@ export class Workflow {
           } else {
             const parts = name.split(".");
             const itemNameOrUuid = parts.slice(1).join(".");
+            // @ts-expect-error
             macroItem = await fromUuid(itemNameOrUuid); // item or activity
             if (macroItem?.item) macroItem = macroItem.item;
             // ItemMacro.name
@@ -2794,6 +2816,7 @@ export class Workflow {
                 itemId = uuid.split(".").slice(-3)[0];
               else
                 itemId = uuid.split(".").slice(-1)[0];
+              // @ts-expect-error can't know about flags
               const itemData = actorToUse.effects.find(effect => effect.flags.dae?.itemData?._id === itemId)?.flags.dae.itemData;
               if (itemData) macroItem = itemData;
             } else if (!macroItem) {
@@ -2817,6 +2840,7 @@ export class Workflow {
             let itemToUse = macroItem;
             macroItem = item;
             if (!macro) {
+              // @ts-expect-error
               const activityOrItem: any = (activitySpec) ? await fromUuid(activitySpec) : macroActivity;
               if (activityOrItem instanceof Item)
                 itemToUse = activityOrItem;
@@ -2857,6 +2881,7 @@ export class Workflow {
           if (name.startsWith("Macro.")) name = name.replace("Macro.", "");
           macro = game.macros?.getName(name)
           if (!macro) {
+            // @ts-expect-error
             const itemOrMacro = await fromUuid(name);
             if (itemOrMacro instanceof Item) {
               macroData.sourceItemUuid = itemOrMacro.uuid;
@@ -2969,6 +2994,7 @@ export class Workflow {
       //let searchRe = /<div class="midi-qol-attack-roll">.*?<\/div>/;
       let searchRe = /<div class="midi-qol-attack-roll">[\s\S]*?<div class="end-midi-qol-attack-roll">/
       let options: any = this.attackRoll?.terms[0].options;
+      // @ts-expect-error no dnd5e-types
       const advantageMode = this.attackRoll?.options?.advantageMode;
       if (advantageMode !== undefined) {
         this.advantage = advantageMode === 1;
@@ -3142,10 +3168,9 @@ export class Workflow {
     for (let target of this.targets) {
       const targetToken = getToken(target);
       if (!targetToken) continue;
-      //@ts-expect-error .texture
       let img = targetToken.document?.texture.src ?? (targetToken.actor as Actor).img;
+      // @ts-expect-error no dnd5e-types
       if (configSettings.usePlayerPortrait && (targetToken.actor as Actor)?.type === "character") {
-        //@ts-expect-error .texture
         img = (targetToken.actor as Actor).img ?? targetToken.document?.texture.src;
       }
       if (VideoHelper.hasVideoExtension(img ?? "")) {
@@ -3240,9 +3265,9 @@ export class Workflow {
       }
     }
 
-    if (fullDamage.length > 0) fullDamageText = i18nFormat("midi-qol.fullDamageText" ?? "{damageType}", { damageType: fullDamage.join(", ") }) ?? "";
-    if (noDamage.length > 0) noDamageText = i18nFormat("midi-qol.noDamageText" ?? "{damageType}", { damageType: noDamage.join(", ") }) ?? "";
-    if (halfDamage.length > 0) halfDamageText = i18nFormat("midi-qol.halfDamageText" ?? "{damageType}", { damageType: halfDamage.join(", ") }) ?? "";
+    if (fullDamage.length > 0) fullDamageText = fullDamage.join(", "); // i18nFormat("midi-qol.fullDamageText" ?? "{damageType}", { damageType: fullDamage.join(", ") }) ?? "";
+    if (noDamage.length > 0) noDamageText = fullDamage.join(", "); // i18nFormat("midi-qol.noDamageText" ?? "{damageType}", { damageType: noDamage.join(", ") }) ?? "";
+    if (halfDamage.length > 0) halfDamageText = fullDamage.join(", "); // i18nFormat("midi-qol.halfDamageText" ?? "{damageType}", { damageType: halfDamage.join(", ") }) ?? "";
     let templateData = {
       fullDamageText,
       halfDamageText,
@@ -3353,6 +3378,7 @@ export class Workflow {
         rollAbility = this.saveActivity.save.ability.first();
       }
       else rollAbility = this.saveActivity.save.ability;
+      // @ts-expect-error no dnd5e-types
       rollAction = CONFIG.Actor.documentClass.prototype.rollSavingThrow;
     } else if (this.saveActivity.check) {
       const isSkillOrTool = this.saveActivity.check.associated.size > 0 || this.item.type === "tool";
@@ -3362,6 +3388,7 @@ export class Workflow {
       if (!skillOrTool) {
         rollType = "check";
         rollAbility = this.saveActivity.check.ability;
+        // @ts-expect-error no dnd5e-types
         rollAction = CONFIG.Actor.documentClass.prototype.rollAbilityCheck;
         flagRollType = "check";
       } else if (GameSystemConfig.skills[skillOrTool]) {
@@ -3369,8 +3396,10 @@ export class Workflow {
         rollAbility = this.saveActivity.check.ability;
         rollAbility = skillOrTool;
         flagRollType = "skill";
+        // @ts-expect-error no dnd5e-types
         rollAction = CONFIG.Actor.documentClass.prototype.rollSkill;
       } else {
+        // @ts-expect-error no dnd5e-types
         rollAction = CONFIG.Actor.documentClass.prototype.rollToolCheck;
         rollType = "tool";
         rollAbility = skillOrTool
@@ -3441,6 +3470,7 @@ export class Workflow {
           //@ts-expect-error .system
           saveDetails.advantage = (targetDocument?.actor?.system.traits?.dr?.custom || "").includes(i18n("midi-qol.MagicResistant").trim());
           // check magic resistance as a feature (based on the SRD name as provided by the DnD5e system)
+          // @ts-expect-error no dnd5e-types
           saveDetails.advantage = saveDetails.advantage || (target?.actor as Actor)?.items.find(a => a.type === "feat" && a.name === i18n("midi-qol.MagicResistanceFeat")?.trim()) !== undefined;
           if (!saveDetails.advantage) saveDetails.advantage = undefined;
           if (await evalAllConditionsAsync(target.actor as Actor, `flags.${MODULE_ID}.magicResistance.all`, conditionData)
@@ -3477,7 +3507,7 @@ export class Workflow {
         if (saveDetails.advantage && !saveDetails.disadvantage) this.advantageSaves.add(target);
         else if (saveDetails.disadvantage && !saveDetails.advantage) this.disadvantageSaves.add(target);
         var player = playerFor(target);
-        if (!player || !player.active) player = game.users?.actveGM;
+        if (!player || !player.active) player = game.users?.activeGM;
         let promptPlayer = !player?.isGM && !(["none", "noneDialog"].includes(configSettings.playerRollSaves));
         let showRollDialog = !player?.isGM && "noneDialog" === configSettings.playerRollSaves;
         if (simulate) promptPlayer = false;
@@ -3609,7 +3639,7 @@ export class Workflow {
           }))
         } else {
           // Find a player owner for the roll if possible
-          let owner: User | undefined = playerFor(target);
+          let owner = playerFor(target);
           if (!owner?.isGM && owner?.active) showRoll = true; // Always show player save rolls
           if (!owner?.active) owner = game.users?.activeGM;
           // Fall back to rolling as the current user
@@ -3748,7 +3778,6 @@ export class Workflow {
     let i = 0;
     if (activityHasAreaTarget(this.activity) && this.templateUuid) {
       const templateDocument = await fromUuid(this.templateUuid);
-      //@ts-expect-error
       var template = templateDocument?.object;
     }
     for (let tokenOrDocument of allHitTargets) {
@@ -3878,7 +3907,7 @@ export class Workflow {
         const failAbilityFlagsLength = collectBonusFlags(target.actor, rollType, `fail.${rollAbility}`).length
         if (failFlagsLength || failAbilityFlagsLength) {
           // If the roll fails and there is an flags.midi-qol.save.fail then apply the bonus
-          let owner: User | undefined = playerFor(target);
+          let owner = playerFor(target);
           if (!owner?.active) owner = game.users?.find((u: User) => u.isGM && u.active);
           if (owner) {
             let newRoll;
@@ -3916,6 +3945,7 @@ export class Workflow {
       if (this.item.flags[MODULE_ID]?.isConcentrationCheck) {
         const checkBonus = foundry.utils.getProperty(target, `actor.flags.${MODULE_ID}.concentrationSaveBonus`);
         if (checkBonus) {
+          // @ts-expect-error
           const rollBonus = (await new Roll(`${checkBonus}`, (target.actor as Actor)?.getRollData()).evaluate());
           result = addRollTo(result[0], rollBonus);
           saveRolls[0] = result;
@@ -3950,10 +3980,9 @@ export class Workflow {
         }
       }
       if (coverSaveBonus) adv += `(+${coverSaveBonus} Cover)`
-      //@ts-expect-error .texture
       let img: string = targetDocument?.texture?.src ?? target.actor.img ?? "";
+      // @ts-expect-error no dnd5e-types
       if (configSettings.usePlayerPortrait && (target.actor as Actor).type === "character") {
-        //@ts-expect-error .texture
         img = target.actor?.img ?? targetDocument?.texture?.src ?? "";
       }
 
@@ -4213,13 +4242,15 @@ export class Workflow {
       //TODO find out why this is using results - seems it should just be the total
       // this.diceRoll = terms[0].results.find(d => d.active).result;
     }
+    // @ts-expect-error no dnd5e-types
     let criticalThreshold = this.attackRoll.options.criticalSuccess;
     if (this.targets.size > 0) {
-      //@ts-expect-error first
-      const midiFlags = this.targets.first().actor?.flags[MODULE_ID];
+      const midiFlags = this.targets.first()?.actor?.flags[MODULE_ID];
       let targetCrit = 20;
+      // @ts-expect-error can't know about flags
       if (midiFlags?.grants?.criticalThreshold) {
         const conditionData = createConditionData({ workflow: this, target: this.targets.first(), actor: this.actor });
+        // @ts-expect-error can't know about flags
         targetCrit = await evalCondition(midiFlags.grants.criticalThreshold, conditionData, { errorReturn: 20, async: true });
       }
       if (isNaN(targetCrit) || !Number.isNumeric(targetCrit)) targetCrit = 20;
@@ -4355,6 +4386,7 @@ export class Workflow {
             if (checkRule("criticalNat20") && this.isCritical) {
 
             } else {
+              // @ts-expect-error no dnd5e-types
               this.isCritical = attackTotal >= ((targetToken.actor as Actor).system.attributes?.ac?.value ?? 10) + Number(checkRule("optionalCritRule"));
             }
           }
@@ -4466,9 +4498,10 @@ export class Workflow {
         }
       }
 
-      let img = targetToken.document?.texture?.src || (targetToken.actor as Actor).img;
+      let img = (targetToken instanceof Token ? targetToken.document : targetToken)?.texture?.src || (targetToken.actor as Actor).img;
+      // @ts-expect-error no dnd5e-types
       if (configSettings.usePlayerPortrait && (targetToken.actor as Actor)?.type === "character") {
-        img = (targetToken.actor as Actor).img || targetToken.document?.texture?.src;
+        img = (targetToken.actor as Actor).img || (targetToken instanceof Token ? targetToken.document : targetToken)?.texture?.src;
       }
       if (VideoHelper.hasVideoExtension(img ?? "")) {
         img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 }) ?? "";
@@ -4546,12 +4579,12 @@ export class Workflow {
     for (let target of this.targets) {
       if (!target.actor) continue;  // no actor means multi levels or bugged actor - but we won't roll a save
       let advantage: boolean | undefined = undefined;
-      //@ts-expect-error
+      // @ts-expect-error no dnd5e-types
       let advantageMode = game.system.dice.D20Roll.ADV_MODE.NORMAL;
-      //@ts-expect-error
       const targetActorSystem = target.actor.system;
 
       // TODO: Add in AC Bonus for cover
+      // @ts-expect-error no dnd5e-types
       const dcMod = targetActorSystem.attributes.ac.value - 10;
       let modString;
       if (dcMod < 0) modString = ` ${dcMod}`;
@@ -4564,10 +4597,10 @@ export class Workflow {
       if (wfadvantage && !wfdisadvantage) {
         advantage = false;
         formula = `2d20kl${modString}`;
-        //@ts-expect-error
+        // @ts-expect-error no dnd5e-types
         advantageMode = game.system.dice.D20Roll.ADV_MODE.DISADVANTAGE;
       } else if (!wfadvantage && wfdisadvantage) {
-        //@ts-expect-error
+        // @ts-expect-error no dnd5e-types
         advantageMode = game.system.dice.D20Roll.ADV_MODE.ADVANTAGE;
         advantage = true;
         formula = `2d20kh${modString}`;
@@ -4684,6 +4717,7 @@ export class Workflow {
     };
 
     if (rolls instanceof Roll) rolls = [rolls];
+    // @ts-expect-error no dnd5e-types
     const baseRollProperties = rolls[0]?.options?.properties ?? [];
     rolls.forEach(roll => {
       setRollOperatorEvaluated(roll);
@@ -4697,6 +4731,7 @@ export class Workflow {
       rolls[i]._evaluated = true;
     }
     for (let i = 1; i < rolls.length; i++) {
+      // @ts-expect-error no dnd5e-types
       foundry.utils.setProperty(rolls[i], "options.properties", (rolls[i].options?.properties ?? []).concat(baseRollProperties));
     }
     this.damageRolls = rolls;
@@ -4794,7 +4829,7 @@ export class DamageOnlyWorkflow extends Workflow {
     const theTargets = Array.from(targets).map(t => getToken(t)).filter(t => t);
     let damageRoll = roll;
     if (!damageRoll) {
-      //@ts-expect-error
+      // @ts-expect-error no dnd5e-types
       damageRoll = new CONFIG.Dice.DamageRoll(`${damageTotal}`, {}, { type: damageType }).evaluateSync();
     }
     let theItem: any = null;
@@ -4807,6 +4842,7 @@ export class DamageOnlyWorkflow extends Workflow {
             type: "damage",
             _id: foundry.utils.randomID(),
             damage: {
+              // @ts-expect-error no dnd5e-types
               parts: [{ custom: { enabled: true, formula: damageRoll.formula }, types: [damageRoll.options.type] }],
             },
             range: {
@@ -4845,6 +4881,7 @@ export class DamageOnlyWorkflow extends Workflow {
       theItem = new CONFIG.Item.documentClass(itemData, { parent: actor });
       foundry.utils.setProperty(itemData, "_id", itemData._id ?? foundry.utils.randomID());
     } else {
+      // @ts-expect-error no dnd5e-types
       theItem = new CONFIG.Item.documentClass(extraItemData, { parent: actor });
     }
     if (!theItem) return;
@@ -4877,6 +4914,7 @@ export class DamageOnlyWorkflow extends Workflow {
   async WorkflowState_Start(context: any = {}): Promise<WorkflowState> {
     this.effectsAlreadyExpired = [];
 
+    // @ts-expect-error
     if (this.itemCardUuid === "new" || !fromUuidSync(this.itemCardUuid)) {
       const message = {}
       const messageConfig = foundry.utils.mergeObject({
@@ -4995,7 +5033,7 @@ export class TrapWorkflow extends Workflow {
       selectTargets.bind(this.activity)(templateDocument, null, gameUser().id); // Target the tokens from the template
       this.targets = new Set(gameUser().targets);
       if (this.templateLocation?.removeDelay) {
-        let ids: string[] = templates.map(td => td._id)
+        let ids: string[] = templates.map(td => td._id as string)
         //TODO test this again
         setTimeout(() => canvas?.scene?.deleteEmbeddedDocuments("MeasuredTemplate", ids), this.templateLocation.removeDelay * 1000);
       }
@@ -5120,6 +5158,7 @@ export class TrapWorkflow extends Workflow {
 }
 
 export class DDBGameLogWorkflow extends Workflow {
+  // @ts-expect-error
   DDBGameLogHookId: number;
   static get forceCreate() { return false }
   static get(id: string): DDBGameLogWorkflow {

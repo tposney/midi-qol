@@ -11,6 +11,7 @@ const rename = require("gulp-rename");
 const minify = require("gulp-minify");
 const tabify = require("gulp-tabify");
 const stringify = require("json-stringify-pretty-compact");
+const readlineSync = require("readline-sync");
 
 const GLOB = "**/*";
 const DIST = "dist/";
@@ -56,11 +57,17 @@ function plog(message) {
  * Compile the source code into the distribution directory
  * @param {Boolean} keepSources Include the TypeScript SourceMaps
  */
-function buildSource(keepSources, minifySources = false, output = null) {
+function buildSource(keepSources, alwaysBuild = false, minifySources = false, output = null) {
   return () => {
     var stream = gulp.src(SOURCE + GLOB);
     // if (keepSources) stream = stream.pipe(sm.init())
     stream = stream.pipe(ts.createProject("tsconfig.json")());
+    stream = stream.on("error", (error) => {
+      if (alwaysBuild) return;
+      if (!this.alreadyRefusedBuild && readlineSync.keyInYN("Build Anyway?")) return;
+      this.alreadyRefusedBuild = true;
+      throw error;
+    });
     // if (keepSources) stream = stream.pipe(sm.write())
     if (minifySources)
       stream = stream.pipe(
@@ -77,7 +84,7 @@ function buildSource(keepSources, minifySources = false, output = null) {
 
 exports.step_buildSourceDev = buildSource(false);
 exports.step_buildSource = buildSource(false);
-exports.step_buildSourceMin = buildSource(false, true);
+exports.step_buildSourceMin = buildSource(false, false, true);
 
 /**
  * Builds the module manifest based on the package, sources, and css.
@@ -180,7 +187,7 @@ exports.devClean = pdel([DEV_DIST()]);
 exports.default = gulp.series(
   pdel([DIST]),
   gulp.parallel(
-    buildSource(true, false),
+    buildSource(true, false, false),
     buildManifest(),
     outputLanguages(),
     outputTemplates(),
@@ -198,7 +205,7 @@ exports.default = gulp.series(
 exports.dev = gulp.series(
   pdel([DEV_DIST() + GLOB], { force: true }),
   gulp.parallel(
-    buildSource(true, false, DEV_DIST()),
+    buildSource(true, true, false, DEV_DIST()),
     buildManifest(DEV_DIST()),
     outputLanguages(DEV_DIST()),
     outputTemplates(DEV_DIST()),
@@ -216,7 +223,7 @@ exports.dev = gulp.series(
 exports.zip = gulp.series(
   pdel([DIST]),
   gulp.parallel(
-    buildSource(false, false),
+    buildSource(false, false, false),
     buildManifest(),
     outputLanguages(),
     outputTemplates(),
@@ -235,7 +242,7 @@ exports.zip = gulp.series(
  */
 exports.watch = function () {
   exports.default();
-  gulp.watch(SOURCE + GLOB, gulp.series(pdel(DIST + SOURCE), buildSource(true, false)));
+  gulp.watch(SOURCE + GLOB, gulp.series(pdel(DIST + SOURCE), buildSource(true, true, false)));
   gulp.watch([CSS + GLOB, "module.json", "package.json"], buildManifest());
   gulp.watch(LANG + GLOB, gulp.series(pdel(DIST + LANG), outputLanguages()));
   gulp.watch(TEMPLATES + GLOB, gulp.series(pdel(DIST + TEMPLATES), outputTemplates()));
@@ -257,7 +264,7 @@ exports.devWatch = function () {
     gulp.series(
       plog("deleting: " + devDist + SOURCE + GLOB),
       pdel(devDist + SOURCE + GLOB, { force: true }),
-      buildSource(true, false, devDist),
+      buildSource(true, true, false, devDist),
       plog("sources done."),
     ),
   );

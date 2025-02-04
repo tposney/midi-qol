@@ -7,6 +7,7 @@ import { bonusCheck } from "./patching.js";
 import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, updateUndoChatCardUuidsById } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { installedModules } from "./setupModules.js";
+import { InvalidUuid } from "fvtt-types/utils";
 
 export var socketlibSocket: any = undefined;
 var traitList: any = { di: {}, dr: {}, dv: {}, dm: {}, da: {} };
@@ -196,6 +197,7 @@ async function _removeCEEffect(data: { effectName: string, uuid: string }) {
 async function cancelWorkflow(data: { workflowId: string, itemCardUuid: string }) {
   const workflow = Workflow.getWorkflow(data.workflowId);
   if (workflow?.itemCardUuid !== data.itemCardUuid) {
+    // @ts-expect-error
     const itemCard = await fromUuid(data.itemCardUuid);
     if (itemCard) itemCard.delete()
     return undefined;
@@ -205,12 +207,16 @@ async function cancelWorkflow(data: { workflowId: string, itemCardUuid: string }
 }
 
 async function confirmDamageRollComplete(data: { activityUuid: string, itemCardId: string, itemCardUuid: string }) {
+  // @ts-expect-error
   const itemCard = fromUuidSync(data.itemCardUuid);
+  // @ts-expect-error
   let activity = fromUuidSync(data.activityUuid);
   let workflow = Workflow.getWorkflow(data.activityUuid);
   if (!activity && itemCard) // no activity means it was a synthetic item's activity
+  // @ts-expect-error no dnd5e-types
     activity = itemCard.getAssociatedActivity(); // recover the activity from the chat message item data
-  if (!workflow) workflow = activity.workflow;
+  // @ts-expect-error
+  if (!workflow) workflow = activity?.workflow;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     /* Confirm this needs to be awaited
     */
@@ -219,7 +225,8 @@ async function confirmDamageRollComplete(data: { activityUuid: string, itemCardI
   }
   const hasHits = workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0;
   if ((workflow.currentAction === workflow.WorkflowState_AttackRollComplete) || hasHits &&
-    activity.hasDamage && (!workflow.damageRoll || workflow.currentAction !== workflow.WorkflowState_ConfirmRoll)) {
+    // @ts-expect-error no dnd5e-types
+    activity?.hasDamage && (!workflow.damageRoll || workflow.currentAction !== workflow.WorkflowState_ConfirmRoll)) {
     return "midi-qol | You must roll damage before completing the roll - you can only confirm miss until then";
   }
   if (workflow.hitTargets.size === 0 && workflow.hitTargetsEC.size === 0) {
@@ -232,18 +239,23 @@ async function confirmDamageRollComplete(data: { activityUuid: string, itemCardI
 }
 
 async function confirmDamageRollCompleteHit(data: { activityUuid: string, itemCardId: string, itemCardUuid: string }) {
+  // @ts-expect-error
   const itemCard = fromUuidSync(data.itemCardUuid);
+  // @ts-expect-error
   let activity = fromUuidSync(data.activityUuid);
   let workflow = Workflow.getWorkflow(data.activityUuid);
   if (!activity && itemCard) // no activity means it was a synthetic item's activity
+    // @ts-expect-error no dnd5e-types
     activity = itemCard.getAssociatedActivity(); // recover the activity from the chat message item data
-  if (!workflow) workflow = activity.workflow;
+  // @ts-expect-error
+  if (!workflow) workflow = activity?.workflow;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     Workflow.removeItemCardAttackDamageButtons(data.itemCardId, {removeAttackButtons: true, removeDamageButtons: true}).then(() => Workflow.removeItemCardConfirmRollButton(data.itemCardId));
     return undefined;
   }
 
-  if ((activity.hasDamage && !workflow.damageRoll) ||
+  // @ts-expect-error no dnd5e-types
+  if ((activity?.hasDamage && !workflow.damageRoll) ||
     workflow.currentAction !== workflow.WorkflowState_ConfirmRoll) {
     return "midi-qol | You must roll damage before completing the roll - you can only confirm miss until then";
   }
@@ -269,12 +281,16 @@ async function confirmDamageRollCompleteHit(data: { activityUuid: string, itemCa
 }
 
 async function confirmDamageRollCompleteMiss(data: { activityUuid: string, itemCardId: string, itemCardUuid: string }) {
+  // @ts-expect-error
   const itemCard = fromUuidSync(data.itemCardUuid);
+  // @ts-expect-error
   let activity = fromUuidSync(data.activityUuid);
   let workflow = Workflow.getWorkflow(data.activityUuid);
   if (!activity && itemCard) // no activity means it was a synthetic item's activity
+    // @ts-expect-error no dnd5e-types
     activity = itemCard.getAssociatedActivity(); // recover the activity from the chat message item data
-  if (!workflow) workflow = activity.workflow;
+  // @ts-expect-error
+  if (!workflow) workflow = activity?.workflow;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     /* Confirm this needs to be awaited
     */
@@ -476,6 +492,7 @@ async function _completeActivityUse(data: {
 }) {
   if (!game.user) return null;
   let { activityUuid, actorUuid, config, dialog, message } = data;
+  // @ts-expect-error
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
 
@@ -489,13 +506,16 @@ async function _completeItemUseV2(data: {
 }) {
   if (!game.user) return null;
   let { itemData, actorUuid, config, dialog, message } = data;
+  // @ts-expect-error
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
   //@ts-ignore v10
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor, keepId: true });
   // prepare item data for socketed events
   ownedItem.prepareData();
+  // @ts-expect-error no dnd5e-types
   ownedItem.prepareFinalAttributes();
+  // @ts-expect-error no dnd5e-types
   ownedItem.applyActiveEffects();
   const workflow = await completeItemUseV2(ownedItem, config, dialog, message);
   if (data.config?.midiOptions?.workflowData) return workflow.getMacroData({ noWorkflowReference: true }); // can't return the workflow
@@ -507,13 +527,16 @@ async function _completeItemUse(data: {
 }) {
   if (!game.user) return null;
   let { itemData, actorUuid, config, options } = data;
+  // @ts-expect-error
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
-  //@ts-ignore v10
+  // @ts-expect-error doesn't expect keepId
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor, keepId: true });
   // prepare item data for socketed events
   ownedItem.prepareData();
+  // @ts-expect-error no dnd5e-types
   ownedItem.prepareFinalAttributes();
+  // @ts-expect-error no dnd5e-types
   ownedItem.applyActiveEffects();
   const workflow = await completeItemUse(ownedItem, config, options);
   if (data.options?.workflowData) return workflow.getMacroData({ noWorkflowReference: true }); // can't return the workflow
@@ -537,6 +560,7 @@ async function createActor(data) {
 }
 
 async function deleteToken(data: { tokenUuid: string }) {
+  // @ts-expect-error
   const token = await fromUuid(data.tokenUuid);
   if (token) { // token will be a token document.
     token.delete();
@@ -586,6 +610,7 @@ export async function deleteItemEffects(data: { targets, origin: string, ignore:
           error("GMAction:deleteItemEffects | could not find actor for ", idData.tokenUuid);
           continue;
         }
+        // @ts-expect-error
         let originEntity = await fromUuid(origin);
         if (!originEntity) {
           error("GMAction:deleteItemEffects | could not find origin for ", origin);
@@ -1107,7 +1132,6 @@ async function createGMReverseDamageCard(
       user: gameUser().id,
       speaker: { scene: getCanvas()?.scene?.id, alias: gameUser().name, user: gameUser().id },
       content: content,
-      //@ts-expect-error
       whisper: ChatMessage.getWhisperRecipients("GM").filter(u => (u as User).active).map(u => u.id),
       flags: { "midiqol": { "undoDamage": prepareDamagelistToJSON(tokenIdList) } }
     };

@@ -20,15 +20,13 @@ export class MidiSounds {
 
   static getSound(playListName: string, soundName: string) {
     const playlist: Playlist | undefined = game.playlists?.getName(playListName);
-    //@ts-ignore
     return { playlist, sound: playlist?.sounds.getName(soundName) };
   }
 
   static async playSound(playListName: string, soundName: string) {
     const { playlist, sound } = this.getSound(playListName, soundName);
-    //@ts-ignore
     if (playlist && sound) {
-        return foundry.audio.AudioHelper.play({ src: sound.path, volume: sound.volume, autoplay: true, loop: false }, true);
+        return foundry.audio.AudioHelper.play({ src: sound.path as string, volume: sound.volume, autoplay: true, loop: false }, true);
     }
     return null;
   }
@@ -101,7 +99,7 @@ export class MidiSounds {
       const soundIndex = Math.floor(Math.random() * sounds.contents.length);
       //@ts-ignore
       const sound = playlist.sounds.contents[soundIndex];
-      return foundry.audio.AudioHelper.play({ src: sound.path, volume: sound.volume, autoplay: true, loop: false }, true);
+      return foundry.audio.AudioHelper.play({ src: sound.path as string, volume: sound.volume, autoplay: true, loop: false }, true);
     }
     return null;
   }

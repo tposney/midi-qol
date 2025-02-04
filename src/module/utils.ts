@@ -345,16 +345,23 @@ export function setupv3DamageDetails(allDamages, selector, token: Token) {
   let totalDamage = tokenDamage.damageDetails[`raw${selector}`].reduce((acc, d) => acc + (["temphp", "midi-none"].includes(d.type) ? 0 : d.value), 0);
   let healingAdjustedTotalDamage = tokenDamage.damageDetails[`raw${selector}`].reduce((acc, d) => acc + (["temphp", "midi-none"].includes(d.type) ? 0 : (d.type === "healing" ? -d.value : d.value)), 0);
   const as = (token.actor as Actor)?.system;
+  // @ts-expect-error no dnd5e-types
   if (!as || !as.attributes.hp) return;
+  // @ts-expect-error no dnd5e-types
   let effectiveTemp = as.attributes.hp.temp ?? 0;
   tokenDamage.useDamageDetail = configSettings.useDamageDetail;
   tokenDamage.tokenUuid = token.document.uuid;
   tokenDamage.tokenId = token.id;
+  // @ts-expect-error no dnd5e-types
   tokenDamage.oldHP = as.attributes.hp.value;
+  // @ts-expect-error no dnd5e-types
   tokenDamage.newHP = as.attributes.hp.value;
+  // @ts-expect-error no dnd5e-types
   tokenDamage.oldTempHP = as.attributes.hp.temp ?? 0;
+  // @ts-expect-error no dnd5e-types
   tokenDamage.newTempHP = as.attributes.hp.temp ?? 0;
   const deltaTemp = amount > 0 ? Math.min(effectiveTemp, amount) : 0;
+  // @ts-expect-error no dnd5e-types
   const deltaHP = Math.clamp(amount - deltaTemp, -as.attributes.hp.damage, as.attributes.hp.value);
   tokenDamage.newHP -= deltaHP;
   tokenDamage.hpDamage = deltaHP;
@@ -613,6 +620,7 @@ export let getSaveMultiplierForItem = (item: Item, itemDamageType) => {
     return 1;
   }
 
+  // @ts-expect-error no dnd5e-types
   if (item.actor && item.type === "spell" && item.system.level === 0) { // cantrip
     const midiFlags = foundry.utils.getProperty(item.actor ?? {}, `flags.${MODULE_ID}`);
     if (midiFlags?.potentCantrip) return 0.5;
@@ -639,7 +647,9 @@ export let getSaveMultiplierForItem = (item: Item, itemDamageType) => {
 
   if (!configSettings.checkSaveText)
     return configSettings.defaultSaveMult;
+  // @ts-expect-error no dnd5e-types
   let description = TextEditor.decodeHTML(item.system?.description.value).toLocaleLowerCase();
+  // @ts-expect-error no dnd5e-types
   if (description.length === 0) description = item.system.description.chat.toLocaleLowerCase();
   let noDamageText = (i18n("midi-qol.noDamage") || "midi-qol.noDamage").toLocaleLowerCase().trim();
   let noDamageTextAlt = (i18n("midi-qol.noDamageAlt") || "midi-qol.noDamageAlt").toLocaleLowerCase().trim();
@@ -751,9 +761,11 @@ export function midiCustomEffect(...args) {
       else {
         const origin = MQfromUuidSync(change.effect.origin);
         if (origin instanceof Item) {
+          // @ts-expect-error no dnd5e-types
           const activities = origin.system.activities?.contents;
           if (activities[0]?.uuid) args[0] = `ActivityMacro.${activities[0].uuid}`;
         } else if (origin instanceof ActiveEffect) {
+          // @ts-expect-error no dnd5e-types
           const activities = origin.parent?.system?.activities?.contents;
           if (activities[0]?.uuid) args[0] = `ActivityMacro.${activities[0].uuid}`;
         } else if (origin.item) {
@@ -768,6 +780,7 @@ export function midiCustomEffect(...args) {
       } else {
         const item = fromUuidSync(potentialUuid);
         if (item instanceof Item) {
+          // @ts-expect-error no dnd5e-types
           const activities = item.system.activities?.contents;
           if (activities[0]?.uuid) args[0] = `ActivityMacro.${activities[0].uuid}`;
         } else { // Acitivty.Name or Activity.identifier
@@ -777,6 +790,7 @@ export function midiCustomEffect(...args) {
             const activity = activities.find(a => a.name === potentialUuid || a.identifier === potentialUuid);
             if (activity?.uuid) args[0] = `ActivityMacro.${activity.uuid}`;
           } else if (origin instanceof Item) {
+            // @ts-expect-error no dnd5e-types
             const activities = origin.system.activities?.contents;
             const activity = activities.find(a => a.name === potentialUuid || a.identifier === potentialUuid);
             if (activity?.uuid) args[0] = `ActivityMacro.${activity.uuid}`;
@@ -853,6 +867,7 @@ export function checkImmunity(candidate, data, options, user) {
   const parent: Actor | undefined = candidate.parent;
   if (!parent || !(parent instanceof CONFIG.Actor.documentClass)) return true;
 
+  // @ts-expect-error no dnd5e-types
   const ci = parent.system.traits?.ci?.value;
   const statusId = (data.name ?? (data.label ?? "no effect")).toLocaleLowerCase(); // TODO 11 chck this
   const returnvalue = !(ci.length && ci.some(c => c === statusId));
@@ -1068,10 +1083,8 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
         // dataset = { type: rollTypeString, ability, dc: saveDC, item: effect.name, action: "rollRequest", midiOvertimeActorUuid: actor.uuid };
         else if (rollTypeString === "skill") dataset.skill = ability;
         // dataset = { type: rollTypeString, dc: saveDC, skill: ability, item: effect.name, action: "rollRequest", midiOvertimeActorUuid: actor.uuid };
-        //@ts-expect-error
-        let whisper: User[] = ChatMessage.getWhisperRecipients(owner.name);
+        let whisper: User[] = ChatMessage.getWhisperRecipients(owner?.name ?? "");
         if (owner?.isGM) {
-          //@ts-expect-error
           whisper = ChatMessage.getWhisperRecipients("GM");
         }
 
@@ -1081,9 +1094,9 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
           whisper: whisper.map(u => u.id ?? ""),
           rollMode: rollMode ?? "public",
           content: await renderTemplate("systems/dnd5e/templates/chat/request-card.hbs", {
-            //@ts-expect-error
-            buttonLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "short", icon: true, hideDC: !owner.isGM && !configSettings.displaySaveDC }),
-            //@ts-expect-error
+            // @ts-expect-error no dnd5e-types
+            buttonLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "short", icon: true, hideDC: !owner?.isGM && !configSettings.displaySaveDC }),
+            // @ts-expect-error no dnd5e-types
             hiddenLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "short", icon: true, hideDC: true }),
             dataset
           }),
@@ -1093,6 +1106,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
         const chatCard = await ChatMessage.create(chatData);
         if (chatCard) {
           chatCardUuids.push(chatCard.uuid);
+          // @ts-expect-error can't know about flags
           chatCard?.setFlag(MODULE_ID, "actorUuid", actor.uuid)
         }
       }
@@ -1128,6 +1142,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       };
       itemData.img = "icons/svg/aura.svg";
       if (typeof itemName === "string") {
+        // @ts-expect-error
         let theItem = await fromUuid(itemName);
         if (!theItem && itemName.startsWith("Actor.")) {
           const localName = itemName.replace("Actor.", "")
@@ -1257,9 +1272,11 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       // TODO: Horrible kludge to allow temporary items to be rolled since dnd5e insists on setting flags on temp items if there is damage/attacks
       // ownedItem.setFlag = async (scope: string, key: string, value: any) => { return ownedItem };
       ownedItem.prepareData();
+      // @ts-expect-error no dnd5e-types
       ownedItem.prepareFinalAttributes();
       ownedItem.prepareEmbeddedDocuments();
       if (!actionSave && saveRemove && saveDC > -1)
+        // @ts-expect-error no dnd5e-types
         savedOverTimeEffectsToDelete[ownedItem.system.activities.contents[0].uuid] = { uuid: effect.uuid };
 
       if (details.removeCondition) {
@@ -1275,6 +1292,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
           remove = true;
         }
         if (remove) {
+          // @ts-expect-error no dnd5e-types
           overTimeEffectsToDelete[ownedItem.system.activities.contents[0].uuid] = { uuid: effect.uuid }
         }
       }
@@ -1460,6 +1478,7 @@ export async function completeItemUse(item, config: any = {}, options: any = { c
 
 export async function completeItemUseV2(item, config: any = {}, dialog: any = {}, message: any = {}) {
   if (typeof item === "string") {
+    // @ts-expect-error
     item = await fromUuid(item);
   }
   config.midiOptions ??= {};
@@ -1468,9 +1487,11 @@ export async function completeItemUseV2(item, config: any = {}, dialog: any = {}
     return undefined;
   }
   if (config.midiOptions.activityId || config.midiOptions.activityIdentifier) {
+    // @ts-expect-error no dnd5e-types
     const selected = item.system.activities.find(a => a.id === config.midiOptions.activityId || a.identifier === config.midiOptions.activityIdentifier)
     if (selected) return completeActivityUse(selected, config, dialog, message);
   }
+  // @ts-expect-error no dnd5e-types
   const activities = item.system.activities?.filter(a => !item.getFlag("dnd5e", "riders.activity")?.includes(a.id) && !a.midiProperties?.automationOnly);
   if (activities.length === 0) {
     error(`completeItemUseV2 | item ${item.name} ${item.uuid} does not have a suitable activity`);
@@ -1496,7 +1517,6 @@ export function untargetAllTokens(...args) {
     prevTurn = combat.turns.length - 1;
 
   const previous = combat.turns[prevTurn];
-  //@ts-expect-error
   if ((gameUser().isGM && ["allGM", "all"].includes(autoRemoveTargets)) || (autoRemoveTargets === "all" && canvas?.tokens?.controlled.find(t => t.id === previous.token?.id))) {
     // release current targets
     gameUser().targets.forEach((t: Token) => {
@@ -1517,17 +1537,21 @@ export function checkIncapacitated(actorRef: Actor | Token | TokenDocument | str
   const actor: Actor | null | undefined = getActor(actorRef);
   if (!actor) return false;
   let status: string | false = false;
+  // @ts-expect-error no dnd5e-types
   if (actor.system.traits?.ci?.value?.has("incapacitated")) return false;
   const vitalityResource = checkRule("vitalityResource");
   if (typeof vitalityResource === "string" && foundry.utils.getProperty(actor, vitalityResource.trim()) !== undefined) {
     const vitality = foundry.utils.getProperty(actor, vitalityResource.trim()) ?? 0;
+    // @ts-expect-error no dnd5e-types
     if (vitality <= 0 && actor?.system.attributes?.hp?.value <= 0) {
       status = "dead";
     }
   } else {
+    // @ts-expect-error no dnd5e-types
     if (!actor.system?.attributes?.hp?.value) {
       (debug("No hp attribute for ", actor));
     }
+    // @ts-expect-error no dnd5e-types
     if (actor?.system?.attributes?.hp?.value <= 0) {
       status = "dead";
     }
@@ -1583,19 +1607,11 @@ export function distancePointToken({ x, y, elevation = 0 }, token, wallblocking 
   const [xbase, ybase] = canvas.grid.grid?.getPixelsFromGridPosition(row, col) || [0, 0];
   let xc, yc;
 
-  ({ xc, yc } = canvas.grid.getCenterPoint.bind(canvas.grid)(xbase, ybase) || { x: 0, y: 0 });
+  ({ x: xc, y: yc } = canvas.grid.getCenterPoint.bind(canvas.grid)({x: xbase, y: ybase}) || { x: 0, y: 0 });
   // const snappedOrigin = canvas?.grid?.getSnappedPosition(x,y)
   const origin = new PIXI.Point(x, y);
   const tokenCenter = token.center;
-  //@ts-expect-error
-  if (game.release.generation >= 12) {
-    //@ts-expect-error
-    distance = canvas.grid.measurePath([origin, tokenCenter]).distance;
-  } else {
-    const ray: Ray = new Ray(origin, tokenCenter)
-    distance = canvas?.grid?.measureDistances([{ ray }], { gridSpaces: false })[0];
-    distance = Math.max(0, distance);
-  }
+  distance = canvas.grid.measurePath([origin, tokenCenter], {}).distance;
   return distance;
 }
 
@@ -1696,7 +1712,6 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
                 case "center":
                   let collisionCheck;
 
-                  //@ts-expect-error polygonBackends
                   collisionCheck = CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, { source: t1.document, mode: "any", type: "sight" })
                   if (collisionCheck) continue;
                   break;
@@ -1727,7 +1742,6 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
                     }
                   } else {
                     let collisionCheck;
-                    //@ts-expect-error polygonBackends
                     collisionCheck = CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, { source: t1.document, mode: "any", type: "sight" })
                     if (collisionCheck) continue;
                   }
@@ -1736,7 +1750,6 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
                 case "simbuls-cover-calculator":
                   if (coverVisible === undefined) {
                     let collisionCheck;
-                    //@ts-expect-error polygonBackends
                     collisionCheck = CONFIG.Canvas.polygonBackends.sight.testCollision(origin, dest, { source: t1.document, mode: "any", type: "sight" })
                     if (collisionCheck) continue;
                   }
@@ -1786,56 +1799,41 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
   }
   if (configSettings.optionalRules.distanceIncludesHeight) {
 
-    //@ts-expect-error release
-    if (game.release.generation < 12) {
-      let rule = safeGetGameSetting("dnd5e", "diagonalMovement") ?? "EUCL"; // V12
-
-      if (["555", "5105"].includes(rule)) {
-        let nd = Math.min(distance, heightDifference);
-        let ns = Math.abs(distance - heightDifference);
-        distance = nd + ns;
-        let dimension = canvas?.dimensions?.distance ?? 5;
-        if (rule === "5105") distance = distance + Math.floor(nd / 2 / dimension) * dimension;
-      } else {
-        distance = Math.sqrt(heightDifference * heightDifference + distance * distance);
-      }
-    } else { // TODO experimental
-      let nd = Math.min(distance, heightDifference);
-      let ns = Math.abs(distance - heightDifference);
-      // distance = nd + ns;
-      let dimension = canvas?.dimensions?.distance ?? 5;
-      let diagonals = safeGetGameSetting("core", "gridDiagonals");
-      const GRID_DIAGONALS = CONST.GRID_DIAGONALS;
-      // Determine the offset distance of the diagonal moves
-      let cd;
-      switch (diagonals) {
-        case GRID_DIAGONALS.EQUIDISTANT: cd = nd; break;
-        case GRID_DIAGONALS.EXACT: cd = Math.SQRT2 * nd; break;
-        case GRID_DIAGONALS.APPROXIMATE: cd = 1.5 * nd; break;
-        case GRID_DIAGONALS.RECTILINEAR: cd = 2 * nd; break;
-        case GRID_DIAGONALS.ALTERNATING_1:
-          // TODO get the diagonals return from MidiMeasureDistances
-          // if ( result.diagonals & 1 ) cd = ((nd + 1) & -2) + (nd >> 1);
-          // else cd = (nd & -2) + ((nd + 1) >> 1);
-          cd = ((nd + 1) & -2) + (nd >> 1);
-          break;
-        case GRID_DIAGONALS.ALTERNATING_2:
-          // TODO get the diagonals return from MidiMeasureDistances
-          // if ( result.diagonals & 1 ) cd = (nd & -2) + ((nd + 1) >> 1);
-          //  else cd = ((nd + 1) & -2) + (nd >> 1);
-          cd = ((nd + 1) & -2) + (nd >> 1);
-          break;
-        case GRID_DIAGONALS.ILLEGAL:
-          // Don't think I want this to be done
-          cd = 2 * nd;
-          nd = 0;
-          // n = di + dj;
-          ns = distance + heightDifference;
-          break;
-      }
-      distance = ns + cd;
-
+    // TODO experimental
+    let nd = Math.min(distance, heightDifference);
+    let ns = Math.abs(distance - heightDifference);
+    // distance = nd + ns;
+    let dimension = canvas?.dimensions?.distance ?? 5;
+    let diagonals = safeGetGameSetting("core", "gridDiagonals");
+    const GRID_DIAGONALS = CONST.GRID_DIAGONALS;
+    // Determine the offset distance of the diagonal moves
+    let cd;
+    switch (diagonals) {
+      case GRID_DIAGONALS.EQUIDISTANT: cd = nd; break;
+      case GRID_DIAGONALS.EXACT: cd = Math.SQRT2 * nd; break;
+      case GRID_DIAGONALS.APPROXIMATE: cd = 1.5 * nd; break;
+      case GRID_DIAGONALS.RECTILINEAR: cd = 2 * nd; break;
+      case GRID_DIAGONALS.ALTERNATING_1:
+        // TODO get the diagonals return from MidiMeasureDistances
+        // if ( result.diagonals & 1 ) cd = ((nd + 1) & -2) + (nd >> 1);
+        // else cd = (nd & -2) + ((nd + 1) >> 1);
+        cd = ((nd + 1) & -2) + (nd >> 1);
+        break;
+      case GRID_DIAGONALS.ALTERNATING_2:
+        // TODO get the diagonals return from MidiMeasureDistances
+        // if ( result.diagonals & 1 ) cd = (nd & -2) + ((nd + 1) >> 1);
+        //  else cd = ((nd + 1) & -2) + (nd >> 1);
+        cd = ((nd + 1) & -2) + (nd >> 1);
+        break;
+      case GRID_DIAGONALS.ILLEGAL:
+        // Don't think I want this to be done
+        cd = 2 * nd;
+        nd = 0;
+        // n = di + dj;
+        ns = distance + heightDifference;
+        break;
     }
+    distance = ns + cd;
   }
   return Math.max(distance, 0);
 };
@@ -1905,18 +1903,15 @@ export function checkActivityRange(activityIn, tokenRef: Token | TokenDocument |
     if (activity.range?.units) {
       switch (activity.range.units) {
         case "mi": // miles - assume grid units are feet or miles - ignore furlongs/chains whatever
-          //@ts-expect-error
           if (["feet", "ft"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
             range *= 5280;
             longRange *= 5280;
-            //@ts-expect-error
           } else if (["yards", "yd", "yds"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
             range *= 1760;
             longRange *= 1760;
           }
           break;
         case "km": // kilometeres - assume grid units are meters or kilometers
-          //@ts-expect-error
           if (["meter", "m", "meters", "metre", "metres"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
             range *= 1000;
             longRange *= 1000;
@@ -2021,7 +2016,6 @@ export function checkActivityRange(activityIn, tokenRef: Token | TokenDocument |
     return { result, attackingToken, range, longRange }
   }
 
-  //@ts-expect-error
   const ownedTokens: Token[] = canvas.tokens.ownedTokens;
   // Initial Check
   // Now we loop through all owned tokens
@@ -2106,18 +2100,15 @@ export function checkRange(itemIn, tokenRef: Token | TokenDocument | string | un
     if (activity.item.system.range?.units) {
       switch (activity.item.system.range.units) {
         case "mi": // miles - assume grid units are feet or miles - ignore furlongs/chains whatever
-          //@ts-expect-error
           if (["feet", "ft"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
             range *= 5280;
             longRange *= 5280;
-            //@ts-expect-error
           } else if (["yards", "yd", "yds"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
             range *= 1760;
             longRange *= 1760;
           }
           break;
         case "km": // kilometeres - assume grid units are meters or kilometers
-          //@ts-expect-error
           if (["meter", "m", "meters", "metre", "metres"].includes(canvas?.scene?.grid.units?.toLocaleLowerCase())) {
             range *= 1000;
             longRange *= 1000;
@@ -2222,7 +2213,6 @@ export function checkRange(itemIn, tokenRef: Token | TokenDocument | string | un
     return { result, attackingToken, range, longRange }
   }
 
-  //@ts-expect-error
   const ownedTokens: Token[] = canvas.tokens.ownedTokens;
   // Initial Check
   // Now we loop through all owned tokens
@@ -2436,8 +2426,10 @@ export function getTokenPlayerName(token: TokenDocument | Token, checkGM: boolea
   if (checkGM && gameUser().isGM) return name;
   if (game.modules?.get("anonymous")?.active) {
     const api = game.modules?.get("anonymous")?.api;
-    if (api.playersSeeName(token.actor)) return name;
-    else return api.getName(token.actor);
+    // @ts-expect-error
+    if (api?.playersSeeName(token.actor)) return name;
+    // @ts-expect-error
+    else return api?.getName(token.actor);
   }
   return name;
 }
@@ -2514,24 +2506,19 @@ export function findNearby(disposition: number | string | null | Array<string | 
       else disposition = disposition.map(s => mapTokenString(s) ?? 0);
       targetDisposition = disposition.map(i => typeof i === "number" && [-1, 0, 1].includes(i) && relative ? token.document.disposition * i : i);
     } else if (typeof disposition === "number" && [-1, 0, 1].includes(disposition)) {
-      //@ts-expect-error token.document.dispostion
       targetDisposition = relative ? [token.document.disposition * disposition] : [disposition];
     } else targetDisposition = [CONST.TOKEN_DISPOSITIONS.HOSTILE, CONST.TOKEN_DISPOSITIONS.NEUTRAL, CONST.TOKEN_DISPOSITIONS.FRIENDLY];
 
-    //@ts-expect-error
-    const canvasPlaceables: Token[] = canvas.tokens?.placeables;
+    const canvasPlaceables: Token[] = canvas.tokens?.placeables ?? [];
     let nearby = canvasPlaceables?.filter(t => {
-      //@ts-expect-error
       const tActor: Actor | null = t.actor;
-      //@ts-expect-error
       const tDocument: TokenDocument = t.document;
       if (!isTargetable(t)) return false;
-      if (options.maxSize && tDocument.height * tDocument.width > options.maxSize) return false;
+      if (options.maxSize && (tDocument.height ?? 1) * (tDocument.width ?? 1) > options.maxSize) return false;
       if (!options.includeIncapacitated && checkIncapacitated(tActor, debugEnabled > 0, false)) return false;
       let inRange = false;
       if (t.actor &&
         (t.id !== token.id || options?.includeToken) && // not the token
-        //@ts-expect-error .disposition v10      
         (disposition === null || targetDisposition.includes(t.document.disposition))) {
         const tokenDistance = computeDistance(t, token, { wallsBlock: true });
         inRange = 0 <= tokenDistance && tokenDistance <= distance
@@ -2559,7 +2546,9 @@ export function checkNearby(disposition: number | null | string, tokenRef: Token
 export function hasCondition(actorRef: Actor | Token | TokenDocument | string | undefined | null, condition: string): 0 | 1 {
   let actor = getActor(actorRef);
   if (!actor) return 0;
+  // @ts-expect-error no dnd5e-types
   if (!actor.system.traits || !actor.statuses) return 0;
+  // @ts-expect-error no dnd5e-types
   if (actor.system.traits?.ci?.value?.has(condition)) return 0;
   if (actor.statuses.has(condition)) return 1;
   const specials = CONFIG.specialStatusEffects;
@@ -2575,10 +2564,12 @@ export function hasCondition(actorRef: Actor | Token | TokenDocument | string | 
       if (actor.statuses.has(specials.DEFEATED)) return 1;
       break
     case "deaf":
+      // @ts-expect-error no dnd5e-types
       if (actor.statuses.has(specials.DEAF)) return 1;
       break;
     case "disease":
     case "diseased":
+      // @ts-expect-error no dnd5e-types
       if (actor.statuses.has(specials.DISEASE)) return 1;
       break;
     case "fly":
@@ -2591,6 +2582,7 @@ export function hasCondition(actorRef: Actor | Token | TokenDocument | string | 
       break;
     case "inaudible":
     case "silent":
+      // @ts-expect-error no dnd5e-types
       if (actor.statuses.has(specials.INAUDIBLE)) return 1;
       break;
     case "invisible":
@@ -2598,6 +2590,7 @@ export function hasCondition(actorRef: Actor | Token | TokenDocument | string | 
       break;
     case "poison":
     case "poisoned":
+      // @ts-expect-error no dnd5e-types
       if (actor.statuses.has(specials.POISON)) return 1;
       break;
   }
@@ -2634,30 +2627,18 @@ export async function removeHidden() {
 export async function removeHiddenCondition(tokenRef: Token | TokenDocument | string | undefined) {
   const token = getToken(tokenRef);
   if (!token) return;
-  //@ts-expect-error
-  if (game.release.generation >= 12) {
-    if (!token.actor) return
-    if (CONFIG.statusEffects.find(se => se.id === "hidden")) {
-      //@ts-expect-error
-      await token.actor.toggleStatusEffect("hidden", { active: false });
-    }
-    if (CONFIG.statusEffects.find(se => se.id === "hiding")) {
-      //@ts-expect-error
-      await token.actor.toggleStatusEffect("hiding", { active: false });
-    }
-  } else {
-    const hidingEffect = CONFIG.statusEffects.find(i => i.id === "hiding");
-    //@ts-expect-error
-    if (hidingEffect) await token.document.toggleActiveEffect(hidingEffect, { active: false });
-    const hiddenEffect = CONFIG.statusEffects.find(i => i.id === "hidden");
-    //@ts-expect-error
-    if (hiddenEffect) await token.document.toggleActiveEffect(hiddenEffect, { active: false });
+  if (!token.actor) return
+  if (CONFIG.statusEffects.find(se => se.id === "hidden")) {
+    await token.actor.toggleStatusEffect("hidden", { active: false });
+  }
+  if (CONFIG.statusEffects.find(se => se.id === "hiding")) {
+    await token.actor.toggleStatusEffect("hiding", { active: false });
   }
   // Try and remove hidden if set by another active effect
   await removeTokenConditionEffect(token, i18n(`midi-qol.hidden`) ?? "");
   if (installedModules.get("perceptive")) {
-    //@ts-expect-error .api
-    const api = game.modules.get("perceptive")?.api;
+    const api = game.modules?.get("perceptive")?.api;
+    // @ts-expect-error
     api?.PerceptiveFlags.setPerceptiveStealthing(token.document, false);
   }
   if (debugEnabled > 0) log(`Hidden removed for ${token.name}`)
@@ -2665,7 +2646,6 @@ export async function removeHiddenCondition(tokenRef: Token | TokenDocument | st
 
 export async function removeTokenConditionEffect(token: Token, condition: string) {
   if (!token) return;
-  //@ts-expect-error appliedEffects
   const hasEffect = token.actor?.appliedEffects.find(ef => ef.name === condition);
   if (hasEffect) await expireEffects(token.actor, [hasEffect], { "expiry-reason": `midi-qol:removeTokenCondition:${condition}` });
 }
@@ -2719,7 +2699,7 @@ export async function expireMyEffects(effectsToExpire: string[]) {
   if (myExpiredEffects?.length > 0) await expireEffects(this.actor, myExpiredEffects, { "expiry-reason": `midi-qol:${effectsToExpire}` });
 }
 
-export async function expireRollEffect(rolltype: string, abilityId: string, success: boolean | undefined) {
+export async function expireRollEffect(rolltype: string, abilityId: string, success?: boolean | undefined) {
   const rollType = rolltype.charAt(0).toUpperCase() + rolltype.slice(1)
   const expiredEffects = this.appliedEffects?.filter(ef => {
     const specialDuration = foundry.utils.getProperty(ef.flags, "dae.specialDuration");
@@ -2748,6 +2728,7 @@ export function validTargetTokens(tokenSet: Set<Token> | undefined | any): Set<T
 // TODO when v12 only change all refs to fromUuidSync
 export function MQfromUuidSync(uuid: string | undefined | null): any {
   if (!!!uuid) return null;
+  // @ts-expect-error
   return fromUuidSync(uuid);
 }
 
@@ -3117,6 +3098,7 @@ async function displayBeforeAfterRolls(data: { originalRoll: Roll, newRoll: Roll
     sound: CONFIG.sounds.dice,
   },
     options.messageData);
+    // @ts-expect-error
   if (originalRoll.options.rollMode) ChatMessage.applyRollMode(chatData, originalRoll.options.rollMode);
   else ChatMessage.applyRollMode(chatData, rollMode);
   foundry.utils.setProperty(newRoll, `flags.${MODULE_ID}.chatMessageShown`, true);
@@ -3383,6 +3365,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
   return new Promise((resolve, reject) => {
     async function onClose() {
       if (timeoutId) clearTimeout(timeoutId);
+      // @ts-expect-error
       newRoll.options.rollMode = rollMode;
       // The original roll is dsn displayed before the bonus dialog is called so mark it as displayed
       DSNMarkDiceDisplayed(originalRoll);
@@ -3592,6 +3575,7 @@ export function hasEffectGranting(actor: globalThis.dnd5e.documents.Actor5e, key
 }
 //@ts-expect-error dnd5e
 export function isConcentrating(actor: globalThis.dnd5e.documents.Actor5e): undefined | ActiveEffect {
+  // @ts-expect-error no dnd5e-types
   return actor.effects.find(e => e.statuses.has(CONFIG.specialStatusEffects.CONCENTRATING) && !e.disabled && !e.isSuppressed)
 }
 
@@ -3665,11 +3649,10 @@ export async function doReactions(targetRef: Token | TokenDocument | string, tri
       }
     }
 
-    let player: User | undefined = playerFor(getTokenDocument(target));
+    let player: User | null | undefined = playerFor(getTokenDocument(target));
     const usedReaction = hasUsedReaction(target.actor as Actor);
     const reactionSetting = getReactionSetting(player);
     if (getReactionSetting(player) === "none") return noResult;
-    //@ts-expect-error
     if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
     if (!player) return noResult;
     const maxLevel = maxCastLevel(target.actor);
@@ -3749,7 +3732,6 @@ export async function doReactions(targetRef: Token | TokenDocument | string, tri
     }
     reactionCount = reactionActivityList?.length ?? 0;
     if (!usedReaction) {
-      //@ts-expect-error .flags
       const midiFlags: any = target.actor.flags[MODULE_ID];
       reactionCount = reactionCount + Object.keys(midiFlags?.optional ?? [])
         .filter(flag => {
@@ -3818,6 +3800,7 @@ export async function doReactions(targetRef: Token | TokenDocument | string, tri
         await busyWait(0.05); // allow pending transactions to complete
         count -= 1;
       } while (globalThis.DAE.actionQueue.remaining && count);
+      // @ts-expect-error protected
       (target.actor as unknown as Actor)._initialize();
       workflow?.actor._initialize();
       // (target.actor as Actor).prepareData(); // allow for any items applied to the actor - like shield spell
@@ -3893,6 +3876,7 @@ export async function promptReactions(tokenUuid: string, reactionActivityList: R
     try {
       enableNotifications(false);
       for (let ref of reactionActivityList) {
+        // @ts-expect-error
         if (typeof ref === "string") reactionActivities.push(await fromUuid(ref));
         else reactionActivities.push(ref);
       };
@@ -3918,6 +3902,7 @@ export async function promptReactions(tokenUuid: string, reactionActivityList: R
         return getOptionalCountRemainingShortFlag(actor, flag) > 0;
       }).map(flag => `flags.${MODULE_ID}.optional.${flag}`);
     if (validFlags.length > 0 && triggerType === "reaction") {
+      // @ts-expect-error no dnd5e-types
       let acRoll = await new Roll(`${actor.system.attributes.ac.value}`).roll();
       const data = {
         actor,
@@ -3927,10 +3912,11 @@ export async function promptReactions(tokenUuid: string, reactionActivityList: R
         rollHTML: reactionFlavor,
         rollTotal: acRoll.total,
       }
+      // @ts-expect-error no dnd5e-types
       const newAC = await bonusDialog.bind(data)(validFlags, "ac", true, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll");
       const endTime = Date.now();
       if (debugEnabled > 0) warn("promptReactions | returned via bonus dialog ", endTime - startTime)
-      return { name: actor.name, uuid: actor.uuid, ac: newAC.total };
+      return { name: actor.name, uuid: actor.uuid, ac: newAC?.total };
     }
     const endTime = Date.now();
     if (debugEnabled > 0) warn("promptReactions | returned no result ", endTime - startTime)
@@ -3942,7 +3928,7 @@ export async function promptReactions(tokenUuid: string, reactionActivityList: R
   }
 }
 
-export function playerFor(target: TokenDocument | Token | undefined): User | undefined {
+export function playerFor(target: TokenDocument | Token | undefined | null): User | null | undefined {
   return playerForActor(target?.actor as unknown as Actor); // just here for syntax checker
 }
 
@@ -3962,7 +3948,7 @@ export function playerForActor(actor: Actor | undefined | null): User | undefine
     user = gameUsers().players.find(p => ownwership[(p as User).id ?? ""] === OWNERSHIP_LEVELS.OWNER)
   if (!user && ownwership.default === OWNERSHIP_LEVELS.OWNER) {
     // does anyone have default owner permission who is active
-    user = gameUsers().players.find(p => (p as User).active && ownwership[(p as User).id] === OWNERSHIP_LEVELS.INHERIT)
+    user = gameUsers().players.find(p => (p as User).active && ownwership[(p as User).id as string] === OWNERSHIP_LEVELS.INHERIT)
   }
   // if all else fails it's an active gm.
   if (!user) user = gameUsers().activeGM
@@ -4042,7 +4028,9 @@ export async function reactionDialog(actor: globalThis.dnd5e.documents.Actor5e, 
 
 class ReactionDialog extends Application {
   startTime: number;
+  // @ts-expect-error will be redone in v2 anyway
   endTime: number;
+  // @ts-expect-error will be redone in v2 anyway
   timeoutId: number;
   timeRemaining;
 
@@ -4169,7 +4157,7 @@ class ReactionDialog extends Application {
         await button.callback(this, button)
         this.close();
       }
-    } catch (err) {
+    } catch (err: any) {
       const message = `Reaction dialog submit`;
       TroubleShooter.recordError(err, message);
       ui.notifications?.error(err);
@@ -4323,8 +4311,10 @@ export function typeOrRace(entity: Token | Actor | TokenDocument | string): stri
   const actor: Actor | null | undefined = getActor(entity);
   const systemData = actor?.system;
   if (!systemData) return "";
+  // @ts-expect-error no dnd5e-types
   if (systemData.details.type?.value) return systemData.details.type?.value?.toLocaleLowerCase() ?? "";
   // cater to dnd5e 2.4+ where race can be a string or an Item
+  // @ts-expect-error no dnd5e-types
   else return (systemData.details?.race?.name ?? systemData.details?.race)?.toLocaleLowerCase() ?? "";
 }
 
@@ -4332,7 +4322,9 @@ export function raceOrType(entity: Token | Actor | TokenDocument | string): stri
   const actor: Actor | null | undefined = getActor(entity);
   const systemData = actor?.system;
   if (!systemData) return "";
+  // @ts-expect-error no dnd5e-types
   if (systemData.details.race) return (systemData.details?.race?.name ?? systemData.details?.race)?.toLocaleLowerCase() ?? "";
+  // @ts-expect-error no dnd5e-types
   return systemData.details.type?.value?.toLocaleLowerCase() ?? "";
 }
 
@@ -4377,7 +4369,6 @@ export function createConditionData(data: { workflow?: any, target?: Token | Tok
         rollData.target.canSee = data.workflow?.targetsCanSee?.has(data.workflow?.token);
         rollData.canSense = data.workflow?.tokenCanSense?.has(theTarget);
         rollData.canSee = data.workflow?.tokenCanSee?.has(theTarget);
-        //@ts-expect-error
         if (theTarget) rollData.target.isCombatTurn = game.combat?.combatant?.tokenId === theTarget.id;
 
       }
@@ -4406,16 +4397,11 @@ export function createConditionData(data: { workflow?: any, target?: Token | Tok
       rollData.combatRound = combat?.round;
       rollData.combatTurn = combat?.turn;
       rollData.combatTime = combat?.round + (combat.turn ?? 0) / 100;
-      //@ts-expect-error
       rollData.actor.isCombatTurn = game.combat?.combatant?.tokenId === data.workflow?.token?.id;
     } else rollData.combatTime = 0;
     rollData.CONFIG = CONFIG;
     rollData.CONST = {};
-    let exclusions: string[] = [];
-    //@ts-expect-error
-    if (game.release.generation > 11) {
-      exclusions = ["DOCUMENT_TYPES"];
-    }
+    let exclusions: string[] = ["DOCUMENT_TYPES"];
     Object.keys(CONST).forEach(key => !exclusions.includes[key] && (rollData.CONST[key] = CONST[key]));
     //Only here to avoid deprecation warnings - remove when we get to v14
   } catch (err) {
@@ -4520,16 +4506,19 @@ export function computeTemplateShapeDistance(templateDocument: MeasuredTemplateD
   let { x, y, direction, distance } = templateDocument;
   // let { direction, distance, angle, width } = templateDocument;
   if (!canvas || !canvas.scene) return { shape: "none", distance: 0 };
-  //@ts-expect-error distancePixels
-  distance *= canvas.dimensions?.distancePixels;
+  distance ??= 0;
+  distance *= canvas.dimensions?.distancePixels ?? 1;
   direction = Math.toRadians(direction);
   if (!templateDocument.object) {
     throw new Error("Template document has no object");
   }
+  // @ts-expect-error
   templateDocument.object.ray = Ray.fromAngle(x, y, direction, distance);
 
   let shape: any;
+  // @ts-expect-error protected
   templateDocument.object.shape = templateDocument.object._computeShape();
+  // @ts-expect-error
   return { shape: templateDocument.object.shape, distance: templateDocument.distance };
 }
 
@@ -4581,10 +4570,8 @@ export async function ConvenientEffectsHasEffect(effectName: string, actor: Acto
     //@ ts-expect-error .dfreds
     // return game.dfreds?.effectInterface?.hasEffectApplied(effectName, actor.uuid);
   } else {
-    //@ts-expect-error
     const effect = actor.appliedEffects.find(ef => ef.name === effectName);
-    //@ts-expect-error
-    if (foundry.utils.isNewerVersion(game.modules.get("dfreds-convenient-effects")?.version, "6.9")) {
+    if (foundry.utils.isNewerVersion(game.modules?.get("dfreds-convenient-effects")?.version ?? "", "6.9")) {
       return !!isConvenientEffect(effect)
     } return !!effect;
   }
@@ -4608,6 +4595,7 @@ export function isInCombat(actor: Actor) {
 }
 
 export async function setActionUsed(actor: Actor) {
+  // @ts-expect-error can't know about flags
   await actor.setFlag(MODULE_ID, "actions.action", true);
 }
 
@@ -4620,11 +4608,14 @@ export async function setReactionUsed(actor: Actor) {
   effect.updateSource({
     origin: actor.uuid,
     changes: [
+      // @ts-expect-error wants "true"
       { key: 'flags.midi-qol.actions.reaction', mode: 2, value: true },
+      // @ts-expect-error wants "true" or "false"
       { key: 'flags.midi-qol.actions.reactionCombatRound', mode: 2, value: (game.combat as unknown as Combat)?.round ?? false }
     ]
   });
   // effect.origin = actor.uuid;
+  // @ts-expect-error
   await ActiveEffect.implementation.create(effect, { parent: actor, keepId: true });
 }
 
@@ -4647,6 +4638,7 @@ export async function setBonusActionUsed(actor: Actor) {
 }
 
 export async function removeActionUsed(actor: Actor) {
+  // @ts-expect-error can't know about flags
   if (gameUser().isGM) return await actor?.setFlag(MODULE_ID, "actions.action", false);
   else return await untimedExecuteAsGM("_gmSetFlag", { base: MODULE_ID, key: "actions.action", value: false, actorUuid: actor.uuid })
 }
@@ -4657,14 +4649,17 @@ export async function removeReactionUsed(actor: Actor, force = false) {
     await actor.effects.get(getStaticID("reaction"))?.delete(); // reaction always non-transfer
   }
   // safety net unset of flags - just in case.
+  // @ts-expect-error can't know about flags
   if (force) await actor.update({ "flags.midi-qol.actions.reaction": false, "flags.midi-qol.actions.-=reactionCombatRound": null });
 }
 
 export function hasUsedAction(actor: Actor) {
+  // @ts-expect-error can't know about flags
   return actor?.getFlag(MODULE_ID, "actions.action")
 }
 
 export function hasUsedReaction(actor: Actor) {
+  // @ts-expect-error can't know about flags
   return (actor.getFlag(MODULE_ID, "actions.reaction"));
 }
 
@@ -4681,7 +4676,6 @@ export async function expirePerTurnBonusActions(combat: Combat, data, options) {
         if (change.key.match(optionalFlagRe)
           && ((change.value === "each-turn")
             || (change.value === "each-round" && data.round !== combat.round))
-          //@ts-expect-error
           || (change.value === "turn" && combat?.turns[data.turn ?? combat.turn].actor === actor)) {
           const usedKey = change.key.replace(/.(count|countAlt)$/, ".used")
           const isUsed = foundry.utils.getProperty(actor, usedKey);
@@ -4697,6 +4691,7 @@ export async function expirePerTurnBonusActions(combat: Combat, data, options) {
 }
 
 export function hasUsedBonusAction(actor: Actor) {
+  // @ts-expect-error can't know about flags
   return actor.getFlag(MODULE_ID, "actions.bonus");
 }
 
@@ -4705,6 +4700,7 @@ export async function removeBonusActionUsed(actor: Actor, force = false) {
     await actor.effects.get(getStaticID("bonusaction"))?.delete()
   }
   // Safety net flag reset just in case
+  // @ts-expect-error can't know about flags
   if (force) await actor.update({ "flags.midi-qol.actions.bonus": false, "flags.midi-qol.actions.-=bonusActionCombatRound": null });
 }
 
@@ -4781,7 +4777,7 @@ function hookCall(entry, args) {
   if (once) Hooks.off(hook, id);
   try {
     return entry.fn(...args);
-  } catch (err) {
+  } catch (err: any) {
     const message = `Error thrown in hooked function '${fn?.name}' for hook '${hook}'`;
     TroubleShooter.recordError(err, message);
     error(`midi | ${message}`);
@@ -4843,6 +4839,7 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     user: gameUser().id,
     tooltip: await getTooltip(roll, options),
     tooltipFormula: options?.tooltipFormula ?? false,
+    // @ts-expect-error no dnd5e-types
     flavor: options?.flavor ?? roll.options?.flavor,
     total: (roll.total !== undefined) ? Math.round((roll.total) * 100) / 100 : "???"
   };
@@ -5148,46 +5145,31 @@ export function canSenseModes(tokenEntity: Token | TokenDocument | string, targe
   return _canSenseModes(token, target, validModes);
 }
 export function initializeVision(tk: Token, force = false) {
-  //@ts-expect-error
   const sightEnabled = tk.document.sight.enabled;
 
-  //@ts-expect-error
   tk.document.sight.enabled = true;
-  //@ts-expect-error
+  // @ts-expect-error protected
   tk.document._prepareDetectionModes();
   const sourceId = tk.sourceId;
-  //@ts-expect-error
-  if (game.release.generation >= 12) {
-    //@ts-expect-error
-    tk.vision = new CONFIG.Canvas.visionSourceClass({ sourceId, object: tk });
-  }
+  // @ts-expect-error
+  tk.vision = new CONFIG.Canvas.visionSourceClass({ sourceId, object: tk });
 
   //todo check this for v12 new types
   tk.vision._initialize({
     x: tk.center.x,
     y: tk.center.y,
-    //@ts-expect-error
     elevation: tk.document.elevation,
     radius: Math.clamp(tk.sightRange, 0, canvas?.dimensions?.maxR ?? 0),
     externalRadius: tk.externalRadius, // Math.max(tk.mesh.width, tk.mesh.height) / 2,
-    //@ts-expect-error
     angle: tk.document.sight.angle,
-    //@ts-expect-error
     contrast: tk.document.sight.contrast,
-    //@ts-expect-error
     saturation: tk.document.sight.saturation,
-    //@ts-expect-error
     brightness: tk.document.sight.brightness,
-    //@ts-expect-error
     attenuation: tk.document.sight.attenuation,
-    //@ts-expect-error
     rotation: tk.document.rotation,
-    //@ts-expect-error
     visionMode: tk.document.sight.visionMode,
-    //@ts-expect-error
-    color: globalThis.Color.from(tk.document.sight.color),
-    isPreview: !!tk._original,
-    //@ts-expect-error specialStatusEffects
+    color: tk.document.sight.color?.toNearest(),
+    preview: !!tk._original,
     blinded: tk.document.hasStatusEffect(CONFIG.specialStatusEffects.BLIND)
   });
 
@@ -5195,26 +5177,21 @@ export function initializeVision(tk: Token, force = false) {
     error(`canSense los not calcluated. Can't check if ${tk.name} can see`, tk.vision);
     return false;
   } else if (!tk.vision.los) {
-    //@ts-expect-error
+    // @ts-expect-error protected
     tk.vision.shape = tk.vision._createRestrictedPolygon();
-    //@ts-expect-error
     tk.vision.los = tk.vision.shape;
   }
-  //@ts-expect-error
-  tk.vision.anmimated = false;
+  if (tk.vision.visionMode) tk.vision.visionMode.animated = false;
   canvas?.effects?.visionSources.set(sourceId, tk.vision);
-  //@ ts-expect-error
   // tk.document.sight.enabled = sightEnabled;
   return true;
 }
 export function _canSenseModes(tokenEntity: Token | TokenDocument, targetEntity: Token | TokenDocument, validModesParam: Array<string> = ["all"]): Array<string> {
-  let target: Token = targetEntity instanceof TokenDocument ? targetEntity.object : targetEntity;
+  let target: Token | null = targetEntity instanceof TokenDocument ? targetEntity.object : targetEntity;
   const detectionModes = CONFIG.Canvas.detectionModes;
   const DetectionModeCONST = DetectionMode;
-  //@ts-expect-error
-  let token: Token = getToken(tokenEntity);
+  let token: Token | null | undefined = getToken(tokenEntity);
   if (!token || !target) return ["noToken"];
-  //@ts-expect-error .hidden
   if (target.document?.hidden || token.document?.hidden) return [];
   if (!token.hasSight && !configSettings.optionalRules.invisVision) return ["senseAll"];
   if ((!token.vision || !token.vision.los) && !initializeVision(token)) return ["noSight"];
@@ -5225,7 +5202,6 @@ export function _canSenseModes(tokenEntity: Token | TokenDocument, targetEntity:
   const offsets = t > 0 ? [[0, 0], [-t, -t], [-t, t], [t, t], [t, -t], [-t, 0], [t, 0], [0, -t], [0, t]] : [[0, 0]];
   const tests = offsets.map(o => ({
     point: new PIXI.Point(targetPoint.x + o[0], targetPoint.y + o[1]),
-    //@ts-expect-error
     elevation: target.document.elevation,
     los: new Map()
   }));
@@ -5234,8 +5210,7 @@ export function _canSenseModes(tokenEntity: Token | TokenDocument, targetEntity:
   const modes = CONFIG.Canvas.detectionModes;
   let validModes = new Set(validModesParam);
 
-  //@ts-expect-error
-  const lightSources = foundry.utils.isNewerVersion(game.system.version, "12.0") ? canvas?.effects?.lightSources : canvas?.effects?.lightSources.values();
+  const lightSources = canvas?.effects?.lightSources;
   for (const lightSource of (lightSources ?? [])) {
     if (/*!lightSource.data.vision ||*/ !lightSource.active || lightSource.data.disabled) continue;
     if (!validModes.has(detectionModes.lightPerception?.id ?? DetectionModeCONST.BASIC_MODE_ID) && !validModes.has("all")) continue;
@@ -5246,6 +5221,7 @@ export function _canSenseModes(tokenEntity: Token | TokenDocument, targetEntity:
   const lightPerception = tokenDetectionModes.find(m => m.id === modes.lightPerception?.id);
   if (lightPerception && ["lightPerception", "all"].some(mode => validModes.has(mode))) {
     // const result = modes.lightPerception.testVisibility(token.vision, basic, config);
+    // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
     const result = lightPerception ? modes.lightPerception.testVisibility(token.vision, lightPerception, config) : false;
     if (result === true)
       matchedModes.add(detectionModes.lightPerception?.id ?? DetectionModeCONST.BASIC_MODE_ID);
@@ -5253,15 +5229,18 @@ export function _canSenseModes(tokenEntity: Token | TokenDocument, targetEntity:
 
   const basic = tokenDetectionModes.find(m => m.id === DetectionModeCONST.BASIC_MODE_ID);
   if (basic && ["basicSight", "all"].some(mode => validModes.has(mode))) {
+    // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
     const result = modes.basicSight.testVisibility(token.vision, basic, config);
     if (result === true)
       matchedModes.add(detectionModes.basicSight?.id ?? DetectionModeCONST.BASIC_MODE_ID);
   }
   for (const detectionMode of tokenDetectionModes) {
     if (detectionMode.id === DetectionModeCONST.BASIC_MODE_ID) continue;
+    // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
     if (!detectionMode.enabled) continue;
     const dm = modes[detectionMode.id as string];
     if (validModes.has("all") || validModes.has(detectionMode.id as string)) {
+      // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
       const result = dm?.testVisibility(token.vision, detectionMode, config)
       if (result === true) {
         matchedModes.add(detectionMode.id as string);
@@ -5269,7 +5248,6 @@ export function _canSenseModes(tokenEntity: Token | TokenDocument, targetEntity:
     }
   }
   for (let tk of [token]) {
-    //@ts-expect-error
     if (!tk.document.sight.enabled) {
       const sourceId = tk.sourceId;
       canvas?.effects?.visionSources.delete(sourceId);
@@ -5284,8 +5262,8 @@ export function tokensForActor(actorRef: Actor | string | undefined | null): Tok
   if (typeof actorRef === "string") actor = fromActorUuid(actorRef);
   else actor = actorRef;
   if (!(actor instanceof Actor)) return undefined;
-  //@ts-expect-error
-  if (actor.token) return [actor.token.object];
+  if (actor.token) return [actor.token.object as Token];
+  // @ts-expect-error getActiveTokens error
   const tokens: Token[] = actor.getActiveTokens();
   if (!tokens.length) return undefined;
   const controlled = tokens.filter(t => t.controlled);
@@ -5306,6 +5284,7 @@ export async function doConcentrationCheck(actor, saveDC) {
   let concentratingItemName: string[] = [];
 
   for (const itemUuid of concentratingItemUuids) {
+    // @ts-expect-error
     typeof (itemUuid) === "string" ? concentratingItemName.push(fromUuidSync(itemUuid)?.item?.name) : concentratingItemName.push("No item");
   };
 
@@ -5388,6 +5367,7 @@ async function _doConcentrationCheck(actor, itemData) {
   // actor took damage and is concentrating....
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
   ownedItem.prepareData();
+  // @ts-expect-error no dnd5e-types
   ownedItem.prepareFinalAttributes();
   ownedItem.prepareEmbeddedDocuments();
   try {
@@ -5411,6 +5391,7 @@ export function hasDAE(workflow: Workflow) {
 
 export function procActorSaveBonus(actor: Actor, rollType: string, item: Item): number {
   if (!item) return 0;
+  // @ts-expect-error no dnd5e-types
   const bonusFlags = actor.system.bonuses?.save;
   if (!bonusFlags) return 0;
   let saveBonus = 0;
@@ -5451,7 +5432,6 @@ export async function displayDSNForRoll(rolls: Roll | Roll[] | undefined, rollTy
       const hideRollOption = configSettings.hideRollDetails;
       let ghostRoll = false;
       let whisperUsers: User[] | null = null;
-      //@ts-expect-error
       const rollMode = defaultRollMode || game.settings?.get("core", "rollMode");
       let hideRoll = (["all"].includes(hideRollOption) && gameUser().isGM) ? true : false;
       if (!gameUser().isGM) hideRoll = false;
@@ -5506,13 +5486,15 @@ export async function displayDSNForRoll(rolls: Roll | Roll[] | undefined, rollTy
           }
         }
         displayRoll.terms.forEach(term => {
-          if (term.options?.flavor) term.options.flavor = term.options.flavor.toLocaleLowerCase();
+          if (term.options?.flavor) term.options.flavor = (term.options.flavor as string).toLocaleLowerCase();
+          // @ts-expect-error no dnd5e-types
           else term.options.flavor = displayRoll.options.type;
         });
         if (ghostRoll) {
           promises.push(dice3d?.showForRoll(displayRoll, gameUser(), true, ChatMessage.getWhisperRecipients("GM"), !gameUser().isGM));
           //@ts-expect-error
           if (game.settings.get("dice-so-nice", "showGhostDice")) {
+            // @ts-expect-error
             displayRoll.ghost = true;
             promises.push(dice3d?.showForRoll(displayRoll, gameUser(), true, gameUsers().players.map(u => (u as User).id), gameUser().isGM));
           }
@@ -5702,6 +5684,7 @@ export function getActor(actorRef: Actor | Token | TokenDocument | string | null
   if (actorRef instanceof Token) return (actorRef.actor as unknown as Actor);
   if (actorRef instanceof TokenDocument) return (actorRef.actor as unknown as Actor);
   let entity: any = actorRef;
+  // @ts-expect-error
   if (typeof actorRef === "string") entity = fromUuidSync(actorRef);
   if (entity instanceof Actor) return entity;
   if (entity instanceof TokenDocument) return (entity.actor as unknown as Actor);
@@ -5711,7 +5694,7 @@ export function getActor(actorRef: Actor | Token | TokenDocument | string | null
   return null;
 }
 
-export function getTokenDocument(tokenRef: Actor | Token | TokenDocument | string | undefined): TokenDocument | undefined {
+export function getTokenDocument(tokenRef: Actor | Token | TokenDocument | string | undefined | null): TokenDocument | undefined {
   if (!tokenRef) return undefined;
   if (tokenRef instanceof TokenDocument) return tokenRef;
   if (typeof tokenRef === "string") {
@@ -5724,7 +5707,7 @@ export function getTokenDocument(tokenRef: Actor | Token | TokenDocument | strin
   return undefined;
 }
 
-export function getToken(tokenRef: Actor | Token | TokenDocument | string | undefined | null): Token | undefined {
+export function getToken(tokenRef: Actor | Token | TokenDocument | string | undefined | null): Token | undefined | null {
   if (!tokenRef) return undefined;
   if (tokenRef instanceof Token) return tokenRef;
   if (tokenRef instanceof TokenDocument) return tokenRef.object;
@@ -5792,26 +5775,22 @@ const MaxNameLength = 20;
 export function getLinkText(entity: Token | TokenDocument | Actor | Item | null | undefined) {
   if (!entity) return "<unknown>";
   let name = entity.name ?? "unknown";
-  //@ts-expect-error
   if (entity instanceof Token && !configSettings.useTokenNames) name = entity.actor?.name ?? name;
   if (entity instanceof Token) return `@UUID[${entity.document.uuid}]{${name.slice(0, MaxNameLength - 5)}}`;
   return `@UUID[${entity.uuid}]{${entity.name?.slice(0, MaxNameLength - 5)}}`;
 }
 
-export function getTokenName(entity: Token | TokenDocument | undefined): string {
+export function getTokenName(entity: Token | TokenDocument | undefined | null): string {
   if (!entity) return "<unknown>";
   entity = getToken(entity)
   if (!(entity instanceof Token)) return "<unknown>";
-  //@ts-expect-error
   if (configSettings.useTokenNames) return entity.name ?? entity.actor?.name ?? "<unknown>";
-  //@ts-expect-error
   else return entity.actor?.name ?? entity.name ?? "<unknown>";
 }
 
 export function getIconFreeLink(entity: Token | TokenDocument | Item | Actor | null | undefined) {
   if (!entity) return "<unknown>";
   let name = entity.name ?? "unknown";
-  //@ts-expect-error
   if (entity instanceof Token && !configSettings.useTokenNames) name = entity.actor?.name ?? name;
   if (entity instanceof Token) {
     return name;
@@ -5860,8 +5839,7 @@ export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}
         return { ray: new Ray(aCenter, bCenter) };
       });
     }
-    //@ts-ignore
-    let distances: any[] = segments.map(s => canvasGridProxy.measurePath([s.ray.A, s.ray.B]));
+    let distances: any[] = segments.map(s => canvasGridProxy.measurePath([s.ray.A, s.ray.B], {}));
     return distances = distances.map(d => {
       let distance = d.distance;
       let fudgeFactor = configSettings.gridlessFudge ?? 0;
@@ -5905,7 +5883,6 @@ export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}
     // Track the total number of diagonals
     let nDiagonal = 0;
     const d = canvas?.dimensions;
-    //@ts-expect-error .grid
     const grid = canvas?.scene?.grid;
     if (!d || !d.size) return 0;
     const fudgeFactor = configSettings.gridlessFudge / d.distance;
@@ -5933,11 +5910,11 @@ export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}
       else if (rule === "EUCL") {
         let nx = Math.max(0, Math.abs(r.dx / d.size) - fudgeFactor);
         let ny = Math.max(0, Math.abs(r.dy / d.size) - fudgeFactor);
-        return Math.ceil(Math.hypot(nx, ny) * grid?.distance);
+        return Math.ceil(Math.hypot(nx, ny) * (grid?.distance ?? 5));
       }
 
       // Standard PHB Movement
-      else return Math.max(nx, ny) * grid.distance;
+      else return Math.max(nx, ny) * (grid?.distance ?? 5);
     });
   }
 }
@@ -6180,6 +6157,7 @@ export function sumRolls(rolls: Array<Roll> | undefined = [], countHealing?: "ig
   if (!rolls) return 0;
   if (countHealing === undefined) countHealing = "positive";
   return rolls.reduce((total, roll) => {
+    // @ts-expect-error no dnd5e-types
     const type = roll.options.type;
     if (type === "midi-none") return total;
     if (["temphp"].includes(type) && countHealing === "negativeIgnoreTemp") return total;
@@ -6392,6 +6370,7 @@ export async function addConcentrationDependent(actorRef: Token | TokenDocument 
     return undefined;
   }
   if (gameUser().isGM || actor.isOwner) {
+    // @ts-expect-error no dnd5e-types
     return concentrationEffect.addDependent(dependent);
   } else
     return socketlibSocket.executeAsGM("addDependent", { documentUuid: concentrationEffect.uuid, dependentUuid: dependent.uuid });
@@ -6566,10 +6545,8 @@ export function setRangedTargets(tokenToUse, targetDetails) {
   // ignoreToken set to null if special target include "self" - otherwise set to token
   let ignoreToken = (targetDetails.affects.special ?? "").split(";").some(spec => spec === "self") ? null : tokenToUse;
   if (canvas.tokens?.placeables && canvas.grid) {
-    //@ts-expect-error
     const canvasTokens: Token[] | undefined = canvas.tokens?.placeables;
     if (canvasTokens) for (let target of canvasTokens) {
-      //@ts-expect-error
       const targetDocument: TokenDocument = target.document;
 
       if (maxTargets !== "" && targetIds.length >= maxTargets) break;

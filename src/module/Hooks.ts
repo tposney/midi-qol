@@ -1,4 +1,4 @@
-import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, geti18nOptions, log, GameSystemConfig, SystemString, MODULE_ID, isdndv4, gameUser, gameSystemId } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, geti18nOptions, log, GameSystemConfig, SystemString, MODULE_ID, isdndv4, gameUser, gameUsers, gameSystemId } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, processItemCardCreation, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { processUndoDamageCard } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, MQfromUuidSync, removeReactionUsed, removeBonusActionUsed, checkflanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, itemIsVersatile, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, isConcentrating, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm } from "./utils.js";
@@ -17,7 +17,7 @@ export var midiFlagTypes: {} = {};
 
 export let readyHooks = async () => {
   // Handle removing effects when the token is moved.
-  Hooks.on("updateToken", (tokenDocument, update, diff, userId) => {
+  Hooks.on("updateToken", (tokenDocument, update: Token.UpdateData, diff, userId) => {
     if (game.user?.id !== userId) return;
     if ((update.x || update.y) === undefined) return;
     const actor = tokenDocument.actor;
@@ -84,11 +84,13 @@ export let readyHooks = async () => {
     }
   });
 
-  Hooks.on("preUpdateActor", (actor, changes, options, userId) => {
+  Hooks.on("preUpdateActor", (actor, changes: Actor.UpdateData, options, userId) => {
     try {
       if (userId !== game.user?.id) return true;
+      // @ts-expect-error no dnd5e-types
       if (changes.system?.attributes?.hp?.value === undefined) return true;
       const hp = actor.system.attributes?.hp?.value;
+      // @ts-expect-error no dnd5e-types
       const newHP = changes.system.attributes.hp.value;
       if (newHP >= hp) return true;
       if (configSettings.doConcentrationCheck === "item" && !options.noConcentrationCheck && isConcentrating(actor)) {
@@ -123,7 +125,9 @@ export let readyHooks = async () => {
       try {
         let origin = MQfromUuidSync(deletedEffect.origin);
         if (origin instanceof ActiveEffect && !options.noConcentrationCheck && configSettings.removeConcentrationEffects !== "none") {
+          // @ts-expect-error no dnd5e-types
           if (origin.statuses?.has(CONFIG.specialStatusEffects.CONCENTRATING) && origin.getDependents()?.length === 0) {
+            // @ts-expect-error
             if (!installedModules.get("times-up") || (origin?.duration?.remaining ?? 1) > 0) {
               await origin.delete();
             }
@@ -153,7 +157,7 @@ export let readyHooks = async () => {
   Hooks.on("dnd5e.preActivityConsumption", preActivityConsumptionHook);
   Hooks.on("dnd5e.activityConsumption", activityConsumptionHook);
   Hooks.on("dnd5e.rollDeathSave", deathSaveHook);
-  Hooks.on("updateCombat", (combat: Combat, update, options, userId) => {
+  Hooks.on("updateCombat", (combat: Combat, update: Combat.UpdateData, options, userId) => {
     if (userId != game.users?.activeGM?.id) return;
     if (!update.hasOwnProperty("round")) return;
     if (!checkMechanic("autoRerollInitiative")) return;
@@ -166,57 +170,57 @@ export let readyHooks = async () => {
   itemJSONData.name = concentrationCheckItemName;
 }
 
-function registerBaBonusHooks() {
-  //TODO migrate all of these to v2 once babonus is dnd5e 4.0 ready
-  if (!game.modules?.get("babonus")?.active) return;
-  // Midi sets fastForward to true for most of these rolls - based on roll settings
-  // need to handle the cases where there is an optional babonus defined and disable fastforward.
+// function registerBaBonusHooks() {
+//   //TODO migrate all of these to v2 once babonus is dnd5e 4.0 ready
+//   if (!game.modules?.get("babonus")?.active) return;
+//   // Midi sets fastForward to true for most of these rolls - based on roll settings
+//   // need to handle the cases where there is an optional babonus defined and disable fastforward.
 
-  Hooks.on("babonus.filterBonuses", (bonuses, subjects, details, hookType) => {
-    if (!(subjects.actor || !subjects.item)) return;
-    const subject = subjects.item ?? subjects.actor;
-    const hasOptionalBonus = bonuses?.some(bonus => bonus.optional);
-    foundry.utils.setProperty(subject, "flags.midi-qol.hasBabonusOptionalBonus", hasOptionalBonus);
-  });
+//   Hooks.on("babonus.filterBonuses", (bonuses, subjects, details, hookType) => {
+//     if (!(subjects.actor || !subjects.item)) return;
+//     const subject = subjects.item ?? subjects.actor;
+//     const hasOptionalBonus = bonuses?.some(bonus => bonus.optional);
+//     foundry.utils.setProperty(subject, "flags.midi-qol.hasBabonusOptionalBonus", hasOptionalBonus);
+//   });
 
-  Hooks.on("dnd5e.preRollAttackV2", (rollConfig, dialogConfig, messageConfig) => {
-    const forceConfigure = foundry.utils.getProperty(rollConfig.subject.item, "flags.midi-qol.hasBabonusOptionalBonus");
-    if (forceConfigure) dialogConfig.configure = true;
-    return true;
-  });
+//   Hooks.on("dnd5e.preRollAttackV2", (rollConfig, dialogConfig, messageConfig) => {
+//     const forceConfigure = foundry.utils.getProperty(rollConfig.subject.item, "flags.midi-qol.hasBabonusOptionalBonus");
+//     if (forceConfigure) dialogConfig.configure = true;
+//     return true;
+//   });
 
 
-  Hooks.on("dnd5e.preRollAbilitySave", (actor, rollData, abilityId) => {
-    rollData.fastForward &&= !foundry.utils.getProperty(actor, "flags.midi-qol.hasBabonusOptionalBonus");
-    return true;
-  })
+//   Hooks.on("dnd5e.preRollAbilitySave", (actor, rollData, abilityId) => {
+//     rollData.fastForward &&= !foundry.utils.getProperty(actor, "flags.midi-qol.hasBabonusOptionalBonus");
+//     return true;
+//   })
 
-  Hooks.on("dnd5e.preRollAbilityTest", (actor, rollData, abilityId) => {
-    rollData.fastForward &&= !foundry.utils.getProperty(actor, "flags.midi-qol.hasBabonusOptionalBonus");
-    return true;
-  });
+//   Hooks.on("dnd5e.preRollAbilityTest", (actor, rollData, abilityId) => {
+//     rollData.fastForward &&= !foundry.utils.getProperty(actor, "flags.midi-qol.hasBabonusOptionalBonus");
+//     return true;
+//   });
 
-  Hooks.on("dnd5e.preRollToolCheck", (actor, rollData, toolId) => {
-    rollData.fastForward &&= !foundry.utils.getProperty(actor, "flags.midi-qol.hasBabonusOptionalBonus");
-    return true;
-  });
+//   Hooks.on("dnd5e.preRollToolCheck", (actor, rollData, toolId) => {
+//     rollData.fastForward &&= !foundry.utils.getProperty(actor, "flags.midi-qol.hasBabonusOptionalBonus");
+//     return true;
+//   });
 
-  Hooks.on("dnd5e.preRollSkill", (actor, rollData, skillId) => {
-    rollData.fastForward &&= !foundry.utils.getProperty(actor, "flags.midi-qol.hasBabonusOptionalBonus");
-    return true;
-  })
+//   Hooks.on("dnd5e.preRollSkill", (actor, rollData, skillId) => {
+//     rollData.fastForward &&= !foundry.utils.getProperty(actor, "flags.midi-qol.hasBabonusOptionalBonus");
+//     return true;
+//   })
 
-  Hooks.on("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, nessageConfig) => {
-    const forceConfigure = foundry.utils.getProperty(rollConfig.subject.item, "flags.midi-qol.hasBabonusOptionalBonus");
-    if (forceConfigure) dialogConfig.configure = true;
-    return true;
-  });
+//   Hooks.on("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, nessageConfig) => {
+//     const forceConfigure = foundry.utils.getProperty(rollConfig.subject.item, "flags.midi-qol.hasBabonusOptionalBonus");
+//     if (forceConfigure) dialogConfig.configure = true;
+//     return true;
+//   });
 
-  Hooks.on("dnd5e.preRollDeathSave", (actor, rollData, abilityId) => {
-    rollData.fastForward &&= !foundry.utils.getProperty(actor, "flags.midi-qol.hasBabonusOptionalBonus");
-    return true;
-  });
-}
+//   Hooks.on("dnd5e.preRollDeathSave", (actor, rollData, abilityId) => {
+//     rollData.fastForward &&= !foundry.utils.getProperty(actor, "flags.midi-qol.hasBabonusOptionalBonus");
+//     return true;
+//   });
+// }
 export async function restManager(actor, result) {
   if (!actor || !result)
     return;
@@ -263,11 +267,12 @@ export function initHooks() {
     ui.chat?.scrollBottom();
   });
 
-  Hooks.on("updateCombat", (combat, data, options, user) => {
+  Hooks.on("updateCombat", (combat, data: Combat.UpdateData, options, user) => {
     if (data.round === undefined && data.turn === undefined) return;
+    // @ts-expect-error
     untargetAllTokens(combat, data.options, user);
     untargetDeadTokens();
-    if (gameUser()?.activeGM.isSelf)
+    if (gameUsers()?.activeGM?.isSelf)
       _processOverTime(combat, data, options, user);
     // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
   });
@@ -313,7 +318,7 @@ export function initHooks() {
   Hooks.on("preUpdateActor", preUpdateItemActorOnUseMacro);
   Hooks.on("combatRound", expirePerTurnBonusActions); // TODO Move this to the update combat hook?
   Hooks.on("combatTurn", expirePerTurnBonusActions);
-  Hooks.on("updateCombatant", (combatant, updates, options, user) => {
+  Hooks.on("updateCombatant", (combatant, updates: Combatant.UpdateData, options, user) => {
     if (game?.user?.id !== user) return true;
     if (combatant.actor && updates.initiative) expireRollEffect.bind(combatant.actor)("Initiative", "none");
     return true;
@@ -598,19 +603,12 @@ export function initHooks() {
     if (!dragDropTargeting) return true;
     if (dropData.type !== "Item") return true;
     if (!canvas?.grid?.grid) return;
-    //@ts-ignore .grid v10
-    let grid_size = canvas.scene?.grid.size;
+    let grid_size = canvas.scene?.grid.size ?? 100;
     // This will work for all grids except gridless
-    let coords;
-    //@ts-expect-error
-    if (game.release.generation < 12) {
-      coords = canvas.grid.grid.getPixelsFromGridPosition(...canvas.grid.grid.getGridPositionFromPixels(dropData.x, dropData.y));
-    } else {
-      coords = canvas.grid.getPixelsFromGridPosition(...canvas.grid.getGridPositionFromPixels(dropData.x, dropData.y));
-    }
+    // TODO: swap to `getTopLeftPoint` - should simplify some
+    let coords = canvas.grid.getPixelsFromGridPosition(...canvas.grid.getGridPositionFromPixels(dropData.x, dropData.y));
 
     // Assume a square grid for gridless
-    //@ts-expect-error .grid v10
     if (canvas.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS) {
       // targetObjects expects the cords to be top left corner of the token, so we need to adjust for that
       coords = [dropData.x - grid_size / 2, dropData.y - grid_size / 2];
@@ -635,9 +633,8 @@ export function initHooks() {
     return true;
   })
 
-  //@ts-expect-error
-  if (foundry.utils.isNewerVersion(game.modules.get("babonus")?.version ?? "0", "12.0.5"))
-    Hooks.once("babonus.initializeRollHooks", registerBaBonusHooks);
+  // if (foundry.utils.isNewerVersion(game.modules.get("babonus")?.version ?? "0", "12.0.5"))
+  //   Hooks.once("babonus.initializeRollHooks", registerBaBonusHooks);
 }
 
 function setupMidiFlagTypes() {
@@ -1126,16 +1123,18 @@ function recalculateDamage(actor, amount, updates, options) {
   updates['system.attributes.hp.value'] = newHpValue
 }
 
-Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
+Hooks.on("dnd5e.preApplyDamage", (actor: Actor.Implementation, amount: number, updates: Actor.UpdateData, options: object) => {
   if (updates["system.attributes.hp.temp"]) updates["system.attributes.hp.temp"] = Math.floor(updates["system.attributes.hp.temp"]);
   // recalculateDamage(actor, amount, updates, options);
   const vitalityResource = checkRule("vitalityResource");
   if (foundry.utils.getProperty(updates, "system.attributes.hp.value") === 0 && typeof vitalityResource === "string" && foundry.utils.getProperty(actor, vitalityResource) !== undefined) {
     // actor is reduced to zero so update vitaility resource
+    // @ts-expect-error no dnd5e-types
     const hp = actor.system.attributes.hp;
     const vitalityDamage = amount - (hp.temp + hp.value);
     updates[vitalityResource] = Math.max(0, foundry.utils.getProperty(actor, vitalityResource) - vitalityDamage);
   }
+  // @ts-expect-error
   if (options.midi) {
     foundry.utils.setProperty(options, "midi.amount", amount);
     foundry.utils.setProperty(options, "midi.updates", updates);
@@ -1185,6 +1184,7 @@ Hooks.on("dnd5e.rollConcentrationV2", (rolls, { subject }) => {
     if (checkRule("criticalSaves") && roll.isCritical) roll.options.success = true;
     // triggerTargetMacros(triggerList: string[], targets: Set<any> = this.targets, options: any = {}) {
     if (configSettings.removeConcentration && roll.options.success === false) {
+      // @ts-expect-error no dnd5e-types
       subject.endConcentration();
       return;
     }
