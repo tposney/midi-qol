@@ -1,4 +1,4 @@
-import { i18n, error, i18nFormat } from "../../midi-qol.js";
+import { i18n, error, i18nFormat, gameUser } from "../../midi-qol.js";
 import { checkMechanic, checkRule, configSettings, targetConfirmation } from "../settings.js";
 import { FULL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, computeCoverBonus, computeFlankingStatus, getIconFreeLink, getToken, isTargetable, markFlanking, tokenForActor } from "../utils.js";
 import { getTokenPlayerName } from "../utils.js";
@@ -29,11 +29,11 @@ export class TargetConfirmationDialog extends Application {
       foundry.utils.setProperty(options, "workflowOptions.fastForward", options.worfkflowOptions?.fastForward);
       return options.callback ? options.callback(value) : value;
     }
-    if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking")) && game.user?.targets) {
+    if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking")) && gameUser().targets) {
       const actor = this.data.activity.actor;
       const token = tokenForActor(actor);
       if (token)
-        for (let target of game.user?.targets)
+        for (let target of gameUser().targets)
           markFlanking(token, target)
     }
     // this.callback = options.callback;
@@ -66,15 +66,16 @@ export class TargetConfirmationDialog extends Application {
       default:
       case 1: yposition = bottom; break;
     }
+    const height: number | "auto" | undefined = "auto"
     return foundry.utils.mergeObject(super.defaultOptions, {
-      title: i18n("midi-qol.TargetConfirmation.Name"),
+      title: i18n("midi-qol.TargetConfirmation.Name") ?? "Target Confirmation",
       classes: ["midi-targeting"],
       template: "modules/midi-qol/templates/targetConfirmation.html",
       id: "midi-qol-targetConfirmation",
       width: 300,
       left: xposition,
       top: yposition,
-      height: "auto",
+      height,
       resizeable: "true",
       closeOnSubmit: true
     });
@@ -82,21 +83,20 @@ export class TargetConfirmationDialog extends Application {
 
   async getData(options = {}) {
     let data: any = foundry.utils.mergeObject(this.data, await super.getData(options));
-    const targets = Array.from(game.user?.targets ?? []);
+    const targets = Array.from(gameUser().targets ?? []);
     data.targets = [];
     const maxTargets = this.data.activity.target?.affects?.count;
     for (let target of targets) {
       if (maxTargets && data.targets.length >= maxTargets) break;
-      //@ts-expect-error .texture
       let img = target.document.texture.src;
       if (VideoHelper.hasVideoExtension(img)) {
-        img = await game.video.createThumbnail(img, { width: 50, height: 50 });
+        img = await game.video?.createThumbnail(img, { width: 50, height: 50 }) ?? "";
       }
       const actor = this.data.activity.actor;
       const token = tokenForActor(actor);
       let details: string[] = [];
       if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking"))) {
-        if (token && computeFlankingStatus(token, target)) details.push((i18n("midi-qol.Flanked")));
+        if (token && computeFlankingStatus(token, target)) details.push((i18n("midi-qol.Flanked") ?? "Flanked"));
       }
 
       let attackerToken = token;
@@ -139,7 +139,7 @@ export class TargetConfirmationDialog extends Application {
       }
 
       let name;
-      if (game.user?.isGM) {
+      if (gameUser().isGM) {
         name = getIconFreeLink(target);
       } else {
         name = getTokenPlayerName(target);
@@ -147,7 +147,6 @@ export class TargetConfirmationDialog extends Application {
       //@ts-expect-error .disposition
       const relativeDisposition = token?.document.disposition * target.document.disposition;
       let displayedDisposition: any = undefined;
-      //@ts-expect-error .disposition .SECRET
       if (target.document.disposition !== CONST.TOKEN_DISPOSITIONS.SECRET) {
         if (relativeDisposition === CONST.TOKEN_DISPOSITIONS.FRIENDLY) {
           displayedDisposition = i18n("TOKEN.DISPOSITION.FRIENDLY");
@@ -158,7 +157,7 @@ export class TargetConfirmationDialog extends Application {
         }*/
       }
       data.targets.push({
-        name, // : namegame.user?.isGM ? getLinkText(target.actor) : getTokenPlayerName(target),
+        name, // : namegameUser().isGM ? getLinkText(target.actor) : getTokenPlayerName(target),
         img,
         displayedDisposition,
         details: details.join(" - "),
@@ -180,17 +179,17 @@ export class TargetConfirmationDialog extends Application {
       this.hookId = Hooks.on("targetToken", (user, token, targeted) => {
         if (user !== game.user) return;
         const maxTargets = this.data.activity.target?.affects?.count;
-        if (maxTargets && game.user?.targets?.size > maxTargets)
+        if (maxTargets && gameUser().targets?.size > maxTargets)
           ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets: maxTargets }));
-        if (game.user?.targets) {
+        if (gameUser().targets) {
           const validTargets: Array<string> = [];
-          for (let target of game?.user?.targets) {
+          for (let target of gameUser().targets) {
             if (maxTargets && validTargets.length >= maxTargets) break;
             if (isTargetable(target)) validTargets.push(target.id);
           }
-          game.user?.updateTokenTargets(validTargets);
+          gameUser().updateTokenTargets(validTargets);
         }
-        this.data.targets = Array.from(game.user?.targets ?? [])
+        this.data.targets = Array.from(gameUser().targets ?? [])
         this.render(true);
       });
     }
@@ -224,13 +223,11 @@ export class TargetConfirmationDialog extends Application {
         });
         i.closest(".midi-qol-box").addEventListener('click', async function () {
           const token = getToken(i.id);
-          //@ts-expect-error .ping
           if (token) await canvas?.ping(token.center);
         });
         i.closest(".midi-qol-box").addEventListener('mouseover', function () {
           const token = getToken(i.id);
           if (token) {
-            //@ts-expect-error .ping
             token.hover = true;
             token.refresh();
           }
@@ -238,7 +235,6 @@ export class TargetConfirmationDialog extends Application {
         i.closest(".midi-qol-box").addEventListener('mouseout', function () {
           const token = getToken(i.id);
           if (token) {
-            //@ts-expect-error .ping
             token.hover = false;
             token.refresh();
           }

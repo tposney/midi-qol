@@ -1,4 +1,4 @@
-import { debugEnabled, i18n, warn } from "../../midi-qol.js";
+import { debugEnabled, gameUser, i18n, warn } from "../../midi-qol.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { MidiSaveActivity } from "./SaveActivity.js";
@@ -23,8 +23,10 @@ export function setupCheckActivity() {
 }
 function getSceneTargets() {
   if (!canvas?.tokens) return [];
-  let targets: Array<any> = canvas?.tokens?.controlled.filter(t => t.actor);
-  if (!targets?.length && game.user?.character) targets = game.user?.character.getActiveTokens();
+  //@ts-expect-error
+  const controlledTokens: Token[] | undefined = canvas?.tokens?.controlled;
+  let targets: Token[] | undefined = controlledTokens?.filter(t => t.actor);
+  if (!targets?.length && gameUser()?.character) targets = gameUser()?.character.getActiveTokens();
   return targets;
 }
 let defineMidiCheckActivityClass = (ActivityClass: any) => {
@@ -47,7 +49,6 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
       }, { inplace: false, insertKeys: true, invsertValues: true })
 
     static defineSchema() {
-      //@ts-expect-error
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField } = foundry.data.fields;
       //@ts-expect-error
       const dataModels = game.system.dataModels;
@@ -67,7 +68,7 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
 
     static async #rollCheck(event, target, message) {
       const targets = getSceneTargets();
-      if (!targets.length) ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });
+      if (!targets?.length) ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });
       let { ability, dc, skill, tool } = target.dataset;
       dc = parseInt(dc);
       //@ts-expect-error
@@ -76,10 +77,12 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
       let check = this.check;
       const data: any = { event, targetValue: Number.isFinite(dc) ? dc : check.dc.value };
 
-      for (const token of targets) {
+      if (targets) for (const token of targets) {
         data.speaker = ChatMessage.getSpeaker({ scene: canvas?.scene ?? undefined, token: token.document });
         if (skill) {
-          await token.actor.rollSkill(skill, { ...data, ability });
+          //@ts-expect-error
+          const actor: Actor = token.actor;
+          await actor.rollSkill(skill, { ...data, ability });
         } else if (tool) {
           const checkData = { ...data, ability };
           if ((item.type === "tool") && !check.associated.size) {
@@ -87,9 +90,13 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
             checkData.prof = item.system.prof;
             checkData.item = item;
           }
-          await token.actor.rollToolCheck(tool, checkData);
+          //@ts-expect-error
+          const actor: Actor = token.actor;
+          await actor.rollToolCheck(tool, checkData);
         } else {
-          await token.actor.rollAbilityTest(ability, data);
+          //@ts-expect-error
+          const actor: Actor = token.actor;
+          await actor.rollAbilityTest(ability, data);
         }
       }
     }
@@ -113,7 +120,7 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
     _usageChatButtons(message) {
       const buttons: any[] = [];
       if (this.damage.parts.length) buttons.push({
-        label: game.i18n.localize("DND5E.Damage"),
+        label: i18n("DND5E.Damage"),
         icon: '<i class="fas fa-burst" inert></i>',
         dataset: {
           action: "rollDamage"
@@ -144,9 +151,9 @@ export function defineMidiCheckSheetClass(baseClass: any) {
     async _prepareEffectContext(context) {
       context = await super._prepareEffectContext(context);
       context.onSaveOptions = [
-        { value: "none", label: game.i18n.localize("DND5E.SAVE.FIELDS.damage.onSave.None") },
-        { value: "half", label: game.i18n.localize("DND5E.SAVE.FIELDS.damage.onSave.Half") },
-        { value: "full", label: game.i18n.localize("DND5E.SAVE.FIELDS.damage.onSave.Full") }
+        { value: "none", label: i18n("DND5E.SAVE.FIELDS.damage.onSave.None") },
+        { value: "half", label: i18n("DND5E.SAVE.FIELDS.damage.onSave.Half") },
+        { value: "full", label: i18n("DND5E.SAVE.FIELDS.damage.onSave.Full") }
       ];
       return context;
     }

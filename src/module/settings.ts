@@ -1,5 +1,4 @@
-import { _mergeUpdate } from "@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/utils/helpers.mjs";
-import { debug, setDebugLevel, i18n, debugEnabled, geti18nTranslations, geti18nOptions, error } from "../midi-qol.js";
+import { debug, setDebugLevel, i18n, debugEnabled, geti18nTranslations, geti18nOptions, error, gameSystemId, gameUser } from "../midi-qol.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -179,7 +178,7 @@ class ConfigSettings {
   useTokenNames: boolean = false;
   undoChatColor: string = "Delete";
   undoWorkflow: boolean = false;
-  v3DamageApplication: boolean = true;
+  //v3DamageApplication: boolean = true;
   useDamageDetail: boolean = true;
   weaponHitSound: string = "";
   weaponUseSound: string = "";
@@ -223,7 +222,7 @@ export function checkMechanic(mechanic: string): any {
 
 export function checkRule(rule: string) {
   let rulesEnabled = configSettings.optionalRulesEnabled;
-  if (game.user?.isGM)
+  if (gameUser()?.isGM)
     rulesEnabled = rulesEnabled ? !configSettings.toggleOptionalRules : configSettings.toggleOptionalRules;
   return rulesEnabled && configSettings.optionalRules[rule];
 }
@@ -283,8 +282,7 @@ export function collectSettingData() {
     flags: {}
   };
   data.flags["exportSource"] = {
-    system: game.system.id,
-    //@ts-expect-error version
+    system: gameSystemId(),
     coreVersion: game.version ?? game?.version,
     //@ts-expect-error version
     systemVersion: game.system.version,
@@ -314,29 +312,44 @@ export async function importSettingsFromJSON(json) {
     json = json.midiSettings;
   }
 
-  await game.settings.set("midi-qol", "ConfigSettings", removeOldValues(json.configSettings));
-  // await game.settings.set("midi-qol", "ItemRollButtons", removeOldValues(json.itemRollButtons));
-  await game.settings.set("midi-qol", "CriticalDamage", removeOldValues(json.criticalDamage));
-  await game.settings.set("midi-qol", "CriticalDamageGM", removeOldValues(json.criticalDamageGM));
-  await game.settings.set("midi-qol", "showGM", removeOldValues(json.nsaFlag));
-  await game.settings.set("midi-qol", "ColoredBorders", removeOldValues(json.coloredBorders));
-  await game.settings.set("midi-qol", "AddChatDamageButtons", removeOldValues(json.addChatDamageButtons));
-  await game.settings.set("midi-qol", "AutoFastForwardAbilityRolls", removeOldValues(json.autoFastForwardAbilityRolls));
-  await game.settings.set("midi-qol", "AutoRemoveTargets", removeOldValues(json.autoRemoveTargets));
-  await game.settings.set("midi-qol", "ForceHideRoll", removeOldValues(json.forceHideRoll));
-  await game.settings.set("midi-qol", "EnableWorkflow", removeOldValues(json.enableWorkflow));
-  await game.settings.set("midi-qol", "DragDropTarget", removeOldValues(json.dragDropTargeting));
-  await game.settings.set("midi-qol", "DebounceInterval", removeOldValues(json.DebounceInterval));
-  await game.settings.set("midi-qol", "TargetConfirmation", removeOldValues(json.targetConfirmation));
-  await game.settings.set("midi-qol", "MidiSoundSettings", removeOldValues(json.midiSoundSettings) ?? {});
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "ConfigSettings", removeOldValues(json.configSettings));
+  // await game.settings?.set("midi-qol", "ItemRollButtons", removeOldValues(json.itemRollButtons));
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "CriticalDamage", removeOldValues(json.criticalDamage));
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "CriticalDamageGM", removeOldValues(json.criticalDamageGM));
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "showGM", removeOldValues(json.nsaFlag));
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "ColoredBorders", removeOldValues(json.coloredBorders));
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "AddChatDamageButtons", removeOldValues(json.addChatDamageButtons));
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "AutoFastForwardAbilityRolls", removeOldValues(json.autoFastForwardAbilityRolls));
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "AutoRemoveTargets", removeOldValues(json.autoRemoveTargets));
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "ForceHideRoll", removeOldValues(json.forceHideRoll));
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "EnableWorkflow", removeOldValues(json.enableWorkflow));
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "DragDropTarget", removeOldValues(json.dragDropTargeting));
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "DebounceInterval", removeOldValues(json.DebounceInterval));
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "TargetConfirmation", removeOldValues(json.targetConfirmation));
+  //@ts-expect-error
+  await game.settings?.set("midi-qol", "MidiSoundSettings", removeOldValues(json.midiSoundSettings) ?? {});
   //@ts-expect-error _sheet
-  const settingsAppId = game.settings._sheet?.appId;
+  const settingsAppId = game.settings?._sheet?.appId;
   if (settingsAppId) ui.windows[settingsAppId]?.render(true);
   const exportSource = json.flags?.exportSource;
   ui.notifications?.notify(`Importing settings from foundry version ${exportSource?.coreVersion} dnd ${exportSource?.systemVersion} midi ${exportSource?.midiVersion}`);
 }
 export let fetchSoundSettings = () => {
-  midiSoundSettings = game.settings.get("midi-qol", "MidiSoundSettings") ?? {};
+  //@ts-expect-error
+  midiSoundSettings = game.settings?.get("midi-qol", "MidiSoundSettings") ?? {};
   if (midiSoundSettings.version === undefined) {
     midiSoundSettingsBackup = foundry.utils.duplicate(midiSoundSettings);
     midiSoundSettings = { "any": midiSoundSettings };
@@ -347,8 +360,8 @@ export let fetchSoundSettings = () => {
 export let fetchParams = () => {
   if (debugEnabled > 1) debug("Fetch Params Loading");
   const promptDamageRoll = configSettings.promptDamageRoll ?? false;
-  //@ts-ignore
-  configSettings = game.settings.get("midi-qol", "ConfigSettings");
+  //@ts-expect-error
+  configSettings = game.settings?.get("midi-qol", "ConfigSettings");
   //TODO create a config.html for this
   if (configSettings.saveDROrder === undefined) configSettings.saveDROrder = "DRSavedr";
   if (!configSettings.fumbleSound) configSettings.fumbleSound = CONFIG.sounds["dice"];
@@ -507,7 +520,8 @@ export let fetchParams = () => {
     delete configSettings.averageNPCDamage;
   }
   if (configSettings.averageDamage === undefined) configSettings.averageDamage = "none";
-  enableWorkflow = Boolean(game.settings.get("midi-qol", "EnableWorkflow"));
+  //@ts-expect-error
+  enableWorkflow = Boolean(game.settings?.get("midi-qol", "EnableWorkflow"));
   if (configSettings.optionalRules.challengeModeArmor === true) { // old settings
     if (configSettings.optionalRules.challengeModeArmorScale)
       configSettings.optionalRules.challengeModeArmor = "scale";
@@ -531,35 +545,49 @@ export let fetchParams = () => {
   //till here?
   // if (configSettings.midiFieldsTab === undefined) configSettings.midiFieldsTab = true;
   configSettings.midiFieldsTab = true;
-  configSettings.v3DamageApplication = true;
+  //configSettings.v3DamageApplication = true;
   configSettings.useDamageDetail = false;
   if (configSettings.collapsibleTargets === undefined) configSettings.collapsibleTargets = true;
-  criticalDamage = String(game.settings.get("midi-qol", "CriticalDamage"));
+  //@ts-expect-error
+  criticalDamage = String(game.settings?.get("midi-qol", "CriticalDamage"));
   if (criticalDamage === "none") criticalDamage = "default";
-  criticalDamageGM = String(game.settings.get("midi-qol", "CriticalDamageGM"));
+  //@ts-expect-error
+  criticalDamageGM = String(game.settings?.get("midi-qol", "CriticalDamageGM"));
   if (criticalDamageGM === "none") criticalDamageGM = criticalDamage;
-  nsaFlag = Boolean(game.settings.get("midi-qol", "showGM"));
-  coloredBorders = String(game.settings.get("midi-qol", "ColoredBorders"));
-  itemRollButtons = false; // Boolean(game.settings.get("midi-qol", "ItemRollButtons"));
-  addChatDamageButtons = String(game.settings.get("midi-qol", "AddChatDamageButtons"))
-  autoFastForwardAbilityRolls = Boolean(game.settings.get("midi-qol", "AutoFastForwardAbilityRolls"));
-  autoRemoveTargets = String(game.settings.get("midi-qol", "AutoRemoveTargets"));
+  //@ts-expect-error
+  nsaFlag = Boolean(game.settings?.get("midi-qol", "showGM"));
+  //@ts-expect-error
+  coloredBorders = String(game.settings?.get("midi-qol", "ColoredBorders"));
+  itemRollButtons = false; // Boolean(game.settings?.get("midi-qol", "ItemRollButtons"));
+  //@ts-expect-error
+  addChatDamageButtons = String(game.settings?.get("midi-qol", "AddChatDamageButtons"))
+  //@ts-expect-error
+  autoFastForwardAbilityRolls = Boolean(game.settings?.get("midi-qol", "AutoFastForwardAbilityRolls"));
+  //@ts-expect-error
+  autoRemoveTargets = String(game.settings?.get("midi-qol", "AutoRemoveTargets"));
   if (autoRemoveTargets === "allGM") {
-    autoRemoveTargets = game.user?.isGM ? "all" : "dead";
-    game.settings.set("midi-qol", "AutoRemoveTargets", autoRemoveTargets);
+    autoRemoveTargets = gameUser().isGM ? "all" : "dead";
+  //@ts-expect-error
+  game.settings?.set("midi-qol", "AutoRemoveTargets", autoRemoveTargets);
   }
-  let debugText: string = String(game.settings.get("midi-qol", "Debug"));
-  forceHideRoll = Boolean(game.settings.get("midi-qol", "ForceHideRoll"));
-  dragDropTargeting = Boolean(game.settings.get("midi-qol", "DragDropTarget"));
-  DebounceInterval = Number(game.settings.get("midi-qol", "DebounceInterval"));
-  ReplaceDefaultActivities = Boolean(game.settings.get("midi-qol", "ReplaceDefaultActivities"));
+  //@ts-expect-error
+  let debugText: string = String(game.settings?.get("midi-qol", "Debug"));
+  //@ts-expect-error
+  forceHideRoll = Boolean(game.settings?.get("midi-qol", "ForceHideRoll"));
+  //@ts-expect-error
+  dragDropTargeting = Boolean(game.settings?.get("midi-qol", "DragDropTarget"));
+  //@ts-expect-error
+  DebounceInterval = Number(game.settings?.get("midi-qol", "DebounceInterval"));
+  //@ts-expect-error
+  ReplaceDefaultActivities = Boolean(game.settings?.get("midi-qol", "ReplaceDefaultActivities"));
   _debouncedUpdateAction = foundry.utils.debounce(_updateAction, DebounceInterval);
-  targetConfirmation = game.settings.get("midi-qol", "TargetConfirmation");
+  //@ts-expect-error
+  targetConfirmation = game.settings?.get("midi-qol", "TargetConfirmation");
   if (configSettings.griddedGridless === undefined) configSettings.griddedGridless = false;
   if (configSettings.gridlessFudge === undefined) configSettings.gridlessFudge = 0;
   if (configSettings.concentrationIncapacitatedConditionCheck === undefined) configSettings.concentrationIncapacitatedConditionCheck = false;
   if (configSettings.activityNamePrefix === undefined) configSettings.activityNamePrefix = true;
-  const blfxActive = game.modules.get("boss-loot-assets-premium")?.active || game.modules.get("boss-loot-assets-free")?.active;
+  const blfxActive = game.modules?.get("boss-loot-assets-premium")?.active || game.modules?.get("boss-loot-assets-free")?.active;
   if (blfxActive) {
     if (configSettings.activityNamePrefix === true) {
       TroubleShooter.recordError({}, "Boss Loot FX is active - disabling activity name prefix");
@@ -588,7 +616,6 @@ export let fetchParams = () => {
 
   setDebugLevel(debugText);
 
-  //@ts-expect-error
   if (configSettings.concentrationAutomation && game.user === game.users?.activeGM) {
     Hooks.once("ready", () => {
       if (configSettings.concentrationAutomation) {
@@ -596,8 +623,10 @@ export let fetchParams = () => {
         ui.notifications?.warn(`Midi concentration automation is deprecated in favour of ${game.system.title} concentration checking - settings updated to use ${game.system.id} concentration`, { permanent: true })
       };
       configSettings.concentrationAutomation = false;
-      game.settings.set(game.system.id, "disableConcentration", false);
-      game.settings.set("midi-qol", "ConfigSettings", configSettings)
+  //@ts-expect-error
+  game.settings?.set(gameSystemId(), "disableConcentration", false);
+  //@ts-expect-error
+  game.settings?.set("midi-qol", "ConfigSettings", configSettings)
     });
   }
   Hooks.callAll("midi-qol.ConfigSettingsChanged");
@@ -696,19 +725,24 @@ const settings = [
 ];
 
 export function readySettingsSetup() {
-  if (game.settings.get("midi-qol", "CriticalDamage") === "none") {
+  //@ts-expect-error
+  if (game.settings?.get("midi-qol", "CriticalDamage") === "none") {
     criticalDamage = "default;"
-    game.settings.set("midi-qol", "CriticalDamage", "default");
+  //@ts-expect-error
+  game.settings?.set("midi-qol", "CriticalDamage", "default");
   }
-  if (game.settings.get("midi-qol", "CriticalDamageGM") === "none") {
+  //@ts-expect-error
+  if (game.settings?.get("midi-qol", "CriticalDamageGM") === "none") {
     criticalDamageGM = criticalDamage;
-    game.settings.set("midi-qol", "CriticalDamageGM", criticalDamage);
+  //@ts-expect-error
+  game.settings?.set("midi-qol", "CriticalDamageGM", criticalDamage);
   }
 }
 export function registerSetupSettings() {
   const translations = geti18nTranslations();
 
-  game.settings.register("midi-qol", "CriticalDamageGM", {
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "CriticalDamageGM", {
     name: "midi-qol.CriticalDamageGM.Name",
     // hint: "midi-qol.CriticalDamageGM.Hint",
     scope: "world",
@@ -718,7 +752,8 @@ export function registerSetupSettings() {
     choices: geti18nOptions("CriticalDamageChoices"),
     onChange: fetchParams
   });
-  game.settings.register("midi-qol", "CriticalDamage", {
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "CriticalDamage", {
     name: "midi-qol.CriticalDamage.Name",
     hint: "midi-qol.CriticalDamage.Hint",
     scope: "world",
@@ -737,8 +772,8 @@ export const registerSettings = function () {
   settings.forEach((setting, i) => {
     let MODULE = "midi-qol"
     let options = {
-      name: game.i18n.localize(`${MODULE}.${setting.name}.Name`),
-      hint: game.i18n.localize(`${MODULE}.${setting.name}.Hint`),
+      name: i18n(`${MODULE}.${setting.name}.Name`),
+      hint: i18n(`${MODULE}.${setting.name}.Hint`),
       scope: setting.scope,
       config: (setting.config === undefined) ? true : setting.config,
       default: setting.default,
@@ -749,10 +784,12 @@ export const registerSettings = function () {
     };
     //@ts-ignore - too tedious to define undefined in each of the settings defs
     if (setting.choices) options.choices = setting.choices;
-    game.settings.register("midi-qol", setting.name, options);
+    //@ts-expect-error
+    game.settings?.register("midi-qol", setting.name, options);
   });
 
-  game.settings.register("midi-qol", "CriticalDamageGM", {
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "CriticalDamageGM", {
     name: "midi-qol.CriticalDamageGM.Name",
     // hint: "midi-qol.CriticalDamageGM.Hint",
     scope: "world",
@@ -762,7 +799,8 @@ export const registerSettings = function () {
     choices: geti18nOptions("CriticalDamageChoices"),
     onChange: fetchParams
   });
-  game.settings.register("midi-qol", "CriticalDamage", {
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "CriticalDamage", {
     name: "midi-qol.CriticalDamage.Name",
     hint: "midi-qol.CriticalDamage.Hint",
     scope: "world",
@@ -774,7 +812,8 @@ export const registerSettings = function () {
   });
 
 
-  game.settings.register("midi-qol", "AddChatDamageButtons", {
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "AddChatDamageButtons", {
     name: "midi-qol.AddChatDamageButtons.Name",
     hint: "midi-qol.AddChatDamageButtons.Hint",
     scope: "world",
@@ -785,7 +824,8 @@ export const registerSettings = function () {
     onChange: fetchParams
   });
 
-  game.settings.register("midi-qol", "ColoredBorders",
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "ColoredBorders",
     {
       name: "midi-qol.ColoredBorders.Name",
       hint: "midi-qol.ColoredBorders.Hint",
@@ -797,7 +837,8 @@ export const registerSettings = function () {
       onChange: fetchParams
     });
 
-  game.settings.register("midi-qol", "TargetConfirmation",
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "TargetConfirmation",
     {
       name: "midi-qol.TargetConfirmation.Name",
       hint: "midi-qol.TargetConfirmation.Hint",
@@ -808,7 +849,8 @@ export const registerSettings = function () {
       onChange: fetchParams
     });
 
-  game.settings.register("midi-qol", "AutoRemoveTargets", {
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "AutoRemoveTargets", {
     name: "midi-qol.AutoRemoveTargets.Name",
     hint: "midi-qol.AutoRemoveTargets.Hint",
     scope: "client",
@@ -818,7 +860,7 @@ export const registerSettings = function () {
     choices: geti18nOptions("AutoRemoveTargetsOptions"),
     onChange: fetchParams
   });
-  game.settings.registerMenu("midi-qol", "midi-qol", {
+  game.settings?.registerMenu("midi-qol", "midi-qol", {
     name: i18n("midi-qol.config"),
     label: "midi-qol.WorkflowSettings",
     hint: i18n("midi-qol.Hint"),
@@ -827,16 +869,17 @@ export const registerSettings = function () {
     restricted: true
   });
 
-  game.settings.registerMenu("midi-qol", "TargetConfirmationConfig", {
+  game.settings?.registerMenu("midi-qol", "TargetConfirmationConfig", {
     name: i18n("midi-qol.TargetConfirmationConfig.Name"),
     label: i18n("midi-qol.TargetConfirmationConfig.Name"),
     hint: i18n("midi-qol.TargetConfirmationConfig.Hint"),
     icon: "fas fa-dice-d20",
+    //@ts-expect-error
     type: TargetConfirmationConfig,
     restricted: false
   });
 
-  game.settings.registerMenu("midi-qol", "midi-qol-sounds", {
+  game.settings?.registerMenu("midi-qol", "midi-qol-sounds", {
     name: i18n("midi-qol.SoundSettings.Name"),
     label: "midi-qol.SoundSettings.Label",
     hint: i18n("midi-qol.SoundSettings.Hint"),
@@ -845,18 +888,19 @@ export const registerSettings = function () {
     restricted: true
   });
 
-  game.settings.register("midi-qol", "playerControlsInvisibleTokens", {
-    name: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Name"),
-    hint: game.i18n.localize("midi-qol.playerControlsInvisibleTokens.Hint"),
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "playerControlsInvisibleTokens", {
+    name: i18n("midi-qol.playerControlsInvisibleTokens.Name"),
+    hint: i18n("midi-qol.playerControlsInvisibleTokens.Hint"),
     scope: "world",
     default: false,
     config: true,
     type: Boolean,
-    //@ts-ignore v10
     requiresReload: true
   });
 
-  game.settings.register("midi-qol", "DebounceInterval", {
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "DebounceInterval", {
     name: "Chat Message Cache Time (ms)",
     hint: "Chat message updates will only happen this often",
     scope: "world",
@@ -866,7 +910,8 @@ export const registerSettings = function () {
     onChange: fetchParams
   });
 
-  game.settings.register("midi-qol", "Debug", {
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "Debug", {
     name: "midi-qol.Debug.Name",
     hint: "midi-qol.Debug.Hint",
     scope: "world",
@@ -877,7 +922,8 @@ export const registerSettings = function () {
     onChange: fetchParams
   });
 
-  game.settings.register("midi-qol", "debugCallTiming", {
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "debugCallTiming", {
     name: "midi-qol.debugCallTiming.Name",
     hint: "midi-qol.debugCallTiming.Hint",
     scope: "world",
@@ -887,7 +933,8 @@ export const registerSettings = function () {
     onChange: fetchParams
   });
 
-  game.settings.register("midi-qol", "notificationVersion", {
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "notificationVersion", {
     name: "",
     hint: "",
     scope: "world",
@@ -896,7 +943,8 @@ export const registerSettings = function () {
     config: false,
   });
 
-  game.settings.register("midi-qol", "splashWarnings", {
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "splashWarnings", {
     name: "",
     hint: "",
     scope: "world",
@@ -905,7 +953,7 @@ export const registerSettings = function () {
     default: true
   })
 
-  game.settings.registerMenu("midi-qol", "troubleShooter", {
+  game.settings?.registerMenu("midi-qol", "troubleShooter", {
     name: i18n("midi-qol.TroubleShooter.Name"),
     label: "midi-qol.TroubleShooter.Label",
     hint: i18n("midi-qol.TroubleShooter.Hint"),
@@ -914,14 +962,16 @@ export const registerSettings = function () {
     restricted: false
   });
 
-  game.settings.register("midi-qol", "last-run-version", {
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "last-run-version", {
     type: String,
     config: false,
     default: "0.0.0",
     //@ts-ignore v10
     requiresReload: true
   });
-  game.settings.register("midi-qol", "instanceId", {
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "instanceId", {
     type: String,
     config: false,
     default: "",
@@ -934,8 +984,9 @@ export function disableWorkflowAutomation() {
   enableWorkflow = false;
 }
 
-export function safeGetGameSetting(moduleName, settingName): any | undefined {
-  if (game.settings.settings.get(`${moduleName}.${settingName}`))
-    return game.settings.get(moduleName, settingName);
+export function safeGetGameSetting(moduleName: string, settingName: string): any | undefined {
+  if (game.settings?.settings.get(`${moduleName}.${settingName}`))
+  //@ts-expect-error
+    return game.settings?.get(moduleName, settingName);
   else return undefined;
 }

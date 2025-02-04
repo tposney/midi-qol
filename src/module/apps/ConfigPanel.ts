@@ -1,6 +1,6 @@
 import { criticalDamage, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow } from "../settings.js"
 import { configSettings } from "../settings.js"
-import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log, GameSystemConfig } from "../../midi-qol.js";
+import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log, GameSystemConfig, gameUser } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
 import { get } from "jquery";
 
@@ -10,7 +10,7 @@ export class ConfigPanel extends FormApplication {
   configHookId: number | undefined;
   static get defaultOptions(): any {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      title: game.i18n.localize("midi-qol.ConfigTitle"),
+      title: i18n("midi-qol.ConfigTitle"),
       template: "modules/midi-qol/templates/config.html",
       id: "midi-qol-settings",
       width: 800,
@@ -29,28 +29,28 @@ export class ConfigPanel extends FormApplication {
   }
 
   get title() {
-    return i18n("midi-qol.ConfigTitle")
+    return i18n("midi-qol.ConfigTitle") ?? "Midi-QOL Configuration";
   }
 
   async getData(options: any): Promise<any> {
     if (!enableWorkflow) {
       ui.notifications?.error("Workflow automation is not enabled")
     }
-    let wallsBlockRangeOptions = foundry.utils.duplicate(geti18nOptions("WallsBlockRangeOptionsNew"));
-    let CoverCalculationOptions = foundry.utils.duplicate(geti18nOptions("CoverCalculationOptions"));
+    let wallsBlockRangeOptions: any = foundry.utils.duplicate(geti18nOptions("WallsBlockRangeOptionsNew"));
+    let CoverCalculationOptions: any = foundry.utils.duplicate(geti18nOptions("CoverCalculationOptions"));
     [{ id: "levelsautocover", name: "'Levels Auto Cover'" }, { id: "simbuls-cover-calculator", name: "'Simbuls Cover Calculator'" }, { id: "tokencover", name: "Alternative Token Cover" }].forEach(module => {
       if (!installedModules.get(module.id)) {
-        wallsBlockRangeOptions[module.id] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
-        CoverCalculationOptions[module.id] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+        wallsBlockRangeOptions[module.id] += ` - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+        CoverCalculationOptions[module.id] += ` - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
       }
     });
     if (!installedModules.get("levels")) {
-      wallsBlockRangeOptions["centerLevels"] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Levels" })}`;
+      wallsBlockRangeOptions["centerLevels"] += ` - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Levels" })}`;
     }
-    let HiddenAdvantageOptions = foundry.utils.duplicate(geti18nOptions("HiddenAdvantageOptions"));
+    let HiddenAdvantageOptions: any = foundry.utils.duplicate(geti18nOptions("HiddenAdvantageOptions"));
     [{ id: "perceptive", name: "Perceptive" }].forEach(module => {
       if (!installedModules.get(module.id)) {
-        HiddenAdvantageOptions[module.id] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+        HiddenAdvantageOptions[module.id] += ` - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
       }
     });
     let quickSettingsOptions = {};
@@ -63,29 +63,28 @@ export class ConfigPanel extends FormApplication {
     */
     const AddWoundedOptions = foundry.utils.duplicate(geti18nOptions("AddDeadOptions"));
     delete AddWoundedOptions["none"];
-    let rollNPCSavesOptions = foundry.utils.duplicate(geti18nOptions("rollNPCSavesOptions"));
+    let rollNPCSavesOptions: any = foundry.utils.duplicate(geti18nOptions("rollNPCSavesOptions"));
     for (let key of Object.keys(rollNPCSavesOptions)) {
       switch (key) {
         case "mtb":
-          if (!installedModules.get("monks-tokenbar")) rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Monks Token Bar" })}`;
+          if (!installedModules.get("monks-tokenbar")) rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Monks Token Bar" })}`;
           break;
         case "rer":
-          if (!installedModules.get("epic-rolls-5e")) rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
+          if (!installedModules.get("epic-rolls-5e")) rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
       }
     }
-    let playerRollSavesOptions = foundry.utils.duplicate(geti18nOptions("playerRollSavesOptions"));
+    let playerRollSavesOptions: any = foundry.utils.duplicate(geti18nOptions("playerRollSavesOptions"));
     for (let key of Object.keys(playerRollSavesOptions)) {
       switch (key) {
         case "mtb":
-          if (!installedModules.get("monks-tokenbar")) playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Monks Token Bar" })}`;
+          if (!installedModules.get("monks-tokenbar")) playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Monks Token Bar" })}`;
           break;
         case "rer":
-          if (!installedModules.get("epic-rolls-5e")) playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
+          if (!installedModules.get("epic-rolls-5e")) playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
       }
     };
     
    let statusEffectList = CONFIG.statusEffects.map((se) => {
-      //@ts-expect-error
        let name = i18n(se.name ?? se.label); 
        if (se.id.startsWith("Convenient Effect")) name = `${name} (CE)`; 
        return { id: se.id, name: name } });
@@ -256,7 +255,8 @@ export class ConfigPanel extends FormApplication {
     formData.itemTypeList = configSettings.itemTypeList;
     let newSettings = foundry.utils.mergeObject(configSettings, formData, { overwrite: true, inplace: false })
     // const newSettings = foundry.utils.mergeObject(configSettings, expand, {overwrite: true})
-    if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", newSettings);
+    //@ts-expect-error
+    if (gameUser().can("SETTINGS_MODIFY")) game.settings?.set("midi-qol", "ConfigSettings", newSettings);
   }
 }
 
@@ -380,7 +380,7 @@ function showDiffs(current: any, changed: any, flavor: string = "", title: strin
       name = key[2].toUpperCase() + key.substring(3);
     else name = key[0].toUpperCase() + key.substring(1);
     let longName = i18n("midi-qol." + name + ".Name");
-    if (longName.startsWith("midi-qol")) longName = name;
+    if (longName?.startsWith("midi-qol")) longName = name;
     debug("Show config changes: Name is ", name, key, key.startsWith("gm") ? "GM" : "", i18n(`midi-qol.${name + ".Name"}`))
     let currentVal = current[key];
     let changedVal = changed[key];
@@ -582,7 +582,8 @@ let quickSettingsDetails: any = {
       singleConcentrationRoll: true,
     },
     codeChecks: (current, settings) => {
-      game.settings.set(game.system.id, "disableConcentation", false);
+      //@ts-expect-error
+      game.settings?.set(game.system?.id, "disableConcentation", false);
     }
   },
   NoDamageApplication: {
@@ -592,7 +593,8 @@ let quickSettingsDetails: any = {
       autoApplyDamage: "noCard"
     },
     codeChecks: (current, settings) => {
-      game.settings.set("midi-qol", "AddChatDamageButtons", "gm");
+      //@ts-expect-error
+      game.settings?.set("midi-qol", "AddChatDamageButtons", "gm");
     }
   },
   DisableConcentration: {
@@ -603,7 +605,8 @@ let quickSettingsDetails: any = {
       singleConcentrationRoll: false,
     },
     codeChecks: (current, settings) => {
-      game.settings.set(game.system.id, "disableConcentation", true);
+      //@ts-expect-error
+      game.settings?.set(game.system?.id, "disableConcentation", true);
     }
   },
 
@@ -654,7 +657,8 @@ export async function applySettings(key: string) {
     if (config.codeChecks) config.codeChecks(configSettings, settingsToApply)
     if (await showDiffs(configSettings, settingsToApply, "", config.shortDescription)) {
       settingsToApply = foundry.utils.mergeObject(configSettings, settingsToApply, { overwrite: true, inplace: true });
-      if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", settingsToApply);
+      //@ts-expect-error
+      if (game.user?.can("SETTINGS_MODIFY")) game.settings?.set("midi-qol", "ConfigSettings", settingsToApply);
       return true;
     }
   } else if (config.fileName) {

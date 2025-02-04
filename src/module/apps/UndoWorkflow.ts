@@ -1,4 +1,4 @@
-import { i18n } from "../../midi-qol.js";
+import { gameUser, i18n } from "../../midi-qol.js";
 import { configSettings } from "../settings.js";
 import { removeMostRecentWorkflow, undoDataQueue, undoMostRecentWorkflow } from "../undo.js";
 
@@ -15,6 +15,7 @@ export class UndoWorkflow extends FormApplication {
     this.undoRemvoedHookId = Hooks.on("midi-qol.removeUndoEntry", this.render.bind(this));
     if (!configSettings.undoWorkflow) {
       configSettings.undoWorkflow = true;
+      //@ts-expect-error
       game.settings.set("midi-qol", "ConfigSettings", configSettings);
       ui.notifications?.warn("Undo Workflow enabled");
     }
@@ -41,16 +42,16 @@ export class UndoWorkflow extends FormApplication {
 
   static get defaultOptions() {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      title: game.i18n.localize("midi-qol.UndoWorkflow.title"),
+      title: game.i18n?.localize("midi-qol.UndoWorkflow.title") ?? "Undo Workflow",
       template: "modules/midi-qol/templates/undo-workflow.html",
       id: "midi-qol-undo-workflow",
-      width: "400",
-      height: "700",
+      width: 400,
+      height: 700,
       resizable: true,
     })
   }
   get title() {
-    return i18n("midi-qol.UndoWorkflow.title");
+    return i18n("midi-qol.UndoWorkflow.title") ?? "Undow Workflow";
   }
 
   async close(options = {}) {
@@ -71,7 +72,7 @@ export class UndoWorkflow extends FormApplication {
 }
 
 export function showUndoWorkflowApp() {
-  if (game.user?.isGM) {
+  if (gameUser()?.isGM) {
     new UndoWorkflow({}).render(true, { focus: true })
   } else {
     ui.notifications?.warn("midi-qol.UndowWorkflow.GMOnly")

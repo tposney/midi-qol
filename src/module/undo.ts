@@ -1,10 +1,9 @@
 
-import { debug, debugEnabled, error, log, warn } from "../midi-qol.js";
+import { debug, debugEnabled, error, gameUser, log, warn } from "../midi-qol.js";
 import { socketlibSocket, untimedExecuteAsGM } from "./GMAction.js";
 import { configSettings } from "./settings.js";
-import { installedModules } from "./setupModules.js";
 import { busyWait } from "./tests/setupTest.js";
-import { MQfromUuidSync, getConcentrationEffect, isReactionItem } from "./utils.js";
+import { MQfromUuidSync, getConcentrationEffect, getTokenDocument, isReactionItem } from "./utils.js";
 import { Workflow } from "./Workflow.js";
 
 var dae;
@@ -58,7 +57,7 @@ export function _queueUndoDataDirect(undoDataDef) {
   undoData.itemName = undoDataDef.itemName;
   undoData.userName = undoDataDef.userName;
   undoData.allTargets = undoDataDef.targets ?? new Collection();
-  undoData.serverTime = game.time.serverTime;
+  undoData.serverTime = game.time?.serverTime;
   undoData.templateUuids = undoDataDef.templateUuids ?? [];
   undoData.isReaction = undoDataDef.isReaction;
 
@@ -78,11 +77,11 @@ export async function saveUndoData(workflow: Workflow): Promise<boolean> {
   if (!configSettings.undoWorkflow) return true;
   workflow.undoData = {};
   workflow.undoData.id = workflow.id;
-  workflow.undoData.userId = game.user?.id;
+  workflow.undoData.userId = gameUser().id;
   workflow.undoData.itemName = workflow.item?.name;
   workflow.undoData.itemUuid = workflow.item?.uuid;
-  workflow.undoData.userName = game.user?.name;
-  workflow.undoData.userId = game.user?.id;
+  workflow.undoData.userName = gameUser().name;
+  workflow.undoData.userId = gameUser().id;
   workflow.undoData.tokendocUuid = workflow.token?.uuid ?? workflow.token?.document.uuid;
   workflow.undoData.actorUuid = workflow.actor?.uuid;
   workflow.undoData.actorName = workflow.actor?.name;
@@ -121,7 +120,6 @@ export function startUndoWorkflow(undoData: any): boolean {
   undoData.allTargets = new Collection; // every token referenced by the workflow
   const concentrationEffect = getConcentrationEffect(actor, undoData.itemUuid);
   if (concentrationEffect) {
-    //@ts-expect-error
     for (let dependent of concentrationEffect.getDependents()) {
       let token;
       if (dependent instanceof ActiveEffect) dependent = dependent.parent;
@@ -161,11 +159,11 @@ export function updateUndoChatCardUuids(data) {
 export async function saveTargetsUndoData(workflow: Workflow) {
   workflow.undoData.targets = [];
   workflow.targets.forEach(t => {
-    let tokendoc: TokenDocument = (t instanceof TokenDocument) ? t : t.document;
-    if (tokendoc.actor?.uuid === workflow.actor.uuid) return;
-    workflow.undoData.targets.push({ tokenUuid: tokendoc.uuid, actorUuid: tokendoc.actor?.uuid });
+    let tokendoc: TokenDocument | undefined = getTokenDocument(t);
+    if ((tokendoc?.actor as unknown as Actor)?.uuid === workflow.actor.uuid) return;
+    workflow.undoData.targets.push({ tokenUuid: tokendoc?.uuid, actorUuid: (tokendoc?.actor as unknown as Actor)?.uuid });
   });
-  workflow.undoData.serverTime = game.time.serverTime;
+  workflow.undoData.serverTime = game.time?.serverTime;
   workflow.undoData.itemCardId = workflow.itemCardId;
   workflow.undoData.itemCardUuid = workflow.itemCardUuid;
   if (workflow.templateUuid) workflow.undoData.templateUuids.push(workflow.templateUuid);
@@ -440,7 +438,6 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
 
   actorChanges = actorData ? getChanges(actor.toObject(true), actorData) : {};
   if (debugEnabled > 0) warn("undoSingleTokenActor | Actor data ", actor.name, actorData, actorChanges);
-  //@ts-expect-error isEmpty
   if (!foundry.utils.isEmpty(actorChanges)) {
     delete actorChanges.items;
     delete actorChanges.effects;
@@ -450,7 +447,6 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
     tokenChanges = tokenData ? getChanges(tokendoc.toObject(true), tokenData) : {};
     delete tokenChanges.actorData;
     delete tokenChanges.delta;
-    //@ts-expect-error isEmpty
     if (!foundry.utils.isEmpty(tokenChanges)) {
       await tokendoc.update(tokenChanges, { noConcentrationCheck: true })
     }
@@ -458,14 +454,12 @@ async function undoSingleTokenActor({ tokenUuid, actorUuid, actorData, tokenData
 }
 
 export async function removeChatCard(chatCard: ChatMessage | undefined) {
-  //@ts-expect-error
   if (!chatCard || !chatCard.content) return;
   const shouldDelete = configSettings.undoChatColor === "Delete";
   if (shouldDelete) {
     if (debugEnabled > 1) debug("Deleting chat card ", chatCard.id, chatCard.uuid);
     return await chatCard.delete();
   }
-  //@ts-expect-error
   return await chatCard.update({ content: `<div style="background-color: ${configSettings.undoChatColor};"> ${chatCard.content}</div>` });
 }
 

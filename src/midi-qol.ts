@@ -18,6 +18,33 @@ import { TroubleShooter } from './module/apps/TroubleShooter.js';
 import { TargetConfirmationDialog } from './module/apps/TargetConfirmation.js';
 import { MidiAttackActivity, setupAttackActivity } from './module/activities/AttackActivity.js';
 
+export function getGame(): Game | undefined {
+  return game as Game;
+}
+
+export function gameUsers(): Users {
+  return game.users as Users;
+}
+export function gameUser(id?: string | undefined): User {
+  if (!id) return game.user as unknown as User;
+  else return game.users.get(id) as unknown as User;
+}
+
+export function gameSystemId() : string {
+  //@ts-expect-error
+  return (game.system?.id ?? "dnd5e") as string;
+}
+export function getCanvas(): Canvas | undefined {
+  if (!canvas || !canvas.scene) {
+    error("Canvas/Scene not ready - roll automation will not function");
+    return undefined;
+  }
+  return canvas;
+}
+
+export function gameCombat(): Combat | undefined {
+  return game.combat as unknown as Combat;
+}
 
 export let debugEnabled = 0;
 export let debugCallTiming: any = false;
@@ -30,45 +57,27 @@ export let timelog = (...args) => warn("midi-qol | ", Date.now(), ...args);
 export var levelsAPI;
 export var allDamageTypes;
 export const MODULE_ID = "midi-qol";
-//@ts-expect-error
 export const ArrayField = foundry.data.fields.ArrayField;
-//@ts-expect-error
 export const ObjectField = foundry.data.fields.ObjectField
-//@ts-expect-error
 export const BooleanField = foundry.data.fields.BooleanField;
-//@ts-expect-error
 export const NumberField = foundry.data.fields.NumberField;
-//@ts-expect-error
 export const StringField = foundry.data.fields.StringField;
-//@ts-expect-error
 export const SchemaField = foundry.data.fields.SchemaField;
 export var isdndv4 = false;
 
-declare global {
-  interface LenientGlobalVariableTypes {
-    game: any; // the type doesn't matter
-  }
-}
-export function getCanvas(): Canvas | undefined {
-  if (!canvas || !canvas.scene) {
-    error("Canvas/Scene not ready - roll automation will not function");
-    return undefined;
-  }
-  return canvas;
-}
 
 export let i18n = key => {
-  return game.i18n.localize(key);
+  return getGame()?.i18n?.localize(key);
 };
 export function i18nSystem(key) {
-  const keyHeader = game.system.id.toUpperCase();
+  const keyHeader = gameSystemId().toUpperCase();
   return i18n(`${keyHeader}.${key}`);
 }
 export let i18nFormat = (key, data = {}) => {
-  return game.i18n.format(key, data);
+  return game.i18n?.format(key, data);
 }
 export function geti18nOptions(key) {
-  let translation: any = game.i18n.translations[MODULE_ID] ?? {};
+  let translation: any = game.i18n?.translations[MODULE_ID] ?? {};
   //@ts-ignore _fallback not accessible
   let fallback: any = game.i18n._fallback[MODULE_ID] ?? {};
   fallback = (fallback instanceof String) ? fallback : (foundry.utils.getProperty(fallback, key) ?? {});
@@ -79,7 +88,7 @@ export function geti18nOptions(key) {
 }
 export function geti18nTranslations() {
   // @ts-expect-error _fallback
-  return foundry.utils.mergeObject(game.i18n._fallback[MODULE_ID] ?? {}, game.i18n.translations[MODULE_ID] ?? {});
+  return foundry.utils.mergeObject(game.i18n?._fallback[MODULE_ID] ?? {}, game.i18n.translations[MODULE_ID] ?? {});
 }
 
 export function getStaticID(id: string): string {
@@ -92,7 +101,8 @@ export let setDebugLevel = (debugText: string) => {
   debugEnabled = { "none": 0, "warn": 1, "debug": 2, "all": 3 }[debugText] || 0;
   // 0 = none, warnings = 1, debug = 2, all = 3
   if (debugEnabled >= 3) CONFIG.debug.hooks = true;
-  debugCallTiming = game.settings.get(MODULE_ID, "debugCallTiming") ?? false;
+  //@ts-expect-error
+  debugCallTiming = game.settings?.get(MODULE_ID, "debugCallTiming") ?? false;
 }
 
 export let noDamageSaves: string[] = [];
@@ -115,9 +125,7 @@ export let systemConcentrationId;
 export let midiReactionEffect;
 export let midiBonusActionEffect;
 
-//@ts-expect-error
 export const NumericTerm = foundry.dice.terms.NumericTerm;
-
 export const MESSAGETYPES = {
   HITS: 1,
   SAVES: 2,
@@ -141,7 +149,6 @@ Hooks.once("levelsReady", function () {
 export let systemString = "DND5E"
 export let MQDamageRollTypes = ["defaultDamage", "otherDamage", "bonusDamage"];
 Hooks.once("init", () => {
-  //@ts-expect-error
   CONFIG.ChatMessage.documentClass = defineChatMessageMidiClass(CONFIG.ChatMessage.documentClass);
 });
 globalThis.MidiQOL = { checkIncapacitated };
@@ -184,19 +191,26 @@ Hooks.once('init', async function () {
     setupMidiStatusEffects();
   });
   addConfigOptions();
+  //@ts-expect-error
+  game.system.config.areaTargetTypes["emanationNoTemplate"] = { 
+    label: i18n("midi-qol.emanationNoTemplate"), 
+    template: "rect", 
+    standard: true, 
+    counted: "midi-qol.emanationTemplate.counted"
+  };
+
 
   //@ts-expect-error
   if (game.release.generation < 12 && !Math.clamp) Math.clamp = Math.clamped;
 
-  GameSystemConfig.damageTypes["none"] = { label: i18n("midi-qol.noType"), icon: `systems/${game.system.id}/icons/svg/trait-damage-immunities.svg` };
-  GameSystemConfig.damageTypes["midi-none"] = { label: i18n("midi-qol.midi-none"), icon: `systems/${game.system.id}/icons/svg/trait-damage-immunities.svg` };
-  SystemString = game.system.id.toUpperCase();
+  GameSystemConfig.damageTypes["none"] = { label: i18n("midi-qol.noType"), icon: `systems/${gameSystemId()}/icons/svg/trait-damage-immunities.svg` };
+  GameSystemConfig.damageTypes["midi-none"] = { label: i18n("midi-qol.midi-none"), icon: `systems/${gameSystemId()}/icons/svg/trait-damage-immunities.svg` };
+  SystemString = gameSystemId().toUpperCase();
   allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
-  if (game.system.id === "sw5e")
+  if (gameSystemId() === "sw5e")
     allAttackTypes = ["rwak", "mwak", "rpak", "mpak"];
   initHooks();
 
-  //@ts-expect-error
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;
 
   // globalThis.MidiQOL = { checkIncapacitated };
@@ -209,7 +223,7 @@ Hooks.once('init', async function () {
   // This seems to cause problems for localisation for the items compendium (at least for french)
   // Try a delay before doing this - hopefully allowing localisation to complete
   // If babele is installed then wait for it to be ready
-  if (game.modules.get("babele")?.active) {
+  if (game.modules?.get("babele")?.active) {
     Hooks.once("babele.ready", MidiSounds.getWeaponBaseTypes);
   } else {
     setTimeout(MidiSounds.getWeaponBaseTypes, 6000);
@@ -355,17 +369,17 @@ Hooks.on("dae.addSpecialDurations", daeSpecialDurations => {
     daeSpecialDurations["Reaction"] = i18n("dae.Reaction");
     daeSpecialDurations["Turn Action"] = i18n("dae.Turn Action");
     daeSpecialDurations["1Spell"] = i18n("dae.1Spell");
-    daeSpecialDurations["1Attack"] = game.i18n.format("dae.1Attack", { type: `${i18n("dae.spell")}/${i18n("dae.weapon")} ${i18n("dae.attack")}` });
-    daeSpecialDurations["1Hit"] = game.i18n.format("dae.1Hit", { type: `${i18n("dae.spell")}/${i18n("dae.weapon")}` });
+    daeSpecialDurations["1Attack"] = game.i18n?.format("dae.1Attack", { type: `${i18n("dae.spell")}/${i18n("dae.weapon")} ${i18n("dae.attack")}` });
+    daeSpecialDurations["1Hit"] = game.i18n?.format("dae.1Hit", { type: `${i18n("dae.spell")}/${i18n("dae.weapon")}` });
     daeSpecialDurations["1Critical"] = i18n("dae.1Critical");
     daeSpecialDurations["1Fumble"] = i18n("dae.1Fumble");
     //    daeSpecialDurations["1Hit"] = i18n("dae.1Hit");
     daeSpecialDurations["1Reaction"] = i18n("dae.1Reaction")
     let attackTypes = ["mwak", "rwak", "msak", "rsak"];
-    if (game.system.id === "sw5e") attackTypes = ["mwak", "rwak", "mpak", "rpak"];
+    if (gameSystemId() === "sw5e") attackTypes = ["mwak", "rwak", "mpak", "rpak"];
     attackTypes.forEach(at => {
-      daeSpecialDurations[`1Attack:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${game.i18n.format("dae.1Attack", { type: GameSystemConfig.itemActionTypes[at] })}`;
-      daeSpecialDurations[`1Hit:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${game.i18n.format("dae.1Hit", { type: GameSystemConfig.itemActionTypes[at] })}`;
+      daeSpecialDurations[`1Attack:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${game.i18n?.format("dae.1Attack", { type: GameSystemConfig.itemActionTypes[at] })}`;
+      daeSpecialDurations[`1Hit:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${game.i18n?.format("dae.1Hit", { type: GameSystemConfig.itemActionTypes[at] })}`;
     })
     daeSpecialDurations["DamageDealt"] = i18n("dae.DamageDealt");
     daeSpecialDurations["isAttacked"] = i18n("dae.isAttacked");
@@ -448,13 +462,9 @@ Hooks.once('setup', function () {
   savingThrowText = i18n("midi-qol.savingThrowText");
   savingThrowTextAlt = i18n("midi-qol.savingThrowTextAlt");
   MQdefaultDamageType = i18n("midi-qol.defaultDamageType");
-  MQItemMacroLabel = i18n("midi-qol.ItemMacroText");
-  if (MQItemMacroLabel === "midi-qol.ItemMacroText") MQItemMacroLabel = "ItemMacro";
-  MQActivityMacroLabel = i18n("midi-qol.ActivityMacroText");
-  if (MQItemMacroLabel === "midi-qol.ActiviotyMacroText") MQItemMacroLabel = "ActivityMacro";
-
-  MQDeferMacroLabel = i18n("midi-qol.DeferText");
-  if (MQDeferMacroLabel === "midi-qol.DeferText") MQDeferMacroLabel = "[Defer]";
+  MQItemMacroLabel = i18n("midi-qol.ItemMacroText") ?? "ItemMacro";
+  MQActivityMacroLabel = i18n("midi-qol.ActivityMacroText") ?? "ActivityMacro";
+  MQDeferMacroLabel = i18n("midi-qol.DeferText") ?? "[Defer]";
   setupSheetQol();
   createMidiMacros();
   setupMidiQOLApi();
@@ -463,10 +473,8 @@ Hooks.once('setup', function () {
 function addConfigOptions() {
 
   //@ts-expect-error
-  let config = game.system.config;
-  //@ts-expect-error
-  const systemVersion = game.system.version;
-  if (game.system.id === "dnd5e" || game.system.id === "n5e") {
+  let config = game.system?.config ?? {};
+  if (gameSystemId() === "dnd5e" || gameSystemId() === "n5e") {
     config.midiProperties = {};
     // Add additonal vision types? How to modify token properties doing this.
     // config.midiProperties["confirmTargets"] = i18n("midi-qol.confirmTargetsProp");
@@ -510,7 +518,7 @@ function addConfigOptions() {
     config.traits.di.configKey = "damageTypes";
     config.traits.dr.configKey = "damageTypes";
     config.traits.dv.configKey = "damageTypes";
-    if (!config.traits.da && game.system.id === "dnd5e") {
+    if (!config.traits.da && gameSystemId() === "dnd5e") {
       config.traits.da = {
         labels: { title: "Damage Absorption", localization: "midi-qol.DamageAbsorption" },
         icon: "systems/dnd5e/icons/svg/damageresistances.svg",
@@ -523,7 +531,7 @@ function addConfigOptions() {
     config.abilityActivationTypes["reactionpreattack"] = `${i18n(dnd5eReaction)} ${i18n("midi-qol.reactionPreAttack")}`;
     config.abilityActivationTypes["reactiondamage"] = `${i18n(dnd5eReaction)} ${i18n("midi-qol.reactionDamaged")}`;
     config.abilityActivationTypes["reactionmanual"] = `${i18n(dnd5eReaction)} ${i18n("midi-qol.reactionManual")}`;
-  } else if (game.system.id === "sw5e") { // sw5e
+  } else if (gameSystemId() === "sw5e") { // sw5e
     //@ts-expect-error
     config = CONFIG.SW5E;
     config.midiProperties = {};
@@ -614,7 +622,7 @@ Hooks.once('ready', function () {
 
   MidiSounds.midiSoundsReadyHooks();
 
-  if (game.system.id === "dnd5e") {
+  if (game.system && gameSystemId() === "dnd5e") {
     //@ts-expect-error
     game.system.config.characterFlags["spellSniper"] = {
       name: "Spell Sniper",
@@ -623,20 +631,27 @@ Hooks.once('ready', function () {
       type: Boolean
     };
     //@ts-expect-error
-    game.system.config.areaTargetTypes["emanationNoTemplate"] = { label: i18n("midi-qol.emanationNoTemplate"), template: "rect" };
+    game.system.config.areaTargetTypes["emanationNoTemplate"] = { 
+      label: i18n("midi-qol.emanationNoTemplate"), 
+      template: "rect", 
+      standard: true, 
+      counted: "midi-qol.emanationTemplate.counted"
+    };
 
-    if (game.user?.isGM) {
-      const instanceId = game.settings.get(MODULE_ID, "instanceId");
-      //@ts-expect-error instanceId
+    if (gameUser()?.isGM && game.settings) {
+      //@ts-expect-error
+      const instanceId = game.settings?.get(MODULE_ID, "instanceId");
       if ([undefined, ""].includes(instanceId)) {
+        //@ts-expect-error
         game.settings.set(MODULE_ID, "instanceId", foundry.utils.randomID());
       }
-      const oldVersion = game.settings.get(MODULE_ID, "last-run-version");
-      //@ts-expect-error version
-      const newVersion = game.modules.get(MODULE_ID)?.version;
       //@ts-expect-error
+      const oldVersion = game.settings.get(MODULE_ID, "last-run-version");
+      const newVersion = game.modules.get(MODULE_ID)?.version;
       if (foundry.utils.isNewerVersion(newVersion, oldVersion)) {
+        //@ts-expect-error
         console.warn(`midi-qol | instance ${game.settings.get(MODULE_ID, "instanceId")} version change from ${oldVersion} to ${newVersion}`);
+        //@ts-expect-error
         game.settings.set(MODULE_ID, "last-run-version", newVersion);
         // look at sending a new version has been installed.
       }
@@ -645,38 +660,37 @@ Hooks.once('ready', function () {
     Hooks.callAll("midi-qol.ready")
   }
 
-  if (game.user?.isGM) {
-    if (installedModules.get("levelsautocover") && configSettings.optionalRules.coverCalculation === "levelsautocover" && !game.settings.get("levelsautocover", "apiMode")) {
-      game.settings.set("levelsautocover", "apiMode", true)
-      if (game.user?.isGM)
-        ui.notifications?.warn("midi-qol | setting levels auto cover to api mode", { permanent: true })
-    } else if (installedModules.get("levelsautocover") && configSettings.optionalRules.coverCalculation !== "levelsautocover" && game.settings.get("levelsautocover", "apiMode")) {
-      ui.notifications?.warn("midi-qol | Levels Auto Cover is in API mode but midi is not using levels auto cover - you may wish to disable api mode", { permanent: true })
-    }
+  if (gameUser()?.isGM) {
+    // if (installedModules.get("levelsautocover") && configSettings.optionalRules.coverCalculation === "levelsautocover" && !game.settings.get("levelsautocover", "apiMode")) {
+    // I think this is no longer required game.settings.set("levelsautocover", "apiMode", true)
+    //  if (gameUser()?.isGM)
+    //    ui.notifications?.warn("midi-qol | setting levels auto cover to api mode", { permanent: true })
+    // } else if (installedModules.get("levelsautocover") && configSettings.optionalRules.coverCalculation !== "levelsautocover" && game.settings.get("levelsautocover", "apiMode")) {
+    //  ui.notifications?.warn("midi-qol | Levels Auto Cover is in API mode but midi is not using levels auto cover - you may wish to disable api mode", { permanent: true })
+    // }
   }
-  //@ts-ignore game.version
-  if (foundry.utils.isNewerVersion(game.version ? game.version : game.version, "0.8.9")) {
-    const noDamageSavesText: string = i18n("midi-qol.noDamageonSaveSpellsv9");
-    noDamageSaves = noDamageSavesText.split(",")?.map(s => s.trim()).map(s => cleanSpellName(s));
-  } else {
-    //@ts-ignore
-    noDamageSaves = i18n("midi-qol.noDamageonSaveSpells")?.map(name => cleanSpellName(name));
-  }
+
+  const noDamageSavesText: string = i18n("midi-qol.noDamageonSaveSpellsv9") ?? "No Damaage Save";
+  noDamageSaves = noDamageSavesText.split(",")?.map(s => s.trim()).map(s => cleanSpellName(s));
   checkModules();
-  if (game.user?.isGM && configSettings.gmLateTargeting !== "none") {
+  if (gameUser()?.isGM && configSettings.gmLateTargeting !== "none") {
     ui.notifications?.notify("Late Targeting has been replaced with Target Confirmation. Please update your settings", "info", { permanent: true });
     new TargetConfirmationConfig({}, {}).render(true);
     configSettings.gmLateTargeting = "none";
+    //@ts-expect-error
     game.settings.set(MODULE_ID, "ConfigSettings", configSettings)
   }
-  if (!game.user?.isGM && game.settings.get(MODULE_ID, "LateTargeting") !== "none") {
+  //@ts-expect-error
+  if (!gameUser()?.isGM && game.settings.get(MODULE_ID, "LateTargeting") !== "none") {
     ui.notifications?.notify("Late Targeting has been replaced with Target Confirmation. Please update your settings", "info", { permanent: true });
     new TargetConfirmationConfig({}, {}).render(true);
+    //@ts-expect-error
     game.settings.set(MODULE_ID, "LateTargeting", "none");
   }
   readyHooks();
   readyPatching();
 
+  //@ts-expect-error
   if (midiSoundSettingsBackup) game.settings.set(MODULE_ID, "MidiSoundSettings-backup", midiSoundSettingsBackup)
 
   // Make midi-qol targets hoverable
@@ -689,18 +703,15 @@ Hooks.once('ready', function () {
   });
 
   if (installedModules.get("betterrolls5e")) {
-    //@ts-ignore console:
     ui.notifications?.error("midi-qol automation disabled", { permanent: true, console: true })
-    //@ts-ignore console:
     ui.notifications?.error("Please make sure betterrolls5e is disabled", { permanent: true, console: true })
-    //@ts-ignore console:
     ui.notifications?.error("Until further notice better rolls is NOT compatible with midi-qol", { permanent: true, console: true })
     disableWorkflowAutomation();
     setTimeout(disableWorkflowAutomation, 2000)
   }
   Hooks.callAll("midi-qol.midiReady");
 
-  if (game.user?.isGM) { // need to improve the test
+  if (gameUser()?.isGM) { // need to improve the test
     const problems = TroubleShooter.collectTroubleShooterData().problems
     for (let problem of problems) {
       const message = `midi-qol ${problem.problemSummary} | Open TroubleShooter to fix`;
@@ -722,7 +733,6 @@ import { MidiCheckActivity, setupCheckActivity } from './module/activities/Check
 import { MidiHealActivity, setupHealActivity } from './module/activities/HealActivity.js';
 import { resolveTargetConfirmation, showItemInfo, templateTokens } from './module/activities/activityHelpers.js';
 import { MidiActivityMixin, setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
-import { field } from '@league-of-foundry-developers/foundry-vtt-types/src/foundry/common/data/fields.mjs.js';
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
 import { setupCastActivity } from './module/activities/CastActivity.js';
@@ -843,10 +853,9 @@ Hooks.on("monaco-editor.ready", (registerTypes) => {
 });// Backwards compatability
 function setupMidiQOLApi() {
 
-  //@ts-expect-error .detectionModes
   const detectionModes = CONFIG.Canvas.detectionModes;
   let InvisibleDisadvantageVisionModes = Object.keys(detectionModes)
-    .filter(dm => !detectionModes[dm].imprecise);
+    .filter(dm => detectionModes[dm].type === DetectionMode.DETECTION_TYPES.OTHER);
 
   let WallsBlockConditions = [
     "burrow"
@@ -1338,7 +1347,7 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.deathSave`);
   midiFlags.push(`flags.${MODULE_ID}.deathSaveBonus`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.deathSaveBonus`);
-  if (game.system.id === "dnd5e") {
+  if (gameSystemId() === "dnd5e") {
     // fix for translations
     ["vocal", "somatic", "material"].forEach(comp => {
       midiFlags.push(`flags.${MODULE_ID}.fail.spell.${comp.toLowerCase()}`);
@@ -1373,7 +1382,7 @@ function setupMidiFlags() {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.healing`);
     midiFlags.push(`flags.${MODULE_ID}.DR.temphp`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.temphp`);
-  } else if (game.system.id === "sw5e") {
+  } else if (gameSystemId() === "sw5e") {
     midiFlags.push(`flags.${MODULE_ID}.DR.all`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.all`);
     midiFlags.push(`flags.${MODULE_ID}.DR.final`);
@@ -1491,14 +1500,13 @@ const MQMacros = [
 ]
 export async function createMidiMacros() {
   const midiVersion = "11.0.9"
-  if (game?.user?.isGM) {
+  if (gameUser()?.isGM) {
     for (let macroSpec of MQMacros) {
       try {
         let existingMacros = game.macros?.filter(m => m.name === macroSpec.name) ?? [];
         if (existingMacros.length > 0) {
           for (let macro of existingMacros) {
             if (macroSpec.checkVersion
-              //@ts-expect-error .flags
               && !foundry.utils.isNewerVersion(macroSpec.version, (macro.flags["midi-version"] ?? "0.0.0")))
               continue; // already up to date
             await macro.update({
@@ -1511,7 +1519,7 @@ export async function createMidiMacros() {
             _id: null,
             name: macroSpec.name,
             type: "script",
-            author: game.user.id,
+            author: gameUser()?.id,
             img: 'icons/svg/dice-target.svg',
             scope: 'global',
             command: macroSpec.commandText,
@@ -1522,7 +1530,6 @@ export async function createMidiMacros() {
             },
             flags: { "midi-version": macroSpec.version ?? "midiVersion" }
           };
-          //@ts-expect-error
           await Macro.createDocuments([macroData]);
           log(`Macro ${macroData.name} created`);
         }
@@ -1545,7 +1552,6 @@ function midiOnerror(event: string | Event, source?: string | undefined, lineno?
 }
 
 export function setupMidiStatusEffects() {
-  //@ts-expect-error
   systemConcentrationId = CONFIG.specialStatusEffects.CONCENTRATING;
   //@ts-expect-error
   const imgSource = game.version < 12 ? "icon" : "img";
@@ -1555,12 +1561,10 @@ export function setupMidiStatusEffects() {
   }
   // Initialise these effects so that we don't need to make a raft of code aysnc only to fetch these
   if (configSettings.enforceBonusActions !== "none") {
-    //@ts-expect-error
     if (!CONFIG.statusEffects.find(e => e._id === getStaticID("bonusaction"))) {
       //@ts-expect-error
       CONFIG.statusEffects.push({ id: "bonusaction", _id: getStaticID("bonusaction"), name: i18n("midi-qol.bonusActionUsed"), changes: [{ key: "flags.midi-qol.actions.bonus", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: true }], [imgSource]: "modules/midi-qol/icons/bonus-action.svg", flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } } });
     }
-    //@ts-expect-error
     ActiveEffect.implementation.fromStatusEffect("bonusaction", { keepId: true }).then(effect => {
       midiBonusActionEffect = effect
       globalThis.MidiQOL.midiBonusActionEffect = effect;
@@ -1568,12 +1572,10 @@ export function setupMidiStatusEffects() {
   }
 
   if (configSettings.enforceReactions !== "none") {
-    //@ts-expect-error
     if (!CONFIG.statusEffects.find(e => e._id === getStaticID("reaction"))) {
       //@ts-expect-error
       CONFIG.statusEffects.push({ id: "reaction", _id: getStaticID("reaction"), name: i18n("midi-qol.reactionUsed"), changes: [{ key: "flags.midi-qol.actions.reaction", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: true }], [imgSource]: "modules/midi-qol/icons/reaction.svg", effectData: { transfer: false }, flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } } });
     }
-    //@ts-expect-error
     ActiveEffect.implementation.fromStatusEffect("reaction", { keepId: true }).then(effect => {
       midiReactionEffect = effect;
       globalThis.MidiQOL.midiReactionEffect = effect;

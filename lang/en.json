@@ -902,7 +902,9 @@
   "midi-qol.ConcentrationIncapacitatedConditionCheck.Hint": "Incapacitated, Dead,  Unconscious, Petrified, Paralysed and Stunned remove concentration",
   "midi-qol.AutoCompleteWorkflow.Name": "Autocomplete workflow if required",
   "midi-qol.AutoCompleteWorkflow.Hint": "Workflows will be marked as complete if rolled before completion, no extra rolls will be performed",
-  "midi-qol.emanationNoTemplate": "Emanation - No Template",
+  "midi-qol.emanationNoTemplate": "Emanation/Radius - No Template",
+  "midi-qol.emanationTemplate.counted.one": "Emanation No Template",
+  "midi-qol.emanationTemplate.counted.other": "Emanation No Template",
   "midi-qol.AddFakeDice.Name": "Add fake dice to GM Dice So Nice rolls",
   "midi-qol.MidiFieldsTab.Name": "Display Midi item fields in a separate tab",
   "midi-qol.UndoChatColor.Name": "Undo Chat Cards Color",
@@ -1018,7 +1020,7 @@
           "hint": "Roll the activity as if owned by..."
         },
         "otherActivityCompatible": {
-          "label": "Other Activity",
+          "label": "Other Activity Compatible",
           "hint": "Can be used as an other activity"
         },
         "ignoreTraits": {
@@ -1096,7 +1098,7 @@
         "hint": "Default ammunition to consume"
       },
       "otherActivityId": {
-        "label": "Other Activity",
+        "label": "Apply Other Activity",
         "hint": "Extra activity to preform 'other' damage"
       }
     }

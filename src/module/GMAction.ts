@@ -1,5 +1,5 @@
 import { checkRule, configSettings, safeGetGameSetting } from "./settings.js";
-import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
+import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming, debug, GameSystemConfig, MODULE_ID, gameUser } from "../midi-qol.js";
 import { canSense, completeItemUse, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, MQfromUuidSync, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUseV2, completeActivityUse } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { Workflow } from "./Workflow.js";
@@ -9,7 +9,7 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { installedModules } from "./setupModules.js";
 
 export var socketlibSocket: any = undefined;
-var traitList = { di: {}, dr: {}, dv: {}, dm: {}, da: {} };
+var traitList: any = { di: {}, dr: {}, dv: {}, dm: {}, da: {} };
 
 export let setupSocket = () => {
   socketlibSocket = globalThis.socketlib.registerModule(MODULE_ID);
@@ -78,7 +78,7 @@ export class SaferSocket {
     this.#_socketlibSocket = socketlibSocket;
   }
   canCall(handler) {
-    if (game.user?.isGM) return true;
+    if (gameUser().isGM) return true;
     switch (handler) {
       case "addDependent":
       case "applyEffects":
@@ -116,8 +116,8 @@ export class SaferSocket {
       case "updateEffects":
       case "_gmSetFlag":
       case "_gmUnsetFlag":
-        if (game.user?.isTrusted) return true;
-        ui.notifications?.warn(`midi-qol | user ${game.user?.name} must be a trusted player to call ${handler} and will be disabled in the future`);
+        if (gameUser().isTrusted) return true;
+        ui.notifications?.warn(`midi-qol | user ${gameUser().name} must be a trusted player to call ${handler} and will be disabled in the future`);
         return true; // TODO change this to false in the future.
 
 
@@ -205,9 +205,7 @@ async function cancelWorkflow(data: { workflowId: string, itemCardUuid: string }
 }
 
 async function confirmDamageRollComplete(data: { activityUuid: string, itemCardId: string, itemCardUuid: string }) {
-  //@ts-expect-error
   const itemCard = fromUuidSync(data.itemCardUuid);
-  //@ts-expect-error
   let activity = fromUuidSync(data.activityUuid);
   let workflow = Workflow.getWorkflow(data.activityUuid);
   if (!activity && itemCard) // no activity means it was a synthetic item's activity
@@ -234,9 +232,7 @@ async function confirmDamageRollComplete(data: { activityUuid: string, itemCardI
 }
 
 async function confirmDamageRollCompleteHit(data: { activityUuid: string, itemCardId: string, itemCardUuid: string }) {
-  //@ts-expect-error
   const itemCard = fromUuidSync(data.itemCardUuid);
-  //@ts-expect-error
   let activity = fromUuidSync(data.activityUuid);
   let workflow = Workflow.getWorkflow(data.activityUuid);
   if (!activity && itemCard) // no activity means it was a synthetic item's activity
@@ -259,7 +255,7 @@ async function confirmDamageRollCompleteHit(data: { activityUuid: string, itemCa
   }
   workflow.hitTargets = new Set(workflow.targets);
   workflow.hitTargetsEC = new Set();
-  const rollMode = game.settings.get("core", "rollMode");
+  const rollMode = safeGetGameSetting("core", "rollMode");
   workflow.isFumble = false;
   for (let hitDataKey in workflow.hitDisplayData) {
     workflow.hitDisplayData[hitDataKey].hitString = i18n("midi-qol.hits");
@@ -273,9 +269,7 @@ async function confirmDamageRollCompleteHit(data: { activityUuid: string, itemCa
 }
 
 async function confirmDamageRollCompleteMiss(data: { activityUuid: string, itemCardId: string, itemCardUuid: string }) {
-  //@ts-expect-error
   const itemCard = fromUuidSync(data.itemCardUuid);
-  //@ts-expect-error
   let activity = fromUuidSync(data.activityUuid);
   let workflow = Workflow.getWorkflow(data.activityUuid);
   if (!activity && itemCard) // no activity means it was a synthetic item's activity
@@ -290,7 +284,7 @@ async function confirmDamageRollCompleteMiss(data: { activityUuid: string, itemC
   if (workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0) {
     workflow.hitTargets = new Set();
     workflow.hitTargetsEC = new Set();
-    const rollMode = game.settings.get("core", "rollMode");
+    const rollMode = safeGetGameSetting("core", "rollMode");
     for (let hitDataKey in workflow.hitDisplayData) {
       workflow.hitDisplayData[hitDataKey].hitString = i18n("midi-qol.misses");
       if (configSettings.highlightSuccess) {
@@ -378,7 +372,7 @@ export function GMupdateEntityStats(data: { id: any; currentStats: any; }) {
 export async function timedExecuteAsGM(toDo: string, data: any) {
   if (!debugCallTiming) return untimedExecuteAsGM(toDo, data);
   const start = Date.now();
-  data.playerId = game.user?.id;
+  data.playerId = gameUser().id;
   const returnValue = await untimedExecuteAsGM(toDo, data);
   log(`executeAsGM: ${toDo} elapsed: ${Date.now() - start}ms`)
   return returnValue;
@@ -386,7 +380,7 @@ export async function timedExecuteAsGM(toDo: string, data: any) {
 
 export async function untimedExecuteAsGM(toDo: string, ...args) {
   if (!socketlibSocket) return undefined;
-  const myScene = game.user?.viewedScene;
+  const myScene = gameUser().viewedScene;
   const gmOnScene = game.users?.filter(u => u.active && u.isGM && u.viewedScene === myScene);
   if (!gmOnScene || gmOnScene.length === 0) return socketlibSocket.executeAsGM(toDo, ...args);
   else return socketlibSocket.executeAsUser(toDo, gmOnScene[0].id, ...args);
@@ -435,7 +429,6 @@ export async function _canSense(data: { tokenUuid, targetUuid }) {
       visionMode: token.document.sight.visionMode,
       color: globalThis.Color.from(token.document.sight.color),
       isPreview: !!token._original,
-      //@ts-expect-error specialStatusEffects
       blinded: token.document.hasStatusEffect(CONFIG.specialStatusEffects.BLIND)
     });
   }
@@ -502,9 +495,7 @@ async function _completeItemUseV2(data: {
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor, keepId: true });
   // prepare item data for socketed events
   ownedItem.prepareData();
-  //@ts-expect-error
   ownedItem.prepareFinalAttributes();
-  //@ts-expect-error
   ownedItem.applyActiveEffects();
   const workflow = await completeItemUseV2(ownedItem, config, dialog, message);
   if (data.config?.midiOptions?.workflowData) return workflow.getMacroData({ noWorkflowReference: true }); // can't return the workflow
@@ -522,9 +513,7 @@ async function _completeItemUse(data: {
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor, keepId: true });
   // prepare item data for socketed events
   ownedItem.prepareData();
-  //@ts-expect-error
   ownedItem.prepareFinalAttributes();
-  //@ts-expect-error
   ownedItem.applyActiveEffects();
   const workflow = await completeItemUse(ownedItem, config, options);
   if (data.options?.workflowData) return workflow.getMacroData({ noWorkflowReference: true }); // can't return the workflow
@@ -688,7 +677,7 @@ export function initGMActionSetup() {
 
 export async function createChatMessage(data: { chatData: any; }) {
   const messageData = foundry.utils.getProperty(data, "chatData.messageData") ?? {};
-  messageData.user = game.user?.id;
+  messageData.user = gameUser().id;
   return await ChatMessage.create(data.chatData);
 }
 
@@ -913,7 +902,6 @@ async function prepareDamageListItems(data: {
       let deltaTemp = amount > 0 ? Math.min(hp.temp, amount) : 0;
       // Since tempDamage represents the final change in tempHP - we can use it for calcs and it is ignored.
 
-      //@ts-expect-error
       let deltaHP = Math.clamp(amount - deltaTemp, -hp.damage, hp.value);
       if (hpDamage !== deltaHP) {
         error(`damage detail amount ${amount} !== hpDamage ${hpDamage}`, configSettings.useDamageDetail ? "ignoring hpDamage" : "using hpDamage");
@@ -1075,19 +1063,14 @@ async function createPlayerDamageCard(data: { damageList: any; autoApplyDamage: 
     const speaker: any = ChatMessage.getSpeaker();
     speaker.alias = data.sender;
     let chatData: any = {
-      user: game.user?.id,
-      speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: game.user?.id, actor: data.actorId },
+      user: gameUser().id,
+      speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: gameUser().id, actor: data.actorId },
       content: content,
       // whisper: ChatMessage.getWhisperRecipients("players").filter(u => u.active).map(u => u.id),
       flags: { "midiqol": { "undoDamage": prepareDamagelistToJSON(tokenIdList) } }
     };
-    //@ts-expect-error
-    if (game.release.generation < 12) {
-      chatData.type = CONST.CHAT_MESSAGE_TYPES.OTHER;
-    } else {
-      //@ts-expect-error
-      chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
-    }
+
+    chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
     if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? "", data.flagTags);
     chatCardUuid = (await ChatMessage.create(chatData))?.uuid;
   }
@@ -1119,22 +1102,16 @@ async function createGMReverseDamageCard(
   if (["yesCard", "noCard", "yesCardNPC", "yesCardMisses", "noCardMisses"].includes(data.autoApplyDamage)) {
     const content = await renderTemplate("modules/midi-qol/templates/damage-results.html", templateData);
     const speaker: any = ChatMessage.getSpeaker();
-    speaker.alias = game.user?.name;
+    speaker.alias = gameUser().name;
     let chatData: any = {
-      user: game.user?.id,
-      speaker: { scene: getCanvas()?.scene?.id, alias: game.user?.name, user: game.user?.id },
+      user: gameUser().id,
+      speaker: { scene: getCanvas()?.scene?.id, alias: gameUser().name, user: gameUser().id },
       content: content,
-      whisper: ChatMessage.getWhisperRecipients("GM").filter(u => u.active).map(u => u.id),
+      //@ts-expect-error
+      whisper: ChatMessage.getWhisperRecipients("GM").filter(u => (u as User).active).map(u => u.id),
       flags: { "midiqol": { "undoDamage": prepareDamagelistToJSON(tokenIdList) } }
     };
-
-    //@ts-expect-error
-    if (game.release.generation < 12) {
-      chatData.type = CONST.CHAT_MESSAGE_TYPES.OTHER;
-    } else {
-      //@ts-expect-error
-      chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
-    }
+    chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
     if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? "", data.flagTags);
     chatCardUuid = (await ChatMessage.create(chatData))?.uuid;
   }
@@ -1269,14 +1246,14 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
   let ray = new Ray(data.point, targetToken.center);
   let distance = data.distance / canvas.dimensions.distance * canvas.dimensions.size;
   let newCenter = ray.project(1 + distance / ray.distance);
-  newCenter = canvas.grid.getSnappedPosition(newCenter.x - targetToken.w / 2, newCenter.y - targetToken.h / 2, 1);
+  const M = CONST.GRID_SNAPPING_MODES;
+  newCenter = canvas.grid.getSnappedPoint({x: newCenter.x - targetToken.w / 2, y: newCenter.y - targetToken.h / 2}, {mode: M.CENTER});
 
   if (data.checkCollision) {
     //@ts-expect-error
     const testCollision = CONFIG.Canvas.polygonBackends.move.testCollision(targetToken.center, newCenter, { source: targetToken.document, type: "move", any: "closest" });
-    if (testCollision.length) {
-      const collisionPoint = { x: testCollision[0].x, y: testCollision[0].y };
-      //@ts-expect-error
+    if (testCollision && testCollision instanceof foundry.canvas.edges.PolygonVertex) {
+      const collisionPoint = { x: testCollision.x, y: testCollision.y };
       const getCenterCollisionPoint = canvas.grid.getCenterPoint(collisionPoint);
       newCenter = canvas.grid.getSnappedPosition(getCenterCollisionPoint.x - targetToken.w / 2, getCenterCollisionPoint.y - targetToken.h / 2, 1);
     }
@@ -1294,7 +1271,7 @@ export async function rollActionSave(data: any) {
         type: request,
         dc: saveDC,
         action: "rollRequest",
-        hideDC: !game.user?.isGM && !configSettings.displaySaveDC,
+        hideDC: !gameUser().isGM && !configSettings.displaySaveDC,
         format: "short",
         icon: true
       };
@@ -1319,7 +1296,6 @@ export async function rollActionSave(data: any) {
       };
       buttons[ability] = button;
     }
-    //@ts-expect-error
     if (!foundry.utils.isEmpty(buttons)) {
       buttons.No = {
         label: `<i class="fas fa-times"></i> ${i18n("No")}`,
@@ -1328,11 +1304,11 @@ export async function rollActionSave(data: any) {
         }
       }
       const id = `overtime-dialog-${foundry.utils.randomID()}`;
-      //@ts-expect-error
       await Dialog.wait({
         title,
         content: `<style>  #${id} .dialog-buttons { flex-direction: column;} </style> ${content}`,
         buttons,
+        //@ts-expect-error
         rejectClose: false,
         close: () => { return (null) }
       }, { "id": id });

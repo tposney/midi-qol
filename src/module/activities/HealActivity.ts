@@ -1,4 +1,4 @@
-import { debugEnabled, i18n, warn } from "../../midi-qol.js";
+import { debugEnabled, gameUser, i18n, warn } from "../../midi-qol.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
@@ -47,8 +47,8 @@ let defineMidiHealActivityClass = (ActivityClass: any) => {
 
     async rollDamage(config: any = {}, dialog: any = {}, message: any = {}) {
       config.midiOptions ??= {};
-      config.midiOptions.fastForwardHeal ??= game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward);
-      config.midiOptions.fastForwardDamage ??= game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward);
+      config.midiOptions.fastForwardHeal ??= gameUser()?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward);
+      config.midiOptions.fastForwardDamage ??= gameUser()?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward);
       return super.rollDamage(config, dialog, message);
     }
     

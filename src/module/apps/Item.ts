@@ -101,8 +101,7 @@ export function activateMacroListeners(app: Application, html) {
 
 async function _onDrop(ev) {
   ev.preventDefault();
-  //@ts-ignore
-  const data = TextEditor.getDragEventData(ev);
+  const data: any = TextEditor.getDragEventData(ev);
   if (data.uuid) {
     const entity: any = await fromUuid(data.uuid);
     if (entity instanceof Item)ev.target.value = `ItemMacro.${data.uuid}`;

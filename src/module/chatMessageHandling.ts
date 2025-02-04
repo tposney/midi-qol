@@ -1,10 +1,9 @@
-import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID } from "../midi-qol.js";
+import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID, gameUser } from "../midi-qol.js";
 import { DDBGameLogWorkflow, Workflow } from "./Workflow.js";
 import { nsaFlag, coloredBorders, configSettings, forceHideRoll, safeGetGameSetting } from "./settings.js";
 import { playerFor, playerForActor, doOverTimeEffect, isInCombat, MQfromUuidSync, isAutoFastDamage, isAutoFastAttack } from "./utils.js";
 import { socketlibSocket, untimedExecuteAsGM } from "./GMAction.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
-import { config } from "@league-of-foundry-developers/foundry-vtt-types/src/types/augments/simple-peer.js";
 export const MAESTRO_MODULE_NAME = "maestro";
 export const MODULE_LABEL = "Maestro";
 
@@ -17,16 +16,13 @@ export let colorChatMessageHandler = (message, html, data) => {
 
   if (actor) user = playerForActor(actor);
   if (!user) return true;
-  //@ts-expect-error .color not defined
   html[0].style.borderColor = user.color;
   const sender = html.find('.message-sender')[0];
   if (!sender) return;
   if (coloredBorders === "borderNamesBackground") {
     sender.style["text-shadow"] = `1px 1px 1px #FFFFFF`;
-    //@ts-expect-error .color not defined
     sender.style.backgroundColor = user.color;
   } else if (coloredBorders === "borderNamesText") {
-    //@ts-expect-error .color not defined
     sender.style.color = user.color;
     sender.style["text-shadow"] = `1px 1px 1px ${sender.style.color}`;
   }
@@ -60,7 +56,6 @@ export function checkOverTimeSaves(message, data, options, user) {
 
   try {
     let func = async (actor: Actor, rollFlags: any, roll: Roll) => {
-      //@ts-expect-error .changes v10
       for (let effect of actor.effects.filter(ef => ef.changes.some(change => change.key === "flags.midi-qol.OverTime"))) {
         await doOverTimeEffect(actor, effect, true, { saveToUse: roll, rollFlags: data.flags?.dnd5e?.roll, isActionSave: true })
       }
@@ -77,7 +72,7 @@ export function checkOverTimeSaves(message, data, options, user) {
 
 export let nsaMessageHandler = (message, data, ...args) => {
   if (!nsaFlag || !message.whisper || message.whisper.length === 0) return true;
-  let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u => u.active)?.map(u => u.id);
+  let gmIds = ChatMessage.getWhisperRecipients("GM").filter(u => (u as unknown as User).active)?.map(u => u.id);
   let currentIds = message.whisper.map(u => typeof (u) === "string" ? u : u.id);
   gmIds = gmIds.filter(id => !currentIds.includes(id));
   if (debugEnabled > 1) debug("nsa handler active GMs ", gmIds, " current ids ", currentIds, "extra gmIds ", gmIds)
@@ -89,8 +84,8 @@ let _highlighted: Token | null = null;
 
 let _onTargetHover = (event) => {
   event.preventDefault();
-  if (!canvas?.scene?.active) return;
-  const token: Token | undefined = canvas?.tokens?.get(event.currentTarget.dataset.id);
+  if (!(canvas?.scene as unknown as Scene)?.active) return;
+  const token: Token | undefined = canvas?.tokens?.get(event.currentTarget.dataset.id) as Token;
   if (token?.isVisible) {
     //@ts-expect-error _controlled, _onHoverIn
     if (!token?._controlled) token._onHoverIn(event);
@@ -106,7 +101,7 @@ let _onTargetHover = (event) => {
  */
 let _onTargetHoverOut = (event) => {
   event.preventDefault();
-  if (!canvas?.scene?.active) return;
+  if (!(canvas?.scene as unknown as Scene)?.active) return;
   //@ts-expect-error onHoverOut
   if (_highlighted) _highlighted._onHoverOut(event);
   _highlighted = null;
@@ -115,11 +110,10 @@ let _onTargetHoverOut = (event) => {
 let _onTargetSelect = (event) => {
   event.stopPropagation();
   event.preventDefault();
-  if (!canvas?.scene?.active) return;
-  const token = canvas.tokens?.get(event.currentTarget.dataset.id);
-  //@ts-expect-error
+  if (!(canvas?.scene as unknown as Scene)?.active) return;
+  const token: Token = canvas?.tokens?.get(event.currentTarget.dataset.id) as Token;
   if (token?.controlled) token?.release();
-  else if (token && token?.isVisible && game.user && token.actor?.testUserPermission(game.user, "OWNER")) {
+  else if (token && token?.isVisible && game.user && (token.actor as Actor)?.testUserPermission(game.user, "OWNER")) {
     token?.control({ releaseOthers: false });
     canvas?.animatePan(token.center)
   }
@@ -129,16 +123,16 @@ let _onTargetSelect = (event) => {
 function _onTargetShow(event) {
   event.stopImmediatePropagation();
   event.preventDefault();
-  if (!canvas?.scene?.active) return;
-  const token = canvas.tokens?.get(event.currentTarget.dataset.id);
-  if (game.user && token?.actor?.testUserPermission(game.user, "OWNER")) {
-    token.actor.sheet?.render(true);
+  if (!(canvas?.scene as unknown as Scene)?.active) return;
+  const token = canvas?.tokens?.get(event.currentTarget.dataset.id) as Token;
+  if (game.user && (token?.actor as Actor)?.testUserPermission(game.user, "OWNER")) {
+    (token.actor as Actor).sheet?.render(true);
   }
 }
 
 export let hideRollRender = (msg, html, data) => {
   if (forceHideRoll && (msg.whisper.length > 0 || msg?.blind)) {
-    if (!game.user?.isGM && !msg.isAuthor && msg.whisper.indexOf(game.user?.id) === -1) {
+    if (!gameUser()?.isGM && !msg.isAuthor && msg.whisper.indexOf(gameUser().id) === -1) {
       if (debugEnabled > 0) warn("hideRollRender | hiding message", msg.whisper);
       html.hide();
       // It seems that html.remove() can get called before the messagge is rendered to the dom?
@@ -151,7 +145,7 @@ export let hideRollRender = (msg, html, data) => {
 
 export let hideRollUpdate = (message, data, diff, id) => {
   if (forceHideRoll && message.whisper.length > 0 || message.blind) {
-    if (!game.user?.isGM && ((!message.isAuthor && (message.whisper.indexOf(game.user?.id) === -1) || message.blind))) {
+    if (!gameUser().isGM && ((!message.isAuthor && (message.whisper.indexOf(gameUser().id) === -1) || message.blind))) {
       let messageLi = $(`.message[data-message-id=${data._id}]`);
       if (debugEnabled > 0) warn("hideRollUpdate: Hiding ", message.whisper, messageLi)
       messageLi.hide();
@@ -171,14 +165,14 @@ export let hideStuffHandler = (message, html, data) => {
   // if (foundry.utils.getProperty(message, "flags.monks-tokenbar")) return;
   const midiqolFlags = foundry.utils.getProperty(message, "flags.midi-qol");
   // Hide rolls which are blind and not the GM if force hide is true
-  if (forceHideRoll && message.blind && !game.user?.isGM) {
+  if (forceHideRoll && message.blind && !gameUser().isGM) {
     html.hide();
     return;
   }
   const authorId = message.author?.id;
   // message.shouldDisplayChallenge returns true for message owners, which is not quite what we want.
   let shouldDisplayChallenge = true;
-  if (game.user?.isGM) shouldDisplayChallenge = true;
+  if (gameUser().isGM) shouldDisplayChallenge = true;
   else switch (safeGetGameSetting("dnd5e", "challengeVisibility")) {
     case "all": shouldDisplayChallenge = true; break;
     case "player": shouldDisplayChallenge = !message.author?.isGM; break;
@@ -186,14 +180,14 @@ export let hideStuffHandler = (message, html, data) => {
   }
   // If force hide rolls and your are not the author/target of a whisper roll hide it.
   if (forceHideRoll
-    && !game.user?.isGM
-    && message.whisper.length > 0 && !message.whisper.includes(game.user?.id)
+    && !gameUser().isGM
+    && message.whisper.length > 0 && !message.whisper.includes(gameUser().id)
     && !message.isAuthor) {
     html.remove();
     return;
   }
 
-  if (game.user?.id !== authorId) {
+  if (gameUser().id !== authorId) {
     html.find(".midi-qol-attack-buttons").hide();
     html.find(".midi-qol-damage-buttons").hide();
     html.find(".midi-qol-otherDamage-button").hide();
@@ -204,7 +198,7 @@ export let hideStuffHandler = (message, html, data) => {
   ids.hover(_onTargetHover, _onTargetHoverOut)
   ids.click(_onTargetSelect);
   ids.contextmenu(_onTargetShow)
-  if (game.user?.isGM) {
+  if (gameUser().isGM) {
     html.find(".midi-qol-playerTokenName").remove();
     if (configSettings.hidePlayerDamageCard && $(html).find(".midi-qol-player-damage-card").length) html.hide();
 
@@ -225,7 +219,6 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("fumble");
     }
 
-    //@ts-expect-error
     ui.chat.scrollBottom
     return;
 
@@ -301,20 +294,19 @@ export let hideStuffHandler = (message, html, data) => {
         html.find(".midi-qol-hits-display .midi-qol-hit-class").removeClass("fumble");
       }
     }
-    if (authorId !== game.user?.id || configSettings.confirmAttackDamage === "gmOnly") {
+    if (authorId !== gameUser().id || configSettings.confirmAttackDamage === "gmOnly") {
       html.find(".midi-qol-confirm-damage-roll-complete-hit").hide();
       html.find(".midi-qol-confirm-damage-roll-complete-miss").hide();
       html.find(".midi-qol-confirm-damage-roll-complete-critical").hide();
     }
 
-    if (!game.user?.isGM) {
+    if (!gameUser().isGM) {
       // Can update the attack roll here, but damage rolls are redone in the ChatmessageMidi code so do the hiding for those there
       html.find(".midi-qol-confirm-damage-roll-cancel").hide();
       // hide the gm version of the name from` players
       html.find(".midi-qol-gmTokenName").remove();
     }
   }
-  //@ts-expect-error
   setTimeout(() => ui.chat.scrollBottom(), 0);
   return true;
 
@@ -322,7 +314,7 @@ export let hideStuffHandler = (message, html, data) => {
 
 export function processItemCardCreation(message, user) {
   const midiFlags = message.flags[MODULE_ID];
-  if (user === game.user?.id && midiFlags?.workflowId) { // check to see if it is a workflow
+  if (user === gameUser().id && midiFlags?.workflowId) { // check to see if it is a workflow
     const workflow = Workflow.getWorkflow(midiFlags.workflowId);
     if (!workflow) return;
     if (debugEnabled > 0) warn("processItemCardCreation", message.id, workflow.itemCardId, workflow.ItemCardUuid, workflow.workflowName)
@@ -343,7 +335,7 @@ export function ddbglPendingFired(data) {
   }
   // const tokenUuid = `Scene.${sceneId??0}.Token.${tokenId??0}`;
   const token = MQfromUuidSync(`Scene.${sceneId ?? 0}.Token.${tokenId ?? 0}`);
-  const actor = (token instanceof CONFIG.Token.documentClass) ? token?.actor ?? game.actors?.get(actorId ?? "") : undefined;
+  const actor: Actor = (token instanceof CONFIG.Token.documentClass) ? token?.actor ?? game.actors?.get(actorId ?? "") : undefined;
   if (!actor || !(token instanceof CONFIG.Token.documentClass)) {
     warn(" ddb-game-log hook could not find actor");
     return;
@@ -353,10 +345,10 @@ export function ddbglPendingFired(data) {
   if (token) {
     player = playerFor(token);
   } else {
-    player = game.users?.players.find(p => p.active && actor?.permission[p.id ?? ""] === CONST.ENTITY_PERMISSIONS.OWNER)
+    player = game.users?.players.find(p => p.active && actor?.testUserPermission(p, "OWNER"));
   }
-  if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
-  if (player?.id !== game.user?.id) return;
+  if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => (u as unknown as User).active);
+  if (player?.id !== gameUser().id) return;
 
   let item = actor.items.get(itemId);
   if (!item) {
@@ -370,7 +362,6 @@ export function ddbglPendingFired(data) {
     workflow = undefined;
   }
 
-  //@ts-expect-error .hasAttack
   if (["damage", "heal"].includes(actionType) && item.hasAttack && !workflow) {
     warn(` ddb-game-log damage roll without workflow being started ${actor.name} using ${item.name}`);
     return;
@@ -384,8 +375,7 @@ export function ddbglPendingFired(data) {
       alias: token?.name ?? actor.name
     }
     //@ts-expect-error
-    workflow = new DDBGameLogWorkflow(actor, item, speaker, game.user.targets, {});
-    //@ts-expect-error .displayCard
+    workflow = new DDBGameLogWorkflow(actor, item, speaker, gameUser().targets, {});
     item.displayCard({ showFullCard: false, workflow, createMessage: false, defaultCard: true });
     // showItemCard.bind(item)(false, workflow, false, true);
     return;
@@ -399,7 +389,6 @@ export function ddbglPendingHook(data) { // need to propagate this to all player
 export function processCreateDDBGLMessages(message: ChatMessage, options: any, user: string) {
   if (!configSettings.optionalRules.enableddbGL) return;
 
-  //@ts-expect-error flags v10
   const flags: any = message.flags;
   if (!flags || !flags["ddb-game-log"] || !game.user) return;
   const ddbGLFlags: any = flags["ddb-game-log"];
@@ -408,9 +397,7 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   if (!(["attack", "damage", "heal"].includes(flags.dnd5e?.roll?.type))) return;
   const itemId = flags.dnd5e?.roll?.itemId;
   if (!itemId) { error("Could not find item for fulfilled roll"); return }
-  //@ts-expect-error speaker v10
   const token = MQfromUuidSync(`Scene.${message.speaker.scene}.Token.${message.speaker.token}`);
-  //@ts-expect-error speaker v10
   const actor = token.actor ?? game.actors?.get(message.speaker.actor ?? "");
   if (!actor) {
     error("ddb-game-log could not find actor for roll");
@@ -421,11 +408,10 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   if (token) {
     player = playerFor(token);
   } else {
-    player = game.users?.players.find(p => p.active && actor?.permission[p.id ?? ""] === CONST.ENTITY_PERMISSIONS.OWNER)
+    player = game.users?.players.find(p => p.active && actor?.testUserPermission(p, "OWNER"));
   }
-  //@ts-expect-error
   if (!player || !player.active) player = game.users?.activeGM;
-  if (player?.id !== game.user?.id) return;
+  if (player?.id !== gameUser().id) return;
 
   const item = actor.items.get(itemId);
   if (!item) {
@@ -448,14 +434,12 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
     untimedExecuteAsGM("updateUndoChatCardUuids", workflow.undoData);
   }
   if (flags.dnd5e.roll.type === "attack") {
-    //@ts-expect-error
     let rolls = message.rolls;
     if (!(rolls instanceof Array)) rolls = [rolls];
     workflow.needItemCard = false;
     workflow.attackRoll = rolls[0] ?? undefined;
     workflow.attackTotal = rolls[0]?.total ?? 0;
     workflow.needsDamage = workflow.item.hasDamage;
-    //@ts-expect-error content v10
     workflow.attackRollHTML = message.content;
     workflow.attackRolled = true;
     if (workflow.currentAction === workflow.WorkflowState_WaitForAttackRoll) {
@@ -465,7 +449,6 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   }
 
   if (["damage", "heal"].includes(flags.dnd5e.roll.type)) {
-    //@ts-expect-error
     let rolls = message.rolls;
     if (!rolls) return;
     workflow.needItemCard = false;

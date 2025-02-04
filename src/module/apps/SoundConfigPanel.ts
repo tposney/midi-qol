@@ -1,4 +1,4 @@
-import { geti18nOptions, i18n } from "../../midi-qol.js";
+import { gameUser, geti18nOptions, i18n } from "../../midi-qol.js";
 import { MidiSounds } from "../midi-sounds.js";
 import { configSettings, midiSoundSettings } from "../settings.js";
 
@@ -12,7 +12,7 @@ export class SoundConfigPanel extends FormApplication {
   }
   
   get title() {
-    return i18n("midi-qol.ConfigTitle")
+    return i18n("midi-qol.ConfigTitle") ?? "Sound Config";
   }
 
   static get defaultOptions(): any {
@@ -58,7 +58,7 @@ export class SoundConfigPanel extends FormApplication {
       "none": {none: "None"}
     }
 
-    const itemTypes = foundry.utils.duplicate(CONFIG.Item.typeLabels);
+    const itemTypes: any = foundry.utils.duplicate(CONFIG.Item.typeLabels);
     delete itemTypes.backpack;
     delete itemTypes.class;
     itemTypes.all = "All";
@@ -101,7 +101,7 @@ export class SoundConfigPanel extends FormApplication {
     }
   }
   async _updateObject(event, formData) {
-    if (!game.user?.can("SETTINGS_MODIFY")) return;
+    if (!gameUser().can("SETTINGS_MODIFY")) return;
     formData = foundry.utils.expandObject(formData);
     const settings: any = {};
     if (formData.chartype) {
@@ -110,7 +110,7 @@ export class SoundConfigPanel extends FormApplication {
           formData[key] = [formData[key]];
         }
       }
-      for (let i = 0; i < formData.chartype?.length ?? 0; i++) {
+      for (let i = 0; i < (formData.chartype?.length ?? 0); i++) {
         const chartype = formData.chartype[i];
         const category = formData.category[i];
         const subtype = formData.subtype[i];
@@ -124,7 +124,8 @@ export class SoundConfigPanel extends FormApplication {
       }
     }
     settings.version = "0.9.48";
-    await game.settings.set("midi-qol", "MidiSoundSettings", settings);
+    //@ts-expect-error
+    await game.settings?.set("midi-qol", "MidiSoundSettings", settings);
   }
 
   activateListeners(html) {

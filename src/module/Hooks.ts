@@ -1,4 +1,4 @@
-import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, geti18nOptions, log, GameSystemConfig, SystemString, MODULE_ID, isdndv4 } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, geti18nOptions, log, GameSystemConfig, SystemString, MODULE_ID, isdndv4, gameUser, gameSystemId } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, processItemCardCreation, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { processUndoDamageCard } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, MQfromUuidSync, removeReactionUsed, removeBonusActionUsed, checkflanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, itemIsVersatile, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, isConcentrating, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm } from "./utils.js";
@@ -49,7 +49,6 @@ export let readyHooks = async () => {
       const cachedUpdates = getUpdatesCache(message.uuid);
       clearUpdatesCache(message.uuid);
       // hideStuffHandler(message, $(message.content), user);
-      //@ts-expect-error
       if (!foundry.utils.isEmpty(cachedUpdates)) {
         if (debugEnabled > 0) warn("preUpdateChatMessage inserting updates", message.uuid, update, cachedUpdates);
         Object.keys(cachedUpdates).forEach(key => {
@@ -117,7 +116,6 @@ export let readyHooks = async () => {
     if (options.undo) return; // TODO check that this is right
     if (debugEnabled > 0) console.warn("deleteActiveEffect", deletedEffect, options, user);
     const checkConcentration = configSettings.concentrationAutomation;
-    //@ts-expect-error activeGM
     if (!game.users?.activeGM?.isSelf) return;
     if (!(deletedEffect.parent instanceof CONFIG.Actor.documentClass)) return;
     if (debugEnabled > 0) warn("deleteActiveEffectHook", deletedEffect, deletedEffect.parent.name, options);
@@ -125,7 +123,6 @@ export let readyHooks = async () => {
       try {
         let origin = MQfromUuidSync(deletedEffect.origin);
         if (origin instanceof ActiveEffect && !options.noConcentrationCheck && configSettings.removeConcentrationEffects !== "none") {
-          //@ts-expect-error
           if (origin.statuses?.has(CONFIG.specialStatusEffects.CONCENTRATING) && origin.getDependents()?.length === 0) {
             if (!installedModules.get("times-up") || (origin?.duration?.remaining ?? 1) > 0) {
               await origin.delete();
@@ -155,16 +152,8 @@ export let readyHooks = async () => {
 
   Hooks.on("dnd5e.preActivityConsumption", preActivityConsumptionHook);
   Hooks.on("dnd5e.activityConsumption", activityConsumptionHook);
-
-
-  //@ts-expect-error
-  if (foundry.utils.isNewerVersion("12.1.0", game.modules.get("babonus")?.version ?? "0"))
-    registerBaBonusHooks();
-
   Hooks.on("dnd5e.rollDeathSave", deathSaveHook);
-
   Hooks.on("updateCombat", (combat: Combat, update, options, userId) => {
-    //@ts-expect-error
     if (userId != game.users?.activeGM?.id) return;
     if (!update.hasOwnProperty("round")) return;
     if (!checkMechanic("autoRerollInitiative")) return;
@@ -179,7 +168,7 @@ export let readyHooks = async () => {
 
 function registerBaBonusHooks() {
   //TODO migrate all of these to v2 once babonus is dnd5e 4.0 ready
-  if (!game.modules.get("babonus")?.active) return;
+  if (!game.modules?.get("babonus")?.active) return;
   // Midi sets fastForward to true for most of these rolls - based on roll settings
   // need to handle the cases where there is an optional babonus defined and disable fastforward.
 
@@ -278,8 +267,7 @@ export function initHooks() {
     if (data.round === undefined && data.turn === undefined) return;
     untargetAllTokens(combat, data.options, user);
     untargetDeadTokens();
-    //@ts-expect-error
-    if (game.users?.activeGM.isSelf)
+    if (gameUser()?.activeGM.isSelf)
       _processOverTime(combat, data, options, user);
     // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
   });
@@ -409,7 +397,7 @@ export function initHooks() {
   }
 
   Hooks.once('tidy5e-sheet.ready', (api) => {
-    if ((game.user?.role ?? CONST.USER_ROLES.PLAYER) < (configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER)) return;
+    if ((gameUser().role ?? CONST.USER_ROLES.PLAYER) < (configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER)) return;
     const myTab = new api.models.HandlebarsTab({
       title: 'Midi Qol',
       tabId: "midi-qol-properties-tab",
@@ -534,7 +522,7 @@ export function initHooks() {
   Hooks.on("renderItemSheet", (app, html, data) => {
     const item = app.object;
     if (!item) return;
-    if ((configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER) > (game.user?.role ?? CONST.USER_ROLES.NONE)) return;
+    if ((configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER) > (gameUser().role ?? CONST.USER_ROLES.NONE)) return;
     if (app.constructor.name !== "Tidy5eKgarItemSheet") {
       if (!item || !["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver", "tool"].includes(data.item.type))
         return;
@@ -618,7 +606,6 @@ export function initHooks() {
     if (game.release.generation < 12) {
       coords = canvas.grid.grid.getPixelsFromGridPosition(...canvas.grid.grid.getGridPositionFromPixels(dropData.x, dropData.y));
     } else {
-      //@ts-expect-error
       coords = canvas.grid.getPixelsFromGridPosition(...canvas.grid.getGridPositionFromPixels(dropData.x, dropData.y));
     }
 
@@ -677,7 +664,7 @@ function setupMidiFlagTypes() {
 
   })
 
-  if (game.system.id === "dnd5e") {
+  if (gameSystemId() === "dnd5e") {
     midiFlagTypes[`flags.midi-qol.DR.all`] = "string";
     midiFlagTypes[`flags.midi-qol.DR.non-magical`] = "string";
     midiFlagTypes[`flags.midi-qol.DR.non-silver`] = "string";
@@ -779,7 +766,6 @@ Hooks.on("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, messageConfig) => {
 });
 
 Hooks.on("dnd5e.preCalculateDamage", (actor, damages, options) => {
-  if (!configSettings.v3DamageApplication) return true;
   try {
     const ignore = (category, type, skipDowngrade) => {
       return options.ignore === true
@@ -811,7 +797,6 @@ Hooks.on("dnd5e.preCalculateDamage", (actor, damages, options) => {
 
       const categories = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption" };
       if (mo?.sourceActorUuid) {
-        //@ts-expect-error
         const sourceActor = fromUuidSync(mo.sourceActorUuid);
         for (let key of ["idi", "idr", "idv", "ida"]) {
           if (foundry.utils.getProperty(sourceActor, `system.traits.${key}`) && sourceActor.system.traits[key].value.size > 0) {
@@ -867,7 +852,6 @@ Hooks.on("dnd5e.preCalculateDamage", (actor, damages, options) => {
 
 Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
   try {
-    if (!configSettings.v3DamageApplication) return true;
     const downgrade = type => options.downgrade === true || options.downgrade?.has?.(type);
     const ignore = (category, type, skipDowngrade) => {
       return options.ignore === true
@@ -911,8 +895,12 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
           if (damage.active[categories[trait]]) continue; // only one dr/di/dv allowed
           if (damage.type === "midi-none") continue;
           if (GameSystemConfig.healingTypes[damage.type]) continue;
-          if (ignore(categories[trait], damage.type, false)) continue;
-          if (ignore(custom, damage.type, false) || damage.active[custom]) continue;
+          if (ignore(categories[trait], damage.type, false)) {
+            continue;
+          }
+          if (ignore(custom, damage.type, false) || damage.active[custom]) {
+            continue;
+          }
           if (!GameSystemConfig.customDamageResistanceTypes[custom])
             custom = Object.keys(GameSystemConfig.customDamageResistanceTypes).find(key => GameSystemConfig.customDamageResistanceTypes[key].toLocaleLowerCase() === custom.toLocaleLowerCase()) ?? custom;
           switch (custom) {
@@ -1139,7 +1127,6 @@ function recalculateDamage(actor, amount, updates, options) {
 }
 
 Hooks.on("dnd5e.preApplyDamage", (actor, amount, updates, options) => {
-  if (!configSettings.v3DamageApplication) return true;
   if (updates["system.attributes.hp.temp"]) updates["system.attributes.hp.temp"] = Math.floor(updates["system.attributes.hp.temp"]);
   // recalculateDamage(actor, amount, updates, options);
   const vitalityResource = checkRule("vitalityResource");
@@ -1198,7 +1185,6 @@ Hooks.on("dnd5e.rollConcentrationV2", (rolls, { subject }) => {
     if (checkRule("criticalSaves") && roll.isCritical) roll.options.success = true;
     // triggerTargetMacros(triggerList: string[], targets: Set<any> = this.targets, options: any = {}) {
     if (configSettings.removeConcentration && roll.options.success === false) {
-      //@ts-expect-error
       subject.endConcentration();
       return;
     }

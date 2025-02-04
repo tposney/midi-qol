@@ -1,4 +1,4 @@
-import { i18n } from "../../midi-qol.js"
+import { gameUser, i18n } from "../../midi-qol.js"
 import { configSettings, defaultTargetConfirmationSettings, targetConfirmation } from "../settings.js";
 
 export class TargetConfirmationConfig extends FormApplication {
@@ -21,7 +21,7 @@ export class TargetConfirmationConfig extends FormApplication {
   }
   static get defaultOptions(): any {
     return foundry.utils.mergeObject(super.defaultOptions, {
-      title: game.i18n.localize("midi-qol.ConfigTitle"),
+      title: i18n("midi-qol.ConfigTitle") ?? "Target Confirmation Config",
       template: "modules/midi-qol/templates/targetConfirmationConfig.html",
       id: "midi-qol-target-confirmation-config",
       width: 400,
@@ -39,10 +39,12 @@ export class TargetConfirmationConfig extends FormApplication {
       newSettings = foundry.utils.duplicate(defaultTargetConfirmationSettings);
       newSettings.gridPosition = formData.gridPosition;
     }
-    game.settings.set("midi-qol", "TargetConfirmation", newSettings);
+    //@ts-expect-error
+    game.settings?.set("midi-qol", "TargetConfirmation", newSettings);
     this.render(true);
-    game.settings.set("midi-qol", "LateTargeting", "none");
-    if (game.user?.isGM) configSettings.gmLateTargeting = "none";
+    //@ts-expect-error
+    game.settings?.set("midi-qol", "LateTargeting", "none");
+    if (gameUser().isGM) configSettings.gmLateTargeting = "none";
   }
 
   activateListeners(html) {
@@ -70,10 +72,10 @@ export class TargetConfirmationConfig extends FormApplication {
     });
   }
   get title() {
-    return i18n("Target Confirmation Config")
+    return i18n("Target Confirmation Config") ?? "Target Confirmation Config";
   }
 
-  getData(options?: Application.RenderOptions | undefined): FormApplication.Data<{}, FormApplication.Options> | Promise<FormApplication.Data<{}, FormApplication.Options>> {
+  getData(options?: Application.RenderOptions | undefined): any {
     const data: any = super.getData(options);
     if (!this.selectedPostion) this.selectedPostion = targetConfirmation.gridPosition ?? foundry.utils.duplicate(defaultTargetConfirmationSettings.gridPosition);
     data.targetConfirmation = targetConfirmation;

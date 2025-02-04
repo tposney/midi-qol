@@ -9,12 +9,13 @@ export class ActorOnUseMacrosConfig extends FormApplication {
   }
 
   static get defaultOptions() {
+    const height: number | "auto" | undefined = "auto"
 	  return foundry.utils.mergeObject(super.defaultOptions, {
 	    template: "modules/midi-qol/templates/actorOnUseMacrosConfig.html",
       classes: ["form", "active-effect-sheet","sheet"],
-      width: "550",
-      height: "auto",
-      title: i18n("midi-qol.ActorOnUseMacros"),
+      width: 550,
+      height,
+      title: i18n("midi-qol.ActorOnUseMacros") ?? "Actor On Use Macros",
       closeOnSubmit: false,
       submitOnClose: true,
       resizable: false,
@@ -61,7 +62,7 @@ export class ActorOnUseMacrosConfig extends FormApplication {
   _onDrop(ev) {
     ev.preventDefault();
     //@ts-ignore
-    const data = TextEditor.getDragEventData(ev);
+    const data: any = TextEditor.getDragEventData(ev);
     if (data.uuid) ev.target.value += data.uuid;
   }
   

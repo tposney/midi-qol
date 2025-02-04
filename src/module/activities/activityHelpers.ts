@@ -1,7 +1,7 @@
-import { MODULE_ID, debugEnabled, warn } from "../../midi-qol.js";
+import { MODULE_ID, debugEnabled, gameUser, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog } from "../apps/TargetConfirmation.js";
-import { configSettings, targetConfirmation } from "../settings.js";
+import { configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { getFlankingEffect, CERemoveEffect, sumRolls, evalActivationCondition, computeTemplateShapeDistance, getToken, MQfromUuidSync, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, getSpeaker, hasWallBlockingCondition, isTargetable, tokenForActor, activityHasAreaTarget, getActivityAutoTargetAction, getAoETargetType, doReactions, getUnitDist } from "../utils.js";
 
@@ -17,11 +17,11 @@ export async function confirmWorkflow(existingWorkflow: Workflow): Promise<boole
       existingWorkflow.aborted = true;
       await existingWorkflow.performState(existingWorkflow.WorkflowState_Cleanup);
     } else {
-      //@ts-expect-error
       switch (await Dialog.wait({
-        title: game.i18n.format("midi-qol.WaitingForexistingWorkflow", { name: existingWorkflow.activity.name }),
+        title: game.i18n?.format("midi-qol.WaitingForexistingWorkflow", { name: existingWorkflow.activity.name }) ?? "",
         default: "cancel",
         content: "Choose what to do with the previous roll",
+        //@ts-expect-error
         rejectClose: false,
         close: () => { return false },
         buttons: {
@@ -56,18 +56,15 @@ export async function removeFlanking(actor: Actor): Promise<void> {
   if (CEFlanking && CEFlanking.name) await CERemoveEffect({ effectName: CEFlanking.name, uuid: actor.uuid });
 }
 
-export function setDamageRollMinTerms(rolls: Array<Roll> | undefined) {
-  //@ts-expect-error
-  const Die = foundry.dice.terms.Die;
+//
+export function setDamageRollMinTerms(rolls: Array<Roll | any> | undefined) {
+  const Die: any = foundry.dice.terms.Die;
   if (rolls && sumRolls(rolls)) {
     for (let roll of rolls) {
       for (let term of roll.terms) {
         // I don't like the default display and it does not look good for dice so nice - fiddle the results for maximised rolls
-        //@ts-expect-error
         if (term instanceof Die && term.modifiers.includes(`min${term.faces}`)) {
-          //@ts-expect-error
           for (let result of term.results) {
-            //@ts-expect-error
             result.result = term.faces;
           }
         }
@@ -139,7 +136,7 @@ export function requiresTargetConfirmation(activity, options): boolean {
   if (options.workflowOptions?.attackPerTarget === true) return false;
   if (activity.midiProperties?.confirmTargets === "always") return true;
   if (activity.midiProperties?.confirmTargets === "never") return false;
-  let numTargets = game.user?.targets?.size ?? 0;
+  let numTargets = gameUser()?.targets?.size ?? 0;
   if (numTargets === 0 && configSettings.enforceSingleWeaponTarget && activity.item.type === "weapon")
     numTargets = 1;
   const token = tokenForActor(activity.actor);
@@ -162,7 +159,7 @@ export function requiresTargetConfirmation(activity, options): boolean {
     }
     if (targetConfirmation.allies && token && numTargets > 0 && activity.target?.affects.type !== "self") {
       //@ts-expect-error find disposition
-      if (game.user?.targets.some(t => t.document.disposition == token.document.disposition)) {
+      if (gameUser()?.targets.some(t => t.document.disposition == token.document.disposition)) {
         if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.allies");
         return true;
       }
@@ -170,22 +167,21 @@ export function requiresTargetConfirmation(activity, options): boolean {
     if (targetConfirmation.targetSelf && activity.target?.affects.type !== "self") {
       let tokenToUse = token;
       /*
-      if (tokenToUse && game.user?.targets) {
-        const { result, attackingToken } = checkActivityRange(activity, tokenToUse, new Set(game.user.targets))
+      if (tokenToUse && gameUser()?.targets) {
+        const { result, attackingToken } = checkActivityRange(activity, tokenToUse, new Set(gameUser()?.targets))
         if (speaker.token && result === "fail")
           tokenToUse = undefined; 
         else tokenToUse = attackingToken;
       }
       */
-      if (tokenToUse && game.user?.targets?.has(tokenToUse)) {
+      if (tokenToUse && gameUser()?.targets?.has(tokenToUse)) {
         if (debugEnabled > 0) warn("target confirmation triggered by has targetConfirmation.targetSelf");
         return true;
       }
     }
-    if (targetConfirmation.mixedDispositiion && numTargets > 0 && game.user?.targets) {
+    if (targetConfirmation.mixedDispositiion && numTargets > 0 && gameUser()?.targets) {
       const dispositions = new Set();
-      for (let target of game.user?.targets) {
-        //@ts-expect-error
+      for (let target of gameUser()?.targets) {
         if (target) dispositions.add(target.document.disposition);
       }
       if (dispositions.size > 1) {
@@ -193,10 +189,10 @@ export function requiresTargetConfirmation(activity, options): boolean {
         return true;
       }
     }
-    if (targetConfirmation.longRange && game?.user?.targets && numTargets > 0 &&
+    if (targetConfirmation.longRange && gameUser()?.targets && numTargets > 0 &&
       (["ft", "m"].includes(activity.item.system.range?.units) || activity.item.system.range.type === "touch")) {
       if (token) {
-        for (let target of game.user.targets) {
+        for (let target of gameUser()?.targets) {
           const { result, attackingToken } = checkActivityRange(activity, token, new Set([target]))
           if (result !== "normal") {
             if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.longRange");
@@ -205,10 +201,10 @@ export function requiresTargetConfirmation(activity, options): boolean {
         }
       }
     }
-    if (targetConfirmation.inCover && numTargets > 0 && token && game.user?.targets) {
+    if (targetConfirmation.inCover && numTargets > 0 && token && gameUser()?.targets) {
       const isRangeTargeting = ["ft", "m"].includes(activity.target?.affects.count) && ["creature", "ally", "enemy"].includes(activity.target?.affects.type);
       if (!activity.target?.template?.type && !isRangeTargeting) {
-        for (let target of game.user?.targets) {
+        for (let target of gameUser()?.targets) {
           if (computeCoverBonus(token, target, activity.item) > 0) {
             if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.inCover");
             return true;
@@ -237,24 +233,24 @@ export async function preTemplateTargets(activity, options): Promise<boolean> {
 
 export async function postTemplateConfirmTargets(activity, options, workflow): Promise<boolean> {
   if (!activityRequiresPostTemplateConfiramtion(activity)) {
-    if (game.user?.targets) {
-      activity.workflow.setTargets(game.user?.targets);
-      activity.targets = new Set(game.user?.targets);
+    if (gameUser()?.targets) {
+      activity.workflow.setTargets(gameUser()?.targets);
+      activity.targets = new Set(gameUser()?.targets);
     }
     return true;
   }
   if (requiresTargetConfirmation(activity, options) || activity.target?.affects?.choice) {
     let result = true;
     result = await resolveTargetConfirmation(activity, options);
-    if (result && game.user?.targets) {
-      workflow.setTargets(game.user.targets);
-      activity.targets = new Set(game.user.targets);
+    if (result && gameUser()?.targets) {
+      workflow.setTargets(gameUser()?.targets);
+      activity.targets = new Set(gameUser()?.targets);
     }
     return result === true;
   }
-  if (game.user?.targets) {
-    activity.workflow.setTargets(game.user?.targets);
-    activity.targets = new Set(game.user?.targets);
+  if (gameUser()?.targets) {
+    activity.workflow.setTargets(gameUser()?.targets);
+    activity.targets = new Set(gameUser()?.targets);
   }
   return true;
 }
@@ -278,7 +274,6 @@ export async function resolveTargetConfirmation(activity, options: any = {}): Pr
   let shouldContinue = await targets;
   if (savedActiveLayer) await savedActiveLayer.activate();
   if (savedSettings.control && savedSettings.tool)
-    //@ts-ignore savedSettings.tool is really a string
     ui.controls?.initialize(savedSettings);
   if (wasMaximized) await activity.actor.sheet.maximize();
   return shouldContinue ? true : false;
@@ -318,7 +313,7 @@ export async function showItemInfo() {
   const html = await renderTemplate(template, templateData);
 
   const chatData: any = {
-    user: game.user?.id,
+    user: gameUser()?.id,
     content: html,
     flavor: this.system.chatFlavor || this.name,
     speaker: getSpeaker(this.actor),
@@ -326,19 +321,14 @@ export async function showItemInfo() {
       "core": { "canPopout": true }
     }
   };
-  //@ts-expect-error
-  if (game.release.generation < 12) {
-    chatData.type = CONST.CHAT_MESSAGE_TYPES.OTHER;
-  } else {
-    //@ts-expect-error
-    chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
-  }
+  chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
 
   // Toggle default roll mode
-  let rollMode = game.settings.get("core", "rollMode");
+  let rollMode = safeGetGameSetting("core", "rollMode") ?? "public";
+  //@ts-expect-error
   if (["gmroll", "blindroll"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
   if (rollMode === "blindroll") chatData["blind"] = true;
-  if (rollMode === "selfroll") chatData["whisper"] = [game.user?.id];
+  if (rollMode === "selfroll") chatData["whisper"] = [gameUser()?.id];
 
   // Create the chat message
   return ChatMessage.create(chatData);
@@ -429,10 +419,8 @@ export function isAoETargetable(targetToken, options: { selfToken?: Token | Toke
     case "notAlly":
       return targetToken.document.disposition !== selfDisposition
     case "enemy":
-      //@ts-expect-error
       return targetToken.document.disposition === -selfDisposition || targetToken.document.disposition == CONST.TOKEN_DISPOSITIONS.SECRET;
     case "notEnemy":
-      //@ts-expect-error
       return targetToken.document.disposition !== -selfDisposition && targetToken.document.disposition !== CONST.TOKEN_DISPOSITIONS.SECRET;
     case "neutral":
       return targetToken.document.disposition === CONST.TOKEN_DISPOSITIONS.NEUTRAL;
@@ -443,10 +431,8 @@ export function isAoETargetable(targetToken, options: { selfToken?: Token | Toke
     case "notFriendly":
       return targetToken.document.disposition !== CONST.TOKEN_DISPOSITIONS.FRIENDLY;
     case "hostile":
-      //@ts-expect-error
       return targetToken.document.disposition === CONST.TOKEN_DISPOSITIONS.HOSTILE || targetToken.document.disposition == CONST.TOKEN_DISPOSITIONS.SECRET;
     case "notHostile":
-      //@ts-expect-error
       return targetToken.document.disposition !== CONST.TOKEN_DISPOSITIONS.HOSTILE && targetToken.document.disposition !== CONST.TOKEN_DISPOSITIONS.SECRET;
     default: return true;
   }
@@ -455,15 +441,15 @@ export function isAoETargetable(targetToken, options: { selfToken?: Token | Toke
 export function templateTokens(templateDetails: MeasuredTemplate, selfTokenRef: Token | TokenDocument | string | undefined = "", ignoreSelf: boolean = false, AoETargetType: string = "any", autoTarget?: string): Token[] {
   if (!autoTarget) autoTarget = configSettings.autoTarget
   // deprecated if (!autoTarget) autoTarget = getAutoTarget(templateDetails.item);
-  console.error(templateDetails);
   if ((autoTarget) === "none") return [];
   const wallsBlockTargeting = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(autoTarget);
-  const tokens = canvas?.tokens?.placeables ?? []; //.map(t=>t)
+  //@ts-expect-error
+  const tokens: Token[] = canvas?.tokens?.placeables ?? []; //.map(t=>t)
   const selfToken = getToken(selfTokenRef);
   let targetIds: string[] = [];
   let targetTokens: Token[] = [];
-  game.user?.updateTokenTargets([]);
-  if (autoTarget === "walledtemplates" && game.modules.get("walledtemplates")?.active) {
+  gameUser()?.updateTokenTargets([]);
+  if (autoTarget === "walledtemplates" && game.modules?.get("walledtemplates")?.active) {
     //@ts-expect-error
     if (foundry.utils.getProperty(templateDetails?.item, "flags.walledtemplates.noAutotarget")) return targetTokens
     //@ts-expect-error
@@ -481,8 +467,8 @@ export function templateTokens(templateDetails: MeasuredTemplate, selfTokenRef: 
       }
     }
   }
-  game.user?.updateTokenTargets(targetIds);
-  game.user?.broadcastActivity({ targets: targetIds });
+  gameUser()?.updateTokenTargets(targetIds);
+  gameUser()?.broadcastActivity({ targets: targetIds });
   return targetTokens;
 }
 
@@ -496,7 +482,7 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
   const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some(spec => spec === "self");
   let AoETargetType = getAoETargetType(activity);
   let targeting = getActivityAutoTargetAction(activity);
-  if ((game.user?.targets.size === 0 || activity.workflow?.workflowOptions.forceTemplateTargeting || user !== game.user?.id || installedModules.get("levelsvolumetrictemplates")) && targeting !== "none") {
+  if ((gameUser()?.targets.size === 0 || activity.workflow?.workflowOptions.forceTemplateTargeting || user !== gameUser()?.id || installedModules.get("levelsvolumetrictemplates")) && targeting !== "none") {
     let mTemplate: MeasuredTemplate = MQfromUuidSync(templateDocument.uuid)?.object;
     if (templateDocument?.object && !installedModules.get("levelsvolumetrictemplates")) {
       if (!mTemplate.shape) {
@@ -525,10 +511,10 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data, 
     return true;
   }
 
-  game.user?.targets?.forEach(token => {
+  gameUser()?.targets?.forEach(token => {
     if (!isAoETargetable(token, { ignoreSelf, selfToken, AoETargetType, autoTarget: getActivityAutoTargetAction(activity) }))
       token.setTarget(false, { user: game.user, releaseOthers: false })
-    if (activity.target?.affects.count && (game.user?.targets?.size ?? 0) > activity.target?.affects?.count)
+    if (activity.target?.affects.count && (gameUser()?.targets?.size ?? 0) > activity.target?.affects?.count)
       token.setTarget(false, { user: game.user, releaseOthers: false });
   });
 
