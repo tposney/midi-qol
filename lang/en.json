@@ -886,6 +886,7 @@
     "SaveDRdr": "Saves -> Damage Reduction -> damage resistance (dr/dv/di)"
   },
   "midi-qol.WaitingForPreviousWorkflow": "Previous roll of {name} has not completed.",
+  "midi-qol.ResolvePreviousWorkflow": "Choose what to do with the previous roll",
   "midi-qol.ConfirmTargetOptions": {
     "default": "Midi Settings",
     "always": "Always",

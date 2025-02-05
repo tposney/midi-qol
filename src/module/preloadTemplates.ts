@@ -1,7 +1,7 @@
 export async function preloadTemplates() {
   const templatePaths = [
     // Add paths to "modules/midi-qol/templates"
-    "modules/midi-qol/templates/actorOnUseMacrosConfig.html",
+    "modules/midi-qol/templates/actorOnUseMacrosConfig.hbs",
     "modules/midi-qol/templates/attack-roll.html",
     "modules/midi-qol/templates/bonus-damage-roll.html",
     "modules/midi-qol/templates/config.html",
@@ -10,7 +10,7 @@ export async function preloadTemplates() {
     // "modules/midi-qol/templates/damage-results-v3.html",
     "modules/midi-qol/templates/damage-roll.html",
     "modules/midi-qol/templates/damage-roll-dialog.hbs",
-    "modules/midi-qol/templates/dialog.html",
+    "modules/midi-qol/templates/dialog.hbs",
     "modules/midi-qol/templates/hits.html",
     "modules/midi-qol/templates/item-card-buttons.html",
     "modules/midi-qol/templates/item-card.hbs",

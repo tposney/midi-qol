@@ -197,8 +197,17 @@
   border: 2px groove #f0f0e0;
   margin: 0 5px 0 0;
 }
-.midi-qol .dialog .dialog-buttons button:last-child {
+.midi-qol.dialog:not(.reaction,.optional) .dialog-buttons button:last-child {
   margin-right: 0;
+}
+.midi-qol.dialog.reaction .dialog-buttons button:last-child {
+  margin-right: 5px;
+}
+.midi-qol.dialog.optional .dialog-buttons button:last-child {
+  margin-right: 5px;
+}
+.midi-qol.dialog.optional .dice-tooltip-collapser:has(>.expanded) {
+  grid-template-rows: 1fr;
 }
 .midi-qol .dialog .dialog-buttons button.default {
   background: rgba(0, 0, 0, 0.05);
@@ -243,6 +252,16 @@
 .column-dialog .column-dialog-buttons button.default {
   background: rgba(0, 0, 0, 0.05);
   border: 2px groove var(--color-border-light-secondary);
+}
+
+.active-effect-sheet.midi-qol .effect-controls {
+  flex: 0;
+  margin: 0 8px 0 5px;
+}
+
+.active-effect-sheet.midi-qol .midi-qol-box {
+  border: 1px groove var(--color-border-light-tertiary);
+  border-top: 0px;
 }
 
 /* ----------------------------------------- */

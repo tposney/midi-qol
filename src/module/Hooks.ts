@@ -521,7 +521,7 @@ export function initHooks() {
       iconClass: "fas fa-cog",
       enabled: () => configSettings.allowActorUseMacro,
       openConfiguration: (params) => {
-        new ActorOnUseMacrosConfig(params.app.object, {}).render(true);
+        new ActorOnUseMacrosConfig({document: params.app.object}).render({force: true});
       },
       openConfigurationTooltip: i18n("midi-qol.ActorOnUseMacros"),
     });

@@ -50,7 +50,7 @@ let enableSheetQOL = (app, html, data) => {
       </a>
       </div>`);
       html.find(".midiqol-onuse-macros").click(ev => {
-        new ActorOnUseMacrosConfig(app.object, {}).render(true);
+        new ActorOnUseMacrosConfig({document: app.object}).render({force: true});
       });
     }
   }
