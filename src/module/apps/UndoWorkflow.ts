@@ -1,18 +1,16 @@
 import { i18n } from "../../midi-qol.js";
 import { configSettings } from "../settings.js";
 import { removeMostRecentWorkflow, undoDataQueue, undoMostRecentWorkflow } from "../undo.js";
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-export class UndoWorkflow extends FormApplication {
+export class UndoWorkflow extends HandlebarsApplicationMixin(ApplicationV2) {
   undoAddedHookId: number;
-  undoRemvoedHookId: number;
+  undoRemovedHookId: number;
 
-  async _updateObject() {
-  };
-
-  constructor(object: any, options: any = {}) {
-    super(object, options);
+  constructor(options) {
+    super(options);
     this.undoAddedHookId = Hooks.on("midi-qol.addUndoEntry", this.render.bind(this));
-    this.undoRemvoedHookId = Hooks.on("midi-qol.removeUndoEntry", this.render.bind(this));
+    this.undoRemovedHookId = Hooks.on("midi-qol.removeUndoEntry", this.render.bind(this));
     if (!configSettings.undoWorkflow) {
       configSettings.undoWorkflow = true;
       //@ts-expect-error
@@ -20,12 +18,28 @@ export class UndoWorkflow extends FormApplication {
       ui.notifications?.warn("Undo Workflow enabled");
     }
   }
-
-  async getData(options) {
-    const data: any = await super.getData(options);
-    data.entries = [];
-    data.queueSize = new TextEncoder().encode(JSON.stringify(undoDataQueue)).length.toLocaleString();
-    data.queueCount = undoDataQueue.length;
+  
+  static PARTS = foundry.utils.mergeObject(super.PARTS, {
+    main: { template: "modules/midi-qol/templates/undo-workflow.hbs" },
+  }, { inplace: false })
+  
+  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+    id: "midi-qol-undo-workflow",
+    window: {
+      title: "midi-qol.UndoWorkflow.title",
+      resizable: true
+    },
+    position: {
+      width: 400,
+      height: 700
+    }
+  });
+  
+  async _prepareContext(options) {
+    const context: any = await super._prepareContext(options);
+    context.entries = [];
+    context.queueSize = new TextEncoder().encode(JSON.stringify(undoDataQueue)).length.toLocaleString();
+    context.queueCount = undoDataQueue.length;
     for (let undoEntry of undoDataQueue) {
       const entry: any = {};
       entry.actorName = undoEntry.actorName;
@@ -35,46 +49,36 @@ export class UndoWorkflow extends FormApplication {
       for (let targetEntry of undoEntry.allTargets) {
         entry.targets.push(targetEntry);
       }
-      data.entries.push(entry)
+      context.entries.push(entry)
     }
-    return data;
+    return context;
   }
 
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      title: game.i18n?.localize("midi-qol.UndoWorkflow.title") ?? "Undo Workflow",
-      template: "modules/midi-qol/templates/undo-workflow.html",
-      id: "midi-qol-undo-workflow",
-      width: 400,
-      height: 700,
-      resizable: true,
+  _onRender(context, options) {
+    super._onRender(context, options);
+    this.element.querySelector("#undo-first-workflow")?.addEventListener("click", (e) => {
+      undoMostRecentWorkflow();
+    });
+    this.element.querySelector("#remove-first-workflow")?.addEventListener("click", (e) => {
+      removeMostRecentWorkflow();
     })
   }
+
   get title() {
-    return i18n("midi-qol.UndoWorkflow.title") ?? "Undow Workflow";
+    return i18n("midi-qol.UndoWorkflow.title") ?? "Undo Workflow";
   }
 
   async close(options = {}) {
     Hooks.off("midi-qol.addUndoEntry", this.undoAddedHookId);
-    Hooks.off("midi-qol.removeUndoEntry", this.undoRemvoedHookId);
+    Hooks.off("midi-qol.removeUndoEntry", this.undoRemovedHookId);
     return super.close(options);
-  }
-
-  activateListeners(html) {
-    super.activateListeners(html);
-    html.find(`#undo-first-workflow`).on("click", (e) => {
-      undoMostRecentWorkflow();
-    })
-    html.find(`#remove-first-workflow`).on("click", (e) => {
-      removeMostRecentWorkflow();
-    })
   }
 }
 
 export function showUndoWorkflowApp() {
   if (game.user?.isGM) {
-    new UndoWorkflow({}).render(true, { focus: true })
+    new UndoWorkflow({}).render({force: true});
   } else {
-    ui.notifications?.warn("midi-qol.UndowWorkflow.GMOnly")
+    ui.notifications?.warn("midi-qol.UndoWorkflow.GMOnly")
   }
 }

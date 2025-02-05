@@ -30,7 +30,7 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/tooltip.html",
     "modules/midi-qol/templates/tool-card.html",
     "modules/midi-qol/templates/troubleShooter.html",
-    "modules/midi-qol/templates/undo-workflow.html"
+    "modules/midi-qol/templates/undo-workflow.hbs"
   ];
 	return loadTemplates(templatePaths);
 }

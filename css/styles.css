@@ -778,3 +778,9 @@
   .midi-qol-tab .midi-activation-conditions h3 {
     border-bottom-color: var(--color-border-light-primary)
   }
+
+  #midi-qol-undo-workflow .midi-qol-box {
+    margin-right: -1px;
+    border-radius: 4px;
+    border-color: var(--color-fieldset-border);
+  }
