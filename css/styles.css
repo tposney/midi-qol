@@ -735,3 +735,27 @@
     top: 0.25rem;
     left: 0.25rem;
   }
+
+  /* Item sheet midi tab */
+  .midi-qol-tab .form-header {
+    color: var(--color-text-dark-primary);
+  }
+  .midi-qol-tab textarea {
+    color: var(--color-text-dark-primary);
+  }
+  .midi-qol-tab .midi-properties {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .midi-qol-tab .form-group {
+    margin-bottom: 5px;
+  }
+  .midi-qol-tab .midi-properties label.checkbox {
+    align-items: baseline;
+  }
+  .theme-dark .midi-qol-tab textarea {
+    background: var(--dnd5e-background-card);
+  }
+  .midi-qol-tab .midi-activation-conditions h3 {
+    border-bottom-color: var(--color-border-light-primary)
+  }
