@@ -196,7 +196,27 @@ export class ConfigPanel extends FormApplication {
     super.activateListeners(html)
 
     html.find(".itemTypeListEdit").on("click", event => {
-      new ItemTypeSelector({}, {}).render(true)
+      const options = Object.entries(CONFIG.Item.typeLabels).filter(kv => !["backpack", "base"].includes(kv[0])).map(([k, v]) => ({value: k, label: i18n(v), selected: configSettings.itemTypeList?.includes(k)}));
+      options.sort((a,b) => a.label.compare(b.label));
+      DialogV2.prompt({
+        id: "midi-qol-item-selector",
+        content: foundry.applications.fields.createMultiSelectInput({
+            type: "checkboxes",
+            name: "items",
+            options
+        }).outerHTML,
+        window: { title: "Show Item Details" },
+        ok: {
+          label: "DND5E.TraitSave",
+          icon: "far fa-save",
+          callback: (evt, button) => {
+            const data = new FormDataExtended(button.form as HTMLFormElement);
+            // @ts-expect-error
+            if (data) configSettings.itemTypeList = data.object?.items ?? configSettings.itemTypeList;
+          }
+        },
+        rejectClose: false
+      });
     })
     html.find(".optionalRulesEnabled").on("click", event => {
       configSettings.optionalRulesEnabled = !configSettings.optionalRulesEnabled;
@@ -261,74 +281,6 @@ export class ConfigPanel extends FormApplication {
   }
 }
 
-export class ItemTypeSelector extends FormApplication {
-
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "midi-qol-item-selector",
-      classes: ["dnd5e"],
-      title: "Show Item Details",
-      template: "modules/midi-qol/templates/itemTypeSelector.html",
-      width: 320,
-      height: "auto",
-      choices: {},
-      allowCustom: false,
-      minimum: 0,
-      maximum: null
-    });
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Return a reference to the target attribute
-   * @type {String}
-   */
-  get attribute() {
-    //@ts-ignore .name
-    return this.options.name;
-  }
-
-  /* -------------------------------------------- */
-
-  /** @override */
-  getData(): any {
-    if (!enableWorkflow) {
-      ui.notifications?.error("Worklow automation is not enabled")
-    }
-    // Populate choices
-    //@ts-ignore
-    const choices: {} = Object.keys(CONFIG.Item.typeLabels).filter(key => !["backpack", "base"].includes(key)).reduce((acc, key) => { acc[key] = CONFIG.Item.typeLabels[key]; return acc }, {});
-    for (let [k, v] of Object.entries(choices)) {
-      choices[k] = {
-        label: i18n(v as string),
-        chosen: configSettings.itemTypeList?.includes(k)
-      }
-    }
-
-    // Return data
-    return {
-      allowCustom: false,
-      choices: choices,
-      custom: ""
-    }
-  }
-
-  /* -------------------------------------------- */
-
-  /** @override */
-  //@ts-ignore
-  _updateObject(event, formData) {
-    const updateData = {};
-    // Obtain choices
-    const chosen: any[] = [];
-    for (let [k, v] of Object.entries(formData)) {
-      if (v) chosen.push(k);
-    }
-    configSettings.itemTypeList = chosen;
-  }
-}
 async function importFromJSONDialog() {
   const content = await renderTemplate("templates/apps/import-data.html", { entity: "midi-qol", name: "settings" });
   let dialog = new Promise((resolve, reject) => {

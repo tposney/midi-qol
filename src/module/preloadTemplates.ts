@@ -15,7 +15,6 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/item-card-buttons.html",
     "modules/midi-qol/templates/item-card.hbs",
     "modules/midi-qol/templates/itemProperties.html", 
-    "modules/midi-qol/templates/itemTypeSelector.html",
     "modules/midi-qol/templates/midiPropertiesForm.hbs",
     "modules/midi-qol/templates/other-damage-roll.html",
     "modules/midi-qol/templates/roll.html",
