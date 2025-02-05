@@ -1,4 +1,4 @@
-import { gameUser, i18n } from "../../midi-qol.js";
+import { i18n } from "../../midi-qol.js";
 import { configSettings } from "../settings.js";
 import { removeMostRecentWorkflow, undoDataQueue, undoMostRecentWorkflow } from "../undo.js";
 
@@ -72,7 +72,7 @@ export class UndoWorkflow extends FormApplication {
 }
 
 export function showUndoWorkflowApp() {
-  if (gameUser()?.isGM) {
+  if (game.user?.isGM) {
     new UndoWorkflow({}).render(true, { focus: true })
   } else {
     ui.notifications?.warn("midi-qol.UndowWorkflow.GMOnly")

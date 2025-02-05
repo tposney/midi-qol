@@ -1,4 +1,4 @@
-import { gameUser, geti18nOptions, i18n } from "../../midi-qol.js";
+import { geti18nOptions, i18n } from "../../midi-qol.js";
 import { MidiSounds } from "../midi-sounds.js";
 import { configSettings, midiSoundSettings } from "../settings.js";
 
@@ -101,7 +101,7 @@ export class SoundConfigPanel extends FormApplication {
     }
   }
   async _updateObject(event, formData) {
-    if (!gameUser().can("SETTINGS_MODIFY")) return;
+    if (!game.user?.can("SETTINGS_MODIFY")) return;
     formData = foundry.utils.expandObject(formData);
     const settings: any = {};
     if (formData.chartype) {

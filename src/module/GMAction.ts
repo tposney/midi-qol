@@ -1,5 +1,5 @@
 import { checkRule, configSettings, safeGetGameSetting } from "./settings.js";
-import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming, debug, GameSystemConfig, MODULE_ID, gameUser } from "../midi-qol.js";
+import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { canSense, completeItemUse, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, MQfromUuidSync, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUseV2, completeActivityUse } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { Workflow } from "./Workflow.js";
@@ -7,7 +7,6 @@ import { bonusCheck } from "./patching.js";
 import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, updateUndoChatCardUuidsById } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { installedModules } from "./setupModules.js";
-import { InvalidUuid } from "fvtt-types/utils";
 
 export var socketlibSocket: any = undefined;
 var traitList: any = { di: {}, dr: {}, dv: {}, dm: {}, da: {} };
@@ -79,7 +78,7 @@ export class SaferSocket {
     this.#_socketlibSocket = socketlibSocket;
   }
   canCall(handler) {
-    if (gameUser().isGM) return true;
+    if (game.user?.isGM) return true;
     switch (handler) {
       case "addDependent":
       case "applyEffects":
@@ -117,8 +116,8 @@ export class SaferSocket {
       case "updateEffects":
       case "_gmSetFlag":
       case "_gmUnsetFlag":
-        if (gameUser().isTrusted) return true;
-        ui.notifications?.warn(`midi-qol | user ${gameUser().name} must be a trusted player to call ${handler} and will be disabled in the future`);
+        if (game.user?.isTrusted) return true;
+        ui.notifications?.warn(`midi-qol | user ${game.user?.name} must be a trusted player to call ${handler} and will be disabled in the future`);
         return true; // TODO change this to false in the future.
 
 
@@ -388,7 +387,7 @@ export function GMupdateEntityStats(data: { id: any; currentStats: any; }) {
 export async function timedExecuteAsGM(toDo: string, data: any) {
   if (!debugCallTiming) return untimedExecuteAsGM(toDo, data);
   const start = Date.now();
-  data.playerId = gameUser().id;
+  data.playerId = game.user?.id;
   const returnValue = await untimedExecuteAsGM(toDo, data);
   log(`executeAsGM: ${toDo} elapsed: ${Date.now() - start}ms`)
   return returnValue;
@@ -396,7 +395,7 @@ export async function timedExecuteAsGM(toDo: string, data: any) {
 
 export async function untimedExecuteAsGM(toDo: string, ...args) {
   if (!socketlibSocket) return undefined;
-  const myScene = gameUser().viewedScene;
+  const myScene = game.user?.viewedScene;
   const gmOnScene = game.users?.filter(u => u.active && u.isGM && u.viewedScene === myScene);
   if (!gmOnScene || gmOnScene.length === 0) return socketlibSocket.executeAsGM(toDo, ...args);
   else return socketlibSocket.executeAsUser(toDo, gmOnScene[0].id, ...args);
@@ -702,7 +701,7 @@ export function initGMActionSetup() {
 
 export async function createChatMessage(data: { chatData: any; }) {
   const messageData = foundry.utils.getProperty(data, "chatData.messageData") ?? {};
-  messageData.user = gameUser().id;
+  messageData.user = game.user?.id;
   return await ChatMessage.create(data.chatData);
 }
 
@@ -1088,8 +1087,8 @@ async function createPlayerDamageCard(data: { damageList: any; autoApplyDamage: 
     const speaker: any = ChatMessage.getSpeaker();
     speaker.alias = data.sender;
     let chatData: any = {
-      user: gameUser().id,
-      speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: gameUser().id, actor: data.actorId },
+      user: game.user?.id,
+      speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: game.user?.id, actor: data.actorId },
       content: content,
       // whisper: ChatMessage.getWhisperRecipients("players").filter(u => u.active).map(u => u.id),
       flags: { "midiqol": { "undoDamage": prepareDamagelistToJSON(tokenIdList) } }
@@ -1127,10 +1126,10 @@ async function createGMReverseDamageCard(
   if (["yesCard", "noCard", "yesCardNPC", "yesCardMisses", "noCardMisses"].includes(data.autoApplyDamage)) {
     const content = await renderTemplate("modules/midi-qol/templates/damage-results.html", templateData);
     const speaker: any = ChatMessage.getSpeaker();
-    speaker.alias = gameUser().name;
+    speaker.alias = game.user?.name;
     let chatData: any = {
-      user: gameUser().id,
-      speaker: { scene: getCanvas()?.scene?.id, alias: gameUser().name, user: gameUser().id },
+      user: game.user?.id,
+      speaker: { scene: getCanvas()?.scene?.id, alias: game.user?.name, user: game.user?.id },
       content: content,
       whisper: ChatMessage.getWhisperRecipients("GM").filter(u => (u as User).active).map(u => u.id),
       flags: { "midiqol": { "undoDamage": prepareDamagelistToJSON(tokenIdList) } }
@@ -1295,7 +1294,7 @@ export async function rollActionSave(data: any) {
         type: request,
         dc: saveDC,
         action: "rollRequest",
-        hideDC: !gameUser().isGM && !configSettings.displaySaveDC,
+        hideDC: !game.user?.isGM && !configSettings.displaySaveDC,
         format: "short",
         icon: true
       };

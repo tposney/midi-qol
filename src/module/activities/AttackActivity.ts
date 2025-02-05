@@ -1,4 +1,4 @@
-import { debugEnabled, warn, GameSystemConfig, debug, log, i18n, MODULE_ID, gameUser, i18nFormat } from "../../midi-qol.js";
+import { debugEnabled, warn, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { untimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
 import { defaultRollOptions } from "../patching.js";
@@ -340,7 +340,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       }
 
       // Active defence resolves by triggering saving throws and returns early
-      if (gameUser()?.isGM && workflow.useActiveDefence) {
+      if (game.user?.isGM && workflow.useActiveDefence) {
         delete config.midiOptions.event; // for dnd 3.0
         // TODO work out what to do with active defense 
         /*
@@ -498,7 +498,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       if (configSettings.requireAmmunition && ammoCount === 0) return { reason: i18n("midi-qol.NoAmmunitionAvailable"), proceed: false, confirm: true };
       if (configSettings.requireAmmunition && !this.ammunition) return { reason: i18n("midi-qol.NoAmmunitionSelected"), proceed: true, confirm: true };
       if (ammunitionOptions.some(ammo => ammo.value === this.ammunition && ammo.disabled)) return { reason: game.i18n?.format("midi-qol.NoAmmunition", { name: this.ammunitionItem?.name }), proceed: true, confirm: true };
-      if (gameUser()?.isGM) return { confirm: configSettings.gmConfirmAmmunition && ammoCount > 1, proceed: true };
+      if (game.user?.isGM) return { confirm: configSettings.gmConfirmAmmunition && ammoCount > 1, proceed: true };
       return { confirm: configSettings.confirmAmmunition && (ammoCount > 1), proceed: true };
     }
 

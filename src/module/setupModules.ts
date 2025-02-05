@@ -1,4 +1,4 @@
-import { error, debugEnabled, i18n, gameUser } from "../midi-qol.js";
+import { error, debugEnabled, i18n } from "../midi-qol.js";
 import { log } from "../midi-qol.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { configSettings } from "./settings.js";
@@ -69,7 +69,7 @@ export function dice3dEnabled() {
 }
 
 export function checkModules() { // this really should happen in TroubleShooter
-  if (gameUser().isGM && !installedModules.get("socketlib")) {
+  if (game.user?.isGM && !installedModules.get("socketlib")) {
     ui.notifications?.error("midi-qol.NoSocketLib", {permanent: true, localize: true});
   }
   //@ts-ignore

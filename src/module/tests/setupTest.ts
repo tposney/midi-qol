@@ -1,4 +1,4 @@
-import { MODULE_ID, error, gameSystemId, gameUser } from "../../midi-qol.js";
+import { MODULE_ID, error } from "../../midi-qol.js";
 import { applySettings } from "../apps/ConfigPanel.js";
 import { FormBuilder } from "../lib/FormBuilder.js";
 import { configSettings } from "../settings.js";
@@ -67,7 +67,7 @@ export function getActorItem(actor, itemName) {
   return item;
 }
 export function setupMidiTests() {
-  if (!gameUser()?.isGM) return;
+  if (!game.user?.isGM) return;
   // @ts-expect-error
   if (!game.world?.title.toLocaleLowerCase().includes("quench")) return;
   const actor1 = getActor(actor1Name);
@@ -107,7 +107,7 @@ async function registerTests() {
             const targetActor: Actor | undefined = target?.actor;
             //@ts-ignore
             assert(target && target?.actor && targetActor)
-            gameUser().updateTokenTargets([target?.id ?? ""]);
+            game.user?.updateTokenTargets([target?.id ?? ""]);
             const item = getActorItem(actor, "Toll the Dead");
             // @ts-expect-error can't know about flags
             if (target?.actor) await targetActor?.setFlag(MODULE_ID, "fail.ability.save.all", true);
@@ -236,8 +236,8 @@ async function registerTests() {
             assert.equal(roll.terms[0].results.length, 1);
           });
           it("rolls an advantage initiative roll", async function () {
-            await actor.setFlag(gameSystemId(), "initiativeAdv", true);
-            await actor.setFlag(gameSystemId(), "initiativeDisadv", false);
+            await actor.setFlag(game.system?.id, "initiativeAdv", true);
+            await actor.setFlag(game.system?.id, "initiativeDisadv", false);
             const rollResult: Promise<Roll> = new Promise((resolve) => {
               Hooks.once("createChatMessage", function (chatMessage) {
                 resolve(chatMessage.rolls[0])
@@ -251,15 +251,15 @@ async function registerTests() {
             await actor.rollInitiativeDialog({ createCombatants: true, rerollInitiative: true });
             await combat?.delete();
             const roll: Roll = await rollResult;
-            await actor.unsetFlag(gameSystemId(), "initiativeAdv");
-            await actor.unsetFlag(gameSystemId(), "initiativeDisadv");
+            await actor.unsetFlag(game.system?.id, "initiativeAdv");
+            await actor.unsetFlag(game.system?.id, "initiativeDisadv");
             //@ts-ignore
             assert.equal(roll.terms[0].results.length, 2);
             assert.ok(roll.formula.startsWith("2d20kh"));
           });
           it("rolls a disadvantage initiative roll", async function () {
-            await actor.setFlag(gameSystemId(), "initiativeAdv", false);
-            await actor.setFlag(gameSystemId(), "initiativeDisadv", true);
+            await actor.setFlag(game.system?.id, "initiativeAdv", false);
+            await actor.setFlag(game.system?.id, "initiativeDisadv", true);
             const rollResult: Promise<Roll> = new Promise(async (resolve) => {
               Hooks.once("createChatMessage", function (chatMessage) {
                 resolve(chatMessage.rolls[0])
@@ -273,8 +273,8 @@ async function registerTests() {
             await actor.rollInitiativeDialog({ createCombatants: true, rerollInitiative: true });
             await combat?.delete();
             const roll: Roll = await rollResult;
-            await actor.unsetFlag(gameSystemId(), "initiativeDisadv");
-            await actor.unsetFlag(gameSystemId(), "initiativeAdv");
+            await actor.unsetFlag(game.system?.id, "initiativeDisadv");
+            await actor.unsetFlag(game.system?.id, "initiativeAdv");
             //@ts-ignore
             assert.equal(roll.terms[0].results.length, 2);
             assert.ok(roll.formula.startsWith("2d20kl"));
@@ -326,7 +326,7 @@ async function registerTests() {
             const actor = getActor(actor1Name);
             const target: Token | undefined = getToken(target1Name);
             assert.ok(target && !!target?.actor && actor)
-            gameUser().updateTokenTargets([target?.id ?? ""]);
+            game.user?.updateTokenTargets([target?.id ?? ""]);
             const item = actor.items.getName("Saving Throw Test");
             assert.ok(item);
             const workflow = await completeItemUse(item, {}, { workflowOptions });
@@ -339,7 +339,7 @@ async function registerTests() {
             const target: Token | undefined = getToken(target1Name);
             assert.ok(target && !!target?.actor && actor)
             try {
-              gameUser().updateTokenTargets([target?.id ?? ""]);
+              game.user?.updateTokenTargets([target?.id ?? ""]);
               const item = actor.items.getName("Saving Throw Test");
               assert.ok(item);
               await actor.setFlag("midi-qol", "magicResistance.all", true);
@@ -358,7 +358,7 @@ async function registerTests() {
             const target: Token | undefined = getToken(target1Name);
             assert.ok(target && !!target?.actor && actor);
             try {
-              gameUser().updateTokenTargets([target?.id ?? ""]);
+              game.user?.updateTokenTargets([target?.id ?? ""]);
               const item = actor.items.getName("Saving Throw Test");
               assert.ok(item);
               await actor.setFlag("midi-qol", "magicVulnerability.all", true);
@@ -386,7 +386,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             const target = getToken(target2Name);
             const item = getActorItem(actor, "Longsword");
-            gameUser().updateTokenTargets([target?.id ?? ""]);
+            game.user?.updateTokenTargets([target?.id ?? ""]);
             return completeItemUse(item, {}, { workflowOptions }).then(workflow => assert.ok(!!workflow));
           });
 
@@ -399,7 +399,7 @@ async function registerTests() {
             //@ts-expect-error
             const targetActor: Actor | undefined = target?.actor;
             const actor = getActor(actor1Name);
-            gameUser().updateTokenTargets([target?.id ?? ""]);
+            game.user?.updateTokenTargets([target?.id ?? ""]);
             if (cltInterface.hasCondition("Blinded", [target]))
               await cltInterface.removeCondition("Blinded", [target]);
             assert.ok(!cltInterface.hasCondition("Blinded", [target]));
@@ -427,7 +427,7 @@ async function registerTests() {
             const targetActor: Actor | undefined = target?.actor;
             const actor = getActor(actor2Name);
             assert.ok(target && actor);
-            gameUser().updateTokenTargets([target?.id ?? ""]);
+            game.user?.updateTokenTargets([target?.id ?? ""]);
             if (await CEHasEffectApplied({ effectName: "Deafened", uuid: targetActor?.uuid ?? "" })) {
               await CERemoveEffect({ effectName: "Deafened", uuid: targetActor?.uuid ?? "" });
             }
@@ -451,7 +451,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             assert.ok(target && actor);
             const oldHp = target?.actor?.system.attributes.hp.value;
-            gameUser().updateTokenTargets([target?.id ?? ""]);
+            game.user?.updateTokenTargets([target?.id ?? ""]);
             //@ts-ignore .flags v10
             foundry.utils.setProperty(actor.flags, "midi-qol.advantage.all", true);
             //@ts-ignore .abilities
@@ -469,7 +469,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             const target2: any = getToken(target2Name);
             const target3: any = getToken(target3Name);
-            gameUser().updateTokenTargets([target3?.id ?? "", target2?.id ?? ""]);
+            game.user?.updateTokenTargets([target3?.id ?? "", target2?.id ?? ""]);
             const target2hp = target2?.actor?.system.attributes.hp.value;
             const target3hp = target3?.actor?.system.attributes.hp.value;
             await completeItemUse(actor.items.getName("MODTest"), {}, { advantage: true, workflowOptions }); // does 10 + 10 to undead
@@ -494,7 +494,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             const target2: any = getToken(target2Name);
             const target3: any = getToken(target3Name);
-            gameUser().updateTokenTargets([target2?.id ?? "", target3?.id ?? ""]);
+            game.user?.updateTokenTargets([target2?.id ?? "", target3?.id ?? ""]);
             const target2hp = target2?.actor?.system.attributes.hp.value;
             const target3hp = target3?.actor?.system.attributes.hp.value;
             await completeItemUse(actor.items.getName("MODTestNoActivation"), {}, { workflowOptions }); // does 10 + 10 to undead
@@ -528,7 +528,7 @@ async function registerTests() {
               if (hasEffect?.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", hasEffect.map(e => e.id))
               hasEffect = targetActor?.effects.filter(e => e.name === "Macro Execute Test") ?? [];
               if (hasEffect?.length > 0) await targetActor?.deleteEmbeddedDocuments("ActiveEffect", hasEffect.map(e => e.id));
-              gameUser().updateTokenTargets([target?.id ?? ""]);
+              game.user?.updateTokenTargets([target?.id ?? ""]);
               await completeItemUse(actor.items.getName("Macro Execute Test"), {}, { workflowOptions });
               await busyWait(0.1);
               console.log("Macro Execute Test checking flag", foundry.utils.getProperty(actor, "flags.midi-qol.test"));
@@ -585,7 +585,7 @@ async function registerTests() {
             await completeItemUse(actor.items.getName("OnUseMacroTest"), {}, { workflowOptions }); // Apply the effect
             //@ts-ignore
             const target = getToken(target2Name);
-            gameUser().updateTokenTargets([target?.id ?? ""]);
+            game.user?.updateTokenTargets([target?.id ?? ""]);
             await completeItemUse(actor.items.getName("Longsword"), {}, { workflowOptions }); // Apply the effect
             Hooks.off("OnUseMacroTest", hookid);
             let hasEffects: any = actor.effects.filter(e => e.name === "OnUseMacroTest") ?? [];
@@ -808,10 +808,10 @@ async function registerTests() {
             assert.ok(Number.isNumeric(foundry.utils.getProperty(target.actor, changeKey)));
 
             const oldHp = foundry.utils.getProperty(target, "actor.system.attributes.hp.value");
-            gameUser().updateTokenTargets([target?.id ?? ""]);
+            game.user?.updateTokenTargets([target?.id ?? ""]);
             await completeItemUse(actor.items.getName("AppliesDamage"), {}, { workflowOptions });
             console.warn("completeItemUse completed");
-            gameUser().updateTokenTargets([]);
+            game.user?.updateTokenTargets([]);
             const newHp = foundry.utils.getProperty(target, "actor.system.attributes.hp.value");
             assert.equal(newHp, oldHp - foundry.utils.getProperty(actor, "system.abilities.str.mod"));
             await target.actor?.deleteEmbeddedDocuments("ActiveEffect", theEffects?.map(ef => ef.id) ?? [])
@@ -823,7 +823,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             const target: any = getToken(target2Name);
             const oldHp = foundry.utils.getProperty(target, "actor.system.attributes.hp.value");
-            gameUser().updateTokenTargets([target?.id ?? ""]);
+            game.user?.updateTokenTargets([target?.id ?? ""]);
             const changeKey = "system.traits.dm.midi.rwak";
             const changeValue = "-10";
             const changeMode = CONST.ACTIVE_EFFECT_MODES.OVERRIDE;
@@ -835,7 +835,7 @@ async function registerTests() {
             assert.equal("number", typeof foundry.utils.getProperty(target.actor, changeKey))
             assert.ok(Number.isNumeric(foundry.utils.getProperty(target.actor, changeKey)));
             await completeItemUse(actor.items.getName("AppliesDamage"), {}, { workflowOptions });
-            gameUser().updateTokenTargets([]);
+            game.user?.updateTokenTargets([]);
             const newHp = target?.actor?.system.attributes.hp.value;
             //@ts-ignore
             assert.equal(newHp, oldHp - actor.system.abilities.str.mod);
@@ -847,7 +847,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             const target: any = getToken(target2Name);
             const oldHp = foundry.utils.getProperty(target, "actor.system.attributes.hp.value");
-            gameUser().updateTokenTargets([target?.id ?? ""]);
+            game.user?.updateTokenTargets([target?.id ?? ""]);
             const changeKey = "system.traits.dm.amount.piercing";
             const changeValue = "-10";
             const changeMode = CONST.ACTIVE_EFFECT_MODES.OVERRIDE;
@@ -858,7 +858,7 @@ async function registerTests() {
             let theEffects = await target.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
             assert.ok(Number.isNumeric(foundry.utils.getProperty(target.actor, changeKey)));
             await completeItemUse(actor.items.getName("AppliesDamage"), {}, { workflowOptions });
-            gameUser().updateTokenTargets([]);
+            game.user?.updateTokenTargets([]);
             const newHp = target?.actor?.system.attributes.hp.value;
             //@ts-expect-error no dnd5e-types
             assert.equal(newHp, oldHp - actor.system.abilities.str.mod);

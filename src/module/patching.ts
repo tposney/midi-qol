@@ -1,4 +1,4 @@
-import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, isdndv4, NumericTerm, gameSystemId, gameUser } from "../midi-qol.js";
+import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, isdndv4, NumericTerm } from "../midi-qol.js";
 import { configSettings, autoFastForwardAbilityRolls, checkRule, checkMechanic, safeGetGameSetting } from "./settings.js";
 import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getTokenForActor, getSpeaker, getUnconsciousStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, MQfromUuidSync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed } from "./utils.js";
 import { installedModules } from "./setupModules.js";
@@ -14,7 +14,7 @@ var d20Roll;
 
 function _isVisionSource(wrapped) {
   const isVisionSource = wrapped();
-  if (this.document.hidden && !gameUser().isGM && this.actor?.testUserPermission(game.user, "OWNER")) {
+  if (this.document.hidden && !game.user?.isGM && this.actor?.testUserPermission(game.user, "OWNER")) {
     return true;
   }
   return isVisionSource;
@@ -23,7 +23,7 @@ function _isVisionSource(wrapped) {
 function isVisible(wrapped) {
   const isVisible = wrapped();
   //@ts-ignore
-  if (!gameUser().isGM && this.actor?.testUserPermission(game.user, "OWNER")) {
+  if (!game.user?.isGM && this.actor?.testUserPermission(game.user, "OWNER")) {
     return true;
   }
   return isVisible;
@@ -111,7 +111,7 @@ export async function bonusCheck(actor, result: Roll, category, detail = "", mes
       messageData
     }
     let title;
-    let systemString = gameSystemId().toUpperCase();
+    let systemString = game.system?.id.toUpperCase();
     if (GameSystemConfig.abilities[detail]?.label || GameSystemConfig.skills[detail]?.label) {
       if (detail.startsWith("fail")) title = "Failed Save Check";
       else if (category.startsWith("check")) title = i18nFormat(`${systemString}.AbilityPromptTitle`, { ability: GameSystemConfig.abilities[detail].label ?? "" });
@@ -243,7 +243,7 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
       const maxValue = (maxflags.skill && maxflags.skill.all);
       const minflags = foundry.utils.getProperty(this, "flags.midi-qol.min") ?? {};
       const minValue = (minflags.skill && minflags.skill.all);
-      preRollSkillHookId = Hooks.once(`${gameSystemId()}.preRollSkillV2`, (config, dialog, message) => {
+      preRollSkillHookId = Hooks.once(`${game.system?.id}.preRollSkillV2`, (config, dialog, message) => {
         message.data ??= {};
         if (foundry.utils.isNewerVersion("4.2", game.system?.version ?? "")) {
           message.create = false; // TODO dnd5e 4.2 remove this
@@ -258,7 +258,7 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
         })
         setDialogOptions(dialog, config, config.rolls[0]?.options);
       })
-      rollSkillHookId = Hooks.once(`${gameSystemId()}.postSkillRollConfiguration`, (rolls, config, dialog, messageDetails) => {
+      rollSkillHookId = Hooks.once(`${game.system?.id}.postSkillRollConfiguration`, (rolls, config, dialog, messageDetails) => {
         // record message configuration details for later display
         message = messageDetails;
       });
@@ -295,8 +295,8 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
     throw err;
   }
   finally {
-    if (preRollSkillHookId) Hooks.off(`${gameSystemId()}.preRollSkillV2`, preRollSkillHookId);
-    if (rollSkillHookId) Hooks.off(`${gameSystemId()}.postSkillRollConfiguration`, rollSkillHookId);
+    if (preRollSkillHookId) Hooks.off(`${game.system?.id}.preRollSkillV2`, preRollSkillHookId);
+    if (rollSkillHookId) Hooks.off(`${game.system?.id}.postSkillRollConfiguration`, rollSkillHookId);
     if (saveRollMode) game.settings?.set("core", "rollMode", saveRollMode);
     if (oldFormat) return result?.[0];
     return result;
@@ -582,7 +582,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
       const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId]));
       const minFlags = foundry.utils.getProperty(this, "flags.midi-qol.min.ability") ?? {};
       const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId]));
-      preRollAbilityHookId = Hooks.once(`${gameSystemId()}.preRoll${type}V2`, (config, dialog, message) => {
+      preRollAbilityHookId = Hooks.once(`${game.system?.id}.preRoll${type}V2`, (config, dialog, message) => {
         config.rolls.forEach(roll => {
           roll.options.advantage ||= config.midiOptions.advantage;
           roll.options.disadvantage ||= config.midiOptions.disadvantage;
@@ -591,7 +591,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
         });
         setDialogOptions(dialog, config, config.rolls[0]?.options);
       });
-      rollAbilityHookId = Hooks.once(`${gameSystemId()}.post${type}RollConfiguration`, (rolls, config, dialog, messageDetails) => {
+      rollAbilityHookId = Hooks.once(`${game.system?.id}.post${type}RollConfiguration`, (rolls, config, dialog, messageDetails) => {
         // record the configured message data for later display
         message = messageDetails;
       });
@@ -648,8 +648,8 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
     TroubleShooter.recordError(err, message);
     error(message, err);
   } finally {
-    if (preRollAbilityHookId) Hooks.off(`${gameSystemId()}.preRoll${type}V2`, preRollAbilityHookId);
-    if (rollAbilityHookId) Hooks.off(`${gameSystemId()}.post${type}RollConfiguration`, rollAbilityHookId);
+    if (preRollAbilityHookId) Hooks.off(`${game.system?.id}.preRoll${type}V2`, preRollAbilityHookId);
+    if (rollAbilityHookId) Hooks.off(`${game.system?.id}.post${type}RollConfiguration`, rollAbilityHookId);
     if (saveRollMode) game.settings?.set("core", "rollMode", saveRollMode);
     return oldFormat ? result?.[0] : result
   }
@@ -753,7 +753,8 @@ export async function procAbilityAdvantage(actor, rollType, abilityId, options: 
   var withDisadvantage = options.disadvantage;
 
   if (rollType === "save" && options.isMagicSave) {
-    if ((actor?.system.traits?.dr?.custom || "").includes(i18n("midi-qol.MagicResistant") ??  "Magic Resistant").trim())
+    const mr = (i18n("midi-qol.MagicResistant") ?? "Magic Resistant").trim();
+    if ((actor?.system.traits?.dr?.custom || "").includes(mr))
       withAdvantage = true;;
     const conditionData = createConditionData({ workflow: options.workflow, target: tokenForActor(actor), actor, item: options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid });
     if (await evalAllConditionsAsync(actor, "flags.midi-qol.magicResistance.all", conditionData, false) ||
@@ -1167,13 +1168,13 @@ export function getInitiativeRoll(wrapped, options: any = { advantageMode: undef
   if (evalAllConditions(this, "flags.midi-qol.advantage.all", conditionData)
     || evalAllConditions(this, "flags.midi-qol.advantage.ability.check.all", conditionData)
     || evalAllConditions(this, `flags.midi-qol.advantage.ability.check.${init}`, conditionData)
-    || evalAllConditions(this, `flags.${gameSystemId()}.initiativeAdv`, conditionData)) {
+    || evalAllConditions(this, `flags.${game.system?.id}.initiativeAdv`, conditionData)) {
     adv = true;
   }
   if (evalAllConditions(this, "flags.midi-qol.disadvantage.all", conditionData)
     || evalAllConditions(this, "flags.midi-qol.disadvantage.ability.check.all", conditionData)
     || evalAllConditions(this, `flags.midi-qol.disadvantage.ability.check.${init}`, conditionData)
-    || evalAllConditions(this, `flags.${gameSystemId()}.initiativeDisadv`, conditionData)) {
+    || evalAllConditions(this, `flags.${game.system?.id}.initiativeDisadv`, conditionData)) {
     disadv = true;
   }
 
@@ -1356,8 +1357,8 @@ function prepareSheetItem(wrapped, item, ctx) {
 }
 
 export function readyPatching() {
-  if (gameSystemId() === "dnd5e" || gameSystemId() === "n5e") {
-    libWrapper.register(MODULE_ID, `game.${gameSystemId()}.canvas.AbilityTemplate.prototype.refresh`, midiATRefresh, "WRAPPER");
+  if (game.system?.id === "dnd5e" || game.system?.id === "n5e") {
+    libWrapper.register(MODULE_ID, `game.${game.system?.id}.canvas.AbilityTemplate.prototype.refresh`, midiATRefresh, "WRAPPER");
     libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['dnd5e.ActorSheet5eCharacter'].cls.prototype._filterItems", _filterItems, "WRAPPER");
     libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['dnd5e.ActorSheet5eCharacter2'].cls.prototype._prepareItem", prepareSheetItem, "WRAPPER");
     libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['dnd5e.ActorSheet5eNPC'].cls.prototype._filterItems", _filterItems, "WRAPPER");
@@ -1379,7 +1380,7 @@ export function readyPatching() {
 
   libWrapper.register(MODULE_ID, "Notifications.prototype.notify", notificationNotify, "MIXED");
   const gameVersion = game.system?.version;
-  if ((gameSystemId() === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion ?? ""))) {
+  if ((game.system?.id === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion ?? ""))) {
     if (ui.notifications)
       ui.notifications.error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
     else
@@ -1418,23 +1419,23 @@ export function readyPatching() {
 }
 
 function removeDependent(dependent: any) {
-  const id = gameSystemId() ?? MODULE_ID;
+  const id = game.system?.id ?? MODULE_ID;
   const dependents = (this.getFlag(id, "dependents") || []).filter(dep => dep.uuid !== dependent.uuid);
   if (dependents.length === 0) return this.unsetFlag(id, "dependents");
   return this.setFlag(id, "dependents", dependents);
 }
 function setDependents(dependents) {
-  const id = gameSystemId() ?? MODULE_ID;
+  const id = game.system?.id ?? MODULE_ID;
   return this.setFlag(id, "dependents", dependents);
 }
 async function clearDependents() {
-  const id = gameSystemId() ?? MODULE_ID;
+  const id = game.system?.id ?? MODULE_ID;
   if (!this.getFlag(id, "dependents")) return;
   return await this.unsetFlag(id, "dependents");
 }
 
 async function deleteAllDependents() {
-  if (!gameUser().isGM) return;
+  if (!game.user?.isGM) return;
   const dependents = this.getDependents();
   await this.clearDependents();
   for (let dep of dependents) {
@@ -1453,7 +1454,7 @@ async function addDependents(...dependents) {
  * @returns {Promise<ActiveEffect5e>}
  */
 async function _addDependent(...dependent) {
-  const id = gameSystemId() ?? MODULE_ID;
+  const id = game.system?.id ?? MODULE_ID;
   const dependents = this.getDependents().map(d => ({ uuid: d.uuid }));
   dependents.push(...dependent.filter(dep => !dependents.some(d => d.uuid === dep.uuid)).map(d => ({ uuid: d.uuid })));
   return this.setFlag(id, "dependents", dependents);
@@ -1464,7 +1465,7 @@ async function _addDependent(...dependent) {
  * @returns {Document[]}
  */
 function _getDependents() {
-  const id = gameSystemId() ?? MODULE_ID;
+  const id = game.system?.id ?? MODULE_ID;
   return Array.from((this.getFlag(id, "dependents") || []).reduce((deps, { uuid }) => {
     const effect = MQfromUuidSync(uuid);
     if (effect) deps.add(effect);
@@ -1478,7 +1479,7 @@ async function _onDelete(wrapped, ...args) {
     if (!this.getDependents) return wrapped(...args);
     // Special case for consumable items - don't delete effect when item deleted
     if (this instanceof Item && this.type === "consumable") {
-      foundry.utils.setProperty(this, `flags.${gameSystemId()}.dependents`, [])
+      foundry.utils.setProperty(this, `flags.${game.system?.id}.dependents`, [])
       return wrapped(...args);
     }
     const dependents = this.getDependents();
@@ -1488,7 +1489,7 @@ async function _onDelete(wrapped, ...args) {
           await dep.delete(options);
         }
         // Since the effect will have been already deleted we can't do any updates to it.
-        foundry.utils.setProperty(this, `flags.${gameSystemId()}.dependents`, [])
+        foundry.utils.setProperty(this, `flags.${game.system?.id}.dependents`, [])
       }
     }
   }
@@ -1497,8 +1498,8 @@ async function _onDelete(wrapped, ...args) {
 
 function createConcentrationEffectData(wrapped, item, data: any = {}) {
   const effectData = wrapped(item, data);
-  if (!foundry.utils.getProperty(effectData, `flags.${gameSystemId()}.itemUuid`)) {
-    foundry.utils.setProperty(effectData, `flags.${gameSystemId()}.itemUuid`, item.uuid);
+  if (!foundry.utils.getProperty(effectData, `flags.${game.system?.id}.itemUuid`)) {
+    foundry.utils.setProperty(effectData, `flags.${game.system?.id}.itemUuid`, item.uuid);
   }
   return effectData;
 }
@@ -1573,7 +1574,7 @@ function _getUsageConfig(wrapped): any {
 
 export let itemPatching = () => {
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.use", doItemUse, "MIXED");
-  if (gameSystemId() === "dnd5e" || gameSystemId() === "n5e") {
+  if (game.system?.id === "dnd5e" || game.system?.id === "n5e") {
     if (!isdndv4) libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype._getUsageConfig", _getUsageConfig, "WRAPPER");
     libWrapper.register(MODULE_ID, "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
   }
@@ -1581,7 +1582,7 @@ export let itemPatching = () => {
 };
 
 export async function checkDeleteTemplate(templateDocument, options, user) {
-  if (user !== gameUser().id) return;
+  if (user !== game.user?.id) return;
   if (options.undo) return;
   let origin = MQfromUuidSync(templateDocument.getFlag("dnd5e", "origin"));
   if (origin instanceof Item && origin.parent instanceof Actor) {
@@ -1630,7 +1631,7 @@ export async function rollToolCheck(wrapped, options: any = {}) {
   if (chatMessage !== false && result) {
     const title = `${this.name} - ${game.i18n?.localize("DND5E.ToolCheck")}`;
     const args: any = { "speaker": getSpeaker(this.actor), title, flavor: title };
-    foundry.utils.setProperty(args, `flags.${gameSystemId()}.roll`, { type: "tool", itemId: this.id, itemUuid: this.uuid });
+    foundry.utils.setProperty(args, `flags.${game.system?.id}.roll`, { type: "tool", itemId: this.id, itemUuid: this.uuid });
     args.template = "modules/midi-qol/templates/roll.html";
     await result.toMessage(args, { rollMode });
   }
@@ -2066,7 +2067,7 @@ function actorGetRollData(wrapped, ...args) {
   data.flags["midi-qol"] = this.flags?.["midi-qol"] ?? {};
   data.midiFlags = data.flags["midi-qol"];
   data.items = this.items;
-  if (gameSystemId() === "dnd5e") {
+  if (game.system?.id === "dnd5e") {
     data.cfg = {};
     data.cfg.armorClasses = GameSystemConfig.armorClasses;
     data.cfg.actorSizes = GameSystemConfig.actorSizes;

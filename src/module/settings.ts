@@ -1,4 +1,4 @@
-import { debug, setDebugLevel, i18n, debugEnabled, geti18nTranslations, geti18nOptions, error, gameSystemId, gameUser } from "../midi-qol.js";
+import { debug, setDebugLevel, i18n, debugEnabled, geti18nTranslations, geti18nOptions, error } from "../midi-qol.js";
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -222,7 +222,7 @@ export function checkMechanic(mechanic: string): any {
 
 export function checkRule(rule: string) {
   let rulesEnabled = configSettings.optionalRulesEnabled;
-  if (gameUser()?.isGM)
+  if (game.user?.isGM)
     rulesEnabled = rulesEnabled ? !configSettings.toggleOptionalRules : configSettings.toggleOptionalRules;
   return rulesEnabled && configSettings.optionalRules[rule];
 }
@@ -282,7 +282,7 @@ export function collectSettingData() {
     flags: {}
   };
   data.flags["exportSource"] = {
-    system: gameSystemId(),
+    system: game.system?.id,
     coreVersion: game.version ?? game?.version,
     //@ts-expect-error version
     systemVersion: game.system.version,
@@ -566,7 +566,7 @@ export let fetchParams = () => {
   //@ts-expect-error
   autoRemoveTargets = String(game.settings?.get("midi-qol", "AutoRemoveTargets"));
   if (autoRemoveTargets === "allGM") {
-    autoRemoveTargets = gameUser().isGM ? "all" : "dead";
+    autoRemoveTargets = game.user?.isGM ? "all" : "dead";
   //@ts-expect-error
   game.settings?.set("midi-qol", "AutoRemoveTargets", autoRemoveTargets);
   }
@@ -623,7 +623,7 @@ export let fetchParams = () => {
       };
       configSettings.concentrationAutomation = false;
   //@ts-expect-error
-  game.settings?.set(gameSystemId(), "disableConcentration", false);
+  game.settings?.set(game.system?.id, "disableConcentration", false);
   //@ts-expect-error
   game.settings?.set("midi-qol", "ConfigSettings", configSettings)
     });

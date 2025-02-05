@@ -1,4 +1,4 @@
-import { gameUser, i18n } from "../../midi-qol.js"
+import { i18n } from "../../midi-qol.js"
 import { configSettings, defaultTargetConfirmationSettings, targetConfirmation } from "../settings.js";
 
 export class TargetConfirmationConfig extends FormApplication {
@@ -45,7 +45,7 @@ export class TargetConfirmationConfig extends FormApplication {
     this.render(true);
     //@ts-expect-error
     game.settings?.set("midi-qol", "LateTargeting", "none");
-    if (gameUser().isGM) configSettings.gmLateTargeting = "none";
+    if (game.user?.isGM) configSettings.gmLateTargeting = "none";
   }
 
   activateListeners(html) {

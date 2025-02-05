@@ -1,4 +1,4 @@
-import { error, gameStats, gameUser, i18n } from "../midi-qol.js";
+import { error, gameStats, i18n } from "../midi-qol.js";
 import { RollStatsDisplay } from "./apps/RollStatsDisplay.js";
 import { timedExecuteAsGM } from "./GMAction.js";
 import { configSettings } from "./settings.js";
@@ -128,7 +128,7 @@ export class RollStats {
   }
 
   async endSession() {
-    if (!gameUser().isGM) return;
+    if (!game.user?.isGM) return;
     Object.keys(this.currentStats).forEach(actorId => {
       this.currentStats[actorId].session = foundry.utils.duplicate(blankStat);
       this.currentStats[actorId].itemStats = {};
@@ -138,7 +138,7 @@ export class RollStats {
   }
 
   async clearStats() {
-    if (!gameUser().isGM) return;
+    if (!game.user?.isGM) return;
     //@ts-expect-error
     await game.settings?.set("midi-qol", "RollStats", {})
   }
@@ -149,7 +149,7 @@ export class RollStats {
   }
 
   GMremoveActorStats(actorId) {
-    if (!gameUser().isGM) return;
+    if (!game.user?.isGM) return;
     delete this.currentStats[actorId];
     //@ts-expect-error
     game.settings?.set("midi-qol", "RollStats", this.currentStats)
@@ -173,9 +173,9 @@ export class RollStats {
     const actorStats = this.getEntityStats(item?.actor?.id, game.actors);
     if (!actorStats) return;
     let playerStats;
-    if (item?.actor.testUserPermission(gameUser(), "OWNER")) {
-      //@ts-ignore gameUser().id
-      playerStats = this.getEntityStats(gameUser().id, gameUsers())
+    if (item?.actor.testUserPermission(game.user, "OWNER")) {
+      //@ts-ignore game.user?.id
+      playerStats = this.getEntityStats(game.user?.id, game.users)
     }
     for (let stats of [actorStats, playerStats]) {
       if (!stats) continue;
@@ -186,7 +186,7 @@ export class RollStats {
         itemStats = this.getitemStats(item, item?.actor.id, game.actors).session;
       else
         //@ts-ignore
-        itemStats = this.getitemStats(item, gameUser().id, gameUsers()).session;
+        itemStats = this.getitemStats(item, game.user?.id, game.users).session;
       [session, lifetime, itemStats].forEach(stats => {
         stats.numDamageRolls += 1;
         stats.damageApplied += hpDamage;
@@ -198,7 +198,7 @@ export class RollStats {
     }
     this.updateEntity({ id: item.actor.id });
     //@ts-ignore
-    if (playerStats) this.updateEntity({ id: gameUser().id })
+    if (playerStats) this.updateEntity({ id: game.user?.id })
     Hooks.call("midi-qol.StatsUpdated");
   }
 
@@ -206,9 +206,9 @@ export class RollStats {
     const currentStats = this.getEntityStats(item.actor?.id, game.actors);
     if (!currentStats) return;
     let playerStats;
-    if (item?.actor.testUserPermission(gameUser(), "OWNER")) {
-      //@ts-ignore gameUser().id
-      playerStats = this.getEntityStats(gameUser().id, gameUsers())
+    if (item?.actor.testUserPermission(game.user, "OWNER")) {
+      //@ts-ignore game.user?.id
+      playerStats = this.getEntityStats(game.user?.id, game.users)
     }
     for (let stats of [currentStats, playerStats]) {
       if (!stats) continue;
@@ -217,7 +217,7 @@ export class RollStats {
         itemStats = this.getitemStats(item, item?.actor.id, game.actors).session;
       else
         //@ts-ignore
-        itemStats = this.getitemStats(item, gameUser().id, gameUsers()).session;
+        itemStats = this.getitemStats(item, game.user?.id, game.users).session;
       const session = stats.session;
       const lifetime = stats.lifetime;
       [session, lifetime, itemStats].forEach(stats => {
@@ -231,7 +231,7 @@ export class RollStats {
     }
     this.updateEntity({ id: item.actor.id });
     //@ts-ignore
-    if (playerStats) this.updateEntity({ id: gameUser().id })
+    if (playerStats) this.updateEntity({ id: game.user?.id })
     Hooks.call("midi-qol.StatsUpdated");
   }
 

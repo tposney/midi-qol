@@ -1,4 +1,4 @@
-import { i18n } from "../../midi-qol";
+import { i18n } from "../../midi-qol.js";
 
 //@ts-expect-error
 const ActivityChoiceDialog = dnd5e.applications?.activity?.ActivityChoiceDialog;

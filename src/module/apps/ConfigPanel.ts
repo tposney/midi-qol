@@ -1,6 +1,6 @@
 import { criticalDamage, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, importSettingsFromJSON, exportSettingsToJSON, enableWorkflow } from "../settings.js"
 import { configSettings } from "../settings.js"
-import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log, GameSystemConfig, gameUser } from "../../midi-qol.js";
+import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log, GameSystemConfig } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
 import { get } from "jquery";
 
@@ -256,7 +256,7 @@ export class ConfigPanel extends FormApplication {
     let newSettings = foundry.utils.mergeObject(configSettings, formData, { overwrite: true, inplace: false })
     // const newSettings = foundry.utils.mergeObject(configSettings, expand, {overwrite: true})
     //@ts-expect-error
-    if (gameUser().can("SETTINGS_MODIFY")) game.settings?.set("midi-qol", "ConfigSettings", newSettings);
+    if (game.user.can("SETTINGS_MODIFY")) game.settings?.set("midi-qol", "ConfigSettings", newSettings);
   }
 }
 

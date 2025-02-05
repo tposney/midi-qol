@@ -285,7 +285,7 @@ export class TroubleShooter extends FormApplication {
     data.summary = {
       "foundry-version": gameVersion,
       "Game System": gameSystemId,
-      "Game System Version": game.system.version,
+      "Game System Version": game.system?.version,
       "midi-qol-version": game.modules?.get("midi-qol")?.version,
       "Dynamic Active Effects Version": game.modules?.get("dae")?.version,
       "coreSettings": {

@@ -1,4 +1,4 @@
-import { GameSystemConfig, MQDamageRollTypes, debugEnabled, gameUser, i18n, log, warn } from "../midi-qol.js";
+import { GameSystemConfig, MQDamageRollTypes, debugEnabled, i18n, log, warn } from "../midi-qol.js";
 //import { chatDamageButtons } from "./chatMessageHandling.js";
 import { addChatDamageButtons, configSettings, safeGetGameSetting } from "./settings.js";
 import { getToken } from "./utils.js";
@@ -142,9 +142,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           foundry.utils.setProperty(rolls[0], "flags.midi-qol.total", total);
         }
         let formulaInToolTip = ["formula", "formulaadv"].includes(configSettings.rollAlternate);
-        let hideDetails = this.author.isGM && !gameUser().isGM && (configSettings.hideRollDetails ?? "none") !== "none";
-        let hideFormula = this.author.isGM && !gameUser().isGM && (configSettings.hideRollDetails ?? "none") !== "none";
-        if (this.author.isGM && !gameUser().isGM && (configSettings.hideRollDetails ?? "none") !== "none") {
+        let hideDetails = this.author.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none";
+        let hideFormula = this.author.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none";
+        if (this.author.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none") {
           switch (configSettings.hideRollDetails) {
             case "none":
               break;
@@ -236,7 +236,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
               html.querySelector(`.midi-qol-${rType}-roll`)?.appendChild(flavor);
             }
             html.querySelector(`.midi-qol-${rType}-roll`)?.appendChild(roll);
-            if ((configSettings.hideRollDetails ?? "none") !== "none" && !gameUser().isGM && this.author.isGM) {
+            if ((configSettings.hideRollDetails ?? "none") !== "none" && !game.user?.isGM && this.author.isGM) {
               html.querySelectorAll(".dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
             }
           }
@@ -244,8 +244,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }
 
       const shouldAddButtons = addChatDamageButtons === "both"
-        || (addChatDamageButtons === "gm" && gameUser().isGM)
-        || (addChatDamageButtons === "pc" && !gameUser().isGM);
+        || (addChatDamageButtons === "gm" && game.user?.isGM)
+        || (addChatDamageButtons === "pc" && !game.user?.isGM);
       if (shouldAddButtons) {
         for (let dType of MQDamageRollTypes) {
           rolls = this.rolls.filter(r => foundry.utils.getProperty(r, "options.midi-qol.rollType") === dType);
@@ -262,7 +262,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           foundry.utils.setProperty(damageApplication.damages, "flags.midi-qol.damageType", dType);
 
           html.querySelector(".message-content").appendChild(damageApplication);
-          if (!gameUser().isGM) {
+          if (!game.user?.isGM) {
             //@ ts-expect-error
             // damageApplication.targetSourceControl.hidden = true;
             //@ ts-expect-error
@@ -279,7 +279,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       super._highlightCriticalSuccessFailure(html);
       for (let [index, d20Roll] of this.rolls.entries()) {
         const total = html.find(".dice-total")[index];
-        if (!gameUser().isGM && configSettings.autoCheckHit === "whisper") {
+        if (!game.user?.isGM && configSettings.autoCheckHit === "whisper") {
           if (total.classList.contains("success")) total.classList.remove("success");
           if (total.classList.contains("failure")) total.classList.remove("failure");
           if (total.classList.contains("critical")) total.classList.remove("critical");
@@ -298,7 +298,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     enrichAttackRolls(html) {
-      if (!this.author.isGM || gameUser().isGM) return;
+      if (!this.author.isGM || game.user?.isGM) return;
       const hitFlag = foundry.utils.getProperty(this, "flags.midi-qol.isHit");
       const hitString = hitFlag === undefined ? "" : hitFlag ? i18n("midi-qol.hits") : i18n("midi-qol.misses");
       let attackRollText;
@@ -334,7 +334,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           break;
       }
       if (attackRollText) html.querySelectorAll(".midi-attack-roll .dice-total")?.forEach(el => el.innerHTML = attackRollText);
-      if (this.author.isGM && !gameUser().isGM && removeFormula) {
+      if (this.author.isGM && !game.user?.isGM && removeFormula) {
         html.querySelectorAll(".midi-attack-roll .dice-formula")?.forEach(el => el.remove());
         html.querySelectorAll(".midi-attack-roll .dice-tooltip")?.forEach(el => el.remove());
         html.querySelectorAll(".dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
@@ -349,13 +349,13 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
       // @ts-expect-error no dnd5e-types
       super._enrichChatCard(html);
-      if (this.author.isGM && (configSettings.hideRollDetails ?? "none") !== "none" && !gameUser().isGM) {
+      if (this.author.isGM && (configSettings.hideRollDetails ?? "none") !== "none" && !game.user?.isGM) {
         html.querySelectorAll(".dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
         html.querySelectorAll(".dice-tooltip").forEach(el => el.style.height = "0");
       }
       // Remove the hit miss check mark for non-gm players if required.
       // Because midi rolls are not marked as attack rolls
-      if (!gameUser().isGM) {
+      if (!game.user?.isGM) {
         const hideAttackResult = safeGetGameSetting("dnd5e", "attackRollVisibility") === "none";
         if (hideAttackResult || configSettings.autoCheckHit !== "all") {
           html.querySelectorAll(".midi-attack-roll .dice-total .icons")?.forEach(el => el.remove());

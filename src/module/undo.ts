@@ -1,5 +1,5 @@
 
-import { debug, debugEnabled, error, gameUser, log, warn } from "../midi-qol.js";
+import { debug, debugEnabled, error, log, warn } from "../midi-qol.js";
 import { socketlibSocket, untimedExecuteAsGM } from "./GMAction.js";
 import { configSettings } from "./settings.js";
 import { busyWait } from "./tests/setupTest.js";
@@ -77,11 +77,11 @@ export async function saveUndoData(workflow: Workflow): Promise<boolean> {
   if (!configSettings.undoWorkflow) return true;
   workflow.undoData = {};
   workflow.undoData.id = workflow.id;
-  workflow.undoData.userId = gameUser().id;
+  workflow.undoData.userId = game.user?.id;
   workflow.undoData.itemName = workflow.item?.name;
   workflow.undoData.itemUuid = workflow.item?.uuid;
-  workflow.undoData.userName = gameUser().name;
-  workflow.undoData.userId = gameUser().id;
+  workflow.undoData.userName = game.user?.name;
+  workflow.undoData.userId = game.user?.id;
   workflow.undoData.tokendocUuid = workflow.token?.uuid ?? workflow.token?.document.uuid;
   workflow.undoData.actorUuid = workflow.actor?.uuid;
   workflow.undoData.actorName = workflow.actor?.name;

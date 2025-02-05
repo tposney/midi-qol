@@ -22,27 +22,12 @@ export function getGame(): Game | undefined {
   return game as Game;
 }
 
-export function gameUsers(): Users {
-  return game.users as Users;
-}
-export function gameUser(id?: string | undefined): User {
-  if (!id) return game.user as unknown as User;
-  else return game.users?.get(id) as unknown as User;
-}
-
-export function gameSystemId() : string {
-  return (game.system?.id ?? "dnd5e") as string;
-}
 export function getCanvas(): Canvas | undefined {
   if (!canvas || !canvas.scene) {
     error("Canvas/Scene not ready - roll automation will not function");
     return undefined;
   }
   return canvas;
-}
-
-export function gameCombat(): Combat | undefined {
-  return game.combat as unknown as Combat;
 }
 
 export let debugEnabled = 0;
@@ -69,7 +54,7 @@ export let i18n = (key: string) => {
   return getGame()?.i18n?.localize(key) ?? key;
 };
 export function i18nSystem(key) {
-  const keyHeader = gameSystemId().toUpperCase();
+  const keyHeader = game.system?.id.toUpperCase();
   return i18n(`${keyHeader}.${key}`);
 }
 export let i18nFormat = (key: string, data = {}) => {
@@ -203,11 +188,11 @@ Hooks.once('init', async function () {
   //@ts-expect-error
   if (game.release.generation < 12 && !Math.clamp) Math.clamp = Math.clamped;
 
-  GameSystemConfig.damageTypes["none"] = { label: i18n("midi-qol.noType"), icon: `systems/${gameSystemId()}/icons/svg/trait-damage-immunities.svg` };
-  GameSystemConfig.damageTypes["midi-none"] = { label: i18n("midi-qol.midi-none"), icon: `systems/${gameSystemId()}/icons/svg/trait-damage-immunities.svg` };
-  SystemString = gameSystemId().toUpperCase();
+  GameSystemConfig.damageTypes["none"] = { label: i18n("midi-qol.noType"), icon: `systems/${game.system?.id}/icons/svg/trait-damage-immunities.svg` };
+  GameSystemConfig.damageTypes["midi-none"] = { label: i18n("midi-qol.midi-none"), icon: `systems/${game.system?.id}/icons/svg/trait-damage-immunities.svg` };
+  SystemString = game.system?.id.toUpperCase();
   allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
-  if (gameSystemId() === "sw5e")
+  if (game.system?.id === "sw5e")
     allAttackTypes = ["rwak", "mwak", "rpak", "mpak"];
   initHooks();
 
@@ -377,7 +362,7 @@ Hooks.on("dae.addSpecialDurations", daeSpecialDurations => {
     //    daeSpecialDurations["1Hit"] = i18n("dae.1Hit");
     daeSpecialDurations["1Reaction"] = i18n("dae.1Reaction")
     let attackTypes = ["mwak", "rwak", "msak", "rsak"];
-    if (gameSystemId() === "sw5e") attackTypes = ["mwak", "rwak", "mpak", "rpak"];
+    if (game.system?.id === "sw5e") attackTypes = ["mwak", "rwak", "mpak", "rpak"];
     attackTypes.forEach(at => {
       daeSpecialDurations[`1Attack:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${game.i18n?.format("dae.1Attack", { type: GameSystemConfig.itemActionTypes[at] })}`;
       daeSpecialDurations[`1Hit:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${game.i18n?.format("dae.1Hit", { type: GameSystemConfig.itemActionTypes[at] })}`;
@@ -475,7 +460,7 @@ function addConfigOptions() {
 
   //@ts-expect-error
   let config = game.system?.config ?? {};
-  if (gameSystemId() === "dnd5e" || gameSystemId() === "n5e") {
+  if (game.system?.id === "dnd5e" || game.system?.id === "n5e") {
     config.midiProperties = {};
     // Add additonal vision types? How to modify token properties doing this.
     // config.midiProperties["confirmTargets"] = i18n("midi-qol.confirmTargetsProp");
@@ -519,7 +504,7 @@ function addConfigOptions() {
     config.traits.di.configKey = "damageTypes";
     config.traits.dr.configKey = "damageTypes";
     config.traits.dv.configKey = "damageTypes";
-    if (!config.traits.da && gameSystemId() === "dnd5e") {
+    if (!config.traits.da && game.system?.id === "dnd5e") {
       config.traits.da = {
         labels: { title: "Damage Absorption", localization: "midi-qol.DamageAbsorption" },
         icon: "systems/dnd5e/icons/svg/damageresistances.svg",
@@ -532,7 +517,7 @@ function addConfigOptions() {
     config.abilityActivationTypes["reactionpreattack"] = `${i18n(dnd5eReaction)} ${i18n("midi-qol.reactionPreAttack")}`;
     config.abilityActivationTypes["reactiondamage"] = `${i18n(dnd5eReaction)} ${i18n("midi-qol.reactionDamaged")}`;
     config.abilityActivationTypes["reactionmanual"] = `${i18n(dnd5eReaction)} ${i18n("midi-qol.reactionManual")}`;
-  } else if (gameSystemId() === "sw5e") { // sw5e
+  } else if (game.system?.id === "sw5e") { // sw5e
     //@ts-expect-error
     config = CONFIG.SW5E;
     config.midiProperties = {};
@@ -623,7 +608,7 @@ Hooks.once('ready', function () {
 
   MidiSounds.midiSoundsReadyHooks();
 
-  if (game.system && gameSystemId() === "dnd5e") {
+  if (game.system && game.system?.id === "dnd5e") {
     //@ts-expect-error
     game.system.config.characterFlags["spellSniper"] = {
       name: "Spell Sniper",
@@ -639,7 +624,7 @@ Hooks.once('ready', function () {
       counted: "midi-qol.emanationTemplate.counted"
     };
 
-    if (gameUser()?.isGM && game.settings) {
+    if (game.user?.isGM && game.settings) {
       //@ts-expect-error
       const instanceId = game.settings?.get(MODULE_ID, "instanceId") as string;
       if ([undefined, ""].includes(instanceId)) {
@@ -661,10 +646,10 @@ Hooks.once('ready', function () {
     Hooks.callAll("midi-qol.ready")
   }
 
-  if (gameUser()?.isGM) {
+  if (game.user?.isGM) {
     // if (installedModules.get("levelsautocover") && configSettings.optionalRules.coverCalculation === "levelsautocover" && !game.settings.get("levelsautocover", "apiMode")) {
     // I think this is no longer required game.settings.set("levelsautocover", "apiMode", true)
-    //  if (gameUser()?.isGM)
+    //  if (game.user?.isGM)
     //    ui.notifications?.warn("midi-qol | setting levels auto cover to api mode", { permanent: true })
     // } else if (installedModules.get("levelsautocover") && configSettings.optionalRules.coverCalculation !== "levelsautocover" && game.settings.get("levelsautocover", "apiMode")) {
     //  ui.notifications?.warn("midi-qol | Levels Auto Cover is in API mode but midi is not using levels auto cover - you may wish to disable api mode", { permanent: true })
@@ -674,7 +659,7 @@ Hooks.once('ready', function () {
   const noDamageSavesText: string = i18n("midi-qol.noDamageonSaveSpellsv9") ?? "No Damaage Save";
   noDamageSaves = noDamageSavesText.split(",")?.map(s => s.trim()).map(s => cleanSpellName(s));
   checkModules();
-  if (gameUser()?.isGM && configSettings.gmLateTargeting !== "none") {
+  if (game.user?.isGM && configSettings.gmLateTargeting !== "none") {
     ui.notifications?.notify("Late Targeting has been replaced with Target Confirmation. Please update your settings", "info", { permanent: true });
     new TargetConfirmationConfig({}, {}).render(true);
     configSettings.gmLateTargeting = "none";
@@ -682,7 +667,7 @@ Hooks.once('ready', function () {
     game.settings.set(MODULE_ID, "ConfigSettings", configSettings)
   }
   //@ts-expect-error
-  if (!gameUser()?.isGM && game.settings.get(MODULE_ID, "LateTargeting") !== "none") {
+  if (!game.user?.isGM && game.settings.get(MODULE_ID, "LateTargeting") !== "none") {
     ui.notifications?.notify("Late Targeting has been replaced with Target Confirmation. Please update your settings", "info", { permanent: true });
     new TargetConfirmationConfig({}, {}).render(true);
     //@ts-expect-error
@@ -712,7 +697,7 @@ Hooks.once('ready', function () {
   }
   Hooks.callAll("midi-qol.midiReady");
 
-  if (gameUser()?.isGM) { // need to improve the test
+  if (game.user?.isGM) { // need to improve the test
     const problems = TroubleShooter.collectTroubleShooterData().problems
     for (let problem of problems) {
       const message = `midi-qol ${problem.problemSummary} | Open TroubleShooter to fix`;
@@ -856,7 +841,8 @@ function setupMidiQOLApi() {
 
   const detectionModes = CONFIG.Canvas.detectionModes;
   let InvisibleDisadvantageVisionModes = Object.keys(detectionModes)
-    .filter(dm => detectionModes[dm].type === DetectionMode.DETECTION_TYPES.OTHER);
+  //@ts-expect-error I think imprecise is added by a module - TODO Check
+  .filter(dm => !detectionModes[dm].imprecise);
 
   let WallsBlockConditions = [
     "burrow"
@@ -1348,7 +1334,7 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.disadvantage.deathSave`);
   midiFlags.push(`flags.${MODULE_ID}.deathSaveBonus`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.deathSaveBonus`);
-  if (gameSystemId() === "dnd5e") {
+  if (game.system?.id === "dnd5e") {
     // fix for translations
     ["vocal", "somatic", "material"].forEach(comp => {
       midiFlags.push(`flags.${MODULE_ID}.fail.spell.${comp.toLowerCase()}`);
@@ -1383,7 +1369,7 @@ function setupMidiFlags() {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.healing`);
     midiFlags.push(`flags.${MODULE_ID}.DR.temphp`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.temphp`);
-  } else if (gameSystemId() === "sw5e") {
+  } else if (game.system?.id === "sw5e") {
     midiFlags.push(`flags.${MODULE_ID}.DR.all`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.all`);
     midiFlags.push(`flags.${MODULE_ID}.DR.final`);
@@ -1501,7 +1487,7 @@ const MQMacros = [
 ]
 export async function createMidiMacros() {
   const midiVersion = "11.0.9"
-  if (gameUser()?.isGM) {
+  if (game.user?.isGM) {
     for (let macroSpec of MQMacros) {
       try {
         let existingMacros = game.macros?.filter(m => m.name === macroSpec.name) ?? [];
@@ -1521,7 +1507,7 @@ export async function createMidiMacros() {
             _id: null,
             name: macroSpec.name,
             type: "script",
-            author: gameUser()?.id,
+            author: game.user?.id,
             img: 'icons/svg/dice-target.svg',
             scope: 'global',
             command: macroSpec.commandText,

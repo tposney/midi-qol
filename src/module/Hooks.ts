@@ -1,4 +1,4 @@
-import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, geti18nOptions, log, GameSystemConfig, SystemString, MODULE_ID, isdndv4, gameUser, gameUsers, gameSystemId } from "../midi-qol.js";
+import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, geti18nOptions, log, GameSystemConfig, SystemString, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, processItemCardCreation, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { processUndoDamageCard } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, MQfromUuidSync, removeReactionUsed, removeBonusActionUsed, checkflanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, itemIsVersatile, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, isConcentrating, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm } from "./utils.js";
@@ -17,7 +17,7 @@ export var midiFlagTypes: {} = {};
 
 export let readyHooks = async () => {
   // Handle removing effects when the token is moved.
-  Hooks.on("updateToken", (tokenDocument, update: Token.UpdateData, diff, userId) => {
+  Hooks.on("updateToken", (tokenDocument: TokenDocument, update: Token.UpdateData, diff, userId) => {
     if (game.user?.id !== userId) return;
     if ((update.x || update.y) === undefined) return;
     const actor = tokenDocument.actor;
@@ -65,7 +65,7 @@ export let readyHooks = async () => {
 
   // Handle updates to the characters HP
   // Handle concentration checks
-  Hooks.on("updateActor", async (actor, update, options, user) => {
+  Hooks.on("updateActor", async (actor: Actor, update, options, user) => {
     if (user !== game.user?.id) return;
     const hpUpdate = foundry.utils.getProperty(update, "system.attributes.hp.value");
     const temphpUpdate = foundry.utils.getProperty(update, "system.attributes.hp.temp");
@@ -77,23 +77,27 @@ export let readyHooks = async () => {
         await zeroHPExpiry(actor, update, options, user);
       }
       await hpUpdateFunc();
+      // @ts-expect-error no dnd5e-types
       if (actor.system.attributes.hp.value <= 0 && configSettings.removeConcentration) {
+        // @ts-expect-error no dnd5e-types
         await actor.endConcentration();
       }
       return;
     }
   });
 
-  Hooks.on("preUpdateActor", (actor, changes: Actor.UpdateData, options, userId) => {
+  Hooks.on("preUpdateActor", (actor: Actor, changes: Actor.UpdateData, options, userId) => {
     try {
       if (userId !== game.user?.id) return true;
       // @ts-expect-error no dnd5e-types
       if (changes.system?.attributes?.hp?.value === undefined) return true;
+      // @ts-expect-error no dnd5e-types
       const hp = actor.system.attributes?.hp?.value;
       // @ts-expect-error no dnd5e-types
       const newHP = changes.system.attributes.hp.value;
       if (newHP >= hp) return true;
       if (configSettings.doConcentrationCheck === "item" && !options.noConcentrationCheck && isConcentrating(actor)) {
+        // @ts-expect-error no dnd5e-types
         doConcentrationCheck(actor, actor.getConcentrationDC(hp - newHP));
       }
     } catch (err) {
@@ -272,7 +276,7 @@ export function initHooks() {
     // @ts-expect-error
     untargetAllTokens(combat, data.options, user);
     untargetDeadTokens();
-    if (gameUsers()?.activeGM?.isSelf)
+    if (game.users?.activeGM?.isSelf)
       _processOverTime(combat, data, options, user);
     // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
   });
@@ -402,7 +406,7 @@ export function initHooks() {
   }
 
   Hooks.once('tidy5e-sheet.ready', (api) => {
-    if ((gameUser().role ?? CONST.USER_ROLES.PLAYER) < (configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER)) return;
+    if ((game.user?.role ?? CONST.USER_ROLES.PLAYER) < (configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER)) return;
     const myTab = new api.models.HandlebarsTab({
       title: 'Midi Qol',
       tabId: "midi-qol-properties-tab",
@@ -527,7 +531,7 @@ export function initHooks() {
   Hooks.on("renderItemSheet", (app, html, data) => {
     const item = app.object;
     if (!item) return;
-    if ((configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER) > (gameUser().role ?? CONST.USER_ROLES.NONE)) return;
+    if ((configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER) > (game.user?.role ?? CONST.USER_ROLES.NONE)) return;
     if (app.constructor.name !== "Tidy5eKgarItemSheet") {
       if (!item || !["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver", "tool"].includes(data.item.type))
         return;
@@ -579,22 +583,6 @@ export function initHooks() {
           }
         });
       }
-      //@ts-expect-error
-      if (false && foundry.utils.isNewerVersion(game.system.version, "2.2") && game.system.id === "dnd5e") {
-        if (["creature", "ally", "enemy"].includes(item.system.target?.type) && !item.hasAreaTarget) { // stop gap for dnd5e2.2 hiding this field sometimes
-          const targetElement = html.find('select[name="system.target.type"]');
-          const targetUnitHTML = `
-              <select name="system.target.units" data-tooltip="${i18n(GameSystemConfig.TargetUnits)}">
-              <option value="" ${item.system.target.units === '' ? "selected" : ''}></option>
-              <option value="ft" ${item.system.target.units === 'ft' ? "selected" : ''}>Feet</option>
-              <option value="mi " ${item.system.target.units === 'mi' ? "selected" : ''}>Miles</option>
-              <option value="m" ${item.system.target.units === 'm' ? "selected" : ''}>Meters</option>
-              <option value="km" ${item.system.target.units === 'km' ? "selected" : ''}>Kilometers</option>
-              </select>
-            `;
-          targetElement.before(targetUnitHTML);
-        }
-      }
     }
     // activateMacroListeners(app, html);
   })
@@ -638,8 +626,6 @@ export function initHooks() {
 }
 
 function setupMidiFlagTypes() {
-  //@ts-expect-error
-  const systemVersion = game.system.version;
   let config: any = GameSystemConfig;
   let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
 
@@ -661,7 +647,7 @@ function setupMidiFlagTypes() {
 
   })
 
-  if (gameSystemId() === "dnd5e") {
+  if (game.system?.id === "dnd5e") {
     midiFlagTypes[`flags.midi-qol.DR.all`] = "string";
     midiFlagTypes[`flags.midi-qol.DR.non-magical`] = "string";
     midiFlagTypes[`flags.midi-qol.DR.non-silver`] = "string";
@@ -1123,7 +1109,7 @@ function recalculateDamage(actor, amount, updates, options) {
   updates['system.attributes.hp.value'] = newHpValue
 }
 
-Hooks.on("dnd5e.preApplyDamage", (actor: Actor.Implementation, amount: number, updates: Actor.UpdateData, options: object) => {
+Hooks.on("dnd5e.preApplyDamage", (actor: Actor.Implementation, amount: number, updates: Actor.UpdateData, options: any = {}) => {
   if (updates["system.attributes.hp.temp"]) updates["system.attributes.hp.temp"] = Math.floor(updates["system.attributes.hp.temp"]);
   // recalculateDamage(actor, amount, updates, options);
   const vitalityResource = checkRule("vitalityResource");
@@ -1134,7 +1120,6 @@ Hooks.on("dnd5e.preApplyDamage", (actor: Actor.Implementation, amount: number, u
     const vitalityDamage = amount - (hp.temp + hp.value);
     updates[vitalityResource] = Math.max(0, foundry.utils.getProperty(actor, vitalityResource) - vitalityDamage);
   }
-  // @ts-expect-error
   if (options.midi) {
     foundry.utils.setProperty(options, "midi.amount", amount);
     foundry.utils.setProperty(options, "midi.updates", updates);

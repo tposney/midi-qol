@@ -1,4 +1,4 @@
-import { debugEnabled, gameUser, i18n, warn } from "../../midi-qol.js";
+import { debugEnabled, i18n, warn } from "../../midi-qol.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { MidiSaveActivity } from "./SaveActivity.js";
@@ -25,8 +25,8 @@ function getSceneTargets() {
   if (!canvas?.tokens) return [];
   const controlledTokens: Token[] | undefined = canvas?.tokens?.controlled;
   let targets: Token[] | undefined = controlledTokens?.filter(t => t.actor);
-  // @ts-expect-error getActiveTokens error
-  if (!targets?.length && gameUser()?.character) targets = gameUser()?.character?.getActiveTokens();
+  //@ts-expect-error getActiveTokens should actually be an array of tokens - not just linked and not document
+  if (!targets?.length && game.user?.character) targets = game.user?.character?.getActiveTokens(false, false);
   return targets;
 }
 let defineMidiCheckActivityClass = (ActivityClass: any) => {

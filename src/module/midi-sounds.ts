@@ -1,4 +1,4 @@
-import { debug, i18n, log, GameSystemConfig, gameSystemId, gameUser } from "../midi-qol.js";
+import { debug, i18n, log, GameSystemConfig } from "../midi-qol.js";
 import { configSettings, midiSoundSettings } from "./settings.js";
 import { dice3dEnabled } from "./setupModules.js";
 import { Workflow } from "./Workflow.js";
@@ -32,7 +32,7 @@ export class MidiSounds {
   }
 
   static ActionTypes(): any {
-    const systemId = gameSystemId()?.toUpperCase();
+    const systemId = game.system?.id.toUpperCase();
     let damageEntries: any = {};
     Object.keys(GameSystemConfig.damageTypes).forEach(
       key => damageEntries[key] = `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes[key].label}`
@@ -67,10 +67,10 @@ export class MidiSounds {
       miss: `${i18n(`${systemId}.Attack`)}: ${i18n("midi-qol.Misses")}`,
       abil: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["abil"]}`,
       heal: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["heal"]}`,
-      msak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes[`${gameSystemId() === "sw5e" ? "mpak" : "msak"}`]}`,
+      msak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes[`${game.system?.id === "sw5e" ? "mpak" : "msak"}`]}`,
       mwak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["mwak"]}`,
       other: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["other"]}`,
-      rsak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes[`${gameSystemId() === "sw5e" ? "rpak" : "rsak"}`]}`,
+      rsak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes[`${game.system?.id === "sw5e" ? "rpak" : "rsak"}`]}`,
       rwak: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["rwak"]}`,
       save: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["save"]}`,
       util: `${i18n(`${systemId}.Action`)}: ${GameSystemConfig.itemActionTypes["util"]}`,
@@ -130,7 +130,7 @@ export class MidiSounds {
       await packObject?.getIndex({ fields: ["system.armor.type", "system.toolType", "system.weaponType", "img"] });
 
       const weaponTypes = Object.keys(GameSystemConfig.weaponTypes);
-      const sheetClass = config.Item.sheetClasses.weapon[`${gameSystemId}.ItemSheet5e2`].cls;
+      const sheetClass = config.Item.sheetClasses.weapon[`${game.system?.id}.ItemSheet5e2`].cls;
       for (let wt of weaponTypes) {
         const baseTypes = await MidiSounds.getItemBaseTypes("weapon", wt);
         MidiSounds.weaponBaseTypes = foundry.utils.mergeObject(MidiSounds.weaponBaseTypes, baseTypes)
@@ -238,7 +238,7 @@ export class MidiSounds {
   }
 
   static async createDefaultPlayList() {
-    if (!gameUser()?.isGM) {
+    if (!game.user?.isGM) {
       ui.notifications?.warn("Only a GM can create the default playlist");
       return;
     }
@@ -451,7 +451,7 @@ export class MidiSounds {
       }
     }
     //@ts-expect-error
-    if (gameUser()?.can("SETTINGS_MODIFY")) await game.settings?.set("midi-qol", "MidiSoundSettings", soundSettings);
+    if (game.user?.can("SETTINGS_MODIFY")) await game.settings?.set("midi-qol", "MidiSoundSettings", soundSettings);
   }
   static async setupFullSounds() {
     const soundSettings = {
@@ -582,7 +582,7 @@ export class MidiSounds {
       }
     }
     //@ts-expect-error
-    if (gameUser()?.can("SETTINGS_MODIFY")) await game.settings?.set("midi-qol", "MidiSoundSettings", soundSettings);
+    if (game.user?.can("SETTINGS_MODIFY")) await game.settings?.set("midi-qol", "MidiSoundSettings", soundSettings);
   }
   static async setupBasicSounds() {
     const soundSettings: any = {
@@ -634,13 +634,13 @@ export class MidiSounds {
         }
       }
     }
-    if (gameSystemId() === "sw5e") {
+    if (game.system?.id === "sw5e") {
       soundSettings.rpak = soundSettings.rsak;
       soundSettings.mpak = soundSettings.msak;
       delete soundSettings.rsak;
       delete soundSettings.msak;
     }
     //@ts-expect-error
-    if (gameUser()?.can("SETTINGS_MODIFY")) await game.settings?.set("midi-qol", "MidiSoundSettings", soundSettings);
+    if (game.user?.can("SETTINGS_MODIFY")) await game.settings?.set("midi-qol", "MidiSoundSettings", soundSettings);
   }
 }

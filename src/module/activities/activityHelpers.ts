@@ -1,4 +1,4 @@
-import { MODULE_ID, debugEnabled, gameUser, warn } from "../../midi-qol.js";
+import { MODULE_ID, debugEnabled, warn } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog } from "../apps/TargetConfirmation.js";
 import { configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
@@ -136,7 +136,7 @@ export function requiresTargetConfirmation(activity, options): boolean {
   if (options.workflowOptions?.attackPerTarget === true) return false;
   if (activity.midiProperties?.confirmTargets === "always") return true;
   if (activity.midiProperties?.confirmTargets === "never") return false;
-  let numTargets = gameUser()?.targets?.size ?? 0;
+  let numTargets = game.user?.targets?.size ?? 0;
   if (numTargets === 0 && configSettings.enforceSingleWeaponTarget && activity.item.type === "weapon")
     numTargets = 1;
   const token = tokenForActor(activity.actor);
@@ -158,7 +158,7 @@ export function requiresTargetConfirmation(activity, options): boolean {
       return true;
     }
     if (targetConfirmation.allies && token && numTargets > 0 && activity.target?.affects.type !== "self") {
-      if (gameUser()?.targets.some(t => t.document.disposition == token.document.disposition)) {
+      if (game.user?.targets.some(t => t.document.disposition == token.document.disposition)) {
         if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.allies");
         return true;
       }
@@ -166,21 +166,21 @@ export function requiresTargetConfirmation(activity, options): boolean {
     if (targetConfirmation.targetSelf && activity.target?.affects.type !== "self") {
       let tokenToUse = token;
       /*
-      if (tokenToUse && gameUser()?.targets) {
-        const { result, attackingToken } = checkActivityRange(activity, tokenToUse, new Set(gameUser()?.targets))
+      if (tokenToUse && game.user?.targets) {
+        const { result, attackingToken } = checkActivityRange(activity, tokenToUse, new Set(game.user?.targets))
         if (speaker.token && result === "fail")
           tokenToUse = undefined; 
         else tokenToUse = attackingToken;
       }
       */
-      if (tokenToUse && gameUser()?.targets?.has(tokenToUse)) {
+      if (tokenToUse && game.user?.targets?.has(tokenToUse)) {
         if (debugEnabled > 0) warn("target confirmation triggered by has targetConfirmation.targetSelf");
         return true;
       }
     }
-    if (targetConfirmation.mixedDispositiion && numTargets > 0 && gameUser()?.targets) {
+    if (targetConfirmation.mixedDispositiion && numTargets > 0 && game.user?.targets) {
       const dispositions = new Set();
-      for (let target of gameUser()?.targets) {
+      for (let target of game.user?.targets) {
         if (target) dispositions.add(target.document.disposition);
       }
       if (dispositions.size > 1) {
@@ -188,10 +188,10 @@ export function requiresTargetConfirmation(activity, options): boolean {
         return true;
       }
     }
-    if (targetConfirmation.longRange && gameUser()?.targets && numTargets > 0 &&
+    if (targetConfirmation.longRange && game.user?.targets && numTargets > 0 &&
       (["ft", "m"].includes(activity.item.system.range?.units) || activity.item.system.range.type === "touch")) {
       if (token) {
-        for (let target of gameUser()?.targets) {
+        for (let target of game.user?.targets) {
           const { result, attackingToken } = checkActivityRange(activity, token, new Set([target]))
           if (result !== "normal") {
             if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.longRange");
@@ -200,10 +200,10 @@ export function requiresTargetConfirmation(activity, options): boolean {
         }
       }
     }
-    if (targetConfirmation.inCover && numTargets > 0 && token && gameUser()?.targets) {
+    if (targetConfirmation.inCover && numTargets > 0 && token && game.user?.targets) {
       const isRangeTargeting = ["ft", "m"].includes(activity.target?.affects.count) && ["creature", "ally", "enemy"].includes(activity.target?.affects.type);
-      if (!activity.target?.template?.type && !isRangeTargeting) {
-        for (let target of gameUser()?.targets) {
+      if (!activity.target?.template?.type && !isRangeTargeting && token) {
+        for (let target of game.user?.targets) {
           if (computeCoverBonus(token, target, activity.item) > 0) {
             if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.inCover");
             return true;
@@ -232,24 +232,24 @@ export async function preTemplateTargets(activity, options): Promise<boolean> {
 
 export async function postTemplateConfirmTargets(activity, options, workflow): Promise<boolean> {
   if (!activityRequiresPostTemplateConfiramtion(activity)) {
-    if (gameUser()?.targets) {
-      activity.workflow.setTargets(gameUser()?.targets);
-      activity.targets = new Set(gameUser()?.targets);
+    if (game.user?.targets) {
+      activity.workflow.setTargets(game.user?.targets);
+      activity.targets = new Set(game.user?.targets);
     }
     return true;
   }
   if (requiresTargetConfirmation(activity, options) || activity.target?.affects?.choice) {
     let result = true;
     result = await resolveTargetConfirmation(activity, options);
-    if (result && gameUser()?.targets) {
-      workflow.setTargets(gameUser()?.targets);
-      activity.targets = new Set(gameUser()?.targets);
+    if (result && game.user?.targets) {
+      workflow.setTargets(game.user?.targets);
+      activity.targets = new Set(game.user?.targets);
     }
     return result === true;
   }
-  if (gameUser()?.targets) {
-    activity.workflow.setTargets(gameUser()?.targets);
-    activity.targets = new Set(gameUser()?.targets);
+  if (game.user?.targets) {
+    activity.workflow.setTargets(game.user?.targets);
+    activity.targets = new Set(game.user?.targets);
   }
   return true;
 }
@@ -313,7 +313,7 @@ export async function showItemInfo() {
   const html = await renderTemplate(template, templateData);
 
   const chatData: any = {
-    user: gameUser()?.id,
+    user: game.user?.id,
     content: html,
     flavor: this.system.chatFlavor || this.name,
     speaker: getSpeaker(this.actor),
@@ -327,7 +327,7 @@ export async function showItemInfo() {
   let rollMode = safeGetGameSetting("core", "rollMode") ?? "public";
   if (["gmroll", "blindroll"].includes(rollMode)) chatData["whisper"] = ChatMessage.getWhisperRecipients("GM").filter(u => u.active);
   if (rollMode === "blindroll") chatData["blind"] = true;
-  if (rollMode === "selfroll") chatData["whisper"] = [gameUser()?.id];
+  if (rollMode === "selfroll") chatData["whisper"] = [game.user?.id];
 
   // Create the chat message
   return ChatMessage.create(chatData);
@@ -443,7 +443,7 @@ export function templateTokens(templateDetails: MeasuredTemplate, selfTokenRef: 
   const selfToken = getToken(selfTokenRef);
   let targetIds: string[] = [];
   let targetTokens: Token[] = [];
-  gameUser()?.updateTokenTargets([]);
+  game.user?.updateTokenTargets([]);
   if (autoTarget === "walledtemplates" && game.modules?.get("walledtemplates")?.active) {
     //@ts-expect-error
     if (foundry.utils.getProperty(templateDetails?.item, "flags.walledtemplates.noAutotarget")) return targetTokens
@@ -462,8 +462,8 @@ export function templateTokens(templateDetails: MeasuredTemplate, selfTokenRef: 
       }
     }
   }
-  gameUser()?.updateTokenTargets(targetIds);
-  gameUser()?.broadcastActivity({ targets: targetIds });
+  game.user?.updateTokenTargets(targetIds);
+  game.user?.broadcastActivity({ targets: targetIds });
   return targetTokens;
 }
 
@@ -477,7 +477,7 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data?,
   const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some(spec => spec === "self");
   let AoETargetType = getAoETargetType(activity);
   let targeting = getActivityAutoTargetAction(activity);
-  if ((gameUser()?.targets.size === 0 || activity.workflow?.workflowOptions.forceTemplateTargeting || user !== gameUser()?.id || installedModules.get("levelsvolumetrictemplates")) && targeting !== "none") {
+  if ((game.user?.targets.size === 0 || activity.workflow?.workflowOptions.forceTemplateTargeting || user !== game.user?.id || installedModules.get("levelsvolumetrictemplates")) && targeting !== "none") {
     let mTemplate: MeasuredTemplate = MQfromUuidSync(templateDocument.uuid)?.object;
     if (templateDocument?.object && !installedModules.get("levelsvolumetrictemplates")) {
       if (!mTemplate.shape) {
@@ -506,10 +506,10 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data?,
     return true;
   }
 
-  gameUser()?.targets?.forEach(token => {
+  game.user?.targets?.forEach(token => {
     if (!isAoETargetable(token, { ignoreSelf, selfToken, AoETargetType, autoTarget: getActivityAutoTargetAction(activity) }))
       token.setTarget(false, { user: game.user, releaseOthers: false })
-    if (activity.target?.affects.count && (gameUser()?.targets?.size ?? 0) > activity.target?.affects?.count)
+    if (activity.target?.affects.count && (game.user?.targets?.size ?? 0) > activity.target?.affects?.count)
       token.setTarget(false, { user: game.user, releaseOthers: false });
   });
 

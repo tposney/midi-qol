@@ -1,4 +1,4 @@
-import { i18n, error, i18nFormat, gameUser } from "../../midi-qol.js";
+import { i18n, error, i18nFormat } from "../../midi-qol.js";
 import { checkMechanic, checkRule, configSettings, targetConfirmation } from "../settings.js";
 import { FULL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, computeCoverBonus, computeFlankingStatus, getIconFreeLink, getToken, isTargetable, markFlanking, tokenForActor } from "../utils.js";
 import { getTokenPlayerName } from "../utils.js";
@@ -30,11 +30,11 @@ export class TargetConfirmationDialog extends Application {
       foundry.utils.setProperty(options, "workflowOptions.fastForward", options.worfkflowOptions?.fastForward);
       return options.callback ? options.callback(value) : value;
     }
-    if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking")) && gameUser().targets) {
+    if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking")) && game.user?.targets) {
       const actor = this.data.activity.actor;
       const token = tokenForActor(actor);
       if (token)
-        for (let target of gameUser().targets)
+        for (let target of game.user?.targets)
           markFlanking(token, target)
     }
     // this.callback = options.callback;
@@ -84,7 +84,7 @@ export class TargetConfirmationDialog extends Application {
 
   async getData(options = {}) {
     let data: any = foundry.utils.mergeObject(this.data, await super.getData(options));
-    const targets = Array.from(gameUser().targets ?? []);
+    const targets = Array.from(game.user?.targets ?? []);
     data.targets = [];
     const maxTargets = this.data.activity.target?.affects?.count;
     for (let target of targets) {
@@ -140,7 +140,7 @@ export class TargetConfirmationDialog extends Application {
       }
 
       let name;
-      if (gameUser().isGM) {
+      if (game.user?.isGM) {
         name = getIconFreeLink(target);
       } else {
         name = getTokenPlayerName(target);
@@ -158,7 +158,7 @@ export class TargetConfirmationDialog extends Application {
         }*/
       }
       data.targets.push({
-        name, // : namegameUser().isGM ? getLinkText(target.actor) : getTokenPlayerName(target),
+        name, // : namegame.user.isGM ? getLinkText(target.actor) : getTokenPlayerName(target),
         img,
         displayedDisposition,
         details: details.join(" - "),
@@ -180,17 +180,17 @@ export class TargetConfirmationDialog extends Application {
       this.hookId = Hooks.on("targetToken", (user, token, targeted) => {
         if (user !== game.user) return;
         const maxTargets = this.data.activity.target?.affects?.count;
-        if (maxTargets && gameUser().targets?.size > maxTargets)
+        if (maxTargets && game.user.targets?.size > maxTargets)
           ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets: maxTargets }));
-        if (gameUser().targets) {
+        if (game.user.targets) {
           const validTargets: Array<string> = [];
-          for (let target of gameUser().targets) {
+          for (let target of game.user.targets) {
             if (maxTargets && validTargets.length >= maxTargets) break;
             if (isTargetable(target)) validTargets.push(target.id);
           }
-          gameUser().updateTokenTargets(validTargets);
+          game.user.updateTokenTargets(validTargets);
         }
-        this.data.targets = Array.from(gameUser().targets ?? [])
+        this.data.targets = Array.from(game.user.targets ?? [])
         this.render(true);
       });
     }
