@@ -67,7 +67,7 @@
   </div>
   {{/if}}
 
-  <div class="form-group stacked weapon-properties">
+  <div class="form-group stacked weapon-properties midi-properties">
     {{#each flags.midiProperties as |value key|}}
     {{#unless (or (eq key "saveDamage") (eq key "bonusSaveDamage") (eq key
     "otherSaveDamage") (eq key "confirmTargets") (eq key "grpact") )}}
@@ -78,7 +78,7 @@
     {{/unless}}
     {{/each}}
   </div>
-  <div class="midi-qol-box">
+  <div class="midi-activation-conditions">
     <h3>{{localize "midi-qol.ConditionHeader"}}</h3>
     <div>
       <label>{{localize "midi-qol.ItemActivationCondition.Name"}}</label>
