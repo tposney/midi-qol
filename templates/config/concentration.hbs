@@ -1,0 +1,44 @@
+<section id="midi-config-concentration" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+    <div class="midi-qol-box">
+        <div class="form-group">
+            <label>{{localize "midi-qol.DoConcentrationCheck.Name"}}</label>
+            <select name="doConcentrationCheck" data-dtype="String">
+                {{selectOptions DoConcentrationCheckOptions selected=configSettings.doConcentrationCheck}}
+            </select>
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.DoConcentrationCheck.Hint"}}}</div>
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.RemoveConcentration.Name"}}</label>
+            <input type="checkbox" name="removeConcentration" data-dtype="Boolean" {{checked
+            configSettings.removeConcentration}} />
+        </div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.ConcentrationIncapacitatedConditionCheck.Name"}}</label>
+            <input type="checkbox" name="concentrationIncapacitatedConditionCheck" data-dtype="Boolean" {{checked
+            configSettings.concentrationIncapacitatedConditionCheck}} />
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.ConcentrationIncapacitatedConditionCheck.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
+            <label>{{localize "midi-qol.SingleConcentrationRoll.Name"}}</label>
+            <input type="checkbox" name="singleConcentrationRoll" data-dtype="Boolean" {{checked
+            configSettings.singleConcentrationRoll}} />
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.SingleConcentrationRoll.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
+            <label>{{localize "midi-qol.TempHPDamageConcentrationCheck.Name"}}</label>
+            <input type="checkbox" name="tempHPDamageConcentrationCheck" data-dtype="Boolean" {{checked
+            configSettings.tempHPDamageConcentrationCheck}} />
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.TempHPDamageConcentrationCheck.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
+            <label>{{localize "midi-qol.RemoveConcentrationEffects.Name"}}</label>
+            <select name="removeConcentrationEffects" data-dtype="String">
+                {{selectOptions RemoveConcentrationEffectsOptions selected=configSettings.removeConcentrationEffects}}
+            </select>
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.RemoveConcentrationEffects.Hint"}}}</div>
+        </div>
+    </div>
+</section>

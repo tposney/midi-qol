@@ -89,14 +89,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     sheet: "summary"
   }
 
-  
-    // options.popOut = true;
-    // options.tabs = [{ navSelector: ".tabs", contentSelector: ".midi-contents", initial: "summary" }];
-
-  // public activateTab(tabName: string) {
-  //   this._tabs[0].activate(tabName);
-  // }
-
   public static recordError(err, message?: string | undefined) {
     if (!this.errors) this.errors = [];
     while (this.errors.length >= this.MAX_ERRORS) this.errors.shift();

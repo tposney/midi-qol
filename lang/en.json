@@ -428,11 +428,20 @@
     "effects": "Check Effects",
     "effectsTemplates": "Check Effects and Templates"
   },
-  "midi-qol.GMSettings": "GM",
-  "midi-qol.PlayerSettings": "Player",
+  "midi-qol.Config": {
+    "Tabs": {
+      "gm": "GM",
+      "player": "Player",
+      "workflow": "Workflow",
+      "concentration": "Concentration",
+      "reactions": "Reactions",
+      "misc": "Misc",
+      "mechanics": "Mechanics",
+      "rules": "Rules",
+      "quick": "Quick Settings"
+    }
+  },
   "midi-qol.SoundSettings.Tab": "Sounds",
-  "midi-qol.Workflow": " Workflow",
-  "midi-qol.Misc": "Misc",
   "midi-qol.Targeting": "Targeting",
   "midi-qol.Special": "Specials",
   "midi-qol.Hits": "Hits",
@@ -450,8 +459,6 @@
   "midi-qol.AttackMacro.Name": "Attack Bonus Macros",
   "midi-qol.AttackMacro.Hint": "Comma separated list of macros to call when calculating attack roll which will be applied when checking if the attack hit the targets",
   "midi-qol.DAEMidiQOL": "DAE/Midi-QOL specific",
-  "midi-qol.Optional": "Rules",
-  "midi-qol.Mechanics": "Mechanics",
   "midi-qol.OptionalRules.Name": "Optional Game Rules",
   "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable. Generally, don't work with better rolls.",
   "midi-qol.InvisAdvantage.Name": "Unseen/Invisible attackers have advantage/disadvantage on attacks",
@@ -688,7 +695,6 @@
   "midi-qol.FixStickyKeys.Name": "Fix sticky alt/ctrl/shift",
   "midi-qol.FixStickyKeys.Hint": "If set midi will attempt to resolve alt/ctrl/shift being stuck 'on'",
   "midi-qol.DisplaySaveAdvantage.Name": "Display if save had Advantage/Disadvantage",
-  "midi-qol.QuickSettings": "QuickSettings",
   "midi-qol.QuickSettingsBlurb": {
     "1": "Quick settings let you set a combination of settings at once.",
     "2": "When one of the buttons below is pushed the changes are immediately made to your settings",
@@ -714,7 +720,6 @@
     "allCrit": "Attack Roll Total + Critical"
   },
   "midi-qol.Reactions": "Prompt For Reactions",
-  "midi-qol.ReactionsTab": "Reactions",
   "midi-qol.DoReactions.Name": "Check PLAYER reactions",
   "midi-qol.DoReactions.Hint": "Give an attacked actor the option to use a reaction before adjudicating the roll. Reactions when hit require auto check hits enabled. Damage reactions if applying damage",
   "midi-qol.GMDoReactions.Name": "Check NPC/GM reactions",
@@ -756,7 +761,7 @@
   },
   "midi-qol.AddRow": "Add Row",
   "midi-qol.CheckFlanking.Name": "Check Flanking",
-  "midi-qol.CheckFlanking.Hint": "Check if you and your allies flank the opponent. Either gives attacker advantage and/or applies <strong>CE flanking</strong> condition to <h4>attacker</h4> OR applies CE Flanked condition to target",
+  "midi-qol.CheckFlanking.Hint": "Check if you and your allies flank the opponent. Either gives attacker advantage and/or applies <strong>CE flanking</strong> condition to <em>attacker</em> OR applies CE Flanked condition to target",
   "midi-qol.CheckFlankingOptions": {
     "off": "none",
     "ceonly": "Convenient Effect Flanking Only",

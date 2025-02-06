@@ -148,8 +148,34 @@
   color: #606060;
 }
 
+.application .midi-qol-faint {
+  color: var(--color-form-hint);
+}
+
 .midi-qol-very-faint {
   color: #A0A0A0;
+}
+
+#midi-qol-settings div.form-group select {
+  width: auto;
+}
+
+#midi-qol-settings .form-group {
+  display: grid;
+  grid-template-areas: "label input" "hint hint";
+  grid-template-columns: 1fr;
+}
+
+#midi-qol-settings .form-group :nth-child(3) {
+  grid-area: hint;
+}
+
+#midi-qol-settings .form-group:not(:nth-of-type(1)) {
+  margin-top: 5px;
+}
+
+.midi-qol-quick-config .window-content {
+  overflow-y: scroll;
 }
 
 #midi-qol-item-selector .item-list {

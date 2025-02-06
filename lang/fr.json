@@ -409,11 +409,7 @@
   "midi-qol.SingleConcentrationRoll.Hint": "Si elle est activée et que l'attaque inflige des dégâts normaux + une sauvegarde + des dégâts autres/versatiles, il suffit de lancer un seul test de concentration pour les dégâts combinés",
   "midi-qol.TempHPDamageConcentrationCheck.Name": "PV Temporaire - Jets de concentration",
   "midi-qol.TempHPDamageConcentrationCheck.Hint": "Si activée, la perte de points de vie temporaire déclenchera un jets de concentration",
-  "midi-qol.GMSettings": "MJ",
-  "midi-qol.PlayerSettings": "Joueur",
   "midi-qol.SoundSettings.Tab": "Sons",
-  "midi-qol.Workflow": " Flux",
-  "midi-qol.Misc": "Divers",
   "midi-qol.Targeting": "Cibler",
   "midi-qol.Special": "Spéciaux",
   "midi-qol.Hits": "Attaques touchées",
@@ -428,7 +424,6 @@
   "midi-qol.AttackMacro.Name": "Macros des bonus d'attaque",
   "midi-qol.AttackMacro.Hint": "Liste de macros séparées par des virgules à appeler lors du calcul du jet d'attaque qui sera appliqué pour vérifier si l'attaque a touché les cibles",
   "midi-qol.DAEMidiQOL": "DAE/Midi-QOL spécifique",
-  "midi-qol.Optional": "Optionnel",
   "midi-qol.OptionalRules.Name": "(EXPÉRIMENTAL) Règles de jeu optionnelles qui fonctionne avec Better Rolls, mais déclenche un avertissement libWrapper",
   "midi-qol.OptionalRules.Hint": "Règles de jeu de DND5E que vous pouvez souhaiter activer. Ne fonctionnent généralement pas avec Better Rolls.",
   "midi-qol.InvisAdvantage.Name": "Les attaquants cachés/invisibles ont un avantage/désavantage sur les attaques",
@@ -575,7 +570,6 @@
   "midi-qol.FixStickyKeys.Name": "Correction du blocage adv/ctl/shift",
   "midi-qol.FixStickyKeys.Hint": "Si cette option est activée, midi tentera de résoudre le problème du blocage de l'adv/ctl/shift sur 'on'",
   "midi-qol.DisplaySaveAdvantage.Name": "Afficher si la sauvegarde a eu un Avantage/Désavantage",
-  "midi-qol.QuickSettings": "Paramètres rapides",
   "midi-qol.QuickSettingsBlurb": {
     "1": "Les réglages rapides vous permettent de définir une combinaison de paramètres en une seule fois.",
     "2": "Lorsque vous appuyez sur l'un des boutons ci-dessous, les modifications sont immédiatement apportées à vos paramètres",
@@ -684,7 +678,19 @@
     "effectsTemplates": "Vérifier les effets et les modèles",
     "effects": "Vérifier les effets"
   },
-  "midi-qol.Mechanics": "Mécanique",
+  "midi-qol.Config": {
+    "Tabs": {
+      "gm": "MJ",
+      "player": "Joueur",
+      "workflow": "Flux",
+      "concentration": "Concentration",
+      "reactions": "Réaction",
+      "misc": "Divers",
+      "mechanics": "Mécanique",
+      "rules": "Règles",
+      "quick": "Paramètres rapides"
+    }
+  },
   "midi-qol.CoverCalculationOptions": {
     "none": "Personne",
     "levelsautocover": "Niveaux de couverture automatique",
@@ -696,7 +702,6 @@
     "overlay": "Ajouter un effet en tant que superposition",
     "normal": "ajouter l'effet comme icône"
   },
-  "midi-qol.ReactionsTab": "Réaction",
   "midi-qol.FumbleThreshold": "Seuil de l'échec",
   "midi-qol.ActionSpecialDurationImmediate.Name": "Expire 1Coup/1Attaque/1Action sur un jet",
   "midi-qol.ActionSpecialDurationImmediate.Hint": "N'attendez pas le jet de dégâts pour faire expirer les effets de durée spéciale d'attaque/coup/action",
