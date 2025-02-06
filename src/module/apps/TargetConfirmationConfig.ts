@@ -37,6 +37,9 @@ i
     },
     form: {
       closeOnSubmit: true
+    },
+    actions: {
+      submit: TargetConfirmationConfig.#onSubmit
     }
   }, { inplace: false });
     // scrollY: [".tab.workflow"],
@@ -94,5 +97,10 @@ i
 
   async _preClose(options) {
     targetConfirmation.gridPosition = this.selectedPosition;
+  }
+
+  static async #onSubmit(event, target) {
+    // @ts-expect-error
+    this.close();
   }
 }
