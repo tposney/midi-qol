@@ -1,0 +1,33 @@
+<section id="midi-troubleshooter-errors" class="tab{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+    <div class="midi-scrollable-list">
+        <div class="midi-qol-box">
+        {{#if hasErrors}}
+            <table>
+                <col width="25%">
+                <col width="75%">
+                <tr>
+                    <th colspan="=2">Recorded Errors</th>
+                </tr>
+                <tr>
+                    <td>Time</td>
+                    <td>Error</td>
+                </tr>
+                {{#each errors as |error|}}
+                    <tr>
+                        <td>{{error.timeString}}</td>
+                        <td>{{error.message}}</td>
+                    </tr>
+                    {{#each error.error.stack as |stackLine|}}
+                        <tr>
+                            <td></td>
+                            <td>{{stackLine}}</td>
+                        </tr>
+                    {{/each}}
+                {{/each}}
+            </table>
+        {{else}}
+            No Errors detected
+        {{/if}}
+        </div>
+    </div>
+</section>

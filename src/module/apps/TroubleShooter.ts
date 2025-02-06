@@ -1,11 +1,11 @@
 import { geti18nOptions, i18n, systemConcentrationId } from "../../midi-qol.js";
 import { CheckedAuthorsList, checkedModuleList, checkMechanic, collectSettingData, configSettings, enableWorkflow, exportSettingsToJSON, fetchParams, importSettingsFromJSON, safeGetGameSetting } from "../settings.js";
 import { REQUIRED_MODULE_VERSIONS, getModuleVersion, installedModules } from "../setupModules.js";
-const { DialogV2 } = foundry.applications.api;
+const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const minimumMidiVersion = "11.0.7";
 
-export class TroubleShooter extends FormApplication {
+export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
   public static errors: { timestamp: number, timeString: string, error: any, message: string | undefined }[] = [];
   public static MAX_ERRORS = 10;
   static _data: TroubleShooterData;
@@ -18,27 +18,84 @@ export class TroubleShooter extends FormApplication {
   get nextFixerId() { this._fixerId += 1; return this._fixerId }
   _hookId;
 
-  constructor(object: any = {}, options: any = {}) {
-    super(object, options);
+  constructor(options?) {
+    super(options);
     TroubleShooter.data = TroubleShooter.collectTroubleShooterData();
-    this.options.editable = true;
     this._hookId = Hooks.on("midi-qol.TroubleShooter.recordError", (errorDetail) => {
       if (TroubleShooter.data.isLocal) {
         TroubleShooter.data = TroubleShooter.collectTroubleShooterData();
-        this.render(true, options);
+        this.render({force: true, ...options});
       }
     });
     return this;
   }
 
-  async render(force: boolean = false, options: any = {}) {
-    await super._render(force, options);
-    if (options.tab) this._tabs[0].activate(options.tab);
+  // async render(options?) {
+  //   await super.render(options);
+  //   if (options.tab) this._tabs[0].activate(options.tab);
+  //   return this;
+  // }
+
+  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+    id: "midi-trouble-shooter",
+    classes: ["midi-trouble-shooter"],
+    window: {
+      title: "midi-qol.TroubleShooter.Label",
+      resizable: true
+    },
+    position: {
+      height: "auto" as "auto",
+      width: 900
+    },
+    form: {
+      closeOnSubmit: false
+    },
+    actions: {
+      export: TroubleShooter.#onExport,
+      import: TroubleShooter.#onImport,
+      refresh: TroubleShooter.#onRefresh,
+      clear: TroubleShooter.#onClear,
+      overwrite: TroubleShooter.#onOverwrite
+    }
+  }, { inplace: false });
+
+  static PARTS = {
+    tabs: {template: "templates/generic/tab-navigation.hbs"},
+    summary: {template: "modules/midi-qol/templates/troubleshooter/summary.hbs"},
+    common: {template: "modules/midi-qol/templates/troubleshooter/common.hbs"},
+    problems: {template: "modules/midi-qol/templates/troubleshooter/problems.hbs"},
+    errors: {template: "modules/midi-qol/templates/troubleshooter/errors.hbs"},
+    modules: {template: "modules/midi-qol/templates/troubleshooter/modules.hbs"},
+    footer: {template: "templates/generic/form-footer.hbs"}
   }
 
-  public activateTab(tabName: string) {
-    this._tabs[0].activate(tabName);
+  // V13 version:
+  // static TABS = {
+  //   sheet: {
+  //     tabs: [
+  //       {id: "summary"},
+  //       {id: "common"},
+  //       {id: "problems"},
+  //       {id: "errors"},
+  //       {id: "modules"}
+  //     ],
+  //     initial: "summary",
+  //     labelPrefix: "midi-qol.TroubleShooter.Tabs"
+  //   }
+  // }
+
+  // V12 version:
+  tabGroups = {
+    sheet: "summary"
   }
+
+  
+    // options.popOut = true;
+    // options.tabs = [{ navSelector: ".tabs", contentSelector: ".midi-contents", initial: "summary" }];
+
+  // public activateTab(tabName: string) {
+  //   this._tabs[0].activate(tabName);
+  // }
 
   public static recordError(err, message?: string | undefined) {
     if (!this.errors) this.errors = [];
@@ -59,20 +116,6 @@ export class TroubleShooter extends FormApplication {
   async _updateObject(event, formData) {
   };
 
-  static get defaultOptions() {
-    const options = super.defaultOptions;
-    options.title = i18n("midi-qol.TroubleShooter.Label");
-    options.classes = ["midi-trouble-shooter"]
-    options.id = 'midi-trouble-shooter';
-    options.template = 'modules/midi-qol/templates/troubleShooter.html';
-    options.closeOnSubmit = false;
-    options.popOut = true;
-    options.width = 900;
-    options.height = "auto";
-    options.resizable = true;
-    options.tabs = [{ navSelector: ".tabs", contentSelector: ".midi-contents", initial: "summary" }];
-    return options;
-  }
   public static exportTroubleShooterData() {
     const data = TroubleShooter.collectTroubleShooterData();
     const filename = "fvtt-midi-qol-troubleshooter.json"
@@ -84,9 +127,11 @@ export class TroubleShooter extends FormApplication {
     let dialog = new Promise((resolve, reject) => {
       new DialogV2({
         window: { title: `Import Trouble Shooter Data` },
+        classes: ["midi-qol-import-troubleshooter"],
         content: content,
         position: {
-          width: 400
+          width: 400,
+          height: "auto"
         },
         buttons: [
           {
@@ -126,8 +171,7 @@ export class TroubleShooter extends FormApplication {
   }
   public static getDetailedSettings(moduleId: string): any {
     const returnValue = {};
-    //@ts-expect-error
-    let settings = Array.from(game.settings.settings).filter(i => i[0].includes(moduleId) && i[1].namespace === moduleId);
+    let settings = Array.from(game.settings?.settings ?? []).filter(i => i[0].includes(moduleId) && i[1].namespace === moduleId);
     settings.forEach(i => {
       if (typeof i[1].name !== "string") return;
       if (!i[1].config) return;
@@ -147,55 +191,62 @@ export class TroubleShooter extends FormApplication {
     return {};
   }
 
-  async close(...args) {
+  async _preClose(options) {
+    await super._preClose(options);
     Hooks.off("midi-qol.TroubleShooter.recordError", this._hookId);
-    super.close(...args)
   }
 
-  activateListeners(html) {
-    html.find("#midi-qol-export-troubleshooter").on("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      TroubleShooter.exportTroubleShooterData()
-    })
-    html.find("#midi-qol-import-troubleshooter").on("click", async (event) => {
-      event.preventDefault();
-      event.stopPropagation(); if (await TroubleShooter.importTroubleShooterDataFromJSONDialog()) {
-        this.render(true);
-      }
-    });
-    html.find("#midi-qol-regenerate-troubleshooter").on("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      TroubleShooter.data = TroubleShooter.collectTroubleShooterData();
-      this.render(true);
-    });
-    html.find("#midi-qol-clear-errors-troubleshooter").on("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      TroubleShooter.clearErrors();
-      TroubleShooter.data = TroubleShooter.collectTroubleShooterData();
-      this.render(true);
-    });
-    html.find("#midi-qol-overwrite-midi-settings").on("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      this.overWriteMidiSettings()
-    });
+  static #onExport(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    TroubleShooter.exportTroubleShooterData();
+  }
+
+  static async #onImport(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (await TroubleShooter.importTroubleShooterDataFromJSONDialog()) {
+      // @ts-expect-error
+      this.render({force: true})
+    }
+  }
+
+  static #onRefresh(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    TroubleShooter.data = TroubleShooter.collectTroubleShooterData();
+    // @ts-expect-error
+    this.render({force: true});
+  }
+
+  static #onClear(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    TroubleShooter.clearErrors();
+    TroubleShooter.data = TroubleShooter.collectTroubleShooterData();
+    // @ts-expect-error
+    this.render({force: true});
+  }
+
+  static #onOverwrite(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    // @ts-expect-error
+    this.overWriteMidiSettings();
+  }
+
+  _onRender(context, options) {
+    super._onRender(context, options);
     for (let i = 0; i < this._fixerFuncs.length; i++) {
       const id = `#fixer-${i + 1}`;
       const fixerFunc = this._fixerFuncs[i];
       const app = this;
-      html.find(id).on("click", function (event) {
+      this.element.querySelector(id)?.addEventListener("click", function(event) {
         event.preventDefault();
         event.stopPropagation();
         fixerFunc(app);
       });
-
     }
-    html.find(".data-action").on("click", event => {
-
-    })
   }
 
   async overWriteMidiSettings(): Promise<boolean> {
@@ -210,9 +261,10 @@ export class TroubleShooter extends FormApplication {
     let dialog: Promise<boolean> = new Promise((resolve, reject) => {
       new DialogV2({
         window: { title: `Overwrite midi-qol settings from loaded file` },
-        content: `This will <strong>permanently</strong> overwrite you midi settings`,
+        content: `<p>This will <strong><em>permanently</em></strong> overwrite your midi settings</p>`,
         position: {
-          width: 400
+          width: 400,
+          height: "auto"
         },
         buttons: [
           {
@@ -238,34 +290,89 @@ export class TroubleShooter extends FormApplication {
     return await dialog;
   }
 
-  getData(options: any): any {
-    let data: any = foundry.utils.deepClone(TroubleShooter.data);
-    data.hasIncompatible = data.summary.incompatible.length > 0;
-    data.hasOutOfDate = data.summary.outOfDate.length > 0;
-    data.hasPossibleOutOfData = data.summary.possibleOutOfDate.length > 0;
-    data.hasProblems = data.problems.length > 0;
-    data.hasErrors = data.errors.length > 0;
-    data.hasFoundryModuleProblems = !foundry.utils.isEmpty(data.summary.foundryModuleIssues);
+  async _prepareContext(options) {
+    let context: any = foundry.utils.deepClone(TroubleShooter.data);
+    context = foundry.utils.mergeObject(await super._prepareContext(options), context, {inplace: false});
+    context.hasIncompatible = context.summary.incompatible.length > 0;
+    context.hasOutOfDate = context.summary.outOfDate.length > 0;
+    context.hasPossibleOutOfData = context.summary.possibleOutOfDate.length > 0;
+    context.hasProblems = context.problems.length > 0;
+    context.hasErrors = context.errors.length > 0;
+    context.hasFoundryModuleProblems = !foundry.utils.isEmpty(context.summary.foundryModuleIssues);
     this._fixerId = 0;
     this._fixerFuncs = [];
     const excludeFoundryWarnings = true;
     if (excludeFoundryWarnings) {
-      for (let key of Object.keys(data.summary.foundryModuleIssues)) {
-        const problem = data.summary.foundryModuleIssues[key];
+      for (let key of Object.keys(context.summary.foundryModuleIssues)) {
+        const problem = context.summary.foundryModuleIssues[key];
         if (problem.error.length === 0) {
-          delete data.summary.foundryModuleIssues[key];
+          delete context.summary.foundryModuleIssues[key];
         } else delete problem.warning;
       }
     }
-    for (let problem of data.problems) {
+    for (let problem of context.problems) {
       if (problem.problemDetail) problem.problemDetail = JSON.stringify(problem.problemDetail);
       if (problem.fixerFunc) {
         problem.hasFixerFunc = true;
-        problem.fixerid = this.nextFixerId;
+        problem.fixerId = this.nextFixerId;
         this._fixerFuncs.push(problem.fixerFunc);
       }
     }
-    return data;
+    context.buttons = [
+      {
+        type: "button",
+        action: "refresh",
+        icon: "fa-solid fa-cogs",
+        label: "MENU.Reload"
+      },
+      {
+        type: "button",
+        action: "clear",
+        icon: "fa-solid fa-cogs",
+        label: "midi-qol.TroubleShooter.ClearErrors"
+      },
+      {
+        type: "button",
+        action: "export",
+        icon: "fa-solid fa-save",
+        label: "SIDEBAR.Export"
+      },
+      {
+        type: "button",
+        action: "import",
+        icon: "fa-solid fa-file-import",
+        label: "SIDEBAR.Import"
+      },
+      {
+        type: "button",
+        action: "overwrite",
+        icon: "fa-solid fa-download",
+        label: "midi-qol.TroubleShooter.Overwrite"
+      }
+    ]
+    // V12-only:
+    context.tabs = this.#getTabs();
+    return context;
+  }
+
+  // V12-only:
+  #getTabs() {
+    const tabs = {
+      summary: {id: "summary", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.summary", active: true},
+      common: {id: "common", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.common"},
+      problems: {id: "problems", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.problems"},
+      errors: {id: "errors", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.errors"},
+      modules: {id: "modules", group: "sheet", label: "midi-qol.TroubleShooter.Tabs.modules"}
+    };
+    return tabs;
+  }
+
+  // V12-only (I think):
+  async _preparePartContext(partId, context) {
+    if (Object.keys(context.tabs).includes(partId)) {
+      context.tab = context.tabs[partId];
+    }
+    return context;
   }
 
   public static collectTroubleShooterData() {
@@ -835,7 +942,7 @@ export class TroubleShooter extends FormApplication {
                       app.render(true)
                     },
           */
-          fixerid: -1
+          fixerId: -1
         });
       } else if (walledTemplatesTargeting && configSettings.autoTarget !== "walledtemplates") {
         data.problems.push({
@@ -856,7 +963,7 @@ export class TroubleShooter extends FormApplication {
             TroubleShooter.data = TroubleShooter.collectTroubleShooterData();
             app.render(true)
           },
-          fixerid: -1
+          fixerId: -1
         });
       }
     } else if (configSettings.autoTarget === "walledtemplates") {
@@ -866,7 +973,7 @@ export class TroubleShooter extends FormApplication {
         problemSummary: "Midi is set to use walled templates but the module is not enabled",
         problemDetail: undefined,
         fixer: "Enable the walled templates module",
-        fixerid: -1
+        fixerId: -1
       });
     }
   }
@@ -889,7 +996,7 @@ export class TroubleShooter extends FormApplication {
           await game.settings.set("itemacro", "charsheet", false);
           SettingsConfig.reloadConfirm({ world: true });
         },
-        fixerid: -1
+        fixerId: -1
       });
     }
   }
@@ -974,7 +1081,7 @@ export class TroubleShooter extends FormApplication {
             app.render(true)
           });
         },
-        fixerid: -1
+        fixerId: -1
       });
     }
   }
@@ -988,7 +1095,7 @@ interface ProblemSpec {
   problemDetail: any | undefined,
   fixer?: string,
   fixerFunc?: any,
-  fixerid?: number;
+  fixerId?: number;
 }
 interface TroubleShooterData {
   midiVersion: string;

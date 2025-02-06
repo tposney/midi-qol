@@ -137,6 +137,7 @@
 .midi-qol-box {
   border: 2px groove var(--color-fieldset-border);
   padding: 3px;
+  border-radius: 4px;
 }
 .midi-qol-nobox {
   padding: 5px;
@@ -262,6 +263,7 @@
 .active-effect-sheet.midi-qol .midi-qol-box {
   border: 1px groove var(--color-border-light-tertiary);
   border-top: 0px;
+  border-radius: 0;
 }
 
 /* ----------------------------------------- */
@@ -273,6 +275,12 @@
 .midi-trouble-shooter .contents .scrollable {
   flex: 1;
   overflow: hidden auto;
+}
+.midi-trouble-shooter .form-footer {
+  display: flex;
+}
+.midi-qol-import-troubleshooter .notes {
+  color: var(--color-text-primary);
 }
 /*
 .midi-trouble-shooter .window-content > div {
@@ -781,16 +789,13 @@
 
   #midi-qol-undo-workflow .midi-qol-box {
     margin-right: -1px;
-    border-radius: 4px;
-    border-color: var(--color-fieldset-border);
-  }
-
-  #midi-qol-target-confirmation-config .midi-qol-box {
-    border-radius: 4px;
-    border-color: var(--color-fieldset-border);
   }
 
   #midi-qol-target-confirmation-config h4 {
     text-shadow: none;
     color: var(--color-text-primary);
+  }
+
+  .midi-targeting dl .midi-qol-box dd {
+    margin: 1rem;
   }

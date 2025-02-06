@@ -828,14 +828,18 @@
   "midi-qol.versus": "versus",
   "midi-qol.Skipped": "Pulado",
   "midi-qol.ExportTroubleShooting": "Exportar Informações de Trouble Shooting",
-  "midi-qol.TroubleShooter.Name": "Abrir Trouble Shooter",
-  "midi-qol.TroubleShooter.Hint": "(MUITO RECENTE) trouble shooter para ajudar a diagnosticar problemas.",
-  "midi-qol.TroubleShooter.Label": "Troubleshooter",
-  "midi-qol.Summary": "Resumo",
-  "midi-qol.CommonModules": "Módulos Comuns",
-  "midi-qol.Problems": "Problemas",
-  "midi-qol.AllModules": "Todos os Módulos",
-  "midi-qol.Errors": "Erros",
+  "midi-qol.TroubleShooter": {
+    "Name": "Abrir Trouble Shooter",
+    "Hint": "(MUITO RECENTE) trouble shooter para ajudar a diagnosticar problemas.",
+    "Label": "Troubleshooter",
+    "Tabs": {
+      "summary": "Resumo",
+      "common": "Módulos Comuns",
+      "problems": "Problemas",
+      "modules": "Todos os Módulos",
+      "errors": "Erros"
+    }
+  },
   "midi-qol.Inactive": "Inativo",
   "midi-qol.Active": "Ativo",
   "midi-qol.EnforceSingleWeaponTarget.Name":  "Armas Atacam Alvos Únicos",

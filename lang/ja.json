@@ -803,14 +803,18 @@
   "midi-qol.versus": "vs.",
   "midi-qol.Skipped": "Skipped",
   "midi-qol.ExportTroubleShooting": "トラブルシューディング用のデータを出力する",
-  "midi-qol.TroubleShooter.Name": "トラブルシューターを開く",
-  "midi-qol.TroubleShooter.Hint": "（実験的） 問題の診断のためのトラブルシューターを表示します。",
-  "midi-qol.TroubleShooter.Label": "トラブルシューター",
-  "midi-qol.Summary": "概要",
-  "midi-qol.CommonModules": "共通モジュール",
-  "midi-qol.Problems": "問題",
-  "midi-qol.AllModules": "すべてのモジュール",
-  "midi-qol.Errors": "エラー",
+  "midi-qol.TroubleShooter": {
+    "Name": "トラブルシューターを開く",
+    "Hint": "（実験的） 問題の診断のためのトラブルシューターを表示します。",
+    "Label": "トラブルシューター",
+    "Tabs": {
+      "summary": "概要",
+      "common": "共通モジュール",
+      "problems": "問題",
+      "modules": "すべてのモジュール",
+      "errors": "エラー"
+    }
+  },
   "midi-qol.Inactive": "無効",
   "midi-qol.Active": "有効",
   "midi-qol.EnforceSingleWeaponTarget.Name":  "武器攻撃のターゲットは1つのみ",

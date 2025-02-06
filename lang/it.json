@@ -826,14 +826,18 @@
 "midi-qol.versus": "contro",
 "midi-qol.Skipped": "Saltato",
 "midi-qol.ExportTroubleShooting": "Esporta Dati per il Troubleshooting",
-"midi-qol.TroubleShooter.Name": "Apri il Troubleshooter",
-"midi-qol.TroubleShooter.Hint": "(MOLTO PRESTO) strumento di troubleshooting per aiutare a diagnosticare i problemi",
-"midi-qol.TroubleShooter.Label": "Troubleshooter",
-"midi-qol.Summary": "Sommario",
-"midi-qol.CommonModules": "Moduli Comuni",
-"midi-qol.Problems": "Problemi",
-"midi-qol.AllModules": "Tutti i Moduli",
-"midi-qol.Errors": "Errori",
+"midi-qol.TroubleShooter": {
+  "Name": "Apri il Troubleshooter",
+  "Hint": "(MOLTO PRESTO) strumento di troubleshooting per aiutare a diagnosticare i problemi",
+  "Label": "Troubleshooter",
+  "Tabs": {
+    "summary": "Sommario",
+    "common": "Moduli Comuni",
+    "problems": "Problemi",
+    "modules": "Tutti i Moduli",
+    "errors": "Errori"
+  }
+},
 "midi-qol.Inactive": "Inattivo",
 "midi-qol.Active": "Attivo",
 "midi-qol.EnforceSingleWeaponTarget.Name":  "Le armi attaccano un singolo bersaglio",

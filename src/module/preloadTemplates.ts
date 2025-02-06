@@ -29,7 +29,11 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/targetConfirmation.hbs",
     "modules/midi-qol/templates/tooltip.html",
     "modules/midi-qol/templates/tool-card.html",
-    "modules/midi-qol/templates/troubleShooter.html",
+    "modules/midi-qol/templates/troubleshooter/summary.hbs",
+    "modules/midi-qol/templates/troubleshooter/common.hbs",
+    "modules/midi-qol/templates/troubleshooter/problems.hbs",
+    "modules/midi-qol/templates/troubleshooter/errors.hbs",
+    "modules/midi-qol/templates/troubleshooter/modules.hbs",
     "modules/midi-qol/templates/undo-workflow.hbs"
   ];
 	return loadTemplates(templatePaths);

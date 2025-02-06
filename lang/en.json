@@ -828,14 +828,20 @@
   "midi-qol.versus": "versus",
   "midi-qol.Skipped": "Skipped",
   "midi-qol.ExportTroubleShooting": "Export Trouble Shooting Data",
-  "midi-qol.TroubleShooter.Name": "Open Trouble Shooter",
-  "midi-qol.TroubleShooter.Hint": "Trouble shooter to help diagnose problems and collect settings",
-  "midi-qol.TroubleShooter.Label": "Troubleshooter",
-  "midi-qol.Summary": "Summary",
-  "midi-qol.CommonModules": "Common Modules",
-  "midi-qol.Problems": "Problems",
-  "midi-qol.AllModules": "All Modules",
-  "midi-qol.Errors": "Errors",
+  "midi-qol.TroubleShooter": {
+    "Name": "Open Trouble Shooter",
+    "Hint": "Trouble shooter to help diagnose problems and collect settings",
+    "Label": "Troubleshooter",
+    "Tabs": {
+      "summary": "Summary",
+      "common": "Common Modules",
+      "problems": "Problems",
+      "errors": "Errors",
+      "modules": "All Modules"
+    },
+    "ClearErrors": "Clear Errors",
+    "Overwrite": "Overwrite Midi Settings"
+  },
   "midi-qol.Inactive": "Inactive",
   "midi-qol.Active": "Active",
   "midi-qol.EnforceSingleWeaponTarget.Name": "Weapons attack single target",
