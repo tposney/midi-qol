@@ -64,7 +64,9 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   //       {id: "mechanics"},
   //       {id: "rules"},
   //       {id: "quick"},
-  //     ]
+  //     ],
+  //     initial: "gm",
+  //     labelPrefix: "midi-qol.Config.Tabs"
   //   }
   // }
 
