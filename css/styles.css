@@ -184,6 +184,10 @@
   padding: 0;
 }
 
+#midi-qol-sound-config table {
+  margin: 0;
+}
+
 .midi-qol-tooltip {
   position: relative;
   display: inline-block;

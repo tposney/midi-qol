@@ -44,6 +44,8 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/troubleshooter/modules.hbs",
     "modules/midi-qol/templates/stats/stats.hbs",
     "modules/midi-qol/templates/stats/config.hbs",
+    "modules/midi-qol/templates/sounds/sounds.hbs",
+    "modules/midi-qol/templates/sounds/quick.hbs",
     "modules/midi-qol/templates/undo-workflow.hbs"
   ];
 	return loadTemplates(templatePaths);
