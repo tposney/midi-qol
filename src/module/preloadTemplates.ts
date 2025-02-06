@@ -26,7 +26,7 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/saves.html",
     "modules/midi-qol/templates/sound-config.html",
     "modules/midi-qol/templates/targetConfirmationConfig.hbs",
-    "modules/midi-qol/templates/targetConfirmation.html",
+    "modules/midi-qol/templates/targetConfirmation.hbs",
     "modules/midi-qol/templates/tooltip.html",
     "modules/midi-qol/templates/tool-card.html",
     "modules/midi-qol/templates/troubleShooter.html",

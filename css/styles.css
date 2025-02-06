@@ -135,12 +135,12 @@
 }
 
 .midi-qol-box {
-  border: 2px groove #eeede0;
+  border: 2px groove var(--color-fieldset-border);
   padding: 3px;
 }
 .midi-qol-nobox {
   padding: 5px;
-  border-top: 2px groove #eeede0;
+  border-top: 2px groove var(--color-fieldset-border);
 }
 
 .midi-qol-faint {

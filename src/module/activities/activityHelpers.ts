@@ -271,7 +271,7 @@ export async function resolveTargetConfirmation(activity, options: any = {}): Pr
     // no timeout since there is a dialog to close
     // create target dialog which updates the target display
     options = foundry.utils.mergeObject(options, { callback: resolve });
-    let targetConfirmation = new TargetConfirmationDialog(activity.actor, activity, game.user, options).render(true);
+    let targetConfirmation = new TargetConfirmationDialog(activity.actor, activity, game.user, options).render({force: true});
   });
   let shouldContinue = await targets;
   // @ts-expect-error

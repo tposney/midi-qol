@@ -65,14 +65,14 @@ i
     await super._onRender(context, options);
     const selected = Object.keys(this.gridMappings).find(key => this.gridMappings[key].x === this.selectedPosition.x && this.gridMappings[key].y === this.selectedPosition.y);  
     this.element.querySelector(`#${selected}`)?.classList.add("selected");
-    this.element.querySelector(".midi-enable-target-confirmation")?.addEventListener("click", event => {
-      targetConfirmation.enabled = !targetConfirmation.enabled;
-      this.render({force: true});
-    });
-    this.element.querySelector(".midi-always-target-confirmation")?.addEventListener("click", event => {
-      targetConfirmation.all = !targetConfirmation.all;
-      this.render({force: true});
-    });
+    const checkboxes = this.element.querySelectorAll('form .form-group input[type="checkbox"]');
+    checkboxes.forEach((checkbox) => {
+      checkbox.addEventListener("click", () => {
+        // @ts-expect-error
+        targetConfirmation[checkbox.name] = !targetConfirmation[checkbox.name];
+        this.render({force: true});
+      })
+    })
     const gridItems = this.element.querySelectorAll(".midi-qol .grid-item");
     gridItems.forEach((item) => {
       item.addEventListener("click", () => {
@@ -97,6 +97,8 @@ i
 
   async _preClose(options) {
     targetConfirmation.gridPosition = this.selectedPosition;
+    // @ts-expect-error
+    await game.settings?.set("midi-qol", "TargetConfirmation", targetConfirmation);
   }
 
   static async #onSubmit(event, target) {
