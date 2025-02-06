@@ -784,3 +784,13 @@
     border-radius: 4px;
     border-color: var(--color-fieldset-border);
   }
+
+  #midi-qol-target-confirmation-config .midi-qol-box {
+    border-radius: 4px;
+    border-color: var(--color-fieldset-border);
+  }
+
+  #midi-qol-target-confirmation-config h4 {
+    text-shadow: none;
+    color: var(--color-text-primary);
+  }
