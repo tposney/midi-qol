@@ -13,15 +13,37 @@
           "stackable": "none",
           "durationExpression": "",
           "specialDuration": [],
-          "macroRepeat": "none"
+          "macroRepeat": "none",
+          "disableCondition": "",
+          "disableIncapacitated": false,
+          "showIcon": false
         },
-        "core": {}
+        "core": {
+          "overlay": false
+        },
+        "ActiveAuras": {
+          "isAura": false,
+          "aura": "None",
+          "nameOverride": "",
+          "radius": "",
+          "alignment": "",
+          "type": "",
+          "customCheck": "",
+          "ignoreSelf": false,
+          "height": false,
+          "hidden": false,
+          "displayTemp": false,
+          "hostile": false,
+          "onlyOnce": false,
+          "wallsBlock": "system",
+          "statuses": []
+        }
       },
       "changes": [
         {
           "key": "system.bonuses.mwak.damage",
           "mode": 0,
-          "value": "1d8",
+          "value": "1d8[radiant]",
           "priority": 0
         }
       ],
@@ -36,7 +58,7 @@
       },
       "transfer": true,
       "disabled": false,
-      "origin": null,
+      "origin": "Compendium.midi-qol.midiqol-sample-items.Item.HW0hsTxecGnYiLSD",
       "tint": "#ffffff",
       "name": "Improved Divine Smite",
       "description": "",
@@ -46,7 +68,7 @@
         "duplicateSource": null,
         "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.1.2",
+        "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
         "lastModifiedBy": null
@@ -148,9 +170,12 @@
       "chat": ""
     },
     "source": {
-      "custom": "PHB pg. 85",
+      "custom": "Midi 12.4.25",
       "revision": 1,
-      "rules": "2024"
+      "rules": "2024",
+      "book": "",
+      "page": "",
+      "license": ""
     },
     "uses": {
       "max": "",
@@ -262,25 +287,37 @@
           "forceDialog": false,
           "confirmTargets": "default",
           "automationOnly": false,
-          "identifier": ""
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true
         }
       }
     },
     "identifier": "improved-divine-smite-10010",
     "enchant": {},
     "prerequisites": {
-      "level": null
+      "level": null,
+      "repeatable": false
     },
-    "properties": []
+    "properties": [],
+    "advancement": [],
+    "cover": null,
+    "crewed": false
   },
   "_stats": {
     "compendiumSource": "Compendium.Dynamic-Effects-SRD.DAE SRD Feats.uvEGiLvPgzje1L6K",
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180117979,
-    "modifiedTime": 1734180117979,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555835389,
+    "modifiedTime": 1738555835389,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "fZIl4G4qj3C894LI",

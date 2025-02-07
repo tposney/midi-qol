@@ -25,9 +25,13 @@
     "identifier": "never-target",
     "enchant": {},
     "prerequisites": {
-      "level": null
+      "level": null,
+      "repeatable": false
     },
-    "properties": []
+    "properties": [],
+    "advancement": [],
+    "cover": null,
+    "crewed": false
   },
   "img": "icons/magic/perception/shadow-stealth-eyes-purple.webp",
   "effects": [
@@ -75,7 +79,7 @@
         "duplicateSource": null,
         "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.1.2",
+        "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
         "lastModifiedBy": null
@@ -128,9 +132,9 @@
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180120850,
-    "modifiedTime": 1734180120850,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555838478,
+    "modifiedTime": 1738555838478,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "_id": "mT0aJmviVtVlss4s",

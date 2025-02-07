@@ -32,7 +32,7 @@ export class MidiSounds {
   }
 
   static ActionTypes(): any {
-    const systemId = game.system?.id.toUpperCase();
+    const systemId = game.system?.id.toUpperCase() ?? "dnd5e";
     let damageEntries: any = {};
     Object.keys(GameSystemConfig.damageTypes).forEach(
       key => damageEntries[key] = `${i18n(`${systemId}.Damage`)}: ${GameSystemConfig.damageTypes[key].label}`

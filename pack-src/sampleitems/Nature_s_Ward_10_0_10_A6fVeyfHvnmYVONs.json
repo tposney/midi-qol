@@ -70,7 +70,7 @@
         "duplicateSource": null,
         "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.1.2",
+        "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
         "lastModifiedBy": null
@@ -134,6 +134,11 @@
     "tidy5e-sheet": {
       "section": "",
       "actionSection": ""
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": []
+      }
     }
   },
   "system": {
@@ -160,18 +165,22 @@
     "identifier": "natures-ward-10010",
     "enchant": {},
     "prerequisites": {
-      "level": null
+      "level": null,
+      "repeatable": false
     },
-    "properties": []
+    "properties": [],
+    "advancement": [],
+    "cover": null,
+    "crewed": false
   },
   "_stats": {
     "compendiumSource": "Compendium.midi-qol.midiqol-sample-items.Td3v4mqUETTolcm0",
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180117979,
-    "modifiedTime": 1734180117979,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555835389,
+    "modifiedTime": 1738555835389,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "fZIl4G4qj3C894LI",

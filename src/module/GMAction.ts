@@ -760,16 +760,8 @@ isConcentrationCheck: boolean | undefined,
 rollDC: number,
 saveItemUuid: string,
 workflowOptions: object
-} = {
-advantage: undefined,
-disadvantage: undefined,
-isMagicSave: isMagicSave,
-isFriendly: undefined,
-isConcentrationCheck: undefined,
-rollDC: rollDC,
-saveItemUuid: "",
-workflowOptions: this.workflowOptions
-};
+workflowId: string
+
 */
   let config: any = { midiOptions: data.options };
   switch (data.request) {
@@ -839,7 +831,7 @@ export async function rollAbility(data: { request: string; targetUuid: string; a
   });
 }
 
-export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined, isMagicSave: boolean | undefined }) {
+export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined, isMagicSave: boolean | undefined , midiOptions: any | undefined}) {
   // let tokens = data.tokens.map((tuuid: any) => new Token(MQfromUuid(tuuid)));
 
   // TODO come back and see what things can be passed to this.
@@ -851,7 +843,8 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
       silent: data.silent,
       rollmode: data.rollMode,
       dc: data.dc,
-      isMagicSave: data.isMagicSave
+      isMagicSave: data.isMagicSave,
+      options: data.midiOptions
     });
 }
 
@@ -1142,12 +1135,13 @@ async function createGMReverseDamageCard(
   return chatCardUuid;
 }
 
-export let processUndoDamageCard = (message, html, data) => {
-  if (!message.flags?.midiqol?.undoDamage) return true;
+export let processUndoDamageCard = (message: ChatMessage, html, data) => {
+  if (!(message.flags?.midiqol as any)?.undoDamage) return true;
   let button = html.find("#all-reverse");
   button.click((ev: { stopPropagation: () => void; }) => {
     (async () => {
-      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageDetail, updateOptions, calcDamageOptions } of message.flags.midiqol.undoDamage) {
+      const undoDamageData = foundry.utils.getProperty(message, "flags.midiqol.undoDamage");
+      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageDetail, updateOptions, calcDamageOptions } of undoDamageData) {
         recoverDamageDetailFromJSON(damageDetail);
         if (!actorUuid) continue;
         const applyButton = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -1174,7 +1168,8 @@ export let processUndoDamageCard = (message, html, data) => {
   button = html.find("#all-apply");
   button.click((ev: { stopPropagation: () => void; }) => {
     (async () => {
-      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageDetail, updateOptions, calcDamageOptions, oldVitality, newVitality } of message.flags.midiqol.undoDamage) {
+      const undoDamageData = foundry.utils.getProperty(message, "flags.midiqol.undoDamage");
+      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageDetail, updateOptions, calcDamageOptions, oldVitality, newVitality } of undoDamageData) {
         if (!actorUuid) continue;
         let actor = fromActorUuid(actorUuid);
         const applyButton = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -1195,7 +1190,8 @@ export let processUndoDamageCard = (message, html, data) => {
     })();
   })
 
-  message.flags.midiqol.undoDamage.forEach(({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions }) => {
+  const undoDamageData = foundry.utils.getProperty(message, "flags.midiqol.undoDamage");
+  undoDamageData?.forEach(({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions }) => {
     if (!actorUuid) return;
     recoverDamageDetailFromJSON(damageDetail);
     // ids should not have "." in the or it's id.class

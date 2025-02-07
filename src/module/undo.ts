@@ -181,7 +181,7 @@ export async function addUndoChatMessage(message: ChatMessage) {
   }
 }
 
-Hooks.on("createChatMessage", (message, data, options, user) => {
+Hooks.on("createChatMessage", (message: ChatMessage, data: any, options:any, user) => {
   if (!configSettings.undoWorkflow) return;
   if ((undoDataQueue ?? []).length < 1) return;
   const currentUndo = undoDataQueue[0];

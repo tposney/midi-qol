@@ -92,7 +92,7 @@
         "duplicateSource": null,
         "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.1.2",
+        "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
         "lastModifiedBy": null
@@ -178,7 +178,8 @@
       "itemCondition": "",
       "reactionCondition": "reaction == 'isHit' || (reaction == 'isDamaged' && workflow.item.name == 'Magic Missiles')",
       "effectCondition": "",
-      "otherCondition": ""
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
     },
     "core": {},
     "scene-packer": {
@@ -222,7 +223,10 @@
         "vocal",
         "somatic"
       ],
-      "persistSourceMigration": true
+      "persistSourceMigration": true,
+      "riders": {
+        "activity": []
+      }
     },
     "dae": {
       "macro": {
@@ -250,6 +254,10 @@
           "duplicateSource": null
         }
       }
+    },
+    "tidy5e-sheet": {
+      "section": "",
+      "actionSection": ""
     }
   },
   "system": {
@@ -379,7 +387,15 @@
           "forceDialog": false,
           "confirmTargets": "default",
           "automationOnly": false,
-          "identifier": ""
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true
         }
       }
     },
@@ -390,9 +406,9 @@
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180122481,
-    "modifiedTime": 1734180122481,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555840264,
+    "modifiedTime": 1738929183914,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "qF3UYnzAAbVavYSR",

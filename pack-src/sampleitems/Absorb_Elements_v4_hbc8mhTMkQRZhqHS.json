@@ -80,7 +80,7 @@
         "duplicateSource": null,
         "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.1.2",
+        "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
         "lastModifiedBy": null
@@ -150,7 +150,7 @@
         "duplicateSource": null,
         "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.1.2",
+        "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
         "lastModifiedBy": null
@@ -322,7 +322,8 @@
       "itemCondition": "",
       "reactionCondition": "",
       "effectCondition": "",
-      "otherCondition": ""
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
     },
     "core": {},
     "favtab": {
@@ -388,7 +389,7 @@
   },
   "system": {
     "description": {
-      "value": "<div class=\"rd__b  rd__b--3\"><p>The spell captures some of the incoming energy, lessening its effect on you and storing it for your next melee attack. You have resistance to the triggering damage type until the start of your next turn. Also, the first time you hit with a melee attack on your next turn, the target takes an extra [[/r 1d6]] damage of the triggering type, and the spell ends.</p><div class=\"rd__spc-inline-post\"><p></p></div></div><div class=\"rd__b  rd__b--3\"><div class=\"rd__b  rd__b--3\"><p><span class=\"entry-title-inner\">At Higher Levels.</span></p><p>When you cast this spell using a spell slot of 2nd level or higher, the extra damage increases by [[/r 1d6]] for each slot level above 1st.</p><div class=\"rd__spc-inline-post\"><p></p></div></div><div class=\"rd__spc-inline-post\"><p>Midi-qol: 11.0.7<br /><strong>When equipped you must rename the item to Absorb Elements</strong></p></div></div>",
+      "value": "<div class=\"rd__b  rd__b--3\"><p>The descriptio for this is not in the SRD so you'll have to get it yourself.</p><div class=\"rd__b  rd__b--3\"><div class=\"rd__spc-inline-post\"><p></p></div><p>Midi-qol:<br /><strong>When equipped you must rename the item to Absorb Elements</strong></p></div></div>",
       "chat": ""
     },
     "source": {
@@ -515,7 +516,15 @@
           "forceDialog": false,
           "confirmTargets": "default",
           "automationOnly": false,
-          "identifier": ""
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true
         }
       }
     },
@@ -528,9 +537,9 @@
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180122481,
-    "modifiedTime": 1734180122481,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555840264,
+    "modifiedTime": 1738557172270,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "qF3UYnzAAbVavYSR",

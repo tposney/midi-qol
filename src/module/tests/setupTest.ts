@@ -1,4 +1,4 @@
-import { MODULE_ID, error } from "../../midi-qol.js";
+import { MODULE_ID, error, warn } from "../../midi-qol.js";
 import { applySettings } from "../apps/ConfigPanel.js";
 import { FormBuilder } from "../lib/FormBuilder.js";
 import { configSettings } from "../settings.js";
@@ -576,23 +576,29 @@ async function registerTests() {
                     });
           */
         });
+      },
+      { displayName: "Midi Item Roll Tests" },
+    );
+    globalThis.quench.registerBatch(
+      "quench.midi-qol.Onuse-macro-tests",
+      context => {
+        const { describe, it } = context;
+        const assert: any = context.assert;
         describe("onUse Macro Tests", async function () {
           it("Calls actor onUseMacros", async function () {
             this.timeout(3000); // why is 2 seconds not enough?
             const actor = getActor(actor2Name);
             const macroPasses: string[] = [];
-            const hookid = Hooks.on("OnUseMacroTest", (pass: string) => macroPasses.push(pass));
             await completeItemUse(actor.items.getName("OnUseMacroTest"), {}, { workflowOptions }); // Apply the effect
-            //@ts-ignore
             const target = getToken(target2Name);
             game.user?.updateTokenTargets([target?.id ?? ""]);
+            const hookid = Hooks.on("OnUseMacroTest", (pass: string) => {macroPasses.push(pass); warn(pass, macroPasses)});
             await completeItemUse(actor.items.getName("Longsword"), {}, { workflowOptions }); // Apply the effect
             Hooks.off("OnUseMacroTest", hookid);
             let hasEffects: any = actor.effects.filter(e => e.name === "OnUseMacroTest") ?? [];
             assert.ok(hasEffects);
             await actor.deleteEmbeddedDocuments("ActiveEffect", hasEffects.map(e => e.id))
-            console.warn("Actual Passes", macroPasses);
-            console.warn("en.json passes", Object.keys(game.i18n?.translations[MODULE_ID]["onUseMacroOptions"]))
+            warn("en.json passes", Object.keys(game.i18n?.translations[MODULE_ID]["onUseMacroOptions"]))
             const expectedPasses = ['preTargeting', 'preItemRoll', 'preStart',
               'postStart', 'preAoETargetConfirmation', 'postAoETargetConfirmation',
               'preValidateRoll', 'postValidateRoll', 'prePreambleComplete',
@@ -602,13 +608,12 @@ async function registerTests() {
               'postSave', 'postSavesComplete', 'preAllRollsComplete', 'postAllRollsComplete',
               'preApplyDynamicEffects', 'preActiveEffects', 'postApplyDynamicEffects',
               'preRollFinished', 'postActiveEffects', 'postRollFinished', 'preCleanup'];
-            console.warn("Expected Passes", expectedPasses);
-            console.warn("Actual passes", macroPasses);
+            warn("Expected Passes", expectedPasses);
+            warn("Actual passes", macroPasses);
             // Test for all passes except "all"
             for (let expectedPass of expectedPasses) {
               assert.ok(macroPasses.includes(expectedPass), `onUseMacro pass ${expectedPass}`);
             }
-            // assert.equal(macroPasses.length, Object.keys(game.i18n.translations[MODULE_ID]["onUseMacroOptions"]).length - 1, "on use macro pass length");
           })
 
           it("Calls item onUseMacros", async function () {
@@ -621,13 +626,12 @@ async function registerTests() {
             for (let expectedPass of expectedPasses) {
               assert.ok(macroPasses.includes(expectedPass), `onUseMacro pass ${expectedPass}`);
             }
-            console.warn("actual passes", macroPasses);
-            console.warn("expected passes", expectedPasses)
-            // assert.equal(JSON.stringify(macroPasses), JSON.stringify(expectedPasses));
+            warn("actual passes", macroPasses);
+            warn("expected passes", expectedPasses)
           });
         });
       },
-      { displayName: "Midi Item Roll Tests" },
+      { displayName: "OnUse Macro Tests" },
     );
     globalThis.quench.registerBatch(
       "quench.midi-qol.conditionImmunity",

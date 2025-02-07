@@ -108,7 +108,7 @@
         },
         "healing": {
           "number": 3,
-          "denomination": 8,
+          "denomination": "8",
           "bonus": "@mod",
           "types": [
             "healing"
@@ -138,10 +138,21 @@
         },
         "midiProperties": {
           "forceDialog": false,
-          "confirmTargets": "default",
+          "confirmTargets": "always",
           "automationOnly": false,
-          "identifier": ""
-        }
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true
+        },
+        "name": "",
+        "img": "",
+        "appliedEffects": []
       }
     },
     "identifier": "mass-cure-wounds-11313",
@@ -202,7 +213,15 @@
             "0": "healing"
           }
         }
+      },
+      "riders": {
+        "activity": [],
+        "effect": []
       }
+    },
+    "tidy5e-sheet": {
+      "section": "",
+      "actionSection": ""
     }
   },
   "img": "icons/magic/life/heart-cross-strong-green.webp",
@@ -213,9 +232,9 @@
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180122481,
-    "modifiedTime": 1734180122481,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555840264,
+    "modifiedTime": 1738929145577,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "_id": "K2wjnJO3XS5g0Jlf",

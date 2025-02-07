@@ -673,7 +673,28 @@ export let getSaveMultiplierForItem = (item: Item, itemDamageType) => {
   return configSettings.defaultSaveMult;
 };
 
-export function requestPCSave(ability, rollType, player, actor, { advantage, disadvantage, flavor, dc, requestId, GMprompt, isMagicSave, magicResistance, magicVulnerability, saveItemUuid, isConcentrationCheck }) {
+export interface pcSaveOptions {
+  flavor: string, 
+  requestId: string, 
+  GMprompt, 
+  isMagicSave: boolean,
+  magicResistance: boolean, 
+  magicVulnerability: boolean, 
+  saveDetails: {
+    advantage: boolean | undefined,
+    disadvantage: boolean | undefined,
+    isFriendly: boolean,
+    isMagicSave: boolean,
+    isConcentrationCheck: boolean | undefined,
+    rollDC: number,
+    saveItemUuid: string,
+    workflowId: string,
+    workflowUuid: string, // deprecated
+    workflowOptions: object,
+    itemCardUuid: string
+  }
+};
+export function requestPCSave(ability: string, rollType, player, actor, options: pcSaveOptions): Promise<ChatMessage> | undefined{
   try {
     // display a chat message to the user telling them to save
     const actorName = actor.name;
@@ -681,20 +702,21 @@ export function requestPCSave(ability, rollType, player, actor, { advantage, dis
     let abilityDetails = GameSystemConfig.abilities[ability];
     if (!abilityDetails) abilityDetails = GameSystemConfig.tools[ability];
     if (abilityDetails?.label) abilityString = abilityDetails.label;
-    let content = ` ${actorName} ${configSettings.displaySaveDC ? "DC " + dc : ""} ${abilityString} ${i18n("midi-qol.saving-throw")}`;
-    if (advantage && !disadvantage) content = content + ` (${i18n("DND5E.Advantage")}) - ${flavor})`;
-    else if (!advantage && disadvantage) content = content + ` (${i18n("DND5E.Disadvantage")}) - ${flavor})`;
-    else content + ` - ${flavor})`;
+    let content = ` ${actorName} ${configSettings.displaySaveDC ? "DC " + options.saveDetails.rollDC : ""} ${abilityString} ${i18n("midi-qol.saving-throw")}`;
+    if (options.saveDetails.advantage && !options.saveDetails.disadvantage) content = content + ` (${i18n("DND5E.Advantage")}) - ${options.flavor})`;
+    else if (!options.saveDetails.advantage && options.saveDetails.disadvantage) content = content + ` (${i18n("DND5E.Disadvantage")}) - ${options.flavor})`;
+    else content + ` - ${options.flavor})`;
     const chatData = {
       content,
       whisper: [player]
     }
     // think about how to do this if (workflow?.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? "", workflow.flagTags);
-    ChatMessage.create(chatData);
+    return ChatMessage.create(chatData) as Promise<ChatMessage>;
   } catch (err) {
     const message = `midi-qol | request PC save`;
     TroubleShooter.recordError(err, message);
     error(message, err);
+    return undefined;
   }
 }
 
@@ -2126,7 +2148,7 @@ export function checkRange(itemIn, tokenRef: Token | TokenDocument | string | un
     }
     if (activity.item.system.range.units === "touch") {
       range = canvas?.dimensions?.distance ?? 5;
-      if (activity.activity.item.system.range.reach) range = activity.activity.item.system.range.reach;
+      if (activity.item.system.range.reach) range = activity.item.system.range.reach;
       longRange = 0;
     }
 
@@ -4389,13 +4411,15 @@ export function createConditionData(data: { workflow?: any, target?: Token | Tok
       rollData.otherDamageActivity = data.workflow?.otherActivity;
       rollData.hasSave = data.workflow.hasSave;
       rollData.item = data.workflow.item?.getRollData().item;
-      if (data.workflow.item) rollData.item.type = data.workflow.item.type;
       rollData.shouldRollDamage = data.workflow.shouldRollDamage;
       rollData.hasAttack = data.workflow.activity.attack;
       rollData.hasDamage = activityHasDamage(data.workflow.activity);
     }
     if (data.activity) {
       rollData.activity = data.activity;
+    }
+    if (item) {
+      Object.defineProperty(rollData.item, "actionType", { get() {return item.system.actionType } });
     }
     if (game.combat) {
       const combat: Combat = game.combat as unknown as Combat;

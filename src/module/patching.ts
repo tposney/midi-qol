@@ -628,6 +628,14 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
     if (!config.midiOptions.simulate) {
       result[0] = await bonusCheck(this, result[0], rollType, abilityId, message.data);
       DSNMarkDiceDisplayed(result);
+      if (Number.isNumeric(result[0].options.target) && result[0].isSuccess === false) {
+        const failFlagsLength = collectBonusFlags(this, rollType, "fail.all").length;
+        const failAbilityFlagsLength = collectBonusFlags(this, rollType, `fail.${abilityId}`).length
+      if (failFlagsLength || failAbilityFlagsLength) {
+        // If the roll fails and there is an flags.midi-qol.save.fail then apply the bonus
+        result[0] = await bonusCheck(this, result[0], rollType, failAbilityFlagsLength ? `fail.${abilityId}` : "fail.all");
+        }
+      }
     }
 
     if (config.target !== undefined && success === undefined) {
@@ -1080,7 +1088,7 @@ export function prepareOnUseMacroData(actorOrItem) {
   }
 }
 
-export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user) {
+export function preUpdateItemActorOnUseMacro(itemOrActor: Item | Actor, changes, options, user) {
   try {
     const macroChanges = foundry.utils.getProperty(changes, "flags.midi-qol.onUseMacroParts") ?? {};
     //@ts-ignore
@@ -1581,10 +1589,10 @@ export let itemPatching = () => {
   configureDamageRollDialog();
 };
 
-export async function checkDeleteTemplate(templateDocument, options, user) {
+export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocument, options, user) {
   if (user !== game.user?.id) return;
   if (options.undo) return;
-  let origin = MQfromUuidSync(templateDocument.getFlag("dnd5e", "origin"));
+  let origin = MQfromUuidSync(templateDocument.getFlag("dnd5e", "origin" as never));
   if (origin instanceof Item && origin.parent instanceof Actor) {
     // @ts-expect-error can't know about flags
     origin = origin.parent.effects?.find(ef => ef.getFlag("dnd5e", "dependents")?.some(dep => dep.uuid === templateDocument.uuid));

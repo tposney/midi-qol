@@ -43,7 +43,7 @@ export let readyHooks = async () => {
     ddbglPendingHook(data);
   });
 
-  Hooks.on("preUpdateChatMessage", (message, update, options, user) => {
+  Hooks.on("preUpdateChatMessage", (message: ChatMessage, update, options, user) => {
     try {
       if (!getCachedDocument(message.uuid)) return true;
       const cachedUpdates = getUpdatesCache(message.uuid);
@@ -107,7 +107,7 @@ export let readyHooks = async () => {
     }
   })
 
-  Hooks.on("renderActorArmorConfig", (app, html, data) => {
+  Hooks.on("renderActorArmorConfig", (app: never, html, data) => {
     if (!["none", undefined, false].includes(checkRule("challengeModeArmor"))) {
       const ac = data.ac;
       const element = html.find(".stacked"); // TODO do this better
@@ -117,11 +117,9 @@ export let readyHooks = async () => {
   });
 
   // Handle removal of concentration
-  Hooks.on("deleteActiveEffect", (...args) => {
-    let [deletedEffect, options, user] = args;
+  Hooks.on("deleteActiveEffect", (deletedEffect: ActiveEffect, options: any = {}, user: string) => {
     if (options.undo) return; // TODO check that this is right
     if (debugEnabled > 0) console.warn("deleteActiveEffect", deletedEffect, options, user);
-    const checkConcentration = configSettings.concentrationAutomation;
     if (!game.users?.activeGM?.isSelf) return;
     if (!(deletedEffect.parent instanceof CONFIG.Actor.documentClass)) return;
     if (debugEnabled > 0) warn("deleteActiveEffectHook", deletedEffect, deletedEffect.parent.name, options);
@@ -131,27 +129,18 @@ export let readyHooks = async () => {
         if (origin instanceof ActiveEffect && !options.noConcentrationCheck && configSettings.removeConcentrationEffects !== "none") {
           // @ts-expect-error no dnd5e-types
           if (origin.statuses?.has(CONFIG.specialStatusEffects.CONCENTRATING) && origin.getDependents()?.length === 0) {
-            // @ts-expect-error
+            // @ts-expect-error duration.remaining
             if (!installedModules.get("times-up") || (origin?.duration?.remaining ?? 1) > 0) {
               await origin.delete();
             }
           }
         }
-        /*
-        if (deletedEffect._id === getStaticID("reaction") && deletedEffect.parent instanceof CONFIG.Actor.documentClass) {
-          await deletedEffect.parent.update({ "flags.midi-qol.actions.reaction": false, "flags.midi-qol.actions.-=reactionCombatRound": false});
-        }
-        if (deletedEffect._id === getStaticID("bonusaction") && deletedEffect.parent instanceof CONFIG.Actor.documentClass) {
-          await deletedEffect.parent.update({ "flags.midi-qol.actions.bonus": false, "flags.midi-qol.actions.-=bonusActionCombatRound": false});
-        }
-        */
         return true;
       } catch (err) {
         console.warn("Error in deleteActiveEffect", err, deletedEffect, options);
         return true;
       }
     }
-    // if (globalThis.DAE?.actionQueue) globalThis.DAE.actionQueue.add(changefunc);
     return changefunc();
   })
 
@@ -265,13 +254,13 @@ export function initHooks() {
     return true;
   });
 
-  Hooks.on("updateChatMessage", (message, update, options, user) => {
+  Hooks.on("updateChatMessage", (message: ChatMessage, update, options, user) => {
     hideRollUpdate(message, update, options, user);
     //@ts-ignore scrollBottom
     ui.chat?.scrollBottom();
   });
 
-  Hooks.on("updateCombat", (combat, data: Combat.UpdateData, options, user) => {
+  Hooks.on("updateCombat", (combat: Combat, data: Combat.UpdateData, options, user) => {
     if (data.round === undefined && data.turn === undefined) return;
     // @ts-expect-error
     untargetAllTokens(combat, data.options, user);
@@ -281,7 +270,7 @@ export function initHooks() {
     // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
   });
 
-  Hooks.on("renderChatMessage", (message, html, data) => {
+  Hooks.on("renderChatMessage", (message: ChatMessage, html, data) => {
     if (debugEnabled > 1) debug("render message hook ", message.id, message, html, data);
     // chatDamageButtons(message, html, data); This no longer works since the html is rewritten
     processUndoDamageCard(message, html, data);
@@ -291,13 +280,13 @@ export function initHooks() {
     processConcentrationRequestMessage(message, html, data);
   });
 
-  Hooks.on("deleteChatMessage", (message, options, user) => {
+  Hooks.on("deleteChatMessage", (message: ChatMessage, options, user) => {
     if (message.author.id !== game.user?.id) return;
     const workflowId = foundry.utils.getProperty(message, "flags.midi-qol.workflowId");
     if (workflowId && Workflow.getWorkflow(workflowId)) Workflow.removeWorkflow(workflowId)
   });
 
-  Hooks.on("midi-qol.RollComplete", async (workflow) => {
+  Hooks.on("midi-qol.RollComplete", async (workflow: Workflow) => {
     const wfuuid = workflow.uuid;
 
     if (savedOverTimeEffectsToDelete[wfuuid]) {
@@ -322,14 +311,14 @@ export function initHooks() {
   Hooks.on("preUpdateActor", preUpdateItemActorOnUseMacro);
   Hooks.on("combatRound", expirePerTurnBonusActions); // TODO Move this to the update combat hook?
   Hooks.on("combatTurn", expirePerTurnBonusActions);
-  Hooks.on("updateCombatant", (combatant, updates: Combatant.UpdateData, options, user) => {
+  Hooks.on("updateCombatant", (combatant: Combatant, updates: Combatant.UpdateData, options, user: string) => {
     if (game?.user?.id !== user) return true;
     if (combatant.actor && updates.initiative) expireRollEffect.bind(combatant.actor)("Initiative", "none");
     return true;
   });
 
 
-  function getItemSheetData(data, item) {
+  function getItemSheetData(data, item: Item) {
     const config = GameSystemConfig;
     const midiProps = config.midiProperties;
     if (!item) {
@@ -367,7 +356,8 @@ export function initHooks() {
     foundry.utils.setProperty(data, "flags.midiProperties", item.flags?.midiProperties ?? {});
     if (["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver"].includes(item?.type)) {
       for (let prop of Object.keys(midiProps)) {
-        if (item.system.properties?.has(prop)
+        //@ts-expect-error no dnd5e types
+        if ((item.system.properties)?.has(prop)
           && foundry.utils.getProperty(item, `flags.midiProperties.${prop}`) === undefined) {
           foundry.utils.setProperty(item, `flags.midiProperties.${prop}`, true);
         } else if (foundry.utils.getProperty(item, `flags.midiProperties.${prop}`) === undefined) {
@@ -748,7 +738,7 @@ Hooks.on("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, messageConfig) => {
   return true;
 });
 
-Hooks.on("dnd5e.preCalculateDamage", (actor, damages, options) => {
+Hooks.on("dnd5e.preCalculateDamage", (actor: Actor.Implementation, damages, options) => {
   try {
     const ignore = (category, type, skipDowngrade) => {
       return options.ignore === true
@@ -791,17 +781,19 @@ Hooks.on("dnd5e.preCalculateDamage", (actor, damages, options) => {
           }
         }
       }
+      //@ts-expect-error no dnd5e types
+      const actorTraits: any = actor.system.traits;
       // For damage absorption ignore other immunity/resistance/vulnerability
-      if (actor.system.traits?.da && false) { // not doing this makes absorbing tatoos much easier to implement
+      if (actorTraits?.da && false) { // not doing this makes absorbing tatoos much easier to implement
         for (let damage of damages) {
           if (ignore("absorption", damage.type, false)) continue;
-          if (actor.system.traits?.da?.value?.has(damage.type) || actor.system.traits?.da?.all) {
+          if (actorTraits?.da?.value?.has(damage.type) || actorTraits?.da?.all) {
             if (!options?.ignore?.immunity) foundry.utils.setProperty(options, "ignore.immunity", new Set())
             if (!options?.ignore?.resistance) foundry.utils.setProperty(options, "ignore.resistance", new Set())
             if (!options?.ignore?.vulnerability) foundry.utils.setProperty(options, "ignore.vulnerability", new Set())
-            if (actor.system.traits?.di.value.has(damage.type)) options.ignore.immunity.add(damage.type);
-            if (actor.system.traits?.dr.value.has(damage.type)) options.ignore.resistance.add(damage.type);
-            if (actor.system.traits?.dv.value.has(damage.type)) options.ignore.vulnerability.add(damage.type);
+            if (actorTraits?.di.value.has(damage.type)) options.ignore.immunity.add(damage.type);
+            if (actorTraits?.dr.value.has(damage.type)) options.ignore.resistance.add(damage.type);
+            if (actorTraits?.dv.value.has(damage.type)) options.ignore.vulnerability.add(damage.type);
           }
         }
       }
@@ -833,7 +825,7 @@ Hooks.on("dnd5e.preCalculateDamage", (actor, damages, options) => {
   }
 });
 
-Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
+Hooks.on("dnd5e.calculateDamage", (actor: Actor.Implementation /* Actor - no dnd5e types*/, damages, options) => {
   try {
     const downgrade = type => options.downgrade === true || options.downgrade?.has?.(type);
     const ignore = (category, type, skipDowngrade) => {
@@ -844,6 +836,8 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
         || ((category === "resistance") && downgrade(type))
     };
     const mo = options.midi;
+    //@ts-expect-error no dnd5e types
+    const actorTraits: any = actor.system.traits;
     if (mo?.noCalc) return true;
     for (let damage of damages) {
       // not sure how to do this. if (damage.active.immunity) damage.multiplier = configSettings.damageImmunityMultiplier;
@@ -855,8 +849,8 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
         damage.active.multiplier = damage.active.multiplier / 2 * configSettings.damageVulnerabilityMultiplier;
         damage.value = damage.value / 2 * configSettings.damageVulnerabilityMultiplier;
       }
-      if (actor.system.traits.da?.[damage.type] !== undefined && !ignore("absorption", damage.type, false)) {
-        const multiplier = Number(actor.system.traits.da?.[damage.type]) ?? -1;
+      if (actorTraits.da?.[damage.type] !== undefined && !ignore("absorption", damage.type, false)) {
+        const multiplier = Number(actorTraits.da?.[damage.type]) ?? -1;
         damage.active.multiplier *= multiplier;
         damage.value *= multiplier;
         damage.active.absorption = true;
@@ -868,9 +862,9 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
     const traitMultipliers = { "dr": configSettings.damageResistanceMultiplier, "di": configSettings.damageImmunityMultiplier, "da": -1, "dv": configSettings.damageVulnerabilityMultiplier };
     // Handle custom immunities
     for (let trait of ["da", "dv", "di", "dr"]) {
-      const bypasses = actor.system.traits[trait].bypasses;
-      customs = (actor.system.traits[trait].custom ?? "").split(";").map(s => s.trim());
-      customs = [...customs, ...Object.keys((actor.system.traits[trait].midi ?? {}))];
+      const bypasses = actorTraits[trait].bypasses;
+      customs = (actorTraits[trait].custom ?? "").split(";").map(s => s.trim());
+      customs = [...customs, ...Object.keys((actorTraits[trait].midi ?? {}))];
       for (let custom of customs) {
         if (custom === "") continue;
         let bypassesPresent;
@@ -924,7 +918,7 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
           damage.active[GameSystemConfig.customDamageResistanceTypes[custom] ?? custom] = true;
           damage.active[categories[trait]] = true;
           let multiplier = traitMultipliers[trait];
-          const da = actor.system.traits?.da?.midi?.[custom] || actor.system.traits?.da?.midi?.all;
+          const da = actorTraits?.da?.midi?.[custom] || actorTraits?.da?.midi?.all;
           if (da && Number.isNumeric(da)) {
             multiplier = Number(da);
           }
@@ -963,17 +957,17 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
     // Insert DR.ALL as a -ve damage value maxed at the total damage.
     let dmAll;
     if (options.ignore !== true && !options.ignore?.DR?.has("none") && !options.ignore?.DR?.has("all")) {
-      // think about how to do custom dm.const specials = [...(actor.system.traits.dm.custom ?? []).split(";"), ...Object.keys(actor.system.traits.dm?.midi ?? {})];
-      const specials = Object.keys(actor.system.traits?.dm?.midi ?? {});
+      // think about how to do custom dm.const specials = [...(actorTraits.dm.custom ?? []).split(";"), ...Object.keys(actorTraits.dm?.midi ?? {})];
+      const specials = Object.keys(actorTraits?.dm?.midi ?? {});
       for (let special of specials) {
         let dm;
         let dmRoll;
         let selectedDamage;
         let oldDamage
         let dmActive;
-        dmRoll = new Roll(`${actor.system.traits?.dm.midi?.[special]}`, actor.getRollData())
+        dmRoll = new Roll(`${actorTraits?.dm.midi?.[special]}`, actor.getRollData() as any)
         dm = doSyncRoll(dmRoll, `traits.dm.midi.${special}`)?.total ?? 0;
-        const bypasses = actor.system.traits["dm"].bypasses ?? new Set();
+        const bypasses = actorTraits["dm"].bypasses ?? new Set();
 
         switch (special) {
           case "all":
@@ -1069,6 +1063,7 @@ Hooks.on("dnd5e.calculateDamage", (actor, damages, options) => {
       }, { totalDamage: 0, temp: 0 });
       // const totalDamage = damages.reduce((a, b) => a + b.value, 0);
       if (!dmAll) dmAll = 0;
+      //@ts-expect-error no dnd5e types
       if (totalDamage > 0 && totalDamage < actor.system.attributes.hp.dt) {
         // total damage is less than the damage threshold so no damage
         dmAll = -totalDamage;

@@ -368,7 +368,7 @@
         "effectConditionText": "",
         "attackMode": "oneHanded",
         "ammunition": "",
-        "otherActivityUuid": "Actor.BogmFuNh1wswTouJ.Item.VsXStPj3CzjgYaZN.Activity.OksXk6wnkGm8Prna",
+        "otherActivityUuid": "",
         "name": "",
         "macroData": {
           "name": "",
@@ -384,9 +384,19 @@
           "forceDialog": false,
           "confirmTargets": "default",
           "automationOnly": false,
-          "identifier": ""
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true
         },
-        "otherActivityId": ""
+        "otherActivityId": "OksXk6wnkGm8Prna",
+        "img": "",
+        "appliedEffects": []
       },
       "OksXk6wnkGm8Prna": {
         "type": "damage",
@@ -476,7 +486,15 @@
           "forceDialog": false,
           "confirmTargets": "default",
           "automationOnly": false,
-          "identifier": ""
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true
         }
       }
     },
@@ -493,9 +511,9 @@
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180119396,
-    "modifiedTime": 1734180119396,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555836908,
+    "modifiedTime": 1738928783383,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "5Ok9Jbl5nOokCkqf",
