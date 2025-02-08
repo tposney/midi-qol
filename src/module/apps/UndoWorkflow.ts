@@ -33,7 +33,7 @@ export class UndoWorkflow extends HandlebarsApplicationMixin(ApplicationV2) {
       width: 400,
       height: 700
     }
-  });
+  }, {inplace: false});
   
   async _prepareContext(options) {
     const context: any = await super._prepareContext(options);
