@@ -20,10 +20,7 @@ export async function confirmWorkflow(existingWorkflow: Workflow): Promise<boole
     } else {
       switch (await DialogV2.wait({
         // @ts-expect-error types needs to make window partial
-        window: { title: game.i18n?.format("midi-qol.WaitingForexistingWorkflow", { name: existingWorkflow.activity.name }) },
-        position: {
-          width: 700
-        },
+        window: { title: game.i18n?.format("midi-qol.WaitingForPreviousWorkflow", { name: existingWorkflow.activity.name }) },
         content: game.i18n?.localize("midi-qol.ResolvePreviousWorkflow"),
         rejectClose: false,
         close: () => { return false },
