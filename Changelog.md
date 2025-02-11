@@ -2,6 +2,8 @@
 * Sneak attack bonus now inherits the properties of the weapon that did the attack, i.e. magic etc.
 * Fix for untarget options getting overwritten by GM settings.
 * Fix for self effects (dae setting apply when rolling/applying active effects) not expiring with special durations start/end of turn.
+* Fix for target confirmation not being shown on enchant/summons activities.
+* App v2 changes - many thanks @michael.
 
 ### 12.4.25
 * This is hopefully the last beta release - I will use it on my game tomorrow to make sure there are no major issues outstanding.
