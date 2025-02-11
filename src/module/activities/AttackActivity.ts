@@ -1,5 +1,4 @@
-import { config } from "@league-of-foundry-developers/foundry-vtt-types/src/types/augments/simple-peer.js";
-import { debugEnabled, warn, GameSystemConfig, debug, log, i18n, MODULE_ID } from "../../midi-qol.js";
+import { debugEnabled, warn, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
 import { untimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
 import { defaultRollOptions } from "../patching.js";
@@ -63,7 +62,7 @@ let defineMidiAttackSheetClass = (baseClass: any) => {
       let indexOffset = 0;
       if (activity.damage?.parts) {
         const scalingOptions = [
-          { value: "", label: game.i18n.localize("DND5E.DAMAGE.Scaling.None") },
+          { value: "", label: i18n("DND5E.DAMAGE.Scaling.None") },
           //@ts-expect-error
           ...Object.entries(GameSystemConfig.damageScalingModes).map(([value, config]) => ({ value, label: config.label }))
         ];
@@ -111,7 +110,6 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
     static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.ATTACK", "midi-qol.SHARED"];
 
     static defineSchema() {
-      //@ts-expect-error
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, NumberField } = foundry.data.fields;
 
       const schema = {
@@ -212,7 +210,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
             const chosenAmmunition = this.actor.items.get(ammoUpdate.id);
             const ammoQuantity = chosenAmmunition?.system.quantity;
             if (ammoQuantity === 0 && this.workflow) {
-              ui.notifications?.warn(game.i18n.format("midi-qol.NoAmmunition", { name: chosenAmmunition?.name }));
+              ui.notifications?.warn(i18nFormat("midi-qol.NoAmmunition", { name: chosenAmmunition?.name }));
               if (this.workflow) this.workflow.abort = true;
             }
           }
@@ -497,9 +495,9 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
     get confirmAmmuntion(): { reason?: string, confirm: boolean, proceed: boolean } {
       const ammunitionOptions = this.item.system.ammunitionOptions;
       const ammoCount = (ammunitionOptions?.filter(ammo => !ammo.disabled) ?? []).length;
-      if (configSettings.requireAmmunition && ammoCount === 0) return { reason: game.i18n.localize("midi-qol.NoAmmunitionAvailable"), proceed: false, confirm: true };
-      if (configSettings.requireAmmunition && !this.ammunition) return { reason: game.i18n.localize("midi-qol.NoAmmunitionSelected"), proceed: true, confirm: true };
-      if (ammunitionOptions.some(ammo => ammo.value === this.ammunition && ammo.disabled)) return { reason: game.i18n.format("midi-qol.NoAmmunition", { name: this.ammunitionItem?.name }), proceed: true, confirm: true };
+      if (configSettings.requireAmmunition && ammoCount === 0) return { reason: i18n("midi-qol.NoAmmunitionAvailable"), proceed: false, confirm: true };
+      if (configSettings.requireAmmunition && !this.ammunition) return { reason: i18n("midi-qol.NoAmmunitionSelected"), proceed: true, confirm: true };
+      if (ammunitionOptions.some(ammo => ammo.value === this.ammunition && ammo.disabled)) return { reason: game.i18n?.format("midi-qol.NoAmmunition", { name: this.ammunitionItem?.name }), proceed: true, confirm: true };
       if (game.user?.isGM) return { confirm: configSettings.gmConfirmAmmunition && ammoCount > 1, proceed: true };
       return { confirm: configSettings.confirmAmmunition && (ammoCount > 1), proceed: true };
     }

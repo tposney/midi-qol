@@ -85,7 +85,7 @@
         "duplicateSource": null,
         "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.1.2",
+        "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
         "lastModifiedBy": null
@@ -129,7 +129,8 @@
       "itemCondition": "",
       "effectCondition": "",
       "reactionCondition": "",
-      "otherCondition": ""
+      "otherCondition": "",
+      "removeAttackDamageButtons": "default"
     },
     "tidy5e-sheet": {
       "section": "",
@@ -183,12 +184,9 @@
           "targets": [
             {
               "type": "itemUses",
-              "target": "",
               "value": "1",
-              "scaling": {
-                "mode": "",
-                "formula": ""
-              }
+              "target": "",
+              "scaling": {}
             }
           ],
           "scaling": {
@@ -203,13 +201,13 @@
         "duration": {
           "concentration": false,
           "value": "",
-          "units": "",
+          "units": "inst",
           "special": "",
           "override": false
         },
         "effects": [],
         "range": {
-          "units": "",
+          "units": "self",
           "special": "",
           "override": false
         },
@@ -225,7 +223,7 @@
           },
           "affects": {
             "count": "",
-            "type": "",
+            "type": "enemy",
             "choice": false,
             "special": ""
           },
@@ -260,25 +258,38 @@
           "forceDialog": false,
           "confirmTargets": "default",
           "automationOnly": false,
-          "identifier": ""
-        }
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true
+        },
+        "name": ""
       }
     },
     "identifier": "indomitable-10010",
     "enchant": {},
     "prerequisites": {
-      "level": null
+      "level": null,
+      "repeatable": false
     },
-    "properties": []
+    "properties": [],
+    "advancement": [],
+    "cover": null,
+    "crewed": false
   },
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.classfeatures.653ZHbNcmm7ZGXbw",
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180117979,
-    "modifiedTime": 1734180117979,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555835389,
+    "modifiedTime": 1738555835389,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "fZIl4G4qj3C894LI",

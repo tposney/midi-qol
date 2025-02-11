@@ -15,8 +15,8 @@ export class OnUseMacros {
     return macros;
   }
 
-  public getMacros(currentOption: string) {
-    return this.items.filter(x => x.macroName?.length > 0 && (x.option.toLocaleLowerCase() === currentOption.toLocaleLowerCase() || x.option === "all")).map(x => x.macroName).toString();
+  public getMacros(currentOption: string | undefined): string {
+    return this.items.filter(x => x.macroName?.length > 0 && (x.option.toLocaleLowerCase() === (currentOption ?? "").toLocaleLowerCase() || x.option === "all")).map(x => x.macroName).toString();
   }
 
   public toString() {
@@ -41,8 +41,7 @@ export class OnUseMacro {
       this.macroName = data!["macroName"].trim();
       this.option = data!["option"];
     }
-    if (this.option === undefined)
-      this.option = "postActiveEffects";
+    this.option ??= "postActiveEffects";
   }
 
   static parsePart(parts: { macroName: string, option: string | undefined }) {
@@ -101,8 +100,7 @@ export function activateMacroListeners(app: Application, html) {
 
 async function _onDrop(ev) {
   ev.preventDefault();
-  //@ts-ignore
-  const data = TextEditor.getDragEventData(ev);
+  const data: any = TextEditor.getDragEventData(ev);
   if (data.uuid) {
     const entity: any = await fromUuid(data.uuid);
     if (entity instanceof Item)ev.target.value = `ItemMacro.${data.uuid}`;

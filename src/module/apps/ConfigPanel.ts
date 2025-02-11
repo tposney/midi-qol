@@ -3,54 +3,101 @@ import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log, GameSystemConfig } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
 import { get } from "jquery";
+const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const PATH = "./modules/midi-qol/sample-config/";
 
-export class ConfigPanel extends FormApplication {
+export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   configHookId: number | undefined;
-  static get defaultOptions(): any {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      title: game.i18n.localize("midi-qol.ConfigTitle"),
-      template: "modules/midi-qol/templates/config.html",
-      id: "midi-qol-settings",
-      width: 800,
-      height: "auto",
-      closeOnSubmit: true,
-      scrollY: [".tab.workflow"],
-      tabs: [{ navSelector: ".tabs", contentSelector: ".content", initial: "gm" }]
-    })
-  }
-
-  constructor(...args) {
-    super(args);
+  activeTab: string;
+  
+  constructor(options?) {
+    super(options);
     this.configHookId = Hooks.on("midi-qol.ConfigSettingsChanged", () => {
-      this.close({ force: true });
-    })
+      this.close();
+    });
+    this.activeTab = "gm";
+    return this;
+  }
+  
+  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+    id: "midi-qol-settings",
+    tag: "form",
+    window: {
+      title: "midi-qol.ConfigTitle"
+    },
+    position: {
+      width: 800,
+      height: "auto" as "auto"
+    },
+    form: {
+      closeOnSubmit: true,
+      handler: this.#onSubmit as any
+    }
+  }, {inplace: false});
+  // template: "modules/midi-qol/templates/config.html",
+
+  static PARTS = {
+    tabs: {template: "templates/generic/tab-navigation.hbs"},
+    gm: {template: "modules/midi-qol/templates/config/gm.hbs"},
+    player: {template: "modules/midi-qol/templates/config/player.hbs"},
+    workflow: {template: "modules/midi-qol/templates/config/workflow.hbs"},
+    concentration: {template: "modules/midi-qol/templates/config/concentration.hbs"},
+    reactions: {template: "modules/midi-qol/templates/config/reactions.hbs"},
+    misc: {template: "modules/midi-qol/templates/config/misc.hbs"},
+    mechanics: {template: "modules/midi-qol/templates/config/mechanics.hbs"},
+    rules: {template: "modules/midi-qol/templates/config/rules.hbs"},
+    quick: {template: "modules/midi-qol/templates/config/quick.hbs"},
+    footer: {template: "modules/midi-qol/templates/config/footer.hbs"}
   }
 
+  // V13 version:
+  // static TABS = {
+  //   sheet: {
+  //     tabs: [
+  //       {id: "gm"},
+  //       {id: "player"},
+  //       {id: "workflow"},
+  //       {id: "concentration"},
+  //       {id: "reactions"},
+  //       {id: "misc"},
+  //       {id: "mechanics"},
+  //       {id: "rules"},
+  //       {id: "quick"},
+  //     ],
+  //     initial: "gm",
+  //     labelPrefix: "midi-qol.Config.Tabs"
+  //   }
+  // }
+
+  // V12 version:
+  tabGroups = {
+    sheet: "gm"
+  }
+  
   get title() {
-    return i18n("midi-qol.ConfigTitle")
+    return i18n("midi-qol.ConfigTitle") ?? "Midi-QOL Configuration";
   }
 
-  async getData(options: any): Promise<any> {
+  async _prepareContext(options) {
     if (!enableWorkflow) {
       ui.notifications?.error("Workflow automation is not enabled")
     }
-    let wallsBlockRangeOptions = foundry.utils.duplicate(geti18nOptions("WallsBlockRangeOptionsNew"));
-    let CoverCalculationOptions = foundry.utils.duplicate(geti18nOptions("CoverCalculationOptions"));
+    let wallsBlockRangeOptions: any = foundry.utils.duplicate(geti18nOptions("WallsBlockRangeOptionsNew"));
+    let CoverCalculationOptions: any = foundry.utils.duplicate(geti18nOptions("CoverCalculationOptions"));
     [{ id: "levelsautocover", name: "'Levels Auto Cover'" }, { id: "simbuls-cover-calculator", name: "'Simbuls Cover Calculator'" }, { id: "tokencover", name: "Alternative Token Cover" }].forEach(module => {
       if (!installedModules.get(module.id)) {
-        wallsBlockRangeOptions[module.id] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
-        CoverCalculationOptions[module.id] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+        wallsBlockRangeOptions[module.id] += ` - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+        CoverCalculationOptions[module.id] += ` - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
       }
     });
     if (!installedModules.get("levels")) {
-      wallsBlockRangeOptions["centerLevels"] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Levels" })}`;
+      wallsBlockRangeOptions["centerLevels"] += ` - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Levels" })}`;
     }
-    let HiddenAdvantageOptions = foundry.utils.duplicate(geti18nOptions("HiddenAdvantageOptions"));
+    let HiddenAdvantageOptions: any = foundry.utils.duplicate(geti18nOptions("HiddenAdvantageOptions"));
     [{ id: "perceptive", name: "Perceptive" }].forEach(module => {
       if (!installedModules.get(module.id)) {
-        HiddenAdvantageOptions[module.id] += ` - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
+        HiddenAdvantageOptions[module.id] += ` - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: module.name })}`;
       }
     });
     let quickSettingsOptions = {};
@@ -63,30 +110,29 @@ export class ConfigPanel extends FormApplication {
     */
     const AddWoundedOptions = foundry.utils.duplicate(geti18nOptions("AddDeadOptions"));
     delete AddWoundedOptions["none"];
-    let rollNPCSavesOptions = foundry.utils.duplicate(geti18nOptions("rollNPCSavesOptions"));
+    let rollNPCSavesOptions: any = foundry.utils.duplicate(geti18nOptions("rollNPCSavesOptions"));
     for (let key of Object.keys(rollNPCSavesOptions)) {
       switch (key) {
         case "mtb":
-          if (!installedModules.get("monks-tokenbar")) rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Monks Token Bar" })}`;
+          if (!installedModules.get("monks-tokenbar")) rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Monks Token Bar" })}`;
           break;
         case "rer":
-          if (!installedModules.get("epic-rolls-5e")) rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
+          if (!installedModules.get("epic-rolls-5e")) rollNPCSavesOptions[key] = `${rollNPCSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
       }
     }
-    let playerRollSavesOptions = foundry.utils.duplicate(geti18nOptions("playerRollSavesOptions"));
+    let playerRollSavesOptions: any = foundry.utils.duplicate(geti18nOptions("playerRollSavesOptions"));
     for (let key of Object.keys(playerRollSavesOptions)) {
       switch (key) {
         case "mtb":
-          if (!installedModules.get("monks-tokenbar")) playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Monks Token Bar" })}`;
+          if (!installedModules.get("monks-tokenbar")) playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Monks Token Bar" })}`;
           break;
         case "rer":
-          if (!installedModules.get("epic-rolls-5e")) playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
+          if (!installedModules.get("epic-rolls-5e")) playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
       }
     };
     
    let statusEffectList = CONFIG.statusEffects.map((se) => {
-      //@ts-expect-error
-       let name = i18n(se.name ?? se.label); 
+       let name = i18n(se.name as string); 
        if (se.id.startsWith("Convenient Effect")) name = `${name} (CE)`; 
        return { id: se.id, name: name } });
 
@@ -97,7 +143,7 @@ export class ConfigPanel extends FormApplication {
       statusEffectList = statusEffectList.concat(ceInterface.findEffects().map(ae => ({id: `z${ae.flags["dfreds-convenient-effects"].ceEffectId}`, name: `${ae.name} (CE)`})));
     }
     let StatusEffectOptions = statusEffectList.reduce((acc, {id, name}) => { acc[id] = name; return acc }, { "none": "None" });
-    let data = {
+    let context: any = {
       QuickSettingsBlurb: geti18nOptions("QuickSettingsBlurb"),
       configSettings,
       quickSettings: true,
@@ -166,63 +212,117 @@ export class ConfigPanel extends FormApplication {
       //@ts-expect-error
       preV12: game.release.generation < 12
     };
-    if (debugEnabled > 0) warn("Config Panel: getData ", data)
-    return data;
+    context = foundry.utils.mergeObject(await super._prepareContext(options), context, {inplace: false});
+    // V12-only:
+    context.tabs = this.#getTabs();
+    if (debugEnabled > 0) warn("Config Panel: getData ", context)
+    return context;
+  }
+
+  changeTab(tab, group, options?) {
+    super.changeTab(tab, group, options);
+    this.activeTab = tab;
+  }
+
+  // V12-only:
+  #getTabs() {
+    const tabs = {
+      gm: {id: "gm", group: "sheet", label: "midi-qol.Config.Tabs.gm"},
+      player: {id: "player", group: "sheet", label: "midi-qol.Config.Tabs.player"},
+      workflow: {id: "workflow", group: "sheet", label: "midi-qol.Config.Tabs.workflow"},
+      concentration: {id: "concentration", group: "sheet", label: "midi-qol.Config.Tabs.concentration"},
+      reactions: {id: "reactions", group: "sheet", label: "midi-qol.Config.Tabs.reactions"},
+      misc: {id: "misc", group: "sheet", label: "midi-qol.Config.Tabs.misc"},
+      mechanics: {id: "mechanics", group: "sheet", label: "midi-qol.Config.Tabs.mechanics"},
+      rules: {id: "rules", group: "sheet", label: "midi-qol.Config.Tabs.rules"},
+      quick: {id: "quick", group: "sheet", label: "midi-qol.Config.Tabs.quick"},
+    }
+    tabs[this.activeTab].active = true;
+    return tabs;
+  }
+
+  // V12-only (I think):
+  async _preparePartContext(partId, context) {
+    if (Object.keys(context.tabs).includes(partId)) {
+      context.tab = context.tabs[partId];
+    }
+    return context;
   }
 
   _onSearch(term) {
     for (let tag of [".midi-qol-box", ".form-group"]) {
-      const elts = Array.from(this.element[0].querySelectorAll(tag));
+      const elts = Array.from(this.element.querySelectorAll(tag));
       term = term.toLowerCase().trim();
       elts.forEach((el) => {
-        //@ts-expect-error
+        // @ts-expect-error
         if (!term || el.innerText.toLowerCase().includes(term)) {
-          //@ts-expect-error
+          // @ts-expect-error
           el.style.display = null;
         } else {
-          //@ts-expect-error
+          // @ts-expect-error
           el.style.display = "none";
         }
       });
     }
   }
-  activateListeners(html) {
-    html.find(".customSounds").change(() => {
+
+  _onRender(context, options) {
+    super._onRender(context, options);
+    this.element.querySelector(".customSounds")?.addEventListener("change", () => {
       configSettings.useCustomSounds = !configSettings.useCustomSounds;
-      this.render(true)
+      this.render({force: true});
     });
-
-    html.find(".playlist").change(this._playList.bind(this));
-    super.activateListeners(html)
-
-    html.find(".itemTypeListEdit").on("click", event => {
-      new ItemTypeSelector({}, {}).render(true)
-    })
-    html.find(".optionalRulesEnabled").on("click", event => {
+    // Don't think this was doing anything
+    // html.find(".playlist").change(this._playList.bind(this));
+    this.element.querySelector(".itemTypeListEdit")?.addEventListener("click", event => {
+      const options = Object.entries(CONFIG.Item.typeLabels).filter(kv => !["backpack", "base"].includes(kv[0])).map(([k, v]) => ({value: k, label: i18n(v), selected: configSettings.itemTypeList?.includes(k)}));
+      options.sort((a,b) => a.label.compare(b.label));
+      DialogV2.prompt({
+        id: "midi-qol-item-selector",
+        content: foundry.applications.fields.createMultiSelectInput({
+            type: "checkboxes",
+            name: "items",
+            options
+        }).outerHTML,
+        window: { title: "Show Item Details" },
+        position: {
+          height: "auto"
+        },
+        ok: {
+          label: "DND5E.TraitSave",
+          icon: "far fa-save",
+          callback: (evt, button) => {
+            const data = new FormDataExtended(button.form as HTMLFormElement);
+            // @ts-expect-error
+            if (data) configSettings.itemTypeList = data.object?.items ?? configSettings.itemTypeList;
+          }
+        },
+        rejectClose: false
+      });
+    });
+    this.element.querySelector(".optionalRulesEnabled")?.addEventListener("click", event => {
       configSettings.optionalRulesEnabled = !configSettings.optionalRulesEnabled;
-      this.render(true);
-    })
-
-    html.find("#midi-qol-show-stats").on("click", event => {
-      gameStats.showStats();
-    })
-
-    html.find("#midi-qol-export-config").on("click", exportSettingsToJSON)
-    html.find("#midi-qol-import-config").on("click", async () => {
-      if (await importFromJSONDialog()) {
-        this.close({ force: true });
-      }
+      this.render({force: true});
     });
-    html.find('.midi-qol-blind-select').hover(this.selectHover.bind(this), this.selectHoverOut.bind(this))
-    html.find(".import-quick-setting").on("click", async function (event) {
-      const key = event.currentTarget.id;
-      if (await applySettings.bind(this)(key)) this.close({ force: true });
-      // this.render();
-    }.bind(this))
-
-    //activate listeners
-    //@ts-expect-error
-    this.element[0].querySelector('input[type="search"]')?.addEventListener("input", (e) => { this._onSearch(e.currentTarget?.value) })
+    this.element.querySelector("#midi-qol-show-stats")?.addEventListener("click", event => {
+      gameStats.showStats();
+    });
+    this.element.querySelector("#midi-qol-export-config")?.addEventListener("click", exportSettingsToJSON);
+    this.element.querySelector("#midi-qol-import-config")?.addEventListener("click", async () => {
+      if (await importFromJSONDialog()) this.close();
+    });
+    for (const elem of Array.from(this.element.querySelectorAll(".midi-qol-blind-select"))) {
+      elem.addEventListener("mouseenter", this.selectHover.bind(this));
+      elem.addEventListener("mouseleave", this.selectHoverOut.bind(this));
+    }
+    for (const elem of Array.from(this.element.querySelectorAll(".import-quick-setting"))) {
+      elem.addEventListener("click", async function(event) {
+        const key = event.currentTarget?.id;
+        if (await applySettings.bind(this)(key)) this.close();
+      }.bind(this));
+    }
+    // @ts-expect-error
+    this.element.querySelector('input[type="search"]')?.addEventListener("input", (e) => { this._onSearch(e.currentTarget?.value) });
   }
 
   selectHover(event) {
@@ -234,129 +334,62 @@ export class ConfigPanel extends FormApplication {
     target.blur();
   }
 
-  close(options) {
+  async _preClose(options) {
+    await super._preClose(options);
     if (this.configHookId) Hooks.off("midi-qol.ConfigSettingsChanged", this.configHookId);
-    return super.close(options);
   }
 
-  async _playList(event) {
-    event.preventDefault();
-    configSettings.customSoundsPlaylist = `${$(event.currentTarget).children("option:selected").val()}`;
-    //@ts-ignore
-    await this.submit({ preventClose: true });
-    this.render();
-  }
+  // async _playList(event) {
+  //   event.preventDefault();
+  //   configSettings.customSoundsPlaylist = `${$(event.currentTarget).children("option:selected").val()}`;
+  //   //@ts-ignore
+  //   await this.submit({ preventClose: true });
+  //   this.render();
+  // }
 
-  onReset() {
-    this.render(true);
-  }
+  // onReset() {
+  //   this.render(true);
+  // }
 
-  async _updateObject(event, formData) {
-    formData = foundry.utils.expandObject(formData);
-    formData.itemTypeList = configSettings.itemTypeList;
-    let newSettings = foundry.utils.mergeObject(configSettings, formData, { overwrite: true, inplace: false })
-    // const newSettings = foundry.utils.mergeObject(configSettings, expand, {overwrite: true})
-    if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", newSettings);
-  }
-}
-
-export class ItemTypeSelector extends FormApplication {
-
-  /** @override */
-  static get defaultOptions() {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      id: "midi-qol-item-selector",
-      classes: ["dnd5e"],
-      title: "Show Item Details",
-      template: "modules/midi-qol/templates/itemTypeSelector.html",
-      width: 320,
-      height: "auto",
-      choices: {},
-      allowCustom: false,
-      minimum: 0,
-      maximum: null
-    });
-  }
-
-  /* -------------------------------------------- */
-
-  /**
-   * Return a reference to the target attribute
-   * @type {String}
-   */
-  get attribute() {
-    //@ts-ignore .name
-    return this.options.name;
-  }
-
-  /* -------------------------------------------- */
-
-  /** @override */
-  getData(): any {
-    if (!enableWorkflow) {
-      ui.notifications?.error("Worklow automation is not enabled")
-    }
-    // Populate choices
-    //@ts-ignore
-    const choices: {} = Object.keys(CONFIG.Item.typeLabels).filter(key => !["backpack", "base"].includes(key)).reduce((acc, key) => { acc[key] = CONFIG.Item.typeLabels[key]; return acc }, {});
-    for (let [k, v] of Object.entries(choices)) {
-      choices[k] = {
-        label: i18n(v),
-        chosen: configSettings.itemTypeList?.includes(k)
-      }
-    }
-
-    // Return data
-    return {
-      allowCustom: false,
-      choices: choices,
-      custom: ""
-    }
-  }
-
-  /* -------------------------------------------- */
-
-  /** @override */
-  //@ts-ignore
-  _updateObject(event, formData) {
-    const updateData = {};
-    // Obtain choices
-    const chosen: any[] = [];
-    for (let [k, v] of Object.entries(formData)) {
-      if (v) chosen.push(k);
-    }
-    configSettings.itemTypeList = chosen;
+  static async #onSubmit(event, form, formData) {
+    const realData = formData.object;
+    realData.itemTypeList = configSettings.itemTypeList;
+    let newSettings = foundry.utils.mergeObject(configSettings, realData, { overwrite: true, inplace: false});
+    // @ts-expect-error
+    if (game.user?.can("SETTINGS_MODIFY")) game.settings?.set("midi-qol", "ConfigSettings", newSettings);
   }
 }
+
 async function importFromJSONDialog() {
   const content = await renderTemplate("templates/apps/import-data.html", { entity: "midi-qol", name: "settings" });
   let dialog = new Promise((resolve, reject) => {
-    new Dialog({
-      title: `Import midi-qol settings`,
+    new DialogV2({
+      window: { title: `Import midi-qol settings` },
+      position: {
+        width: 400,
+        height: "auto"
+      },
       content: content,
-      buttons: {
-        import: {
-          icon: '<i class="fas fa-file-import"></i>',
-          label: "Import",
-          callback: html => {
-            //@ts-ignore
-            const form = html.find("form")[0];
-            if (!form.data.files.length) return ui.notifications?.error("You did not upload a data file!");
+      buttons: [
+        {
+          action: "import",
+          label: '<i class="fas fa-file-import"></i> Import',
+          default: true,
+          callback: event => {
+            const form = (event.currentTarget as HTMLElement | null)?.querySelector("form");
+            if (!form?.data.files.length) return ui.notifications?.error("You did not upload a data file!");
             readTextFromFile(form.data.files[0]).then(json => {
               importSettingsFromJSON(json).then(() => resolve(true))
             });
           }
         },
-        no: {
-          icon: '<i class="fas fa-times"></i>',
-          label: "Cancel",
-          callback: html => resolve(false)
+        {
+          action: "no",
+          label: '<i class="fas fa-times"></i> Cancel',
+          callback: event => resolve(false)
         }
-      },
-      default: "import"
-    }, {
-      width: 400
-    }).render(true);
+      ],
+    }).render({force: true});
   });
   return await dialog;
 }
@@ -380,7 +413,7 @@ function showDiffs(current: any, changed: any, flavor: string = "", title: strin
       name = key[2].toUpperCase() + key.substring(3);
     else name = key[0].toUpperCase() + key.substring(1);
     let longName = i18n("midi-qol." + name + ".Name");
-    if (longName.startsWith("midi-qol")) longName = name;
+    if (longName?.startsWith("midi-qol")) longName = name;
     debug("Show config changes: Name is ", name, key, key.startsWith("gm") ? "GM" : "", i18n(`midi-qol.${name + ".Name"}`))
     let currentVal = current[key];
     let changedVal = changed[key];
@@ -392,27 +425,29 @@ function showDiffs(current: any, changed: any, flavor: string = "", title: strin
   if (changes.length === 0) changes.push("No Changes");
   const dialog = new Promise((resolve, reject) => {
     let dialogTitle;
-    if (title !== "") dialogTitle = `${i18n("midi-qol.QuickSettings")} - ${title}`;
-    else dialogTitle = i18n("midi-qol.QuickSettings");
-    let d = new Dialog({
-      title: dialogTitle,
+    if (title !== "") dialogTitle = `${i18n("midi-qol.Config.Tabs.quick")} - ${title}`;
+    else dialogTitle = i18n("midi-qol.Config.Tabs.quick");
+    let d = new DialogV2({
+      classes: ["midi-qol-quick-config"],
+      window: { title: dialogTitle },
+      position: {
+        height: "auto"
+      },
       content: changes.join("<br>"),
-      buttons: {
-        apply: {
-          icon: '<i class="fas fa-check"></i>',
-          label: "Apply Changes",
+      buttons: [
+        {
+          action: "apply",
+          default: true,
+          label: '<i class="fas fa-check"></i> Apply Changes',
           callback: () => resolve(true)
         },
-        abort: {
-          icon: '<i class="fas fa-xmark"></i>',
-          label: "Don't Apply Changes",
+        {
+          action: "abort",
+          label: '<i class="fas fa-xmark"></i> Don\'t Apply Changes',
           callback: () => resolve(false)
         }
-      },
-      default: "apply",
-      close: () => resolve(false)
-    });
-    d.render(true);
+      ],
+    }).render({force: true});
     warn("Quick Settings ", changes.join("\n"));
   })
   return dialog;
@@ -582,7 +617,8 @@ let quickSettingsDetails: any = {
       singleConcentrationRoll: true,
     },
     codeChecks: (current, settings) => {
-      game.settings.set(game.system.id, "disableConcentation", false);
+      //@ts-expect-error
+      game.settings?.set(game.system?.id, "disableConcentation", false);
     }
   },
   NoDamageApplication: {
@@ -592,7 +628,8 @@ let quickSettingsDetails: any = {
       autoApplyDamage: "noCard"
     },
     codeChecks: (current, settings) => {
-      game.settings.set("midi-qol", "AddChatDamageButtons", "gm");
+      //@ts-expect-error
+      game.settings?.set("midi-qol", "AddChatDamageButtons", "gm");
     }
   },
   DisableConcentration: {
@@ -603,7 +640,8 @@ let quickSettingsDetails: any = {
       singleConcentrationRoll: false,
     },
     codeChecks: (current, settings) => {
-      game.settings.set(game.system.id, "disableConcentation", true);
+      //@ts-expect-error
+      game.settings?.set(game.system?.id, "disableConcentation", true);
     }
   },
 
@@ -654,7 +692,8 @@ export async function applySettings(key: string) {
     if (config.codeChecks) config.codeChecks(configSettings, settingsToApply)
     if (await showDiffs(configSettings, settingsToApply, "", config.shortDescription)) {
       settingsToApply = foundry.utils.mergeObject(configSettings, settingsToApply, { overwrite: true, inplace: true });
-      if (game.user?.can("SETTINGS_MODIFY")) game.settings.set("midi-qol", "ConfigSettings", settingsToApply);
+      //@ts-expect-error
+      if (game.user?.can("SETTINGS_MODIFY")) game.settings?.set("midi-qol", "ConfigSettings", settingsToApply);
       return true;
     }
   } else if (config.fileName) {

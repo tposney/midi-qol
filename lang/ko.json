@@ -359,10 +359,19 @@
     "midi-qol.ConcentrationAutomation.Hint": "활성화되면 midi-qol을 통한 집중 관리가 처리된다. CUB의 집중 관리는 비활성화 된다.",
     "midi-qol.SingleConcentrationRoll.Name": "단일 집중 확인",
     "midi-qol.SingleConcentrationRoll.Hint": "활성화 시 공격이 정상적 피해 + 내성굴림 + 기타/다용도 피해를 굴리면 결합된 피해에 대한 단일 집중 검사만을 확인한다.",
-    "midi-qol.GMSettings": "GM",
-    "midi-qol.PlayerSettings": "플레이어",
-    "midi-qol.Workflow": " 워크플로우",
-    "midi-qol.Misc": "Misc",
+    "midi-qol.Config": {
+    "Tabs": {
+      "gm": "GM",
+      "player": "플레이어",
+      "workflow": "워크플로우",
+      "concentration": "집중",
+      "reactions": "Reactions",
+      "misc": "Misc",
+      "mechanics": "Mechanics",
+      "rules": "옵션",
+      "quick": "Quick Settings"
+    }
+  },
     "midi-qol.Targeting": "대상 지정",
     "midi-qol.Special": "특수",
     "midi-qol.Hits": "명중",
@@ -375,7 +384,6 @@
     "midi-qol.AttackMacro.Name": "공격 보너스 매크로",
     "midi-qol.AttackMacro.Hint": "공격이 대상에 명중했는지 확인할 공격 굴림을 계산할 때 호출할 매크로의 목록. 쉼표로 구분.",
     "midi-qol.DAEMidiQOL": "DAE/Midi-QOL 특성",
-    "midi-qol.Optional": "옵션",
     "midi-qol.OptionalRules.Name": "(EXPERIMENTAL) 선택적 게임 규칙을 Better rolls로써 작동시킬 수 있지만 libWrapper 경고를 유발한다.",
     "midi-qol.OptionalRules.Hint": "사용 가능한 DND5E 게임 규칙이다. 일반적으로 Better rolls는 적용되지 않는다.",
     "midi-qol.InvisAdvantage.Name": "은신/투명한 공격자가 공격에 유리함을 받음 (CUB or CV 필요)",

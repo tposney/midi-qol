@@ -424,11 +424,20 @@
     "effects": "効果を監視",
     "effectsTemplates": "効果とテンプレートを監視"
   },
-  "midi-qol.GMSettings": "GM",
-  "midi-qol.PlayerSettings": "プレイヤー",
+  "midi-qol.Config": {
+    "Tabs": {
+      "gm": "GM",
+      "player": "プレイヤー",
+      "workflow": "ワークフロー",
+      "concentration": "集中",
+      "reactions": "リアクション",
+      "misc": "そのほか",
+      "mechanics": "メカニクス",
+      "rules": "任意",
+      "quick": "クイック設定"
+    }
+  },
   "midi-qol.SoundSettings.Tab": "サウンド",
-  "midi-qol.Workflow": " ワークフロー",
-  "midi-qol.Misc": "そのほか",
   "midi-qol.Targeting": "ターゲット指定",
   "midi-qol.Special": "特殊",
   "midi-qol.Hits": "命中判定",
@@ -443,8 +452,6 @@
   "midi-qol.AttackMacro.Name": "攻撃ボーナスマクロ",
   "midi-qol.AttackMacro.Hint": "攻撃ロール時に呼び出されるマクロのカンマ区切りリストです。攻撃の命中判定時に適用されます。",
   "midi-qol.DAEMidiQOL": "DAE/Midi-QOL固有",
-  "midi-qol.Optional": "任意",
-  "midi-qol.Mechanics": "メカニクス",
   "midi-qol.OptionalRules.Name": "選択ルール",
   "midi-qol.OptionalRules.Hint": "DMによっては使うかもしれないDnD5eの選択ルール。BetterRolls環境ではlibWrapperで警告が発生するかもしれません。",
   "midi-qol.InvisAdvantage.Name": "不可視状態の攻撃に関する有利/不利",
@@ -666,7 +673,6 @@
   "midi-qol.FixStickyKeys.Name": "固定キー機能を修正する",
   "midi-qol.FixStickyKeys.Hint": "有効にすると、（Token Action HUDなどで）有利/不利などがかってにオンになる問題の解決を試みます。",
   "midi-qol.DisplaySaveAdvantage.Name": "セーヴ時に有利/不利を表示する",
-  "midi-qol.QuickSettings": "クイック設定",
   "midi-qol.QuickSettingsBlurb": {
     "1": "クイック設定により、さまざまな組み合わせの設定を一括反映できます。",
     "2": "下のいずれかのボタンを押すと、その組み合わせが反映されます。",
@@ -692,7 +698,6 @@
     "allCrit": "すべての攻撃ロール＋クリティカル"
   },
   "midi-qol.Reactions": "リアクションの確認",
-  "midi-qol.ReactionsTab": "リアクション",
   "midi-qol.DoReactions.Name": "PCのリアクション確認",
   "midi-qol.DoReactions.Hint": "攻撃を受けたアクターは、ロール前にリアクションを使用するオプションが選択できるようになります。ヒットでトリガーされるリアクションは、ヒット確認を自動化する必要があります。ダメージの適用をトリガーにする場合は、ダメージリアクション（Readmeを参照）を使用してください。",
   "midi-qol.GMDoReactions.Name": "NPC/GMのリアクション確認",
@@ -803,14 +808,18 @@
   "midi-qol.versus": "vs.",
   "midi-qol.Skipped": "Skipped",
   "midi-qol.ExportTroubleShooting": "トラブルシューディング用のデータを出力する",
-  "midi-qol.TroubleShooter.Name": "トラブルシューターを開く",
-  "midi-qol.TroubleShooter.Hint": "（実験的） 問題の診断のためのトラブルシューターを表示します。",
-  "midi-qol.TroubleShooter.Label": "トラブルシューター",
-  "midi-qol.Summary": "概要",
-  "midi-qol.CommonModules": "共通モジュール",
-  "midi-qol.Problems": "問題",
-  "midi-qol.AllModules": "すべてのモジュール",
-  "midi-qol.Errors": "エラー",
+  "midi-qol.TroubleShooter": {
+    "Name": "トラブルシューターを開く",
+    "Hint": "（実験的） 問題の診断のためのトラブルシューターを表示します。",
+    "Label": "トラブルシューター",
+    "Tabs": {
+      "summary": "概要",
+      "common": "共通モジュール",
+      "problems": "問題",
+      "modules": "すべてのモジュール",
+      "errors": "エラー"
+    }
+  },
   "midi-qol.Inactive": "無効",
   "midi-qol.Active": "有効",
   "midi-qol.EnforceSingleWeaponTarget.Name":  "武器攻撃のターゲットは1つのみ",

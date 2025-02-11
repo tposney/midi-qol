@@ -80,7 +80,7 @@
         "duplicateSource": null,
         "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.1.2",
+        "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
         "lastModifiedBy": null
@@ -109,7 +109,8 @@
       "itemCondition": "",
       "reactionCondition": "",
       "otherCondition": "",
-      "effectCondition": ""
+      "effectCondition": "",
+      "removeAttackDamageButtons": "default"
     },
     "cf": {
       "id": "temp_0hvf80hl1zcf",
@@ -148,7 +149,14 @@
         {
           "uuid": "Scene.GO63mgFDMhBfPVWf.Token.y8rDGEEuPTa8Oz4m.Actor.2W8ip8j0hvK2pQ7V.ActiveEffect.NxxYwMu18V5RMGEw"
         }
-      ]
+      ],
+      "riders": {
+        "activity": []
+      }
+    },
+    "tidy5e-sheet": {
+      "section": "",
+      "actionSection": ""
     }
   },
   "system": {
@@ -289,7 +297,15 @@
           "forceDialog": false,
           "confirmTargets": "default",
           "automationOnly": false,
-          "identifier": ""
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true
         }
       }
     },
@@ -302,9 +318,9 @@
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180122481,
-    "modifiedTime": 1734180122481,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555840264,
+    "modifiedTime": 1738928928455,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "qF3UYnzAAbVavYSR",

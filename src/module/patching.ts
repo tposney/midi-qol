@@ -7,7 +7,6 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiAttackActivity } from "./activities/AttackActivity.js";
 import { templateTokens } from "./activities/activityHelpers.js";
 import { MidiActivityChoiceDialog } from "./apps/MidiActivityChoiceDialog.js";
-import { resolveOutput } from "xstate/dist/declarations/src/utils.js";
 
 let libWrapper;
 
@@ -24,7 +23,7 @@ function _isVisionSource(wrapped) {
 function isVisible(wrapped) {
   const isVisible = wrapped();
   //@ts-ignore
-  if (!game.user.isGM && this.actor?.testUserPermission(game.user, "OWNER")) {
+  if (!game.user?.isGM && this.actor?.testUserPermission(game.user, "OWNER")) {
     return true;
   }
   return isVisible;
@@ -97,7 +96,8 @@ export function collectBonusFlags(actor, category, detail): any[] {
   return [];
 }
 
-export async function bonusCheck(actor, result: Roll, category, detail, messageData: any = {}): Promise<Roll> {
+export async function bonusCheck(actor, result: Roll, category, detail = "", messageData: any = {}): Promise<Roll> {
+
   let bonusFlags = collectBonusFlags(actor, category, detail);
 
   if (bonusFlags.length > 0) {
@@ -111,7 +111,7 @@ export async function bonusCheck(actor, result: Roll, category, detail, messageD
       messageData
     }
     let title;
-    let systemString = game.system.id.toUpperCase();
+    let systemString = game.system?.id.toUpperCase();
     if (GameSystemConfig.abilities[detail]?.label || GameSystemConfig.skills[detail]?.label) {
       if (detail.startsWith("fail")) title = "Failed Save Check";
       else if (category.startsWith("check")) title = i18nFormat(`${systemString}.AbilityPromptTitle`, { ability: GameSystemConfig.abilities[detail].label ?? "" });
@@ -132,7 +132,7 @@ export async function bonusCheck(actor, result: Roll, category, detail, messageD
       "roll",
       { messageData }
     );
-    result = newRoll;
+    if (newRoll) result = newRoll;
   }
 
   return result;
@@ -176,7 +176,6 @@ function _applyDeprecatedD20Configs(rollConfig, dialogConfig, messageConfig, opt
   set(messageConfig, "rollMode", options.rollMode);
   set(messageConfig, "data.flavor", options.flavor);
 
-  //@ts-expect-error
   if (!foundry.utils.isEmpty(roll)) {
     rollConfig.rolls ??= [];
     if (rollConfig.rolls[0]) rollConfig.rolls[0] = roll;
@@ -187,7 +186,6 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
   let oldFormat = false;
   if (foundry.utils.getType(config) !== "Object") {
     oldFormat = true;
-    //@ts-expect-error
     foundry.utils.logCompatibilityWarning(
       `The \`rollSkill\` method on Actor5e now takes roll, dialog, and message config objects as parameters.`,
       { since: "DnD5e 4.1", until: "DnD5e 4.5" }
@@ -206,7 +204,7 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
   let rollSkillHookId;
   //@ts-expect-error
   let result: CONFIG.Dice.D20Roll[] = [];
-  const saveRollMode = game.settings.get("core", "rollMode");
+  const saveRollMode = safeGetGameSetting("core", "rollMode");
   try {
     message.data ??= {};
     let skillId = config.skill;
@@ -233,11 +231,11 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
       result = [new D20Roll("-1[auto fail]").evaluateSync()];
       success = false;
     }
-    let rollMode: string = message.rollMode ?? config.rollMode ?? game.settings.get("core", "rollMode");
+    let rollMode: string = message.rollMode ?? config.rollMode ?? safeGetGameSetting("core", "rollMode");
     const blindSkillRoll = configSettings.rollSkillsBlind.includes("all") || configSettings.rollSkillsBlind.includes(skillId);
     if (blindSkillRoll && ["publicroll", "roll", "gmroll"].includes(rollMode)) {
       rollMode = "blindroll";
-      game.settings.set("core", "rollMode", "blindroll");
+      game.settings?.set("core", "rollMode", "blindroll");
     }
     if (config.midiOptions.fastForward) dialog.configure = false;
     if (success === undefined) {
@@ -245,10 +243,9 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
       const maxValue = (maxflags.skill && maxflags.skill.all);
       const minflags = foundry.utils.getProperty(this, "flags.midi-qol.min") ?? {};
       const minValue = (minflags.skill && minflags.skill.all);
-      preRollSkillHookId = Hooks.once(`${game.system.id}.preRollSkillV2`, (config, dialog, message) => {
+      preRollSkillHookId = Hooks.once(`${game.system?.id}.preRollSkillV2`, (config, dialog, message) => {
         message.data ??= {};
-        //@ts-expect-error
-        if (foundry.utils.isNewerVersion("4.2", game.system.version)) {
+        if (foundry.utils.isNewerVersion("4.2", game.system?.version ?? "")) {
           message.create = false; // TODO dnd5e 4.2 remove this
         }
         if (overtimeActorUuid)
@@ -261,7 +258,7 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
         })
         setDialogOptions(dialog, config, config.rolls[0]?.options);
       })
-      rollSkillHookId = Hooks.once(`${game.system.id}.postSkillRollConfiguration`, (rolls, config, dialog, messageDetails) => {
+      rollSkillHookId = Hooks.once(`${game.system?.id}.postSkillRollConfiguration`, (rolls, config, dialog, messageDetails) => {
         // record message configuration details for later display
         message = messageDetails;
       });
@@ -298,9 +295,9 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
     throw err;
   }
   finally {
-    if (preRollSkillHookId) Hooks.off(`${game.system.id}.preRollSkillV2`, preRollSkillHookId);
-    if (rollSkillHookId) Hooks.off(`${game.system.id}.postSkillRollConfiguration`, rollSkillHookId);
-    game.settings.set("core", "rollMode", saveRollMode);
+    if (preRollSkillHookId) Hooks.off(`${game.system?.id}.preRollSkillV2`, preRollSkillHookId);
+    if (rollSkillHookId) Hooks.off(`${game.system?.id}.postSkillRollConfiguration`, rollSkillHookId);
+    if (saveRollMode) game.settings?.set("core", "rollMode", saveRollMode);
     if (oldFormat) return result?.[0];
     return result;
   }
@@ -340,7 +337,6 @@ function multiply(modifier: string) {
 }
 
 export function addDiceTermModifiers() {
-  //@ts-expect-error
   const Die = foundry.dice.terms.Die;
   Die.MODIFIERS["mx"] = "multiply";
   foundry.utils.setProperty(Die.prototype, "multiply", multiply);
@@ -348,9 +344,9 @@ export function addDiceTermModifiers() {
 
 export function averageDice(roll: Roll) {
   roll.terms = roll.terms.map(term => {
-    if (term instanceof DiceTerm) {
+    if (term instanceof foundry.dice.terms.DiceTerm) {
       const mult = term.modifiers.includes("mx2") ? 2 : 1
-      const newTerm = new NumericTerm({ number: Math.floor(term.number * mult * (term.faces + 1) / 2) });
+      const newTerm = new NumericTerm({ number: Math.floor((term.number ?? 1) * mult * ((term.faces ?? 1) + 1) / 2) });
       newTerm.options = term.options;
       return newTerm;
     }
@@ -369,11 +365,8 @@ function configureDamage(wrapped, options: any = { critical: {} }) {
   if (this.options.configured || options.critical.allow === false || !this.isCritical) {
     return;
   }
-  //@ts-expect-error
   const OperatorTerm = foundry.dice.terms.OperatorTerm
-  //@ts-expect-error
   const DiceTerm = foundry.dice.terms.DiceTerm;
-  //@ts-expect-error
   const Die = foundry.dice.terms.Die;
   let useDefaultCritical = getCriticalDamage() === "default";
   useDefaultCritical ||= (getCriticalDamage() === "explodeCharacter" && this.data.actorType !== "character");
@@ -381,14 +374,16 @@ function configureDamage(wrapped, options: any = { critical: {} }) {
   if (useDefaultCritical) {
     while (this.terms.length > 0 && this.terms[this.terms.length - 1] instanceof OperatorTerm)
       this.terms.pop();
-    options.critical.multiplyNumeric ??= game.settings.get("dnd5e", "criticalDamageModifiers");
-    options.critical.powerfulCritical ??= game.settings.get("dnd5e", "criticalDamageMaxDice");
+    //@ts-expect-error "dnd5e"
+    options.critical.multiplyNumeric ??= game.settings?.get("dnd5e", "criticalDamageModifiers");
+    //@ts-expect-error "dnd5e"
+    options.critical.powerfulCritical ??= game.settings?.get("dnd5e", "criticalDamageMaxDice");
     wrapped({ critical: options.critical });
     if (this.data.actorType === configSettings.averageDamage || configSettings.averageDamage === "all") averageDice(this);
     return;
   }
   // if (this.options.configured) return; seems this is not required.
-  let bonusTerms: RollTerm[] = [];
+  let bonusTerms: foundry.dice.terms.RollTerm[] = [];
   /* criticalDamage is one of 
     "default": "DND5e Settings Only",
     "maxDamage": "Max Normal Damage",
@@ -430,7 +425,7 @@ function configureDamage(wrapped, options: any = { critical: {} }) {
           let critTerm;
           bonusTerms.push(new OperatorTerm({ operator: "+" }));
           if (getCriticalDamage() === "maxCrit")
-            critTerm = new NumericTerm({ number: (term.number + cb) * term.faces });
+            critTerm = new NumericTerm({ number: (term.number + cb) * (term.faces ?? 1)});
           else {
             critTerm = new Die({ number: term.number + cb, faces: term.faces });
             critTerm.modifiers = foundry.utils.duplicate(term.modifiers);
@@ -453,7 +448,7 @@ function configureDamage(wrapped, options: any = { critical: {} }) {
       case "bestOfTwo":
         if (term instanceof DiceTerm) {
           term.modifiers.push(`kh${term.number !== 1 ? term.number: ""}`);
-          term.number *= 2;
+          term.number = (term.number ?? 1) * 2;
         }
         break;
       case "doubleDice":
@@ -513,7 +508,6 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
   if (foundry.utils.getType(config) !== "Object") {
     oldFormat = true;
     const method = rollType === "save" ? "rollSavingThrow" : "rollAbilityCheck";
-    //@ts-expect-error
     foundry.utils.logCompatibilityWarning(
       `The \`${method}\` method on Actor5e now takes roll, dialog, and message config objects as parameters.`,
       { since: "DnD5e 4.1", until: "DnD5e 4.5" }
@@ -538,7 +532,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
   let overtimeActorUuid;
   let preRollAbilityHookId;
   let rollAbilityHookId;
-  const saveRollMode = game.settings.get("core", "rollMode");
+  const saveRollMode = safeGetGameSetting("core", "rollMode");
   let result;
   let type;
   try {
@@ -579,7 +573,6 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
     let success;
     if (procAutoFail(this, rollType, abilityId)) {
       success = false;
-      //@ts-expect-error
       result = [new Roll("-1[auto fail]").evaluateSync()];
     }
     if (success === undefined) {
@@ -589,7 +582,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
       const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId]));
       const minFlags = foundry.utils.getProperty(this, "flags.midi-qol.min.ability") ?? {};
       const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId]));
-      preRollAbilityHookId = Hooks.once(`${game.system.id}.preRoll${type}V2`, (config, dialog, message) => {
+      preRollAbilityHookId = Hooks.once(`${game.system?.id}.preRoll${type}V2`, (config, dialog, message) => {
         config.rolls.forEach(roll => {
           roll.options.advantage ||= config.midiOptions.advantage;
           roll.options.disadvantage ||= config.midiOptions.disadvantage;
@@ -598,7 +591,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
         });
         setDialogOptions(dialog, config, config.rolls[0]?.options);
       });
-      rollAbilityHookId = Hooks.once(`${game.system.id}.post${type}RollConfiguration`, (rolls, config, dialog, messageDetails) => {
+      rollAbilityHookId = Hooks.once(`${game.system?.id}.post${type}RollConfiguration`, (rolls, config, dialog, messageDetails) => {
         // record the configured message data for later display
         message = messageDetails;
       });
@@ -612,7 +605,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
     }
     const flavor = result[0].options?.flavor;
 
-    let rollMode: string = message.rollMode ?? game.settings.get("core", "rollMode");
+    let rollMode: string = message.rollMode ?? safeGetGameSetting("core", "rollMode");
     if (["publicroll", "roll", "gmroll"].includes(rollMode)) {
       let blindRollSetting;
       if (rollType === "check")
@@ -621,7 +614,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
         blindRollSetting = configSettings.rollSavesBlind.includes("all") || configSettings.rollSavesBlind.includes(abilityId);
       if (blindRollSetting) {
         rollMode = "blindroll";
-        game.settings.set("core", "rollMode", "blindroll");
+        game.settings?.set("core", "rollMode", "blindroll");
         result.forEach(r => r.options.rollMode = "blindroll");
       }
 
@@ -635,6 +628,14 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
     if (!config.midiOptions.simulate) {
       result[0] = await bonusCheck(this, result[0], rollType, abilityId, message.data);
       DSNMarkDiceDisplayed(result);
+      if (Number.isNumeric(result[0].options.target) && result[0].isSuccess === false) {
+        const failFlagsLength = collectBonusFlags(this, rollType, "fail.all").length;
+        const failAbilityFlagsLength = collectBonusFlags(this, rollType, `fail.${abilityId}`).length
+      if (failFlagsLength || failAbilityFlagsLength) {
+        // If the roll fails and there is an flags.midi-qol.save.fail then apply the bonus
+        result[0] = await bonusCheck(this, result[0], rollType, failAbilityFlagsLength ? `fail.${abilityId}` : "fail.all");
+        }
+      }
     }
 
     if (config.target !== undefined && success === undefined) {
@@ -644,10 +645,10 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
     }
 
     if (message.create !== false && result) {
-      //@ts-expect-error
+      //@ts-expect-error no dnd5e-types
       CONFIG.Dice.D20Roll.toMessage(result, message.data, { rollMode, create: true });
     }
-    game.settings.set("core", "rollMode", saveRollMode);
+    if (saveRollMode) game.settings?.set("core", "rollMode", saveRollMode);
     await expireRollEffect.bind(this)(rollType, abilityId, success);
     if (config.midiOptions.isConcentrationCheck) expireRollEffect.bind(this)("isConcentrationSave", success);
   } catch (err) {
@@ -655,9 +656,9 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
     TroubleShooter.recordError(err, message);
     error(message, err);
   } finally {
-    if (preRollAbilityHookId) Hooks.off(`${game.system.id}.preRoll${type}V2`, preRollAbilityHookId);
-    if (rollAbilityHookId) Hooks.off(`${game.system.id}.post${type}RollConfiguration`, rollAbilityHookId);
-    game.settings.set("core", "rollMode", saveRollMode);
+    if (preRollAbilityHookId) Hooks.off(`${game.system?.id}.preRoll${type}V2`, preRollAbilityHookId);
+    if (rollAbilityHookId) Hooks.off(`${game.system?.id}.post${type}RollConfiguration`, rollAbilityHookId);
+    if (saveRollMode) game.settings?.set("core", "rollMode", saveRollMode);
     return oldFormat ? result?.[0] : result
   }
 }
@@ -710,7 +711,7 @@ async function rollDeathSave(wrapped, config: any = {}, dialog: any = {}, messag
     for (let roll of config.rolls) {
       roll.options.advantage = config.midiOptions.advantage;
       roll.options.disadvantage = config.midiOptions.disadvantage;
-      if (config.midiOptions.parts.length) roll.parts.push(config.midiOptions.parts);
+      if (config.midiOptions?.parts?.length) roll.parts.push(config.midiOptions.parts);
       if (blindSaveRoll) roll.options.rollMode = "blindRoll"
     }
     setDialogOptions(dialog, config, config.rolls[0].options);
@@ -722,7 +723,6 @@ async function rollDeathSave(wrapped, config: any = {}, dialog: any = {}, messag
 export async function deathSaveHook(actor, result, details) {
   if (details.chatString === "DND5E.DeathSaveFailure") {
     if (hasCondition(actor, "unconscious")) {
-      //@ts-expect-error
       const _id = CONFIG.statusEffects.find(e => e.id === "unconscious")?._id;
       const effect = actor.effects.find(e => e._id === _id);
       if (effect) effect.update({ "flags.core.overlay": false });
@@ -761,7 +761,8 @@ export async function procAbilityAdvantage(actor, rollType, abilityId, options: 
   var withDisadvantage = options.disadvantage;
 
   if (rollType === "save" && options.isMagicSave) {
-    if ((actor?.system.traits?.dr?.custom || "").includes(i18n("midi-qol.MagicResistant").trim()))
+    const mr = (i18n("midi-qol.MagicResistant") ?? "Magic Resistant").trim();
+    if ((actor?.system.traits?.dr?.custom || "").includes(mr))
       withAdvantage = true;;
     const conditionData = createConditionData({ workflow: options.workflow, target: tokenForActor(actor), actor, item: options.item ?? options.itemUuid ?? options.saveItem ?? options.saveItemUuid });
     if (await evalAllConditionsAsync(actor, "flags.midi-qol.magicResistance.all", conditionData, false) ||
@@ -844,9 +845,10 @@ function _midiATIRefresh(template) {
     let distance = template.distance;
     const dimensions = canvas?.dimensions || { size: 1, distance: 1 };
     distance *= dimensions.size / dimensions.distance;
-    const tokensToCheck = canvas?.tokens?.placeables?.filter(tk => {
+    const tokens: Token[] | undefined = canvas.tokens.placeables;
+    const tokensToCheck = tokens?.filter(tk => {
       const r: Ray = new Ray(
-        { x: template.x, y: template.y },
+        { x: template.document?.x ?? template.x, y: template.document?.y ?? template.y},
         //@ts-ignore .width .height TODO check this v10
         { x: tk.x + tk.document.width * dimensions.size, y: tk.y + tk.document.height * dimensions.size }
       );
@@ -861,7 +863,7 @@ function _midiATIRefresh(template) {
       return true;
     })
 
-    if (tokensToCheck?.length > 0) {
+    if (tokensToCheck && tokensToCheck.length > 0) {
       //@ts-expect-error compute3Dtemplate(t, tokensToCheck = canvas.tokens.placeables)
       VolumetricTemplates.compute3Dtemplate(template, tokensToCheck);
     }
@@ -1086,7 +1088,7 @@ export function prepareOnUseMacroData(actorOrItem) {
   }
 }
 
-export function preUpdateItemActorOnUseMacro(itemOrActor, changes, options, user) {
+export function preUpdateItemActorOnUseMacro(itemOrActor: Item | Actor, changes, options, user) {
   try {
     const macroChanges = foundry.utils.getProperty(changes, "flags.midi-qol.onUseMacroParts") ?? {};
     //@ts-ignore
@@ -1127,7 +1129,7 @@ export async function rollInitiativeDialog(wrapped, rollOptions: any = { fastFor
   const adv = false;
   const disadv = false;
   //@ts-expect-error .dice
-  const dice: any = game.system.dice.D20Roll;
+  const dice: any = game.system?.dice.D20Roll;
   rollOptions.advantageMode = dice.ADV_MODE.NORMAL;
   if (adv && !disadv) {
     rollOptions.advantageMode = dice.ADV_MODE.ADVANTAGE;
@@ -1149,7 +1151,7 @@ export async function rollInitiativeDialog(wrapped, rollOptions: any = { fastFor
     subject: this
   }
   const dialog = { configure: false };
-  const message = { rollMode: game.settings.get("core", "rollMode") };
+  const message = { rollMode: safeGetGameSetting("core", "rollMode") };
   //@ts-expect-error
   const rolls = await CONFIG.Dice.D20Roll.build(config, dialog, message);
   this._cachedInitiativeRoll = rolls[0];
@@ -1174,13 +1176,13 @@ export function getInitiativeRoll(wrapped, options: any = { advantageMode: undef
   if (evalAllConditions(this, "flags.midi-qol.advantage.all", conditionData)
     || evalAllConditions(this, "flags.midi-qol.advantage.ability.check.all", conditionData)
     || evalAllConditions(this, `flags.midi-qol.advantage.ability.check.${init}`, conditionData)
-    || evalAllConditions(this, `flags.${game.system.id}.initiativeAdv`, conditionData)) {
+    || evalAllConditions(this, `flags.${game.system?.id}.initiativeAdv`, conditionData)) {
     adv = true;
   }
   if (evalAllConditions(this, "flags.midi-qol.disadvantage.all", conditionData)
     || evalAllConditions(this, "flags.midi-qol.disadvantage.ability.check.all", conditionData)
     || evalAllConditions(this, `flags.midi-qol.disadvantage.ability.check.${init}`, conditionData)
-    || evalAllConditions(this, `flags.${game.system.id}.initiativeDisadv`, conditionData)) {
+    || evalAllConditions(this, `flags.${game.system?.id}.initiativeDisadv`, conditionData)) {
     disadv = true;
   }
 
@@ -1213,13 +1215,14 @@ export function getItemEffectsToDelete(args: { actor: Actor, origin: string, ign
     if (!actor) {
       return [];
     }
-    //@ts-expect-error
-    effectsToDelete = actor?.appliedEffects?.filter(ef => {
+    const actorEffects: ActiveEffect[] | undefined = actor?.appliedEffects;
+    effectsToDelete = actorEffects?.filter(ef => {
       if (installedModules.get("times-up")) {
         if (globalThis.TimesUp.isEffectExpired(ef, { combat: game.combat })) return false;
       }
       return ef.origin === origin
         && !ignore.includes(ef.uuid)
+        // @ts-expect-error
         && (!ignoreTransfer || ef.flags?.dae?.transfer !== true)
     }).map(ef => ef.id);
     warn("getItemEffectsToDelete: effectsToDelete ", actor.name, effectsToDelete, options);
@@ -1270,28 +1273,12 @@ export async function checkWounded(actor, update, options, user) {
       const token = tokenForActor(actor);
       if (woundedStatus && token) {
         if (!needsWounded) {
-          //@ts-expect-error
-          if (game.release.generation >= 12) {
-            // Cater to the possibility that the setings changed while the effect was applied
-            //@ts-expect-error
-            await token.actor?.toggleStatusEffect(woundedStatus?.id, { overlay: true, active: false });
-            //@ts-expect-error
-            await token.actor?.toggleStatusEffect(woundedStatus?.id, { overlay: false, active: false });
-
-          } else {
-            await token.toggleEffect(woundedStatus, { overlay: true, active: false });
-            await token.toggleEffect(woundedStatus, { overlay: false, active: false });
-          }
+          // Cater to the possibility that the setings changed while the effect was applied
+          await token.actor?.toggleStatusEffect(woundedStatus?.id, { overlay: true, active: false });
+          await token.actor?.toggleStatusEffect(woundedStatus?.id, { overlay: false, active: false });
         } else {
-          //@ts-expect-error
           if (!token.document.hasStatusEffect(woundedStatus.id)) {
-            //@ts-expect-error
-            if (game.release.generation >= 12) {
-              //@ts-expect-error
-              await token.actor?.toggleStatusEffect(woundedStatus.id, { overlay: configSettings.addWoundedStyle === "overlay", active: true });
-            } else {
-              await token.toggleEffect(woundedStatus, { overlay: configSettings.addWoundedStyle === "overlay", active: true });
-            }
+            await token.actor?.toggleStatusEffect(woundedStatus.id, { overlay: configSettings.addWoundedStyle === "overlay", active: true });
           }
         }
       }
@@ -1323,8 +1310,8 @@ async function setDeadStatus(actor, options: any) {
     const isBeaten = actor.effects.find(ef => ef.name === effect?.name) !== undefined;
     if ((makeDead !== isBeaten)) {
       let combatant;
-      if (actor.token) combatant = game.combat?.getCombatantByToken(actor.token.id);
-      //@ts-ignore
+      const combat: Combat | null | undefined = game.combat;
+      if (actor.token && combat) combatant = combat?.getCombatantByActor(actor);
       else combatant = game.combat?.getCombatantByActor(actor.id);
       if (combatant && useDefeated) {
         await combatant.update({ defeated: makeDead })
@@ -1338,38 +1325,18 @@ async function setDeadStatus(actor, options: any) {
       }
     }
   } else if (!isConvenientEffect(effect)) {
-    //@ts-expect-error generation
-    if (game.release.generation >= 12) {
-      // V12 uses an actor
-      const isBeaten = actor.effects.find(ef => ef.name === (i18n(effect?.name ?? effect?.label ?? ""))) !== undefined;
-      if (isBeaten !== makeDead) {
-        let combatant;
-        if (actor.token) combatant = game.combat?.getCombatantByToken(actor.token.id);
-        //@ts-expect-error
-        else combatant = game.combat?.getCombatantByActor(actor.id);
-        if (combatant && useDefeated) await combatant.update({ defeated: makeDead });
-        await actor.toggleStatusEffect(effect.id, { overlay: (configSettings.addDead === "overlay") || options.overlay, active: makeDead });
-        const token = tokenForActor(actor);
-        //@ts-expect-error TODO find out why such a long delay is needed
-        setTimeout(() => token._onApplyStatusEffect(effect.id, makeDead), 1000);
-      }
-    } else {
-      let token = tokenForActor(actor); // V11 must use a token
-      if (token) {
-        const isBeaten = actor.effects.find(ef => ef.name === (i18n(effect?.name ?? effect?.label ?? ""))) !== undefined;
-        if (isBeaten !== makeDead) {
-          let combatant;
-          if (actor.token) combatant = game.combat?.getCombatantByToken(actor.token.id);
-          //@ts-expect-error
-          else combatant = game.combat?.getCombatantByActor(actor.id);
-          if (combatant && useDefeated) await combatant.update({ defeated: makeDead });
-          if (effect) {
-            await token.toggleEffect(effect, { overlay: (configSettings.addDead === "overlay" || options.overlay), active: makeDead });
-            //@ts-expect-error TODO find out why such a long delay is needed
-            setTimeout(() => token._onApplyStatusEffect(effect.id, makeDead), 1500);
-          }
-        }
-      }
+    // V12 uses an actor
+    const isBeaten = actor.effects.find(ef => ef.name === (i18n(effect?.name ?? effect?.label ?? ""))) !== undefined;
+    if (isBeaten !== makeDead) {
+      let combatant;
+      const combat: Combat | null | undefined = game.combat;
+      if (actor.token) combatant = combat?.getCombatantByToken(actor.token.id);
+      else combatant = game.combat?.getCombatantByActor(actor.id);
+      if (combatant && useDefeated) await combatant.update({ defeated: makeDead });
+      await actor.toggleStatusEffect(effect.id, { overlay: (configSettings.addDead === "overlay") || options.overlay, active: makeDead });
+      const token = tokenForActor(actor);
+      // TODO find out why such a long delay is needed
+      setTimeout(() => token?._onApplyStatusEffect(effect.id, makeDead), 1000);
     }
   }
 }
@@ -1377,7 +1344,7 @@ async function setDeadStatus(actor, options: any) {
 function itemSheetDefaultOptions(wrapped) {
   const options = wrapped();
   const modulesToCheck = ["magic-items-2", "magicitems", "items-with-spells-5e", "ready-set-roll-5e"];
-  const installedModules = modulesToCheck.filter(mid => game.modules.get(mid)?.active).length + (configSettings.midiFieldsTab ? 1 : 0);
+  const installedModules = modulesToCheck.filter(mid => game.modules?.get(mid)?.active).length + (configSettings.midiFieldsTab ? 1 : 0);
   const newWidth = 560 + Math.max(0, (installedModules - 2) * 100);
   if (options.width < newWidth) {
     log(`increasing item sheet width from ${options.width} to ${newWidth}`);
@@ -1398,11 +1365,12 @@ function prepareSheetItem(wrapped, item, ctx) {
 }
 
 export function readyPatching() {
-  if (game.system.id === "dnd5e" || game.system.id === "n5e") {
-    libWrapper.register(MODULE_ID, `game.${game.system.id}.canvas.AbilityTemplate.prototype.refresh`, midiATRefresh, "WRAPPER");
+  if (game.system?.id === "dnd5e" || game.system?.id === "n5e") {
+    libWrapper.register(MODULE_ID, `game.${game.system?.id}.canvas.AbilityTemplate.prototype.refresh`, midiATRefresh, "WRAPPER");
     libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['dnd5e.ActorSheet5eCharacter'].cls.prototype._filterItems", _filterItems, "WRAPPER");
     libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['dnd5e.ActorSheet5eCharacter2'].cls.prototype._prepareItem", prepareSheetItem, "WRAPPER");
     libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['dnd5e.ActorSheet5eNPC'].cls.prototype._filterItems", _filterItems, "WRAPPER");
+    libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['dnd5e.ActorSheet5eNPC2'].cls.prototype._prepareItem", prepareSheetItem, "WRAPPER");
     if (!isdndv4) libWrapper.register(MODULE_ID, "CONFIG.Item.sheetClasses.base['dnd5e.ItemSheet5e2'].cls.defaultOptions", itemSheetDefaultOptions, "WRAPPER");
     libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.createConcentrationEffectData", createConcentrationEffectData, "WRAPPER");
     // This controls whether to display the chat message or not
@@ -1419,9 +1387,8 @@ export function readyPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preDelete", _preDeleteCombat, "WRAPPER");
 
   libWrapper.register(MODULE_ID, "Notifications.prototype.notify", notificationNotify, "MIXED");
-  //@ts-expect-error
-  const gameVersion = game.system.version;
-  if ((game.system.id === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion))) {
+  const gameVersion = game.system?.version;
+  if ((game.system?.id === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion ?? ""))) {
     if (ui.notifications)
       ui.notifications.error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
     else
@@ -1460,17 +1427,17 @@ export function readyPatching() {
 }
 
 function removeDependent(dependent: any) {
-  const id = game.system.id ?? MODULE_ID;
+  const id = game.system?.id ?? MODULE_ID;
   const dependents = (this.getFlag(id, "dependents") || []).filter(dep => dep.uuid !== dependent.uuid);
   if (dependents.length === 0) return this.unsetFlag(id, "dependents");
   return this.setFlag(id, "dependents", dependents);
 }
 function setDependents(dependents) {
-  const id = game.system.id ?? MODULE_ID;
+  const id = game.system?.id ?? MODULE_ID;
   return this.setFlag(id, "dependents", dependents);
 }
 async function clearDependents() {
-  const id = game.system.id ?? MODULE_ID;
+  const id = game.system?.id ?? MODULE_ID;
   if (!this.getFlag(id, "dependents")) return;
   return await this.unsetFlag(id, "dependents");
 }
@@ -1495,7 +1462,7 @@ async function addDependents(...dependents) {
  * @returns {Promise<ActiveEffect5e>}
  */
 async function _addDependent(...dependent) {
-  const id = game.system.id ?? MODULE_ID;
+  const id = game.system?.id ?? MODULE_ID;
   const dependents = this.getDependents().map(d => ({ uuid: d.uuid }));
   dependents.push(...dependent.filter(dep => !dependents.some(d => d.uuid === dep.uuid)).map(d => ({ uuid: d.uuid })));
   return this.setFlag(id, "dependents", dependents);
@@ -1506,7 +1473,7 @@ async function _addDependent(...dependent) {
  * @returns {Document[]}
  */
 function _getDependents() {
-  const id = game.system.id ?? MODULE_ID;
+  const id = game.system?.id ?? MODULE_ID;
   return Array.from((this.getFlag(id, "dependents") || []).reduce((deps, { uuid }) => {
     const effect = MQfromUuidSync(uuid);
     if (effect) deps.add(effect);
@@ -1516,23 +1483,21 @@ function _getDependents() {
 
 async function _onDelete(wrapped, ...args) {
   let [options, userId] = args;
-  //@ts-expect-error
   if (game.user === game.users?.activeGM) {
     if (!this.getDependents) return wrapped(...args);
     // Special case for consumable items - don't delete effect when item deleted
     if (this instanceof Item && this.type === "consumable") {
-      foundry.utils.setProperty(this, `flags.${game.system.id}.dependents`, [])
+      foundry.utils.setProperty(this, `flags.${game.system?.id}.dependents`, [])
       return wrapped(...args);
     }
     const dependents = this.getDependents();
     if (dependents.length > 0) {
       for (let dep of dependents) {
-        //@ts-expect-error
         if (fromUuidSync(dep.uuid)) {
           await dep.delete(options);
         }
         // Since the effect will have been already deleted we can't do any updates to it.
-        foundry.utils.setProperty(this, `flags.${game.system.id}.dependents`, [])
+        foundry.utils.setProperty(this, `flags.${game.system?.id}.dependents`, [])
       }
     }
   }
@@ -1541,8 +1506,8 @@ async function _onDelete(wrapped, ...args) {
 
 function createConcentrationEffectData(wrapped, item, data: any = {}) {
   const effectData = wrapped(item, data);
-  if (!foundry.utils.getProperty(effectData, `flags.${game.system.id}.itemUuid`)) {
-    foundry.utils.setProperty(effectData, `flags.${game.system.id}.itemUuid`, item.uuid);
+  if (!foundry.utils.getProperty(effectData, `flags.${game.system?.id}.itemUuid`)) {
+    foundry.utils.setProperty(effectData, `flags.${game.system?.id}.itemUuid`, item.uuid);
   }
   return effectData;
 }
@@ -1558,23 +1523,21 @@ export async function challengeConcentration(wrapped, { dc = 10, ability = null 
       action: "concentration",
       dc,
     };
-    //@ts-expect-error
-    if (ability && ability in game.system.config.abilities) dataset.ability = ability;
+    //@ts-expect-error no dnd5e-types
+    if (ability && ability in game.system?.config.abilities) dataset.ability = ability;
     const config = {
       type: "concentration",
       format: "short",
       icon: true
     }
-    //@ts-expect-error
-    const enrichers = game.system.enrichers;
-    //@ts-expect-error
+    //@ts-expect-error no dnd5e-types
+    const enrichers = game.system?.enrichers;
     return ChatMessage.implementation.create({
       content: `<div class="dnd5e chat-card request-card" data-action="concentration" data-dc="${dc}" data-type="midi-concentration">
       <div><span class="visible-dc">${enrichers.createRollLabel({ ...dataset, ...config })} ${i18n("DND5E.Roll")}</span></div>
       <div><span class="hidden-dc">${enrichers.createRollLabel({ ...dataset, ...config, hideDC: true })} ${i18n("DND5E.Roll")}</span></div>
       </div>`,
-      whisper: game.users?.filter(user => this.testUserPermission(user, "OWNER")),
-      //@ts-expect-errorq
+      whisper: game.users?.filter(user => this.testUserPermission(user, "OWNER")).map(user => user.id),
       speaker: ChatMessage.implementation.getSpeaker({ actor: this })
     });
   }
@@ -1584,7 +1547,7 @@ export async function challengeConcentration(wrapped, { dc = 10, ability = null 
 
 export let visionPatching = () => {
   //@ts-ignore game.version
-  const patchVision = foundry.utils.isNewerVersion(game.version ?? game?.version, "0.7.0") && game.settings.get(MODULE_ID, "playerControlsInvisibleTokens")
+  const patchVision = foundry.utils.isNewerVersion(game.version ?? game?.version, "0.7.0") && game.settings?.get(MODULE_ID, "playerControlsInvisibleTokens")
   if (patchVision) {
     ui.notifications?.warn("Player control vision is deprecated, use it at your own risk")
     console.warn("midi-qol | Player control vision is deprecated, use it at your own risk")
@@ -1619,23 +1582,23 @@ function _getUsageConfig(wrapped): any {
 
 export let itemPatching = () => {
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.use", doItemUse, "MIXED");
-  if (game.system.id === "dnd5e" || game.system.id === "n5e") {
+  if (game.system?.id === "dnd5e" || game.system?.id === "n5e") {
     if (!isdndv4) libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype._getUsageConfig", _getUsageConfig, "WRAPPER");
     libWrapper.register(MODULE_ID, "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
   }
   configureDamageRollDialog();
 };
 
-export async function checkDeleteTemplate(templateDocument, options, user) {
+export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocument, options, user) {
   if (user !== game.user?.id) return;
   if (options.undo) return;
-  let origin = MQfromUuidSync(templateDocument.getFlag("dnd5e", "origin"));
+  let origin = MQfromUuidSync(templateDocument.getFlag("dnd5e", "origin" as never));
   if (origin instanceof Item && origin.parent instanceof Actor) {
-    //@ts-expect-error
+    // @ts-expect-error can't know about flags
     origin = origin.parent.effects?.find(ef => ef.getFlag("dnd5e", "dependents")?.some(dep => dep.uuid === templateDocument.uuid));
   }
   if (origin instanceof ActiveEffect && !options.noConcentrationCheck && configSettings.removeConcentrationEffects !== "none") {
-    //@ts-expect-error
+    // @ts-expect-error no dnd5e-types
     if (origin?.getDependents()?.length === 0) {
       await origin.delete();
     }
@@ -1669,14 +1632,14 @@ export async function rollToolCheck(wrapped, options: any = {}) {
   const chatMessage = options.chatMessage;
   options.chatMessage = false;
   let result = await wrapped(options);
-  let rollMode = result.options.rollMode ?? game.settings.get("core", "rollMode");
+  let rollMode = result.options?.rollMode ?? safeGetGameSetting("core", "rollMode");
   await displayDSNForRoll(result, "toolCheck", rollMode);
   result = await bonusCheck(this.actor, result, "check", this.system.ability ?? "");
   if (!result) return result;
   if (chatMessage !== false && result) {
-    const title = `${this.name} - ${game.i18n.localize("DND5E.ToolCheck")}`;
+    const title = `${this.name} - ${game.i18n?.localize("DND5E.ToolCheck")}`;
     const args: any = { "speaker": getSpeaker(this.actor), title, flavor: title };
-    foundry.utils.setProperty(args, `flags.${game.system.id}.roll`, { type: "tool", itemId: this.id, itemUuid: this.uuid });
+    foundry.utils.setProperty(args, `flags.${game.system?.id}.roll`, { type: "tool", itemId: this.id, itemUuid: this.uuid });
     args.template = "modules/midi-qol/templates/roll.html";
     await result.toMessage(args, { rollMode });
   }
@@ -1694,11 +1657,11 @@ async function _preCreateActiveEffect(wrapped, data, options, user): Promise<voi
     if (!(parent instanceof CONFIG.Actor.documentClass)) return;
     if (globalThis.MidiQOL.incapacitatedConditions.some(condition => this.statuses.has(condition))) {
       if (debugEnabled > 0) warn(`on createActiveEffect ${this.name} ${this.id} removing concentration for ${parent.name}`)
-      //@ts-expect-error - there is a separate check for hp.value <= in Hooks.ts so don't duplicate removal
-      if (parent.system.attributes?.hp?.value > 0) {
-        //@ts-expect-error
-        await parent.endConcentration();
-      }
+        // @ts-expect-error no dnd5e-types
+        if (parent.system.attributes?.hp?.value > 0) {
+          // @ts-expect-error no dnd5e-types
+          await parent.endConcentration();
+        }
     }
   } catch (err) {
     const message = "midi-qol | error in preCreateActiveEffect";
@@ -1758,7 +1721,7 @@ export async function doItemUse(wrapped, config: any = {}, dialog: any = {}, mes
     }
   }
   //@ts-expect-error
-  const areKeysPressed = game.system.utils.areKeysPressed;
+  const areKeysPressed = game.system?.utils.areKeysPressed;
   const skipPressed = areKeysPressed(config.event, "skipDialogAdvantage") || areKeysPressed(config.event, "skipDialogDisadvantage") || areKeysPressed(config.event, "skipDialogNormal");
   if (skipPressed) {
     const attackActivity = attackActivities[0];
@@ -1775,125 +1738,123 @@ export async function doItemUse(wrapped, config: any = {}, dialog: any = {}, mes
   if (this.actor) return this.displayCard(message);
 }
 
-class CustomizeDamageFormula {
-  static formula: string;
-  static async configureDialog(wrapped, ...args) {
-    // If the option is not enabled, return the original function - as an alternative register\unregister would be possible
-    const [rolls, { title, defaultRollMode, defaultCritical, template, allowCritical }, options] = args;
-    // Render the Dialog inner HTML
-    const allRolls = rolls.map((roll, index) => ({
-      value: `${roll.formula}${index === 0 ? " + @bonus" : ""}`,
-      type: GameSystemConfig.damageTypes[roll.options.type]?.label ?? null,
-      active: true,
-      label: "Formula",
-      roll,
-      id: foundry.utils.randomID()
-    }));
-    const item = rolls[0]?.data.item;
-    //@ts-expect-error
-    const DamageRoll = CONFIG.Dice.DamageRoll;
-    if (item) {
-      if (item.damage.versatile) {
-        let actorBonus;
-        if (rolls[0].data?.bonuses) {
-          const actorBonusData = foundry.utils.getProperty(rolls[0], `data.bonuses.${item.actionType}`) || {};
-          if (actorBonusData.damage && (parseInt(actorBonusData.damage) !== 0)) {
-            actorBonus = actorBonusData.damage;
-          }
-        }
-        const versatileFormula = item.damage.versatile + (actorBonus ? ` + ${actorBonus}` : "");
-        allRolls.push({
-          value: versatileFormula,
-          type: GameSystemConfig.damageTypes[rolls[0].options.type]?.label ?? null,
-          active: false,
-          label: "Versatile",
-          roll: new DamageRoll(versatileFormula, rolls[0].data, rolls[0].options),
-          id: foundry.utils.randomID()
-        })
-      }
-      if ((item.formula ?? "").length > 0) {
-        allRolls.push({
-          value: item.formula,
-          type: GameSystemConfig.damageTypes[rolls[0].options.type]?.label ?? null,
-          versatileDamage: item.damage.versatile,
-          active: false,
-          label: "Other",
-          roll: new DamageRoll(item.formula, rolls[0].data, rolls[0].options),
-          id: foundry.utils.randomID()
-        })
-      }
-    }
-    const content = await renderTemplate(
-      //@ts-ignore
-      "modules/midi-qol/templates/damage-roll-dialog.hbs",
-      {
-        formulas: allRolls,
-        defaultRollMode,
-        rollModes: CONFIG.Dice.rollModes,
-      }
-    );
+// Commented this out as it doesn't seem to be in use currently
+// class CustomizeDamageFormula {
+//   static formula: string;
+//   static async configureDialog(wrapped, ...args) {
+//     // If the option is not enabled, return the original function - as an alternative register\unregister would be possible
+//     const [rolls, { title, defaultRollMode, defaultCritical, template, allowCritical }, options] = args;
+//     // Render the Dialog inner HTML
+//     const allRolls = rolls.map((roll, index) => ({
+//       value: `${roll.formula}${index === 0 ? " + @bonus" : ""}`,
+//       type: GameSystemConfig.damageTypes[roll.options.type]?.label ?? null,
+//       active: true,
+//       label: "Formula",
+//       roll,
+//       id: foundry.utils.randomID()
+//     }));
+//     const item = rolls[0]?.data.item;
+//     //@ts-expect-error
+//     const DamageRoll = CONFIG.Dice.DamageRoll;
+//     if (item) {
+//       if (item.damage.versatile) {
+//         let actorBonus;
+//         if (rolls[0].data?.bonuses) {
+//           const actorBonusData = foundry.utils.getProperty(rolls[0], `data.bonuses.${item.actionType}`) || {};
+//           if (actorBonusData.damage && (parseInt(actorBonusData.damage) !== 0)) {
+//             actorBonus = actorBonusData.damage;
+//           }
+//         }
+//         const versatileFormula = item.damage.versatile + (actorBonus ? ` + ${actorBonus}` : "");
+//         allRolls.push({
+//           value: versatileFormula,
+//           type: GameSystemConfig.damageTypes[rolls[0].options.type]?.label ?? null,
+//           active: false,
+//           label: "Versatile",
+//           roll: new DamageRoll(versatileFormula, rolls[0].data, rolls[0].options),
+//           id: foundry.utils.randomID()
+//         })
+//       }
+//       if ((item.formula ?? "").length > 0) {
+//         allRolls.push({
+//           value: item.formula,
+//           type: GameSystemConfig.damageTypes[rolls[0].options.type]?.label ?? null,
+//           versatileDamage: item.damage.versatile,
+//           active: false,
+//           label: "Other",
+//           roll: new DamageRoll(item.formula, rolls[0].data, rolls[0].options),
+//           id: foundry.utils.randomID()
+//         })
+//       }
+//     }
+//     const content = await renderTemplate(
+//       //@ts-ignore
+//       "modules/midi-qol/templates/damage-roll-dialog.hbs",
+//       {
+//         formulas: allRolls,
+//         defaultRollMode,
+//         rollModes: CONFIG.Dice.rollModes,
+//       }
+//     );
 
-    // Create the Dialog window and await submission of the form
-    return new Promise((resolve) => {
-      new Dialog(
-        {
-          title,
-          rolls: allRolls,
-          content,
-          buttons: {
-            critical: {
-              //@ts-ignore
-              condition: allowCritical,
-              label: game.i18n.localize("DND5E.CriticalHit"),
-              //@ts-ignore
-              callback: html => {
-                let returnRolls = allRolls.filter(r => r.active).map(r => r.roll);
-                returnRolls = returnRolls.map((r, i) => r._onDialogSubmit(html, true, i === 0));
-                rolls.length = 0;
-                rolls.push(...returnRolls);
-                resolve(returnRolls);
-              }
-            },
-            normal: {
-              label: game.i18n.localize(
-                allowCritical ? "DND5E.Normal" : "DND5E.Roll"
-              ),
-              //@ts-ignore
-              callback: html => {
-                let returnRolls = allRolls.filter(r => r.active).map(r => r.roll);
-                returnRolls = returnRolls.map((r, i) => r._onDialogSubmit(html, false, i === 0));
-                rolls.length = 0;
-                rolls.push(...returnRolls);
-                resolve(returnRolls);
-              },
-            },
-          },
-          default: defaultCritical ? "critical" : "normal",
-          // Inject the formula customizer - this is the only line that differs from the original
-          render: (html) => {
-            try {
-              CustomizeDamageFormula.activateListeners(html, allRolls);
-            } catch (err) {
-              const message = `injectFormulaCustomizer`
-              error(message, err);
-              TroubleShooter.recordError(err, message);
-            }
-          },
-          close: () => resolve(null),
-        },
-        options
-      ).render(true);
-    });
-  }
+//     // Create the Dialog window and await submission of the form
+//     return new Promise((resolve) => {
+//       new Dialog(
+//         {
+//           title,
+//           rolls: allRolls,
+//           content,
+//           buttons: {
+//             critical: {
+//               //@ts-ignore
+//               condition: allowCritical,
+//               label: i18n("DND5E.CriticalHit") ?? "<Critical Hit>",
+//               //@ts-ignore
+//               callback: html => {
+//                 let returnRolls = allRolls.filter(r => r.active).map(r => r.roll);
+//                 returnRolls = returnRolls.map((r, i) => r._onDialogSubmit(html, true, i === 0));
+//                 rolls.length = 0;
+//                 rolls.push(...returnRolls);
+//                 resolve(returnRolls);
+//               }
+//             },
+//             normal: {
+//               label: i18n(allowCritical ? "DND5E.Normal" : "DND5E.Roll") ?? "<Normal Roll>",
+//               callback: html => {
+//                 let returnRolls = allRolls.filter(r => r.active).map(r => r.roll);
+//                 returnRolls = returnRolls.map((r, i) => r._onDialogSubmit(html, false, i === 0));
+//                 rolls.length = 0;
+//                 rolls.push(...returnRolls);
+//                 resolve(returnRolls);
+//               },
+//             },
+//           },
+//           default: defaultCritical ? "critical" : "normal",
+//           // Inject the formula customizer - this is the only line that differs from the original
+//           render: (html) => {
+//             try {
+//               CustomizeDamageFormula.activateListeners(html, allRolls);
+//             } catch (err) {
+//               const message = `injectFormulaCustomizer`
+//               error(message, err);
+//               TroubleShooter.recordError(err, message);
+//             }
+//           },
+//           close: () => resolve(null),
+//         },
+//         options
+//       ).render(true);
+//     });
+//   }
 
-  static activateListeners(html, allRolls) {
-    html.find('input[name="formula.active"]').on("click", (e) => {
-      const id = e.currentTarget.dataset.id;
-      const theRoll = allRolls.find(r => r.id === id)
-      theRoll.active = e.currentTarget.checked;
-    })
-  }
-}
+//   static activateListeners(html, allRolls) {
+//     html.find('input[name="formula.active"]').on("click", (e) => {
+//       const id = e.currentTarget.dataset.id;
+//       const theRoll = allRolls.find(r => r.id === id)
+//       theRoll.active = e.currentTarget.checked;
+//     })
+//   }
+// }
 
 export function processTraits(actor) {
   try {
@@ -1984,17 +1945,17 @@ export function migrateTraits(actor) {
               log(`${actor.name} mapping "nongamic" to ${trait.custom}`)
               break;
             case "spell":
-              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.spell-damage"));
+              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.spell-damage") ?? "Spell Damage");
               trait.value.delete("spell");
               log(`${actor.name} mapping "spell" to ${trait.custom}`)
               break
             case "power":
-              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.power-damage"));
+              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.power-damage") ?? "Power Damage");
               trait.value.delete("power");
               log(`${actor.name} mapping "power" to ${trait.custom}`)
               break
             case "magic":
-              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.Magical"));
+              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.Magical") ?? "Magical Damage");
               trait.value.delete("magic");
               log(`${actor.name} mapping "magic" to ${trait.custom}`)
               break
@@ -2039,17 +2000,17 @@ export function migrateTraits(actor) {
               log(`${actor.name} mapping "nongamic" to ${trait.custom}`)
               break;
             case "spell":
-              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.spell-damage"));
+              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.spell-damage") ?? "Spell Damage");
               trait.value = removeTraitValue(trait.value, "spell");
               log(`${actor.name} mapping "spell" to ${trait.custom}`)
               break
             case "power":
-              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.power-damage"));
+              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.power-damage") ?? "Power Damage");
               trait.value = removeTraitValue(trait.value, "power");
               log(`${actor.name} mapping "power" to ${trait.custom}`)
               break
             case "magic":
-              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.Magical"));
+              trait.custom = addCustomTrait(trait.custom, i18n("midi-qol.Magical") ?? "Magical Damage");
               trait.value = removeTraitValue(trait.value, "magic");
               log(`${actor.name} mapping "magic" to ${trait.custom}`)
               break
@@ -2115,7 +2076,7 @@ function actorGetRollData(wrapped, ...args) {
   data.flags["midi-qol"] = this.flags?.["midi-qol"] ?? {};
   data.midiFlags = data.flags["midi-qol"];
   data.items = this.items;
-  if (game.system.id === "dnd5e") {
+  if (game.system?.id === "dnd5e") {
     data.cfg = {};
     data.cfg.armorClasses = GameSystemConfig.armorClasses;
     data.cfg.actorSizes = GameSystemConfig.actorSizes;

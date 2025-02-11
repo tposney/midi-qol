@@ -20,7 +20,7 @@
         "id": "dnd5e",
         "type": "system",
         "compatibility": {
-          "minimum": "4.1",
+          "minimum": "4.2.2",
           "maximum": "4.9.99"
         }
       },
@@ -46,7 +46,7 @@
         "id": "dae",
         "type": "module",
         "compatibility": {
-          "minimum": "12.0.4"
+          "minimum": "12.0.12"
         }
       }
     ]
@@ -106,7 +106,7 @@
   ],
   "compatibility": {
     "minimum": "12.0.0",
-    "verified": "12.999",
+    "verified": "12.331",
     "maximum": "12.999"
   },
   "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",

@@ -7,9 +7,12 @@
       "chat": ""
     },
     "source": {
-      "custom": "",
+      "custom": "Midi 12.4.16",
       "revision": 1,
-      "rules": "2024"
+      "rules": "2024",
+      "book": "",
+      "page": "",
+      "license": ""
     },
     "uses": {
       "max": "",
@@ -107,16 +110,28 @@
           "forceDialog": false,
           "confirmTargets": "default",
           "automationOnly": false,
-          "identifier": ""
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true
         }
       }
     },
     "identifier": "make-miss",
     "enchant": {},
     "prerequisites": {
-      "level": null
+      "level": null,
+      "repeatable": false
     },
-    "properties": []
+    "properties": [],
+    "advancement": [],
+    "cover": null,
+    "crewed": false
   },
   "img": "icons/magic/air/air-burst-spiral-blue-gray.webp",
   "effects": [
@@ -190,7 +205,7 @@
         "duplicateSource": null,
         "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.1.2",
+        "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
         "lastModifiedBy": null
@@ -278,9 +293,9 @@
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180116268,
-    "modifiedTime": 1734180116268,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555833713,
+    "modifiedTime": 1738555833713,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "tWh6UgUeg2lxQ8uJ",

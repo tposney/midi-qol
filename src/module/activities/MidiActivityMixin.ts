@@ -10,6 +10,22 @@ import { busyWait } from "../tests/setupTest.js";
 import { saveUndoData } from "../undo.js";
 import { activityHasAreaTarget, asyncHooksCall, canSee, canSense, checkActivityRange, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getStatusName, getToken, activityHasAutoPlaceTemplate, hasUsedBonusAction, hasUsedReaction, initializeVision, isAutoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, processDamageRollBonusFlags, setBonusActionUsed, setReactionUsed, sumRolls, tokenForActor, validTargetTokens, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, isAutoFastDamage } from "../utils.js";
 import { confirmWorkflow, postTemplateConfirmTargets, preTemplateTargets, removeFlanking, selectTargets, setDamageRollMinTerms } from "./activityHelpers.js";
+const { DialogV2 } = foundry.applications.api;
+
+export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
+  _validateType(value) {
+    return typeof value === "string";
+  }
+  constructor(options: any) {
+    super(options);
+  }
+  static get _defaults(): any {
+    return foundry.utils.mergeObject(super._defaults, {
+      deterministic: false
+    });
+  }
+
+}
 
 export var MidiActivityMixin = Base => {
   return class MidiActivityMixin extends Base {
@@ -23,13 +39,13 @@ export var MidiActivityMixin = Base => {
     static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.SHARED"];
 
     static defineSchema() {
-      //@ts-expect-error
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, SetField } = foundry.data.fields;
+      const { FormulaField } = globalThis.dnd5e.dataModels.fields
       const schema = {
         ...super.defineSchema(),
         // flags: new ObjectField(),
-        useConditionText: new StringField({ name: "useCondition", initial: "" }),
-        effectConditionText: new StringField({ name: "effectCondition", initial: "" }),
+        useConditionText: new MidiConditionField({ name: "useCondition", initial: "" }),
+        effectConditionText: new MidiConditionField({ name: "effectCondition", initial: "" }),
         // disabled pending a way to make it work 
         // useSystemActivity: new BooleanField({ name: "useSystemActivity", initial: false }),
         macroData: new SchemaField({
@@ -45,7 +61,8 @@ export var MidiActivityMixin = Base => {
         midiProperties: new SchemaField({
           ignoreTraits: new SetField(new StringField(), { initial: [] }),
           triggeredActivityId: new StringField({ name: "triggeredActivity", initial: "none" }),
-          triggeredActivityConditionText: new StringField({ name: "triggeredActivityCondition", initial: "" }),
+          //@ts-expect-error
+          triggeredActivityConditionText: new MidiConditionField({ name: "triggeredActivityCondition", initial: "" }),
           triggeredActivityTargets: new StringField({ name: "triggeredActivitityTargets", initial: "targets" }),
           triggeredActivityRollAs: new StringField({ name: "triggeredActivityRollAs", initial: "self" }),
           forceDialog: new BooleanField({ name: "forceDialog", initial: false }),
@@ -109,8 +126,18 @@ export var MidiActivityMixin = Base => {
       }
       return baseFlags;
     }
-    get triggeredActivity() {
-      return this.item.system.activities.find(a => a.id === this.midiProperties?.triggeredActivityId);
+    async getTriggeredActivity() {
+      let activity = this.item.system.activities.find(a => a.id === this.midiProperties?.triggeredActivityId);
+      if (activity) return activity;
+      activity = await fromUuid(this.midiProperties?.triggeredActivityId);
+      return activity
+    }
+
+    get triggeredActivityX() {
+      let activity = this.item.system.activities.find(a => a.id === this.midiProperties?.triggeredActivityId);
+      if (activity) return activity;
+      activity = fromUuidSync(this.midiProperties?.triggeredActivityId);
+      return activity
     }
 
     static metadata = foundry.utils.mergeObject(
@@ -140,13 +167,13 @@ export var MidiActivityMixin = Base => {
           ui.notifications?.warn("Only the GM can apply effects for other players")
           return;
         }
-        if (game.user.targets.size === 0) {
+        if (game.user?.targets.size === 0) {
           ui.notifications?.warn(i18n("midi-qol.noTokens"));
           return;
         }
         const result = (await socketlibSocket.executeAsUser("applyEffects", authorId, {
           workflowId: this.uuid,
-          targets: Array.from(game.user.targets).map(t => t.document.uuid)
+          targets: Array.from(game.user?.targets).map(t => t.document.uuid)
         }));
       } else {
         if (workflow) {
@@ -223,20 +250,24 @@ export var MidiActivityMixin = Base => {
       const itemData = this.item.toObject();
       delete itemData._id;
       let item = new CONFIG.Item.documentClass(itemData, { parent: actor });
-      //@ts-expect-error
+      // @ts-expect-error no dnd5e-types
       const activity = item.system.activities.get(this.id);
       delete config.midiOptions.rollAs;
       return activity.use(config, dialog, message);
     }
 
     async use(config: any = {}, dialog: any = {}, message: any = {}) {
+      if (config.midiOptions?.rollAs) return this.useAs(config.midiOptions.rollAs, config, dialog, message);
       if (!this.item.isEmbedded) return;
       if (!this.item.isOwner) {
         ui.notifications?.error("DND5E.DocumentUseWarn", { localize: true });
       }
+      if ( !this.canUse ) {
+        ui.notifications?.error("DND5E.ACTIVITY.Warning.UsageNotAllowed", { localize: true });
+        return;
+      }
       if (debugEnabled > 0) warn("MidiQOL | MidiActivity | use | Called", config, dialog, message);
-      if (config.midiOptions?.rollAs) return this.useAs(config.midiOptions.rollAs, config, dialog, message);
-      let item = this.item.clone({}, { keepId: true });
+      let item = this.item.clone({parent: this.actor}, { keepId: true });
       let activity = item.system.activities.get(this.id)
 
       await removeFlanking(item.parent);
@@ -266,6 +297,8 @@ export var MidiActivityMixin = Base => {
 
       // activity.workflow.options won't be other than the default yet
       activity.workflow.rollOptions.rollToggle = false;
+      if (config.midiOptions.isCritical) activity.workflow.isCritical = true;
+      if (config.midiOptions.isFumble) activity.workflow.isFumble = true;
       const autoCreatetemplate = activityHasAutoPlaceTemplate(this);
       const emanationNoTemplate = activityHasEmanationNoTemplate(this);
       if (autoCreatetemplate || emanationNoTemplate) {
@@ -376,7 +409,7 @@ export var MidiActivityMixin = Base => {
           if (this.workflow && areMidiKeysPressed(config.event, "RollToggle")) this.workflow.rollOptions.rollToggle = true;
           if (this.workflow?.rollOptions?.rollToggle) dialog.configure = !dialog.configure;
           // if (dialog.configure) config.midiOptions.isCritical = false;
-          preRollDamageHookId = Hooks.once(`${game.system.id}.preRollDamageV2`, (rollConfig, dialogConfig, messageConfig) => {
+          preRollDamageHookId = Hooks.once(`${game.system?.id}.preRollDamageV2`, (rollConfig, dialogConfig, messageConfig) => {
             for (let roll of rollConfig.rolls) {
               if (keys.critical) roll.options.isCritical = true;
               else if (keys.normal) roll.options.isCritical = false;
@@ -389,8 +422,8 @@ export var MidiActivityMixin = Base => {
               } else dialogConfig.options.defaultButton = "normal";
             } return true;
           });
-          rollDamageHookId = Hooks.once(`${game.system.id}.rollDamageV2`, rolls => {
-            if (rolls[0] && this.workflow) this.workflow.isCritical = rolls[0].options.isCritical;
+          rollDamageHookId = Hooks.once(`${game.system?.id}.rollDamageV2`, rolls => {
+            if (rolls[0] && this.workflow && config.midiOptions.updateWorkflow !== false) this.workflow.isCritical = rolls[0].options.isCritical;
           }); 
           message.create ??= false;
           if (this.damage?.parts.some(part => part.types.size > 1)) dialog.configure = true;
@@ -437,8 +470,8 @@ export var MidiActivityMixin = Base => {
         TroubleShooter.recordError(err, message);
         error(message, err);
       } finally {
-        if (preRollDamageHookId) Hooks.off(`${game.system.id}.preRollDamageV2`, preRollDamageHookId);
-        if (rollDamageHookId) Hooks.off(`${game.system.id}.rollDamageV2`, rollDamageHookId);
+        if (preRollDamageHookId) Hooks.off(`${game.system?.id}.preRollDamageV2`, preRollDamageHookId);
+        if (rollDamageHookId) Hooks.off(`${game.system?.id}.rollDamageV2`, rollDamageHookId);
       }
       return result ?? [];
     }
@@ -462,9 +495,9 @@ export var MidiActivityMixin = Base => {
 
         if (workflow.currentAction !== workflow.WorkflowState_WaitForDamageRoll) {
           if (workflow.currentAction === workflow.WorkflowState_AwaitTemplate)
-            return ui.notifications?.warn(i18n("midi-qol.noTemplateSeen"));
+            return ui.notifications?.warn(i18n("midi-qol.noTemplateSeen")) as void;
           else if (workflow.currentAction === workflow.WorkflowState_WaitForAttackRoll)
-            return ui.notifications?.warn(i18n("midi-qol.noAttackRoll"));
+            return ui.notifications?.warn(i18n("midi-qol.noAttackRoll")) as void;
         }
 
         // TODO revisit this to see if it is still possoible to just re-roll the damage
@@ -483,9 +516,6 @@ export var MidiActivityMixin = Base => {
         config.midiOptions.fastForwardDamage = config.midiOptions.fastForwardDamage ?? workflow.workflowOptions?.fastForwardDamage ?? workflow.rollOptions.fastForwardDamage;
 
         if (workflow) workflow.damageRollCount += 1;
-        let result: Array<Roll>;
-        let result2: Array<Roll>;
-
       } catch (err) {
         const message = "Configure Damage Roll error";
         TroubleShooter.recordError(err, message);
@@ -502,7 +532,7 @@ export var MidiActivityMixin = Base => {
         if (rollConfig.ammunition) { // add ammunition properties to the damage roll
           let rollProperties = new Set(roll.options.properties);
           const ammunitionProperties = rollConfig.ammunition.system.properties;
-          //@ts-expect-error
+          //@ts-ignore silly vscode thinks union does not exist
           roll.options.properties = Array.from(rollProperties.union(ammunitionProperties));
         }
         // critical/fumble will be inserted when roll.build is called.
@@ -536,9 +566,8 @@ export var MidiActivityMixin = Base => {
             droll.options.properties.push(this.actionType)
           })
         }
-        //@ts-expect-error .first
-        const firstTarget = this.workflow.hitTargets.first() ?? this.workflow.targets?.first();
-        const firstTargetActor = firstTarget?.actor;
+        const firstTarget = this.workflow.hitTargets.first() ?? this.workflow.targets?.first() as (Token | TokenDocument);
+        const firstTargetActor: Actor = firstTarget?.actor as Actor;
         const targetMaxFlags = foundry.utils.getProperty(firstTargetActor, `flags.${MODULE_ID}.grants.max.damage`) ?? {};
         const maxFlags = foundry.utils.getProperty(this.workflow, `actor.flags.${MODULE_ID}.max`) ?? {};
         let needsMaxDamage = (maxFlags.damage?.all && await evalActivationCondition(this.workflow, maxFlags.damage.all, firstTarget, { async: true, errorReturn: false }))
@@ -559,19 +588,19 @@ export var MidiActivityMixin = Base => {
         }
 
         let actionFlavor;
-        switch (game.system.id) {
+        switch (game.system?.id) {
           case "sw5e":
-            actionFlavor = game.i18n.localize(this.actionType === "heal" ? "SW5E.Healing" : "SW5E.DamageRoll");
+            actionFlavor = i18n(this.actionType === "heal" ? "SW5E.Healing" : "SW5E.DamageRoll");
             break;
           case "n5e":
-            actionFlavor = game.i18n.localize(this.actionType === "heal" ? "N5E.Healing" : "N5E.DamageRoll");
+            actionFlavor = i18n(this.actionType === "heal" ? "N5E.Healing" : "N5E.DamageRoll");
             break;
           case "dnd5e":
           default:
-            actionFlavor = game.i18n.localize(this.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
+            actionFlavor = i18n(this.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
         }
 
-        const title = `${this.name} - ${actionFlavor}`;
+        const title = `${this.name}`;
         const speaker = getSpeaker(this.actor);
         let flavor = title;
         if (this.item.labels.damages?.length > 0) {
@@ -582,7 +611,7 @@ export var MidiActivityMixin = Base => {
           flavor,
           speaker,
         }, { "flags.dnd5e.roll": { type: "damage", itemId: this.item.id, itemUuid: this.item.uuid } });
-        if (game.system.id === "sw5e") foundry.utils.setProperty(messageData, "flags.sw5e.roll", { type: "damage", itemId: this.item.id, itemUuid: this.item.uuid })
+        if (game.system?.id === "sw5e") foundry.utils.setProperty(messageData, "flags.sw5e.roll", { type: "damage", itemId: this.item.id, itemUuid: this.item.uuid })
         if (needsMaxDamage) {
           for (let i = 0; i < result.length; i++) {
             result[i] = await result[i].reroll({ maximize: true });
@@ -605,7 +634,7 @@ export var MidiActivityMixin = Base => {
             let promises = result2.map(r => displayDSNForRoll(r, "damageRoll"));
             await Promise.all(promises);
           }
-          await DamageRoll.toMessage(result2, messageData, { rollMode: game.settings.get("core", "rollMode") });
+          await DamageRoll.toMessage(result2, messageData, { rollMode: game.settings?.get("core", "rollMode") });
           // await result2.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
         }
         setDamageRollMinTerms(result)
@@ -771,23 +800,23 @@ export var MidiActivityMixin = Base => {
         if (!config.midiOptions.workflowOptions?.notReaction && ["reaction", "reactiondamage", "reactionmanual", "reactionpreattack"].includes(this.activation?.type) && (this.activation?.cost ?? 1) > 0) {
           thisUsesReaction = true;
         }
-        if (!config.midiOptions.workflowOptions?.notReaction && checkReactionAOO && !thisUsesReaction && this.attack) {
+        if (!config.midiOptions.workflowOptions?.notReaction && checkReactionAOO && !thisUsesReaction ) {
           let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
           const isTurn = activeCombatants?.includes(speaker.token)
-          if (!isTurn && inCombat) {
+          if (!isTurn && inCombat && ["action", "crew"].includes(this.activation?.type)) {
             thisUsesReaction = true;
             AoO = true;
           }
         }
 
         // do pre roll checks
-        if ((game.system.id === "dnd5e" || game.system.id === "n5e") && requiresTargets && this.targets.size > allowedTargets) {
+        if ((game.system?.id === "dnd5e" || game.system?.id === "n5e") && requiresTargets && this.targets.size > allowedTargets) {
           ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
           if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat(`midi-qol.${MODULE_ID}.wrongNumberTargets`, { allowedTargets })}`)
           return false;
         }
         let tokenToUse: Token | undefined;
-        if (speaker.token) tokenToUse = canvas?.tokens?.get(speaker.token);
+        if (speaker.token) tokenToUse = canvas?.tokens?.get(speaker.token) as Token;
         const rangeDetails = checkActivityRange(this, tokenToUse, this.targets, checkMechanic("checkRange") !== "none")
         if (checkMechanic("checkRange") !== "none" && !isAoETargeting && !isEmanationTargeting && !AoO && speaker.token) {
           if (tokenToUse && this.targets.size > 0) {
@@ -855,11 +884,11 @@ export var MidiActivityMixin = Base => {
         workflow.reactionQueried = false;
         const blockReaction = thisUsesReaction && hasReaction && workflow.inCombat && needsReactionCheck(this.actor) && !config.midiOptions?.ammoSelector?.hasRun;
         if (blockReaction) {
-          let shouldRoll = false;
-          let d = await Dialog.confirm({
-            title: i18n("midi-qol.EnforceReactions.Title"),
+          const shouldRoll = await DialogV2.confirm({
+            // @ts-expect-error types needs to make window partial
+            window: { title: i18n("midi-qol.EnforceReactions.Title") },
             content: i18n("midi-qol.EnforceReactions.Content"),
-            yes: () => { shouldRoll = true },
+            rejectClose: false
           });
           if (!shouldRoll) {
             return false; // user aborted roll TODO should the workflow be deleted?
@@ -870,11 +899,11 @@ export var MidiActivityMixin = Base => {
         const itemUsesBonusAction = ["bonus"].includes(this.activation?.type);
         const blockBonus = workflow.inCombat && itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(this.actor) && !config.midiOptions?.ammoSelector?.hasRun;
         if (blockBonus) {
-          let shouldRoll = false;
-          let d = await Dialog.confirm({
-            title: i18n("midi-qol.EnforceBonusActions.Title"),
+          const shouldRoll = await DialogV2.confirm({
+            // @ts-expect-error types needs to make window partial
+            window: { title: i18n("midi-qol.EnforceBonusActions.Title") },
             content: i18n("midi-qol.EnforceBonusActions.Content"),
-            yes: () => { shouldRoll = true },
+            rejectClose: false
           });
           if (!shouldRoll) {
             return false;
@@ -901,17 +930,18 @@ export var MidiActivityMixin = Base => {
 
         let needPause = false;
         for (let tokenRef of this.targets) {
-          const target = getToken(tokenRef);
+          const target: Token | null | undefined = getToken(tokenRef);
           if (!target) continue;
           if (
-            //@ts-expect-error - sight not enabled but we are treating it as if it is
+            // sight not enabled but we are treating it as if it is
             (!target.document.sight.enabled && configSettings.optionalRules.invisVision)
-            || (target.document.actor?.type === "npc")
-            //@ts-expect-error - sight enabled but not the owner of the token
+            // @ts-expect-error no dnd5e-types
+            || ((target.actor as Actor)?.type === "npc")
+            // sight enabled but not the owner of the token
             || (!target.isOwner && target.document.sight.enabled)
             || (!target.vision || !target.vision?.los)) {
             initializeVision(target);
-            needPause = game.modules.get("levels-3d-preview")?.active ?? false;
+            needPause = game.modules?.get("levels-3d-preview")?.active ?? false;
           }
         }
         if (needPause) {
@@ -920,7 +950,6 @@ export var MidiActivityMixin = Base => {
             const target = getToken(tokenRef);
             if (!target || !target.vision?.los) continue;
             const sourceId = target.sourceId;
-            //@ts-expect-error
             canvas?.effects?.visionSources.set(sourceId, target.vision);
           }
         }
@@ -1020,13 +1049,13 @@ export var MidiActivityMixin = Base => {
         }
 
         // do pre roll checks
-        if ((game.system.id === "dnd5e" || game.system.id === "n5e") && requiresTargets && this.targets.size > allowedTargets) {
+        if ((game.system?.id === "dnd5e" || game.system?.id === "n5e") && requiresTargets && this.targets.size > allowedTargets) {
           ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets }));
           if (debugEnabled > 0) warn(`${game.user?.name} ${i18nFormat(`midi-qol.${MODULE_ID}.wrongNumberTargets`, { allowedTargets })}`)
           return this.removeWorkflow();
         }
         let tokenToUse: Token | undefined;
-        if (speaker.token) tokenToUse = canvas?.tokens?.get(speaker.token);
+        if (speaker.token) tokenToUse = canvas?.tokens?.get(speaker.token) as Token;
         const rangeDetails = checkActivityRange(this, tokenToUse, this.targets, checkMechanic("checkRange") !== "none")
         if (checkMechanic("checkRange") !== "none" && !isAoETargeting && !isEmanationTargeting && !AoO && speaker.token) {
           if (tokenToUse && this.targets.size > 0) {
@@ -1101,11 +1130,11 @@ export var MidiActivityMixin = Base => {
         workflow.reactionQueried = false;
         const blockReaction = thisUsesReaction && hasReaction && workflow.inCombat && needsReactionCheck(this.actor) && !config.midiOptions?.ammoSelector?.hasRun;
         if (blockReaction) {
-          let shouldRoll = false;
-          let d = await Dialog.confirm({
-            title: i18n("midi-qol.EnforceReactions.Title"),
+          const shouldRoll = await DialogV2.confirm({
+            // @ts-expect-error types needs to make window partial
+            window: { title: i18n("midi-qol.EnforceReactions.Title") },
             content: i18n("midi-qol.EnforceReactions.Content"),
-            yes: () => { shouldRoll = true },
+            rejectClose: false
           });
           if (!shouldRoll) {
             await workflow.performState(workflow.WorkflowState_Abort);
@@ -1117,11 +1146,11 @@ export var MidiActivityMixin = Base => {
         const itemUsesBonusAction = ["bonus"].includes(this.activation?.type);
         const blockBonus = workflow.inCombat && itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(this.actor) && !config.midiOptions?.ammoSelector?.hasRun;
         if (blockBonus) {
-          let shouldRoll = false;
-          let d = await Dialog.confirm({
-            title: i18n("midi-qol.EnforceBonusActions.Title"),
+          const shouldRoll = await DialogV2.confirm({
+            // @ts-expect-error types needs to make window partial
+            window: { title: i18n("midi-qol.EnforceBonusActions.Title") },
             content: i18n("midi-qol.EnforceBonusActions.Content"),
-            yes: () => { shouldRoll = true },
+            rejectClose: false
           });
           if (!shouldRoll) {
             await workflow.performState(workflow.WorkflowState_Abort); // user aborted roll TODO should the workflow be deleted?
@@ -1151,14 +1180,15 @@ export var MidiActivityMixin = Base => {
           const target = getToken(tokenRef);
           if (!target) continue;
           if (
-            //@ts-expect-error - sight not enabled but we are treating it as if it is
+            // sight not enabled but we are treating it as if it is
             (!target.document.sight.enabled && configSettings.optionalRules.invisVision)
-            || (target.document.actor?.type === "npc")
-            //@ts-expect-error - sight enabled but not the owner of the token
+            // @ts-expect-error no dnd5e-types
+            || ((target.actor as Actor)?.type === "npc")
+            // sight enabled but not the owner of the token
             || (!target.isOwner && target.document.sight.enabled)
             || (!target.vision || !target.vision?.los)) {
             initializeVision(target);
-            needPause = game.modules.get("levels-3d-preview")?.active ?? false;
+            needPause = game.modules?.get("levels-3d-preview")?.active ?? false;
           }
         }
         if (needPause) {
@@ -1167,7 +1197,6 @@ export var MidiActivityMixin = Base => {
             const target = getToken(tokenRef);
             if (!target || !target.vision?.los) continue;
             const sourceId = target.sourceId;
-            //@ts-expect-error
             canvas?.effects?.visionSources.set(sourceId, target.vision);
           }
         }
@@ -1228,10 +1257,9 @@ export var MidiActivityMixin = Base => {
         let item = this;
         let target = this.target ?? { value: 0 };
         const fudge = 0.1;
-        //@ts-expect-error
         const { width, height } = tokenToUse.document;
 
-        templateOptions.distance = Math.ceil(target.template.size + Math.max(width / 2, height / 2, 0) * (canvas?.dimensions?.distance ?? 0));
+        templateOptions.distance = Math.ceil(target.template.size + Math.max((width ?? 1) / 2, (height ?? 1) / 2, 0) * (canvas?.dimensions?.distance ?? 0));
         templateOptions.x = tokenToUse.center?.x ?? 0;
         templateOptions.y = tokenToUse.center?.y ?? 0;
         foundry.utils.setProperty(templateOptions, `flags.${MODULE_ID}.actorUuid`, actor.uuid);
@@ -1247,8 +1275,7 @@ export var MidiActivityMixin = Base => {
         const templateData = template.document.toObject();
         if (this.item) foundry.utils.setProperty(templateData, `flags.${MODULE_ID}.itemUuid`, this.item.uuid);
         if (this.actor) foundry.utils.setProperty(templateData, `flags.${MODULE_ID}.actorUuid`, this.actor.uuid);
-        if (!foundry.utils.getProperty(templateData, `flags.${game.system.id}.origin`)) foundry.utils.setProperty(templateData, `flags.${game.system.id}.origin`, this.item?.uuid);
-        // @ts-expect-error
+        if (!foundry.utils.getProperty(templateData, `flags.${game.system?.id}.origin`)) foundry.utils.setProperty(templateData, `flags.${game.system?.id}.origin`, this.item?.uuid);
         const templateDocuments: MeasuredTemplateDocument[] | undefined = await canvas?.scene?.createEmbeddedDocuments("MeasuredTemplate", [templateData]);
 
         if (templateDocuments && templateDocuments.length > 0) {
@@ -1282,7 +1309,7 @@ export var MidiActivityMixin = Base => {
       const tokenToUse = getToken(this.item.parent);
       const autoCreatetemplate = activityHasAutoPlaceTemplate(this);
       const emanationNoTemplate = activityHasEmanationNoTemplate(this);
-      // If emanationTemplate or emanationNoTemplate setup game.user.targets.
+      // If emanationTemplate or emanationNoTemplate setup game.user?.targets.
       if (tokenToUse && autoCreatetemplate) {
         this.templates = await this._placeEmanationTemplate();
       }
@@ -1428,7 +1455,7 @@ export var MidiActivityMixinSheet = Base => {
         .reduce((ret, a) => { ret.push({ label: `${a.name}`, value: a.id }); return ret }, [{ label: "None", value: "none" }]);
       context.triggeredActivityOptions?.forEach(option => { option.selected = option.value === this.activity.midiProperties.triggeredActivityId });
       let activity = context.activity
-      let triggeredActivity = context.activity.triggeredActivity;
+      let triggeredActivity = await context.activity.getTriggeredActivity();
       const triggerList: String[] = [activity.name];
       while (triggeredActivity) {
         triggerList.push(triggeredActivity.name);
@@ -1436,7 +1463,7 @@ export var MidiActivityMixinSheet = Base => {
           ui.notifications?.error(`midi-qol | Circular activity call detected ${triggerList.join("->")}`);
           break;
         }
-        triggeredActivity = triggeredActivity.triggeredActivity;
+        triggeredActivity = await triggeredActivity.getTriggeredActivity();
       }
       context.triggeredActivityTargetOptions = Object.entries(geti18nOptions("TriggeredActivityTargetOptions")).map(([value, label]) => {
         return { value, label, selected: midiProperties.triggeredActivityTargets === value }
@@ -1453,7 +1480,6 @@ export var MidiActivityMixinSheet = Base => {
       context.AutoTargetActionOptions = Object.entries(foundry.utils.mergeObject(defaultAction, geti18nOptions("autoTargetOptions"))).map(([value, label]) => ({ value, label }));
       context.hasAreaTarget = this.activity.target?.template?.type;
       context.possibleOtherActivity = this.activity.possibleOtherActivity;
-      console.error(context);
       return context;
 
     }
@@ -1468,7 +1494,7 @@ export var MidiActivityMixinSheet = Base => {
     /** @override */ // This does not seem to work for activity sheets
     _getHeaderButtons() {
       let buttons = super._getHeaderButtons();
-      const DIMtitle = game.i18n.localize('dae.DIMEditor.Name');
+      const DIMtitle = i18n('dae.DIMEditor.Name');
       const Editor = globalThis.DAE?.DIMEditor;
       if (!Editor) return buttons;
       buttons.unshift({
@@ -1494,7 +1520,7 @@ function renderActivitySheetHook(app, [elem]) {
   }
   let closeButton = elem.closest('.window-header').querySelector('button[data-action="close"]');
   let daeButton = document.createElement('button');
-  const DIMtitle = game.i18n.localize('dae.DIMEditor.Name');
+  const DIMtitle = i18n('dae.DIMEditor.Name');
   daeButton.setAttribute('class', 'header-control fa-solid fa-file-pen dae-dimeditor');
   daeButton.onclick = ev => { new Editor(activity, {}).render(true); }
   if (activity.macro?.command) daeButton.style.color = '#36ba36';

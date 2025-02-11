@@ -1,90 +1,99 @@
+import { AnyObject } from "fvtt-types/utils";
 import { geti18nOptions, i18n } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
-import { getCurrentMacros, getCurrentSourceMacros, OnUseMacros } from "./Item.js";
+import { getCurrentMacros, getCurrentSourceMacros, OnUseMacro, OnUseMacros } from "./Item.js";
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-export class ActorOnUseMacrosConfig extends FormApplication {
-  object: any;
-  constructor(object, options) {
-    super(object, options);
+export class ActorOnUseMacrosConfig extends HandlebarsApplicationMixin(ApplicationV2) {
+  document: Actor.Implementation
+  constructor(options) {
+    super(options);
+    this.document = options.document;
   }
 
-  static get defaultOptions() {
-	  return foundry.utils.mergeObject(super.defaultOptions, {
-	    template: "modules/midi-qol/templates/actorOnUseMacrosConfig.html",
-      classes: ["form", "active-effect-sheet","sheet"],
-      width: "550",
-      height: "auto",
-      title: i18n("midi-qol.ActorOnUseMacros"),
-      closeOnSubmit: false,
-      submitOnClose: true,
-      resizable: false,
-      jQuery: true,
-      dragDrop: [{dropSelector: ".key"}]
-    });
-  }
-
-  async getData(options) {
-    let data: any = await super.getData(options);
-    data.onUseMacroName = foundry.utils.getProperty(this.object._source, "flags.midi-qol.onUseMacroName");
-    if (data.onUseMacroName !== undefined) data.onUseMacroParts = new OnUseMacros(data.onUseMacroName);
-    else data.onUseMacroParts = new OnUseMacros(null);
-    data.MacroPassOptions = foundry.utils.mergeObject(geti18nOptions("onUseMacroOptions"), Workflow.stateHooks);
-    return data;
-  }
-
-  async _updateObject(event, data) {
-    await this.object.setFlag("midi-qol", "onUseMacroParts", data.onUseMacroParts);
-    // don't need to update onUseMacroName since the preUpdate hook will do this
-    this.render();
-  }
-
-  _getSubmitData(updateData={}) {
-
-    //@ts-ignore
-    const fd = new FormDataExtended(this.form, {editors: this.editors});
-    //@ts-ignore .object v10
-    let data = foundry.utils.expandObject(fd.object);
-    if ( updateData ) foundry.utils.mergeObject(data, updateData);
-    return data;
-  }
-
-  activateListeners(html) {
-    super.activateListeners(html);
-    if (this.isEditable) {
-      html.find(".macro-control").click(this.onMacroControl.bind(this));    
-      // html.find(".key").onDrop = ev => this._onDrop(ev);
+  // old "form" "active-effect-sheet" "sheet"
+  static PARTS = {
+    dialog: {
+      id: "dialog-onuse-config",
+      classes: ["dialog", "active-effect-sheet", "midi-qol"],
+      template: "modules/midi-qol/templates/actorOnUseMacrosConfig.hbs"
     }
+  }
+
+  // TODO: dragDrop? dropSelector .key
+  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+    window: {
+      resizable: false,
+      title: "midi-qol.ActorOnUseMacros"
+    },
+    position: {
+      height: "auto" as "auto",
+      width: 550
+    },
+    form: {
+      closeOnSubmit: false,
+      submitOnClose: true
+    }
+  }, { inplace: false });
+
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    if (this.isEditable) {
+      for (const control of Array.from(this.element.querySelectorAll(".macro-control"))) {
+        control.addEventListener("click", this.onMacroControl.bind(this));
+      }
+    }
+  }
+
+  get isEditable() {
+    if ( this.document.pack ) {
+      const pack = game.packs?.get(this.document.pack);
+      if ( pack?.locked ) return false;
+    }
+    return this.document.testUserPermission(game.user as User, CONST.DOCUMENT_OWNERSHIP_LEVELS.OWNER);
+  }
+
+  async _prepareContext(options) {
+    let context: any = await super._prepareContext(options);
+    context.onUseMacroName = foundry.utils.getProperty(this.document._source, "flags.midi-qol.onUseMacroName");
+    if (context.onUseMacroName !== undefined) context.onUseMacroParts = new OnUseMacros(context.onUseMacroName);
+    else context.onUseMacroParts = new OnUseMacros(null);
+    context.MacroPassOptions = foundry.utils.mergeObject(geti18nOptions("onUseMacroOptions"), Workflow.stateHooks);
+    return context;
   }
 
   _onDragStart(ev) {}
 
   _onDrop(ev) {
     ev.preventDefault();
-    //@ts-ignore
-    const data = TextEditor.getDragEventData(ev);
+    const data: any = TextEditor.getDragEventData(ev);
     if (data.uuid) ev.target.value += data.uuid;
   }
   
-  async onMacroControl(event){
-    event.preventDefault();
-    const a = event.currentTarget;
-  
-    // Add new macro component
-    if ( a.classList.contains("add-macro") ) {
-      const macros = getCurrentSourceMacros(this.object);
-      const index = macros.items.length;
-      await this._onSubmit(event);  // Submit any unsaved changes
-      const updateData =  {};
-      updateData[`onUseMacroParts.items.${index}`] = {macroName: "",  option: "postActiveEffects"};
-      return this.submit({preventClose: true, updateData})?.then(() => this.render(true));
+  async onMacroControl(event?){
+    event?.preventDefault();
+    const a = event?.currentTarget;
+    const macros = getCurrentSourceMacros(this.document);
+    const formMacros = Object.entries(new FormDataExtended(this.element.querySelector("form") as HTMLFormElement)?.object) ?? [];
+    for (const [k, v] of formMacros) {
+      foundry.utils.setProperty(macros, k.split('.').slice(1).join('.'), v);
     }
-  
-    // Remove a macro component
-    if ( a.classList.contains("delete-macro") ) {
+    
+    if ( a?.classList.contains("add-macro") ) {
+      // Add new macro component
+      macros.items.push(new OnUseMacro(""));
+    } else  if ( a?.classList.contains("delete-macro") ) {
+      // Remove a macro component
       const li = a.closest(".macro-change");
-      const macros = getCurrentSourceMacros(this.object);
       macros.items.splice(Number(li.dataset.macropart), 1);
-      return this.object.update({"flags.midi-qol.onUseMacroName": macros.toString()}).then(() => this.render(true));
     }
+    // @ts-expect-error can't know about flags
+    await this.document.update({"flags.midi-qol.onUseMacroName": macros.toString()});
+    if (event) this.render({force: true});
+  }
+
+  async _preClose(options) {
+    await this.onMacroControl();
+    return;
   }
 }

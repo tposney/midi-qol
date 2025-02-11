@@ -1,12 +1,13 @@
 import { i18n } from "../../midi-qol.js"
 import { configSettings, defaultTargetConfirmationSettings, targetConfirmation } from "../settings.js";
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-export class TargetConfirmationConfig extends FormApplication {
+export class TargetConfirmationConfig extends HandlebarsApplicationMixin(ApplicationV2) {
   gridMappings: any;
-  selectedPostion: {x: number, y: number};
-
-  constructor(object, options) {
-    super(object, options);
+  selectedPosition: {x: number, y: number};
+i
+  constructor(options) {
+    super(options);
     this.gridMappings = {
       "midi-qol-grid1": {x: -1, y: -1},
       "midi-qol-grid2": {x: 0, y: -1},
@@ -17,20 +18,33 @@ export class TargetConfirmationConfig extends FormApplication {
       "midi-qol-grid7": {x: -1, y: 1},
       "midi-qol-grid8": {x: 0, y: 1},
       "midi-qol-grid9": {x: 1, y: 1}
-    }
+    };
+    this.selectedPosition = targetConfirmation.gridPosition ?? foundry.utils.duplicate(defaultTargetConfirmationSettings.gridPosition);
   }
-  static get defaultOptions(): any {
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      title: game.i18n.localize("midi-qol.ConfigTitle"),
-      template: "modules/midi-qol/templates/targetConfirmationConfig.html",
-      id: "midi-qol-target-confirmation-config",
+
+  static PARTS = {
+    main: { template: "modules/midi-qol/templates/targetConfirmationConfig.hbs" }
+  };
+
+  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+    id: "midi-qol-target-confirmation-config",
+    window: {
+      title: "midi-qol.ConfigTitle"
+    },
+    position: {
       width: 400,
-      height: "auto",
-      closeOnSubmit: true,
-      scrollY: [".tab.workflow"],
-      tabs: [{ navSelector: ".tabs", contentSelector: ".content", initial: "gm" }]
-    })
-  }
+      height: "auto" as "auto"
+    },
+    form: {
+      closeOnSubmit: true
+    },
+    actions: {
+      submit: TargetConfirmationConfig.#onSubmit
+    }
+  }, { inplace: false });
+    // scrollY: [".tab.workflow"],
+    // tabs: [{ navSelector: ".tabs", contentSelector: ".content", initial: "gm" }]
+
   async _updateObject(event, formData) {
     formData = foundry.utils.expandObject(formData);
     let newSettings = foundry.utils.mergeObject(targetConfirmation, formData, { overwrite: true, inplace: false })
@@ -39,49 +53,56 @@ export class TargetConfirmationConfig extends FormApplication {
       newSettings = foundry.utils.duplicate(defaultTargetConfirmationSettings);
       newSettings.gridPosition = formData.gridPosition;
     }
-    game.settings.set("midi-qol", "TargetConfirmation", newSettings);
+    //@ts-expect-error
+    game.settings?.set("midi-qol", "TargetConfirmation", newSettings);
     this.render(true);
-    game.settings.set("midi-qol", "LateTargeting", "none");
+    //@ts-expect-error
+    game.settings?.set("midi-qol", "LateTargeting", "none");
     if (game.user?.isGM) configSettings.gmLateTargeting = "none";
   }
 
-  activateListeners(html) {
-    super.activateListeners(html);
-    const selected = Object.keys(this.gridMappings).find(key => this.gridMappings[key].x === this.selectedPostion.x && this.gridMappings[key].y === this.selectedPostion.y);  
-    html.find(`#${selected}`).addClass("selected");
-    html.find(".midi-enable-target-confirmation").on("click", event => {
-      targetConfirmation.enabled = !targetConfirmation.enabled;
-      this.render(true);
-    });
-    html.find(".midi-always-target-confirmation").on("click", event => {
-      targetConfirmation.all = !targetConfirmation.all;
-      this.render(true);
-    });
-    const gridItems = document.querySelectorAll(".midi-qol .grid-item");
-
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    const selected = Object.keys(this.gridMappings).find(key => this.gridMappings[key].x === this.selectedPosition.x && this.gridMappings[key].y === this.selectedPosition.y);  
+    this.element.querySelector(`#${selected}`)?.classList.add("selected");
+    const checkboxes = this.element.querySelectorAll('form .form-group input[type="checkbox"]');
+    checkboxes.forEach((checkbox) => {
+      checkbox.addEventListener("click", () => {
+        // @ts-expect-error
+        targetConfirmation[checkbox.name] = !targetConfirmation[checkbox.name];
+        this.render({force: true});
+      })
+    })
+    const gridItems = this.element.querySelectorAll(".midi-qol .grid-item");
     gridItems.forEach((item) => {
       item.addEventListener("click", () => {
         gridItems.forEach((other) => {
           other.classList.remove("selected");
         });
         item.classList.toggle("selected");
-        this.selectedPostion = this.gridMappings[item.id];
+        this.selectedPosition = this.gridMappings[item.id];
       });
     });
   }
+
   get title() {
-    return i18n("Target Confirmation Config")
+    return i18n("Target Confirmation Config") ?? "Target Confirmation Config";
   }
 
-  getData(options?: Application.RenderOptions | undefined): FormApplication.Data<{}, FormApplication.Options> | Promise<FormApplication.Data<{}, FormApplication.Options>> {
-    const data: any = super.getData(options);
-    if (!this.selectedPostion) this.selectedPostion = targetConfirmation.gridPosition ?? foundry.utils.duplicate(defaultTargetConfirmationSettings.gridPosition);
-    data.targetConfirmation = targetConfirmation;
-    return data;
+  async _prepareContext(options) {
+    const context: any = await super._prepareContext(options);
+    context.targetConfirmation = targetConfirmation;
+    return context;
   }
 
-  protected _onSubmit(event: Event, options: any | undefined): Promise<Partial<Record<string, unknown>>> {
-    targetConfirmation.gridPosition = this.selectedPostion;
-    return super._onSubmit(event, options);
+  async _preClose(options) {
+    targetConfirmation.gridPosition = this.selectedPosition;
+    // @ts-expect-error
+    await game.settings?.set("midi-qol", "TargetConfirmation", targetConfirmation);
+  }
+
+  static async #onSubmit(event, target) {
+    // @ts-expect-error
+    this.close();
   }
 }

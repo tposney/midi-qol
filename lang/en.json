@@ -30,7 +30,7 @@
   "midi-qol.ItemRollButtons.Name": "Add attack/damage buttons to item inventory list",
   "midi-qol.ItemRollButtons.Hint": "Add Roll Buttons to item description - these buttons support ctrl/alt/shift to skip the dialog",
   "midi-qol.AddChatDamageButtons.Name": "Add damage buttons to chat message",
-  "midi-qol.AddChatDamageButtons.Hint": "Add Damage buttons to any damage roll chat message - clicking applies damage to all selected tokens (NOT TARGETED) (the same as the drop down menu)",
+  "midi-qol.AddChatDamageButtons.Hint": "Add Damage buttons to any damage roll chat message - this enables the dnd5e damage buttons on midi chat cards",
   "midi-qol.AddChatDamageButtonsOptions": {
     "none": "None",
     "gm": "Only add buttons for GM",
@@ -428,11 +428,20 @@
     "effects": "Check Effects",
     "effectsTemplates": "Check Effects and Templates"
   },
-  "midi-qol.GMSettings": "GM",
-  "midi-qol.PlayerSettings": "Player",
+  "midi-qol.Config": {
+    "Tabs": {
+      "gm": "GM",
+      "player": "Player",
+      "workflow": "Workflow",
+      "concentration": "Concentration",
+      "reactions": "Reactions",
+      "misc": "Misc",
+      "mechanics": "Mechanics",
+      "rules": "Rules",
+      "quick": "Quick Settings"
+    }
+  },
   "midi-qol.SoundSettings.Tab": "Sounds",
-  "midi-qol.Workflow": " Workflow",
-  "midi-qol.Misc": "Misc",
   "midi-qol.Targeting": "Targeting",
   "midi-qol.Special": "Specials",
   "midi-qol.Hits": "Hits",
@@ -450,8 +459,6 @@
   "midi-qol.AttackMacro.Name": "Attack Bonus Macros",
   "midi-qol.AttackMacro.Hint": "Comma separated list of macros to call when calculating attack roll which will be applied when checking if the attack hit the targets",
   "midi-qol.DAEMidiQOL": "DAE/Midi-QOL specific",
-  "midi-qol.Optional": "Rules",
-  "midi-qol.Mechanics": "Mechanics",
   "midi-qol.OptionalRules.Name": "Optional Game Rules",
   "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable. Generally, don't work with better rolls.",
   "midi-qol.InvisAdvantage.Name": "Unseen/Invisible attackers have advantage/disadvantage on attacks",
@@ -618,11 +625,11 @@
   "midi-qol.SpellDamage": "Spell Damage",
   "midi-qol.NonSpellDamage": "Non-Spell Damage",
   "midi-qol.ConditionHeader": "Activation Conditions",
-  "midi-qol.EffectActivationCondition.Name": "Effects will be applied if true",
+  "midi-qol.EffectActivationCondition.Name": "Effects will be applied if true (Deprecated)",
   "midi-qol.EffectActivation": "Use System Activation for Effect application (Deprecated)",
-  "midi-qol.ItemActivationCondition.Name": "Item use allowed if true",
-  "midi-qol.ReactionActivationCondition.Name": "Reaction will be triggered if true",
-  "midi-qol.OtherActivationCondition.Name": "Other Formula will be rolled if true",
+  "midi-qol.ItemActivationCondition.Name": "Item use allowed if true (Deprecated)",
+  "midi-qol.ReactionActivationCondition.Name": "Reaction will be triggered if true (Deprecated)",
+  "midi-qol.OtherActivationCondition.Name": "Other Formula will be rolled if true (Deprecated)",
   "midi-qol.HPUpdated": "HP Updated",
   "midi-qol.HPNPCUpdated": "NPC HP Updated",
   "midi-qol.HPNotUpdated": "HP Not Updated",
@@ -688,7 +695,6 @@
   "midi-qol.FixStickyKeys.Name": "Fix sticky alt/ctrl/shift",
   "midi-qol.FixStickyKeys.Hint": "If set midi will attempt to resolve alt/ctrl/shift being stuck 'on'",
   "midi-qol.DisplaySaveAdvantage.Name": "Display if save had Advantage/Disadvantage",
-  "midi-qol.QuickSettings": "QuickSettings",
   "midi-qol.QuickSettingsBlurb": {
     "1": "Quick settings let you set a combination of settings at once.",
     "2": "When one of the buttons below is pushed the changes are immediately made to your settings",
@@ -714,7 +720,6 @@
     "allCrit": "Attack Roll Total + Critical"
   },
   "midi-qol.Reactions": "Prompt For Reactions",
-  "midi-qol.ReactionsTab": "Reactions",
   "midi-qol.DoReactions.Name": "Check PLAYER reactions",
   "midi-qol.DoReactions.Hint": "Give an attacked actor the option to use a reaction before adjudicating the roll. Reactions when hit require auto check hits enabled. Damage reactions if applying damage",
   "midi-qol.GMDoReactions.Name": "Check NPC/GM reactions",
@@ -756,7 +761,7 @@
   },
   "midi-qol.AddRow": "Add Row",
   "midi-qol.CheckFlanking.Name": "Check Flanking",
-  "midi-qol.CheckFlanking.Hint": "Check if you and your allies flank the opponent. Either gives attacker advantage and/or applies <strong>CE flanking</strong> condition to <h4>attacker</h4> OR applies CE Flanked condition to target",
+  "midi-qol.CheckFlanking.Hint": "Check if you and your allies flank the opponent. Either gives attacker advantage and/or applies <strong>CE flanking</strong> condition to <em>attacker</em> OR applies CE Flanked condition to target",
   "midi-qol.CheckFlankingOptions": {
     "off": "none",
     "ceonly": "Convenient Effect Flanking Only",
@@ -828,14 +833,20 @@
   "midi-qol.versus": "versus",
   "midi-qol.Skipped": "Skipped",
   "midi-qol.ExportTroubleShooting": "Export Trouble Shooting Data",
-  "midi-qol.TroubleShooter.Name": "Open Trouble Shooter",
-  "midi-qol.TroubleShooter.Hint": "Trouble shooter to help diagnose problems and collect settings",
-  "midi-qol.TroubleShooter.Label": "Troubleshooter",
-  "midi-qol.Summary": "Summary",
-  "midi-qol.CommonModules": "Common Modules",
-  "midi-qol.Problems": "Problems",
-  "midi-qol.AllModules": "All Modules",
-  "midi-qol.Errors": "Errors",
+  "midi-qol.TroubleShooter": {
+    "Name": "Open Trouble Shooter",
+    "Hint": "Trouble shooter to help diagnose problems and collect settings",
+    "Label": "Troubleshooter",
+    "Tabs": {
+      "summary": "Summary",
+      "common": "Common Modules",
+      "problems": "Problems",
+      "errors": "Errors",
+      "modules": "All Modules"
+    },
+    "ClearErrors": "Clear Errors",
+    "Overwrite": "Overwrite Midi Settings"
+  },
   "midi-qol.Inactive": "Inactive",
   "midi-qol.Active": "Active",
   "midi-qol.EnforceSingleWeaponTarget.Name": "Weapons attack single target",
@@ -886,6 +897,7 @@
     "SaveDRdr": "Saves -> Damage Reduction -> damage resistance (dr/dv/di)"
   },
   "midi-qol.WaitingForPreviousWorkflow": "Previous roll of {name} has not completed.",
+  "midi-qol.ResolvePreviousWorkflow": "Choose what to do with the previous roll",
   "midi-qol.ConfirmTargetOptions": {
     "default": "Midi Settings",
     "always": "Always",
@@ -902,7 +914,9 @@
   "midi-qol.ConcentrationIncapacitatedConditionCheck.Hint": "Incapacitated, Dead,  Unconscious, Petrified, Paralysed and Stunned remove concentration",
   "midi-qol.AutoCompleteWorkflow.Name": "Autocomplete workflow if required",
   "midi-qol.AutoCompleteWorkflow.Hint": "Workflows will be marked as complete if rolled before completion, no extra rolls will be performed",
-  "midi-qol.emanationNoTemplate": "Emanation - No Template",
+  "midi-qol.emanationNoTemplate": "Emanation/Radius - No Template",
+  "midi-qol.emanationTemplate.counted.one": "Emanation No Template",
+  "midi-qol.emanationTemplate.counted.other": "Emanation No Template",
   "midi-qol.AddFakeDice.Name": "Add fake dice to GM Dice So Nice rolls",
   "midi-qol.MidiFieldsTab.Name": "Display Midi item fields in a separate tab",
   "midi-qol.UndoChatColor.Name": "Undo Chat Cards Color",
@@ -1018,7 +1032,7 @@
           "hint": "Roll the activity as if owned by..."
         },
         "otherActivityCompatible": {
-          "label": "Other Activity",
+          "label": "Other Activity Compatible",
           "hint": "Can be used as an other activity"
         },
         "ignoreTraits": {
@@ -1096,7 +1110,7 @@
         "hint": "Default ammunition to consume"
       },
       "otherActivityId": {
-        "label": "Other Activity",
+        "label": "Apply Other Activity",
         "hint": "Extra activity to preform 'other' damage"
       }
     }
@@ -1133,8 +1147,8 @@
   },
   "midi-qol.UTILITY": {
     "Title": {
-      "one": "Midi Utility",
-      "other": "Midi Utility"
+      "one": "Midi Use",
+      "other": "Midi Use"
     }
   },
   "midi-qol.SUMMON": {

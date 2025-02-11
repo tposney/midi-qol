@@ -88,7 +88,7 @@
         "duplicateSource": null,
         "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.1.2",
+        "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
         "lastModifiedBy": null
@@ -222,9 +222,12 @@
       "chat": ""
     },
     "source": {
-      "custom": "PHB pg. 53",
+      "custom": "Midi 12.4.15",
       "revision": 1,
-      "rules": "2024"
+      "rules": "2014",
+      "book": "",
+      "page": "",
+      "license": ""
     },
     "uses": {
       "max": "max(1, @abilities.cha.mod)",
@@ -337,25 +340,37 @@
           "forceDialog": false,
           "confirmTargets": "default",
           "automationOnly": false,
-          "identifier": ""
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true
         }
       }
     },
     "identifier": "bardic-inspiration-dnd202-mq10010",
     "enchant": {},
     "prerequisites": {
-      "level": null
+      "level": null,
+      "repeatable": false
     },
-    "properties": []
+    "properties": [],
+    "advancement": [],
+    "cover": null,
+    "crewed": false
   },
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.classfeatures.hpLNiGq7y67d2EHA",
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180117979,
-    "modifiedTime": 1734180117979,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555835389,
+    "modifiedTime": 1738555835389,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "fZIl4G4qj3C894LI",

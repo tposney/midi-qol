@@ -254,7 +254,7 @@
             }
           ],
           "critical": {
-            "allow": false,
+            "allow": true,
             "bonus": ""
           }
         },
@@ -275,7 +275,15 @@
           "automationOnly": true,
           "forceDialog": false,
           "confirmTargets": "default",
-          "identifier": ""
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true
         },
         "macroData": {
           "name": "",
@@ -299,9 +307,9 @@
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180119396,
-    "modifiedTime": 1734180119396,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555836908,
+    "modifiedTime": 1738555836908,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "5Ok9Jbl5nOokCkqf",

@@ -59,7 +59,7 @@
         "duplicateSource": null,
         "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.1.2",
+        "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
         "lastModifiedBy": null
@@ -282,25 +282,37 @@
           "forceDialog": false,
           "confirmTargets": "default",
           "automationOnly": false,
-          "identifier": ""
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "otherActivityCompatible": true
         }
       }
     },
     "identifier": "gm-inspiration-10010",
     "enchant": {},
     "prerequisites": {
-      "level": null
+      "level": null,
+      "repeatable": false
     },
-    "properties": []
+    "properties": [],
+    "advancement": [],
+    "cover": null,
+    "crewed": false
   },
   "_stats": {
     "compendiumSource": "Item.F58v9Hv37KF4JszF",
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180117979,
-    "modifiedTime": 1734180117979,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555835389,
+    "modifiedTime": 1738555835389,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "fZIl4G4qj3C894LI",

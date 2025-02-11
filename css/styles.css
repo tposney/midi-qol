@@ -135,26 +135,57 @@
 }
 
 .midi-qol-box {
-  border: 2px groove #eeede0;
+  border: 2px groove var(--color-fieldset-border);
   padding: 3px;
+  border-radius: 4px;
 }
 .midi-qol-nobox {
   padding: 5px;
-  border-top: 2px groove #eeede0;
+  border-top: 2px groove var(--color-fieldset-border);
 }
 
 .midi-qol-faint {
   color: #606060;
 }
 
+.application .midi-qol-faint {
+  color: var(--color-form-hint);
+}
+
 .midi-qol-very-faint {
   color: #A0A0A0;
+}
+
+#midi-qol-settings div.form-group select {
+  width: auto;
+}
+
+#midi-qol-settings .form-group {
+  display: grid;
+  grid-template-areas: "label input" "hint hint";
+  grid-template-columns: 1fr;
+}
+
+#midi-qol-settings .form-group :nth-child(3) {
+  grid-area: hint;
+}
+
+#midi-qol-settings .form-group:not(:nth-of-type(1)) {
+  margin-top: 5px;
+}
+
+.midi-qol-quick-config .window-content {
+  overflow-y: scroll;
 }
 
 #midi-qol-item-selector .item-list {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+#midi-qol-sound-config table {
+  margin: 0;
 }
 
 .midi-qol-tooltip {
@@ -197,8 +228,17 @@
   border: 2px groove #f0f0e0;
   margin: 0 5px 0 0;
 }
-.midi-qol .dialog .dialog-buttons button:last-child {
+.midi-qol.dialog:not(.reaction,.optional) .dialog-buttons button:last-child {
   margin-right: 0;
+}
+.midi-qol.dialog.reaction .dialog-buttons button:last-child {
+  margin-right: 5px;
+}
+.midi-qol.dialog.optional .dialog-buttons button:last-child {
+  margin-right: 5px;
+}
+.midi-qol.dialog.optional .dice-tooltip-collapser:has(>.expanded) {
+  grid-template-rows: 1fr;
 }
 .midi-qol .dialog .dialog-buttons button.default {
   background: rgba(0, 0, 0, 0.05);
@@ -245,6 +285,17 @@
   border: 2px groove var(--color-border-light-secondary);
 }
 
+.active-effect-sheet.midi-qol .effect-controls {
+  flex: 0;
+  margin: 0 8px 0 5px;
+}
+
+.active-effect-sheet.midi-qol .midi-qol-box {
+  border: 1px groove var(--color-border-light-tertiary);
+  border-top: 0px;
+  border-radius: 0;
+}
+
 /* ----------------------------------------- */
 /* midi-trouble-shooter
 /* ----------------------------------------- */
@@ -254,6 +305,12 @@
 .midi-trouble-shooter .contents .scrollable {
   flex: 1;
   overflow: hidden auto;
+}
+.midi-trouble-shooter .form-footer {
+  display: flex;
+}
+.midi-qol-import-troubleshooter .notes {
+  color: var(--color-text-primary);
 }
 /*
 .midi-trouble-shooter .window-content > div {
@@ -734,4 +791,41 @@
       position: relative;
     top: 0.25rem;
     left: 0.25rem;
+  }
+
+  /* Item sheet midi tab */
+  .midi-qol-tab .form-header {
+    color: var(--color-text-dark-primary);
+  }
+  .midi-qol-tab textarea {
+    color: var(--color-text-dark-primary);
+  }
+  .midi-qol-tab .midi-properties {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .midi-qol-tab .form-group {
+    margin-bottom: 5px;
+  }
+  .midi-qol-tab .midi-properties label.checkbox {
+    align-items: baseline;
+  }
+  .theme-dark .midi-qol-tab textarea {
+    background: var(--dnd5e-background-card);
+  }
+  .midi-qol-tab .midi-activation-conditions h3 {
+    border-bottom-color: var(--color-border-light-primary)
+  }
+
+  #midi-qol-undo-workflow .midi-qol-box {
+    margin-right: -1px;
+  }
+
+  #midi-qol-target-confirmation-config h4 {
+    text-shadow: none;
+    color: var(--color-text-primary);
+  }
+
+  .midi-targeting dl .midi-qol-box dd {
+    margin: 1rem;
   }

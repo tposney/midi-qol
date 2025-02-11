@@ -1,13 +1,16 @@
-import { i18n } from "../midi-qol.js";
+import { error, gameStats, getGame, i18n } from "../midi-qol.js";
 
 export class MidiKeyManager {
   constructor() {
   }
   
   initKeyMappings() {
-    //@ts-ignore
+    const game = getGame();
+    if (!game?.keybindings) {
+      error("MidiKeyManager | initKeyMappings | Game is not initialized");
+      return;
+    }
     const keybindings = game.keybindings;
-    //@ts-ignore
     const normalPrecedence = CONST.KEYBINDING_PRECEDENCE.NORMAL;
 
     keybindings.register("midi-qol", "NoOptionalRules", {
@@ -19,7 +22,7 @@ export class MidiKeyManager {
       precedence: normalPrecedence
     });
     keybindings.register("midi-qol", "Versatile", {
-      name: i18n("DND5E.Versatile"),
+      name: i18n("DND5E.Versatile") ?? "Verstatile",
       hint: "midi-qol.KeysVersatile.Hint",
       editable: [
         { key: "KeyV" },
@@ -29,7 +32,7 @@ export class MidiKeyManager {
     });
 
     keybindings.register("midi-qol", "RollToggle", {
-      name: i18n("midi-qol.RollToggle.Name"),
+      name: i18n("midi-qol.RollToggle.Name") ?? "Roll Toggle",
       hint: i18n("midi-qol.RollToggle.Hint"),
       editable: [
         { key: "KeyF" }

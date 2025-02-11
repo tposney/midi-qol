@@ -3,30 +3,31 @@ import { checkMechanic, checkRule, configSettings, targetConfirmation } from "..
 import { FULL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, computeCoverBonus, computeFlankingStatus, getIconFreeLink, getToken, isTargetable, markFlanking, tokenForActor } from "../utils.js";
 import { getTokenPlayerName } from "../utils.js";
 import { TroubleShooter } from "./TroubleShooter.js";
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
-export class TargetConfirmationDialog extends Application {
-  callback: ((data) => {}) | undefined
+export class TargetConfirmationDialog extends HandlebarsApplicationMixin(ApplicationV2) {
+  callback: ((data) => {}) | undefined;
   data: {
-    //@ts-ignore
-    actor: CONFIG.Actor.documentClass,
-    //@ts-ignore
-    activity: CONFIG.Item.documentClass,
+    actor: Actor.Implementation,
+    // no dnd5e types, so "any" it is
+    activity: any,
     user: User | null,
     targets: Token[],
     options: any
   };
   hookId: number;
 
-  //@ts-ignore .Actor, .Item
-  constructor(actor: CONFIG.Actor.documentClass, activity, user, options: any = {}) {
+  constructor(actor: Actor.Implementation, activity, user, options: any = {}) {
     super(options);
+    this.position.left = TargetConfirmationDialog.xPosition;
+    this.position.top = TargetConfirmationDialog.yPosition;
     this.data = { actor, activity, user, targets: [], options }
     const keys = {}; // TODO see if this needs to be set from the workflow event or let it get processed later
     // Handle alt/ctrl etc keypresses when completing the dialog
     this.callback = function (value) {
       foundry.utils.setProperty(options, "workflowOptions.advantage", options.workflowOptions?.advantage);
       foundry.utils.setProperty(options, "workflowOptions.disadvantage", options.workflowOptions?.disadvantage);
-      foundry.utils.setProperty(options, "workflowOptions.fastForward", options.worfkflowOptions?.fastForward);
+      foundry.utils.setProperty(options, "workflowOptions.fastForward", options.workflowOptions?.fastForward);
       return options.callback ? options.callback(value) : value;
     }
     if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking")) && game.user?.targets) {
@@ -37,66 +38,87 @@ export class TargetConfirmationDialog extends Application {
           markFlanking(token, target)
     }
     // this.callback = options.callback;
+    this.hookId = Hooks.on("targetToken", (user, token, targeted) => {
+      if (user !== game.user) return;
+      const maxTargets = this.data.activity.target?.affects?.count;
+      if (maxTargets && game.user.targets?.size > maxTargets)
+        ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets: maxTargets }));
+      if (game.user.targets) {
+        const validTargets: Array<string> = [];
+        for (let target of game.user.targets) {
+          if (maxTargets && validTargets.length >= maxTargets) break;
+          if (isTargetable(target)) validTargets.push(target.id);
+        }
+        game.user.updateTokenTargets(validTargets);
+      }
+      this.data.targets = Array.from(game.user.targets ?? [])
+    });
     return this;
   }
 
   get title() {
     return this.data.options.title ?? i18n("midi-qol.TargetConfirmation.Name");
   }
-
-  static get defaultOptions() {
-    let left = 100;
-    let top = 100;
-    let middleX = window.innerWidth / 2 - 155;
-    let middleY = window.innerHeight / 2 - 100;
-    //@ts-ignore _collapsed
-    let right = window.innerWidth - 310 - (ui.sidebar?._collapsed ? 10 : (ui.sidebar?.position.width ?? 300));
-    let bottom = window.innerHeight - 200;
-    let xposition = middleX;
-    let yposition = middleY;
+  
+  static get xPosition() {
+    const left = 100;
+    const middle = window.innerWidth / 2 - 155;
+    const right = window.innerWidth - 310 - (ui.sidebar?.element.hasClass("collapsed") ? 10 : (ui.sidebar?.position.width ?? 300));
     switch (targetConfirmation.gridPosition?.x) {
-      case -1: xposition = left; break;
-      case 0: xposition = middleX; break;
+      case -1: return left;
+      case 0 : return middle;
       default:
-      case 1: xposition = right; break;
+      case 1 : return right;
     }
-    switch (targetConfirmation.gridPosition?.y) {
-      case -1: yposition = top; break;
-      case 0: yposition = middleY; break;
-      default:
-      case 1: yposition = bottom; break;
-    }
-    return foundry.utils.mergeObject(super.defaultOptions, {
-      title: i18n("midi-qol.TargetConfirmation.Name"),
-      classes: ["midi-targeting"],
-      template: "modules/midi-qol/templates/targetConfirmation.html",
-      id: "midi-qol-targetConfirmation",
-      width: 300,
-      left: xposition,
-      top: yposition,
-      height: "auto",
-      resizeable: "true",
-      closeOnSubmit: true
-    });
   }
 
-  async getData(options = {}) {
-    let data: any = foundry.utils.mergeObject(this.data, await super.getData(options));
+  static get yPosition() {
+    const top = 100;
+    const middle = window.innerHeight / 2 - 100;
+    const bottom = window.innerHeight - 200;
+    switch (targetConfirmation.gridPosition?.y) {
+      case -1: return top;
+      case 0 : return middle;
+      default:
+      case 1 : return bottom;
+    }
+  }
+
+  static PARTS = {
+    main: {template: "modules/midi-qol/templates/targetConfirmation.hbs"}
+  };
+
+  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+    id: "midi-qol-targetConfirmation",
+    window: {
+      title: "midi-qol.TargetConfirmation.Name",
+      resizable: true
+    },
+    classes: ["midi-targeting"],
+    position: {
+      width: 300,
+      height: "auto" as "auto",
+      left: 100,
+      top: 100
+    }
+  }, { inplace: false });
+
+  async _prepareContext(options) {
+    let data: any = foundry.utils.mergeObject(this.data, await super._prepareContext(options));
     const targets = Array.from(game.user?.targets ?? []);
     data.targets = [];
     const maxTargets = this.data.activity.target?.affects?.count;
     for (let target of targets) {
       if (maxTargets && data.targets.length >= maxTargets) break;
-      //@ts-expect-error .texture
       let img = target.document.texture.src;
-      if (VideoHelper.hasVideoExtension(img)) {
-        img = await game.video.createThumbnail(img, { width: 50, height: 50 });
+      if (VideoHelper.hasVideoExtension(img as string)) {
+        img = await game.video?.createThumbnail(img as string, { width: 50, height: 50 }) ?? "";
       }
       const actor = this.data.activity.actor;
       const token = tokenForActor(actor);
       let details: string[] = [];
       if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking"))) {
-        if (token && computeFlankingStatus(token, target)) details.push((i18n("midi-qol.Flanked")));
+        if (token && computeFlankingStatus(token, target)) details.push((i18n("midi-qol.Flanked") ?? "Flanked"));
       }
 
       let attackerToken = token;
@@ -147,7 +169,6 @@ export class TargetConfirmationDialog extends Application {
       //@ts-expect-error .disposition
       const relativeDisposition = token?.document.disposition * target.document.disposition;
       let displayedDisposition: any = undefined;
-      //@ts-expect-error .disposition .SECRET
       if (target.document.disposition !== CONST.TOKEN_DISPOSITIONS.SECRET) {
         if (relativeDisposition === CONST.TOKEN_DISPOSITIONS.FRIENDLY) {
           displayedDisposition = i18n("TOKEN.DISPOSITION.FRIENDLY");
@@ -158,7 +179,7 @@ export class TargetConfirmationDialog extends Application {
         }*/
       }
       data.targets.push({
-        name, // : namegame.user?.isGM ? getLinkText(target.actor) : getTokenPlayerName(target),
+        name, // : namegame.user.isGM ? getLinkText(target.actor) : getTokenPlayerName(target),
         img,
         displayedDisposition,
         details: details.join(" - "),
@@ -174,71 +195,49 @@ export class TargetConfirmationDialog extends Application {
     return data;
   }
 
-  activateListeners(html) {
-    super.activateListeners(html);
-    if (!this.hookId) {
-      this.hookId = Hooks.on("targetToken", (user, token, targeted) => {
-        if (user !== game.user) return;
-        const maxTargets = this.data.activity.target?.affects?.count;
-        if (maxTargets && game.user?.targets?.size > maxTargets)
-          ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets: maxTargets }));
-        if (game.user?.targets) {
-          const validTargets: Array<string> = [];
-          for (let target of game?.user?.targets) {
-            if (maxTargets && validTargets.length >= maxTargets) break;
-            if (isTargetable(target)) validTargets.push(target.id);
-          }
-          game.user?.updateTokenTargets(validTargets);
-        }
-        this.data.targets = Array.from(game.user?.targets ?? [])
-        this.render(true);
-      });
-    }
-    html.find(".midi-roll-confirm").on("click", () => {
+  async _onRender(context, options) {
+    await super._onRender(context, options);
+    this.element.querySelector(".midi-roll-confirm")?.addEventListener("click", () => {
       this.doCallback(true);
       this.close();
-    })
-    html.find(".midi-roll-cancel").on("click", () => {
+    });
+    this.element.querySelector(".midi-roll-cancel")?.addEventListener("click", () => {
       this.doCallback(false);
       this.close();
-    })
-
+    });
     if (canvas) {
-      let targetNames = html[0].getElementsByClassName("content-link midi-qol");
-      for (let targetName of targetNames) {
+      let targetNames = this.element.getElementsByClassName("content-link midi-qol");
+      for (let targetName of Array.from(targetNames)) {
         targetName.addEventListener("click", async (event) => {
           event.stopPropagation();
-          const doc = await fromUuid(event.currentTarget.dataset.uuid);
-          //@ts-expect-error .sheet
-          return doc?.sheet.render(true);
+          // @ts-expect-error
+          const doc = await fromUuid(event.currentTarget?.dataset.uuid);
+          return doc?.sheet.render({force: true});
         });
       }
-      let imgs = html[0].getElementsByTagName('img');
-      for (let i of imgs) {
+      let imgs = this.element.getElementsByTagName("img");
+      for (let i of Array.from(imgs)) {
         i.style.border = 'none';
-        i.closest(".midi-qol-box").addEventListener("contextmenu", (event) => {
+        i.closest(".midi-qol-box")?.addEventListener("contextmenu", (event) => {
           const token = getToken(i.id);
           if (token) {
             token.setTarget(false, { user: game.user, releaseOthers: false, groupSelection: true });
           }
         });
-        i.closest(".midi-qol-box").addEventListener('click', async function () {
+        i.closest(".midi-qol-box")?.addEventListener('click', async function () {
           const token = getToken(i.id);
-          //@ts-expect-error .ping
           if (token) await canvas?.ping(token.center);
         });
-        i.closest(".midi-qol-box").addEventListener('mouseover', function () {
+        i.closest(".midi-qol-box")?.addEventListener('mouseover', function () {
           const token = getToken(i.id);
           if (token) {
-            //@ts-expect-error .ping
             token.hover = true;
             token.refresh();
           }
         });
-        i.closest(".midi-qol-box").addEventListener('mouseout', function () {
+        i.closest(".midi-qol-box")?.addEventListener('mouseout', function () {
           const token = getToken(i.id);
           if (token) {
-            //@ts-expect-error .ping
             token.hover = false;
             token.refresh();
           }

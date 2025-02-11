@@ -1,0 +1,177 @@
+<section id="midi-troubleshooter-problems" class="tab{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+    <div class="midi-scrollable-list">
+        <div class="midi-qol-box">
+            {{#if hasProblems}}
+                <table>
+                    <th style="text-align: center" colspan="4">Common Problems</th>
+                    <tr>
+                    <th>Severity</th>
+                    <th>Module Id</th>
+                    <th>Problem</th>
+                    <th>Fix</th>
+                    </tr>
+                    {{#each problems as |problem moudleId|}}
+                        <tr>
+                        {{#if problem.critical}}
+                            <td style="color: red"><strong>Critical {{problem.severity}}</strong></td>
+                        {{else}}
+                            <td>{{problem.severity}}</td>
+                        {{/if}}
+                        <td>{{moduleId}}</td>
+                        <td>{{problem.problemSummary}}</td>
+                        <td>{{problem.fixer}}</td>
+                        </tr>
+
+                        {{#if problem.hasFixerFunc}}
+                            <tr>
+                                <td></td>
+                                <td></td>
+                                <td style="text-align: center">
+                                    <div class="midi-qol-box">
+                                        <div class="trouble-shooter-action-label" id="fixer-{{problem.fixerid}}"><strong>{{localize "Auto
+                                            Fix"}}</strong></div>
+                                    </div>
+                                </td>
+                                <td style="text-align: center;">Click on Auto Fix to resolve the problem</td>
+                            </tr>
+                        {{/if}}
+                        {{#if problem.problemDetail}}
+                            <tr>
+                                <td></td>
+                                <td>Details</td>
+                                <td colspan=3>{{problem.problemDetail}}</td>
+                            </tr>
+                        {{/if}}
+                    {{/each}}
+                </table>
+            {{else}}
+                <div style="text-align: center">No Problems detected</div>
+            {{/if}}
+        </div>
+        <div class="midi-qol-box">
+            {{#if hasIncompatible}}
+                <table>
+                    <t style="text-align: center" colspan="2">Incompatible Modules Active</th>
+                    <tr>
+                        <td>Module Id</td>
+                        <td>Module Name</td>
+                    </tr>
+                    {{#each summary.incompatible as |module|}}
+                        <tr>
+                            <td>{{module.key}}</td>
+                            <td>{{module.title}}</td>
+                        </tr>
+                    {{/each}}
+                </table>
+            {{else}}
+                <div style="text-align: center">No Incompatible Modules Active</div>
+            {{/if}}
+        </div>
+        <div class="midi-qol-box">
+            {{#if hasFoundryModuleProblems}}
+                <table>
+                    <col width="15%">
+                    <col width="15%">
+                    <col width="70%">
+                    <th style="text-align: center" colspan="3">
+                    Foundry Identified Compatibility Issues
+                    </th>
+                    <tr>
+                        <th style="text-align: left">Id</th>
+                        <th style="text-align: left">Type</th>
+                        <th style="text-align: left">Title</th>
+                    </tr>
+                    {{#each summary.foundryModuleIssues as |foundryDetail key|}}
+                        <tr>
+                            <td><strong>{{key}}</strong></td>
+                            <td>{{foundryDetail.type}}</td>
+                            <td>{{foundryDetail.title}}</td>
+                        </tr>
+                        {{#each foundryDetail.error as |error|}}
+                            <tr>
+                                <td></td>
+                                <td>Error</td>
+                                <td colspan=1>
+                                    {{error}}
+                                </td>
+                            </tr>
+                        {{/each}}
+                        {{#each foundryDetail.warning as |warning|}}
+                            <tr>
+                                <td></td>
+                                <td>Warning</td>
+                                <td colspan=1>
+                                    {{warning}}
+                                </td>
+                            </tr>
+                        {{/each}}
+                    {{/each}}
+                </table>
+            {{else}}
+                <div style="text-align: center">No Foundry module issues reported</div>
+            {{/if}}
+        </div>
+        <div class="midi-qol-box">
+            {{#if hasOutOfDate}}
+                <table>
+                    <th style="text-align: center" colspan="5">
+                    Out of date modules installed
+                    </th>
+                    <tr>
+                        <th style="text-align: left">Id</th>
+                        <th style="text-align: left">Active</th>
+                        <th style="text-align: left">Title</th>
+                        <th style="text-align: left">Version</th>
+                        <th style="text-align: left">Foundry Version</th>
+                    </tr>
+                    {{#each summary.outOfDate as |moduleVersion|}}
+                        {{#if moduleVersion.active}}
+                            <tr>
+                        {{else}}
+                            <tr class="midi-qol-very-faint">
+                        {{/if}}
+                                <td>{{moduleVersion.key}}</td>
+                                <td>{{moduleVersion.active}}</td>
+                                <td>{{moduleVersion.title}}</td>
+                                <td>{{moduleVersion.moduleVersion}}</td>
+                                <td>{{moduleVersion.foundryVersion}}</td>
+                            </tr>
+                    {{/each}}
+                </table>
+            {{else}}
+                <div style="text-align: center">No Out of Date Modules Installed</div>
+            {{/if}}
+        </div>
+        <div class="midi-qol-box">
+            {{#if hasOutOfDate}}
+                <table>
+                    <th style="text-align: center" colspan="5">
+                    Potential out of date modules installed
+                    </th>
+                    <tr>
+                        <th style="text-align: left">Id</th>
+                        <th style="text-align: left">Active</th>
+                        <th style="text-align: left">Title</th>
+                        <th style="text-align: left">Version</th>
+                        <th style="text-align: left">Foundry Version</th>
+                    </tr>
+                    {{#each summary.possibleOutOfDate as |moduleVersion|}}
+                        {{#if moduleVersion.active}}
+                            <tr>
+                        {{else}}
+                            <tr class="midi-qol-very-faint">
+                        {{/if}}
+                            <td>{{moduleVersion.key}}</td>
+                            <td>{{moduleVersion.active}}</td>
+                            <td>{{moduleVersion.title}}</td>
+                            <td>{{moduleVersion.moduleVersion}}</td>
+                            <td>{{moduleVersion.version}}</td>
+                        </tr>
+                    {{/each}}
+                </table>
+            {{else}}
+                <div style="text-align: center">No Out of Date Modules Installed</div>
+            {{/if}}
+        </div>
+    </div>
+</section>

@@ -1,3 +1,31 @@
+### 12.4.26
+* Sneak attack bonus now inherits the properties of the weapon that did the attack, i.e. magic etc.
+* Fix for untarget options getting overwritten by GM settings.
+* Fix for self effects (dae setting apply when rolling/applying active effects) not expiring with special durations start/end of turn.
+* Fix for target confirmation not being shown on enchant/summons activities.
+* App v2 changes - many thanks @michael.
+
+### 12.4.25
+* This is hopefully the last beta release - I will use it on my game tomorrow to make sure there are no major issues outstanding.
+* Align origin set by midi-qol application of active effects to that of dnd5e.
+* DamageOnlyWorkflow now completes via AllRollsComplete, rather than RollFinished, which means isDamaged will be called for DamageOnlyWorkflows.
+* Using a legendary action won't be treated as a reaction when checking AoO is enabled.
+* Rolling a death save will no longer trigger an error in bonusDialog.
+* Fix for error being thrown when placing templates in some cases.
+* Renable apply damage buttons for players if set. Only targets they own will be displayed in the targets they can apply damage to.
+* Fix for reach propterty usage - still uses item's range rather than activities range.
+* A review of all the midi sample items which should work in v4.
+* Fix for shove item to use Athletics for the attacker.
+* Change so that attacks that do negative damage (i.e. healing) don't trigger isDamaged reactions.
+* Fix for rolling saves/checks via Ripper's Epic Rolls.
+* Fix for onTargetUpdate processing.
+* Allow triggeredActivityId to be a full activity uuid. There is no UI support for this, but enchantments can set the field. Implemented to allow adding a triggered activity to an item (for things like weapon of dragon slaying) that won't clobber the base items behaviour.
+* Fix for supporting changes to saving throw target value via dnd5e.preRollSavingThrow etc.
+* Fix for itemMacro calls when the item that sourced the macro has been deleted from the source actor, e.g. consumables.
+* Removed configSettings.v3DamageApplication.
+* **Breaking** Now call the ammunition items macros for each midi state. 
+* Moved to the latest version of @league-of-foundry-developers/fvtt-types, which results in 11 semantic errors on build (due to circular references) but otherwise is a good thing. Many thanks to @michael for holding my hand, and doing mammoth amounts of work, through this traumatic process.
+
 ### 12.4.24
 * Fix for ignoring always confirm targets activity setting if no targets selected when activity rolled.
 * Fix for optional bonus rolls being performed on player clients for failed saves not working.

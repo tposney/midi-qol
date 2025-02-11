@@ -7,9 +7,10 @@ import { bonusCheck } from "./patching.js";
 import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, updateUndoChatCardUuidsById } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { installedModules } from "./setupModules.js";
+const { DialogV2 } = foundry.applications.api;
 
 export var socketlibSocket: any = undefined;
-var traitList = { di: {}, dr: {}, dv: {}, dm: {}, da: {} };
+var traitList: any = { di: {}, dr: {}, dv: {}, dm: {}, da: {} };
 
 export let setupSocket = () => {
   socketlibSocket = globalThis.socketlib.registerModule(MODULE_ID);
@@ -196,6 +197,7 @@ async function _removeCEEffect(data: { effectName: string, uuid: string }) {
 async function cancelWorkflow(data: { workflowId: string, itemCardUuid: string }) {
   const workflow = Workflow.getWorkflow(data.workflowId);
   if (workflow?.itemCardUuid !== data.itemCardUuid) {
+    // @ts-expect-error
     const itemCard = await fromUuid(data.itemCardUuid);
     if (itemCard) itemCard.delete()
     return undefined;
@@ -205,14 +207,16 @@ async function cancelWorkflow(data: { workflowId: string, itemCardUuid: string }
 }
 
 async function confirmDamageRollComplete(data: { activityUuid: string, itemCardId: string, itemCardUuid: string }) {
-  //@ts-expect-error
+  // @ts-expect-error
   const itemCard = fromUuidSync(data.itemCardUuid);
-  //@ts-expect-error
+  // @ts-expect-error
   let activity = fromUuidSync(data.activityUuid);
   let workflow = Workflow.getWorkflow(data.activityUuid);
   if (!activity && itemCard) // no activity means it was a synthetic item's activity
+  // @ts-expect-error no dnd5e-types
     activity = itemCard.getAssociatedActivity(); // recover the activity from the chat message item data
-  if (!workflow) workflow = activity.workflow;
+  // @ts-expect-error
+  if (!workflow) workflow = activity?.workflow;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     /* Confirm this needs to be awaited
     */
@@ -221,7 +225,8 @@ async function confirmDamageRollComplete(data: { activityUuid: string, itemCardI
   }
   const hasHits = workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0;
   if ((workflow.currentAction === workflow.WorkflowState_AttackRollComplete) || hasHits &&
-    activity.hasDamage && (!workflow.damageRoll || workflow.currentAction !== workflow.WorkflowState_ConfirmRoll)) {
+    // @ts-expect-error no dnd5e-types
+    activity?.hasDamage && (!workflow.damageRoll || workflow.currentAction !== workflow.WorkflowState_ConfirmRoll)) {
     return "midi-qol | You must roll damage before completing the roll - you can only confirm miss until then";
   }
   if (workflow.hitTargets.size === 0 && workflow.hitTargetsEC.size === 0) {
@@ -234,20 +239,23 @@ async function confirmDamageRollComplete(data: { activityUuid: string, itemCardI
 }
 
 async function confirmDamageRollCompleteHit(data: { activityUuid: string, itemCardId: string, itemCardUuid: string }) {
-  //@ts-expect-error
+  // @ts-expect-error
   const itemCard = fromUuidSync(data.itemCardUuid);
-  //@ts-expect-error
+  // @ts-expect-error
   let activity = fromUuidSync(data.activityUuid);
   let workflow = Workflow.getWorkflow(data.activityUuid);
   if (!activity && itemCard) // no activity means it was a synthetic item's activity
+    // @ts-expect-error no dnd5e-types
     activity = itemCard.getAssociatedActivity(); // recover the activity from the chat message item data
-  if (!workflow) workflow = activity.workflow;
+  // @ts-expect-error
+  if (!workflow) workflow = activity?.workflow;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     Workflow.removeItemCardAttackDamageButtons(data.itemCardId, {removeAttackButtons: true, removeDamageButtons: true}).then(() => Workflow.removeItemCardConfirmRollButton(data.itemCardId));
     return undefined;
   }
 
-  if ((activity.hasDamage && !workflow.damageRoll) ||
+  // @ts-expect-error no dnd5e-types
+  if ((activity?.hasDamage && !workflow.damageRoll) ||
     workflow.currentAction !== workflow.WorkflowState_ConfirmRoll) {
     return "midi-qol | You must roll damage before completing the roll - you can only confirm miss until then";
   }
@@ -259,7 +267,7 @@ async function confirmDamageRollCompleteHit(data: { activityUuid: string, itemCa
   }
   workflow.hitTargets = new Set(workflow.targets);
   workflow.hitTargetsEC = new Set();
-  const rollMode = game.settings.get("core", "rollMode");
+  const rollMode = safeGetGameSetting("core", "rollMode");
   workflow.isFumble = false;
   for (let hitDataKey in workflow.hitDisplayData) {
     workflow.hitDisplayData[hitDataKey].hitString = i18n("midi-qol.hits");
@@ -273,14 +281,16 @@ async function confirmDamageRollCompleteHit(data: { activityUuid: string, itemCa
 }
 
 async function confirmDamageRollCompleteMiss(data: { activityUuid: string, itemCardId: string, itemCardUuid: string }) {
-  //@ts-expect-error
+  // @ts-expect-error
   const itemCard = fromUuidSync(data.itemCardUuid);
-  //@ts-expect-error
+  // @ts-expect-error
   let activity = fromUuidSync(data.activityUuid);
   let workflow = Workflow.getWorkflow(data.activityUuid);
   if (!activity && itemCard) // no activity means it was a synthetic item's activity
+    // @ts-expect-error no dnd5e-types
     activity = itemCard.getAssociatedActivity(); // recover the activity from the chat message item data
-  if (!workflow) workflow = activity.workflow;
+  // @ts-expect-error
+  if (!workflow) workflow = activity?.workflow;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     /* Confirm this needs to be awaited
     */
@@ -290,7 +300,7 @@ async function confirmDamageRollCompleteMiss(data: { activityUuid: string, itemC
   if (workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0) {
     workflow.hitTargets = new Set();
     workflow.hitTargetsEC = new Set();
-    const rollMode = game.settings.get("core", "rollMode");
+    const rollMode = safeGetGameSetting("core", "rollMode");
     for (let hitDataKey in workflow.hitDisplayData) {
       workflow.hitDisplayData[hitDataKey].hitString = i18n("midi-qol.misses");
       if (configSettings.highlightSuccess) {
@@ -435,7 +445,6 @@ export async function _canSense(data: { tokenUuid, targetUuid }) {
       visionMode: token.document.sight.visionMode,
       color: globalThis.Color.from(token.document.sight.color),
       isPreview: !!token._original,
-      //@ts-expect-error specialStatusEffects
       blinded: token.document.hasStatusEffect(CONFIG.specialStatusEffects.BLIND)
     });
   }
@@ -483,6 +492,7 @@ async function _completeActivityUse(data: {
 }) {
   if (!game.user) return null;
   let { activityUuid, actorUuid, config, dialog, message } = data;
+  // @ts-expect-error
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
 
@@ -496,15 +506,16 @@ async function _completeItemUseV2(data: {
 }) {
   if (!game.user) return null;
   let { itemData, actorUuid, config, dialog, message } = data;
+  // @ts-expect-error
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
   //@ts-ignore v10
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor, keepId: true });
   // prepare item data for socketed events
   ownedItem.prepareData();
-  //@ts-expect-error
+  // @ts-expect-error no dnd5e-types
   ownedItem.prepareFinalAttributes();
-  //@ts-expect-error
+  // @ts-expect-error no dnd5e-types
   ownedItem.applyActiveEffects();
   const workflow = await completeItemUseV2(ownedItem, config, dialog, message);
   if (data.config?.midiOptions?.workflowData) return workflow.getMacroData({ noWorkflowReference: true }); // can't return the workflow
@@ -516,15 +527,16 @@ async function _completeItemUse(data: {
 }) {
   if (!game.user) return null;
   let { itemData, actorUuid, config, options } = data;
+  // @ts-expect-error
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
-  //@ts-ignore v10
+  // @ts-expect-error doesn't expect keepId
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor, keepId: true });
   // prepare item data for socketed events
   ownedItem.prepareData();
-  //@ts-expect-error
+  // @ts-expect-error no dnd5e-types
   ownedItem.prepareFinalAttributes();
-  //@ts-expect-error
+  // @ts-expect-error no dnd5e-types
   ownedItem.applyActiveEffects();
   const workflow = await completeItemUse(ownedItem, config, options);
   if (data.options?.workflowData) return workflow.getMacroData({ noWorkflowReference: true }); // can't return the workflow
@@ -548,6 +560,7 @@ async function createActor(data) {
 }
 
 async function deleteToken(data: { tokenUuid: string }) {
+  // @ts-expect-error
   const token = await fromUuid(data.tokenUuid);
   if (token) { // token will be a token document.
     token.delete();
@@ -597,6 +610,7 @@ export async function deleteItemEffects(data: { targets, origin: string, ignore:
           error("GMAction:deleteItemEffects | could not find actor for ", idData.tokenUuid);
           continue;
         }
+        // @ts-expect-error
         let originEntity = await fromUuid(origin);
         if (!originEntity) {
           error("GMAction:deleteItemEffects | could not find origin for ", origin);
@@ -747,16 +761,8 @@ isConcentrationCheck: boolean | undefined,
 rollDC: number,
 saveItemUuid: string,
 workflowOptions: object
-} = {
-advantage: undefined,
-disadvantage: undefined,
-isMagicSave: isMagicSave,
-isFriendly: undefined,
-isConcentrationCheck: undefined,
-rollDC: rollDC,
-saveItemUuid: "",
-workflowOptions: this.workflowOptions
-};
+workflowId: string
+
 */
   let config: any = { midiOptions: data.options };
   switch (data.request) {
@@ -826,7 +832,7 @@ export async function rollAbility(data: { request: string; targetUuid: string; a
   });
 }
 
-export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined, isMagicSave: boolean | undefined }) {
+export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined, isMagicSave: boolean | undefined , midiOptions: any | undefined}) {
   // let tokens = data.tokens.map((tuuid: any) => new Token(MQfromUuid(tuuid)));
 
   // TODO come back and see what things can be passed to this.
@@ -838,7 +844,8 @@ export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silen
       silent: data.silent,
       rollmode: data.rollMode,
       dc: data.dc,
-      isMagicSave: data.isMagicSave
+      isMagicSave: data.isMagicSave,
+      options: data.midiOptions
     });
 }
 
@@ -913,7 +920,6 @@ async function prepareDamageListItems(data: {
       let deltaTemp = amount > 0 ? Math.min(hp.temp, amount) : 0;
       // Since tempDamage represents the final change in tempHP - we can use it for calcs and it is ignored.
 
-      //@ts-expect-error
       let deltaHP = Math.clamp(amount - deltaTemp, -hp.damage, hp.value);
       if (hpDamage !== deltaHP) {
         error(`damage detail amount ${amount} !== hpDamage ${hpDamage}`, configSettings.useDamageDetail ? "ignoring hpDamage" : "using hpDamage");
@@ -1081,13 +1087,8 @@ async function createPlayerDamageCard(data: { damageList: any; autoApplyDamage: 
       // whisper: ChatMessage.getWhisperRecipients("players").filter(u => u.active).map(u => u.id),
       flags: { "midiqol": { "undoDamage": prepareDamagelistToJSON(tokenIdList) } }
     };
-    //@ts-expect-error
-    if (game.release.generation < 12) {
-      chatData.type = CONST.CHAT_MESSAGE_TYPES.OTHER;
-    } else {
-      //@ts-expect-error
-      chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
-    }
+
+    chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
     if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? "", data.flagTags);
     chatCardUuid = (await ChatMessage.create(chatData))?.uuid;
   }
@@ -1124,17 +1125,10 @@ async function createGMReverseDamageCard(
       user: game.user?.id,
       speaker: { scene: getCanvas()?.scene?.id, alias: game.user?.name, user: game.user?.id },
       content: content,
-      whisper: ChatMessage.getWhisperRecipients("GM").filter(u => u.active).map(u => u.id),
+      whisper: ChatMessage.getWhisperRecipients("GM").filter(u => (u as User).active).map(u => u.id),
       flags: { "midiqol": { "undoDamage": prepareDamagelistToJSON(tokenIdList) } }
     };
-
-    //@ts-expect-error
-    if (game.release.generation < 12) {
-      chatData.type = CONST.CHAT_MESSAGE_TYPES.OTHER;
-    } else {
-      //@ts-expect-error
-      chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
-    }
+    chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
     if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? "", data.flagTags);
     chatCardUuid = (await ChatMessage.create(chatData))?.uuid;
   }
@@ -1142,12 +1136,13 @@ async function createGMReverseDamageCard(
   return chatCardUuid;
 }
 
-export let processUndoDamageCard = (message, html, data) => {
-  if (!message.flags?.midiqol?.undoDamage) return true;
+export let processUndoDamageCard = (message: ChatMessage, html, data) => {
+  if (!(message.flags?.midiqol as any)?.undoDamage) return true;
   let button = html.find("#all-reverse");
   button.click((ev: { stopPropagation: () => void; }) => {
     (async () => {
-      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageDetail, updateOptions, calcDamageOptions } of message.flags.midiqol.undoDamage) {
+      const undoDamageData = foundry.utils.getProperty(message, "flags.midiqol.undoDamage");
+      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageDetail, updateOptions, calcDamageOptions } of undoDamageData) {
         recoverDamageDetailFromJSON(damageDetail);
         if (!actorUuid) continue;
         const applyButton = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -1174,7 +1169,8 @@ export let processUndoDamageCard = (message, html, data) => {
   button = html.find("#all-apply");
   button.click((ev: { stopPropagation: () => void; }) => {
     (async () => {
-      for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageDetail, updateOptions, calcDamageOptions, oldVitality, newVitality } of message.flags.midiqol.undoDamage) {
+      const undoDamageData = foundry.utils.getProperty(message, "flags.midiqol.undoDamage");
+      if (undoDamageData) for (let { actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, damageDetail, updateOptions, calcDamageOptions, oldVitality, newVitality } of undoDamageData) {
         if (!actorUuid) continue;
         let actor = fromActorUuid(actorUuid);
         const applyButton = html.find(`#apply-${actorUuid.replaceAll(".", "")}`);
@@ -1195,7 +1191,8 @@ export let processUndoDamageCard = (message, html, data) => {
     })();
   })
 
-  message.flags.midiqol.undoDamage.forEach(({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions }) => {
+  const undoDamageData = foundry.utils.getProperty(message, "flags.midiqol.undoDamage");
+  undoDamageData?.forEach(({ actorUuid, oldTempHP, oldHP, totalDamage, newHP, newTempHP, oldVitality, newVitality, damageDetail, calcDamageOptions, updateOptions }) => {
     if (!actorUuid) return;
     recoverDamageDetailFromJSON(damageDetail);
     // ids should not have "." in the or it's id.class
@@ -1269,14 +1266,14 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
   let ray = new Ray(data.point, targetToken.center);
   let distance = data.distance / canvas.dimensions.distance * canvas.dimensions.size;
   let newCenter = ray.project(1 + distance / ray.distance);
-  newCenter = canvas.grid.getSnappedPosition(newCenter.x - targetToken.w / 2, newCenter.y - targetToken.h / 2, 1);
+  const M = CONST.GRID_SNAPPING_MODES;
+  newCenter = canvas.grid.getSnappedPoint({x: newCenter.x - targetToken.w / 2, y: newCenter.y - targetToken.h / 2}, {mode: M.CENTER});
 
   if (data.checkCollision) {
     //@ts-expect-error
     const testCollision = CONFIG.Canvas.polygonBackends.move.testCollision(targetToken.center, newCenter, { source: targetToken.document, type: "move", any: "closest" });
-    if (testCollision.length) {
-      const collisionPoint = { x: testCollision[0].x, y: testCollision[0].y };
-      //@ts-expect-error
+    if (testCollision && testCollision instanceof foundry.canvas.edges.PolygonVertex) {
+      const collisionPoint = { x: testCollision.x, y: testCollision.y };
       const getCenterCollisionPoint = canvas.grid.getCenterPoint(collisionPoint);
       newCenter = canvas.grid.getSnappedPosition(getCenterCollisionPoint.x - targetToken.w / 2, getCenterCollisionPoint.y - targetToken.h / 2, 1);
     }
@@ -1288,7 +1285,7 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
 export async function rollActionSave(data: any) {
   let { request, actorUuid, abilities, options, content, title, saveDC } = data;
   let saveResult: any = await new Promise(async (resolve, reject) => {
-    const buttons: any = {};
+    const buttons: foundry.applications.api.DialogV2.Button<any>[] = [];
     for (let ability of abilities) {
       let config: any = {
         type: request,
@@ -1307,6 +1304,7 @@ export async function rollActionSave(data: any) {
       const button = {
         //@ts-expect-error
         label: game.system?.enrichers?.createRollLabel(config) ?? `${saveDC} ${ability} ${request}`,
+        action: ability,
         callback: async (html: any) => {
           let roll = await rollAbility({
             targetUuid: actorUuid,
@@ -1317,25 +1315,26 @@ export async function rollActionSave(data: any) {
           resolve(roll)
         }
       };
-      buttons[ability] = button;
+      buttons.push(button);
     }
-    //@ts-expect-error
     if (!foundry.utils.isEmpty(buttons)) {
-      buttons.No = {
+      buttons.push({
+        action: "no",
         label: `<i class="fas fa-times"></i> ${i18n("No")}`,
         callback: async () => {
           resolve(undefined);
         }
-      }
+      });
       const id = `overtime-dialog-${foundry.utils.randomID()}`;
-      //@ts-expect-error
-      await Dialog.wait({
-        title,
-        content: `<style>  #${id} .dialog-buttons { flex-direction: column;} </style> ${content}`,
+      await DialogV2.wait({
+        // @ts-expect-error types needs to make window partial
+        window: { title },
+        content: `<style>  #${id} .form-footer { flex-direction: column;} </style> ${content}`,
         buttons,
+        id,
         rejectClose: false,
         close: () => { return (null) }
-      }, { "id": id });
+      });
     }
     resolve("invalid");
   })

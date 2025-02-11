@@ -54,7 +54,7 @@
         "duplicateSource": null,
         "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.1.2",
+        "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
         "lastModifiedBy": null
@@ -233,18 +233,22 @@
     "identifier": "fleet-of-foot-10010",
     "enchant": {},
     "prerequisites": {
-      "level": null
+      "level": null,
+      "repeatable": false
     },
-    "properties": []
+    "properties": [],
+    "advancement": [],
+    "cover": null,
+    "crewed": false
   },
   "_stats": {
     "compendiumSource": "Compendium.midi-qol.midiqol-sample-items.c9OSXfLd170kf3hS",
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.1.2",
-    "createdTime": 1734180119396,
-    "modifiedTime": 1734180119396,
+    "systemVersion": "4.2.2",
+    "createdTime": 1738555836908,
+    "modifiedTime": 1738555836908,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "5Ok9Jbl5nOokCkqf",

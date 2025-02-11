@@ -3,7 +3,7 @@ import { log } from "../midi-qol.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { configSettings } from "./settings.js";
 
-export const DAE_REQUIRED_VERSION = "12.0.11";
+export const DAE_REQUIRED_VERSION = "12.0.12";
 export const REQUIRED_MODULE_VERSIONS = {
   "about-time": "0.0", 
   "anonymous": "0.0.0",
@@ -34,8 +34,7 @@ export const REQUIRED_MODULE_VERSIONS = {
 export let installedModules = new Map();
 
 export function getModuleVersion(moduleName): string {
-  //@ts-expect-error .version
-  let modVer = game.modules.get(moduleName)?.version || "0.0.0";
+  let modVer = game.modules?.get(moduleName)?.version || "0.0.0";
   if (!/[0-9\.]+/.test(modVer)) {
     console.warn(`midi-qol | module ${moduleName} has unrecognised version ${modVer} using ${REQUIRED_MODULE_VERSIONS[moduleName]} instead}`);
     modVer = REQUIRED_MODULE_VERSIONS[moduleName];
@@ -47,11 +46,11 @@ export let setupModules = () => {
     const modVer = getModuleVersion(name);
     const neededVer = REQUIRED_MODULE_VERSIONS[name];
     const isValidVersion = foundry.utils.isNewerVersion(modVer, neededVer) || !foundry.utils.isNewerVersion(neededVer, modVer);
-    if (!installedModules.get(name)) installedModules.set(name, game.modules.get(name)?.active && isValidVersion) 
+    if (!installedModules.get(name)) installedModules.set(name, game.modules?.get(name)?.active && isValidVersion) 
     if (!installedModules.get(name)) {
-      if (game.modules.get(name)?.active) {
+      if (game.modules?.get(name)?.active) {
         //@ts-ignore game.module.version
-        const message = `midi-qol requires ${name} to be of version ${REQUIRED_MODULE_VERSIONS[name]} or later, but it is version ${game.modules.get(name)?.version}`;
+        const message = `midi-qol requires ${name} to be of version ${REQUIRED_MODULE_VERSIONS[name]} or later, but it is version ${game.modules?.get(name)?.version}`;
         error(message);
         TroubleShooter.recordError(new Error(message), message);
       } else console.warn(`midi-qol | optional module ${name} not active - some features disabled`)
@@ -74,7 +73,8 @@ export function checkModules() { // this really should happen in TroubleShooter
     ui.notifications?.error("midi-qol.NoSocketLib", {permanent: true, localize: true});
   }
   //@ts-ignore
-  const midiVersion = game.modules.get("midi-qol").version;
+  const midiVersion = game.modules?.get("midi-qol").version;
+  //@ts-expect-error
   const notificationVersion = game.settings.get("midi-qol", "notificationVersion");
 
 }
