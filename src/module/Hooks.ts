@@ -1170,3 +1170,9 @@ Hooks.on("dnd5e.rollConcentrationV2", (rolls, { subject }) => {
     }
   }
 });
+
+// Make activity templates a tiny bit bigger so that the off by one pixel errors don't happen.
+Hooks.on("dnd5e.preCreateActivityTemplate", (activity, templateData) => {
+  templateData.distance += 0.000001; // Make the template factionally larger to avoid rounding errors
+  return true;
+});

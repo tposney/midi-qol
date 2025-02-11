@@ -127,6 +127,7 @@ export function requiresTargetConfirmation(activity, options): boolean {
   if (!activity.item) debugger;
   if (options.workflowOptions?.targetConfirmation === "none") return false;
   if (options.workflowOptions?.targetConfirmation === "always") return true;
+  if (["enchant", "summon"].includes(activity.type)) return false;
   // check lateTargeting as well - legacy.
   // For old version of dnd5e-scriptlets
   if (options.workflowdialogOptions?.lateTargeting === "none") return false;
@@ -515,6 +516,7 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data?,
 
   if (activity.workflow.workflowType === "TrapWorkflow") return;
   if (debugEnabled > 0) warn("selectTargets ", activity.workflow?.suspended, activity.workflow?.needTemplate, templateDocument);
+  
   if (activity.workflow?.needTemplate) {
     activity.workflow.needTemplate = false;
     if (activity.workflow?.suspended) activity.workflow.unSuspend.bind(activity.workflow)({ templateDocument });

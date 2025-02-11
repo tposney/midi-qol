@@ -1413,7 +1413,6 @@ export class Workflow {
               otherDamage: this.otherDamageTotal ?? 0,
               bonusDamage: this.bonusDamageTotal ?? 0,
               itemData: this.item.toObject()
-
             }
           })
         }
@@ -1435,7 +1434,7 @@ export class Workflow {
                 effectData.duration.rounds = effectData.duration.rounds ?? Math.ceil(effectData.duration.seconds / CONFIG.time.roundTime);
                 delete effectData.duration.seconds;
               }
-              effectData.origin = origin;
+              effectData.origin = origin ?? this.activity.uuid ?? this.activity.item.uuid;
               const effects = await CEAddEffectWith({ effectData, effectName: ceEffect.name, uuid: (token.actor as Actor).uuid, origin, overlay: false });
               // const effects = await game.dfreds?.effectInterface?.addEffectWith({ effectData, uuid: token.actor.uuid, origin, metadata: macroData });
               if (this.chatCard.getFlag("dnd5e", "use.concentrationId")) {
@@ -1476,7 +1475,7 @@ export class Workflow {
             itemCardId: this.itemCardId,
             itemCardUuid: this.itemCardUuid,
             metaData,
-            origin: this.otherActivity.item.uuid,
+            origin: selectedEffects[0]?.uuid ?? this.otherActivity.uuid,
             spellLevel: this.spellLevel,
             toggleEffect: this.item?.flags.midiProperties?.toggleEffect,
             tokenId: this.tokenId,
@@ -1512,7 +1511,7 @@ export class Workflow {
         itemCardId: this.itemCardId,
         itemCardUuid: this.itemCardUuid,
         metaData,
-        origin,
+        origin: origin ?? this.activity.uuid ?? this.item.uuid,
         spellLevel: this.spellLevel,
         toggleEffect: this.item?.flags.midiProperties?.toggleEffect,
         tokenId: this.tokenId,

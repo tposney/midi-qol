@@ -567,8 +567,6 @@ export let fetchParams = () => {
   autoRemoveTargets = String(game.settings?.get("midi-qol", "AutoRemoveTargets"));
   if (autoRemoveTargets === "allGM") {
     autoRemoveTargets = game.user?.isGM ? "all" : "dead";
-  //@ts-expect-error
-  game.settings?.set("midi-qol", "AutoRemoveTargets", autoRemoveTargets);
   }
   //@ts-expect-error
   let debugText: string = String(game.settings?.get("midi-qol", "Debug"));

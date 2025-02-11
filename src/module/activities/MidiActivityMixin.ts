@@ -11,6 +11,21 @@ import { saveUndoData } from "../undo.js";
 import { activityHasAreaTarget, asyncHooksCall, canSee, canSense, checkActivityRange, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getStatusName, getToken, activityHasAutoPlaceTemplate, hasUsedBonusAction, hasUsedReaction, initializeVision, isAutoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, processDamageRollBonusFlags, setBonusActionUsed, setReactionUsed, sumRolls, tokenForActor, validTargetTokens, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, isAutoFastDamage } from "../utils.js";
 import { confirmWorkflow, postTemplateConfirmTargets, preTemplateTargets, removeFlanking, selectTargets, setDamageRollMinTerms } from "./activityHelpers.js";
 
+export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
+  _validateType(value) {
+    return typeof value === "string";
+  }
+  constructor(options: any) {
+    super(options);
+  }
+  static get _defaults(): any {
+    return foundry.utils.mergeObject(super._defaults, {
+      deterministic: false
+    });
+  }
+
+}
+
 export var MidiActivityMixin = Base => {
   return class MidiActivityMixin extends Base {
     _workflow: Workflow | undefined;
@@ -24,11 +39,12 @@ export var MidiActivityMixin = Base => {
 
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, SetField } = foundry.data.fields;
+      const { FormulaField } = globalThis.dnd5e.dataModels.fields
       const schema = {
         ...super.defineSchema(),
         // flags: new ObjectField(),
-        useConditionText: new StringField({ name: "useCondition", initial: "" }),
-        effectConditionText: new StringField({ name: "effectCondition", initial: "" }),
+        useConditionText: new MidiConditionField({ name: "useCondition", initial: "" }),
+        effectConditionText: new MidiConditionField({ name: "effectCondition", initial: "" }),
         // disabled pending a way to make it work 
         // useSystemActivity: new BooleanField({ name: "useSystemActivity", initial: false }),
         macroData: new SchemaField({
@@ -44,7 +60,8 @@ export var MidiActivityMixin = Base => {
         midiProperties: new SchemaField({
           ignoreTraits: new SetField(new StringField(), { initial: [] }),
           triggeredActivityId: new StringField({ name: "triggeredActivity", initial: "none" }),
-          triggeredActivityConditionText: new StringField({ name: "triggeredActivityCondition", initial: "" }),
+          //@ts-expect-error
+          triggeredActivityConditionText: new MidiConditionField({ name: "triggeredActivityCondition", initial: "" }),
           triggeredActivityTargets: new StringField({ name: "triggeredActivitityTargets", initial: "targets" }),
           triggeredActivityRollAs: new StringField({ name: "triggeredActivityRollAs", initial: "self" }),
           forceDialog: new BooleanField({ name: "forceDialog", initial: false }),
@@ -498,9 +515,6 @@ export var MidiActivityMixin = Base => {
         config.midiOptions.fastForwardDamage = config.midiOptions.fastForwardDamage ?? workflow.workflowOptions?.fastForwardDamage ?? workflow.rollOptions.fastForwardDamage;
 
         if (workflow) workflow.damageRollCount += 1;
-        let result: Array<Roll>;
-        let result2: Array<Roll>;
-
       } catch (err) {
         const message = "Configure Damage Roll error";
         TroubleShooter.recordError(err, message);
@@ -585,7 +599,7 @@ export var MidiActivityMixin = Base => {
             actionFlavor = i18n(this.actionType === "heal" ? "DND5E.Healing" : "DND5E.DamageRoll");
         }
 
-        const title = `${this.name} - ${actionFlavor}`;
+        const title = `${this.name}`;
         const speaker = getSpeaker(this.actor);
         let flavor = title;
         if (this.item.labels.damages?.length > 0) {
