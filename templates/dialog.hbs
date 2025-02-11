@@ -1,0 +1,13 @@
+<div>
+    <div>
+        {{{content}}}
+    </div>
+    <div class="dialog-buttons" style="flex-direction: column;">
+        {{#each buttons}}
+            <button class="dialog-button {{cssClass}}" data-button="{{@key}}">
+                {{{icon}}}
+                {{{label}}}
+            </button>
+        {{/each}}
+    </div>
+</div>

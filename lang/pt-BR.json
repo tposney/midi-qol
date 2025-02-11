@@ -428,11 +428,20 @@
     "effects": "Verificar Efeitos",
     "effectsTemplates": "Verificar Efeitos e Modelos"
   },
-  "midi-qol.GMSettings": "Mestre",
-  "midi-qol.PlayerSettings": "Jogador",
+  "midi-qol.Config": {
+    "Tabs": {
+      "gm": "Mestre",
+      "player": "Jogador",
+      "workflow": "Fluxo",
+      "concentration": "Concentração",
+      "reactions": "Reações",
+      "misc": "Diversos",
+      "mechanics": "Mecânicas",
+      "rules": "Regras",
+      "quick": "Configurações Rápidas"
+    }
+  },
   "midi-qol.SoundSettings.Tab": "Sons",
-  "midi-qol.Workflow": "Fluxo",
-  "midi-qol.Misc": "Diversos",
   "midi-qol.Targeting": "Marcação",
   "midi-qol.Special": "Especiais",
   "midi-qol.Hits": "Acertos",
@@ -450,8 +459,6 @@
   "midi-qol.AttackMacro.Name": "Macros de Ataque Bônus",
   "midi-qol.AttackMacro.Hint": "Lista separada por vírgulas de macros a serem chamadas ao calcular a jogada de ataque que será aplicada ao verificar se o ataque atingiu os alvos.",
   "midi-qol.DAEMidiQOL": "Especificações DAE/Midi QOL",
-  "midi-qol.Optional": "Regras",
-  "midi-qol.Mechanics": "Mecânicas",
   "midi-qol.OptionalRules.Name": "Regras Opcionais de Jogo",
   "midi-qol.OptionalRules.Hint": "Regras de Jogo de D&D5e que você talvez queira habilitar. Geralmente não funciona com o módulo Better Rolls.",
   "midi-qol.InvisAdvantage.Name": "Tokens Não-Vistos ou Invisíveis têm Vantagem/Desvantagem em Ataques",
@@ -688,7 +695,6 @@
   "midi-qol.FixStickyKeys.Name": "Corrijir alt/ctrl/shift Travado",
   "midi-qol.FixStickyKeys.Hint": "Se ativado, Midi QOL tentará resolver alt/ctrl/shift travado em 'Ativado'",
   "midi-qol.DisplaySaveAdvantage.Name": "Exibe se a Salvaguarda tem Vantagem/Desvantagem",
-  "midi-qol.QuickSettings": "Configurações Rápidas",
   "midi-qol.QuickSettingsBlurb": {
     "1": "Configurações Rápidas permite definir uma combinação de configurações de uma só vez.",
     "2": "Quando um dos botões abaixo é pressionado, as alterações são feitas imediatamente nas suas configurações.",
@@ -714,7 +720,6 @@
     "allCrit": "Rolagem de Ataque Completa + Crítico"
   },
   "midi-qol.Reactions": "Avisar Para Reações",
-  "midi-qol.ReactionsTab": "Reações",
   "midi-qol.DoReactions.Name": "Verificar Reações de Jogador",
   "midi-qol.DoReactions.Hint": "Dá a um ator atacado a opção de usar sua reação antes de completar a rolagem. Reações ao atingir exigem a opção 'Verificação de Acerto' habilitada. Reações de dano se aplicar dano.",
   "midi-qol.GMDoReactions.Name": "Verificar Reações de PdJ/Mestre",
@@ -828,14 +833,18 @@
   "midi-qol.versus": "versus",
   "midi-qol.Skipped": "Pulado",
   "midi-qol.ExportTroubleShooting": "Exportar Informações de Trouble Shooting",
-  "midi-qol.TroubleShooter.Name": "Abrir Trouble Shooter",
-  "midi-qol.TroubleShooter.Hint": "(MUITO RECENTE) trouble shooter para ajudar a diagnosticar problemas.",
-  "midi-qol.TroubleShooter.Label": "Troubleshooter",
-  "midi-qol.Summary": "Resumo",
-  "midi-qol.CommonModules": "Módulos Comuns",
-  "midi-qol.Problems": "Problemas",
-  "midi-qol.AllModules": "Todos os Módulos",
-  "midi-qol.Errors": "Erros",
+  "midi-qol.TroubleShooter": {
+    "Name": "Abrir Trouble Shooter",
+    "Hint": "(MUITO RECENTE) trouble shooter para ajudar a diagnosticar problemas.",
+    "Label": "Troubleshooter",
+    "Tabs": {
+      "summary": "Resumo",
+      "common": "Módulos Comuns",
+      "problems": "Problemas",
+      "modules": "Todos os Módulos",
+      "errors": "Erros"
+    }
+  },
   "midi-qol.Inactive": "Inativo",
   "midi-qol.Active": "Ativo",
   "midi-qol.EnforceSingleWeaponTarget.Name":  "Armas Atacam Alvos Únicos",

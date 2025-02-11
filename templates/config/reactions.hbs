@@ -1,0 +1,69 @@
+<section id="midi-config-reactions" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+    <div class="midi-qol-box">
+        <h4>{{localize "midi-qol.Reaction.Title"}}</h4>
+        {{localize "midi-qol.Reactions"}}
+        <div class="notes midi-qol-faint">{{{localize "midi-qol.DoReactions.Hint"}}}</div>
+        <div class="form-group">
+            <label>{{localize "midi-qol.DoReactions.Name"}}</label>
+            <select name="doReactions" data-dtype="String">
+                {{selectOptions doReactionsOptions selected=configSettings.doReactions}}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>{{localize "midi-qol.GMDoReactions.Name"}}</label>
+            <select name="gmDoReactions" data-dtype="String">
+                {{selectOptions gmDoReactionsOptions selected=configSettings.gmDoReactions}}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>{{localize "midi-qol.ReactionTimeout.Name"}}</label>
+            <input type="number" name="reactionTimeout" value="{{configSettings.reactionTimeout}}" />
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.ReactionTimeout.Hint"}}}</div>
+        </div>
+
+        <div class="form-group ShowReactionChatMessage">
+            <label>{{localize "midi-qol.ShowReactionChatMessage.Name"}}</label>
+            <input id="showReactionChatMessage" type="checkbox" name="showReactionChatMessage" data-dtype="Boolean"
+            {{checked configSettings.showReactionChatMessage}} />
+        </div>
+
+        <div class="form-group">
+            <label>{{localize "midi-qol.ShowReactionAttackRoll.Name"}}</label>
+            <select name="showReactionAttackRoll" data-dtype="String">
+                {{selectOptions showReactionAttackRollOptions selected=configSettings.showReactionAttackRoll}}
+            </select>
+        </div>
+
+        <div class="form-group IgnoreSpellReactionRestriction">
+            <label>{{localize "midi-qol.IgnoreSpellReactionRestriction.Name"}}</label>
+            <input id="ignoreSpellReactionRestriction" type="checkbox" name="ignoreSpellReactionRestriction"
+            data-dtype="Boolean" {{checked configSettings.ignoreSpellReactionRestriction}} />
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.IgnoreSpellReactionRestriction.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
+            <label>{{localize "midi-qol.EnforceReactions.Name"}}</label>
+            <select name="enforceReactions" data-dtype="String">
+                {{selectOptions EnforceReactionsOptions selected=configSettings.enforceReactions}}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>{{localize "midi-qol.EnforceBonusActions.Name"}}</label>
+            <select name="enforceBonusActions" data-dtype="String">
+                {{selectOptions EnforceReactionsOptions selected=configSettings.enforceBonusActions}}
+            </select>
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.EnforceReactions.Hint"}}}</div>
+        </div>
+
+        <div class="form-group">
+            <label>{{localize "midi-qol.RecordAOO.Name"}}</label>
+            <select name="recordAOO" data-dtype="String">
+                {{selectOptions RecordAOOOptions selected=configSettings.recordAOO}}
+            </select>
+            <div class="notes midi-qol-faint">{{{localize "midi-qol.RecordAOO.Hint"}}}</div>
+        </div>
+    </div>
+</section>

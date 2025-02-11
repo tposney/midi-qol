@@ -661,7 +661,7 @@ Hooks.once('ready', function () {
   checkModules();
   if (game.user?.isGM && configSettings.gmLateTargeting !== "none") {
     ui.notifications?.notify("Late Targeting has been replaced with Target Confirmation. Please update your settings", "info", { permanent: true });
-    new TargetConfirmationConfig({}, {}).render(true);
+    new TargetConfirmationConfig({}).render({force: true});
     configSettings.gmLateTargeting = "none";
     //@ts-expect-error
     game.settings.set(MODULE_ID, "ConfigSettings", configSettings)
@@ -669,7 +669,7 @@ Hooks.once('ready', function () {
   //@ts-expect-error
   if (!game.user?.isGM && game.settings.get(MODULE_ID, "LateTargeting") !== "none") {
     ui.notifications?.notify("Late Targeting has been replaced with Target Confirmation. Please update your settings", "info", { permanent: true });
-    new TargetConfirmationConfig({}, {}).render(true);
+    new TargetConfirmationConfig({}).render({force: true});
     //@ts-expect-error
     game.settings.set(MODULE_ID, "LateTargeting", "none");
   }

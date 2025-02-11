@@ -7,6 +7,7 @@ import { bonusCheck } from "./patching.js";
 import { queueUndoData, startUndoWorkflow, updateUndoChatCardUuids, _removeMostRecentWorkflow, _undoMostRecentWorkflow, undoTillWorkflow, _queueUndoDataDirect, updateUndoChatCardUuidsById } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { installedModules } from "./setupModules.js";
+const { DialogV2 } = foundry.applications.api;
 
 export var socketlibSocket: any = undefined;
 var traitList: any = { di: {}, dr: {}, dv: {}, dm: {}, da: {} };
@@ -1284,7 +1285,7 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
 export async function rollActionSave(data: any) {
   let { request, actorUuid, abilities, options, content, title, saveDC } = data;
   let saveResult: any = await new Promise(async (resolve, reject) => {
-    const buttons: any = {};
+    const buttons: foundry.applications.api.DialogV2.Button<any>[] = [];
     for (let ability of abilities) {
       let config: any = {
         type: request,
@@ -1303,6 +1304,7 @@ export async function rollActionSave(data: any) {
       const button = {
         //@ts-expect-error
         label: game.system?.enrichers?.createRollLabel(config) ?? `${saveDC} ${ability} ${request}`,
+        action: ability,
         callback: async (html: any) => {
           let roll = await rollAbility({
             targetUuid: actorUuid,
@@ -1313,24 +1315,26 @@ export async function rollActionSave(data: any) {
           resolve(roll)
         }
       };
-      buttons[ability] = button;
+      buttons.push(button);
     }
     if (!foundry.utils.isEmpty(buttons)) {
-      buttons.No = {
+      buttons.push({
+        action: "no",
         label: `<i class="fas fa-times"></i> ${i18n("No")}`,
         callback: async () => {
           resolve(undefined);
         }
-      }
+      });
       const id = `overtime-dialog-${foundry.utils.randomID()}`;
-      await Dialog.wait({
-        title,
-        content: `<style>  #${id} .dialog-buttons { flex-direction: column;} </style> ${content}`,
+      await DialogV2.wait({
+        // @ts-expect-error types needs to make window partial
+        window: { title },
+        content: `<style>  #${id} .form-footer { flex-direction: column;} </style> ${content}`,
         buttons,
-        //@ts-expect-error
+        id,
         rejectClose: false,
         close: () => { return (null) }
-      }, { "id": id });
+      });
     }
     resolve("invalid");
   })

@@ -59,7 +59,7 @@ export class RollStats {
   };
 
   public showStats() {
-    new RollStatsDisplay(this, { playersOnly: configSettings.playerStatsOnly }).render(true);
+    new RollStatsDisplay({ stats: this, playersOnly: configSettings.playerStatsOnly }).render({force: true});
   }
 
   getEntityStats(id, collection) {
@@ -101,7 +101,7 @@ export class RollStats {
     return stats;
   }
 
-  getitemStats(item, id, collection) {
+  getItemStats(item, id, collection) {
     if (!item) return foundry.utils.duplicate(blankStat);
     let currentStats = this.getEntityStats(id, collection);
     if (!currentStats) return null;
@@ -183,10 +183,10 @@ export class RollStats {
       const lifetime = stats.lifetime;
       let itemStats;
       if (stats === actorStats)
-        itemStats = this.getitemStats(item, item?.actor.id, game.actors).session;
+        itemStats = this.getItemStats(item, item?.actor.id, game.actors).session;
       else
         //@ts-ignore
-        itemStats = this.getitemStats(item, game.user?.id, game.users).session;
+        itemStats = this.getItemStats(item, game.user?.id, game.users).session;
       [session, lifetime, itemStats].forEach(stats => {
         stats.numDamageRolls += 1;
         stats.damageApplied += hpDamage;
@@ -214,10 +214,10 @@ export class RollStats {
       if (!stats) continue;
       let itemStats;
       if (stats === currentStats)
-        itemStats = this.getitemStats(item, item?.actor.id, game.actors).session;
+        itemStats = this.getItemStats(item, item?.actor.id, game.actors).session;
       else
         //@ts-ignore
-        itemStats = this.getitemStats(item, game.user?.id, game.users).session;
+        itemStats = this.getItemStats(item, game.user?.id, game.users).session;
       const session = stats.session;
       const lifetime = stats.lifetime;
       [session, lifetime, itemStats].forEach(stats => {

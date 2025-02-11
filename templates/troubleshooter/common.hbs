@@ -1,0 +1,30 @@
+<section id="midi-troubleshooter-common" class="tab{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+    <div class="midi-scrollable-list">
+        <div class="midi-qol-box">
+            <div>
+                <table>
+                    <tr>
+                        <td>ID</td>
+                        <td>{{localize "midi-qol.Active"}}</td>
+                        <td>Name</td>
+                        <td>Version</td>
+                        <td>FVTT Version</td>
+                    </tr>
+                    {{#each summary.knownModules as |versionInfo moduleId|}}
+                        {{#if versionInfo.active}}
+                            <tr>
+                        {{else}}
+                            <tr class="midi-qol-very-faint">
+                        {{/if}}
+                        <td>{{moduleId}}</td>
+                        <td>{{active}}</td>
+                        <td>{{versionInfo.title}}</td>
+                        <td>{{versionInfo.moduleVersion}}</td>
+                        <td>{{versionInfo.foundryVersion}}</td>
+                        </tr>
+                    {{/each}}
+                </table>
+            </div>
+        </div>
+    </div>
+</section>

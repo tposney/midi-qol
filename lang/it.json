@@ -432,11 +432,20 @@
     "effects": "Controlla gli Effetti",
     "effectsTemplates": "Controlla gli Effetti e i Modelli"
 },
-"midi-qol.GMSettings": "Impostazioni GM",
-"midi-qol.PlayerSettings": "Impostazioni Giocatore",
+"midi-qol.Config": {
+    "Tabs": {
+      "gm": "Impostazioni GM",
+      "player": "Impostazioni Giocatore",
+      "workflow": "Flusso di Lavoro",
+      "concentration": "Concentrazione",
+      "reactions": "Reazioni",
+      "misc": "Varie",
+      "mechanics": "Meccaniche",
+      "rules": "Regole Opzionali",
+      "quick": "Impostazioni Rapide"
+    }
+  },
 "midi-qol.SoundSettings.Tab": "Suoni",
-"midi-qol.Workflow": "Flusso di Lavoro",
-"midi-qol.Misc": "Varie",
 "midi-qol.Targeting": "Bersagliare",
 "midi-qol.Special": "Speciali",
 "midi-qol.Hits": "Colpi",
@@ -454,8 +463,6 @@
 "midi-qol.AttackMacro.Name": "Macro Bonus Attacco",
 "midi-qol.AttackMacro.Hint": "Elenco separato da virgole di macro da richiamare quando si calcola il tiro di attacco, che verrà applicato durante il controllo se l'attacco ha colpito i bersagli",
 "midi-qol.DAEMidiQOL": "Specifico DAE/Midi-QOL",
-"midi-qol.Optional": "Regole Opzionali",
-"midi-qol.Mechanics": "Meccaniche",
 "midi-qol.OptionalRules.Name": "Regole di Gioco Opzionali",
 "midi-qol.OptionalRules.Hint": "Regole di gioco DND5E che potresti voler attivare. Di solito non funzionano con migliori tiri.",
 "midi-qol.InvisAdvantage.Name": "Gli attaccanti invisibili/hidei hanno vantaggio/svantaggio negli attacchi",
@@ -688,7 +695,6 @@
 "midi-qol.FixStickyKeys.Name": "Risolve il problema dei tasti alt/ctrl/shift bloccati",
 "midi-qol.FixStickyKeys.Hint": "Se impostato, midi cercherà di risolvere il problema dei tasti alt/ctrl/shift bloccati",
 "midi-qol.DisplaySaveAdvantage.Name": "Mostra se il tiro salvezza aveva Vantaggio/Svantaggio",
-"midi-qol.QuickSettings": "Impostazioni Rapide",
 "midi-qol.QuickSettingsBlurb": {
   "1": "Le impostazioni rapide ti consentono di impostare una combinazione di impostazioni in una volta sola.",
   "2": "Quando uno dei pulsanti sottostanti viene premuto, le modifiche vengono apportate immediatamente alle tue impostazioni",
@@ -714,7 +720,6 @@
   "allCrit": "Tiro totale di attacco + Critico"
 },
 "midi-qol.Reactions": "Prompt per le Reazioni",
-"midi-qol.ReactionsTab": "Reazioni",
 "midi-qol.DoReactions.Name": "Verifica reazioni dei GIOCATORI",
 "midi-qol.DoReactions.Hint": "Dà all'attore attaccato la possibilità di usare una reazione prima di decidere il tiro. Le reazioni quando colpiti richiedono l'abilitazione del controllo automatico dei colpi. Reazioni al danno se applicate",
 "midi-qol.GMDoReactions.Name": "Verifica reazioni dei PNG/GM",
@@ -826,14 +831,18 @@
 "midi-qol.versus": "contro",
 "midi-qol.Skipped": "Saltato",
 "midi-qol.ExportTroubleShooting": "Esporta Dati per il Troubleshooting",
-"midi-qol.TroubleShooter.Name": "Apri il Troubleshooter",
-"midi-qol.TroubleShooter.Hint": "(MOLTO PRESTO) strumento di troubleshooting per aiutare a diagnosticare i problemi",
-"midi-qol.TroubleShooter.Label": "Troubleshooter",
-"midi-qol.Summary": "Sommario",
-"midi-qol.CommonModules": "Moduli Comuni",
-"midi-qol.Problems": "Problemi",
-"midi-qol.AllModules": "Tutti i Moduli",
-"midi-qol.Errors": "Errori",
+"midi-qol.TroubleShooter": {
+  "Name": "Apri il Troubleshooter",
+  "Hint": "(MOLTO PRESTO) strumento di troubleshooting per aiutare a diagnosticare i problemi",
+  "Label": "Troubleshooter",
+  "Tabs": {
+    "summary": "Sommario",
+    "common": "Moduli Comuni",
+    "problems": "Problemi",
+    "modules": "Tutti i Moduli",
+    "errors": "Errori"
+  }
+},
 "midi-qol.Inactive": "Inattivo",
 "midi-qol.Active": "Attivo",
 "midi-qol.EnforceSingleWeaponTarget.Name":  "Le armi attaccano un singolo bersaglio",

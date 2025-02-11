@@ -1,0 +1,88 @@
+<section id="midi-troubleshooter-summary" class="tab{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+    <div class="midi-scrollable-list">
+        <div class="midi-qol-box">
+            {{#if isLocal}}
+                Local Client Settings
+            {{else}}
+                Settings from File: {{fileName}}
+            {{/if}}
+        </div>
+        <div class="midi-qol-box">
+            <table>
+                <col width="70%">
+                <col width="30%">
+                <tr>
+                <td>Foundry Version</td>
+                <td>{{summary.[foundry-version]}}</td>
+                </tr>
+                <td>{{summary.[Game System]}} Version</td>
+                <td>{{summary.[Game System Version]}}</td>
+                </tr>
+                <tr>
+                <td>Midi Version</td>
+                <td>{{summary.[midi-qol-version]}}</td>
+                </tr>
+                <tr>
+                <td>Dynamic Active Effects Version</td>
+                <td>{{summary.[Dynamic Active Effects Version]}}</td>
+                </tr>
+            </table>
+        </div>
+        <div class="midi-qol-box">
+            <table>
+                <col width="30%">
+                <col width="70%">
+                <tr>
+                <th style="text-align: center" colspan="2">Foundry Data</th>
+                </tr>
+                {{#each summary.coreSettings as |value key|}}
+                    <tr>
+                    <td>{{key}}</td>
+                    <td>{{value}}</td>
+                    </tr>
+                {{/each}}
+            </table>
+        </div>
+        <div class="midi-qol-box">
+            <table>
+                <col width="70%">
+                <col width="30%">
+                <tr>
+                <th style="text-align: center" colspan="2">{{summary.[Game System]}} Settings</th>
+                {{#each summary.gameSystemSettings as |value key|}}
+                    <tr>
+                    <td>{{key}}</td>
+                    <td>{{value}}</td>
+                    </tr>
+                {{/each}}
+            </table>
+        </div>
+        <div class="midi-qol-box">
+            <table>
+                <col width="70%">
+                <col width="30%">
+                <tr>
+                <th style="text-align: center" colspan="2">Specific Module Settings</th>
+                {{#each summary.moduleSettings as |value key|}}
+                    <tr>
+                    <td>{{key}}</td>
+                    <td>{{value}}</td>
+                    </tr>
+                {{/each}}
+            </table>
+        </div>
+        <div class="midi-qol-box">
+            <table>
+                <col width="70%">
+                <col width="30%">
+                <th style="text-align: center" colspan="2">Select Midi Settings</th>
+                {{#each summary.midiSettings as |value key|}}
+                    <tr>
+                    <td>{{key}}</td>
+                    <td>{{value}}</td>
+                    </tr>
+                {{/each}}
+            </table>
+        </div>
+    </div>
+</section>

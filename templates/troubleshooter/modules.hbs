@@ -1,0 +1,40 @@
+<section id="midi-troubleshooter-modules" class="tab{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+    <div class="midi-qol-box midi-scrollable-list">
+        <table>
+            <tr>
+                <th style="text-align: center" colspan="5">All Installed Modules</th>
+            </tr>
+            <tr>
+                <th style="text-align: left">Module id</th>
+                <th style="text-align: left">Active</th>
+                <th style="text-align: left">Title</th>
+                <th style="text-align: left">Version</th>
+                <th style="text-align: left">Foundry Version</th>
+            </tr>
+            {{#each modules as |detail moduleId|}}
+                {{#if detail.active}}
+                    <tr>
+                {{else}}
+                    <tr class="midi-qol-very-faint">
+                {{/if}}
+                    <td>{{moduleId}}</td>
+                    <td>{{detail.active}}</td>
+                    <td>{{detail.title}}</td>
+                    <td>{{detail.version}}</td>
+                    <td>{{detail.compatibility}}</td>
+                </tr>
+                {{#if detail.settings}}
+                    {{#each detail.settings as |value key|}}
+                        <tr>
+                            <td></td>
+                            <td>{{key}}</td>
+                            <td>{{value}}</td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    {{/each}}
+                {{/if}}
+            {{/each}}
+        </table>
+    </div>
+</section>

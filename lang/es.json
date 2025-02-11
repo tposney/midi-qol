@@ -356,10 +356,6 @@
   "midi-qol.ConcentrationAutomation.Hint": "Si se activa, se gestionará la concentración a través de midi-qol, requiriendo que la comprobación automática de TS esté activa. Desactivará la gestión de la concentración de CUB",
   "midi-qol.SingleConcentrationRoll.Name": "Prueba de concentración única",
   "midi-qol.SingleConcentrationRoll.Hint": "Si está activada y el ataque hace daño normal + una salvación + otro daño/versátil, sólo se hace una prueba de concentración para el daño combinado",
-  "midi-qol.GMSettings": "GM",
-  "midi-qol.PlayerSettings": "Jugador",
-  "midi-qol.Workflow": " Flujo de trabajo",
-  "midi-qol.Misc": "Misc",
   "midi-qol.Targeting": "Objetivos",
   "midi-qol.Special": "Especiales",
   "midi-qol.Hits": "Impactos",
@@ -372,7 +368,6 @@
   "midi-qol.AttackMacro.Name": "Macros de bonificadores de ataque",
   "midi-qol.AttackMacro.Hint": "Lista separada por comas de las macros a llamar cuando se calcula la tirada de ataque para comprobar si el ataque alcanzó a los objetivos",
   "midi-qol.DAEMidiQOL": "Específico de DAE/Midi-QOL",
-  "midi-qol.Optional": "Reglas",
   "midi-qol.OptionalRules.Name": "Reglas de juego opcionales",
   "midi-qol.OptionalRules.Hint": "Las reglas de DND5E que deberías activar. No suele funcionar con better rolls.",
   "midi-qol.InvisAdvantage.Name": "Los atacantes ocultos/invisibles tienen ventaja (desventaja si no pueden ver a su objetivo) en los ataques (requiere CV/CE/CUB y la visión nativa de foundry)",
@@ -486,6 +481,19 @@
     "effects": "Comprobar efectos",
     "none": "Nunca"
   },
+  "midi-qol.Config": {
+    "Tabs": {
+      "gm": "GM",
+      "player": "Jugador",
+      "workflow": "Flujo de trabajo",
+      "concentration": "Concentración",
+      "reactions": "Reacciones",
+      "misc": "Misc",
+      "mechanics": "Mecánicas",
+      "rules": "Reglas",
+      "quick": "Ajustes rápidos"
+    }
+  },
   "midi-qol.SoundSettings.Tab": "Sonidos",
   "midi-qol.NoChangelogs": "Midi-qol apoya y recomienda los ChangeLogs o Module Manager + módulos para mostrar cualquier cambio desde la última actualización",
   "midi-qol.CoverCalculation.Name": "Calcular cobertura",
@@ -529,7 +537,6 @@
     "1": "Los ajustes rápidos te permiten configurar una serie de opciones al mismo tiempo."
   },
   "midi-qol.Reaction.Title": "Procesado de las Reacciones",
-  "midi-qol.ReactionsTab": "Reacciones",
   "midi-qol.NoOptionalRules.Name": "Sin reglas opcionales",
   "midi-qol.NoOptionalRules.Hint": "Desactivar las reglas opcionales para esta tirada",
   "midi-qol.RecordAOO.Name": "Registrar ataques de oportunidad",
@@ -613,7 +620,6 @@
     "debug": "Depuración",
     "all": "Todas"
   },
-  "midi-qol.Mechanics": "Mecánicas",
   "midi-qol.ChallengeModeArmorScale.Hint": "Requiere que el Modo Challenge de la armadura esté activado. Implementa una versión modificada de las reglas del modo challenge de armadura - ver readme para más información",
   "midi-qol.reactionFlavorAttack": "{actorName} es impactado por {itemName} y puede realizar una reacción",
   "midi-qol.WallsBlockRangeOptionsNew": {
@@ -643,7 +649,6 @@
   "midi-qol.KeysVersatile.Hint": "Tirar daño versátil",
   "midi-qol.KeysOther.Hint": "Tirar Otra fórmula como daño",
   "midi-qol.DisplaySaveAdvantage.Name": "Mostrar si la salvación tenía Ventaja/Desventaja",
-  "midi-qol.QuickSettings": "Ajustes rápidos",
   "midi-qol.RollOtherSpellDamage.Name": "Tira otra fórmula de daño para los conjuros",
   "midi-qol.convenientEffectsOff": "No aplicar Convenient Effect",
   "midi-qol.ConsumeResource.Name": "Omitir la ventana de consumir recurso",

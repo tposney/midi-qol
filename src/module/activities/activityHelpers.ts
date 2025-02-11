@@ -4,6 +4,7 @@ import { TargetConfirmationDialog } from "../apps/TargetConfirmation.js";
 import { configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { getFlankingEffect, CERemoveEffect, sumRolls, evalActivationCondition, computeTemplateShapeDistance, getToken, MQfromUuidSync, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, getSpeaker, hasWallBlockingCondition, isTargetable, tokenForActor, activityHasAreaTarget, getActivityAutoTargetAction, getAoETargetType, doReactions, getUnitDist } from "../utils.js";
+const { DialogV2 } = foundry.applications.api;
 
 export async function confirmWorkflow(existingWorkflow: Workflow): Promise<boolean> {
   const validStates = [existingWorkflow.WorkflowState_Completed, existingWorkflow.WorkflowState_Start, existingWorkflow.WorkflowState_RollFinished]
@@ -17,20 +18,19 @@ export async function confirmWorkflow(existingWorkflow: Workflow): Promise<boole
       existingWorkflow.aborted = true;
       await existingWorkflow.performState(existingWorkflow.WorkflowState_Cleanup);
     } else {
-      switch (await Dialog.wait({
-        title: game.i18n?.format("midi-qol.WaitingForexistingWorkflow", { name: existingWorkflow.activity.name }) ?? "",
-        default: "cancel",
-        content: "Choose what to do with the previous roll",
-        //@ts-expect-error
+      switch (await DialogV2.wait({
+        // @ts-expect-error types needs to make window partial
+        window: { title: game.i18n?.format("midi-qol.WaitingForPreviousWorkflow", { name: existingWorkflow.activity.name }) },
+        content: game.i18n?.localize("midi-qol.ResolvePreviousWorkflow"),
         rejectClose: false,
         close: () => { return false },
-        buttons: {
-          complete: { icon: `<i class="fas fa-check"></i>`, label: "Complete previous", callback: () => { return "complete" } },
-          discard: { icon: `<i class="fas fa-trash"></i>`, label: "Discard previous", callback: () => { return "discard" } },
-          undo: { icon: `<i class="fas fa-undo"></i>`, label: "Undo until previous", callback: () => { return "undo" } },
-          cancel: { icon: `<i class="fas fa-times"></i>`, label: "Cancel New", callback: () => { return "cancel" } },
-        }
-      }, { width: 700 })) {
+        buttons: [
+          { action: "complete", label: `<i class="fas fa-check"></i> Complete previous`, callback: () => { return "complete" } },
+          { action: "discard", label: `<i class="fas fa-trash"></i> Discard previous`, callback: () => { return "discard" } },
+          { action: "undo", label: `<i class="fas fa-undo"></i> Undo until previous`, callback: () => { return "undo" } },
+          { action: "cancel", default: true, label: `<i class="fas fa-times"></i> Cancel New`, callback: () => { return "cancel" } }
+        ],
+      })) {
         case "complete":
           await existingWorkflow.performState(existingWorkflow.WorkflowState_Cleanup);
           await Workflow.removeWorkflow(existingWorkflow.uuid);
@@ -269,7 +269,7 @@ export async function resolveTargetConfirmation(activity, options: any = {}): Pr
     // no timeout since there is a dialog to close
     // create target dialog which updates the target display
     options = foundry.utils.mergeObject(options, { callback: resolve });
-    let targetConfirmation = new TargetConfirmationDialog(activity.actor, activity, game.user, options).render(true);
+    let targetConfirmation = new TargetConfirmationDialog(activity.actor, activity, game.user, options).render({force: true});
   });
   let shouldContinue = await targets;
   // @ts-expect-error
