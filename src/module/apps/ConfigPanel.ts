@@ -268,10 +268,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   _onRender(context, options) {
     super._onRender(context, options);
-    this.element.querySelector(".customSounds")?.addEventListener("change", () => {
-      configSettings.useCustomSounds = !configSettings.useCustomSounds;
-      this.render({force: true});
-    });
     // Don't think this was doing anything
     // html.find(".playlist").change(this._playList.bind(this));
     this.element.querySelector(".itemTypeListEdit")?.addEventListener("click", event => {

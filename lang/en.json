@@ -460,7 +460,7 @@
   "midi-qol.AttackMacro.Hint": "Comma separated list of macros to call when calculating attack roll which will be applied when checking if the attack hit the targets",
   "midi-qol.DAEMidiQOL": "DAE/Midi-QOL specific",
   "midi-qol.OptionalRules.Name": "Optional Game Rules",
-  "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable. Generally, don't work with better rolls.",
+  "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable.",
   "midi-qol.InvisAdvantage.Name": "Unseen/Invisible attackers have advantage/disadvantage on attacks",
   "midi-qol.InvisAdvantage.Hint": "<strong>Rules as written</strong> Invisible attackers have advantage on attacks. Disadvantage if the target is invisible",
   "midi-qol.InvisAdvantageOptions": {

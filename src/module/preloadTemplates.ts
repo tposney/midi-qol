@@ -20,7 +20,6 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/roll-base.html",
     "modules/midi-qol/templates/roll-dialog.hbs",
     "modules/midi-qol/templates/rolloptions.html",
-    "modules/midi-qol/templates/roll-stats.html",
     "modules/midi-qol/templates/rolloptions.html",
     "modules/midi-qol/templates/saves.html",
     "modules/midi-qol/templates/config/gm.hbs",
