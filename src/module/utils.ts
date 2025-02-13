@@ -1957,7 +1957,17 @@ export function checkActivityRange(activityIn, tokenRef: Token | TokenDocument |
       longRange = 0;
     }
 
-    if (["mwak", "msak", "mpak"].includes(activity.actionType) && !activity.properties?.has("thr")) longRange = 0;
+    const meleeActions = new Set(["mwak", "msak", "mpak"]);
+    const isMeleeAttack = meleeActions.has(activity.actionType);
+    const hasThrownProperty = activity.item.labels.properties?.some(p => p.abbr === "thr");
+
+    if (isMeleeAttack && !hasThrownProperty) {
+        longRange = 0;
+     }
+
+    const isMetric = game.settings.get("dnd5e", "metricLengthUnits");
+    const fudgeFactor = configSettings.gridlessFudge ?? 0;
+
     for (let target of targets) {
       if (target === token) continue;
       // check if target is burrowing
@@ -1972,7 +1982,14 @@ export function checkActivityRange(activityIn, tokenRef: Token | TokenDocument |
       }
       // check the range TODO reivew total cover flag and activity as part of midi properties
       const ignoreTotalCover = foundry.utils.getProperty(activity.item, "flags.midiProperties.ignoreTotalCover");
-      const distance = computeDistance(token, target, { wallsBlock: configSettings.optionalRules.wallsBlockRange && !ignoreTotalCover, includeCover: !ignoreTotalCover });
+
+      const coverOptions = {
+        wallsBlock: configSettings.optionalRules.wallsBlockRange && !ignoreTotalCover,
+        includeCover: !ignoreTotalCover,
+       };
+
+      const rawDistance = computeDistance(token, target, coverOptions);
+      const distance = parseFloat(rawDistance.toFixed(isMetric ? 1 : 0)) - fudgeFactor;
 
       if ((longRange !== 0 && distance > longRange) || (distance > range && longRange === 0)) {
         log(`${target.name} is too far ${distance} from your character you cannot hit`)
