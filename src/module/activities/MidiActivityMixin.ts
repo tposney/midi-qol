@@ -1423,7 +1423,7 @@ export var MidiActivityMixinSheet = Base => {
     }
     static #addMacro() {
       const Editor = globalThis.DAE?.DIMEditor;
-      if (Editor) new Editor(this.activity, {}).render(true);
+      if (Editor) new Editor({document: this.activity}).render({force: true});
       else ui.notifications?.error("DIMEditor not available - install Dynamic Active Effects");
     }
 
@@ -1501,7 +1501,7 @@ export var MidiActivityMixinSheet = Base => {
         label: DIMtitle,
         class: "dae-dimeditor",
         icon: "fas fa-file-pen",
-        onclick: () => { new Editor(this.document, {}).render(true) }
+        onclick: () => { new Editor({document: this.activity}).render({force: true}) }
       });
       return buttons;
     }
@@ -1522,7 +1522,7 @@ function renderActivitySheetHook(app, [elem]) {
   let daeButton = document.createElement('button');
   const DIMtitle = i18n('dae.DIMEditor.Name');
   daeButton.setAttribute('class', 'header-control fa-solid fa-file-pen dae-dimeditor');
-  daeButton.onclick = ev => { new Editor(activity, {}).render(true); }
+  daeButton.onclick = function(ev) { new Editor({document: this.activity}).render({force: true}); }.bind(app);
   if (activity.macro?.command) daeButton.style.color = '#36ba36';
   daeButton.title = "Activity Macro Editor";
   closeButton.parentNode.insertBefore(daeButton, closeButton);
