@@ -135,7 +135,7 @@ async function _onMacroControl(event) {
   }
 
   if (a.classList.contains("edit-macro")) {
-    new globalThis.DAE.DIMEditor(this.document, {}).render(true);
+    new globalThis.DAE.DIMEditor({document: this.document}).render({force: true});
   }
   this.selectMidiTab = true;
 }
