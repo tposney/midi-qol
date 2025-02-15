@@ -143,7 +143,7 @@ export class SaferSocket {
 
   async executeAsGM(handler, ...args) {
     if (!this.canCall(handler)) return false;
-    return await untimedExecuteAsGM(handler, ...args);
+    return await unTimedExecuteAsGM(handler, ...args);
   }
   async executeAsUser(handler, userId, ...args) {
     if (!this.canCall(handler)) return false;
@@ -386,15 +386,15 @@ export function GMupdateEntityStats(data: { id: any; currentStats: any; }) {
 }
 
 export async function timedExecuteAsGM(toDo: string, data: any) {
-  if (!debugCallTiming) return untimedExecuteAsGM(toDo, data);
+  if (!debugCallTiming) return unTimedExecuteAsGM(toDo, data);
   const start = Date.now();
   data.playerId = game.user?.id;
-  const returnValue = await untimedExecuteAsGM(toDo, data);
+  const returnValue = await unTimedExecuteAsGM(toDo, data);
   log(`executeAsGM: ${toDo} elapsed: ${Date.now() - start}ms`)
   return returnValue;
 }
 
-export async function untimedExecuteAsGM(toDo: string, ...args) {
+export async function unTimedExecuteAsGM(toDo: string, ...args) {
   if (!socketlibSocket) return undefined;
   const myScene = game.user?.viewedScene;
   const gmOnScene = game.users?.filter(u => u.active && u.isGM && u.viewedScene === myScene);
@@ -403,9 +403,9 @@ export async function untimedExecuteAsGM(toDo: string, ...args) {
 }
 
 export async function timedAwaitExecuteAsGM(toDo: string, data: any) {
-  if (!debugCallTiming) return await untimedExecuteAsGM(toDo, data);
+  if (!debugCallTiming) return await unTimedExecuteAsGM(toDo, data);
   const start = Date.now();
-  const returnValue = await untimedExecuteAsGM(toDo, data);
+  const returnValue = await unTimedExecuteAsGM(toDo, data);
   log(`await executeAsGM: ${toDo} elapsed: ${Date.now() - start}ms`)
   return returnValue;
 }
@@ -764,21 +764,20 @@ workflowOptions: object
 workflowId: string
 
 */
-  let config: any = { midiOptions: data.options };
-  switch (data.request) {
-    case "save": config.ability = data.ability; break;
-    case "check": config.ability = data.ability; break;
-    case "skill": config.skill = data.ability; break;
-    case "tool": config.tool = data.ability; break;
-  };
+  let config: any = { midiOptions: data.options, ability: data.ability, skill: data.skill, tool: data.tool, proficiency: data.proficiency, advantage: data.advantage, disadvantage: data.disadvantage, isMagicSave: data.isMagicSave, isConcentrationCheck: data.isConcentrationCheck, rollDC: data.rollDC, saveItemUuid: data.saveItemUuid, workflowOptions: data.workflowOptions, workflowId: data.workflowId };
   let dialog: any = { configure: !data.options.fastForward };
-  let message: any = { create: data.options.chatMessage };
+  let message: any = { create: data.options.chatMessage ?? data.options.create, rollMode: data.options.rollMode };
   if (data.request === "tool") {
-    const requestedTool = data.ability;
-    const tool = actor.items.find(i => i.type === "tool" && i.system.type.baseItem === requestedTool);
+    const requestedTool = data.tool;
+    let tool = actor.items.get(data.options.itemId);
+    if (!tool) tool = actor.items.find(i => i.type === "tool" && i.system.type.baseItem === requestedTool);
     if (!tool) { // no tool of the requested type - auto fail
       //@ts-expect-error
       return [await new CONFIG.Dice.D20Roll("-1").roll()];
+    } else {
+      config.bonus = tool?.system.bonus ?? 0;
+      config.prof = tool?.system.prof;
+      config.item = tool;
     }
   }
   return new Promise(async (resolve) => {
@@ -794,7 +793,7 @@ workflowId: string
       resolve(result ?? {});
     }, configSettings.playerSaveTimeout * 1000);
     if (data.request === "save") result = await actor.rollSavingThrow(config, dialog, message)
-    else if (data.request === "check") result = await actor.rollAbilityTest(config, dialog, message);
+    else if (data.request === "check") result = await actor.rollAbilityCheck(config, dialog, message);
     else if (data.request === "skill") result = await actor.rollSkill(config, dialog, message);
     else if (data.request === "tool") result = await actor.rollToolCheck(config, dialog, message);
     if (timeoutId) clearTimeout(timeoutId);

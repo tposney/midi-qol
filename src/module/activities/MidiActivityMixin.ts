@@ -10,7 +10,6 @@ import { busyWait } from "../tests/setupTest.js";
 import { saveUndoData } from "../undo.js";
 import { activityHasAreaTarget, asyncHooksCall, canSee, canSense, checkActivityRange, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getStatusName, getToken, activityHasAutoPlaceTemplate, hasUsedBonusAction, hasUsedReaction, initializeVision, isAutoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, processDamageRollBonusFlags, setBonusActionUsed, setReactionUsed, sumRolls, tokenForActor, validTargetTokens, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, isAutoFastDamage } from "../utils.js";
 import { confirmWorkflow, postTemplateConfirmTargets, preTemplateTargets, removeFlanking, selectTargets, setDamageRollMinTerms } from "./activityHelpers.js";
-const { DialogV2 } = foundry.applications.api;
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
   _validateType(value) {
@@ -884,11 +883,11 @@ export var MidiActivityMixin = Base => {
         workflow.reactionQueried = false;
         const blockReaction = thisUsesReaction && hasReaction && workflow.inCombat && needsReactionCheck(this.actor) && !config.midiOptions?.ammoSelector?.hasRun;
         if (blockReaction) {
-          const shouldRoll = await DialogV2.confirm({
-            // @ts-expect-error types needs to make window partial
-            window: { title: i18n("midi-qol.EnforceReactions.Title") },
+          let shouldRoll = false;
+          let d = await Dialog.confirm({
+            title: i18n("midi-qol.EnforceReactions.Title"),
             content: i18n("midi-qol.EnforceReactions.Content"),
-            rejectClose: false
+            yes: () => { shouldRoll = true },
           });
           if (!shouldRoll) {
             return false; // user aborted roll TODO should the workflow be deleted?
@@ -899,11 +898,11 @@ export var MidiActivityMixin = Base => {
         const itemUsesBonusAction = ["bonus"].includes(this.activation?.type);
         const blockBonus = workflow.inCombat && itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(this.actor) && !config.midiOptions?.ammoSelector?.hasRun;
         if (blockBonus) {
-          const shouldRoll = await DialogV2.confirm({
-            // @ts-expect-error types needs to make window partial
-            window: { title: i18n("midi-qol.EnforceBonusActions.Title") },
+          let shouldRoll = false;
+          let d = await Dialog.confirm({
+            title: i18n("midi-qol.EnforceBonusActions.Title"),
             content: i18n("midi-qol.EnforceBonusActions.Content"),
-            rejectClose: false
+            yes: () => { shouldRoll = true },
           });
           if (!shouldRoll) {
             return false;
@@ -1130,11 +1129,11 @@ export var MidiActivityMixin = Base => {
         workflow.reactionQueried = false;
         const blockReaction = thisUsesReaction && hasReaction && workflow.inCombat && needsReactionCheck(this.actor) && !config.midiOptions?.ammoSelector?.hasRun;
         if (blockReaction) {
-          const shouldRoll = await DialogV2.confirm({
-            // @ts-expect-error types needs to make window partial
-            window: { title: i18n("midi-qol.EnforceReactions.Title") },
+          let shouldRoll = false;
+          let d = await Dialog.confirm({
+            title: i18n("midi-qol.EnforceReactions.Title"),
             content: i18n("midi-qol.EnforceReactions.Content"),
-            rejectClose: false
+            yes: () => { shouldRoll = true },
           });
           if (!shouldRoll) {
             await workflow.performState(workflow.WorkflowState_Abort);
@@ -1146,11 +1145,11 @@ export var MidiActivityMixin = Base => {
         const itemUsesBonusAction = ["bonus"].includes(this.activation?.type);
         const blockBonus = workflow.inCombat && itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(this.actor) && !config.midiOptions?.ammoSelector?.hasRun;
         if (blockBonus) {
-          const shouldRoll = await DialogV2.confirm({
-            // @ts-expect-error types needs to make window partial
-            window: { title: i18n("midi-qol.EnforceBonusActions.Title") },
+          let shouldRoll = false;
+          let d = await Dialog.confirm({
+            title: i18n("midi-qol.EnforceBonusActions.Title"),
             content: i18n("midi-qol.EnforceBonusActions.Content"),
-            rejectClose: false
+            yes: () => { shouldRoll = true },
           });
           if (!shouldRoll) {
             await workflow.performState(workflow.WorkflowState_Abort); // user aborted roll TODO should the workflow be deleted?

@@ -51,7 +51,8 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         }
         game.user.updateTokenTargets(validTargets);
       }
-      this.data.targets = Array.from(game.user.targets ?? [])
+      this.data.targets = Array.from(game.user.targets ?? []);
+      this.render();
     });
     return this;
   }
@@ -108,14 +109,22 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     const targets = Array.from(game.user?.targets ?? []);
     data.targets = [];
     const maxTargets = this.data.activity.target?.affects?.count;
+    const actor = this.data.activity.actor;
+    const token = tokenForActor(actor);
     for (let target of targets) {
       if (maxTargets && data.targets.length >= maxTargets) break;
+      switch (this.data.activity.target?.affects?.type ?? "any") {
+        case "enemy":
+          if ((token?.document?.disposition ?? 1) * target.document.disposition >= 0) continue;
+        case "ally": 
+          if ((token?.document?.disposition ?? 1) * target.document.disposition < 0) continue;
+        default: break;
+      }
       let img = target.document.texture.src;
       if (VideoHelper.hasVideoExtension(img as string)) {
         img = await game.video?.createThumbnail(img as string, { width: 50, height: 50 }) ?? "";
       }
-      const actor = this.data.activity.actor;
-      const token = tokenForActor(actor);
+
       let details: string[] = [];
       if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking"))) {
         if (token && computeFlankingStatus(token, target)) details.push((i18n("midi-qol.Flanked") ?? "Flanked"));
@@ -222,11 +231,13 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
           const token = getToken(i.id);
           if (token) {
             token.setTarget(false, { user: game.user, releaseOthers: false, groupSelection: true });
+            this.render();
           }
         });
         i.closest(".midi-qol-box")?.addEventListener('click', async function () {
           const token = getToken(i.id);
           if (token) await canvas?.ping(token.center);
+          console.error("ping");
         });
         i.closest(".midi-qol-box")?.addEventListener('mouseover', function () {
           const token = getToken(i.id);

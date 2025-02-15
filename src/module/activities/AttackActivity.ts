@@ -1,5 +1,5 @@
 import { debugEnabled, warn, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
-import { untimedExecuteAsGM } from "../GMAction.js";
+import { unTimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
 import { defaultRollOptions } from "../patching.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
@@ -185,15 +185,10 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         }
         if (Object.values(keys).some(k => k)) dialog.configure = this.midiProperties.forceDialog || requiresAmmoConfirmation;
         else dialog.configure ??= !config.midiOptions.fastForwardAttack || this.midiProperties.forceDialog || requiresAmmoConfirmation;
+        config.advantage = !!config.midiOptions.advantage || keys.advantage;
+        config.disadvantage = !!config.midiOptions.disadvantage || keys.disadvantage;
         preRollHookId = Hooks.once("dnd5e.preRollAttackV2", (rollConfig, dialogConfig, messageConfig) => {
           if (this.workflow?.aborted) return false;
-          for (let roll of rollConfig.rolls) {
-            roll.options.advantage ||= !!config.midiOptions.advantage || keys.advantage;;
-            roll.options.disadvantage ||= !!config.midiOptions.disadvantage || keys.disadvantage;
-          }
-          let rollOptions = rollConfig.rolls[0].options;
-          //@ts-expect-error
-          const ADV_MODE = CONFIG.Dice.D20Roll.ADV_MODE;
           if (this.workflow?.rollOptions?.rollToggle) dialogConfig.configure = !dialogConfig.configure;
           if (configSettings.checkTwoHanded && ["twoHanded", "offhand"].includes(rollConfig.attackMode)) {
             // check equipment - shield other weapons for equipped status
@@ -202,6 +197,14 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
               if (this.workflow) this.workflow.aborted = true;
               return false;
             }
+          }
+          if (keys.disadvantage && this.workflow) {
+            this.workflow.attackAdvAttribution.add(`DIS:keyPress`);
+            this.workflow.advReminderAttackAdvAttribution.add(`DIS:keyPress`);
+          }
+          if (keys.advantage && this.workflow) {
+            this.workflow.attackAdvAttribution.add(`ADV:keyPress`);
+            this.workflow.advReminderAttackAdvAttribution.add(`ADV:keyPress`);
           }
           return true;
         });
@@ -306,7 +309,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
             workflow.needItemCard = false;
             if (configSettings.undoWorkflow && workflow.undoData) {
               workflow.undoData.chatCardUuids = workflow.undoData.chatCardUuids.concat([itemCard.uuid]);
-              untimedExecuteAsGM("updateUndoChatCardUuids", workflow.undoData);
+              unTimedExecuteAsGM("updateUndoChatCardUuids", workflow.undoData);
             }
           }
         }
@@ -365,7 +368,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         || workflow?.workflowOptions?.advantage
         || workflow.flankingAdvantage;
       if (workflow.noAdvantage) advantage = false;
-      // Attribute advantaage
+      // Attribute advantage
       if (workflow.rollOptions.advantage) {
         workflow.attackAdvAttribution.add(`ADV:keyPress`);
         workflow.advReminderAttackAdvAttribution.add(`ADV:keyPress`);
@@ -382,10 +385,6 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         || workflow.rollOptions.disadvantage;
       if (workflow.noDisadvantage) disadvantage = false;
 
-      if (workflow.rollOptions.disadvantage) {
-        workflow.attackAdvAttribution.add(`DIS:keyPress`);
-        workflow.advReminderAttackAdvAttribution.add(`DIS:keyPress`);
-      }
       if (workflow.workflowOptions?.disadvantage)
         workflow.attackAdvAttribution.add(`DIS:workflowOptions`);
 

@@ -460,7 +460,7 @@
   "midi-qol.AttackMacro.Hint": "Comma separated list of macros to call when calculating attack roll which will be applied when checking if the attack hit the targets",
   "midi-qol.DAEMidiQOL": "DAE/Midi-QOL specific",
   "midi-qol.OptionalRules.Name": "Optional Game Rules",
-  "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable.",
+  "midi-qol.OptionalRules.Hint": "DND5E Game rules that you may wish to enable. Generally, don't work with better rolls.",
   "midi-qol.InvisAdvantage.Name": "Unseen/Invisible attackers have advantage/disadvantage on attacks",
   "midi-qol.InvisAdvantage.Hint": "<strong>Rules as written</strong> Invisible attackers have advantage on attacks. Disadvantage if the target is invisible",
   "midi-qol.InvisAdvantageOptions": {
@@ -764,13 +764,16 @@
   "midi-qol.CheckFlanking.Hint": "Check if you and your allies flank the opponent. Either gives attacker advantage and/or applies <strong>CE flanking</strong> condition to <em>attacker</em> OR applies CE Flanked condition to target",
   "midi-qol.CheckFlankingOptions": {
     "off": "none",
-    "ceonly": "Convenient Effect Flanking Only",
     "advonly": "Advantage Only",
-    "ceadv": "CE Flanking + Advantage",
-    "ceflanked": "CE Flanked condition only",
-    "ceflankedNoconga": "CE Flanked + no conga line"
+    "ceonly": "Convenient Effects Flanking",
+    "midiFlanking": "Midi Flanking effect",
+    "ceflanked": "Convenient Effects Flanked",
+    "midiFlanked": "Midi Flanked effect", 
+    "ceflankedNoconga": "Convenient Effects Flanked + no conga line",
+    "miidFlankedNoConga": "Midi Flanked + no conga line"
   },
   "midi-qol.Flanked": "Flanked",
+  "midi-qol.Flanking": "Flanking",
   "midi-qol.RollAlternate.Name": "Move roll formula to tooltip",
   "midi-qol.RollAlternate.Hint": "Use alternate roll display on merge card moving the roll formula to the tooltip and optionally add advantage attribution",
   "midi-qol.RollAlternateOptions": {

@@ -3,7 +3,7 @@ import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, processIt
 import { processUndoDamageCard } from "./GMAction.js";
 import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, MQfromUuidSync, removeReactionUsed, removeBonusActionUsed, checkflanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, itemIsVersatile, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, isConcentrating, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm } from "./utils.js";
 import { activateMacroListeners, getCurrentSourceMacros } from "./apps/Item.js"
-import { checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
+import { autoFastForwardAbilityRolls, checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { Workflow } from "./Workflow.js";
@@ -511,7 +511,7 @@ export function initHooks() {
       iconClass: "fas fa-cog",
       enabled: () => configSettings.allowActorUseMacro,
       openConfiguration: (params) => {
-        new ActorOnUseMacrosConfig({document: params.app.object}).render({force: true});
+        new ActorOnUseMacrosConfig({ document: params.app.object }).render({ force: true });
       },
       openConfigurationTooltip: i18n("midi-qol.ActorOnUseMacros"),
     });
@@ -607,7 +607,7 @@ export function initHooks() {
       error(message);
       TroubleShooter.recordError(new Error(message), message);
     }
-    item?.use({legacy: false}, {}, {});
+    item?.use({ legacy: false }, {}, {});
     return true;
   })
 
@@ -882,20 +882,20 @@ Hooks.on("dnd5e.calculateDamage", (actor: Actor.Implementation /* Actor - no dnd
             custom = Object.keys(GameSystemConfig.customDamageResistanceTypes).find(key => GameSystemConfig.customDamageResistanceTypes[key].toLocaleLowerCase() === custom.toLocaleLowerCase()) ?? custom;
           switch (custom) {
             case "spell": if (!damage.properties.has("spell")) continue; break;
-            case "nonSpell": 
-            case "non-spell": 
+            case "nonSpell":
+            case "non-spell":
               if (damage.properties.has("spell")) continue; break;
             case "magical": if (!damage.properties.has("mgc")) continue; break;
-            case "nonMagical": 
+            case "nonMagical":
             case "non-magical":
               if (damage.properties.has("mgc")) continue; break;
             case "physical":
               bypassesPresent = damage.properties.intersection(bypasses);
-              if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || bypassesPresent.size > 0) continue; 
+              if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || bypassesPresent.size > 0) continue;
               break;
             case "nonPhysical":
             case "non-physical":
-              if (GameSystemConfig.damageTypes[damage.type]?.isPhysical) continue; break; 
+              if (GameSystemConfig.damageTypes[damage.type]?.isPhysical) continue; break;
             case "nonMagicalPhysical":
             case "non-magical-physical":
               if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || damage.properties.has("mgc")) continue; break;
@@ -903,7 +903,7 @@ Hooks.on("dnd5e.calculateDamage", (actor: Actor.Implementation /* Actor - no dnd
             case "non-silver-physical":
               if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || damage.properties.has("sil")) continue;
               break;
-            case "nonAdamantPhysical": 
+            case "nonAdamantPhysical":
             case "non-adamant-physical":
               if (!GameSystemConfig.damageTypes[damage.type]?.isPhysical || damage.properties.has("ada")) continue;
               break;
@@ -979,11 +979,11 @@ Hooks.on("dnd5e.calculateDamage", (actor: Actor.Implementation /* Actor - no dnd
           case "rwak":
             if (options.ignore?.modification?.has(special)) continue;
             selectedDamage = selectDamages(damages, (damage) => {
-            const bypassesPresent = damage.properties.intersection(bypasses);
-            return !GameSystemConfig.healingTypes[damage.type] 
-            && damage.properties.has(special)
-            && bypassesPresent.size === 0
-          });
+              const bypassesPresent = damage.properties.intersection(bypasses);
+              return !GameSystemConfig.healingTypes[damage.type]
+                && damage.properties.has(special)
+                && bypassesPresent.size === 0
+            });
             if (selectedDamage > 0) dmActive = i18n(special);
             break;
           case "msak":
@@ -1024,9 +1024,9 @@ Hooks.on("dnd5e.calculateDamage", (actor: Actor.Implementation /* Actor - no dnd
           case "physical":
             selectedDamage = selectDamages(damages, (damage) => {
               const bypassesPresent = damage.properties.intersection(bypasses);
-              return !GameSystemConfig.healingTypes[damage.type] 
-              && GameSystemConfig.damageTypes[damage.type]?.isPhysical
-              && bypassesPresent.size === 0;
+              return !GameSystemConfig.healingTypes[damage.type]
+                && GameSystemConfig.damageTypes[damage.type]?.isPhysical
+                && bypassesPresent.size === 0;
             });
             if (selectedDamage > 0) dmActive = i18n("midi-qol.Physical");
             break;
@@ -1176,3 +1176,35 @@ Hooks.on("dnd5e.preCreateActivityTemplate", (activity, templateData) => {
   templateData.distance += 0.000001; // Make the template factionally larger to avoid rounding errors
   return true;
 });
+
+// insert midi initiative changes into the initiative config.
+Hooks.on("dnd5e.preConfigureInitiative", (actor: Actor, rollConfig: any) => {
+  let { parts, data, options, subject } = rollConfig;
+  console.error("midi-qol | preConfigureInitiative", parts, data, options);
+  //@ts-expect-error no dnd5e-types
+  const init: any = actor.system.attributes.init.value ?? "dex";
+  const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: actor });
+  if (evalAllConditions(actor, "flags.midi-qol.advantage.all", conditionData)
+    || evalAllConditions(actor, "flags.midi-qol.advantage.ability.check.all", conditionData)
+    || evalAllConditions(actor, `flags.midi-qol.advantage.ability.check.${init}`, conditionData)
+    || evalAllConditions(actor, `flags.${game.system?.id}.initiativeAdv`, conditionData)) {
+    options.advantage ||= true;
+  }
+  if (evalAllConditions(actor, "flags.midi-qol.disadvantage.all", conditionData)
+    || evalAllConditions(actor, "flags.midi-qol.disadvantage.ability.check.all", conditionData)
+    || evalAllConditions(actor, `flags.midi-qol.disadvantage.ability.check.${init}`, conditionData)
+    || evalAllConditions(actor, `flags.${game.system?.id}.initiativeDisadv`, conditionData)) {
+    options.disadvantage ||= true;
+  }
+  if (foundry.utils.getProperty(actor, `flags.${game.system?.id}.initiativeHalfProficiency`) && !parts.includes("@prof")) {
+    parts.push("@prof");
+    data.prof = new globalThis.dnd5e.documents.Proficiency(data.attributes.prof, 0.5, false);
+  }
+});
+
+Hooks.on("dnd5e.preRollAbilityCheckV2", (config, dialog, message) => {
+  if (autoFastForwardAbilityRolls) {
+    dialog.configure = false;
+  }
+}
+)

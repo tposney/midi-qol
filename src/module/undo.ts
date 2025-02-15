@@ -1,6 +1,6 @@
 
 import { debug, debugEnabled, error, log, warn } from "../midi-qol.js";
-import { socketlibSocket, untimedExecuteAsGM } from "./GMAction.js";
+import { socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { configSettings } from "./settings.js";
 import { busyWait } from "./tests/setupTest.js";
 import { MQfromUuidSync, getConcentrationEffect, getTokenDocument, isReactionItem } from "./utils.js";
@@ -40,7 +40,7 @@ interface undoDataDef {
 
 export function queueUndoDataDirect(undoDataDef) {
   if (!configSettings.undoWorkflow) return;
-  untimedExecuteAsGM("queueUndoDataDirect", undoDataDef);
+  unTimedExecuteAsGM("queueUndoDataDirect", undoDataDef);
 }
 export function _queueUndoDataDirect(undoDataDef) {
   if (!configSettings.undoWorkflow) return;
@@ -89,7 +89,7 @@ export async function saveUndoData(workflow: Workflow): Promise<boolean> {
   workflow.undoData.isReaction = workflow.options?.isReaction || isReactionItem(workflow.item);
   workflow.undoData.templateUuids = [];
   workflow.undoData.sequencerUuid = workflow.item?.uuid;
-  if (!await untimedExecuteAsGM("startUndoWorkflow", workflow.undoData)) {
+  if (!await unTimedExecuteAsGM("startUndoWorkflow", workflow.undoData)) {
     error("Could not startUndoWorkflow");
     return false;
   }
@@ -168,7 +168,7 @@ export async function saveTargetsUndoData(workflow: Workflow) {
   workflow.undoData.itemCardId = workflow.itemCardId;
   workflow.undoData.itemCardUuid = workflow.itemCardUuid;
   if (workflow.templateUuid) workflow.undoData.templateUuids.push(workflow.templateUuid);
-  return untimedExecuteAsGM("queueUndoData", workflow.undoData)
+  return unTimedExecuteAsGM("queueUndoData", workflow.undoData)
 }
 
 export async function addUndoChatMessage(message: ChatMessage) {
@@ -177,7 +177,7 @@ export async function addUndoChatMessage(message: ChatMessage) {
   if (configSettings.undoWorkflow && currentUndo && !currentUndo.chatCardUuids.some(uuid => uuid === message.uuid)) {
     // Assumes workflow.undoData.chatCardUuids has been initialised
     currentUndo.chatCardUuids = currentUndo.chatCardUuids.concat([message.uuid]);
-    untimedExecuteAsGM("updateUndoChatCardUuids", currentUndo);
+    unTimedExecuteAsGM("updateUndoChatCardUuids", currentUndo);
   }
 }
 
@@ -266,10 +266,10 @@ export function addQueueEntry(queue: any[], data: any) {
 }
 
 export async function undoMostRecentWorkflow() {
-  return untimedExecuteAsGM("undoMostRecentWorkflow")
+  return unTimedExecuteAsGM("undoMostRecentWorkflow")
 }
 export async function removeMostRecentWorkflow() {
-  return untimedExecuteAsGM("removeMostRecentWorkflow")
+  return unTimedExecuteAsGM("removeMostRecentWorkflow")
 }
 
 export async function undoTillWorkflow(workflowId: string, undoTarget: boolean, removeWorkflow: boolean = false) {

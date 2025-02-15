@@ -2,7 +2,7 @@ import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID } from ".
 import { DDBGameLogWorkflow, Workflow } from "./Workflow.js";
 import { nsaFlag, coloredBorders, configSettings, forceHideRoll, safeGetGameSetting } from "./settings.js";
 import { playerFor, playerForActor, doOverTimeEffect, isInCombat, MQfromUuidSync, isAutoFastAttack } from "./utils.js";
-import { socketlibSocket, untimedExecuteAsGM } from "./GMAction.js";
+import { socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 export const MAESTRO_MODULE_NAME = "maestro";
 export const MODULE_LABEL = "Maestro";
@@ -434,7 +434,7 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   if (configSettings.undoWorkflow && workflow.undoData && message) {
     if (!workflow.undoData.chatCardUuids) workflow.undoData.chatCardUuids = [];
     workflow.undoData.chatCardUuids = workflow.undoData.chatCardUuids.concat([message.uuid]);
-    untimedExecuteAsGM("updateUndoChatCardUuids", workflow.undoData);
+    unTimedExecuteAsGM("updateUndoChatCardUuids", workflow.undoData);
   }
   if (flags.dnd5e.roll.type === "attack") {
     let rolls = message.rolls;

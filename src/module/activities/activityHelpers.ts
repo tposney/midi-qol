@@ -132,8 +132,9 @@ export function requiresTargetConfirmation(activity, options): boolean {
   // For old version of dnd5e-scriptlets
   if (options.workflowdialogOptions?.lateTargeting === "none") return false;
   if (options.workflowdialogOptions?.lateTargeting === "always") return true;
-  if (activity.target?.affects.type === "self") return false;
+  if (["", "self", undefined].includes(activity.target?.affects?.type) && ["", undefined, "self"].includes(activity.range?.units)) return false;
   if (activity.target?.affects?.choice) return true;
+  if (activity.target?.affects.type === "self") return false;
   if (options.workflowOptions?.attackPerTarget === true) return false;
   if (activity.midiProperties?.confirmTargets === "always") return true;
   if (activity.midiProperties?.confirmTargets === "never") return false;

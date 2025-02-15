@@ -1,3 +1,16 @@
+### 12.4.27
+* Midi-qol has been appv2ified, due to @michael many thanks for all his work to do this.
+* Fix for tool rolls not returning the right sort of rolls and throwing errors in various cases.
+* Clean up of initiative handling to be less intrusive - uses the newish dnd5e.preConfigureInitiative hook instead.
+* Reinstated flags.dnd5e.initiativeHalfProficiency both as an active effect change and as a special traits setting.
+* Fix for onUseMacro calls triggered by postTemplatePlaced not triggering.
+* Fix for spell sniper and sharp shooter. Spell Sniper and Sharp Shooter can be set from the special traits popup on the character sheet or via active effects.
+  * flags.midi-qol.sharpShooter is deprecated in favour of flags.dnd5e.sharpShooter.
+* Midi now implements it's own flanking/flanked conditions and supports CPR's conditions if they are present.
+
+* Roll statistics is not implemented for dnd5e v4 yet, roll statistics settings are not displayed at present
+* Active defense not working.
+
 ### 12.4.26
 * Sneak attack bonus now inherits the properties of the weapon that did the attack, i.e. magic etc.
 * Fix for untarget options getting overwritten by GM settings.
@@ -12,8 +25,8 @@
 * Using a legendary action won't be treated as a reaction when checking AoO is enabled.
 * Rolling a death save will no longer trigger an error in bonusDialog.
 * Fix for error being thrown when placing templates in some cases.
-* Renable apply damage buttons for players if set. Only targets they own will be displayed in the targets they can apply damage to.
-* Fix for reach propterty usage - still uses item's range rather than activities range.
+* Reenable apply damage buttons for players if set. Only targets they own will be displayed in the targets they can apply damage to.
+* Fix for reach property usage - still uses item's range rather than activities range.
 * A review of all the midi sample items which should work in v4.
 * Fix for shove item to use Athletics for the attacker.
 * Change so that attacks that do negative damage (i.e. healing) don't trigger isDamaged reactions.

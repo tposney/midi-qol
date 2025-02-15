@@ -3,7 +3,7 @@ import { preloadTemplates } from './module/preloadTemplates.js';
 import { checkModules, installedModules, setupModules } from './module/setupModules.js';
 import { itemPatching, visionPatching, actorAbilityRollPatching, readyPatching, initPatching, addDiceTermModifiers } from './module/patching.js';
 import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
-import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, untimedExecuteAsGM } from './module/GMAction.js';
+import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
 import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, checkRange, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, debouncedUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getTokenForActor, getTokenForActorAsSet, getTokenPlayerName, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isTargetable, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, reportMidiCriticalFlags, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, MQfromUuidSync, actorFromUuid, createDamageDetail, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, completeItemUseV2, checkActivityRange, modifyDamageBy, computeDistance, addDependent } from './module/utils.js';
@@ -47,7 +47,7 @@ export const BooleanField = foundry.data.fields.BooleanField;
 export const NumberField = foundry.data.fields.NumberField;
 export const StringField = foundry.data.fields.StringField;
 export const SchemaField = foundry.data.fields.SchemaField;
-export var isdndv4 = false;
+export var isDnD = false;
 
 
 export let i18n = (key: string) => {
@@ -108,9 +108,11 @@ export let SystemString;
 export let systemConcentrationId;
 export let midiReactionEffect;
 export let midiBonusActionEffect;
+export let midiFlankingEffect;
+export let midiFlankedEffect;
 
 export const NumericTerm = foundry.dice.terms.NumericTerm;
-export const MESSAGETYPES = {
+export const MESSAGE_TYPES = {
   HITS: 1,
   SAVES: 2,
   ATTACK: 3,
@@ -177,10 +179,10 @@ Hooks.once('init', async function () {
   });
   addConfigOptions();
   //@ts-expect-error
-  game.system.config.areaTargetTypes["emanationNoTemplate"] = { 
-    label: i18n("midi-qol.emanationNoTemplate"), 
-    template: "rect", 
-    standard: true, 
+  game.system.config.areaTargetTypes["emanationNoTemplate"] = {
+    label: i18n("midi-qol.emanationNoTemplate"),
+    template: "rect",
+    standard: true,
     counted: "midi-qol.emanationTemplate.counted"
   };
 
@@ -255,7 +257,7 @@ Hooks.on("dae.modifySpecials", (specKey, specials, _characterSpec) => {
     if (!["dm", "da"].includes(type)) allAttackTypes.forEach(attackType => {
       specials[`system.traits.${type}.midi.${attackType}`] = [new StringField(), -1];
       daeFieldBrowserFields.push(`system.traits.${type}.midi.${attackType}`);
-    }); 
+    });
   }
 
   if (GameSystemConfig.damageTypes) {
@@ -345,79 +347,80 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
   fieldMappings[`flags.${MODULE_ID}.max.ability.save.concentration`] = `system.attributes.concentration.roll.max`;
   fieldMappings[`flags.${MODULE_ID}.min.ability.save.concentration`] = `system.attributes.concentration.roll.min`;
   fieldMappings[`flags.${MODULE_ID}.concentrationSaveBonus`] = `system.attributes.concentration.bonuses.save`;
+  fieldMappings[`flags.${MODULE_ID}.sharpShooter`] = `flags.dnd5e.sharpShooter`;
   if (debugEnabled > 0) warn("fieldMappings", fieldMappings);
 
 });
 
 Hooks.on("dae.addSpecialDurations", daeSpecialDurations => {
-    daeSpecialDurations["1Action"] = i18n("dae.1Action");
-    daeSpecialDurations["Bonus Action"] = i18n("dae.Bonus Action");
-    daeSpecialDurations["Reaction"] = i18n("dae.Reaction");
-    daeSpecialDurations["Turn Action"] = i18n("dae.Turn Action");
-    daeSpecialDurations["1Spell"] = i18n("dae.1Spell");
-    daeSpecialDurations["1Attack"] = game.i18n?.format("dae.1Attack", { type: `${i18n("dae.spell")}/${i18n("dae.weapon")} ${i18n("dae.attack")}` });
-    daeSpecialDurations["1Hit"] = game.i18n?.format("dae.1Hit", { type: `${i18n("dae.spell")}/${i18n("dae.weapon")}` });
-    daeSpecialDurations["1Critical"] = i18n("dae.1Critical");
-    daeSpecialDurations["1Fumble"] = i18n("dae.1Fumble");
-    //    daeSpecialDurations["1Hit"] = i18n("dae.1Hit");
-    daeSpecialDurations["1Reaction"] = i18n("dae.1Reaction")
-    let attackTypes = ["mwak", "rwak", "msak", "rsak"];
-    if (game.system?.id === "sw5e") attackTypes = ["mwak", "rwak", "mpak", "rpak"];
-    attackTypes.forEach(at => {
-      daeSpecialDurations[`1Attack:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${game.i18n?.format("dae.1Attack", { type: GameSystemConfig.itemActionTypes[at] })}`;
-      daeSpecialDurations[`1Hit:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${game.i18n?.format("dae.1Hit", { type: GameSystemConfig.itemActionTypes[at] })}`;
-    })
-    daeSpecialDurations["DamageDealt"] = i18n("dae.DamageDealt");
-    daeSpecialDurations["isAttacked"] = i18n("dae.isAttacked");
-    daeSpecialDurations["isDamaged"] = i18n("dae.isDamaged");
-    daeSpecialDurations["isHealed"] = i18n("dae.isHealed");
-    daeSpecialDurations["zeroHP"] = i18n("dae.ZeroHP");
-    daeSpecialDurations["isHit"] = i18n("dae.isHit");
-    daeSpecialDurations["isHitCritical"] = i18n("dae.isHitCritical");
-    daeSpecialDurations["isSave"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSaveDetail")}`;
-    daeSpecialDurations["isSaveSuccess"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSaveDetail")}: ${i18n("dae.success")}`;
-    daeSpecialDurations["isSaveFailure"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSaveDetail")}: ${i18n("dae.failure")}`;
-    daeSpecialDurations["isConcentrationSave"] = i18n("dae.isConcentrationSave");
-    daeSpecialDurations["isConcentrationSaveFail"] = `${i18n("dae.isConcentrationSave")}: ${i18n("dae.failure")}`;
-    daeSpecialDurations["isConcentrationSaveSuccess"] = `${i18n("dae.isConcentrationSave")}: ${i18n("dae.success")}`;
-    daeSpecialDurations["isCheck"] = `${i18n("dae.isRollBase")} ${i18n("dae.isCheckDetail")}`;
-    daeSpecialDurations["isSkill"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSkillDetail")}`;
-    daeSpecialDurations["isInitiative"] = `${i18n("dae.isRollBase")} ${i18n("dae.isInitiativeDetail")}`;
+  daeSpecialDurations["1Action"] = i18n("dae.1Action");
+  daeSpecialDurations["Bonus Action"] = i18n("dae.Bonus Action");
+  daeSpecialDurations["Reaction"] = i18n("dae.Reaction");
+  daeSpecialDurations["Turn Action"] = i18n("dae.Turn Action");
+  daeSpecialDurations["1Spell"] = i18n("dae.1Spell");
+  daeSpecialDurations["1Attack"] = game.i18n?.format("dae.1Attack", { type: `${i18n("dae.spell")}/${i18n("dae.weapon")} ${i18n("dae.attack")}` });
+  daeSpecialDurations["1Hit"] = game.i18n?.format("dae.1Hit", { type: `${i18n("dae.spell")}/${i18n("dae.weapon")}` });
+  daeSpecialDurations["1Critical"] = i18n("dae.1Critical");
+  daeSpecialDurations["1Fumble"] = i18n("dae.1Fumble");
+  //    daeSpecialDurations["1Hit"] = i18n("dae.1Hit");
+  daeSpecialDurations["1Reaction"] = i18n("dae.1Reaction")
+  let attackTypes = ["mwak", "rwak", "msak", "rsak"];
+  if (game.system?.id === "sw5e") attackTypes = ["mwak", "rwak", "mpak", "rpak"];
+  attackTypes.forEach(at => {
+    daeSpecialDurations[`1Attack:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${game.i18n?.format("dae.1Attack", { type: GameSystemConfig.itemActionTypes[at] })}`;
+    daeSpecialDurations[`1Hit:${at}`] = `${GameSystemConfig.itemActionTypes[at]}: ${game.i18n?.format("dae.1Hit", { type: GameSystemConfig.itemActionTypes[at] })}`;
+  })
+  daeSpecialDurations["DamageDealt"] = i18n("dae.DamageDealt");
+  daeSpecialDurations["isAttacked"] = i18n("dae.isAttacked");
+  daeSpecialDurations["isDamaged"] = i18n("dae.isDamaged");
+  daeSpecialDurations["isHealed"] = i18n("dae.isHealed");
+  daeSpecialDurations["zeroHP"] = i18n("dae.ZeroHP");
+  daeSpecialDurations["isHit"] = i18n("dae.isHit");
+  daeSpecialDurations["isHitCritical"] = i18n("dae.isHitCritical");
+  daeSpecialDurations["isSave"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSaveDetail")}`;
+  daeSpecialDurations["isSaveSuccess"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSaveDetail")}: ${i18n("dae.success")}`;
+  daeSpecialDurations["isSaveFailure"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSaveDetail")}: ${i18n("dae.failure")}`;
+  daeSpecialDurations["isConcentrationSave"] = i18n("dae.isConcentrationSave");
+  daeSpecialDurations["isConcentrationSaveFail"] = `${i18n("dae.isConcentrationSave")}: ${i18n("dae.failure")}`;
+  daeSpecialDurations["isConcentrationSaveSuccess"] = `${i18n("dae.isConcentrationSave")}: ${i18n("dae.success")}`;
+  daeSpecialDurations["isCheck"] = `${i18n("dae.isRollBase")} ${i18n("dae.isCheckDetail")}`;
+  daeSpecialDurations["isSkill"] = `${i18n("dae.isRollBase")} ${i18n("dae.isSkillDetail")}`;
+  daeSpecialDurations["isInitiative"] = `${i18n("dae.isRollBase")} ${i18n("dae.isInitiativeDetail")}`;
 
-    daeSpecialDurations["isMoved"] = i18n("dae.isMoved");
-    daeSpecialDurations["longRest"] = i18n("DND5E.LongRest");
-    daeSpecialDurations["shortRest"] = i18n("DND5E.ShortRest");
-    daeSpecialDurations["newDay"] = `${i18n("DND5E.NewDay")}`;
-    Object.keys(GameSystemConfig.abilities).forEach(abl => {
-      //@ts-expect-error .version
-      let ablString = foundry.utils.isNewerVersion(game.system.version, "2.1.5")
-        ? GameSystemConfig.abilities[abl].label
-        : GameSystemConfig.abilities[abl];
-      daeSpecialDurations[`isSave.${abl}`] = `${i18n("dae.isRollBase")} ${ablString} ${i18n("dae.isSaveDetail")}`;
-      daeSpecialDurations[`isSaveSuccess.${abl}`] = `${i18n("dae.isRollBase")} ${ablString} ${i18n("dae.isSaveDetail")}: ${i18n("dae.success")}`;
-      daeSpecialDurations[`isSaveFailure.${abl}`] = `${i18n("dae.isRollBase")} ${ablString} ${i18n("dae.isSaveDetail")}: ${i18n("dae.failure")}`;
-      daeSpecialDurations[`isCheck.${abl}`] = `${i18n("dae.isRollBase")} ${ablString} ${i18n("dae.isCheckDetail")}`;
-    })
-    //@ts-expect-error
-    if (foundry.utils.isNewerVersion(game.system.version, "2.9.99")) {
-      Object.keys(GameSystemConfig.damageTypes).forEach(key => {
-        daeSpecialDurations[`isDamaged.${key}`] = `${i18n("dae.isDamaged")}: ${GameSystemConfig.damageTypes[key].label}`;
-      });
-
-    } else {
-      Object.keys(GameSystemConfig.damageTypes).forEach(dt => {
-        daeSpecialDurations[`isDamaged.${dt}`] = `${i18n("dae.isDamaged")}: ${GameSystemConfig.damageTypes[dt]}`;
-      });
-    }
-    //@ts-expect-error
-    if (foundry.utils.isNewerVersion(game.system.version, "2.9.99")) {
-      daeSpecialDurations[`isDamaged.healing`] = `${i18n("dae.isDamaged")}: ${GameSystemConfig.healingTypes["healing"].label}`;
-    } else {
-      daeSpecialDurations[`isDamaged.healing`] = `${i18n("dae.isDamaged")}: ${GameSystemConfig.healingTypes["healing"]}`;
-    }
-    Object.keys(GameSystemConfig.skills).forEach(skillId => {
-      daeSpecialDurations[`isSkill.${skillId}`] = `${i18n("dae.isRollBase")} ${i18n("dae.isSkillDetail")} ${GameSystemConfig.skills[skillId].label}`;
+  daeSpecialDurations["isMoved"] = i18n("dae.isMoved");
+  daeSpecialDurations["longRest"] = i18n("DND5E.LongRest");
+  daeSpecialDurations["shortRest"] = i18n("DND5E.ShortRest");
+  daeSpecialDurations["newDay"] = `${i18n("DND5E.NewDay")}`;
+  Object.keys(GameSystemConfig.abilities).forEach(abl => {
+    //@ts-expect-error .version
+    let ablString = foundry.utils.isNewerVersion(game.system.version, "2.1.5")
+      ? GameSystemConfig.abilities[abl].label
+      : GameSystemConfig.abilities[abl];
+    daeSpecialDurations[`isSave.${abl}`] = `${i18n("dae.isRollBase")} ${ablString} ${i18n("dae.isSaveDetail")}`;
+    daeSpecialDurations[`isSaveSuccess.${abl}`] = `${i18n("dae.isRollBase")} ${ablString} ${i18n("dae.isSaveDetail")}: ${i18n("dae.success")}`;
+    daeSpecialDurations[`isSaveFailure.${abl}`] = `${i18n("dae.isRollBase")} ${ablString} ${i18n("dae.isSaveDetail")}: ${i18n("dae.failure")}`;
+    daeSpecialDurations[`isCheck.${abl}`] = `${i18n("dae.isRollBase")} ${ablString} ${i18n("dae.isCheckDetail")}`;
+  })
+  //@ts-expect-error
+  if (foundry.utils.isNewerVersion(game.system.version, "2.9.99")) {
+    Object.keys(GameSystemConfig.damageTypes).forEach(key => {
+      daeSpecialDurations[`isDamaged.${key}`] = `${i18n("dae.isDamaged")}: ${GameSystemConfig.damageTypes[key].label}`;
     });
+
+  } else {
+    Object.keys(GameSystemConfig.damageTypes).forEach(dt => {
+      daeSpecialDurations[`isDamaged.${dt}`] = `${i18n("dae.isDamaged")}: ${GameSystemConfig.damageTypes[dt]}`;
+    });
+  }
+  //@ts-expect-error
+  if (foundry.utils.isNewerVersion(game.system.version, "2.9.99")) {
+    daeSpecialDurations[`isDamaged.healing`] = `${i18n("dae.isDamaged")}: ${GameSystemConfig.healingTypes["healing"].label}`;
+  } else {
+    daeSpecialDurations[`isDamaged.healing`] = `${i18n("dae.isDamaged")}: ${GameSystemConfig.healingTypes["healing"]}`;
+  }
+  Object.keys(GameSystemConfig.skills).forEach(skillId => {
+    daeSpecialDurations[`isSkill.${skillId}`] = `${i18n("dae.isRollBase")} ${i18n("dae.isSkillDetail")} ${GameSystemConfig.skills[skillId].label}`;
+  });
 
 })
 
@@ -434,7 +437,7 @@ Hooks.on("dae.setFieldData", (fieldData: Record<string, string[]>) => {
 Hooks.once('setup', function () {
   // Do anything after initialization but before
   //@ts-expect-error
-  isdndv4 = game.system.id === "dnd5e" && foundry.utils.isNewerVersion(game.system.version, "3.3.99");
+  isDnD = game.system.id === "dnd5e" && foundry.utils.isNewerVersion(game.system.version, "3.3.99");
   setupModules();
   setupMidiFlags();
   setupSocket();
@@ -538,16 +541,39 @@ function addConfigOptions() {
       "physical": i18n("midi-qol.NonMagicalPhysical")
     }
   }
-
-  if (configSettings.allowUseMacro) {
-    config.characterFlags["DamageBonusMacro"] = {
-      hint: i18n("midi-qol.DamageMacro.Hint"),
-      name: i18n("midi-qol.DamageMacro.Name"),
-      placeholder: "",
-      section: i18n("midi-qol.DAEMidiQOL"),
-      type: String
+  if (game.system?.id === "dnd5e") {
+    globalThis.dnd5e.config.characterFlags["DamageBonusMacro"] = {
+      type: String,
+      name: "Damage Bonus Macro",
+      hint: "Macro to use for damage bonus",
+      section: "Midi QOL"
     };
-  };
+    globalThis.dnd5e.config.characterFlags["initiativeHalfProficiency"] = {
+      type: Boolean,
+      name: "Half Proficiency for Initiative",
+      hint: "add 1/2 proficiency to initiative",
+      section: "Midi QOL"
+    };
+    globalThis.dnd5e.config.characterFlags["initiativeDisadv"] = {
+      type: Boolean,
+      name: "Disadvantage on Initiative",
+      hint: "Provided by fears or magical items",
+      section: "Midi QOL"
+    };
+    globalThis.dnd5e.config.characterFlags["spellSniper"] = {
+      type: Boolean,
+      name: "Spell Sniper",
+      hint: "Provided by feats or magical items",
+      section: "Midi QOL"
+    };
+
+    globalThis.dnd5e.config.characterFlags["sharpShooter"] = {
+      type: Boolean,
+      name: "Sharp Shooter",
+      hint: "Provided by feats or magical items",
+      section: "Midi QOL"
+    };
+  }
 }
 /* ------------------------------------ */
 /* When ready							*/
@@ -609,18 +635,10 @@ Hooks.once('ready', function () {
   MidiSounds.midiSoundsReadyHooks();
 
   if (game.system && game.system?.id === "dnd5e") {
-    //@ts-expect-error
-    game.system.config.characterFlags["spellSniper"] = {
-      name: "Spell Sniper",
-      hint: "Spell Sniper",
-      section: i18n("DND5E.Feats"),
-      type: Boolean
-    };
-    //@ts-expect-error
-    game.system.config.areaTargetTypes["emanationNoTemplate"] = { 
-      label: i18n("midi-qol.emanationNoTemplate"), 
-      template: "rect", 
-      standard: true, 
+    globalThis.dnd5e.config.areaTargetTypes["emanationNoTemplate"] = {
+      label: i18n("midi-qol.emanationNoTemplate"),
+      template: "rect",
+      standard: true,
       counted: "midi-qol.emanationTemplate.counted"
     };
 
@@ -646,22 +664,12 @@ Hooks.once('ready', function () {
     Hooks.callAll("midi-qol.ready")
   }
 
-  if (game.user?.isGM) {
-    // if (installedModules.get("levelsautocover") && configSettings.optionalRules.coverCalculation === "levelsautocover" && !game.settings.get("levelsautocover", "apiMode")) {
-    // I think this is no longer required game.settings.set("levelsautocover", "apiMode", true)
-    //  if (game.user?.isGM)
-    //    ui.notifications?.warn("midi-qol | setting levels auto cover to api mode", { permanent: true })
-    // } else if (installedModules.get("levelsautocover") && configSettings.optionalRules.coverCalculation !== "levelsautocover" && game.settings.get("levelsautocover", "apiMode")) {
-    //  ui.notifications?.warn("midi-qol | Levels Auto Cover is in API mode but midi is not using levels auto cover - you may wish to disable api mode", { permanent: true })
-    // }
-  }
-
   const noDamageSavesText: string = i18n("midi-qol.noDamageonSaveSpellsv9") ?? "No Damaage Save";
   noDamageSaves = noDamageSavesText.split(",")?.map(s => s.trim()).map(s => cleanSpellName(s));
   checkModules();
   if (game.user?.isGM && configSettings.gmLateTargeting !== "none") {
     ui.notifications?.notify("Late Targeting has been replaced with Target Confirmation. Please update your settings", "info", { permanent: true });
-    new TargetConfirmationConfig({}).render({force: true});
+    new TargetConfirmationConfig({}).render({ force: true });
     configSettings.gmLateTargeting = "none";
     //@ts-expect-error
     game.settings.set(MODULE_ID, "ConfigSettings", configSettings)
@@ -669,7 +677,7 @@ Hooks.once('ready', function () {
   //@ts-expect-error
   if (!game.user?.isGM && game.settings.get(MODULE_ID, "LateTargeting") !== "none") {
     ui.notifications?.notify("Late Targeting has been replaced with Target Confirmation. Please update your settings", "info", { permanent: true });
-    new TargetConfirmationConfig({}).render({force: true});
+    new TargetConfirmationConfig({}).render({ force: true });
     //@ts-expect-error
     game.settings.set(MODULE_ID, "LateTargeting", "none");
   }
@@ -841,8 +849,8 @@ function setupMidiQOLApi() {
 
   const detectionModes = CONFIG.Canvas.detectionModes;
   let InvisibleDisadvantageVisionModes = Object.keys(detectionModes)
-  //@ts-expect-error I think imprecise is added by a module - TODO Check
-  .filter(dm => !detectionModes[dm].imprecise);
+    //@ts-expect-error I think imprecise is added by a module - TODO Check
+    .filter(dm => !detectionModes[dm].imprecise);
 
   let WallsBlockConditions = [
     "burrow"
@@ -963,12 +971,12 @@ function setupMidiQOLApi() {
     Workflows,
     moveToken: async (tokenRef: Token | TokenDocument | string, newCenter: { x: number, y: number }, animate: boolean = true) => {
       const tokenUuid = getTokenDocument(tokenRef)?.uuid;
-      if (tokenUuid) return untimedExecuteAsGM("moveToken", { tokenUuid, newCenter, animate });
+      if (tokenUuid) return unTimedExecuteAsGM("moveToken", { tokenUuid, newCenter, animate });
     },
     moveTokenAwayFromPoint: async (targetRef: Token | TokenDocument | string, distance: number, point: { x: number, y: number }, animate: boolean = true, checkCollision: boolean = false) => {
       const targetUuid = getTokenDocument(targetRef)?.uuid;
       if (point && targetUuid && distance)
-        return untimedExecuteAsGM("moveTokenAwayFromPoint", { targetUuid, distance, point, animate, checkCollision })
+        return unTimedExecuteAsGM("moveTokenAwayFromPoint", { targetUuid, distance, point, animate, checkCollision })
     },
     createEffects: async (data: { actorUuid: string, effects: [], options: { keepId: true } }) => {
       const { actorUuid, effects, options } = data;
@@ -977,7 +985,7 @@ function setupMidiQOLApi() {
         return false;
       }
       if (effects?.length)
-        return untimedExecuteAsGM("createEffects", { actorUuid, effects, options });
+        return unTimedExecuteAsGM("createEffects", { actorUuid, effects, options });
       else {
         console.error("Midi-QOL createEffects failed with missing data, which should include {actorUuid, effects: [], options: {}} but got", data);
         return false;
@@ -1000,11 +1008,11 @@ function setupMidiQOLApi() {
           data.effects[i] = getStaticID(statusId);
         }
       }
-      return untimedExecuteAsGM("removeEffects", data);
+      return unTimedExecuteAsGM("removeEffects", data);
     },
     updateEffects: async (data: { actorUuid: string, updates: [] }) => {
       if (data.actorUuid && data.updates?.length)
-        return untimedExecuteAsGM("updateEffects", data);
+        return unTimedExecuteAsGM("updateEffects", data);
       else {
         console.error("Midi-QOL updateEffects failed missing data which should include {actorUuid, updates: []} but got", data)
         return false;
@@ -1046,8 +1054,8 @@ function setupMidiQOLApi() {
   Hooks.callAll("midi-qol.setup", globalThis.MidiQOL);
 }
 
-export function testfunc(scope) {
-  console.warn("MidiQOL testfunc called ", scope)
+export function testfunc(...args: any[]) {
+  console.warn("MidiQOL testfunc called ", ...args)
 }
 
 // Minor-qol compatibility patching
@@ -1550,8 +1558,13 @@ export function setupMidiStatusEffects() {
   // Initialise these effects so that we don't need to make a raft of code aysnc only to fetch these
   if (configSettings.enforceBonusActions !== "none") {
     if (!CONFIG.statusEffects.find(e => e._id === getStaticID("bonusaction"))) {
-      //@ts-expect-error wants "true"
-      CONFIG.statusEffects.push({ id: "bonusaction", _id: getStaticID("bonusaction"), name: i18n("midi-qol.bonusActionUsed"), changes: [{ key: "flags.midi-qol.actions.bonus", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: true }], img: "modules/midi-qol/icons/bonus-action.svg", flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } } });
+      CONFIG.statusEffects.push({ 
+        id: "bonusaction", 
+        _id: getStaticID("bonusaction"), 
+        name: i18n("midi-qol.bonusActionUsed"), 
+        changes: [{ key: "flags.midi-qol.actions.bonus", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }], img: "modules/midi-qol/icons/bonus-action.svg", 
+        //@ts-expect-error
+        flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } } });
     }
     // @ts-expect-error not expecting keepId
     ActiveEffect.implementation.fromStatusEffect("bonusaction", { keepId: true }).then(effect => {
@@ -1562,8 +1575,15 @@ export function setupMidiStatusEffects() {
 
   if (configSettings.enforceReactions !== "none") {
     if (!CONFIG.statusEffects.find(e => e._id === getStaticID("reaction"))) {
-      //@ts-expect-error wants "true"
-      CONFIG.statusEffects.push({ id: "reaction", _id: getStaticID("reaction"), name: i18n("midi-qol.reactionUsed"), changes: [{ key: "flags.midi-qol.actions.reaction", mode: CONST.ACTIVE_EFFECT_MODES.ADD, value: true }], img: "modules/midi-qol/icons/reaction.svg", effectData: { transfer: false }, flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } } });
+      CONFIG.statusEffects.push({ 
+        id: "reaction", 
+        _id: getStaticID("reaction"), 
+        name: i18n("midi-qol.reactionUsed"), 
+        changes: [{ key: "flags.midi-qol.actions.reaction", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }], 
+        img: "modules/midi-qol/icons/reaction.svg", 
+        effectData: { transfer: false }, 
+        //@ts-expect-error
+        flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } } });
     }
     // @ts-expect-error not expecting keepId
     ActiveEffect.implementation.fromStatusEffect("reaction", { keepId: true }).then(effect => {
@@ -1571,6 +1591,51 @@ export function setupMidiStatusEffects() {
       globalThis.MidiQOL.midiReactionEffect = effect;
     });
 
+    if (!CONFIG.statusEffects.find(e => e._id === getStaticID("flanking"))) {
+      CONFIG.statusEffects.push({ 
+        id: "flanking", 
+        _id: getStaticID("flanking"), 
+        name: i18n("midi-qol.Flanking"), 
+        changes: [
+          { key: "flags.midi-qol.flanking", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }, 
+          { key: "flags.midi-qol.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }, 
+          { key: "flags.midi-qol.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
+        ],
+        img: "icons/svg/sword.svg", 
+        effectData: { transfer: false}, 
+        //@ts-expect-error
+        flags: { dae: { specialDuration: ["combatEnd"] } } });
+    }
+
+    //@ts-expect-error not expecting keepId
+    ActiveEffect.implementation.fromStatusEffect("flanking", { keepId: true }).then(effect => {
+      midiFlankingEffect = effect;
+      globalThis.MidiQOL.midiFlankingEffect = effect;
+    });
+
+    if (!CONFIG.statusEffects.find(e => e._id === getStaticID("flanked"))) {
+      CONFIG.statusEffects.push({
+        id: "flanked", 
+        _id: getStaticID("flanked"), 
+        name: i18n("midi-qol.Flanked"), 
+        changes: [
+          { key: "flags.midi-qol.grants.attack.advantage.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
+          { key: "flags.midi-qol.grants.attack.advantage.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
+        ],
+        img: "modules/midi-qol/icons/encirclement.svg", 
+        effectData: { 
+          transfer: false,
+        },
+        //@ts-expect-error
+        flags: { dae: { specialDuration: ["combatEnd"] } } 
+      });
+    };
+
+    //@ts-expect-error not expecting keepId
+    ActiveEffect.implementation.fromStatusEffect("flanked", { keepId: true }).then(effect => {
+      midiFlankedEffect = effect;
+      globalThis.MidiQOL.midiFlankedEffect = effect;
+    });
   }
 }
 // globalThis.onerror = midiOnerror;
