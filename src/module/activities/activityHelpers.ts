@@ -3,7 +3,7 @@ import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog } from "../apps/TargetConfirmation.js";
 import { configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
-import { getFlankingEffect, CERemoveEffect, sumRolls, evalActivationCondition, computeTemplateShapeDistance, getToken, MQfromUuidSync, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, getSpeaker, hasWallBlockingCondition, isTargetable, tokenForActor, activityHasAreaTarget, getActivityAutoTargetAction, getAoETargetType, doReactions, getUnitDist } from "../utils.js";
+import { getFlankingEffect, CERemoveEffect, sumRolls, evalActivationCondition, computeTemplateShapeDistance, getToken, MQfromUuidSync, checkActivityRange, checkDefeated, checkIncapacitated, computeCoverBonus, getSpeaker, hasWallBlockingCondition, isTargetable, tokenForActor, activityHasAreaTarget, getActivityAutoTargetAction, getAoETargetType, doReactions, getUnitDist, updateUserTargets } from "../utils.js";
 const { DialogV2 } = foundry.applications.api;
 
 export async function confirmWorkflow(existingWorkflow: Workflow): Promise<boolean> {
@@ -445,7 +445,7 @@ export function templateTokens(templateDetails: MeasuredTemplate, selfTokenRef: 
   const selfToken = getToken(selfTokenRef);
   let targetIds: string[] = [];
   let targetTokens: Token[] = [];
-  game.user?.updateTokenTargets([]);
+  updateUserTargets([]);
   if (autoTarget === "walledtemplates" && game.modules?.get("walledtemplates")?.active) {
     //@ts-expect-error
     if (foundry.utils.getProperty(templateDetails?.item, "flags.walledtemplates.noAutotarget")) return targetTokens
@@ -464,7 +464,7 @@ export function templateTokens(templateDetails: MeasuredTemplate, selfTokenRef: 
       }
     }
   }
-  game.user?.updateTokenTargets(targetIds);
+  updateUserTargets(targetIds);
   game.user?.broadcastActivity({ targets: targetIds });
   return targetTokens;
 }
@@ -524,11 +524,6 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data?,
   }
   return;
 };
-
-export function preRollDamageHook(item, rollConfig) {
-
-  return true;
-}
 
 // If we are blocking the roll let anyone waiting on the roll know it is complete
 function blockRoll(item, workflow) {

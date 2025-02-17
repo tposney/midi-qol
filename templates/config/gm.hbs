@@ -1,82 +1,89 @@
-<section id="midi-config-gm" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
-    <div class="midi-qol-box">
-        <div class="form-group">
-            <label>{{localize "midi-qol.AutoAttack.Name"}}</label>
-            <input type="checkbox" name="gmAutoAttack" data-dtype="Boolean" {{checked configSettings.gmAutoAttack}} />
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.ConsumeResource.Name"}}</label>
-            <select name="gmConsumeResource" data-dtype="String">
-                {{selectOptions ConsumeResourceOptions selected=configSettings.gmConsumeResource}}
-            </select>
-            <div class="notes midi-qol-faint">{{{localize "midi-qol.ConsumeResource.Hint"}}}</div>
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.ConfirmAmmunition.Name"}}</label>
-            <input type="checkbox" name="gmConfirmAmmunition" data-dtype="Boolean" {{checked
-            configSettings.gmConfirmAmmunition}} />
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.AutoFastForwardAttack.Name"}}</label>
-            <input type="checkbox" name="gmAutoFastForwardAttack" data-dtype="Boolean" {{checked
-            configSettings.gmAutoFastForwardAttack}} />
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.AutoDamage.Name"}}</label>
-            <select name="gmAutoDamage" data-dtype="String">
-                {{selectOptions autoRollDamageOptions selected=configSettings.gmAutoDamage}}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.AutoFastForwardDamage.Name"}}</label>
-            <input type="checkbox" name="gmAutoFastForwardDamage" data-dtype="Boolean" {{checked
-            configSettings.gmAutoFastForwardDamage}} />
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.AverageDamage.Name"}}</label>
-            <select name="averageDamage" data-dtype="String">
-                {{selectOptions AverageDamageOptions selected=configSettings.averageDamage}}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.RemoveButtons.Name"}}</label>
-            <select name="gmRemoveButtons" data-dtype="String">
-                {{selectOptions removeButtonsOptions selected=configSettings.gmRemoveButtons}}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.HideRollDetails.Name"}}</label>
-            <select name="hideRollDetails" data-dtype="String">
-                {{selectOptions hideRollDetailsOptions selected=configSettings.hideRollDetails}}
-            </select>
-            <ul>
-                {{#each hideRollDetailsHint as |label val|}}
-                    <li class="notes midi-qol-faint">
-                        {{{label}}}
-                    </li>
-                {{/each}}
-            </ul>
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.GMHide3dDice.Name"}}</label>
-            <input type="checkbox" name="gmHide3dDice" data-dtype="Boolean" {{checked configSettings.gmHide3dDice}} />
-        </div>
-        <div class="form-group">
-            <label>{{localize "midi-qol.GhostRolls.Name"}}</label>
-            <input type="checkbox" name="ghostRolls" data-dtype="Boolean" {{checked configSettings.ghostRolls}} />
-        </div>
-        <div class="form-group">
-            <label>{{localize "midi-qol.AddFakeDice.Name"}}</label>
-            <input type="checkbox" name="addFakeDice" data-dtype="Boolean" {{checked configSettings.addFakeDice}} />
-        </div>
+<section id="midi-config-gm" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}"
+  data-tab="{{tab.id}}">
+  <div class="midi-qol-box">
+    <div class="form-group">
+      <label>{{localize "midi-qol.AutoAttack.Name"}}</label>
+      <input type="checkbox" name="gmAutoAttack" data-dtype="Boolean" {{checked configSettings.gmAutoAttack}} />
     </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.ConsumeResource.Name"}}</label>
+      <select name="gmConsumeResource" data-dtype="String">
+        {{selectOptions ConsumeResourceOptions selected=configSettings.gmConsumeResource}}
+      </select>
+      <div class="notes midi-qol-faint">{{{localize "midi-qol.ConsumeResource.Hint"}}}</div>
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.ConfirmAmmunition.Name"}}</label>
+      <input type="checkbox" name="gmConfirmAmmunition" data-dtype="Boolean" {{checked
+        configSettings.gmConfirmAmmunition}} />
+    </div>
+    
+    <div class="form-group">
+      <label>{{localize "midi-qol.RequireAmmunition.Name"}}</label>
+      <input type="checkbox" name="gmRequireAmmunition" data-dtype="Boolean" {{checked
+        configSettings.gmRequireAmmunition}} />
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.AutoFastForwardAttack.Name"}}</label>
+      <input type="checkbox" name="gmAutoFastForwardAttack" data-dtype="Boolean" {{checked
+        configSettings.gmAutoFastForwardAttack}} />
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.AutoDamage.Name"}}</label>
+      <select name="gmAutoDamage" data-dtype="String">
+        {{selectOptions autoRollDamageOptions selected=configSettings.gmAutoDamage}}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.AutoFastForwardDamage.Name"}}</label>
+      <input type="checkbox" name="gmAutoFastForwardDamage" data-dtype="Boolean" {{checked
+        configSettings.gmAutoFastForwardDamage}} />
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.AverageDamage.Name"}}</label>
+      <select name="averageDamage" data-dtype="String">
+        {{selectOptions AverageDamageOptions selected=configSettings.averageDamage}}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.RemoveButtons.Name"}}</label>
+      <select name="gmRemoveButtons" data-dtype="String">
+        {{selectOptions removeButtonsOptions selected=configSettings.gmRemoveButtons}}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.HideRollDetails.Name"}}</label>
+      <select name="hideRollDetails" data-dtype="String">
+        {{selectOptions hideRollDetailsOptions selected=configSettings.hideRollDetails}}
+      </select>
+      <ul>
+        {{#each hideRollDetailsHint as |label val|}}
+        <li class="notes midi-qol-faint">
+          {{{label}}}
+        </li>
+        {{/each}}
+      </ul>
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.GMHide3dDice.Name"}}</label>
+      <input type="checkbox" name="gmHide3dDice" data-dtype="Boolean" {{checked configSettings.gmHide3dDice}} />
+    </div>
+    <div class="form-group">
+      <label>{{localize "midi-qol.GhostRolls.Name"}}</label>
+      <input type="checkbox" name="ghostRolls" data-dtype="Boolean" {{checked configSettings.ghostRolls}} />
+    </div>
+    <div class="form-group">
+      <label>{{localize "midi-qol.AddFakeDice.Name"}}</label>
+      <input type="checkbox" name="addFakeDice" data-dtype="Boolean" {{checked configSettings.addFakeDice}} />
+    </div>
+  </div>
 </section>

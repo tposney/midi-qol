@@ -10,7 +10,7 @@
   {{#each saves as |save iid|}}
   <div>
     <div class="midi-qol target midi-qol-save-class {{save.saveClass}}" style="align-content: center;">
-      <img src="{{save.img}}" style="background-color: var(--dnd5e-background-10);" />
+      <img src="{{save.img}}" style="background-color: var(--dnd5e-background-10); width: 30px; height: 30px;" />
       <div class="name-stacked">
         <span class="midi-qol-target-name title midi-qol-tooltip " id="{{save.target.id}}"
           data-uuid="{{save.target.document.uuid}}">

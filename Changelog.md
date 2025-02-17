@@ -1,3 +1,21 @@
+Prior to the next midi release which is non-beta for dnd5e v4 - I'm posting these notes to try and ease the migration. Please read them
+Although this is the first non-beta release midi has been working with dnd5e 4.x for more than a month so this release should be fairly solid. Please do read the following notes
+* If you have not yet migrated to v4 you **really really** should make a backup of your world before installing midi.
+* It is **strongly recommended** that when you first run the upgraded world that you disable all modules so that dnd5e can do it's best to migrate items.
+* There are likely to be issues with any items that end up having a utility effect created (this means any item that has other damage defined) so please check them once updated and midi is enabled.
+* If this is the first time you have run midi with dnd4, there are quite a lot of changes:
+  - midi now uses activities, most directly for attack activities that can also roll extra damage, such as a spider bite via an "other" activity. This replaces the previous "other damage" mechanism. 
+    - Have a look at the SRD spider bite item plus the spider bite included in the midi sample items (which shows a few tweaks).
+  - Most midi properties are being migrated from the item to activities, which is not yet complete. 
+  - Use/active effect conditions are now per activity (rather than per item - although the existing per item conditions are still supported while they are deprecated).
+    - Reaction activities check the Use condition to decide if the activity should be offered as a reaction option.
+  - Support for a triggered activity on all midi activities, which allows you to chain a new activity after the first activity is complete. Have a look at ice knife as an example use case for this.
+  - The previous mechanism for area effect items centered on the caster have been revised.
+      - Target range/self shape=radius/emanation will now auto place the template on the caster (the size of the template will scale with the size of the caster's token due to a dnd5e enhancement)
+      - Target range/self shape=radius/emanation - no template which will auto target tokens within range of the target. 
+      - To avoid targeting the caster in the template put the special target "self" in the target type setting.
+* For some items (dragon slayer, life stealer, wounding) there is a new way to mange those items. The items in the sample items compendium are "generator" items (which utilise a very clever idea from the dungeon master's guide foundry module) which allow you to drag the generator's effect (an enchantment) to a target weapon which will imbue it with the relevant changes. 
+
 ### 12.4.27
 * Midi-qol has been appv2ified, due to @michael many thanks for all his work to do this.
 * Fix for tool rolls not returning the right sort of rolls and throwing errors in various cases.
@@ -6,8 +24,11 @@
 * Fix for onUseMacro calls triggered by postTemplatePlaced not triggering.
 * Fix for spell sniper and sharp shooter. Spell Sniper and Sharp Shooter can be set from the special traits popup on the character sheet or via active effects.
   * flags.midi-qol.sharpShooter is deprecated in favour of flags.dnd5e.sharpShooter.
-* Midi now implements it's own flanking/flanked conditions and supports CPR's conditions if they are present.
+* Midi now implements it's own flanking/flanked conditions and supports CPR's conditions if they are present in addition to continuing to support convenient effects flanking/flanked.
+  - The GM can choose to disable midi flanking/flanked checking and apply the effects by hand from the token HUD which midi will still use when rolling an attack.
+* New setting for gm/players requires an item that consumes ammunition to have at least 1 of the ammunition to be able to use the item. If insufficient ammunition exists when starting the roll configure dialog will be displayed to let you select different ammunition, if there is still insufficient ammo the item use will be aborted.
 
+Known issues
 * Roll statistics is not implemented for dnd5e v4 yet, roll statistics settings are not displayed at present
 * Active defense not working.
 

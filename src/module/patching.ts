@@ -582,10 +582,10 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
       const maxValue = (maxFlags[rollType] && (maxFlags[rollType].all || maxFlags[rollType][abilityId]));
       const minFlags = foundry.utils.getProperty(this, "flags.midi-qol.min.ability") ?? {};
       const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId]));
+      config.advantage ||= config.midiOptions.advantage;
+      config.disadvantage ||= config.midiOptions.disadvantage;
       preRollAbilityHookId = Hooks.once(`${game.system?.id}.preRoll${type}V2`, (config, dialog, message) => {
         config.rolls.forEach(roll => {
-          roll.options.advantage ||= config.midiOptions.advantage;
-          roll.options.disadvantage ||= config.midiOptions.disadvantage;
           if (maxValue !== undefined && Number.isNumeric(maxValue)) roll.options.maximum = Math.min(roll.options.maximum ?? Infinity, Number(maxValue));
           if (minValue !== undefined && Number.isNumeric(minValue)) roll.options.minimum = Math.max(roll.options.minimum ?? -Infinity, Number(minValue));
         });
@@ -1310,8 +1310,6 @@ export function readyPatching() {
     else
       error(`dnd5e version ${gameVersion} is too old to support midi-qol, please update to 3.3.1 or later`);
   }
-  // libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getInitiativeRoll", getInitiativeRoll, "WRAPPER")
-  // libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.rollInitiativeDialog", rollInitiativeDialog, "MIXED");
   if (true) {
     const effectClass: any = CONFIG.ActiveEffect.documentClass;
     const classStrings = [

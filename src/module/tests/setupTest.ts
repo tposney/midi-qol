@@ -2,7 +2,7 @@ import { MODULE_ID, error, warn } from "../../midi-qol.js";
 import { applySettings } from "../apps/ConfigPanel.js";
 import { FormBuilder } from "../lib/FormBuilder.js";
 import { configSettings } from "../settings.js";
-import { CEHasEffectApplied, CERemoveEffect, applyTokenDamage, completeItemUse, findNearby } from "../utils.js";
+import { CEHasEffectApplied, CERemoveEffect, applyTokenDamage, completeItemUse, findNearby, updateUserTargets } from "../utils.js";
 import { TrapWorkflow, Workflow } from "../Workflow.js";
 
 const actor1Name = "actor1";
@@ -107,7 +107,7 @@ async function registerTests() {
             const targetActor: Actor | undefined = target?.actor;
             //@ts-ignore
             assert(target && target?.actor && targetActor)
-            game.user?.updateTokenTargets([target?.id ?? ""]);
+            updateUserTargets([target?.id ?? ""]);
             const item = getActorItem(actor, "Toll the Dead");
             // @ts-expect-error can't know about flags
             if (target?.actor) await targetActor?.setFlag(MODULE_ID, "fail.ability.save.all", true);
@@ -326,7 +326,7 @@ async function registerTests() {
             const actor = getActor(actor1Name);
             const target: Token | undefined = getToken(target1Name);
             assert.ok(target && !!target?.actor && actor)
-            game.user?.updateTokenTargets([target?.id ?? ""]);
+            updateUserTargets([target?.id ?? ""]);
             const item = actor.items.getName("Saving Throw Test");
             assert.ok(item);
             const workflow = await completeItemUse(item, {}, { workflowOptions });
@@ -339,7 +339,7 @@ async function registerTests() {
             const target: Token | undefined = getToken(target1Name);
             assert.ok(target && !!target?.actor && actor)
             try {
-              game.user?.updateTokenTargets([target?.id ?? ""]);
+              updateUserTargets([target?.id ?? ""]);
               const item = actor.items.getName("Saving Throw Test");
               assert.ok(item);
               await actor.setFlag("midi-qol", "magicResistance.all", true);
@@ -358,7 +358,7 @@ async function registerTests() {
             const target: Token | undefined = getToken(target1Name);
             assert.ok(target && !!target?.actor && actor);
             try {
-              game.user?.updateTokenTargets([target?.id ?? ""]);
+              updateUserTargets([target?.id ?? ""]);
               const item = actor.items.getName("Saving Throw Test");
               assert.ok(item);
               await actor.setFlag("midi-qol", "magicVulnerability.all", true);
@@ -386,7 +386,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             const target = getToken(target2Name);
             const item = getActorItem(actor, "Longsword");
-            game.user?.updateTokenTargets([target?.id ?? ""]);
+            updateUserTargets([target?.id ?? ""]);
             return completeItemUse(item, {}, { workflowOptions }).then(workflow => assert.ok(!!workflow));
           });
 
@@ -399,7 +399,7 @@ async function registerTests() {
             //@ts-expect-error
             const targetActor: Actor | undefined = target?.actor;
             const actor = getActor(actor1Name);
-            game.user?.updateTokenTargets([target?.id ?? ""]);
+            updateUserTargets([target?.id ?? ""]);
             if (cltInterface.hasCondition("Blinded", [target]))
               await cltInterface.removeCondition("Blinded", [target]);
             assert.ok(!cltInterface.hasCondition("Blinded", [target]));
@@ -427,7 +427,7 @@ async function registerTests() {
             const targetActor: Actor | undefined = target?.actor;
             const actor = getActor(actor2Name);
             assert.ok(target && actor);
-            game.user?.updateTokenTargets([target?.id ?? ""]);
+            updateUserTargets([target?.id ?? ""]);
             if (await CEHasEffectApplied({ effectName: "Deafened", uuid: targetActor?.uuid ?? "" })) {
               await CERemoveEffect({ effectName: "Deafened", uuid: targetActor?.uuid ?? "" });
             }
@@ -451,7 +451,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             assert.ok(target && actor);
             const oldHp = target?.actor?.system.attributes.hp.value;
-            game.user?.updateTokenTargets([target?.id ?? ""]);
+            updateUserTargets([target?.id ?? ""]);
             //@ts-ignore .flags v10
             foundry.utils.setProperty(actor.flags, "midi-qol.advantage.all", true);
             //@ts-ignore .abilities
@@ -469,7 +469,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             const target2: any = getToken(target2Name);
             const target3: any = getToken(target3Name);
-            game.user?.updateTokenTargets([target3?.id ?? "", target2?.id ?? ""]);
+            updateUserTargets([target3?.id ?? "", target2?.id ?? ""]);
             const target2hp = target2?.actor?.system.attributes.hp.value;
             const target3hp = target3?.actor?.system.attributes.hp.value;
             await completeItemUse(actor.items.getName("MODTest"), {}, { advantage: true, workflowOptions }); // does 10 + 10 to undead
@@ -494,7 +494,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             const target2: any = getToken(target2Name);
             const target3: any = getToken(target3Name);
-            game.user?.updateTokenTargets([target2?.id ?? "", target3?.id ?? ""]);
+            updateUserTargets([target2?.id ?? "", target3?.id ?? ""]);
             const target2hp = target2?.actor?.system.attributes.hp.value;
             const target3hp = target3?.actor?.system.attributes.hp.value;
             await completeItemUse(actor.items.getName("MODTestNoActivation"), {}, { workflowOptions }); // does 10 + 10 to undead
@@ -528,7 +528,7 @@ async function registerTests() {
               if (hasEffect?.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", hasEffect.map(e => e.id))
               hasEffect = targetActor?.effects.filter(e => e.name === "Macro Execute Test") ?? [];
               if (hasEffect?.length > 0) await targetActor?.deleteEmbeddedDocuments("ActiveEffect", hasEffect.map(e => e.id));
-              game.user?.updateTokenTargets([target?.id ?? ""]);
+              updateUserTargets([target?.id ?? ""]);
               await completeItemUse(actor.items.getName("Macro Execute Test"), {}, { workflowOptions });
               await busyWait(0.1);
               console.log("Macro Execute Test checking flag", foundry.utils.getProperty(actor, "flags.midi-qol.test"));
@@ -591,7 +591,7 @@ async function registerTests() {
             const macroPasses: string[] = [];
             await completeItemUse(actor.items.getName("OnUseMacroTest"), {}, { workflowOptions }); // Apply the effect
             const target = getToken(target2Name);
-            game.user?.updateTokenTargets([target?.id ?? ""]);
+            updateUserTargets([target?.id ?? ""]);
             const hookid = Hooks.on("OnUseMacroTest", (pass: string) => {macroPasses.push(pass); warn(pass, macroPasses)});
             await completeItemUse(actor.items.getName("Longsword"), {}, { workflowOptions }); // Apply the effect
             Hooks.off("OnUseMacroTest", hookid);
@@ -812,10 +812,10 @@ async function registerTests() {
             assert.ok(Number.isNumeric(foundry.utils.getProperty(target.actor, changeKey)));
 
             const oldHp = foundry.utils.getProperty(target, "actor.system.attributes.hp.value");
-            game.user?.updateTokenTargets([target?.id ?? ""]);
+            updateUserTargets([target?.id ?? ""]);
             await completeItemUse(actor.items.getName("AppliesDamage"), {}, { workflowOptions });
             console.warn("completeItemUse completed");
-            game.user?.updateTokenTargets([]);
+            updateUserTargets([]);
             const newHp = foundry.utils.getProperty(target, "actor.system.attributes.hp.value");
             assert.equal(newHp, oldHp - foundry.utils.getProperty(actor, "system.abilities.str.mod"));
             await target.actor?.deleteEmbeddedDocuments("ActiveEffect", theEffects?.map(ef => ef.id) ?? [])
@@ -827,7 +827,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             const target: any = getToken(target2Name);
             const oldHp = foundry.utils.getProperty(target, "actor.system.attributes.hp.value");
-            game.user?.updateTokenTargets([target?.id ?? ""]);
+            updateUserTargets([target?.id ?? ""]);
             const changeKey = "system.traits.dm.midi.rwak";
             const changeValue = "-10";
             const changeMode = CONST.ACTIVE_EFFECT_MODES.OVERRIDE;
@@ -839,7 +839,7 @@ async function registerTests() {
             assert.equal("number", typeof foundry.utils.getProperty(target.actor, changeKey))
             assert.ok(Number.isNumeric(foundry.utils.getProperty(target.actor, changeKey)));
             await completeItemUse(actor.items.getName("AppliesDamage"), {}, { workflowOptions });
-            game.user?.updateTokenTargets([]);
+            updateUserTargets([]);
             const newHp = target?.actor?.system.attributes.hp.value;
             //@ts-ignore
             assert.equal(newHp, oldHp - actor.system.abilities.str.mod);
@@ -851,7 +851,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             const target: any = getToken(target2Name);
             const oldHp = foundry.utils.getProperty(target, "actor.system.attributes.hp.value");
-            game.user?.updateTokenTargets([target?.id ?? ""]);
+            updateUserTargets([target?.id ?? ""]);
             const changeKey = "system.traits.dm.amount.piercing";
             const changeValue = "-10";
             const changeMode = CONST.ACTIVE_EFFECT_MODES.OVERRIDE;
@@ -862,7 +862,7 @@ async function registerTests() {
             let theEffects = await target.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
             assert.ok(Number.isNumeric(foundry.utils.getProperty(target.actor, changeKey)));
             await completeItemUse(actor.items.getName("AppliesDamage"), {}, { workflowOptions });
-            game.user?.updateTokenTargets([]);
+            updateUserTargets([]);
             const newHp = target?.actor?.system.attributes.hp.value;
             //@ts-expect-error no dnd5e-types
             assert.equal(newHp, oldHp - actor.system.abilities.str.mod);

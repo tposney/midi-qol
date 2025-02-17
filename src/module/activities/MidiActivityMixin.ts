@@ -8,7 +8,7 @@ import { checkMechanic, configSettings } from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { busyWait } from "../tests/setupTest.js";
 import { saveUndoData } from "../undo.js";
-import { activityHasAreaTarget, asyncHooksCall, canSee, canSense, checkActivityRange, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getStatusName, getToken, activityHasAutoPlaceTemplate, hasUsedBonusAction, hasUsedReaction, initializeVision, isAutoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, processDamageRollBonusFlags, setBonusActionUsed, setReactionUsed, sumRolls, tokenForActor, validTargetTokens, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, isAutoFastDamage } from "../utils.js";
+import { activityHasAreaTarget, asyncHooksCall, canSee, canSense, checkActivityRange, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getStatusName, getToken, activityHasAutoPlaceTemplate, hasUsedBonusAction, hasUsedReaction, initializeVision, isAutoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, processDamageRollBonusFlags, setBonusActionUsed, setReactionUsed, sumRolls, tokenForActor, validTargetTokens, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, isAutoFastDamage, updateUserTargets } from "../utils.js";
 import { confirmWorkflow, postTemplateConfirmTargets, preTemplateTargets, removeFlanking, selectTargets, setDamageRollMinTerms } from "./activityHelpers.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
@@ -298,9 +298,9 @@ export var MidiActivityMixin = Base => {
       activity.workflow.rollOptions.rollToggle = false;
       if (config.midiOptions.isCritical) activity.workflow.isCritical = true;
       if (config.midiOptions.isFumble) activity.workflow.isFumble = true;
-      const autoCreatetemplate = activityHasAutoPlaceTemplate(this);
+      const autoCreateTemplate = activityHasAutoPlaceTemplate(this);
       const emanationNoTemplate = activityHasEmanationNoTemplate(this);
-      if (autoCreatetemplate || emanationNoTemplate) {
+      if (autoCreateTemplate || emanationNoTemplate) {
         config.create ??= {};
         config.create.measuredTemplate = false;
       }
@@ -318,7 +318,7 @@ export var MidiActivityMixin = Base => {
       if (!activity.item._id) foundry.utils.setProperty(message, "data.flags.dnd5e.item.data", activity.item.toObject());
       const results = await super.use(config, dialog, message);
       if (!results) return;
-      if (autoCreatetemplate || emanationNoTemplate) if (!await activity.setupTargets(config, dialog, message)) return;
+      if (autoCreateTemplate || emanationNoTemplate) if (!await activity.setupTargets(config, dialog, message)) return;
       activity.workflow.noAutoDamage = config.midiOptions.systemCard;
       activity.workflow.noAutoAttack = config.midiOptions.systemCard;
       activity.workflow.setTargets(activity.targets); // Allow for targets set by emanation
@@ -409,14 +409,11 @@ export var MidiActivityMixin = Base => {
           if (this.workflow?.rollOptions?.rollToggle) dialog.configure = !dialog.configure;
           // if (dialog.configure) config.midiOptions.isCritical = false;
           preRollDamageHookId = Hooks.once(`${game.system?.id}.preRollDamageV2`, (rollConfig, dialogConfig, messageConfig) => {
-            for (let roll of rollConfig.rolls) {
-              if (keys.critical) roll.options.isCritical = true;
-              else if (keys.normal) roll.options.isCritical = false;
-              else if (!dialog.configure) roll.options.isCritical = rollConfig.midiOptions.isCritical;
-              if (this.damage?.critical?.allow === false) roll.options.isCritical = false;
-            }
+            if (keys.critical) rollConfig.isCritical = true;
+            else if (keys.normal) rollConfig.isCritical = false;
+            else if (!dialogConfig.configure) rollConfig.isCritical ||= rollConfig.midiOptions.isCritical;
             if (dialogConfig.configure) {
-              if (rollConfig.rolls[0].options.isCritical || rollConfig.midiOptions.isCritical) {
+              if (rollConfig.isCritical || rollConfig.midiOptions.isCritical) {
                 dialogConfig.options.defaultButton = "critical";
               } else dialogConfig.options.defaultButton = "normal";
             } return true;
@@ -428,7 +425,7 @@ export var MidiActivityMixin = Base => {
           if (this.damage?.parts.some(part => part.types.size > 1)) dialog.configure = true;
           if (this.healing?.types?.size > 1) dialog.configure = true;
           result = await super.rollDamage(config, dialog, message) ?? [];
-          result = await this.postProcessDamageRoll(config, result);
+          if (result) result = await this.postProcessDamageRoll(config, result);
           if (this.workflow && config.midiOptions.updateWorkflow !== false) await this.workflow.setDamageRolls(result);
         }
         if (this.otherActivity && this.workflow?.otherActivity !== this) {
@@ -539,16 +536,13 @@ export var MidiActivityMixin = Base => {
       return rollConfig;
     }
 
-    async postProcessDamageRoll(config, result): Promise<Array<Roll>> {
-      let result2: Array<Roll>;
+    async postProcessDamageRoll(config, result: Array<Roll>): Promise<Array<Roll>> {
+      let result2: Array<Roll> = [];
       //@ts-expect-error
       const DamageRoll = CONFIG.Dice.DamageRoll;
       try {
         if (!this.workflow) return result;
-        if (foundry.utils.getProperty(this.actor, `parent.flags.${MODULE_ID}.damage.advantage`)) {
-          // TODO see if this is still possible
-          // result2 = await wrapped(damageRollData)
-        }
+
         let magicalDamage = this.item?.system.properties?.has("mgc") || this.item?.flags?.midiProperties?.magicdam;
         magicalDamage ||= config.ammunition?.system.properties.has("mgc") || config.ammunition?.flags?.midiProperties?.magicdam;
         magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && this.attackBonus > 0);
@@ -619,15 +613,15 @@ export var MidiActivityMixin = Base => {
           for (let i = 0; i < result.length; i++) {
             result[i] = await result[i].reroll({ minimize: true });
           }
-        } else if (foundry.utils.getProperty(this, `parent.flags.${MODULE_ID}.damage.reroll-kh`) || foundry.utils.getProperty(this, `parent.flags.${MODULE_ID}.damage.reroll-kl`)) {
+        } else if (foundry.utils.getProperty(this, `actor.flags.${MODULE_ID}.damage.reroll-kh`) || foundry.utils.getProperty(this, `actor.flags.${MODULE_ID}.damage.reroll-kl`)) {
           let result2: Roll[] = [];
           for (let i = 0; i < result.length; i++) {
             result2.push(await result[i].reroll());
           }
-          if ((foundry.utils.getProperty(this, `parent.flags.${MODULE_ID}.damage.reroll-kh`) && (sumRolls(result2) > sumRolls(result)))
-            || (foundry.utils.getProperty(this, `parent.flags.${MODULE_ID}.damage.reroll-kl`) && (sumRolls(result2) < sumRolls(result)))) {
+          if ((foundry.utils.getProperty(this, `actor.flags.${MODULE_ID}.damage.reroll-kh`) && (sumRolls(result2) > sumRolls(result)))
+            || (foundry.utils.getProperty(this, `actor.flags.${MODULE_ID}.damage.reroll-kl`) && (sumRolls(result2) < sumRolls(result)))) {
             [result, result2] = [result2, result];
-          }
+          } 
           // display roll not being used.
           if (this.workflow.workflowOptions?.damageRollDSN !== false) {
             let promises = result2.map(r => displayDSNForRoll(r, "damageRoll"));
@@ -635,6 +629,8 @@ export var MidiActivityMixin = Base => {
           }
           await DamageRoll.toMessage(result2, messageData, { rollMode: game.settings?.get("core", "rollMode") });
           // await result2.toMessage(messageData, { rollMode: game.settings.get("core", "rollMode") });
+        } else if (foundry.utils.getProperty(this, `actor.flags.${MODULE_ID}.damage.advantage`)) {
+          // To do this properly requires rerolling each term in the damage roll
         }
         setDamageRollMinTerms(result)
 
@@ -677,7 +673,7 @@ export var MidiActivityMixin = Base => {
       if (canvas?.scene) {
         //@ts-expect-error
         const tokensIdsToUse: Array<string> = this.targets ? Array.from(this.targets).map(t => t.id) : [];
-        game.user?.updateTokenTargets(tokensIdsToUse)
+        updateUserTargets(tokensIdsToUse);
       }
       if (this.workflow) this.workflow.setTargets(this.targets);
       return true;
@@ -708,7 +704,7 @@ export var MidiActivityMixin = Base => {
       if (configSettings.allowUseMacro) {
         const results = await workflow.callMacros(this.item, workflow.onUseMacros?.getMacros("preTargeting"), "OnUse", "preTargeting");
         if (workflow.aborted || results.some(i => i === false)) {
-          console.warn("midi-qol | item roll blocked by preItemRoll macro");
+          console.warn("midi-qol | item roll blocked by preTargeting macro");
           workflow.aborted = true;
           await workflow.performState(workflow.WorkflowState_Abort)
           return false;

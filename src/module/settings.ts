@@ -150,7 +150,8 @@ class ConfigSettings {
   removeButtons: string = "all";
   removeConcentration: boolean = true;
   removeConcentrationEffects: string = "effects";
-  requireAmmunition: boolean = false;
+  playerRequireAmmunition: boolean = false;
+  gmRequireAmmunition: boolean = false;
   requireMagical: string = "off";
   requiresTargets: string = "none";
   rollNPCLinkedSaves: string = "auto";

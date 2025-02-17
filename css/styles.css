@@ -184,6 +184,10 @@
   margin-right: 5px;
 }
 
+#midi-qol-settings #midi-config-mechanics .form-group > div.flexrow > select {
+  max-width: 200px;
+}
+
 .midi-qol-quick-config .window-content {
   overflow-y: scroll;
 }

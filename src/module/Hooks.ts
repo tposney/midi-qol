@@ -1180,7 +1180,6 @@ Hooks.on("dnd5e.preCreateActivityTemplate", (activity, templateData) => {
 // insert midi initiative changes into the initiative config.
 Hooks.on("dnd5e.preConfigureInitiative", (actor: Actor, rollConfig: any) => {
   let { parts, data, options, subject } = rollConfig;
-  console.error("midi-qol | preConfigureInitiative", parts, data, options);
   //@ts-expect-error no dnd5e-types
   const init: any = actor.system.attributes.init.value ?? "dex";
   const conditionData = createConditionData({ workflow: undefined, target: undefined, actor: actor });
@@ -1206,5 +1205,4 @@ Hooks.on("dnd5e.preRollAbilityCheckV2", (config, dialog, message) => {
   if (autoFastForwardAbilityRolls) {
     dialog.configure = false;
   }
-}
-)
+});

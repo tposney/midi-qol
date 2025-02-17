@@ -1,4 +1,6 @@
 import { i18n } from "../../midi-qol.js";
+import { safeGetGameSetting } from "../settings.js";
+import { asyncHooksCall, asyncHooksCallAll } from "../utils.js";
 
 //@ts-expect-error
 const ActivityChoiceDialog = dnd5e.applications?.activity?.ActivityChoiceDialog;
@@ -17,8 +19,7 @@ export class MidiActivityChoiceDialog extends ActivityChoiceDialog {
   _prepareActivityContext(...args) { return super._prepareActivityContext(...args) }
   async _prepareContext(options) {
     let controlHint;
-    //@ts-expect-error
-    if ( game.settings?.get("dnd5e", "controlHints") ) {
+    if ( safeGetGameSetting("dnd5e", "controlHints") ) {
       controlHint = i18n("DND5E.Controls.Activity.FastForwardHint");
       controlHint = controlHint.replace(
         "<left-click>",
@@ -30,6 +31,7 @@ export class MidiActivityChoiceDialog extends ActivityChoiceDialog {
       .filter(a => !a.midiProperties?.automationOnly)
       .map(this._prepareActivityContext.bind(this))
       .sort((a, b) => a.sort - b.sort);
+    await asyncHooksCallAll("midi-qol.activityChoiceDialogContext", {activities, item: this.item});
     return {
       ...await super._prepareContext(options),
       controlHint, 

@@ -52,7 +52,7 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
       if (await asyncHooksCall("midi-qol.preFormulaRoll", this.workflow) === false
         || await asyncHooksCall(`midi-qol.preFormulaRoll.${this.item.uuid}`, this.workflow) === false
         || await asyncHooksCall(`midi-qol.preFormulaRoll.${this.uuid}`, this.workflow) === false) {
-        console.warn("midi-qol | UtiliatyActivity | Formula roll blocked via pre-hook");
+        console.warn("midi-qol | UtilityActivity | Formula roll blocked via pre-hook");
         return;
       }
       if (config.midiOptions.fastForward !== undefined)
@@ -72,11 +72,6 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
         dialog.configure = true;
       */
       if (this.workflow?.rollOptions?.rollToggle) dialog.configure = !!!dialog.configure;
-
-      Hooks.once("dnd5e.preRollFormulaV2", (rollConfig, dialogConfig, messageConfig) => {
-        return true;
-      })
-
       message.create ??= true;
       let result = await super.rollFormula(config, dialog, message);
       // result = await postProcessUtilityRoll(this, config, result);

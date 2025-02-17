@@ -1679,10 +1679,10 @@ export class Workflow {
       Hooks.off("preCreateMeasuredTemplate", this.preCreateTemplateHookId);
     }
     if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookid);
-    if (this.itemCardUuid && MQfromUuidSync(this.itemCardUuid)) {
+    if (!this.keepActivityCard && this.itemCardUuid && MQfromUuidSync(this.itemCardUuid)) {
       await this.chatCard.delete();
+      clearUpdatesCache(this.itemCardUuid);
     }
-    clearUpdatesCache(this.itemCardUuid);
 
     if (this.templateUuid) {
       const templateToDelete = await fromUuid(this.templateUuid);
@@ -1781,6 +1781,7 @@ export class Workflow {
           disabled: false,
           icon: this.item?.img,
           label: this.item?.name + templateString,
+          name: this.item?.name + templateString,
           duration: {},
           flags: {
             dae: {
@@ -2154,7 +2155,7 @@ export class Workflow {
 
     const needsFlanking = await markFlanking(token, target,);
     if (needsFlanking) {
-      this.attackAdvAttribution.add(`ADV:flanking`);
+      // this.attackAdvAttribution.add(`ADV:flanking`);
       foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.flanking", { value: true, effects: ["Flanking"] });
       // this.advReminderAttackAdvAttribution.add("ADV:flanking");
     }
@@ -3141,7 +3142,7 @@ export class Workflow {
   async displayTargets(whisper = false) {
     this.hitDisplayData = {};
     this.targetsDisplayed = true;
-    if (this.item.type === "feat" && ["ench", "class", undefined].includes(this.actvity.actionType)) return;
+    if (this.item.type === "feat" && ["ench", "class", undefined].includes(this.activity.actionType)) return;
     for (let target of this.targets) {
       const targetToken = getToken(target);
       if (!targetToken) continue;
@@ -4042,14 +4043,14 @@ export class Workflow {
         isPC: isPlayerOwned,
         target,
         saveString,
-        saveSymbol: saved ? "fa-check" : "fa-times",
+        saveSymbol: (rollDC === null) ? "" : (saved ? "fa-check" : "fa-times"),
         saveTotalClass: (target.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-save-total",
         rollTotal: saveRollTotal,
         rollDetail: saveRolls[0],
         rollHTML,
         id: target.id,
         adv,
-        saveClass: saved ? "success" : "failure",
+        saveClass: (rollDC === null) ? "" : (saved ? "success" : "failure"),
       });
       i++;
     }
@@ -4535,7 +4536,7 @@ export class Workflow {
         else hitStyle = "color: red;";
       }
       */
-      //TODO work out hot to do
+      //TODO work out how to do
       if (attackTotal !== this.attackTotal) {
         if (!configSettings.displayHitResultNumeric &&
           (!game.user?.isGM || ["none", "detailsDSN", "details"].includes(configSettings.hideRollDetails))) {

@@ -13,11 +13,13 @@
 
 It has LOTS of configuration options which can be daunting.
 
+If you have a problem when using midi-qol it is almost certainly an issue with midi-qol and **not** the dnd5e system. Please do not raise issues on the dnd5e system github unless you have tested with midi-qol disabled.
+
 ## Available versions
 
+- MidiQOL **12.4.27** requires foundry 12 and is compatible with dnd5e 4.2+.
 - MidiQOL **v11.4.48** is compatible with dnd5e up to **v3.2.x** and Foundry **v12** (as all the versions mentioned below).
 - MidiQOL **v11.6.x** is compatible with dnd5e **v3.3.x**.
-- MidiQOL **v12.x** is a beta build if someone wants to test for dnd5e **v4.x**. Non game ready and none of the premade modules are compatible at all (needs DAE v12.x too).
 
 # Bug reports
 **Important** When submitting a bug report ALWAYS include either:

@@ -1175,7 +1175,7 @@
   },
   "midi-qol.BaseDamageFlavor": "Base Damage",
   "midi-qol.OtherDamageFlavor": "Other Damage",
-  "midi-qol.RequireAmmunition.Name": "Require ammunition available if used",
+  "midi-qol.RequireAmmunition.Name": "Require ammunition available to roll attack",
   "midi-qol.CheckTwoHanded.Name": "Require no shield equipped for two-handed/off-hand attacks",
   "midi-qol.NoAmmunition": "There are 0 {name} in your inventory",
   "midi-qol.TwoHandedShieldWarning": "Cannot use two-handed or off-hand attack with a shield equipped",

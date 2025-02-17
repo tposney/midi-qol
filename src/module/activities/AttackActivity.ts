@@ -158,6 +158,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
     async rollAttack(config:any = {}, dialog: any = {}, message: any = {}) {
       let preRollHookId;
       let rollAttackHookId;
+      let postConfigureDialogHookId;
       let rolls;
       config.midiOptions ??= this.midiOptions ?? this.workflow?.rollOptions ?? {};
       try {
@@ -176,8 +177,10 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           disadvantage: areKeysPressed(config.event, "skipDialogDisadvantage")
         };
         if (this.item.system.properties.has("amm")) {
-          const ammoConfirmation = this.confirmAmmuntion
-          if (ammoConfirmation.reason) ui.notifications?.warn(ammoConfirmation.reason);
+          const ammoConfirmation = this.confirmAmmunition
+          if (ammoConfirmation.reason) {
+            ui.notifications?.warn(ammoConfirmation.reason + " Please choose different ammunition or cancel the attack.");
+          }            
           if (!ammoConfirmation.proceed) {
             if (this.workflow) this.workflow.aborted = true;
           }
@@ -208,8 +211,9 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           }
           return true;
         });
+        /*
         rollAttackHookId = Hooks.once("dnd5e.rollAttackV2", (rolls, { subject, ammoUpdate }) => {
-          if (configSettings.requireAmmunition && this.ammunition) {
+          if (this.requireAmmunition && this.ammunition) {
             const chosenAmmunition = this.actor.items.get(ammoUpdate.id);
             const ammoQuantity = chosenAmmunition?.system.quantity;
             if (ammoQuantity === 0 && this.workflow) {
@@ -218,8 +222,15 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
             }
           }
         })
-
-
+*/
+        postConfigureDialogHookId = Hooks.once("dnd5e.postAttackRollConfiguration", (rolls, config: any, dialog: any, message: any) => {
+          if (this.requireAmmunition && config.ammunition && this.workflow) {
+            const chosenAmmunition = this.actor.items.get(config.ammunition);
+            if ((chosenAmmunition?.system.quantity ?? 0) <= 0) ui.notifications?.error(i18nFormat("midi-qol.NoAmmunition", { name: chosenAmmunition?.name ?? "Ammunition" }));
+            return chosenAmmunition?.system.quantity > 0;
+          }
+          return true;
+        })
         message ??= {};
         message.create ??= config.midiOptions.chatMessage;
         config.attackMode = this.attackMode ?? "oneHanded";
@@ -231,7 +242,10 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           this.workflow.rollOptions.rollToggle = areMidiKeysPressed(config.event, "RollToggle");
         }
         rolls = await super.rollAttack(config, dialog, message);
-        if (!rolls || rolls.length === 0) return;
+        if (!rolls || rolls.length === 0) {
+          if (this.workflow) this.workflow.aborted = true;
+          return;
+        }
         if (dialog.configure && rolls[0]?.options?.ammunition && rolls[0].options.ammunition !== this.ammunition) {
           await this.update({ ammunition: rolls[0].options.ammunition });
           this.ammunition = rolls[0].options.ammunition;
@@ -260,6 +274,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       } finally {
         if (preRollHookId) Hooks.off("dnd5e.preRollAttackV2", preRollHookId);
         if (rollAttackHookId) Hooks.off("dnd5e.rollAttackV2", rollAttackHookId);
+        if (postConfigureDialogHookId) Hooks.off("dnd5e.postRollConfiguration", postConfigureDialogHookId);
 
       }
       return rolls;
@@ -491,16 +506,19 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         console.warn(`midi-qol | otherActivityUuid is deprecated. Edit ${this.actor?.name ?? ""} ${this.item?.name ?? ""} ${this.name} and reset other activity. Currently ${this.otherActivityUuid}`);
       }
     }
-    get confirmAmmuntion(): { reason?: string, confirm: boolean, proceed: boolean } {
+    get confirmAmmunition(): { reason?: string, confirm: boolean, proceed: boolean } {
       const ammunitionOptions = this.item.system.ammunitionOptions;
       const ammoCount = (ammunitionOptions?.filter(ammo => !ammo.disabled) ?? []).length;
-      if (configSettings.requireAmmunition && ammoCount === 0) return { reason: i18n("midi-qol.NoAmmunitionAvailable"), proceed: false, confirm: true };
-      if (configSettings.requireAmmunition && !this.ammunition) return { reason: i18n("midi-qol.NoAmmunitionSelected"), proceed: true, confirm: true };
+      if (this.requireAmmunition && ammoCount === 0) return { reason: i18n("midi-qol.NoAmmunitionAvailable"), proceed: false, confirm: true };
+      if (this.requireAmmunition && !this.ammunition) return { reason: i18n("midi-qol.NoAmmunitionSelected"), proceed: true, confirm: true };
       if (ammunitionOptions.some(ammo => ammo.value === this.ammunition && ammo.disabled)) return { reason: game.i18n?.format("midi-qol.NoAmmunition", { name: this.ammunitionItem?.name }), proceed: true, confirm: true };
       if (game.user?.isGM) return { confirm: configSettings.gmConfirmAmmunition && ammoCount > 1, proceed: true };
-      return { confirm: configSettings.confirmAmmunition && (ammoCount > 1), proceed: true };
+      return { confirm: this.confirmAmmunition && (ammoCount > 1), proceed: true };
     }
 
+    get requireAmmunition(): boolean {
+      return game.user?.isGM ? configSettings.gmRequireAmmunition : configSettings.playerRequireAmmunition;
+    }
     async _usageChatContext(message) {
       const context = await super._usageChatContext(message);
 

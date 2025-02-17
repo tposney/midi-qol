@@ -1,6 +1,6 @@
 import { i18n, error, i18nFormat } from "../../midi-qol.js";
 import { checkMechanic, checkRule, configSettings, targetConfirmation } from "../settings.js";
-import { FULL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, computeCoverBonus, computeFlankingStatus, getIconFreeLink, getToken, isTargetable, markFlanking, tokenForActor } from "../utils.js";
+import { FULL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, computeCoverBonus, computeFlankingStatus, getIconFreeLink, getToken, isTargetable, markFlanking, tokenForActor, updateUserTargets } from "../utils.js";
 import { getTokenPlayerName } from "../utils.js";
 import { TroubleShooter } from "./TroubleShooter.js";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -49,7 +49,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
           if (maxTargets && validTargets.length >= maxTargets) break;
           if (isTargetable(target)) validTargets.push(target.id);
         }
-        game.user.updateTokenTargets(validTargets);
+        updateUserTargets(validTargets);
       }
       this.data.targets = Array.from(game.user.targets ?? []);
       this.render();
@@ -64,7 +64,9 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
   static get xPosition() {
     const left = 100;
     const middle = window.innerWidth / 2 - 155;
-    const right = window.innerWidth - 310 - (ui.sidebar?.element.hasClass("collapsed") ? 10 : (ui.sidebar?.position.width ?? 300));
+    let adjustment = 10;
+    if ((game.release?.generation ?? 12) < 13) adjustment = (ui.sidebar?.element.hasClass("collapsed") ? 10 : (ui.sidebar?.position.width ?? 300))
+    const right = window.innerWidth - 310 - adjustment
     switch (targetConfirmation.gridPosition?.x) {
       case -1: return left;
       case 0 : return middle;

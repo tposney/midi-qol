@@ -1,44 +1,51 @@
-<section id="midi-config-player" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
-    <div class="midi-qol-box">
-        <div class="form-group">
-            <label>{{localize "midi-qol.AutoAttack.Name"}}</label>
-            <input type="checkbox" name="autoRollAttack" data-dtype="Boolean" {{checked configSettings.autoRollAttack}} />
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.ConsumeResource.Name"}}</label>
-            <select name="consumeResource" data-dtype="String">
-                {{selectOptions ConsumeResourceOptions selected=configSettings.consumeResource}}
-            </select>
-        </div>
-
-        <div class="notes midi-qol-faint">{{{localize "midi-qol.ConsumeResource.Hint"}}}</div>
-       
-        <div class="form-group">
-            <label>{{localize "midi-qol.ConfirmAmmunition.Name"}}</label>
-            <input type="checkbox" name="confirmAmmunition" data-dtype="Boolean" {{checked
-            configSettings.confirmAmmunition}} />
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.AutoDamage.Name"}}</label>
-            <select name="autoRollDamage" data-dtype="String">
-                {{selectOptions autoRollDamageOptions selected=configSettings.autoRollDamage}}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.AutoFastForward.Name"}}</label>
-            <select name="autoFastForward" data-dtype="String">
-                {{selectOptions clickOptions selected=configSettings.autoFastForward}}
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>{{localize "midi-qol.RemoveButtons.Name"}}</label>
-            <select name="removeButtons" data-dtype="String">
-                {{selectOptions removeButtonsOptions selected=configSettings.removeButtons}}
-            </select>
-        </div>
+<section id="midi-config-player" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}"
+  data-group="{{tab.group}}" data-tab="{{tab.id}}">
+  <div class="midi-qol-box">
+    <div class="form-group">
+      <label>{{localize "midi-qol.AutoAttack.Name"}}</label>
+      <input type="checkbox" name="autoRollAttack" data-dtype="Boolean" {{checked configSettings.autoRollAttack}} />
     </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.ConsumeResource.Name"}}</label>
+      <select name="consumeResource" data-dtype="String">
+        {{selectOptions ConsumeResourceOptions selected=configSettings.consumeResource}}
+      </select>
+    </div>
+
+    <div class="notes midi-qol-faint">{{{localize "midi-qol.ConsumeResource.Hint"}}}</div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.ConfirmAmmunition.Name"}}</label>
+      <input type="checkbox" name="confirmAmmunition" data-dtype="Boolean" {{checked
+        configSettings.confirmAmmunition}} />
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.RequireAmmunition.Name"}}</label>
+      <input type="checkbox" name="playerRequireAmmunition" data-dtype="Boolean" {{checked
+        configSettings.playerRequireAmmunition}} />
+    </div>
+    
+    <div class="form-group">
+      <label>{{localize "midi-qol.AutoDamage.Name"}}</label>
+      <select name="autoRollDamage" data-dtype="String">
+        {{selectOptions autoRollDamageOptions selected=configSettings.autoRollDamage}}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.AutoFastForward.Name"}}</label>
+      <select name="autoFastForward" data-dtype="String">
+        {{selectOptions clickOptions selected=configSettings.autoFastForward}}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.RemoveButtons.Name"}}</label>
+      <select name="removeButtons" data-dtype="String">
+        {{selectOptions removeButtonsOptions selected=configSettings.removeButtons}}
+      </select>
+    </div>
+  </div>
 </section>
