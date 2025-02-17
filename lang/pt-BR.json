@@ -764,13 +764,16 @@
   "midi-qol.CheckFlanking.Hint": "Verifica se você e seus aliados estão flanqueando o oponente. Dá vantagem a quem ataca e/ou aplica a condição 'CE flanking' a quem ataca OU aplica a condição 'CE Flanked' ao alvo.",
   "midi-qol.CheckFlankingOptions": {
     "off": "Não",
-    "ceonly": "Apenas Convenient Effect Flanking",
     "advonly": "Apenas Vantagem",
-    "ceadv": "CE Flanking + Vantagem",
-    "ceflanked": "Apenas Condição CE Flanked",
-    "ceflankedNoconga": "CE Flanked + Sem Linha de Conga"
+    "ceonly": "Flanqueando Convenient Effect",
+    "midiFlanking": "Flanqueando Midi",
+    "ceflanked": "Flanqueado Convenient Effect",
+    "midiFlanked": "Flanqueado Midi",
+    "ceflankedNoconga": "Flanqueado Convenient Effect + Sem Linha de Conga",
+    "miidFlankedNoConga": "Flanqueado Midi + Sem Linha de Conga"
   },
   "midi-qol.Flanked": "Flanqueado",
+  "midi-qol.Flanking": "Flanqueando",
   "midi-qol.RollAlternate.Name": "Mover Fórmula de Rolagem para Dica",
   "midi-qol.RollAlternate.Hint": "Usa uma exibição alternativa de rolagem no Cartão Mesclado, movendo a fórmula de rolagem para a dica e, opcionalmente, adiciona atribuição de vantagem.",
   "midi-qol.RollAlternateOptions": {
