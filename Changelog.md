@@ -1,4 +1,6 @@
-Prior to the next midi release which is non-beta for dnd5e v4 - I'm posting these notes to try and ease the migration. Please read them
+### 12.4.27.1
+* FIx for infinite loop.
+
 Although this is the first non-beta release midi has been working with dnd5e 4.x for more than a month so this release should be fairly solid. Please do read the following notes
 * If you have not yet migrated to v4 you **really really** should make a backup of your world before installing midi.
 * It is **strongly recommended** that when you first run the upgraded world that you disable all modules so that dnd5e can do it's best to migrate items.

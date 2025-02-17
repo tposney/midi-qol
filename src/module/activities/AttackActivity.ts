@@ -513,7 +513,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       if (this.requireAmmunition && !this.ammunition) return { reason: i18n("midi-qol.NoAmmunitionSelected"), proceed: true, confirm: true };
       if (ammunitionOptions.some(ammo => ammo.value === this.ammunition && ammo.disabled)) return { reason: game.i18n?.format("midi-qol.NoAmmunition", { name: this.ammunitionItem?.name }), proceed: true, confirm: true };
       if (game.user?.isGM) return { confirm: configSettings.gmConfirmAmmunition && ammoCount > 1, proceed: true };
-      return { confirm: this.confirmAmmunition && (ammoCount > 1), proceed: true };
+      return { confirm: configSettings.confirmAmmunition && (ammoCount > 1), proceed: true };
     }
 
     get requireAmmunition(): boolean {
