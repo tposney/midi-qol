@@ -5738,9 +5738,11 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       flavor: targetFlavor,
       title: `${targetFlavor}: ${targetToken?.name} vs ${sourceToken?.name}`
     });
+    const sourceConfig = { request: source.rollType.trim(), targetUuid: sourceDocument?.uuid, options: sourceOptions, [source.rollType === "skill" ? "skill" : "ability"]: source.ability.trim() };
+    const targetConfig = { request: target.rollType.trim(), targetUuid: targetDocument?.uuid, options: targetOptions, [target.rollType === "skill" ? "skill" : "ability"]: target.ability.trim() };
     const resultPromises = [
-      socketlibSocket.executeAsUser("rollAbilityV2", player1.id, { request: source.rollType.trim(), targetUuid: sourceDocument?.uuid, ability: source.ability.trim(), options: sourceOptions }),
-      socketlibSocket.executeAsUser("rollAbilityV2", player2.id, { request: target.rollType.trim(), targetUuid: targetDocument?.uuid, ability: target.ability.trim(), options: targetOptions }),
+      socketlibSocket.executeAsUser("rollAbilityV2", player1.id, sourceConfig),
+      socketlibSocket.executeAsUser("rollAbilityV2", player2.id, targetConfig),
     ];
 
     let results = await Promise.all(resultPromises);
