@@ -358,7 +358,7 @@ export class Workflow {
         this.item.flags.midiProperties = {};
       }
     }
-    this.needTemplate = (getActivityAutoTargetAction(this.activity) !== "none" && activityHasAreaTarget(this.activity) && !activityHasAutoPlaceTemplate(this.item));
+    this.needTemplate = (activityHasAreaTarget(this.activity) && !activityHasAutoPlaceTemplate(this.activity));
     if (this.needTemplate && options.noTemplateHook !== true) {
       if (debugEnabled > 0) warn("registering for preCreateMeasuredTemplate, createMeasuredTemplate")
       this.preCreateTemplateHookId = Hooks.once("preCreateMeasuredTemplate", this.setTemplateFlags.bind(this));
@@ -1762,7 +1762,7 @@ export class Workflow {
       let origin = this.actor.effects.get(this.chatCard.getFlag("dnd5e", "use.concentrationId"));
       if (origin instanceof ActiveEffect) {
         // @ts-expect-error no dnd5e-types
-        await origin.addDependent(this.template);
+        await origin.addDependent(template);
       }
     } else if (installedModules.get("dae") && activityHasAreaTarget(this.activity) && template
       && this.activity.duration?.units && configSettings.autoRemoveTemplate) { // create an effect to delete the template
@@ -1773,7 +1773,7 @@ export class Workflow {
       let effect = this.item.actor.effects.find(ef => ef.name === this.item.name + templateString);
       if (effect) { // effect already applied
         if (template) { // we can add dependents so do that
-          await effect.addDependent(this.template);
+          await effect.addDependent(template);
         }
       } else if (template) { // add an effect which will cause the template to be deleted
         effectData = {
@@ -1787,7 +1787,7 @@ export class Workflow {
             dae: {
               stackable: "noneName"
             },
-            dnd5e: { dependents: [{ uuid: this.templateUuid }] }
+            dnd5e: { dependents: [{ uuid: template.uuid }] }
           },
         }
 
