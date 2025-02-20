@@ -2513,7 +2513,7 @@ export class Workflow {
                 flavor: flavor ?? damageType,
               }
               //@ts-expect-error
-              rolls.push(await new CONFIG.Dice.DamageRoll(damageRoll, this.item?.getRollData() ?? this.actor.getRollData(), rollOptions).evaluate({ async: true }));
+              rolls.push(await new CONFIG.Dice.DamageRoll(damageRoll, this.item?.getRollData() ?? this.actor.getRollData(), rollOptions).evaluate());
             }
           }
         }
