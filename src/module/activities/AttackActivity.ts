@@ -110,7 +110,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
     static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.ATTACK", "midi-qol.SHARED"];
 
     static defineSchema() {
-      const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, NumberField } = foundry.data.fields;
+      const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, NumberField, DocumentIdField } = foundry.data.fields;
 
       const schema = {
         ...super.defineSchema(),
@@ -155,10 +155,10 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
     async _triggerSubsequentActions(config, results) {
     }
 
-    async rollAttack(config:any = {}, dialog: any = {}, message: any = {}) {
+    async rollAttack(config: any = {}, dialog: any = {}, message: any = {}) {
       let preRollHookId;
       let rollAttackHookId;
-      let postConfigureDialogHookId;
+      let postAttackRollConfigurationHook;
       let rolls;
       config.midiOptions ??= this.midiOptions ?? this.workflow?.rollOptions ?? {};
       try {
@@ -176,11 +176,11 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           advantage: areKeysPressed(config.event, "skipDialogAdvantage"),
           disadvantage: areKeysPressed(config.event, "skipDialogDisadvantage")
         };
-        if (this.item.system.properties.has("amm")) {
-          const ammoConfirmation = this.confirmAmmunition
+        if (this.item.system.properties?.has("amm")) {
+          const ammoConfirmation = this.confirmAmmunition;
           if (ammoConfirmation.reason) {
-            ui.notifications?.warn(ammoConfirmation.reason + " Please choose different ammunition or cancel the attack.");
-          }            
+            ui.notifications?.warn(ammoConfirmation.reason);
+          }
           if (!ammoConfirmation.proceed) {
             if (this.workflow) this.workflow.aborted = true;
           }
@@ -211,21 +211,10 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           }
           return true;
         });
-        /*
-        rollAttackHookId = Hooks.once("dnd5e.rollAttackV2", (rolls, { subject, ammoUpdate }) => {
-          if (this.requireAmmunition && this.ammunition) {
-            const chosenAmmunition = this.actor.items.get(ammoUpdate.id);
-            const ammoQuantity = chosenAmmunition?.system.quantity;
-            if (ammoQuantity === 0 && this.workflow) {
-              ui.notifications?.warn(i18nFormat("midi-qol.NoAmmunition", { name: chosenAmmunition?.name }));
-              if (this.workflow) this.workflow.abort = true;
-            }
-          }
-        })
-*/
-        postConfigureDialogHookId = Hooks.once("dnd5e.postAttackRollConfiguration", (rolls, config: any, dialog: any, message: any) => {
-          if (this.requireAmmunition && config.ammunition && this.workflow) {
-            const chosenAmmunition = this.actor.items.get(config.ammunition);
+
+        postAttackRollConfigurationHook = Hooks.once("dnd5e.postAttackRollConfiguration", (rolls, config: any, dialog: any, message: any) => {
+          if (this.requireAmmunition && this.item.system.properties?.has("amm") && this.workflow) {
+            const chosenAmmunition = this.actor.items.get(rolls[0].options.ammunition);
             if ((chosenAmmunition?.system.quantity ?? 0) <= 0) ui.notifications?.error(i18nFormat("midi-qol.NoAmmunition", { name: chosenAmmunition?.name ?? "Ammunition" }));
             return chosenAmmunition?.system.quantity > 0;
           }
@@ -256,7 +245,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           this.workflow.ammunition = rolls[0].options.ammunition ?? config.ammunition;
           this.workflow.ammo = this.ammunitionItem;
           if (configSettings.allowUseMacro) {
-              this.workflow.ammoOnUseMacros = foundry.utils.getProperty(this.workflow.ammo ?? {}, `flags.${MODULE_ID}.onUseMacroParts`) ?? new OnUseMacros();
+            this.workflow.ammoOnUseMacros = foundry.utils.getProperty(this.workflow.ammo ?? {}, `flags.${MODULE_ID}.onUseMacroParts`) ?? new OnUseMacros();
           }
           if (this.workflow.workflowOptions?.attackRollDSN !== false) await displayDSNForRoll(rolls[0], "attackRollD20");
           await this.workflow?.setAttackRoll(rolls[0]);
@@ -274,7 +263,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       } finally {
         if (preRollHookId) Hooks.off("dnd5e.preRollAttackV2", preRollHookId);
         if (rollAttackHookId) Hooks.off("dnd5e.rollAttackV2", rollAttackHookId);
-        if (postConfigureDialogHookId) Hooks.off("dnd5e.postRollConfiguration", postConfigureDialogHookId);
+        if (postAttackRollConfigurationHook) Hooks.off("dnd5e.postRollConfiguration", postAttackRollConfigurationHook);
 
       }
       return rolls;
@@ -342,7 +331,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       if (configSettings.allowUseMacro && workflow.options.noTargetOnusemacro !== true) {
         await workflow.triggerTargetMacros(["isPreAttacked"]);
         if (workflow.aborted) {
-          console.warn(`midi-qol | item ${workflow.ammo.name ?? ""} roll blocked by isPreAttacked macro`);
+          console.warn(`midi-qol | item ${workflow.item?.name ?? ""} roll blocked by isPreAttacked macro`);
           await workflow.performState(workflow.WorkflowState_Abort);
           return false;
         }
@@ -509,6 +498,9 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
     get confirmAmmunition(): { reason?: string, confirm: boolean, proceed: boolean } {
       const ammunitionOptions = this.item.system.ammunitionOptions;
       const ammoCount = (ammunitionOptions?.filter(ammo => !ammo.disabled) ?? []).length;
+      if ((ammoCount ?? 0) > 0 && (this.ammunition ?? "") === "") {
+        this.ammunition = ammunitionOptions?.find((ammo: { disabled?: boolean; value?: string }) => !ammo.disabled)?.value ?? "";
+      }
       if (this.requireAmmunition && ammoCount === 0) return { reason: i18n("midi-qol.NoAmmunitionAvailable"), proceed: false, confirm: true };
       if (this.requireAmmunition && !this.ammunition) return { reason: i18n("midi-qol.NoAmmunitionSelected"), proceed: true, confirm: true };
       if (ammunitionOptions.some(ammo => ammo.value === this.ammunition && ammo.disabled)) return { reason: game.i18n?.format("midi-qol.NoAmmunition", { name: this.ammunitionItem?.name }), proceed: true, confirm: true };

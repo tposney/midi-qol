@@ -1,6 +1,6 @@
 import { checkRule, configSettings, safeGetGameSetting } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { canSense, completeItemUse, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, MQfromUuidSync, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUseV2, completeActivityUse } from "./utils.js";
+import { canSense, completeItemUse, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, MQfromUuidSync, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUseV2, completeActivityUse, localActivityOverTimeEffect } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { Workflow } from "./Workflow.js";
 import { bonusCheck } from "./patching.js";
@@ -29,7 +29,7 @@ export let setupSocket = () => {
   socketlibSocket.register("confirmDamageRollCompleteMiss", confirmDamageRollCompleteMiss);
   socketlibSocket.register("cancelWorkflow", cancelWorkflow);
   socketlibSocket.register("createActor", createActor);
-  socketlibSocket.register("createChatMessage", createChatMessage);
+  socketlibSocket.register("createChatMessage", _createChatMessage);
   socketlibSocket.register("createEffects", createEffects);
   socketlibSocket.register("createReverseDamageCard", createReverseDamageCard);
   socketlibSocket.register("D20Roll", _D20Roll);
@@ -39,7 +39,7 @@ export let setupSocket = () => {
   socketlibSocket.register("deleteItemEffects", deleteItemEffects);
   socketlibSocket.register("deleteToken", deleteToken);
   socketlibSocket.register("gmOverTimeEffect", _gmOverTimeEffect);
-  socketlibSocket.register("log", log)
+  socketlibSocket.register("localActivityOverTimeEffect", _localActivityOverTimeEffect);
   socketlibSocket.register("monksTokenBarSaves", monksTokenBarSaves);
   socketlibSocket.register("moveToken", _moveToken);
   socketlibSocket.register("moveTokenAwayFromPoint", _moveTokenAwayFromPoint);
@@ -65,6 +65,7 @@ export let setupSocket = () => {
   socketlibSocket.register("updateUndoChatCardUuidsById", updateUndoChatCardUuidsById);
   socketlibSocket.register("removeActionBonusReaction", removeActionBonusReaction);
   socketlibSocket.register("rollActionSave", rollActionSave);
+  socketlibSocket.register("toggleStatusEffect", _toggleStatusEffect);
 
   // socketlibSocket.register("canSense", _canSense);
 }
@@ -103,6 +104,7 @@ export class SaferSocket {
       case "rollConcentration":
       case "removeEffect":
       case "removeActionBonusReaction":
+      case "toggleStatusEffect":
         return true;
 
       case "addConvenientEffect":
@@ -172,7 +174,7 @@ export class SaferSocket {
   }
 }
 
-export async function removeActionBonusReaction(data: { actorUuid: string }) {
+async function removeActionBonusReaction(data: { actorUuid: string }) {
   const actor = fromActorUuid(data.actorUuid);
   if (!actor) return;
   if (hasUsedReaction(actor)) await removeReactionUsed(actor);
@@ -318,7 +320,7 @@ function paranoidCheck(action: string, actor: any, data: any): boolean {
   return true;
 }
 
-export async function removeEffects(data: { actorUuid: string; effects: string[]; options: {} }) {
+async function removeEffects(data: { actorUuid: string; effects: string[]; options: {} }) {
   debug("removeEffects started");
   let removeFunc = async () => {
     try {
@@ -335,14 +337,14 @@ export async function removeEffects(data: { actorUuid: string; effects: string[]
       warn("removeFunc: remove effects completed")
     }
   };
-  // Using the seamphore queue leads to quite a few potential cases of deadlock - disabling for now
+  // Using the semaphore queue leads to quite a few potential cases of deadlock - disabling for now
   // if (globalThis.DAE?.actionQueue) return globalThis.DAE.actionQueue.add(removeFunc)
   // else return removeFunc();
   return removeFunc();
 
 }
 
-export async function removeEffectUuids(data: { actorUuid: string; effects: string[]; options: {} }) {
+async function removeEffectUuids(data: { actorUuid: string; effects: string[]; options: {} }) {
   debug("removeEffects started");
   let removeFunc = async () => {
     try {
@@ -364,7 +366,8 @@ export async function removeEffectUuids(data: { actorUuid: string; effects: stri
   // else return removeFunc();
   return removeFunc();
 }
-export async function createEffects(data: { actorUuid: string, effects: any[], options: any }) {
+
+async function createEffects(data: { actorUuid: string, effects: any[], options: any }) {
   const actor = fromActorUuid(data.actorUuid);
   for (let effect of data.effects) { // override default foundry behaviour of blank being transfer
     if (effect.transfer === undefined) effect.transfer = false;
@@ -372,16 +375,21 @@ export async function createEffects(data: { actorUuid: string, effects: any[], o
   return await actor?.createEmbeddedDocuments("ActiveEffect", data.effects, data.options);
 }
 
-export async function updateEffects(data: { actorUuid: string, updates: any[] }) {
+async function updateEffects(data: { actorUuid: string, updates: any[] }) {
   const actor = fromActorUuid(data.actorUuid);
   return actor?.updateEmbeddedDocuments("ActiveEffect", data.updates);
 }
 
-export function removeActorStats(data: { actorId: any }) {
+async function _toggleStatusEffect(data: { actorUuid: string, statusId: string, options: any }) {
+  const actor = fromActorUuid(data.actorUuid);
+  return actor.toggleEffect(data.statusId, data.options);
+}
+
+function removeActorStats(data: { actorId: any }) {
   return gameStats.GMremoveActorStats(data.actorId)
 }
 
-export function GMupdateEntityStats(data: { id: any; currentStats: any; }) {
+function GMupdateEntityStats(data: { id: any; currentStats: any; }) {
   return gameStats.GMupdateEntity(data)
 }
 
@@ -410,14 +418,14 @@ export async function timedAwaitExecuteAsGM(toDo: string, data: any) {
   return returnValue;
 }
 
-export async function _gmUnsetFlag(data: { base: string, key: string, actorUuid: string }) {
+async function _gmUnsetFlag(data: { base: string, key: string, actorUuid: string }) {
   let actor = MQfromUuidSync(data.actorUuid);
   actor = actor.actor ?? actor;
   if (!actor) return undefined;
   return actor.unsetFlag(data.base, data.key)
 }
 
-export async function _gmSetFlag(data: { base: string, key: string, value: any, actorUuid: string }) {
+async function _gmSetFlag(data: { base: string, key: string, value: any, actorUuid: string }) {
   let actor = MQfromUuidSync(data.actorUuid);
   actor = actor.actor ?? actor;
   if (!actor) return undefined;
@@ -425,7 +433,7 @@ export async function _gmSetFlag(data: { base: string, key: string, value: any, 
 }
 
 // Seems to work doing it on the client instead.
-export async function _canSense(data: { tokenUuid, targetUuid }) {
+async function _canSense(data: { tokenUuid, targetUuid }) {
   const token = MQfromUuidSync(data.tokenUuid)?.object;
   const target = MQfromUuidSync(data.targetUuid)?.object;
   if (!target || !token) return true;
@@ -451,14 +459,27 @@ export async function _canSense(data: { tokenUuid, targetUuid }) {
   return await canSense(token, target);
 }
 
-export async function _gmOverTimeEffect(data: { actorUuid, effectUuid, startTurn, options }) {
+async function _gmOverTimeEffect(data: { actorUuid, effectUuid, startTurn, options }) {
   const actor = fromActorUuid(data.actorUuid);
   const effect = MQfromUuidSync(data.effectUuid)
   log("Called _gmOvertime", actor.name, effect.name)
   return gmOverTimeEffect(actor, effect, data.startTurn, data.options)
 }
 
-export async function _bonusCheck(data: { actorUuid, result, rollType, selector }) {
+async function _localActivityOverTimeEffect(data: { actorUuid, effectUuid, startTurn, options }) {  
+  const actor = await fromUuid(data.actorUuid);
+  const effect = await fromUuid(data.effectUuid);
+  if (!actor || !effect) {
+    const message = `localActivityOverTimeEffect | actor or effect not found actor: ${data.actorUuid} effect: ${data.effectUuid}`;  
+    console.error(message);
+    TroubleShooter.recordError(new Error("GMAction failed"), message);
+    return undefined
+  };
+  log("Called _localActivityOverTimeEffect", actor.name, effect.name)
+  return localActivityOverTimeEffect(actor, effect, data.startTurn, data.options)
+}
+
+async function _bonusCheck(data: { actorUuid, result, rollType, selector }) {
   const tokenOrActor: any = await fromUuid(data.actorUuid);
   const actor = tokenOrActor?.actor ?? tokenOrActor;
   const roll = Roll.fromJSON(data.result);
@@ -466,7 +487,7 @@ export async function _bonusCheck(data: { actorUuid, result, rollType, selector 
   else return null;
 }
 
-export async function _applyEffects(data: { workflowId: string, targets: string[] }) {
+async function _applyEffects(data: { workflowId: string, targets: string[] }) {
   let result;
   try {
     const workflow = Workflow.getWorkflow(data.workflowId);
@@ -567,7 +588,7 @@ async function deleteToken(data: { tokenUuid: string }) {
   }
 }
 
-export async function deleteEffectsByUuid(data: { effectsToDelete: string[], options: any }) {
+async function deleteEffectsByUuid(data: { effectsToDelete: string[], options: any }) {
   for (let effectUuid of data.effectsToDelete) {
     const effect = MQfromUuidSync(effectUuid);
     if (effect !== undefined && !isEffectExpired(effect)) {
@@ -579,7 +600,7 @@ export async function deleteEffectsByUuid(data: { effectsToDelete: string[], opt
   }
 }
 
-export async function deleteEffects(data: { actorUuid: string, effectsToDelete: string[], options: any }) {
+async function deleteEffects(data: { actorUuid: string, effectsToDelete: string[], options: any }) {
   const actor = fromActorUuid(data.actorUuid);
   if (!actor) return;
   // Check that none of the effects were deleted while we were waiting to execute
@@ -597,7 +618,7 @@ export async function deleteEffects(data: { actorUuid: string, effectsToDelete: 
   }
 }
 
-export async function deleteItemEffects(data: { targets, origin: string, ignore: string[], ignoreTransfer: boolean, options: any }) {
+async function deleteItemEffects(data: { targets, origin: string, ignore: string[], ignoreTransfer: boolean, options: any }) {
   debug("deleteItemEffects: started", globalThis.DAE?.actionQueue)
   let deleteFunc = async () => {
     let effectsToDelete;
@@ -700,13 +721,13 @@ export function initGMActionSetup() {
   traitList.dv = "dv";
 }
 
-export async function createChatMessage(data: { chatData: any; }) {
+async function _createChatMessage(data: { chatData: any; }) {
   const messageData = foundry.utils.getProperty(data, "chatData.messageData") ?? {};
   messageData.user = game.user?.id;
   return await ChatMessage.create(data.chatData);
 }
 
-export async function _D20Roll(data: { request: string, targetUuid: string, formula: string, rollMode: string, options: any, targetDC: number, messageData: any }) {
+async function _D20Roll(data: { request: string, targetUuid: string, formula: string, rollMode: string, options: any, targetDC: number, messageData: any }) {
   const actor = fromActorUuid(data.targetUuid);
   if (!actor) {
     error(`GMAction.D20Roll | no actor for ${data.targetUuid}`)
@@ -735,7 +756,7 @@ export async function _D20Roll(data: { request: string, targetUuid: string, form
     resolve(result ?? {})
   });
 }
-export async function rollConcentration(data: { actorUuid, target, whisper, create, rollMode }) {
+async function rollConcentration(data: { actorUuid, target, whisper, create, rollMode }) {
   const actor = MQfromUuidSync(data.actorUuid);
   if (!actor) {
     error(`GMAction.rollConcentration | no actor for ${data.actorUuid}`)
@@ -802,7 +823,7 @@ workflowId: string
 
 
 }
-export async function rollAbility(data: { request: string; targetUuid: string; ability: string; options: any; }) {
+async function rollAbility(data: { request: string; targetUuid: string; ability: string; options: any; }) {
   if (data.request === "abil") data.request = "check";
   if (data.request === "test") data.request = "check";
   const actor = fromActorUuid(data.targetUuid);
@@ -831,7 +852,7 @@ export async function rollAbility(data: { request: string; targetUuid: string; a
   });
 }
 
-export function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined, isMagicSave: boolean | undefined , midiOptions: any | undefined}) {
+function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined, isMagicSave: boolean | undefined , midiOptions: any | undefined}) {
   // let tokens = data.tokens.map((tuuid: any) => new Token(MQfromUuid(tuuid)));
 
   // TODO come back and see what things can be passed to this.
@@ -1281,7 +1302,7 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
   return targetTokenDocument.update({ x: newCenter?.x ?? 0, y: newCenter?.y ?? 0 }, { animate: data.animate ?? true });
 }
 
-export async function rollActionSave(data: any) {
+async function rollActionSave(data: any) {
   let { request, actorUuid, abilities, options, content, title, saveDC } = data;
   let saveResult: any = await new Promise(async (resolve, reject) => {
     const buttons: foundry.applications.api.DialogV2.Button<any>[] = [];
@@ -1349,14 +1370,16 @@ export function prepareDamagelistToJSON(damageList: any[]): any[] {
   }
   return newDL;
 }
-export function prepareDamageDetailToJSON(damageDetail: any[]) {
+
+function prepareDamageDetailToJSON(damageDetail: any[]) {
   for (let damageLine of damageDetail) {
     if (damageLine.properties instanceof Set) {
       damageLine.properties = Array.from(damageLine.properties);
     }
   }
 }
-export function recoverDamageListFromJSON(damageList: any[]): any[] {
+
+function recoverDamageListFromJSON(damageList: any[]): any[] {
   const newDL = foundry.utils.deepClone(damageList);
   for (let damageItem of newDL) {
     for (let damageDetail of [damageItem.damageDetail ?? [], damageItem.rawDamageDetail ?? [], ...Object.values(damageItem.damageDetails ?? [])]) {
@@ -1365,7 +1388,8 @@ export function recoverDamageListFromJSON(damageList: any[]): any[] {
   }
   return newDL;
 }
-export function recoverDamageDetailFromJSON(damageDetail: any[]) {
+
+function recoverDamageDetailFromJSON(damageDetail: any[]) {
   if (damageDetail instanceof Array) {
     for (let damageLine of damageDetail) {
       if (damageLine.properties instanceof Array) {

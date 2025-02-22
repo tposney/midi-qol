@@ -75,7 +75,7 @@ export function setDamageRollMinTerms(rolls: Array<Roll | any> | undefined) {
 
 export async function doActivityReactions(activity, workflow: Workflow) {
   const promises: Promise<any>[] = [];
-  if (!foundry.utils.getProperty(activity, `flags.${MODULE_ID}.noProvokeReaction`)) {
+  if (!foundry.utils.getProperty(activity, `flags.${MODULE_ID}.noProvokeReaction`) && !workflow?.workflowOptions.noProvokeReaction) {
     for (let targetToken of workflow.targets) {
       promises.push(new Promise(async resolve => {
         //@ts-expect-error targetToken Type

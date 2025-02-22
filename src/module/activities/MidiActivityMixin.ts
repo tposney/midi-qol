@@ -39,7 +39,7 @@ export var MidiActivityMixin = Base => {
 
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, SetField } = foundry.data.fields;
-      const { FormulaField } = globalThis.dnd5e.dataModels.fields
+      const { FormulaField } = globalThis.dnd5e.dataModels.fields;
       const schema = {
         ...super.defineSchema(),
         // flags: new ObjectField(),
@@ -71,6 +71,17 @@ export var MidiActivityMixin = Base => {
           automationOnly: new BooleanField({ name: "automationOnly", initial: false }),
           otherActivityCompatible: new BooleanField({ name: "otherActivityCompatible", initial: true }),
           identifier: new StringField({ name: "identifier", initial: "", required: false }),
+          displayActivityName: new BooleanField({ name: "displayActivityName", initial: false }),
+          rollMode: new StringField({ name: "rollMode", initial: "default" }),
+        }),
+        isOverTimeFlag: new BooleanField({ name: "isOverTimeFlag", initial: false }),
+        overTimeProperties: new SchemaField({
+          turnChoice: new StringField({ blank: false, choices: ["start", "end"], default: "start" }),
+          saveRemoves: new BooleanField({ initial: true }),
+          //@ts-expect-error find out why there is a type error here
+          preRemoveConditionText: new MidiConditionField({ name: "removeCondition", initial: "" }),
+          //@ts-expect-error find out why there is a type error here
+          postRemoveConditionText: new MidiConditionField({ name: "postRemoveCondition", initial: "" }),
         })
       };
       return schema;
@@ -268,7 +279,7 @@ export var MidiActivityMixin = Base => {
       if (debugEnabled > 0) warn("MidiQOL | MidiActivity | use | Called", config, dialog, message);
       let item = this.item.clone({parent: this.actor}, { keepId: true });
       let activity = item.system.activities.get(this.id)
-
+      if ((this.midiProperties.rollMode ?? "default") !== "default") message.rollMode = this.midiProperties.rollMode;
       await removeFlanking(item.parent);
       config.midiOptions ??= {};
       config.midiOptions.workflowOptions ??= {};
@@ -666,7 +677,12 @@ export var MidiActivityMixin = Base => {
           this.targets = validTargetTokens(game.user?.targets);
         } else {
           foundry.utils.setProperty(dialog, "workflowOptions.targetConfirmation", "none");
-          this.targets = new Set([tokenForActor(this.actor)]);
+          let potentialTarget: Token | TokenDocument | undefined = tokenForActor(this.actor);
+          if (!potentialTarget) {
+            potentialTarget = new config.Token.documentClass(await this.actor.getTokenDocument({hidden: true}, {parent: canvas?.scene}) as TokenDocument);
+          }
+          this.targets = new Set();
+          if (potentialTarget) this.targets.add(potentialTarget);
         }
       }
       // remove selection of untargetable targets TODO
@@ -1442,6 +1458,15 @@ export var MidiActivityMixinSheet = Base => {
 
     async _prepareMidiQolContext(context) {
       context.ConfirmTargetOptions = Object.entries(geti18nOptions("ConfirmTargetOptions")).map(([value, label]) => ({ value, label }));
+      
+      const ROLL_MODES = CONST.DICE_ROLL_MODES;
+      context.RollModeOptions = [
+        { value: "default", label: i18n("Default") },
+        { value: ROLL_MODES.PUBLIC, label: i18n("CHAT.RollPublic") },
+        { value: ROLL_MODES.PRIVATE, label: i18n("CHAT.RollPrivate") },
+        { value: ROLL_MODES.BLIND, label: i18n("CHAT.RollBlind") },
+        { value: ROLL_MODES.SELF, label: i18n("CHAT.RollSelf") }
+      ];
       context.placeholderIdentifier = context.activity.identifier;
       const midiProperties = context.activity.midiProperties;
 
@@ -1475,8 +1500,8 @@ export var MidiActivityMixinSheet = Base => {
       context.AutoTargetActionOptions = Object.entries(foundry.utils.mergeObject(defaultAction, geti18nOptions("autoTargetOptions"))).map(([value, label]) => ({ value, label }));
       context.hasAreaTarget = this.activity.target?.template?.type;
       context.possibleOtherActivity = this.activity.possibleOtherActivity;
+      context.turnChoiceOptions = [{ value: "start", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.start") }, { value: "end", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.end") }];
       return context;
-
     }
 
     async _preparePartContext(partId, context) {
@@ -1518,7 +1543,8 @@ function renderActivitySheetHook(app, [elem]) {
   const DIMtitle = i18n('dae.DIMEditor.Name');
   daeButton.setAttribute('class', 'header-control fa-solid fa-file-pen dae-dimeditor');
   daeButton.onclick = function(ev) { new Editor({document: this.activity}).render({force: true}); }.bind(app);
-  if (activity.macro?.command) daeButton.style.color = '#36ba36';
+  if (activity.macro?.command) daeButton.style.color = '#36ba36'; 
+
   daeButton.title = "Activity Macro Editor";
   closeButton.parentNode.insertBefore(daeButton, closeButton);
 }

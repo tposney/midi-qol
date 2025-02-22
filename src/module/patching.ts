@@ -1329,7 +1329,8 @@ export function readyPatching() {
       const docClass = eval(classString)
       if (!docClass) continue;
       if (!docClass.prototype.addDependent) libWrapper.register(MODULE_ID, `${classString}.prototype._onDelete`, _onDelete, "WRAPPER");
-      if (!docClass.prototype.addDependent) docClass.prototype.addDependent = addDependent;
+      // if (!docClass.prototype.addDependent) docClass.prototype.addDependent = addDependent;
+      docClass.prototype.addDependent = addDependent; // The core version does not filter out dependents that no longer exist.
       if (!docClass.prototype.getDependents) docClass.prototype.getDependents = getDependents;
       if (!docClass.prototype.setDependents) docClass.prototype.setDependents = setDependents;
       if (!docClass.prototype.removeDependent) docClass.prototype.removeDependent = removeDependent;
@@ -1556,12 +1557,12 @@ export async function rollToolCheck(wrapped, config: any = {}, dialog: any = {},
       baseMessage = messageData;
     });
     result = await wrapped(config, dialog, message);
-    let rollMode = result.options?.rollMode ?? safeGetGameSetting("core", "rollMode");
+    let rollMode = message.rollMode ?? safeGetGameSetting("core", "rollMode");
     await displayDSNForRoll(result, "toolCheck", rollMode);
     result[0] = await bonusCheck(this, result[0], "check", config.ability ?? "");
     if (!result) return result;
     if (chatMessage !== false && result) {
-      const messageData: any = { rolls: result, ...baseMessage.data };
+      const messageData: any = { rolls: result, ...baseMessage.data, rollMode };
       //@ts-expect-error
       CONFIG.Dice.D20Roll._prepareMessageData(result, messageData);
       messageData.template = "modules/midi-qol/templates/roll.html";

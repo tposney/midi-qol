@@ -89,6 +89,14 @@ export class Workflow {
     let finalRoll = this.bonusDamageRolls.slice(1).reduce((rolls, roll) => addRollTo(rolls, roll), this.bonusDamageRolls[0]);
     return finalRoll;
   }
+  get otherDamageRoll(): Roll | undefined {
+    if (!this.otherDamageRolls || this.otherDamageRolls.length === 0) return undefined;
+    let finalRoll = this.otherDamageRolls.slice(1).reduce((rolls, roll) => addRollTo(rolls, roll), this.otherDamageRolls[0]);
+    return finalRoll;
+  }
+  set otherDamageRoll(roll: Roll | undefined) {
+    if (roll) this.setOtherDamageRoll(roll);
+  }
   get otherActivity() {
     return this.activity.otherActivity;
   }
@@ -326,12 +334,12 @@ export class Workflow {
     this.needTemplate = activityHasAreaTarget(this.activity);
     this.attackRolled = false;
     this.flagTags = undefined;
-    this.workflowOptions = options?.workflowOptions ?? {};
     this.rollOptions = foundry.utils.mergeObject(this.rollOptions ?? foundry.utils.duplicate(defaultRollOptions), { autoRollAttack: getAutoRollAttack(this), autoRollDamage: getAutoRollDamage() }, { overwrite: true });
     this.attackAdvAttribution = new Set();
     this.advReminderAttackAdvAttribution = new Set();
     this.systemString = game.system?.id.toUpperCase();
-    this.options = options;
+    this.workflowOptions = options?.workflowOptions ?? {};
+    this.options = options; // not really required.
     this.initSaveResults();
     this.extraRolls = [];
     this.needsAttackAdvantageCheck = true;
@@ -757,7 +765,7 @@ export class Workflow {
     this.hitTargets = new Set(this.targets)
     this.hitTargetsEC = new Set();
     let content = chatMessage && foundry.utils.duplicate(chatMessage.content)
-    let buttonRe = /<button data-action="placeTemplate">[^<]*<\/button>/
+    let buttonRe = /<button[^>]*data-action="placeTemplate">[^<]*<\/button>/
     content = content?.replace(buttonRe, "");
     await debouncedUpdate(chatMessage, { content, "flags.midi-qol.type": MESSAGE_TYPES.ITEM, style: CONST.CHAT_MESSAGE_STYLES.OTHER });
     return this.WorkflowState_AoETargetConfirmation;
@@ -1162,7 +1170,8 @@ export class Workflow {
       // let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
       let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
       try {
-        await this.checkSaves(configSettings.autoCheckSaves !== "allShow");
+        const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
+        await this.checkSaves(saveDisplay !== "allShow");
       } catch (err) {
         const message = ("midi-qol | checkSaves error")
         TroubleShooter.recordError(err, message);
@@ -1177,7 +1186,8 @@ export class Workflow {
       await asyncHooksCallAll("midi-qol.postCheckSaves", this);
       if (this.item) await asyncHooksCallAll(`midi-qol.postCheckSaves.${this.item?.uuid}`, this);
       if (this.aborted) return this.WorkflowState_Abort;
-      await this.displaySaves(configSettings.autoCheckSaves === "whisper");
+      const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
+      await this.displaySaves(saveDisplay === "whisper");
     } else {// has saves but we are not checking so do nothing with the damage
       await this.expireTargetEffects(["isAttacked"])
       this.effectTargets = this.failedSaves;
@@ -1741,18 +1751,25 @@ export class Workflow {
       await this.displayHits(chatMessage.whisper.length > 0, true);
     }
     let content = chatMessage?.content && foundry.utils.duplicate(chatMessage?.content);
+    let contentChanged = false;
     if (content && getRemoveAttackButtons(this.item) && chatMessage && configSettings.confirmAttackDamage === "none") {
-      let searchRe = /<button data-action="attack">[^<]*<\/button>/;
-      searchRe = /<div class="midi-attack-buttons".*<\/div>/
+      let searchRe = /<button[^>]*? data-action="attack"[\s\S]*?<\/button>/;
+      // searchRe = /<div class="midi-attack-buttons".*<\/div>/
       content = content.replace(searchRe, "");
+      contentChanged = true;
+    }
+    // Once the roll if finished cannot place template again so remove the button
+    if (content) {
+      const searchRe = /<button[^>]*?data-action="placeTemplate"[\s\S]*?<\/button>/;
+      content = content.replace(searchRe, "");
+      contentChanged = true;
+    }
+    if (contentChanged) {
       const update: any = {
         "content": content,
         timestamp: Date.now(),
         "flags.midi-qol.type": MESSAGE_TYPES.ITEM,
       };
-
-      // v12 no longer need to set the sytle of the roll
-      // update.style = CONST.CHAT_MESSAGE_STYLES.ROLL;
       await debouncedUpdate(chatMessage, update);
     }
     // Add concentration data if required
@@ -2204,17 +2221,18 @@ export class Workflow {
       grantsAdvantage = true;
       this.attackAdvAttribution.add(`ADV:grants.attack.${actionType} ${firstTargetDocument.name}`);
     }
-    if (grants.fail?.advantage?.attack?.all && await evalCondition(grants.fail.advantage.attack.all, conditionData, { errorReturn: false, async: true })) {
+
+    if (grants.noAdvantage?.attack?.all && await evalCondition(grants.noAdvantage.attack.all, conditionData, { errorReturn: false, async: true })) {  
       grantsAdvantage = false;
       this.advantage = false;
       this.noAdvantage = true;
-      this.attackAdvAttribution.add(`ADV:grants.attack.noAdvantage ${firstTargetDocument.name}`);
+      this.attackAdvAttribution.add(`ADV:None grants.noAdvantage ${firstTargetDocument.name}`);
     }
-    if (grants.fail?.advantage?.attack && grants.fail.advantage.attack[actionType] && await evalCondition(grants.fail.advantage.attack[actionType], conditionData, { errorReturn: false, async: true })) {
+    if (grants.noAdvantage?.attack && grants.noAdvantage.attack[actionType] && await evalCondition(grants.noAdvantage.attack[actionType], conditionData, { errorReturn: false, async: true })) {
       grantsAdvantage = false;
       this.advantage = false;
       this.noAdvantage = true;
-      this.attackAdvAttribution.add(`ADV:grants.attack.noAdvantage${actionType} ${firstTargetDocument.name}`);
+      this.attackAdvAttribution.add(`ADV:None grants.noAdvantage${actionType} ${firstTargetDocument.name}`);
     }
 
     const attackDisadvantage = grants.disadvantage?.attack || {};
@@ -2231,22 +2249,20 @@ export class Workflow {
       grantsDisadvantage = true;
       this.attackAdvAttribution.add(`DIS:grants.attack.${actionType} ${firstTargetDocument.name}`);
     }
-    if (grants.fail?.disadvantage?.attack?.all && await evalCondition(grants.fail.disadvantage.attack.all, conditionData, { errorReturn: false, async: true })) {
-      this.attackAdvAttribution.add(`DIS:None ${firstTargetDocument.name}`);
+    if (grants.noDisadvantage?.attack?.all && await evalCondition(grants.noDisadvantage.attack.all, conditionData, { errorReturn: false, async: true })) {
       grantsDisadvantage = false;
       this.disadvantage = false;
-      this.noDisdvantage = true;
-      this.attackAdvAttribution.add(`ADV:grants.attack.noDisdvantage ${firstTargetDocument.name}`);
+      this.noDisadvantage = true;
+      this.attackAdvAttribution.add(`DIS:None grants.noDisadvantage.all ${firstTargetDocument.name}`);
     }
-    if (grants.fail?.disadvantage?.attack && grants.fail.disadvantage.attack[actionType] && await evalCondition(grants.fail.disadvantage.attack[actionType], conditionData, { errorReturn: false, async: true })) {
+    if (grants.noDisadvantage?.attack && grants.noDisadvantage.attack[actionType] && await evalCondition(grants.noDisadvantage.attack[actionType], conditionData, { errorReturn: false, async: true })) {
       grantsDisadvantage = false;
       this.disadvantage = false;
-      this.noDisdvantage = true;
-      this.attackAdvAttribution.add(`ADV:grants.attack.noDisadvantage${actionType} ${firstTargetDocument.name}`);
+      this.noDisadvantage = true;
+      this.attackAdvAttribution.add(`DIS:None grants.noDisadvantage${actionType} ${firstTargetDocument.name}`);
     }
     this.advantage = this.advantage || grantsAdvantage;
     this.disadvantage = this.disadvantage || grantsDisadvantage;
-
   }
 
   async triggerTargetMacros(triggerList: string[], targets: Set<any> = this.targets, options: any = {}) {
@@ -2929,7 +2945,7 @@ export class Workflow {
     if (!this.itemCardUuid) return;
     const chatMessage = this.chatCard;
     if (chatMessage?.content) {
-      const buttonRe = /<button data-action="midiApplyEffects">[^<]*<\/button>/;
+      const buttonRe = /<button[^>]*?data-action="midiApplyEffects"[\s\S]*?<\/button>/;
       let content: any = foundry.utils.duplicate(chatMessage.content);
       content = content?.replace(buttonRe, "");
       await debouncedUpdate(chatMessage, { content });
@@ -2943,7 +2959,7 @@ export class Workflow {
     let newFlags = {};
 
     if (game.user?.isGM && this.useActiveDefence) {
-      const searchRe = /<div class="midi-qol-attack-roll">[\s\S]*?<div class="end-midi-qol-attack-roll">/;
+      const searchRe = /<div class="midi-qol-attack-roll"[\s\S]*?<div class="end-midi-qol-attack-roll">/;
       let DCString = "DC";
       if (game.system?.id === "dnd5e") {
         DCString = i18n(`${this.systemString}.AbbreviationDC`) ?? "DC";
@@ -2970,7 +2986,7 @@ export class Workflow {
     }
     if (chatMessage) { // display the attack roll
       //let searchRe = /<div class="midi-qol-attack-roll">.*?<\/div>/;
-      let searchRe = /<div class="midi-qol-attack-roll">[\s\S]*?<div class="end-midi-qol-attack-roll">/
+      let searchRe = /<div class="midi-qol-attack-roll"[\s\S]*?<div class="end-midi-qol-attack-roll">/
       let options: any = this.attackRoll?.terms[0].options;
       // @ts-expect-error no dnd5e-types
       const advantageMode = this.attackRoll?.options?.advantageMode;
@@ -3049,9 +3065,9 @@ export class Workflow {
     }
     let content = (chatMessage && foundry.utils.duplicate(chatMessage.content)) ?? "";
     if ((getRemoveDamageButtons(this.item) && configSettings.confirmAttackDamage === "none") || this.workflowType === "TrapWorkflow") {
-      const versatileRe = /<button data-action="versatile">[^<]*<\/button>/
-      const damageRe = /<button data-action="damage">[^<]*<\/button>/
-      const formulaRe = /<button data-action="rollFormula">[^<]*<\/button>/
+      const versatileRe = /<button[^>]*?data-action="versatile"[\s\S]*?<\/button>/
+      const damageRe = /<button[^>]*?data-action="damage">[\s\S]*<\/button>/
+      const formulaRe = /<button[^>]*?data-action="rollFormula"[\s\S]*?\/button>/
       content = content?.replace(damageRe, "<div></div>")
       content = content?.replace(formulaRe, "")
       content = content?.replace(versatileRe, "")
@@ -3060,32 +3076,32 @@ export class Workflow {
     if (chatMessage) {
       if (this.damageRollHTML) {
         if (!this.useOther) {
-          const searchRe = /<div class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
+          const searchRe = /<div[^>]*?class="midi-qol-damage-roll"[\s\S]*?<div class="end-midi-qol-damage-roll">/;
           const replaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center">${this.damageFlavor}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-damage-roll">`
           content = content.replace(searchRe, replaceString);
         } else {
-          const otherSearchRe = /<div class="midi-qol-other-damage-roll">[\s\S]*?<div class="end-midi-qol-other-damage-roll">/;
+          const otherSearchRe = /<div[^>]*? class="midi-qol-other-damage-roll"[\s\S]*?<div class="end-midi-qol-other-damage-roll">/;
           const otherReplaceString = `<div class="midi-qol-other-damage-roll"><div style="text-align:center">${this.damageFlavor}</div>${this.damageRollHTML || ""}<div class="end-midi-qol-other-damage-roll">`
           content = content.replace(otherSearchRe, otherReplaceString);
         }
         if (this.otherDamageRollHTML) {
-          const otherSearchRe = /<div class="midi-qol-other-damage-roll">[\s\S]*?<div class="end-midi-qol-other-damage-roll">/;
+          const otherSearchRe = /<div[^>]*?class="midi-qol-other-damage-roll"[\s\S]*?<div class="end-midi-qol-other-damage-roll">/;
           const otherReplaceString = `<div class="midi-qol-other-damage-roll"><div style="text-align:center" >${this.otherDamageFlavor}${this.otherDamageRollHTML || ""}</div><div class="end-midi-qol-other-damage-roll">`
           content = content.replace(otherSearchRe, otherReplaceString);
         }
         if (this.bonusDamageRolls) {
-          const bonusSearchRe = /<div class="midi-qol-bonus-damage-roll">[\s\S]*?<div class="end-midi-qol-bonus-damage-roll">/;
+          const bonusSearchRe = /<div[^>]*?class="midi-qol-bonus-damage-roll"[\s\S]*?<div class="end-midi-qol-bonus-damage-roll">/;
           const bonusReplaceString = `<div class="midi-qol-bonus-damage-roll"><div style="text-align:center" >${this.bonusDamageFlavor}${this.bonusDamageHTML || ""}</div><div class="end-midi-qol-bonus-damage-roll">`
           content = content.replace(bonusSearchRe, bonusReplaceString);
         }
       } else {
         if (this.otherDamageRollHTML) {
-          const otherSearchRe = /<div class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
+          const otherSearchRe = /<div[^>]*?class="midi-qol-damage-roll"[\s\S]*?<div class="end-midi-qol-damage-roll">/;
           const otherReplaceString = `<div class="midi-qol-damage-roll"><div style="text-align:center">${this.otherDamageFlavor}</div>${this.otherDamageRollHTML || ""}<div class="end-midi-qol-damage-roll">`
           content = content.replace(otherSearchRe, otherReplaceString);
         }
         if (this.bonusDamageRolls) {
-          const bonusSearchRe = /<div class="midi-qol-bonus-damage-roll">[\s\S]*?<div class="end-midi-qol-bonus-damage-roll">/;
+          const bonusSearchRe = /<div[^>]*?class="midi-qol-bonus-damage-roll"[\s\S]*?<div class="end-midi-qol-bonus-damage-roll">/;
           const bonusReplaceString = `<div class="midi-qol-bonus-damage-roll"><div style="text-align:center" >${this.bonusDamageFlavor}</div>${this.bonusDamageHTML || ""}<div class="end-midi-qol-bonus-damage-roll">`
           content = content.replace(bonusSearchRe, bonusReplaceString);
         }
@@ -3192,7 +3208,7 @@ export class Workflow {
       var content = chatMessage && foundry.utils.duplicate(chatMessage.content);
       var searchString;
       var replaceString;
-      searchString = /<div class="midi-qol-hits-display">[\s\S]*?<div class="end-midi-qol-hits-display">/;
+      searchString = /<div[^>]*?class="midi-qol-hits-display">[\s\S]*?<div class="end-midi-qol-hits-display">/;
       replaceString = `<div class="midi-qol-hits-display">${hitContent}<div class="end-midi-qol-hits-display">`
       content = content.replace(searchString, replaceString);
 
@@ -3294,7 +3310,7 @@ export class Workflow {
         })
       }
       if (this.workflowType !== "DamageOnlyWorkflow") {
-        searchString = /<div class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
+        searchString = /<div[^>]*?class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
         replaceString = `<div class="midi-qol-saves-display"><div data-item-id="${this.item.id}">${saveContent}</div><div class="end-midi-qol-saves-display">`
         content = content.replace(searchString, replaceString);
         const update: any = {
@@ -3400,7 +3416,8 @@ export class Workflow {
     let rerRequestsPlayer: any[] = [];
     let monkRequestsGM: any[] = [];
     let rerRequestsGM: any[] = [];
-    let showRoll = configSettings.autoCheckSaves === "allShow";
+    const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
+    let showRoll = saveDisplay === "allShow";
     if (simulate) showRoll = false;
     const isMagicSave = this.item?.type === "spell" || this.item?.flags.midiProperties?.magiceffect || this.item?.flags.midiProperties?.magiceffect;
 
@@ -3412,7 +3429,7 @@ export class Workflow {
       }
 
       for (let target of allHitTargets) {
-        if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`)) {
+        if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
           await doReactions(target, this.tokenUuid, this.attackRoll ?? new Roll(""), "reactionsave", { workflow: this, activity: this.activity, item: this.item })
         }
         if (!target || !target?.actor) continue;
@@ -3598,7 +3615,8 @@ export class Workflow {
                   delete this.saveRequests[requestId];
                   delete this.saveTimeouts[requestId];
                   let result;
-                  if (!game.user?.isGM && configSettings.autoCheckSaves === "allShow") {
+                  const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
+                  if (!game.user?.isGM && saveDisplay === "allShow") {
                     // non-gm users don't have permission to create chat cards impersonating the GM so hand the role to a GM client
                     result = await timedAwaitExecuteAsGM("rollAbilityV2", {
                       targetUuid: (target.actor as Actor)?.uuid ?? "",
@@ -3611,7 +3629,7 @@ export class Workflow {
                         target: saveDetails.rollDC,
                         chatMessage: showRoll,
                         mapKeys: false,
-                        rollMode: whisper ? CONST.DICE_ROLL_MODES.SELF : CONST.DICE_ROLL_MODES.PUBLIC,
+                        rollMode: ((this.activity?.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties.rollMode : CONST.DICE_ROLL_MODES.PUBLIC, // since it's allShow we want to display the roll to evryone whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC,
                         advantage: saveDetails.advantage,
                         disadvantage: saveDetails.disadvantage,
                         fastForward: true,
@@ -3681,7 +3699,7 @@ export class Workflow {
               target: saveDetails.rollDC,
               messageData: { user: owner?.id },
               chatMessage: showRoll,
-              rollMode: whisper ? CONST.DICE_ROLL_MODES.SELF : CONST.DICE_ROLL_MODES.PUBLIC,
+              rollMode: ((this.activity?.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties.rollMode : whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC,
               mapKeys: false,
               advantage: saveDetails.advantage,
               disadvantage: saveDetails.disadvantage,
@@ -3711,7 +3729,7 @@ export class Workflow {
         request: `${rollType === "check" ? "ability" : rollType}:${rollAbility}`,
         silent: true,
         showdc: configSettings.displaySaveDC,
-        rollMode: whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC // should be CONST.DICE_ROLL_MODES.PUBLIC but monks does not check it
+        rollMode: ((this.activity?.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties.rollMode : whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC // should be CONST.DICE_ROLL_MODES.PUBLIC but monks does not check it
       };
       // Display dc triggers the tick/cross on monks tb
       if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) requestData.dc = rollDC
@@ -3721,7 +3739,7 @@ export class Workflow {
         tokenData: monkRequestsGM,
         request: `${rollType === "check" ? "ability" : rollType}:${rollAbility}`,
         silent: true,
-        rollMode: whisper ? CONST.DICE_ROLL_MODES.SELF : "roll", // should be CONST.DICE_ROLL_MODES.PUBLIC but monks does not check it
+        rollMode: whisper ? CONST.DICE_ROLL_MODES.PRIVATE : "roll", // should be CONST.DICE_ROLL_MODES.PUBLIC but monks does not check it
         isMagicSave,
         options: { // This does nothing as monks does not pass through any optiosn to the roll - just here in hope
           workflowOptions: this.workflowOptions,
@@ -3738,7 +3756,7 @@ export class Workflow {
         tokenData: monkRequestsPlayer,
         request: `${rollType === "check" ? "ability" : rollType}:${rollAbility}`,
         silent: true,
-        rollMode: "roll",// should be CONST.DICE_ROLL_MODES.PUBLIC but monks does not check it
+        rollMode: ((this.activity?.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties.rollMode : "roll",// should be CONST.DICE_ROLL_MODES.PUBLIC but monks does not check it
         isMagicSave,
         saveItemUuid: this.item.uuid,
         workflowId: this.id,
@@ -3911,7 +3929,7 @@ export class Workflow {
         this.saves.delete(target);
         this.failedSaves.add(target);
       }
-      if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`)) {
+      if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
         if (saved)
           //@ts-expect-error
           await doReactions(target, this.tokenUuid, this.attackRoll, "reactionsavesuccess", { workflow: this, activity: this.activity, item: this.item })
@@ -4109,13 +4127,13 @@ export class Workflow {
     if (content) {
       data = chatMessage?.toObject(); // TODO check this v10
       content = data.content || "";
-      let searchRe = /<div class="midi-qol-damage-roll">[\s\S\n\r]*<div class="end-midi-qol-damage-roll">/;
+      let searchRe = /<div[^>]*?class="midi-qol-damage-roll">[\s\S]*?<div class="end-midi-qol-damage-roll">/;
       let replaceString = `<div class="midi-qol-damage-roll"><div class="end-midi-qol-damage-roll">`
       content = content.replace(searchRe, replaceString);
-      searchRe = /<div class="midi-qol-other-roll">[\s\S\n\r]*<div class="end-midi-qol-other-roll">/;
+      searchRe = /<div[^>]*?class="midi-qol-other-roll"[\s\S]*?<div class="end-midi-qol-other-roll">/;
       replaceString = `<div class="midi-qol-other-roll"><div class="end-midi-qol-other-roll">`
       content = content.replace(searchRe, replaceString);
-      searchRe = /<div class="midi-qol-bonus-roll">[\s\S\n\r]*<div class="end-midi-qol-bonus-roll">/;
+      searchRe = /<div[^>]*?class="midi-qol-bonus-roll">[\s\S]*?<div class="end-midi-qol-bonus-roll">/;
       replaceString = `<div class="midi-qol-bonus-roll"><div class="end-midi-qol-bonus-roll">`
       content = content.replace(searchRe, replaceString);
     }
@@ -4212,7 +4230,8 @@ export class Workflow {
       }
       handler(message.rolls[0])
     }
-    if (game.user?.id !== message.author.id && !["allShow"].includes(configSettings.autoCheckSaves)) {
+    const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
+    if (game.user?.id !== message.author.id && !["allShow"].includes(saveDisplay)) {
       setTimeout(() => html.remove(), 100);
     }
     return true;
@@ -4303,7 +4322,7 @@ export class Workflow {
     if (debugEnabled > 1) debug("processAttackRoll: ", this.diceRoll, this.attackTotal, this.isCritical, this.isFumble);
   }
 
-  async checkHits(options: { noProvokeReaction?: boolean, noOnuseMacro?: boolean, noTargetOnuseMacro?: boolean } = {}) {
+  async checkHits(options: { workflowOptions?: any, noOnuseMacro?: boolean, noTargetOnuseMacro?: boolean } = {}) {
     let isHit = true;
     let isHitEC = false;
 
@@ -4387,7 +4406,7 @@ export class Workflow {
           }
           if (challengeModeArmorSet) isHit = attackTotal > targetAC || this.isCritical;
           else {
-            if (this.attackRoll && !foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !options.noProvokeReaction) {
+            if (this.attackRoll && !foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
               const workflowOptions = foundry.utils.mergeObject(foundry.utils.duplicate(this.workflowOptions), { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
               const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
               // TODO what else to do once rolled
@@ -4399,11 +4418,11 @@ export class Workflow {
 
           if (targetEC) isHitEC = challengeModeArmorSet && attackTotal <= targetAC && attackTotal >= targetEC && bonusAC !== FULL_COVER;
           // check to see if the roll hit the target
-          if ((isHit || isHitEC) && this.activity?.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`) && !options.noProvokeReaction) {
+          if ((isHit || isHitEC) && this.activity?.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
             const workflowOptions = foundry.utils.mergeObject(foundry.utils.duplicate(this.workflowOptions), { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
             // reaction is the same as reactionhit to accomodate the existing reaction workflow
             let result;
-            if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !options.noProvokeReaction) {
+            if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
               result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reaction", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
             }
             if (!Workflow.getWorkflow(this.id)) // workflow has been removed - bail out
@@ -4418,7 +4437,7 @@ export class Workflow {
             if (targetEC) isHitEC = challengeModeArmorSet && this.attackTotal <= targetAC && this.attackTotal >= targetEC;
           } else if ((!isHit && !isHitEC) && this.activity?.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`)) {
             const workflowOptions = foundry.utils.mergeObject(foundry.utils.duplicate(this.workflowOptions), { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
-            if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !options.noProvokeReaction) {
+            if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
               let result;
               if (isHit || isHitEC) {
                 result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionhit", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
@@ -4566,13 +4585,26 @@ export class Workflow {
       if (this.isFumble) hitResultNumeric = "--";
       const targetUuid = getTokenDocument(targetToken)?.uuid ?? "";
 
+      let acBonusString = "";
+      if (attackBonus || bonusAC) {
+        //@ts-expect-error no dnd5e-types
+        acBonusString = ` (${targetToken.actor?.system.attributes.ac?.value ?? 10}`;
+        if (attackBonus) acBonusString += `-${attackBonus}`;
+        if (bonusAC) acBonusString += `+${bonusAC}`;
+        acBonusString += ")";
+      }
+      const acDisplay = `${targetAC}${acBonusString}`;
+
       this.hitDisplayData[targetUuid] = {
         isPC: (targetToken.actor as Actor)?.hasPlayerOwner,
         target: targetToken,
         actorUuid: (targetToken.actor as Actor).uuid,
         tokenuuid: targetUuid,
         hitStyle,
-        ac: attackBonus > 0 ? `${targetAC}-${attackBonus}` : targetAC,
+        attackBonus,
+        ac: targetAC,
+        acDisplay,
+        baseAc: targetAC - bonusAC,
         hitClass: ["hit", "critical", "isHitEC"].includes(isHitResult) ? "success" : "failure",
         acClass: (targetToken.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-ac",
         hitSymbol,
@@ -5129,7 +5161,8 @@ export class TrapWorkflow extends Workflow {
     //        let brHookId = Hooks.on("renderChatMessage", this.processBetterRollsChatCard.bind(this));
     let monksId = Hooks.on("updateChatMessage", this.monksSavingCheck.bind(this));
     try {
-      await this.checkSaves(configSettings.autoCheckSaves !== "allShow");
+      const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
+      await this.checkSaves(saveDisplay !== "allShow");
     } catch (err) {
       TroubleShooter.recordError(err, "checkSaves");
     } finally {
@@ -5138,7 +5171,8 @@ export class TrapWorkflow extends Workflow {
       Hooks.off("updateChatMessage", monksId)
     }
     if (debugEnabled > 1) debug("Check Saves: renderChat message hooks length ", Hooks.events["renderChatMessage"]?.length);
-    await this.displaySaves(configSettings.autoCheckSaves === "whisper");
+    const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
+    await this.displaySaves(saveDisplay === "whisper");
     return this.WorkflowState_SavesComplete;
   }
   async WorkflowState_SavesComplete(context: any = {}): Promise<WorkflowState> {

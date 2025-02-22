@@ -44,5 +44,4 @@ let defineMidiForwardActivityClass = (ActivityClass: any) => {
       return false;
     }
   }
-
 }

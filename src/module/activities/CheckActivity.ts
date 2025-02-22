@@ -1,4 +1,4 @@
-import { debugEnabled, i18n, warn } from "../../midi-qol.js";
+import { debugEnabled, geti18nOptions, i18n, warn } from "../../midi-qol.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { MidiSaveActivity } from "./SaveActivity.js";
@@ -62,6 +62,8 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
           onSave: new StringField({name: "onSave", initial: "half"}),
           parts: new ArrayField(new DamageField())
         }),
+        // WIP
+        // saveDisplay: new StringField({initial: "default"}),
       };
       return schema;
     }
@@ -158,6 +160,13 @@ export function defineMidiCheckSheetClass(baseClass: any) {
         { value: "half", label: i18n("DND5E.SAVE.FIELDS.damage.onSave.Half") },
         { value: "full", label: i18n("DND5E.SAVE.FIELDS.damage.onSave.Full") }
       ];
+      // WIP
+      let autoCheckOptions = foundry.utils.duplicate(geti18nOptions("autoCheckSavesOptions"));
+      delete autoCheckOptions["none"];
+      context.SaveDisplayOptions = Object.keys(autoCheckOptions).reduce((acc: any, key: string) => {
+        acc.push({ value: key, label: autoCheckOptions[key] });
+        return acc;
+      }, [{value: "default", label: i18n("Default")}]);
       return context;
     }
   }

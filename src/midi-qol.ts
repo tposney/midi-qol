@@ -304,7 +304,12 @@ Hooks.on("dae.modifySpecials", (specKey, specials, _characterSpec) => {
   daeFieldBrowserFields.push(`system.traits.idm.value`);
 });
 
+Hooks.on("dae.modifyBaseValues", (specKey: string, baseValues, _characterSpec) => {
+  baseValues[`flags.${MODULE_ID}.ActivityOverTime`] = [new StringField({initial: ""}), -1];
+});
 Hooks.on("dae.addFieldMappings", (fieldMappings) => {
+  let allAttackTypes = ["rwak", "mwak", "rsak", "msak"];
+  if (game.system?.id === "sw5e") allAttackTypes = ["rwak", "mwak", "rpak", "mpak"];
   registerSettings();
   fetchParams();
   //@ts-expect-error
@@ -339,6 +344,11 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
   for (let attackType of allAttackTypes) {
     fieldMappings[`flags.${MODULE_ID}.fail.critical.${attackType}`] = `flags.${MODULE_ID}.grants.noCritical.${attackType}`;
   }
+  let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
+  attackTypes.forEach(attackType => {
+    fieldMappings[`flags.${MODULE_ID}.grants.fail.advantage.attack.${attackType}`] = `flags.${MODULE_ID}.grants.noAdvantage.attack.${attackType}`;
+    fieldMappings[`flags.${MODULE_ID}.grants.fail.disadvantage.attack.${attackType}`] = `flags.${MODULE_ID}.grants.noDisadvantage.attack.${attackType}`;
+  })
   //@ts-expect-error
   if (game.system.config.skills) for (let skill of Object.keys(game.system.config.skills)) {
     fieldMappings[`flags.${MODULE_ID}.max.skill.${skill}`] = `system.skills.${skill}.roll.max`;
@@ -348,6 +358,8 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
   fieldMappings[`flags.${MODULE_ID}.min.ability.save.concentration`] = `system.attributes.concentration.roll.min`;
   fieldMappings[`flags.${MODULE_ID}.concentrationSaveBonus`] = `system.attributes.concentration.bonuses.save`;
   fieldMappings[`flags.${MODULE_ID}.sharpShooter`] = `flags.dnd5e.sharpShooter`;
+  fieldMappings[`flags.${MODULE_ID}.grants.fail.advantage.attack.all`] = `flags.${MODULE_ID}.grants.noAdvantage.attack.all`;
+  fieldMappings[`flags.${MODULE_ID}.grants.fail.disadvantage.attack.all`] = `flags.${MODULE_ID}.grants.noDisadvantage.attack.all`;
   if (debugEnabled > 0) warn("fieldMappings", fieldMappings);
 
 });
@@ -1112,8 +1124,12 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.skill.all`);
   midiFlags.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.all`);
   midiFlags.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.all`);
+  midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.all`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.all`);
   midiFlags.push(`flags.${MODULE_ID}.neverTarget`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.neverTarget`);
   midiFlags.push(`flags.${MODULE_ID}.grants.attack.success.all`);
@@ -1187,8 +1203,12 @@ function setupMidiFlags() {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.attack.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.${at}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.critical.${at}`);
@@ -1429,6 +1449,7 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.uncanny-dodge`);
   midiFlags.push(`flags.${MODULE_ID}.OverTime`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.OverTime`);
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.ActivityOverTime`);
   midiFlags.push(`flags.${MODULE_ID}.inMotion`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.inMotion`);
   //@ts-ignore
@@ -1558,13 +1579,14 @@ export function setupMidiStatusEffects() {
   // Initialise these effects so that we don't need to make a raft of code aysnc only to fetch these
   if (configSettings.enforceBonusActions !== "none") {
     if (!CONFIG.statusEffects.find(e => e._id === getStaticID("bonusaction"))) {
-      CONFIG.statusEffects.push({ 
-        id: "bonusaction", 
-        _id: getStaticID("bonusaction"), 
-        name: i18n("midi-qol.bonusActionUsed"), 
-        changes: [{ key: "flags.midi-qol.actions.bonus", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }], img: "modules/midi-qol/icons/bonus-action.svg", 
+      CONFIG.statusEffects.push({
+        id: "bonusaction",
+        _id: getStaticID("bonusaction"),
+        name: i18n("midi-qol.bonusActionUsed"),
+        changes: [{ key: "flags.midi-qol.actions.bonus", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }], img: "modules/midi-qol/icons/bonus-action.svg",
         //@ts-expect-error
-        flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } } });
+        flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } }
+      });
     }
     // @ts-expect-error not expecting keepId
     ActiveEffect.implementation.fromStatusEffect("bonusaction", { keepId: true }).then(effect => {
@@ -1575,67 +1597,67 @@ export function setupMidiStatusEffects() {
 
   if (configSettings.enforceReactions !== "none") {
     if (!CONFIG.statusEffects.find(e => e._id === getStaticID("reaction"))) {
-      CONFIG.statusEffects.push({ 
-        id: "reaction", 
-        _id: getStaticID("reaction"), 
-        name: i18n("midi-qol.reactionUsed"), 
-        changes: [{ key: "flags.midi-qol.actions.reaction", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }], 
-        img: "modules/midi-qol/icons/reaction.svg", 
-        effectData: { transfer: false }, 
+      CONFIG.statusEffects.push({
+        id: "reaction",
+        _id: getStaticID("reaction"),
+        name: i18n("midi-qol.reactionUsed"),
+        changes: [{ key: "flags.midi-qol.actions.reaction", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }],
+        img: "modules/midi-qol/icons/reaction.svg",
+        effectData: { transfer: false },
         //@ts-expect-error
-        flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } } });
+        flags: { dae: { specialDuration: ["turnStart", "combatEnd", "shortRest"] } }
+      });
     }
     // @ts-expect-error not expecting keepId
     ActiveEffect.implementation.fromStatusEffect("reaction", { keepId: true }).then(effect => {
       midiReactionEffect = effect;
       globalThis.MidiQOL.midiReactionEffect = effect;
     });
-
-    if (!CONFIG.statusEffects.find(e => e._id === getStaticID("flanking"))) {
-      CONFIG.statusEffects.push({ 
-        id: "flanking", 
-        _id: getStaticID("flanking"), 
-        name: i18n("midi-qol.Flanking"), 
-        changes: [
-          { key: "flags.midi-qol.flanking", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }, 
-          { key: "flags.midi-qol.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }, 
-          { key: "flags.midi-qol.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
-        ],
-        img: "icons/svg/sword.svg", 
-        effectData: { transfer: false}, 
-        //@ts-expect-error
-        flags: { dae: { specialDuration: ["combatEnd"] } } });
-    }
-
-    //@ts-expect-error not expecting keepId
-    ActiveEffect.implementation.fromStatusEffect("flanking", { keepId: true }).then(effect => {
-      midiFlankingEffect = effect;
-      globalThis.MidiQOL.midiFlankingEffect = effect;
-    });
-
-    if (!CONFIG.statusEffects.find(e => e._id === getStaticID("flanked"))) {
-      CONFIG.statusEffects.push({
-        id: "flanked", 
-        _id: getStaticID("flanked"), 
-        name: i18n("midi-qol.Flanked"), 
-        changes: [
-          { key: "flags.midi-qol.grants.attack.advantage.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
-          { key: "flags.midi-qol.grants.attack.advantage.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
-        ],
-        img: "modules/midi-qol/icons/encirclement.svg", 
-        effectData: { 
-          transfer: false,
-        },
-        //@ts-expect-error
-        flags: { dae: { specialDuration: ["combatEnd"] } } 
-      });
-    };
-
-    //@ts-expect-error not expecting keepId
-    ActiveEffect.implementation.fromStatusEffect("flanked", { keepId: true }).then(effect => {
-      midiFlankedEffect = effect;
-      globalThis.MidiQOL.midiFlankedEffect = effect;
+  }
+  if (!CONFIG.statusEffects.find(e => e._id === getStaticID("flanking"))) {
+    CONFIG.statusEffects.push({
+      id: "flanking",
+      _id: getStaticID("flanking"),
+      name: i18n("midi-qol.Flanking"),
+      changes: [
+        { key: "flags.midi-qol.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
+        { key: "flags.midi-qol.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
+      ],
+      img: "icons/svg/sword.svg",
+      effectData: { transfer: false },
+      //@ts-expect-error
+      flags: { dae: { specialDuration: ["combatEnd"] } }
     });
   }
+
+  //@ts-expect-error not expecting keepId
+  ActiveEffect.implementation.fromStatusEffect("flanking", { keepId: true }).then(effect => {
+    midiFlankingEffect = effect;
+    globalThis.MidiQOL.midiFlankingEffect = effect;
+  });
+
+  if (!CONFIG.statusEffects.find(e => e._id === getStaticID("flanked"))) {
+    CONFIG.statusEffects.push({
+      id: "flanked",
+      _id: getStaticID("flanked"),
+      name: i18n("midi-qol.Flanked"),
+      changes: [
+        { key: "flags.midi-qol.grants.attack.advantage.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
+        { key: "flags.midi-qol.grants.attack.advantage.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
+      ],
+      img: "modules/midi-qol/icons/encirclement.svg",
+      effectData: {
+        transfer: false,
+      },
+      //@ts-expect-error
+      flags: { dae: { specialDuration: ["combatEnd"] } }
+    });
+  };
+
+  //@ts-expect-error not expecting keepId
+  ActiveEffect.implementation.fromStatusEffect("flanked", { keepId: true }).then(effect => {
+    midiFlankedEffect = effect;
+    globalThis.MidiQOL.midiFlankedEffect = effect;
+  });
 }
 // globalThis.onerror = midiOnerror;

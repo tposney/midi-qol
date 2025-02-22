@@ -52,7 +52,9 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
             allow: new BooleanField(),
             bonus: new FormulaField(),
           }),
-        })
+        }),
+        // WIP
+        // saveDisplay: new StringField({initial: "default"})
       }
     }
 
