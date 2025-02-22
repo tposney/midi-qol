@@ -282,7 +282,7 @@ export function initHooks() {
   });
 
   Hooks.on("deleteChatMessage", (message: ChatMessage, options, user) => {
-    if (message.author.id !== game.user?.id) return;
+    if (message.author?.id !== game.user?.id) return;
     const workflowId = foundry.utils.getProperty(message, "flags.midi-qol.workflowId");
     if (workflowId && Workflow.getWorkflow(workflowId)) Workflow.removeWorkflow(workflowId)
   });
