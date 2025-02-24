@@ -770,7 +770,7 @@
     "ceflanked": "Flanqueado Convenient Effect",
     "midiFlanked": "Flanqueado Midi",
     "ceflankedNoconga": "Flanqueado Convenient Effect + Sem Linha de Conga",
-    "miidFlankedNoConga": "Flanqueado Midi + Sem Linha de Conga"
+    "midiFlankedNoConga": "Flanqueado Midi + Sem Linha de Conga"
   },
   "midi-qol.Flanked": "Flanqueado",
   "midi-qol.Flanking": "Flanqueando",
@@ -994,6 +994,10 @@
         "hint": "Condição para aplicar efeito ativo."
       },
       "midiProperties": {
+        "rollMode": {
+          "label": "Modo de Rolagem",
+          "hint": "Modo de rolagem para usar para a Atividade."
+        },
         "forceDialog": {
           "label": "Forçar Diálogo de Configuração",
           "hint": "Força o diálogo de configuração ao rolar ataques."
@@ -1013,6 +1017,10 @@
         "automationOnly": {
           "label": "Apenas Automação",
           "hint": "A atividade destina-se apenas à automação Midi QOL e não ao uso manual."
+        },
+        "displayActivityName": {
+          "label": "Exibir Nome da Atividade",
+          "hint": "Mostrar o nome da Atividade no cartão do chat."
         },
         "identifier": {
           "label": "Identificador",
@@ -1059,6 +1067,30 @@
             "label": "Modificação",
             "hint": "Ignora Modificação de danos ao aplicar o dano."
           }
+        }
+      },
+      "isOverTimeFlag": {
+        "label": "É Over Time",
+        "hint": "A Atividade pode ser uma Atividade de Over Time"
+      },
+      "overTimeProperties": {
+        "turnChoice": {
+          "label": "Escolha de Turno",
+          "hint": "Início ou Fim do Turno",
+          "start": "Início do Turno",
+          "end": "Fim do Turno"
+        },
+        "saveRemoves": {
+          "label": "Remover Sucesso Salv.",
+          "hint": "Remove o efeito em uma salvaguarda bem-sucedida."
+        },
+        "preRemoveConditionText": {
+          "label": "Condição de Remoção Pré-Atividade",
+          "hint": "Testado antes da rolagem da Atividade. O efeito é removido se for verdadeiro."
+        },
+        "postRemoveConditionText": {
+          "label": "Condição de Remoção Pós-Atividade",
+          "hint": "Testado após a rolagem da Atividade. O efeito é removido se for verdadeiro."
         }
       },
       "ActivityMacro": {
@@ -1142,6 +1174,35 @@
       "other": "Curas Midi"
     }
   },
+  "midi-qol.OVERTIME": {
+    "Title": {
+      "one": "OverTime Midi",
+      "other": "OverTimes Midi"
+    },
+    "extras": {
+      "header": "Configurações OverTime Midi"
+    },
+    "FIELDS": {
+      "turnChoice": {
+        "label": "Escolha de Turno",
+        "hint": "Início ou Fim do Turno",
+        "start": "Início do Turno",
+        "end": "Fim do Turno"
+      },
+      "saveRemoves": {
+        "label": "Remover Sucesso Salv.",
+        "hint": "Remove o efeito em uma salvaguarda bem-sucedida."
+      },
+      "removeConditionBeforeActivity": {
+        "label": "Remover Antes de Rolar",
+        "hint": "Se a Condição para Remover é cumprida, o efeito é removido antes da atividade ser rolada."
+      },
+      "removeConditionText": {
+        "label": "Condição para Remover",
+        "hint": "Condição para remover o efeito."
+      }
+    }
+  },
   "midi-qol.SAVE": {
     "Title": {
       "one": "Salvaguarda Midi",
@@ -1178,6 +1239,8 @@
   "midi-qol.RequireAmmunition.Name": "Exigir Munição Disponível Se Usado",
   "midi-qol.CheckTwoHanded.Name": "Não Requer Escudo em Ataques com Duas Mãos/Ambidestro",
   "midi-qol.NoAmmunition": "Existem 0 {name} no seu inventário",
+  "midi-qol.NoAmmunitionAvailable": "Não há munição em seu inventário.",
+  "midi-qol.NoAmmunitionSelected": "Você deve selecionar a munição a ser usada.",
   "midi-qol.TwoHandedShieldWarning": "Não é possível usar ataque com as duas mãos ou com a mão secundária com um escudo equipado",
   "dae.MidiQOL.fieldData": {
     "flags.midi-qol.absorption.acid": { "name": "Absorção Dano (Ácido)", "description": "Converte dano Ácido sofrido em cura" },
@@ -1492,6 +1555,7 @@
     "flags.midi-qol.grants.disadvantage.skill.str": { "name": "Dar Desvantagem Perícia (Força)", "description": "" },
     "flags.midi-qol.grants.disadvantage.skill.wis": { "name": "Dar Desvantagem Perícia (Sabedoria)", "description": "" },
     "flags.midi-qol.grants.fail.advantage.attack.all": { "name": "Dar Falha Vantagem Ataque (Todos)", "description": "" },
+    "flags.midi-qol.noAdvantage.attack.all": { "name": "Dar Falha Vantagem Ataque (Todos)", "description": "" },
     "flags.midi-qol.grants.fail.advantage.attack.heal": { "name": "Dar Falha Vantagem (Cura)", "description": "" },
     "flags.midi-qol.grants.fail.advantage.attack.msak": { "name": "Dar Falha Vantagem Ataque (Mágico Corpo a Corpo)", "description": "" },
     "flags.midi-qol.grants.fail.advantage.attack.mwak": { "name": "Dar Falha Vantagem Ataque (Armado Corpo a Corpo)", "description": "" },
@@ -1501,6 +1565,7 @@
     "flags.midi-qol.grants.fail.advantage.attack.save": { "name": "Dar Falha Vantagem (Salvaguarda)", "description": "" },
     "flags.midi-qol.grants.fail.advantage.attack.util": { "name": "Dar Falha Vantagem (Utilidade)", "description": "" },
     "flags.midi-qol.grants.fail.disadvantage.attack.all": { "name": "Dar Falha Desvantagem Ataque (Todos)", "description": "" },
+    "flags.midi-qol.grants.noDisadvantage.attack.all": { "name": "Dar Falha Desvantagem Ataque (Todos)", "description": "" },
     "flags.midi-qol.grants.fail.disadvantage.attack.heal": { "name": "Dar Falha Desvantagem (Cura)", "description": "" },
     "flags.midi-qol.grants.fail.disadvantage.attack.msak": { "name": "Dar Falha Desvantagem Ataque (Mágico Corpo a Corpo)", "description": "" },
     "flags.midi-qol.grants.fail.disadvantage.attack.mwak": { "name": "Dar Falha Desvantagem Ataque (Armado Corpo a Corpo)", "description": "" },
