@@ -104,7 +104,7 @@ export function activityConsumptionHook(activity, usageConfig, messageConfig, up
   return true;
 }
 
-function activityRequiresPostTemplateConfiramtion(activity): boolean {
+function activityRequiresPostTemplateConfirmation(activity): boolean {
   // const isRangeTargeting = ["ft", "m"].includes(activity.range?.units) && ["creature", "ally", "enemy"].includes(activity.target?.affects.type);
   if (activity.target?.template?.type) {
     return true;
@@ -226,14 +226,14 @@ export function requiresTargetConfirmation(activity, options): boolean {
 }
 
 export async function preTemplateTargets(activity, options): Promise<boolean> {
-  if (activityRequiresPostTemplateConfiramtion(activity)) return true;
+  if (activityRequiresPostTemplateConfirmation(activity)) return true;
   if (requiresTargetConfirmation(activity, options))
     return await resolveTargetConfirmation(activity, options) === true;
   return true;
 }
 
 export async function postTemplateConfirmTargets(activity, options, workflow): Promise<boolean> {
-  if (!activityRequiresPostTemplateConfiramtion(activity)) {
+  if (!activityRequiresPostTemplateConfirmation(activity)) {
     if (game.user?.targets) {
       activity.workflow.setTargets(game.user?.targets);
       activity.targets = new Set(game.user?.targets);
