@@ -1,3 +1,24 @@
+### 12.4.29
+* Fix for Utility activities to display rolls in the chat card, like other activities.
+* Fix so that auto consume is disabled when roll toggle is pressed.
+* Fix for triggered activities not being properly prepared when rolled. (Affects saving throws amongst other things).
+* Fix for reroll-with bonus not correctly looking up actor data when triggered via MTB.
+* Fix for drag and drop targeting. Now works correctly in both gridded and gridless scenes.
+* Fixes for spellSniper and sharpShooter thanks @Elwin.
+* Cast and Forward activities cannot be selected as triggered activities due to issues with targeting, once resolved they will be enabled, but only for item owner triggered activities.
+* Adjusted some flags for noAdvantage/noDisadvantage to apply to attacks and saves, checks and skill rolls.
+* Fix for MidiQOL.chooseEffect not counting down the time remaining before timeout correctly.
+For macro writers
+* Fix for forced rolls via GMAction.RollAbilityV2 not correctly setting options for the roll. Manifested in contested roll not correctly picking up the skill requested, but would also affect any automated skill rolls.
+* Fix for not passing correct workflow options to preTemplateTargets - thanks @Elwin
+* Fix for various other typos/bugs thanks @Micheal @thatlonelybugbear.
+* Slight re-organization of config settings and removal of some extra boxes on the config panel.
+* First cut of support for separate attack rolls per target for attack activities.
+* Removed support for the deprecated **system.details.race === 'notarget'** test for checking if a token is a valid target.
+  - Added support for secret tokens to be ignored in targeting by midi.
+* Removed searching item description for 1/2 "damage on save" etc, since it now must be specified in the relevant activity.
+* As a first step to making workflows survive reloads (not really started in this release).... **Major breaking** workflow.uuid is now deprecated, since it was never a uuid that could be looked up. Workflow.id is now the preferred usage (and the key into Workflow._workflows) and is the same as workflow.itemCardUuid. For a short period workflow.uuid will return workflow.itemUuid, workflow.itemUuid is preferred for fetching the workflow's item's uuid.
+
 ### 12.4.28
 * Fix for contested roll when using a skill. Thanks @michael.
 * Added in some bug fix merges from @thatLonelyBugbear - thanks.

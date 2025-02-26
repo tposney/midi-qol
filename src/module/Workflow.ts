@@ -1,16 +1,15 @@
-import { warn, debug, log, i18n, MESSAGE_TYPES, error, MQdefaultDamageType, debugEnabled, MQItemMacroLabel, debugCallTiming, geti18nOptions, i18nFormat, GameSystemConfig, i18nSystem, allDamageTypes, MODULE_ID, NumericTerm, MQActivityMacroLabel } from "../midi-qol.js";
+import { warn, debug, log, i18n, MESSAGE_TYPES, error, MQdefaultDamageType, debugEnabled, MQItemMacroLabel, debugCallTiming, geti18nOptions, GameSystemConfig, i18nSystem, allDamageTypes, MODULE_ID, NumericTerm, MQActivityMacroLabel } from "../midi-qol.js";
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { configSettings, autoRemoveTargets, checkRule, autoFastForwardAbilityRolls, checkMechanic, safeGetGameSetting } from "./settings.js";
-import { createDamageDetailV4, processDamageRoll, untargetDeadTokens, applyTokenDamage, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, getAutoRollAttack, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, expireMyEffects, validTargetTokens, getTokenForActorAsSet, doReactions, playerFor, requestPCActiveDefence, evalActivationCondition, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, MQfromUuidSync, midiRenderRoll, markFlanking, canSense, tokenForActor, getTokenForActor, createConditionData, evalCondition, removeHidden, hasDAE, computeCoverBonus, FULL_COVER, isInCombat, displayDSNForRoll, setActionUsed, removeInvisible, isTargetable, hasWallBlockingCondition, getTokenDocument, getToken, checkDefeated, getIconFreeLink, activityHasAutoPlaceTemplate, itemOtherFormula, addRollTo, sumRolls, midiRenderAttackRoll, midiRenderDamageRoll, midiRenderBonusDamageRoll, midiRenderOtherDamageRoll, debouncedUpdate, getCachedDocument, clearUpdatesCache, getDamageType, getTokenName, setRollOperatorEvaluated, evalAllConditionsAsync, getAppliedEffects, canSee, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, getsaveMultiplierForActivity, checkActivityRange, computeDistance, getAoETargetType, getActivityAutoTargetAction, activityHasEmanationNoTemplate, isAutoFastDamage, completeItemUseV2, completeActivityUse, getActor, getRemoveAllButtons, requestPCSave } from "./utils.js"
+import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting } from "./settings.js";
+import { createDamageDetailV4, processDamageRoll, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, getAutoRollAttack, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, expireMyEffects, validTargetTokens, getTokenForActorAsSet, doReactions, playerFor, requestPCActiveDefence, evalActivationCondition, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, MQfromUuidSync, midiRenderRoll, markFlanking, canSense, tokenForActor, getTokenForActor, createConditionData, evalCondition, removeHidden, hasDAE, computeCoverBonus, FULL_COVER, isInCombat, displayDSNForRoll, setActionUsed, removeInvisible, getTokenDocument, getToken, getIconFreeLink, activityHasAutoPlaceTemplate, addRollTo, sumRolls, midiRenderAttackRoll, midiRenderDamageRoll, midiRenderBonusDamageRoll, midiRenderOtherDamageRoll, debouncedUpdate, getCachedDocument, clearUpdatesCache, getDamageType, getTokenName, setRollOperatorEvaluated, evalAllConditionsAsync, getAppliedEffects, canSee, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, getsaveMultiplierForActivity, checkActivityRange, computeDistance, getAoETargetType, getActivityAutoTargetAction, activityHasEmanationNoTemplate, isAutoFastDamage, completeActivityUse, getActor, getRemoveAllButtons, requestPCSave } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
-import { bonusCheck, collectBonusFlags, defaultRollOptions, procAbilityAdvantage, procAutoFail } from "./patching.js";
+import { bonusCheck, collectBonusFlags, defaultRollOptions, procAbilityAdvantage } from "./patching.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { busyWait } from "./tests/setupTest.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
 import { postTemplateConfirmTargets, selectTargets, templateTokens } from "./activities/activityHelpers.js";
-import { resolveModuleName } from "typescript";
 
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
@@ -26,9 +25,13 @@ export type WorkflowState = undefined | ((context: any) => Promise<WorkflowState
 
 export class Workflow {
   [x: string]: any;
-  static _workflows: {} = {};
-  static get forceCreate() { return true }
+  static _workflows: IterableWeakMap<String, Workflow> = new foundry.utils.IterableWeakMap();
+  static get forceCreate(): boolean { return true }
 
+  static addWorkflow(workflow: Workflow) {
+    if (Workflow._workflows[workflow.id]) Workflow.removeWorkflow(workflow.id);
+    Workflow._workflows[workflow.id] = workflow;
+  }
   //@ts-expect-error dnd5e v10
   actor: globalThis.dnd5e.documents.Actor5e | undefined;
   //@ts-expect-error dnd5e v10
@@ -53,7 +56,12 @@ export class Workflow {
   saveDisplayFlavor: string | undefined;
   showCard: boolean | undefined;
   get id() { return this._id }
-  get uuid() { return this._id }
+
+  get uuid() {
+    console.error("workflow.uuid is deprecated. Use workflow.id to reference the workflow and workflow.itemUuid to reference the item instead.");
+    return this.itemUuid;
+  }
+
   itemId: string;
   itemUuid: string | undefined;
   // @ts-expect-error might be undefined
@@ -72,6 +80,15 @@ export class Workflow {
   noAutoAttack: boolean | undefined; // override attack roll for standard care
 
   hitDisplayData: any;
+
+  get utilityRoll() {
+    if (!this.utilityRolls || this.utilityRolls.length === 0) return undefined;
+    let finalRoll = this.utilityRolls.slice(1).reduce((rolls, roll) => addRollTo(rolls, roll), this.utilityRolls[0]);
+    return finalRoll;
+  }
+  set utilityRoll(roll: Roll | undefined) {
+    if (roll) this.setUtilityRoll(roll);
+  }
 
   get damageRoll(): Roll | undefined {
     if (!this.damageRolls || this.damageRolls.length === 0) return undefined;
@@ -164,6 +181,15 @@ export class Workflow {
     return Workflow._workflows[id];
   }
 
+  static getWorkflowByActivityUuid(activityUuid: string | undefined): Workflow | undefined {
+    console.warn("Fetching workflow by activity uuid");
+    if (!activityUuid) return undefined;
+    //@ts-expect-error
+    for (let [key, workflow] of Workflow._workflows.entries()) {
+      if (workflow.activity?.uuid === activityUuid) return workflow;
+    }
+    return undefined;
+  }
   get bonusDamageFlavor() {
     return `(${this.bonusDamageRolls.map(r => r.options.flavor ?? r.options.type)})`;
   }
@@ -197,9 +223,9 @@ export class Workflow {
     return this.activity.save || this.activity.check || this.otherActivity?.save || this.otherActivity?.check;
   }
 
-
   get otherDamageFormula() {
-    return itemOtherFormula(this.otherDamageItem);
+    console.error("workflow.otherDamageFormula is deprecated without replacement.");
+    return "";
   }
 
   get otherUseCondition() {
@@ -265,9 +291,10 @@ export class Workflow {
     } else {
       this.itemId = this.item.id;
       this.itemUuid = this.item.uuid;
-      this._id = this.activity.uuid;
+      this._id = this.activity.uuid; // Temporary until the item card is created.
       const workflowName = options.workflowOptions?.workflowName ?? this.item?.name ?? "no item";
       this.workflowName = `${this.constructor.name} ${workflowName} ${foundry.utils.randomID()}`;
+      if (options.storeWorkflow) Workflow.addWorkflow(this);
     }
 
     this.tokenId = speaker.token;
@@ -330,7 +357,6 @@ export class Workflow {
     this.onUseCalled = false;
     this.effectsAlreadyExpired = [];
     this.reactionUpdates = new Set();
-    if (!(this instanceof DummyWorkflow)) Workflow._workflows[this.id] = this;
     this.needTemplate = activityHasAreaTarget(this.activity);
     this.attackRolled = false;
     this.flagTags = undefined;
@@ -774,7 +800,7 @@ export class Workflow {
     const hasAoETemplate = activityHasAreaTarget(this.activity);
     const emanationNoTemplate = activityHasEmanationNoTemplate(this.activity);
     if ((hasAoETemplate || emanationNoTemplate) && this.workflowOptions.targetConfirmation !== "none") {
-      if (!await postTemplateConfirmTargets(this.activity, this.workflowOptions, this)) {
+      if (!await postTemplateConfirmTargets(this.activity, { workflowOptions: this.workflowOptions }, this)) {
         return this.WorkflowState_Abort;
       }
     }
@@ -891,12 +917,11 @@ export class Workflow {
       await this.callMacros(this.item, this.onUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
       if (this.ammo) await this.callMacros(this.ammo, this.ammoOnUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
     }
+    if (this.activity.roll?.formula) return this.WorkflowState_WaitForUtilityRoll;
     if (this.autoRollAttack) {
       this.rollOptions.fastForwardAttack ||= isFastRoll;
-      // REFACTOR -await
       const rolls = await this.activity.rollAttack({ event: this.event, midiOptions: this.rollOptions }, {}, {});
       if (!rolls || this.abort) return this.WorkflowState_Abort;
-      if (this.activity.roll?.formula) return this.WorkflowState_WaitForUtilityRoll;
       return this.WorkflowState_AttackRollComplete;
     }
     return this.WorkflowState_Suspend;
@@ -1126,15 +1151,22 @@ export class Workflow {
   }
 
   async WorkflowState_WaitForUtilityRoll(context: any = {}): Promise<WorkflowState> {
-    if (!this.activity.roll?.formula || context.utilityRoll) return this.WorkflowState_UtilityRollComplete;
+    if (!this.activity.roll?.formula || context.utilityRolls) return this.WorkflowState_UtilityRollComplete;
     if (getAutoRollDamage(this) !== "none") {
-      this.utilityRoll = await this.activity.rollFormula({ event: this.event, midiOptions: this.rollOptions }, {}, { create: true });
+      const rolls = await this.activity.rollFormula({ event: this.event, midiOptions: this.rollOptions }, {}, { create: false });
+      if (!rolls || this.abort) {
+        return this.WorkflowState_Abort;
+      }
       return this.WorkflowState_UtilityRollComplete;
     }
     return this.WorkflowState_Suspend;
   }
 
   async WorkflowState_UtilityRollComplete(context: any = {}): Promise<WorkflowState> {
+    if (this.itemCardUuid && this.utilityRolls) {
+      this.displayUtilityRolls();
+      this.extraRolls?.push(this.utilityRolls[0]);
+    }
     return this.WorkflowState_WaitForDamageRoll;
   }
   async WorkflowState_DamageRollCompleteCancelled(context: any = {}): Promise<WorkflowState> {
@@ -1261,8 +1293,10 @@ export class Workflow {
 
     this.effectTargets = new Set();
     this.otherEffectTargets = new Set();
+    this.allEffectTargets = new Set(this.targets);
+    this.allOtherEffectTargets = new Set(this.targets);
     if (this.forceApplyEffects) {
-      this.effectTargets = this.targets;
+      this.effectTargets = new Set(); // will get picked up in allEffectTargets
     } else if (this.saveActivity?.save && this.activity.attack) {
       this.effectTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
       this.effectTargets = new Set([...this.effectTargets].filter(t => this.failedSaves.has(t)));
@@ -1322,9 +1356,14 @@ export class Workflow {
     const hasCE = installedModules.get("dfreds-convenient-effects")
     let ceEffect = getCEEffectByName(this.activity.name);
     if (!ceEffect) ceEffect = getCEEffectByName(this.activity.item.name);
-
     let activityEffects = (this.activity.applicableEffects ?? []).filter(ef => !ef.transfer);
+    if (this.activity?.midiProperties?.chooseEffects) {
+      activityEffects = await this.chooseEffects(activityEffects, this);
+    }
     let otherActivityEffects = (this.otherActivity?.applicableEffects ?? []).filter(ef => !ef.transfer);
+    if (this.otherActivity?.midiProperties?.chooseEffects) {
+      otherActivityEffects = await this.chooseEffects(otherActivityEffects, this);
+    }
     const ceTargetEffect = ceEffect && !(ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
     const ceSelfEffect = ceEffect && (ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
     const hasActivityEffects = hasDAE(this) && activityEffects.length > 0;
@@ -1402,7 +1441,7 @@ export class Workflow {
             context: {
               damageComponents,
               damageApplied: hpDamage,
-              damage: totalDamage,  // this is curently ignored see damageTotal above
+              damage: totalDamage,  // this is currently ignored see damageTotal above
               otherDamage: this.otherDamageTotal ?? 0,
               bonusDamage: this.bonusDamageTotal ?? 0,
               itemData: this.item.toObject()
@@ -1659,12 +1698,17 @@ export class Workflow {
               case "missedTargets": targetUuids = toUuids(this.targets.difference(this.hitTargets)); break;
               case "failedSaves": targetUuids = toUuids(this.failedSaves); break;
               case "saveTargets": targetUuids = toUuids(this.saveTargets); break;
-              default:
               case "targets": targetUuids = toUuids(this.targets); break;
+              case "retarget":
+              default:
+                // targetUuids = [];
+                break;
             }
           config.midiOptions.targetUuids = targetUuids;
+          config.midiOptions.triggeredActivity = true;
           const saveTargets = game.user?.targets;
-          if (targetUuids?.length === 0) shouldTrigger = false;
+          if (this.activity.midiProperties.triggeredActivityTargets !== "retarget" && targetUuids?.length === 0)
+            shouldTrigger = false;
           if (this.activity.midiProperties?.triggeredActivityConditionText && shouldTrigger) {
             // @ts-expect-error
             const target: any = await fromUuid(targetUuids[0]);
@@ -2222,7 +2266,7 @@ export class Workflow {
       this.attackAdvAttribution.add(`ADV:grants.attack.${actionType} ${firstTargetDocument.name}`);
     }
 
-    if (grants.noAdvantage?.attack?.all && await evalCondition(grants.noAdvantage.attack.all, conditionData, { errorReturn: false, async: true })) {  
+    if (grants.noAdvantage?.attack?.all && await evalCondition(grants.noAdvantage.attack.all, conditionData, { errorReturn: false, async: true })) {
       grantsAdvantage = false;
       this.advantage = false;
       this.noAdvantage = true;
@@ -2666,7 +2710,7 @@ export class Workflow {
       hitTargetsEC,
       hitTargetUuids,
       hitTargetUuidsEC,
-      id: item?.id,
+      id: this.id,
       isCritical: this.rollOptions.isCritical || this.isCritical || this.workflowOptions.isCritical,
       isFumble: this.isFumble,
       isVersatile: this.rollOptions.versatile || this.isVersatile || this.workflowOptions.isVersatile,
@@ -2695,7 +2739,7 @@ export class Workflow {
       templateUuid: this.templateUuid,
       tokenId: this.tokenId,
       tokenUuid: this.tokenUuid,
-      uuid: this.uuid, // deprecated
+      uuid: this.itemUuid, // deprecated
       workflowOptions: this.workflowOptions,
       castData: this.castData,
       workflow: options.noWorkflowReference ? undefined : this,
@@ -2951,6 +2995,34 @@ export class Workflow {
       await debouncedUpdate(chatMessage, { content });
     }
   }
+  async displayUtilityRolls(displayOptions: any = {}) {
+    const chatMessage = this.chatCard;
+    let content = chatMessage && foundry.utils.duplicate(chatMessage.content);
+    const flags = chatMessage?.flags || {};
+    let newFlags = {};
+
+    if (chatMessage) { // display the attack roll
+      const utilityRoll = this.utilityRoll; // will concat as needed
+      //let searchRe = /<div class="midi-qol-attack-roll">.*?<\/div>/;
+      let searchRe = /<div class="midi-qol-utility-roll"[\s\S]*?<div class="end-midi-qol-utility-roll">/
+      const rollString = i18n(`${this.systemString}.UTILITY.Title`);
+      let replaceString = `<div class="midi-qol-utility-roll"><div style="text-align:center" >${rollString}</div>${this.utilityRollHTML}<div class="end-midi-qol-utility-roll">`
+      content = content.replace(searchRe, replaceString);
+      if (debugEnabled > 0) warn("displayUtilityRoll |", this.attackCardData, this.attackRoll)
+      newFlags = foundry.utils.mergeObject(flags, {
+        "midi-qol":
+        {
+          type: MESSAGE_TYPES.OTHER,
+          roll: utilityRoll?.roll,
+          displayId: this.displayId,
+        }
+      }, { overwrite: true, inplace: false }
+      )
+    }
+    // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
+    const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
+    await debouncedUpdate(chatMessage, { content, flags: newFlags, rolls: rolls }, true);
+  }
 
   async displayAttackRoll(displayOptions: any = {}) {
     const chatMessage = this.chatCard;
@@ -2985,7 +3057,6 @@ export class Workflow {
       }, { overwrite: true, inplace: false });
     }
     if (chatMessage) { // display the attack roll
-      //let searchRe = /<div class="midi-qol-attack-roll">.*?<\/div>/;
       let searchRe = /<div class="midi-qol-attack-roll"[\s\S]*?<div class="end-midi-qol-attack-roll">/
       let options: any = this.attackRoll?.terms[0].options;
       // @ts-expect-error no dnd5e-types
@@ -3260,9 +3331,9 @@ export class Workflow {
       }
     }
 
-    if (fullDamage.length > 0) fullDamageText = fullDamage.join(", "); // i18nFormat("midi-qol.fullDamageText" ?? "{damageType}", { damageType: fullDamage.join(", ") }) ?? "";
-    if (noDamage.length > 0) noDamageText = noDamage.join(", "); // i18nFormat("midi-qol.noDamageText" ?? "{damageType}", { damageType: noDamage.join(", ") }) ?? "";
-    if (halfDamage.length > 0) halfDamageText = halfDamage.join(", "); // i18nFormat("midi-qol.halfDamageText" ?? "{damageType}", { damageType: halfDamage.join(", ") }) ?? "";
+    if (fullDamage.length > 0) fullDamageText = fullDamage.join(", ");
+    if (noDamage.length > 0) noDamageText = noDamage.join(", ");
+    if (halfDamage.length > 0) halfDamageText = halfDamage.join(", ");
     let templateData = {
       fullDamageText,
       halfDamageText,
@@ -3485,6 +3556,7 @@ export class Workflow {
           if (debugEnabled > 1) debug(`${(target.actor as Actor).name} resistant to magic : ${saveDetails.advantage}`);
           if (debugEnabled > 1) debug(`${(target.actor as Actor).name} vulnerable to magic : ${saveDetails.disadvantage}`);
         }
+
         const settingsOptions = await procAbilityAdvantage(target.actor, rollType, this.saveActivity.save?.ability ?? this.saveActivity.check?.ability, { workflow: this });
         if (settingsOptions.advantage) saveDetails.advantage = true;
         if (settingsOptions.disadvantage) saveDetails.disadvantage = true;
@@ -3502,7 +3574,13 @@ export class Workflow {
           || await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.grants.disadvantage.${flagRollType}.${rollAbility}`, conditionData)) {
           saveDetails.disadvantage = true;
         }
-
+        // TODO manage grants.noAdvantage/disAdvantage for the roll
+        if (await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.grants.noAdvantage.all`, conditionData)
+          || await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.grants.noAdvantage.${flagRollType}`, conditionData))
+          saveDetails.advantage = false;
+        if (await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.grants.noDisadvantage.all`, conditionData)
+          || await evalAllConditionsAsync(target.actor, `flags.${MODULE_ID}.grants.noDisadvantage.${flagRollType}`, conditionData))
+          saveDetails.disadvantage = false;
         if (saveDetails.advantage && !saveDetails.disadvantage) this.advantageSaves.add(target);
         else if (saveDetails.disadvantage && !saveDetails.advantage) this.disadvantageSaves.add(target);
         var player = playerFor(target);
@@ -4754,6 +4832,23 @@ export class Workflow {
     this.attackRollHTML = await midiRenderAttackRoll(roll);
   }
 
+  async setUtilityRolls(rolls: Array<Roll> | Roll | undefined | null) {
+    if (!rolls) {
+      this.utilityRolls = undefined;
+      return;
+    };
+    if (rolls instanceof Roll) rolls = [rolls];
+    this.utilityRolls = rolls;
+    this.utilityRollHTML = "";
+    for (let roll of this.utilityRolls) {
+      foundry.utils.setProperty(roll, `options.${MODULE_ID}.rollType`, "utility");
+      this.utilityRollHTML += await midiRenderRoll(roll);
+    }
+  }
+  setUtilityRoll(roll: Roll) {
+    this.setUtilityRolls([roll]);
+  }
+
   convertRollToDamageRoll(roll) {
     //@ts-expect-error
     const DamageRoll = CONFIG.Dice.DamageRoll;
@@ -4904,7 +4999,8 @@ export class UserWorkflow extends Workflow {
 export class DamageOnlyWorkflow extends Workflow {
   //@ts-expect-error
   constructor(actor: globalThis.dnd5e.documents.Actor5e, token: Token, damageTotal: number, damageType: string, targets: [Token], roll: Roll,
-    options: { flavor: string, itemCardId: string, itemCardUuid: string, damageList: [], useOther: boolean, itemData: any, isCritical: boolean, item?: Item }) {
+    options: { flavor: string, itemCardId: string, itemCardUuid: string, damageList: [], useOther: boolean, itemData: any, isCritical: boolean, item?: Item, storeWorkflow?: boolean}) {
+    if (options.storeWorkflow === undefined) options.storeWorkflow = true;
     if (!actor) actor = token.actor ?? targets[0]?.actor;
     const theTargets = Array.from(targets).map(t => getToken(t)).filter(t => t);
     let damageRoll = roll;
@@ -5050,11 +5146,11 @@ export class TrapWorkflow extends Workflow {
   templateLocation: { x: number, y: number, direction?: number, removeDelay?: number } | undefined;
   saveTargets: any;
   static get forceCreate() { return false; }
-  //@ts-expect-error dnd5e v10
-  constructor(actor: globalThis.dnd5e.documents.Actor5e, activity, targets: Array<Token> | undefined,
+  //
+  constructor(actor: Actor, activity, targets: Array<Token> | undefined,
     templateLocation: { x: number, y: number, direction?: number, removeDelay?: number } | undefined = undefined,
-    trapSound: { playlist: string, sound: string } | undefined = undefined, event: any = {}) {
-    super(actor, activity, ChatMessage.getSpeaker({ actor }), new Set(targets), event);
+    trapSound: { playlist: string, sound: string } | undefined = undefined, event: any = {}, storeWorkflow: boolean = false) {
+    super(actor, activity, ChatMessage.getSpeaker({ actor }), new Set(targets), {event, storeWorkflow: false});
     // this.targets = new Set(targets);
     if (!this.event) this.event = foundry.utils.duplicate(shiftOnlyEvent);
     if (templateLocation) this.templateLocation = templateLocation;
@@ -5062,7 +5158,7 @@ export class TrapWorkflow extends Workflow {
     this.rollOptions.fastForward = true;
     this.kickStart = false;
     this.suspended = false;
-    this.activity.use({ configure: false }, {}, {})
+    this.activity.use({ configure: false, midiOptions: {workflow: this}}, {}, {})
     // this.performState(this.WorkflowState_Start);
     return this;
   }
@@ -5073,14 +5169,6 @@ export class TrapWorkflow extends Workflow {
     this.saveTargets = validTargetTokens(game.user?.targets);
     this.effectsAlreadyExpired = [];
     this.onUseMacroCalled = false;
-    /*    const itemCard = await (this.item.displayCard({ systemCard: false, workflow: this, createMessage: true, defaultCard: true }));
-        if (itemCard) {
-          this.itemCardUuid = itemCard.uuid;
-          this.itemCardId = itemCard.id
-        }
-        */
-    // this.activity.use({ configure: false }, {}, {})
-    // this.itemCardId = (await showItemCard.bind(this.item)(false, this, true))?.id;
     if (debugEnabled > 1) debug(" Trapworkflow | WorkflowState_Start ", this.item, getActivityAutoTargetAction(this.activity), activityHasAreaTarget(this.activity), this.targets);
     // don't support the placement of a template
     return this.WorkflowState_AwaitTemplate
@@ -5255,13 +5343,6 @@ export class DDBGameLogWorkflow extends Workflow {
     this.needsDamage = this.item.hasDamage;
     this.attackRolled = !item.hasAttack;
     if (configSettings.undoWorkflow) this.undoData = { actor: actor.id, item: item.id, targets: Array.from(targets).map(t => t.id), options: options };
-    /*
-    if (this.item.system.formula) {
-      shouldRollOtherDamage.bind(this.otherDamageItem)(this, configSettings.rollOtherDamage, configSettings.rollOtherSpellDamage)
-        .then(result => this.needsOtherDamage = result);
-    }
-    */
-    // this.needsOtherDamage = this.item.system.formula && shouldRollOtherDamage.bind(this.otherDamageItem)(this, configSettings.rollOtherDamage, configSettings.rollOtherSpellDamage);
     this.kickStart = true;
     this.flagTags = { "ddb-game-log": { "midi-generated": true } };
     if (configSettings.undoWorkflow) saveUndoData(this);

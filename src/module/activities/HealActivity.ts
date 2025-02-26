@@ -44,6 +44,9 @@ let defineMidiHealActivityClass = (ActivityClass: any) => {
     get possibleOtherActivity() { 
       return true;
     }
+    get selfTriggerableOnly() {
+      return false;
+    }
 
     async rollDamage(config: any = {}, dialog: any = {}, message: any = {}) {
       config.midiOptions ??= {};

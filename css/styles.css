@@ -184,6 +184,12 @@
   margin-right: 5px;
 }
 
+#midi-qol-settings .heading {
+  text-align: left;
+  font-weight: bold;
+  margin-bottom: 5px;  
+}
+
 #midi-qol-settings #midi-config-mechanics .form-group > div.flexrow > select {
   max-width: 200px;
 }
@@ -665,7 +671,7 @@
     margin-top: 0.1rem;
   }
   
-  .midi-qol-attack-roll > div:nth-child(1), .midi-qol-damage-roll > div:nth-child(1), .midi-qol-other-damage-roll > div:nth-child(1) {
+  .midi-qol-attack-roll > div:nth-child(1), .midi-qol-damage-roll > div:nth-child(1), .midi-qol-other-damage-roll > div:nth-child(1), .midi-qol-utility-roll > div:nth-child(1){
     text-transform: uppercase;
     font-size: 10px;
     font-weight: bold;

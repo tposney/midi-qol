@@ -6,7 +6,7 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, checkRange, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, debouncedUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getTokenForActor, getTokenForActorAsSet, getTokenPlayerName, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isTargetable, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, reportMidiCriticalFlags, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, MQfromUuidSync, actorFromUuid, createDamageDetail, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, completeItemUseV2, checkActivityRange, modifyDamageBy, computeDistance, addDependent } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, checkRange, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, debouncedUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getTokenForActor, getTokenForActorAsSet, getTokenPlayerName, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, reportMidiCriticalFlags, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, MQfromUuidSync, actorFromUuid, createDamageDetail, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, completeItemUseV2, checkActivityRange, modifyDamageBy, computeDistance, addDependent } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
@@ -117,6 +117,7 @@ export const MESSAGE_TYPES = {
   SAVES: 2,
   ATTACK: 3,
   DAMAGE: 4,
+  OTHER: 5,
   ITEM: 0
 };
 export let cleanSpellName = (name: string): string => {
@@ -147,7 +148,7 @@ function setupActvities() {
   setupDamageActivity();
   globalThis.MidiQOL.activityTypes["damage"] = { documentClass: MidiDamageActivity };
   setupCastActivity();
-  globalThis.MidiQOL.activityTypes["cast"] = { documentClass: MidiDamageActivity };
+  globalThis.MidiQOL.activityTypes["cast"] = { documentClass: MidiCastActivity };
   setupSaveActivity();
   globalThis.MidiQOL.activityTypes["save"] = { documentClass: MidiSaveActivity };
   setupCheckActivity(); // must happen after setupSaveActivity
@@ -344,7 +345,7 @@ Hooks.on("dae.addFieldMappings", (fieldMappings) => {
   for (let attackType of allAttackTypes) {
     fieldMappings[`flags.${MODULE_ID}.fail.critical.${attackType}`] = `flags.${MODULE_ID}.grants.noCritical.${attackType}`;
   }
-  let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
+  let attackTypes = allAttackTypes.concat(["save", "check", "skill", "tool"])
   attackTypes.forEach(attackType => {
     fieldMappings[`flags.${MODULE_ID}.grants.fail.advantage.attack.${attackType}`] = `flags.${MODULE_ID}.grants.noAdvantage.attack.${attackType}`;
     fieldMappings[`flags.${MODULE_ID}.grants.fail.disadvantage.attack.${attackType}`] = `flags.${MODULE_ID}.grants.noDisadvantage.attack.${attackType}`;
@@ -536,12 +537,6 @@ function addConfigOptions() {
     //@ts-expect-error
     config = CONFIG.SW5E;
     config.midiProperties = {};
-    config.midiProperties["nodam"] = i18n("midi-qol.noDamageSaveProp");
-    config.midiProperties["fulldam"] = i18n("midi-qol.fullDamageSaveProp");
-    config.midiProperties["halfdam"] = i18n("midi-qol.halfDamageSaveProp")
-    config.midiProperties["saveDamage"] = "Save Damage";
-    config.midiProperties["bonusSaveDamage"] = "Bonus Damage Save";
-    config.midiProperties["otherSaveDamage"] = "Other Damage Save";
     config.damageTypes["midi-none"] = i18n("midi-qol.midi-none");
     config.abilityActivationTypes["reactiondamage"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionDamaged")}`;
     config.abilityActivationTypes["reactionmanual"] = `${i18n("DND5E.Reaction")} ${i18n("midi-qol.reactionManual")}`;
@@ -735,13 +730,13 @@ import { MidiSaveActivity, setupSaveActivity } from './module/activities/SaveAct
 import { MidiUtilityActivity, setupUtilityActivity } from './module/activities/UtilityActivity.js';
 import { MidiSummonActivity, setupSummonActivity } from './module/activities/SummonActivity.js';
 import { MidiDamageActivity, setupDamageActivity } from './module/activities/DamageActivity.js';
+import { MidiCastActivity, setupCastActivity } from './module/activities/CastActivity.js';
 import { MidiCheckActivity, setupCheckActivity } from './module/activities/CheckActivity.js';
 import { MidiHealActivity, setupHealActivity } from './module/activities/HealActivity.js';
 import { resolveTargetConfirmation, showItemInfo, templateTokens } from './module/activities/activityHelpers.js';
 import { MidiActivityMixin, setupMidiActivityMixin } from './module/activities/MidiActivityMixin.js';
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
-import { setupCastActivity } from './module/activities/CastActivity.js';
 Hooks.once("midi-qol.midiReady", () => {
   setupMidiTests();
 });
@@ -932,7 +927,7 @@ function setupMidiQOLApi() {
     humanoid,
     incapacitatedConditions: ["incapacitated", "Convenient Effect: Incapacitated", "stunned", "Convenient Effect: Stunned", "paralyzed", "paralysis", "Convenient Effect: Paralyzed", "unconscious", "Convenient Effect: Unconscious", "dead", "Convenient Effect: Dead", "petrified", "Convenient Effect: Petrified"],
     InvisibleDisadvantageVisionModes,
-    isTargetable,
+    isTargetable: isValidTarget,
     TargetConfirmationDialog,
     log,
     midiFlags,
@@ -1055,7 +1050,7 @@ function setupMidiQOLApi() {
     hasUsedBonusAction,
     hasUsedReaction,
     humanoid,
-    isTargetable,
+    isTargetable: isValidTarget,
     raceOrType,
     typeOrRace,
     safeGetGameSetting,
@@ -1181,7 +1176,20 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.range.all`);
   midiFlags.push(`flags.${MODULE_ID}.long.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.long.all`);
-  let attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
+  let attackTypes = allAttackTypes.concat(["save", "check", "skill", "tool"])
+  attackTypes.forEach(at => {
+    midiFlags.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.${at}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.${at}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
+    midiFlags.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.${at}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.${at}`);
+  });
+  attackTypes = allAttackTypes.concat(["heal", "other", "save", "util"])
   attackTypes.forEach(at => {
     midiFlags.push(`flags.${MODULE_ID}.range.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.range.${at}`);
@@ -1201,16 +1209,6 @@ function setupMidiFlags() {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.noCritical.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.advantage.attack.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.${at}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.advantage.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noAdvantage.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.disadvantage.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.noDisadvantage.attack.${at}`);
-    midiFlags.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.${at}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.fail.disadvantage.attack.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.critical.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.critical.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.noCritical.${at}`);
@@ -1236,7 +1234,6 @@ function setupMidiFlags() {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.attack.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.optional.NAME.attack.fail.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.attack.fail.${at}`);
-
     midiFlags.push(`flags.${MODULE_ID}.optional.NAME.damage.${at}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.damage.${at}`);
     midiFlags.push(`flags.${MODULE_ID}.rangeOverride.attack.${at}`);

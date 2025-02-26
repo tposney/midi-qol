@@ -58,9 +58,17 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
       }
     }
 
+    use(config = {}, dialog = {}, message = {}) {
+      return super.use(config, dialog, message);
+    }
+    
     get possibleOtherActivity() {
       return true;
     }
+    get selfTriggerableOnly() {
+      return false;
+    }
+
     getDamageConfig(config = {}) {
       const rollConfig = super.getDamageConfig(config);
 

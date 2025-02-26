@@ -38,6 +38,10 @@ let defineMidiDamageActivityClass = (ActivityClass: any) => {
         return true;
       }
 
+      get selfTriggerableOnly() {
+        return false;
+      }
+  
     async rollDamage(config, dialog, message) {
       config.midiOptions ??= {};
       config.midiOptions.fastForwardDamage ??= game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward);

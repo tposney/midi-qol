@@ -43,5 +43,12 @@ let defineMidiSummonActivityClass = (ActivityClass: any) => {
     get possibleOtherActivity() {
       return false;
     }
+    get isTriggerableActivity() {
+      return true;
+    }
+    
+    get selfTriggerableOnly() {
+      return false;
+    }
   }
 }

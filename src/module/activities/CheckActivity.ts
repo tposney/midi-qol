@@ -105,9 +105,15 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
         }
       }
     }
+
     get possibleOtherActivity() {
       return true;
     }
+    
+    get isSelfTriggerableOnly() {
+      return false;
+    }
+
     async rollDamage(config={}, dialog={}, message={}) {
       message = foundry.utils.mergeObject({
         "data.flags.dnd5e.roll": {

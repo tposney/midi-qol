@@ -40,8 +40,26 @@ let defineMidiCastActivityClass = (ActivityClass: any) => {
           dialog: ActivityClass.metadata.usage.dialog,
         },
       }, { inplace: false, insertKeys: true, insertValues: true });
+
+    async use(config?: any, dialog?: any, message?: any) {
+      // if (config.midiOptions?.workflowOptions?.targetConfirmation) delete config.midiOptions.workflowOptions.targetConfirmation;
+      return super.use(config, dialog, message);
+    }
+
     get possibleOtherActivity() {
       return false;
+    }
+
+    get isSelfTriggerableOnly() {
+      return false;
+    }
+
+    get isTriggerableActivity() {
+      return false;
+    }
+    
+    get forcedTargetConfirmation() {
+      return "never";
     }
   }
 }

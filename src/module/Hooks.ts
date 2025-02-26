@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, geti18nOptions, log, GameSystemConfig, SystemString, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, processItemCardCreation, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, MQfromUuidSync, removeReactionUsed, removeBonusActionUsed, checkflanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, itemIsVersatile, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, isConcentrating, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, MQfromUuidSync, removeReactionUsed, removeBonusActionUsed, chackFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, itemIsVersatile, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, isConcentrating, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime } from "./utils.js";
 import { activateMacroListeners, getCurrentSourceMacros } from "./apps/Item.js"
 import { autoFastForwardAbilityRolls, checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
@@ -30,11 +30,11 @@ export let readyHooks = async () => {
   });
 
   Hooks.on("template3dUpdatePreview", (at, t) => {
-    //@ts-expect-error Volumetrictemplates
+    //@ts-expect-error VolumetricTemplates
     VolumetricTemplates.compute3Dtemplate(t);
   });
 
-  Hooks.on("targetToken", foundry.utils.debounce(checkflanking, 150));
+  Hooks.on("targetToken", foundry.utils.debounce(chackFlanking, 150));
 
   Hooks.on("ddb-game-log.pendingRoll", (data) => {
     ddbglPendingHook(data);
@@ -288,21 +288,21 @@ export function initHooks() {
   });
 
   Hooks.on("midi-qol.RollComplete", async (workflow: Workflow) => {
-    const wfuuid = workflow.uuid;
+    const activityUuid = workflow.activity.uuid;
 
-    if (savedOverTimeEffectsToDelete[wfuuid]) {
+    if (savedOverTimeEffectsToDelete[activityUuid]) {
       if (workflow.saves.size === 1 || !workflow.hasSave) {
-        let effect = MQfromUuidSync(savedOverTimeEffectsToDelete[wfuuid].uuid);
+        let effect = MQfromUuidSync(savedOverTimeEffectsToDelete[activityUuid].uuid);
         expireEffects(effect.parent, [effect], { "expiry-reason": "midi-qol:overTime" });
       }
-      delete savedOverTimeEffectsToDelete[wfuuid];
+      delete savedOverTimeEffectsToDelete[activityUuid];
     }
-    if (overTimeEffectsToDelete[wfuuid]) {
-      let effect = MQfromUuidSync(overTimeEffectsToDelete[wfuuid].uuid);
+    if (overTimeEffectsToDelete[activityUuid]) {
+      let effect = fromUuidSync(overTimeEffectsToDelete[activityUuid].uuid);
       expireEffects(effect.parent, [effect], { "expiry-reason": "midi-qol:overTime" });
-      delete overTimeEffectsToDelete[wfuuid];
+      delete overTimeEffectsToDelete[activityUuid];
     }
-    if (debugEnabled > 1) debug("Finished the roll", wfuuid)
+    if (debugEnabled > 1) debug("Finished the roll", activityUuid, workflow.id)
   });
 
   setupMidiFlagTypes();
@@ -585,18 +585,15 @@ export function initHooks() {
     let grid_size = canvas.scene?.grid.size ?? 100;
     // This will work for all grids except gridless
     // TODO: swap to `getTopLeftPoint` - should simplify some
-    let coords = canvas.grid.getPixelsFromGridPosition(...canvas.grid.getGridPositionFromPixels(dropData.x, dropData.y));
-
-    // Assume a square grid for gridless
-    if (canvas.scene?.grid.type === CONST.GRID_TYPES.GRIDLESS) {
-      // targetObjects expects the cords to be top left corner of the token, so we need to adjust for that
-      coords = [dropData.x - grid_size / 2, dropData.y - grid_size / 2];
+    let coords = {x: dropData.x, y: dropData.y};
+    if (canvas.scene?.grid.type !== CONST.GRID_TYPES.GRIDLESS) {
+      coords = canvas.grid.getCenterPoint(coords);
     }
     const targetCount = canvas.tokens?.targetObjects({
-      x: coords[0],
-      y: coords[1],
-      height: grid_size,
-      width: grid_size
+      x: coords.x - 5,
+      y: coords.y - 5,
+      height: 10, 
+      width: 10,
     }, { releaseOthers: true });
     if (targetCount === 0) {
       ui.notifications?.warn("No target selected");

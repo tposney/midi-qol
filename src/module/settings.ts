@@ -2,7 +2,6 @@ import { debug, setDebugLevel, i18n, debugEnabled, geti18nTranslations, geti18nO
 import { ConfigPanel } from "./apps/ConfigPanel.js"
 import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
-import { configureDamageRollDialog } from "./patching.js";
 import { TargetConfirmationConfig } from "./apps/TargetConfirmationConfig.js";
 import { _updateAction } from "./utils.js";
 
@@ -37,7 +36,7 @@ export const defaultTargetConfirmationSettings = {
   hasRangedAoE: false,
   longRange: false,
   inCover: false,
-  mixedDispositiion: false,
+  mixedDisposition: false,
   gridPosition: { x: 0, y: 0 }
 };
 
@@ -141,7 +140,6 @@ class ConfigSettings {
   playerSaveTimeout: number = 0;
   playerStatsOnly: boolean = false;
   potionUseSound: string = "";
-  promptDamageRoll: boolean = false;
   quickSettings: boolean = true;
   rangeTarget: string = "none";
   useTemplateRangedTargeting: boolean = false;
@@ -360,7 +358,6 @@ export let fetchSoundSettings = () => {
 
 export let fetchParams = () => {
   if (debugEnabled > 1) debug("Fetch Params Loading");
-  const promptDamageRoll = configSettings.promptDamageRoll ?? false;
   //@ts-expect-error
   configSettings = game.settings?.get("midi-qol", "ConfigSettings");
   //TODO create a config.html for this
@@ -386,7 +383,6 @@ export let fetchParams = () => {
   configSettings.rollSkillsBlind = configSettings.rollSkillsBlind.filter((item) => item !== "none");
   //@ts-expect-error type mismatch - this is for legacy true setting
   if (configSettings.rollSkillsBlind === true) configSettings.rollSkillsBlind = ["all"];
-  if (configSettings.promptDamageRoll === undefined) configSettings.promptDamageRoll = false;
   if (configSettings.gmHide3dDice === undefined) configSettings.gmHide3dDice = false;
   if (configSettings.ghostRolls === undefined) configSettings.ghostRolls = false;
   if (configSettings.addFakeDice === undefined) configSettings.addFakeDice = false;
@@ -606,12 +602,9 @@ export let fetchParams = () => {
     longRange: false,
     inCover: false,
     allies: false,
-    mixedDispositiion: false,
+    mixedDisposition: false,
     gridPosition: { x: 0, y: 0 }
   };
-  if (game.ready) {
-    configureDamageRollDialog();
-  }
 
   setDebugLevel(debugText);
 

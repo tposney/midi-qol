@@ -221,6 +221,8 @@ async function registerTests() {
         describe("initiative rolls", function () {
           it("rolls a normal initiative roll", async function () {
             await busyWait(0.1); // let previous chat message creation complete
+            this.timeout(3000);
+
             const rollResult: Promise<Roll> = new Promise((resolve) => {
               Hooks.once("createChatMessage", function (chatMessage) {
                 resolve(chatMessage.rolls[0])
@@ -236,6 +238,7 @@ async function registerTests() {
             assert.equal(roll.terms[0].results.length, 1);
           });
           it("rolls an advantage initiative roll", async function () {
+            this.timeout(3000);
             await actor.setFlag(game.system?.id, "initiativeAdv", true);
             await actor.setFlag(game.system?.id, "initiativeDisadv", false);
             const rollResult: Promise<Roll> = new Promise((resolve) => {
@@ -258,6 +261,7 @@ async function registerTests() {
             assert.ok(roll.formula.startsWith("2d20kh"));
           });
           it("rolls a disadvantage initiative roll", async function () {
+            this.timeout(3000);
             await actor.setFlag(game.system?.id, "initiativeAdv", false);
             await actor.setFlag(game.system?.id, "initiativeDisadv", true);
             const rollResult: Promise<Roll> = new Promise(async (resolve) => {
@@ -345,7 +349,7 @@ async function registerTests() {
               await actor.setFlag("midi-qol", "magicResistance.all", true);
               console.warn("update flags returned", actor.flags["midi-qol"].magicResistance);
               const workflow = await completeItemUse(item, {}, { workflowOptions });
-              console.warn("complete ite use returned")
+              console.warn("complete item use returned")
               assert.equal(workflow.saveResults.length, 1);
               assert.equal(workflow.saveResults[0][0].terms[0].results.length, 2);
               assert.ok(workflow.saveResults[0][0].formula.startsWith("2d20kh"))

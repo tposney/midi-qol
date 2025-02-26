@@ -1,6 +1,6 @@
 import { i18n, error, i18nFormat } from "../../midi-qol.js";
 import { checkMechanic, checkRule, configSettings, targetConfirmation } from "../settings.js";
-import { FULL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, computeCoverBonus, computeFlankingStatus, getIconFreeLink, getToken, isTargetable, markFlanking, tokenForActor, updateUserTargets } from "../utils.js";
+import { FULL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, computeCoverBonus, computeFlankingStatus, getIconFreeLink, getToken, isValidTarget, markFlanking, tokenForActor, updateUserTargets } from "../utils.js";
 import { getTokenPlayerName } from "../utils.js";
 import { TroubleShooter } from "./TroubleShooter.js";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -47,7 +47,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         const validTargets: Array<string> = [];
         for (let target of game.user.targets) {
           if (maxTargets && validTargets.length >= maxTargets) break;
-          if (isTargetable(target)) validTargets.push(target.id);
+          if (isValidTarget(target)) validTargets.push(target.id);
         }
         updateUserTargets(validTargets);
       }
@@ -128,7 +128,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       }
 
       let details: string[] = [];
-      if (["ceflanked", "ceflankedNoconga"].includes(checkRule("checkFlanking"))) {
+      if (["ceflanked", "ceflankedNoconga", "midiFlanked", "midiFlankedNoConga"].includes(checkRule("checkFlanking"))) {
         if (token && computeFlankingStatus(token, target)) details.push((i18n("midi-qol.Flanked") ?? "Flanked"));
       }
 
@@ -190,7 +190,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         }*/
       }
       data.targets.push({
-        name, // : namegame.user.isGM ? getLinkText(target.actor) : getTokenPlayerName(target),
+        name, // : name: game.user.isGM ? getLinkText(target.actor) : getTokenPlayerName(target),
         img,
         displayedDisposition,
         details: details.join(" - "),

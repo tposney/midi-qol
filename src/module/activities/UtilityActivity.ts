@@ -39,6 +39,10 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
       return true;
     }
     
+    get selfTriggerableOnly() {
+      return false;
+    }
+
     async rollFormula(config, dialog, message: any = {}) {
       if (debugEnabled > 0)
         warn("UtilityActivity | rollFormula | Called", config, dialog, message);
@@ -55,30 +59,28 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
         console.warn("midi-qol | UtilityActivity | Formula roll blocked via pre-hook");
         return;
       }
-      if (config.midiOptions.fastForward !== undefined)
-        dialog.configure = !config.midiOptions.fastForwardDamage;
+
       //@ts-expect-error
       const areKeysPressed = game.system.utils.areKeysPressed;
       const keys = {
         normal: areKeysPressed(config.event, "skipDialogNormal"),
-        advantage: areKeysPressed(config.event, "skipDialogAdvantage"),
-        disadvantage: areKeysPressed(config.event, "skipDialogDisadvantage")
       };
       if (Object.values(keys).some(k => k)) dialog.configure = this.midiProperties.forceDialog;
-      else dialog.configure ??= !config.midiOptions.fastForwardDamage || this.midiProperties.forceDialog;
-
+      else dialog.configure ??= !config.midiOptions.fastForward || this.midiProperties.forceDialog;
       /*
       else
         dialog.configure = true;
       */
       if (this.workflow?.rollOptions?.rollToggle) dialog.configure = !!!dialog.configure;
-      message.create ??= true;
+      message.create ??= false;
       let result = await super.rollFormula(config, dialog, message);
+      if (result && this.workflow && config.midiOptions.updateWorkflow !== false) await this.workflow.setUtilityRolls(result);
+
       // result = await postProcessUtilityRoll(this, config, result);
       if (config.midiOptions.updateWorkflow !== false && this.workflow) {
         this.workflow.utilityRolls = result;
         if (this.workflow.suspended)
-          this.workflow.unSuspend.bind(this.workflow)({ utilityRoll: result });
+          this.workflow.unSuspend.bind(this.workflow)({ utilityRolls: result });
       }
       return result;
     }

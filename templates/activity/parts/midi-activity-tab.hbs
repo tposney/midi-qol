@@ -10,20 +10,11 @@
     {{ formField fields.displayActivityName value=../source.midiProperties.displayActivityName }}
     {{ formField fields.identifier value=../source.midiProperties.identifier placeholder=../placeholderIdentifier }}
     {{ formField fields.forceDialog value=../source.midiProperties.forceDialog }}
-    {{ formField fields.confirmTargets value=../source.midiProperties.confirmTargets options=../ConfirmTargetOptions}}
+    {{ formField fields.confirmTargets value=../source.targetConfirmation options=../ConfirmTargetOptions}}
     {{#if ../hasAreaTarget}}
     {{ formField fields.autoTargetType value=../source.midiProperties.autoTargetType options=../AutoTargetTypeOptions}}
     {{ formField fields.autoTargetAction value=../source.midiProperties.autoTargetAction
     options=../AutoTargetActionOptions}}
-    {{/if}}
-    {{ formField fields.triggeredActivityId value=../source.midiProperties.triggeredActivityId
-    options=../triggeredActivityOptions}}
-    {{#if (ne ../source.midiProperties.triggeredActivityId "none")}}
-    {{ formField fields.triggeredActivityConditionText value=../source.midiProperties.triggeredActivityConditionText }}
-    {{ formField fields.triggeredActivityTargets value=../source.midiProperties.triggeredActivityTargets
-    options=../triggeredActivityTargetOptions}}
-    {{ formField fields.triggeredActivityRollAs value=../source.midiProperties.triggeredActivityRollAs
-    options=../triggeredActivityRollAsOptions}}
     {{/if}}
     {{ formField fields.automationOnly value=../source.midiProperties.automationOnly }}
     {{#if ../possibleOtherActivity}}
@@ -32,9 +23,20 @@
     {{/if}}
     {{ formField fields.ignoreTraits value=../source.midiProperties.ignoreTraits options=../ignoreTraitsOptions
     label="midi-qol.SHARED.ignore.header" localize=true classes="multi-select"}}
+    {{ formField fields.chooseEffects value=../source.midiProperties.chooseEffects }}
     {{/with}}
   </fieldset>
-
+  <fieldset>
+    {{#with fields.midiProperties.fields as |fields|}}
+    {{ formField fields.triggeredActivityId value=../source.midiProperties.triggeredActivityId
+    options=../triggeredActivityOptions}}
+    {{#if (ne ../source.midiProperties.triggeredActivityId "none")}}
+    {{ formField fields.triggeredActivityConditionText value=../source.midiProperties.triggeredActivityConditionText }}
+    {{ formField fields.triggeredActivityTargets value=../source.midiProperties.triggeredActivityTargets options=../triggeredActivityTargetOptions}}
+    {{ formField fields.triggeredActivityRollAs value=../source.midiProperties.triggeredActivityRollAs options=../triggeredActivityRollAsOptions}}
+    {{/if}}
+    {{/with}}
+  </fieldset>
   <fieldset>
     <legend> {{ localize "midi-qol.OVERTIME.extras.header" }} </legend>
     {{ formField fields.isOverTimeFlag value=source.isOverTimeFlag}}

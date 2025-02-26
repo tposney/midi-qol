@@ -40,12 +40,12 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       return super.canApplyDamage;
     }
 
-    // Patch for getAssociatedItem not peparing data on items recovered from item.data
+    // Patch for getAssociatedItem not preparing data on items recovered from item.data
     getAssociatedItem() {
       // @ts-expect-error no dnd5e-types
       const item = super.getAssociatedItem();
       // @ts-expect-error can't know about flags
-      if (this.flags.dnd5e?.item?.data) {
+      if (this.flags.dnd5e?.item?.data && this.flags.dnd5e?.item.id === item.id) {
         item.prepareData();
         item.prepareFinalAttributes();
       }

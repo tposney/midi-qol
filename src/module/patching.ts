@@ -974,13 +974,13 @@ function _DAgetTargetOptions(...args) {
     options.midi = foundry.utils.duplicate(targetDetails);
     const saveMult = targetDetails.saveMults?.[damageType];
     if (targetDetails.saved) {
-      foundry.utils.setProperty(options, "midi.saveMultiplier", saveMult ?? 0.5);
+      foundry.utils.setProperty(options, "midi.saveMultiplier", saveMult ?? configSettings.defaultSaveMult);
     }
     if (saveMult !== undefined) {
-      if (targetDetails.superSaver && saveMult === 0.5) {
-        foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : 0.5);
+      if (targetDetails.superSaver && saveMult === configSettings.defaultSaveMult) {
+        foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : configSettings.defaultSaveMult);
       }
-      if (targetDetails.semiSuperSaver && saveMult === 0.5) {
+      if (targetDetails.semiSuperSaver && saveMult === configSettings.defaultSaveMult) {
         foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : 1);
       }
     }
@@ -1390,7 +1390,7 @@ async function _addDependent(...dependent) {
 function _getDependents() {
   const id = game.system?.id ?? MODULE_ID;
   return Array.from((this.getFlag(id, "dependents") || []).reduce((deps, { uuid }) => {
-    const effect = MQfromUuidSync(uuid);
+    const effect = fromUuidSync(uuid);
     if (effect) deps.add(effect);
     return deps;
   }, new Set()));
@@ -1476,22 +1476,11 @@ export let visionPatching = () => {
   log("Vision patching - ", patchVision ? "enabled" : "disabled")
 }
 
-export function configureDamageRollDialog() {
-  try {
-    libWrapper.unregister(MODULE_ID, "CONFIG.Dice.DamageRoll.configureDialog", false);
-    // if (configSettings.promptDamageRoll) libWrapper.register(MODULE_ID, "CONFIG.Dice.DamageRoll.configureDialog", CustomizeDamageFormula.configureDialog, "MIXED");
-  } catch (err) {
-    const message = `midi-qol | error when registering configureDamageRollDialog`;
-    TroubleShooter.recordError(err, message);
-    error(message, err);
-  }
-}
-
 function _getUsageConfig(wrapped): any {
-  //Radius tempalte spells with self/spec/any will auto place the template so don't prompt for it in config.
+  //Radius template spells with self/spec/any will auto place the template so don't prompt for it in config.
   const config = wrapped();
-  const autoCreatetemplate = this.hasAreaTarget && hasAutoPlaceTemplate(this);
-  if (autoCreatetemplate) config.createMeasuredTemplate = null;
+  const autoCreateTemplate = this.hasAreaTarget && hasAutoPlaceTemplate(this);
+  if (autoCreateTemplate) config.createMeasuredTemplate = null;
   return config;
 }
 
@@ -1501,7 +1490,6 @@ export let itemPatching = () => {
     if (!isDnD) libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype._getUsageConfig", _getUsageConfig, "WRAPPER");
     libWrapper.register(MODULE_ID, "CONFIG.Dice.DamageRoll.prototype.configureDamage", configureDamage, "MIXED");
   }
-  configureDamageRollDialog();
 };
 
 export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocument, options, user) {
@@ -1669,124 +1657,6 @@ export async function doItemUse(wrapped, config: any = {}, dialog: any = {}, mes
   }
   if (this.actor) return this.displayCard(message);
 }
-
-// Commented this out as it doesn't seem to be in use currently
-// class CustomizeDamageFormula {
-//   static formula: string;
-//   static async configureDialog(wrapped, ...args) {
-//     // If the option is not enabled, return the original function - as an alternative register\unregister would be possible
-//     const [rolls, { title, defaultRollMode, defaultCritical, template, allowCritical }, options] = args;
-//     // Render the Dialog inner HTML
-//     const allRolls = rolls.map((roll, index) => ({
-//       value: `${roll.formula}${index === 0 ? " + @bonus" : ""}`,
-//       type: GameSystemConfig.damageTypes[roll.options.type]?.label ?? null,
-//       active: true,
-//       label: "Formula",
-//       roll,
-//       id: foundry.utils.randomID()
-//     }));
-//     const item = rolls[0]?.data.item;
-//     //@ts-expect-error
-//     const DamageRoll = CONFIG.Dice.DamageRoll;
-//     if (item) {
-//       if (item.damage.versatile) {
-//         let actorBonus;
-//         if (rolls[0].data?.bonuses) {
-//           const actorBonusData = foundry.utils.getProperty(rolls[0], `data.bonuses.${item.actionType}`) || {};
-//           if (actorBonusData.damage && (parseInt(actorBonusData.damage) !== 0)) {
-//             actorBonus = actorBonusData.damage;
-//           }
-//         }
-//         const versatileFormula = item.damage.versatile + (actorBonus ? ` + ${actorBonus}` : "");
-//         allRolls.push({
-//           value: versatileFormula,
-//           type: GameSystemConfig.damageTypes[rolls[0].options.type]?.label ?? null,
-//           active: false,
-//           label: "Versatile",
-//           roll: new DamageRoll(versatileFormula, rolls[0].data, rolls[0].options),
-//           id: foundry.utils.randomID()
-//         })
-//       }
-//       if ((item.formula ?? "").length > 0) {
-//         allRolls.push({
-//           value: item.formula,
-//           type: GameSystemConfig.damageTypes[rolls[0].options.type]?.label ?? null,
-//           versatileDamage: item.damage.versatile,
-//           active: false,
-//           label: "Other",
-//           roll: new DamageRoll(item.formula, rolls[0].data, rolls[0].options),
-//           id: foundry.utils.randomID()
-//         })
-//       }
-//     }
-//     const content = await renderTemplate(
-//       //@ts-ignore
-//       "modules/midi-qol/templates/damage-roll-dialog.hbs",
-//       {
-//         formulas: allRolls,
-//         defaultRollMode,
-//         rollModes: CONFIG.Dice.rollModes,
-//       }
-//     );
-
-//     // Create the Dialog window and await submission of the form
-//     return new Promise((resolve) => {
-//       new Dialog(
-//         {
-//           title,
-//           rolls: allRolls,
-//           content,
-//           buttons: {
-//             critical: {
-//               //@ts-ignore
-//               condition: allowCritical,
-//               label: i18n("DND5E.CriticalHit") ?? "<Critical Hit>",
-//               //@ts-ignore
-//               callback: html => {
-//                 let returnRolls = allRolls.filter(r => r.active).map(r => r.roll);
-//                 returnRolls = returnRolls.map((r, i) => r._onDialogSubmit(html, true, i === 0));
-//                 rolls.length = 0;
-//                 rolls.push(...returnRolls);
-//                 resolve(returnRolls);
-//               }
-//             },
-//             normal: {
-//               label: i18n(allowCritical ? "DND5E.Normal" : "DND5E.Roll") ?? "<Normal Roll>",
-//               callback: html => {
-//                 let returnRolls = allRolls.filter(r => r.active).map(r => r.roll);
-//                 returnRolls = returnRolls.map((r, i) => r._onDialogSubmit(html, false, i === 0));
-//                 rolls.length = 0;
-//                 rolls.push(...returnRolls);
-//                 resolve(returnRolls);
-//               },
-//             },
-//           },
-//           default: defaultCritical ? "critical" : "normal",
-//           // Inject the formula customizer - this is the only line that differs from the original
-//           render: (html) => {
-//             try {
-//               CustomizeDamageFormula.activateListeners(html, allRolls);
-//             } catch (err) {
-//               const message = `injectFormulaCustomizer`
-//               error(message, err);
-//               TroubleShooter.recordError(err, message);
-//             }
-//           },
-//           close: () => resolve(null),
-//         },
-//         options
-//       ).render(true);
-//     });
-//   }
-
-//   static activateListeners(html, allRolls) {
-//     html.find('input[name="formula.active"]').on("click", (e) => {
-//       const id = e.currentTarget.dataset.id;
-//       const theRoll = allRolls.find(r => r.id === id)
-//       theRoll.active = e.currentTarget.checked;
-//     })
-//   }
-// }
 
 export function processTraits(actor) {
   try {

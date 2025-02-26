@@ -4,7 +4,7 @@ import { Workflow } from "../Workflow.js";
 import { defaultRollOptions } from "../patching.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { busyWait } from "../tests/setupTest.js";
-import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, displayDSNForRoll, getSpeaker, processAttackRollBonusFlags } from "../utils.js";
+import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, displayDSNForRoll, getSpeaker, processAttackRollBonusFlags } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
@@ -155,6 +155,25 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
     async _triggerSubsequentActions(config, results) {
     }
 
+    async use(config: any = {}, dialog: any = {}, message: any = {}) {
+      if (debugEnabled > 0) warn("MidiQOL | AttackActivity | use | Called", config, dialog, message);
+      config = foundry.utils.deepClone(config);
+      config.midiOptions ??= this.midiOptions ?? {};
+      if (!configSettings.attackPerTarget || config.midiOptions.isAttackPerTarget) return super.use(config, dialog, message);
+      // confirm targets
+
+      let returnValue;
+      if (!this.targets) this.targets = new Set(game.user?.targets);
+      for (let target of this.targets) {
+        config.midiOptions.isAttackPerTarget = true;
+        config.midiOptions.targetsToUse = new Set([target]);
+        config.midiOptions.workflowOptions ??= {};
+        // disable target confirmation
+        config.midiOptions.workflowOptions.targetConfirmation = "never";
+        returnValue = await this.use(config, dialog, message);
+      }
+      return returnValue;
+    }
     async rollAttack(config: any = {}, dialog: any = {}, message: any = {}) {
       let preRollHookId;
       let rollAttackHookId;
@@ -445,6 +464,10 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
     get isOtherActivityCompatible() {
       return false;
     }
+    get selfTriggerableOnly() {
+      return false;
+    }
+    
     /*
     get otherActivityId() {
       if (!this.otherActivityId && this.otherActivityUuid) 

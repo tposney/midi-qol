@@ -77,6 +77,10 @@ let defineMidiOverTimeActivityClass = (ActivityClass: any) => {
     get possibleOtherActivity() {
       return false;
     }
+    
+    get isTriggerableActivity() {
+      return false;
+    }
     async confirmCanProceed(config, dialog, message): Promise<boolean> {
       if (this.useCondition) { // reactions condition evaluation is handled elsewhere
         if (!(await evalActivationCondition(this.workflow, this.useCondition, this.targets.first(), { async: true }))) {

@@ -215,14 +215,14 @@ async function confirmDamageRollComplete(data: { activityUuid: string, itemCardI
   let activity = fromUuidSync(data.activityUuid);
   let workflow = Workflow.getWorkflow(data.activityUuid);
   if (!activity && itemCard) // no activity means it was a synthetic item's activity
-  // @ts-expect-error no dnd5e-types
+    // @ts-expect-error no dnd5e-types
     activity = itemCard.getAssociatedActivity(); // recover the activity from the chat message item data
   // @ts-expect-error
   if (!workflow) workflow = activity?.workflow;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     /* Confirm this needs to be awaited
     */
-    Workflow.removeItemCardAttackDamageButtons(data.itemCardId, {removeAttackButtons: true, removeDamageButtons: true}).then(() => Workflow.removeItemCardConfirmRollButton(data.itemCardId));
+    Workflow.removeItemCardAttackDamageButtons(data.itemCardId, { removeAttackButtons: true, removeDamageButtons: true }).then(() => Workflow.removeItemCardConfirmRollButton(data.itemCardId));
     return undefined;
   }
   const hasHits = workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0;
@@ -252,7 +252,7 @@ async function confirmDamageRollCompleteHit(data: { activityUuid: string, itemCa
   // @ts-expect-error
   if (!workflow) workflow = activity?.workflow;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
-    Workflow.removeItemCardAttackDamageButtons(data.itemCardId, {removeAttackButtons: true, removeDamageButtons: true}).then(() => Workflow.removeItemCardConfirmRollButton(data.itemCardId));
+    Workflow.removeItemCardAttackDamageButtons(data.itemCardId, { removeAttackButtons: true, removeDamageButtons: true }).then(() => Workflow.removeItemCardConfirmRollButton(data.itemCardId));
     return undefined;
   }
 
@@ -296,7 +296,7 @@ async function confirmDamageRollCompleteMiss(data: { activityUuid: string, itemC
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     /* Confirm this needs to be awaited
     */
-    Workflow.removeItemCardAttackDamageButtons(data.itemCardId, {removeDamageButtons: true, removeAttackButtons: true}).then(() => Workflow.removeItemCardConfirmRollButton(data.itemCardId));
+    Workflow.removeItemCardAttackDamageButtons(data.itemCardId, { removeDamageButtons: true, removeAttackButtons: true }).then(() => Workflow.removeItemCardConfirmRollButton(data.itemCardId));
     return undefined;
   }
   if (workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0) {
@@ -466,11 +466,11 @@ async function _gmOverTimeEffect(data: { actorUuid, effectUuid, startTurn, optio
   return gmOverTimeEffect(actor, effect, data.startTurn, data.options)
 }
 
-async function _localActivityOverTimeEffect(data: { actorUuid, effectUuid, startTurn, options }) {  
+async function _localActivityOverTimeEffect(data: { actorUuid, effectUuid, startTurn, options }) {
   const actor = await fromUuid(data.actorUuid);
   const effect = await fromUuid(data.effectUuid);
   if (!actor || !effect) {
-    const message = `localActivityOverTimeEffect | actor or effect not found actor: ${data.actorUuid} effect: ${data.effectUuid}`;  
+    const message = `localActivityOverTimeEffect | actor or effect not found actor: ${data.actorUuid} effect: ${data.effectUuid}`;
     console.error(message);
     TroubleShooter.recordError(new Error("GMAction failed"), message);
     return undefined
@@ -785,7 +785,11 @@ workflowOptions: object
 workflowId: string
 
 */
-  let config: any = { midiOptions: data.options, ability: data.ability, skill: data.skill, tool: data.tool, proficiency: data.proficiency, advantage: data.advantage, disadvantage: data.disadvantage, isMagicSave: data.isMagicSave, isConcentrationCheck: data.isConcentrationCheck, rollDC: data.rollDC, saveItemUuid: data.saveItemUuid, workflowOptions: data.workflowOptions, workflowId: data.workflowId };
+  let config: any = { midiOptions: data.options, advantage: data.advantage, disadvantage: data.disadvantage, isMagicSave: data.isMagicSave, isConcentrationCheck: data.isConcentrationCheck, rollDC: data.rollDC, saveItemUuid: data.saveItemUuid, workflowOptions: data.workflowOptions, workflowId: data.workflowId }
+  if (data.ability) config.ability = data.ability;
+  if (data.skill) config.skill = data.skill;
+  if (data.tool) config.tool = data.tool
+  if (data.proficiency) config.prof = data.proficiency;
   let dialog: any = { configure: !data.options.fastForward };
   let message: any = { create: data.options.chatMessage ?? data.options.create, rollMode: data.options.rollMode };
   if (data.request === "tool") {
@@ -852,7 +856,7 @@ async function rollAbility(data: { request: string; targetUuid: string; ability:
   });
 }
 
-function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined, isMagicSave: boolean | undefined , midiOptions: any | undefined}) {
+function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined, isMagicSave: boolean | undefined, midiOptions: any | undefined }) {
   // let tokens = data.tokens.map((tuuid: any) => new Token(MQfromUuid(tuuid)));
 
   // TODO come back and see what things can be passed to this.
@@ -1287,7 +1291,7 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
   let distance = data.distance / canvas.dimensions.distance * canvas.dimensions.size;
   let newCenter = ray.project(1 + distance / ray.distance);
   const M = CONST.GRID_SNAPPING_MODES;
-  newCenter = canvas.grid.getSnappedPoint({x: newCenter.x - targetToken.w / 2, y: newCenter.y - targetToken.h / 2}, {mode: M.CENTER});
+  newCenter = canvas.grid.getSnappedPoint({ x: newCenter.x - targetToken.w / 2, y: newCenter.y - targetToken.h / 2 }, { mode: M.CENTER });
 
   if (data.checkCollision) {
     //@ts-expect-error
