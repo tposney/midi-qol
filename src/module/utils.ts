@@ -4555,6 +4555,7 @@ export function createConditionData(data: { workflow?: any, target?: Token | Tok
       rollData.combatTurn = combat?.turn;
       rollData.combatTime = combat?.round + (combat.turn ?? 0) / 100;
       rollData.actor.isCombatTurn = game.combat?.combatant?.tokenId === data.workflow?.token?.id;
+      rollData.isCombatTurn = rollData.actor.isCombatTurn;
     } else rollData.combatTime = 0;
     rollData.CONFIG = CONFIG;
     rollData.CONST = {};
