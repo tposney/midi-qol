@@ -72,7 +72,7 @@
   "midi-qol.noTemplateSeen": "Modelo não foi posicionado",
   "midi-qol.AutoTarget.Name": "Marcar ao Posicionar Modelo",
   "midi-qol.AutoTarget.Hint": "Quando posicionar um modelo (como de uma magia), marca automaticamente os tokens dentro do modelo. Se 'Centro + Levels' estiver configurado em alvos à distância, Levels Volumetric Templates será usado (se instalado).",
-  "midi-qol._comment for translators_noDamageonSaveSpells": "In foundry v9 the array json element is no longer supported, so only the v9 version will be used",
+  "midi-qol._comment for translators_noDamageOnSaveSpells": "In foundry v9 the array json element is no longer supported, so only the v9 version will be used",
   "midi-qol.noDamageonSaveSpells": [
     "Borrifo Ácido",
     "Rompante de Espadas",
@@ -93,10 +93,6 @@
     "Tremor de Terra"
   ],
   "midi-qol.noDamageonSaveSpellsv9": "Borrifo Ácido, Rompante de Espadas, Golpe Trovejante, Zombaria Viciosa, Criar Fogueira, Isca Relâmpago, Borrifo Venenoso, Cordão de Flecha, Desintegrar, Chama Sagrada, Cordão de Flechas, Picada Congelante, Infestação, Soar os Mortos, Palavra do Esplendor, Catapulta, Tremor de Terra",
-  "midi-qol.fullDamageText": "{damageType}",
-  "midi-qol._comment for translators_fullDamage": "Both of text lines below are searched for by midi in the spell description",
-  "midi-qol.fullDamage": "todo o dano em salvaguardas",
-  "midi-qol.fullDamageAlt": "dano completo em salvaguardas",
   "midi-qol.undoDamageFrom": "Desfazer dano aplicado de ",
   "midi-qol.noGM": "Sem usuário Mestre conectado. Não é possível aplicar efeitos ou atualizar Pontos de Vida",
   "midi-qol.noSelection": "Nenhum Token/Ator selecionado",
@@ -123,15 +119,6 @@
   "midi-qol.PlayerSaveTimeout.Hint": "Quanto tempo o Mestre deve esperar para rolar a salvaguarda no lugar do jogador (em segundos).",
   "midi-qol.MagicResistant": "magic-resistant",
   "midi-qol.MagicResistanceFeat": "Resistência Mágica",
-  "midi-qol._comment for translators_halfDamage": "The text below is searched for by midi in the spell description",
-  "midi-qol.halfDamage": "metade disso",
-  "midi-qol._comment for translators_halfDamageAlt": "The text below is searched for by midi in the spell description",
-  "midi-qol.halfDamageAlt": "metade do dano",
-  "midi-qol.halfDamageText": "{damageType}",
-  "midi-qol._comment for translators_noDamage": "Both text lines below are searched for by midi in the spell description",
-  "midi-qol.noDamage": "nenhum dano em um sucesso",
-  "midi-qol.noDamageAlt": "nenhum dano sucesso",
-  "midi-qol.noDamageText": "{damageType}",
   "midi-qol.PreRollChecks.Name": "Experimental: Aplicar verificação antes de fazer uma rolagem de Avanço Rápido/Macro",
   "midi-qol.PreRollChecks.Hint": "Experimental: Verificar antes de realizar uma rolagem de item; Atualmente à distância e o autor deve ter mais de 0 PV",
   "midi-qol.noTargets": "Você tem que marcar um token antes de rolar o ataque",
@@ -297,7 +284,6 @@
   },
   "midi-qol.playerRollSavesOptionsReduced": {
     "none": "Nenhum",
-    "letme": "Let Me Roll That For You",
     "chat": "Mensagem do Chat"
   },
   "midi-qol.AutoRemoveTargetsOptions": {
@@ -592,8 +578,6 @@
   "midi-qol.ActiveDefence.Hint": "Ao invés do Mestre rolar 'Para Atingir', jogadores fazem uma rolagem de defesa.",
   "midi-qol.ActiveDefenceShow.Name": "Exibição Padrão para Rolagens de Defesa Ativa",
   "midi-qol.ActiveDefenceShow.Hint": "Se definido para 'Rolagem Pessoal', a rolagem será escondida do Mestre, independente de outras configurações.",
-  "midi-qol.PromptDamageRoll.Name": "Aprimorar Diálogo de Rolagem de Dano",
-  "midi-qol.PromptDamageRoll.Hint": "Ao usar o Diálogo de Rolagem de Dano, exibe um diálogo aprimorado que possibilita escolher o tipo de dano.",
   "midi-qol.GMHide3dDice.Name": "Esconder Rolagens de Dados 3D do Mestre. Subscreve outras configurações (apenas Cartão Mesclado)",
   "midi-qol.GhostRolls.Name": "Exibir 'Dados Fantasma do Dice So Nice' ao Invés de Esconder (apenas Cartão Mesclado)",
   "midi-qol.convenientEffectsOn": "Aplicar Convenient Effect",
@@ -1243,578 +1227,2341 @@
   "midi-qol.NoAmmunitionSelected": "Você deve selecionar a munição a ser usada.",
   "midi-qol.TwoHandedShieldWarning": "Não é possível usar ataque com as duas mãos ou com a mão secundária com um escudo equipado",
   "dae.MidiQOL.fieldData": {
-    "flags.midi-qol.absorption.acid": { "name": "Absorção Dano (Ácido)", "description": "Converte dano Ácido sofrido em cura" },
-    "flags.midi-qol.absorption.bludgeoning": { "name": "Absorção Dano (Contundente)", "description": "Converte dano Contundente sofrido em cura" },
-    "flags.midi-qol.absorption.cold": { "name": "Absorção Dano (Gélido)", "description": "Converte dano Gélido sofrido em cura" },
-    "flags.midi-qol.absorption.fire": { "name": "Absorção Dano (Ígneo)", "description": "Converte dano Ígneo sofrido em cura" },
-    "flags.midi-qol.absorption.force": { "name": "Absorção Dano (Energético)", "description": "Converte dano Energético sofrido em cura" },
-    "flags.midi-qol.absorption.lightning": { "name": "Absorção Dano (Elétrico)", "description": "Converte dano Elétrico sofrido em cura" },
-    "flags.midi-qol.absorption.midi-none": { "name": "Absorção Dano (Sem Tipo)", "description": "" },
-    "flags.midi-qol.absorption.necrotic": { "name": "Absorção Dano (Necrótico)", "description": "Converte dano Necrótico sofrido em cura" },
-    "flags.midi-qol.absorption.none": { "name": "Absorção Dano (Sem Dano)", "description": "" },
-    "flags.midi-qol.absorption.piercing": { "name": "Absorção Dano (Perfurante)", "description": "Converte dano Perfurante sofrido em cura" },
-    "flags.midi-qol.absorption.poison": { "name": "Absorção Dano (Venenoso)", "description": "Converte dano Venenoso sofrido em cura" },
-    "flags.midi-qol.absorption.psychic": { "name": "Absorção Dano (Psíquico)", "description": "Converte dano Psíquico sofrido em cura" },
-    "flags.midi-qol.absorption.radiant": { "name": "Absorção Dano (Radiante)", "description": "Converte dano Radiante sofrido em cura" },
-    "flags.midi-qol.absorption.slashing": { "name": "Absorção Dano (Cortante)", "description": "Converte dano Cortante sofrido em cura" },
-    "flags.midi-qol.absorption.thunder": { "name": "Absorção Dano (Trovejante)", "description": "Converte dano Trovejante sofrido em cura" },
-    "flags.midi-qol.advantage.ability.all": { "name": "Vantagem Atributo (Todos)", "description": "Vantagem em todas as salvaguardas, testes de atributo e perícias" },
-    "flags.midi-qol.advantage.ability.check.all": { "name": "Vantagem Teste (Todos Atributos)", "description": "Vantagem em todos os testes de atributo e perícias" },
-    "flags.midi-qol.advantage.ability.check.cha": { "name": "Vantagem Teste (Carisma)", "description": "Vantagem em testes de Carisma" },
-    "flags.midi-qol.advantage.ability.check.con": { "name": "Vantagem Teste (Constituição)", "description": "Vantagem em testes de Constituição" },
-    "flags.midi-qol.advantage.ability.check.dex": { "name": "Vantagem Teste (Destreza)", "description": "Vantagem em testes de Destreza" },
-    "flags.midi-qol.advantage.ability.check.int": { "name": "Vantagem Teste (Inteligência)", "description": "Vantagem em testes de Inteligência" },
-    "flags.midi-qol.advantage.ability.check.str": { "name": "Vantagem Teste (Força)", "description": "Vantagem em testes de Força" },
-    "flags.midi-qol.advantage.ability.check.wis": { "name": "Vantagem Teste (Sabedoria)", "description": "Vantagem em testes de Sabedoria" },
-    "flags.midi-qol.advantage.ability.save.all": { "name": "Vantagem Salvaguarda (Todas)", "description": "Vantagem em todas as salvaguardas" },
-    "flags.midi-qol.advantage.ability.save.cha": { "name": "Vantagem Salvaguarda (Carisma)", "description": "Vantagem em salvaguardas de Carisma" },
-    "flags.midi-qol.advantage.ability.save.con": { "name": "Vantagem Salvaguarda (Constituição)", "description": "Vantagem em salvaguardas de Constituição" },
-    "flags.midi-qol.advantage.ability.save.dex": { "name": "Vantagem Salvaguarda (Destreza)", "description": "Vantagem em salvaguardas de Destreza" },
-    "flags.midi-qol.advantage.ability.save.int": { "name": "Vantagem Salvaguarda (Inteligência)", "description": "Vantagem em salvaguardas de Inteligência" },
-    "flags.midi-qol.advantage.ability.save.str": { "name": "Vantagem Salvaguarda (Força)", "description": "Vantagem em salvaguardas de Força" },
-    "flags.midi-qol.advantage.ability.save.wis": { "name": "Vantagem Salvaguarda (Sabedoria)", "description": "Vantagem em salvaguardas de Sabedoria" },
-    "flags.midi-qol.advantage.all": { "name": "Vantagem Todos Dados", "description": "Vantagem em todas as jogadas de d20" },
-    "flags.midi-qol.advantage.attack.all": { "name": "Vantagem Ataque (Todos)", "description": "Vantagem em todos os tipos de ataque (corpo a corpo, à distância e mágicos)" },
-    "flags.midi-qol.advantage.attack.cha": { "name": "Vantagem Ataque (Carisma)", "description": "Vantagem em ataques usando Carisma" },
-    "flags.midi-qol.advantage.attack.con": { "name": "Vantagem Ataque (Constituição)", "description": "Vantagem em ataques usando Constituição" },
-    "flags.midi-qol.advantage.attack.dex": { "name": "Vantagem Ataque (Destreza)", "description": "Vantagem em ataques usando Destreza" },
-    "flags.midi-qol.advantage.attack.heal": { "name": "Vantagem Ataque (Cura)", "description": "" },
-    "flags.midi-qol.advantage.attack.int": { "name": "Vantagem Ataque (Inteligência)", "description": "Vantagem em ataques usando Inteligência" },
-    "flags.midi-qol.advantage.attack.msak": { "name": "Vantagem Ataque (Mágico Corpo a Corpo)", "description": "Vantagem em ataques mágicos corpo a corpo" },
-    "flags.midi-qol.advantage.attack.mwak": { "name": "Vantagem Ataque (Armado Corpo a Corpo)", "description": "Vantagem em ataques armados corpo a corpo" },
-    "flags.midi-qol.advantage.attack.other": { "name": "Vantagem Ataque (Outro)", "description": "" },
-    "flags.midi-qol.advantage.attack.rsak": { "name": "Vantagem Ataque (Mágico à Distância)", "description": "Vantagem em ataques mágicos à distância" },
-    "flags.midi-qol.advantage.attack.rwak": { "name": "Vantagem Ataque (Armado à Distância)", "description": "Vantagem em ataques armados à distância" },
-    "flags.midi-qol.advantage.attack.save": { "name": "Vantagem Ataque (Salvaguarda)", "description": "Vantagem em todos os ataques cujo tipo de ação seja Salvaguarda" },
-    "flags.midi-qol.advantage.attack.str": { "name": "Vantagem Ataque (Força)", "description": "Vantagem em ataques usando Força" },
-    "flags.midi-qol.advantage.attack.util": { "name": "Vantagem Ataque (Utilidade)", "description": "Vantagem em todos os ataques cujo tipo de ação seja Utilidade" },
-    "flags.midi-qol.advantage.attack.wis": { "name": "Vantagem Ataque (Sabedoria)", "description": "Vantagem em ataques usando Sabedoria" },
-    "flags.midi-qol.fail.disadvantage.heavy": { "name": "Falha Desvantagem Pesado", "description": "Desvantagem em testes de Furtividade por usar Armadura Pesada" },
-    "flags.midi-qol.": { "name": "Flags Midi QOL", "description": "" },
-    "flags.midi-qol.DR.msak": { "name": "(Obsoleto) Redução de Dano (Ataque Mágico Corpo a Corpo)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.mwak": { "name": "(Obsoleto) Redução de Dano (Ataque Armado Corpo a Corpo)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.non-adamant": { "name": "(Obsoleto) Redução de Dano (Não-Adamantino)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.non-magical": { "name": "(Obsoleto) Redução de Dano (Não-Mágico)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.non-magical-physical": { "name": "(Obsoleto) Redução de Dano (Físico Não-Mágico)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.non-physical": { "name": "(Obsoleto) Redução de Dano (Não-Físicos)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.non-silver": { "name": "(Obsoleto) Redução de Dano (Não-Prata)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.other": { "name": "(Obsoleto) Redução de Dano (Outro)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.rsak": { "name": "(Obsoleto) Redução de Dano (Ataque Mágico à Distância)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.rwak": { "name": "(Obsoleto) Redução de Dano (Ataque Armado à Distância)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.save": { "name": "(Obsoleto) Redução de Dano (Salvaguarda)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.util": { "name": "(Obsoleto) Redução de Dano (Utilidade)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.acid": { "name": "(Obsoleto) Redução de Dano (Ácido)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.all": { "name": "(Obsoleto) Redução de Dano (Todos)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.bludgeoning": { "name": "(Obsoleto) Redução de Dano (Contundente)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.cold": { "name": "(Obsoleto) Redução de Dano (Gélido)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.final": { "name": "(Obsoleto) Redução de Dano Final", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.fire": { "name": "(Obsoleto) Redução de Dano (Ígneo)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.force": { "name": "(Obsoleto) Redução de Dano (Energético)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.healing": { "name": "(Obsoleto) Redução de Dano (Cura)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.lightning": { "name": "(Obsoleto) Redução de Dano (Elétrico)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.midi-none": { "name": "(Obsoleto) Redução de Dano (Sem Tipo)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.necrotic": { "name": "(Obsoleto) Redução de Dano (Necrótico)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.none": { "name": "(Obsoleto) Redução de Dano (Sem Dano)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.piercing": { "name": "(Obsoleto) Redução de Dano (Perfurante)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.poison": { "name": "(Obsoleto) Redução de Dano (Venenoso)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.psychic": { "name": "(Obsoleto) Redução de Dano (Psíquico)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.radiant": { "name": "(Obsoleto) Redução de Dano (Radiante)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.slashing": { "name": "(Obsoleto) Redução de Dano (Cortante)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.temphp": { "name": "(Obsoleto) Redução de Dano (Cura Temporária)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.DR.thunder": { "name": "(Obsoleto) Redução de Dano (Trovejante)", "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." },
-    "flags.midi-qol.OverTime": { "name": "Efeitos Over Time", "description": "" },
-    "flags.midi-qol.advantage.concentration": { "name": "Vantagem (Concentração)", "description": "Vantagem em salvaguardas de Concentração" },
-    "flags.midi-qol.advantage.deathSave": { "name": "Vantagem (Salvaguarda Contra Morte)", "description": "Vantagem em Salvaguardas Contra Morte" },
-    "flags.midi-qol.advantage.skill.acr": { "name": "Vantagem Perícia (Acrobacia)", "description": "Vantagem em testes de Acrobacia" },
-    "flags.midi-qol.advantage.skill.all": { "name": "Vantagem Perícia (Todas)", "description": "Vantagem em todos os testes de perícia" },
-    "flags.midi-qol.advantage.skill.ani": { "name": "Vantagem Perícia (Lidar com Animais)", "description": "Vantagem em testes de Lidar com Animais" },
-    "flags.midi-qol.advantage.skill.arc": { "name": "Vantagem Perícia (Arcanismo)", "description": "Vantagem em testes de Arcanismo" },
-    "flags.midi-qol.advantage.skill.ath": { "name": "Vantagem Perícia (Atletismo)", "description": "Vantagem em testes de Atletismo" },
-    "flags.midi-qol.advantage.skill.dec": { "name": "Vantagem Perícia (Enganação)", "description": "Vantagem em testes de Enganação" },
-    "flags.midi-qol.advantage.skill.his": { "name": "Vantagem Perícia (História)", "description": "Vantagem em testes de História" },
-    "flags.midi-qol.advantage.skill.ins": { "name": "Vantagem Perícia (Intuição)", "description": "Vantagem em testes de Intuição" },
-    "flags.midi-qol.advantage.skill.inv": { "name": "Vantagem Perícia (Investigação)", "description": "Vantagem em testes de Investigação" },
-    "flags.midi-qol.advantage.skill.itm": { "name": "Vantagem Perícia (Intimidação)", "description": "Vantagem em testes de Intimidação" },
-    "flags.midi-qol.advantage.skill.med": { "name": "Vantagem Perícia (Medicina)", "description": "Vantagem em testes de Medicina" },
-    "flags.midi-qol.advantage.skill.nat": { "name": "Vantagem Perícia (Natureza)", "description": "Vantagem em testes de Natureza" },
-    "flags.midi-qol.advantage.skill.per": { "name": "Vantagem Perícia (Persuasão)", "description": "Vantagem em testes de Persuasão" },
-    "flags.midi-qol.advantage.skill.prc": { "name": "Vantagem Perícia (Percepção)", "description": "Vantagem em testes de Percepção" },
-    "flags.midi-qol.advantage.skill.prf": { "name": "Vantagem Perícia (Performance)", "description": "Vantagem em testes de Performance" },
-    "flags.midi-qol.advantage.skill.rel": { "name": "Vantagem Perícia (Religião)", "description": "Vantagem em testes de Religião" },
-    "flags.midi-qol.advantage.skill.slt": { "name": "Vantagem Perícia (Prestidigitação)", "description": "Vantagem em testes de Prestidigitação" },
-    "flags.midi-qol.advantage.skill.ste": { "name": "Vantagem Perícia (Furtividade)", "description": "Vantagem em testes de Furtividade" },
-    "flags.midi-qol.advantage.skill.sur": { "name": "Vantagem Perícia (Sobrevivência)", "description": "Vantagem em testes de Sobrevivência" },
-    "flags.midi-qol.carefulSpells": { "name": "Magia Cuidadosa", "description": "Alvos previamente selecionados da salvaguarda de magia são automaticamente bem-sucedidos." },
-    "flags.midi-qol.concentrationSaveBonus": { "name": "Bônus Salvaguarda Concentração", "description": "" },
-    "flags.midi-qol.critical.all": { "name": "Acerto Crítico (Todos)", "description": "" },
-    "flags.midi-qol.critical.heal": { "name": "Acerto Crítico (Cura)", "description": "" },
-    "flags.midi-qol.critical.msak": { "name": "Acerto Crítico (Ataque Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.critical.mwak": { "name": "Acerto Crítico (Ataque Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.critical.other": { "name": "Acerto Crítico (Outro)", "description": "" },
-    "flags.midi-qol.critical.rsak": { "name": "Acerto Crítico (Ataque Mágico à Distância)", "description": "" },
-    "flags.midi-qol.critical.rwak": { "name": "Acerto Crítico (Ataque Armado à Distância)", "description": "" },
-    "flags.midi-qol.critical.save": { "name": "Acerto Crítico (Salvaguarda)", "description": "" },
-    "flags.midi-qol.critical.util": { "name": "Acerto Crítico (Utilidade)", "description": "" },
-    "flags.midi-qol.damage.reroll-kh": { "name": "Rerolar Dano (Manter Maior)", "description": "" },
-    "flags.midi-qol.damage.reroll-kl": { "name": "Rerolar Dano (Manter Menor)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.all": { "name": "Desvantagem Atributo (Todos)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.check.all": { "name": "Desvantagem Teste (Todos Atributos)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.check.cha": { "name": "Desvantagem Teste (Carisma)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.check.con": { "name": "Desvantagem Teste (Constituição)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.check.dex": { "name": "Desvantagem Teste (Destreza)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.check.int": { "name": "Desvantagem Teste (Inteligência)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.check.str": { "name": "Desvantagem Teste (Força)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.check.wis": { "name": "Desvantagem Teste (Sabedoria)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.save.all": { "name": "Desvantagem Salvaguarda (Todas)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.save.cha": { "name": "Desvantagem Salvaguarda (Carisma)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.save.con": { "name": "Desvantagem Salvaguarda (Constituição)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.save.dex": { "name": "Desvantagem Salvaguarda (Destreza)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.save.int": { "name": "Desvantagem Salvaguarda (Inteligência)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.save.str": { "name": "Desvantagem Salvaguarda (Força)", "description": "" },
-    "flags.midi-qol.disadvantage.ability.save.wis": { "name": "Desvantagem Salvaguarda (Sabedoria)", "description": "" },
-    "flags.midi-qol.disadvantage.all": { "name": "Desvantagem Todos Dados", "description": "Desvantagem em todas as rolagens de d20" },
-    "flags.midi-qol.disadvantage.attack.all": { "name": "Desvantagem Ataque (Todos)", "description": "" },
-    "flags.midi-qol.disadvantage.attack.cha": { "name": "Desvantagem Ataque (Carisma)", "description": "" },
-    "flags.midi-qol.disadvantage.attack.con": { "name": "Desvantagem Ataque (Constituição)", "description": "" },
-    "flags.midi-qol.disadvantage.attack.dex": { "name": "Desvantagem Ataque (Destreza)", "description": "" },
-    "flags.midi-qol.disadvantage.attack.heal": { "name": "Desvantagem (Cura)", "description": "" },
-    "flags.midi-qol.disadvantage.attack.int": { "name": "Desvantagem Ataque (Inteligência)", "description": "" },
-    "flags.midi-qol.disadvantage.attack.msak": { "name": "Desvantagem Ataque (Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.disadvantage.attack.mwak": { "name": "Desvantagem Ataque (Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.disadvantage.attack.other": { "name": "Desvantagem Ataque (Outro)", "description": "" },
-    "flags.midi-qol.disadvantage.attack.rsak": { "name": "Desvantagem Ataque (Mágico à Distância)", "description": "" },
-    "flags.midi-qol.disadvantage.attack.rwak": { "name": "Desvantagem Ataque (Armado à Distância)", "description": "" },
-    "flags.midi-qol.disadvantage.attack.save": { "name": "Desvantagem (Salvaguarda)", "description": "" },
-    "flags.midi-qol.disadvantage.attack.util": { "name": "Desvantagem (Utilidade)", "description": "" },
-    "flags.midi-qol.disadvantage.attack.wis": { "name": "Desvantagem Ataque (Sabedoria)", "description": "" },
-    "flags.midi-qol.disadvantage.concentration": { "name": "Desvantagem (Concentração)", "description": "" },
-    "flags.midi-qol.disadvantage.deathSave": { "name": "Desvantagem (Salvaguarda Contra Morte)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.acr": { "name": "Desvantagem Perícia (Acrobacia)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.all": { "name": "Desvantagem Perícia (Todas)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.ani": { "name": "Desvantagem Perícia (Lidar com Animais)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.arc": { "name": "Desvantagem Perícia (Arcanismo)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.ath": { "name": "Desvantagem Perícia (Atletismo)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.dec": { "name": "Desvantagem Perícia (Enganação)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.his": { "name": "Desvantagem Perícia (História)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.ins": { "name": "Desvantagem Perícia (Intuição)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.inv": { "name": "Desvantagem Perícia (Investigação)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.itm": { "name": "Desvantagem Perícia (Intimidação)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.med": { "name": "Desvantagem Perícia (Medicina)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.nat": { "name": "Desvantagem Perícia (Natureza)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.per": { "name": "Desvantagem Perícia (Persuasão)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.prc": { "name": "Desvantagem Perícia (Percepção)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.prf": { "name": "Desvantagem Perícia (Performance)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.rel": { "name": "Desvantagem Perícia (Religião)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.slt": { "name": "Desvantagem Perícia (Prestidigitação)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.ste": { "name": "Desvantagem Perícia (Furtividade)", "description": "" },
-    "flags.midi-qol.disadvantage.skill.sur": { "name": "Desvantagem Perícia (Sobrevivência)", "description": "" },
-    "flags.midi-qol.fail.ability.all": { "name": "Falha Atributo (Todos)", "description": "" },
-    "flags.midi-qol.fail.ability.check.all": { "name": "Falha Teste (Todos Atributos)", "description": "" },
-    "flags.midi-qol.fail.ability.check.cha": { "name": "Falha Teste (Carisma)", "description": "" },
-    "flags.midi-qol.fail.ability.check.con": { "name": "Falha Teste (Constituição)", "description": "" },
-    "flags.midi-qol.fail.ability.check.dex": { "name": "Falha Teste (Destreza)", "description": "" },
-    "flags.midi-qol.fail.ability.check.int": { "name": "Falha Teste (Inteligência)", "description": "" },
-    "flags.midi-qol.fail.ability.check.str": { "name": "Falha Teste (Força)", "description": "" },
-    "flags.midi-qol.fail.ability.check.wis": { "name": "Falha Teste (Sabedoria)", "description": "" },
-    "flags.midi-qol.fail.ability.save.all": { "name": "Falha Salvaguarda (Todas)", "description": "" },
-    "flags.midi-qol.fail.ability.save.cha": { "name": "Falha Salvaguarda (Carisma)", "description": "" },
-    "flags.midi-qol.fail.ability.save.con": { "name": "Falha Salvaguarda (Constituição)", "description": "" },
-    "flags.midi-qol.fail.ability.save.dex": { "name": "Falha Salvaguarda (Destreza)", "description": "" },
-    "flags.midi-qol.fail.ability.save.int": { "name": "Falha Salvaguarda (Inteligência)", "description": "" },
-    "flags.midi-qol.fail.ability.save.str": { "name": "Falha Salvaguarda (Força)", "description": "" },
-    "flags.midi-qol.fail.ability.save.wis": { "name": "Falha Salvaguarda (Sabedoria)", "description": "" },
-    "flags.midi-qol.fail.all": { "name": "Falha (Todas Ações)", "description": "" },
-    "flags.midi-qol.fail.attack.all": { "name": "Falha Ataque (Todos)", "description": "" },
-    "flags.midi-qol.fail.attack.heal": { "name": "Falha (Cura)", "description": "" },
-    "flags.midi-qol.fail.attack.msak": { "name": "Falha Ataque (Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.fail.attack.mwak": { "name": "Falha Ataque (Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.fail.attack.other": { "name": "Falha Ataque (Outro)", "description": "" },
-    "flags.midi-qol.fail.attack.rsak": { "name": "Falha Ataque (Mágico à Distância)", "description": "" },
-    "flags.midi-qol.fail.attack.rwak": { "name": "Falha Ataque (Armado à Distância)", "description": "" },
-    "flags.midi-qol.fail.attack.save": { "name": "Falha (Salvaguarda)", "description": "" },
-    "flags.midi-qol.fail.attack.util": { "name": "Falha (Utilidade)", "description": "" },
-    "flags.midi-qol.fail.critical.all": { "name": "Falha Crítica (Todos)", "description": "" },
-    "flags.midi-qol.fail.critical.heal": { "name": "Falha Crítica (Cura)", "description": "" },
-    "flags.midi-qol.fail.critical.msak": { "name": "Falha Crítica (Ataque Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.fail.critical.mwak": { "name": "Falha Crítica (Ataque Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.fail.critical.other": { "name": "Falha Crítica (Outro)", "description": "" },
-    "flags.midi-qol.fail.critical.rsak": { "name": "Falha Crítica (Ataque Mágico à Distância)", "description": "" },
-    "flags.midi-qol.fail.critical.rwak": { "name": "Falha Crítica (Ataque Armado à Distância)", "description": "" },
-    "flags.midi-qol.fail.critical.save": { "name": "Falha Crítica (Salvaguarda)", "description": "" },
-    "flags.midi-qol.fail.critical.util": { "name": "Falha Crítica (Utilidade)", "description": "" },
-    "flags.midi-qol.fail.skill.acr": { "name": "Falha Perícia (Acrobacia)", "description": "" },
-    "flags.midi-qol.fail.skill.all": { "name": "Falha Perícia (Todas)", "description": "" },
-    "flags.midi-qol.fail.skill.ani": { "name": "Falha Perícia (Lidar com Animais)", "description": "" },
-    "flags.midi-qol.fail.skill.arc": { "name": "Falha Perícia (Arcanismo)", "description": "" },
-    "flags.midi-qol.fail.skill.ath": { "name": "Falha Perícia (Atletismo)", "description": "" },
-    "flags.midi-qol.fail.skill.dec": { "name": "Falha Perícia (Enganação)", "description": "" },
-    "flags.midi-qol.fail.skill.his": { "name": "Falha Perícia (História)", "description": "" },
-    "flags.midi-qol.fail.skill.ins": { "name": "Falha Perícia (Intuição)", "description": "" },
-    "flags.midi-qol.fail.skill.inv": { "name": "Falha Perícia (Investigação)", "description": "" },
-    "flags.midi-qol.fail.skill.itm": { "name": "Falha Perícia (Intimidação)", "description": "" },
-    "flags.midi-qol.fail.skill.med": { "name": "Falha Perícia (Medicina)", "description": "" },
-    "flags.midi-qol.fail.skill.nat": { "name": "Falha Perícia (Natureza)", "description": "" },
-    "flags.midi-qol.fail.skill.per": { "name": "Falha Perícia (Persuação)", "description": "" },
-    "flags.midi-qol.fail.skill.prc": { "name": "Falha Perícia (Percepção)", "description": "" },
-    "flags.midi-qol.fail.skill.prf": { "name": "Falha Perícia (Performance)", "description": "" },
-    "flags.midi-qol.fail.skill.rel": { "name": "Falha Perícia (Religião)", "description": "" },
-    "flags.midi-qol.fail.skill.slt": { "name": "Falha Perícia (Prestidigitação)", "description": "" },
-    "flags.midi-qol.fail.skill.ste": { "name": "Falha Perícia (Furtividade)", "description": "" },
-    "flags.midi-qol.fail.skill.sur": { "name": "Falha Perícia (Sobrevivência)", "description": "" },
-    "flags.midi-qol.fail.spell.material": { "name": "Falha (Componente Material)", "description": "" },
-    "flags.midi-qol.fail.spell.somatic": { "name": "Falha (Componente Somático)", "description": "" },
-    "flags.midi-qol.fail.spell.vocal": { "name": "Falha (Componente Vocal)", "description": "" },
-    "flags.midi-qol.grants.advantage.attack.all": { "name": "Dar Vantagem Ataque (Todos)", "description": "" },
-    "flags.midi-qol.grants.advantage.attack.heal": { "name": "Dar Vantagem (Cura)", "description": "" },
-    "flags.midi-qol.grants.advantage.attack.msak": { "name": "Dar Vantagem Ataque (Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.advantage.attack.mwak": { "name": "Dar Vantagem Ataque (Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.advantage.attack.other": { "name": "Dar Vantagem Ataque (Outro)", "description": "" },
-    "flags.midi-qol.grants.advantage.attack.rsak": { "name": "Dar Vantagem Ataque (Mágico à Distância)", "description": "" },
-    "flags.midi-qol.grants.advantage.attack.rwak": { "name": "Dar Vantagem Ataque (Armado à Distância)", "description": "" },
-    "flags.midi-qol.grants.advantage.attack.save": { "name": "Dar Vantagem (Salvaguarda)", "description": "" },
-    "flags.midi-qol.grants.advantage.attack.util": { "name": "Dar Vantagem (Utilidade)", "description": "" },
-    "flags.midi-qol.grants.advantage.check.all": { "name": "Dar Vantagem Teste (Todos)", "description": "" },
-    "flags.midi-qol.grants.advantage.check.cha": { "name": "Dar Vantagem Teste (Carisma)", "description": "" },
-    "flags.midi-qol.grants.advantage.check.con": { "name": "Dar Vantagem Teste (Constituição)", "description": "" },
-    "flags.midi-qol.grants.advantage.check.dex": { "name": "Dar Vantagem Teste (Destreza)", "description": "" },
-    "flags.midi-qol.grants.advantage.check.int": { "name": "Dar Vantagem Teste (Inteligência)", "description": "" },
-    "flags.midi-qol.grants.advantage.check.str": { "name": "Dar Vantagem Teste (Força)", "description": "" },
-    "flags.midi-qol.grants.advantage.check.wis": { "name": "Dar Vantagem Teste (Sabedoria)", "description": "" },
-    "flags.midi-qol.grants.advantage.save.all": { "name": "Dar Vantagem Salvaguarda (Todas)", "description": "" },
-    "flags.midi-qol.grants.advantage.save.cha": { "name": "Dar Vantagem Salvaguarda (Carisma)", "description": "" },
-    "flags.midi-qol.grants.advantage.save.con": { "name": "Dar Vantagem Salvaguarda (Constituição)", "description": "" },
-    "flags.midi-qol.grants.advantage.save.dex": { "name": "Dar Vantagem Salvaguarda (Destreza)", "description": "" },
-    "flags.midi-qol.grants.advantage.save.int": { "name": "Dar Vantagem Salvaguarda (Inteligência)", "description": "" },
-    "flags.midi-qol.grants.advantage.save.str": { "name": "Dar Vantagem Salvaguarda (Força)", "description": "" },
-    "flags.midi-qol.grants.advantage.save.wis": { "name": "Dar Vantagem Salvaguarda (Sabedoria)", "description": "" },
-    "flags.midi-qol.grants.advantage.skill.all": { "name": "Dar Vantagem Perícia (Todas)", "description": "" },
-    "flags.midi-qol.grants.advantage.skill.cha": { "name": "Dar Vantagem Perícia (Carisma)", "description": "" },
-    "flags.midi-qol.grants.advantage.skill.con": { "name": "Dar Vantagem Perícia (Constituição)", "description": "" },
-    "flags.midi-qol.grants.advantage.skill.dex": { "name": "Dar Vantagem Perícia (Destreza)", "description": "" },
-    "flags.midi-qol.grants.advantage.skill.int": { "name": "Dar Vantagem Perícia (Inteligência)", "description": "" },
-    "flags.midi-qol.grants.advantage.skill.str": { "name": "Dar Vantagem Perícia (Força)", "description": "" },
-    "flags.midi-qol.grants.advantage.skill.wis": { "name": "Dar Vantagem Perícia (Sabedoria)", "description": "" },
-    "flags.midi-qol.grants.attack.bonus.all": { "name": "Dar Bônus Ataque (Todos)", "description": "" },
-    "flags.midi-qol.grants.attack.bonus.heal": { "name": "Dar Bônus Ataque (Cura)", "description": "" },
-    "flags.midi-qol.grants.attack.bonus.msak": { "name": "Dar Bônus Ataque (Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.attack.bonus.mwak": { "name": "Dar Bônus Ataque (Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.attack.bonus.other": { "name": "Dar Bônus Ataque (Outro)", "description": "" },
-    "flags.midi-qol.grants.attack.bonus.rsak": { "name": "Dar Bônus Ataque (Mágico à Distância)", "description": "" },
-    "flags.midi-qol.grants.attack.bonus.rwak": { "name": "Dar Bônus Ataque (Armado à Distância)", "description": "" },
-    "flags.midi-qol.grants.attack.bonus.save": { "name": "Dar Bônus Ataque (Salvaguarda)", "description": "" },
-    "flags.midi-qol.grants.attack.bonus.util": { "name": "Dar Bônus Ataque (Utilidade)", "description": "" },
-    "flags.midi-qol.grants.attack.fail.all": { "name": "Dar Falha Ataque (Todos)", "description": "" },
-    "flags.midi-qol.grants.attack.success.all": { "name": "Dar Sucesso Ataque (Todos)", "description": "" },
-    "flags.midi-qol.grants.attack.success.heal": { "name": "Dar Sucesso Ataque (Cura)", "description": "" },
-    "flags.midi-qol.grants.attack.success.msak": { "name": "Dar Sucesso Ataque (Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.attack.success.mwak": { "name": "Dar Sucesso Ataque (Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.attack.success.other": { "name": "Dar Sucesso Ataque (Outro)", "description": "" },
-    "flags.midi-qol.grants.attack.success.rsak": { "name": "Dar Sucesso Ataque (Mágico à Distância)", "description": "" },
-    "flags.midi-qol.grants.attack.success.rwak": { "name": "Dar Sucesso Ataque (Armado à Distância)", "description": "" },
-    "flags.midi-qol.grants.attack.success.save": { "name": "Dar Sucesso Ataque (Salvaguarda)", "description": "" },
-    "flags.midi-qol.grants.attack.success.util": { "name": "Dar Sucesso Ataque (Utilidade)", "description": "" },
-    "flags.midi-qol.grants.critical.all": { "name": "Dar Acerto Crítico (Todos)", "description": "" },
-    "flags.midi-qol.grants.critical.heal": { "name": "Dar Acerto Crítico (Cura)", "description": "" },
-    "flags.midi-qol.grants.critical.msak": { "name": "Dar Acerto Crítico (Ataque Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.critical.mwak": { "name": "Dar Acerto Crítico (Ataque Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.critical.other": { "name": "Dar Acerto Crítico (Outro)", "description": "" },
-    "flags.midi-qol.grants.critical.range": { "name": "Dar Acerto Crítico (Alcance)", "description": "" },
-    "flags.midi-qol.grants.critical.rsak": { "name": "Dar Acerto Crítico (Ataque Mágico à Distância)", "description": "" },
-    "flags.midi-qol.grants.critical.rwak": { "name": "Dar Acerto Crítico (Ataque Armado à Distância)", "description": "" },
-    "flags.midi-qol.grants.critical.save": { "name": "Dar Acerto Crítico (Salvaguarda)", "description": "" },
-    "flags.midi-qol.grants.critical.util": { "name": "Dar Acerto Crítico (Utilidade)", "description": "" },
-    "flags.midi-qol.grants.criticalThreshold": { "name": "Dar Margem Acerto Crítico", "description": "" },
-    "flags.midi-qol.grants.disadvantage.attack.all": { "name": "Dar Desvantagem Ataque (Todos)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.attack.heal": { "name": "Dar Desvantagem Ataque (Cura)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.attack.msak": { "name": "Dar Desvantagem Ataque (Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.attack.mwak": { "name": "Dar Desvantagem Ataque (Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.attack.other": { "name": "Dar Desvantagem Ataque (Outro)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.attack.rsak": { "name": "Dar Desvantagem Ataque (Mágico à Distância)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.attack.rwak": { "name": "Dar Desvantagem Ataque (Armado à Distância)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.attack.save": { "name": "Dar Desvantagem (Salvaguarda)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.attack.util": { "name": "Dar Desvantagem (Utilidade)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.check.all": { "name": "Dar Desvantagem Teste (Todos)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.check.cha": { "name": "Dar Desvantagem Teste (Carisma)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.check.con": { "name": "Dar Desvantagem Teste (Constituição)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.check.dex": { "name": "Dar Desvantagem Teste (Destreza)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.check.int": { "name": "Dar Desvantagem Teste (Inteligência)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.check.str": { "name": "Dar Desvantagem Teste (Força)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.check.wis": { "name": "Dar Desvantagem Teste (Sabedoria)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.save.all": { "name": "Dar Desvantagem Salvaguarda (Todas)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.save.cha": { "name": "Dar Desvantagem Salvaguarda (Carisma)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.save.con": { "name": "Dar Desvantagem Salvaguarda (Constituição)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.save.dex": { "name": "Dar Desvantagem Salvaguarda (Destreza)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.save.int": { "name": "Dar Desvantagem Salvaguarda (Inteligência)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.save.str": { "name": "Dar Desvantagem Salvaguarda (Força)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.save.wis": { "name": "Dar Desvantagem Salvaguarda (Sabedoria)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.skill.all": { "name": "Dar Desvantagem Perícia (Todas)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.skill.cha": { "name": "Dar Desvantagem Perícia (Carisma)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.skill.con": { "name": "Dar Desvantagem Perícia (Constituição)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.skill.dex": { "name": "Dar Desvantagem Perícia (Destreza)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.skill.int": { "name": "Dar Desvantagem Perícia (Inteligência)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.skill.str": { "name": "Dar Desvantagem Perícia (Força)", "description": "" },
-    "flags.midi-qol.grants.disadvantage.skill.wis": { "name": "Dar Desvantagem Perícia (Sabedoria)", "description": "" },
-    "flags.midi-qol.grants.fail.advantage.attack.all": { "name": "Dar Falha Vantagem Ataque (Todos)", "description": "" },
-    "flags.midi-qol.noAdvantage.attack.all": { "name": "Dar Falha Vantagem Ataque (Todos)", "description": "" },
-    "flags.midi-qol.grants.fail.advantage.attack.heal": { "name": "Dar Falha Vantagem (Cura)", "description": "" },
-    "flags.midi-qol.grants.fail.advantage.attack.msak": { "name": "Dar Falha Vantagem Ataque (Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.fail.advantage.attack.mwak": { "name": "Dar Falha Vantagem Ataque (Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.fail.advantage.attack.other": { "name": "Dar Falha Vantagem Ataque (Outro)", "description": "" },
-    "flags.midi-qol.grants.fail.advantage.attack.rsak": { "name": "Dar Falha Vantagem Ataque (Mágico à Distância)", "description": "" },
-    "flags.midi-qol.grants.fail.advantage.attack.rwak": { "name": "Dar Falha Vantagem Ataque (Armado à Distância)", "description": "" },
-    "flags.midi-qol.grants.fail.advantage.attack.save": { "name": "Dar Falha Vantagem (Salvaguarda)", "description": "" },
-    "flags.midi-qol.grants.fail.advantage.attack.util": { "name": "Dar Falha Vantagem (Utilidade)", "description": "" },
-    "flags.midi-qol.grants.fail.disadvantage.attack.all": { "name": "Dar Falha Desvantagem Ataque (Todos)", "description": "" },
-    "flags.midi-qol.grants.noDisadvantage.attack.all": { "name": "Dar Falha Desvantagem Ataque (Todos)", "description": "" },
-    "flags.midi-qol.grants.fail.disadvantage.attack.heal": { "name": "Dar Falha Desvantagem (Cura)", "description": "" },
-    "flags.midi-qol.grants.fail.disadvantage.attack.msak": { "name": "Dar Falha Desvantagem Ataque (Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.fail.disadvantage.attack.mwak": { "name": "Dar Falha Desvantagem Ataque (Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.fail.disadvantage.attack.other": { "name": "Dar Falha Desvantagem Ataque (Outro)", "description": "" },
-    "flags.midi-qol.grants.fail.disadvantage.attack.rsak": { "name": "Dar Falha Desvantagem Ataque (Mágico à Distância)", "description": "" },
-    "flags.midi-qol.grants.fail.disadvantage.attack.rwak": { "name": "Dar Falha Desvantagem Ataque (Armado à Distância)", "description": "" },
-    "flags.midi-qol.grants.fail.disadvantage.attack.save": { "name": "Dar Falha Desvantagem (Salvaguarda)", "description": "" },
-    "flags.midi-qol.grants.fail.disadvantage.attack.util": { "name": "Dar Falha Desvantagem (Utilidade)", "description": "" },
-    "flags.midi-qol.grants.max.damage.all": { "name": "Dar Dano Máximo (Todos)", "description": "" },
-    "flags.midi-qol.grants.max.damage.heal": { "name": "Dar Dano Máximo (Cura)", "description": "" },
-    "flags.midi-qol.grants.max.damage.msak": { "name": "Dar Dano Máximo (Ataque Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.max.damage.mwak": { "name": "Dar Dano Máximo (Ataque Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.max.damage.other": { "name": "Dar Dano Máximo (Outro)", "description": "" },
-    "flags.midi-qol.grants.max.damage.rsak": { "name": "Dar Dano Máximo (Ataque Mágico à Distância)", "description": "" },
-    "flags.midi-qol.grants.max.damage.rwak": { "name": "Dar Dano Máximo (Ataque Armado à Distância)", "description": "" },
-    "flags.midi-qol.grants.max.damage.save": { "name": "Dar Dano Máximo (Salvaguarda)", "description": "" },
-    "flags.midi-qol.grants.max.damage.util": { "name": "Dar Dano Máximo (Utilidade)", "description": "" },
-    "flags.midi-qol.grants.min.damage.all": { "name": "Dar Dano Mínimo (Todos)", "description": "" },
-    "flags.midi-qol.grants.min.damage.heal": { "name": "Dar Dano Mínimo (Cura)", "description": "" },
-    "flags.midi-qol.grants.min.damage.msak": { "name": "Dar Dano Mínimo (Ataque Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.min.damage.mwak": { "name": "Dar Dano Mínimo (Ataque Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.min.damage.other": { "name": "Dar Dano Mínimo (Outro)", "description": "" },
-    "flags.midi-qol.grants.min.damage.rsak": { "name": "Dar Dano Mínimo (Ataque Mágico à Distância)", "description": "" },
-    "flags.midi-qol.grants.min.damage.rwak": { "name": "Dar Dano Mínimo (Ataque Armado à Distância)", "description": "" },
-    "flags.midi-qol.grants.min.damage.save": { "name": "Dar Dano Mínimo (Salvaguarda)", "description": "" },
-    "flags.midi-qol.grants.min.damage.util": { "name": "Dar Dano Mínimo (Utilidade)", "description": "" },
-    "flags.midi-qol.grants.noCritical.all": { "name": "Dar Acerto Não-Crítico (Todos)", "description": "" },
-    "flags.midi-qol.grants.noCritical.heal": { "name": "Dar Acerto Não-Crítico (Cura)", "description": "" },
-    "flags.midi-qol.grants.noCritical.msak": { "name": "Dar Acerto Não-Crítico (Ataque Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.noCritical.mwak": { "name": "Dar Acerto Não-Crítico (Ataque Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.grants.noCritical.other": { "name": "Dar Acerto Não-Crítico (Outro)", "description": "" },
-    "flags.midi-qol.grants.noCritical.rsak": { "name": "Dar Acerto Não-Crítico (Ataque Mágico à Distância)", "description": "" },
-    "flags.midi-qol.grants.noCritical.rwak": { "name": "Dar Acerto Não-Crítico (Ataque Armado à Distância)", "description": "" },
-    "flags.midi-qol.grants.noCritical.save": { "name": "Dar Acerto Não-Crítico (Salvaguarda)", "description": "" },
-    "flags.midi-qol.grants.noCritical.util": { "name": "Dar Acerto Não-Crítico (Utilidade)", "description": "" },
-    "flags.midi-qol.ignoreNearbyFoes": { "name": "Ignorar Inimigos Próximos", "description": "Ignora desvantagem em jogadas de Ataques à Distância por conta de inimigos adjacentes." },
-    "flags.midi-qol.inMotion": { "name": "In Motion", "description": "" },
-    "flags.midi-qol.long.all": { "name": "Alcance Longo (Todos)", "description": "" },
-    "flags.midi-qol.long.heal": { "name": "Alcance Longo (Cura)", "description": "" },
-    "flags.midi-qol.long.msak": { "name": "Alcance Longo (Ataque Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.long.mwak": { "name": "Alcance Longo (Ataque Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.long.other": { "name": "Alcance Longo (Outro)", "description": "" },
-    "flags.midi-qol.long.rsak": { "name": "Alcance Longo (Ataque Mágico à Distância)", "description": "" },
-    "flags.midi-qol.long.rwak": { "name": "Alcance Longo (Ataque Armado à Distância)", "description": "" },
-    "flags.midi-qol.long.save": { "name": "Alcance Longo (Salvaguarda)", "description": "" },
-    "flags.midi-qol.long.util": { "name": "Alcance Longo (Utilidade)", "description": "" },
-    "flags.midi-qol.magicResistance.all": { "name": "Resistência Mágica (Todos)", "description": "" },
-    "flags.midi-qol.magicResistance.cha": { "name": "Resistência Mágica (Carisma)", "description": "" },
-    "flags.midi-qol.magicResistance.check.all": { "name": "Resistência Mágica (Todos Testes)", "description": "" },
-    "flags.midi-qol.magicResistance.con": { "name": "Resistência Mágica (Constituição)", "description": "" },
-    "flags.midi-qol.magicResistance.dex": { "name": "Resistência Mágica (Destreza)", "description": "" },
-    "flags.midi-qol.magicResistance.int": { "name": "Resistência Mágica (Inteligência)", "description": "" },
-    "flags.midi-qol.magicResistance.save.all": { "name": "Resistência Mágica (Todas Salvaguardas)", "description": "" },
-    "flags.midi-qol.magicResistance.skill.all": { "name": "Resistência Mágica (Todas Perícias)", "description": "" },
-    "flags.midi-qol.magicResistance.str": { "name": "Resistência Mágica (Força)", "description": "" },
-    "flags.midi-qol.magicResistance.wis": { "name": "Resistência Mágica (Sabedoria)", "description": "" },
-    "flags.midi-qol.magicVulnerability.all": { "name": "Vulnerabilidade Mágica (Todos)", "description": "" },
-    "flags.midi-qol.magicVulnerability.all.cha": { "name": "Vulnerabilidade Mágica (Carisma)", "description": "" },
-    "flags.midi-qol.magicVulnerability.all.con": { "name": "Vulnerabilidade Mágica (Constituição)", "description": "" },
-    "flags.midi-qol.magicVulnerability.all.dex": { "name": "Vulnerabilidade Mágica (Destreza)", "description": "" },
-    "flags.midi-qol.magicVulnerability.all.int": { "name": "Vulnerabilidade Mágica (Inteligência)", "description": "" },
-    "flags.midi-qol.magicVulnerability.all.str": { "name": "Vulnerabilidade Mágica (Força)", "description": "" },
-    "flags.midi-qol.magicVulnerability.all.wis": { "name": "Vulnerabilidade Mágica (Sabedoria)", "description": "" },
-    "flags.midi-qol.max.ability.check.all": { "name": "Teste Atributo Máximo (Todos)", "description": "Número máximo jogado no d20 principal para todos os testes." },
-    "flags.midi-qol.max.ability.check.cha": { "name": "Teste Atributo Máximo (Carisma)", "description": "Número máximo jogado no d20 principal para todos os testes de Carisma." },
-    "flags.midi-qol.max.ability.check.con": { "name": "Teste Atributo Máximo (Constituição)", "description": "Número máximo jogado no d20 principal para todos os testes de Constituição." },
-    "flags.midi-qol.max.ability.check.dex": { "name": "Teste Atributo Máximo (Destreza)", "description": "Número máximo jogado no d20 principal para todos os testes de Destreza." },
-    "flags.midi-qol.max.ability.check.int": { "name": "Teste Atributo Máximo (Inteligência)", "description": "Número máximo jogado no d20 principal para todos os testes de Inteligência." },
-    "flags.midi-qol.max.ability.check.str": { "name": "Teste Atributo Máximo (Força)", "description": "Número máximo jogado no d20 principal para todos os testes de Força." },
-    "flags.midi-qol.max.ability.check.wis": { "name": "Teste Atributo Máximo (Sabedoria)", "description": "Número máximo jogado no d20 principal para todos os testes de Sabedoria." },
-    "flags.midi-qol.max.ability.save.all": { "name": "Salvaguarda Máximo (Todas)", "description": "Número máximo jogado no d20 principal para todas as salvaguardas." },
-    "flags.midi-qol.max.ability.save.cha": { "name": "Salvaguarda Máximo (Carisma)", "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Carisma." },
-    "flags.midi-qol.max.ability.save.con": { "name": "Salvaguarda Máximo (Constituição)", "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Constituição." },
-    "flags.midi-qol.max.ability.save.concentration": { "name": "Salvaguarda Máximo (Concentração)", "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Concentração." },
-    "flags.midi-qol.max.ability.save.dex": { "name": "Salvaguarda Máximo (Destreza)", "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Destreza." },
-    "flags.midi-qol.max.ability.save.int": { "name": "Salvaguarda Máximo (Inteligência)", "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Inteligência." },
-    "flags.midi-qol.max.ability.save.str": { "name": "Salvaguarda Máximo (Força)", "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Força." },
-    "flags.midi-qol.max.ability.save.wis": { "name": "Salvaguarda Máximo (Sabedoria)", "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Sabedoria." },
-    "flags.midi-qol.max.damage.all": { "name": "Dano Máximo (Todos)", "description": "" },
-    "flags.midi-qol.max.damage.heal": { "name": "Dano Máximo (Cura)", "description": "" },
-    "flags.midi-qol.max.damage.msak": { "name": "Dano Máximo (Ataque Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.max.damage.mwak": { "name": "Dano Máximo (Ataque Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.max.damage.other": { "name": "Dano Máximo (Outro)", "description": "" },
-    "flags.midi-qol.max.damage.rsak": { "name": "Dano Máximo (Ataque Mágico à Distância)", "description": "" },
-    "flags.midi-qol.max.damage.rwak": { "name": "Dano Máximo (Ataque Armado à Distância)", "description": "" },
-    "flags.midi-qol.max.damage.save": { "name": "Dano Máximo (Salvaguarda)", "description": "" },
-    "flags.midi-qol.max.damage.util": { "name": "Dano Máximo (Utilidade)", "description": "" },
-    "flags.midi-qol.max.skill.all": { "name": "Perícia Máxima (Todos)", "description": "Número máximo jogado no d20 principal para todos os testes de Perícia." },
-    "flags.midi-qol.min.ability.check.all": { "name": "Teste Atributo Mínimo (Todos)", "description": "Número mínimo jogado no d20 principal para todos os testes." },
-    "flags.midi-qol.min.ability.check.cha": { "name": "Teste Atributo Mínimo (Carisma)", "description": "Número mínimo jogado no d20 principal para todos os testes de Carisma." },
-    "flags.midi-qol.min.ability.check.con": { "name": "Teste Atributo Mínimo (Constituição)", "description": "Número mínimo jogado no d20 principal para todos os testes de Constituição." },
-    "flags.midi-qol.min.ability.check.dex": { "name": "Teste Atributo Mínimo (Destreza)", "description": "Número mínimo jogado no d20 principal para todos os testes de Destreza." },
-    "flags.midi-qol.min.ability.check.int": { "name": "Teste Atributo Mínimo (Inteligência)", "description": "Número mínimo jogado no d20 principal para todos os testes de Inteligência." },
-    "flags.midi-qol.min.ability.check.str": { "name": "Teste Atributo Mínimo (Força)", "description": "Número mínimo jogado no d20 principal para todos os testes de Força." },
-    "flags.midi-qol.min.ability.check.wis": { "name": "Teste Atributo Mínimo (Sabedoria)", "description": "Número mínimo jogado no d20 principal para todos os testes de Sabedoria." },
-    "flags.midi-qol.min.ability.save.all": { "name": "Salvaguarda Mínimo (Todos)", "description": "Número mínimo jogado no d20 principal para todas as salvaguardas." },
-    "flags.midi-qol.min.ability.save.cha": { "name": "Salvaguarda Mínimo (Carisma)", "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Carisma." },
-    "flags.midi-qol.min.ability.save.con": { "name": "Salvaguarda Mínimo (Constituição)", "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Constituição." },
-    "flags.midi-qol.min.ability.save.concentration": { "name": "Salvaguarda Mínimo (Concentração)", "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Concentração." },
-    "flags.midi-qol.min.ability.save.dex": { "name": "Salvaguarda Mínimo (Destreza)", "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Destreza." },
-    "flags.midi-qol.min.ability.save.int": { "name": "Salvaguarda Mínimo (Inteligência)", "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Inteligência." },
-    "flags.midi-qol.min.ability.save.str": { "name": "Salvaguarda Mínimo (Força)", "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Força." },
-    "flags.midi-qol.min.ability.save.wis": { "name": "Salvaguarda Mínimo (Sabedoria)", "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Sabedoria." },
-    "flags.midi-qol.min.damage.all": { "name": "Dano Mínimo (Todos)", "description": "" },
-    "flags.midi-qol.min.damage.heal": { "name": "Dano Mínimo (Cura)", "description": "" },
-    "flags.midi-qol.min.damage.msak": { "name": "Dano Mínimo (Ataque Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.min.damage.mwak": { "name": "Dano Mínimo (Ataque Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.min.damage.other": { "name": "Dano Mínimo (Outro)", "description": "" },
-    "flags.midi-qol.min.damage.rsak": { "name": "Dano Mínimo (Ataque Mágico à Distância)", "description": "" },
-    "flags.midi-qol.min.damage.rwak": { "name": "Dano Mínimo (Ataque Armado à Distância)", "description": "" },
-    "flags.midi-qol.min.damage.save": { "name": "Dano Mínimo (Salvaguarda)", "description": "" },
-    "flags.midi-qol.min.damage.util": { "name": "Dano Mínimo (Utilidade)", "description": "" },
-    "flags.midi-qol.neverTarget": { "name": "Inalvejável", "description": "" },
-    "flags.midi-qol.noCritical.all": { "name": "Acerto Não-Crítico (Todos)", "description": "" },
-    "flags.midi-qol.noCritical.heal": { "name": "Acerto Não-Crítico (Cura)", "description": "" },
-    "flags.midi-qol.noCritical.msak": { "name": "Acerto Não-Crítico (Ataque Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.noCritical.mwak": { "name": "Acerto Não-Crítico (Ataque Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.noCritical.other": { "name": "Acerto Não-Crítico (Outro)", "description": "" },
-    "flags.midi-qol.noCritical.rsak": { "name": "Acerto Não-Crítico (Ataque Mágico à Distância)", "description": "" },
-    "flags.midi-qol.noCritical.rwak": { "name": "Acerto Não-Crítico (Ataque Armado à Distância)", "description": "" },
-    "flags.midi-qol.noCritical.save": { "name": "Acerto Não-Crítico (Salvaguarda)", "description": "" },
-    "flags.midi-qol.noCritical.util": { "name": "Acerto Não-Crítico (Utilidade)", "description": "" },
-    "flags.midi-qol.onUseMacroName": { "name": "", "description": "" },
-    "flags.midi-qol.optional.NAME.macroToCall": { "name": "", "description": "" },
-    "flags.midi-qol.optional.NAME.ac": { "name": "Bônus Opcional (CA)", "description": "Bônus para aplicar na CA do alvo." },
-    "flags.midi-qol.optional.NAME.activation": { "name": "Bônus Opcional (Ativação)", "description": "Condição de ativação para o Bônus Opcional." },
-    "flags.midi-qol.optional.NAME.attack.all": { "name": "Bônus Opcional Ataque (Todos)", "description": "Bônus adicionado após qualquer jogada de ataque." },
-    "flags.midi-qol.optional.NAME.attack.fail.all": { "name": "Bônus Opcional Falha Ataque (Todos)", "description": "Bônus adicionado após qualquer jogada falha de ataque." },
-    "flags.midi-qol.optional.NAME.attack.fail.heal": { "name": "Bônus Opcional Falha Ataque (Cura)", "description": "Bônus adicionado após jogada falha de ataque de Cura." },
-    "flags.midi-qol.optional.NAME.attack.fail.msak": { "name": "Bônus Opcional Falha Ataque (Mágico Corpo a Corpo)", "description": "Bônus adicionado após jogada falha de Ataque Mágico Corpo a Corpo." },
-    "flags.midi-qol.optional.NAME.attack.fail.mwak": { "name": "Bônus Opcional Falha Ataque (Armado Corpo a Corpo)", "description": "Bônus adicionado após jogada falha de Ataque Armado Corpo a Corpo." },
-    "flags.midi-qol.optional.NAME.attack.fail.other": { "name": "Bônus Opcional Falha Ataque (Outro)", "description": "" },
-    "flags.midi-qol.optional.NAME.attack.fail.rsak": { "name": "Bônus Opcional Falha Ataque (Mágico à Distância)", "description": "Bônus adicionado após jogada falha de Ataque Mágico à Distância." },
-    "flags.midi-qol.optional.NAME.attack.fail.rwak": { "name": "Bônus Opcional Falha Ataque (Armado à Distância)", "description": "Bônus adicionado após jogada falha de Ataque Armado à Distância." },
-    "flags.midi-qol.optional.NAME.attack.fail.save": { "name": "Bônus Opcional Falha Ataque (Salvaguarda)", "description": "" },
-    "flags.midi-qol.optional.NAME.attack.fail.util": { "name": "Bônus Opcional Falha Ataque (Utilidade)", "description": "" },
-    "flags.midi-qol.optional.NAME.attack.heal": { "name": "Bônus Opcional Ataque (Cura)", "description": "Bônus adicionado após jogada de ataque de Cura." },
-    "flags.midi-qol.optional.NAME.attack.msak": { "name": "Bônus Opcional Ataque (Mágico Corpo a Corpo)", "description": "Bônus adicionado após jogada de Ataque Mágico Corpo a Corpo." },
-    "flags.midi-qol.optional.NAME.attack.mwak": { "name": "Bônus Opcional Ataque (Armado Corpo a Corpo)", "description": "Bônus adicionado após jogada de Ataque Armado Corpo a Corpo." },
-    "flags.midi-qol.optional.NAME.attack.other": { "name": "Bônus Opcional Ataque (Outro)", "description": "" },
-    "flags.midi-qol.optional.NAME.attack.rsak": { "name": "Bônus Opcional Ataque (Mágico à Distância)", "description": "Bônus adicionado após jogada de Ataque Mágico à Distância." },
-    "flags.midi-qol.optional.NAME.attack.rwak": { "name": "Bônus Opcional Ataque (Armado à Distância)", "description": "Bônus adicionado após jogada de Ataque Armado à Distância." },
-    "flags.midi-qol.optional.NAME.attack.save": { "name": "Bônus Opcional Ataque (Salvaguarda)", "description": "" },
-    "flags.midi-qol.optional.NAME.attack.util": { "name": "Bônus Opcional Ataque (Utilidade)", "description": "" },
-    "flags.midi-qol.optional.NAME.check.all": { "name": "Bônus Opcional Teste (Todos)", "description": "Bônus adicionado após jogada de qualquer teste." },
-    "flags.midi-qol.optional.NAME.check.cha": { "name": "Bônus Opcional Teste (Carisma)", "description": "Bônus adicionado após jogada de teste de Carisma." },
-    "flags.midi-qol.optional.NAME.check.con": { "name": "Bônus Opcional Teste (Constituição)", "description": "Bônus adicionado após jogada de teste de Constituição." },
-    "flags.midi-qol.optional.NAME.check.dex": { "name": "Bônus Opcional Teste (Destreza)", "description": "Bônus adicionado após jogada de teste de Destreza." },
-    "flags.midi-qol.optional.NAME.check.fail.all": { "name": "Bônus Opcional Falha Teste (Todos)", "description": "Bônus adicionado após jogada falha de qualquer teste." },
-    "flags.midi-qol.optional.NAME.check.fail.cha": { "name": "Bônus Opcional Falha Teste (Carisma)", "description": "Bônus adicionado após jogada falha de teste de Carisma." },
-    "flags.midi-qol.optional.NAME.check.fail.con": { "name": "Bônus Opcional Falha Teste (Constituição)", "description": "Bônus adicionado após jogada falha de teste de Constituição." },
-    "flags.midi-qol.optional.NAME.check.fail.dex": { "name": "Bônus Opcional Falha Teste (Destreza)", "description": "Bônus adicionado após jogada falha de teste de Destreza." },
-    "flags.midi-qol.optional.NAME.check.fail.int": { "name": "Bônus Opcional Falha Teste (Inteligência)", "description": "Bônus adicionado após jogada falha de teste de Inteligência." },
-    "flags.midi-qol.optional.NAME.check.fail.str": { "name": "Bônus Opcional Falha Teste (Força)", "description": "Bônus adicionado após jogada falha de teste de Força." },
-    "flags.midi-qol.optional.NAME.check.fail.wis": { "name": "Bônus Opcional Falha Teste (Sabedoria)", "description": "Bônus adicionado após jogada falha de teste de Sabedoria." },
-    "flags.midi-qol.optional.NAME.check.int": { "name": "Bônus Opcional Teste (Inteligência)", "description": "Bônus adicionado após jogada de teste de Inteligência." },
-    "flags.midi-qol.optional.NAME.check.str": { "name": "Bônus Opcional Teste (Força)", "description": "Bônus adicionado após jogada de teste de Força." },
-    "flags.midi-qol.optional.NAME.check.wis": { "name": "Bônus Opcional Teste (Sabedoria)", "description": "Bônus adicionado após jogada de teste de Sabedoria." },
-    "flags.midi-qol.optional.NAME.count": { "name": "Bônus Opcional (Uso)", "description": "Definição do uso para o Bônus Opcional. Consultar Midi Wiki." },
-    "flags.midi-qol.optional.NAME.countAlt": { "name": "Bônus Opcional (Uso Alternativo)", "description": "Definição do uso alternativo para o Bônus Opcional. Consultar Midi Wiki." },
-    "flags.midi-qol.optional.NAME.criticalDamage": { "name": "Bônus Opcional (Dano Crítico)", "description": "" },
-    "flags.midi-qol.optional.NAME.damage.all": { "name": "Bônus Opcional Dano (Todos)", "description": "Bônus adicionado após jogada de qualquer dano." },
-    "flags.midi-qol.optional.NAME.damage.heal": { "name": "Bônus Opcional Dano (Cura)", "description": "Bônus adicionado após jogada de Cura." },
-    "flags.midi-qol.optional.NAME.damage.msak": { "name": "Bônus Opcional Dano (Ataque Mágico Corpo a Corpo)", "description": "Bônus adicionado após jogada de dano de Ataques Mágicos Corpo a Corpo." },
-    "flags.midi-qol.optional.NAME.damage.mwak": { "name": "Bônus Opcional Dano (Ataque Armado Corpo a Corpo)", "description": "Bônus adicionado após jogada de dano de Ataques Armados Corpo a Corpo." },
-    "flags.midi-qol.optional.NAME.damage.other": { "name": "Bônus Opcional Dano (Outro)", "description": "" },
-    "flags.midi-qol.optional.NAME.damage.rsak": { "name": "Bônus Opcional Dano (Ataque Mágico à Distância)", "description": "Bônus adicionado após jogada de dano de Ataques Mágicos à Distância." },
-    "flags.midi-qol.optional.NAME.damage.rwak": { "name": "Bônus Opcional Dano (Ataque Armado à Distância)", "description": "Bônus adicionado após jogada de dano de Ataques Armados à Distância." },
-    "flags.midi-qol.optional.NAME.damage.save": { "name": "Bônus Opcional Dano (Salvaguarda)", "description": "Bônus adicionado após jogada de dano de Salvaguardas." },
-    "flags.midi-qol.optional.NAME.damage.util": { "name": "Bônus Opcional Dano (Utilidade)", "description": "" },
-    "flags.midi-qol.optional.NAME.force": { "name": "Bônus Opcional (Forçar)", "description": "Condição de ativação para o Bônus Opcional, porém não avisa ao jogador, apenas aplica diretamente." },
-    "flags.midi-qol.optional.NAME.label": { "name": "Bônus Opcional Nome", "description": "Nome do cartão do Bônus Opcional que irá aparecer para o jogador." },
-    "flags.midi-qol.optional.NAME.save.all": { "name": "Bônus Opcional Salvaguarda (Todos)", "description": "Bônus adicionado após jogada de qualquer salvaguarda." },
-    "flags.midi-qol.optional.NAME.save.cha": { "name": "Bônus Opcional Salvaguarda (Carisma)", "description": "Bônus adicionado após jogada de salvaguarda de Carisma." },
-    "flags.midi-qol.optional.NAME.save.con": { "name": "Bônus Opcional Salvaguarda (Constituição)", "description": "Bônus adicionado após jogada de salvaguarda de Constituição." },
-    "flags.midi-qol.optional.NAME.save.dex": { "name": "Bônus Opcional Salvaguarda (Destreza)", "description": "Bônus adicionado após jogada de salvaguarda de Destreza." },
-    "flags.midi-qol.optional.NAME.save.fail.all": { "name": "Bônus Opcional Falha Salvaguarda (Todos)", "description": "Bônus adicionado após jogada falha de qualquer salvaguarda." },
-    "flags.midi-qol.optional.NAME.save.fail.cha": { "name": "Bônus Opcional Falha Salvaguarda (Carisma)", "description": "Bônus adicionado após jogada falha de salvaguarda de Carisma." },
-    "flags.midi-qol.optional.NAME.save.fail.con": { "name": "Bônus Opcional Falha Salvaguarda (Constituição)", "description": "Bônus adicionado após jogada falha de salvaguarda de Constituição." },
-    "flags.midi-qol.optional.NAME.save.fail.dex": { "name": "Bônus Opcional Falha Salvaguarda (Destreza)", "description": "Bônus adicionado após jogada falha de salvaguarda de Destreza." },
-    "flags.midi-qol.optional.NAME.save.fail.int": { "name": "Bônus Opcional Falha Salvaguarda (Inteligência)", "description": "Bônus adicionado após jogada falha de salvaguarda de Inteligência." },
-    "flags.midi-qol.optional.NAME.save.fail.str": { "name": "Bônus Opcional Falha Salvaguarda (Força)", "description": "Bônus adicionado após jogada falha de salvaguarda de Força." },
-    "flags.midi-qol.optional.NAME.save.fail.wis": { "name": "Bônus Opcional Falha Salvaguarda (Sabedoria)", "description": "Bônus adicionado após jogada falha de salvaguarda de Sabedoria." },
-    "flags.midi-qol.optional.NAME.save.int": { "name": "Bônus Opcional Salvaguarda (Inteligência)", "description": "Bônus adicionado após jogada de salvaguarda de Inteligência." },
-    "flags.midi-qol.optional.NAME.save.str": { "name": "Bônus Opcional Salvaguarda (Força)", "description": "Bônus adicionado após jogada de salvaguarda de Força." },
-    "flags.midi-qol.optional.NAME.save.wis": { "name": "Bônus Opcional Salvaguarda (Sabedoria)", "description": "Bônus adicionado após jogada de salvaguarda de Sabedoria." },
-    "flags.midi-qol.optional.NAME.skill.acr": { "name": "Bônus Opcional Perícia (Acrobacia)", "description": "Bônus adicionado após jogada de teste de Acrobacia." },
-    "flags.midi-qol.optional.NAME.skill.all": { "name": "Bônus Opcional Perícia (Todas)", "description": "Bônus adicionado após jogada de teste de qualquer Perícia." },
-    "flags.midi-qol.optional.NAME.skill.ani": { "name": "Bônus Opcional Perícia (Lidar com Animais)", "description": "Bônus adicionado após jogada de teste de Lidar com Animais." },
-    "flags.midi-qol.optional.NAME.skill.arc": { "name": "Bônus Opcional Perícia (Arcanismo)", "description": "Bônus adicionado após jogada de teste de Arcanismo." },
-    "flags.midi-qol.optional.NAME.skill.ath": { "name": "Bônus Opcional Perícia (Atletismo)", "description": "Bônus adicionado após jogada de teste de Atletismo." },
-    "flags.midi-qol.optional.NAME.skill.fail.all": { "name": "Bônus Opcional Falha Perícia (Todas)", "description": "Bônus adicionado após jogada falha de teste de qualquer Perícia." },
-    "flags.midi-qol.optional.NAME.skill.his": { "name": "Bônus Opcional Perícia (História)", "description": "Bônus adicionado após jogada de teste de História." },
-    "flags.midi-qol.optional.NAME.skill.ins": { "name": "Bônus Opcional Perícia (Intuição)", "description": "Bônus adicionado após jogada de teste de Intuição." },
-    "flags.midi-qol.optional.NAME.skill.inv": { "name": "Bônus Opcional Perícia (Investigação)", "description": "Bônus adicionado após jogada de teste de Investigação." },
-    "flags.midi-qol.optional.NAME.skill.itm": { "name": "Bônus Opcional Perícia (Intimidação)", "description": "Bônus adicionado após jogada de teste de Intimidação." },
-    "flags.midi-qol.optional.NAME.skill.med": { "name": "Bônus Opcional Perícia (Medicina)", "description": "Bônus adicionado após jogada de teste de Medicina." },
-    "flags.midi-qol.optional.NAME.skill.nat": { "name": "Bônus Opcional Perícia (Natureza)", "description": "Bônus adicionado após jogada de teste de Natureza." },
-    "flags.midi-qol.optional.NAME.skill.per": { "name": "Bônus Opcional Perícia (Persuasão)", "description": "Bônus adicionado após jogada de teste de Persuasão." },
-    "flags.midi-qol.optional.NAME.skill.prc": { "name": "Bônus Opcional Perícia (Percepção)", "description": "Bônus adicionado após jogada de teste de Percepção." },
-    "flags.midi-qol.optional.NAME.skill.prf": { "name": "Bônus Opcional Perícia (Performance)", "description": "Bônus adicionado após jogada de teste de Performance." },
-    "flags.midi-qol.optional.NAME.skill.rel": { "name": "Bônus Opcional Perícia (Religião)", "description": "Bônus adicionado após jogada de teste de Religião." },
-    "flags.midi-qol.optional.NAME.skill.slt": { "name": "Bônus Opcional Perícia (Prestidigitação)", "description": "Bônus adicionado após jogada de teste de Prestidigitação." },
-    "flags.midi-qol.optional.NAME.skill.ste": { "name": "Bônus Opcional Perícia (Furtividade)", "description": "Bônus adicionado após jogada de teste de Furtividade." },
-    "flags.midi-qol.optional.NAME.skill.sur": { "name": "Bônus Opcional Perícia (Sobrevivência)", "description": "Bônus adicionado após jogada de teste de Sobrevivência." },
-    "flags.midi-qol.potentCantrip": { "name": "Truque Potente", "description": "" },
-    "flags.midi-qol.range.all": { "name": "Alcance (Todos)", "description": "" },
-    "flags.midi-qol.range.heal": { "name": "Alcance (Cura)", "description": "" },
-    "flags.midi-qol.range.msak": { "name": "Alcance (Ataque Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.range.mwak": { "name": "Alcance (Ataque Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.range.other": { "name": "Alcance (Outro)", "description": "" },
-    "flags.midi-qol.range.rsak": { "name": "Alcance (Ataque Mágico à Distância)", "description": "" },
-    "flags.midi-qol.range.rwak": { "name": "Alcance (Ataque Armado à Distância)", "description": "" },
-    "flags.midi-qol.range.save": { "name": "Alcance (Salvaguarda)", "description": "" },
-    "flags.midi-qol.range.util": { "name": "Alcance (Utilidade)", "description": "" },
-    "flags.midi-qol.rangeOverride.attack.all": { "name": "Substituir Alcance (Todos)", "description": "" },
-    "flags.midi-qol.rangeOverride.attack.heal": { "name": "Substituir Alcance (Cura)", "description": "" },
-    "flags.midi-qol.rangeOverride.attack.msak": { "name": "Substituir Alcance (Ataque Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.rangeOverride.attack.mwak": { "name": "Substituir Alcance (Ataque Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.rangeOverride.attack.other": { "name": "Substituir Alcance (Outro)", "description": "" },
-    "flags.midi-qol.rangeOverride.attack.rsak": { "name": "Substituir Alcance (Ataque Mágico à Distância)", "description": "" },
-    "flags.midi-qol.rangeOverride.attack.rwak": { "name": "Substituir Alcance (Ataque Armado à Distância)", "description": "" },
-    "flags.midi-qol.rangeOverride.attack.save": { "name": "Substituir Alcance (Salvaguarda)", "description": "" },
-    "flags.midi-qol.rangeOverride.attack.util": { "name": "Substituir Alcance (Utilidade)", "description": "" },
-    "flags.midi-qol.sculptSpells": { "name": "Esculpir Magias", "description": "Alvos previamente selecionados da salvaguarda de magia são automaticamente bem-sucedidos e recebem o status \"super-saver\"." },
-    "flags.midi-qol.semiSuperSaver.all": { "name": "Semi Super Salvaguarda (Todas)", "description": "Não sofre dano ao ser bem-sucedido em qualquer salvaguarda." },
-    "flags.midi-qol.semiSuperSaver.cha": { "name": "Semi Super Salvaguarda (Carisma)", "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Carisma." },
-    "flags.midi-qol.semiSuperSaver.con": { "name": "Semi Super Salvaguarda (Constituição)", "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Constituição." },
-    "flags.midi-qol.semiSuperSaver.dex": { "name": "Semi Super Salvaguarda (Destreza)", "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Destreza." },
-    "flags.midi-qol.semiSuperSaver.int": { "name": "Semi Super Salvaguarda (Inteligência)", "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Inteligência." },
-    "flags.midi-qol.semiSuperSaver.str": { "name": "Semi Super Salvaguarda (Força)", "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Força." },
-    "flags.midi-qol.semiSuperSaver.wis": { "name": "Semi Super Salvaguarda (Sabedoria)", "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Sabedoria." },
-    "flags.midi-qol.sharpShooter": { "name": "Sharp Shooter", "description": "" },
-    "flags.midi-qol.success.attack.all": { "name": "Sucesso Ataque (Todos)", "description": "" },
-    "flags.midi-qol.success.attack.heal": { "name": "Sucesso Ataque (Cura)", "description": "" },
-    "flags.midi-qol.success.attack.msak": { "name": "Sucesso Ataque (Mágico Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.success.attack.mwak": { "name": "Sucesso Ataque (Armado Corpo a Corpo)", "description": "" },
-    "flags.midi-qol.success.attack.other": { "name": "Sucesso (Outro)", "description": "" },
-    "flags.midi-qol.success.attack.rsak": { "name": "Sucesso Ataque (Mágico à Distância)", "description": "" },
-    "flags.midi-qol.success.attack.rwak": { "name": "Sucesso Ataque (Armado à Distância)", "description": "" },
-    "flags.midi-qol.success.attack.save": { "name": "Sucesso (Salvaguarda)", "description": "" },
-    "flags.midi-qol.success.attack.util": { "name": "Sucesso (Utilidade)", "description": "" },
-    "flags.midi-qol.superSaver.all": { "name": "Super Salvaguarda (Todas)", "description": "Não sofre dano ao ser bem-sucedido em qualquer salvaguarda e sofre apenas metade em caso de falha." },
-    "flags.midi-qol.superSaver.cha": { "name": "Super Salvaguarda (Carisma)", "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Carisma e sofre apenas metade em caso de falha." },
-    "flags.midi-qol.superSaver.con": { "name": "Super Salvaguarda (Constituição)", "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Constituição e sofre apenas metade em caso de falha." },
-    "flags.midi-qol.superSaver.dex": { "name": "Super Salvaguarda (Destreza)", "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Destreza e sofre apenas metade em caso de falha." },
-    "flags.midi-qol.superSaver.int": { "name": "Super Salvaguarda (Inteligência)", "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Inteligência e sofre apenas metade em caso de falha." },
-    "flags.midi-qol.superSaver.str": { "name": "Super Salvaguarda (Força)", "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Força e sofre apenas metade em caso de falha." },
-    "flags.midi-qol.superSaver.wis": { "name": "Super Salvaguarda (Sabedoria)", "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Sabedoria e sofre apenas metade em caso de falha." },
-    "flags.midi-qol.uncanny-dodge": { "name": "Esquiva Sobrenatural", "description": "" }
+    "flags.midi-qol.absorption.acid": {
+      "name": "Absorção Dano (Ácido)",
+      "description": "Converte dano Ácido sofrido em cura" 
+    },
+    "flags.midi-qol.absorption.bludgeoning": {
+      "name": "Absorção Dano (Contundente)",
+      "description": "Converte dano Contundente sofrido em cura" 
+    },
+    "flags.midi-qol.absorption.cold": {
+      "name": "Absorção Dano (Gélido)",
+      "description": "Converte dano Gélido sofrido em cura" 
+    },
+    "flags.midi-qol.absorption.fire": {
+      "name": "Absorção Dano (Ígneo)",
+      "description": "Converte dano Ígneo sofrido em cura" 
+    },
+    "flags.midi-qol.absorption.force": {
+      "name": "Absorção Dano (Energético)",
+      "description": "Converte dano Energético sofrido em cura" 
+    },
+    "flags.midi-qol.absorption.lightning": {
+      "name": "Absorção Dano (Elétrico)",
+      "description": "Converte dano Elétrico sofrido em cura" 
+    },
+    "flags.midi-qol.absorption.midi-none": {
+      "name": "Absorção Dano (Sem Tipo)",
+      "description": "" 
+    },
+    "flags.midi-qol.absorption.necrotic": {
+      "name": "Absorção Dano (Necrótico)",
+      "description": "Converte dano Necrótico sofrido em cura" 
+    },
+    "flags.midi-qol.absorption.none": {
+      "name": "Absorção Dano (Sem Dano)",
+      "description": "" 
+    },
+    "flags.midi-qol.absorption.piercing": {
+      "name": "Absorção Dano (Perfurante)",
+      "description": "Converte dano Perfurante sofrido em cura" 
+    },
+    "flags.midi-qol.absorption.poison": {
+      "name": "Absorção Dano (Venenoso)",
+      "description": "Converte dano Venenoso sofrido em cura" 
+    },
+    "flags.midi-qol.absorption.psychic": {
+      "name": "Absorção Dano (Psíquico)",
+      "description": "Converte dano Psíquico sofrido em cura" 
+    },
+    "flags.midi-qol.absorption.radiant": {
+      "name": "Absorção Dano (Radiante)",
+      "description": "Converte dano Radiante sofrido em cura" 
+    },
+    "flags.midi-qol.absorption.slashing": {
+      "name": "Absorção Dano (Cortante)",
+      "description": "Converte dano Cortante sofrido em cura" 
+    },
+    "flags.midi-qol.absorption.thunder": {
+      "name": "Absorção Dano (Trovejante)",
+      "description": "Converte dano Trovejante sofrido em cura" 
+    },
+    "flags.midi-qol.advantage.ability.all": {
+      "name": "Vantagem Atributo (Todos)",
+      "description": "Vantagem em todas as salvaguardas, testes de atributo e perícias" 
+    },
+    "flags.midi-qol.advantage.ability.check.all": {
+      "name": "Vantagem Teste (Todos Atributos)",
+      "description": "Vantagem em todos os testes de atributo e perícias" 
+    },
+    "flags.midi-qol.advantage.ability.check.cha": {
+      "name": "Vantagem Teste (Carisma)",
+      "description": "Vantagem em testes de Carisma" 
+    },
+    "flags.midi-qol.advantage.ability.check.con": {
+      "name": "Vantagem Teste (Constituição)",
+      "description": "Vantagem em testes de Constituição" 
+    },
+    "flags.midi-qol.advantage.ability.check.dex": {
+      "name": "Vantagem Teste (Destreza)",
+      "description": "Vantagem em testes de Destreza" 
+    },
+    "flags.midi-qol.advantage.ability.check.int": {
+      "name": "Vantagem Teste (Inteligência)",
+      "description": "Vantagem em testes de Inteligência" 
+    },
+    "flags.midi-qol.advantage.ability.check.str": {
+      "name": "Vantagem Teste (Força)",
+      "description": "Vantagem em testes de Força" 
+    },
+    "flags.midi-qol.advantage.ability.check.wis": {
+      "name": "Vantagem Teste (Sabedoria)",
+      "description": "Vantagem em testes de Sabedoria" 
+    },
+    "flags.midi-qol.advantage.ability.save.all": {
+      "name": "Vantagem Salvaguarda (Todas)",
+      "description": "Vantagem em todas as salvaguardas" 
+    },
+    "flags.midi-qol.advantage.ability.save.cha": {
+      "name": "Vantagem Salvaguarda (Carisma)",
+      "description": "Vantagem em salvaguardas de Carisma" 
+    },
+    "flags.midi-qol.advantage.ability.save.con": {
+      "name": "Vantagem Salvaguarda (Constituição)",
+      "description": "Vantagem em salvaguardas de Constituição" 
+    },
+    "flags.midi-qol.advantage.ability.save.dex": {
+      "name": "Vantagem Salvaguarda (Destreza)",
+      "description": "Vantagem em salvaguardas de Destreza" 
+    },
+    "flags.midi-qol.advantage.ability.save.int": {
+      "name": "Vantagem Salvaguarda (Inteligência)",
+      "description": "Vantagem em salvaguardas de Inteligência" 
+    },
+    "flags.midi-qol.advantage.ability.save.str": {
+      "name": "Vantagem Salvaguarda (Força)",
+      "description": "Vantagem em salvaguardas de Força" 
+    },
+    "flags.midi-qol.advantage.ability.save.wis": {
+      "name": "Vantagem Salvaguarda (Sabedoria)",
+      "description": "Vantagem em salvaguardas de Sabedoria" 
+    },
+    "flags.midi-qol.advantage.all": {
+      "name": "Vantagem Todos Dados",
+      "description": "Vantagem em todas as jogadas de d20" 
+    },
+    "flags.midi-qol.advantage.attack.all": {
+      "name": "Vantagem Ataque (Todos)",
+      "description": "Vantagem em todos os tipos de ataque (corpo a corpo, à distância e mágicos)" 
+    },
+    "flags.midi-qol.advantage.attack.cha": {
+      "name": "Vantagem Ataque (Carisma)",
+      "description": "Vantagem em ataques usando Carisma" 
+    },
+    "flags.midi-qol.advantage.attack.con": {
+      "name": "Vantagem Ataque (Constituição)",
+      "description": "Vantagem em ataques usando Constituição" 
+    },
+    "flags.midi-qol.advantage.attack.dex": {
+      "name": "Vantagem Ataque (Destreza)",
+      "description": "Vantagem em ataques usando Destreza" 
+    },
+    "flags.midi-qol.advantage.attack.heal": {
+      "name": "Vantagem Ataque (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.advantage.attack.int": {
+      "name": "Vantagem Ataque (Inteligência)",
+      "description": "Vantagem em ataques usando Inteligência" 
+    },
+    "flags.midi-qol.advantage.attack.msak": {
+      "name": "Vantagem Ataque (Mágico Corpo a Corpo)",
+      "description": "Vantagem em ataques mágicos corpo a corpo" 
+    },
+    "flags.midi-qol.advantage.attack.mwak": {
+      "name": "Vantagem Ataque (Armado Corpo a Corpo)",
+      "description": "Vantagem em ataques armados corpo a corpo" 
+    },
+    "flags.midi-qol.advantage.attack.other": {
+      "name": "Vantagem Ataque (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.advantage.attack.rsak": {
+      "name": "Vantagem Ataque (Mágico à Distância)",
+      "description": "Vantagem em ataques mágicos à distância" 
+    },
+    "flags.midi-qol.advantage.attack.rwak": {
+      "name": "Vantagem Ataque (Armado à Distância)",
+      "description": "Vantagem em ataques armados à distância" 
+    },
+    "flags.midi-qol.advantage.attack.save": {
+      "name": "Vantagem Ataque (Salvaguarda)",
+      "description": "Vantagem em todos os ataques cujo tipo de ação seja Salvaguarda" 
+    },
+    "flags.midi-qol.advantage.attack.str": {
+      "name": "Vantagem Ataque (Força)",
+      "description": "Vantagem em ataques usando Força" 
+    },
+    "flags.midi-qol.advantage.attack.util": {
+      "name": "Vantagem Ataque (Utilidade)",
+      "description": "Vantagem em todos os ataques cujo tipo de ação seja Utilidade" 
+    },
+    "flags.midi-qol.advantage.attack.wis": {
+      "name": "Vantagem Ataque (Sabedoria)",
+      "description": "Vantagem em ataques usando Sabedoria" 
+    },
+    "flags.midi-qol.fail.disadvantage.heavy": {
+      "name": "Falha Desvantagem Pesado",
+      "description": "Desvantagem em testes de Furtividade por usar Armadura Pesada" 
+    },
+    "flags.midi-qol.": {
+      "name": "Flags Midi QOL",
+      "description": "" 
+    },
+    "flags.midi-qol.DR.msak": {
+      "name": "(Obsoleto) Redução de Dano (Ataque Mágico Corpo a Corpo)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.mwak": {
+      "name": "(Obsoleto) Redução de Dano (Ataque Armado Corpo a Corpo)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.non-adamant": {
+      "name": "(Obsoleto) Redução de Dano (Não-Adamantino)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.non-magical": {
+      "name": "(Obsoleto) Redução de Dano (Não-Mágico)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.non-magical-physical": {
+      "name": "(Obsoleto) Redução de Dano (Físico Não-Mágico)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.non-physical": {
+      "name": "(Obsoleto) Redução de Dano (Não-Físicos)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.non-silver": {
+      "name": "(Obsoleto) Redução de Dano (Não-Prata)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.other": {
+      "name": "(Obsoleto) Redução de Dano (Outro)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.rsak": {
+      "name": "(Obsoleto) Redução de Dano (Ataque Mágico à Distância)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.rwak": {
+      "name": "(Obsoleto) Redução de Dano (Ataque Armado à Distância)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.save": {
+      "name": "(Obsoleto) Redução de Dano (Salvaguarda)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.util": {
+      "name": "(Obsoleto) Redução de Dano (Utilidade)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.acid": {
+      "name": "(Obsoleto) Redução de Dano (Ácido)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.all": {
+      "name": "(Obsoleto) Redução de Dano (Todos)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.bludgeoning": {
+      "name": "(Obsoleto) Redução de Dano (Contundente)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.cold": {
+      "name": "(Obsoleto) Redução de Dano (Gélido)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.final": {
+      "name": "(Obsoleto) Redução de Dano Final",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.fire": {
+      "name": "(Obsoleto) Redução de Dano (Ígneo)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.force": {
+      "name": "(Obsoleto) Redução de Dano (Energético)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.healing": {
+      "name": "(Obsoleto) Redução de Dano (Cura)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.lightning": {
+      "name": "(Obsoleto) Redução de Dano (Elétrico)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.midi-none": {
+      "name": "(Obsoleto) Redução de Dano (Sem Tipo)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.necrotic": {
+      "name": "(Obsoleto) Redução de Dano (Necrótico)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.none": {
+      "name": "(Obsoleto) Redução de Dano (Sem Dano)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.piercing": {
+      "name": "(Obsoleto) Redução de Dano (Perfurante)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.poison": {
+      "name": "(Obsoleto) Redução de Dano (Venenoso)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.psychic": {
+      "name": "(Obsoleto) Redução de Dano (Psíquico)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.radiant": {
+      "name": "(Obsoleto) Redução de Dano (Radiante)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.slashing": {
+      "name": "(Obsoleto) Redução de Dano (Cortante)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.temphp": {
+      "name": "(Obsoleto) Redução de Dano (Cura Temporária)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.DR.thunder": {
+      "name": "(Obsoleto) Redução de Dano (Trovejante)",
+      "description": "Ao invés de usar este, use os campos de system.traits.dm com valores negativos." 
+    },
+    "flags.midi-qol.OverTime": {
+      "name": "Efeitos Over Time",
+      "description": "" 
+    },
+    "flags.midi-qol.advantage.concentration": {
+      "name": "Vantagem (Concentração)",
+      "description": "Vantagem em salvaguardas de Concentração" 
+    },
+    "flags.midi-qol.advantage.deathSave": {
+      "name": "Vantagem (Salvaguarda Contra Morte)",
+      "description": "Vantagem em Salvaguardas Contra Morte" 
+    },
+    "flags.midi-qol.advantage.skill.acr": {
+      "name": "Vantagem Perícia (Acrobacia)",
+      "description": "Vantagem em testes de Acrobacia" 
+    },
+    "flags.midi-qol.advantage.skill.all": {
+      "name": "Vantagem Perícia (Todas)",
+      "description": "Vantagem em todos os testes de perícia" 
+    },
+    "flags.midi-qol.advantage.skill.ani": {
+      "name": "Vantagem Perícia (Lidar com Animais)",
+      "description": "Vantagem em testes de Lidar com Animais" 
+    },
+    "flags.midi-qol.advantage.skill.arc": {
+      "name": "Vantagem Perícia (Arcanismo)",
+      "description": "Vantagem em testes de Arcanismo" 
+    },
+    "flags.midi-qol.advantage.skill.ath": {
+      "name": "Vantagem Perícia (Atletismo)",
+      "description": "Vantagem em testes de Atletismo" 
+    },
+    "flags.midi-qol.advantage.skill.dec": {
+      "name": "Vantagem Perícia (Enganação)",
+      "description": "Vantagem em testes de Enganação" 
+    },
+    "flags.midi-qol.advantage.skill.his": {
+      "name": "Vantagem Perícia (História)",
+      "description": "Vantagem em testes de História" 
+    },
+    "flags.midi-qol.advantage.skill.ins": {
+      "name": "Vantagem Perícia (Intuição)",
+      "description": "Vantagem em testes de Intuição" 
+    },
+    "flags.midi-qol.advantage.skill.inv": {
+      "name": "Vantagem Perícia (Investigação)",
+      "description": "Vantagem em testes de Investigação" 
+    },
+    "flags.midi-qol.advantage.skill.itm": {
+      "name": "Vantagem Perícia (Intimidação)",
+      "description": "Vantagem em testes de Intimidação" 
+    },
+    "flags.midi-qol.advantage.skill.med": {
+      "name": "Vantagem Perícia (Medicina)",
+      "description": "Vantagem em testes de Medicina" 
+    },
+    "flags.midi-qol.advantage.skill.nat": {
+      "name": "Vantagem Perícia (Natureza)",
+      "description": "Vantagem em testes de Natureza" 
+    },
+    "flags.midi-qol.advantage.skill.per": {
+      "name": "Vantagem Perícia (Persuasão)",
+      "description": "Vantagem em testes de Persuasão" 
+    },
+    "flags.midi-qol.advantage.skill.prc": {
+      "name": "Vantagem Perícia (Percepção)",
+      "description": "Vantagem em testes de Percepção" 
+    },
+    "flags.midi-qol.advantage.skill.prf": {
+      "name": "Vantagem Perícia (Performance)",
+      "description": "Vantagem em testes de Performance" 
+    },
+    "flags.midi-qol.advantage.skill.rel": {
+      "name": "Vantagem Perícia (Religião)",
+      "description": "Vantagem em testes de Religião" 
+    },
+    "flags.midi-qol.advantage.skill.slt": {
+      "name": "Vantagem Perícia (Prestidigitação)",
+      "description": "Vantagem em testes de Prestidigitação" 
+    },
+    "flags.midi-qol.advantage.skill.ste": {
+      "name": "Vantagem Perícia (Furtividade)",
+      "description": "Vantagem em testes de Furtividade" 
+    },
+    "flags.midi-qol.advantage.skill.sur": {
+      "name": "Vantagem Perícia (Sobrevivência)",
+      "description": "Vantagem em testes de Sobrevivência" 
+    },
+    "flags.midi-qol.carefulSpells": {
+      "name": "Magia Cuidadosa",
+      "description": "Alvos previamente selecionados da salvaguarda de magia são automaticamente bem-sucedidos." 
+    },
+    "flags.midi-qol.concentrationSaveBonus": {
+      "name": "Bônus Salvaguarda Concentração",
+      "description": "" 
+    },
+    "flags.midi-qol.critical.all": {
+      "name": "Acerto Crítico (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.critical.heal": {
+      "name": "Acerto Crítico (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.critical.msak": {
+      "name": "Acerto Crítico (Ataque Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.critical.mwak": {
+      "name": "Acerto Crítico (Ataque Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.critical.other": {
+      "name": "Acerto Crítico (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.critical.rsak": {
+      "name": "Acerto Crítico (Ataque Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.critical.rwak": {
+      "name": "Acerto Crítico (Ataque Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.critical.save": {
+      "name": "Acerto Crítico (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.critical.util": {
+      "name": "Acerto Crítico (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.damage.reroll-kh": {
+      "name": "Rerolar Dano (Manter Maior)",
+      "description": "" 
+    },
+    "flags.midi-qol.damage.reroll-kl": {
+      "name": "Rerolar Dano (Manter Menor)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.all": {
+      "name": "Desvantagem Atributo (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.check.all": {
+      "name": "Desvantagem Teste (Todos Atributos)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.check.cha": {
+      "name": "Desvantagem Teste (Carisma)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.check.con": {
+      "name": "Desvantagem Teste (Constituição)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.check.dex": {
+      "name": "Desvantagem Teste (Destreza)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.check.int": {
+      "name": "Desvantagem Teste (Inteligência)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.check.str": {
+      "name": "Desvantagem Teste (Força)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.check.wis": {
+      "name": "Desvantagem Teste (Sabedoria)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.save.all": {
+      "name": "Desvantagem Salvaguarda (Todas)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.save.cha": {
+      "name": "Desvantagem Salvaguarda (Carisma)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.save.con": {
+      "name": "Desvantagem Salvaguarda (Constituição)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.save.dex": {
+      "name": "Desvantagem Salvaguarda (Destreza)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.save.int": {
+      "name": "Desvantagem Salvaguarda (Inteligência)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.save.str": {
+      "name": "Desvantagem Salvaguarda (Força)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.ability.save.wis": {
+      "name": "Desvantagem Salvaguarda (Sabedoria)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.all": {
+      "name": "Desvantagem Todos Dados",
+      "description": "Desvantagem em todas as rolagens de d20" 
+    },
+    "flags.midi-qol.disadvantage.attack.all": {
+      "name": "Desvantagem Ataque (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.attack.cha": {
+      "name": "Desvantagem Ataque (Carisma)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.attack.con": {
+      "name": "Desvantagem Ataque (Constituição)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.attack.dex": {
+      "name": "Desvantagem Ataque (Destreza)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.attack.heal": {
+      "name": "Desvantagem (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.attack.int": {
+      "name": "Desvantagem Ataque (Inteligência)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.attack.msak": {
+      "name": "Desvantagem Ataque (Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.attack.mwak": {
+      "name": "Desvantagem Ataque (Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.attack.other": {
+      "name": "Desvantagem Ataque (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.attack.rsak": {
+      "name": "Desvantagem Ataque (Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.attack.rwak": {
+      "name": "Desvantagem Ataque (Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.attack.save": {
+      "name": "Desvantagem (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.attack.util": {
+      "name": "Desvantagem (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.attack.wis": {
+      "name": "Desvantagem Ataque (Sabedoria)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.concentration": {
+      "name": "Desvantagem (Concentração)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.deathSave": {
+      "name": "Desvantagem (Salvaguarda Contra Morte)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.acr": {
+      "name": "Desvantagem Perícia (Acrobacia)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.all": {
+      "name": "Desvantagem Perícia (Todas)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.ani": {
+      "name": "Desvantagem Perícia (Lidar com Animais)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.arc": {
+      "name": "Desvantagem Perícia (Arcanismo)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.ath": {
+      "name": "Desvantagem Perícia (Atletismo)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.dec": {
+      "name": "Desvantagem Perícia (Enganação)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.his": {
+      "name": "Desvantagem Perícia (História)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.ins": {
+      "name": "Desvantagem Perícia (Intuição)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.inv": {
+      "name": "Desvantagem Perícia (Investigação)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.itm": {
+      "name": "Desvantagem Perícia (Intimidação)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.med": {
+      "name": "Desvantagem Perícia (Medicina)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.nat": {
+      "name": "Desvantagem Perícia (Natureza)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.per": {
+      "name": "Desvantagem Perícia (Persuasão)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.prc": {
+      "name": "Desvantagem Perícia (Percepção)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.prf": {
+      "name": "Desvantagem Perícia (Performance)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.rel": {
+      "name": "Desvantagem Perícia (Religião)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.slt": {
+      "name": "Desvantagem Perícia (Prestidigitação)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.ste": {
+      "name": "Desvantagem Perícia (Furtividade)",
+      "description": "" 
+    },
+    "flags.midi-qol.disadvantage.skill.sur": {
+      "name": "Desvantagem Perícia (Sobrevivência)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.all": {
+      "name": "Falha Atributo (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.check.all": {
+      "name": "Falha Teste (Todos Atributos)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.check.cha": {
+      "name": "Falha Teste (Carisma)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.check.con": {
+      "name": "Falha Teste (Constituição)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.check.dex": {
+      "name": "Falha Teste (Destreza)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.check.int": {
+      "name": "Falha Teste (Inteligência)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.check.str": {
+      "name": "Falha Teste (Força)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.check.wis": {
+      "name": "Falha Teste (Sabedoria)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.save.all": {
+      "name": "Falha Salvaguarda (Todas)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.save.cha": {
+      "name": "Falha Salvaguarda (Carisma)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.save.con": {
+      "name": "Falha Salvaguarda (Constituição)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.save.dex": {
+      "name": "Falha Salvaguarda (Destreza)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.save.int": {
+      "name": "Falha Salvaguarda (Inteligência)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.save.str": {
+      "name": "Falha Salvaguarda (Força)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.ability.save.wis": {
+      "name": "Falha Salvaguarda (Sabedoria)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.all": {
+      "name": "Falha (Todas Ações)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.attack.all": {
+      "name": "Falha Ataque (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.attack.heal": {
+      "name": "Falha (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.attack.msak": {
+      "name": "Falha Ataque (Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.attack.mwak": {
+      "name": "Falha Ataque (Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.attack.other": {
+      "name": "Falha Ataque (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.attack.rsak": {
+      "name": "Falha Ataque (Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.attack.rwak": {
+      "name": "Falha Ataque (Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.attack.save": {
+      "name": "Falha (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.attack.util": {
+      "name": "Falha (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.critical.all": {
+      "name": "Falha Crítica (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.critical.heal": {
+      "name": "Falha Crítica (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.critical.msak": {
+      "name": "Falha Crítica (Ataque Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.critical.mwak": {
+      "name": "Falha Crítica (Ataque Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.critical.other": {
+      "name": "Falha Crítica (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.critical.rsak": {
+      "name": "Falha Crítica (Ataque Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.critical.rwak": {
+      "name": "Falha Crítica (Ataque Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.critical.save": {
+      "name": "Falha Crítica (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.critical.util": {
+      "name": "Falha Crítica (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.acr": {
+      "name": "Falha Perícia (Acrobacia)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.all": {
+      "name": "Falha Perícia (Todas)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.ani": {
+      "name": "Falha Perícia (Lidar com Animais)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.arc": {
+      "name": "Falha Perícia (Arcanismo)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.ath": {
+      "name": "Falha Perícia (Atletismo)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.dec": {
+      "name": "Falha Perícia (Enganação)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.his": {
+      "name": "Falha Perícia (História)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.ins": {
+      "name": "Falha Perícia (Intuição)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.inv": {
+      "name": "Falha Perícia (Investigação)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.itm": {
+      "name": "Falha Perícia (Intimidação)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.med": {
+      "name": "Falha Perícia (Medicina)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.nat": {
+      "name": "Falha Perícia (Natureza)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.per": {
+      "name": "Falha Perícia (Persuação)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.prc": {
+      "name": "Falha Perícia (Percepção)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.prf": {
+      "name": "Falha Perícia (Performance)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.rel": {
+      "name": "Falha Perícia (Religião)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.slt": {
+      "name": "Falha Perícia (Prestidigitação)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.ste": {
+      "name": "Falha Perícia (Furtividade)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.skill.sur": {
+      "name": "Falha Perícia (Sobrevivência)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.spell.material": {
+      "name": "Falha (Componente Material)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.spell.somatic": {
+      "name": "Falha (Componente Somático)",
+      "description": "" 
+    },
+    "flags.midi-qol.fail.spell.vocal": {
+      "name": "Falha (Componente Vocal)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.attack.all": {
+      "name": "Conceder Vantagem Ataque (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.attack.heal": {
+      "name": "Conceder Vantagem (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.attack.msak": {
+      "name": "Conceder Vantagem Ataque (Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.attack.mwak": {
+      "name": "Conceder Vantagem Ataque (Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.attack.other": {
+      "name": "Conceder Vantagem Ataque (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.attack.rsak": {
+      "name": "Conceder Vantagem Ataque (Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.attack.rwak": {
+      "name": "Conceder Vantagem Ataque (Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.attack.save": {
+      "name": "Conceder Vantagem (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.attack.util": {
+      "name": "Conceder Vantagem (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.check.all": {
+      "name": "Conceder Vantagem Teste (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.check.cha": {
+      "name": "Conceder Vantagem Teste (Carisma)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.check.con": {
+      "name": "Conceder Vantagem Teste (Constituição)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.check.dex": {
+      "name": "Conceder Vantagem Teste (Destreza)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.check.int": {
+      "name": "Conceder Vantagem Teste (Inteligência)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.check.str": {
+      "name": "Conceder Vantagem Teste (Força)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.check.wis": {
+      "name": "Conceder Vantagem Teste (Sabedoria)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.save.all": {
+      "name": "Conceder Vantagem Salvaguarda (Todas)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.save.cha": {
+      "name": "Conceder Vantagem Salvaguarda (Carisma)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.save.con": {
+      "name": "Conceder Vantagem Salvaguarda (Constituição)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.save.dex": {
+      "name": "Conceder Vantagem Salvaguarda (Destreza)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.save.int": {
+      "name": "Conceder Vantagem Salvaguarda (Inteligência)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.save.str": {
+      "name": "Conceder Vantagem Salvaguarda (Força)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.save.wis": {
+      "name": "Conceder Vantagem Salvaguarda (Sabedoria)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.skill.all": {
+      "name": "Conceder Vantagem Perícia (Todas)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.skill.cha": {
+      "name": "Conceder Vantagem Perícia (Carisma)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.skill.con": {
+      "name": "Conceder Vantagem Perícia (Constituição)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.skill.dex": {
+      "name": "Conceder Vantagem Perícia (Destreza)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.skill.int": {
+      "name": "Conceder Vantagem Perícia (Inteligência)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.skill.str": {
+      "name": "Conceder Vantagem Perícia (Força)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.advantage.skill.wis": {
+      "name": "Conceder Vantagem Perícia (Sabedoria)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.bonus.all": {
+      "name": "Conceder Bônus Ataque (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.bonus.heal": {
+      "name": "Conceder Bônus Ataque (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.bonus.msak": {
+      "name": "Conceder Bônus Ataque (Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.bonus.mwak": {
+      "name": "Conceder Bônus Ataque (Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.bonus.other": {
+      "name": "Conceder Bônus Ataque (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.bonus.rsak": {
+      "name": "Conceder Bônus Ataque (Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.bonus.rwak": {
+      "name": "Conceder Bônus Ataque (Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.bonus.save": {
+      "name": "Conceder Bônus Ataque (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.bonus.util": {
+      "name": "Conceder Bônus Ataque (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.fail.all": {
+      "name": "Conceder Falha Ataque (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.success.all": {
+      "name": "Conceder Sucesso Ataque (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.success.heal": {
+      "name": "Conceder Sucesso Ataque (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.success.msak": {
+      "name": "Conceder Sucesso Ataque (Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.success.mwak": {
+      "name": "Conceder Sucesso Ataque (Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.success.other": {
+      "name": "Conceder Sucesso Ataque (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.success.rsak": {
+      "name": "Conceder Sucesso Ataque (Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.success.rwak": {
+      "name": "Conceder Sucesso Ataque (Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.success.save": {
+      "name": "Conceder Sucesso Ataque (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.attack.success.util": {
+      "name": "Conceder Sucesso Ataque (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.critical.all": {
+      "name": "Conceder Acerto Crítico (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.critical.heal": {
+      "name": "Conceder Acerto Crítico (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.critical.msak": {
+      "name": "Conceder Acerto Crítico (Ataque Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.critical.mwak": {
+      "name": "Conceder Acerto Crítico (Ataque Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.critical.other": {
+      "name": "Conceder Acerto Crítico (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.critical.range": {
+      "name": "Conceder Acerto Crítico (Alcance)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.critical.rsak": {
+      "name": "Conceder Acerto Crítico (Ataque Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.critical.rwak": {
+      "name": "Conceder Acerto Crítico (Ataque Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.critical.save": {
+      "name": "Conceder Acerto Crítico (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.critical.util": {
+      "name": "Conceder Acerto Crítico (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.criticalThreshold": {
+      "name": "Conceder Margem Acerto Crítico",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.attack.all": {
+      "name": "Conceder Desvantagem Ataque (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.attack.heal": {
+      "name": "Conceder Desvantagem Ataque (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.attack.msak": {
+      "name": "Conceder Desvantagem Ataque (Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.attack.mwak": {
+      "name": "Conceder Desvantagem Ataque (Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.attack.other": {
+      "name": "Conceder Desvantagem Ataque (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.attack.rsak": {
+      "name": "Conceder Desvantagem Ataque (Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.attack.rwak": {
+      "name": "Conceder Desvantagem Ataque (Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.attack.save": {
+      "name": "Conceder Desvantagem (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.attack.util": {
+      "name": "Conceder Desvantagem (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.check.all": {
+      "name": "Conceder Desvantagem Teste (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.check.cha": {
+      "name": "Conceder Desvantagem Teste (Carisma)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.check.con": {
+      "name": "Conceder Desvantagem Teste (Constituição)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.check.dex": {
+      "name": "Conceder Desvantagem Teste (Destreza)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.check.int": {
+      "name": "Conceder Desvantagem Teste (Inteligência)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.check.str": {
+      "name": "Conceder Desvantagem Teste (Força)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.check.wis": {
+      "name": "Conceder Desvantagem Teste (Sabedoria)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.save.all": {
+      "name": "Conceder Desvantagem Salvaguarda (Todas)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.save.cha": {
+      "name": "Conceder Desvantagem Salvaguarda (Carisma)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.save.con": {
+      "name": "Conceder Desvantagem Salvaguarda (Constituição)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.save.dex": {
+      "name": "Conceder Desvantagem Salvaguarda (Destreza)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.save.int": {
+      "name": "Conceder Desvantagem Salvaguarda (Inteligência)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.save.str": {
+      "name": "Conceder Desvantagem Salvaguarda (Força)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.save.wis": {
+      "name": "Conceder Desvantagem Salvaguarda (Sabedoria)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.skill.all": {
+      "name": "Conceder Desvantagem Perícia (Todas)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.skill.cha": {
+      "name": "Conceder Desvantagem Perícia (Carisma)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.skill.con": {
+      "name": "Conceder Desvantagem Perícia (Constituição)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.skill.dex": {
+      "name": "Conceder Desvantagem Perícia (Destreza)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.skill.int": {
+      "name": "Conceder Desvantagem Perícia (Inteligência)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.skill.str": {
+      "name": "Conceder Desvantagem Perícia (Força)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.disadvantage.skill.wis": {
+      "name": "Conceder Desvantagem Perícia (Sabedoria)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.all": {
+      "name": "Conceder Falha Vantagem Ataque (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.noAdvantage.attack.all": {
+      "name": "Sem Vantagem (Todos)",
+      "description": "Ataques não recebem Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.heal": {
+      "name": "Não Conceder Vantagem (Cura)",
+      "description": "Qualquer ataque de Cura contra o alvo não recebe Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.msak": {
+      "name": "Não Conceder Vantagem (Mágico Corpo a Corpo)",
+      "description": "Qualquer Ataque Mágico Corpo a Corpo contra o alvo não recebe Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.mwak": {
+      "name": "Não Conceder Vantagem (Armado Corpo a Corpo)",
+      "description": "Qualquer Ataque Armado Corpo a Corpo contra o alvo não recebe Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.rsak": {
+      "name": "Não Conceder Vantagem (Mágico à Distância)",
+      "description": "Qualquer Ataque Mágico à Distância contra o alvo não recebe Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.rwak": {
+      "name": "Não Conceder Vantagem (Armado à Distância)",
+      "description": "Qualquer Ataque Armado à Distância contra o alvo não recebe Vantagem."
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.save": {
+      "name": "Não Conceder Vantagem (Salvaguarda)",
+      "description": "Nenhuma Salvaguarda que o ator forçar, terá Vantagem para ser resistida."
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.check": {
+      "name": "Não Conceder Vantagem (Teste)",
+      "description": "Nenhum Teste de Atributo que o ator forçar, terá Vantagem para ser resistido."
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.skill": {
+      "name": "Não Conceder Vantagem (Perícia)",
+      "description": "Nenhum Teste de Perícia que o ator forçar, terá Vantagem para ser resistido."
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.msak": {
+      "name": "Conceder Falha Vantagem Ataque (Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.mwak": {
+      "name": "Conceder Falha Vantagem Ataque (Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.rsak": {
+      "name": "Conceder Falha Vantagem Ataque (Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.rwak": {
+      "name": "Conceder Falha Vantagem Ataque (Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.save": {
+      "name": "Conceder Falha Vantagem (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.check": {
+      "name": "Conceder Falha Vantagem (Teste)",
+      "description": ""
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.skill": {
+      "name": "Conceder Falha Vantagem (Perícia)",
+      "description": ""
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.all": {
+      "name": "Conceder Falha Desvantagem Ataque (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.noDisadvantage.attack.all": {
+      "name": "Conceder Falha Desvantagem Ataque (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.msak": {
+      "name": "Conceder Falha Desvantagem Ataque (Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.noDisadvantage.attack.msak": {
+      "name": "Não Conceder Desvantagem (Mágico Corpo a Corpo)",
+      "description": "Qualquer Ataque Mágico Corpo a Corpo contra o alvo não recebe Desvantagem."
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.mwak": {
+      "name": "Conceder Falha Desvantagem Ataque (Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.NoDisadvantage.attack.mwak": {
+      "name": "Não Conceder Desvantagem (Armado Corpo a Corpo)",
+      "description": "Qualquer Ataque Armado Corpo a Corpo contra o alvo não recebe Desvantagem."
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.rsak": {
+      "name": "Conceder Falha Desvantagem Ataque (Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.NoDisadvantage.attack.rsak": {
+      "name": "Não Conceder Desvantagem (Mágico à Distância)",
+      "description": "Qualquer Ataque Mágico à Distância contra o alvo não recebe Desvantagem."
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.rwak": {
+      "name": "Conceder Falha Desvantagem Ataque (Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.noDisadvantage.attack.rwak": {
+      "name": "Não Conceder Desvantagem (Armado à Distância)",
+      "description": "Qualquer Ataque Armado à Distância contra o alvo não recebe Desvantagem."
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.save": {
+      "name": "Conceder Falha Desvantagem (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.noDisadvantage.attack.save": {
+      "name": "Não Conceder Desvantagem (Salvaguarda)",
+      "description": "Any save forced by the actor will not have disadvantage"
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.check": {
+      "name": "Conceder Falha Desvantagem (Teste)",
+      "description": ""
+    },
+    "flags.midi-qol.grants.noDisadvantage.attack.check": {
+      "name": "Não Conceder Desvantagem (Teste)",
+      "description": "Nenhum Teste que o ator forçar, terá Desvantagem para ser resistido."
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.skill": {
+      "name": "Conceder Falha Desvantagem (Perícia)",
+      "description": ""
+    },
+    "flags.midi-qol.grants.noDisadvantage.attack.skill": {
+      "name": "Não Conceder Desvantagem (Perícia)",
+      "description": "Nenhum Teste de Perícia que o ator forçar, terá Desvantagem para ser resistido."
+    },
+    "flags.midi-qol.grants.max.damage.all": {
+      "name": "Conceder Dano Máximo (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.max.damage.heal": {
+      "name": "Conceder Dano Máximo (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.max.damage.msak": {
+      "name": "Conceder Dano Máximo (Ataque Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.max.damage.mwak": {
+      "name": "Conceder Dano Máximo (Ataque Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.max.damage.rsak": {
+      "name": "Conceder Dano Máximo (Ataque Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.max.damage.rwak": {
+      "name": "Conceder Dano Máximo (Ataque Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.max.damage.save": {
+      "name": "Conceder Dano Máximo (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.min.damage.all": {
+      "name": "Conceder Dano Mínimo (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.min.damage.heal": {
+      "name": "Conceder Dano Mínimo (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.min.damage.msak": {
+      "name": "Conceder Dano Mínimo (Ataque Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.min.damage.mwak": {
+      "name": "Conceder Dano Mínimo (Ataque Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.min.damage.other": {
+      "name": "Conceder Dano Mínimo (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.min.damage.rsak": {
+      "name": "Conceder Dano Mínimo (Ataque Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.min.damage.rwak": {
+      "name": "Conceder Dano Mínimo (Ataque Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.min.damage.save": {
+      "name": "Conceder Dano Mínimo (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.min.damage.util": {
+      "name": "Conceder Dano Mínimo (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.noCritical.all": {
+      "name": "Conceder Acerto Não-Crítico (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.noCritical.heal": {
+      "name": "Conceder Acerto Não-Crítico (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.noCritical.msak": {
+      "name": "Conceder Acerto Não-Crítico (Ataque Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.noCritical.mwak": {
+      "name": "Conceder Acerto Não-Crítico (Ataque Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.noCritical.other": {
+      "name": "Conceder Acerto Não-Crítico (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.noCritical.rsak": {
+      "name": "Conceder Acerto Não-Crítico (Ataque Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.noCritical.rwak": {
+      "name": "Conceder Acerto Não-Crítico (Ataque Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.noCritical.save": {
+      "name": "Conceder Acerto Não-Crítico (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.grants.noCritical.util": {
+      "name": "Conceder Acerto Não-Crítico (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.ignoreNearbyFoes": {
+      "name": "Ignorar Inimigos Próximos",
+      "description": "Ignora desvantagem em jogadas de Ataques à Distância por conta de inimigos adjacentes." 
+    },
+    "flags.midi-qol.inMotion": {
+      "name": "In Motion",
+      "description": "" 
+    },
+    "flags.midi-qol.long.all": {
+      "name": "Alcance Longo (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.long.heal": {
+      "name": "Alcance Longo (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.long.msak": {
+      "name": "Alcance Longo (Ataque Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.long.mwak": {
+      "name": "Alcance Longo (Ataque Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.long.other": {
+      "name": "Alcance Longo (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.long.rsak": {
+      "name": "Alcance Longo (Ataque Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.long.rwak": {
+      "name": "Alcance Longo (Ataque Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.long.save": {
+      "name": "Alcance Longo (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.long.util": {
+      "name": "Alcance Longo (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicResistance.all": {
+      "name": "Resistência Mágica (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicResistance.cha": {
+      "name": "Resistência Mágica (Carisma)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicResistance.check.all": {
+      "name": "Resistência Mágica (Todos Testes)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicResistance.con": {
+      "name": "Resistência Mágica (Constituição)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicResistance.dex": {
+      "name": "Resistência Mágica (Destreza)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicResistance.int": {
+      "name": "Resistência Mágica (Inteligência)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicResistance.save.all": {
+      "name": "Resistência Mágica (Todas Salvaguardas)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicResistance.skill.all": {
+      "name": "Resistência Mágica (Todas Perícias)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicResistance.str": {
+      "name": "Resistência Mágica (Força)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicResistance.wis": {
+      "name": "Resistência Mágica (Sabedoria)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicVulnerability.all": {
+      "name": "Vulnerabilidade Mágica (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicVulnerability.all.cha": {
+      "name": "Vulnerabilidade Mágica (Carisma)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicVulnerability.all.con": {
+      "name": "Vulnerabilidade Mágica (Constituição)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicVulnerability.all.dex": {
+      "name": "Vulnerabilidade Mágica (Destreza)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicVulnerability.all.int": {
+      "name": "Vulnerabilidade Mágica (Inteligência)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicVulnerability.all.str": {
+      "name": "Vulnerabilidade Mágica (Força)",
+      "description": "" 
+    },
+    "flags.midi-qol.magicVulnerability.all.wis": {
+      "name": "Vulnerabilidade Mágica (Sabedoria)",
+      "description": "" 
+    },
+    "flags.midi-qol.max.ability.check.all": {
+      "name": "Teste Atributo Máximo (Todos)",
+      "description": "Número máximo jogado no d20 principal para todos os testes." 
+    },
+    "flags.midi-qol.max.ability.check.cha": {
+      "name": "Teste Atributo Máximo (Carisma)",
+      "description": "Número máximo jogado no d20 principal para todos os testes de Carisma." 
+    },
+    "flags.midi-qol.max.ability.check.con": {
+      "name": "Teste Atributo Máximo (Constituição)",
+      "description": "Número máximo jogado no d20 principal para todos os testes de Constituição." 
+    },
+    "flags.midi-qol.max.ability.check.dex": {
+      "name": "Teste Atributo Máximo (Destreza)",
+      "description": "Número máximo jogado no d20 principal para todos os testes de Destreza." 
+    },
+    "flags.midi-qol.max.ability.check.int": {
+      "name": "Teste Atributo Máximo (Inteligência)",
+      "description": "Número máximo jogado no d20 principal para todos os testes de Inteligência." 
+    },
+    "flags.midi-qol.max.ability.check.str": {
+      "name": "Teste Atributo Máximo (Força)",
+      "description": "Número máximo jogado no d20 principal para todos os testes de Força." 
+    },
+    "flags.midi-qol.max.ability.check.wis": {
+      "name": "Teste Atributo Máximo (Sabedoria)",
+      "description": "Número máximo jogado no d20 principal para todos os testes de Sabedoria." 
+    },
+    "flags.midi-qol.max.ability.save.all": {
+      "name": "Salvaguarda Máximo (Todas)",
+      "description": "Número máximo jogado no d20 principal para todas as salvaguardas." 
+    },
+    "flags.midi-qol.max.ability.save.cha": {
+      "name": "Salvaguarda Máximo (Carisma)",
+      "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Carisma." 
+    },
+    "flags.midi-qol.max.ability.save.con": {
+      "name": "Salvaguarda Máximo (Constituição)",
+      "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Constituição." 
+    },
+    "flags.midi-qol.max.ability.save.concentration": {
+      "name": "Salvaguarda Máximo (Concentração)",
+      "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Concentração." 
+    },
+    "flags.midi-qol.max.ability.save.dex": {
+      "name": "Salvaguarda Máximo (Destreza)",
+      "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Destreza." 
+    },
+    "flags.midi-qol.max.ability.save.int": {
+      "name": "Salvaguarda Máximo (Inteligência)",
+      "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Inteligência." 
+    },
+    "flags.midi-qol.max.ability.save.str": {
+      "name": "Salvaguarda Máximo (Força)",
+      "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Força." 
+    },
+    "flags.midi-qol.max.ability.save.wis": {
+      "name": "Salvaguarda Máximo (Sabedoria)",
+      "description": "Número máximo jogado no d20 principal para todas as salvaguardas de Sabedoria." 
+    },
+    "flags.midi-qol.max.damage.all": {
+      "name": "Dano Máximo (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.max.damage.heal": {
+      "name": "Dano Máximo (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.max.damage.msak": {
+      "name": "Dano Máximo (Ataque Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.max.damage.mwak": {
+      "name": "Dano Máximo (Ataque Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.max.damage.other": {
+      "name": "Dano Máximo (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.max.damage.rsak": {
+      "name": "Dano Máximo (Ataque Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.max.damage.rwak": {
+      "name": "Dano Máximo (Ataque Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.max.damage.save": {
+      "name": "Dano Máximo (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.max.damage.util": {
+      "name": "Dano Máximo (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.max.skill.all": {
+      "name": "Perícia Máxima (Todos)",
+      "description": "Número máximo jogado no d20 principal para todos os testes de Perícia." 
+    },
+    "flags.midi-qol.min.ability.check.all": {
+      "name": "Teste Atributo Mínimo (Todos)",
+      "description": "Número mínimo jogado no d20 principal para todos os testes." 
+    },
+    "flags.midi-qol.min.ability.check.cha": {
+      "name": "Teste Atributo Mínimo (Carisma)",
+      "description": "Número mínimo jogado no d20 principal para todos os testes de Carisma." 
+    },
+    "flags.midi-qol.min.ability.check.con": {
+      "name": "Teste Atributo Mínimo (Constituição)",
+      "description": "Número mínimo jogado no d20 principal para todos os testes de Constituição." 
+    },
+    "flags.midi-qol.min.ability.check.dex": {
+      "name": "Teste Atributo Mínimo (Destreza)",
+      "description": "Número mínimo jogado no d20 principal para todos os testes de Destreza." 
+    },
+    "flags.midi-qol.min.ability.check.int": {
+      "name": "Teste Atributo Mínimo (Inteligência)",
+      "description": "Número mínimo jogado no d20 principal para todos os testes de Inteligência." 
+    },
+    "flags.midi-qol.min.ability.check.str": {
+      "name": "Teste Atributo Mínimo (Força)",
+      "description": "Número mínimo jogado no d20 principal para todos os testes de Força." 
+    },
+    "flags.midi-qol.min.ability.check.wis": {
+      "name": "Teste Atributo Mínimo (Sabedoria)",
+      "description": "Número mínimo jogado no d20 principal para todos os testes de Sabedoria." 
+    },
+    "flags.midi-qol.min.ability.save.all": {
+      "name": "Salvaguarda Mínimo (Todos)",
+      "description": "Número mínimo jogado no d20 principal para todas as salvaguardas." 
+    },
+    "flags.midi-qol.min.ability.save.cha": {
+      "name": "Salvaguarda Mínimo (Carisma)",
+      "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Carisma." 
+    },
+    "flags.midi-qol.min.ability.save.con": {
+      "name": "Salvaguarda Mínimo (Constituição)",
+      "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Constituição." 
+    },
+    "flags.midi-qol.min.ability.save.concentration": {
+      "name": "Salvaguarda Mínimo (Concentração)",
+      "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Concentração." 
+    },
+    "flags.midi-qol.min.ability.save.dex": {
+      "name": "Salvaguarda Mínimo (Destreza)",
+      "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Destreza." 
+    },
+    "flags.midi-qol.min.ability.save.int": {
+      "name": "Salvaguarda Mínimo (Inteligência)",
+      "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Inteligência." 
+    },
+    "flags.midi-qol.min.ability.save.str": {
+      "name": "Salvaguarda Mínimo (Força)",
+      "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Força." 
+    },
+    "flags.midi-qol.min.ability.save.wis": {
+      "name": "Salvaguarda Mínimo (Sabedoria)",
+      "description": "Número mínimo jogado no d20 principal para todas as salvaguardas de Sabedoria." 
+    },
+    "flags.midi-qol.min.damage.all": {
+      "name": "Dano Mínimo (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.min.damage.heal": {
+      "name": "Dano Mínimo (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.min.damage.msak": {
+      "name": "Dano Mínimo (Ataque Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.min.damage.mwak": {
+      "name": "Dano Mínimo (Ataque Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.min.damage.other": {
+      "name": "Dano Mínimo (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.min.damage.rsak": {
+      "name": "Dano Mínimo (Ataque Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.min.damage.rwak": {
+      "name": "Dano Mínimo (Ataque Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.min.damage.save": {
+      "name": "Dano Mínimo (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.min.damage.util": {
+      "name": "Dano Mínimo (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.neverTarget": {
+      "name": "Inalvejável",
+      "description": "" 
+    },
+    "flags.midi-qol.noCritical.all": {
+      "name": "Acerto Não-Crítico (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.noCritical.heal": {
+      "name": "Acerto Não-Crítico (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.noCritical.msak": {
+      "name": "Acerto Não-Crítico (Ataque Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.noCritical.mwak": {
+      "name": "Acerto Não-Crítico (Ataque Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.noCritical.other": {
+      "name": "Acerto Não-Crítico (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.noCritical.rsak": {
+      "name": "Acerto Não-Crítico (Ataque Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.noCritical.rwak": {
+      "name": "Acerto Não-Crítico (Ataque Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.noCritical.save": {
+      "name": "Acerto Não-Crítico (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.noCritical.util": {
+      "name": "Acerto Não-Crítico (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.onUseMacroName": {
+      "name": "",
+      "description": "" 
+    },
+    "flags.midi-qol.optional.NAME.macroToCall": {
+      "name": "",
+      "description": "" 
+    },
+    "flags.midi-qol.optional.NAME.ac": {
+      "name": "Bônus Opcional (CA)",
+      "description": "Bônus para aplicar na CA do alvo." 
+    },
+    "flags.midi-qol.optional.NAME.activation": {
+      "name": "Bônus Opcional (Ativação)",
+      "description": "Condição de ativação para o Bônus Opcional." 
+    },
+    "flags.midi-qol.optional.NAME.attack.all": {
+      "name": "Bônus Opcional Ataque (Todos)",
+      "description": "Bônus adicionado após qualquer jogada de ataque." 
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.all": {
+      "name": "Bônus Opcional Falha Ataque (Todos)",
+      "description": "Bônus adicionado após qualquer jogada falha de ataque." 
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.heal": {
+      "name": "Bônus Opcional Falha Ataque (Cura)",
+      "description": "Bônus adicionado após jogada falha de ataque de Cura." 
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.msak": {
+      "name": "Bônus Opcional Falha Ataque (Mágico Corpo a Corpo)",
+      "description": "Bônus adicionado após jogada falha de Ataque Mágico Corpo a Corpo." 
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.mwak": {
+      "name": "Bônus Opcional Falha Ataque (Armado Corpo a Corpo)",
+      "description": "Bônus adicionado após jogada falha de Ataque Armado Corpo a Corpo." 
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.other": {
+      "name": "Bônus Opcional Falha Ataque (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.rsak": {
+      "name": "Bônus Opcional Falha Ataque (Mágico à Distância)",
+      "description": "Bônus adicionado após jogada falha de Ataque Mágico à Distância." 
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.rwak": {
+      "name": "Bônus Opcional Falha Ataque (Armado à Distância)",
+      "description": "Bônus adicionado após jogada falha de Ataque Armado à Distância." 
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.save": {
+      "name": "Bônus Opcional Falha Ataque (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.util": {
+      "name": "Bônus Opcional Falha Ataque (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.optional.NAME.attack.heal": {
+      "name": "Bônus Opcional Ataque (Cura)",
+      "description": "Bônus adicionado após jogada de ataque de Cura." 
+    },
+    "flags.midi-qol.optional.NAME.attack.msak": {
+      "name": "Bônus Opcional Ataque (Mágico Corpo a Corpo)",
+      "description": "Bônus adicionado após jogada de Ataque Mágico Corpo a Corpo." 
+    },
+    "flags.midi-qol.optional.NAME.attack.mwak": {
+      "name": "Bônus Opcional Ataque (Armado Corpo a Corpo)",
+      "description": "Bônus adicionado após jogada de Ataque Armado Corpo a Corpo." 
+    },
+    "flags.midi-qol.optional.NAME.attack.other": {
+      "name": "Bônus Opcional Ataque (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.optional.NAME.attack.rsak": {
+      "name": "Bônus Opcional Ataque (Mágico à Distância)",
+      "description": "Bônus adicionado após jogada de Ataque Mágico à Distância." 
+    },
+    "flags.midi-qol.optional.NAME.attack.rwak": {
+      "name": "Bônus Opcional Ataque (Armado à Distância)",
+      "description": "Bônus adicionado após jogada de Ataque Armado à Distância." 
+    },
+    "flags.midi-qol.optional.NAME.attack.save": {
+      "name": "Bônus Opcional Ataque (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.optional.NAME.attack.util": {
+      "name": "Bônus Opcional Ataque (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.optional.NAME.check.all": {
+      "name": "Bônus Opcional Teste (Todos)",
+      "description": "Bônus adicionado após jogada de qualquer teste." 
+    },
+    "flags.midi-qol.optional.NAME.check.cha": {
+      "name": "Bônus Opcional Teste (Carisma)",
+      "description": "Bônus adicionado após jogada de teste de Carisma." 
+    },
+    "flags.midi-qol.optional.NAME.check.con": {
+      "name": "Bônus Opcional Teste (Constituição)",
+      "description": "Bônus adicionado após jogada de teste de Constituição." 
+    },
+    "flags.midi-qol.optional.NAME.check.dex": {
+      "name": "Bônus Opcional Teste (Destreza)",
+      "description": "Bônus adicionado após jogada de teste de Destreza." 
+    },
+    "flags.midi-qol.optional.NAME.check.fail.all": {
+      "name": "Bônus Opcional Falha Teste (Todos)",
+      "description": "Bônus adicionado após jogada falha de qualquer teste." 
+    },
+    "flags.midi-qol.optional.NAME.check.fail.cha": {
+      "name": "Bônus Opcional Falha Teste (Carisma)",
+      "description": "Bônus adicionado após jogada falha de teste de Carisma." 
+    },
+    "flags.midi-qol.optional.NAME.check.fail.con": {
+      "name": "Bônus Opcional Falha Teste (Constituição)",
+      "description": "Bônus adicionado após jogada falha de teste de Constituição." 
+    },
+    "flags.midi-qol.optional.NAME.check.fail.dex": {
+      "name": "Bônus Opcional Falha Teste (Destreza)",
+      "description": "Bônus adicionado após jogada falha de teste de Destreza." 
+    },
+    "flags.midi-qol.optional.NAME.check.fail.int": {
+      "name": "Bônus Opcional Falha Teste (Inteligência)",
+      "description": "Bônus adicionado após jogada falha de teste de Inteligência." 
+    },
+    "flags.midi-qol.optional.NAME.check.fail.str": {
+      "name": "Bônus Opcional Falha Teste (Força)",
+      "description": "Bônus adicionado após jogada falha de teste de Força." 
+    },
+    "flags.midi-qol.optional.NAME.check.fail.wis": {
+      "name": "Bônus Opcional Falha Teste (Sabedoria)",
+      "description": "Bônus adicionado após jogada falha de teste de Sabedoria." 
+    },
+    "flags.midi-qol.optional.NAME.check.int": {
+      "name": "Bônus Opcional Teste (Inteligência)",
+      "description": "Bônus adicionado após jogada de teste de Inteligência." 
+    },
+    "flags.midi-qol.optional.NAME.check.str": {
+      "name": "Bônus Opcional Teste (Força)",
+      "description": "Bônus adicionado após jogada de teste de Força." 
+    },
+    "flags.midi-qol.optional.NAME.check.wis": {
+      "name": "Bônus Opcional Teste (Sabedoria)",
+      "description": "Bônus adicionado após jogada de teste de Sabedoria." 
+    },
+    "flags.midi-qol.optional.NAME.count": {
+      "name": "Bônus Opcional (Uso)",
+      "description": "Definição do uso para o Bônus Opcional. Consultar Midi Wiki." 
+    },
+    "flags.midi-qol.optional.NAME.countAlt": {
+      "name": "Bônus Opcional (Uso Alternativo)",
+      "description": "Definição do uso alternativo para o Bônus Opcional. Consultar Midi Wiki." 
+    },
+    "flags.midi-qol.optional.NAME.criticalDamage": {
+      "name": "Bônus Opcional (Dano Crítico)",
+      "description": "" 
+    },
+    "flags.midi-qol.optional.NAME.damage.all": {
+      "name": "Bônus Opcional Dano (Todos)",
+      "description": "Bônus adicionado após jogada de qualquer dano." 
+    },
+    "flags.midi-qol.optional.NAME.damage.heal": {
+      "name": "Bônus Opcional Dano (Cura)",
+      "description": "Bônus adicionado após jogada de Cura." 
+    },
+    "flags.midi-qol.optional.NAME.damage.msak": {
+      "name": "Bônus Opcional Dano (Ataque Mágico Corpo a Corpo)",
+      "description": "Bônus adicionado após jogada de dano de Ataques Mágicos Corpo a Corpo." 
+    },
+    "flags.midi-qol.optional.NAME.damage.mwak": {
+      "name": "Bônus Opcional Dano (Ataque Armado Corpo a Corpo)",
+      "description": "Bônus adicionado após jogada de dano de Ataques Armados Corpo a Corpo." 
+    },
+    "flags.midi-qol.optional.NAME.damage.other": {
+      "name": "Bônus Opcional Dano (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.optional.NAME.damage.rsak": {
+      "name": "Bônus Opcional Dano (Ataque Mágico à Distância)",
+      "description": "Bônus adicionado após jogada de dano de Ataques Mágicos à Distância." 
+    },
+    "flags.midi-qol.optional.NAME.damage.rwak": {
+      "name": "Bônus Opcional Dano (Ataque Armado à Distância)",
+      "description": "Bônus adicionado após jogada de dano de Ataques Armados à Distância." 
+    },
+    "flags.midi-qol.optional.NAME.damage.save": {
+      "name": "Bônus Opcional Dano (Salvaguarda)",
+      "description": "Bônus adicionado após jogada de dano de Salvaguardas." 
+    },
+    "flags.midi-qol.optional.NAME.damage.util": {
+      "name": "Bônus Opcional Dano (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.optional.NAME.force": {
+      "name": "Bônus Opcional (Forçar)",
+      "description": "Condição de ativação para o Bônus Opcional, porém não avisa ao jogador, apenas aplica diretamente." 
+    },
+    "flags.midi-qol.optional.NAME.label": {
+      "name": "Bônus Opcional Nome",
+      "description": "Nome do cartão do Bônus Opcional que irá aparecer para o jogador." 
+    },
+    "flags.midi-qol.optional.NAME.save.all": {
+      "name": "Bônus Opcional Salvaguarda (Todos)",
+      "description": "Bônus adicionado após jogada de qualquer salvaguarda." 
+    },
+    "flags.midi-qol.optional.NAME.save.cha": {
+      "name": "Bônus Opcional Salvaguarda (Carisma)",
+      "description": "Bônus adicionado após jogada de salvaguarda de Carisma." 
+    },
+    "flags.midi-qol.optional.NAME.save.con": {
+      "name": "Bônus Opcional Salvaguarda (Constituição)",
+      "description": "Bônus adicionado após jogada de salvaguarda de Constituição." 
+    },
+    "flags.midi-qol.optional.NAME.save.dex": {
+      "name": "Bônus Opcional Salvaguarda (Destreza)",
+      "description": "Bônus adicionado após jogada de salvaguarda de Destreza." 
+    },
+    "flags.midi-qol.optional.NAME.save.fail.all": {
+      "name": "Bônus Opcional Falha Salvaguarda (Todos)",
+      "description": "Bônus adicionado após jogada falha de qualquer salvaguarda." 
+    },
+    "flags.midi-qol.optional.NAME.save.fail.cha": {
+      "name": "Bônus Opcional Falha Salvaguarda (Carisma)",
+      "description": "Bônus adicionado após jogada falha de salvaguarda de Carisma." 
+    },
+    "flags.midi-qol.optional.NAME.save.fail.con": {
+      "name": "Bônus Opcional Falha Salvaguarda (Constituição)",
+      "description": "Bônus adicionado após jogada falha de salvaguarda de Constituição." 
+    },
+    "flags.midi-qol.optional.NAME.save.fail.dex": {
+      "name": "Bônus Opcional Falha Salvaguarda (Destreza)",
+      "description": "Bônus adicionado após jogada falha de salvaguarda de Destreza." 
+    },
+    "flags.midi-qol.optional.NAME.save.fail.int": {
+      "name": "Bônus Opcional Falha Salvaguarda (Inteligência)",
+      "description": "Bônus adicionado após jogada falha de salvaguarda de Inteligência." 
+    },
+    "flags.midi-qol.optional.NAME.save.fail.str": {
+      "name": "Bônus Opcional Falha Salvaguarda (Força)",
+      "description": "Bônus adicionado após jogada falha de salvaguarda de Força." 
+    },
+    "flags.midi-qol.optional.NAME.save.fail.wis": {
+      "name": "Bônus Opcional Falha Salvaguarda (Sabedoria)",
+      "description": "Bônus adicionado após jogada falha de salvaguarda de Sabedoria." 
+    },
+    "flags.midi-qol.optional.NAME.save.int": {
+      "name": "Bônus Opcional Salvaguarda (Inteligência)",
+      "description": "Bônus adicionado após jogada de salvaguarda de Inteligência." 
+    },
+    "flags.midi-qol.optional.NAME.save.str": {
+      "name": "Bônus Opcional Salvaguarda (Força)",
+      "description": "Bônus adicionado após jogada de salvaguarda de Força." 
+    },
+    "flags.midi-qol.optional.NAME.save.wis": {
+      "name": "Bônus Opcional Salvaguarda (Sabedoria)",
+      "description": "Bônus adicionado após jogada de salvaguarda de Sabedoria." 
+    },
+    "flags.midi-qol.optional.NAME.skill.acr": {
+      "name": "Bônus Opcional Perícia (Acrobacia)",
+      "description": "Bônus adicionado após jogada de teste de Acrobacia." 
+    },
+    "flags.midi-qol.optional.NAME.skill.all": {
+      "name": "Bônus Opcional Perícia (Todas)",
+      "description": "Bônus adicionado após jogada de teste de qualquer Perícia." 
+    },
+    "flags.midi-qol.optional.NAME.skill.ani": {
+      "name": "Bônus Opcional Perícia (Lidar com Animais)",
+      "description": "Bônus adicionado após jogada de teste de Lidar com Animais." 
+    },
+    "flags.midi-qol.optional.NAME.skill.arc": {
+      "name": "Bônus Opcional Perícia (Arcanismo)",
+      "description": "Bônus adicionado após jogada de teste de Arcanismo." 
+    },
+    "flags.midi-qol.optional.NAME.skill.ath": {
+      "name": "Bônus Opcional Perícia (Atletismo)",
+      "description": "Bônus adicionado após jogada de teste de Atletismo." 
+    },
+    "flags.midi-qol.optional.NAME.skill.fail.all": {
+      "name": "Bônus Opcional Falha Perícia (Todas)",
+      "description": "Bônus adicionado após jogada falha de teste de qualquer Perícia." 
+    },
+    "flags.midi-qol.optional.NAME.skill.his": {
+      "name": "Bônus Opcional Perícia (História)",
+      "description": "Bônus adicionado após jogada de teste de História." 
+    },
+    "flags.midi-qol.optional.NAME.skill.ins": {
+      "name": "Bônus Opcional Perícia (Intuição)",
+      "description": "Bônus adicionado após jogada de teste de Intuição." 
+    },
+    "flags.midi-qol.optional.NAME.skill.inv": {
+      "name": "Bônus Opcional Perícia (Investigação)",
+      "description": "Bônus adicionado após jogada de teste de Investigação." 
+    },
+    "flags.midi-qol.optional.NAME.skill.itm": {
+      "name": "Bônus Opcional Perícia (Intimidação)",
+      "description": "Bônus adicionado após jogada de teste de Intimidação." 
+    },
+    "flags.midi-qol.optional.NAME.skill.med": {
+      "name": "Bônus Opcional Perícia (Medicina)",
+      "description": "Bônus adicionado após jogada de teste de Medicina." 
+    },
+    "flags.midi-qol.optional.NAME.skill.nat": {
+      "name": "Bônus Opcional Perícia (Natureza)",
+      "description": "Bônus adicionado após jogada de teste de Natureza." 
+    },
+    "flags.midi-qol.optional.NAME.skill.per": {
+      "name": "Bônus Opcional Perícia (Persuasão)",
+      "description": "Bônus adicionado após jogada de teste de Persuasão." 
+    },
+    "flags.midi-qol.optional.NAME.skill.prc": {
+      "name": "Bônus Opcional Perícia (Percepção)",
+      "description": "Bônus adicionado após jogada de teste de Percepção." 
+    },
+    "flags.midi-qol.optional.NAME.skill.prf": {
+      "name": "Bônus Opcional Perícia (Performance)",
+      "description": "Bônus adicionado após jogada de teste de Performance." 
+    },
+    "flags.midi-qol.optional.NAME.skill.rel": {
+      "name": "Bônus Opcional Perícia (Religião)",
+      "description": "Bônus adicionado após jogada de teste de Religião." 
+    },
+    "flags.midi-qol.optional.NAME.skill.slt": {
+      "name": "Bônus Opcional Perícia (Prestidigitação)",
+      "description": "Bônus adicionado após jogada de teste de Prestidigitação." 
+    },
+    "flags.midi-qol.optional.NAME.skill.ste": {
+      "name": "Bônus Opcional Perícia (Furtividade)",
+      "description": "Bônus adicionado após jogada de teste de Furtividade." 
+    },
+    "flags.midi-qol.optional.NAME.skill.sur": {
+      "name": "Bônus Opcional Perícia (Sobrevivência)",
+      "description": "Bônus adicionado após jogada de teste de Sobrevivência." 
+    },
+    "flags.midi-qol.potentCantrip": {
+      "name": "Truque Potente",
+      "description": "" 
+    },
+    "flags.midi-qol.range.all": {
+      "name": "Alcance (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.range.heal": {
+      "name": "Alcance (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.range.msak": {
+      "name": "Alcance (Ataque Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.range.mwak": {
+      "name": "Alcance (Ataque Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.range.other": {
+      "name": "Alcance (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.range.rsak": {
+      "name": "Alcance (Ataque Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.range.rwak": {
+      "name": "Alcance (Ataque Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.range.save": {
+      "name": "Alcance (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.range.util": {
+      "name": "Alcance (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.rangeOverride.attack.all": {
+      "name": "Substituir Alcance (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.rangeOverride.attack.heal": {
+      "name": "Substituir Alcance (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.rangeOverride.attack.msak": {
+      "name": "Substituir Alcance (Ataque Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.rangeOverride.attack.mwak": {
+      "name": "Substituir Alcance (Ataque Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.rangeOverride.attack.other": {
+      "name": "Substituir Alcance (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.rangeOverride.attack.rsak": {
+      "name": "Substituir Alcance (Ataque Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.rangeOverride.attack.rwak": {
+      "name": "Substituir Alcance (Ataque Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.rangeOverride.attack.save": {
+      "name": "Substituir Alcance (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.rangeOverride.attack.util": {
+      "name": "Substituir Alcance (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.sculptSpells": {
+      "name": "Esculpir Magias",
+      "description": "Alvos previamente selecionados da salvaguarda de magia são automaticamente bem-sucedidos e recebem o status \"super-saver\"." 
+    },
+    "flags.midi-qol.semiSuperSaver.all": {
+      "name": "Semi Super Salvaguarda (Todas)",
+      "description": "Não sofre dano ao ser bem-sucedido em qualquer salvaguarda." 
+    },
+    "flags.midi-qol.semiSuperSaver.cha": {
+      "name": "Semi Super Salvaguarda (Carisma)",
+      "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Carisma." 
+    },
+    "flags.midi-qol.semiSuperSaver.con": {
+      "name": "Semi Super Salvaguarda (Constituição)",
+      "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Constituição." 
+    },
+    "flags.midi-qol.semiSuperSaver.dex": {
+      "name": "Semi Super Salvaguarda (Destreza)",
+      "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Destreza." 
+    },
+    "flags.midi-qol.semiSuperSaver.int": {
+      "name": "Semi Super Salvaguarda (Inteligência)",
+      "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Inteligência." 
+    },
+    "flags.midi-qol.semiSuperSaver.str": {
+      "name": "Semi Super Salvaguarda (Força)",
+      "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Força." 
+    },
+    "flags.midi-qol.semiSuperSaver.wis": {
+      "name": "Semi Super Salvaguarda (Sabedoria)",
+      "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Sabedoria." 
+    },
+    "flags.midi-qol.sharpShooter": {
+      "name": "Sharp Shooter",
+      "description": "" 
+    },
+    "flags.midi-qol.success.attack.all": {
+      "name": "Sucesso Ataque (Todos)",
+      "description": "" 
+    },
+    "flags.midi-qol.success.attack.heal": {
+      "name": "Sucesso Ataque (Cura)",
+      "description": "" 
+    },
+    "flags.midi-qol.success.attack.msak": {
+      "name": "Sucesso Ataque (Mágico Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.success.attack.mwak": {
+      "name": "Sucesso Ataque (Armado Corpo a Corpo)",
+      "description": "" 
+    },
+    "flags.midi-qol.success.attack.other": {
+      "name": "Sucesso (Outro)",
+      "description": "" 
+    },
+    "flags.midi-qol.success.attack.rsak": {
+      "name": "Sucesso Ataque (Mágico à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.success.attack.rwak": {
+      "name": "Sucesso Ataque (Armado à Distância)",
+      "description": "" 
+    },
+    "flags.midi-qol.success.attack.save": {
+      "name": "Sucesso (Salvaguarda)",
+      "description": "" 
+    },
+    "flags.midi-qol.success.attack.util": {
+      "name": "Sucesso (Utilidade)",
+      "description": "" 
+    },
+    "flags.midi-qol.superSaver.all": {
+      "name": "Super Salvaguarda (Todas)",
+      "description": "Não sofre dano ao ser bem-sucedido em qualquer salvaguarda e sofre apenas metade em caso de falha." 
+    },
+    "flags.midi-qol.superSaver.cha": {
+      "name": "Super Salvaguarda (Carisma)",
+      "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Carisma e sofre apenas metade em caso de falha." 
+    },
+    "flags.midi-qol.superSaver.con": {
+      "name": "Super Salvaguarda (Constituição)",
+      "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Constituição e sofre apenas metade em caso de falha." 
+    },
+    "flags.midi-qol.superSaver.dex": {
+      "name": "Super Salvaguarda (Destreza)",
+      "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Destreza e sofre apenas metade em caso de falha." 
+    },
+    "flags.midi-qol.superSaver.int": {
+      "name": "Super Salvaguarda (Inteligência)",
+      "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Inteligência e sofre apenas metade em caso de falha." 
+    },
+    "flags.midi-qol.superSaver.str": {
+      "name": "Super Salvaguarda (Força)",
+      "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Força e sofre apenas metade em caso de falha." 
+    },
+    "flags.midi-qol.superSaver.wis": {
+      "name": "Super Salvaguarda (Sabedoria)",
+      "description": "Não sofre dano ao ser bem-sucedido em salvaguardas de Sabedoria e sofre apenas metade em caso de falha." 
+    },
+    "flags.midi-qol.uncanny-dodge": {
+      "name": "Esquiva Sobrenatural",
+      "description": "" 
+    }
   }
 }
