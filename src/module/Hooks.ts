@@ -130,7 +130,7 @@ export let readyHooks = async () => {
           // @ts-expect-error no dnd5e-types
           if (origin.statuses?.has(CONFIG.specialStatusEffects.CONCENTRATING) && origin.getDependents()?.length === 0) {
             // @ts-expect-error duration.remaining
-            if (!installedModules.get("times-up") || (origin?.duration?.remaining ?? 1) > 0) {
+            if (!installedModules.get("times-up") || (origin?.duration?.emaining ?? 1) > 0) {
               await origin.delete();
             }
           }
@@ -267,7 +267,7 @@ export function initHooks() {
     untargetDeadTokens();
     if (game.users?.activeGM?.isSelf)
       _processOverTime(combat, data, options, user);
-      _processActivityOverTime(combat, data, options, user);
+    _processActivityOverTime(combat, data, options, user);
     // updateReactionRounds(combat, data, options, user); This is handled in processOverTime
   });
 
@@ -283,8 +283,7 @@ export function initHooks() {
 
   Hooks.on("deleteChatMessage", (message: ChatMessage, options, user) => {
     if (message.author?.id !== game.user?.id) return;
-    const workflowId = foundry.utils.getProperty(message, "flags.midi-qol.workflowId");
-    if (workflowId && Workflow.getWorkflow(workflowId)) Workflow.removeWorkflow(workflowId)
+    Workflow.deleteWorkflow(message.uuid)
   });
 
   Hooks.on("midi-qol.RollComplete", async (workflow: Workflow) => {
@@ -585,14 +584,14 @@ export function initHooks() {
     let grid_size = canvas.scene?.grid.size ?? 100;
     // This will work for all grids except gridless
     // TODO: swap to `getTopLeftPoint` - should simplify some
-    let coords = {x: dropData.x, y: dropData.y};
+    let coords = { x: dropData.x, y: dropData.y };
     if (canvas.scene?.grid.type !== CONST.GRID_TYPES.GRIDLESS) {
       coords = canvas.grid.getCenterPoint(coords);
     }
     const targetCount = canvas.tokens?.targetObjects({
       x: coords.x - 5,
       y: coords.y - 5,
-      height: 10, 
+      height: 10,
       width: 10,
     }, { releaseOthers: true });
     if (targetCount === 0) {
@@ -738,17 +737,32 @@ Hooks.on("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, messageConfig) => {
 
 Hooks.on("dnd5e.preCalculateDamage", (actor: Actor.Implementation, damages, options) => {
   try {
+    const downgrade = type => options.downgrade === true || options.downgrade?.has?.(type);
+    //@ts-expect-error no dnd5e types
+    const traits = actor.system.traits ?? {};
+
+    const hasEffect = (category, type, properties?) => {
+      if ((category === "dr") && downgrade(type) && hasEffect("di", type, properties)
+        && !ignore("immunity", type, true)) return true;
+      const config = traits[category];
+      if (!config?.value.has(type)) return false;
+      //@ts-expect-error no dnd5e types
+      if (!CONFIG.DND5E.damageTypes[type]?.isPhysical || !properties?.size) return true;
+      return !config.bypasses?.intersection(properties)?.size;
+    };
     const ignore = (category, type, skipDowngrade) => {
       return options.ignore === true
         || options.ignore?.[category] === true
-        || options.ignore?.[category]?.has?.(type);
+        || options.ignore?.[category]?.has?.(type)
+        || ((category === "immunity") && downgrade(type) && !skipDowngrade)
+        || ((category === "resistance") && downgrade(type) && !hasEffect("di", type));
     };
 
     const mo = options.midi;
     if (mo?.noCalc) return true;
     if (mo) {
       if (configSettings.saveDROrder === "DRSavedr" && options?.ignore !== true) {
-        // Currently now way to disable just super saver and leave saver
+        // Currently no way to disable just super saver and leave saver
       } else if (configSettings.saveDROrder === "SaveDRdr" && options.ignore !== true) {
         for (let damage of damages) {
           if (mo.superSaver && (options?.ignore?.superSaver === true || options?.ignore?.superSaver?.has(damage.type))) continue;
@@ -766,19 +780,28 @@ Hooks.on("dnd5e.preCalculateDamage", (actor: Actor.Implementation, damages, opti
         }
       }
 
-      const categories = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption" };
-      if (mo?.sourceActorUuid) {
-        const sourceActor = fromUuidSync(mo.sourceActorUuid);
-        for (let key of ["idi", "idr", "idv", "ida"]) {
-          if (foundry.utils.getProperty(sourceActor, `system.traits.${key}`) && sourceActor.system.traits[key].value.size > 0) {
-            const trait = foundry.utils.getProperty(sourceActor, `system.traits.${key}`);
-            if (!options.ignore?.[categories[key]]) foundry.utils.setProperty(options, `ignore.${categories[key]}`, new Set())
-            for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
-              if (trait.value.has(dt) || trait.all) options.ignore[categories[key]].add(dt);
+      if (!options.midiIgnoreComputed) {
+        const categories = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption" };
+        if (mo?.sourceActorUuid) {
+          const sourceActor = fromUuidSync(mo.sourceActorUuid);
+          for (let key of ["idi", "idr", "idv", "ida"]) {
+            if (foundry.utils.getProperty(sourceActor, `system.traits.${key}`) && sourceActor.system.traits[key].value.size > 0) {
+              const trait = foundry.utils.getProperty(sourceActor, `system.traits.${key}`);
+              if (!options.ignore?.[categories[key]]) foundry.utils.setProperty(options, `ignore.${categories[key]}`, new Set())
+              for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
+                if (!damages.some(di => di.type === dt)) continue;
+                if (trait.value.has(dt) || trait.all) {
+                  if (categories[key] === "immunity" && hasEffect("di", dt) && !hasEffect("dr", dt)) {
+                    options.downgrade ??= new Set();
+                    options.downgrade.add(dt);
+                  } else options.ignore[categories[key]].add(dt);
+                }
+              }
             }
           }
         }
       }
+      options.midiIgnoreComputed = true;
       //@ts-expect-error no dnd5e types
       const actorTraits: any = actor.system.traits;
       // For damage absorption ignore other immunity/resistance/vulnerability

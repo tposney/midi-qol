@@ -1,6 +1,8 @@
 import { debugEnabled, i18n, warn } from "../../midi-qol.js";
+import { Workflow } from "../Workflow.js";
+import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
-import { asyncHooksCall } from "../utils.js";
+import { areMidiKeysPressed, asyncHooksCall, isAutoFastDamage } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
 export var MidiUtilityActivity;
@@ -32,13 +34,23 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
         sheetClass: MidiUtilitySheet,
         usage: {
           chatCard: "modules/midi-qol/templates/activity-card.hbs",
-        },
+          actions: {
+            rollFormula: MidiUtilityActivity.#rollFormula
+          }
+        }
       }, { inplace: false, insertKeys: true, insertValues: true });
+
+    static #rollFormula(event, target, message) {
+      const workflow = Workflow.getWorkflow(message?.uuid);
+
+      //@ts-expect-error
+      return this.rollFormula({ event, workflow }, {}, {});
+    }
 
     get possibleOtherActivity() {
       return true;
     }
-    
+
     get selfTriggerableOnly() {
       return false;
     }
@@ -49,13 +61,21 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
       config ??= {};
       dialog ??= {};
       message ??= {}
+      const workflow = config.workflow;
+      if (!workflow) {
+        const errorMessage = "MidiUtilityActivity | rollFormula | No workflow found";
+        console.error(errorMessage);
+        TroubleShooter.recordError(new Error("No Workflow Found"), errorMessage);
+        return;
+      }
       config.midiOptions ??= {};
+      config.midiOptions.fastForward ??= isAutoFastDamage(workflow)
       if (debugEnabled > 0) {
         warn("MidiUtilityActivity | rollFormula | Called", config, dialog, message);
       }
-      if (await asyncHooksCall("midi-qol.preFormulaRoll", this.workflow) === false
-        || await asyncHooksCall(`midi-qol.preFormulaRoll.${this.item.uuid}`, this.workflow) === false
-        || await asyncHooksCall(`midi-qol.preFormulaRoll.${this.uuid}`, this.workflow) === false) {
+      if (await asyncHooksCall("midi-qol.preFormulaRoll", workflow) === false
+        || await asyncHooksCall(`midi-qol.preFormulaRoll.${this.item.uuid}`, workflow) === false
+        || await asyncHooksCall(`midi-qol.preFormulaRoll.${this.uuid}`, workflow) === false) {
         console.warn("midi-qol | UtilityActivity | Formula roll blocked via pre-hook");
         return;
       }
@@ -63,24 +83,23 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
       //@ts-expect-error
       const areKeysPressed = game.system.utils.areKeysPressed;
       const keys = {
-        normal: areKeysPressed(config.event, "skipDialogNormal"),
+        normal: areKeysPressed(config.event, "skipDialogNormal") || areKeysPressed(config.event, "skipDialogAdvantage") || areKeysPressed(config.event, "skipDialogDisadvantage")
       };
       if (Object.values(keys).some(k => k)) dialog.configure = this.midiProperties.forceDialog;
       else dialog.configure ??= !config.midiOptions.fastForward || this.midiProperties.forceDialog;
-      /*
-      else
-        dialog.configure = true;
-      */
-      if (this.workflow?.rollOptions?.rollToggle) dialog.configure = !!!dialog.configure;
+      if (workflow?.rollOptions?.rollToggle) dialog.configure = !!!dialog.configure;
+      const rollToggle = areMidiKeysPressed(config.event, "RollToggle");
+      if (workflow) workflow.rollOptions.rollToggle = rollToggle;
+      if (rollToggle) dialog.configure = !!!dialog.configure;
       message.create ??= false;
       let result = await super.rollFormula(config, dialog, message);
-      if (result && this.workflow && config.midiOptions.updateWorkflow !== false) await this.workflow.setUtilityRolls(result);
+      if (result && workflow && config.midiOptions.updateWorkflow !== false) await workflow.setUtilityRolls(result);
 
       // result = await postProcessUtilityRoll(this, config, result);
-      if (config.midiOptions.updateWorkflow !== false && this.workflow) {
-        this.workflow.utilityRolls = result;
-        if (this.workflow.suspended)
-          this.workflow.unSuspend.bind(this.workflow)({ utilityRolls: result });
+      if (config.midiOptions.updateWorkflow !== false && workflow) {
+        workflow.utilityRolls = result;
+        if (workflow.suspended)
+          workflow.unSuspend.bind(workflow)({ utilityRolls: result });
       }
       return result;
     }

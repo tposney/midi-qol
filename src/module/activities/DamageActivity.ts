@@ -1,4 +1,5 @@
 import { debugEnabled, i18n, warn } from "../../midi-qol.js";
+import { Workflow } from "../Workflow.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
@@ -31,17 +32,26 @@ let defineMidiDamageActivityClass = (ActivityClass: any) => {
         sheetClass: MidiDamageSheet,
         usage: {
           chatCard: "modules/midi-qol/templates/activity-card.hbs",
-        },
+          actions: {
+            rollDamage: MidiDamageActivity.#rollDamage
+          },
+        }
       }, { inplace: false, insertKeys: true, insertValues: true });
 
-      get possibleOtherActivity() {
-        return true;
-      }
+    static #rollDamage(event, target, message) {
+      const workflow = Workflow.getWorkflow(message?.uuid);
+      //@ts-expect-error
+      this.rollDamage({ event, workflow });
+    }
 
-      get selfTriggerableOnly() {
-        return false;
-      }
-  
+    get possibleOtherActivity() {
+      return true;
+    }
+
+    get selfTriggerableOnly() {
+      return false;
+    }
+
     async rollDamage(config, dialog, message) {
       config.midiOptions ??= {};
       config.midiOptions.fastForwardDamage ??= game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward);

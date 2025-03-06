@@ -4,6 +4,7 @@ import { nsaFlag, coloredBorders, configSettings, forceHideRoll, safeGetGameSett
 import { playerFor, playerForActor, doOverTimeEffect, isInCombat, MQfromUuidSync, isAutoFastAttack } from "./utils.js";
 import { socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
+import { MidiSaveActivity } from "./activities/SaveActivity.js";
 export const MAESTRO_MODULE_NAME = "maestro";
 export const MODULE_LABEL = "Maestro";
 
@@ -185,6 +186,13 @@ export let hideStuffHandler = (message, html, data) => {
     && !message.isAuthor) {
     html.remove();
     return;
+  }
+
+  const workflow = Workflow.getWorkflow(message._uuid);
+  if (workflow) {
+    if (workflow.activity instanceof MidiSaveActivity && workflow.activity.hasDamage && workflow.damageRolls?.length === 0) {
+      // hide the saving throw button if there is one.
+    }
   }
 
   if (game.user?.id !== authorId) {

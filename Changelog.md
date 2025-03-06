@@ -1,3 +1,39 @@
+### 12.4.30
+* Fix for the debacle with not being able to do most rolls.
+* Roll an attack per target now respects the per item settings.
+* Fix for optional bonus expressions (i.e. @abilities.int.mod * 2) not working, throwing an unevaluated expression error.
+* When rolling a save activity the targets required to save is displayed prior to the rolls being requested so everyone can see who is saving (unless it's GM only) and after the damage is rolled.
+* Fix for setting confirm targets on activities' midi-qol tab.
+* Fix for flanking/flanked applied by players - thanks @thatlonelybugbear.
+* Fixed dumb error in midi's flanked status effect - should work properly now.
+  - if using Cauldron of Plentiful resources midi will automatically update the flanked effect.
+* Fix for midi sound configuration not opening when the settings reference sounds that cannot be found.
+  - Any referenced playlists or sounds that no longer exist will be flagged and you won't be able to save your settings until that is corrected.
+* Added a use condition reason, which is displayed if the item use condition failed.
+* Added game.time.worldTime as worldTime for condition evaluation
+* Added full target rollData as target. in condition evaluation.
+* **Breaking** the flag flags.traits.idi.value now means downgrade damage immunity to resistance. If you want to completely ignore immunity, set flags.traits.idi.value **and** flags.traits.idr.value.
+* Fix for problem when Auto Animations and Midi's autoRemoveInstantaneousTemplates sometimes causing AA to lose the template data and place the animation incorrectly. If Boss Loot Assets is active it will also remove the template too early for AA to get the information.
+* Separate roll per target now will correctly do a targetless roll if you roll with no targets selected.
+* Utility Activities got a little more love with the dnd5e button being displayed and rolls completing as expected and the various keys (shift/F) etc working.
+  - Utility rolls currently auto fast forward based on the damage fast forward setting.
+* When rolling a save activity and not auto rolling saves (via Epic Rolls/Monks Token Bar or midi's auto rolling) the dnd5e save buttons are left on display for the gm/players to use. They only have an effect after damage is rolled.
+* Various improvements to damage application integration with dnd5e apply damage tray.
+  - ignore damage immunity now displays as being applied in damage tray.
+  - selected targets now include ignore immunity/resistance etc in damage try.
+* Support for dnd5e always apply effects being applied by midi-qol.
+
+
+* **For macro writers** Midi workflows are now keyed by the chatcard.uuid that spawned the workflow. Moving forwards to get a particular workflow you will need to use MidiQOL.Workflow.getWorkflow(chatCardUuid).
+  - Midi inserts the workflow in the config and usage elements for most of the dnd5e rolls, e.g rollAttack(config,....), activity.use(usage,....) and the down stream calls. So hooking dnd5e.xxx should allow you to recover the workflow via config.workflow, or usage.config as appropriate.
+  - For a limited period fetching workflows via activity uuid will continue to work.
+  - If you are intercepting the dnd5e rollAttack/rollDamage etc functions to do processing config.workflow will be instantiated to the appropriate workflow.
+  - Midi no longer stores any data in the activity, so activity.workflow and activity.targets will not be defined.
+  - As a side effect of this change there can be multiple workflows active for the same activity and this should be correctly resolved.
+  - During the deprecation period Workflow.getWorkflow(activity.uuid) will return the most recent workflow rolled for that activity uuid.
+* Socketed completeActivityUse now correctly sets targets.
+    
+
 ### 12.4.29
 * Fix for Utility activities to display rolls in the chat card, like other activities.
 * Fix so that auto consume is disabled when roll toggle is pressed.

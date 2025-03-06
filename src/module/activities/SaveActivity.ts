@@ -1,6 +1,8 @@
 import { debugEnabled, warn } from "../../midi-qol.js";
+import { Workflow } from "../Workflow.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
+import { getSceneTargets } from "./activityHelpers.js";
 
 export var MidiSaveActivity;
 export var MidiSaveSheet;
@@ -31,8 +33,13 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
         sheetClass: MidiSaveSheet,
         usage: {
           chatCard: "modules/midi-qol/templates/activity-card.hbs",
+          actions: {
+            rollDamage: MidiSaveActivity.#rollDamage,
+            rollSave: MidiSaveActivity.#rollSave, // Having this means needing to track the dnd5e SaveActivity.#rollSave changes
+            // Currently not needed as there is no workflow related activity to be done
+          }
         },
-      }, { inplace: false, insertKeys: true, insertValues: true });
+      }, { inplace: false, overwrite: true, insertKeys: true, insertValues: true });
 
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField } = foundry.data.fields;
@@ -58,10 +65,45 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
       }
     }
 
+    static #rollDamage(event, target, message) {
+      const workflow = Workflow.getWorkflow(message?.uuid);
+      //@ts-expect-error
+      return this.rollDamage({event, workflow});
+    }
+
+    static async #rollSave(event, target, message) {
+      const workflow = Workflow.getWorkflow(message?.uuid);
+      // return ActivityClass.#rollSave.bind(this)(event, target, message);
+      // Can't call ActivityClass.#rollSave.bind(this)(event, target, message) as it's private
+      const targets: Array<Token | Actor> = getSceneTargets();
+      if (!targets.length && game.user?.character) targets.push(game.user?.character);
+      if (!targets.length) ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });
+      const dc = parseInt(target.dataset.dc);
+      for (const token of targets) {
+        const actor = token instanceof Actor ? token : token.actor;
+        const speaker = ChatMessage.getSpeaker({ actor, scene: canvas?.scene, token: token instanceof Token ? token.document : null });
+        const message: any = { data: { speaker } };
+        // if (!actor?.hasPlayerOwner && workflow) message.create = false - this breaks save checking from chat card
+        message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+        if (token instanceof Token) foundry.utils.setProperty(message, "flags.midi-qol.requestId", token.document.uuid);
+        else foundry.utils.setProperty(message, "flags.midi-qol.requestId", token?.uuid);
+        if (configSettings.autoCheckSaves !== "none") message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+        //@ts-expect-error no dnd5e types
+        await actor?.rollSavingThrow({
+          event,
+          workflow, 
+          //@ts-expect-error this has been bound to an activity
+          ability: target.dataset.ability ?? this.save.ability.first(),
+          //@ts-expect-error this has been bound to an activity
+          target: Number.isFinite(dc) ? dc : this.save.dc.value
+        }, {}, message);
+      }
+    }
+
     use(config = {}, dialog = {}, message = {}) {
       return super.use(config, dialog, message);
     }
-    
+
     get possibleOtherActivity() {
       return true;
     }

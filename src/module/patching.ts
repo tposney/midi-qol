@@ -621,6 +621,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
     }
     if (config.rollMode) {
       console.warn("midi-qol | doRollAbilityV2: config.rollMode is deprecated, use message.rollMode instead");
+      message.rollMode ??= config.rollMode;
     }
     if (rollMode !== CONST.DICE_ROLL_MODES.BLIND) rollMode = message.rollMode ?? config.rollMode;
     await displayDSNForRoll(result, rollType, rollMode);
@@ -638,11 +639,6 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
       }
     }
 
-    if (config.target !== undefined && success === undefined) {
-      const resultTotal = result.reduce((acc, r) => acc + r.total, 0);
-      success = resultTotal >= config.target;
-      result.forEach(r => r.options.success = success);
-    }
 
     if (message.create !== false && result) {
       //@ts-expect-error no dnd5e-types
@@ -964,68 +960,88 @@ export function initPatching() {
 function _DAgetTargetOptions(...args) {
   let [uuid] = args;
   const options = currentDAGetTargetOptions.bind(this)(...args);
-  // const damageType = getProperty(this, `damages.flags.${MODULE_ID}.damageType`);
-  const damageType = this.damages?.flags?.[MODULE_ID]?.damageType;
-  let targetDetails;
-  if (damageType) {
-    const targets = this?.chatMessage?.flags?.["midi-qol"]?.midi?.dnd5eTargets ?? [];
-    targetDetails = targets.find(target => target.uuid === uuid);
-    if (!targetDetails) return options;
-    options.midi = foundry.utils.duplicate(targetDetails);
-    const saveMult = targetDetails.saveMults?.[damageType];
-    if (targetDetails.saved) {
-      foundry.utils.setProperty(options, "midi.saveMultiplier", saveMult ?? configSettings.defaultSaveMult);
-    }
-    if (saveMult !== undefined) {
-      if (targetDetails.superSaver && saveMult === configSettings.defaultSaveMult) {
-        foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : configSettings.defaultSaveMult);
+  let sourceActorUuid = foundry.utils.getProperty(this.chatMessage, "flags.midi-qol.sourceActorUuid");
+  try {
+    // const damageType = getProperty(this, `damages.flags.${MODULE_ID}.damageType`);
+    const damageType = this.damages?.flags?.[MODULE_ID]?.damageType;
+    let targetDetails;
+
+    if (damageType) {
+      const targets = this?.chatMessage?.flags?.["midi-qol"]?.dnd5eTargets ?? [];
+      targetDetails = targets.find(target => target.uuid === uuid);
+      if (!targetDetails) return options;
+      options.midi = foundry.utils.duplicate(targetDetails);
+      const saveMultiplier = targetDetails.saveMults?.[damageType];
+      if (targetDetails.saved) {
+        foundry.utils.setProperty(options, "midi.saveMultiplier", saveMultiplier ?? configSettings.defaultSaveMult);
       }
-      if (targetDetails.semiSuperSaver && saveMult === configSettings.defaultSaveMult) {
-        foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : 1);
+      if (saveMultiplier !== undefined) {
+        if (targetDetails.superSaver && saveMultiplier === configSettings.defaultSaveMult) {
+          foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : configSettings.defaultSaveMult);
+        }
+        if (targetDetails.semiSuperSaver && saveMultiplier === configSettings.defaultSaveMult) {
+          foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : 1);
+        }
+      }
+      if (targetDetails.uncannyDodge) {
+        foundry.utils.setProperty(options, "midi.uncannyDodge", true);
+      }
+      // Left in for backwards compatibility of previous midi versions
+      if (targetDetails.sourceActorUuid) {
+        sourceActorUuid = targetDetails.sourceActorUuid;
       }
     }
-    if (targetDetails.uncannyDodge) {
-      foundry.utils.setProperty(options, "midi.uncannyDodge", true);
-    }
-    foundry.utils.setProperty(options, "midi.sourceActorUuid", targetDetails.sourceActorUuid);
+
+  } catch (err) {
+    const message = `midi-qol | _DAgetTargetOptions failed to get target options`;
+    console.warn(message, err);
+    TroubleShooter.recordError(err, message);
+  } finally {
+    foundry.utils.setProperty(options, "midi.sourceActorUuid", sourceActorUuid);
   }
   return options;
 }
 
 function _DAcalculateDamage(actor, options) {
   const { temp, total, active } = currentDAcalculateDamage.bind(this)(actor, options);
-  active.absorption = new Set();
-  active.saved = new Set();
-  active.superSaver = new Set();
-  active.semiSuperSaver = new Set();
-  active.spell = new Set();
-  active.magic = new Set();
-  active.uncannyDodge = new Set();
-  active.nonmagic = new Set();
-  active.DR = new Set();
-  const damages = actor.calculateDamage(this.damages, options);
-  for (const damage of damages) {
-    if (damage.active.absorption) active.absorption.add(damage.type);
-    if (damage.active.spell) active.spell.add(damage.type);
-    if (damage.active.magic) active.magic.add(damage.type);
-    if (damage.active.nonmagic) active.nonmagic.add(damage.type);
-    if (damage.active.DR) active.DR.add(damage.type);
-    if (damage.active.superSaver) active.superSaver.add(damage.type);
-    else if (damage.active.semiSuperSaver) active.semiSuperSaver.add(damage.type);
-    else if (damage.active.saved) active.saved.add(damage.type);
+  try {
+    active.absorption = new Set();
+    active.saved = new Set();
+    active.superSaver = new Set();
+    active.semiSuperSaver = new Set();
+    active.spell = new Set();
+    active.magic = new Set();
+    active.uncannyDodge = new Set();
+    active.nonmagic = new Set();
+    active.DR = new Set();
+    const damages = actor.calculateDamage(this.damages, options);
+    for (const damage of damages) {
+      if (damage.active.absorption) active.absorption.add(damage.type);
+      if (damage.active.spell) active.spell.add(damage.type);
+      if (damage.active.magic) active.magic.add(damage.type);
+      if (damage.active.nonmagic) active.nonmagic.add(damage.type);
+      if (damage.active.DR) active.DR.add(damage.type);
+      if (damage.active.superSaver) active.superSaver.add(damage.type);
+      else if (damage.active.semiSuperSaver) active.semiSuperSaver.add(damage.type);
+      else if (damage.active.saved) active.saved.add(damage.type);
 
-    if (damage.active.uncannyDodge) active.uncannyDodge.add(damage.type);
+      if (damage.active.uncannyDodge) active.uncannyDodge.add(damage.type);
+    }
+    const union = t => {
+      if (foundry.utils.getType(options.ignore?.[t]) === "Set") active[t] = active[t].union(options.ignore[t]);
+    };
+    union("absorption");
+    union("spell")
+    union("magic");
+    union("nonmagic");
+    union("saved");
+    union("uncannyDodge");
+    union("DR");
+  } catch (err) {
+    const message = `midi-qol | _DAcalculateDamage failed to calculate damage`;
+    console.warn(message, err);
+    TroubleShooter.recordError(err, message);
   }
-  const union = t => {
-    if (foundry.utils.getType(options.ignore?.[t]) === "Set") active[t] = active[t].union(options.ignore[t]);
-  };
-  union("absorption");
-  union("spell")
-  union("magic");
-  union("nonmagic");
-  union("saved");
-  union("uncannyDodge");
-  union("DR");
   return { temp, total, active };
 }
 

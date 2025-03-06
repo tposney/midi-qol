@@ -1,0 +1,28 @@
+<fieldset>
+  <legend>{{localize "midi-qol.SHARED.use-condition.header"}}</legend>
+  {{ formField fields.useConditionText value=source.useConditionText }}
+  {{ formField fields.effectConditionText value=source.effectConditionText }}
+</fieldset>
+<fieldset>
+  {{ formField fields.forceDialog value=source.forceDialog }}
+  {{ formField fields.midiProperties.fields.confirmTargets value=source.midiProperties.confirmTargets options=ConfirmTargetOptions}}
+  {{ formField fields.midiAutomationOnly value=source.midiAutomationOnly }}
+</fieldset>
+<fieldset>
+  <legend> {{ localize "midi-qol.SHARED.ignore.header" }}</legend>
+  {{#with fields.ignoreTraits.fields as |fields|}}
+  {{ formField fields.idi value=../source.ignoreTraits.idi }}
+  {{ formField fields.idr value=../source.ignoreTraits.idr }}
+  {{ formField fields.idv value=../source.ignoreTraits.idv }}
+  {{ formField fields.ida value=../source.ignoreTraits.ida }}
+  {{/with}}
+</fieldset>
+<fieldset>
+  <label> {{ localize 'midi-qol.SHARED.FIELDS.ActivityMacro.label' }}
+    <button type="button" class="unbutton control-button" data-action="addMacro"
+      data-tooltip="midi-qol.SHARED.FIELDS.ActivityMacro.hint"
+      aria-label="{{ localize 'midi-qol.SHARED.FIELDS.ActivityMacro.label' }}">
+      <i class="fas fa-file-pen" inert></i>
+    </button>
+  </label>
+</fieldset>

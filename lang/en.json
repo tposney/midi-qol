@@ -971,7 +971,11 @@
     "FIELDS": {
       "useConditionText": {
         "label": "Use Condition",
-        "hint": "Condition to allow use"
+        "hint": "Condition which must be true to allow the activity use to proceed"
+      },
+      "useConditionReason": {
+        "label": "Use Condition Reason",
+        "hint": "Message to display if the use condition is false"
       },
       "effectConditionText": {
         "label": "Active Effect Condition",

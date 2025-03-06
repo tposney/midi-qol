@@ -1,75 +1,80 @@
-<section id="midi-sounds-sounds" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
-    <div class="midi-qol-box">
-        <table>
-            <tr>
-                <td></td>
-                <td>Char Type</td>
-                <td>Item Type</td>
-                <td>Sub Type</td>
-                <td>Event</td>
-                <td>Playlist</td>
-                <td>Sound</td>
-            </tr>
-            {{#each midiSoundSettings as |characterSettings chartype|}}
-                {{#each characterSettings as |categorySettings category|}}
-                    {{#each categorySettings as |settings subtype|}}
-                        {{#each settings as |setting action|}}
-                            <tr data-index="{{@key}}">
-                                <td>
-                                    <div class="sound-controls">
-                                        <a class="sound-control" data-action="delete"><i class="fas fa-trash"></i></a>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-group chartype">
-                                    <select name="chartype" data-dtype="String">
-                                        {{selectOptions @root.characterTypes selected=chartype}}
-                                    </select>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-group category">
-                                    <select name="category" data-dtype="String">
-                                        {{selectOptions @root.itemTypes selected=category}}
-                                    </select>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="form-group subtype">
-                                    <select name="subtype" data-dtype="String">
-                                        {{selectOptions (lookup @root.subTypes category) selected=subtype}}
-                                    </select>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="action">
-                                    <select name="action" data-dtype="String">
-                                        {{selectOptions @root.actionTypes selected=action}}
-                                    </select>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="playlistName">
-                                    <select name="playlistName" data-dtype="String">
-                                        {{selectOptions @root.playlists selected=setting.playlistName}}
-                                    </select>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="soundName">
-                                    <select name="soundName" data-dtype="String">
-                                        {{selectOptions (lookup @root.playlists setting.playlistName) selected=setting.soundName}}
-                                    </select>
-                                    </div>
-                                </td>
-                            </tr>
-                        {{/each}}
-                    {{/each}}
-                {{/each}}
-            {{/each}}
-        </table>
-    </div>
-    <button type="addrow" name="addrow" class="sound-control" data-action="add">
-        <i class="fas fa-plus"></i> {{localize "midi-qol.AddRow"}}
-    </button>
+<section id="midi-sounds-sounds" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}"
+  data-group="{{tab.group}}" data-tab="{{tab.id}}">
+
+  {{#each @root.missingPlaylists as |playlist|}}
+  <h2><div style="text-align: center;">Playlist: {{playlist}} is missing</div></h2>
+  {{/each}}
+  <div class="midi-qol-box">
+    <table>
+      <tr>
+        <td></td>
+        <td>Char Type</td>
+        <td>Item Type</td>
+        <td>Sub Type</td>
+        <td>Event</td>
+        <td>Playlist</td>
+        <td>Sound</td>
+      </tr>
+      {{#each midiSoundSettings as |characterSettings chartype|}}
+      {{#each characterSettings as |categorySettings category|}}
+      {{#each categorySettings as |settings subtype|}}
+      {{#each settings as |setting action|}}
+      <tr data-index="{{@key}}">
+        <td>
+          <div class="sound-controls">
+            <a class="sound-control" data-action="delete"><i class="fas fa-trash"></i></a>
+          </div>
+        </td>
+        <td>
+          <div class="form-group chartype">
+            <select name="chartype" data-dtype="String">
+              {{selectOptions @root.characterTypes selected=chartype}}
+            </select>
+          </div>
+        </td>
+        <td>
+          <div class="form-group category">
+            <select name="category" data-dtype="String">
+              {{selectOptions @root.itemTypes selected=category}}
+            </select>
+          </div>
+        </td>
+        <td>
+          <div class="form-group subtype">
+            <select name="subtype" data-dtype="String">
+              {{selectOptions (lookup @root.subTypes category) selected=subtype}}
+            </select>
+          </div>
+        </td>
+        <td>
+          <div class="action">
+            <select name="action" data-dtype="String">
+              {{selectOptions @root.actionTypes selected=action}}
+            </select>
+          </div>
+        </td>
+        <td>
+          <div class="playlistName">
+            <select name="playlistName" data-dtype="String">
+              {{selectOptions @root.playlists selected=setting.playlistName}}
+            </select>
+          </div>
+        </td>
+        <td>
+          <div class="soundName">
+            <select name="soundName" data-dtype="String">
+              {{selectOptions (lookup @root.playlists setting.playlistName) selected=setting.soundName}}
+            </select>
+          </div>
+        </td>
+      </tr>
+      {{/each}}
+      {{/each}}
+      {{/each}}
+      {{/each}}
+    </table>
+  </div>
+  <button type="addrow" name="addrow" class="sound-control" data-action="add">
+    <i class="fas fa-plus"></i> {{localize "midi-qol.AddRow"}}
+  </button>
 </section>

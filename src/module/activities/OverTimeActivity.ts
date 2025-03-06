@@ -77,17 +77,17 @@ let defineMidiOverTimeActivityClass = (ActivityClass: any) => {
     get possibleOtherActivity() {
       return false;
     }
-    
+
     get isTriggerableActivity() {
       return false;
     }
-    async confirmCanProceed(config, dialog, message): Promise<boolean> {
+    async confirmCanProceed(config, dialog, message, options): Promise<boolean> {
       if (this.useCondition) { // reactions condition evaluation is handled elsewhere
-        if (!(await evalActivationCondition(this.workflow, this.useCondition, this.targets.first(), { async: true }))) {
-          return this.removeWorkflow();
+        if (!(await evalActivationCondition(config.workflow, this.useCondition, this.targets.first(), { async: true }))) {
+          return this.removeWorkflow(config.workflow,);
         }
       }
-      return super.confirmCanProceed(config, dialog, message);
+      return super.confirmCanProceed(config, dialog, message, options);
     }
   }
 }

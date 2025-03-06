@@ -6,7 +6,7 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, checkRange, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, debouncedUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getTokenForActor, getTokenForActorAsSet, getTokenPlayerName, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, reportMidiCriticalFlags, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, MQfromUuidSync, actorFromUuid, createDamageDetail, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, completeItemUseV2, checkActivityRange, modifyDamageBy, computeDistance, addDependent } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, checkRange, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, debouncedUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getTokenForActor, getTokenForActorAsSet, getTokenPlayerName, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, reportMidiCriticalFlags, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, MQfromUuidSync, actorFromUuid, createDamageDetail, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, completeItemUseV2, checkActivityRange, modifyDamageBy, computeDistance, addDependent, cleanCPRFlanked } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
@@ -586,6 +586,7 @@ function addConfigOptions() {
 /* When ready							*/
 /* ------------------------------------ */
 Hooks.once('ready', function () {
+  cleanCPRFlanked();
   //@ts-expect-error
   const config = game.system.config;
   addConfigOptions();
@@ -807,7 +808,6 @@ Hooks.on("monaco-editor.ready", (registerTypes) => {
     midiRenderDamageRoll: function midiRenderDamageRoll(roll, options);
     midiRenderBonusDamageRoll: function midiRenderBonusDamageRoll(roll, options);
     midiRenderOtherDamageRoll: function midiRenderOtherDamageRoll(roll, options);
-    midiSoundSettings: function(): any,
     modifyDamageBy: function modifyDamageBy({damageItem = {}, value, multiplier = 1, type = "none", reason}), 
     MQfromActorUuid: function MQfromActorUuid(actorUuid: string): Actor | undefined,
     MQfromUuid: function MQfromUuid(uuid: string): Actor | Item | TokenDocument | undefined,
@@ -936,7 +936,9 @@ function setupMidiQOLApi() {
     midiRenderDamageRoll,
     midiRenderBonusDamageRoll,
     midiRenderOtherDamageRoll,
-    midiSoundSettings: () => { return midiSoundSettings },
+    //@ts-expect-error
+    get midiSoundSettings() { return game.settings?.get("midi-qol", "MidiSoundSettings") },
+    MidiSounds,
     modifyDamageBy,
     MQfromActorUuid: fromActorUuid,
     actorFromUuid,
@@ -1639,8 +1641,8 @@ export function setupMidiStatusEffects() {
       _id: getStaticID("flanked"),
       name: i18n("midi-qol.Flanked"),
       changes: [
-        { key: "flags.midi-qol.grants.attack.advantage.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
-        { key: "flags.midi-qol.grants.attack.advantage.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
+        { key: "flags.midi-qol.grants.advantage.attack.mwak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" },
+        { key: "flags.midi-qol.grants.advantage.attack.msak", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }
       ],
       img: "modules/midi-qol/icons/encirclement.svg",
       effectData: {

@@ -30,9 +30,7 @@ let defineMidiEnchantActivityClass = (ActivityClass: any) => {
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiEnchantSheet,
         usage: {
-          // chatCard: "modules/midi-qol/templates/activity-card.hbs",
           dialog: ActivityClass.metadata.usage.dialog,
-
         },
       }, { inplace: false, insertKeys: true, insertValues: true })
 
@@ -42,7 +40,7 @@ let defineMidiEnchantActivityClass = (ActivityClass: any) => {
     get isTriggerableActivity() {
       return false;
     }
-    
+
     async _triggerSubsequentActions(config, results) {
     }
   }

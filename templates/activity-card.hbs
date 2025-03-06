@@ -4,6 +4,7 @@
   isSpell}}data-spell-level="{{ item.system.level }}" {{/if}} {{#if isPower}}data-power-level="{{item.system.level}}"
   {{/if}}>
 
+{{!-- if dnd5e supports putting activity name look at replacing this by inserting the dnd5e template --}}
   <section class="card-header description collapsible" {{#if description.concealed}}data-concealed{{/if}}>
     <header class="summary">
       <img class="gold-icon" src="{{ item.img }}" alt="{{ item.name }}">
@@ -66,10 +67,6 @@
     {{/if}}
     {{/if}}
 
-    {{!-- Other Formula --}}
-    {{#if activity.otherActivity?.damage}}
-    <button class="midi-qol-otherDamage-button" data-action="rollDamage">{{ OtherFormula }}</button>
-    {{/if}}
 
     {{!-- Apply Effects --}}
     {{#if hasEffects}}
@@ -93,7 +90,11 @@
     {{/if}}
   </div>
   {{/if}}
+
+  {{!-- Insert dnd5e buttons on card --}}
+  {{!-- Utility Activity rollFormula - just use the dnd5e button --}}
   {{#if buttons}}
+  <div class="midi-dnd5e-buttons">
   <div class="card-buttons">
     {{#each buttons}}
     <button type="button" {{ dnd5e-dataset dataset }}>
@@ -101,9 +102,10 @@
     </button>
     {{/each}}
   </div>
+  <div class="end-midi-dnd5e-buttons"></div>
   {{/if}}
-  {{!-- Midi results --}}
 
+  {{!-- Midi results --}}
   <div class="midi-results">
     {{#if condensed}}
     <div class="flexrow 2">
@@ -116,6 +118,9 @@
     </div>
     <div class="midi-qol-hits-display">
       <div class="end-midi-qol-hits-display"></div>
+    </div>
+    <div class="midi-qol-saves-display">
+      <div class="end-midi-qol-saves-display"></div>
     </div>
     {{else}}
     <div class="midi-qol-attack-roll">
@@ -136,30 +141,29 @@
     </div>
     <div class="midi-qol-utility-roll">
       <div class="end-midi-qol-utility-roll"></div>
-
+    </div>
     <div class="midi-qol-saves-display">
       <div class="end-midi-qol-saves-display"></div>
     </div>
+
+    {{!-- Reactions --}}
+    {{#if (and activity.activation.condition (eq activity.activation.type "reaction"))}}
+    <p class="supplement"><strong>{{ localize "DND5E.Reaction" }}</strong>{{ activity.activation.condition }}</p>
+    {{/if}}
+
+    {{!-- Materials --}}
+    {{#if item.system.materials.value}}
+    <p class="supplement"><strong>{{ localize "DND5E.Materials" }}</strong>{{ item.system.materials.value }}</p>
+    {{/if}}
+
+    {{!-- Item Properties --}}
+    {{#if properties.length}}
+    <ul class="card-footer pills unlist">
+      {{#each properties}}
+      <li class="pill transparent">
+        <span class="label">{{ this }}</span>
+      </li>
+      {{/each}}
+    </ul>
+    {{/if}}
   </div>
-
-  {{!-- Reactions --}}
-  {{#if (and activity.activation.condition (eq activity.activation.type "reaction"))}}
-  <p class="supplement"><strong>{{ localize "DND5E.Reaction" }}</strong>{{ activity.activation.condition }}</p>
-  {{/if}}
-
-  {{!-- Materials --}}
-  {{#if item.system.materials.value}}
-  <p class="supplement"><strong>{{ localize "DND5E.Materials" }}</strong>{{ item.system.materials.value }}</p>
-  {{/if}}
-
-  {{!-- Item Properties --}}
-  {{#if properties.length}}
-  <ul class="card-footer pills unlist">
-    {{#each properties}}
-    <li class="pill transparent">
-      <span class="label">{{ this }}</span>
-    </li>
-    {{/each}}
-  </ul>
-  {{/if}}
-</div>

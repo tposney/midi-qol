@@ -358,6 +358,8 @@ export let fetchSoundSettings = () => {
 
 export let fetchParams = () => {
   if (debugEnabled > 1) debug("Fetch Params Loading");
+  const blfxActive = game.modules?.get("boss-loot-assets-premium")?.active || game.modules?.get("boss-loot-assets-free")?.active;
+
   //@ts-expect-error
   configSettings = game.settings?.get("midi-qol", "ConfigSettings");
   //TODO create a config.html for this
@@ -582,12 +584,9 @@ export let fetchParams = () => {
   if (configSettings.gridlessFudge === undefined) configSettings.gridlessFudge = 0;
   if (configSettings.concentrationIncapacitatedConditionCheck === undefined) configSettings.concentrationIncapacitatedConditionCheck = false;
   if (configSettings.activityNamePrefix === undefined) configSettings.activityNamePrefix = true;
-  const blfxActive = game.modules?.get("boss-loot-assets-premium")?.active || game.modules?.get("boss-loot-assets-free")?.active;
-  if (blfxActive) {
-    if (configSettings.activityNamePrefix === true) {
-      TroubleShooter.recordError({}, "Boss Loot FX is active - disabling activity name prefix");
-      console.warn("midiqol | Boss Loot FX is active - disabling activity name prefix");
-    }
+  if (blfxActive && configSettings.activityNamePrefix) {
+    TroubleShooter.recordError({}, "Boss Loot FX is active - disabling activity name prefix");
+    console.warn("midiqol | Boss Loot FX is active - disabling activity name prefix");
     configSettings.activityNamePrefix = false;
   }
   if (targetConfirmation === undefined || typeof targetConfirmation === "string" || targetConfirmation instanceof String) targetConfirmation = {
@@ -614,10 +613,10 @@ export let fetchParams = () => {
         ui.notifications?.warn(`Midi concentration automation is deprecated in favour of ${game.system?.title} concentration checking - settings updated to use ${game.system?.id} concentration`, { permanent: true })
       };
       configSettings.concentrationAutomation = false;
-  //@ts-expect-error
-  game.settings?.set(game.system?.id, "disableConcentration", false);
-  //@ts-expect-error
-  game.settings?.set("midi-qol", "ConfigSettings", configSettings)
+      //@ts-expect-error
+      game.settings?.set(game.system?.id, "disableConcentration", false);
+      //@ts-expect-error
+      game.settings?.set("midi-qol", "ConfigSettings", configSettings)
     });
   }
   Hooks.callAll("midi-qol.ConfigSettingsChanged");
@@ -719,14 +718,14 @@ export function readySettingsSetup() {
   //@ts-expect-error
   if (game.settings?.get("midi-qol", "CriticalDamage") === "none") {
     criticalDamage = "default;"
-  //@ts-expect-error
-  game.settings?.set("midi-qol", "CriticalDamage", "default");
+    //@ts-expect-error
+    game.settings?.set("midi-qol", "CriticalDamage", "default");
   }
   //@ts-expect-error
   if (game.settings?.get("midi-qol", "CriticalDamageGM") === "none") {
     criticalDamageGM = criticalDamage;
-  //@ts-expect-error
-  game.settings?.set("midi-qol", "CriticalDamageGM", criticalDamage);
+    //@ts-expect-error
+    game.settings?.set("midi-qol", "CriticalDamageGM", criticalDamage);
   }
 }
 export function registerSetupSettings() {
@@ -978,7 +977,7 @@ export function disableWorkflowAutomation() {
 export function safeGetGameSetting(moduleName: string, settingName: string): any | undefined {
   // @ts-expect-error
   if (game.settings?.settings.get(`${moduleName}.${settingName}`))
-  //@ts-expect-error
+    //@ts-expect-error
     return game.settings?.get(moduleName, settingName);
   else return undefined;
 }

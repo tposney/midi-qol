@@ -41,9 +41,9 @@ let defineMidiCastActivityClass = (ActivityClass: any) => {
         },
       }, { inplace: false, insertKeys: true, insertValues: true });
 
-    async use(config?: any, dialog?: any, message?: any) {
+    async use(usage?: any, dialog?: any, message?: any) {
       // if (config.midiOptions?.workflowOptions?.targetConfirmation) delete config.midiOptions.workflowOptions.targetConfirmation;
-      return super.use(config, dialog, message);
+      return ActivityClass.prototype.use.bind(this)(usage, dialog, message);
     }
 
     get possibleOtherActivity() {

@@ -1,4 +1,5 @@
 import { debugEnabled, i18n, warn } from "../../midi-qol.js";
+import { Workflow } from "../Workflow.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 
@@ -32,14 +33,15 @@ let defineMidiHealActivityClass = (ActivityClass: any) => {
         usage: {
           chatCard: "modules/midi-qol/templates/activity-card.hbs",
           actions: {
-            rollDamage: MidiHealActivity.#rollDamage
+            rollHealing: MidiHealActivity.#rollHealing
           }
         },
       }, { inplace: false, insertKeys: true, insertValues: true })
 
-    static #rollDamage(event, target, message) {
+    static #rollHealing(event, target, message) {
+      const workflow = Workflow.getWorkflow(message?.uuid);
       //@ts-expect-error
-      return this.rollDamage(event);
+      return this.rollDamage(event, workflow);
     }
     get possibleOtherActivity() { 
       return true;

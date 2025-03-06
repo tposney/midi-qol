@@ -2,15 +2,15 @@
   <fieldset>
     <legend>{{localize "midi-qol.SHARED.use-condition.header"}}</legend>
     {{ formField fields.useConditionText value=source.useConditionText }}
-    {{ formField fields.effectConditionText value=source.effectConditionText }}
-  </fieldset>
+    {{ formField fields.useConditionReason value=source.useConditionReason }}
+    {{ formField fields.effectConditionText value=source.effectConditionText }}  </fieldset>
   <fieldset>
     {{#with fields.midiProperties.fields as |fields|}}
     {{ formField fields.rollMode value=../source.midiProperties.rollMode options=../RollModeOptions}}
     {{ formField fields.displayActivityName value=../source.midiProperties.displayActivityName }}
     {{ formField fields.identifier value=../source.midiProperties.identifier placeholder=../placeholderIdentifier }}
     {{ formField fields.forceDialog value=../source.midiProperties.forceDialog }}
-    {{ formField fields.confirmTargets value=../source.targetConfirmation options=../ConfirmTargetOptions}}
+    {{ formField fields.confirmTargets value=../source.midiProperties.confirmTargets options=../ConfirmTargetOptions}}
     {{#if ../hasAreaTarget}}
     {{ formField fields.autoTargetType value=../source.midiProperties.autoTargetType options=../AutoTargetTypeOptions}}
     {{ formField fields.autoTargetAction value=../source.midiProperties.autoTargetAction

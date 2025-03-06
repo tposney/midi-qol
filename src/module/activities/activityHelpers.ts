@@ -114,7 +114,7 @@ function activityRequiresPostTemplateConfirmation(activity): boolean {
   return false;
 }
 
-function itemRequiresPostTemplateConfiramtion(activity): boolean {
+function itemRequiresPostTemplateConfirmation(activity): boolean {
   const isRangeTargeting = ["ft", "m"].includes(activity.item.system.range?.units) && ["creature", "ally", "enemy"].includes(activity.target?.affects.type);
   if (activity.target?.template?.type) {
     return true;
@@ -233,8 +233,7 @@ export async function preTemplateTargets(activity, options): Promise<boolean> {
 export async function postTemplateConfirmTargets(activity, options, workflow): Promise<boolean> {
   if (!activityRequiresPostTemplateConfirmation(activity)) {
     if (game.user?.targets) {
-      activity.workflow.setTargets(game.user?.targets);
-      activity.targets = new Set(game.user?.targets);
+      workflow.setTargets(game.user?.targets);
     }
     return true;
   }
@@ -243,13 +242,11 @@ export async function postTemplateConfirmTargets(activity, options, workflow): P
     result = await resolveTargetConfirmation(activity, options);
     if (result && game.user?.targets) {
       workflow.setTargets(game.user?.targets);
-      activity.targets = new Set(game.user?.targets);
     }
     return result === true;
   }
   if (game.user?.targets) {
-    activity.workflow.setTargets(game.user?.targets);
-    activity.targets = new Set(game.user?.targets);
+    workflow.setTargets(game.user?.targets);
   }
   return true;
 }
@@ -268,7 +265,7 @@ export async function resolveTargetConfirmation(activity, options: any = {}): Pr
     // no timeout since there is a dialog to close
     // create target dialog which updates the target display
     options = foundry.utils.mergeObject(options, { callback: resolve });
-    let targetConfirmation = new TargetConfirmationDialog(activity.actor, activity, game.user, options).render({force: true});
+    let targetConfirmation = new TargetConfirmationDialog(activity.actor, activity, game.user, options).render({ force: true });
   });
   let shouldContinue = await targets;
   // @ts-expect-error
@@ -471,13 +468,13 @@ export function templateTokens(templateDetails: MeasuredTemplate, selfTokenRef: 
 // this is bound to a workflow when called - most of the time
 export function selectTargets(templateDocument: MeasuredTemplateDocument, data?, user?) {
   // const workflow = this?.currentAction ? this : Workflow.getWorkflow(templateDocument.flags?.dnd5e?.origin);
-  const activity = this;
-  if (debugEnabled > 0) warn("selectTargets ", activity, templateDocument, data, user);
+  const activity = this?.activity;
+  if (debugEnabled > 0) warn("selectTargets ", this, templateDocument, data, user);
   const selfToken = getToken(activity.actor);
   const ignoreSelf = (activity?.target.affects.special ?? "").split(";").some(spec => spec === "self");
   let AoETargetType = getAoETargetType(activity);
   let targeting = getActivityAutoTargetAction(activity);
-  if ((game.user?.targets.size === 0 || activity.workflow?.workflowOptions.forceTemplateTargeting || user !== game.user?.id || installedModules.get("levelsvolumetrictemplates")) && targeting !== "none") {
+  if ((game.user?.targets.size === 0 || this?.workflowOptions.forceTemplateTargeting || user !== game.user?.id || installedModules.get("levelsvolumetrictemplates")) && targeting !== "none") {
     let mTemplate: MeasuredTemplate = MQfromUuidSync(templateDocument.uuid)?.object;
     if (templateDocument?.object && !installedModules.get("levelsvolumetrictemplates")) {
       if (!mTemplate.shape) {
@@ -496,13 +493,12 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data?,
       VolumetricTemplates.compute3Dtemplate(templateDocument.object, canvas?.tokens?.placeables);
     }
   }
-  // TODO fix this so the workflow is not required (store the template reference somewhere else)
-  if (activity.workflow) {
-    activity.workflow.templateId = templateDocument?.id;
-    activity.workflow.templateUuid = templateDocument?.uuid;
+  if (this) {
+    this.templateId = templateDocument?.id;
+    this.templateUuid = templateDocument?.uuid;
   }
   if (targeting === "none") { // this is no good
-    Hooks.callAll("midi-qol-targeted", activity.workflow?.targets);
+    Hooks.callAll("midi-qol-targeted", this?.targets);
     return true;
   }
 
@@ -513,12 +509,12 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data?,
       token.setTarget(false, { user: game.user, releaseOthers: false });
   });
 
-  if (activity.workflow.workflowType === "TrapWorkflow") return;
-  if (debugEnabled > 0) warn("selectTargets ", activity.workflow?.suspended, activity.workflow?.needTemplate, templateDocument);
-  
-  if (activity.workflow?.needTemplate) {
-    activity.workflow.needTemplate = false;
-    if (activity.workflow?.suspended) activity.workflow.unSuspend.bind(activity.workflow)({ templateDocument });
+  if (this?.workflowType === "TrapWorkflow") return;
+  if (debugEnabled > 0) warn("selectTargets ", this?.suspended, this?.needTemplate, templateDocument);
+
+  if (this?.needTemplate) {
+    this.needTemplate = false;
+    if (this.suspended) this.unSuspend.bind(this)({ templateDocument });
   }
   return;
 };
@@ -531,4 +527,15 @@ function blockRoll(item, workflow) {
     Hooks.callAll(hookName, workflow)
   }
   return false;
+}
+
+/**
+ * Get currently selected tokens in the scene or user's character's tokens.
+ * @returns {Token5e[]}
+ */
+export function getSceneTargets(): Token[] {
+  let targets: Token[] = canvas?.tokens?.controlled.filter(t => t.actor) ?? [];
+  //@ts-expect-error getActiveTokens can return Token[] or TokenDocument[] and types assumes TokenDocument[]
+  if (!targets.length && game.user?.character) targets = game.user.character.getActiveTokens();
+  return targets;
 }
