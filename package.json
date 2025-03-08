@@ -13,7 +13,7 @@
 		"devwatch": "npx gulp devWatch",
 		"devclean": "npx gulp devClean",
 		"release": "npx gulp zip",
-		"tag": "git tag -a v%npm_package_version% && git push origin --follow-tags"
+		"tag": "cross-var git tag -a v$npm_package_version -m \"version $npm_package_version release tag\" && git push origin --follow-tags"
 	},
 	"prettier": {
 		"tabWidth": 2,
@@ -26,6 +26,7 @@
 		"@ethaks/fvtt-quench": "^0.6.0",
 		"@foundryvtt/foundryvtt-cli": "^1.0.3",
 		"@types/jest": "^27.4.1",
+		"cross-var": "^1.1.0",
 		"del": "^6.0.0",
 		"fvtt-types": "github:League-of-Foundry-Developers/foundry-vtt-types#documents-v2",
 		"gulp": "^4.0.2",
