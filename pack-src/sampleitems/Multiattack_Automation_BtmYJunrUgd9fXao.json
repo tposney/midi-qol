@@ -186,20 +186,19 @@
           "onlyOnce": false,
           "wallsBlock": "system"
         },
-        "core": {
-          "sourceId": "Scene.VUTmnLQOHLsSo5lF.Token.IyRV8LwSCk1FiSWh.Actor.K58INTSFII9dCu9i.Item.FXy68z4tsAoyYBv2.ActiveEffect.Eb9vz83kYdtdho2B"
-        }
+        "core": {}
       },
       "tint": "#ffffff",
       "_stats": {
-        "compendiumSource": null,
+        "compendiumSource": "Scene.VUTmnLQOHLsSo5lF.Token.IyRV8LwSCk1FiSWh.Actor.K58INTSFII9dCu9i.Item.FXy68z4tsAoyYBv2.ActiveEffect.Eb9vz83kYdtdho2B",
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/skills/melee/blade-tips-triple-steel.webp",
       "type": "base",
@@ -323,12 +322,13 @@
   "_stats": {
     "compendiumSource": null,
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555835389,
     "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "_id": "BtmYJunrUgd9fXao",
   "sort": 300000,

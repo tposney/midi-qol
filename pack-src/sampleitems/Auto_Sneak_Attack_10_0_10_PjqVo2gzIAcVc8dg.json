@@ -58,12 +58,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/skills/melee/strike-dagger-arcane-pink.webp",
       "type": "base",
@@ -122,9 +123,7 @@
         "loopAnimations": true
       }
     },
-    "core": {
-      "sourceId": "Compendium.midi-qol.midiqol-sample-items.uvRQayOyn61L6vOV"
-    },
+    "core": {},
     "midiProperties": {
       "confirmTargets": "default",
       "autoFailFriendly": false,
@@ -287,12 +286,13 @@
   "_stats": {
     "compendiumSource": "Compendium.midi-qol.midiqol-sample-items.uvRQayOyn61L6vOV",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555835389,
     "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "PjqVo2gzIAcVc8dg",

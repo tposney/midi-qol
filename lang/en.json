@@ -30,7 +30,7 @@
   "midi-qol.ItemRollButtons.Name": "Add attack/damage buttons to item inventory list",
   "midi-qol.ItemRollButtons.Hint": "Add Roll Buttons to item description - these buttons support ctrl/alt/shift to skip the dialog",
   "midi-qol.AddChatDamageButtons.Name": "Add damage buttons to chat message",
-  "midi-qol.AddChatDamageButtons.Hint": "Add Damage buttons to any damage roll chat message - this enables the dnd5e damage buttons on midi chat cards",
+  "midi-qol.AddChatDamageButtons.Hint": "Add Enable the dnd5e damage tray on chat messages.",
   "midi-qol.AddChatDamageButtonsOptions": {
     "none": "None",
     "gm": "Only add buttons for GM",

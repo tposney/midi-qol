@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, geti18nOptions, log, GameSystemConfig, SystemString, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, processItemCardCreation, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { processUndoDamageCard } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, MQfromUuidSync, removeReactionUsed, removeBonusActionUsed, chackFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, itemIsVersatile, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, isConcentrating, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, itemIsVersatile, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, isConcentrating, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime } from "./utils.js";
 import { activateMacroListeners, getCurrentSourceMacros } from "./apps/Item.js"
 import { autoFastForwardAbilityRolls, checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
@@ -123,14 +123,15 @@ export let readyHooks = async () => {
     if (!game.users?.activeGM?.isSelf) return;
     if (!(deletedEffect.parent instanceof CONFIG.Actor.documentClass)) return;
     if (debugEnabled > 0) warn("deleteActiveEffectHook", deletedEffect, deletedEffect.parent.name, options);
-    async function changefunc() {
+    async function changeFunc() {
       try {
-        let origin = MQfromUuidSync(deletedEffect.origin);
+        let origin = fromUuidSync(deletedEffect.origin as any);
         if (origin instanceof ActiveEffect && !options.noConcentrationCheck && configSettings.removeConcentrationEffects !== "none") {
           // @ts-expect-error no dnd5e-types
           if (origin.statuses?.has(CONFIG.specialStatusEffects.CONCENTRATING) && origin.getDependents()?.length === 0) {
             // @ts-expect-error duration.remaining
             if (!installedModules.get("times-up") || (origin?.duration?.emaining ?? 1) > 0) {
+              //@ts-expect-error
               await origin.delete();
             }
           }
@@ -141,7 +142,7 @@ export let readyHooks = async () => {
         return true;
       }
     }
-    return changefunc();
+    return changeFunc();
   })
 
   // Hooks.on("restCompleted", restManager); I think this means 1.6 is required.
@@ -156,6 +157,7 @@ export let readyHooks = async () => {
     if (!checkMechanic("autoRerollInitiative")) return;
     let combatantIds: any = combat.combatants.map(c => c.id);
     if (combat.combatants?.size > 0) {
+      //@ts-expect-error types things update data is never
       combat.rollInitiative(combatantIds, { updateTurn: true }).then(() => combat.update({ turn: 0 }));
     }
   });
@@ -256,9 +258,10 @@ export function initHooks() {
 
   Hooks.on("updateChatMessage", (message: ChatMessage, update, options, user) => {
     hideRollUpdate(message, update, options, user);
-    //@ts-ignore scrollBottom
-    ui.chat?.scrollBottom();
+    //@ ts-ignore scrollBottom
+    // ui.chat?.scrollBottom();
   });
+
 
   Hooks.on("updateCombat", (combat: Combat, data: Combat.UpdateData, options, user) => {
     if (data.round === undefined && data.turn === undefined) return;
@@ -282,8 +285,8 @@ export function initHooks() {
   });
 
   Hooks.on("deleteChatMessage", (message: ChatMessage, options, user) => {
-    if (message.author?.id !== game.user?.id) return;
-    Workflow.deleteWorkflow(message.uuid)
+    Workflow.deleteWorkflow(message.uuid);
+    clearUpdatesCache(message.uuid);
   });
 
   Hooks.on("midi-qol.RollComplete", async (workflow: Workflow) => {
@@ -291,14 +294,14 @@ export function initHooks() {
 
     if (savedOverTimeEffectsToDelete[activityUuid]) {
       if (workflow.saves.size === 1 || !workflow.hasSave) {
-        let effect = MQfromUuidSync(savedOverTimeEffectsToDelete[activityUuid].uuid);
-        expireEffects(effect.parent, [effect], { "expiry-reason": "midi-qol:overTime" });
+        let effect = fromUuidSync(savedOverTimeEffectsToDelete[activityUuid].uuid) as ActiveEffect | undefined;
+        if (effect) expireEffects(effect.parent, [effect], { "expiry-reason": "midi-qol:overTime" });
       }
       delete savedOverTimeEffectsToDelete[activityUuid];
     }
     if (overTimeEffectsToDelete[activityUuid]) {
-      let effect = fromUuidSync(overTimeEffectsToDelete[activityUuid].uuid);
-      expireEffects(effect.parent, [effect], { "expiry-reason": "midi-qol:overTime" });
+      let effect: ActiveEffect | undefined = fromUuidSync(overTimeEffectsToDelete[activityUuid].uuid) as ActiveEffect | undefined;
+      if (effect) expireEffects(effect.parent, [effect], { "expiry-reason": "midi-qol:overTime" });
       delete overTimeEffectsToDelete[activityUuid];
     }
     if (debugEnabled > 1) debug("Finished the roll", activityUuid, workflow.id)
@@ -481,31 +484,7 @@ export function initHooks() {
           },
         ]);
         */
-    /*
-    api.registerItemContent(
-      new api.models.HtmlContent({
-        html: (data) => {
-          const tooltip = `${SystemString}.TargetUnits`
-          return `
-          <select name="system.target.units" data-tooltip="${i18n(tooltip)}">
-          <option value="" ${data.item.system.target.units === '' ? "selected" : ''}></option>
-          <option value="ft" ${data.item.system.target.units === 'ft' ? "selected" : ''}>Feet</option>
-          <option value="mi " ${data.item.system.target.units === 'mi' ? "selected" : ''}>Miles</option>
-          <option value="m" ${data.item.system.target.units === 'm' ? "selected" : ''}>Meters</option>
-          <option value="km" ${data.item.system.target.units === 'km' ? "selected" : ''}>Kilometers</option>
-          </select>
-        `;
-        },
-        injectParams: {
-          selector: `[data-tidy-field="system.target.type"]`,
-          position: "beforebegin",
-        },
-        enabled: (data) =>
-          ["creature", "ally", "enemy"].includes(data.item.system.target?.type) &&
-          !data.item.hasAreaTarget,
-      })
-    );
-    */
+
     api.config.actorTraits.registerActorTrait({
       title: i18n("midi-qol.ActorOnUseMacros"),
       iconClass: "fas fa-cog",
@@ -598,12 +577,13 @@ export function initHooks() {
       ui.notifications?.warn("No target selected");
       return true;
     }
-    const item = MQfromUuidSync(dropData.uuid)
+    const item = fromUuidSync(dropData.uuid) as Item | undefined;
     if (!item) {
       const message = `actor / item broke for ${dropData?.uuid}`;
       error(message);
       TroubleShooter.recordError(new Error(message), message);
     }
+    //@ts-expect-error no dnd5e types
     item?.use({ legacy: false }, {}, {});
     return true;
   })
@@ -783,10 +763,11 @@ Hooks.on("dnd5e.preCalculateDamage", (actor: Actor.Implementation, damages, opti
       if (!options.midiIgnoreComputed) {
         const categories = { "idi": "immunity", "idr": "resistance", "idv": "vulnerability", "ida": "absorption" };
         if (mo?.sourceActorUuid) {
-          const sourceActor = fromUuidSync(mo.sourceActorUuid);
+          const sourceActor: Actor | undefined = fromUuidSync(mo.sourceActorUuid) as Actor | undefined;
           for (let key of ["idi", "idr", "idv", "ida"]) {
-            if (foundry.utils.getProperty(sourceActor, `system.traits.${key}`) && sourceActor.system.traits[key].value.size > 0) {
-              const trait = foundry.utils.getProperty(sourceActor, `system.traits.${key}`);
+            //@ts-expect-error no dnd5e types
+            if (sourceActor && foundry.utils.getProperty(sourceActor as any, `system.traits.${key}`) && sourceActor.system.traits[key]?.value.size > 0) {
+              const trait = foundry.utils.getProperty(sourceActor as any, `system.traits.${key}`);
               if (!options.ignore?.[categories[key]]) foundry.utils.setProperty(options, `ignore.${categories[key]}`, new Set())
               for (let dt of Object.keys(GameSystemConfig.damageTypes)) {
                 if (!damages.some(di => di.type === dt)) continue;

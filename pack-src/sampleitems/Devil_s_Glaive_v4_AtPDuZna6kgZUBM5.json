@@ -71,12 +71,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/weapons/polearms/halberd-crescent-glowing.webp",
       "type": "base",
@@ -179,9 +180,7 @@
         }
       }
     },
-    "core": {
-      "sourceId": "Item.0AgqaCUkEyZCbC5Y"
-    },
+    "core": {},
     "enhancedcombathud": {
       "set1p": false,
       "set2p": false,
@@ -511,12 +510,13 @@
   "_stats": {
     "compendiumSource": "Item.0AgqaCUkEyZCbC5Y",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555836908,
     "modifiedTime": 1738555836908,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "5Ok9Jbl5nOokCkqf",
   "_id": "AtPDuZna6kgZUBM5",

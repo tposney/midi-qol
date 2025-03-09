@@ -77,12 +77,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/magic/defensive/shield-barrier-flaming-diamond-blue-yellow.webp",
       "type": "base",
@@ -92,9 +93,7 @@
     }
   ],
   "flags": {
-    "core": {
-      "sourceId": "Compendium.dnd5e.spells.JVhKeanAXZH62DrF"
-    },
+    "core": {},
     "scene-packer": {
       "hash": "2d3cdfc17b6cc966dbf55fe4f0d981795641ffae",
       "sourceId": "Item.YHB1R4IDwGQAeCvP"
@@ -364,12 +363,13 @@
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.spells.JVhKeanAXZH62DrF",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555835389,
     "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "INfoostPYhvVepHc",

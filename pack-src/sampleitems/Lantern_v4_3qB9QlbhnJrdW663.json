@@ -45,12 +45,13 @@
       "_stats": {
         "compendiumSource": "Actor.BogmFuNh1wswTouJ.Item.01nUqcU5tM6Lt5q2.ActiveEffect.1alY3YZuyczKY8Ly",
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/sundries/lights/lantern-iron-yellow.webp",
       "type": "base",
@@ -75,9 +76,7 @@
       "rechargeUnit": "r1",
       "sorting": "l"
     },
-    "core": {
-      "sourceId": "Item.1y6oB6dwzODcP0Kp"
-    },
+    "core": {},
     "dnd5e": {
       "riders": {
         "activity": [],
@@ -298,12 +297,13 @@
   "_stats": {
     "compendiumSource": "Item.1y6oB6dwzODcP0Kp",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555836908,
     "modifiedTime": 1738555836908,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "_id": "3qB9QlbhnJrdW663",
   "sort": 1200000,

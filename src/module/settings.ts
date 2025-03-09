@@ -4,6 +4,7 @@ import { SoundConfigPanel } from "./apps/SoundConfigPanel.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { TargetConfirmationConfig } from "./apps/TargetConfirmationConfig.js";
 import { _updateAction } from "./utils.js";
+import { Workflow } from "./Workflow.js";
 
 export var itemRollButtons: boolean;
 export var criticalDamage: string;
@@ -24,6 +25,7 @@ export var midiSoundSettingsBackup: any = undefined;
 export var DebounceInterval: number;
 export var _debouncedUpdateAction;
 export var ReplaceDefaultActivities: boolean = true;
+export var UseWeakReferences: boolean = false;
 
 export const defaultTargetConfirmationSettings = {
   enabled: false,
@@ -578,6 +580,10 @@ export let fetchParams = () => {
   //@ts-expect-error
   ReplaceDefaultActivities = Boolean(game.settings?.get("midi-qol", "ReplaceDefaultActivities"));
   _debouncedUpdateAction = foundry.utils.debounce(_updateAction, DebounceInterval);
+  const oldWeakReferences = UseWeakReferences;
+  //@ts-expect-error
+  UseWeakReferences = game.settings?.get("midi-qol", "UseWeakReferences") ?? false;
+  if (UseWeakReferences !== oldWeakReferences) Workflow.clearWorkflows();
   //@ts-expect-error
   targetConfirmation = game.settings?.get("midi-qol", "TargetConfirmation");
   if (configSettings.griddedGridless === undefined) configSettings.griddedGridless = false;
@@ -911,7 +917,16 @@ export const registerSettings = function () {
     choices: geti18nOptions("DebugOptions"),
     onChange: fetchParams
   });
-
+  //@ts-expect-error
+  game.settings?.register("midi-qol", "UseWeakReferences", {
+    name: "Use Weak References for Workflows",
+    hint: "DO NOT CHANGE THIS SETTING",
+    scope: "world",
+    default: false,
+    type: Boolean,
+    config: true,
+    onChange: fetchParams
+  });
   //@ts-expect-error
   game.settings?.register("midi-qol", "debugCallTiming", {
     name: "midi-qol.debugCallTiming.Name",

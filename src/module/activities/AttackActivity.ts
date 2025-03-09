@@ -172,7 +172,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         return this.rollAttack({ event, workflow, midiOptions: { advantage: true } }, {}, {});
       }
     }
-    
+
     static #rollAttackDisadvantage(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
       if (!message || !workflow || workflow.currentAction === workflow.WorkflowState_Aborted || workflow.currentAction === workflow.WorkflowState_Completed) {
@@ -211,36 +211,36 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         if (preValidateRollHookId) Hooks.off("dnd5e.preValidateRollAttack", preValidateRollHookId);
       }
     }
-    
+
     async use(config: any = {}, dialog: any = {}, message: any = {}) {
       if (debugEnabled > 0) warn("MidiQOL | AttackActivity | use | Called", config, dialog, message);
       config.midiOptions ??= {};
-
       const itemAttackPerTarget = foundry.utils.getProperty(this.item, "flags.midi-qol.rollAttackPerTarget");
       let isAttackPerTarget = itemAttackPerTarget === "always"
         || (configSettings.attackPerTarget && itemAttackPerTarget !== "never")
-      isAttackPerTarget &&= this.target?.template?.type === "";
-      if (!isAttackPerTarget)
+      isAttackPerTarget &&= this.target?.template?.type === ""; // only works if there is no AoE template targeting.
+      // Solution for this is to have a lead Use activity that sets the targets and then calls the attack activity as a trigger activity
+      const willHaveTargets = (config.midiOptions?.targetsToUse?.size ?? 0) > 0 || (game.user?.targets?.size ?? 0) > 0 || requiresTargetConfirmation(this, {})
+      if (!isAttackPerTarget || !willHaveTargets)
         return super.use(config, dialog, message);
-
-      const willHaveTargets = (game.user?.targets?.size ?? 0) > 0 || requiresTargetConfirmation(this, {})
-      if (!willHaveTargets) return super.use(config, dialog, message);
-      if (!await preTemplateTargets(this, config.midiOptions)) return false;
+      // Do target confirmation if required
+      if (!config.midiOptions.targetsToUse && !await preTemplateTargets(this, config.midiOptions)) return false;
       let returnValue;
-      let checkReaction = true;
-      let checkBonusAction = true;
-      if (!this.targets) this.targets = new Set(game.user?.targets);
-      for (let target of this.targets) {
+      let checkReaction = true; // first pass do reaction checks
+      let checkBonusAction = true; // first pass do bonus action checks
+      let targets;
+      if (config.midiOptions.targetsToUse) targets = config.midiOptions.targetsToUse;
+      if (!targets) targets = new Set(game.user?.targets);
+      for (let target of targets) {
         let item = this.item.clone({}, { keepId: true });
         let activity = item.system.activities.get(this.id);
         const attackConfig = foundry.utils.deepClone(config);
         attackConfig.midiOptions.targetsToUse = new Set([target]);
         attackConfig.midiOptions.workflowOptions ??= {};
         attackConfig.midiOptions.proceedChecks = { checkReaction, checkBonusAction };
-                attackConfig.midiOptions.workflowOptions.targetConfirmation = "never";
+        attackConfig.midiOptions.workflowOptions.targetConfirmation = "never";
         const attackDialog = foundry.utils.deepClone(dialog);
         delete attackDialog.configure;
-
         returnValue = await super.use.bind(activity)(attackConfig, attackDialog, message);
         checkReaction = false;
         checkBonusAction = false;
@@ -255,38 +255,8 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       let rolls;
       const workflow = config.workflow;
       config.midiOptions ??= this.midiOptions ?? workflow?.rollOptions ?? {};
-      /* WIP
-      if (foundry.utils.getProperty(config, "midiOptions.workflowOptions.rollAttackPerTarget")) { // this is the first targeted attack of multiple targets
-        console.error("midi-qol | AttackActivity | rollAttack isSingleAttack ", workflow?.targets), this.targets;
-        if (workflow?.targets && workflow.targets.size > 1) {
-          const userTargets = game.user?.targets ?? new Set();
-          const saveTargets = new Set(workflow?.targets);
-          saveTargets.delete(saveTargets.first() as Token);
-          workflow.targets = new Set([workflow?.targets?.first()]) as Set<Token>;
-          console.error(workflow.targets);
-          this.targets = workflow.targets;
-          for (let target of saveTargets) {
-            const attackConfig = foundry.utils.deepClone(config);
-            attackConfig.midiOptions.targetsToUse = new Set([target]);
-            attackConfig.midiOptions.workflowOptions ??= {};
-            attackConfig.midiOptions.proceedChecks = { checkReaction: false, checkBonusAction: false };
-            attackConfig.midiOptions.workflowOptions.targetConfirmation = "never";
-            attackConfig.midiOptions.targetsToUse = new Set([target]);
-            attackConfig.midiOptions.workflowOptions.rollAttackPerTarget = false;
-            attackConfig.midiOptions.checkRollPerTarget = false;
-            const attackDialog = foundry.utils.deepClone(dialog);
-            delete attackDialog.configure;
-            game.user?.broadcastActivity({ targets: [(target as Token).document.id as string] });
-            console.error("Targeting ", target.name);
-            await this.use(attackConfig, attackDialog, message);
-          }
-          const targetIds: string[] = Array.from(userTargets).map(t => (t as Token).document.id as string);
-          game.user?.broadcastActivity({ targets: targetIds });
-        }
-      }
-      */
+      
       try {
-        console.error("midi-qol | AttackActivity | rollAttack | Called", Array.from(this.targets ?? new Set()).map(t  => (t as Token).name));
         if (workflow && workflow?._currentState === workflow?.WorkflowState_Aborted || workflow?._currentState === workflow?.WorkflowState_Completed)
           // return this.use(config, dialog, message);
           if (debugEnabled > 0) warn("MidiQOL | AttackActivity | rollAttack | Called", config, dialog, message);
@@ -599,14 +569,14 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       this._otherActivity = this.item.system.activities.get(this.otherActivityId)
       if (!this._otherActivity) {
         // Is there exactly 1 automation activity on the item
-        const otherActivityOptions = this.item.system.activities.filter(a => a.midiProperties?.automationOnly);
+        const otherActivityOptions = this.item.system.activities.filter(a => a.midiProperties?.automationOnly && a.uuid !== this.uuid);
         if (otherActivityOptions.length === 1) {
           this._otherActivity = otherActivityOptions[0];
         }
       }
       if (!this._otherActivity) {
         // Is there exactly 1 other activity compatible activity on the item
-        const otherActivityOptions = this.item.system.activities.filter(a => a.isOtherActivityCompatible);
+        const otherActivityOptions = this.item.system.activities.filter(a => a.isOtherActivityCompatible && a.uuid !== this.uuid);
         if (otherActivityOptions.length === 1) {
           this._otherActivity = otherActivityOptions[0];
         }

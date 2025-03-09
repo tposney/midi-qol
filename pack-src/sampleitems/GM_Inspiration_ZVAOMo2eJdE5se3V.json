@@ -57,12 +57,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/magic/control/buff-luck-fortune-green.webp",
       "type": "base",
@@ -122,9 +123,7 @@
       "autoTarget": "default",
       "removeAttackDamageButtons": "default"
     },
-    "core": {
-      "sourceId": "Item.F58v9Hv37KF4JszF"
-    },
+    "core": {},
     "cf": {
       "id": "temp_1xw0kahfmt1",
       "color": "#000000"
@@ -308,12 +307,13 @@
   "_stats": {
     "compendiumSource": "Item.F58v9Hv37KF4JszF",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555835389,
     "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "ZVAOMo2eJdE5se3V",

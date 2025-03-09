@@ -28,12 +28,13 @@ export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.Formu
 
 export var MidiActivityMixin = Base => {
   return class MidiActivityMixin extends Base {
-    _workflow: Workflow | undefined;
     get workflow() {
-      if (!this._workflow) this._workflow = Workflow.getWorkflowByActivityUuid(this.uuid);
-      return this._workflow;
+      warn("MidiActivityMixin | acitvity.workflow is deprecated. activities no long store workflow references");
+      return Workflow.getWorkflowByActivityUuid(this.uuid);
     }
-    set workflow(value) { this._workflow = value; }
+    set workflow(value) { 
+      error("MidiActivityMixin | activity.workflow = is deprecated. activities no long store workflow references");``
+     }
 
     static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.SHARED"];
 
@@ -326,6 +327,7 @@ export var MidiActivityMixin = Base => {
     }
 
     async use(usage: any = {}, dialog: any = {}, message: any = {}) {
+      // console.error("midi-qol | MidiActivity | use | Called", usage, dialog, message);
       if (usage.midiOptions?.rollAs) return this.useAs(usage.midiOptions.rollAs, usage, dialog, message);
       if (!this.item.isEmbedded) return;
       if (!this.item.isOwner) {
@@ -340,13 +342,12 @@ export var MidiActivityMixin = Base => {
       if (debugEnabled > 0) warn("MidiQOL | MidiActivity | use | Called", usage, dialog, message);
       let item = this.item.clone({}, { keepId: true });
       let activity = item.system.activities.get(this.id);
-      if (usage.midiOptions.workflow) usage.workflow = usage.midiOptions.workflow; // This is a hack to allow for the workflow to be passed in
-      else {
+      if (!usage.workflow) {
         let workflowClass = usage?.midi?.workflowClass ?? globalThis.MidiQOL.workflowClass;
         if (!(workflowClass.prototype instanceof Workflow)) workflowClass = Workflow;
         usage.workflow = new workflowClass(activity.actor, activity, ChatMessage.getSpeaker({ actor: activity.item.actor }), game.user?.targets, { ...usage.midiOptions, event: usage.event, storeWorkflow: false });
         message.workflow = usage.workflow; // TODO: remove hack to allow card config processing
-      }
+      } 
       if ((activity.midiProperties.rollMode ?? "default") !== "default") message.rollMode = activity.midiProperties.rollMode;
       await removeFlanking(item.parent);
 
@@ -391,7 +392,6 @@ export var MidiActivityMixin = Base => {
       let usageData;
       const activityConsumptionHookId = Hooks.once("dnd5e.activityConsumption", (newActivity, usageConfig, messageConfig) => {
         usageData = usageConfig;
-        console.error("activityConsumptionHookId", newActivity, usageConfig, messageConfig)
       });
       try {
         activity.aaMarked = "midi-qol"
@@ -416,8 +416,7 @@ export var MidiActivityMixin = Base => {
         activity.removeWorkflow();
         return undefined;
       }
-      usage.workflow._id = results.message.uuid;
-      console.error("1", usage.workflow.targets)
+      usage.workflow.id = results.message.uuid;
       Workflow.addWorkflow(usage.workflow);
       usage.workflow.itemCardUuid = results.message.uuid;
       usage.workflow.itemCardId = results.message.id;
@@ -1102,7 +1101,8 @@ export var MidiActivityMixin = Base => {
         if (this.item) foundry.utils.setProperty(templateData, `flags.${MODULE_ID}.itemUuid`, this.item.uuid);
         if (this.actor) foundry.utils.setProperty(templateData, `flags.${MODULE_ID}.actorUuid`, this.actor.uuid);
         if (!foundry.utils.getProperty(templateData, `flags.${game.system?.id}.origin`)) foundry.utils.setProperty(templateData, `flags.${game.system?.id}.origin`, this.item?.uuid);
-        const templateDocuments: MeasuredTemplateDocument[] | undefined = await canvas?.scene?.createEmbeddedDocuments("MeasuredTemplate", [templateData]);
+        //@ts-expect-error
+        const templateDocuments: MeasuredTemplateDocument[] | undefined = await canvas?.scene?.createEmbeddedDocuments("MeasuredTemplate", [templateData]) as MeasuredTemplateDocument[];
 
         if (templateDocuments && templateDocuments.length > 0) {
           let td: MeasuredTemplateDocument = templateDocuments[0];

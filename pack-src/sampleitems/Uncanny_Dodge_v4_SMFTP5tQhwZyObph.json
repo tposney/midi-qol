@@ -54,12 +54,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/skills/movement/feet-winged-boots-brown.webp",
       "type": "base",
@@ -70,9 +71,7 @@
   ],
   "folder": "fZIl4G4qj3C894LI",
   "flags": {
-    "core": {
-      "sourceId": "Compendium.dnd5e.classfeatures.Mm64SKAHJWYecgXS"
-    },
+    "core": {},
     "betterRolls5e": {
       "critRange": {
         "type": "String",
@@ -343,12 +342,13 @@
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.classfeatures.Mm64SKAHJWYecgXS",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555835389,
     "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "_id": "SMFTP5tQhwZyObph",
   "sort": 900000,

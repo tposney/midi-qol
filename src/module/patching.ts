@@ -1,6 +1,6 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, isDnD, NumericTerm } from "../midi-qol.js";
 import { configSettings, autoFastForwardAbilityRolls, checkRule, checkMechanic, safeGetGameSetting } from "./settings.js";
-import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getTokenForActor, getSpeaker, getUnconsciousStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, MQfromUuidSync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed } from "./utils.js";
+import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getTokenForActor, getSpeaker, getUnconsciousStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -214,7 +214,8 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
       const target = config.event?.target?.closest('.roll-link, [data-action="rollRequest"], [data-action="concentration"]');
       if (target?.dataset?.midiOvertimeActorUuid) overtimeActorUuid = target.dataset.midiOvertimeActorUuid;
       if (overtimeActorUuid && this.uuid !== overtimeActorUuid) {
-        const actualActor = MQfromUuidSync(overtimeActorUuid);
+        const actualActor = fromUuidSync(overtimeActorUuid) as Actor | undefined;
+        //@ts-expect-error no dnd5e types
         if (actualActor) return actualActor.rollSkill(config, dialog, message);
       }
     }
@@ -543,10 +544,12 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
         message.rollMode = target.dataset.midiRollMode ?? message.rollMode;
       }
       if (overtimeActorUuid && this.uuid !== overtimeActorUuid) {
-        const actualActor = MQfromUuidSync(overtimeActorUuid);
+        const actualActor = fromUuidSync(overtimeActorUuid) as Actor | undefined;
         if (actualActor && rollType === "save")
+        //@ts-expect-error no dnd5e types
           return actualActor.rollSavingThrow(config, dialog, message);
-        else return actualActor.rollAbilityCheck(config, dialog, message);
+        //@ts-expect-error no dnd5e types
+        else if (actualActor) return actualActor.rollAbilityCheck(config, dialog, message);
       }
     }
 
@@ -1406,7 +1409,7 @@ async function _addDependent(...dependent) {
 function _getDependents() {
   const id = game.system?.id ?? MODULE_ID;
   return Array.from((this.getFlag(id, "dependents") || []).reduce((deps, { uuid }) => {
-    const effect = fromUuidSync(uuid);
+    const effect = fromUuidSync(uuid) as ActiveEffect | undefined;
     if (effect) deps.add(effect);
     return deps;
   }, new Set()));
@@ -1424,7 +1427,7 @@ async function _onDelete(wrapped, ...args) {
     const dependents = this.getDependents();
     if (dependents.length > 0) {
       for (let dep of dependents) {
-        if (fromUuidSync(dep.uuid)) {
+        if (fromUuidSync(dep.uuid) as any | undefined) {
           await dep.delete(options);
         }
         // Since the effect will have been already deleted we can't do any updates to it.
@@ -1511,7 +1514,8 @@ export let itemPatching = () => {
 export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocument, options, user) {
   if (user !== game.user?.id) return;
   if (options.undo) return;
-  let origin = MQfromUuidSync(templateDocument.getFlag("dnd5e", "origin" as never));
+  //@ts-expect-error
+  let origin = fromUuidSync(templateDocument.getFlag("dnd5e", "origin") as any | undefined) as Item | ActiveEffect | Actor | TokenDocument | undefined;
   if (origin instanceof Item && origin.parent instanceof Actor) {
     // @ts-expect-error can't know about flags
     origin = origin.parent.effects?.find(ef => ef.getFlag("dnd5e", "dependents")?.some(dep => dep.uuid === templateDocument.uuid));
@@ -1519,6 +1523,7 @@ export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocu
   if (origin instanceof ActiveEffect && !options.noConcentrationCheck && configSettings.removeConcentrationEffects !== "none") {
     // @ts-expect-error no dnd5e-types
     if (origin?.getDependents()?.length === 0) {
+      //@ts-expect-error
       await origin.delete();
     }
   }

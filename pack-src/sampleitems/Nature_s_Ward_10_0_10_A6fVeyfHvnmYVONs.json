@@ -68,12 +68,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/commodities/flowers/lotus-pink.webp",
       "type": "base",
@@ -101,9 +102,7 @@
       "id": "temp_qt0kn9os0vl",
       "color": "#000000"
     },
-    "core": {
-      "sourceId": "Compendium.midi-qol.midiqol-sample-items.Td3v4mqUETTolcm0"
-    },
+    "core": {},
     "midiProperties": {
       "confirmTargets": "default",
       "autoFailFriendly": false,
@@ -176,12 +175,13 @@
   "_stats": {
     "compendiumSource": "Compendium.midi-qol.midiqol-sample-items.Td3v4mqUETTolcm0",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555835389,
     "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "A6fVeyfHvnmYVONs",

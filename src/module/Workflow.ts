@@ -1,7 +1,7 @@
 import { warn, debug, log, i18n, MESSAGE_TYPES, error, MQdefaultDamageType, debugEnabled, MQItemMacroLabel, debugCallTiming, geti18nOptions, GameSystemConfig, i18nSystem, allDamageTypes, MODULE_ID, NumericTerm, MQActivityMacroLabel } from "../midi-qol.js";
 import { socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
-import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting } from "./settings.js";
+import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, UseWeakReferences } from "./settings.js";
 import { createDamageDetailV4, processDamageRoll, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, getAutoRollAttack, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, expireMyEffects, validTargetTokens, getTokenForActorAsSet, doReactions, playerFor, requestPCActiveDefence, evalActivationCondition, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, MQfromUuidSync, midiRenderRoll, markFlanking, canSense, tokenForActor, getTokenForActor, createConditionData, evalCondition, removeHidden, hasDAE, computeCoverBonus, FULL_COVER, isInCombat, displayDSNForRoll, setActionUsed, removeInvisible, getTokenDocument, getToken, getIconFreeLink, activityHasAutoPlaceTemplate, addRollTo, sumRolls, midiRenderAttackRoll, midiRenderDamageRoll, midiRenderBonusDamageRoll, midiRenderOtherDamageRoll, debouncedUpdate, getCachedDocument, clearUpdatesCache, getDamageType, getTokenName, setRollOperatorEvaluated, evalAllConditionsAsync, getAppliedEffects, canSee, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, getsaveMultiplierForActivity, checkActivityRange, computeDistance, getAoETargetType, getActivityAutoTargetAction, activityHasEmanationNoTemplate, isAutoFastDamage, completeActivityUse, getActor, getRemoveAllButtons, requestPCSave } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, procAbilityAdvantage } from "./patching.js";
@@ -22,18 +22,23 @@ type damageBonusMacroSingleResult = {
 type damageBonusMacroResult = damageBonusMacroSingleResult[] | damageBonusMacroSingleResult;
 
 export type WorkflowState = undefined | ((context: any) => Promise<WorkflowState>);
-const useWeakRef = false;
 export class Workflow {
   [x: string]: any;
   static get forceCreate(): boolean { return true }
   static _workflows: Map<string, WeakRef<Workflow> | Workflow> = new Map();
+  static clearWorkflows() {
+    Workflow._workflows = new Map();
+  }
+
   static addWorkflow(workflow: Workflow) {
     if (Workflow._workflows.has(workflow.id)) Workflow.removeWorkflow(workflow.id);
-    if (useWeakRef) Workflow._workflows.set(workflow.id, new WeakRef(workflow));
+    if (UseWeakReferences) Workflow._workflows.set(workflow.id, new WeakRef(workflow));
     else Workflow._workflows.set(workflow.id, workflow);
   }
   static get workflows() { return Workflow._workflows }
   static getWorkflow(id: string | undefined): Workflow | undefined {
+    if (debugEnabled > 0) warn("Get workflow ", id, Workflow._workflows, Workflow._workflows[id ?? ""])
+
     if (debugEnabled > 1) debug("Get workflow ", id, Workflow._workflows, Workflow._workflows[id ?? ""])
     if (!id) return undefined;
     let workflow = Workflow._workflows.get(id);
@@ -68,7 +73,7 @@ export class Workflow {
         break;
       }
     }
-    console.warn(`Fetching workflow by activity uuid ${activityUuid} workflowId: ${returnValue?.id}`);
+    if (debugEnabled > 0) warn(`Fetching workflow by activity uuid ${activityUuid} workflowId: ${returnValue?.id}`);
     return returnValue;
   }
   static deleteWorkflow(id: string) {
@@ -101,7 +106,7 @@ export class Workflow {
   set id(id: string) { this._id = id }
 
   get uuid() {
-    console.warn(`workflow.uuid is deprecated. Use workflow.id to reference the workflow and workflow.itemUuid to reference the item instead.
+    if (debugEnabled > 0) warn(`workflow.uuid is deprecated. Use workflow.id to reference the workflow and workflow.itemUuid to reference the item instead.
       Returning ${this.activity.uuid} workflowId: ${this.id}`);
     return this.activity.uuid;
   }
@@ -169,7 +174,7 @@ export class Workflow {
 
   get saveItem() {
     if (this.activity.save || this.activity.check) return this.item;
-    return this.otherActivity?.item;
+    return this.otherActivity?.item ?? this.activity.item;
   }
 
   damageRolls: Roll[] | undefined;
@@ -307,19 +312,6 @@ export class Workflow {
     this.actor = actor;
     this.item = activity.item;
     this.activity = activity;
-    if (this.workflowType === "BaseWorkflow") {
-      const existing = Workflow.getWorkflow(activity.uuid);
-      if (existing) {
-        Workflow.removeWorkflow(activity.uuid);
-        //TODO check this
-        if ([existing.WorkflowState_RollFinished, existing.WorkflowState_WaitForDamageRoll].includes(existing.currentAction) && existing.itemCardUuid) {
-          clearUpdatesCache(existing.itemCardUuid);
-          const existingCard = MQfromUuidSync(existing.itemCardUuid);
-          if (existingCard) existingCard.delete();
-          // game.messages?.get(existing.itemCardId ?? "")?.delete();
-        }
-      }
-    }
 
     if (!this.item || this instanceof DummyWorkflow) {
       this.id = foundry.utils.randomID();
@@ -545,6 +537,7 @@ export class Workflow {
       return;
     }
     const workflow = Workflow.getWorkflow(id);
+    console.warn(`removeWorkflow deleting ${id}`, Workflow._workflows[id]); // TODO remove
     if (!workflow) {
       if (debugEnabled > 0) warn("removeWorkflow | No such workflow ", id);
       return;
@@ -710,26 +703,26 @@ export class Workflow {
           if (!isAborting || this.currentAction === this.WorkflowState_Completed) {
             await this.callOnUseMacrosForAction("post", this.currentAction);
             if (await this.callHooksForAction("post", this.currentAction) === false && !isAborting) {
-              console.warn(`${this.workflowName} ${currentName} -> ${name} aborted by post ${this.nameForState(this.currentAction)} Hook`)
+              console.warn(`${this.workflowName}${this.id} ${currentName} -> ${name} aborted by post ${this.nameForState(this.currentAction)} Hook`)
               newState = this.aborted ? this.WorkflowState_Abort : this.WorkflowState_RollFinished;
             }
-            if (debugEnabled > 0) warn(`${this.workflowName} finished ${currentName}`);
-            if (debugEnabled > 0) warn(`${this.workflowName} transition ${this.nameForState(this.currentAction)} -> ${name}`);
+            if (debugEnabled > 0) warn(`${this.workflowName} ${this.id} finished ${currentName}`);
+            if (debugEnabled > 0) warn(`${this.workflowName} ${this.id} transition ${this.nameForState(this.currentAction)} -> ${name}`);
 
             if (!isAborting && this.aborted) {
-              console.warn(`${this.workflowName} ${currentName} -> ${name} aborted by pre ${this.nameForState(this.currentAction)} macro pass`)
+              console.warn(`${this.workflowName} ${this.id} ${currentName} -> ${name} aborted by pre ${this.nameForState(this.currentAction)} macro pass`)
               newState = this.WorkflowState_Abort;
               continue;
             }
           }
           await this.callOnUseMacrosForAction("pre", newState);
           if (await this.callHooksForAction("pre", newState) === false && !isAborting) {
-            console.warn(`${this.workflowName} ${currentName} -> ${name} aborted by pre ${this.nameForState(newState)} Hook`)
+            console.warn(`${this.workflowName} ${this.id} ${currentName} -> ${name} aborted by pre ${this.nameForState(newState)} Hook`)
             newState = this.aborted ? this.WorkflowState_Abort : this.WorkflowState_RollFinished;
             continue;
           }
           if (this.aborted && !isAborting) {
-            console.warn(`${this.workflowName} ${currentName} -> ${name} aborted by pre ${this.nameForState(newState)} macro pass`)
+            console.warn(`${this.workflowName} ${currentName} ${this.id} -> ${name} aborted by pre ${this.nameForState(newState)} macro pass`)
             newState = this.WorkflowState_Abort;
             continue;
           }
@@ -751,7 +744,6 @@ export class Workflow {
         const message = `performState | ${this.workflowName} Workflow ${this.id} exceeded ${this.maxTransitionCount ?? MaxTransitionCount} iterations`;
         error(message);
         TroubleShooter.recordError(new Error(message), message);
-        if (Workflow.getWorkflow(this.id)) await Workflow.removeWorkflow(this.id);
       }
     } catch (err) {
       const message = `performState | ${this.workflowName} Workflow ${this.id}`;
@@ -1647,7 +1639,8 @@ export class Workflow {
         // if auto animations is active we need to allow enough time for it to have grabbed the template data before deleting it.
         const timeout = AAActive ? Math.max(1000 - elapsed, 1) : 1;
         setTimeout(() => {
-          const templateToDelete = fromUuidSync(this.templateUuid);
+          const templateToDelete = fromUuidSync(this.templateUuid) as MeasuredTemplateDocument || null;
+          //@ts-expect-error
           templateToDelete?.delete()
         }, timeout);
       } else log("Not auto removing instantaneous template because boss loot assets active")
@@ -1655,8 +1648,10 @@ export class Workflow {
     if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookid);
     if (configSettings.autoItemEffects === "applyRemove") await this.removeEffectsButton();
     // TODO see if we can delete the workflow - I think that causes problems for Crymic
-    // @ts-expect-error protected
-    ui.chat?.scrollBottom();
+    setTimeout(() => {
+      //@ts-expect-error protected
+      ui.chat?.scrollBottom();
+    }, 100);
     return this.WorkflowState_Completed;
   }
 
@@ -1756,6 +1751,7 @@ export class Workflow {
 
     if (this.templateUuid) {
       const templateToDelete = await fromUuid(this.templateUuid);
+      //@ts-expect-error
       if (templateToDelete) await templateToDelete.delete();
     }
     return this.WorkflowState_Cleanup;
@@ -2863,7 +2859,9 @@ export class Workflow {
             const itemNameOrUuid = parts.slice(1).join(".");
             // @ts-expect-error
             macroItem = await fromUuid(itemNameOrUuid); // item or activity
-            if (macroItem?.item) macroItem = macroItem.item;
+            if (macroItem instanceof ActiveEffect && macroItem.parent instanceof Item) 
+              macroItem = macroItem.parent;
+            else if (macroItem?.item) macroItem = macroItem.item;
             // ItemMacro.name
             if (!macroItem) macroItem = actorToUse.items.find(i => i.name === itemNameOrUuid && (foundry.utils.getProperty(i.flags, "dae.macro") ?? foundry.utils.getProperty(i.flags, "itemacro.macro")))
             if (!macroItem && actorToUse instanceof Actor && uuid) {
@@ -3971,6 +3969,7 @@ export class Workflow {
 
     if (debugEnabled > 1) debug("check saves: requests are ", this.saveRequests)
     var results = await Promise.all(promises);
+  //@ts-expect-error
     (await Promise.all(requestCards)).forEach(chatMessage => chatMessage?.delete());
     if (rerRequests?.length > 0) await busyWait(0.01);
     delete this.saveDetails;
@@ -3987,7 +3986,7 @@ export class Workflow {
     this.saveResults = results;
     let i = 0;
     if (activityHasAreaTarget(this.activity) && this.templateUuid) {
-      const templateDocument = await fromUuid(this.templateUuid);
+      const templateDocument = await fromUuid(this.templateUuid) as MeasuredTemplateDocument | null;
       var template = templateDocument?.object;
     }
     for (let tokenOrDocument of allHitTargets) {
@@ -4031,8 +4030,9 @@ export class Workflow {
           const position: any = foundry.utils.duplicate(template.center);
           const dimensions = canvas?.dimensions;
           if (template.document.t === "rect") {
-            position.x += template.document.width / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
-            position.y += template.document.width / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
+            // TODO in v12 width seems to be always 0 so this does nothing
+            position.x += (template.document.width ?? 1) / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
+            position.y += (template.document.width ?? 1) / (dimensions?.distance ?? 5) / 2 * (dimensions?.size ?? 100);
           }
           if (configSettings.optionalRules.coverCalculation === "levelsautocover"
             && installedModules.get("levelsautocover")) {
@@ -4040,6 +4040,7 @@ export class Workflow {
             coverSaveBonus = computeCoverBonus({
               center: position,
               document: {
+                //@ts-expect-error
                 elevation: template.document.elevation,
                 disposition: targetDocument?.disposition,
               }
@@ -4274,7 +4275,6 @@ export class Workflow {
 
   async displayChatCardWithoutDamageDetail() {
     let chatMessage = getCachedDocument(this.itemCardUuid);
-    // let chatMessage = game.messages?.get(workflow.itemCardId ?? "");
     //@ts-ignore content v10
     let content = (chatMessage && chatMessage.content) ?? "";
     let data;
@@ -5212,9 +5212,7 @@ export class DamageOnlyWorkflow extends Workflow {
     // TODO change this to the new apply token damage call - sigh
     //this.damageList = await applyTokenDamage(this.rawDamageDetail, this.damageTotal, this.targets, this.item, new Set(), { existingDamage: this.damageList, superSavers: new Set(), semiSuperSavers: new Set(), workflow: this, updateContext: undefined, forceApply: false })
     const result = await this.WorkflowState_AllRollsComplete()
-    Workflow.removeWorkflow(this.id);
     return result;
-    // return this.WorkflowState_Suspend;
   }
 }
 
@@ -5234,7 +5232,7 @@ export class TrapWorkflow extends Workflow {
     this.rollOptions.fastForward = true;
     this.kickStart = false;
     this.suspended = false;
-    this.activity.use({ configure: false, midiOptions: { workflowOptions: this.workflowOptions, workflow: this } }, {}, {})
+    this.activity.use({ configure: false, workflow: this, midiOptions: { workflowOptions: this.workflowOptions } }, {}, {})
     // this.performState(this.WorkflowState_Start);
     return this;
   }
@@ -5267,6 +5265,7 @@ export class TrapWorkflow extends Workflow {
     templateData.direction = this.templateLocation?.direction || 0;
 
     // Create the template
+    //@ts-expect-error
     let templates = await (canvas?.scene as unknown as Scene)?.createEmbeddedDocuments("MeasuredTemplate", [templateData]);
     if (templates) {
       const templateDocument: any = templates[0];
@@ -5279,6 +5278,7 @@ export class TrapWorkflow extends Workflow {
       if (this.templateLocation?.removeDelay) {
         let ids: string[] = templates.map(td => td._id as string)
         //TODO test this again
+        //@ts-expect-error
         setTimeout(() => canvas?.scene?.deleteEmbeddedDocuments("MeasuredTemplate", ids), this.templateLocation.removeDelay * 1000);
       }
     }
@@ -5519,7 +5519,7 @@ export class DDBGameLogWorkflow extends Workflow {
       Hooks.off("preCreateMeasuredTemplate", this.preCreateTemplateHookId);
     }
     if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookId);
-    super.WorkflowState_RollFinished().then(() => Workflow.removeWorkflow(this.activity.uuid));
+    super.WorkflowState_RollFinished();
     return this.WorkflowState_Suspend;
   }
 }

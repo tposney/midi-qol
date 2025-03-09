@@ -65,12 +65,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/magic/light/explosion-beam-impact-silhouette.webp",
       "type": "base",
@@ -94,9 +95,7 @@
       "rechargeUnit": "r1",
       "sorting": "l"
     },
-    "core": {
-      "sourceId": "Item.TD7s9EYoA6Bg5mdp"
-    },
+    "core": {},
     "scene-packer": {
       "sourceId": "Item.kpgiUAoyLfvKtbaY"
     },
@@ -207,12 +206,13 @@
   "_stats": {
     "compendiumSource": "Item.TD7s9EYoA6Bg5mdp",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555835389,
     "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "HNeqAtPkcUqfI2mQ",

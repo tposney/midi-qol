@@ -201,12 +201,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/magic/light/hand-sparks-glow-yellow.webp",
       "type": "base",
@@ -293,9 +294,7 @@
         }
       }
     },
-    "core": {
-      "sourceId": "Actor.DMTSWfQs8whM5FtE.Item.U12advFHOATmDZJa"
-    },
+    "core": {},
     "cf": {
       "id": "temp_qt0kn9os0vl"
     },
@@ -323,12 +322,13 @@
   "_stats": {
     "compendiumSource": "Actor.DMTSWfQs8whM5FtE.Item.U12advFHOATmDZJa",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555835389,
     "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "HjNkcVje0brf07RH",

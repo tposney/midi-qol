@@ -222,12 +222,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/consumables/potions/bottle-round-corked-pink.webp",
       "type": "base",
@@ -269,9 +270,7 @@
         }
       }
     },
-    "core": {
-      "sourceId": "Compendium.dnd5e.items.Fc6UfFNOnW80XMzi"
-    },
+    "core": {},
     "siftoolkit": {
       "SIFData": {
         "ignoreDuration": false,
@@ -286,12 +285,6 @@
         "clip": "",
         "volume": 100
       }
-    },
-    "exportSource": {
-      "world": "fr-myths-and-shadows",
-      "system": "dnd5e",
-      "coreVersion": "10.291",
-      "systemVersion": "2.1.5"
     },
     "magicitems": {
       "enabled": false,
@@ -389,12 +382,19 @@
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.items.Fc6UfFNOnW80XMzi",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555836908,
     "modifiedTime": 1738555836908,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": {
+      "worldId": "fr-myths-and-shadows",
+      "uuid": null,
+      "coreVersion": "10.291",
+      "systemId": "dnd5e",
+      "systemVersion": "2.1.5"
+    }
   },
   "folder": "5Ok9Jbl5nOokCkqf",
   "_id": "bIVzHw94NXZwFAso",

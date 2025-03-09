@@ -52,12 +52,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/equipment/feet/boots-collared-simple-leather.webp",
       "type": "base",
@@ -68,8 +69,7 @@
   ],
   "flags": {
     "core": {
-      "sheetClass": "dnd5e.DynamicItemSheet5e",
-      "sourceId": "Compendium.midi-qol.midiqol-sample-items.c9OSXfLd170kf3hS"
+      "sheetClass": "dnd5e.DynamicItemSheet5e"
     },
     "dynamiceffects": {
       "effects": [
@@ -244,12 +244,13 @@
   "_stats": {
     "compendiumSource": "Compendium.midi-qol.midiqol-sample-items.c9OSXfLd170kf3hS",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555836908,
     "modifiedTime": 1738555836908,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "5Ok9Jbl5nOokCkqf",
   "_id": "k4v75aYkFEsddzN4",

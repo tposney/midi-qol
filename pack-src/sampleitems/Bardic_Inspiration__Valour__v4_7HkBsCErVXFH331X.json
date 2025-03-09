@@ -92,12 +92,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/skills/melee/unarmed-punch-fist.webp",
       "type": "base",
@@ -107,9 +108,7 @@
     }
   ],
   "flags": {
-    "core": {
-      "sourceId": "Compendium.dnd5e.classfeatures.hpLNiGq7y67d2EHA"
-    },
+    "core": {},
     "midi-qol": {
       "onUseMacroName": "",
       "effectActivation": false,
@@ -369,12 +368,13 @@
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.classfeatures.hpLNiGq7y67d2EHA",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555835389,
     "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "7HkBsCErVXFH331X",

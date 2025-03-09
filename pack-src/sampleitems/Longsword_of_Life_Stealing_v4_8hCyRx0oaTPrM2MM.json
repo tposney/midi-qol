@@ -33,9 +33,7 @@
       "rechargeUnit": "r1",
       "sorting": "l"
     },
-    "core": {
-      "sourceId": "Compendium.dnd5e.items.wtctR6tCcYbQPiS0"
-    },
+    "core": {},
     "itemacro": {
       "macro": {
         "data": {
@@ -509,12 +507,13 @@
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.items.wtctR6tCcYbQPiS0",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555836908,
     "modifiedTime": 1738928783383,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "5Ok9Jbl5nOokCkqf",
   "_id": "8hCyRx0oaTPrM2MM",

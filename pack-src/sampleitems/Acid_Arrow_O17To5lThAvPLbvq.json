@@ -456,6 +456,10 @@
           }
         }
       }
+    },
+    "tidy5e-sheet": {
+      "section": "",
+      "actionSection": ""
     }
   },
   "img": "icons/magic/acid/projectile-bolts-salvo-green.webp",
@@ -538,12 +542,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.3.3",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "_key": "!items.effects!O17To5lThAvPLbvq.KxbU4A3kfPPS8k6Z"
     }
@@ -556,7 +561,7 @@
     "systemId": "dnd5e",
     "systemVersion": "4.3.3",
     "createdTime": 1740187782500,
-    "modifiedTime": 1740187782522,
+    "modifiedTime": 1741354313106,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "_key": "!items!O17To5lThAvPLbvq"

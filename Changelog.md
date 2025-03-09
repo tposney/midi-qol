@@ -1,3 +1,12 @@
+### 12.4.31
+* Don't remove existing workflow on construction as there could well be another workflow in flight.
+* Slight change to behaviour in activity.use, if you pass a workflow in usage, midi will reuse that workflow rather than creating a new one. Can be useful if you want to pre-configure the workflow. (TrapWorkflow does this).
+* Fixed a bug where an attack activity would return itself as it's own other activity if there were no others and it's set to auto.
+* Midi was incorrectly removing a workflow when another was created in some circumstances.
+* Fix? for flags.onUseMacro ItemMacro, macroPass.
+* Included a new sample item mortar, which places a template then makes a ranged weapon attack against each target in the template to show off the attack roll per target in dnd5e 4.x. The idea of using a Use activity to target then a trigger activity to deal with the targets might have more general use.
+* Added a world setting Use Weak References. Don't enable this unless you know what it means - only meant for GM and dev testing - will be removed eventually.
+
 ### 12.4.30
 * Fix for the debacle with not being able to do most rolls.
 * Roll an attack per target now respects the per item settings.
@@ -10,7 +19,7 @@
 * Fix for midi sound configuration not opening when the settings reference sounds that cannot be found.
   - Any referenced playlists or sounds that no longer exist will be flagged and you won't be able to save your settings until that is corrected.
 * Added a use condition reason, which is displayed if the item use condition failed.
-* Added game.time.worldTime as worldTime for condition evaluation
+* Added game.time.worldTime as worldTime for condition evaluation. Used in sample items Revivify to check how long target had been dead.
 * Added full target rollData as target. in condition evaluation.
 * **Breaking** the flag flags.traits.idi.value now means downgrade damage immunity to resistance. If you want to completely ignore immunity, set flags.traits.idi.value **and** flags.traits.idr.value.
 * Fix for problem when Auto Animations and Midi's autoRemoveInstantaneousTemplates sometimes causing AA to lose the template data and place the animation incorrectly. If Boss Loot Assets is active it will also remove the template too early for AA to get the information.

@@ -203,12 +203,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/magic/air/air-burst-spiral-blue-gray.webp",
       "type": "base",
@@ -265,9 +266,7 @@
       "idv": false,
       "ida": false
     },
-    "core": {
-      "sourceId": "Actor.DMTSWfQs8whM5FtE.Item.LNzob6K0PuEQNGzs"
-    },
+    "core": {},
     "cf": {
       "id": "temp_1xw0kahfmt1"
     },
@@ -291,12 +290,13 @@
   "_stats": {
     "compendiumSource": "Actor.DMTSWfQs8whM5FtE.Item.LNzob6K0PuEQNGzs",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555833713,
     "modifiedTime": 1738555833713,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "tWh6UgUeg2lxQ8uJ",
   "_id": "9fodGMwR2wacWJlF",

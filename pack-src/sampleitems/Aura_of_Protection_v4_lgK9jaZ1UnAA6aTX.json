@@ -69,12 +69,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/magic/air/wind-tornado-wall-blue.webp",
       "type": "base",
@@ -106,16 +107,8 @@
     "favtab": {
       "isFavorite": false
     },
-    "core": {
-      "sourceId": "Item.WiVleJLWZ5UXryDN"
-    },
+    "core": {},
     "gm-notes": {},
-    "exportSource": {
-      "world": "testWorld",
-      "system": "dnd5e",
-      "coreVersion": "0.7.9",
-      "systemVersion": "1.2.3"
-    },
     "betterRolls5e": {
       "quickDesc": {
         "value": true,
@@ -223,12 +216,19 @@
   "_stats": {
     "compendiumSource": "Item.WiVleJLWZ5UXryDN",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555835389,
     "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": {
+      "worldId": "testWorld",
+      "uuid": null,
+      "coreVersion": "0.7.9",
+      "systemId": "dnd5e",
+      "systemVersion": "1.2.3"
+    }
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "lgK9jaZ1UnAA6aTX",

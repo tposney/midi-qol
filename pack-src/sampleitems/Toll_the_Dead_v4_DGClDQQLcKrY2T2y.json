@@ -71,9 +71,7 @@
       "idv": false,
       "ida": false
     },
-    "core": {
-      "sourceId": "Compendium.world.ddb-spells.eWALttYghEEA1qOa"
-    },
+    "core": {},
     "scene-packer": {
       "hash": "9f7ff19882d5754133397d9eb2657cd5ce210bd1",
       "sourceId": "Item.CHNM01gLo3kddfju"
@@ -337,12 +335,13 @@
   "_stats": {
     "compendiumSource": "Compendium.world.ddb-spells.eWALttYghEEA1qOa",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738930091560,
     "modifiedTime": 1738930091560,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "qF3UYnzAAbVavYSR",
   "ownership": {

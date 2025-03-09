@@ -1,7 +1,7 @@
 import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID } from "../midi-qol.js";
 import { DDBGameLogWorkflow, Workflow } from "./Workflow.js";
 import { nsaFlag, coloredBorders, configSettings, forceHideRoll, safeGetGameSetting } from "./settings.js";
-import { playerFor, playerForActor, doOverTimeEffect, isInCombat, MQfromUuidSync, isAutoFastAttack } from "./utils.js";
+import { playerFor, playerForActor, doOverTimeEffect, isInCombat, isAutoFastAttack } from "./utils.js";
 import { socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiSaveActivity } from "./activities/SaveActivity.js";
@@ -12,7 +12,7 @@ export let colorChatMessageHandler = (message, html, data) => {
   if (coloredBorders === "none") return true;
   let actorId = message.speaker.actor;
   let userId = message.author;
-  let actor = game.actors?.get(actorId);
+  let actor = game.actors?.get(actorId) as Actor | undefined;
   let user = game.users?.get(userId) as User.Implementation | undefined;
 
   if (actor) user = playerForActor(actor);
@@ -34,7 +34,7 @@ export let colorChatMessageHandler = (message, html, data) => {
 // Also should ideally be async.
 export function checkOverTimeSaves(message, data, options, user) {
   if (!message.rolls?.length || !["skill", "save", "ability"].includes(data.flags?.dnd5e?.roll?.type)) return true;
-  let actor: Actor | undefined | null = game.actors?.get(message.speaker.actor);
+  let actor: Actor | undefined | null = game.actors?.get(message.speaker.actor) as Actor;
   if (message.speaker.token) {
     actor = game.scenes?.get(message.speaker.scene)?.tokens?.get(message.speaker.token)?.actor;
   }
@@ -42,8 +42,8 @@ export function checkOverTimeSaves(message, data, options, user) {
   const overtimeActorUuid = foundry.utils.getProperty(message, "flags.midi-qol.overtimeActorUuid");
   if (actor.uuid !== overtimeActorUuid) {
     if (overtimeActorUuid) {
-      const overTimeActor = MQfromUuidSync(overtimeActorUuid);
-      ui.notifications?.warn(`Over time actor mismatch ${actor.name} should be ${overTimeActor.name}`);
+      const overTimeActor = fromUuidSync(overtimeActorUuid) as Actor | undefined;
+      ui.notifications?.warn(`Over time actor mismatch ${actor.name} should be ${overTimeActor?.name}`);
     }
     return true;
   }
@@ -188,13 +188,6 @@ export let hideStuffHandler = (message, html, data) => {
     return;
   }
 
-  const workflow = Workflow.getWorkflow(message._uuid);
-  if (workflow) {
-    if (workflow.activity instanceof MidiSaveActivity && workflow.activity.hasDamage && workflow.damageRolls?.length === 0) {
-      // hide the saving throw button if there is one.
-    }
-  }
-
   if (game.user?.id !== authorId) {
     html.find(".midi-qol-attack-buttons").hide();
     html.find(".midi-qol-damage-buttons").hide();
@@ -227,8 +220,8 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("fumble");
     }
 
-    // @ts-expect-error protected - but this isn't doing anything, is it?
-    ui.chat.scrollBottom
+    // @ ts-expect-error protected - but this isn't doing anything, is it?
+    // ui.chat.scrollBottom
     return;
 
   } else {
@@ -316,8 +309,8 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-gmTokenName").remove();
     }
   }
-  // @ts-expect-error protected
-  setTimeout(() => ui.chat?.scrollBottom(), 0);
+  // @ ts-expect-error protected
+  // setTimeout(() => ui.chat?.scrollBottom(), 0);
   return true;
 
 }
@@ -344,8 +337,8 @@ export function ddbglPendingFired(data:{sceneId: string, tokenId: string, actorI
     error("DDB Game Log - no item/action for pending roll"); return
   }
   // const tokenUuid = `Scene.${sceneId??0}.Token.${tokenId??0}`;
-  const token: Token | undefined = MQfromUuidSync(`Scene.${sceneId ?? 0}.Token.${tokenId ?? 0}`);
-  const actor: Actor | undefined = (token instanceof CONFIG.Token.documentClass) ? token?.actor ?? game.actors?.get(actorId ?? "") : undefined;
+  const token: Token | undefined = fromUuidSync(`Scene.${sceneId ?? 0}.Token.${tokenId ?? 0}`)?.object as Token | undefined;
+  const actor: Actor | undefined = (token instanceof CONFIG.Token.documentClass) ? token?.actor ?? game.actors?.get(actorId ?? "") as Actor: undefined;
   if (!actor || !(token instanceof CONFIG.Token.documentClass)) {
     warn(" ddb-game-log hook could not find actor");
     return;
@@ -408,13 +401,13 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   if (!(["attack", "damage", "heal"].includes(flags.dnd5e?.roll?.type))) return;
   const itemId = flags.dnd5e?.roll?.itemId;
   if (!itemId) { error("Could not find item for fulfilled roll"); return }
-  const token = MQfromUuidSync(`Scene.${message.speaker.scene}.Token.${message.speaker.token}`);
-  const actor = token.actor ?? game.actors?.get(message.speaker.actor ?? "");
+  const token = fromUuidSync(`Scene.${message.speaker.scene}.Token.${message.speaker.token}`)?.object as Token | null;
+  const actor = token?.actor ?? game.actors?.get(message.speaker.actor ?? "");
   if (!actor) {
     error("ddb-game-log could not find actor for roll");
     return;
   }
-  // find the player who controls the charcter.
+  // find the player who controls the character.
   let player;
   if (token) {
     player = playerFor(token);
@@ -431,6 +424,7 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   }
 
   let workflow: Workflow | undefined = DDBGameLogWorkflow.get(item.uuid);
+  //@ts-expect-error no dnd5e-types
   if (!workflow && flags.dnd5e.roll.type === "damage" && item.hasAttack && ["rwak", "mwak"].includes(item.actionType)) {
     warn(`ddb-game-log roll damage roll wihtout workflow being started ${actor.name} using ${item.name}`);
     return;

@@ -405,21 +405,20 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "_key": "!items.effects!BdPwXUK86B8tWnbd.d23QTwP434lw72W2"
     }
   ],
   "folder": null,
   "flags": {
-    "core": {
-      "sourceId": "Compendium.dnd5e.monsterfeatures.WdpSeGqhZpptz37y"
-    },
+    "core": {},
     "dnd5e": {
       "last": {
         "dnd5eactivity000": {
@@ -477,12 +476,13 @@
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.monsterfeatures.WdpSeGqhZpptz37y",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.3.3",
     "createdTime": 1738555847314,
     "modifiedTime": 1740188037771,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "ownership": {
     "default": 0,

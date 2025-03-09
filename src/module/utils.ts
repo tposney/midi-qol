@@ -119,7 +119,9 @@ export function getTokenForActor(actor): Token {
   const tokenData = actor.prototypeToken.toObject();
   tokenData.actorId = actor.id;
   const cls = globalThis.getDocumentClass("Token");
-  return new cls(tokenData, { actor });
+  // TODO check this - not sure if actor is set correctly
+  const tokenDocument: TokenDocument = new cls(tokenData);
+  return new CONFIG.Token.objectClass(tokenDocument);
 }
 
 export function getTokenForActorAsSet(actor): Set<Token> {
@@ -310,7 +312,7 @@ export async function applyTokenDamage(damageDetail, totalDamage, theTargets, it
     allDamages[token.document.uuid].calcDamageOptions = calcDamageOptions;
     allDamages[token.document.uuid].rawDamageDetail = damageDetail;
     allDamages[token.document.uuid].damageDetails[`rawcombinedDamage`] = damageDetail;
-    setupv3DamageDetails(allDamages, "combinedDamage", token);
+    setupV3DamageDetails(allDamages, "combinedDamage", token);
   }
   const cardIds: string[] = await timedAwaitExecuteAsGM("createReverseDamageCard", {
     autoApplyDamage: configSettings.autoApplyDamage,
@@ -336,7 +338,7 @@ export interface applyDamageDetails {
   semiSuperSavers?: Set<Token | TokenDocument>;
 }
 
-export function setupv3DamageDetails(allDamages, selector, token: Token) {
+export function setupV3DamageDetails(allDamages, selector, token: Token) {
   const tokenDamage = allDamages[token.document.uuid];
   let { amount, temp } = tokenDamage.damageDetails[selector].reduce((acc, d) => {
     if (d.type === "temphp") acc.temp += d.value;
@@ -519,11 +521,8 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
           }
         }
 
-        console.error("calcDamageOptions", calcDamageOptions)
-
         //@ts-expect-error
         let returnDamages = foundry.utils.deepClone(token.actor.calculateDamage(damages, calcDamageOptions));
-        console.error(" post calculateDamage", returnDamages, calcDamageOptions);
         if (configSettings.singleConcentrationRoll || type !== "otherDamage") {
           damageDetails[type] = returnDamages;
           damageDetails["combinedDamage"] = damageDetails["combinedDamage"].concat(returnDamages);
@@ -555,7 +554,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
       if (!token?.actor) continue;
       if (!tokenDocument) continue;
       const damageDetails = damagePerToken[tokenDocument.uuid];
-      setupv3DamageDetails(damagePerToken, selector, token);
+      setupV3DamageDetails(damagePerToken, selector, token);
       await workflow?.callv3DamageHooks(damageDetails, token);
       damageDetails.damageDetails[selector] = damageDetails.damageDetail;
       // setupv3DamageDetails(allDamages, selector, token);
@@ -1479,8 +1478,11 @@ export async function completeActivityUse(activity, config: any = {}, dialog: an
   }
   foundry.utils.setProperty(config, "midiOptions.workflowOptions.forceCompletion", true);
   // delete any existing workflow - complete item use always is fresh.
-  // workflows are keyed by chatmessage so this is not needed - if (Workflow.getWorkflow(activity.uuid)) await Workflow.removeWorkflow(activity.uuid);
-  let localRoll = (!config.midiOptions.asUser && game.user?.isGM) || !config.midiOptions.checkGMStatus || config.midiOptions.asUser === game.user?.id;
+  // workflows are keyed by chatMessage so this is not needed - if (Workflow.getWorkflow(activity.uuid)) await Workflow.removeWorkflow(activity.uuid);
+  let localRoll = 
+        // if there's no asUser requirement and we are a GM or the checkGMStatus is off roll locally
+        (!config.midiOptions.asUser && (game.user?.isGM || !config.midiOptions.checkGMStatus))
+        || config.midiOptions.asUser === game.user?.id; // requested to run as self
   if (localRoll) {
     return new Promise((resolve) => {
       let saveTargets = Array.from(game.user?.targets ?? []).map(t => { return t.id });
@@ -1512,7 +1514,6 @@ export async function completeActivityUse(activity, config: any = {}, dialog: an
         // dependent activity fired
         Hooks.off(abortHookName, abortHookId);
         Hooks.off(completeHookName, completeHookId);
-        console.error("Post use linked spell fired ", activity, usage, results);
         if (debugEnabled > 0) warn(`spell use hook fired: ${activity.item?.name} ${completeHookName}`)
 
         updateUserTargets(saveTargets);
@@ -1553,9 +1554,8 @@ export async function completeActivityUse(activity, config: any = {}, dialog: an
       message
     }
     const asUserActive = (game.users?.get(config.midiOptions.asUser) as (User | undefined))?.active;
-    //@ts-expect-error
-    if (!asUserActive) options.asUser = game.users?.activeGM?.id ?? game.user?.id
-    if (config.midiOptions.asUser && asUserActive)
+    if (!asUserActive) config.midiOptions.asUser = game.users?.activeGM?.id ?? game.user?.id
+    if (config.midiOptions.asUser)
       return await socketlibSocket.executeAsUser("completeActivityUse", config.midiOptions.asUser, data);
     else
       return await timedAwaitExecuteAsGM("completeActivityUse", data);
@@ -3089,9 +3089,9 @@ class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       else if (this.timeRemaining >= this.data.timeout * 0.50) color = "yellow";
       else if (this.timeRemaining >= this.data.timeout * 0.25) color = "orange";
       this._updateFrame({ window: { title: this.title } });
-      const title = this.element.querySelector(".window-title");
+      const title = this.element?.querySelector(".window-title");
       if (title) title.setAttribute("style", `color: ${color}`);
-      if (this.timeRemaining > 0) this.set1SecondTimeout();
+      if (this.timeRemaining > 0 && title) this.set1SecondTimeout();
     }, 1000)
   }
 
@@ -3997,6 +3997,7 @@ export async function requestReactions(target: Token, player: User, triggerToken
     const endTime = Date.now();
     if (debugEnabled > 0) warn("requestReactions | returned after ", endTime - startTime, result);
     resolve(result);
+    //@ts-expect-error
     if (chatPromptMessage) chatPromptMessage.delete();
   } catch (err) {
     const message = `requestReactions | error ${triggerType} for ${target?.name} ${triggerTokenUuid}`;
@@ -4225,7 +4226,7 @@ class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       if (this.data.timeout < maxPad) maxPad = this.data.timeout;
       const padCount = Math.ceil(this.timeRemaining / (this.data.timeout ?? defaultTimeout) * maxPad);
       const pad = "-".repeat(padCount);
-      return `${this.data.title ?? "Dialog"} ${pad} ${this.timeRemaining}`;
+      return `${this.data.actor?.name} ${this.data.title ?? "Dialog"} ${pad} ${this.timeRemaining}`;
     }
     else return this.data.title ?? "Dialog";
   }
@@ -4271,9 +4272,9 @@ class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
       else if (this.timeRemaining >= this.data.timeout * 0.50) color = "yellow";
       else if (this.timeRemaining >= this.data.timeout * 0.25) color = "orange";
       this._updateFrame({ window: { title: this.title } });
-      const title = this.element.querySelector(".window-title");
+      const title = this.element?.querySelector(".window-title");
       if (title) title.setAttribute("style", `color: ${color}`);
-      if (this.timeRemaining > 0) this.set1Secondtimeout();
+      if (this.timeRemaining > 0 && title) this.set1Secondtimeout();
     }, 1000)
   }
 
@@ -4761,6 +4762,7 @@ export async function setReactionUsed(actor: Actor) {
   if (!["all", "displayOnly"].includes(configSettings.enforceReactions) && configSettings.enforceReactions !== actor.type) return;
   // await actor.update({"flags.midi-qol.actions.reaction": true, "flags.midi-qol.actions.reactionCombatRound": game.combat?.round});  
   const id = "reaction";
+  //@ts-expect-error
   await actor.effects.get(getStaticID(id))?.delete();
   const effect = foundry.utils.deepClone(getReactionEffect());
   effect.updateSource({
@@ -4782,6 +4784,7 @@ export async function setBonusActionUsed(actor: Actor) {
   if (!["all", "displayOnly"].includes(configSettings.enforceBonusActions) && configSettings.enforceBonusActions !== actor.type) return;
   // await actor.update({ "flags.midi-qol.actions.bonus": true, "flags.midi-qol.actions.bonusActionCombatRound": game.combat?.round });
   const id = "bonusaction";
+  //@ts-expect-error
   await actor.effects.get(getStaticID(id))?.delete();
   const effect = foundry.utils.deepClone(midiBonusActionEffect);
   effect.updateSource({
@@ -4804,6 +4807,7 @@ export async function removeActionUsed(actor: Actor) {
 export async function removeReactionUsed(actor: Actor, force = false) {
   if (debugEnabled > 0) warn("removeReactionUsed | starting", actor);
   if (force || !installedModules.get("times-up")) { // if times-up installed the special duration will expire the effect
+    //@ts-expect-error
     await actor.effects.get(getStaticID("reaction"))?.delete(); // reaction always non-transfer
   }
   // safety net unset of flags - just in case.
@@ -4855,6 +4859,7 @@ export function hasUsedBonusAction(actor: Actor) {
 
 export async function removeBonusActionUsed(actor: Actor, force = false) {
   if (force || !installedModules.get("times-up")) { // bonus action will be expired by times-up if installed
+    //@ts-expect-error
     await actor.effects.get(getStaticID("bonusaction"))?.delete()
   }
   // Safety net flag reset just in case
@@ -6366,7 +6371,7 @@ export function sumRolls(rolls: Array<Roll> | undefined = [], countHealing?: "ig
   }, 0);
 }
 
-const updatesCache = {};
+export const updatesCache = {};
 export async function _updateAction(document) {
   if (!updatesCache[document.uuid]) return;
   const updates = updatesCache[document.uuid];
@@ -6449,11 +6454,13 @@ export async function expireEffects(actor, effects: ActiveEffect[], options: any
   if (actorEffectsToDelete.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", actorEffectsToDelete, options);
   if (effectsToDisable.length > 0) {
     for (let effect of effectsToDisable) {
+      //@ts-expect-error types things first arg is type never
       await effect.update({ "disabled": true }, options)
     }
   }
   if (effectsToDelete.length > 0) {
     for (let effect of effectsToDelete)
+      //@ts-expect-error
       await effect.delete(options);
   }
   return { deleted: actorEffectsToDelete, disabled: effectsToDisable, itemEffects: effectsToDelete };
@@ -6476,7 +6483,7 @@ export function processConcentrationRequestMessage(message, html, data) {
     if (action === "concentration" && type === "midi-concentration") {
       dc = Number(dc);
       let { actor, alias, scene, token } = message.speaker;
-      if (scene && token) token = game.scenes?.get(scene)?.tokens.get(token) as Token;
+      if (scene && token) token = game.scenes?.get(scene)?.tokens.get(token)?.object as Token | undefined;
       if (token) actor = token.actor as Actor;
       else actor = game.actors?.get(actor);
       if (actor) {
@@ -6814,6 +6821,7 @@ export async function cleanCPRFlanked() {
     }
   });
   if (updateNeeded) {
+    //@ts-expect-error
     await cprEffect.update({ "changes": changes });
     console.warn("midi-qol | cleanCPRFlanked | corrected flanked effect", cprEffect);
   }
@@ -6822,11 +6830,12 @@ export async function cleanCPRFlanked() {
 //@ts-expect-error
 function getItemFromEffectOrigin(origin: any): globalThis.dnd5e.documents.Item5e | undefined {
   let originItem;
-  const originEffect = fromUuidSync(origin);
-  if (originEffect.origin) {
+  const originEffect: any = fromUuidSync(origin) as any | undefined;
+  // TODO make origin effect type ActiveEffect5e when types supports it
+  if (originEffect?.origin) {
     if (originEffect.parent instanceof Item) {
       originItem = originEffect.parent;
-    } else originItem = fromUuidSync(originEffect.origin);
+    } else originItem = fromUuidSync(originEffect?.origin as any);
   }
   return originItem;
 }

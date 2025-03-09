@@ -66,12 +66,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/magic/symbols/cog-shield-white-blue.webp",
       "type": "base",
@@ -81,7 +82,7 @@
     }
   ],
   "flags": {
-    "_sheetTab": "details",
+    "_sheetTab": {},
     "entityorder": {
       "order": 162
     },
@@ -101,9 +102,7 @@
         }
       ]
     },
-    "core": {
-      "sourceId": "Compendium.Dynamic-Effects-SRD.DAE SRD Feats.uvEGiLvPgzje1L6K"
-    },
+    "core": {},
     "midi-qol": {
       "onUseMacroName": "",
       "effectActivation": false,
@@ -313,12 +312,13 @@
   "_stats": {
     "compendiumSource": "Compendium.Dynamic-Effects-SRD.DAE SRD Feats.uvEGiLvPgzje1L6K",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555835389,
     "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "HW0hsTxecGnYiLSD",

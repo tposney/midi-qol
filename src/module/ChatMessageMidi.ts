@@ -73,6 +73,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       uuids.forEach(uuid => {
         const token = getToken(uuid);
         if (!token?.actor || !game.user) return;
+        //@ts-check testUserPermission is not in the types
         if (token?.isVisible && (token.actor as Actor).testUserPermission(game.user, "OWNER")) {
           token.control({ releaseOthers: false });
         }
@@ -243,9 +244,10 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         }
       }
 
-      const shouldAddButtons = addChatDamageButtons === "both"
+      let shouldAddButtons = addChatDamageButtons === "both"
         || (addChatDamageButtons === "gm" && game.user?.isGM)
         || (addChatDamageButtons === "pc" && !game.user?.isGM);
+        if (game.user?.isGM && configSettings.autoApplyDamage === "none") shouldAddButtons = true;
       if (shouldAddButtons) {
         for (let dType of MQDamageRollTypes) {
           rolls = this.rolls.filter(r => foundry.utils.getProperty(r, "options.midi-qol.rollType") === dType);

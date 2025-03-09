@@ -73,12 +73,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/magic/holy/barrier-shield-winged-blue.webp",
       "type": "base",
@@ -110,9 +111,7 @@
       "autoTarget": "default",
       "removeAttackDamageButtons": "default"
     },
-    "core": {
-      "sourceId": "Item.sTiwetZlEawz5RLi"
-    },
+    "core": {},
     "itemacro": {
       "macro": {
         "data": {
@@ -153,12 +152,6 @@
     "scene-packer": {
       "sourceId": "Item.9rDJI0I5GPcf2h7M",
       "hash": "8e7c5b9b02f5a25bb5dfe4e1c47f3e816366f93a"
-    },
-    "exportSource": {
-      "world": "tp-game-v3",
-      "system": "dnd5e",
-      "coreVersion": "9.249",
-      "systemVersion": "1.5.7"
     },
     "betterRolls5e": {
       "quickOther": {
@@ -520,12 +513,19 @@
   "_stats": {
     "compendiumSource": "Item.sTiwetZlEawz5RLi",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555841694,
     "modifiedTime": 1738555855096,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": {
+      "worldId": "tp-game-v3",
+      "uuid": null,
+      "coreVersion": "9.249",
+      "systemId": "dnd5e",
+      "systemVersion": "1.5.7"
+    }
   },
   "folder": null,
   "ownership": {

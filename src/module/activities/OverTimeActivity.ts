@@ -7,7 +7,7 @@ import { MidiActivityMixin, MidiActivityMixinSheet, MidiConditionField } from ".
 export var MidiOverTimeActivity;
 export var MidiOverTimeSheet;
 
-// Not currently used
+// Not currently used - might be relevant later on
 export function setupOvertimeActivity() {
   if (debugEnabled > 0) warn("MidiQOL | ForwardActivity | setupOverTimeActivity | Called");
   //@ts-expect-error

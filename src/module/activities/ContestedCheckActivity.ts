@@ -2,7 +2,7 @@ import { debugEnabled, geti18nOptions, i18n, warn } from "../../midi-qol.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { MidiSaveActivity } from "./SaveActivity.js";
-
+// WIP
 export var MidiContestedCheckActivity;
 export var MidiCheckSheet;
 var ContestedCheckActivity;

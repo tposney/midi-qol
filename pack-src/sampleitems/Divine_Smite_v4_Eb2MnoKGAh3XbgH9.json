@@ -153,9 +153,7 @@
       "otherCondition": "",
       "removeAttackDamageButtons": "default"
     },
-    "core": {
-      "sourceId": "Item.pJKe8oNZdJSKtbcu"
-    },
+    "core": {},
     "autoanimations": {
       "killAnim": false,
       "below": false,
@@ -410,12 +408,13 @@
   "_stats": {
     "compendiumSource": "Item.pJKe8oNZdJSKtbcu",
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555840264,
     "modifiedTime": 1738555840264,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": null
   },
   "folder": "qF3UYnzAAbVavYSR",
   "_id": "Eb2MnoKGAh3XbgH9",

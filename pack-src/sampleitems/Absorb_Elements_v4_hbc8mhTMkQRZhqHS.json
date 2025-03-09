@@ -78,12 +78,13 @@
       "_stats": {
         "compendiumSource": "Scene.GO63mgFDMhBfPVWf.Token.y8rDGEEuPTa8Oz4m.Actor.2W8ip8j0hvK2pQ7V.Item.wdJlLWxQuUuyCwA5.ActiveEffect.iJ9E4fnIwXjfi1TP",
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/magic/defensive/shield-barrier-flaming-diamond-red.webp",
       "type": "base",
@@ -148,12 +149,13 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "12.331",
+        "coreVersion": "13.337",
         "systemId": "dnd5e",
         "systemVersion": "4.2.2",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null
+        "lastModifiedBy": null,
+        "exportSource": null
       },
       "img": "icons/magic/defensive/shield-barrier-flaming-diamond-red.webp",
       "type": "base",
@@ -206,12 +208,6 @@
           "duplicateSource": null
         }
       }
-    },
-    "exportSource": {
-      "world": "waterdeep-dungeon-of-the-mad-mage",
-      "system": "dnd5e",
-      "coreVersion": "0.7.9",
-      "systemVersion": "1.2.4"
     },
     "betterRolls5e": {
       "quickDesc": {
@@ -535,12 +531,19 @@
   "_stats": {
     "compendiumSource": null,
     "duplicateSource": null,
-    "coreVersion": "12.331",
+    "coreVersion": "13.337",
     "systemId": "dnd5e",
     "systemVersion": "4.2.2",
     "createdTime": 1738555840264,
     "modifiedTime": 1738557172270,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
+    "exportSource": {
+      "worldId": "waterdeep-dungeon-of-the-mad-mage",
+      "uuid": null,
+      "coreVersion": "0.7.9",
+      "systemId": "dnd5e",
+      "systemVersion": "1.2.4"
+    }
   },
   "folder": "qF3UYnzAAbVavYSR",
   "_id": "hbc8mhTMkQRZhqHS",
