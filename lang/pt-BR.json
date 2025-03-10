@@ -973,6 +973,10 @@
         "label": "Condição de Uso",
         "hint": "Condição para permitir o uso."
       },
+      "useConditionReason": {
+        "label": "Usar Motivo da Condição",
+        "hint": "Mensagem a ser exibida se a condição de uso for falsa."
+      },
       "effectConditionText": {
         "label": "Condição de Efeito Ativo",
         "hint": "Condição para aplicar efeito ativo."
@@ -2585,7 +2589,7 @@
     },
     "flags.midi-qol.grants.noDisadvantage.attack.save": {
       "name": "Não Conceder Desvantagem (Salvaguarda)",
-      "description": "Any save forced by the actor will not have disadvantage"
+      "description": "Nenhuma Salvaguarda que o ator forçar, terá Desvantagem para ser resistida."
     },
     "flags.midi-qol.grants.fail.disadvantage.attack.check": {
       "name": "Conceder Falha Desvantagem (Teste)",
