@@ -2483,35 +2483,35 @@
       "name": "Grants No Advantage (All Attacks)",
       "description": "Any attack against the target will not have advantage"
     },
-    "flags.midi-qol.grants.{noAdvantage.attack.heal": {
+    "flags.midi-qol.grants.noAdvantage.attack.heal": {
       "name": "Grants No Advantage (Heal)",
       "description": "Any healing attack against the target will not have advantage"
     },
-    "flags.midi-qol.grants.{noAdvantage.attack.msak": {
+    "flags.midi-qol.grants.noAdvantage.attack.msak": {
       "name": "Grants No Advantage (Melee Spell Attack)",
       "description": "Any Melee Spell Attack against the target will not have advantage"
     },
-    "flags.midi-qol.grants.{noAdvantage.attack.mwak": {
+    "flags.midi-qol.grants.noAdvantage.attack.mwak": {
       "name": "Grants No Advantage (Melee Weapon Attack)",
       "description": "Any Melee Weapon Attack against the target will not have advantage"
     },
-    "flags.midi-qol.grants.{noAdvantage.attack.rsak": {
+    "flags.midi-qol.grants.noAdvantage.attack.rsak": {
       "name": "Grants No Advantage (Ranged Spell Attack)",
       "description": "Any Ranged Spell attack against the target will not have advantage"
     },
-    "flags.midi-qol.grants.{noAdvantage.attack.rwak": {
+    "flags.midi-qol.grants.noAdvantage.attack.rwak": {
       "name": "Grants No Advantage (Ranged Weapon Attack)",
       "description": "Any Ranged Weapon attack against the target will not have advantage"
     },
-    "flags.midi-qol.grants.{noAdvantage.attack.save": {
+    "flags.midi-qol.grants.noAdvantage.attack.save": {
       "name": "Grants No Advantage (Save)",
       "description": "No saving throw forced by the actor will have advantage"
     },
-    "flags.midi-qol.grants.{noAdvantage.attack.check": {
+    "flags.midi-qol.grants.noAdvantage.attack.check": {
       "name": "Grants No Advantage (Check)",
       "description": "No ability check forced by the actor will have advantage"
     },
-    "flags.midi-qol.grants.{noAdvantage.attack.skill": {
+    "flags.midi-qol.grants.noAdvantage.attack.skill": {
       "name": "Grants No Advantage (Skill)",
       "description": "No Skill roll forced by the actor will have advantage"
     },
