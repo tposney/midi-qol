@@ -48,7 +48,7 @@ publish-foundry-manifest:
     - apt-get -qq update
     - apt-get install -y jq
   script: |
-      curl -X POST -H "Content-Type: application/json" $FOUNDRY_RELEASE_URL -d \
+      curl -X POST -H "Content-Type: application/json" -H "Authorization: $FOUNDRY_API_TOKEN" $FOUNDRY_RELEASE_URL -d \
       "{
         \"id\": \"$PACKAGE_NAME\",
         \"dry-run\": "false",
