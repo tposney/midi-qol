@@ -1,6 +1,8 @@
 ![](https://img.shields.io/badge/Foundry-v10-informational)
 ![](https://img.shields.io/badge/Foundry-v11-informational)
 ![](https://img.shields.io/badge/Foundry-v12-informational)
+![](https://img.shields.io/badge/Dnd5e-v3.3.1-informational)
+![](https://img.shields.io/badge/Dnd5e-v4.1.1.beta-informational)
 ![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2Fmidi-qol&colorB=4aa94a)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tposney)
@@ -13,13 +15,11 @@
 
 It has LOTS of configuration options which can be daunting.
 
-If you have a problem when using midi-qol it is almost certainly an issue with midi-qol and **not** the dnd5e system. Please do not raise issues on the dnd5e system github unless you have tested with midi-qol disabled.
-
 ## Available versions
 
-- MidiQOL **12.4.27** requires foundry 12 and is compatible with dnd5e 4.2+.
 - MidiQOL **v11.4.48** is compatible with dnd5e up to **v3.2.x** and Foundry **v12** (as all the versions mentioned below).
 - MidiQOL **v11.6.x** is compatible with dnd5e **v3.3.x**.
+- MidiQOL **12.4.27+** requires foundry 12 and is compatible with dnd5e 4.2+.
 
 # Bug reports
 **Important** When submitting a bug report ALWAYS include either:
@@ -60,56 +60,39 @@ Over time I have come up with some items that I use in my game, which I think ot
 
 [TOC]
 
-# Changes in dnd5e 1.5:
-
-## Enhanced dnd5e critical damage effects. 
-You can make most of the changes that midi-qol supports for critical hits via the new game settings (max base dice, double modifiers as well as dice) and per weapon settings (additional dice). If you want to use the dnd5e critical damage fields set the midi-qol critical damage to "dnd5e default"
-
-You will need to experiment to confirm the interaction of the dnd5e critical damage flags and the midi-qol settings, however if you use the dnd5e default setting in midi-qol the rolls will not be modified by midi in any way and the dnd5e system will operate.
-
-Midi-qol supports exploding dice for critical hit dice if enabled.
-
 # Changelog
-https://gitlab.com/tposney/midi-qol/-/blob/master/Changelog.md
+https://gitlab.com/tposney/midi-qol/-/blob/v11.6/Changelog.md
 
 # Symbiotic Modules
 I don't spend a lot of time examining all of the modules that are written (and there are hundreds) so it is almost certain that other modules can substitute for the Highly Recommended/Good to Have just as well. If your favorite module is not in the list, it probably means I just don't know about it, so don't take the absence of a module from this list as a negative - it simply reflects my ignorance.
 
 ## Required Modules
 You have to have these, period.
+* **DAE**
 * libwrapper
 * socketlib
 
 ## Almost Required
 You can probably survive without these but midi pretty much assumes they are installed.
-* **Advanced Macros** **No longer required/used**
-* **DAE**
 * **Times-up** - for automated expiry of effects. If you don't use combat expiry then you can use about-time instead.
 * **Simple Calendar** - to manage the game clock
-* **Item Macros** - many of the sample items I include have itemMacros on them, without the module you can't examine the macro.
 
 ## Highly Recommended
-* Either **LMRTFY** or **Monks Token Bar** (or both) to manage saving throws
-* Either **Convenient Effects** or **Combat Utility Belt** (or both)
-* **DAE SRD**/**Midi SRD** (lots of prebuilt items) **These modules do not work with V10 so only use them for ideas, not working items**.
 * **Active Auras** - works well with midi/dae and some of the sample items require it.
+* **Automated Animations** - If you have the **jb2a** module this will automatically add lots of animations to spell/weapon effects.
 * **Token Magic** - lets you add some spiffy graphical effects to spells.
 * **SmallTime** - to make time advancement easy.
-* **Automated Animations** - If you have the **jb2a** module this will automatically add lots of animations to spell/weapon effects.
-* **libChangeLogs** - will show the midi change log when it changes.
-* **DF QoL** - If you want template targeting to work as written in the rules, install this and enable it for template targeting. (apologies to @flamewave000 for the mislabelling)
-* **Warp Gate** - Some of the sample items use warp gate to summon tokens (Flaming Sphere, Spiritual Weapon).
-* **Build-A-Bonus** This module allows more complex bonuses to be calculated than dae/midi support by default. The bonus can be attached to an actor/item/active effect. 
-* **Template Macros** Allows you to run a macro when a template is placed, very useful.
 * **Effect Macros** provides another way to trigger behaviour when an effect is applied, combat updates and so on. Allows for more complex over time type effects via macros. The down side is that it does not include all of the midi data that onUseMacros get, but you can use flags.midi-qol...., flags.dae to set some of the values you might need
 
 ## Good To Have
 * **Active Token Lighting.** Allows tokens to emit light
+* **DFreds Convenient Effects** for making custom effects (not replacing the system's status effects anymore though)
+* **Dice So Nice.** if you like 3d dice rolling it's pretty much the only choice.
 * **Levels.** if you are doing anything with height.
 * **Levels - Volumetric Templates**
-* **DnD5e Helpers.** if you want some help with a lot of misc 5e stuff
-* **Dice So Nice.** if you like 3d dice rolling it's pretty much the only choice.
-* **Simbul's Cover Calculator** or **Levels Auto Cover** enables the automatic calculation of cover bonus for 1/2, 3/4 cover.
+* **Monks Token Bar** to manage saving throws
+* **Alternative Token Cover**, **Simbul's Cover Calculator** or **Levels Auto Cover** enables the automatic calculation of cover bonus for 1/2, 3/4 cover.
+* **Perceptive** or **Stealthy** to offer some extra support of hiding and visibility of tokens in such cases.
 
 # (In)Compatibilities? ##
 As already mentioned I don't look at lots of modules, so there will be others that do/don't work with midi. As they come to my attention I'll try and update the list.
@@ -117,16 +100,8 @@ As already mentioned I don't look at lots of modules, so there will be others th
 ## Dice So Nice
 Midi generally works with dice so nice, but the interactions are more complicated with the merge card.
 
-## Let Me Roll That For You
-Midi-qol can use Let Me Roll That For You for player/gm saving throws and is the preferred roller. There is a "feature" that LMRTFY returns the roll result to midi before the 3d dice have finished rolling, so you may see the saves display before the dice finish doing their thing.
-
 ## Monks Token Bar
 Midi-qol can use Monk's Token Bar to roll saves. **Update** adv/dis advantage for magic resistance/concentration now work with MTB.
-
-## Dfreds Quality of Life  
-Midi supports the foundry template targeting, DF Qol has support for rules as written template targeting behaviour. There is an option in midi's AoE auto target to use DF QoL's template targeting, which disables midi's internal template targeting. You should only enable one sort of template targeting since mid/df-qol will fight over who gets to do the targeting which will lead to confusing results.
-
-As of version 1.6.0, DF QoL does not seem to have a wall blocking option, so if that is important you'll need to use midi's targeting or another module that supports both.
 
 ## Convenient Effects
 Midi supports the application of Convenient Effects spell/item effects (configuration setting - Apply Convenient Effects) and matches those by name. For example, if you cast the spell Bless midi will see if there is a convenient effect "Bless" and apply it to any targets that were hit by the spell.
@@ -138,28 +113,17 @@ If you generally use convenient effects you would disable the convenient effect 
 
 There is an additional check box available on the item sheet, for items that have corresponding convenient effects. The check box reverses the "apply convenient effects setting" for that item. If you have "auto apply convenient effect" set to true, the check box will disable the auto application for that one item. Similarly, if you have "auto apply convenient effect" set to false, the check box will enable the auto application for that one item. 
 
-## levels
+## Levels
 - Midi-qol will use the levels wall collision detection for its distance calculations/LOS calculations.
 
 ## levelVolumetricTemplates
 - Midi-qol will use levels volumetric template target calculations if installed.
 
-## Furnace (deprecated for Foundry 0.8.x - Use Advanced Macros)
-If you intend to make use of any of the macro features in midi-qol you will need to install the Advanced Macros module. As of 0.9.56 there is no dependency on advanced macros/furnace.
-
-## Better Rolls and Ready Set Roll
-Currently **not** compatible with midi-qol.
+## Ready Set Roll
+**Not** compatible with midi-qol.
 
 ## Magic Items
-**(Thanks to @simone for his help)**
-Midi-qol is mostly compatible with magic-items. The only issue is that spell templates for spells in a magic item are not auto-placed on casting. Once placed everything works as expected. Spells/features that can be rolled will work.  
-Items that create changes by being present in the characters inventory (i.e. passive/transfer effects) won't behave as expected since they are actually held in the characters inventory, this includes transfer active effects.  
-
-## Mess
- Midi-qol and Mess dnd5e effects are not compatible. Template effects and the other features of that excellent module should work. If you want Mess attack/damage cards don't use midi-qol.  
-
-## Cozy player
-Minor-qol was not compatible with cozy-player, with targets being lost before attack/damage rolls were made. I have done only limited testing but it seems that there are no problems with cozy-player and midi-qol.  
+For the most part the system on version 4 of dnd5e has made this kind of modules redundant. Use Cast activities instead.
 
 ## Cautious GM
 Midi-qol breaks the blind chats by hidden GM feature of cautious GM.  
@@ -167,30 +131,11 @@ Midi-qol breaks the blind chats by hidden GM feature of cautious GM.
 ## Chat Portraits
  If using Chat Portraits, the changes made by midi-qol to the token/actor name in chat cards are overwritten/lost. Choose which sort of highlighting you want - only one will work. Otherwise, all seems to work.
 
-## Ez-Roller
-The 'send to chat log' feature of ez-roller will disable combo cards in midi-qol.  
-
-## Combat Utility Belt
-CUB concentrator and midi-qol concentration automation are incompatible. Choose one or the other. If you want concentration to expire at the end of the spell you need to install times-up and use midi-qol concentration automation.
-
-## Maestro
-Maestro looks for the attack roll chat card in the chat log to play its critical/attack/fumble sounds. If you are using the merge card then the attack roll card is never created and Maestro can't play its sounds. You can use the midi-qol custom sounds instead.
-
 ## Item Macro
- You can create ItemMacro macros with this module and call them from midi's onUse/DamageBonus macro fields by adding ItemMacro (case-sensitive) in the macro field.
-
-If you have installed ItemMacro please make sure you disable the ItemMacro config settings:
-
-  * "character sheet hook" else when you use the item the macro will get called bypassing midi-qol/dae completely and none of the arguments will get populated.
-
-  * "override default macro execution"  If this is enabled the hotbar hooks will directly call the item macro and won't work as expected for dae/midi.  
-The settings are per player so each player needs to change the setting to disabled.  
-
-## Dnd5e-helpers
-Midi-qol has configuration options (in the optional rules section) to incorporate the AC bonus calculated by dnd5e-helpers. There are two settings dnd5e-helpers which allows an attack if any of the 4 corners of the target are visible and dnd5e-helpers+AC which will include the AC bonus from armor when calculating a hit. The bonus AC on the target will be displayed in the to hit card.
+No more needed, as DAE has its own macro editor that is preferable.
 
 ## Warpgate
-Some items in the midi sample items compendium use warpgate and won't function otherwise. It is also a very useful module for handling creating tokens on the canvas
+Should NOT be used with any v3.x system
 
 ## DDB Game Log.
 DDG Game Log sends rolls from dnd beyond to foundry. If DDB Game Log is enabled in the optional settings section of midi, making an attack roll (or damage roll if there is no attack roll) will trigger a midi-qol workflow for the attack. Hits will be checked, saving throws asked for and damage applied as per the rest of the midi-qol settings, except that midi will wait for dnd beyond and will resolve when the dnd beyond roll is made.
@@ -205,21 +150,10 @@ Things to keep in mind:
 * Midi will look only at the foundry data, so it is up to you to keep things synchronised between the two.
 * Effects that increase attack bonus/damage dealt (when applied in foundry) will have no effect on attack/damage rolls made on DND Beyond. Midi **will** take into account effects that change AC (when checking hits), damage resistance, etc. when applying damage.
 
-## FVTTEncounterStats. 
-This module keeps very detailed stats about each encounter you run and is fully compatible with midi-qol. If keeping game stats is your thing it's worth a look. Much better and more informative than the midi inbuilt rollStats.
-
-## Minor Roll Enhancements.
-* Generally not compatible.
-* You can use MRE to manage accelerator keys, provided you set it to be registered first in libWrapper settings.
-* I've only done a little bit of playing with the attack/damage behaviour, but it seems to be incompatible with midi.
-
 ## Advantage Reminder for dnd5e
 If you don't fast-forward rolls this does a good job of highlight the default advantage/disadvantage/critical status of a roll.  
 Reminders also lets you highlight when a saving throw might meet advantage which midi can't process (e.g. advantage on poison saves).  
 Thanks to @kaelad for highlighting a midi problem, as of 0.9.11 midi is compatible with Advantage Reminder for attack and damage rolls.
-
-## GM Paranoia
-Midi-qol is not compatible with GM paranoia.
 
 # Short Guide to configuration settings
 The heading says short, but it really isn't.
