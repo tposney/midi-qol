@@ -36,7 +36,7 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
           actions: {
             rollDamage: MidiSaveActivity.#rollDamage,
             rollSave: MidiSaveActivity.#rollSave, // Having this means needing to track the dnd5e SaveActivity.#rollSave changes
-            // Currently not needed as there is no workflow related activity to be done
+            // Currently needed to tag the request id for midi-qol to pick up chat card saves as being for the current activity
           }
         },
       }, { inplace: false, overwrite: true, insertKeys: true, insertValues: true });
@@ -110,7 +110,10 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
     get selfTriggerableOnly() {
       return false;
     }
-
+    get canUseOtherActivity() {
+      return true;
+    }
+    
     getDamageConfig(config = {}) {
       const rollConfig = super.getDamageConfig(config);
 

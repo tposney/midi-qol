@@ -355,7 +355,17 @@
           "triggeredActivityRollAs": "self",
           "autoTargetType": "any",
           "autoTargetAction": "default",
-          "otherActivityCompatible": true
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
         }
       },
       "9uK3kf0FIqhFjYtS": {
@@ -444,7 +454,10 @@
           "triggeredActivityRollAs": "self",
           "autoTargetType": "any",
           "autoTargetAction": "default",
-          "otherActivityCompatible": true
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
         },
         "macroData": {
           "name": "",
@@ -455,6 +468,14 @@
           "idr": false,
           "idv": false,
           "ida": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
         }
       }
     },
@@ -467,13 +488,12 @@
   "_stats": {
     "compendiumSource": null,
     "duplicateSource": null,
-    "coreVersion": "13.337",
+    "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.2.2",
-    "createdTime": 1738555836908,
-    "modifiedTime": 1738555836908,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
-    "exportSource": null
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782992877,
+    "modifiedTime": 1741782992877,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "5Ok9Jbl5nOokCkqf",
   "_id": "QEkOwc7gMKfxO8Kr",

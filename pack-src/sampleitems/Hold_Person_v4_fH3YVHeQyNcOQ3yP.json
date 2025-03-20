@@ -78,13 +78,12 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "13.337",
+        "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.2.2",
+        "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
+        "lastModifiedBy": null
       },
       "img": "icons/magic/control/debuff-chains-ropes-purple.webp",
       "type": "base",
@@ -304,7 +303,18 @@
           "triggeredActivityRollAs": "self",
           "autoTargetType": "any",
           "autoTargetAction": "default",
-          "otherActivityCompatible": true
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
         }
       }
     },
@@ -315,13 +325,12 @@
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.spells.3Lo9boi7P2ro6QV4",
     "duplicateSource": null,
-    "coreVersion": "13.337",
+    "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.2.2",
-    "createdTime": 1738555840264,
-    "modifiedTime": 1738928928455,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
-    "exportSource": null
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782997074,
+    "modifiedTime": 1741782997074,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "qF3UYnzAAbVavYSR",
   "_id": "fH3YVHeQyNcOQ3yP",

@@ -13,7 +13,7 @@ export var nsaFlag: boolean;
 export var coloredBorders: string;
 export var saveRequests = {};
 export var saveTimeouts = {};
-export var addChatDamageButtons: string;
+export var addChatDamageButtonsOld: string;
 export var autoFastForwardAbilityRolls: boolean;
 export var autoRemoveTargets: string;
 export var forceHideRoll: boolean;
@@ -26,6 +26,7 @@ export var DebounceInterval: number;
 export var _debouncedUpdateAction;
 export var ReplaceDefaultActivities: boolean = true;
 export var UseWeakReferences: boolean = false;
+export var SaveToChatCard: boolean = false;
 
 export const defaultTargetConfirmationSettings = {
   enabled: false,
@@ -51,6 +52,7 @@ const defaultKeyMapping = {
 
 class ConfigSettings {
   // fullAuto: boolean = false;
+  addChatDamageButtons: string = "none";
   addDead: string = "none";
   addFakeDice: boolean = false;
   addWounded: number = 0;
@@ -272,7 +274,7 @@ export function collectSettingData() {
     criticalDamageGM,
     nsaFlag,
     coloredBorders,
-    addChatDamageButtons,
+    // addChatDamageButtons,
     autoFastForwardAbilityRolls,
     autoRemoveTargets,
     forceHideRoll,
@@ -324,8 +326,8 @@ export async function importSettingsFromJSON(json) {
   await game.settings?.set("midi-qol", "showGM", removeOldValues(json.nsaFlag));
   //@ts-expect-error
   await game.settings?.set("midi-qol", "ColoredBorders", removeOldValues(json.coloredBorders));
-  //@ts-expect-error
-  await game.settings?.set("midi-qol", "AddChatDamageButtons", removeOldValues(json.addChatDamageButtons));
+  // @ ts-expect-error
+  // await game.settings?.set("midi-qol", "AddChatDamageButtons", removeOldValues(json.addChatDamageButtons));
   //@ts-expect-error
   await game.settings?.set("midi-qol", "AutoFastForwardAbilityRolls", removeOldValues(json.autoFastForwardAbilityRolls));
   //@ts-expect-error
@@ -561,7 +563,9 @@ export let fetchParams = () => {
   coloredBorders = String(game.settings?.get("midi-qol", "ColoredBorders"));
   itemRollButtons = false; // Boolean(game.settings?.get("midi-qol", "ItemRollButtons"));
   //@ts-expect-error
-  addChatDamageButtons = String(game.settings?.get("midi-qol", "AddChatDamageButtons"))
+  addChatDamageButtonsOld = String(game.settings?.get("midi-qol", "AddChatDamageButtons"));
+  if (configSettings.addChatDamageButtons === undefined) configSettings.addChatDamageButtons = addChatDamageButtonsOld ?? "none";
+
   //@ts-expect-error
   autoFastForwardAbilityRolls = Boolean(game.settings?.get("midi-qol", "AutoFastForwardAbilityRolls"));
   //@ts-expect-error
@@ -584,6 +588,8 @@ export let fetchParams = () => {
   //@ts-expect-error
   UseWeakReferences = game.settings?.get("midi-qol", "UseWeakReferences") ?? false;
   if (UseWeakReferences !== oldWeakReferences) Workflow.clearWorkflows();
+  //@ts-expect-error
+  SaveToChatCard = game.settings?.get("midi-qol", "SaveToChatCard");
   //@ts-expect-error
   targetConfirmation = game.settings?.get("midi-qol", "TargetConfirmation");
   if (configSettings.griddedGridless === undefined) configSettings.griddedGridless = false;
@@ -808,14 +814,14 @@ export const registerSettings = function () {
   });
 
 
-  //@ts-expect-error
+  //@ts-expect-error - remove this in v12.5.x??
   game.settings?.register("midi-qol", "AddChatDamageButtons", {
     name: "midi-qol.AddChatDamageButtons.Name",
     hint: "midi-qol.AddChatDamageButtons.Hint",
     scope: "world",
     default: "none",
     type: String,
-    config: true,
+    config: false,
     choices: geti18nOptions("AddChatDamageButtonsOptions"),
     onChange: fetchParams
   });
@@ -920,7 +926,7 @@ export const registerSettings = function () {
   //@ts-expect-error
   game.settings?.register("midi-qol", "UseWeakReferences", {
     name: "Use Weak References for Workflows",
-    hint: "DO NOT CHANGE THIS SETTING",
+    hint: "Developer Only: Leave unchecked",
     scope: "world",
     default: false,
     type: Boolean,
@@ -928,9 +934,9 @@ export const registerSettings = function () {
     onChange: fetchParams
   });
   //@ts-expect-error
-  game.settings?.register("midi-qol", "debugCallTiming", {
-    name: "midi-qol.debugCallTiming.Name",
-    hint: "midi-qol.debugCallTiming.Hint",
+  game.settings?.register("midi-qol", "SaveToChatCard", {
+    name: "Save to Chat Card",
+    hint: "Developer Only: Leave unchecked",
     scope: "world",
     default: false,
     type: Boolean,

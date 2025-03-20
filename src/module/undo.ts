@@ -33,7 +33,6 @@ interface undoDataDef {
   isReaction: boolean;
   templateUuids: string[] | undefined;
   sequencerUuid: string | undefined;
-  itemCardId: string | undefined;
   itemCardUuid: string | undefined;
   targets: { actorUuid: string, tokenUuid: string }[] | undefined;
 }
@@ -51,7 +50,6 @@ export function _queueUndoDataDirect(undoDataDef) {
   undoData.id = undoDataDef.id ?? foundry.utils.randomID();
   undoData.actorEntry = { actorUuid: undoDataDef.actorUuid, tokenUuid: undoDataDef.tokendocUuid, actorData: actor?.toObject(true), tokenData: tokenDoc?.toObject(true) };
   undoData.chatCardUuids = undoDataDef.chatCardUuids ?? [];
-  undoData.itemCardId = undoDataDef.itemCardId;
   undoData.itemCardUuid = undoDataDef.itemCardUuid;
   undoData.actorName = actor.name;
   undoData.itemName = undoDataDef.itemName;
@@ -82,11 +80,11 @@ export async function saveUndoData(workflow: Workflow): Promise<boolean> {
   workflow.undoData.itemUuid = workflow.item?.uuid;
   workflow.undoData.userName = game.user?.name;
   workflow.undoData.userId = game.user?.id;
-  workflow.undoData.tokendocUuid = workflow.token?.uuid ?? workflow.token?.document.uuid;
+  workflow.undoData.tokendocUuid = workflow.token?.document.uuid;
   workflow.undoData.actorUuid = workflow.actor?.uuid;
   workflow.undoData.actorName = workflow.actor?.name;
   workflow.undoData.chatCardUuids = [];
-  workflow.undoData.isReaction = workflow.options?.isReaction || isReactionItem(workflow.item);
+  workflow.undoData.isReaction = workflow.workflowOptions?.isReaction || isReactionItem(workflow.item);
   workflow.undoData.templateUuids = [];
   workflow.undoData.sequencerUuid = workflow.item?.uuid;
   if (!await unTimedExecuteAsGM("startUndoWorkflow", workflow.undoData)) {
@@ -165,7 +163,6 @@ export async function saveTargetsUndoData(workflow: Workflow) {
     workflow.undoData.targets.push({ tokenUuid: tokendoc?.uuid, actorUuid: (tokendoc?.actor as unknown as Actor)?.uuid });
   });
   workflow.undoData.serverTime = game.time?.serverTime;
-  workflow.undoData.itemCardId = workflow.itemCardId;
   workflow.undoData.itemCardUuid = workflow.itemCardUuid;
   if (workflow.templateUuid) workflow.undoData.templateUuids.push(workflow.templateUuid);
   return unTimedExecuteAsGM("queueUndoData", workflow.undoData)
@@ -483,6 +480,5 @@ export async function undoWorkflow(undoData: any) {
     const message = MQfromUuidSync(undoData.itemCardUuid);
     await removeChatCard(message);
   }
-  // if (undoData.itemCardId) await removeChatCard(game.messages?.get(undoData.itemCardId));
   await _removeChatCards({ chatCardUuids: undoData.chatCardUuids });
 }

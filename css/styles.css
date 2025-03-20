@@ -332,17 +332,6 @@
 .midi-qol-import-troubleshooter .notes {
   color: var(--color-text-primary);
 }
-/*
-.midi-trouble-shooter .window-content > div {
-  height: 90%;
-  flex-wrap: nowrap;
-}
-
-
-.midi-trouble-shooter .contents footer {
-  flex: 0;
-}
-*/
 
 .midi-qol-blind-select {
   width: 150px;
@@ -849,7 +838,10 @@
     text-shadow: none;
     color: var(--color-text-primary);
   }
-
+  .midi-qol-target-confirmation-list {
+      overflow-y: scroll;
+      max-height: 600px;
+  }
   .midi-targeting dl .midi-qol-box dd {
     margin: 1rem;
   }

@@ -1,16 +1,11 @@
 import { GameSystemConfig, MQDamageRollTypes, debugEnabled, i18n, log, warn } from "../midi-qol.js";
-//import { chatDamageButtons } from "./chatMessageHandling.js";
-import { addChatDamageButtons, configSettings, safeGetGameSetting } from "./settings.js";
+import { configSettings, safeGetGameSetting } from "./settings.js";
 import { getToken } from "./utils.js";
 import { setDamageRollMinTerms } from "./activities/activityHelpers.js";
+import { WorkflowDataFlags } from "./Workflow.js";
 
 export function defineChatMessageMidiClass(baseClass: ChatMessage.ImplementationClass) {
   return class ChatMessageMidi extends baseClass /*globalThis.dnd5e.documents.ChatMessage5e*/ {
-    constructor(...args) {
-      super(...args);
-      if (debugEnabled > 1) log("Chat message midi constructor", ...args)
-    }
-
     get isRoll() {
       // @ts-expect-error can't know about flags
       if (this.flags?.["midi-qol"]?.messageType) return false // do this so that dsn won't trigger
@@ -53,15 +48,14 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     /**
- * Select the hit or missed targets.
- * @param {HTMLElement} li    The chat entry which contains the roll data.
- * @param {string} type       The type of selection ('hit' or 'miss').
- */
+  * Select the hit or missed targets.
+  * @param {HTMLElement} li    The chat entry which contains the roll data.
+  * @param {string} type       The type of selection ('hit' or 'miss').
+  */
     selectTargets(li, type) {
       if (!canvas?.ready) return;
       // @ts-expect-error no dnd5e-types
       if (!foundry.utils.getProperty(this, "flags.midi-qol")) return super.selectTargets(li, type);
-      const lis = li.closest("[data-message-id]").querySelectorAll(`.evaluation li.target.${type}`);
       // @ts-expect-error can't know about flags
       let targetUuids: string[] = this.getFlag("midi-qol", "targetUuids") || [];
       // @ts-expect-error can't know about flags
@@ -73,7 +67,6 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       uuids.forEach(uuid => {
         const token = getToken(uuid);
         if (!token?.actor || !game.user) return;
-        //@ts-check testUserPermission is not in the types
         if (token?.isVisible && (token.actor as Actor).testUserPermission(game.user, "OWNER")) {
           token.control({ releaseOthers: false });
         }
@@ -244,10 +237,10 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         }
       }
 
-      let shouldAddButtons = addChatDamageButtons === "both"
-        || (addChatDamageButtons === "gm" && game.user?.isGM)
-        || (addChatDamageButtons === "pc" && !game.user?.isGM);
-        if (game.user?.isGM && configSettings.autoApplyDamage === "none") shouldAddButtons = true;
+      let shouldAddButtons = (configSettings.addChatDamageButtons === "both")
+        || ((configSettings.addChatDamageButtons === "gm") && game.user?.isGM)
+        || ((configSettings.addChatDamageButtons === "pc") && !game.user?.isGM);
+      if (game.user?.isGM && configSettings.autoApplyDamage === "none") shouldAddButtons = true;
       if (shouldAddButtons) {
         for (let dType of MQDamageRollTypes) {
           rolls = this.rolls.filter(r => foundry.utils.getProperty(r, "options.midi-qol.rollType") === dType);
@@ -363,6 +356,25 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           html.querySelectorAll(".midi-attack-roll .dice-total .icons")?.forEach(el => el.remove());
         }
       }
+    }
+
+    prepareDerivedData() {
+      const attackRoll = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.attackRoll);
+      if (attackRoll)
+        foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.attackRoll, Roll.fromData(attackRoll));
+      const damageRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.damageRolls);
+      if (damageRolls)
+        foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.damageRolls, damageRolls.map(d => Roll.fromData(d)));
+      const otherDamageRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.otherDamageRolls);
+      if (otherDamageRolls)
+        foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.otherDamageRolls, otherDamageRolls.map(d => Roll.fromData(d)));
+      const bonusDamageRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.bonusDamageRolls);
+      if (bonusDamageRolls)
+        foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.bonusDamageRolls, bonusDamageRolls.map(d => Roll.fromData(d)));
+      const extraRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.extraRolls);
+      if (extraRolls)
+        foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.extraRolls, extraRolls.map(d => Roll.fromData(d)));
+      super.prepareDerivedData();
     }
 
     noDiceClicks(event) {

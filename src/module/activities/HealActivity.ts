@@ -50,6 +50,10 @@ let defineMidiHealActivityClass = (ActivityClass: any) => {
       return false;
     }
 
+    get canUseOtherActivity() {
+      return true;
+    }
+    
     async rollDamage(config: any = {}, dialog: any = {}, message: any = {}) {
       config.midiOptions ??= {};
       config.midiOptions.fastForwardHeal ??= game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward);

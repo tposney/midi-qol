@@ -71,13 +71,12 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "13.337",
+        "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.2.2",
+        "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
+        "lastModifiedBy": null
       },
       "img": "icons/weapons/polearms/halberd-crescent-glowing.webp",
       "type": "base",
@@ -494,9 +493,19 @@
           "triggeredActivityRollAs": "self",
           "autoTargetType": "any",
           "autoTargetAction": "default",
-          "otherActivityCompatible": true
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
         },
-        "otherActivityId": ""
+        "otherActivityId": "",
+        "useConditionReason": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
       }
     },
     "identifier": "devils-glaive-11438",
@@ -510,13 +519,12 @@
   "_stats": {
     "compendiumSource": "Item.0AgqaCUkEyZCbC5Y",
     "duplicateSource": null,
-    "coreVersion": "13.337",
+    "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.2.2",
-    "createdTime": 1738555836908,
-    "modifiedTime": 1738555836908,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
-    "exportSource": null
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782992877,
+    "modifiedTime": 1741782992877,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "5Ok9Jbl5nOokCkqf",
   "_id": "AtPDuZna6kgZUBM5",

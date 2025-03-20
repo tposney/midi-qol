@@ -69,13 +69,12 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "13.337",
+        "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.2.2",
+        "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
+        "lastModifiedBy": null
       },
       "img": "icons/equipment/wrist/bracer-studded-leather-steel.webp",
       "type": "base",
@@ -239,19 +238,12 @@
   "_stats": {
     "compendiumSource": "Item.93tqVAgnT6DsLnjy",
     "duplicateSource": null,
-    "coreVersion": "13.337",
+    "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.2.2",
-    "createdTime": 1738555836908,
-    "modifiedTime": 1738555836908,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
-    "exportSource": {
-      "worldId": "tp-game-v3",
-      "uuid": null,
-      "coreVersion": "9.249",
-      "systemId": "dnd5e",
-      "systemVersion": "1.5.7"
-    }
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782992877,
+    "modifiedTime": 1741782992877,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "5Ok9Jbl5nOokCkqf",
   "_id": "PK7zGIdSuauon3TR",

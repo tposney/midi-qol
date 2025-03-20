@@ -31,7 +31,7 @@ export class MidiActivityChoiceDialog extends ActivityChoiceDialog {
       .filter(a => !a.midiProperties?.automationOnly)
       .map(this._prepareActivityContext.bind(this))
       .sort((a, b) => a.sort - b.sort);
-    await asyncHooksCallAll("midi-qol.activityChoiceDialogContext", {activities, item: this.item});
+    await asyncHooksCallAll("midi-qol.itemUseActivitySelect", {activities, item: this.item});
     return {
       ...await super._prepareContext(options),
       controlHint, 

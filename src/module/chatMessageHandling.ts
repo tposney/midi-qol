@@ -1,6 +1,6 @@
-import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID } from "../midi-qol.js";
-import { DDBGameLogWorkflow, Workflow } from "./Workflow.js";
-import { nsaFlag, coloredBorders, configSettings, forceHideRoll, safeGetGameSetting } from "./settings.js";
+import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID, MESSAGE_TYPES } from "../midi-qol.js";
+import { DDBGameLogWorkflow, Workflow, WorkflowDataFlags } from "./Workflow.js";
+import { nsaFlag, coloredBorders, configSettings, forceHideRoll, safeGetGameSetting, SaveToChatCard } from "./settings.js";
 import { playerFor, playerForActor, doOverTimeEffect, isInCombat, isAutoFastAttack } from "./utils.js";
 import { socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -162,6 +162,9 @@ export let hideRollUpdate = (message, data, diff, id) => {
 };
 
 export let hideStuffHandler = (message, html, data) => {
+  let htmlElement = (html instanceof HTMLElement) ? html : html[0];
+  const messageActor: Actor | undefined = (fromUuidSync(foundry.utils.getProperty(message, `flags.${WorkflowDataFlags.actor}`)) ?? game.actors?.get(message.speaker.actor)) as Actor;
+  const messageActorOwner = messageActor?.isOwner;
   if (debugEnabled > 1) debug("hideStuffHandler message: ", message.id, message)
   // if (foundry.utils.getProperty(message, "flags.monks-tokenbar")) return;
   const midiqolFlags = foundry.utils.getProperty(message, "flags.midi-qol");
@@ -170,7 +173,6 @@ export let hideStuffHandler = (message, html, data) => {
     html.hide();
     return;
   }
-  const authorId = message.author?.id;
   // message.shouldDisplayChallenge returns true for message owners, which is not quite what we want.
   let shouldDisplayChallenge = true;
   if (game.user?.isGM) shouldDisplayChallenge = true;
@@ -187,8 +189,13 @@ export let hideStuffHandler = (message, html, data) => {
     html.remove();
     return;
   }
+  if (foundry.utils.getProperty(message, "flags.midi-qol.type") === MESSAGE_TYPES.SAVES) {
+    const matched = htmlElement?.querySelectorAll(`[data-action="rollSave"]`);
+    htmlElement?.querySelectorAll(`[data-action="rollSave"]`).forEach((el) => {el.disabled = false});
+    htmlElement?.querySelectorAll(`[data-action="rollCheck"]`).forEach((el) => {el.disabled = false});
+  }
 
-  if (game.user?.id !== authorId) {
+  if (!message.isAuthor && !(messageActorOwner && SaveToChatCard)) {
     html.find(".midi-qol-attack-buttons").hide();
     html.find(".midi-qol-damage-buttons").hide();
     html.find(".midi-qol-otherDamage-button").hide();
@@ -296,7 +303,7 @@ export let hideStuffHandler = (message, html, data) => {
         html.find(".midi-qol-hits-display .midi-qol-hit-class").removeClass("fumble");
       }
     }
-    if (authorId !== game.user?.id || configSettings.confirmAttackDamage === "gmOnly") {
+    if (message.isAuthor|| configSettings.confirmAttackDamage === "gmOnly") {
       html.find(".midi-qol-confirm-damage-roll-complete-hit").hide();
       html.find(".midi-qol-confirm-damage-roll-complete-miss").hide();
       html.find(".midi-qol-confirm-damage-roll-complete-critical").hide();
@@ -320,13 +327,12 @@ export function processItemCardCreation(message, user) {
   if (user === game.user?.id && midiFlags?.workflowId) { // check to see if it is a workflow
     const workflow = Workflow.getWorkflow(midiFlags.workflowId);
     if (!workflow) return;
-    if (debugEnabled > 0) warn("processItemCardCreation", message.id, workflow.itemCardId, workflow.ItemCardUuid, workflow.workflowName)
-    workflow.itemCardId = message.id;
+    if (debugEnabled > 0) warn("processItemCardCreation", message.id, workflow.itemCardUuid, workflow.ItemCardUuid, workflow.workflowName)
     workflow.itemCardUuid = message.uuid;
-    workflow.needItemCard = false;
-    const shouldUnsuspend = ([workflow.WorkflowState_AwaitItemCard, workflow.WorkflowState_AwaitTemplate, workflow.WorkflowState_NoAction].includes(workflow.currentAction) && workflow.suspended && !workflow.needTemplate && !workflow.needItemCard && workflow.preItemUseComplete); if (debugEnabled > 0) warn(`chat card created: unsuspending ${workflow.workflowName} ${workflow.nameForState(workflow.currentAction)} unsuspending: ${shouldUnsuspend}, workflow suspended: ${workflow.suspended} needs template: ${workflow.needTemplate}, needs Item card ${workflow.needItemCard}, itemUseomplete: ${workflow.preItemUseComplete}`);
+    const shouldUnsuspend = ([workflow.WorkflowState_AwaitItemCard, workflow.WorkflowState_AwaitTemplate, workflow.WorkflowState_NoAction].includes(workflow.currentAction) && workflow.suspended && !workflow.needTemplate && !workflow.needItemCard && workflow.preItemUseComplete);
+    if (debugEnabled > 0) warn(`chat card created: unsuspending ${workflow.workflowName} ${workflow.nameForState(workflow.currentAction)} unsuspending: ${shouldUnsuspend}, workflow suspended: ${workflow.suspended} needs template: ${workflow.needTemplate}, needs Item card ${workflow.needItemCard}, itemUseomplete: ${workflow.preItemUseComplete}`);
     if (shouldUnsuspend) {
-      workflow.unSuspend({ itemCardId: message.id, itemCarduuid: message.uuid, itemUseComplete: true });
+      workflow.unSuspend({ itemCardUuid: message.uuid, itemUseComplete: true });
     }
   }
 }
@@ -441,7 +447,7 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   if (flags.dnd5e.roll.type === "attack") {
     let rolls = message.rolls;
     if (!(rolls instanceof Array)) rolls = [rolls];
-    workflow.needItemCard = false;
+    // workflow.needItemCard = false; TODO revisit this
     workflow.attackRoll = rolls[0] ?? undefined;
     workflow.attackTotal = rolls[0]?.total ?? 0;
     workflow.needsDamage = workflow.item.hasDamage;
@@ -456,7 +462,7 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   if (["damage", "heal"].includes(flags.dnd5e.roll.type)) {
     let rolls = message.rolls;
     if (!rolls) return;
-    workflow.needItemCard = false;
+    // workflow.needItemCard = false; TODO revist this
     workflow.attackRolled = true;
     if (!(rolls instanceof Array)) rolls = [rolls];
     if (workflow.needsDamage && rolls?.length) {

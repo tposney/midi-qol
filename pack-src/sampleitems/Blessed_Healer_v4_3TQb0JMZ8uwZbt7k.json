@@ -66,13 +66,12 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "13.337",
+        "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.2.2",
+        "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
+        "lastModifiedBy": null
       },
       "img": "icons/magic/light/orbs-hand-gray.webp",
       "type": "base",
@@ -270,19 +269,12 @@
   "_stats": {
     "compendiumSource": null,
     "duplicateSource": null,
-    "coreVersion": "13.337",
+    "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.2.2",
-    "createdTime": 1738555835389,
-    "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
-    "exportSource": {
-      "worldId": "tp-game-v3",
-      "uuid": null,
-      "coreVersion": "9.255",
-      "systemId": "dnd5e",
-      "systemVersion": "1.5.7"
-    }
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782991287,
+    "modifiedTime": 1741782991287,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "3TQb0JMZ8uwZbt7k",

@@ -81,13 +81,13 @@ let defineMidiOverTimeActivityClass = (ActivityClass: any) => {
     get isTriggerableActivity() {
       return false;
     }
-    async confirmCanProceed(config, dialog, message, options): Promise<boolean> {
+    async postChatCardChecks(config, dialog, message, options): Promise<boolean> {
       if (this.useCondition) { // reactions condition evaluation is handled elsewhere
         if (!(await evalActivationCondition(config.workflow, this.useCondition, this.targets.first(), { async: true }))) {
           return this.removeWorkflow(config.workflow,);
         }
       }
-      return super.confirmCanProceed(config, dialog, message, options);
+      return super.postChatCardChecks(config, dialog, message, options);
     }
   }
 }

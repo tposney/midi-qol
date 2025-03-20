@@ -1,0 +1,475 @@
+{
+  "name": "Hunter's Mark",
+  "type": "spell",
+  "img": "icons/magic/perception/eye-ringed-glow-angry-small-red.webp",
+  "effects": [
+    {
+      "_id": "9eOiLd1FGoDJ9eLu",
+      "changes": [
+        {
+          "key": "flags.dae.onUpdateSource",
+          "mode": 0,
+          "value": "Hunter's Mark",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": null,
+        "seconds": 3600,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": null,
+        "startTurn": null
+      },
+      "origin": "Item.SU8tsBLWTXP7NUdb",
+      "tint": "#ffffff",
+      "transfer": false,
+      "flags": {
+        "dae": {
+          "stackable": "noneName",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": false,
+          "durationExpression": "",
+          "disableIncapacitated": false,
+          "selfTarget": false,
+          "selfTargetAlways": false,
+          "dontApply": false,
+          "showIcon": false,
+          "enableCondition": "",
+          "disableCondition": ""
+        },
+        "ActiveAuras": {
+          "isAura": false,
+          "radius": null,
+          "aura": "None",
+          "alignment": "",
+          "type": "",
+          "ignoreSelf": false,
+          "height": false,
+          "hidden": false,
+          "hostile": false,
+          "onlyOnce": false,
+          "displayTemp": false
+        },
+        "core": {
+          "overlay": false
+        },
+        "effectmacro": {}
+      },
+      "name": "Marked",
+      "description": "",
+      "statuses": [],
+      "_stats": {
+        "compendiumSource": null,
+        "duplicateSource": null,
+        "coreVersion": "12.331",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null
+      },
+      "img": "icons/magic/perception/eye-ringed-glow-angry-small-red.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!7jMEN36K5VvR3lxT.9eOiLd1FGoDJ9eLu"
+    },
+    {
+      "_id": "jGoO5o3jt4DvIfve",
+      "changes": [
+        {
+          "key": "flags.dnd5e.DamageBonusMacro",
+          "mode": 0,
+          "value": "ItemMacro",
+          "priority": 20
+        }
+      ],
+      "disabled": false,
+      "duration": {
+        "startTime": 47180392501,
+        "seconds": null,
+        "combat": null,
+        "rounds": null,
+        "turns": null,
+        "startRound": 109,
+        "startTurn": 0
+      },
+      "origin": "Actor.WSDm88RsLBxiViel.Item.bWvKQzDpCLqIMOtM",
+      "transfer": true,
+      "flags": {
+        "core": {},
+        "dae": {
+          "stackable": "noneName",
+          "durationExpression": "",
+          "macroRepeat": "none",
+          "specialDuration": [],
+          "transfer": true,
+          "selfTarget": false,
+          "selfTargetAlways": false
+        },
+        "ActiveAuras": {
+          "isAura": false,
+          "aura": "None",
+          "radius": null,
+          "alignment": "",
+          "type": "",
+          "ignoreSelf": false,
+          "height": false,
+          "hidden": false,
+          "displayTemp": false,
+          "hostile": false,
+          "onlyOnce": false
+        }
+      },
+      "tint": "#ffffff",
+      "name": "Hunter's Mark",
+      "description": "",
+      "statuses": [],
+      "_stats": {
+        "compendiumSource": "Compendium.midi-qol.midiqol-sample-items.Item.6IXuB99Ghl0usHya.ActiveEffect.1u2srq7ti2lvguvx",
+        "duplicateSource": null,
+        "coreVersion": "12.331",
+        "systemId": "dnd5e",
+        "systemVersion": "4.3.6",
+        "createdTime": null,
+        "modifiedTime": null,
+        "lastModifiedBy": null
+      },
+      "img": "icons/magic/perception/eye-ringed-glow-angry-small-red.webp",
+      "type": "base",
+      "system": {},
+      "sort": 0,
+      "_key": "!items.effects!7jMEN36K5VvR3lxT.jGoO5o3jt4DvIfve"
+    }
+  ],
+  "flags": {
+    "core": {},
+    "midi-qol": {
+      "onUseMacroName": "[preItemRoll]ItemMacro",
+      "effectActivation": false,
+      "forceCEOff": true,
+      "forceCEOn": false,
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "AoETargetType": "any",
+      "autoTarget": "default",
+      "removeAttackDamageButtons": "default"
+    },
+    "itemacro": {
+      "macro": {
+        "data": {
+          "_id": null,
+          "name": "Hunter's Mark",
+          "type": "script",
+          "author": "devnIbfBHb74U9Zv",
+          "img": "icons/svg/dice-target.svg",
+          "scope": "global",
+          "command": "if (actor.data?.flags?.dae?.onUpdateTarget && args[0].hitTargets.length > 0) {\n\tconst isMarked = actor.data.flags.dae.onUpdateTarget.find(flag => flag.flagName === \"Hunter's Mark\" && flag.sourceActorUuid === args[0].hitTargets[0].actor.uuid);\n\tif (isMarked) {\n\t        let damageType = args[0].item.data.damage.parts[0][1];\n\t        const diceMult = args[0].isCritical ? 2: 1;\n\t        return {damageRoll: `${diceMult}d6[${damageType}]`, flavor: \"Hunters Mark Damage\"};\n\t}\t\n}\nreturn {};",
+          "folder": null,
+          "sort": 0,
+          "permission": {
+            "default": 0
+          },
+          "flags": {}
+        },
+        "name": "Hunter's Mark 11.4.23",
+        "type": "script",
+        "img": "icons/magic/perception/eye-ringed-glow-angry-small-red.webp",
+        "scope": "global",
+        "command": "const version = \"10.0.23\";\ntry {\n\tif (args[0].macroPass === \"DamageBonus\") {\n\t\tif (actor.flags?.dae?.onUpdateTarget && args[0].hitTargets.length > 0) {\n\t\t\tconst isMarked = actor.flags.dae.onUpdateTarget?.find(flag => \n\t\t\t\t\tflag.flagName === \"Hunter's Mark\" && flag.sourceTokenUuid === args[0].hitTargetUuids[0]);\n\t\t\tif (isMarked) {\n\t\t\t\t\tlet damageType = args[0].item.system.damage.parts[0][1];\n\t\t\t\t\tconst diceMult = args[0].isCritical ? 2: 1;\n\t\t\t\t\treturn {damageRoll: `${diceMult}d6[${damageType}]`, flavor: \"Hunters Mark Damage\"};\n\t\t\t}\t\n\t\t}\n\t\treturn {};\n\t} else if (args[0].macroPass === \"preItemRoll\") {\n\t\t// check if we are already marking and if the marked target is dead.\n\t\tconst markedTarget = actor.flags.dae.onUpdateTarget?.find(flag => flag.flagName === \"Hunter's Mark\")?.sourceTokenUuid;\n\t\tif (markedTarget) {\n\t\t\tconst target = await fromUuid(markedTarget);\n\t\t\tif (!target || target.actor.system.attributes.hp.value <= 0) { //marked target is dead or removed so don't consume a resource\n\t\t\tconst currentDuration = duplicate(actor.effects.find(ef => ef.name === `${game.i18n.localize(\"midi-qol.Concentrating\")}: ${rolledItem.name}` || ef.name === game.i18n.localize(\"midi-qol.Concentrating\")).duration);\n\t\t\t\tconst useHookId = Hooks.on(\"dnd5e.preUseItem\", (hookItem, config, options) => {\n\t\t\t\t\tif (hookItem !== item) return;\n\t\t\t\t\toptions.configureDialog = false;\n\t\t\t\t\tconfig.consumeSpellLevel = false;\n\t\t\t\t\tHooks.off(\"dnd5e.preUseItem\", useHookId);\n\t\t\t\t});\n\t\t\t\tconst effectHookId = Hooks.on(\"preCreateActiveEffect\", (effect, data, options, user) => {\n\t\t\t\t\tif (effect.name === `${game.i18n.localize(\"midi-qol.Concentrating\")}: ${rolledItem.name}` || game.i18n.localize(\"midi-qol.Concentrating\")) {\n\t\t\t\t\t\teffect.updateSource({\"duration\": currentDuration});\n\t\t\t\t\t\tHooks.off(\"dnd5e.preCreateActiveEffect\", effectHookId);\n\t\t\t\t\t}\n\t\t\t\t\treturn true;\n\t\t\t\t})\n\t\t\t}\n\t\t}\n\t\treturn true;\n\t}\n} catch (err) {\n\t    console.error(`${args[0].itemData.name} - Hunter's Mark ${version}`, err);\n\t\treturn {}\n}",
+        "sort": 0,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": null,
+          "systemVersion": null,
+          "coreVersion": null,
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null
+        },
+        "author": "STcmc1QZ0hx024Tl",
+        "_id": null,
+        "folder": null
+      }
+    },
+    "cf": {
+      "id": "temp_qt0kn9os0vl",
+      "color": "#000000"
+    },
+    "midiProperties": {
+      "nodam": false,
+      "halfdam": false,
+      "fulldam": false,
+      "rollOther": false,
+      "critOther": false,
+      "concentration": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "toggleEffect": false,
+      "selfEffect": false,
+      "ignoreTotalCover": false,
+      "autoFailFriendly": false,
+      "offHandWeapon": false,
+      "autoSaveFriendly": false,
+      "confirmTargets": "never",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "scene-packer": {
+      "hash": "e49ee2b885e37cab29203953d30791bc66d083ff",
+      "sourceId": "Compendium.world.backup-sample-items.Item.WSYSrYCBE4DCjs0a"
+    },
+    "walledtemplates": {
+      "wallsBlock": "globalDefault",
+      "wallRestriction": "globalDefault"
+    },
+    "dnd5e": {
+      "migratedProperties": [
+        "vocal",
+        "concentration"
+      ],
+      "persistSourceMigration": true,
+      "riders": {
+        "activity": []
+      }
+    },
+    "dae": {
+      "macro": {
+        "data": {
+          "_id": null,
+          "name": "Hunter's Mark",
+          "type": "script",
+          "author": "devnIbfBHb74U9Zv",
+          "img": "icons/svg/dice-target.svg",
+          "scope": "global",
+          "command": "if (actor.data?.flags?.dae?.onUpdateTarget && args[0].hitTargets.length > 0) {\n\tconst isMarked = actor.data.flags.dae.onUpdateTarget.find(flag => flag.flagName === \"Hunter's Mark\" && flag.sourceActorUuid === args[0].hitTargets[0].actor.uuid);\n\tif (isMarked) {\n\t        let damageType = args[0].item.data.damage.parts[0][1];\n\t        const diceMult = args[0].isCritical ? 2: 1;\n\t        return {damageRoll: `${diceMult}d6[${damageType}]`, flavor: \"Hunters Mark Damage\"};\n\t}\t\n}\nreturn {};",
+          "folder": null,
+          "sort": 0,
+          "permission": {
+            "default": 0
+          },
+          "flags": {}
+        },
+        "name": "Hunter's Mark v4",
+        "type": "script",
+        "img": "icons/magic/perception/eye-ringed-glow-angry-small-red.webp",
+        "scope": "global",
+        "command": "const version = \"12.4.22\";\ntry {\n\tif (args[0].macroPass === \"DamageBonus\") {\n\t\tif (![\"rwak\", \"mwak\"].includes(macroActivity.actionType)) return {};\n\t\tif (actor.flags?.dae?.onUpdateTarget && args[0].hitTargets.length > 0) {\n\t\t\tconst isMarked = actor.flags.dae.onUpdateTarget?.find(flag => \n\t\t\t\t\tflag.flagName === \"Hunter's Mark\" && flag.sourceTokenUuid === args[0].hitTargetUuids[0]);\n\t\t\tif (isMarked) {\n\t\t\t\t\tlet damageType = macroActivity.damage.parts[0]?.types.first() ?? \"none\";\n\t\t\t\t\tconsole.error(\"agrs are \", args[0], scope)\n\t\t\t\t\treturn new game.system.dice.DamageRoll(\"1d6\", {}, {isCritical: workflow.isCritical, properties: [\"mgc\"], type: damageType, flavor: macroItem.name})\n\t\t\t}\t\n\t\t}\n\t\treturn {};\n\t} else if (args[0].macroPass === \"preItemRoll\") {\n\t\t// check if we are already marking and if the marked target is dead.\n\t\tconst markedTarget = actor.flags.dae.onUpdateTarget?.find(flag => flag.flagName === \"Hunter's Mark\")?.sourceTokenUuid;\n\t\tif (markedTarget) {\n\t\t\tconst target = await fromUuid(markedTarget);\n\t\t\tif (!target || target.actor.system.attributes.hp.value <= 0) { //marked target is dead or removed so don't consume a resource\n\t\t\tconst currentDuration = duplicate(actor.effects.find(ef => ef.name === `${game.i18n.localize(\"midi-qol.Concentrating\")}: ${rolledItem.name}` || ef.name === game.i18n.localize(\"midi-qol.Concentrating\")).duration);\n\t\t\t\tconst useHookId = Hooks.on(\"dnd5e.preUseItem\", (hookItem, config, options) => {\n\t\t\t\t\tif (hookItem !== item) return;\n\t\t\t\t\toptions.configureDialog = false;\n\t\t\t\t\tconfig.consumeSpellLevel = false;\n\t\t\t\t\tHooks.off(\"dnd5e.preUseItem\", useHookId);\n\t\t\t\t});\n\t\t\t\tconst effectHookId = Hooks.on(\"preCreateActiveEffect\", (effect, data, options, user) => {\n\t\t\t\t\tif (effect.name === `${game.i18n.localize(\"midi-qol.Concentrating\")}: ${rolledItem.name}` || game.i18n.localize(\"midi-qol.Concentrating\")) {\n\t\t\t\t\t\teffect.updateSource({\"duration\": currentDuration});\n\t\t\t\t\t\tHooks.off(\"dnd5e.preCreateActiveEffect\", effectHookId);\n\t\t\t\t\t}\n\t\t\t\t\treturn true;\n\t\t\t\t})\n\t\t\t}\n\t\t}\n\t\treturn true;\n\t}\n} catch (err) {\n\t    console.error(`${args[0].itemData.name} - Hunter's Mark ${version}`, err);\n\t\treturn {}\n}",
+        "sort": 0,
+        "ownership": {
+          "default": 3
+        },
+        "flags": {},
+        "_stats": {
+          "systemId": "dnd5e",
+          "systemVersion": "4.1.2",
+          "coreVersion": "12.331",
+          "createdTime": null,
+          "modifiedTime": null,
+          "lastModifiedBy": null,
+          "compendiumSource": null,
+          "duplicateSource": null
+        },
+        "author": "Zl1BOUaPLwDEujaL",
+        "_id": null,
+        "folder": null
+      }
+    },
+    "tidy5e-sheet": {
+      "section": "",
+      "actionSection": ""
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<p>You choose a creature you can see within range and mystically mark it as your quarry. Until the spell ends, you deal an extra {@dice 1d6} damage to the target whenever you hit it with a weapon attack, and you have advantage on any Wisdom (Perception) or Wisdom (Survival) check you make to find it. If the target drops to 0 hit points before this spell ends, you can use a bonus action on a subsequent turn of yours to mark a new creature.</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "Midi 12.4.25",
+      "revision": 1,
+      "rules": "2024",
+      "book": "PHB 2024",
+      "page": "pg 251",
+      "license": ""
+    },
+    "activation": {
+      "type": "bonus",
+      "condition": "",
+      "value": 1
+    },
+    "duration": {
+      "value": "1",
+      "units": "hour"
+    },
+    "target": {
+      "affects": {
+        "type": "creature",
+        "count": "1",
+        "choice": false,
+        "special": ""
+      },
+      "template": {
+        "units": "",
+        "contiguous": false,
+        "type": ""
+      }
+    },
+    "range": {
+      "value": "90",
+      "units": "ft",
+      "special": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "ability": "",
+    "level": 1,
+    "school": "div",
+    "materials": {
+      "value": "",
+      "consumed": false,
+      "cost": 0,
+      "supply": 0
+    },
+    "preparation": {
+      "mode": "prepared",
+      "prepared": false
+    },
+    "properties": [
+      "vocal",
+      "concentration",
+      "mgc"
+    ],
+    "sourceClass": "ranger",
+    "activities": {
+      "dnd5eactivity000": {
+        "_id": "dnd5eactivity000",
+        "type": "utility",
+        "activation": {
+          "type": "action",
+          "value": null,
+          "override": false
+        },
+        "consumption": {
+          "targets": [],
+          "scaling": {
+            "allowed": false,
+            "max": ""
+          },
+          "spellSlot": true
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [
+          {
+            "_id": "9eOiLd1FGoDJ9eLu"
+          }
+        ],
+        "range": {
+          "override": false
+        },
+        "target": {
+          "prompt": true,
+          "template": {
+            "contiguous": false,
+            "units": "ft"
+          },
+          "affects": {
+            "choice": false
+          },
+          "override": false
+        },
+        "uses": {
+          "spent": 0,
+          "max": "",
+          "recovery": []
+        },
+        "roll": {
+          "formula": "",
+          "name": "",
+          "prompt": false,
+          "visible": false
+        },
+        "sort": 0,
+        "useConditionText": "",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "automationOnly": false,
+          "identifier": "",
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "otherActivityCompatible": true,
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        }
+      }
+    },
+    "identifier": "hunters-mark-1165"
+  },
+  "_stats": {
+    "compendiumSource": "Compendium.world.fixup.Item.HavE2PV2g1IGUFTN",
+    "duplicateSource": null,
+    "coreVersion": "12.331",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.6",
+    "createdTime": 1741783010670,
+    "modifiedTime": 1741783010684,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+  },
+  "folder": null,
+  "_id": "7jMEN36K5VvR3lxT",
+  "sort": 103125,
+  "ownership": {
+    "default": 0,
+    "Zl1BOUaPLwDEujaL": 3
+  },
+  "_key": "!items!7jMEN36K5VvR3lxT"
+}

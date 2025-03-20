@@ -1,4 +1,7 @@
 <section id="midi-config-concentration" class="tab midi-scrollable-list{{#if tab.active}} active{{/if}}" data-group="{{tab.group}}" data-tab="{{tab.id}}">
+  {{#if concentrationDisabled}}
+{{{ localize "midi-qol.dnd5eConcentrationTrackingDisabled" }}}
+  {{else}}
     <div class="midi-qol-box">
         <div class="form-group">
             <label>{{localize "midi-qol.DoConcentrationCheck.Name"}}</label>
@@ -32,7 +35,6 @@
             configSettings.tempHPDamageConcentrationCheck}} />
             <div class="notes midi-qol-faint">{{{localize "midi-qol.TempHPDamageConcentrationCheck.Hint"}}}</div>
         </div>
-
         <div class="form-group">
             <label>{{localize "midi-qol.RemoveConcentrationEffects.Name"}}</label>
             <select name="removeConcentrationEffects" data-dtype="String">
@@ -41,4 +43,5 @@
             <div class="notes midi-qol-faint">{{{localize "midi-qol.RemoveConcentrationEffects.Hint"}}}</div>
         </div>
     </div>
+  {{/if}}
 </section>

@@ -132,13 +132,12 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "13.337",
+        "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.2.2",
+        "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
+        "lastModifiedBy": null
       },
       "img": "icons/magic/control/hypnosis-mesmerism-eye.webp",
       "type": "base",
@@ -249,18 +248,22 @@
     "tidy5e-sheet": {
       "section": "",
       "actionSection": ""
+    },
+    "dnd5e": {
+      "riders": {
+        "activity": []
+      }
     }
   },
   "_stats": {
     "compendiumSource": "Compendium.dnd5e.items.XGAWqtmhK6SYBL6A",
     "duplicateSource": null,
-    "coreVersion": "13.337",
+    "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.2.2",
-    "createdTime": 1738555836908,
-    "modifiedTime": 1738555836908,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
-    "exportSource": null
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782992877,
+    "modifiedTime": 1741782992877,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "5Ok9Jbl5nOokCkqf",
   "_id": "DklFQQNLObR1NoK9",

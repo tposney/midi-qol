@@ -54,7 +54,7 @@ let defineMidiCastActivityClass = (ActivityClass: any) => {
     }
 
     get isTriggerableActivity() {
-      return false;
+      return true;
     }
     
     get forcedTargetConfirmation() {

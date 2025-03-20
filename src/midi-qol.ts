@@ -6,7 +6,7 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, checkRange, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, debouncedUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getTokenForActor, getTokenForActorAsSet, getTokenPlayerName, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, reportMidiCriticalFlags, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, MQfromUuidSync, actorFromUuid, createDamageDetail, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, completeItemUseV2, checkActivityRange, modifyDamageBy, computeDistance, addDependent, cleanCPRFlanked, updatesCache } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, checkRange, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, debouncedUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, reportMidiCriticalFlags, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, MQfromUuidSync, actorFromUuid, createDamageDetail, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, completeItemUseV2, checkActivityRange, modifyDamageBy, computeDistance, addDependent, cleanCPRFlanked, updatesCache } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
@@ -31,7 +31,6 @@ export function getCanvas(): Canvas | undefined {
 }
 
 export let debugEnabled = 0;
-export let debugCallTiming: any = false;
 // 0 = none, warnings = 1, debug = 2, all = 3
 export let debug = (...args) => { if (debugEnabled > 1) console.log("DEBUG: midi-qol | ", ...args) };
 export let log = (...args) => console.log("midi-qol | ", ...args);
@@ -85,8 +84,6 @@ export let setDebugLevel = (debugText: string) => {
   debugEnabled = { "none": 0, "warn": 1, "debug": 2, "all": 3 }[debugText] || 0;
   // 0 = none, warnings = 1, debug = 2, all = 3
   if (debugEnabled >= 3) CONFIG.debug.hooks = true;
-  //@ts-expect-error
-  debugCallTiming = game.settings?.get(MODULE_ID, "debugCallTiming") ?? false;
 }
 
 export let noDamageSaves: string[] = [];
@@ -768,7 +765,7 @@ Hooks.on("monaco-editor.ready", (registerTypes) => {
       source: { rollType: string, ability: string, token: Token | TokenDocument | string, rollOptions: any },
       target: { rollType: string, ability: string, token: Token | TokenDocument | string, rollOptions: any },
       displayResults: boolean,
-      itemCardId: string,
+      itemCardUuid: string,
       flavor: string,
       rollOptions: any,
       success: (results) => {}, failure: (results) => {}, drawn: (results) => {}
@@ -917,8 +914,8 @@ function setupMidiQOLApi() {
     getSaveRollModeFor,
     getCheckRollModeFor,
     getTokenPlayerName,
-    getTokenForActor,
-    getTokenForActorAsSet,
+    getTokenForActor: getOrCreateTokenForActor,
+    getTokenForActorAsSet: getOrCreateTokenForActorAsSet,
     getTraitMult: getTraitMult,
     getUndoQueue,
     hasCondition,
@@ -1318,8 +1315,8 @@ function setupMidiFlags() {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.check.fail.${abl}`);
     midiFlags.push(`flags.${MODULE_ID}.magicResistance.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.magicResistance.${abl}`);
-    midiFlags.push(`flags.${MODULE_ID}.magicVulnerability.all.${abl}`);
-    daeFieldBrowserFields.push(`flags.${MODULE_ID}.magicVulnerability.all.${abl}`);
+    midiFlags.push(`flags.${MODULE_ID}.magicVulnerability.${abl}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.magicVulnerability.${abl}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.advantage.save.${abl}`);
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.grants.advantage.save.${abl}`);
     midiFlags.push(`flags.${MODULE_ID}.grants.advantage.check.${abl}`);

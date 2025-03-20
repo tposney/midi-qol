@@ -178,6 +178,15 @@
       </select>
     </div>
 
+
+    <div class="form-group">
+      <label>{{localize "midi-qol.AddChatDamageButtons.Name"}}</label>
+      <select name="addChatDamageButtons" data-dtype="String">
+        {{selectOptions AddChatDamageButtonsOptions selected=configSettings.addChatDamageButtons}}
+      </select>
+      <div class="notes midi-qol-faint">{{{localize "midi-qol.AddChatDamageButtons.Hint"}}}</div>
+    </div>
+
     <div class="form-group">
       <label>{{localize "midi-qol.PlayerDamageCard.Name"}}</label>
       <select name="playerDamageCard" data-dtype="String">

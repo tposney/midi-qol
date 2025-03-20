@@ -1,33 +1,37 @@
 <form class="flexcol {{classes}} content" autocomplete="off">
-  {{blurb}}
-  <dl>
-    {{#each targets as |target iid|}}
-    <div class="midi-qol-box">
-      <div class="flexrow 2">
-        <div style="flex-grow: 4">
-          <dd>
-            <strong>{{{target.name}}}</strong>
-            {{#if target.displayedDisposition}}
-            <br>
-            {{target.displayedDisposition}}
-            {{/if}}
-            {{#if target.hasDetails}}
-            <br>
-            {{target.details}}
-            {{/if}}
-          </dd>
+  {{{blurb}}}
+  <section class="midi-qol-target-confirmation-list">
+    <dl>
+      {{#each targets as |target iid|}}
+      <div class="midi-qol-box">
+        <div class="flexrow 2">
+          <div style="flex-grow: 4">
+            <dd>
+              <strong>{{{target.name}}}</strong>
+              {{#if target.displayedDisposition}}
+              <br>
+              {{target.displayedDisposition}}
+              {{/if}}
+              {{#if target.hasDetails}}
+              <br>
+              {{target.details}}
+              {{/if}}
+            </dd>
+          </div>
+          <div style="flex-grow: 1"><img id="{{target.uuid}}" src="{{target.img}}" width="50" height="50"
+              style="border:0px" /></div>
         </div>
-        <div style="flex-grow: 1"><img id ="{{target.uuid}}" src="{{target.img}}" width="50" height="50" style="border:0px" /></div>
       </div>
-    </div>
-    {{/each}}
-  </dl>
+      {{/each}}
+    </dl>
+  </section>
 
-  <button type="button" name="Roll" class="midi-roll-confirm">
-    <i class="fas fa-dice-d20"></i> {{localize "DND5E.Roll"}}
-  </button>
-  <button type="button" name="Roll" class="midi-roll-cancel">
-    <i class="fas fa-stop"></i> {{localize "Cancel"}}
-  </button>
-  </div>
+  <footer>
+    <button type="button" name="Roll" class="midi-roll-confirm">
+      <i class="fas fa-dice-d20"></i> {{localize "DND5E.Roll"}}
+    </button>
+    <button type="button" name="Roll" class="midi-roll-cancel">
+      <i class="fas fa-stop"></i> {{localize "Cancel"}}
+    </button>
+  </footer>
 </form>

@@ -1,3 +1,56 @@
+### 12.4.32
+* Thanks to @michael for adding ability to consume activity uses in optional effects:
+  flags.midi-qol.optional.NAME.count OVERRIDE then one of
+    ActivityUses.identifier.special-mace.super-attack
+    ActivityUses.partialNameMatch.mace.super
+    ActivityUses.id.iLKpfoGF7rGpvNWD.NegUUOdFH35S3xNi
+    ActivityUses.exactNameMatch.Special Mace.Super Attack
+    ActivityUses.Special Mace.Super Attack
+* New midi property "Choose Effect". If an activity has multiple effects in its apply effect section, setting choose effect on the activity's midi-qol tab will prompt you to choose the effect to be applied when the activity is used. 
+  - Only effects listed in the activity effect section are presented for selection.
+  - This is functionally the same as having multiple activities, but can be less onerous to setup, i.e. only one activity but multiple effects. 
+  - Currently only lets you choose one effect, but in the future this support a multi select.
+* **Breaking** Midi properties for "toggle effect" and "ignore full cover" have been migrated to the activity midi-qol tab. They will remain on the item tab (and used) for a period to allow migration.
+* Moved "add chat damage buttons" to the midi-qol workflow tab damage section. The previous setting will be auto imported on first load.
+* Target confirmation now reflects the number of targets you are allowed to target and stops you from continuing if you have more than that selected.
+  - Target list is now scrollable when it gets too long.
+  - Fix? (not sure if it fixes all cases) of the disappearing tokens on display after using the target confirmation dialogue.I think this was related to target vision calculations during confirmation.
+* Some reorganisation of when pre roll checks are done. You will see some cases where the chat card is displayed, a confirmation check fails and the card is removed. This will be refined over time.
+* Fix for triggered activities when the template is an emanation template.
+* Reinstated ability to apply self targeted effects even if there is no token for the actor on the scene. Generally the behaviour when there is no token on the scene should have improved.
+* Fix for [Midi 12.4.31] Error in activities with "apply to self" effects.
+* Fix for emanation templates throwing an error.
+* Fix for Utility Activities aborting if auto roll damage was enabled.
+* Fix for Attack activities and rolling from the advantage button on the chat card not working.
+* Fix for most items in the midi sample items compendium having the wrong system version.
+* When midi displays save targets prior to the save rolls being made it was incorrectly showing a fixed value of a dc 15 dex save no matter what the actual save should have been. It's now displays the dc and type of the first save specified.
+  - if not auto checking saves midi will leave the correct dnd5e buttons for the save on display to facilitate manual checking.
+* The dnd5e save buttons (if displayed) are inactive until the damage roll has been made. This is on purpose so that players know what is at stake when they need to do a save and because saves from the buttons are not recorded before the damage is rolled. Dnd5e buttons do not currently work with the auto check saves options (other than chat card). Will be fixed in a subsequent release.
+* Fix for item use applied effects, now will exclude enchantment effects in application.
+* Fix for template placement triggering workflow states twice.
+* Made the apply/restore all buttons on the gm damage card readable again.
+* Fixes for midi concentration handling:
+  - The chat card options now correctly tests the returned roll (was ignored).
+  - Enable/Disable "temphp damage triggers a concentration check", now works for all settings. Note this is a homebrew rule not official dnd5e
+  - Whatever the temp hp setting, temp hp will be included when calculating the DC of any concentration check.
+  - If concentration tracking is disabled in dnd5e the midi concentration settings panel will be unavailable.
+
+**For Macro Writers**
+* Fix for completeItemUse when targetsToUse and targetUuids are passed.
+* Cleaned up workflowOptions and completeItemUseV2.
+  - calling completeItemUse with configure.midiOptions =  {autoRollAttack:true , autoRollDamage "always", fastForwardAttack: true, fastForwardDamage: true}, auto roll and fast forward both attack and damage rolls.
+  - workflowOptions passed to the workflow constructor will be stored and used during the rest of the workflow lifecycle.
+  - workflow.rollOptions now is only used for event/keypress (or at the macro writers discretion other) once off roll configuration.
+* I'm switching all of the damage application code to use actor Uuids instead of token uuids. 
+  - By the time it gets to damage application you don't need the token anymore (although, if available, it is still included in the data), which is reversing a decision made ages ago when token.actor.uuid pointed to the base actor rather than the synthetic actor on a token. 
+  - The upshot of this is that (amongst other things) over time effects can apply to actors with no token on the scene and all of the self target activities now work without a token on the scene. This is a work in progress so it will ripple further up the evaluation chain as time permits. 
+  - The problem case is still application of active effects via dae which are sill via tokenUuid, but that will get revisited as well.
+* Workflows can now be stored in chat cards (new world setting save workflow to chat card) - which means workflows can be accessed from any client and survive reload - fetch via MidiQOL.Workflow.getWorkflow(chatCardUuid). So you can complete a workflow from any client and complete an incomplete workflow after reload. 
+  - It is still experimental and definitely not ready for game play. This can be enabled/disabled without requiring a reload, but toggling the setting will zero out all of the stored workflows.
+    - Chat card updates for workflow state are piggy backed off the existing chat card updates, so there should be no (or very little) increased database activity.
+  - There is also a setting to enable weak references which should reduce the memory requirements for midi - workflows are only stored in memory while active (actually subject to the whims of the garbage collector) and are subsequently recreated from the chat card if required and the save to chat card setting is enabled.
+  - You should see no changes from all of this if you use full auto everything - since the workflow will run to completion before the reference to it can be lost.
+
 ### 12.4.31
 * Don't remove existing workflow on construction as there could well be another workflow in flight.
 * Slight change to behaviour in activity.use, if you pass a workflow in usage, midi will reuse that workflow rather than creating a new one. Can be useful if you want to pre-configure the workflow. (TrapWorkflow does this).
@@ -6,8 +59,6 @@
 * Fix? for flags.onUseMacro ItemMacro, macroPass.
 * Included a new sample item mortar, which places a template then makes a ranged weapon attack against each target in the template to show off the attack roll per target in dnd5e 4.x. The idea of using a Use activity to target then a trigger activity to deal with the targets might have more general use.
 * Added a world setting Use Weak References. Don't enable this unless you know what it means - only meant for GM and dev testing - will be removed eventually.
-
-### 12.4.30
 * Fix for the debacle with not being able to do most rolls.
 * Roll an attack per target now respects the per item settings.
 * Fix for optional bonus expressions (i.e. @abilities.int.mod * 2) not working, throwing an unevaluated expression error.

@@ -78,13 +78,12 @@
       "_stats": {
         "compendiumSource": "Scene.GO63mgFDMhBfPVWf.Token.y8rDGEEuPTa8Oz4m.Actor.2W8ip8j0hvK2pQ7V.Item.wdJlLWxQuUuyCwA5.ActiveEffect.iJ9E4fnIwXjfi1TP",
         "duplicateSource": null,
-        "coreVersion": "13.337",
+        "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.2.2",
+        "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
+        "lastModifiedBy": null
       },
       "img": "icons/magic/defensive/shield-barrier-flaming-diamond-red.webp",
       "type": "base",
@@ -149,13 +148,12 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "13.337",
+        "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.2.2",
+        "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
+        "lastModifiedBy": null
       },
       "img": "icons/magic/defensive/shield-barrier-flaming-diamond-red.webp",
       "type": "base",
@@ -520,7 +518,18 @@
           "triggeredActivityRollAs": "self",
           "autoTargetType": "any",
           "autoTargetAction": "default",
-          "otherActivityCompatible": true
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
         }
       }
     },
@@ -531,19 +540,12 @@
   "_stats": {
     "compendiumSource": null,
     "duplicateSource": null,
-    "coreVersion": "13.337",
+    "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.2.2",
-    "createdTime": 1738555840264,
-    "modifiedTime": 1738557172270,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
-    "exportSource": {
-      "worldId": "waterdeep-dungeon-of-the-mad-mage",
-      "uuid": null,
-      "coreVersion": "0.7.9",
-      "systemId": "dnd5e",
-      "systemVersion": "1.2.4"
-    }
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782997074,
+    "modifiedTime": 1741782997074,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "qF3UYnzAAbVavYSR",
   "_id": "hbc8mhTMkQRZhqHS",

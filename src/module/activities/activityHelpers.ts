@@ -231,32 +231,32 @@ export async function preTemplateTargets(activity, options): Promise<boolean> {
 }
 
 export async function postTemplateConfirmTargets(activity, options, workflow): Promise<boolean> {
-  if (!activityRequiresPostTemplateConfirmation(activity)) {
-    if (game.user?.targets) {
-      workflow.setTargets(game.user?.targets);
-    }
-    return true;
+  const updateTargets = async () => {
+    const needCanSeeSense = game.user?.targets && !workflow.targets.equals(game.user?.targets);
+    workflow.setTargets(game.user?.targets);
+    if (needCanSeeSense) await workflow.activity.setupCanSeeSense({ workflow });
   }
-  if (requiresTargetConfirmation(activity, options) || activity.target?.affects?.choice) {
+  if (activityRequiresPostTemplateConfirmation(activity) && (requiresTargetConfirmation(activity, options) || activity.target?.affects?.choice)) {
     let result = true;
     result = await resolveTargetConfirmation(activity, options);
     if (result && game.user?.targets) {
-      workflow.setTargets(game.user?.targets);
+      await updateTargets();
     }
     return result === true;
   }
   if (game.user?.targets) {
-    workflow.setTargets(game.user?.targets);
+    await updateTargets();
+    return true;
   }
   return true;
 }
 
 export async function resolveTargetConfirmation(activity, options: any = {}): Promise<boolean> {
-  const savedSettings = { control: ui.controls?.control?.name, tool: ui.controls?.tool as string | undefined };
-  const savedActiveLayer = canvas?.activeLayer;
-  await canvas?.tokens?.activate();
-  ui.controls?.initialize({ tool: "target", control: "token" })
-
+  if (!canvas?.tokens?.active) {
+    await canvas?.tokens?.activate();
+  }
+  const savedTokensTool = ui.controls?.activeTool;
+  await ui.controls?.initialize({ tool: "target" });
   const wasMaximized = !(activity.actor.sheet?._minimized);
   // Hide the sheet that originated the preview
   if (wasMaximized) await activity.actor.sheet.minimize();
@@ -264,16 +264,18 @@ export async function resolveTargetConfirmation(activity, options: any = {}): Pr
   let targets = new Promise((resolve, reject) => {
     // no timeout since there is a dialog to close
     // create target dialog which updates the target display
-    options = foundry.utils.mergeObject(options, { callback: resolve });
-    let targetConfirmation = new TargetConfirmationDialog(activity.actor, activity, game.user, options).render({ force: true });
+    options ??= {};
+    options.callback = resolve;
+    new TargetConfirmationDialog(activity.actor, activity, game.user, options).render({ force: true });
   });
   let shouldContinue = await targets;
-  // @ts-expect-error
-  if (savedActiveLayer) await savedActiveLayer.activate();
-  if (savedSettings.control && savedSettings.tool)
-    ui.controls?.initialize(savedSettings);
+  //@ts-expect-error
+  for (let token of canvas?.tokens?.placeables) await token.initializeVisionSource();
+  if (savedTokensTool) await ui.controls?.initialize({tool: savedTokensTool});
+
+
   if (wasMaximized) await activity.actor.sheet.maximize();
-  return shouldContinue ? true : false;
+  return !!shouldContinue;
 }
 
 export async function showItemInfo() {
@@ -494,7 +496,6 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data?,
     }
   }
   if (this) {
-    this.templateId = templateDocument?.id;
     this.templateUuid = templateDocument?.uuid;
   }
   if (targeting === "none") { // this is no good
@@ -514,7 +515,9 @@ export function selectTargets(templateDocument: MeasuredTemplateDocument, data?,
 
   if (this?.needTemplate) {
     this.needTemplate = false;
-    if (this.suspended) this.unSuspend.bind(this)({ templateDocument });
+    this.templateUuid = templateDocument?.uuid;
+    if (this.suspended && this.currentAction === this.WorkflowState_AwaitTemplate) 
+      this.unSuspend.bind(this)({ templateDocument });
   }
   return;
 };
@@ -533,9 +536,8 @@ function blockRoll(item, workflow) {
  * Get currently selected tokens in the scene or user's character's tokens.
  * @returns {Token5e[]}
  */
+
+
 export function getSceneTargets(): Token[] {
-  let targets: Token[] = canvas?.tokens?.controlled.filter(t => t.actor) ?? [];
-  //@ts-expect-error getActiveTokens can return Token[] or TokenDocument[] and types assumes TokenDocument[]
-  if (!targets.length && game.user?.character) targets = game.user.character.getActiveTokens();
-  return targets;
+  return globalThis.dnd5e.utils.getSceneTargets();
 }

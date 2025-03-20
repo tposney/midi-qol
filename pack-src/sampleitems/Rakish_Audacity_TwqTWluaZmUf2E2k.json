@@ -77,13 +77,12 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "13.337",
+        "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.2.2",
+        "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
+        "lastModifiedBy": null
       },
       "img": "icons/skills/melee/strike-dagger-arcane-pink.webp",
       "type": "base",
@@ -437,7 +436,18 @@
           "triggeredActivityRollAs": "self",
           "autoTargetType": "any",
           "autoTargetAction": "default",
-          "otherActivityCompatible": true
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
         }
       }
     },
@@ -455,19 +465,12 @@
   "_stats": {
     "compendiumSource": "Item.FkeL8Qyuy8EE8oGD",
     "duplicateSource": null,
-    "coreVersion": "13.337",
+    "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.2.2",
-    "createdTime": 1738555835389,
-    "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
-    "exportSource": {
-      "worldId": "storm-kings-thunder",
-      "uuid": null,
-      "coreVersion": "0.7.9",
-      "systemId": "dnd5e",
-      "systemVersion": "1.2.3"
-    }
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782991287,
+    "modifiedTime": 1741782991287,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "TwqTWluaZmUf2E2k",

@@ -69,13 +69,12 @@
       "_stats": {
         "compendiumSource": null,
         "duplicateSource": null,
-        "coreVersion": "13.337",
+        "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.2.2",
+        "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
+        "lastModifiedBy": null
       },
       "img": "icons/magic/air/wind-tornado-wall-blue.webp",
       "type": "base",
@@ -216,19 +215,12 @@
   "_stats": {
     "compendiumSource": "Item.WiVleJLWZ5UXryDN",
     "duplicateSource": null,
-    "coreVersion": "13.337",
+    "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.2.2",
-    "createdTime": 1738555835389,
-    "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
-    "exportSource": {
-      "worldId": "testWorld",
-      "uuid": null,
-      "coreVersion": "0.7.9",
-      "systemId": "dnd5e",
-      "systemVersion": "1.2.3"
-    }
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782991287,
+    "modifiedTime": 1741782991287,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "lgK9jaZ1UnAA6aTX",

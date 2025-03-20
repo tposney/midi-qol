@@ -255,13 +255,13 @@ async function registerTests() {
               Hooks.once("createChatMessage", function (chatMessage) {
                 resolve(chatMessage.rolls[0])
               });
-
             });
             const cls = getDocumentClass("Combat");
             let scene = canvas?.scene;
             const combat = await cls.create({ scene: scene?.id, active: true }, { render: true });
             await combat?.startCombat();
-            await actor.rollInitiativeDialog({ createCombatants: true, rerollInitiative: true });
+            // await actor.rollInitiativeDialog({ createCombatants: true, rerollInitiative: true });
+            await actor.rollInitiative({ createCombatants: true, rerollInitiative: true });
             //@ts-expect-error
             await combat?.delete();
             const roll: Roll = await rollResult;
@@ -285,7 +285,8 @@ async function registerTests() {
             let scene = canvas?.scene;
             const combat: any = await cls.create({ scene: scene?.id, active: true });
             await combat?.startCombat();
-            await actor.rollInitiativeDialog({ createCombatants: true, rerollInitiative: true });
+            await actor.rollInitiative({ createCombatants: true, rerollInitiative: true });
+            // await actor.rollInitiativeDialog({ createCombatants: true, rerollInitiative: true });
             await combat?.delete();
             const roll: Roll = await rollResult;
             await actor.unsetFlag(game.system?.id, "initiativeDisadv");
@@ -358,9 +359,7 @@ async function registerTests() {
               const item = actor.items.getName("Saving Throw Test");
               assert.ok(item);
               await actor.setFlag("midi-qol", "magicResistance.all", true);
-              console.warn("update flags returned", actor.flags["midi-qol"].magicResistance);
               const workflow = await completeItemUse(item, {}, { workflowOptions });
-              console.warn("complete item use returned")
               assert.equal(workflow.saveResults.length, 1);
               assert.equal(workflow.saveResults[0][0].terms[0].results.length, 2);
               assert.ok(workflow.saveResults[0][0].formula.startsWith("2d20kh"))
@@ -614,6 +613,7 @@ async function registerTests() {
             const actor = getActor(actor2Name);
             const macroPasses: string[] = [];
             await completeItemUse(actor.items.getName("OnUseMacroTest"), {}, { workflowOptions }); // Apply the effect
+            await busyWait(0.2);
             const target = getToken(target2Name);
             updateUserTargets([target?.id ?? ""]);
             const hookId = Hooks.on("OnUseMacroTest", (pass: string) => {macroPasses.push(pass); warn(pass, macroPasses)});
@@ -850,7 +850,6 @@ async function registerTests() {
             const oldHp = foundry.utils.getProperty(target, "actor.system.attributes.hp.value");
             updateUserTargets([target?.id ?? ""]);
             await completeItemUse(actor.items.getName("AppliesDamage"), {}, { workflowOptions });
-            console.warn("completeItemUse completed");
             updateUserTargets([]);
             const newHp = foundry.utils.getProperty(target, "actor.system.attributes.hp.value");
             assert.equal(newHp, oldHp - foundry.utils.getProperty(actor, "system.abilities.str.mod"));

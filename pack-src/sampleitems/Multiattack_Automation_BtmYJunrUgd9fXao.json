@@ -115,7 +115,18 @@
           "triggeredActivityRollAs": "self",
           "autoTargetType": "any",
           "autoTargetAction": "default",
-          "otherActivityCompatible": true
+          "otherActivityCompatible": true,
+          "displayActivityName": false,
+          "rollMode": "default",
+          "chooseEffects": false
+        },
+        "useConditionReason": "",
+        "otherActivityId": "",
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
         }
       }
     },
@@ -192,13 +203,12 @@
       "_stats": {
         "compendiumSource": "Scene.VUTmnLQOHLsSo5lF.Token.IyRV8LwSCk1FiSWh.Actor.K58INTSFII9dCu9i.Item.FXy68z4tsAoyYBv2.ActiveEffect.Eb9vz83kYdtdho2B",
         "duplicateSource": null,
-        "coreVersion": "13.337",
+        "coreVersion": "12.331",
         "systemId": "dnd5e",
-        "systemVersion": "4.2.2",
+        "systemVersion": "4.3.6",
         "createdTime": null,
         "modifiedTime": null,
-        "lastModifiedBy": null,
-        "exportSource": null
+        "lastModifiedBy": null
       },
       "img": "icons/skills/melee/blade-tips-triple-steel.webp",
       "type": "base",
@@ -312,7 +322,10 @@
       "wallRestriction": "globalDefault"
     },
     "dnd5e": {
-      "persistSourceMigration": true
+      "persistSourceMigration": true,
+      "riders": {
+        "activity": []
+      }
     },
     "tidy5e-sheet": {
       "section": "",
@@ -322,13 +335,12 @@
   "_stats": {
     "compendiumSource": null,
     "duplicateSource": null,
-    "coreVersion": "13.337",
+    "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.2.2",
-    "createdTime": 1738555835389,
-    "modifiedTime": 1738555835389,
-    "lastModifiedBy": "Zl1BOUaPLwDEujaL",
-    "exportSource": null
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782991287,
+    "modifiedTime": 1741782991287,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "_id": "BtmYJunrUgd9fXao",
   "sort": 300000,

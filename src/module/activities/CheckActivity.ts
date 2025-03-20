@@ -107,6 +107,10 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
       return true;
     }
 
+    get canUseOtherActivity() {
+      return true;
+    }
+    
     get isSelfTriggerableOnly() {
       return false;
     }

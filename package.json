@@ -1,7 +1,7 @@
 {
 	"name": "midi-qol",
 	"title": "Midi QOL",
-	"version": "12.4.31",
+	"version": "12.4.32",
 	"description": "Automates rolling weapon/spell attacks and applying damage amongst other things",
 	"devDir": "/home/timp/foundry-data/foundryv11dnd3/Data/modules/",
 	"main": "src/midi-qol.ts",
@@ -13,7 +13,7 @@
 		"devwatch": "npx gulp devWatch",
 		"devclean": "npx gulp devClean",
 		"release": "npx gulp zip",
-		"tag": "cross-var git tag -a v$npm_package_version -m \"version $npm_package_version release tag\" && git push origin --follow-tags"
+		"tag": "git tag -a v$npm_package_version -m \"version $npm_package_version release tag\" && git push origin --follow-tags"
 	},
 	"prettier": {
 		"tabWidth": 2,

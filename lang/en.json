@@ -30,7 +30,7 @@
   "midi-qol.ItemRollButtons.Name": "Add attack/damage buttons to item inventory list",
   "midi-qol.ItemRollButtons.Hint": "Add Roll Buttons to item description - these buttons support ctrl/alt/shift to skip the dialog",
   "midi-qol.AddChatDamageButtons.Name": "Add damage buttons to chat message",
-  "midi-qol.AddChatDamageButtons.Hint": "Add Enable the dnd5e damage tray on chat messages.",
+  "midi-qol.AddChatDamageButtons.Hint": "Enable the dnd5e damage tray on chat messages.",
   "midi-qol.AddChatDamageButtonsOptions": {
     "none": "None",
     "gm": "Only add buttons for GM",
@@ -344,7 +344,7 @@
   "midi-qol.magicalEffectProp": "Magic Effect",
   "midi-qol.concentrationEffectProp": "Concentration",
   "midi-qol.noConcentrationEffectProp": "No Conc Save",
-  "midi-qol.toggleEffectProp": "Toggle effect",
+  "midi-qol.toggleEffectProp": "Toggle effect (Deprecated)",
   "midi-qol.playerControlsInvisibleTokens.Name": "Players control owned hidden tokens",
   "midi-qol.playerControlsInvisibleTokens.Hint": "Experimental - might work",
   "midi-qol.Debug.Name": "Enable debug",
@@ -406,7 +406,7 @@
   "midi-qol.SingleConcentrationRoll.Name": "Single Concentration Check",
   "midi-qol.SingleConcentrationRoll.Hint": "If enabled and the attack is rolling normal damage + a save + other/versatile damage only roll a single concentration check for the combined damage",
   "midi-qol.TempHPDamageConcentrationCheck.Name": "Temporary HP Concentration Check",
-  "midi-qol.TempHPDamageConcentrationCheck.Hint": "If enabled loss of temporary HP will trigger a concentration check",
+  "midi-qol.TempHPDamageConcentrationCheck.Hint": "If enabled loss of temporary HP will trigger a concentration check.<br><strong>Disabling this is homebrew. Rules as written DND5E is that temp hp damage triggers a concentration check</strong>",
   "midi-qol.RemoveConcentrationEffects.Name": "Remove concentration when effects removed",
   "midi-qol.RemoveConcentrationEffects.Hint": "Check when effects (effects & templates) are removed. If all effects and templates for the concentration spell/feature have been removed remove concentration",
   "midi-qol.RemoveConcentrationEffectsOptions": {
@@ -648,8 +648,8 @@
   "midi-qol.TargetConfirmationConfig.Name": "Target Confirmation",
   "midi-qol.TargetConfirmationConfig.Hint": "When rolling an item confirm targets before completing",
   "midi-qol.TargetConfirmation.Name": "Target Confirmation",
-  "midi-qol.TargetConfirmation.Blurb": "Select up to {targetCount} {targetType}. Shift-Click to select multiple targets",
-  "midi-qol.TargetConfirmation.BlurbAny": "Select any number of targets. Shift-Click to select multiple targets",
+  "midi-qol.TargetConfirmation.Blurb": "Select up to {targetCount} {targetType}. <br>Shift-Click a token to add to the target list.<br>Right click in the list to remove a target",
+  "midi-qol.TargetConfirmation.BlurbAny": "Select any number of targets.<br>Shift-Click a token to add to the target list.<br>Right click in the list to remove a target",
   "midi-qol.AddDead.Name": "Add effect when HP = 0",
   "midi-qol.AddDead.Hint1": "Player Controlled",
   "midi-qol.AddDead.Hint2": "GM Controlled",
@@ -791,7 +791,7 @@
   "midi-qol.AttackPerTarget.Name": "Roll a separate attack per target",
   "midi-qol.SkillAbilityCheckAdvantage.Name": "Ability Check Advantage gives Skill Advantage",
   "midi-qol.SkillAbilityCheckAdvantage.Hint": "If an actor has advantage/disadvantage on ability checks, skills based on that ability also have advantage/disadvantage",
-  "midi-qol.ignoreTotalCover": "No Full cover",
+  "midi-qol.ignoreTotalCover": "No Full cover (Deprecated)",
   "midi-qol.InitPromptTitle": "Initiative Roll",
   "midi-qol.HighlightSuccess.Name": "Color code Hit/Miss/Save Display",
   "midi-qol.HighlightSuccess.Hint": "When displaying hits/misses, hits/saves are in green and misses/failed saves in red",
@@ -961,6 +961,7 @@
     "firstSaveTarget": "First saved target",
     "firstFailedSaveTarget": "First failed save target"
   },
+  "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>DND5E Concentration Tracking Disabled</strong><br></center><br><center>Concentration Tracking is disabled in the dnd5e system settings.</center><center>Enable in DND5E settings to enable midi concentration settings</center><br>",
   "midi-qol.SHARED": {
     "use-condition": {
       "header": "Midi Conditions"
@@ -981,14 +982,27 @@
         "label": "Active Effect Condition",
         "hint": "Condition to apply active effects"
       },
+      "otherActivityId": {
+        "label": "Use Other Activity",
+        "hint": "Extra activity to preform 'other' damage"
+      },
       "midiProperties": {
         "rollMode": {
           "label": "Roll Mode",
           "hint": "Roll mode to use for the activity"
         },
+        "ignoreFullCover":
+        {
+          "label": "Ignore Full Cover",
+          "hint": "Ignore full cover when applying damage/saves"
+        },
+        "chooseEffects": {
+          "label": "Choose Effects",
+          "hint": "Choose effects to apply"
+        },
         "forceDialog": {
           "label": "Force Configuration Dialog",
-          "hint": "Force Configuration Dialog when attack rolled"
+          "hint": "Force Configuration Dialog when activity used"
         },
         "confirmTargets": {
           "label": "Target Confirmation",
@@ -1033,6 +1047,10 @@
         "otherActivityCompatible": {
           "label": "Other Activity Compatible",
           "hint": "Can be used as an other activity"
+        },
+        "toggleEffect": {
+          "label": "Toggle Effect",
+          "hint": "Disabling an effect will toggle it rather than removing it"
         },
         "ignoreTraits": {
           "idi": {
@@ -1125,10 +1143,6 @@
       "ammunition": {
         "label": "Ammunition",
         "hint": "Default ammunition to consume"
-      },
-      "otherActivityId": {
-        "label": "Apply Other Activity",
-        "hint": "Extra activity to preform 'other' damage"
       }
     }
   },

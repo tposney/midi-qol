@@ -1,6 +1,6 @@
 import { log, i18n, error, i18nFormat, warn, debugEnabled, GameSystemConfig, MODULE_ID, isDnD, NumericTerm } from "../midi-qol.js";
 import { configSettings, autoFastForwardAbilityRolls, checkRule, checkMechanic, safeGetGameSetting } from "./settings.js";
-import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getTokenForActor, getSpeaker, getUnconsciousStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed } from "./utils.js";
+import { bonusDialog, checkDefeated, checkIncapacitated, ConvenientEffectsHasEffect, createConditionData, displayDSNForRoll, expireRollEffect, getCriticalDamage, getDeadStatus, getOptionalCountRemainingShortFlag, getOrCreateTokenForActor, getSpeaker, getUnconsciousStatus, getWoundedStatus, hasAutoPlaceTemplate, hasUsedAction, hasUsedBonusAction, hasUsedReaction, midiRenderRoll, notificationNotify, removeActionUsed, removeBonusActionUsed, removeReactionUsed, tokenForActor, expireEffects, DSNMarkDiceDisplayed, evalAllConditions, evalAllConditionsAsync, CEAddEffectWith, isConvenientEffect, CERemoveEffect, getActivityAutoTargetAction, getAoETargetType, hasCondition, areMidiKeysPressed } from "./utils.js";
 import { installedModules } from "./setupModules.js";
 import { OnUseMacro, OnUseMacros } from "./apps/Item.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
@@ -868,9 +868,10 @@ function _midiATIRefresh(template) {
     }
   } else {
     const distance: number = template.distance ?? 0;
-    if (template.activity) {
-      const ignoreSelf = (template.activity?.target.affects.special ?? "").split(";").some(spec => spec === "self");
-      templateTokens(template, getTokenForActor(template.item.parent), ignoreSelf, getAoETargetType(template.activity), autoTarget);
+
+    if (template.activity && tokenForActor(template.item.parent)) {
+      const ignoreSelf = (template.activity?.target.affects.special ?? "").split(";").some(spec => spec === "self"); // TODO targeting changes
+      templateTokens(template, tokenForActor(template.item.parent), ignoreSelf, getAoETargetType(template.activity), autoTarget);
       return true;
     } else
       templateTokens(template);
@@ -1898,7 +1899,7 @@ function actorGetRollData(wrapped, ...args) {
   data.flags ??= {};
   data.flags["midi-qol"] = this.flags?.["midi-qol"] ?? {};
   data.midiFlags = data.flags["midi-qol"];
-  data.items = this.items;
+  // data.items = this.items;
   if (game.system?.id === "dnd5e") {
     data.cfg = {};
     data.cfg.armorClasses = GameSystemConfig.armorClasses;

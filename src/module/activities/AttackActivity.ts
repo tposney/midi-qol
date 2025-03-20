@@ -55,10 +55,6 @@ let defineMidiAttackSheetClass = (baseClass: any) => {
         ui.notifications?.warn("Please update other activity. otherActivityUuid is deprecated");
         activity.otherActivityUuid = undefined;
       }
-      context.otherActivityOptions = this.item.system.activities
-        .filter(a => a.id !== this.activity.id && a.isOtherActivityCompatible)
-        .reduce((ret, a) => { ret.push({ label: `${a.name}`, value: a.id }); return ret }, [{ label: "Auto", value: "" }, { label: "None", value: "none" }]);
-      context.otherActivityOptions?.forEach(option => { option.selected = option.value === context.currentOtherActivityId });
       let indexOffset = 0;
       if (activity.damage?.parts) {
         const scalingOptions = [
@@ -117,7 +113,6 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         // @ ts-expect-error
         attackMode: new StringField({ name: "attackMode", initial: "oneHanded" }),
         ammunition: new StringField({ name: "ammunition", initial: "" }),
-        otherActivityId: new StringField({ name: "otherActivity", initial: "" }),
         // deprecated 
         otherActivityUuid: new StringField({ name: "otherActivityUuid", required: false, initial: "" }),
       };
@@ -146,6 +141,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         const attackConfig: any = { event, workflow };
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= {};
+        attackConfig.midiOptions.targets = new Set(workflow?.targets);
         attackConfig.workflow = workflow;
         //@ts-expect-error
         this.use(attackConfig, {}, {});
@@ -157,8 +153,6 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
 
     static #rollAttackAdvantage(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
-      //@ts-expect-error
-      config.workflow = workflow;
       if (!message || !workflow || workflow.currentAction === workflow.WorkflowState_Aborted || workflow.currentAction === workflow.WorkflowState_Completed) {
         if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
         const attackConfig: any = { event, workflow };
@@ -168,8 +162,13 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         //@ts-expect-error
         this.use(attackConfig, {}, {});
       } else {
+        const attackConfig:any = { workflow };
+        attackConfig.midiOptions = workflow?.rollOptions ?? {};
+        attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
+        attackConfig.advantage = true;
+        attackConfig.disadvantage = false;
         //@ts-expect-error
-        return this.rollAttack({ event, workflow, midiOptions: { advantage: true } }, {}, {});
+        return this.rollAttack(attackConfig, {}, {});
       }
     }
 
@@ -184,8 +183,13 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         //@ts-expect-error
         this.use(attackConfig, {}, {});
       } else {
+        const attackConfig:any = { workflow };
+        attackConfig.midiOptions = workflow?.rollOptions ?? {};
+        attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
+        attackConfig.advantage = false;
+        attackConfig.disadvantage = true;
         //@ts-expect-error
-        return this.rollAttack({ event, workflow, midiOptions: { disadvantage: true } }, {}, {});
+        return this.rollAttack(attackConfig, {}, {});
       }
     }
 
@@ -254,18 +258,19 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       let postAttackRollConfigurationHook;
       let rolls;
       const workflow = config.workflow;
-      config.midiOptions ??= this.midiOptions ?? workflow?.rollOptions ?? {};
-      
+      config.midiOptions ??= {};
+
       try {
-        if (workflow && workflow?._currentState === workflow?.WorkflowState_Aborted || workflow?._currentState === workflow?.WorkflowState_Completed)
-          // return this.use(config, dialog, message);
-          if (debugEnabled > 0) warn("MidiQOL | AttackActivity | rollAttack | Called", config, dialog, message);
+        /* Decide what this should mean
+        if (workflow && workflow?.currentAction === workflow?.WorkflowState_Aborted || workflow?.currentAction === workflow?.WorkflowState_Completed)
+          return this.use(config, dialog, {});
+        */
+        if (debugEnabled > 0) warn("MidiQOL | AttackActivity | rollAttack | Called", config, dialog, message);
         let returnValue = await this.configureAttackRoll(config);
         if (workflow?.aborted || !returnValue) return [];
 
         let requiresAmmoConfirmation = false;
-        await workflow?.checkAttackAdvantage();
-
+        await workflow.checkAttackAdvantage();
         //@ts-expect-error
         const areKeysPressed = game.system.utils.areKeysPressed;
         const keys = {
@@ -283,10 +288,13 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           }
           requiresAmmoConfirmation = ammoConfirmation.confirm;
         }
-        if (Object.values(keys).some(k => k)) dialog.configure = this.midiProperties.forceDialog || requiresAmmoConfirmation;
-        else dialog.configure ??= !config.midiOptions.fastForwardAttack || this.midiProperties.forceDialog || requiresAmmoConfirmation;
-        config.advantage = !!config.midiOptions.advantage || keys.advantage;
-        config.disadvantage = !!config.midiOptions.disadvantage || keys.disadvantage;
+        if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties.forceDialog || requiresAmmoConfirmation);
+        if (config.workflow && areMidiKeysPressed(config.event, "RollToggle")) config.workflow.rollOptions.rollToggle = !config.workflow.rollOptions.rollToggle;
+        else dialog.configure ??= !(config.midiOptions.fastForwardAttack ?? workflow.workflowOptions.fastForwardAttack ?? false) || this.midiProperties.forceDialog || requiresAmmoConfirmation;
+        if (keys.advantage) workflow.rollOptions.advantage = keys.advantage;
+        if (keys.disadvantage) workflow.rollOptions.disadvantage = keys.disadvantage;
+        config.advantage ??= !!keys.advantage || !!(config.midiOptions.advantage ?? workflow.workflowOptions.advantage);
+        config.disadvantage ??= !!keys.disadvantage || !!(config.midiOptions.disadvantage ?? workflow.workflowOptions.disadvantage);
         preRollHookId = Hooks.once("dnd5e.preRollAttackV2", (rollConfig, dialogConfig, messageConfig) => {
           if (workflow?.aborted) return false;
           if (workflow?.rollOptions?.rollToggle) dialogConfig.configure = !dialogConfig.configure;
@@ -370,7 +378,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       if (debugEnabled > 0) warn("configureAttackRoll", this, config);
       if (!config.workflow) return false;
       let workflow: Workflow = config.workflow;
-      config.midiOptions ??= this.midiOptions ?? {};
+      config.midiOptions ??= {};
       if (workflow && !workflow.reactionQueried) {
       }
 
@@ -402,9 +410,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
             }, { flags: workflow.chatCard.flags })
             const itemCard = await this._createUsageMessage(messageConfig);
             // const itemCard = await this.displayCard(foundry.utils.mergeObject(config, { systemCard: false, workflowId: workflow.id, minimalCard: false, createMessage: true }));
-            workflow.itemCardId = itemCard.id;
             workflow.itemCardUuid = itemCard.uuid;
-            workflow.needItemCard = false;
             if (configSettings.undoWorkflow && workflow.undoData) {
               workflow.undoData.chatCardUuids = workflow.undoData.chatCardUuids.concat([itemCard.uuid]);
               unTimedExecuteAsGM("updateUndoChatCardUuids", workflow.undoData);
@@ -418,11 +424,11 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         workflow.disadvantage = false;
         workflow.rollOptions = foundry.utils.deepClone(defaultRollOptions);
       }
-      if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
+      if (workflow.workflowType === "TrapWorkflow") workflow.workflowOptions.fastForward = true;
 
       await doActivityReactions(this, workflow);
       await busyWait(0.01);
-      if (configSettings.allowUseMacro && workflow.options.noTargetOnusemacro !== true) {
+      if (configSettings.allowUseMacro && workflow.workflowOptions.noTargetOnusemacro !== true) {
         await workflow.triggerTargetMacros(["isPreAttacked"]);
         if (workflow.aborted) {
           console.warn(`midi-qol | item ${workflow.item?.name ?? ""} roll blocked by isPreAttacked macro`);
@@ -459,11 +465,11 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       }
 
       // Advantage is true if any of the sources of advantage are true;
-      let advantage = config.midiOptions.advantage
-        || workflow.options.advantage
-        || workflow?.advantage
-        || workflow?.rollOptions.advantage
-        || workflow?.workflowOptions?.advantage
+      let advantage = config.advantage
+        || workflow.workflowOptions.advantage
+        || workflow.advantage
+        || workflow.rollOptions.advantage
+        || workflow.workflowOptions?.advantage
         || workflow.flankingAdvantage;
       if (workflow.noAdvantage) advantage = false;
       // Attribute advantage
@@ -477,9 +483,9 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       }
 
       let disadvantage = config.midiOptions.disadvantage
-        || workflow.options.disadvantage
-        || workflow?.disadvantage
-        || workflow?.workflowOptions?.disadvantage
+        || workflow.workflowOptions.disadvantage
+        || workflow.disadvantage
+        || workflow.workflowOptions?.disadvantage
         || workflow.rollOptions.disadvantage;
       if (workflow.noDisadvantage) disadvantage = false;
 
@@ -539,52 +545,13 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
     get isOtherActivityCompatible() {
       return false;
     }
+
+    get canUseOtherActivity() {
+      return true;
+    }
+
     get selfTriggerableOnly() {
       return false;
-    }
-
-    /*
-    get otherActivityId() {
-      if (!this.otherActivityId && this.otherActivityUuid) 
-        return this.otherActivityUuid.split(".").pop();
-      return this.otherActivityId; 
-    }
-    */
-    get otherActivity() {
-      if (this._otherActivity !== undefined) return this._otherActivity;
-      if (this.otherActivityId === "none") return undefined;
-      if (this.ammunitionItem) {
-        //TODO consider making this a choice of activity
-        this._otherActivity = this.ammunitionItem.system.activities?.contents.find(
-          a => a.midiProperties?.automationOnly && a.isOtherActivityCompatible
-        )
-        // if (!this._otherActivity)
-        //  this._otherActivity = this.ammunitionItem.system.activities.contents[0];
-        if (this._otherActivity) {
-          this._otherActivity.prepareData();
-          return this._otherActivity;
-        }
-      }
-
-      this._otherActivity = this.item.system.activities.get(this.otherActivityId)
-      if (!this._otherActivity) {
-        // Is there exactly 1 automation activity on the item
-        const otherActivityOptions = this.item.system.activities.filter(a => a.midiProperties?.automationOnly && a.uuid !== this.uuid);
-        if (otherActivityOptions.length === 1) {
-          this._otherActivity = otherActivityOptions[0];
-        }
-      }
-      if (!this._otherActivity) {
-        // Is there exactly 1 other activity compatible activity on the item
-        const otherActivityOptions = this.item.system.activities.filter(a => a.isOtherActivityCompatible && a.uuid !== this.uuid);
-        if (otherActivityOptions.length === 1) {
-          this._otherActivity = otherActivityOptions[0];
-        }
-      }
-      // If none of the above match we can't tell which one to use.
-      this._otherActivity?.prepareData();
-      if (!this._otherActivity) this._otherActivity = null;
-      return this._otherActivity;
     }
 
     prepareData() {

@@ -5,7 +5,7 @@
   "type": "Item",
   "_id": "tWh6UgUeg2lxQ8uJ",
   "description": "",
-  "sort": 400000,
+  "sort": 100000,
   "color": null,
   "flags": {},
   "_stats": {
@@ -13,9 +13,9 @@
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.2.2",
-    "createdTime": 1738555833652,
-    "modifiedTime": 1738930186762,
+    "systemVersion": "4.3.6",
+    "createdTime": 1741782987291,
+    "modifiedTime": 1741782987291,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "_key": "!folders!tWh6UgUeg2lxQ8uJ"

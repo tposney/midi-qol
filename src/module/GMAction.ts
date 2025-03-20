@@ -1,5 +1,5 @@
 import { checkRule, configSettings, safeGetGameSetting } from "./settings.js";
-import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debugCallTiming, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
+import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
 import { canSense, completeItemUse, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUseV2, completeActivityUse, localActivityOverTimeEffect, isValidTarget } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { Workflow } from "./Workflow.js";
@@ -209,12 +209,12 @@ async function cancelWorkflow(data: { workflowId: string, itemCardUuid: string }
   return undefined;
 }
 
-async function confirmDamageRollComplete(data: { workflowId: string, activityUuid: string, itemCardId: string, itemCardUuid: string }) {
+async function confirmDamageRollComplete(data: { workflowId: string, activityUuid: string, itemCardUuid: string }) {
   const workflow = Workflow.getWorkflow(data.workflowId);
   const activity = workflow?.activity;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     // Confirm this needs to be awaited
-    Workflow.removeItemCardButtons(data.itemCardId, { removeAttackButtons: true, removeDamageButtons: true, removeConfirmButtons: true });
+    Workflow.removeItemCardButtons(data.itemCardUuid, { removeAttackButtons: true, removeDamageButtons: true, removeConfirmButtons: true });
     return undefined;
   }
   const hasHits = workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0;
@@ -231,11 +231,11 @@ async function confirmDamageRollComplete(data: { workflowId: string, activityUui
   return workflow.performState(workflow.WorkflowState_RollConfirmed)
 }
 
-async function confirmDamageRollCompleteHit(data: { workflowId: string, activityUuid: string, itemCardId: string, itemCardUuid: string }) {
+async function confirmDamageRollCompleteHit(data: { workflowId: string, activityUuid: string, itemCardUuid: string }) {
   const workflow = Workflow.getWorkflow(data.workflowId);
   const activity = workflow?.activity;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
-    Workflow.removeItemCardButtons(data.itemCardId, { removeAttackButtons: true, removeDamageButtons: true, removeConfirmButtons: true });
+    Workflow.removeItemCardButtons(data.itemCardUuid, { removeAttackButtons: true, removeDamageButtons: true, removeConfirmButtons: true });
     return undefined;
   }
   if ((activity?.hasDamage && !workflow.damageRoll) ||
@@ -263,13 +263,13 @@ async function confirmDamageRollCompleteHit(data: { workflowId: string, activity
   return await workflow.performState(workflow.WorkflowState_RollConfirmed);
 }
 
-async function confirmDamageRollCompleteMiss(data: { workflowId: string, activityUuid: string, itemCardId: string, itemCardUuid: string }) {
+async function confirmDamageRollCompleteMiss(data: { workflowId: string, activityUuid: string, itemCardUuid: string }) {
   const workflow = Workflow.getWorkflow(data.workflowId);
   const activity = workflow?.activity;
   if (!workflow || workflow.itemCardUuid !== data.itemCardUuid) {
     /* Confirm this needs to be awaited
     */
-    Workflow.removeItemCardButtons(data.itemCardId, { removeDamageButtons: true, removeAttackButtons: true, removeConfirmButtons: true });
+    Workflow.removeItemCardButtons(data.itemCardUuid, { removeDamageButtons: true, removeAttackButtons: true, removeConfirmButtons: true });
     return undefined;
   }
   if (workflow.hitTargets.size > 0 || workflow.hitTargetsEC.size > 0) {
@@ -367,7 +367,7 @@ function GMupdateEntityStats(data: { id: any; currentStats: any; }) {
 }
 
 export async function timedExecuteAsGM(toDo: string, data: any) {
-  if (!debugCallTiming) return unTimedExecuteAsGM(toDo, data);
+  if (false) return unTimedExecuteAsGM(toDo, data);
   const start = Date.now();
   data.playerId = game.user?.id;
   const returnValue = await unTimedExecuteAsGM(toDo, data);
@@ -384,7 +384,7 @@ export async function unTimedExecuteAsGM(toDo: string, ...args) {
 }
 
 export async function timedAwaitExecuteAsGM(toDo: string, data: any) {
-  if (!debugCallTiming) return await unTimedExecuteAsGM(toDo, data);
+  if (false) return await unTimedExecuteAsGM(toDo, data);
   const start = Date.now();
   const returnValue = await unTimedExecuteAsGM(toDo, data);
   log(`await executeAsGM: ${toDo} elapsed: ${Date.now() - start}ms`)
@@ -483,19 +483,19 @@ async function _applyEffects(data: { workflowId: string, targets: string[] }) {
 }
 
 async function _completeActivityUse(data: {
-  activityUuid: string, actorUuid: string, config: any, dialog: any, message: any, workflowData: boolean
+  activityUuid: string, actorUuid: string, usage: any, dialog: any, message: any, workflowData: boolean
 }) {
   if (!game.user) return null;
-  let { activityUuid, actorUuid, config, dialog, message } = data;
+  let { activityUuid, actorUuid, usage, dialog, message } = data;
   // @ts-expect-error
   let actor: any = await fromUuid(actorUuid);
   if (actor.actor) actor = actor.actor;
-  if (config.midiOptions?.targetsToUse) {
-    const targets = config.midiOptions.targetsToUse.map(t => fromUuidSync(t)).filter(t => isValidTarget(t));
-    config.midiOptions.targetsToUse = new Set(targets);
+  if (usage.midiOptions?.targetsToUse) {
+    const targets = usage.midiOptions.targetsToUse.map(t => fromUuidSync(t)).filter(t => isValidTarget(t));
+    usage.midiOptions.targetsToUse = new Set(targets);
   }
-  const workflow = await completeActivityUse(activityUuid, config, dialog, message);
-  if (data.config.midiOptions?.workflowData) return workflow?.getMacroData();
+  const workflow = await completeActivityUse(activityUuid, usage, dialog, message);
+  if (data.usage.midiOptions?.workflowData) return workflow?.getMacroData();
   else return true;
 }
 
@@ -886,22 +886,16 @@ async function createReverseDamageCard(data: {
 async function prepareDamageListItems(data: {
   damageList: any; autoApplyDamage: string; flagTags: any, forceApply: boolean, updateOptions: any
 },
-  templateData, tokenIdList, createPromises: boolean = false, showNPC: boolean = true, doHits: boolean = true): Promise<void> {
+  templateData, tokenDataList, createPromises: boolean = false, showNPC: boolean = true, doHits: boolean = true): Promise<void> {
   const damageList = data.damageList;
   let promises: Promise<any>[] = [];
 
   for (let damageItem of damageList) {
-    let { tokenId, tokenUuid, actorId, actorUuid, oldHP, oldTempHP, oldVitality, newHP, newTempHP, newVitality, hpDamage, tempDamage, vitalityDamage, totalDamage, sceneId, wasHit } = damageItem;
+    let { tokenUuid, actorId, actorUuid, oldHP, oldTempHP, oldVitality, newHP, newTempHP, newVitality, hpDamage, tempDamage, vitalityDamage, totalDamage, sceneId, wasHit } = damageItem;
     if (doHits && !wasHit) continue;
     if (!doHits && wasHit) continue;
-    let tokenDocument;
-    let actor;
-    if (tokenUuid) {
-      tokenDocument = fromUuidSync(tokenUuid);
-      actor = tokenDocument?.actor ?? tokenDocument ?? fromActorUuid(actorUuid);
-    }
-    else
-      actor = fromActorUuid(actorUuid)
+    let tokenDocument = fromUuidSync(tokenUuid) as TokenDocument;
+    let actor = fromUuidSync(actorUuid) as any; // No dnd5e types when available use Actor5e
 
     if (!actor) {
       if (debugEnabled > 0) warn(`GMAction: reverse damage card could not find actor to update HP tokenUuid ${tokenUuid} actorUuid ${actorUuid}`);
@@ -963,8 +957,8 @@ async function prepareDamageListItems(data: {
         }
       }
     }
-    tokenIdList.push({
-      tokenId, tokenUuid, actorUuid, actorId,
+    tokenDataList.push({
+      tokenUuid, actorUuid, actorId,
       oldTempHP: damageItem.oldTempHP,
       oldHP: damageItem.oldHP,
       totalDamage: Math.abs(damageItem.totalDamage),
@@ -980,7 +974,7 @@ async function prepareDamageListItems(data: {
 
     let img = tokenDocument?.texture.src || actor.img;
     if (configSettings.usePlayerPortrait && actor.type === "character")
-      img = actor?.img || tokenDocument?.texture.src;
+      img = actor?.img ?? tokenDocument?.texture.src;
     if (VideoHelper.hasVideoExtension(img)) {
       //@ts-ignore - createThumbnail not defined
       img = await game.video.createThumbnail(img, { width: 100, height: 100 });
@@ -990,9 +984,8 @@ async function prepareDamageListItems(data: {
       isCharacter: actor.hasPlayerOwner,
       isNpc: !actor.hasPlayerOwner,
       actorUuid,
-      tokenId: tokenId ?? "none",
-      displayUuid: actorUuid.replaceAll(".", ""),
       tokenUuid,
+      displayUuid: actorUuid.replaceAll(".", ""),
       tokenImg: img,
       hpDamage,
       abshpDamage: Math.abs(damageItem.hpDamage),
@@ -1003,12 +996,12 @@ async function prepareDamageListItems(data: {
       doubleDamage: Math.abs(damageItem.totalDamage * 2),
       playerViewTotalDamage: damageItem.hpDamage + damageItem.tempDamage,
       absDamage: Math.abs(damageItem.hpDamage),
-      tokenName: (tokenDocument?.name && configSettings.useTokenNames) ? tokenDocument.name : actor.name,
+      tokenName: (tokenDocument?.name && configSettings.useTokenNames) ? tokenDocument.name ?? actor.name : actor.name,
       dmgSign: damageItem.hpDamage < 0 ? "+" : "-",
       damageItem,
       oldVitality: damageItem.oldVitality,
       newVitality: damageItem.newVitality,
-      buttonId: tokenUuid,
+      buttonId: actorUuid,
       iconPrefix: (data.autoApplyDamage === "yesCardNPC" && actor.type === "character") ? "*" : "",
     };
 
@@ -1067,7 +1060,7 @@ async function createPlayerDamageCard(data: { damageList: any; autoApplyDamage: 
   //@ts-ignore
   let actor: CONFIG.Actor.documentClass;
   const startTime = Date.now();
-  let tokenIdList: any[] = [];
+  let tokenDataList: any[] = [];
   let templateData = {
     damageApplied: ["yes", "yesCard", "yesCardMisses"].includes(data.autoApplyDamage) ? i18n("midi-qol.HPUpdated") : i18n("midi-qol.HPNotUpdated"),
     damageList: [],
@@ -1076,7 +1069,7 @@ async function createPlayerDamageCard(data: { damageList: any; autoApplyDamage: 
     playerButtons
   };
 
-  prepareDamageListItems(data, templateData, tokenIdList, false, showNPC, true)
+  prepareDamageListItems(data, templateData, tokenDataList, false, showNPC, true)
   if (templateData.damageList.length === 0) {
     log("No damage data to show to player");
     return;
@@ -1094,7 +1087,7 @@ async function createPlayerDamageCard(data: { damageList: any; autoApplyDamage: 
       speaker: { scene: getCanvas()?.scene?.id, alias: data.charName, user: game.user?.id, actor: data.actorId },
       content: content,
       // whisper: ChatMessage.getWhisperRecipients("players").filter(u => u.active).map(u => u.id),
-      flags: { "midiqol": { "undoDamage": prepareDamageListToJSON(tokenIdList) } }
+      flags: { "midiqol": { "undoDamage": prepareDamageListToJSON(tokenDataList) } }
     };
 
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
@@ -1113,7 +1106,7 @@ async function createGMReverseDamageCard(
   let actor: { update: (arg0: { "system.attributes.hp.temp": any; "system.attributes.hp.value": number; damageItem: any[] }) => Promise<any>; img: any; type: string; name: any; data: { data: { traits: { [x: string]: any; }; }; }; };
   const startTime = Date.now();
   let promises: Array<Promise<any>>;;
-  let tokenIdList: any[] = [];
+  let tokenDataList: any[] = [];
   let chatCardUuid;
   const damageWasApplied = (doHits && (["yes", "yesCard", "yesCardMisses"].includes(data.autoApplyDamage) || data.forceApply));
   let templateData = {
@@ -1122,7 +1115,7 @@ async function createGMReverseDamageCard(
     damageList: [],
     needsButtonAll: false
   };
-  await prepareDamageListItems(data, templateData, tokenIdList, true, true, doHits)
+  await prepareDamageListItems(data, templateData, tokenDataList, true, true, doHits)
 
   templateData.needsButtonAll = damageList.length > 1;
 
@@ -1135,7 +1128,7 @@ async function createGMReverseDamageCard(
       speaker: { scene: getCanvas()?.scene?.id, alias: game.user?.name, user: game.user?.id },
       content: content,
       whisper: ChatMessage.getWhisperRecipients("GM").filter(u => (u as User).active).map(u => u.id),
-      flags: { "midiqol": { "undoDamage": prepareDamageListToJSON(tokenIdList) } }
+      flags: { "midiqol": { "undoDamage": prepareDamageListToJSON(tokenDataList) } }
     };
     chatData.style = CONST.CHAT_MESSAGE_STYLES.OTHER;
     if (data.flagTags) chatData.flags = foundry.utils.mergeObject(chatData.flags ?? "", data.flagTags);

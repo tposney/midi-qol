@@ -10,7 +10,7 @@ const PATH = "./modules/midi-qol/sample-config/";
 export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   configHookId: number | undefined;
   activeTab: string;
-  
+
   constructor(options?) {
     super(options);
     this.configHookId = Hooks.on("midi-qol.ConfigSettingsChanged", () => {
@@ -19,7 +19,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     this.activeTab = "gm";
     return this;
   }
-  
+
   static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
     id: "midi-qol-settings",
     tag: "form",
@@ -34,21 +34,21 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       closeOnSubmit: true,
       handler: this.#onSubmit as any
     }
-  }, {inplace: false});
+  }, { inplace: false });
   // template: "modules/midi-qol/templates/config.html",
 
   static PARTS = {
-    tabs: {template: "templates/generic/tab-navigation.hbs"},
-    gm: {template: "modules/midi-qol/templates/config/gm.hbs"},
-    player: {template: "modules/midi-qol/templates/config/player.hbs"},
-    workflow: {template: "modules/midi-qol/templates/config/workflow.hbs"},
-    concentration: {template: "modules/midi-qol/templates/config/concentration.hbs"},
-    reactions: {template: "modules/midi-qol/templates/config/reactions.hbs"},
-    misc: {template: "modules/midi-qol/templates/config/misc.hbs"},
-    mechanics: {template: "modules/midi-qol/templates/config/mechanics.hbs"},
-    rules: {template: "modules/midi-qol/templates/config/rules.hbs"},
-    quick: {template: "modules/midi-qol/templates/config/quick.hbs"},
-    footer: {template: "modules/midi-qol/templates/config/footer.hbs"}
+    tabs: { template: "templates/generic/tab-navigation.hbs" },
+    gm: { template: "modules/midi-qol/templates/config/gm.hbs" },
+    player: { template: "modules/midi-qol/templates/config/player.hbs" },
+    workflow: { template: "modules/midi-qol/templates/config/workflow.hbs" },
+    concentration: { template: "modules/midi-qol/templates/config/concentration.hbs" },
+    reactions: { template: "modules/midi-qol/templates/config/reactions.hbs" },
+    misc: { template: "modules/midi-qol/templates/config/misc.hbs" },
+    mechanics: { template: "modules/midi-qol/templates/config/mechanics.hbs" },
+    rules: { template: "modules/midi-qol/templates/config/rules.hbs" },
+    quick: { template: "modules/midi-qol/templates/config/quick.hbs" },
+    footer: { template: "modules/midi-qol/templates/config/footer.hbs" }
   }
 
   // V13 version:
@@ -74,7 +74,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   tabGroups = {
     sheet: "gm"
   }
-  
+
   get title() {
     return i18n("midi-qol.ConfigTitle") ?? "Midi-QOL Configuration";
   }
@@ -130,19 +130,20 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
           if (!installedModules.get("epic-rolls-5e")) playerRollSavesOptions[key] = `${playerRollSavesOptions[key]} - ${game.i18n?.format("MODMANAGE.DepNotInstalled", { missing: "Epic Rolls" })}`;
       }
     };
-    
-   let statusEffectList = CONFIG.statusEffects.map((se) => {
-       let name = i18n(se.name as string); 
-       if (se.id.startsWith("Convenient Effect")) name = `${name} (CE)`; 
-       return { id: se.id, name: name } });
+
+    let statusEffectList = CONFIG.statusEffects.map((se) => {
+      let name = i18n(se.name as string);
+      if (se.id.startsWith("Convenient Effect")) name = `${name} (CE)`;
+      return { id: se.id, name: name }
+    });
 
     //@ts-expect-error
     const ceInterface = game.dfreds?.effectInterface;
     //@ts-expect-error
     if (ceInterface && foundry.utils.isNewerVersion(game.modules.get("dfreds-convenient-effects")?.version, "6.9")) {
-      statusEffectList = statusEffectList.concat(ceInterface.findEffects().map(ae => ({id: `z${ae.flags["dfreds-convenient-effects"].ceEffectId}`, name: `${ae.name} (CE)`})));
+      statusEffectList = statusEffectList.concat(ceInterface.findEffects().map(ae => ({ id: `z${ae.flags["dfreds-convenient-effects"].ceEffectId}`, name: `${ae.name} (CE)` })));
     }
-    let StatusEffectOptions = statusEffectList.reduce((acc, {id, name}) => { acc[id] = name; return acc }, { "none": "None" });
+    let StatusEffectOptions = statusEffectList.reduce((acc, { id, name }) => { acc[id] = name; return acc }, { "none": "None" });
     let context: any = {
       QuickSettingsBlurb: geti18nOptions("QuickSettingsBlurb"),
       configSettings,
@@ -208,11 +209,13 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       SaveDROrderOptions: geti18nOptions("SaveDROrderOptions"),
       ColorOptions: colorList.reduce((acc, c) => { acc[c] = c; return acc }, { "Delete": "Delete" }),
       DoConcentrationCheckOptions: geti18nOptions("DoConcentrationCheckOptions"),
+      AddChatDamageButtonsOptions: geti18nOptions("AddChatDamageButtonsOptions"),
       rollModes: CONFIG.Dice.rollModes,
-      //@ts-expect-error
-      preV12: game.release.generation < 12
     };
-    context = foundry.utils.mergeObject(await super._prepareContext(options), context, {inplace: false});
+    context = foundry.utils.mergeObject(await super._prepareContext(options), context, { inplace: false });
+    //@ts-expect-error
+    context.concentrationDisabled = game.settings?.get("dnd5e", "disableConcentration")
+
     // V12-only:
     context.tabs = this.#getTabs();
     if (debugEnabled > 0) warn("Config Panel: getData ", context)
@@ -227,15 +230,15 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   // V12-only:
   #getTabs() {
     const tabs = {
-      gm: {id: "gm", group: "sheet", label: "midi-qol.Config.Tabs.gm"},
-      player: {id: "player", group: "sheet", label: "midi-qol.Config.Tabs.player"},
-      workflow: {id: "workflow", group: "sheet", label: "midi-qol.Config.Tabs.workflow"},
-      concentration: {id: "concentration", group: "sheet", label: "midi-qol.Config.Tabs.concentration"},
-      reactions: {id: "reactions", group: "sheet", label: "midi-qol.Config.Tabs.reactions"},
-      misc: {id: "misc", group: "sheet", label: "midi-qol.Config.Tabs.misc"},
-      mechanics: {id: "mechanics", group: "sheet", label: "midi-qol.Config.Tabs.mechanics"},
-      rules: {id: "rules", group: "sheet", label: "midi-qol.Config.Tabs.rules"},
-      quick: {id: "quick", group: "sheet", label: "midi-qol.Config.Tabs.quick"},
+      gm: { id: "gm", group: "sheet", label: "midi-qol.Config.Tabs.gm" },
+      player: { id: "player", group: "sheet", label: "midi-qol.Config.Tabs.player" },
+      workflow: { id: "workflow", group: "sheet", label: "midi-qol.Config.Tabs.workflow" },
+      concentration: { id: "concentration", group: "sheet", label: "midi-qol.Config.Tabs.concentration" },
+      reactions: { id: "reactions", group: "sheet", label: "midi-qol.Config.Tabs.reactions" },
+      misc: { id: "misc", group: "sheet", label: "midi-qol.Config.Tabs.misc" },
+      mechanics: { id: "mechanics", group: "sheet", label: "midi-qol.Config.Tabs.mechanics" },
+      rules: { id: "rules", group: "sheet", label: "midi-qol.Config.Tabs.rules" },
+      quick: { id: "quick", group: "sheet", label: "midi-qol.Config.Tabs.quick" },
     }
     tabs[this.activeTab].active = true;
     return tabs;
@@ -271,14 +274,14 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     // Don't think this was doing anything
     // html.find(".playlist").change(this._playList.bind(this));
     this.element.querySelector(".itemTypeListEdit")?.addEventListener("click", event => {
-      const options = Object.entries(CONFIG.Item.typeLabels).filter(kv => !["backpack", "base"].includes(kv[0])).map(([k, v]) => ({value: k, label: i18n(v), selected: configSettings.itemTypeList?.includes(k)}));
-      options.sort((a,b) => a.label.compare(b.label));
+      const options = Object.entries(CONFIG.Item.typeLabels).filter(kv => !["backpack", "base"].includes(kv[0])).map(([k, v]) => ({ value: k, label: i18n(v), selected: configSettings.itemTypeList?.includes(k) }));
+      options.sort((a, b) => a.label.compare(b.label));
       DialogV2.prompt({
         id: "midi-qol-item-selector",
         content: foundry.applications.fields.createMultiSelectInput({
-            type: "checkboxes",
-            name: "items",
-            options
+          type: "checkboxes",
+          name: "items",
+          options
         }).outerHTML,
         window: { title: "Show Item Details" },
         position: {
@@ -298,7 +301,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     });
     this.element.querySelector(".optionalRulesEnabled")?.addEventListener("click", event => {
       configSettings.optionalRulesEnabled = !configSettings.optionalRulesEnabled;
-      this.render({force: true});
+      this.render({ force: true });
     });
     this.element.querySelector("#midi-qol-show-stats")?.addEventListener("click", event => {
       gameStats.showStats();
@@ -312,7 +315,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       elem.addEventListener("mouseleave", this.selectHoverOut.bind(this));
     }
     for (const elem of Array.from(this.element.querySelectorAll(".import-quick-setting"))) {
-      elem.addEventListener("click", async function(event) {
+      elem.addEventListener("click", async function (event) {
         const key = event.currentTarget?.id;
         if (await applySettings.bind(this)(key)) this.close();
       }.bind(this));
@@ -350,7 +353,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static async #onSubmit(event, form, formData) {
     const realData = formData.object;
     realData.itemTypeList = configSettings.itemTypeList;
-    let newSettings = foundry.utils.mergeObject(configSettings, realData, { overwrite: true, inplace: false});
+    let newSettings = foundry.utils.mergeObject(configSettings, realData, { overwrite: true, inplace: false });
     // @ts-expect-error
     if (game.user?.can("SETTINGS_MODIFY")) game.settings?.set("midi-qol", "ConfigSettings", newSettings);
   }
@@ -385,7 +388,7 @@ async function importFromJSONDialog() {
           callback: event => resolve(false)
         }
       ],
-    }).render({force: true});
+    }).render({ force: true });
   });
   return await dialog;
 }
@@ -443,7 +446,7 @@ function showDiffs(current: any, changed: any, flavor: string = "", title: strin
           callback: () => resolve(false)
         }
       ],
-    }).render({force: true});
+    }).render({ force: true });
     warn("Quick Settings ", changes.join("\n"));
   })
   return dialog;

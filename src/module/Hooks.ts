@@ -86,19 +86,35 @@ export let readyHooks = async () => {
     }
   });
 
-  Hooks.on("preUpdateActor", (actor: Actor, changes: Actor.UpdateData, options, userId) => {
+  //TODO: if/when options are passed to dnd5e.damageActor can use that hook instead and not do any calculations.
+  Hooks.on("preUpdateActor", (actor: Actor, changes: any, options: any = {}, userId) => {
+
+    if (userId !== game.user?.id) return true;
+    //@ts-expect-error
+    if (game.settings?.get("dnd5e", "disableConcentration")) {
+      options.noConcentrationCheck = true;
+      return true;
+    }
+    const hpUpdate = changes.system?.attributes?.hp?.value;
+    const tempHpUpdate = changes.system?.attributes?.hp?.temp;
+    //@ts-expect-error no dnd5e-types
+    const hpDamage = (hpUpdate !== undefined) ? actor.system.attributes.hp.value - hpUpdate : 0;
+    //@ts-expect-error no dnd5e-types
+    const tempHPDamage = (tempHpUpdate !== undefined) ? actor.system.attributes.hp.temp - tempHpUpdate : 0;
+    const totalDamage = tempHPDamage + hpDamage;
+    let isConcentrationCheck = !options.noConcentrationCheck;
+    isConcentrationCheck &&= (hpDamage > 0 || !configSettings.tempHPDamageConcentrationCheck)
+    if (!isConcentrationCheck || (hpDamage === 0 && !configSettings.tempHPDamageConcentrationCheck)) {
+      isConcentrationCheck = false;
+    }
+    options.noConcentrationCheck = !isConcentrationCheck;
+    foundry.utils.setProperty(options, "dnd5e.concentrationCheck", isConcentrationCheck);
+    if (!isConcentrationCheck || totalDamage <= 0) return true;
     try {
-      if (userId !== game.user?.id) return true;
-      // @ts-expect-error no dnd5e-types
-      if (changes.system?.attributes?.hp?.value === undefined) return true;
-      // @ts-expect-error no dnd5e-types
-      const hp = actor.system.attributes?.hp?.value;
-      // @ts-expect-error no dnd5e-types
-      const newHP = changes.system.attributes.hp.value;
-      if (newHP >= hp) return true;
-      if (configSettings.doConcentrationCheck === "item" && !options.noConcentrationCheck && isConcentrating(actor)) {
-        // @ts-expect-error no dnd5e-types
-        doConcentrationCheck(actor, actor.getConcentrationDC(hp - newHP));
+      if (configSettings.doConcentrationCheck === "item" && !options.noConcentrationCheck && options.dnd5e?.concentrationCheck !== false && isConcentrating(actor)) {
+        //@ts-expect-error no dnd5e-types
+        const concentrationDc = actor.getConcentrationDC(totalDamage);
+        doConcentrationCheck(actor, concentrationDc);
       }
     } catch (err) {
       console.error("Error in preUpdateActor", err);
@@ -130,7 +146,7 @@ export let readyHooks = async () => {
           // @ts-expect-error no dnd5e-types
           if (origin.statuses?.has(CONFIG.specialStatusEffects.CONCENTRATING) && origin.getDependents()?.length === 0) {
             // @ts-expect-error duration.remaining
-            if (!installedModules.get("times-up") || (origin?.duration?.emaining ?? 1) > 0) {
+            if (!installedModules.get("times-up") || (origin?.duration?.remaining ?? 1) > 0) {
               //@ts-expect-error
               await origin.delete();
             }
@@ -1165,7 +1181,7 @@ Hooks.on("dnd5e.rollConcentrationV2", (rolls, { subject }) => {
   for (let roll of rolls) {
     if (checkRule("criticalSaves") && roll.isCritical) roll.options.success = true;
     // triggerTargetMacros(triggerList: string[], targets: Set<any> = this.targets, options: any = {}) {
-    if (configSettings.removeConcentration && roll.options.success === false) {
+    if (configSettings.removeConcentration && roll.isFailure) {
       // @ts-expect-error no dnd5e-types
       subject.endConcentration();
       return;
