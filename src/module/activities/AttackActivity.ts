@@ -274,9 +274,9 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         //@ts-expect-error
         const areKeysPressed = game.system.utils.areKeysPressed;
         const keys = {
-          normal: areKeysPressed(config.event, "skipDialogNormal"),
-          advantage: areKeysPressed(config.event, "skipDialogAdvantage"),
-          disadvantage: areKeysPressed(config.event, "skipDialogDisadvantage")
+          normal: areKeysPressed(config.event ?? workflow.workflowOptions.event, "skipDialogNormal"),
+          advantage: areKeysPressed(config.event ?? workflow.workflowOptions.event, "skipDialogAdvantage"),
+          disadvantage: areKeysPressed(config.event ?? workflow.workflowOptions.event, "skipDialogDisadvantage")
         };
         if (this.item.system.properties?.has("amm")) {
           const ammoConfirmation = this.confirmAmmunition;

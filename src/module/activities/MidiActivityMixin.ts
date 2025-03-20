@@ -35,6 +35,13 @@ export var MidiActivityMixin = Base => {
     set workflow(value) {
       error("MidiActivityMixin | activity.workflow = is deprecated. activities no long store workflow references"); ``
     }
+    get targets() {
+      foundry.utils.logCompatibilityWarning("MidiActivityMixin | activity.targets is deprecated. Use workflow.targets instead");
+      return Workflow.getWorkflowByActivityUuid(this.uuid)?.targets ?? new Set();
+    }
+    set targets(value) {
+      foundry.utils.logCompatibilityWarning("MidiActivityMixin | setting activity.targets is not supported. Use workflow.targets instead");
+    }
 
     static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.SHARED"];
 
@@ -176,17 +183,20 @@ export var MidiActivityMixin = Base => {
     }
     get messageFlags() {
       const baseFlags = super.messageFlags;
-      // foundry.utils.setProperty(baseFlags, "roll.type", "midi");
+      // cannot change targets once the workflow has started....
+      if (baseFlags.dnd5e?.targets) delete baseFlags.dnd5e.targets;
+      /*
       const targets = new Map();
       if (this.targets) {
         for (const token of this.targets) {
           const { name } = token;
           const { img, system, uuid } = token.actor ?? {};
+          //@ts-expect-error no dnd5e types
           if (uuid) targets.set(uuid, { name, img, uuid, ac: system?.attributes?.ac?.value });
         }
         baseFlags.targets = Array.from(targets.values());
-        // foundry.utils.setProperty(baseFlags, "roll.type", "usage");
-      }
+        
+      } */
       return baseFlags;
     }
     async getTriggeredActivity() {
@@ -845,7 +855,6 @@ export var MidiActivityMixin = Base => {
     }
 
     async confirmTargets(): Promise<void> {
-      this.targets = game.user?.targets;
     }
 
     async preChatChecks(usage, dialog, message, optionsConfig: any = {}): Promise<boolean> {
@@ -864,7 +873,7 @@ export var MidiActivityMixin = Base => {
     async postChatCardChecks(usage, dialog, message, optionsConfig: any = {}): Promise<boolean> {
       const workflow = usage.workflow;
       const removeWorkflow = async (workflow) => {
-        Workflow.removeWorkflow(workflow);
+        Workflow.removeWorkflow(workflow.id);
         const consumed = workflow.chatCard?.getFlag("dnd5e", "consumed");
         if (!foundry.utils.isEmpty(consumed)) {
           await workflow.activity.refund(consumed);

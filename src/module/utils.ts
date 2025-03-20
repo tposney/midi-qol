@@ -2430,9 +2430,16 @@ export const FULL_COVER = 999;
 export const THREE_QUARTERS_COVER = 5;
 export const HALF_COVER = 2;
 
-export function computeCoverBonus(attacker: Token | TokenDocument, target: Token | TokenDocument, activity: any = undefined) {
+export function computeCoverBonus(attacker: Token | TokenDocument, target: Token | TokenDocument, activity: any = undefined): number {
   let existingCoverBonus = foundry.utils.getProperty(target, `actor.flags.${MODULE_ID}.acBonus`) ?? 0;
-  let item = activity?.item;
+  let item: any;
+  if (activity instanceof Item) {
+    item = activity;
+    activity = undefined;
+    foundry.utils.logCompatibilityWarning("computeCoverBonus(attacker, target, item) is deprecated in favor of computeCoverBonus(attacker, target, activity");
+  } else if (activity) {
+    item = activity.item;
+  }
   if (!attacker) return existingCoverBonus;
   let coverBonus = 0;
   try {
@@ -2485,21 +2492,21 @@ export function computeCoverBonus(attacker: Token | TokenDocument, target: Token
     }
 
     //TODO is this right or should it be the same as non-spell?
-    if ((activity.midiProperties?.ignoreFullCover ?? item?.flags?.midiProperties?.ignoreTotalCover) && item.type === "spell") coverBonus = 0;
-    else if ((activity.midiProperties.ignoreFullCover ?? item?.flags?.midiProperties?.ignoreTotalCover) && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
+    if ((activity?.midiProperties?.ignoreFullCover ?? item?.flags?.midiProperties?.ignoreTotalCover) && item?.type === "spell") coverBonus = 0;
+    else if ((activity?.midiProperties.ignoreFullCover ?? item?.flags?.midiProperties?.ignoreTotalCover) && coverBonus === FULL_COVER) coverBonus = THREE_QUARTERS_COVER;
 
-    if (activity.actionType === "rwak" && attacker.actor && coverBonus !== FULL_COVER && coverBonus !== 0
+    if ((activity?.actionType ?? item?.system.actionType) === "rwak" && attacker.actor && coverBonus !== FULL_COVER && coverBonus !== 0
       && (foundry.utils.getProperty(attacker.actor, `flags.${MODULE_ID}.sharpShooter`) || foundry.utils.getProperty(attacker.actor, "flags.dnd5e.sharpShooter"))) {
-      const conditionData = createConditionData({ item: activity.item, actor: attacker.actor, activity, target });
+      const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
       let sharpShooterEnabled = evalCondition(foundry.utils.getProperty(attacker.actor, "flags.dnd5e.sharpShooter"), conditionData);
       sharpShooterEnabled ||= evalCondition(foundry.utils.getProperty(attacker.actor, `flags.${MODULE_ID}.sharpShooter`), conditionData);
       if (sharpShooterEnabled) coverBonus = 0;
     }
-    if (["rsak"/*, "rpak"*/].includes(activity.actionType)
+    if (["rsak"/*, "rpak"*/].includes((activity?.actionType ?? item?.system.actionType))
       && attacker.actor
       && (foundry.utils.getProperty(attacker.actor, "flags.dnd5e.spellSniper") || foundry.utils.getProperty(attacker.actor, `flags.${MODULE_ID}.spellSniper`))
       && coverBonus !== FULL_COVER && coverBonus !== 0) {
-      const conditionData = createConditionData({ item: activity.item, actor: attacker.actor, activity, target });
+      const conditionData = createConditionData({ item, actor: attacker.actor, activity, target });
       let spellSniperEnabled = evalCondition(foundry.utils.getProperty(attacker.actor, "flags.dnd5e.spellSniper"), conditionData);
       spellSniperEnabled ||= evalCondition(foundry.utils.getProperty(attacker.actor, `flags.${MODULE_ID}.spellSniper`), conditionData);
       if (spellSniperEnabled) coverBonus = 0;

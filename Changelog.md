@@ -1,3 +1,12 @@
+### 12.4.33
+* Fix for check activities not passing the workflow in config.
+* Expunge an accidental reference to activity.targets
+* Fix for some backward compatibility problems in computeCoverBonus - midi will still accept an item in the computeCoverBonus call, but this should be switched to an activity.
+* Disable changing targets in the damage roll once set.
+* Fix for error thrown when pre roll workflow checks fail.
+* Target confirmation now include range/cover for more activity types.
+* Fix for ignoring atl/ctl/shit when auto rolling an attack.
+
 ### 12.4.32
 * Thanks to @michael for adding ability to consume activity uses in optional effects:
   flags.midi-qol.optional.NAME.count OVERRIDE then one of
@@ -245,11 +254,11 @@ Known issues
 * Requires dae upgrade to 12.0.10 or later
 
 ### 12.4.20
-* Fix for workflows incorrectly being reused on subsequen activity/item uses - thanks @Elwin
+* Fix for workflows incorrectly being reused on subsequent activity/item uses - thanks @Elwin
 * Reinstate target advantage, inadvertently disabled in 12.4.19
 * Fix for optional bonus flags not working for skill/saves/checks from character sheet.
 * Fix for interaction with CPR setting display DSN after all macros complete.
-* Comestic change to treatment of flags.grants.attack.bonus.xxx, the bonus will be displayed on the chat card as a subtratction to the targets AC.
+* Cometic change to treatment of flags.grants.attack.bonus.xxx, the bonus will be displayed on the chat card as a subtraction to the targets AC.
 * Fix for flags.grants.advantage/disadvantage not being processed.
 * Fix for error thrown with tidy item sheet - thanks @kgar.
 * Fix for duplicate healing buttons on healing activities.

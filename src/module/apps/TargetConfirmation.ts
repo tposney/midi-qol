@@ -140,7 +140,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       }
 
       let attackerToken = token;
-      if (token && checkMechanic("checkRange") !== "none" && (["mwak", "msak", "mpak", "rwak", "rsak", "rpak"].includes(this.data.activity.actionType))) {
+      if (token && checkMechanic("checkRange") !== "none" && (["mwak", "msak", "mpak", "rwak", "rsak", "rpak", "utility", "check", "save", "damage"].includes(this.data.activity.actionType))) {
         const { result, attackingToken } = checkActivityRange(this.data.activity, token, new Set([target]), false);
         if (attackingToken) attackerToken = attackingToken;
         switch (result) {
@@ -157,10 +157,8 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       }
       // TODO look at doing save cover bonus calculations here - need the template
       if (typeof configSettings.optionalRules.coverCalculation === "string" && configSettings.optionalRules.coverCalculation !== "none") {
-        // TODO confirm this is right for auto template targeting.
-        const isRangeTargeting = ["ft", "m"].includes(this.data.activity.range?.units) && ["creature", "ally", "enemy"].includes(this.data.activity.target.affects.type);
-        if (!activityHasAreaTarget(this.data.activity) && !isRangeTargeting) {
-          const targetCover = attackerToken ? computeCoverBonus(attackerToken, target, this.data.activity.item) : 0;
+        if (!activityHasAreaTarget(this.data.activity)) {
+          const targetCover = attackerToken ? computeCoverBonus(attackerToken, target, this.data.activity) : 0;
           switch (targetCover) {
             case HALF_COVER:
               details.push(`${i18n("DND5E.CoverHalf")} ${i18n("DND5E.Cover")}`);

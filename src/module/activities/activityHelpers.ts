@@ -204,7 +204,7 @@ export function requiresTargetConfirmation(activity, options): boolean {
       const isRangeTargeting = ["ft", "m"].includes(activity.target?.affects.count) && ["creature", "ally", "enemy"].includes(activity.target?.affects.type);
       if (!activity.target?.template?.type && !isRangeTargeting && token) {
         for (let target of game.user?.targets) {
-          if (computeCoverBonus(token, target, activity.item) > 0) {
+          if (computeCoverBonus(token, target, activity) > 0) {
             if (debugEnabled > 0) warn("target confirmation triggered from targetConfirmation.inCover");
             return true;
           }

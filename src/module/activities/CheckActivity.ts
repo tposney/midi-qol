@@ -37,10 +37,9 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
         usage: {
           chatCard: "modules/midi-qol/templates/activity-card.hbs",
           actions: {
-            // rollCheck: MidiCheckActivity.#rollCheck, Having this means having to track CheckActivity.#rollCheck code changes
-            // Currently not needed as there is no workflow activity
+            rollCheck: MidiCheckActivity.#rollCheck, // Having this means having to track CheckActivity.#rollCheck code changes
+            // Needed so the workflow can be inserted
             rollDamage: MidiSaveActivity.metadata.usage.actions.rollDamage,
-
           }
         },
       }, { inplace: false, insertKeys: true, invsertValues: true })
