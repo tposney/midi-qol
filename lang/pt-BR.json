@@ -981,10 +981,23 @@
         "label": "Condição de Efeito Ativo",
         "hint": "Condição para aplicar efeito ativo."
       },
+      "otherActivityId": {
+        "label": "Usar Outra Atividade",
+        "hint": "Atividade extra para causar 'outros' danos."
+      },
       "midiProperties": {
         "rollMode": {
           "label": "Modo de Rolagem",
           "hint": "Modo de rolagem para usar para a Atividade."
+        },
+        "ignoreFullCover":
+        {
+          "label": "Ignorar Cobertura Total",
+          "hint": "Ignora Cobertura Total em jogadas de dano/salvaguardas."
+        },
+        "chooseEffects": {
+          "label": "Escolher Efeitos",
+          "hint": "Escolha efeitos para aplicar."
         },
         "forceDialog": {
           "label": "Forçar Diálogo de Configuração",
@@ -1033,6 +1046,10 @@
         "otherActivityCompatible": {
           "label": "Outra Atividade",
           "hint": "Pode ser usada como uma outra Atividade."
+        },
+        "toggleEffect": {
+          "label": "Alternar Efeito",
+          "hint": "Desabilitar um efeito irá alternar entra ativado e desativado ao invés de removê-lo."
         },
         "ignoreTraits": {
           "idi": {
@@ -1131,10 +1148,6 @@
       "ammunition": {
         "label": "Munição",
         "hint": "Munição padrão a ser consumida."
-      },
-      "otherActivityId": {
-        "label": "Outra Atividade",
-        "hint": "Atividade extra para pré-formar 'outros' danos."
       }
     }
   },
