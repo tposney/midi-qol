@@ -40,6 +40,20 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
         }
       }, { inplace: false, insertKeys: true, insertValues: true });
 
+      static defineSchema() {
+        const { StringField, ArrayField, BooleanField, SchemaField, ObjectField } = foundry.data.fields;
+        //@ts-expect-error
+        const dataModels = game.system.dataModels;
+        const { ActivationField: ActivationField, CreatureTypeField, CurrencyTemplate, DamageData,
+          DamageField, DurationField, MovementField, RangeField, RollConfigField, SensesField,
+          SourceField, TargetField, UsesField } = dataModels.shared
+  
+        const schema = {
+          ...super.defineSchema(),
+          otherActivityId: new StringField({ name: "otherActivity", initial: "none" }),
+        };
+        return schema;
+      }
     static #rollFormula(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
 

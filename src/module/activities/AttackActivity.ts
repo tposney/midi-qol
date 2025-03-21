@@ -110,6 +110,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
 
       const schema = {
         ...super.defineSchema(),
+        otherActivityId: new StringField({ name: "otherActivity", initial: "" }),
         // @ ts-expect-error
         attackMode: new StringField({ name: "attackMode", initial: "oneHanded" }),
         ammunition: new StringField({ name: "ammunition", initial: "" }),

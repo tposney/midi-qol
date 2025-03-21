@@ -5,8 +5,8 @@
     {{ formField fields.useConditionReason value=source.useConditionReason }}
     {{ formField fields.effectConditionText value=source.effectConditionText }}
     {{ formField fields.midiProperties.fields.chooseEffects value=source.midiProperties.chooseEffects }}
-    {{ formField fields.midiProperties.fields.toggleEffect value=source.midiProperties.toggleEffect }}  
-    </fieldset>
+    {{ formField fields.midiProperties.fields.toggleEffect value=source.midiProperties.toggleEffect }}
+  </fieldset>
   <fieldset>
     {{#with fields.midiProperties.fields as |fields|}}
     {{ formField fields.rollMode value=../source.midiProperties.rollMode options=../RollModeOptions}}
@@ -28,17 +28,21 @@
     label="midi-qol.SHARED.ignore.header" localize=true classes="multi-select"}}
     {{/with}}
   </fieldset>
+  {{#if (ne fields.otherActivityId undefined)}}
   <fieldset>
     {{ formField fields.otherActivityId value=source.otherActivityId options=otherActivityOptions}}
   </fieldset>
+  {{/if}}
   <fieldset>
     {{#with fields.midiProperties.fields as |fields|}}
     {{ formField fields.triggeredActivityId value=../source.midiProperties.triggeredActivityId
     options=../triggeredActivityOptions}}
     {{#if (ne ../source.midiProperties.triggeredActivityId "none")}}
     {{ formField fields.triggeredActivityConditionText value=../source.midiProperties.triggeredActivityConditionText }}
-    {{ formField fields.triggeredActivityTargets value=../source.midiProperties.triggeredActivityTargets options=../triggeredActivityTargetOptions}}
-    {{ formField fields.triggeredActivityRollAs value=../source.midiProperties.triggeredActivityRollAs options=../triggeredActivityRollAsOptions}}
+    {{ formField fields.triggeredActivityTargets value=../source.midiProperties.triggeredActivityTargets
+    options=../triggeredActivityTargetOptions}}
+    {{ formField fields.triggeredActivityRollAs value=../source.midiProperties.triggeredActivityRollAs
+    options=../triggeredActivityRollAsOptions}}
     {{/if}}
     {{/with}}
   </fieldset>

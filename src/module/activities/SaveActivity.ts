@@ -43,6 +43,7 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
 
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField } = foundry.data.fields;
+      
       //@ts-expect-error
       const dataModels = game.system.dataModels;
       const { ActivationField: ActivationField, CreatureTypeField, CurrencyTemplate, DamageData,
@@ -52,6 +53,7 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
 
       return {
         ...super.defineSchema(),
+        otherActivityId: new StringField({ name: "otherActivity", initial: "" }),
         damage: new SchemaField({
           onSave: new StringField(),
           parts: new ArrayField(new DamageField()),

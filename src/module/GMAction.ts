@@ -495,7 +495,7 @@ async function _completeActivityUse(data: {
     usage.midiOptions.targetsToUse = new Set(targets);
   }
   const workflow = await completeActivityUse(activityUuid, usage, dialog, message);
-  if (data.usage.midiOptions?.workflowData) return workflow?.getMacroData();
+  if (data.usage.midiOptions?.workflowData) return workflow.getSafeMacroData();
   else return true;
 }
 

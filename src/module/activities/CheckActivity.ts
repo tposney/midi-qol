@@ -54,6 +54,7 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
 
       const schema = {
         ...super.defineSchema(),
+        otherActivityId: new StringField({ name: "otherActivity", initial: "none" }),
         damage: new SchemaField({
           onSave: new StringField({ name: "onSave", initial: "half" }),
           parts: new ArrayField(new DamageField())

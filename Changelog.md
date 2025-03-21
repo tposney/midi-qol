@@ -1,3 +1,10 @@
+### 12.4.34
+* Fix for failing to scroll to bottom when waiting for a manual damage roll.
+* Don't display targets if the activity affects no targets.
+* Set default otherActivity to none for save/check/use activities.
+* Remove otherActivity setting from summons, cast, damage, forward, enchant and heal activities.
+* Some more tweaking of completeActivityUse
+
 ### 12.4.33
 * Fix for check activities not passing the workflow in config.
 * Expunge an accidental reference to activity.targets
@@ -5,7 +12,7 @@
 * Disable changing targets in the damage roll once set.
 * Fix for error thrown when pre roll workflow checks fail.
 * Target confirmation now include range/cover for more activity types.
-* Fix for ignoring atl/ctl/shit when auto rolling an attack.
+* Fix for ignoring alt/ctl/shift when auto rolling an attack.
 
 ### 12.4.32
 * Thanks to @michael for adding ability to consume activity uses in optional effects:

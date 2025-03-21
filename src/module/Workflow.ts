@@ -2104,6 +2104,10 @@ export class Workflow {
         replaceString = `<button data-action="versatile">${damageString}</button>`
         content = content.replace(searchRe, replaceString);
         await this.performDebouncedUpdate(chatMessage, { content });
+        setTimeout(() => {
+          //@ts-expect-error protected
+          ui.chat?.scrollBottom();
+        }, 100);
       }
     }
     return this.WorkflowState_Suspend; // wait for a damage roll to advance the state.
@@ -2781,7 +2785,7 @@ export class Workflow {
     const rollFinishedStartTime = Date.now();
     const chatMessage = this.chatCard;
     let selfTarget = this.token ?? getOrCreateTokenForActor(this.actor);
-    if (!this.hitTargetsDisplayed && this.targets?.size > 0 && chatMessage && (this.activity.damage || this.effectTargets?.size > 0)) {
+    if (!this.hitTargetsDisplayed && this.targets?.size > 0 && chatMessage && (this.activity.effects.length || this.otherActivity?.effects.length)) {
       this.hitDisplayData = {};
       const theTargets = this.effectTargets?.size > 0 ? this.effectTargets : this.targets;
       for (let targetToken of theTargets) {
@@ -2812,6 +2816,7 @@ export class Workflow {
     }
     let content = chatMessage?.content && foundry.utils.duplicate(chatMessage?.content);
     let contentChanged = false;
+    // TODO move this to call the omnibus remove buttons function
     if (content && getRemoveAttackButtons(this.item) && chatMessage && configSettings.confirmAttackDamage === "none") {
       let searchRe = /<button[^>]*? data-action="attack"[\s\S]*?<\/button>/;
       // searchRe = /<div class="midi-attack-buttons".*<\/div>/
@@ -3616,6 +3621,13 @@ export class Workflow {
     return data;
   }
 
+  getSafeMacroData(item: Item | undefined, options: any = {}) : any {
+    const niceData = this.getMacroData(item, options);
+    let naughtyFields = ["actor", "workflow", "targets", "failedSaves", "criticalSaves", "fumbleSaves", "hitTargets", "hitTargetsEC", "saves", "superSavers", "semiSuperSavers"];
+    for (let field of naughtyFields) delete niceData[field];
+    return niceData;
+  }
+
   getMacroData(item: Item | undefined, options: any = {}): any {
     if (!item) item = this.item;
     let targets: TokenDocument[] = [];
@@ -4306,8 +4318,8 @@ export class Workflow {
     let fullDamageText = "";
     let noDamageText = "";
     let halfDamageText = "";
-    this.hitTargetsDisplayed = true;
-    if ((this.activity.save || this.activity.check || this.otherActivity?.save || this.otherActivity?.check) && this.activity.damage.parts.length > 0) {
+    //this.hitTargetsDisplayed = true;
+    if ((this.activity.save || this.activity.check) && this.activity.damage?.parts.length > 0) {
       switch (getsaveMultiplierForActivity(this.activity)) {
         case 0:
           noDamage.push(`${i18n("midi-qol.BaseDamageFlavor")} &#48;`)
@@ -4319,7 +4331,7 @@ export class Workflow {
           halfDamage.push(`${i18n("midi-qol.BaseDamageFlavor")} &frac12;`);
       }
     }
-    if ((this.otherActivity?.save || this.otherActivity?.check) && this.otherActivity?.damage.parts.length > 0) {
+    if ((this.otherActivity?.save || this.otherActivity?.check) && this.otherActivity?.damage?.parts.length > 0) {
       switch (getsaveMultiplierForActivity(this.otherActivity)) {
         case 0:
           noDamage.push(`${i18n("midi-qol.OtherDamageFlavor")} &#48;`)

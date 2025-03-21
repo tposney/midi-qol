@@ -577,27 +577,27 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     }
   }
   */
- timedAwaitExecuteAsGM("createReverseDamageCard", {
-    autoApplyDamage: configSettings.autoApplyDamage,
-    sender: game.user?.name,
-    actorId: workflow.actor?.id,
-    charName: workflow.token?.name ?? workflow.actor?.name ?? game.user?.name,
-    damageList: prepareDamageListToJSON(workflow.damageList),
-    chatCardUuid: workflow.itemCardUuid,
-    flagTags: workflow.flagTags,
-    updateOptions: { noConcentrationCheck: workflow?.workflowOptions?.noConcentrationCheck ?? false },
-    forceApply: false
-  }).then(cardIds => {
-    if (cardIds) chatCardUuids.push(...cardIds);
-    if (workflow && configSettings.undoWorkflow) {
-      // Assumes workflow.undoData.chatCardUuids has been initialised
-      if (workflow.undoData) {
-        workflow.undoData.chatCardUuids = workflow.undoData.chatCardUuids.concat(chatCardUuids);
-        unTimedExecuteAsGM("updateUndoChatCardUuids", workflow.undoData);
+    timedAwaitExecuteAsGM("createReverseDamageCard", {
+      autoApplyDamage: configSettings.autoApplyDamage,
+      sender: game.user?.name,
+      actorId: workflow.actor?.id,
+      charName: workflow.token?.name ?? workflow.actor?.name ?? game.user?.name,
+      damageList: prepareDamageListToJSON(workflow.damageList),
+      chatCardUuid: workflow.itemCardUuid,
+      flagTags: workflow.flagTags,
+      updateOptions: { noConcentrationCheck: workflow?.workflowOptions?.noConcentrationCheck ?? false },
+      forceApply: false
+    }).then(cardIds => {
+      if (cardIds) chatCardUuids.push(...cardIds);
+      if (workflow && configSettings.undoWorkflow) {
+        // Assumes workflow.undoData.chatCardUuids has been initialised
+        if (workflow.undoData) {
+          workflow.undoData.chatCardUuids = workflow.undoData.chatCardUuids.concat(chatCardUuids);
+          unTimedExecuteAsGM("updateUndoChatCardUuids", workflow.undoData);
+        }
       }
-    }
-  });
-}
+    });
+  }
 
 
   if (debugEnabled > 1) debug(`process damage roll complete for ${workflow.item.name} `, workflow.damageList)
@@ -1500,39 +1500,45 @@ export async function _processOverTime(combat, data, options, userId) {
 export async function completeActivityUse(activity, usage: any = {}, dialog: any = {}, message: any = {}) {
   let theItem: any;
   usage.midiOptions ??= {};
-  let targetsToUse: Set<Token> = (usage.midiOptions?.targetsToUse ?? new Set()).map(t => getToken(t));
+  let targetsToUse: Set<Token> = new Set();
+  if (usage.midiOptions?.targetsToUse && !(usage.midiOptions.targetsToUse instanceof Set)) {
+    console.error("completeActivityUse | targetsToUse is not a Set");
+  } else if (usage.midiOptions?.targetsToUse) {
+    targetsToUse = (usage.midiOptions?.targetsToUse ?? new Set()).map(t => getToken(t));
+  }
+  if (usage.midiOptions?.targetUuids) {
+    for (let targetUuid of usage.midiOptions.targetUuids) {
+      const theTarget: Token | null | undefined = getToken(targetUuid);
+      if (theTarget) {
+        targetsToUse.add(theTarget);
+      }
+    }
+  }
+  // Targets to use will be the union of usage.midiOptions.targetsToUse and usage.midiOptions.targetUuids
   if (typeof activity === "string") {
     activity = MQfromUuidSync(activity);
   }
+  let asUser: User | undefined | null = (typeof usage.midiOptions.asUser === "string") ? game.users?.get(usage.midiOptions.asUser) : usage.midiOptions.asUser;
+  const asUserActive = asUser?.active;
+  if (!asUserActive && (usage.midiOptions.checkGMstatus && !game.user?.isGM))
+    asUser = game.users?.activeGM as (User | null);
+  if (!asUser) asUser = game.user;
+  // asUser will be the requested user, a GM user if there is one active or self
   foundry.utils.setProperty(usage, "midiOptions.workflowOptions.forceCompletion", true);
-  // delete any existing workflow - complete item use always is fresh.
-  // workflows are keyed by chatMessage so this is not needed - if (Workflow.getWorkflow(activity.uuid)) await Workflow.removeWorkflow(activity.uuid);
-  let localRoll =
-    // if there's no asUser requirement and we are a GM or the checkGMStatus is off roll locally
-    (!usage.midiOptions.asUser && (game.user?.isGM || !usage.midiOptions.checkGMStatus))
-    || usage.midiOptions.asUser === game.user?.id; // requested to run as self
+  let localRoll = asUser?.id === game.user?.id;;
   if (localRoll) {
     return new Promise((resolve) => {
       const maxWait = 90; // If the activity usage doesn't complete in 90 seconds then we have a problem
       let saveTargets = Array.from(game.user?.targets ?? []).map(t => { return t.id });
       if (usage.midiOptions.ignoreUserTargets) updateUserTargets([]);
-      if (usage.midiOptions.targetsToUse) { }
-      else if (game.user && activity.target?.affects?.type === "self") {
+      if (game.user && activity.target?.affects?.type === "self") {
         updateUserTargets([]);
         const selfTarget = getToken(activity.item.actor);
         if (selfTarget) {
           selfTarget.setTarget(true, { user: game.user, releaseOthers: false, groupSelection: true });
-          targetsToUse.add(selfTarget);
+          targetsToUse = new Set([selfTarget]);
         }
-      } else if (usage.midiOptions.targetUuids?.length > 0 && game.user && activity.target?.affects?.type !== "self") {
-        for (let targetUuid of usage.midiOptions.targetUuids) {
-          const theTarget: Token | null | undefined = getToken(targetUuid);
-          if (theTarget) {
-            theTarget.setTarget(true, { user: game.user, releaseOthers: false, groupSelection: true });
-            targetsToUse.add(theTarget)
-          }
-        }
-      } else if (usage.midiOptions.targetUuids === undefined && !usage.midiOptions.ignoreUserTargets) {
+      } else if (targetsToUse.size === 0 && !usage.midiOptions.ignoreUserTargets) {
         targetsToUse = new Set(game.user?.targets);
       }
 
@@ -1550,7 +1556,6 @@ export async function completeActivityUse(activity, usage: any = {}, dialog: any
         Hooks.off(abortHookName, abortHookId);
         Hooks.off(completeHookName, completeHookId);
         if (debugEnabled > 0) warn(`spell use hook fired: ${activity.item?.name} ${completeHookName}`)
-
         updateUserTargets(saveTargets);
         resolve(usage.workflow);
       });
@@ -1599,10 +1604,8 @@ export async function completeActivityUse(activity, usage: any = {}, dialog: any
       dialog,
       message
     }
-    const asUserActive = (game.users?.get(usage.midiOptions.asUser) as (User | undefined))?.active;
-    if (!asUserActive) usage.midiOptions.asUser = game.users?.activeGM?.id ?? game.user?.id
-    if (usage.midiOptions.asUser)
-      return await socketlibSocket.executeAsUser("completeActivityUse", usage.midiOptions.asUser, data);
+    if (asUser)
+      return await socketlibSocket.executeAsUser("completeActivityUse", asUser.id, data);
     else
       return await timedAwaitExecuteAsGM("completeActivityUse", data);
   }
@@ -1741,12 +1744,12 @@ export function distancePointToken({ x, y, elevation = 0 }, token, wallblocking 
   const t2StartX = -Math.max(0, token.document.width - 1);
   const t2StartY = -Math.max(0, token.document.height - 1);
   var d, r, segments: { ray: Ray }[] = [], rdistance, distance;
-//  const [row, col] = canvas.grid?.getGridPositionFromPixels(x, y) || [0, 0];
-//  const [xBase, yBase] = canvas.grid?.getPixelsFromGridPosition(row, col) || [0, 0];
+  //  const [row, col] = canvas.grid?.getGridPositionFromPixels(x, y) || [0, 0];
+  //  const [xBase, yBase] = canvas.grid?.getPixelsFromGridPosition(row, col) || [0, 0];
   let xc, yc;
 
-//  ({ x: xc, y: yc } = canvas.grid.getCenterPoint.bind(canvas.grid)({ x: xBase, y: yBase }) || { x: 0, y: 0 });
-({ x: xc, y: yc } = canvas.grid.getCenterPoint.bind(canvas.grid)({ x, y}) || { x: 0, y: 0 });
+  //  ({ x: xc, y: yc } = canvas.grid.getCenterPoint.bind(canvas.grid)({ x: xBase, y: yBase }) || { x: 0, y: 0 });
+  ({ x: xc, y: yc } = canvas.grid.getCenterPoint.bind(canvas.grid)({ x, y }) || { x: 0, y: 0 });
   const origin = new PIXI.Point(x, y);
   const tokenCenter = token.center;
   distance = canvas.grid.measurePath([origin, tokenCenter], {}).distance;

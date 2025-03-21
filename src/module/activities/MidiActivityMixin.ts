@@ -54,7 +54,6 @@ export var MidiActivityMixin = Base => {
         useConditionText: new MidiConditionField({ name: "useCondition", initial: "" }),
         useConditionReason: new StringField({ name: "useConditionReason", initial: "" }),
         effectConditionText: new MidiConditionField({ name: "effectCondition", initial: "" }),
-        otherActivityId: new StringField({ name: "otherActivity", initial: "" }),
         // disabled pending a way to make it work 
         // useSystemActivity: new BooleanField({ name: "useSystemActivity", initial: false }),
         macroData: new SchemaField({
@@ -1258,7 +1257,7 @@ export var MidiActivityMixin = Base => {
 
     get otherActivity() {
       if (this._otherActivity !== undefined) return this._otherActivity;
-      if (this.otherActivityId === "none") return undefined;
+      if (this.otherActivityId === "none" || this.otherActivityId === undefined) return undefined;
       if (this.ammunitionItem) {
         //TODO consider making this a choice of activity
         this._otherActivity = this.ammunitionItem.system.activities?.contents.find(
