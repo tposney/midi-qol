@@ -2,7 +2,7 @@
 ![](https://img.shields.io/badge/Foundry-v11-informational)
 ![](https://img.shields.io/badge/Foundry-v12-informational)
 ![](https://img.shields.io/badge/Dnd5e-v3.3.1-informational)
-![](https://img.shields.io/badge/Dnd5e-v4.1.1.beta-informational)
+![](https://img.shields.io/badge/Dnd5e-v4.3.6-informational)
 ![Forge Installs](https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https%3A%2F%2Fforge-vtt.com%2Fapi%2Fbazaar%2Fpackage%2Fmidi-qol&colorB=4aa94a)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/tposney)
