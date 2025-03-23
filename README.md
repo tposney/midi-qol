@@ -718,6 +718,26 @@ If a spell caster with flags.midi-qol.sculptSpell set to 1, casts an area of eff
 If a spell caster with flags.midi-qol.carefulSpell set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and damage as if they had saved (no matter what they roll).
 
 ## flags.midi-qol.OverTime (Overtime effects)
+### Overtime Activity Effects (MidiQOL 12.4.28+)
+New feature Overtime Activity effects. 
+Any midi activity may be designated as an overtime activity (in fact any activity can be used, but it may not behave as you'd expect).
+There is a new midi effect flag, `flags.midi-qol.ActivityOverTime` (much like `flags.midi-qol.overTime`) which allows you to specify an activity to be called by either
+- the uuid of the activity to call 
+- or the identifier of the activity on the same item as the activity applying the effect to the target.
+
+ Be careful about referencing by uuid, as the activity's uuid may change if the actor/item is exported/imported to another world, compendium uuids should be fine.
+For example, you have a bleeding effect which does 1d4 necrotic damage at the start of the target's and then if successful DC 12 con save is made the effect is removed.
+-	Step 1. Create a Save activity (called Bleeding Save), which has a con dc of 12, and does 1d4 necrotic damage (full damage on successful save). You want the activity to target self (since it will be rolled by the actor that has the effect applied) but otherwise it could be anything. Set overtime activity true, "turn start: and "save removes" on the midi properties tab for the activity.
+-	Step 2. On the item's attack activity specify an effect to apply, `flags.midi-qol.ActivityOvertime` and enter bleeding-save in the field (or copy and paste the Bleeding Save activity's uuid)
+The overtime activity's use condition will be checked before calling the overtime effect, i.e. `attributes.hp.value > 0` (no point flogging a dead horse).
+You can create multiple overtime change entries on the same effect and they will be executed in order of the changes "turn start", then "turn end", and priority (lowest first). So, you can split effects to have some run at the start of the turn and some at the end of the turn and have an assortment of remove conditions and effects.
+Overtime activities will use the spell level of the original cast to allow for scaling of damage in the dependent activity - disable scaling in the dependent activity if you don't want this to be applied.
+When creating overtime activities make sure to have them target self - most of the time that is what you want.
+You can include AoE activities as overtime activities (choose emanation or emanation no template to have them centered on the target token with the effect). Other target options will prompt the placement of a template.
+Any activity can be chosen as a dependent activity, so you could for example summon an imp each round or force a bagpipes check each round to avoid taking damage. I've not tested all activities as dependent activities, but save, check, damage and summon have been tested. Forward/Cast Activities are special cases that probably won't work as hoped - to be looked at.
+
+
+### Overtime effects (pre 12.4.28)
 Intended for damage over time effects or until save effects, but can do a bunch of things.
 ```
 flags.midi-qol.OverTime OVERRIDE specification
