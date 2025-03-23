@@ -135,7 +135,7 @@ Midi-qol breaks the blind chats by hidden GM feature of cautious GM.
 No more needed, as DAE has its own macro editor that is preferable.
 
 ## Warpgate
-Should NOT be used with any v3.x system
+**Should NOT be used with version 12 and higher of Foundry!**
 
 ## DDB Game Log.
 DDG Game Log sends rolls from dnd beyond to foundry. If DDB Game Log is enabled in the optional settings section of midi, making an attack roll (or damage roll if there is no attack roll) will trigger a midi-qol workflow for the attack. Hits will be checked, saving throws asked for and damage applied as per the rest of the midi-qol settings, except that midi will wait for dnd beyond and will resolve when the dnd beyond roll is made.
