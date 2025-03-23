@@ -29,27 +29,46 @@ I really can't work out what is going on without them.
 
 No world information is exported. The list of active modules can be very useful to me in debugging.
 
-## HELP! My midi-qol disappeared.
+# Table of Contents
+- [Getting Started Guide](<https://gitlab.com/tposney/midi-qol/-/blob/v12dnd4/Getting%20Started.md>)
+- [Changelog](https://gitlab.com/tposney/midi-qol/-/blob/v12dnd4/Changelog.md)
+- [FAQS](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#faqs)
+  - [HELP! My midi-qol disappeared](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#help-my-midi-qol-disappeared.)
+  - [HI just upgraded and nothing works anymore](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#i-just-upgraded-and-nothing-works-anymore)
+  - [Midi works for some players and not for others....](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#midi-works-for-some-players-and-not-for-others)
+  - [Midi compendium items don't work](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#items-i-bring-in-from-the-sample-compendium-dont-work)
+  - [How to write macros for Midi](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#how-do-i-write-macros-for-this-module)
+  - [I have a macro that works and just want to call it when using an item.](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#i-have-a-macro-that-works-and-just-want-to-call-it-when-using-an-item)
+  - [MidiQOL sample items compendium](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#midiqol-sample-items-compendium)
+  - [DDB Game Log](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#ddb-game-log)
+  - [Custom Sounds](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#custom-sounds-complete-rewrite-as-of-v0929)
+  - [Other QOL settings](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#other-qol-settings)
+  - [Active Defence](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#active-defence)
+- [Quick settings](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#quick-settings)
+  - [Full auto mode settings](https://gitlab.com/tposney/midi-qol/-/edit/v12dnd4/README.md#settings-for-full-auto-mode)
+
+## FAQS
+### HELP! My midi-qol disappeared.
 If you've just updated midi-qol and it disappears from your in-game list of modules you probably need to update your dnd5e system to the latest one.
 
-## I just upgraded and nothing works anymore. 
+### I just upgraded and nothing works anymore. 
 I've seen a couple of cases where after migration of foundry versions the per player setting "enable workflow automation" gets set to off. This flag being unset causes midi to do nothing with rolls (hence the nothing works). **Also note that this is a per player setting, so each user needs to make sure it is on.**
 
-## Midi works for some players and not for others....
+### Midi works for some players and not for others....
 Same problem as above - check workflow automation is enabled on all clients. You can use the module SocketSettings to force set the setting on all clients.
 
-## Items I bring in from the sample compendium don't work. 
+### Items I bring in from the sample compendium don't work. 
 Some of the items require creating a DamageBonusMacro, make sure that is enabled in the midi settings. Also, if the damage bonus macro effect runs an ItemMacro.ItemName, the name of the feature needs to match the name of the item macro being run. For example Rage MQ0.8.9, will have to be renamed Rage when equipped on a character or the damage bonus macro won't run. I know this is not ideal, but I wanted to make clear when the version of the items changed.
 
-## How do I write macros for this module?
+### How do I write macros for this module?
 Have a look at [Notes for Macro writers](#notes-for-macro-writers) which I try to update if new things occur. I've included some examples and if I do something I think is maybe useful, will add it to this section going forwards.
 
-## I have a macro that works and just want to call it when using an item.
+### I have a macro that works and just want to call it when using an item.
 If you have a standalone macro, or one from (say) the community macros collection that you want to call when using an item, create an item and set it's onUse macro to the macro's name and set the pass to preamble complete. 
 
 If you want to get fancier then change the point at which it is called and have a look at the data passed to onUse macros. Or use a `macro.execute` (some changes may be required) which is only called if active effects are applied to the target.
 
-## MidiQOL sample items compendium
+### MidiQOL sample items compendium
 midi-qol is an automation tool that is meant to make it possible to automate some/many facets of your game. It is not a library of items that you can plug and play into your game and many great macro modules that play well with midi-qol (too many for me to list and I'm sure I don't know them all).
 
 Similarly there are some excellent tools for animation effects, beyond those supported directly by dae/midi. I don't know them all and I have no doubt that there are some gems that I simply have not discovered, but do use Automated Animations in my game as well as Token Magic FX.
@@ -58,86 +77,7 @@ midi-qol combined with DAE has lots of ways for you to implement items/spells/fe
 
 Over time I have come up with some items that I use in my game, which I think others might find useful, or which might have some interesting ideas for other to develop their own items. I have created a sample items compendium of these which you are free to use in any way you want. The warning is that whilst they work in my game, they may not in yours and there is no certification that they are fit for purpose. Feel free to try them and if they work for you great, if not make them better and share with the community - I am always happy to receive suggestions for inclusion. I try to add a version number to items to indicate the midi-qol version in which they were updated. You don't have to keep the version number in your game.
 
-[TOC]
-
-# Changelog
-https://gitlab.com/tposney/midi-qol/-/blob/v11.6/Changelog.md
-
-# Symbiotic Modules
-I don't spend a lot of time examining all of the modules that are written (and there are hundreds) so it is almost certain that other modules can substitute for the Highly Recommended/Good to Have just as well. If your favorite module is not in the list, it probably means I just don't know about it, so don't take the absence of a module from this list as a negative - it simply reflects my ignorance.
-
-## Required Modules
-You have to have these, period.
-* **DAE**
-* libwrapper
-* socketlib
-
-## Almost Required
-You can probably survive without these but midi pretty much assumes they are installed.
-* **Times-up** - for automated expiry of effects. If you don't use combat expiry then you can use about-time instead.
-* **Simple Calendar** - to manage the game clock
-
-## Highly Recommended
-* **Active Auras** - works well with midi/dae and some of the sample items require it.
-* **Automated Animations** - If you have the **jb2a** module this will automatically add lots of animations to spell/weapon effects.
-* **Token Magic** - lets you add some spiffy graphical effects to spells.
-* **SmallTime** - to make time advancement easy.
-* **Effect Macros** provides another way to trigger behaviour when an effect is applied, combat updates and so on. Allows for more complex over time type effects via macros. The down side is that it does not include all of the midi data that onUseMacros get, but you can use flags.midi-qol...., flags.dae to set some of the values you might need
-
-## Good To Have
-* **Active Token Lighting.** Allows tokens to emit light
-* **DFreds Convenient Effects** for making custom effects (not replacing the system's status effects anymore though)
-* **Dice So Nice.** if you like 3d dice rolling it's pretty much the only choice.
-* **Levels.** if you are doing anything with height.
-* **Levels - Volumetric Templates**
-* **Monks Token Bar** to manage saving throws
-* **Alternative Token Cover**, **Simbul's Cover Calculator** or **Levels Auto Cover** enables the automatic calculation of cover bonus for 1/2, 3/4 cover.
-* **Perceptive** or **Stealthy** to offer some extra support of hiding and visibility of tokens in such cases.
-
-# (In)Compatibilities? ##
-As already mentioned I don't look at lots of modules, so there will be others that do/don't work with midi. As they come to my attention I'll try and update the list.
-
-## Dice So Nice
-Midi generally works with dice so nice, but the interactions are more complicated with the merge card.
-
-## Monks Token Bar
-Midi-qol can use Monk's Token Bar to roll saves. **Update** adv/dis advantage for magic resistance/concentration now work with MTB.
-
-## Convenient Effects
-Midi supports the application of Convenient Effects spell/item effects (configuration setting - Apply Convenient Effects) and matches those by name. For example, if you cast the spell Bless midi will see if there is a convenient effect "Bless" and apply it to any targets that were hit by the spell.
-
-If you have apply convenient effects set and use items from the with DAE effects, **you will get a double up of the effect**. You need to choose how you want the item to behave, if using convenient effects, delete the DAE effects. The double up problem is intentional, since you might wish to augment the Convenient Effect definition with your own extra effects on the item. 
-
-If you generally use hand crafted effects I suggest setting apply convenient effects to false and then enabling convenient effects on an item by item basis (using the setting below).
-If you generally use convenient effects you would disable the convenient effect for the items that you want to use from DAE hand crafted effects.
-
-There is an additional check box available on the item sheet, for items that have corresponding convenient effects. The check box reverses the "apply convenient effects setting" for that item. If you have "auto apply convenient effect" set to true, the check box will disable the auto application for that one item. Similarly, if you have "auto apply convenient effect" set to false, the check box will enable the auto application for that one item. 
-
-## Levels
-- Midi-qol will use the levels wall collision detection for its distance calculations/LOS calculations.
-
-## levelVolumetricTemplates
-- Midi-qol will use levels volumetric template target calculations if installed.
-
-## Ready Set Roll
-**Not** compatible with midi-qol.
-
-## Magic Items
-For the most part the system on version 4 of dnd5e has made this kind of modules redundant. Use Cast activities instead.
-
-## Cautious GM
-Midi-qol breaks the blind chats by hidden GM feature of cautious GM.  
-
-## Chat Portraits
- If using Chat Portraits, the changes made by midi-qol to the token/actor name in chat cards are overwritten/lost. Choose which sort of highlighting you want - only one will work. Otherwise, all seems to work.
-
-## Item Macro
-No more needed, as DAE has its own macro editor that is preferable.
-
-## Warpgate
-**Should NOT be used with version 12 and higher of Foundry!**
-
-## DDB Game Log.
+### DDB Game Log.
 DDG Game Log sends rolls from dnd beyond to foundry. If DDB Game Log is enabled in the optional settings section of midi, making an attack roll (or damage roll if there is no attack roll) will trigger a midi-qol workflow for the attack. Hits will be checked, saving throws asked for and damage applied as per the rest of the midi-qol settings, except that midi will wait for dnd beyond and will resolve when the dnd beyond roll is made.
 
 You can run mixed games with some/all players/monsters on dnd beyond and some on foundry only. It's really up to you. 
@@ -150,138 +90,8 @@ Things to keep in mind:
 * Midi will look only at the foundry data, so it is up to you to keep things synchronised between the two.
 * Effects that increase attack bonus/damage dealt (when applied in foundry) will have no effect on attack/damage rolls made on DND Beyond. Midi **will** take into account effects that change AC (when checking hits), damage resistance, etc. when applying damage.
 
-## Advantage Reminder for dnd5e
-If you don't fast-forward rolls this does a good job of highlight the default advantage/disadvantage/critical status of a roll.  
-Reminders also lets you highlight when a saving throw might meet advantage which midi can't process (e.g. advantage on poison saves).  
-Thanks to @kaelad for highlighting a midi problem, as of 0.9.11 midi is compatible with Advantage Reminder for attack and damage rolls.
 
-# Short Guide to configuration settings
-The heading says short, but it really isn't.
-
-
-## Workflow settings
-* **Speed Item Rolls** 
-Poorly named, but historical, speed item rolls let you configure how the ctl/alt/shift keys work.
-
-If speed rolls are off, all of the ctrl/alt|meta/shift keys and roll behaviour are the same as in core. There is one additional feature: if you click on a damage button in chat, CTRL+ALT click will use the critical/normal hit status from the midi-qol roll data.
-
-If speed rolls are enabled you need to assign the keys yourself.
-If you enable speed ability rolls as well, your key mappings will apply to ability check, save and skill rolls as well.
-
-* advantage key modifier, defaults to Alt/Meta
-* disadvantage key modifier, defaults to Ctrl
-* versatile key modifier, defaults to Shift.
-* critical damage modifier, defaults to Alt/Meta.
-* fast-forward key (turn any attack or damage roll into a fast-forwarded or disable auto fast-forward if set) advantage+disadvantage.
-
-If you have speed item rolls enabled **Caps-Lock** behaves as if advantage & disadvantage are both pressed, which will invert the fast-forward automation setting for rolls. 
-
-If you assign a key multiple meanings the behaviour is going to be confusing at best.
-
-## Display
-* **Card styles** Midi-qol supports two options for item/attack/damage/save rolls. The Merge card combines all of those rolls into a single card. If Merge card is disabled you will get a separate chat card for each roll, which is the default dnd5e look and feel. The condensed Merge card simply puts attack and damage next to each other to conserve a bit less space. The merge card is recommended.
-* **Show Item details in chat card**. You can configure whether the item details are included in the chat card. If disabled, the item description is not added to the card, you can configure which items have the info displayed. If enabled, you can use the dnd5e setting to choose if it is expanded or hidden when displayed. 
-* **Chat cards use token names**. If the field is blank actual actor/token names will be used in the chat card, hits/saves display for non-GMs. If set to a string the actual names will be replaced in the chat cards with the string. This feature is not a replacement for Combat Utility Belts hide names feature, rather it addresses those fields that CUB does not know about. For full hiding of names on cards and the tracker you need to use CUB in conjunction with midi-qol.
-* **Chat cards use token name** By default chat cards are sent with the name of the actor (i.e. "Orc"). If enabled, the name of the token will be used instead (i.e. "Orc with a terrible limp").
-* **Hide Roll Details** There are several settings, hide roll formula, hide all details, d20Attack + hide roll formula, show d20 attack roll only amongst others. Some only work with the merge card.
-
-## Targeting
-Almost everywhere midi-qol uses the **targeted** tokens to apply hits/saves/damage not **selected** tokens. Targeted tokens have 4 arrows pointing at the token and selected tokens have a box around them.
-
-* **Auto target on template draw** If a spell/feature has an area effect template then enabling this setting will auto target (for later damage application) all tokens inside the template once placed. Also, the roll will not progress (i.e. roll saves or apply damage) until the template is placed. If **"walls-block"** is selected then any wall between the template origin and the token will block the targeting. There is an additional setting **"Use DF QoL"** which requires the DF-QOL module to be installed and active
-* **Auto target for ranged spells/attacks** If the item specifies a ranged target with a target type of creature/enemy/ally then all tokens within range of the caster will be auto targeted when the effect is cast. “enemy/ally” are enemies/allies of the caster. 
-* **Auto roll attack**, **Auto roll damage** and **Auto fast-forward rolls**. The auto roll attack and damage settings tell midi-qol to start an attack roll or damage roll if there is one. The auto fast-forward settings determine if the advantage/disadvantage and/or critical/normal dialogs are shown or suppressed. Damage can be set to “Attack Hits”, which will roll damage only if the attack roll was sufficient to hit the target. These are settable on the GM/Player tabs.
-* **Require targets to be selected before rolling** It is incredibly common in my games that players forget to target before starting the roll. This setting will not allow them to roll if they have not selected a target and one is needed. (Auto-target spells - like a fireball - are not affected by this setting.)
-
-## Saving Throws
-* **Auto Check Saves** Set this to “None” if you wish the players or GM to be responsible for rolling and evaluating saving throws.  (If you want only one group to roll manually and the other to roll automatically, set this to “None” and make appropriate choices for the “Prompt Players to Roll Saves” and “Prompt GM to Roll Saves” settings).  Otherwise, set this to control the visibility of saving throws that will be automatically rolled and evaluated for each targeted token.
-  * Save - all see results. Saves are rolled and who saved/failed to save is visible to all users.
-  * Save - only GM sees. Saves are rolled and the save/fail display is only visible to the GM.
-  * Save - All see results + Rolls. Normally the NPC rolls are hidden; this option shows the roll chat cards to all players.
-* **Prompt Players to Roll Saves** If "None" set the module will automatically roll all saves.  If set to another value, the system will prompt the player to roll their save and wait up to **Delay before rolling** seconds before auto rolling the save for them. You can also specify Monks Token Bar for saves. Monk's token bar rolls do not support setting of advantage by midi-qol.
-  * Chat Message. If selected, an impacted player will receive a whisper in chat prompting them to roll a saving throw.  The module will assume that the next saving throw in the chat stream from this player was the requested roll and evaluate it.  
-  * Let Me Roll That For You.  If selected (and LMRTFY is installed and enabled), midi-qol while use LMRTFY to prompt the player who controls the target (or, if there is none, a randomly chosen player with ownership rights to the target) to make the roll.  The specific roll details are passed to LMRTFY and multiple rolled (i.e. more than one spell requiring a save) will be correctly allocated.
-  * Monks Token Bar. If selected (and Monks Tokenbar is installed and active) characters with a logged in player owner will be added to a monks token bar saving throw dialog. Completing the roll from the dialog will be used as the save. Monk's token bar rolls do not support setting of advantage by midi-qol.
-* **Prompt GM to Roll Saves** Set this to “Auto” to have midi-qol automatically roll and evaluate NPC saving throws on behalf of the GM.  Set to “Let Me Roll That For You” to instead have the LMRTFY module prompt the GM for NPC saving throws. You can also use Monks Token Bar saving throws.
-* **Display Saving throw DC**. Determines if the saving throw DC is displayed to the players and on the chat cards. If unchecked, saving throws will display on the chat card with the value replaced by “??”. 
-
-**Saving Throw Multiplier**
-You can ignore this section until you find spells/weapons that don't do what you'd expect.
-TL;DR: If you are just using standard items you can just leave things at the default and most saves will do 1/2 damage as you'd expect, monsters (like a giant spider) will (if Roll Other Damage is enabled) do base weapon damage and have a save applied to the bonus poison damage.
-  * There is a config setting, default save multiplier (defaults to 0.5). If there are no special overrides then a saving throw will do 
-    `rolled damage * defaultSaveMultiplier` damage. When set to 0.5 saving against the attack will do 1/2 damage, like most cases for dnd.
-  * There are a number of ways to override the default multiplier.
-  * If the item description includes the text "no damage on save" (or the localized equivalent) then a save will do no damage.
-  * If the item description includes the text "full damage on save" (or the localized equivalent) then a save will still do full damage. You can use this for attacks that do damage, and have a save for a condition being applied, like poisoned and so on.
- *  `flags.midi-qol.potentCantrip`, if set cantrips cast by the actor will do 1/2 damage instead of no damage. Overrides any other damage multiplier settings.
-  * If the setting "search spell description" is set, items with the text "half as much damage" (or the localized equivalent) will do 1/2 damage on a save ignoring the default multiplier. If the text is not found the save will use the defaultSaveMultiplier.
-  * For weapons (only) there are weapon properties for 1/2, full or no damage saves. These properties override any other settings. If not present the save multiplier will be worked out as above. 
-  * For weapons (only) the save multiplier applies to the whole damage roll **UNLESS**...
-    * You have enabled "Roll other damage on mwak/rwak" (which is intended specifically to support attacks that have base damage + extra damage with a save - think spider bite). If the weapon has a save specified **AND** the weapon has an Other Damage formula, the saving throw multiplier applies to the Other damage and the base damage is applied as full damage.
-    * Because of the way the SRD monsters have been set up, (i.e. extra damage as versatile damage and the versatile property not set) the versatile formula will be treated as Other Damage if there is no Other Damage formula and the weapon property "versatile" is not set. 
-
-For those who have a lot of weapons set up with a save and want the default damage on save to be full damage (which is what a previous version enabled when search spell description was enabled) just edit the items and set the save to full damage on save (preferred) or set the default save multiplier to 1.
-
-## Hits
-You can enable auto checking of hits. Fumbles automatically miss and criticals automatically hit. As GM you can mouse over the name of the hit target to highlight the token and click to select it. This is useful if you are not auto applying damage, since you can do all the damage application from the chat log, by clicking on the targets name, then clicking on the appropriate damage button.
-
-## Damage
-* **Auto apply damage to target**
-  * Yes: Damage is auto-applied to targeted tokens (**or self if self-target is specified**) that were hit or did not save, or that saved and take half damage.
-  * "+ damage card": If included, a chat card is sent to the GM which includes each target that had damage applied with details of the damage, any immunities/resistances and some buttons. The first button sets the target hit points based on the calculation displayed. The dropdown controls how the damage is applied, "Calc" means take into account damage immunity/resistance etc. multipliers change the amount of damage applied but **do not** take into account resistance/immunity.
-
-
-* **Apply Damage immunities** Midi-qol will use the target’s resistance/immunity/vulnerability settings for each type of damage in the attack and calculate how much of the damage applies. If "+physical" is set midi-qol will look at the item that did the attack to see if the damage is magical or not according to the following:
-  * If the item is:
-    * not a weapon: the damage is assumed to be magical
-    * a weapon has an attack bonus > 0: it is assumed to be magical
-    * a weapon has the "Magical" property set: attacks are considered magical. (The magical property for weapons only exists if midi-qol is enabled)
-
-You can configure how much resistance reduces damage or how much vulnerability increases damage. Defaults to the dnd setting of 0.5 and 2. These figures multiply the damage done of the appropriate type by the multiplier
-* **Auto apply item effects to target** If the item had dynamic effects which are currently active as specified and the target was hit and did not save; OR did not save; OR there are no attacks or saves: dynamic effects is called to apply the active effects to each such target. This includes self if a self target is specified.
-
-### **Roll Other formula for rwak/mwak** **Roll Other formula for spells**
-
-Roll Other Damage has 3 options,
-- **"off"**: never auto roll the other damage,
-- **"ifsave"**: roll the other damage if a save is present (this is the same as the earlier version of this setting)
-- **"activation"**: if the item's activation condition evaluates to true then roll the Other damage even if no save is present. "activation" also requires that the item attunement not be "Attunement Required", i.e. dragon slayer weapons do no extra damage if they are not attuned.
-
-Most creature attacks with extra damage (poisonous bite) equate to the ifSave setting.
-Magic items that roll additional damage if a particular condition is true (slayer weapons) require the "activation" setting.
-
-midi will evaluate the activation condition as an expression, providing, the actor, item and target actor's (@target) roll data. For example:
-```
-    target.details.type.value.includes("dragon")
-```
-will only roll if the target has a type of dragon. 
-
-The evaluation of conditions has changed, You do not need to put @ in front of fields, but still can. If the field is a a string then @ fields must be enclosed in quotes, i.e. "@target.details.type.value".includes("dragon").
-
-
-Specifically midi will populate the expression data with:
-* casting actor, anything from actor.system (direct via @field, e.g. @attributes...),
-* casting actor, anything from actor.flags (via @flags....),
-* anything from item.data.data (via @item.damage.),
-* anything from the target.actor.system, via (@target.abilities etc),
-* anything from the workflow itself (via @workflow.attackRoll etc).
-
-**An empty activation condition** will evaluate as true. If you don't want a specific weapon to roll Other Damage set Activation Condition false.
-
-You can add the above condition to the SRD slayer items to make the bonus damage automated based on target type.
-
-If the weapon rolling the attack has ammunition AND the weapon does not have its own Other Roll defined, the Other activation condition, Other roll and saving throw from the ammunition will be used instead of the attacking weapon. (Arrow of Slaying).
-
-There is a new weapon property "Crit Other Roll" which when set means that the "Other Damage" roll will be rolled as critical if the base roll is critical. Previously Other Damage would never roll critical damage. You can decide if your Arrow of Slaying can do critical damage or not.
-
-**Mark Wounded When damage falls below %**. (Requires Convenient Effects)
-You can specify a percentage (0 disables) so that when the HP of a token falls below X% the Custom Convenient Effect wounded will be applied to the target. This is useful if you are not showing the HP status bar to players so they get some idea if a baddie is hurt or not. You must create the Wounded condition (Wounded is a localisable string so it may vary for you game).
-
-If you are not using convenient effects you can set this up much more flexibly in Combat Utility Belt using Triggler.
-
-**Add defeated when HP === 0**. The dnd5e defeated condition will automatically be added to the token if it's hp fall to 0.
-
-## Custom Sounds Complete rewrite as of v0.9.29
+### Custom Sounds Complete rewrite as of v0.9.29
 Existing custom sounds will be disabled.
   
   Custom sounds apply to both merge and non-merge cards.
@@ -314,7 +124,7 @@ Existing custom sounds will be disabled.
     
 ![Custom Sound Settings](pictures/newSounds.png)
 
-## Other QOL settings
+### Other QOL settings
 * **Add attack damage buttons to the inventory** If enabled then a set of buttons (to bypass the midi-qol behaviour) are added to the description drop-down in the inventory.
 * **Fast-forward ability rolls** If enabled, allows you to bypass the advantage/disadvantage question when rolling ability saves/checks; ctrl/alt are supported.
 * **Critical Damage Type** adds options for how critical damage is treated. Only in core 0.7+.
@@ -326,58 +136,40 @@ Existing custom sounds will be disabled.
 * **Players control invisible tokens** 0.7.1+. If enabled then players can both see and control tokens they own that are hidden.  Also, any token they own will **always** appear on their map. **Deprecated** Please use the excellent Your Tokens Visible instead.
 * **Force Hide Rolls** If enabled then private/blind/gm only rolls will only appear on the recipient’s chat log.
 
-## Optional Rules
-Midi supports various optional rule settings that can be useful.
-* **Incapacitated Actors can't make attacks**
-If a token has 0 HP, they cannot attack.
-* **Invisible/Hidden Token attack with advantage**
-If a token is invisible/hidden (CUB/Conditional Visibility) it attacks with advantage.
-* **Attack removes hidden/invisible**
-Remove invisible/hidden when making an attack.
-* **Check Weapon range when attacking**
-Check the range of the weapon when doing an attack. Impose disadvantage for range > short range. Fail if range is > max range.
-* **Include Height in range calculation**
-Take token height differences into account when checking range.
-* **Ranged attacks when Foes are closer than X have disadvantage**
-If you make a ranged attack when a foe is less than X feet/meters from you the attack is made at disadvantage.
-* **House rule for Damage Reduction**
-Choose how to combine Damage Reduction.
-* **Critical/Fumble for saving throws**
-Critical saves always succeed, fumbled saves always fail.
-* **(House Rule) Ranged attacks at foes with nearby allies have disadvantage**
-If making a ranged attack at a target whose size is less than that specified and there is an ally within 5 feet of the target the ranged attack is made with disadvantage. (You want to avoid hitting your friends but really big targets can still be hit safely).
-* **Active Defence**
+
+### Active Defence
 Experimental: Support for the Active Defence variant rule. Enable via optional rules setting Active Defence.
 Can work with LMRTFY.
-  * Active defence has attacked players roll a defence roll instead of the GM rolling an attack roll, which is meant to keep player engagement up, see [Unearthed Arcana: Variant Rules](https://media.wizards.com/2015/downloads/dnd/UA5_VariantRules.pdf).
-  * If active defence is enabled, then when the GM attacks instead of rolling an attack roll for the attacker, the defender is prompted to make a defence roll. The DC of the roll is 12 + the attackers bonus and the roll formula is 1d20 + AC - 10, which means the outcome is identical to an attack roll but instead the defender rolls. This differs from the UA article, because its math is off, see [this discussion](https://rpg.stackexchange.com/questions/69064/is-unearthed-arcana-players-make-all-rolls-correct/145293).
-  * As released, this had identical behaviour to the standard rolls with the exception that each player effectively has a individual attack roll made against them.
-  * Advantage/disadvantage are correctly processed with attacker advantage meaning defender disadvantage.
-  * A fumbled defence roll is a critical hit and a critical defence roll is a fumbled attack, midi checks the attacking weapon for the correct critical hit/fumble rolls.
-  * Timeout for player interaction is taken form the saving throw player timeout.
-  * Display of the defence roll DC on the defenders prompt is taken from the saving throws display DC setting.
-  * Issues: There is only one critical result supported, so if multiple targets are attacked they will all have critical damage rolled against them or none. (future might support individual results)
-  * There is only 1 advantage/disadvantage setting applied, that of the first defender (same as current midi-qol). Future enhancement will use per character advantage/disadvantage settings.
-  * Only works for mwak/rwak/rsak/msak.
-* **Challenge Mode Armor Class.**
-  * Implements the Challenge Mode AC rules, characters have an Evasion Class (EC) and an Armor Resistance (AR). In the base mode your EC is 10 + the dex mod applied to your AC (based on armor type used) + any shield AC you have.  
-  If an attack roll:
-    * is < your EC the attack misses.
-    * is >= your EC and <= your AC, it is a hit, but it did not penetrate your armor, so the damage you take is reduced by your armor resistance. 
-    * is > your AC the attack hits normally.  
-  * Your AR is equal to your AC - applied dex mod, i.e. the part of your AC that is not nimbleness.
-  * This means that tanks, high armor class but weighed down take more glancing damage, but that damage is mitigated by the AR.
-  * The logic of the system is that part of hitting is having the blow land  on the target, which is measured by the EC which rewards nimble characters and secondly damage reduction done when a glancing blow does not get "through the armor" and so the damage is reduced by the Armor Resistance.
-  * Some informal testing suggests this is badly weighted against tank classes once they reach a high enough level to be fighting tough opponents doing high levels of damage, since many of the EC hits will get through the AR but there is no compensation for taking this extra damage.
-  * The **house rule** version makes the following changes.
-    1. The damage from an EC hit (i.e. greater than EC and <= AC) is scaled, so a tank with 8 points of armor reduction wil take 1/9. 2/9, ... 9/9 of the rolled damage when an EC hits for EC, EC +1, EC +2 ... EC+8
-    2. The damage reduction applies for all hits except critical hits.
-  * Some options for Challenge Mode.
-    - if you give an actor the following effects
-      system.attributes.ac.EC OVERRIDE 0 priority 0
-      system.attributes.ac.AR OVERRIDE 0 priority 0
-    midi's internal calculations of EC/AR won't apply and you can choose how to set it yourself via active effects. If you wanted a difference approach to how EC/AR are apportioned from armor class for example.
+* Active defence has attacked players roll a defence roll instead of the GM rolling an attack roll, which is meant to keep player engagement up, see [Unearthed Arcana: Variant Rules](https://media.wizards.com/2015/downloads/dnd/UA5_VariantRules.pdf).
+* If active defence is enabled, then when the GM attacks instead of rolling an attack roll for the attacker, the defender is prompted to make a defence roll. The DC of the roll is 12 + the attackers bonus and the roll formula is 1d20 + AC - 10, which means the outcome is identical to an attack roll but instead the defender rolls. This differs from the UA article, because its math is off, see [this discussion](https://rpg.stackexchange.com/questions/69064/is-unearthed-arcana-players-make-all-rolls-correct/145293).
+* As released, this had identical behaviour to the standard rolls with the exception that each player effectively has a individual attack roll made against them.
+* Advantage/disadvantage are correctly processed with attacker advantage meaning defender disadvantage.
+* A fumbled defence roll is a critical hit and a critical defence roll is a fumbled attack, midi checks the attacking weapon for the correct critical hit/fumble rolls.
+* Timeout for player interaction is taken form the saving throw player timeout.
+* Display of the defence roll DC on the defenders prompt is taken from the saving throws display DC setting.
+* Issues: There is only one critical result supported, so if multiple targets are attacked they will all have critical damage rolled against them or none. (future might support individual results)
+* There is only 1 advantage/disadvantage setting applied, that of the first defender (same as current midi-qol). Future enhancement will use per character advantage/disadvantage settings.
+* Only works for mwak/rwak/rsak/msak.
+##Challenge Mode Armor Class.**
+* Implements the Challenge Mode AC rules, characters have an Evasion Class (EC) and an Armor Resistance (AR). In the base mode your EC is 10 + the dex mod applied to your AC (based on armor type used) + any shield AC you have.  
+If an attack roll:
+  * is < your EC the attack misses.
+  * is >= your EC and <= your AC, it is a hit, but it did not penetrate your armor, so the damage you take is reduced by your armor resistance. 
+  * is > your AC the attack hits normally.  
+* Your AR is equal to your AC - applied dex mod, i.e. the part of your AC that is not nimbleness.
+* This means that tanks, high armor class but weighed down take more glancing damage, but that damage is mitigated by the AR.
+* The logic of the system is that part of hitting is having the blow land  on the target, which is measured by the EC which rewards nimble characters and secondly damage reduction done when a glancing blow does not get "through the armor" and so the damage is reduced by the Armor Resistance.
+* Some informal testing suggests this is badly weighted against tank classes once they reach a high enough level to be fighting tough opponents doing high levels of damage, since many of the EC hits will get through the AR but there is no compensation for taking this extra damage.
+* The **house rule** version makes the following changes.
+  1. The damage from an EC hit (i.e. greater than EC and <= AC) is scaled, so a tank with 8 points of armor reduction wil take 1/9. 2/9, ... 9/9 of the rolled damage when an EC hits for EC, EC +1, EC +2 ... EC+8
+  2. The damage reduction applies for all hits except critical hits.
+* Some options for Challenge Mode.
+  - if you give an actor the following effects
+    system.attributes.ac.EC OVERRIDE 0 priority 0
+    system.attributes.ac.AR OVERRIDE 0 priority 0
+  midi's internal calculations of EC/AR won't apply and you can choose how to set it yourself via active effects. If you wanted a difference approach to how EC/AR are apportioned from armor class for example.
 
+## Quick Settings
 ### Settings for full auto mode:
 If the above was discussion was all too tedious here are the settings I use.
 * Speed Item Rolls on - if you want to be able to shift/ctrl/alt click.
@@ -466,9 +258,9 @@ Another collection of settings, designed to achieve these goals:
 * Advantage=alt, disadvantage=ctrl|cmd, critical=alt, versatile=shift
 * As of the time of this writing (March 8, 2021) I am using ALL the optional rules except that last one (labeled “House Rule”).
 
-# Some Features
+## Some Features
 
-## **Roll Statistics.**
+### **Roll Statistics.**
   * Most of the time when an attack roll is made or a spell is cast that does damage, the actual attack and damage rolls are recorded. This is recorded for every unique actor, on both a session and lifetime basis, as well as recording the same data for each item used by the actor on a session basis. So you might be able to answer questions like "is my longsword better than my dagger given the foes we are fighting?" The data kept is
   * #attack rolls
   * #criticals
@@ -485,29 +277,11 @@ Another collection of settings, designed to achieve these goals:
   * MidiQOL.gameStats.showStats() display a window displaying the statistics kept. Players only see their own characters.
   * MidiQOL.gameStats.statData returns the current statData (have a look and see what is stored)
 
-## Concentration Checks
-support for **concentration automation**. The is dependent on DAE being installed and of the right version and **requires** CUB concentration automation to be disabled. Midi will work with Convenient Effects, Combat Utility Belt or use its own effect for concentration.
-  * Enabled via config setting (near auto check saves)
-  * Get user confirmation before casting a second concentration spell while the first is still active. First concentration is removed if you proceed.
-  * Taking damage causes a concentration check, failure removes concentration.
-  * If the spell that caused concentration expires concentration is removed
-  * Concentration can be removed from the token effects HUD and will work as expected.
-  * If concentration is removed any effects due to the spell on any tokens (self + targets) are removed.
-  * If concentration is removed any measured templates associated with the spell are removed.
-  * No changes are required to any spells/effects for this to work, it keys off the concentration attribute in the spell details.
-  * Support for concentration for non-spells. Put "Concentration" (or the localised equivalent) in the activation conditions field and using the item will cause concentration to be added to the caster and any active effects applied by the item will be linked to concentration.  
 
-Midi-qol will attempt to use Convenient Effects, then Combat Utility Belt, then an internal concentration effect (in that order) when applying and removing concentration.  
-* Convenient Effects: No Additional configuration is required.
-* Combat Utility Belt. Since in CUB you need to identify which of the conditions (in condition lab) is the concentration effect (and midi uses that mapping), you need to make sure that the concentration name is set correctly in CUB's concentrator to match the concentration effect in condition lab.
-* For the internal effect no additional configuration is required.
-
-Recently (Nov 2021) CUB supports its own system for removing concentration checks on failed saves so the two options midi/CUB are feature equivalent - just choose the one you prefer.
-
-## Magic Resistance
+### Magic Resistance
 If the target token has the SRD feat "Magic Resistance" or a custom damage resistance trait equal to exactly magic-resistant the auto rolled saving throws against magic effects (item type spell) with be rolled with advantage. This is really intended for NPCs with magic resistance to have their auto rolled saving throws made with advantage.    
 
-## Special Active Effect Expiry
+### Special Active Effect Expiry
 * [Requires DAE 0.2.25+]  Effects support additional expiry options (which apply in addition to the normal duration based expiry) (available on the DAE effect duration screen) that can be chosen:
   * 1Attack: active effects last for one attack - requires workflow automation
   * 1Action: active effects last for one action - requires workflow automation 
@@ -524,7 +298,7 @@ If the target token has the SRD feat "Magic Resistance" or a custom damage resis
   * isSkill.acr, isSkill.per....: If the character made a skill check for the specified skill the effect is removed.
 All of these effects expire at the end of the combat if no other duration is specified.
 
-## Reactions
+### Reactions
 If the config settings for reaction checks is enabled midi will check a target that is hit by an attack for any items/features/spells that have an activation type of reaction and prompt the target if they want to use any of their reactions, which will then initiate a midi workflow for that item/feature/spell targeting the attacker (so hellish rebuke for example works). 
 
 Reaction spells must be prepared (if preparation is required for the spell) and you must have a spell slot of the appropriate level available for the spell to be included in the list of possible reactions.
@@ -567,7 +341,7 @@ To help macro writers creating reaction items, args[0] contains an additional fi
   - **workflowOptions.damageDetail:** the detail of the damage done which is an array {damage: number, type: string}. Where the string is piercing, fire etc.
   - Be aware when writing macros that if the item is rolled from the character sheet these fields will not be populated.
 
-## Item description text and saving throws
+### Item description text and saving throws
 * **"no damage on save"** (or the localized equivalent) in the item description means targets that save will take no damage. Lots of cantrips are like this. Most cantrips are already in a list that midi maintains automatically, but if your favorite spell is not in the list you can the text to the description.
 * **"full damage on save"** (or the localized equivalent) in the item description means targets that save will take full damage. This is mainly useful for attacks that do full damage on a hit and have a save to avoid the application of a condition, like the mace of disruption and the frightened condition.
 * **"auto fail friendly"** (or the localized equivalent) in the item description then tokens with the same disposition as the caster will auto fail their save. Useful for some spell effects where you don't want friends to save. Also available as a per item property (in the midi properties).
@@ -575,7 +349,7 @@ To help macro writers creating reaction items, args[0] contains an additional fi
 
 * If the midi-qol setting **"check spell text"** is enabled and the text "half damage on save" appears in the item description then saves will do 1/2 damage no matter what the default save modifier is set to. When set this means you can change the default modifier to whatever you like for various reasons.
 
-## flags.midi-qol 
+### flags.midi-qol 
 Midi-qol supports a lot of flags values that alter how attacks/casts are rolled. They are supported by any modules that use item.rollI(), item.rollAttack(), item.rollDamage() or actor.useSpell() [the standard dnd5e rolls]. Usually you would apply these via active effects.
 
 There is a handy spreadsheet that has a table of flags plus explanation thanks to (dstein766) https://docs.google.com/spreadsheets/d/1Vze_sJhhMwLZDj1IKI5w1pvfuynUO8wxE2j8AwNbnHE/edit?usp=sharing
@@ -705,7 +479,7 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
 
 Values for the optional roll bonus flags include a dice expression (added to the roll), a number, reroll (rerolling the roll completely) reroll-max, reroll-min, reroll-kh (reroll with max dice, min dice, or reroll and keep the higher of the original/new roll) or success which changes the roll to 99 ensuring success.
 
-## Enhanced traits.dr/di/dv
+### Enhanced traits.dr/di/dv
 * Available from the special traits actor settings, or via active effects.
 * As well as supporting the dnd5e damage resistance/immunity/vulnerability settings (including the bypass settings) midi-qol provides some additional damage types that can be resisted.
   - healing/temp healing setting this will reduce/enhance the effect of healing on the character.
@@ -713,12 +487,12 @@ Values for the optional roll bonus flags include a dice expression (added to the
   - Magical damage/Non-magical damage- resistance/etc to damage defined as magical (see the require magical property setting in the workflow tab and the per item property magical damage)
   - Spell Damage - resistance etc to damage caused by a spell item.
 
-## Spell Sculpting: flags.midi-qol.sculptSpell and flags.midi-qol.carefulSpell
+### Spell Sculpting: flags.midi-qol.sculptSpell and flags.midi-qol.carefulSpell
 If a spell caster with flags.midi-qol.sculptSpell set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and they take no damage from spells that would normally do 1/2 damage on a save. So if casting a fireball into an area with allies, target the allies before casting the spell and they will take no damage.
 If a spell caster with flags.midi-qol.carefulSpell set to 1, casts an area of effect (template or ranged) Evocation spell, any tokens targeted before casting the spell will always save against the spell and damage as if they had saved (no matter what they roll).
 
-## flags.midi-qol.OverTime (Overtime effects)
-### Overtime Activity Effects (MidiQOL 12.4.28+)
+### flags.midi-qol.OverTime (Overtime effects)
+#### Overtime Activity Effects (MidiQOL 12.4.28+)
 
 Any midi activity may be designated as an overtime activity (in fact any activity can be used, but it may not behave as you'd expect).
 There is a new midi effect flag, `flags.midi-qol.ActivityOverTime` (much like `flags.midi-qol.overTime`) which allows you to specify an activity to be called by either
@@ -745,14 +519,14 @@ Any activity can be chosen as a dependent activity, so you could for example sum
 I've not tested all activities as dependent activities, but save, check, damage and summon have been tested. Forward/Cast Activities are special cases that probably won't work as hoped - to be looked at.
 
 
-### Overtime effects (pre 12.4.28)
+#### Overtime effects (pre 12.4.28)
 Intended for damage over time effects or until save effects, but can do a bunch of things.
 ```
 flags.midi-qol.OverTime OVERRIDE specification
 ```
 where specification is a comma separated list of fields.
 
-  #### Overtime parameters
+  ##### Overtime parameters
   * `turn=start/end` (check at the start or end of the actor's turn) The only required field.
 
   * `label=string` - displayed on the relevant roll.
@@ -764,7 +538,7 @@ where specification is a comma separated list of fields.
 
   * `removeCondition=expression`, if present and evaluates to true the effect is removed after the rest of the processing.
 
-  #### Overtime rolls: 
+  ##### Overtime rolls: 
   the entire active effect will be removed when the roll exceeds the DC provided (or the effect duration expires).
   * `rollType=check/save/skill` (default save), roll an ability check, save or skill.
   * `saveAbility=dex/con/etc` prc/perception etc. The actor's ability/skill to use for rolling the saving throw. For actionSaves
@@ -778,7 +552,7 @@ where specification is a comma separated list of fields.
 
  * `damageBeforeSave=true/false` - true means the damage will be applied before the save is adjudicated (Sword of Wounding) and false means the damage will only apply if the save is failed. 
   
-  #### Overtime Damage:
+  ##### Overtime Damage:
   * `damageRoll=roll expression`, e.g. 3d6
 
   * `damageType=piercing/bludgeoning` etc. 
@@ -786,13 +560,13 @@ where specification is a comma separated list of fields.
 
   * `rollMode=gmroll/blindroll/publicroll/selfroll`, the rollmode will be applied to the overtime item roll.
   
-  #### Overtime Macros:
+  ##### Overtime Macros:
   * `macro=<macro to call>` - call a macro as part of the damage application stage, with available arguments the results of rolling the overTime item, which will include damage done, saving throws made etc., as if it were an OnUse macro of the Overtime item roll. These macros can be:
     * `world macros` using the name of the macro from your macro folder,
     * linked to the Item Macro of an Item by using `ItemMacro.ItemUUID`,
     * macros provided by modules in which case MidiQOL will `bind` the relevant arguments to that function, using for example `function.MidiQOL.log`.
 
-  #### Overtime hints and tips
+  ##### Overtime hints and tips
   * If the effect is configured to be stackable with a stack count, of say 2 and a base `damageRoll=3d6`, the damage will become `3d6 + 3d6`(for items like Longsword of Wounding or Devil's Glaive).
   * The most common use for overtime effects is damage over time effects. However you can include an OverTime effect with just a save can be used to apply any other changes (in the same active effect) until a save is made (Hold Person).
   * You can use @field references, e.g.
@@ -802,7 +576,7 @@ where specification is a comma separated list of fields.
   ```
   * There are several "traps" for use of @fields. If the effect is created on the actor via transfer effects or hand editing of the effect the @ fields refer to the actor which has the effect. See more [here](https://gitlab.com/tposney/midi-qol/-/tree/v11#overtime-using-fields)
 
-  #### Overtime Examples:
+  ##### Overtime Examples:
   *(non-transfer effects are the ones that are NOT set to "Transfer to actor on item equip")*<br>
   * Longsword of Wounding (Non-transfer effect, should have stackable set to "each stack increases stack count by 1")
   ```
@@ -818,22 +592,20 @@ where specification is a comma separated list of fields.
   StatusEffect OVERRIDE Convenient Effect: Paralyzed
   ```
 
-
-
-  #### OverTime Effects: Action Save.
+  ##### OverTime Effects: Action Save.
   There are quite a lot of effects that require a target to use its action to try and save against the effect. You can add `actionSave=true` which means overtime effects won't auto roll the save, rather it waits for the actor to roll an appropriate save when it is the actor's turn (just roll the save from the character sheet). This allows you to support "the character can use its action to save against the effect". Simply add `actionSave=true` to the overtime effect definition and MidiQOL will watch for saving throws on the actors turn (rather than rolling the save automatically) and if the type matches the overtime effect it will check the roll versus the saveDC and remove the effect if the save is successful.
 
-  #### OverTime effects: add/remove conditions.
+  ##### OverTime effects: add/remove conditions.
   It turns out that overtime effects have lots of applications. One that is not obvious is that you can use the overtime effect as a switch to turn on and off other effects. If you have one effect with multiple changes, one of which is an OverTime effect, they will ALL be applied and ALL removed on a save. Here's a Hold Person, which has an overtime effect for the save and a payload of applying the paralyzed status effect to a target.  
 
 ![Hold Person](pictures/HoldPerson.png)
 
-  #### MidiQOL.doOverTimeEffect
+  ##### MidiQOL.doOverTimeEffect
   MidiQOL.doOverTimeEffect(actor: Actor5e, effect: ActiveEffect, turnStart: boolean), which will perform the overtime processing for the passed effect, turnStart === true, do turn=start changes, false do turn=end changes.
 
  The effect does not need to be present on the actor to be processed.
  
-  #### Overtime using @fields.
+  ##### Overtime using @fields.
   If you are applying the effect via using an item, `@fields` are ambiguous, should they refer to the caster or the target? There are reasons to have both interpretations, an ongoing saving throw should refer to the caster, e.g. ```saveDC=@attributes.spelldc```. Regeneration has applyCondition=@attributes.hp.value > 0, which should refer to the target.
 
   Effects transferred via item usage, require DAE and use its evaluation to resolve the problem. Fields written as simple @ fields (``@attributes.spelldc``) ALWAYS refer to the caster.  
@@ -850,14 +622,10 @@ where specification is a comma separated list of fields.
   flags.midi-qol.Overtime  OVERRIDE  applyCondition=75 > 0
   flags.midi-qol.Overtime  OVERRIDE  applyCondition=@attributes.hp.value > 0
   ```
-### Overtime effects and macros. 
+#### Overtime effects and macros. 
   There are two ways to have a macro effect applied to a target when using Overtime effects.
   * The first is to have the macro as an additional change in an active effect (macro.execute/macro.ItemMacro). The macro as an additional change is called once when the effect is applied and once when it is removed (with args[0]==="on"/"off" respectively - the normal macro.execute/macro.itemMacro behaviour).
   * The second is as part of the overtime effect with `macro=some macro` as explained [above](https://gitlab.com/tposney/midi-qol/-/tree/v11#overtime-macros). The macro is called each turn with the results of the save/targets etc. (see OnUse Macro data for details).
-
-# Bugs
-probably many however....
-* Language translations are not up-to-date.
 
 # Notes for Macro writers
 For modules that want to call midi-qol it is easier than in minor-qol. Just call item.roll() and if you pass an event via item.roll({event}) you can have key accelerators. (the meanings of shift/ctrl/alt will be interpreted using the speed rolls settings)
