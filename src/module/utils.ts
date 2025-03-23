@@ -6264,11 +6264,11 @@ export function getAutoTarget(item: Item): string {
   return configSettings.autoTarget;
 }
 export function hasAutoPlaceTemplate(item) {
-  return item && item.hasAreaTarget && ["self", undefined].includes(item.system.range?.units) && ["radius", "squareRadius"].includes(item.system.target.type);
+  return item && item.hasAreaTarget && ["self", undefined].includes(item.system.range?.units) && ["radius", "squareRadius"].includes(item.system.target?.type);
 }
 
 export function activityHasAutoPlaceTemplate(activity) {
-  return activity && ["self", undefined].includes(activity.range?.units) && ["radius", "squareRadius"].includes(activity.target.template.type);
+  return activity && ["self", undefined].includes(activity.range?.units) && ["radius", "squareRadius"].includes(activity.target?.template.type);
 }
 
 export function activityHasEmanationNoTemplate(activity) {
