@@ -742,7 +742,7 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
       3. `ActivityUses.partialNameMatch.mace.super`
       4. `ActivityUses.exactNameMatch.Special Mace.Super Attack`
       5. `ActivityUses.Special Mace.Super Attack`
-* `flags.midi-qol.optional.NAME.countAlt`
+* `flags.midi-qol.optional.NAME.countAlt` a secondary entry that can be used to designate a different count that needs to be also available at the same time that the `.count` is being checked. For example, an Item that has uses and also needs a `reaction` to be available.
 * `flags.midi-qol.optional.NAME.ac`	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
 * `flags.midi-qol.optional.NAME.rollMode`, any additional rolls are to be made with the specifid roll mode. Can be useful to hide rolls from the players. Use one of `publicroll/gmroll/blindroll/selfroll` 
 * `flags.midi-qol.optional.NAME.macroToCall`, `ItemMacro` or `world macro name` executes a macro when the user opts in to use the optional bonus, with arguments being the same as in MidiQOL onUse macros.
