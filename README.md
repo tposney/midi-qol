@@ -702,7 +702,7 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
   You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
   - **ItemUses.field1.field2** - designate specific item's uses:
     - `<field1>`: can be one of the following:
-      - `identifier` (identifier is each item's special identification string, usually decided by the name you used when you initially created the item and can be seen in the I)
+      - `identifier` (identifier is each item's special identification string, usually decided by the name you used when you initially created the item and can be found by copying the UUID of the item and then in dev tools' console tab using `fromUuidSync("copied UUID").identifier`)
       - `partialNameMatch`
       - `exactNameMatch`
       - `exact item name` (for backwards compatibility only)
