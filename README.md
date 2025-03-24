@@ -658,23 +658,25 @@ Negative DR is not supported (i.e. to increase damage taken).
 
   The flags modify saving throw, ability checks and skill check rolls. min means that each dice of the d20 roll will be at LEAST value, max mean that the roll will be at MOST value. The value field must be numeric, you can force lookups by using ``[[@abilities.dex.value]]`` for example
 
-* f  ``flags.midi-qol.range.mwak/rwak/etc/all ADD expression``
-  ``flags.midi-qol.long.mwak/rwak/etc/all ADD expression``
-  - The expression will be evaluated and added to an item's range when checking range for the item.
-  - The expression can be negative which will reduce the range of the item, but the resulting range/long range will be at least 0.
-  - The expression can reference the item/actor, e.g. +(item.baseItem==="longbow" ? item.range.value : 0) to double the range of any longbows.
-  - if you want to restrict blinded actors to have a range of only 5 feet for all attacks add the following to your blind active effect:
-    ```flags.midi-qol.range.all ADD 5 - item.range.value``` and
-    ```flags.midi-qol.long.all ADD 5 - item.long.value```
-  - Alternatively you can add an effect with
-  ```flags.midi-qol.range.all ADD -(hasCondition("@actorUuid", "blind") ? item.range.value - 5 : 0)```
-  ```flags.midi-qol.long.all ADD -(hasCondition("@actorUuid", "blind") ? item.range.long - 5 : 0)```
+* flags for items range
+  - `flags.midi-qol.range.mwak/rwak/etc/all ADD expression`
+  - `flags.midi-qol.long.mwak/rwak/etc/all ADD expression`
+    - The expression will be evaluated and added to an item's range when checking range for the item.
+    - The expression can be negative which will reduce the range of the item, but the resulting range/long range will be at least 0.
+    - The expression can reference the item/actor, e.g. +(item.baseItem==="longbow" ? item.range.value : 0) to double the range of any longbows.
+    - if you want to restrict blinded actors to have a range of only 5 feet for all attacks add the following to your blind active effect:
+      - `flags.midi-qol.range.all ADD 5 - item.range.value` and
+      - `flags.midi-qol.long.all ADD 5 - item.long.value`
+    - Alternatively you can add an effect with
+      - `flags.midi-qol.range.all ADD -(hasCondition("@actorUuid", "blind") ? item.range.value - 5 : 0)`
+      - `flags.midi-qol.long.all ADD -(hasCondition("@actorUuid", "blind") ? item.range.long - 5 : 0)`
   
   NOTE: You cannot directly manipulate the items range with these flags, only a valued added to the item's range when midi checks that targets are in range.
   ADD/OVERRIDE/etc are applied to the flag string value (i.e 5 - item.range.value) rather than the item's range.
   
 ## Optional Bonus Effects
-Optional flags cause a dialog to be raised when an opportunity to apply the effect comes up (i.e. the player is hit by an attack).
+Optional flags cause a dialog to be created when an opportunity to apply the effect comes up.
+You can instead elect to force the effect's bonus when using the `.force` key explained later.
 
 ```
 flags.midi-qol.optional.NAME.<key> OVERRIDE specification
