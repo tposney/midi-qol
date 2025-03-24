@@ -676,7 +676,18 @@ Negative DR is not supported (i.e. to increase damage taken).
 ## Optional Bonus Effects
 Optional flags cause a dialog to be raised when an opportunity to apply the effect comes up (i.e. the player is hit by an attack).
 
+```
+flags.midi-qol.optional.NAME.<key> OVERRIDE specification
+```
+As you can have lots of entries that are relevant to one specific optional bonus, ALWAYS replace the `NAME` part of the key with a unique string.
+For example:
 An optional attack bonus prompts the attacker after the attack roll is made, but before the attack is adjudicated, giving the attacker the option to modify the roll. Effects last for one application unless the count flag is set.
+```
+flags.midi-qol.optional.ExtraPowerfulAttack.attack.all || OVERRIDE || +5
+flags.midi-qol.optional.ExtraPowerfulAttack.label || OVERRIDE || Extra Powerful Attack
+```
+This will ask the player when rolling an attack, if they want to apply the optional bonus labeled **Extra Powerful Attack** and will be deleted once they use it.
+
 
 * `flags.midi-qol.optional.NAME.activation` a condition that if it evaluates to true, the optional pop up will be triggered so that the player can choose to use it.
 * `flags.midi-qol.optional.NAME.force` a condition that if it evaluates to true, the optional bonus will be applied without input from the player.
