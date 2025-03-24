@@ -700,7 +700,49 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
   - **each-round** - can be used once per round on any turn (assumes in combat).
   - **@fields** - available if the @field > 0, decrements the @field on use. 
   You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
-  - **ItemUses.ItemName** - Additional option for optional.NAME.count ItemUses.ItemName, which will use the value of the uses field for the item name ItemName (which must be on the actor), it means you don't need to use a resources entry for these any more. eg `ItemUses.my super duper item`
+  - **ItemUses.field1.field2** - designate specific item's uses:
+    - `<field1>`: can be one of the following:
+      - `identifier` (identifier is each item's special identification string, usually decided by the name you used when you initially created the item and can be seen in the I)
+      - `partialNameMatch`
+      - `exactNameMatch`
+      - `exact item name` (for backwards compatibility only)
+    - `<field2>`: Based on the value you used in `<field1`> it can be:
+      1. Item's identifier
+      2. a word that is a partial match of the item's name
+      3. the exact name of the item
+      4. Nothing as you already have matched the exact item's name
+    - Examples for an Item named `Special Mace`
+      1. `ItemUses.identifier.super-mace`
+      2. `ItemUses.partialMatch.Mac`
+      3. `ItemUses.exactMatch.Super Mace`
+      4. `ItemUses.Super Mace`
+      *. Allowing for both 3 and 4 options to be available for backwards compatibility.
+  - **ActivityUses.field1.field2.field3** - designate specific activity's uses:
+      - `<field1>`: can be one of the following
+        1. `identifier`
+        2. `id`
+        3. `partialNameMatch`
+        4. `exactNameMatch`
+        5. `the item name the activity is on`
+      - `<field2>`: Based on the value you used in `<field1`> it can be:
+        1. Item's identifier
+        2. Item's id
+        3. a word that is a partial match of the item's name
+        4. the exact name of the item
+        5. the exact name of the activity
+      - `<field3>`: Based on the value you used in `<field1`> it can be:
+        1. Activity's identifier
+        2. Activity's id
+        3. a word that is a partial match of the activity's name
+        4. the exact name of the activity
+        5. Nothing as you already have matched the exact item and activity names.
+    - Examples for an Item named `Special Mace` with an Activity named `Super Attack`
+      1. `ActivityUses.identifier.special-mace.super-attack`
+      2. `ActivityUses.id.iLKpfoGF7rGpvNWD.NegUUOdFH35S3xNi`
+      3. `ActivityUses.partialNameMatch.mace.super`
+      4. `ActivityUses.exactNameMatch.Special Mace.Super Attack`
+      5. `ActivityUses.Special Mace.Super Attack`
+* `flags.midi-qol.optional.NAME.countAlt`
 * `flags.midi-qol.optional.NAME.ac`	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
 * `flags.midi-qol.optional.NAME.rollMode`, any additional rolls are to be made with the specifid roll mode. Can be useful to hide rolls from the players. Use one of `publicroll/gmroll/blindroll/selfroll` 
 * `flags.midi-qol.optional.NAME.macroToCall`, `ItemMacro` or `world macro name` executes a macro when the user opts in to use the optional bonus, with arguments being the same as in MidiQOL onUse macros.
