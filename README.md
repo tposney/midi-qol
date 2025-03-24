@@ -678,18 +678,20 @@ Optional flags cause a dialog to be raised when an opportunity to apply the effe
 
 An optional attack bonus prompts the attacker after the attack roll is made, but before the attack is adjudicated, giving the attacker the option to modify the roll. Effects last for one application unless the count flag is set.
 
-* `flags.midi-qol.optional.Name.damage.all/mwak/rwak/msak/rsak`	bonus to apply to damage done. 
-* `flags.midi-qol.optional.Name.skill.all/per/prc/itm` etc	bonus to apply to skill rolls
-* `flags.midi-qol.optional.Name.attack.all/mwak/rwak/msak/rsak`	the bonus is added after the attack roll		
-* `flags.midi-qol.optional.Name.check.all/str/dex/etc`. the bonus is added after the ability check roll		
-* `flags.midi-qol.optional.Name.save.all/str/dex/etc`	the bonus is added after the save roll. Requires auto fast-forward		
-* `flags.midi-qol.optional.Name.save.fail.all/str/dex` etc
-* `flags.midi-qol.optional.Name.check.fail.all/str/dex` etc
-* `flags.midi-qol.optional.Name.skill.fail.all/str/dex etc`. If the actor is forced to make a saving throw from an item use the optional bonus will be activated. 
-  - e.g. `flags.midi-qol.optional.Name.save.fail.dex` OVERRIDE success will alow the saver to convert a failed save to a success.
-* `flags.midi-qol.optional.Name.label`	label to use in the dialog		
-* `flags.midi-qol.optional.Name.criticalDamage`. If present in the effect then bonus damage will use the existing damage rolls critical damage status and roll bonus damage as critical using the game/midi critical damage settings.
-* `flags.midi-qol.optional.Name.count`	how many uses the effect has (think lucky which has 3), if absent the bonus will be single use (bardic inspiration), turn for once per turn.   
+* `flags.midi-qol.optional.NAME.activation` a condition that if it evaluates to true, the optional pop up will be triggered so that the player can choose to use it.
+* `flags.midi-qol.optional.NAME.force` a condition that if it evaluates to true, the optional bonus will be applied without input from the player.
+* `flags.midi-qol.optional.NAME.damage.all/mwak/rwak/msak/rsak`	bonus to apply to damage done. 
+* `flags.midi-qol.optional.NAME.skill.all/per/prc/itm` etc	bonus to apply to skill rolls
+* `flags.midi-qol.optional.NAME.attack.all/mwak/rwak/msak/rsak`	the bonus is added after the attack roll		
+* `flags.midi-qol.optional.NAME.check.all/str/dex/etc`. the bonus is added after the ability check roll		
+* `flags.midi-qol.optional.NAME.save.all/str/dex/etc`	the bonus is added after the save roll. Requires auto fast-forward		
+* `flags.midi-qol.optional.NAME.save.fail.all/str/dex` etc
+* `flags.midi-qol.optional.NAME.check.fail.all/str/dex` etc
+* `flags.midi-qol.optional.NAME.skill.fail.all/str/dex etc`. If the actor is forced to make a saving throw from an item use the optional bonus will be activated. 
+  - e.g. `flags.midi-qol.optional.NAME.save.fail.dex` OVERRIDE success will alow the saver to convert a failed save to a success.
+* `flags.midi-qol.optional.NAME.label`	label to use in the dialog		
+* `flags.midi-qol.optional.NAME.criticalDamage`. If present in the effect then bonus damage will use the existing damage rolls critical damage status and roll bonus damage as critical using the game/midi critical damage settings.
+* `flags.midi-qol.optional.NAME.count`	how many uses the effect has (think lucky which has 3), if absent the bonus will be single use (bardic inspiration), turn for once per turn.   
   - **every** - you can use the optional effect on every occurrence
   - **reaction** - behaves as a reaction roll, i.e. uses up your reaction
   - **a number** - how many times the effect can be used before expiring
@@ -699,11 +701,25 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
   - **@fields** - available if the @field > 0, decrements the @field on use. 
   You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
   - **ItemUses.ItemName** - Additional option for optional.NAME.count ItemUses.ItemName, which will use the value of the uses field for the item name ItemName (which must be on the actor), it means you don't need to use a resources entry for these any more. eg `ItemUses.my super duper item`
-* `flags.midi-qol.optional.Name.ac`	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
-* `flags.midi-qol.optional.Name.rollMode`, any additional rolls are to be made with the specifid roll mode. Can be useful to hide rolls from the players. Use one of `publicroll/gmroll/blindroll/selfroll` 
-* `flags.midi-qol.optional.Name.macroToCall`, `ItemMacro` or `world macro name` executes a macro when the user opts in to use the optional bonus, with arguments being the same as in MidiQOL onUse macros.
+* `flags.midi-qol.optional.NAME.ac`	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
+* `flags.midi-qol.optional.NAME.rollMode`, any additional rolls are to be made with the specifid roll mode. Can be useful to hide rolls from the players. Use one of `publicroll/gmroll/blindroll/selfroll` 
+* `flags.midi-qol.optional.NAME.macroToCall`, `ItemMacro` or `world macro name` executes a macro when the user opts in to use the optional bonus, with arguments being the same as in MidiQOL onUse macros.
 
-Values for the optional roll bonus flags include a dice expression (added to the roll), a number, reroll (rerolling the roll completely) reroll-max, reroll-min, reroll-kh (reroll with max dice, min dice, or reroll and keep the higher of the original/new roll) or success which changes the roll to 99 ensuring success.
+Values for the optional roll bonus flags include:
+* a dice expression (added to the roll),
+* a number (use the relevant Math operator when used alongside a .activation or .force optional entry, eg `+2`),
+* Rerolls with:
+  * `reroll`: rerolls and keeps the new roll,
+  * `reroll-max`: rerolls max and keeps the new roll,
+  * `reroll-min`: rerolls min and keeps the new roll,
+  * `reroll-kh`: rerolls and keeps higher roll,
+  * `reroll-kl`: rerolls and keeps lower roll,
+  * `reroll-query`: rerolls and asks user which roll to keep,
+  * `reroll-withBonus`: rerolls and adds the provided bonus, for example: `reroll-withBonus +1d4`
+* `success`: ensures success for D20Rolls (currently makes it a critical),
+* `fail`: ensures failure for D20Rolls,
+* `replace <formula>`: replaces with a new formula, example `replace 4d20kh`,
+* `ItemMacro.<itemUUID>`: which can implement whatever logic you want and should be returning one of the above types, eg `return '1d6[fire]'`.
 
 ## Enhanced traits.dr/di/dv
 * Available from the special traits actor settings, or via active effects.
