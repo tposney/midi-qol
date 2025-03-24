@@ -713,8 +713,8 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
       4. Nothing as you already have matched the exact item's name
     - Examples for an Item named `Special Mace`
       1. `ItemUses.identifier.super-mace`
-      2. `ItemUses.partialMatch.Mac`
-      3. `ItemUses.exactMatch.Super Mace`
+      2. `ItemUses.partialNameMatch.Mac`
+      3. `ItemUses.exactNameMatch.Super Mace`
       4. `ItemUses.Super Mace`
       *. Allowing for both 3 and 4 options to be available for backwards compatibility.
   - **ActivityUses.field1.field2.field3** - designate specific activity's uses:
