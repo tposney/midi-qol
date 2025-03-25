@@ -658,38 +658,53 @@ Negative DR is not supported (i.e. to increase damage taken).
 
   The flags modify saving throw, ability checks and skill check rolls. min means that each dice of the d20 roll will be at LEAST value, max mean that the roll will be at MOST value. The value field must be numeric, you can force lookups by using ``[[@abilities.dex.value]]`` for example
 
-* f  ``flags.midi-qol.range.mwak/rwak/etc/all ADD expression``
-  ``flags.midi-qol.long.mwak/rwak/etc/all ADD expression``
-  - The expression will be evaluated and added to an item's range when checking range for the item.
-  - The expression can be negative which will reduce the range of the item, but the resulting range/long range will be at least 0.
-  - The expression can reference the item/actor, e.g. +(item.baseItem==="longbow" ? item.range.value : 0) to double the range of any longbows.
-  - if you want to restrict blinded actors to have a range of only 5 feet for all attacks add the following to your blind active effect:
-    ```flags.midi-qol.range.all ADD 5 - item.range.value``` and
-    ```flags.midi-qol.long.all ADD 5 - item.long.value```
-  - Alternatively you can add an effect with
-  ```flags.midi-qol.range.all ADD -(hasCondition("@actorUuid", "blind") ? item.range.value - 5 : 0)```
-  ```flags.midi-qol.long.all ADD -(hasCondition("@actorUuid", "blind") ? item.range.long - 5 : 0)```
+* flags for items range
+  - `flags.midi-qol.range.mwak/rwak/etc/all ADD expression`
+  - `flags.midi-qol.long.mwak/rwak/etc/all ADD expression`
+    - The expression will be evaluated and added to an item's range when checking range for the item.
+    - The expression can be negative which will reduce the range of the item, but the resulting range/long range will be at least 0.
+    - The expression can reference the item/actor, e.g. +(item.baseItem==="longbow" ? item.range.value : 0) to double the range of any longbows.
+    - if you want to restrict blinded actors to have a range of only 5 feet for all attacks add the following to your blind active effect:
+      - `flags.midi-qol.range.all ADD 5 - item.range.value` and
+      - `flags.midi-qol.long.all ADD 5 - item.long.value`
+    - Alternatively you can add an effect with
+      - `flags.midi-qol.range.all ADD -(hasCondition("@actorUuid", "blind") ? item.range.value - 5 : 0)`
+      - `flags.midi-qol.long.all ADD -(hasCondition("@actorUuid", "blind") ? item.range.long - 5 : 0)`
   
   NOTE: You cannot directly manipulate the items range with these flags, only a valued added to the item's range when midi checks that targets are in range.
   ADD/OVERRIDE/etc are applied to the flag string value (i.e 5 - item.range.value) rather than the item's range.
   
 ## Optional Bonus Effects
-Optional flags cause a dialog to be raised when an opportunity to apply the effect comes up (i.e. the player is hit by an attack).
+Optional flags cause a dialog to be created when an opportunity to apply the effect comes up.
+You can instead elect to force the effect's bonus when using the `.force` key explained later.
 
+```
+flags.midi-qol.optional.NAME.<key> OVERRIDE specification
+```
+As you can have lots of entries that are relevant to one specific optional bonus, ALWAYS replace the `NAME` part of the key with a unique string.
+For example:
 An optional attack bonus prompts the attacker after the attack roll is made, but before the attack is adjudicated, giving the attacker the option to modify the roll. Effects last for one application unless the count flag is set.
+```
+flags.midi-qol.optional.ExtraPowerfulAttack.attack.all || OVERRIDE || +5
+flags.midi-qol.optional.ExtraPowerfulAttack.label || OVERRIDE || Extra Powerful Attack
+```
+This will ask the player when rolling an attack, if they want to apply the optional bonus labeled **Extra Powerful Attack** and will be deleted once they use it.
 
-* `flags.midi-qol.optional.Name.damage.all/mwak/rwak/msak/rsak`	bonus to apply to damage done. 
-* `flags.midi-qol.optional.Name.skill.all/per/prc/itm` etc	bonus to apply to skill rolls
-* `flags.midi-qol.optional.Name.attack.all/mwak/rwak/msak/rsak`	the bonus is added after the attack roll		
-* `flags.midi-qol.optional.Name.check.all/str/dex/etc`. the bonus is added after the ability check roll		
-* `flags.midi-qol.optional.Name.save.all/str/dex/etc`	the bonus is added after the save roll. Requires auto fast-forward		
-* `flags.midi-qol.optional.Name.save.fail.all/str/dex` etc
-* `flags.midi-qol.optional.Name.check.fail.all/str/dex` etc
-* `flags.midi-qol.optional.Name.skill.fail.all/str/dex etc`. If the actor is forced to make a saving throw from an item use the optional bonus will be activated. 
-  - e.g. `flags.midi-qol.optional.Name.save.fail.dex` OVERRIDE success will alow the saver to convert a failed save to a success.
-* `flags.midi-qol.optional.Name.label`	label to use in the dialog		
-* `flags.midi-qol.optional.Name.criticalDamage`. If present in the effect then bonus damage will use the existing damage rolls critical damage status and roll bonus damage as critical using the game/midi critical damage settings.
-* `flags.midi-qol.optional.Name.count`	how many uses the effect has (think lucky which has 3), if absent the bonus will be single use (bardic inspiration), turn for once per turn.   
+
+* `flags.midi-qol.optional.NAME.activation` a condition that if it evaluates to true, the optional pop up will be triggered so that the player can choose to use it.
+* `flags.midi-qol.optional.NAME.force` a condition that if it evaluates to true, the optional bonus will be applied without input from the player.
+* `flags.midi-qol.optional.NAME.damage.all/mwak/rwak/msak/rsak`	bonus to apply to damage done. 
+* `flags.midi-qol.optional.NAME.skill.all/per/prc/itm` etc	bonus to apply to skill rolls
+* `flags.midi-qol.optional.NAME.attack.all/mwak/rwak/msak/rsak`	the bonus is added after the attack roll		
+* `flags.midi-qol.optional.NAME.check.all/str/dex/etc`. the bonus is added after the ability check roll		
+* `flags.midi-qol.optional.NAME.save.all/str/dex/etc`	the bonus is added after the save roll. Requires auto fast-forward		
+* `flags.midi-qol.optional.NAME.save.fail.all/str/dex` etc
+* `flags.midi-qol.optional.NAME.check.fail.all/str/dex` etc
+* `flags.midi-qol.optional.NAME.skill.fail.all/str/dex etc`. If the actor is forced to make a saving throw from an item use the optional bonus will be activated. 
+  - e.g. `flags.midi-qol.optional.NAME.save.fail.dex` OVERRIDE success will alow the saver to convert a failed save to a success.
+* `flags.midi-qol.optional.NAME.label`	label to use in the dialog		
+* `flags.midi-qol.optional.NAME.criticalDamage`. If present in the effect then bonus damage will use the existing damage rolls critical damage status and roll bonus damage as critical using the game/midi critical damage settings.
+* `flags.midi-qol.optional.NAME.count`	how many uses the effect has (think lucky which has 3), if absent the bonus will be single use (bardic inspiration), turn for once per turn.   
   - **every** - you can use the optional effect on every occurrence
   - **reaction** - behaves as a reaction roll, i.e. uses up your reaction
   - **a number** - how many times the effect can be used before expiring
@@ -698,12 +713,68 @@ An optional attack bonus prompts the attacker after the attack roll is made, but
   - **each-round** - can be used once per round on any turn (assumes in combat).
   - **@fields** - available if the @field > 0, decrements the @field on use. 
   You can specify a resource to consume in the count field, e.g. @resources.tertiary.value which will decrement the tertiary resource field until it is all used up (i.e. 0). Resources can be set to refresh on rests, so this will support the full uses per day definition.  
-  - **ItemUses.ItemName** - Additional option for optional.NAME.count ItemUses.ItemName, which will use the value of the uses field for the item name ItemName (which must be on the actor), it means you don't need to use a resources entry for these any more. eg `ItemUses.my super duper item`
-* `flags.midi-qol.optional.Name.ac`	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
-* `flags.midi-qol.optional.Name.rollMode`, any additional rolls are to be made with the specifid roll mode. Can be useful to hide rolls from the players. Use one of `publicroll/gmroll/blindroll/selfroll` 
-* `flags.midi-qol.optional.Name.macroToCall`, `ItemMacro` or `world macro name` executes a macro when the user opts in to use the optional bonus, with arguments being the same as in MidiQOL onUse macros.
+  - **ItemUses.field1.field2** - designate specific item's uses:
+    - `<field1>`: can be one of the following:
+      - `identifier` (identifier is each item's special identification string, usually decided by the name you used when you initially created the item and can be found by copying the UUID of the item and then in dev tools' console tab using `fromUuidSync("copied UUID").identifier`)
+      - `partialNameMatch`
+      - `exactNameMatch`
+      - `exact item name` (for backwards compatibility only)
+    - `<field2>`: Based on the value you used in `<field1`> it can be:
+      1. Item's identifier
+      2. a word that is a partial match of the item's name
+      3. the exact name of the item
+      4. Nothing as you already have matched the exact item's name
+    - Examples for an Item named `Special Mace`
+      1. `ItemUses.identifier.super-mace`
+      2. `ItemUses.partialNameMatch.Mac`
+      3. `ItemUses.exactNameMatch.Super Mace`
+      4. `ItemUses.Super Mace`
+      *. Allowing for both 3 and 4 options to be available for backwards compatibility.
+  - **ActivityUses.field1.field2.field3** - designate specific activity's uses:
+      - `<field1>`: can be one of the following
+        1. `identifier`
+        2. `id`
+        3. `partialNameMatch`
+        4. `exactNameMatch`
+        5. `the item name the activity is on`
+      - `<field2>`: Based on the value you used in `<field1`> it can be:
+        1. Item's identifier
+        2. Item's id
+        3. a word that is a partial match of the item's name
+        4. the exact name of the item
+        5. the exact name of the activity
+      - `<field3>`: Based on the value you used in `<field1`> it can be:
+        1. Activity's identifier
+        2. Activity's id
+        3. a word that is a partial match of the activity's name
+        4. the exact name of the activity
+        5. Nothing as you already have matched the exact item and activity names.
+    - Examples for an Item named `Special Mace` with an Activity named `Super Attack`
+      1. `ActivityUses.identifier.special-mace.super-attack`
+      2. `ActivityUses.id.iLKpfoGF7rGpvNWD.NegUUOdFH35S3xNi`
+      3. `ActivityUses.partialNameMatch.mace.super`
+      4. `ActivityUses.exactNameMatch.Special Mace.Super Attack`
+      5. `ActivityUses.Special Mace.Super Attack`
+* `flags.midi-qol.optional.NAME.countAlt` a secondary entry that can be used to designate a different count that needs to be also available at the same time that the `.count` is being checked. For example, an Item that has uses and also needs a `reaction` to be available.
+* `flags.midi-qol.optional.NAME.ac`	bonus to apply to AC of the target - prompted on the target's owner's client. (A bit like a reaction roll)  
+* `flags.midi-qol.optional.NAME.rollMode`, any additional rolls are to be made with the specifid roll mode. Can be useful to hide rolls from the players. Use one of `publicroll/gmroll/blindroll/selfroll` 
+* `flags.midi-qol.optional.NAME.macroToCall`, `ItemMacro` or `world macro name` executes a macro when the user opts in to use the optional bonus, with arguments being the same as in MidiQOL onUse macros.
 
-Values for the optional roll bonus flags include a dice expression (added to the roll), a number, reroll (rerolling the roll completely) reroll-max, reroll-min, reroll-kh (reroll with max dice, min dice, or reroll and keep the higher of the original/new roll) or success which changes the roll to 99 ensuring success.
+Values for the optional roll bonus flags include:
+* a dice expression (added to the roll),
+* a number (use the relevant Math operator when used alongside a .activation or .force optional entry, eg `+2`),
+* Rerolls with:
+  * `reroll`: rerolls and keeps the new roll,
+  * `reroll-max`: rerolls max and keeps the new roll,
+  * `reroll-min`: rerolls min and keeps the new roll,
+  * `reroll-kh`: rerolls and keeps higher roll,
+  * `reroll-kl`: rerolls and keeps lower roll,
+  * `reroll-query`: rerolls and asks user which roll to keep,
+  * `reroll-withBonus`: rerolls and adds the provided bonus, for example: `reroll-withBonus +1d4`
+* `success`: ensures success for D20Rolls (currently makes it a critical),
+* `fail`: ensures failure for D20Rolls,
+* `replace <formula>`: replaces with a new formula, example `replace 4d20kh`,
+* `ItemMacro.<itemUUID>`: which can implement whatever logic you want and should be returning one of the above types, eg `return '1d6[fire]'`.
 
 ## Enhanced traits.dr/di/dv
 * Available from the special traits actor settings, or via active effects.
