@@ -2639,13 +2639,22 @@ export class Workflow {
       if (!blfxActive) {
         const elapsed = Date.now() - this.workflowStartTime;
         // if auto animations is active we need to allow enough time for it to have grabbed the template data before deleting it.
-        const timeout = AAActive ? Math.max(1000 - elapsed, 1) : 1;
+        let timeout = AAActive ? Math.max(1000 - elapsed, 1) : 1;
+        timeout = Math.max(1000, timeout);
         setTimeout(() => {
           const templateToDelete = fromUuidSync(this.templateUuid) as MeasuredTemplateDocument || null;
           //@ts-expect-error
           templateToDelete?.delete()
         }, timeout);
-      } else log("Not auto removing instantaneous template because boss loot assets active")
+      } else {
+        const timeout = 2000;
+        setTimeout(() => {
+          const templateToDelete = fromUuidSync(this.templateUuid) as MeasuredTemplateDocument || null;
+          //@ts-expect-error
+          templateToDelete?.delete()
+        }, timeout);
+        log("Not auto removing instantaneous template because boss loot assets active")
+      }
     }
     if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookid);
     if (configSettings.autoItemEffects === "applyRemove") await this.removeEffectsButton();
@@ -3917,17 +3926,17 @@ export class Workflow {
               }
               const itemId = parts.at(-1);
               if (!macro?.command) {
-                macroActivity = itemToUse.system.activities?.contents.find(activity => activity.identifier === itemId);
+                macroActivity = itemToUse.system.activities?.find(activity => activity.identifier === itemId);
                 if (macroActivity?.macro?.command)
                   macro = macroActivity.macro;
               }
               if (!macro?.command) {
-                macroActivity = itemToUse.system.activities?.contents.find(activity => activity._id === itemId);
+                macroActivity = itemToUse.system.activities?.find(activity => activity._id === itemId);
                 if (macroActivity?.macro?.command)
                   macro = macroActivity.macro;
               }
               if (!macro?.command) {
-                macroActivity = itemToUse.system.activities?.contents.find(activity => activity.name === itemId);
+                macroActivity = itemToUse.system.activities?.find(activity => activity.name === itemId);
                 if (macroActivity?.macro.command) macro = macroActivity.macro;
               }
               if (!macro?.command && activityOrItem instanceof Item) {
@@ -5613,7 +5622,7 @@ export class Workflow {
           if (challengeModeArmorSet) isHit = attackTotal > targetAC || this.isCritical;
           else {
             if (this.attackRoll && !foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
-              const workflowOptions = foundry.utils.mergeObject(foundry.utils.duplicate(this.workflowOptions), { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
+              const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
               const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
               // TODO what else to do once rolled
               targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC;
@@ -5625,7 +5634,7 @@ export class Workflow {
           if (targetEC) isHitEC = challengeModeArmorSet && attackTotal <= targetAC && attackTotal >= targetEC && bonusAC !== FULL_COVER;
           // check to see if the roll hit the target
           if ((isHit || isHitEC) && this.activity?.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
-            const workflowOptions = foundry.utils.mergeObject(foundry.utils.duplicate(this.workflowOptions), { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
+            const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
             // reaction is the same as reactionhit to accomodate the existing reaction workflow
             let result;
             if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
@@ -5642,7 +5651,7 @@ export class Workflow {
             if (challengeModeArmorSet) isHit = this.attackTotal >= targetAC || this.isCritical;
             if (targetEC) isHitEC = challengeModeArmorSet && this.attackTotal <= targetAC && this.attackTotal >= targetEC;
           } else if ((!isHit && !isHitEC) && this.activity?.attack && this.attackRoll && targetToken !== null && !foundry.utils.getProperty(this, `item.flags.${MODULE_ID}.noProvokeReaction`)) {
-            const workflowOptions = foundry.utils.mergeObject(foundry.utils.duplicate(this.workflowOptions), { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
+            const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
             if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
               let result;
               if (isHit || isHitEC) {

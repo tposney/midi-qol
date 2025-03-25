@@ -1260,21 +1260,30 @@ export var MidiActivityMixin = Base => {
       if (this.otherActivityId === "none" || this.otherActivityId === undefined) return undefined;
       if (this.ammunitionItem) {
         //TODO consider making this a choice of activity
-        this._otherActivity = this.ammunitionItem.system.activities?.contents.find(
+        this._otherActivity = this.ammunitionItem.system.activities?.find(
           a => a.midiProperties?.automationOnly && a.isOtherActivityCompatible
         )
-        // if (!this._otherActivity)
-        //  this._otherActivity = this.ammunitionItem.system.activities.contents[0];
+        if (!this._otherActivity) {
+          this._otherActivity = this.ammunitionItem.system.activities.find(
+            a => a.isOtherActivityCompatible
+          )
+        }
+
         if (this._otherActivity) {
           this._otherActivity.prepareData();
           return this._otherActivity;
         }
       }
 
-      this._otherActivity = this.item.system.activities.get(this.otherActivityId)
+      if (this.otherActivityId !== "auto") {
+        this._otherActivity = this.item.system.activities.get(this.otherActivityId);
+        this._otherActivity?.prepareData();
+        return this._otherActivity;
+      }
+
       if (!this._otherActivity) {
-        // Is there exactly 1 automation activity on the item
-        const otherActivityOptions = this.item.system.activities.filter(a => a.midiProperties?.automationOnly && a.uuid !== this.uuid);
+        // Is there exactly 1 automation only and otherActivityCompatible activity on the item
+        const otherActivityOptions = this.item.system.activities.filter(a => a.midiProperties?.automationOnly && a.isOtherActivityCompatible && a.uuid !== this.uuid);
         if (otherActivityOptions.length === 1) {
           this._otherActivity = otherActivityOptions[0];
         }

@@ -1,3 +1,9 @@
+### 12.4.35
+* Fix for rolling attacks/damage when actor sheet is popped out.
+* Fix for completeItemUse not actually doing anything in some cases.
+* Fix for AoE template checking - thanks @thatlonelybugbear
+* Change to otherActivity selection, activities must be marked as Other Activity Compatible for the activity to be used as an otherActivity.
+
 ### 12.4.34
 * Fix for failing to scroll to bottom when waiting for a manual damage roll.
 * Don't display targets if the activity affects no targets.

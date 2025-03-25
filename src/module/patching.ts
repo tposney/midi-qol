@@ -1294,7 +1294,7 @@ function prepareSheetItem(wrapped, item, ctx) {
   if (ctx.activities?.length > 0) {
     ctx.activities = ctx.activities.filter(data => {
       const activity = item.system.activities.get(data._id ?? data.id);
-      return !activity?.midiProperties?.automationOnly;
+      return !activity?.midiProperties?.automationOnly && !item.getFlag("dnd5e", "riders.activity")?.includes(activity.id);
     });
   }
   return ctx;
@@ -1654,7 +1654,7 @@ export async function doItemUse(wrapped, config: any = {}, dialog: any = {}, mes
   if (config.legacy !== false) return wrapped(config, dialog, message);
   const { legacy, chooseActivity, ...activityConfig } = config;
   const activities = this.system.activities?.filter(a => !this.getFlag("dnd5e", "riders.activity")?.includes(a.id) && !a.midiProperties?.automationOnly);
-  const attackActivities = activities?.filter(a => a instanceof MidiAttackActivity && !a.midiProperties?.automationOnly);
+  const attackActivities = activities?.filter(a => a instanceof MidiAttackActivity);
   if (attackActivities?.length === 1) { // if there is a single attack activity and no other non-automation activities use it
     const attackActivity = attackActivities[0];
     const extraActivities = activities?.filter(a => a !== attackActivity && a !== attackActivity?.otherActivity);

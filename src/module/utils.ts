@@ -956,7 +956,7 @@ export async function localActivityOverTimeEffect(actor, effect, startTurn: bool
     // @ts-expect-error no dnd5e-types
     newItem.prepareFinalAttributes(); // since the actor prepareData is not being called need to call this by hand
     //@ts-expect-error
-    const overTimeActivity = newItem.system.activities.contents.find(a => a.id === activity.id);
+    const overTimeActivity = newItem.system.activities.find(a => a.id === activity.id);
 
     // Check remove Condition
     if ((overTimeActivity.overTimeProperties?.preRemoveConditionText ?? "") !== "" && overTimeActivity.overTimeProperties.removeConditionBeforeActivity) {
@@ -1613,6 +1613,15 @@ export async function completeActivityUse(activity, usage: any = {}, dialog: any
 
 export async function completeItemUse(item, config: any = {}, options: any = { checkGMstatus: false, targetUuids: undefined, asUser: undefined }, dialog: any = {}, message: any = {}) {
   config.midiOptions = options;
+  if (typeof item === "string") {
+    // @ts-expect-error
+    item = await fromUuid(item);
+  }
+  if (!item) {
+    error("completeItemUse | no item", item);
+    return undefined;
+  }
+  config.midiOptions = options;
   return completeItemUseV2(item, config, dialog, message);
 }
 
@@ -1620,6 +1629,11 @@ export async function completeItemUseV2(item, config: any = {}, dialog: any = {}
   if (typeof item === "string") {
     // @ts-expect-error
     item = await fromUuid(item);
+  }
+  const { legacy, chooseActivity, ...activityConfig } = config;
+  if (legacy) {
+    console.error("completeItemUseV2 | legacy rolls are no longer supported");
+    return;
   }
   config.midiOptions ??= {};
   if (!(item instanceof CONFIG.Item.documentClass)) {
@@ -1629,7 +1643,7 @@ export async function completeItemUseV2(item, config: any = {}, dialog: any = {}
   if (config.midiOptions.activityId || config.midiOptions.activityIdentifier) {
     // @ts-expect-error no dnd5e-types
     const selected = item.system.activities.find(a => a.id === config.midiOptions.activityId || a.identifier === config.midiOptions.activityIdentifier)
-    if (selected) return completeActivityUse(selected, config, dialog, message);
+    if (selected) return completeActivityUse(selected, activityConfig, dialog, message);
   }
   // @ts-expect-error no dnd5e-types
   const activities = item.system.activities?.filter(a => !item.getFlag("dnd5e", "riders.activity")?.includes(a.id) && !a.midiProperties?.automationOnly);
@@ -1640,12 +1654,13 @@ export async function completeItemUseV2(item, config: any = {}, dialog: any = {}
     // return undefined;
   }
   if (activities.length === 1) { // if there is a single non-automation activity use it
-    return completeActivityUse(activities[0], config, dialog, message);
+    return completeActivityUse(activities[0], activityConfig, dialog, message);
   }
 
-  const { legacy, chooseActivity, ...activityConfig } = config;
   if (activities?.length > 1 || chooseActivity) {
     const activity = await MidiActivityChoiceDialog.create(item);
+    if (activity) return completeActivityUse(activity, activityConfig, dialog, message);
+
   }
   return undefined;
 }

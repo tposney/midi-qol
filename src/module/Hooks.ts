@@ -433,7 +433,7 @@ export function initHooks() {
 
     Hooks.on('tidy5e-sheet.getActivitiesForPlay', (parent, data) => {
       if (data.activities && data.activities instanceof Array) {
-        data.activities = data.activities.filter(activity => !activity?.midiProperties?.automationOnly);
+        data.activities = data.activities.filter(activity => !activity?.midiProperties?.automationOnly && !parent.getFlag("dnd5e", "riders.activity")?.includes(activity.id));
       }
     });
 
