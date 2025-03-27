@@ -240,24 +240,23 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
     }
     if (config.midiOptions.fastForward) dialog.configure = false;
     if (success === undefined) {
-      const maxflags = foundry.utils.getProperty(this, "flags.midi-qol.max") ?? {};
-      const maxValue = (maxflags.skill && maxflags.skill.all);
-      const minflags = foundry.utils.getProperty(this, "flags.midi-qol.min") ?? {};
-      const minValue = (minflags.skill && minflags.skill.all);
+      const maxFlags = foundry.utils.getProperty(this, "flags.midi-qol.max") ?? {};
+      const maxValue = (maxFlags.skill && maxFlags.skill.all);
+      const minFlags = foundry.utils.getProperty(this, "flags.midi-qol.min") ?? {};
+      const minValue = (minFlags.skill && minFlags.skill.all);
+      config.advantage ||= config.midiOptions.advantage;
+      config.disadvantage ||= config.midiOptions.disadvantage;
       preRollSkillHookId = Hooks.once(`${game.system?.id}.preRollSkillV2`, (config, dialog, message) => {
         message.data ??= {};
-        if (foundry.utils.isNewerVersion("4.2", game.system?.version ?? "")) {
-          message.create = false; // TODO dnd5e 4.2 remove this
-        }
         if (overtimeActorUuid)
           message.data["flags.midi-qol.overtimeActorUuid"] = overtimeActorUuid;
         config.rolls.forEach(roll => {
-          roll.options.advantage ||= config.midiOptions.advantage;
-          roll.options.disadvantage ||= config.midiOptions.disadvantage;
+          //          roll.options.advantage ||= config.midiOptions.advantage;
+          //          roll.options.disadvantage ||= config.midiOptions.disadvantage;
           if (maxValue && Number.isNumeric(maxValue)) roll.options.maximum = Math.min(Number(maxValue), roll.options.maximum ?? Infinity);
           if (minValue && Number.isNumeric(minValue)) roll.options.minimum = Math.max(Number(minValue), roll.options.minimum ?? -Infinity);
         })
-        setDialogOptions(dialog, config, config.rolls[0]?.options);
+        setDialogOptions(dialog, config);
       })
       rollSkillHookId = Hooks.once(`${game.system?.id}.postSkillRollConfiguration`, (rolls, config, dialog, messageDetails) => {
         // record message configuration details for later display
@@ -305,18 +304,18 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
 }
 
 
-function setDialogOptions(dialog, config, options) {
+function setDialogOptions(dialog, config) {
   dialog.options ??= {};
   //@ts-expect-error
   const ADV_MODE = CONFIG.Dice.D20Roll.ADV_MODE;
-  if (config.midiOptions?.fastForward || options.advantage) dialog.configure = false;
+  if (config.midiOptions?.fastForward) dialog.configure = false;
   if (dialog.configure === undefined && autoFastForwardAbilityRolls) dialog.configure = false;
   if (areMidiKeysPressed(config.event, "RollToggle")) dialog.configure = !dialog.configure;
 
-  if (options.advantage && !options.disadvantage) {
+  if (config.advantage && !config.disadvantage) {
     dialog.options.advantageMode = ADV_MODE.ADVANTAGE;
     dialog.options.defaultButton = "advantage";
-  } else if (!options.advantage && options.disadvantage) {
+  } else if (!config.advantage && config.disadvantage) {
     dialog.options.advantageMode = ADV_MODE.DISADVANTAGE;
     dialog.options.defaultButton = "disadvantage";
   } else {
@@ -546,7 +545,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
       if (overtimeActorUuid && this.uuid !== overtimeActorUuid) {
         const actualActor = fromUuidSync(overtimeActorUuid) as Actor | undefined;
         if (actualActor && rollType === "save")
-        //@ts-expect-error no dnd5e types
+          //@ts-expect-error no dnd5e types
           return actualActor.rollSavingThrow(config, dialog, message);
         //@ts-expect-error no dnd5e types
         else if (actualActor) return actualActor.rollAbilityCheck(config, dialog, message);
@@ -592,7 +591,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
           if (maxValue !== undefined && Number.isNumeric(maxValue)) roll.options.maximum = Math.min(roll.options.maximum ?? Infinity, Number(maxValue));
           if (minValue !== undefined && Number.isNumeric(minValue)) roll.options.minimum = Math.max(roll.options.minimum ?? -Infinity, Number(minValue));
         });
-        setDialogOptions(dialog, config, config.rolls[0]?.options);
+        setDialogOptions(dialog, config);
       });
       rollAbilityHookId = Hooks.once(`${game.system?.id}.post${type}RollConfiguration`, (rolls, config, dialog, messageDetails) => {
         // record the configured message data for later display
@@ -713,7 +712,7 @@ async function rollDeathSave(wrapped, config: any = {}, dialog: any = {}, messag
       if (config.midiOptions?.parts?.length) roll.parts.push(config.midiOptions.parts);
       if (blindSaveRoll) roll.options.rollMode = CONST.DICE_ROLL_MODES.BLIND
     }
-    setDialogOptions(dialog, config, config.rolls[0].options);
+    setDialogOptions(dialog, config);
     if (blindSaveRoll) message.rollMode = CONST.DICE_ROLL_MODES.BLIND;
   });
   return wrapped(config, dialog, message);
@@ -1222,17 +1221,16 @@ export async function checkWounded(actor, update, options, user) {
   }
   if (configSettings.addDead !== "none") {
     let effect: any = getDeadStatus();
-    let useDefeated = true;
-
+    let useDefeated = configSettings.markNonPlayerDefeated;
     if ((actor.type === "character" || actor.hasPlayerOwner) && !vitalityResource) {
       effect = getUnconsciousStatus();
-      useDefeated = effect === getDeadStatus();
+      useDefeated = configSettings.markPlayerDefeated;
     }
     if (!needsBeaten) {
       await setDeadStatus(actor, { effect, useDefeated, makeDead: false });
 
     } else {
-      await setDeadStatus(actor, { effect, useDefeated, makeDead: needsBeaten });
+      await setDeadStatus(actor, { effect, useDefeated, makeDead: true });
     }
   }
 }
@@ -1245,13 +1243,7 @@ async function setDeadStatus(actor, options: any) {
   if (effect && installedModules.get("dfreds-convenient-effects") && isConvenientEffect(effect)) {
     const isBeaten = actor.effects.find(ef => ef.name === effect?.name) !== undefined;
     if ((makeDead !== isBeaten)) {
-      let combatant;
-      const combat: Combat | null | undefined = game.combat;
-      if (actor.token && combat) combatant = combat?.getCombatantByActor(actor);
-      else combatant = game.combat?.getCombatantByActor(actor.id);
-      if (combatant && useDefeated) {
-        await combatant.update({ defeated: makeDead })
-      }
+
       if (makeDead) {
         await CEAddEffectWith({ effectName: effect.name, uuid: actor.uuid, overlay: (configSettings.addDead === "overlay") || options.overlay });
         // await dfreds.effectInterface?.addEffectWith({ effectData: effect, uuid: actor.uuid, overlay: configSettings.addDead === "overlay" });
@@ -1259,20 +1251,22 @@ async function setDeadStatus(actor, options: any) {
         await CERemoveEffect({ effectName: effect.name, uuid: actor.uuid });
         // await dfreds.effectInterface?.removeEffect({ effectName: effect?.name, uuid: actor.uuid })
       }
+      if (useDefeated) {
+        const combatants = game.combat?.getCombatantsByActor(actor) ?? [];
+        //@ts-expect-error
+        for (let combatant of combatants) await combatant.update({ defeated: makeDead }, {})
+      }
     }
   } else if (!isConvenientEffect(effect)) {
     // V12 uses an actor
     const isBeaten = actor.effects.find(ef => ef.name === (i18n(effect?.name ?? effect?.label ?? ""))) !== undefined;
     if (isBeaten !== makeDead) {
-      let combatant;
-      const combat: Combat | null | undefined = game.combat;
-      if (actor.token) combatant = combat?.getCombatantByToken(actor.token.id);
-      else combatant = game.combat?.getCombatantByActor(actor.id);
-      if (combatant && useDefeated) await combatant.update({ defeated: makeDead });
       await actor.toggleStatusEffect(effect.id, { overlay: (configSettings.addDead === "overlay") || options.overlay, active: makeDead });
-      const token = tokenForActor(actor);
-      // TODO find out why such a long delay is needed
-      setTimeout(() => token?._onApplyStatusEffect(effect.id, makeDead), 1000);
+      if (useDefeated) {
+        const combatants = game.combat?.getCombatantsByActor(actor) ?? [];
+        //@ts-expect-error
+        for (let combatant of combatants) await combatant.update({ defeated: makeDead }, {});
+      }
     }
   }
 }

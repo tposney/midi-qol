@@ -653,6 +653,7 @@
   "midi-qol.AddDead.Name": "Add effect when HP = 0",
   "midi-qol.AddDead.Hint1": "Player Controlled",
   "midi-qol.AddDead.Hint2": "GM Controlled",
+  "midi-qol.markDefeated": "Mark defeated in combat tracker",
   "midi-qol.AddDeadOptions": {
     "none": "Do Not Update",
     "overlay": "Add effect as overlay",

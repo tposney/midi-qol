@@ -352,10 +352,22 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static async #onSubmit(event, form, formData) {
     const realData = formData.object;
+    let needReload = false;
     realData.itemTypeList = configSettings.itemTypeList;
+    if (realData.enforceReactions !== "none" && configSettings.enforceReactions !== realData.enforceReactions) {
+      needReload = true;
+    }
+    if (realData.enforceBonusActions !== "none" && configSettings.enforceBonusActions !== realData.enforceBonusActions) {
+      needReload = true;
+    }
+    if (configSettings.activityNamePrefix !== realData.activityNamePrefix) needReload = true;
+
     let newSettings = foundry.utils.mergeObject(configSettings, realData, { overwrite: true, inplace: false });
-    // @ts-expect-error
-    if (game.user?.can("SETTINGS_MODIFY")) game.settings?.set("midi-qol", "ConfigSettings", newSettings);
+    if (game.user?.can("SETTINGS_MODIFY")) {
+      // @ts-expect-error
+      game.settings?.set("midi-qol", "ConfigSettings", newSettings);
+      if (needReload) SettingsConfig.reloadConfirm({world: true});
+    }
   }
 }
 

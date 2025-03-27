@@ -268,8 +268,8 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     _highlightCriticalSuccessFailure(html) {
-      // @ts-expect-error no dnd5e-types
-      if (!this.flags?.["midi-qol"]) return super._highlightCriticalSuccessFailure(html);
+      // @ t s-expect-error no dnd5e-types
+      // if (!this.flags?.["midi-qol"]) return super._highlightCriticalSuccessFailure(html);
       // @ts-expect-error no dnd5e-types
       super._highlightCriticalSuccessFailure(html);
       for (let [index, d20Roll] of this.rolls.entries()) {
@@ -280,6 +280,10 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           if (total.classList.contains("critical")) total.classList.remove("critical");
           if (total.classList.contains("fumble")) total.classList.remove("fumble");
         } else if (total && configSettings.highLightCriticalAttackOnly) {
+          //@ts-expect-error
+          if (d20Roll.isCritical) total.classList.add("critical");
+          //@ts-expect-error
+          if (d20Roll.isFumble) total.classList.add("fumble");
           if (total.classList.contains("success")) total.classList.remove("success");
           if (total.classList.contains("failure")) total.classList.remove("failure");
         } else if (total && !configSettings.highlightSuccess) {
@@ -287,6 +291,11 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           if (total.classList.contains("failure")) total.classList.remove("failure");
           if (total.classList.contains("critical")) total.classList.remove("critical");
           if (total.classList.contains("fumble")) total.classList.remove("fumble");
+        } else if (total && !configSettings.highlightSuccess) {
+          //@ts-expect-error
+          if (d20Roll.isCritical) total.classList.add("critical");
+          //@ts-expect-error
+          if (d20Roll.isFumble) total.classList.add("fumble");
         }
       }
       return;

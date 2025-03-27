@@ -138,6 +138,8 @@ class ConfigSettings {
   confirmAttackDamage: string = "none";
   highlightSuccess: boolean = false;
   highLightCriticalAttackOnly: boolean = false;
+  markPlayerDefeated: boolean = false;
+  markNonPlayerDefeated: boolean = false;
   optionalRulesEnabled: boolean = false;
   paranoidGM: boolean = false;
   playerRollSaves: string = "none";

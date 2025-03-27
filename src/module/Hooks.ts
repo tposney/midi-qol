@@ -438,7 +438,7 @@ export function initHooks() {
     });
 
     api.registerItemTab(myTab);
-    /*
+    
         api.config.itemSummary.registerCommands([
           {
             label: i18n("midi-qol.buttons.roll"),
@@ -447,9 +447,10 @@ export function initHooks() {
             execute: (params) => {
               if (debugEnabled > 1) log('roll', params.item);
               Workflow.removeWorkflow(params.item.uuid);
-              params.item.use({}, { event: params.event, configureDialog: true, systemCard: true });
+              params.item.use({legacy: false, event: params.event, configureDialog: true, systemCard: true }, {}, {systemCard: true});
             },
           },
+/*
           {
             label: i18n("midi-qol.buttons.attack"),
             enabled: (params) => params.item.hasAttack,
@@ -498,8 +499,8 @@ export function initHooks() {
               showItemInfo.bind(params.item)()
             },
           },
+*/        
         ]);
-        */
 
     api.config.actorTraits.registerActorTrait({
       title: i18n("midi-qol.ActorOnUseMacros"),
@@ -723,6 +724,7 @@ export const itemJSONData = {
   }
 }
 Hooks.on("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, messageConfig) => {
+  if (!rollConfig.subject) return true;
   if (rollConfig.subject.actor && rollConfig.subject.isSpell) {
     const actorSpellBonus = foundry.utils.getProperty(rollConfig.subject.actor, "system.bonuses.spell.all.damage");
     if (actorSpellBonus) rollConfig.rolls[0].parts.push(actorSpellBonus);
@@ -1141,6 +1143,7 @@ Hooks.on("dnd5e.preApplyDamage", (actor: Actor.Implementation, amount: number, u
 });
 
 Hooks.on("dnd5e.preRollConcentrationV2", (rollConfig: any, dialogConfig: any, messageConfig: any) => {
+  if (!rollConfig.subject) return true;
   const actor = rollConfig.subject;
   // insert advantage and disadvantage
   // insert midi bonuses.

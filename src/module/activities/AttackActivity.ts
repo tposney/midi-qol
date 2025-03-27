@@ -217,29 +217,29 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       }
     }
 
-    async use(config: any = {}, dialog: any = {}, message: any = {}) {
-      if (debugEnabled > 0) warn("MidiQOL | AttackActivity | use | Called", config, dialog, message);
-      config.midiOptions ??= {};
+    async use(usage: any = {}, dialog: any = {}, message: any = {}) {
+      if (debugEnabled > 0) warn("MidiQOL | AttackActivity | use | Called", usage, dialog, message);
+      usage.midiOptions ??= {};
       const itemAttackPerTarget = foundry.utils.getProperty(this.item, "flags.midi-qol.rollAttackPerTarget");
       let isAttackPerTarget = itemAttackPerTarget === "always"
         || (configSettings.attackPerTarget && itemAttackPerTarget !== "never")
       isAttackPerTarget &&= this.target?.template?.type === ""; // only works if there is no AoE template targeting.
       // Solution for this is to have a lead Use activity that sets the targets and then calls the attack activity as a trigger activity
-      const willHaveTargets = (config.midiOptions?.targetsToUse?.size ?? 0) > 0 || (game.user?.targets?.size ?? 0) > 0 || requiresTargetConfirmation(this, {})
+      const willHaveTargets = (usage.midiOptions?.targetsToUse?.size ?? 0) > 0 || (game.user?.targets?.size ?? 0) > 0 || requiresTargetConfirmation(this, {})
       if (!isAttackPerTarget || !willHaveTargets)
-        return super.use(config, dialog, message);
+        return super.use(usage, dialog, message);
       // Do target confirmation if required
-      if (!config.midiOptions.targetsToUse && !await preTemplateTargets(this, config.midiOptions)) return false;
+      if (!usage.midiOptions.targetsToUse && !await preTemplateTargets(this, usage.midiOptions)) return false;
       let returnValue;
-      let checkReaction = true; // first pass do reaction checks
-      let checkBonusAction = true; // first pass do bonus action checks
+      let checkReaction = !usage.midiOptions.isTriggered; // first pass do reaction checks
+      let checkBonusAction = !usage.midiOptions.isTriggered; // first pass do bonus action checks
       let targets;
-      if (config.midiOptions.targetsToUse) targets = config.midiOptions.targetsToUse;
+      if (usage.midiOptions.targetsToUse) targets = usage.midiOptions.targetsToUse;
       if (!targets) targets = new Set(game.user?.targets);
       for (let target of targets) {
         let item = this.item.clone({}, { keepId: true });
         let activity = item.system.activities.get(this.id);
-        const attackConfig = foundry.utils.deepClone(config);
+        const attackConfig = foundry.utils.deepClone(usage);
         attackConfig.midiOptions.targetsToUse = new Set([target]);
         attackConfig.midiOptions.workflowOptions ??= {};
         attackConfig.midiOptions.proceedChecks = { checkReaction, checkBonusAction };
@@ -247,6 +247,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         const attackDialog = foundry.utils.deepClone(dialog);
         delete attackDialog.configure;
         returnValue = await super.use.bind(activity)(attackConfig, attackDialog, message);
+        if (!returnValue) break;
         checkReaction = false;
         checkBonusAction = false;
       }
@@ -338,7 +339,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         }
         rolls = await super.rollAttack(config, dialog, message);
         if (!rolls || rolls.length === 0) {
-          if (workflow) workflow.aborted = true;
+          // if (workflow) workflow.aborted = true;
           return;
         }
         if (dialog.configure && rolls[0]?.options?.ammunition && rolls[0].options.ammunition !== this.ammunition) {
@@ -380,8 +381,6 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       if (!config.workflow) return false;
       let workflow: Workflow = config.workflow;
       config.midiOptions ??= {};
-      if (workflow && !workflow.reactionQueried) {
-      }
 
       if (debugEnabled > 1) debug("Entering configure attack roll", config.event, workflow, config.rolllOptions);
 

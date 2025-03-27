@@ -344,15 +344,15 @@
           "priority": 40
         },
         {
-          "key": "system.attunement",
+          "key": "activities[attack].midiProperties.triggeredActivityId",
           "mode": 5,
-          "value": "required",
+          "value": "slayer-damage",
           "priority": 20
         },
         {
-          "key": "activities[attack].midiProperties.triggeredActivityId",
-          "mode": 0,
-          "value": "Compendium.midi-qol.midiqol-sample-items.Item.bGPquYUrCnQzApW0.Activity.1f5j3czkKl75PtlG",
+          "key": "activities[attack].midiProperties.triggeredActivityConditionText",
+          "mode": 5,
+          "value": "raceOrType.includes(\"dragon\")",
           "priority": 20
         }
       ],
@@ -400,6 +400,11 @@
           "onlyOnce": false,
           "wallsBlock": "system",
           "statuses": []
+        },
+        "dnd5e": {
+          "riders": {
+            "statuses": []
+          }
         }
       },
       "_stats": {
@@ -409,8 +414,8 @@
         "systemId": "dnd5e",
         "systemVersion": "4.3.6",
         "createdTime": null,
-        "modifiedTime": null,
-        "lastModifiedBy": null
+        "modifiedTime": 1743048804962,
+        "lastModifiedBy": "Zl1BOUaPLwDEujaL"
       },
       "_key": "!items.effects!qpjbIZk1gEc5P3Nd.ZveR6kPKafjcwQdY"
     }

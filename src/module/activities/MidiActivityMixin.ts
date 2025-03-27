@@ -8,9 +8,8 @@ import { checkMechanic, configSettings } from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { busyWait } from "../tests/setupTest.js";
 import { saveUndoData } from "../undo.js";
-import { activityHasAreaTarget, asyncHooksCall, canSee, canSense, checkActivityRange, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getStatusName, getToken, activityHasAutoPlaceTemplate, hasUsedBonusAction, hasUsedReaction, initializeVision, isAutoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, processDamageRollBonusFlags, setBonusActionUsed, setReactionUsed, sumRolls, tokenForActor, getOrCreateTokenForActor, validTargetTokens, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, isAutoFastDamage, updateUserTargets, isValidTarget } from "../utils.js";
+import { activityHasAreaTarget, asyncHooksCall, canSee, canSense, checkActivityRange, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getStatusName, getToken, activityHasAutoPlaceTemplate, hasUsedBonusAction, hasUsedReaction, initializeVision, isAutoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, processDamageRollBonusFlags, setBonusActionUsed, setReactionUsed, sumRolls, tokenForActor, getOrCreateTokenForActor, validTargetTokens, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, isAutoFastDamage, updateUserTargets, isValidTarget, needsAOOCheck } from "../utils.js";
 import { confirmWorkflow, postTemplateConfirmTargets, preTemplateTargets, removeFlanking, selectTargets, setDamageRollMinTerms } from "./activityHelpers.js";
-import { MidiCastActivity } from "./CastActivity.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
   _validateType(value) {
@@ -200,6 +199,7 @@ export var MidiActivityMixin = Base => {
     }
     async getTriggeredActivity() {
       let activity = this.item.system.activities.find(a => a.id === this.midiProperties?.triggeredActivityId);
+      if (!activity) activity = this.item.system.activities.find(a => a.identifier === this.midiProperties?.triggeredActivityId);
       if (!activity) activity = await fromUuid(this.midiProperties?.triggeredActivityId);
       return activity;
     }
@@ -301,7 +301,7 @@ export var MidiActivityMixin = Base => {
 
     static #rollDamage(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
-      return this.rollDamage({ event, workflow }, {}, message);
+      return this.rollDamage({ event, workflow, critical: { allow: true } }, {}, message);
     }
 
     static #rollDamageNoCritical(event, target, message) {
@@ -366,11 +366,11 @@ export var MidiActivityMixin = Base => {
         usage.workflow.sequenceId = usage.sequenceId;
         message.workflow = usage.workflow; // TODO: remove hack to allow card config processing
       }
+      usage.workflow.systemCard = message.systemCard;
       if ((activity.midiProperties.rollMode ?? "default") !== "default") message.rollMode = activity.midiProperties.rollMode;
       await removeFlanking(item.parent);
 
       // config.midiOptions.workflowOptions.targetConfirmation ??= this.forcedTargetConfirmation;
-      if (usage.systemCard) return super.use(usage, dialog, message);
       // come back and see about re-rolling etc.
       if (!usage.workflow) return undefined;
 
@@ -409,8 +409,9 @@ export var MidiActivityMixin = Base => {
         usageData = usageConfig;
       });
 
-      await activity.preChatChecks(usage, dialog, message);
+      if (!await activity.preTargetingChecks(usage, dialog, message)) return;
       if (!await activity.setupTargets(usage, dialog, message)) return;
+      if (!await activity.preChatChecks(usage, dialog, message)) return;
       try {
         activity.aaMarked = "midi-qol"
         useResults = await super.use.bind(activity)(usage, dialog, message);
@@ -439,8 +440,6 @@ export var MidiActivityMixin = Base => {
       if (await activity.postChatCardChecks(usage, dialog, message) !== true) return;
       await activity.setupCanSeeSense(usage)
       // if (autoCreateTemplate || emanationNoTemplate) if (!await activity.setupTargets(usage, dialog, message)) return;
-      usage.workflow.noAutoDamage = usage.midiOptions.systemCard;
-      usage.workflow.noAutoAttack = usage.midiOptions.systemCard;
       if (activity.templates) { // TODO find a better place to store this
         useResults.templates = activity.templates;
         delete activity.templates;
@@ -450,7 +449,10 @@ export var MidiActivityMixin = Base => {
       usage.workflow.itemUseComplete = true;
 
       usage.workflow.id = useResults.message.uuid;
-
+      if (usage.workflow.itemUsesReaction && !hasUsedReaction(this.actor))
+        await setReactionUsed(this.actor);
+      if (usage.workflow.itemUsesBonusAction && !hasUsedBonusAction(this.actor))
+        await setBonusActionUsed(this.actor);
       if (activity.consumption?.spellSlot) {
         usage.workflow.castData = {
           baseLevel: activity.item.system.level,
@@ -518,7 +520,7 @@ export var MidiActivityMixin = Base => {
           critical: areKeysPressed(config.event, "skipDialogAdvantage")
         };
 
-        config.midiOptions.isCritical ??= config.workflow.workflowOptions?.isCritical;
+        config.midiOptions.isCritical ??= config.workflow.workflowOptions?.isCritical || config.workflow.isCritical;
         config.midiOptions.fastForwardDamage ??= config.workflow.workflowOptions?.fastForwardDamage;
         if (this.hasDamage || this.hasHealing) {
           if (Object.values(keys).some(k => k)) dialog.configure = !!(this.midiProperties.forceDialog);
@@ -545,7 +547,7 @@ export var MidiActivityMixin = Base => {
           result = await super.rollDamage(config, dialog, message);
           if (!result) { // user backed out of roll 
             config.workflow.currentAction = config.workflow?.WorkflowState_WaitForDamageRoll;
-            config.workflow.suspend();
+            // config.workflow.suspend();
             return;
           }
           if (result) result = await this.postProcessDamageRoll(config, result);
@@ -601,7 +603,6 @@ export var MidiActivityMixin = Base => {
         let workflow = config.workflow;
         if (!workflow) return config;
 
-        if (workflow && config.midiOptions.systemCard) workflow.systemCard = true;
         if (workflow.workflowType === "TrapWorkflow") workflow.rollOptions.fastForward = true;
 
         const midiFlags = workflow.actor.flags[MODULE_ID]
@@ -856,9 +857,9 @@ export var MidiActivityMixin = Base => {
     async confirmTargets(): Promise<void> {
     }
 
-    async preChatChecks(usage, dialog, message, optionsConfig: any = {}): Promise<boolean> {
+    async preTargetingChecks(usage, dialog, message, optionsConfig: any = {}): Promise<boolean> {
       const workflow = usage.workflow;
-      const removeWorfklow = (workflow) => {
+      const removeWorkflow = (workflow) => {
         return false;
       }
       if (!workflow) return false;
@@ -867,8 +868,152 @@ export var MidiActivityMixin = Base => {
       options = foundry.utils.mergeObject(options, optionsConfig, { insertKeys: true, overwrite: true });
       if (usage.midiOptions.proceedChecks?.none) options = usage.midiOptions.proceedChecks;
       options = foundry.utils.mergeObject(options, usage.midiOptions.proceedChecks ?? {}, { insertKeys: true, overwrite: true });
+      let cancelWorkflow;
+
+      if (options.checkAllowIncapacitated && !usage.midiOptions?.workflowOptions?.allowIncapacitated && checkMechanic("incapacitated") !== "nothing") {
+        const condition = checkIncapacitated(this.actor, true, false);
+        if (condition) {
+          logIncapacitatedCheckResult(this.actor.name, condition, debugEnabled > 0, true);
+          if (checkMechanic("incapacitated") === "enforce") return removeWorkflow(usage.workflow);
+        }
+      }
+
+      if (options.callHooks) {
+        cancelWorkflow = await asyncHooksCall("midi-qol.preTargeting", { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false
+          || await asyncHooksCall(`midi-qol.preTargeting.${this.item.uuid}`, { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false
+          || await asyncHooksCall(`midi-qol.preTargeting.${this.uuid}`, { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false;
+      }
+      if (options.callMacros && configSettings.allowUseMacro) {
+        const results = await workflow?.callMacros(this.item, workflow?.onUseMacros?.getMacros("preTargeting"), "OnUse", "preTargeting");
+        cancelWorkflow ||= results?.some(i => i === false) ?? false;
+      }
+      if (cancelWorkflow) return removeWorkflow(usage.workflow);
       return true;
     }
+
+    async preChatChecks(usage, dialog, message, optionsConfig: any = {}): Promise<boolean> {
+      const workflow = usage.workflow;
+      const removeWorkflow = (workflow) => {
+        return false;
+      }
+      if (!workflow) return false;
+      let options: any = { none: false, checkAoO: true, checkReaction: true, checkBonusAction: true, checkAllowIncapacitated: false, callMacros: true, callHooks: true, checkTargets: true, checkComponents: true, checkUse: true }
+      if (optionsConfig.none) options = optionsConfig;
+      options = foundry.utils.mergeObject(options, optionsConfig, { insertKeys: true, overwrite: true });
+      if (usage.midiOptions.proceedChecks?.none) options = usage.midiOptions.proceedChecks;
+      options = foundry.utils.mergeObject(options, usage.midiOptions.proceedChecks ?? {}, { insertKeys: true, overwrite: true });
+
+      if (options.callHooks) {
+        const hookAbort = await asyncHooksCall("midi-qol.preItemRoll", { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false || await asyncHooksCall(`midi-qol.preItemRoll.${this.uuid}`, { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false;
+        if (hookAbort || workflow.aborted) {
+          console.warn("midi-qol | attack roll blocked by preItemRoll hook");
+          workflow.aborted = true;
+          await workflow.performState(workflow.WorkflowState_Abort)
+          return removeWorkflow(usage.workflow);
+        }
+      }
+      if (options.callMacros && configSettings.allowUseMacro) {
+        const results = await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preItemRoll"), "OnUse", "preItemRoll");
+        if (workflow.aborted || results.some(i => i === false)) {
+          console.warn("midi-qol | item roll blocked by preItemRoll macro");
+          workflow.aborted = true;
+          await workflow.performState(workflow.WorkflowState_Abort)
+          return removeWorkflow(usage.workflow);
+        }
+      }
+
+      if (options.checkUse && this.useCondition && this.activation.type !== "reaction") { // reactions condition evaluation is handled elsewhere
+        if (!(await evalActivationCondition(usage.workflow, this.useCondition, workflow.targets.first(), { async: true }))) {
+          ui.notifications?.warn(`${this.useConditionReason}. You are unable to use ${this.item.name}`);
+          return removeWorkflow(usage.workflow);
+        }
+      }
+
+      if (this.isSpell) {
+        const midiFlags = this.actor.flags[MODULE_ID];
+        const needsVerbal = this.item.system.properties.has("vocal");
+        const needsSomatic = this.item.system.properties.has("somatic");
+        const needsMaterial = this.item.system.properties.has("material");
+        //TODO Consider how to disable this check for DamageOnly workflows and trap workflows
+        const conditionData = createConditionData({ actor: this.actor, activity: this });
+        const notSpell = await evalCondition(midiFlags?.fail?.spell?.all, conditionData, { errorReturn: false, async: true });
+        if (notSpell) {
+          ui.notifications?.warn("You are unable to cast the spell");
+          return removeWorkflow(usage.workflow);
+        }
+        if (options.checkComponents) {
+          let notVerbal = await evalCondition(midiFlags?.fail?.spell?.verbal, conditionData, { errorReturn: false, async: true });
+          if (notVerbal && needsVerbal) {
+            ui.notifications?.warn("You make no sound and the spell fails");
+            return removeWorkflow(usage.workflow);
+          }
+          notVerbal = notVerbal || await evalCondition(midiFlags?.fail?.spell?.vocal, conditionData, { errorReturn: false, async: true });
+          if (notVerbal && needsVerbal) {
+            ui.notifications?.warn("You make no sound and the spell fails");
+            return removeWorkflow(usage.workflow);
+          }
+          const notSomatic = await evalCondition(midiFlags?.fail?.spell?.somatic, conditionData, { errorReturn: false, async: true });
+          if (notSomatic && needsSomatic) {
+            ui.notifications?.warn("You can't make the gestures and the spell fails");
+            return removeWorkflow(usage.workflow);
+          }
+          const notMaterial = await evalCondition(midiFlags?.fail?.spell?.material, conditionData, { errorReturn: false, async: true });
+          if (notMaterial && needsMaterial) {
+            ui.notifications?.warn("You can't use the material component and the spell fails");
+            return removeWorkflow(usage.workflow);
+          }
+        }
+      }
+      workflow.AoO = false;
+      workflow.itemUsesReaction = false;
+      if (!usage.midiOptions?.workflowOptions?.notReaction && options.checkReaction && this.actor.inCombat) {
+        const isTurn = game.combat?.combatant === game.combat?.getCombatantsByToken(this.actor)[0];
+        if (["reaction", "reactiondamage", "reactionmanual", "reactionpreattack"].includes(this.activation?.type) 
+              && (this.activation?.cost ?? 1) > 0 && needsReactionCheck(this.actor)) {
+          workflow.itemUsesReaction = true;
+        }
+
+        if (needsAOOCheck(this.actor) && this.attack && !isTurn) {
+          workflow.itemUsesReaction = true;
+          workflow.AoO = true;
+        }
+
+        const queryReaction = workflow.itemUsesReaction && hasUsedReaction(this.actor) && this.actor.inCombat
+          && needsReactionCheck(this.actor)
+        if (queryReaction) {
+          let shouldRoll = false;
+          let d = await Dialog.confirm({
+            title: i18n("midi-qol.EnforceReactions.Title"),
+            content: i18n("midi-qol.EnforceReactions.Content"),
+            yes: () => { shouldRoll = true },
+          });
+          if (!shouldRoll) {
+            await workflow.performState(workflow.WorkflowState_Abort);
+            return removeWorkflow(usage.workflow); // user aborted roll TODO should the workflow be deleted?
+          }
+        }
+      }
+
+      workflow.itemUsesBonusAction = false;
+      if (options.checkBonusAction && this.actor.inCombat && needsBonusActionCheck(this.actor)) {
+        workflow.itemUsesBonusAction = ["bonus"].includes(this.activation?.type);
+        const queryBonus = workflow.itemUsesBonusAction && hasUsedBonusAction(this.actor) && needsBonusActionCheck(this.actor);
+        if (queryBonus) {
+          let shouldRoll = false;
+          let d = await Dialog.confirm({
+            title: i18n("midi-qol.EnforceBonusActions.Title"),
+            content: i18n("midi-qol.EnforceBonusActions.Content"),
+            yes: () => { shouldRoll = true },
+          });
+          if (!shouldRoll) {
+            await workflow.performState(workflow.WorkflowState_Abort); // user aborted roll TODO should the workflow be deleted?
+            return removeWorkflow(usage.workflow);
+          }
+        }
+      }
+      return true;
+    }
+
     async postChatCardChecks(usage, dialog, message, optionsConfig: any = {}): Promise<boolean> {
       const workflow = usage.workflow;
       const removeWorkflow = async (workflow) => {
@@ -889,19 +1034,7 @@ export var MidiActivityMixin = Base => {
       options = foundry.utils.mergeObject(options, usage.midiOptions.proceedChecks ?? {}, { insertKeys: true, overwrite: true });
       try {
         // Needs to be after chat card as requires targets
-        if (options.checkUse && this.useCondition && this.activation.type !== "reaction") { // reactions condition evaluation is handled elsewhere
-          if (!(await evalActivationCondition(usage.workflow, this.useCondition, workflow.targets.first(), { async: true }))) {
-            ui.notifications?.warn(`${this.useConditionReason}. You are unable to use ${this.item.name}`);
-            return removeWorkflow(usage.workflow);
-          }
-        }
-        if (options.checkAllowIncapacitated && !usage.midiOptions?.workflowOptions?.allowIncapacitated && checkMechanic("incapacitated") !== "nothing") {
-          const condition = checkIncapacitated(this.actor, true, false);
-          if (condition) {
-            logIncapacitatedCheckResult(this.actor.name, condition, debugEnabled > 0, true);
-            if (checkMechanic("incapacitated") === "enforce") return removeWorkflow(usage.workflow);
-          }
-        }
+
         let isEmanationTargeting = activityHasAutoPlaceTemplate(this) || activityHasEmanationNoTemplate(this);
         let isAoETargeting = !isEmanationTargeting && activityHasAreaTarget(this);
         let selfTarget = this.target?.affects.type === "self";
@@ -911,16 +1044,7 @@ export var MidiActivityMixin = Base => {
 
         const token = tokenForActor(this.actor);
         let cancelWorkflow = false;
-        if (options.callHooks) {
-          cancelWorkflow = await asyncHooksCall("midi-qol.preTargeting", { activity: this, token, config: usage, dialog, message }) === false
-            || await asyncHooksCall(`midi-qol.preTargeting.${this.item.uuid}`, { activity: this, token, config: usage, dialog, message }) === false
-            || await asyncHooksCall(`midi-qol.preTargeting.${this.uuid}`, { activity: this, token, config: usage, dialog, message }) === false;
-        }
-        if (options.callMacros && configSettings.allowUseMacro) {
-          const results = await workflow?.callMacros(this.item, workflow?.onUseMacros?.getMacros("preTargeting"), "OnUse", "preTargeting");
-          cancelWorkflow ||= results?.some(i => i === false) ?? false;
-        }
-        if (cancelWorkflow) return removeWorkflow(usage.workflow);
+
         let shouldAllowRoll = !options.checkTargets || !requiresTargets // we don't care about targets
           || (workflow.targets.size > 0) // there are some target selected
           || (this.target?.affects.type ?? "") === "" // no target required
@@ -928,6 +1052,10 @@ export var MidiActivityMixin = Base => {
           || isAoETargeting // area effect spell and we will auto target
           || isEmanationTargeting // range target and will autoTarget
           || (!this.attack && !this.hasDamage && !this.hasSave); // does not do anything - need to check dynamic effects
+
+        if (!shouldAllowRoll) {
+          return removeWorkflow(usage.workflow);
+        }
 
         // only allow attacks against at most the specified number of targets
         let allowedTargets;
@@ -951,24 +1079,6 @@ export var MidiActivityMixin = Base => {
             return removeWorkflow(usage.workflow);
           }
         }
-        let AoO = false;
-        let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
-        const isTurn = activeCombatants?.includes(speaker.token);
-
-        const checkReactionAOO = configSettings.recordAOO === "all" || (configSettings.recordAOO === this.actor.type)
-        let thisUsesReaction = false;
-        const hasReaction = hasUsedReaction(this.actor);
-        if (!usage.midiOptions.workflowOptions?.notReaction && ["reaction", "reactiondamage", "reactionmanual", "reactionpreattack"].includes(this.activation?.type) && (this.activation?.cost ?? 1) > 0) {
-          thisUsesReaction = true;
-        }
-        if (!usage.midiOptions.workflowOptions?.notReaction && checkReactionAOO && !thisUsesReaction && this.attack) {
-          let activeCombatants = game.combats?.combats.map(combat => combat.combatant?.token?.id)
-          const isTurn = activeCombatants?.includes(speaker.token)
-          if (!isTurn && inCombat) {
-            thisUsesReaction = true;
-            AoO = true;
-          }
-        }
 
         // do pre roll checks
         if (options.checkTargets) {
@@ -978,10 +1088,11 @@ export var MidiActivityMixin = Base => {
             return removeWorkflow(usage.workflow);
           }
         }
+
         let tokenToUse: Token | undefined;
         if (speaker.token) tokenToUse = canvas?.tokens?.get(speaker.token) as Token;
         const rangeDetails = checkActivityRange(this, tokenToUse, workflow.targets, checkMechanic("checkRange") !== "none")
-        if (checkMechanic("checkRange") !== "none" && !isAoETargeting && !isEmanationTargeting && !AoO && speaker.token) {
+        if (checkMechanic("checkRange") !== "none" && !isAoETargeting && !isEmanationTargeting && !workflow.AoO && speaker.token) {
           if (tokenToUse && workflow.targets.size > 0) {
             if (rangeDetails.result === "fail")
               return removeWorkflow(usage.workflow);
@@ -990,50 +1101,9 @@ export var MidiActivityMixin = Base => {
             }
           }
         }
-        if (this.isSpell && shouldAllowRoll) {
-          const midiFlags = this.actor.flags[MODULE_ID];
-          const needsVerbal = this.item.system.properties.has("vocal");
-          const needsSomatic = this.item.system.properties.has("somatic");
-          const needsMaterial = this.item.system.properties.has("material");
-          //TODO Consider how to disable this check for DamageOnly workflows and trap workflows
-          const conditionData = createConditionData({ actor: this.actor, activity: this });
-          const notSpell = await evalCondition(midiFlags?.fail?.spell?.all, conditionData, { errorReturn: false, async: true });
-          if (notSpell) {
-            ui.notifications?.warn("You are unable to cast the spell");
-            return removeWorkflow(usage.workflow);
-          }
-          if (options.checkComponents) {
-            let notVerbal = await evalCondition(midiFlags?.fail?.spell?.verbal, conditionData, { errorReturn: false, async: true });
-            if (notVerbal && needsVerbal) {
-              ui.notifications?.warn("You make no sound and the spell fails");
-              return removeWorkflow(usage.workflow);
-            }
-            notVerbal = notVerbal || await evalCondition(midiFlags?.fail?.spell?.vocal, conditionData, { errorReturn: false, async: true });
-            if (notVerbal && needsVerbal) {
-              ui.notifications?.warn("You make no sound and the spell fails");
-              return removeWorkflow(usage.workflow);
-            }
-            const notSomatic = await evalCondition(midiFlags?.fail?.spell?.somatic, conditionData, { errorReturn: false, async: true });
-            if (notSomatic && needsSomatic) {
-              ui.notifications?.warn("You can't make the gestures and the spell fails");
-              return removeWorkflow(usage.workflow);
-            }
-            const notMaterial = await evalCondition(midiFlags?.fail?.spell?.material, conditionData, { errorReturn: false, async: true });
-            if (notMaterial && needsMaterial) {
-              ui.notifications?.warn("You can't use the material component and the spell fails");
-              return removeWorkflow(usage.workflow);
-            }
-          }
-        }
-        if (!shouldAllowRoll) {
-          return removeWorkflow(usage.workflow);
-        }
+
 
         if (!workflow) return false;
-        workflow.inCombat = inCombat ?? false;
-        workflow.isTurn = isTurn ?? false;
-        workflow.AoO = AoO;
-        workflow.config = usage;
         workflow.token = tokenToUse;
         workflow.rangeDetails = rangeDetails;
 
@@ -1041,64 +1111,11 @@ export var MidiActivityMixin = Base => {
 
         // TODO see if this is needed still workflow.rollOptions.versatile = workflow.rollOptions.versatile || versatile || workflow.isVersatile;
         // if showing a full card we don't want to auto roll attacks or damage.
-        workflow.noAutoDamage = usage.midiOptions.systemCard;
-        workflow.noAutoAttack = usage.midiOptions.systemCard;
         const consume = this.consume;
         if (consume?.type === "ammo") {
           workflow.ammo = this.actor.items.get(consume.target);
         }
 
-        workflow.reactionQueried = false;
-        const blockReaction = thisUsesReaction && hasReaction && workflow.inCombat && needsReactionCheck(this.actor) && !usage.midiOptions?.ammoSelector?.hasRun;
-        if (blockReaction && options.checkReaction) {
-          let shouldRoll = false;
-          let d = await Dialog.confirm({
-            title: i18n("midi-qol.EnforceReactions.Title"),
-            content: i18n("midi-qol.EnforceReactions.Content"),
-            yes: () => { shouldRoll = true },
-          });
-          if (!shouldRoll) {
-            await workflow.performState(workflow.WorkflowState_Abort);
-            return removeWorkflow(usage.workflow); // user aborted roll TODO should the workflow be deleted?
-          }
-        }
-
-        const hasBonusAction = hasUsedBonusAction(this.actor);
-        const itemUsesBonusAction = ["bonus"].includes(this.activation?.type);
-        const blockBonus = workflow.inCombat && itemUsesBonusAction && hasBonusAction && needsBonusActionCheck(this.actor) && !usage.midiOptions?.ammoSelector?.hasRun;
-        if (options.checkBonusAction && blockBonus) {
-          let shouldRoll = false;
-          let d = await Dialog.confirm({
-            title: i18n("midi-qol.EnforceBonusActions.Title"),
-            content: i18n("midi-qol.EnforceBonusActions.Content"),
-            yes: () => { shouldRoll = true },
-          });
-          if (!shouldRoll) {
-            await workflow.performState(workflow.WorkflowState_Abort); // user aborted roll TODO should the workflow be deleted?
-            return removeWorkflow(usage.workflow);
-          }
-        }
-        if (options.callHooks) {
-          const hookAbort = await asyncHooksCall("midi-qol.preItemRoll", { activity: this, token: tokenToUse, config: usage, dialog, message }) === false || await asyncHooksCall(`midi-qol.preItemRoll.${this.uuid}`, { activity: this, token: tokenToUse, config: usage, dialog, message }) === false;
-          if (hookAbort || workflow.aborted) {
-            console.warn("midi-qol | attack roll blocked by preItemRoll hook");
-            workflow.aborted = true;
-            await workflow.performState(workflow.WorkflowState_Abort)
-            return removeWorkflow(usage.workflow);
-          }
-        }
-        if (options.callMacros && configSettings.allowUseMacro) {
-          const results = await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preItemRoll"), "OnUse", "preItemRoll");
-          if (workflow.aborted || results.some(i => i === false)) {
-            console.warn("midi-qol | item roll blocked by preItemRoll macro");
-            workflow.aborted = true;
-            await workflow.performState(workflow.WorkflowState_Abort)
-            return removeWorkflow(usage.workflow);
-          }
-        }
-
-        if (options.checkBonusAction && itemUsesBonusAction && !hasBonusAction && configSettings.enforceBonusActions !== "none" && workflow.inCombat) await setBonusActionUsed(this.actor);
-        if (options.checkReaction && thisUsesReaction && !hasReaction && configSettings.enforceReactions !== "none" && workflow.inCombat) await setReactionUsed(this.actor);
 
         // Need concentration removal to complete before allowing workflow to continue so have workflow wait for item use to complete
       } catch (err) {
@@ -1175,7 +1192,7 @@ export var MidiActivityMixin = Base => {
     async _usageChatContext(message) {
       // TODO major revisit needed for this
       const workflow = message.workflow;
-      let systemCard = false;
+      let systemCard = message.systemCard ?? false;
       const minimalCard = false;
 
       // Insert targets as required for emanation templates and emanationNoTemplate
@@ -1193,7 +1210,6 @@ export var MidiActivityMixin = Base => {
 
       foundry.utils.setProperty(message.data, "flags.dnd5e.targets", globalThis.dnd5e.utils.getTargetDescriptors());
       const context = await super._usageChatContext(message);
-      if (systemCard === undefined) systemCard = false;
       if (debugEnabled > 0) warn("show item card ", this, this.actor, this.actor.token, systemCard, workflow);
       let needAttackButton = !getRemoveAttackButtons(this.item) || configSettings.mergeCardMulti
         || configSettings.confirmAttackDamage !== "none" ||
@@ -1388,12 +1404,12 @@ export var MidiActivityMixinSheet = Base => {
 
       context.otherActivityOptions = this.item.system.activities
         .filter(a => a.id !== this.activity.id && a.isOtherActivityCompatible)
-        .reduce((ret, a) => { ret.push({ label: `${a.name}`, value: a.id }); return ret }, [{ label: "Auto", value: "" }, { label: "None", value: "none" }]);
-      context.otherActivityOptions?.forEach(option => { option.selected = option.value === this.activity.otherActivityId });
+        .reduce((ret, a) => { ret.push({ label: `${a.name} (${a.identifier})`, value: a.identifier, id: a.id }); return ret }, [{ label: "Auto", value: "" }, { label: "None", value: "none" }]);
+      context.otherActivityOptions?.forEach(option => { option.selected = option.value === this.activity.otherActivityId || option.id === this.activity.otherActivityId });
       context.triggeredActivityOptions = this.item.system.activities
         .filter(a => a.id !== this.activity.id && a.isTriggerableActivity)
-        .reduce((ret, a) => { ret.push({ label: `${a.name}`, value: a.id }); return ret }, [{ label: "None", value: "none" }]);
-      context.triggeredActivityOptions?.filter(option => { option.selected = option.value === this.activity.midiProperties.triggeredActivityId });
+        .reduce((ret, a) => { ret.push({ label: `${a.name} (${a.identifier})`, value: a.identifier, id: a.id }); return ret }, [{ label: "None", value: "none" }]);
+      context.triggeredActivityOptions?.filter(option => { option.selected = option.value === this.activity.midiProperties.triggeredActivityId || option.id === this.activity.midiProperties.triggeredActivityId });
       let activity = context.activity;
       let triggeredActivity = await context.activity.getTriggeredActivity();
       const triggerList: String[] = [activity.name];

@@ -1382,7 +1382,6 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       }
       try {
         const options = {
-          systemCard: false,
           createWorkflow: true,
           versatile: false,
           configureDialog: false,
@@ -1401,7 +1400,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
           }
         };
         foundry.utils.setProperty(options, `flags.${MODULE_ID}.isOverTime`, true);
-        await completeItemUseV2(ownedItem, { midiOptions: options }, { configure: false }, { rollMode }); // worried about multiple effects in flight so do one at a time
+        await completeItemUseV2(ownedItem, { midiOptions: options }, { configure: false }, { rollMode, systemCard: false }); // worried about multiple effects in flight so do one at a time
         if (actionSaveSuccess) {
           await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:actionSave" });
         }
@@ -2572,6 +2571,7 @@ export function getAutoRollDamage(workflow: Workflow | undefined = undefined): s
 }
 
 export function getAutoRollAttack(workflow: Workflow | undefined = undefined): boolean {
+  if (workflow?.systemCard) return false;
   if (workflow?.workflowOptions?.autoRollAttack !== undefined) {
     return workflow.workflowOptions.autoRollAttack;
   }
@@ -4256,7 +4256,6 @@ export async function reactionDialog(actor: globalThis.dnd5e.documents.Actor5e, 
           dialog.close();
           // options = foundry.utils.mergeObject(options.workflowOptions ?? {}, {triggerTokenUuid, checkGMStatus: false}, {overwrite: true});
           const itemRollOptions = foundry.utils.mergeObject(options, {
-            systemCard: false,
             createWorkflow: true,
             versatile: false,
             configureDialog: true,
@@ -4274,7 +4273,7 @@ export async function reactionDialog(actor: globalThis.dnd5e.documents.Actor5e, 
           clearTimeout(useTimeoutId);
           if (activity.item instanceof CONFIG.Item.documentClass) { // a nomral item}
             const config = { midiOptions: itemRollOptions };
-            result = await completeActivityUse(activity, config, {}, {});
+            result = await completeActivityUse(activity, config, {}, {systemCard: false});
             const workflow = result;  // completeActivityUse returns a workflow when called locally which for reactions it always is
             if (workflow && workflow.currentAction !== workflow.WorkflowState_Cleanup) resolve(noResult);
             else if (workflow) resolve({ name: workflow.activity?.name, uuid: workflow.activity?.uuid, itemName: workflow.activity.item.name, itemUuid: activity.item.uuid })
@@ -4545,15 +4544,9 @@ function mySafeEval(expression: string, sandbox: any, onErrorReturn: any | undef
   try {
     const src = 'with (sandbox) { return ' + expression + '}';
     if (expression.includes("Roll(")) {
-      //@ts-expect-error
-      if (game.release.generation > 11) {
-        error("safeEval | Roll expressions are not supported in v12", expression)
-        expression.replaceAll(/evaluate\s*\({\s*async:\s* false\s*}\)/g, "evaluateSync({strict: false})")
+        error("safeEval | Roll expressions are not supported", expression)
+        expression = expression.replaceAll(/evaluate\s*\({\s*async:\s* false\s*}\)/g, "evaluateSync({strict: false})")
         error("Expression replaced with ", expression);
-      } else {
-        const newExpression = expression.replaceAll(/evaluate\s*\({\s*async:\s* false\s*}\)/g, "evaluateSync({strict: false})")
-        console.warn(`%c safeEval | Roll expressions ${expression} are not supported in v12 and will be replaced with ${newExpression}`, "color:red;")
-      }
     }
     const evl = new Function('sandbox', src);
     sandbox = foundry.utils.mergeObject(sandbox, { Roll, findNearby, findNearbyCount, checkNearby, hasCondition, checkDefeated, checkIncapacitated, canSee, canSense, computeDistance, checkRange, checkDistance, fromUuidSync: MQfromUuidSync, MQfromUuidSync, nonWorkflowTargetedToken: game.user?.targets.first()?.document.uuid, combat: game.combat, evalRaceOrType: raceOrType, evalTypeOrRaceEval: typeOrRace });
@@ -4891,12 +4884,14 @@ export async function setActionUsed(actor: Actor) {
 }
 
 export async function setReactionUsed(actor: Actor) {
+  if (!getReactionEffect()) return;
   if (!["all", "displayOnly"].includes(configSettings.enforceReactions) && configSettings.enforceReactions !== actor.type) return;
   // await actor.update({"flags.midi-qol.actions.reaction": true, "flags.midi-qol.actions.reactionCombatRound": game.combat?.round});  
   const id = "reaction";
   //@ts-expect-error
   await actor.effects.get(getStaticID(id))?.delete();
   const effect = foundry.utils.deepClone(getReactionEffect());
+  if (!effect) return;
   effect.updateSource({
     origin: actor.uuid,
     changes: [
@@ -4918,16 +4913,19 @@ export async function setBonusActionUsed(actor: Actor) {
   const id = "bonusaction";
   //@ts-expect-error
   await actor.effects.get(getStaticID(id))?.delete();
-  const effect = foundry.utils.deepClone(midiBonusActionEffect);
+  const effect = foundry.utils.deepClone(getBonusActionEffect());
+  if (!effect) return;
   effect.updateSource({
     origin: actor.uuid,
     changes: [
+      //@ts-expect-error
       { key: 'flags.midi-qol.actions.bonus', mode: 2, value: true },
+      //@ts-expect-error
       { key: 'flags.midi-qol.actions.bonusActionCombatRound', mode: 2, value: (game.combat as unknown as Combat)?.round ?? false }
     ]
   });
   effect.origin = actor.uuid;
-  await ActiveEffect.implementation.create(effect, { parent: actor, keepId: true });
+  await ActiveEffect.implementation.create(effect as any, { parent: actor, keepId: true });
 }
 
 export async function removeActionUsed(actor: Actor) {
@@ -5002,6 +5000,10 @@ export async function removeBonusActionUsed(actor: Actor, force = false) {
 
 export function needsReactionCheck(actor) {
   return (configSettings.enforceReactions === "all" || configSettings.enforceReactions === actor.type)
+}
+
+export function needsAOOCheck(actor) {
+  return (configSettings.recordAOO === "all" || configSettings.recordAOO === actor.type)
 }
 
 export function needsBonusActionCheck(actor) {
@@ -5351,10 +5353,12 @@ export function getFlankedEffect(): ActiveEffect | undefined {
   return undefined;
 }
 
-export function getReactionEffect(): ActiveEffect {
+export function getReactionEffect(): ActiveEffect | undefined {
+  if (!midiReactionEffect) return undefined;
   return getCPREffect(midiReactionEffect._id) ?? midiReactionEffect;
 }
 export function getBonusActionEffect(): ActiveEffect {
+  if (!midiBonusActionEffect) undefined;
   return getCPREffect(midiBonusActionEffect._id) ?? midiBonusActionEffect;
 }
 
@@ -5713,8 +5717,8 @@ async function _doConcentrationCheck(actor, itemData) {
   // @ts-expect-error no dnd5e-types
   ownedItem.prepareFinalAttributes();
   try {
-    const midiOptions = { checkGMStatus: true, systemCard: false, isConcentrationCheck: true, createWorkflow: true, versatile: false, workflowOptions: { targetConfirmation: "none" } }
-    result = await completeItemUseV2(ownedItem, { midiOptions }, { configure: false }, {}); // worried about multiple effects in flight so do one at a time
+    const midiOptions = { checkGMStatus: true, isConcentrationCheck: true, createWorkflow: true, versatile: false, workflowOptions: { targetConfirmation: "none" } }
+    result = await completeItemUseV2(ownedItem, { midiOptions }, { configure: false }, {systemCard: false}); // worried about multiple effects in flight so do one at a time
   } catch (err) {
     const message = "midi-qol | doConcentrationCheck";
     TroubleShooter.recordError(err, message);

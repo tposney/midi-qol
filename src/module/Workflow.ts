@@ -172,7 +172,7 @@ export class Workflow {
   }
 
   performDebouncedUpdate(chatCard, updates, immediate = false) {
-    // ugly hack to force updates into the cach for things that are sets
+    // ugly hack to force updates into the cache for things that are sets
     if (SaveToChatCard) {
       this.actor = this.actor;
       this.activity = this.activity;
@@ -476,19 +476,9 @@ export class Workflow {
     return this.templateUuid.split(".")[-1];
   }
   placeTemplateHookId: number | null;
-  _inCombat: boolean | undefined; // Is the item wielder in combat.
+
   get inCombat() {
-    if (this._inCombat !== undefined) return this._inCombat;
-    if (this.itemCardUuid && SaveToChatCard) {
-      this._inCombat = foundry.utils.getProperty(this.chatCard, "flags." + WorkflowDataFlags.inCombat);
-    }
-    return this._inCombat ?? false;
-  }
-  set inCombat(inCombat: boolean) {
-    this._inCombat = inCombat;
-    if (this.itemCardUuid && SaveToChatCard) {
-      addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.inCombat]: inCombat });
-    }
+    return this.actor.inCombat
   }
   isTurn: boolean | undefined; // Is it the item wielder's turn.
   _AoO: boolean | undefined; // Is the attack an attack of opportunity
@@ -1294,10 +1284,9 @@ export class Workflow {
     if (this.actor.type === configSettings.averageDamage || configSettings.averageDamage === "all") return true;
     const normalRoll = getAutoRollDamage(this) === "always"
       || (getAutoRollDamage(this) === "saveOnly" && this.activity.save && !this.activity.attack)
-      || (getAutoRollDamage(this) !== "none" && !this.activity.attack)
+      || (getAutoRollDamage(this) !== "none" && (!this.activity.attack || configSettings.autoCheckHit === "none"))
       || (getAutoRollDamage(this) === "onHit" && (this.hitTargets.size > 0 || this.hitTargetsEC?.size > 0 || this.targets.size === 0))
       || (getAutoRollDamage(this) === "onHit" && (this.hitTargetsEC?.size > 0));
-
     return this.rollOptions?.rollToggle ? !normalRoll : normalRoll;
   }
 
@@ -1904,6 +1893,7 @@ export class Workflow {
   }
   async WorkflowState_WaitForAttackRoll(context: any = {}): Promise<WorkflowState> {
     if (context.attackRoll) {
+      if (this.abort) return this.WorkflowState_Abort;
       return this.WorkflowState_AttackRollComplete;
     }
     if (!this.activity.attack) {
@@ -1915,13 +1905,12 @@ export class Workflow {
 
     const isFastRoll = this.rollOptions.fastForwardAttack ?? this.workflowOptions.fastForwardAttack ?? isAutoFastAttack(this);
     this.rollOptions.fastForwardAttack ||= isFastRoll;
-    if (this.noAutoAttack) return this.WorkflowState_Suspend;
-    this.autoRollAttack = this.rollOptions.autoRollAttack ?? this.workflowOptions.autoRollAttack;
-    if (!this.autoRollAttack) {
+    const autoRollAttack = this.rollOptions.autoRollAttack ?? getAutoRollAttack(this);
+    if (!autoRollAttack) {
       // Not auto rolling attack so setup the buttons to display advantage/disadvantage
       const chatMessage = this.chatCard;
       let content = chatMessage?.content && foundry.utils.duplicate(chatMessage.content)
-      if (content && (!this.autoRollAttack || !isFastRoll)) {
+      if (content && (!autoRollAttack || !isFastRoll)) {
         // provide a hint as to the type of roll expected.
         let content = chatMessage && foundry.utils.duplicate(chatMessage.content)
         let searchRe = /<button data-action="attack">[^<]+<\/button>/;
@@ -1946,11 +1935,9 @@ export class Workflow {
       if (this.ammo) await this.callMacros(this.ammo, this.ammoOnUseMacros?.getMacros("preAttackRoll"), "OnUse", "preAttackRoll");
     }
     if (this.activity.roll?.formula) return this.WorkflowState_WaitForUtilityRoll;
-    if (this.autoRollAttack) {
+    if (autoRollAttack) {
       this.rollOptions.fastForwardAttack ||= isFastRoll;
-      const rolls = await this.activity.rollAttack({ event: this.event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {});
-      if (!rolls || this.abort) return this.WorkflowState_Abort;
-      return this.WorkflowState_AttackRollComplete;
+      this.activity.rollAttack({ event: this.event, workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {});
     }
     return this.WorkflowState_Suspend;
   }
@@ -2693,11 +2680,12 @@ export class Workflow {
       let triggeredActivity = await this.activity.getTriggeredActivity();
       if (shouldTrigger && triggeredActivity) {
         if (shouldTrigger) {
-          let config: any = {};
-          config.midiOptions = {};
-          config.midiOptions.event = this.event;
-          config.midiOptions.workflowOptions = this.workflowOptions;
-          config.midiOptions.rollOptions = this.rollOptions;
+          let usage: any = {};
+          usage.midiOptions = {};
+          usage.midiOptions.event = this.event;
+          usage.midiOptions.workflowOptions = this.workflowOptions;
+          usage.midiOptions.rollOptions = this.rollOptions;
+          usage.midiOptions.isTriggered = true;
           let targetUuids: string[] = [];
           const toUuids = (targets: Set<Token | TokenDocument>): string[] => {
             //@ts-expect-error
@@ -2706,14 +2694,14 @@ export class Workflow {
 
           if (this.activity.midiProperties?.triggeredActivityRollAs) {
             switch (this.activity.midiProperties.triggeredActivityRollAs) {
-              case "firstTarget": config.midiOptions.rollAs = getActor(this.targets.first()); break;
-              case "firstHitTarget": config.midiOptions.rollAs = getActor(this.hitTargets.first()); break;
-              case "firstMissedTarget": config.midiOptions.rollAs = getActor(this.targets.difference(this.hitTargets).first()); break;
-              case "firstSaveTarget": config.midiOptions.rollAs = getActor(this.saves.first()); break;
-              case "firstFailedSaveTarget": config.midiOptions.rollAs = getActor(this.failedSaves.first()); break;
+              case "firstTarget": usage.midiOptions.rollAs = getActor(this.targets.first()); break;
+              case "firstHitTarget": usage.midiOptions.rollAs = getActor(this.hitTargets.first()); break;
+              case "firstMissedTarget": usage.midiOptions.rollAs = getActor(this.targets.difference(this.hitTargets).first()); break;
+              case "firstSaveTarget": usage.midiOptions.rollAs = getActor(this.saves.first()); break;
+              case "firstFailedSaveTarget": usage.midiOptions.rollAs = getActor(this.failedSaves.first()); break;
               case "self":
               default:
-                config.midiOptions.rollAs = this.actor;
+                usage.midiOptions.rollAs = this.actor;
                 break;
             }
           }
@@ -2730,8 +2718,8 @@ export class Workflow {
                 // targetUuids = [];
                 break;
             }
-          config.midiOptions.targetUuids = targetUuids;
-          config.midiOptions.triggeredActivity = true;
+          usage.midiOptions.targetUuids = targetUuids;
+          usage.midiOptions.triggeredActivity = true;
           const saveTargets = game.user?.targets;
           if (this.activity.midiProperties.triggeredActivityTargets !== "retarget" && targetUuids?.length === 0)
             shouldTrigger = false;
@@ -2743,8 +2731,8 @@ export class Workflow {
             shouldTrigger = await evalCondition(condition, conditionData, { async: true, errorReturn: false });
           }
           if (shouldTrigger) {
-            foundry.utils.setProperty(config, "midiOptions.isCritical", this.isCritical);
-            await completeActivityUse(triggeredActivity, config, { configure: false }, {});
+            foundry.utils.setProperty(usage, "midiOptions.isCritical", this.isCritical);
+            await completeActivityUse(triggeredActivity, usage, { configure: false }, {});
           }
         }
       }
@@ -3072,7 +3060,7 @@ export class Workflow {
         // @ts-expect-error
         const targetSpotted = await perceptiveApi?.isSpottedby(target, token, { LOS: false, Range: true, Effects: true, Hidden: false, canbeSpotted: true }) ?? true;
         if (!tokenSpotted) {
-          this.attackAdvAttribution.add("ADV:hidden");
+          this.attackAdvAttribution.add("ADV:Attacker hidden");
           this.advReminderAttackAdvAttribution.add("ADV:Hidden");
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.hidden", { value: true, effects: ["Hidden Attacker"] });
           this.advantage = true;
@@ -3089,13 +3077,13 @@ export class Workflow {
         const hiddenToken = this.token ? hasCondition(this.token.actor as Actor, "hidden") : false;
         const hiddenTarget = hasCondition(target.actor as Actor, "hidden");
         if (hiddenToken) {
-          this.attackAdvAttribution.add("ADV:hidden");
+          this.attackAdvAttribution.add("ADV:Attacker hidden");
           this.advReminderAttackAdvAttribution.add("ADV:Hidden");
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.advantage.attack.hidden", { value: true, effects: ["Hidden Attacker"] });
           this.advantage = true;
         }
         if (hiddenTarget) {
-          this.attackAdvAttribution.add("DIS:hidden");
+          this.attackAdvAttribution.add("DIS:Target hidden");
           this.advReminderAttackAdvAttribution.add("DIS:Hidden Foe");
           foundry.utils.setProperty(this.actor, "flags.midi.evaluated.disadvantage.attack.hidden", { value: true, effects: ["Hidden Defender"] });
           this.disadvantage = true;
