@@ -48,7 +48,7 @@ publish-foundry-manifest:
     - apt-get -qq update
     - apt-get install -y jq
   script: |
-      curl -X POST -H "Content-Type: application/json" -H "Authorization: $FOUNDRY_API_TOKEN" $FOUNDRY_RELEASE_URL -d \
+      RESPONSE=$(curl -X POST -H "Content-Type: application/json" -H "Authorization: $FOUNDRY_API_TOKEN" $FOUNDRY_RELEASE_URL -d \
       "{
         \"id\": \"$PACKAGE_NAME\",
         \"dry-run\": \"false\",
@@ -58,6 +58,7 @@ publish-foundry-manifest:
           \"notes\": \"$CI_PROJECT_URL/-/releases/$CI_COMMIT_TAG\",
           \"compatibility\": $(jq .compatibility package/$PACKAGE_TYPE.json)
         }
-      }"
+      }")
+      echo $RESPONSE
   rules:
     - if: $CI_COMMIT_TAG
