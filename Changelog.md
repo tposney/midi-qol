@@ -1,7 +1,18 @@
+### 12.4.37
+* Fix for counting every attack as an Attack of Opportunity.
+* For Macro writers
+  - Added new versions of the preItemRoll and preTargeting hooks,
+    - preItemRollV2(workflow, usage, dialog, message)
+    - preTargetingV2(workflow, usage, dialog, message)
+  - The existing hooks are still called with the existing signatures
+    - preItemRoll(activity, token, config, dialog, message)
+    - preTargeting(activity, token, config, dialog, message)
+    In both of the old form hooks workflow can be accessed via config.workflow.
+  - For all the versions of these hooks, Workflow.getWorkflow(activity.uuid) will fail, the workflow is not recorded until after the chat card is created.
+
 ### 12.4.36
 * Fix for chat card damage button not picking up critical hits when not auto rolling damage.
 * Change to attack/damage roll behaviour - backing out of the roll configuration dialog no longer aborts the workflow.
-* Reorganized pre item checks and pre target checks to run before the configuration dialog is presented.
 * Addition to triggeredActivityIds. You may now use an activity identifier (shown on the midi-qol tab) rather than an ID or uuid. This should make enchantments that add triggered activities simpler since you will know the identifier of the activity you added via the enchantment.
 * **Breaking** Adding effects when reaching 0 HP now supports toggling defeated in the combat tracker via check boxes, one for player characters (and tokens they control) and one for GM controlled actors.
 * For Macro writers
@@ -10,6 +21,7 @@
   - moved incapacitated check prior to item card being displayed.
   - moved verbal/somatic/material checks prior to item card being displayed.
   - moved use condition check prior to item card being displayed.
+* Updated dragon slayer weapons to not require attunement.
 
 ### 12.4.35
 * Fix for rolling attacks/damage when actor sheet is popped out.

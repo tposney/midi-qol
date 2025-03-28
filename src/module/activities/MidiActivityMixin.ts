@@ -1,4 +1,3 @@
-import { get } from "jquery";
 import { GameSystemConfig, MODULE_ID, SystemString, allAttackTypes, debugEnabled, error, geti18nOptions, i18n, i18nFormat, log, warn } from "../../midi-qol.js";
 import { socketlibSocket } from "../GMAction.js";
 import { DDBGameLogWorkflow, DamageOnlyWorkflow, TrapWorkflow, Workflow } from "../Workflow.js";
@@ -882,7 +881,11 @@ export var MidiActivityMixin = Base => {
         cancelWorkflow = await asyncHooksCall("midi-qol.preTargeting", { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false
           || await asyncHooksCall(`midi-qol.preTargeting.${this.item.uuid}`, { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false
           || await asyncHooksCall(`midi-qol.preTargeting.${this.uuid}`, { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false;
+        cancelWorkflow ||= await asyncHooksCall("midi-qol.preTargetingV2", { workflow: usage.workflow, usage, dialog, message }) === false
+          || await asyncHooksCall(`midi-qol.preTargetingV2.${this.item.uuid}`, { workflow: usage.workflow, usage, dialog, message }) === false
+          || await asyncHooksCall(`midi-qol.preTargetingV2.${this.uuid}`, { workflow: usage.workflow, usage, dialog, message }) === false;
       }
+
       if (options.callMacros && configSettings.allowUseMacro) {
         const results = await workflow?.callMacros(this.item, workflow?.onUseMacros?.getMacros("preTargeting"), "OnUse", "preTargeting");
         cancelWorkflow ||= results?.some(i => i === false) ?? false;
@@ -904,7 +907,10 @@ export var MidiActivityMixin = Base => {
       options = foundry.utils.mergeObject(options, usage.midiOptions.proceedChecks ?? {}, { insertKeys: true, overwrite: true });
 
       if (options.callHooks) {
-        const hookAbort = await asyncHooksCall("midi-qol.preItemRoll", { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false || await asyncHooksCall(`midi-qol.preItemRoll.${this.uuid}`, { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false;
+        let hookAbort = await asyncHooksCall("midi-qol.preItemRoll", { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false 
+          || await asyncHooksCall(`midi-qol.preItemRoll.${this.uuid}`, { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false;
+        hookAbort ||= await asyncHooksCall("midi-qol.preItemRollV2", { workflow: usage.workflow, usage, dialog, message }) === false
+        || await asyncHooksCall(`midi-qol.preItemRollV2.${this.item.uuid}`, { workflow: usage.workflow, usage, dialog, message }) === false;
         if (hookAbort || workflow.aborted) {
           console.warn("midi-qol | attack roll blocked by preItemRoll hook");
           workflow.aborted = true;
@@ -912,6 +918,7 @@ export var MidiActivityMixin = Base => {
           return removeWorkflow(usage.workflow);
         }
       }
+
       if (options.callMacros && configSettings.allowUseMacro) {
         const results = await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preItemRoll"), "OnUse", "preItemRoll");
         if (workflow.aborted || results.some(i => i === false)) {
@@ -967,9 +974,9 @@ export var MidiActivityMixin = Base => {
       workflow.AoO = false;
       workflow.itemUsesReaction = false;
       if (!usage.midiOptions?.workflowOptions?.notReaction && options.checkReaction && this.actor.inCombat) {
-        const isTurn = game.combat?.combatant === game.combat?.getCombatantsByToken(this.actor)[0];
-        if (["reaction", "reactiondamage", "reactionmanual", "reactionpreattack"].includes(this.activation?.type) 
-              && (this.activation?.cost ?? 1) > 0 && needsReactionCheck(this.actor)) {
+        const isTurn = game.combat?.combatant === game.combat?.getCombatantsByActor(this.actor)[0];
+        if (["reaction", "reactiondamage", "reactionmanual", "reactionpreattack"].includes(this.activation?.type)
+          && (this.activation?.cost ?? 1) > 0 && needsReactionCheck(this.actor)) {
           workflow.itemUsesReaction = true;
         }
 
