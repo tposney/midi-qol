@@ -4601,7 +4601,7 @@ export class Workflow {
       rollDC = this.chatUseFlags.babonus.saveDC;
     }
     const playerMonksTB = !simulate && flagRollType !== "tool" && installedModules.get("monks-tokenbar") && configSettings.playerRollSaves === "mtb";
-    const playerEpicRolls = !simulate && flagRollType !== "tool" && installedModules.get("epic-rolls-5e") && configSettings.playerRollSaves === "rer"
+    const playerEpicRolls = !simulate && installedModules.get("epic-rolls-5e") && configSettings.playerRollSaves === "rer"
     let monkRequestsPlayer: any[] = [];
     let rerRequestsPlayer: any[] = [];
     let monkRequestsGM: any[] = [];
@@ -4717,7 +4717,7 @@ export class Workflow {
           const monksTBSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "mtb" : configSettings.rollNPCSaves === "mtb"
           const epicRollsSetting = targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves === "rer" : configSettings.rollNPCSaves === "rer"
           gmMonksTB = flagRollType !== "tool" && installedModules.get("monks-tokenbar") && monksTBSetting;
-          gmRER = flagRollType !== "tool" && installedModules.get("epic-rolls-5e") && epicRollsSetting;
+          gmRER = installedModules.get("epic-rolls-5e") && epicRollsSetting;
           GMprompt = (targetDocument?.isLinked ? configSettings.rollNPCLinkedSaves : configSettings.rollNPCSaves);
 
           promptPlayer = !["auto", "autoDialog"].includes(GMprompt);
@@ -4932,9 +4932,17 @@ export class Workflow {
       if (configSettings.displaySaveDC && "whisper" !== configSettings.autoCheckSaves) requestData.dc = rollDC
       timedExecuteAsGM("monksTokenBarSaves", requestData);
     } else if (monkRequestsPlayer.length > 0 || monkRequestsGM.length > 0) {
+      let request: string | undefined;
+      if (rollType === "save") {
+        request = `save:${rollAbility}`;
+      } else if (rollType === "check") {
+        request = `ability:${rollAbility}`;
+      } else if (rollType === "skill") {
+        request = `skill:${rollSkill}`;
+      }
       const requestDataGM: any = {
         tokenData: monkRequestsGM,
-        request: `${rollType === "check" ? "ability" : rollType}:${rollAbility}`,
+        request,
         silent: true,
         rollMode: whisper ? CONST.DICE_ROLL_MODES.PRIVATE : "roll", // should be CONST.DICE_ROLL_MODES.PUBLIC but monks does not check it
         isMagicSave,
@@ -4951,7 +4959,7 @@ export class Workflow {
       }
       const requestDataPlayer: any = {
         tokenData: monkRequestsPlayer,
-        request: `${rollType === "check" ? "ability" : rollType}:${rollAbility}`,
+        request,
         silent: true,
         rollMode: ((this.activity?.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties.rollMode : "roll",// should be CONST.DICE_ROLL_MODES.PUBLIC but monks does not check it
         isMagicSave,
@@ -4975,10 +4983,12 @@ export class Workflow {
     if (rerRequests.length > 0) {
       // rollType is save/abil/skill
       const rerType = rollType;
+      const type = `${rerType}.${this.saveActivity.save?.ability.first() ?? this.saveActivity.check?.associated.first() ?? "dex"}`
+      console.error ("rerRequests", type, rollType, rerRequests)
       const rerRequest: any = {
         actors: rerRequests.map(request => request.actorUuid),
         contestants: [],
-        type: `${rerType}.${this.saveActivity.save?.ability.first() ?? this.saveActivity.check?.associated.first() ?? "dex"}`,
+        type,
         options: {
           DC: rollDC,
           showDC: configSettings.displaySaveDC,

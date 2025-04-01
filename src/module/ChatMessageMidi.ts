@@ -281,9 +281,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           if (total.classList.contains("fumble")) total.classList.remove("fumble");
         } else if (total && configSettings.highLightCriticalAttackOnly) {
           //@ts-expect-error
-          if (d20Roll.isCritical) total.classList.add("critical");
+          if (d20Roll?.isCritical) total.classList.add("critical");
           //@ts-expect-error
-          if (d20Roll.isFumble) total.classList.add("fumble");
+          if (d20Roll?.isFumble) total.classList.add("fumble");
           if (total.classList.contains("success")) total.classList.remove("success");
           if (total.classList.contains("failure")) total.classList.remove("failure");
         } else if (total && !configSettings.highlightSuccess) {

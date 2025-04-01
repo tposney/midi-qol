@@ -1,3 +1,9 @@
+### 12.4.40
+* Fix for other activities not functioning when set to auto. Thanks @michael
+
+### 12.4.39
+* Fix for using monks token bar and skill checks for check activities.
+
 ### 12.4.38.1
 * Remove some testing code accidentally left if - thanks @Elwin
 
