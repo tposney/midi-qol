@@ -97,9 +97,7 @@ export function collectBonusFlags(actor, category, detail): any[] {
 }
 
 export async function bonusCheck(actor, result: Roll, category, detail = "", messageData: any = {}): Promise<Roll> {
-
   let bonusFlags = collectBonusFlags(actor, category, detail);
-
   if (bonusFlags.length > 0) {
     const data = {
       actor,
@@ -137,6 +135,7 @@ export async function bonusCheck(actor, result: Roll, category, detail = "", mes
 
   return result;
 }
+
 function _applyDeprecatedD20Configs(rollConfig, dialogConfig, messageConfig, options) {
   const set = (config, keyPath, value) => {
     if (value === undefined) return;
@@ -357,14 +356,27 @@ export function averageDice(roll: Roll) {
   return roll;
 }
 
-function configureDamage(wrapped, options: any = { critical: {} }) {
-  // @ ts-expect-error
-  // if ((options.critical && foundry.utils.isEmpty(options.critical)) || this.options.configured || options.critical.allow === false || !this.isCritical) {
+function applyDamageModifiers(damageRoll: Roll): Roll {
+  if (damageRoll.options?.["midi-qol"]?.modifiers?.length) {
+    damageRoll.terms.forEach(term => {
+      if (term instanceof foundry.dice.terms.DiceTerm) {
+        term.modifiers ??= [];
+        term.modifiers = term.modifiers.concat(damageRoll.options["midi-qol"].modifiers);
+      }
+    })
+  }
+  return damageRoll;
+}
 
-  this.simplify();
-  if (this.options.configured || options.critical.allow === false || !this.isCritical) {
+function configureDamage(wrapped, options: any = { critical: {} }) {
+  if (this.options.configured) {
     return;
   }
+  applyDamageModifiers(this);
+  if (options.critical.allow === false || !this.isCritical) {
+    return wrapped(options);
+  }
+  this.simplify();
   const OperatorTerm = foundry.dice.terms.OperatorTerm
   const DiceTerm = foundry.dice.terms.DiceTerm;
   const Die = foundry.dice.terms.Die;
@@ -947,6 +959,8 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getRollData", actorGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
+  libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
+
   currentDAcalculateDamage = window?.customElements?.get("damage-application")?.prototype.calculateDamage;
   if (window?.customElements?.get("damage-application")?.prototype?.calculateDamage) {
     currentDAcalculateDamage = window?.customElements?.get("damage-application")?.prototype?.calculateDamage;
@@ -958,6 +972,40 @@ export function initPatching() {
     //@ts-expect-error
     window.customElements.get("damage-application").prototype.getTargetOptions = _DAgetTargetOptions;
   }
+}
+
+function getAttackModifiers(roll: Roll /* DC20Roll */): string[] {
+  //@ts-expect-error
+  const modifiers: string[] = roll.d20.modifiers ?? [];
+  const actor: Actor = fromUuidSync(roll.data?.actorUuid as string) as Actor;
+  if (!actor) return modifiers;
+  //@ts-expect-error
+  const itemType = roll.data?.item?.itemType;
+  //@ts-expect-error
+  const type = roll.data?.activity?.attack?.type
+  if (!itemType || !type) return modifiers;
+  const actionType = `${type?.value === "ranged" ? "r" : "m"}${type?.classification === "spell" ? "sak" : "wak"}`;
+  const changes: any[] = [];
+  for (let effect of actor.allApplicableEffects()) {
+    if (effect.disabled || effect.isSuppressed) continue;
+    for (let change of effect.changes) {
+      if (change.key.startsWith("flags.midi-qol.rollModifiers.attack.")) changes.push(change);
+    }
+  }
+  changes.sort((a, b) => a.priority - b.priority);
+  for (let change of changes) {
+    const [_, __, ___, ____, actionOrItem] = change.key.split(".");
+    if (actionOrItem === "all" || actionOrItem === actionType || actionOrItem === itemType) {
+      modifiers.push(change.value);
+    }
+  }
+  return modifiers;
+}
+
+function _configureModifiers(wrapped) {
+  wrapped();
+  if (this.data?.activity?.type !== "attack") return;
+  this.d20.modifiers = getAttackModifiers(this);
 }
 
 function _DAgetTargetOptions(...args) {

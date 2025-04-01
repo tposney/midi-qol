@@ -1,3 +1,26 @@
+### 12.4.38
+* Fix for incorrect dc being used when doing concentration checks chat message+roll.
+* Fix for concentration/saves auto completing with a "1" result when not auto rolling saves in some combinations of settings.
+* Fix so that "not checking saves" leaves dnd5e save buttons on the chat card if remove all buttons is not set.
+* Fix for flags.midi-qol.optional.NAME.save.xxx custom ItemMacro not being able to roll the macro.
+* Fix for globalThis.MidiQOL not being correctly initialised.
+* Fix for target AC display when a target grants an attack bonus.
+* New set of flags, flags.midi-qol.rollModifiers.damage.itemOrActionType.damageType.
+  - itemOrActionType can be all/weapon/spell/feat/tool/mwak/msak/heal etc
+  - damageType can be all/piercing/fire etc
+  - you can specify any of the dnd5e roll modifiers, like r<3, x etc, i.e. any of the foundry roll modifier strings.
+  - The modifier will be appended to each of the dice terms in the damage roll.
+  - change priority can be used to specify the order in which the modifiers are added to the roll.
+  so for example:
+    flags.midi-qol.rollModifiers.damage.spell.fire override rr<3 and
+    flags.midi-qol.rollModifiers.damage.spell.fire override x
+    will roll spell fire damage as reroll any 1s or 2s and then explode the resulting rolls.
+* Similarly for flags.midi-qol.rollModifiers.attack.itemOrActionType
+  - itemOrActionType can be all/weapon/spell/feat/tool/mwak/msak/heal etc
+* For macro writers.
+  - preTargeting and preItemUse macro calls now include usage, dialog and message in the options variable.
+    - these are "live" versions, so changes made will affect the rest of the workflow. i.e. options.dialog.configure = false will skip the configure dialog for the activity.
+
 ### 12.4.37
 * Fix for counting every attack as an Attack of Opportunity.
 * For Macro writers

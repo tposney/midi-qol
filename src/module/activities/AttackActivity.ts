@@ -316,6 +316,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
             workflow.attackAdvAttribution.add(`ADV:keyPress`);
             workflow.advReminderAttackAdvAttribution.add(`ADV:keyPress`);
           }
+          rollConfig.midiOptions = {testing: true};
           return true;
         });
 

@@ -2586,7 +2586,7 @@ export function getTargetConfirmation(workflow: Workflow | undefined = undefined
 
 
 export function activityHasDamage(activity) {
-  return activity.damage?.parts?.length > 0;
+  return activity?.damage?.parts?.length > 0;
 }
 export function itemHasDamage(item) {
   return item?.system.damage?.base?.formula;
@@ -3381,7 +3381,7 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
         let item = MQfromUuidSync(itemUuidOrName);
         if (!item && this.actor) item = this.actor.items.getName(itemUuidOrName);
         if (!item && this instanceof Actor) item = this.items.getName(itemUuidOrName);
-        workflow = new DummyWorkflow(this.actor ?? this, item, ChatMessage.getSpeaker({ actor: this.actor }), [], {});
+        workflow = new DummyWorkflow(this.actor ?? this, undefined, ChatMessage.getSpeaker({ actor: this.actor }), [], {item});
       }
       const macroData = workflow.getMacroData();
       macroData.macroPass = `${button.key}.${flagSelector}`;
@@ -6638,7 +6638,7 @@ export function processConcentrationRequestMessage(message, html, data) {
         if (user?.active) {
           const whisper = game.users?.filter(user => actor.testUserPermission(user, "OWNER")).map(u => (u as User).id);
           socketlibSocket.executeAsUser("rollConcentration", user.id, { actorUuid: actor.uuid, target: dc, create: true, rollMode: "gmroll" });
-        } else actor.rollConcentration({ target: dc }, {}, { create: true, rollMode: "gmroll" });
+        } else actor.rollConcentration({ legacy: false, target: dc }, {}, { create: true, rollMode: "gmroll" });
         message.setFlag(MODULE_ID, "concentrationRolled", true);
       }
     }
@@ -6839,7 +6839,7 @@ export function getDefaultDamageType(item) {
 }
 
 export function activityHasAreaTarget(activity): boolean {
-  return activity.target?.template.type in GameSystemConfig.areaTargetTypes
+  return activity?.target?.template.type in GameSystemConfig.areaTargetTypes
 }
 
 export function getSaveRollModeFor(abilityId) {

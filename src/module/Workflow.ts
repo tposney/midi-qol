@@ -1311,7 +1311,7 @@ export class Workflow {
     this.hitTargetsEC = new Set();
   }
 
-  constructor(actor: any /* Actor5e*/, activity: any /* Item5e*/, speaker, targets, options: any = { chatCardUuid: undefined, storeWorkflow: true }) {
+  constructor(actor: any /* Actor5e*/, activity: any /* Item5e*/, speaker, targets, options: any = { chatCardUuid: undefined, storeWorkflow: true, item: undefined }) {
     if (options.chatCardUuid && SaveToChatCard) {
       this.itemCardUuid = options.chatCardUuid;
       this.id = options.chatCardUuid;
@@ -1324,7 +1324,7 @@ export class Workflow {
       }
       if (this.activity?.target?.affects.type === "self") this.targets = new Set(this.token ? [this.token] : []);
       else this.targets = new Set(targets ? targets : []);
-      this.item = activity.item;
+      this.item = activity?.item ?? options.item;
       this.activity = activity;
       this.speaker = speaker;
       this.hitTargets = new Set(this.targets);
@@ -1395,7 +1395,7 @@ export class Workflow {
     this.systemString = game.system?.id.toUpperCase();
     this.needsAttackAdvantageCheck = true;
     this.defaultDamageType = getActivityDefaultDamageType(this) ?? MQdefaultDamageType;
-    if (this.activity.actionType === "heal" && !Object.keys(GameSystemConfig.healingTypes).includes(this.defaultDamageType ?? "")) this.defaultDamageType = "healing";
+    if (this.activity?.actionType === "heal" && !Object.keys(GameSystemConfig.healingTypes).includes(this.defaultDamageType ?? "")) this.defaultDamageType = "healing";
 
     this.preSelectedTargets = canvas?.scene ? new Set(game.user?.targets) : new Set(); // record those targets targeted before cast.
     if (this.item && ["spell", "feat", "weapon"].includes(this.item.type)) {
@@ -1491,7 +1491,10 @@ export class Workflow {
         } else {
           if (removeDnd5eSaveButtons) {
             const saveRe = /<button[\s\S].*?data-action="rollSave"[\s\S]*?<\/button>/
-            content = content?.replace(saveRe, "")
+            for (let count = 0; count < 100; count++) {
+              if (!content.match(saveRe)) break;
+              content = content?.replace(saveRe, "")
+            }
           }
           if (removeDnd5eTemplateButtons) {
             const templateRe = /<button[\s\S].*?data-action="placeTemplate"[\s\S]*?<\/button>/
@@ -1841,7 +1844,7 @@ export class Workflow {
     }
 
     // do pre roll checks
-    if (checkMechanic("checkRange") !== "none" && (!this.AoO || ["rwak", "rsak", "rpak"].includes(this.activity.actionType)) && this.tokenUuid) {
+    if (checkMechanic("checkRange") !== "none" && (!this.AoO || ["rwak", "rsak", "rpak"].includes(this.activity?.actionType)) && this.tokenUuid) {
       const { result, attackingToken, range, longRange } = checkActivityRange(this.activity, getToken(this.token) ?? "invalid", this.targets);
       switch (result) {
         case "fail": return this.WorkflowState_RollFinished;
@@ -2080,7 +2083,7 @@ export class Workflow {
         // provide a hint as to the type of roll expected.
         let content = chatMessage && foundry.utils.duplicate(chatMessage.content)
         let searchRe = /<button data-action="damage">[^<]+<\/button>/;
-        const damageTypeString = (this.activity.actionType === "heal") ? i18n(`${this.systemString}.Healing`) : i18n(`${this.systemString}.Damage`);
+        const damageTypeString = (this.activity?.actionType === "heal") ? i18n(`${this.systemString}.Healing`) : i18n(`${this.systemString}.Damage`);
         let damageString = (this.rollOptions.isCritical || this.isCritical) ? i18n(`${this.systemString}.Critical`) : damageTypeString;
         if (this.rollOptions.fastForwardDamage && configSettings.showFastForward) damageString += ` ${i18n("midi-qol.fastForward")}`;
         let replaceString = `<button data-action="damage">${damageString}</button>`
@@ -2237,7 +2240,7 @@ export class Workflow {
       if (this.item) await asyncHooksCallAll(`midi-qol.postCheckSaves.${this.item?.uuid}`, this);
       if (this.aborted) return this.WorkflowState_Abort;
       const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
-      Workflow.removeItemCardButtons(this.itemCardUuid as string, { removeDnd5eSaveButtons: true, removeDnd5eTemplateButtons: true });
+      Workflow.removeItemCardButtons(this.itemCardUuid as string, { removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none", removeDnd5eTemplateButtons: true });
       await this.displaySaves(saveDisplay === "whisper");
     } else {// has saves but we are not checking so do nothing with the damage
       await this.expireTargetEffects(["isAttacked"])
@@ -2660,7 +2663,7 @@ export class Workflow {
         damageListData.forEach((di => delete di.damageDetails))
         addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.damageList]: damageListData });
       }
-      await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: getRemoveAllButtons(this.item), removeAttackButtons: getRemoveAttackButtons(this.item), removeDamageButtons: getRemoveDamageButtons(this.item), removeDnD5eButtons: getRemoveAllButtons(this.item), removeDnd5eSaveButtons: true });
+      await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: getRemoveAllButtons(this.item), removeAttackButtons: getRemoveAttackButtons(this.item), removeDamageButtons: getRemoveDamageButtons(this.item), removeDnD5eButtons: getRemoveAllButtons(this.item) && configSettings.autoCheckSaves !== "none", removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none" });
     }
     if (context.attackRoll) return this.WorkflowState_AttackRollComplete;
     if (context.damageRoll) return this.WorkflowState_ConfirmRoll;
@@ -3120,8 +3123,8 @@ export class Workflow {
         conditionData = createConditionData({ workflow: this, target, actor: this.actor });
       if (!failDisadvantageHeavy || !await evalAllConditionsAsync(this.actor, `flags.${MODULE_ID}.fail.disadvantage.heavy`, conditionData)) {
         if (safeGetGameSetting("dnd5e", "rulesVersion") === "modern") {
-          if ((this.activity.actionType === "mwak" && this.actor.system.abilities?.str.value < 13) ||
-            (this.activity.actionType === "rwak" && this.actor.system.abilities?.dex.value < 13)) {
+          if ((this.activity?.actionType === "mwak" && this.actor.system.abilities?.str.value < 13) ||
+            (this.activity?.actionType === "rwak" && this.actor.system.abilities?.dex.value < 13)) {
             this.disadvantage = true;
             this.attackAdvAttribution.add("DIS:heavy weapon");
             this.advReminderAttackAdvAttribution.add("DIS:Heavy Weapon");
@@ -4243,7 +4246,7 @@ export class Workflow {
   async displayHitTargets(whisper = false) {
     this.hitDisplayData = {};
     this.hitTargetsDisplayed = true;
-    if (this.item.type === "feat" && ["ench", "class", undefined].includes(this.activity.actionType)) return;
+    if (this.item.type === "feat" && ["ench", "class", undefined].includes(this.activity?.actionType)) return;
     for (let target of this.targets) {
       const targetToken = getToken(target);
       if (!targetToken) continue;
@@ -5414,13 +5417,14 @@ export class Workflow {
     const ddbglFlags = message.flags && message.flags["ddb-game-log"];
     const isDDBGL = ddbglFlags?.cls === "save" && !ddbglFlags?.pending;
     const midiFlags = message.flags && message.flags[MODULE_ID];
-
+    const isRoll = message.flags?.dnd5e?.messageType === "roll";
     let requestId = message?.speaker?.token;
     if (!requestId && isDDBGL) requestId = message?.speaker?.actor;
     if (debugEnabled > 0) warn("processSaveRoll |", requestId, this.saveRequests)
     if (!requestId) return true;
 
-    if (!this.saveRequests[requestId]) return true;
+    // TODO check the roll against the sort of roll we are waiting for.
+    if (!this.saveRequests[requestId] || !isRoll) return true;
 
     if (this.saveRequests[requestId]) {
       clearTimeout(this.saveTimeouts[requestId]);
@@ -5719,7 +5723,7 @@ export class Workflow {
         // This was set by computeCoverBonus so clear it after use.
         foundry.utils.setProperty(targetActor, `flags.${MODULE_ID}.acBonus`, 0);
       }
-      if (game.user?.isGM) log(`${this.speaker.alias} Rolled a ${this.attackTotal} to hit ${targetName} 's AC of ${targetAC} ${(isHit || this.isCritical) ? "hitting" : "missing"}`);
+      if (game.user?.isGM) log(`${this.speaker.alias} Rolled a ${this.attackTotal + attackBonus} to hit ${targetName} 's AC of ${targetAC} ${(isHit || this.isCritical) ? "hitting" : "missing"}`);
       // Log the hit on the target
       let attackType = ""; //item?.name ? i18n(item.name) : "Attack";
 
@@ -5789,14 +5793,18 @@ export class Workflow {
       const targetUuid = getTokenDocument(targetToken)?.uuid ?? "";
 
       let acBonusString = "";
+      let targetACString = `${targetAC}`;
       if (attackBonus || bonusAC) {
         //@ts-expect-error no dnd5e-types
         acBonusString = ` (${targetToken.actor?.system.attributes.ac?.value ?? 10}`;
-        if (attackBonus) acBonusString += `-${attackBonus}`;
+        if (attackBonus) {
+          acBonusString += `-${attackBonus}`;
+          targetACString = `${targetAC - attackBonus}`;
+        }
         if (bonusAC) acBonusString += `+${bonusAC}`;
         acBonusString += ")";
       }
-      const acDisplay = `${targetAC}${acBonusString}`;
+      const acDisplay = `${targetACString}${acBonusString}`;
 
       this.hitDisplayData[targetUuid] = {
         isPC: (targetToken.actor as Actor)?.hasPlayerOwner,
@@ -5805,7 +5813,7 @@ export class Workflow {
         tokenuuid: targetUuid,
         hitStyle,
         attackBonus,
-        ac: targetAC,
+        ac: targetAC - attackBonus,
         acDisplay,
         baseAc: targetAC - bonusAC,
         hitClass: ["hit", "critical", "isHitEC"].includes(isHitResult) ? "success" : "failure",
@@ -6613,7 +6621,7 @@ export class DDBGameLogWorkflow extends Workflow {
   }
   async WorkflowState_DamageRollComplete(context: any = {}): Promise<WorkflowState> {
     this.defaultDamageType = getActivityDefaultDamageType(this) ?? this.defaultDamageType ?? MQdefaultDamageType;
-    if (this.activity.actionType === "heal" && !Object.keys(GameSystemConfig.healingTypes).includes(this.defaultDamageType ?? "")) this.defaultDamageType = "healing";
+    if (this.activity?.actionType === "heal" && !Object.keys(GameSystemConfig.healingTypes).includes(this.defaultDamageType ?? "")) this.defaultDamageType = "healing";
 
     this.rawDamageDetail = createDamageDetailV4({ roll: this.damageRolls, activity: this.activity, defaultType: this.defaultDamageType });
 
@@ -6660,9 +6668,9 @@ export class DDBGameLogWorkflow extends Workflow {
 export class DummyWorkflow extends Workflow {
   static get forceCreate() { return false }
   //@ts-expect-error dnd5e v10
-  constructor(actor: globalThis.dnd5e.documents.Actor5e, item: globalThis.dnd5e.documents.Item5e, speaker, targets, options: any) {
+  constructor(actor: globalThis.dnd5e.documents.Actor5e, activity: any, speaker, targets, options: any) {
     options.noTemplateHook = true;
-    super(actor, item, speaker, targets, options);
+    super(actor, activity, speaker, targets, options);
     this.advantage = options?.advantage;
     this.disadvantage = options?.disadvantage
     this.rollOptions.fastForward = options?.fastForward;
