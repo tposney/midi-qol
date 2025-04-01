@@ -51,7 +51,6 @@ publish-foundry-manifest:
       RESPONSE=$(curl -X POST -H "Content-Type: application/json" -H "Authorization: $FOUNDRY_API_TOKEN" $FOUNDRY_RELEASE_URL -d \
       "{
         \"id\": \"$PACKAGE_NAME\",
-        \"dry-run\": \"false\",
         \"release\": {
           \"version\": \"${CI_COMMIT_TAG:1}\",
           \"manifest\": \"$CI_PROJECT_URL/-/releases/$CI_COMMIT_TAG/downloads/$PACKAGE_TYPE.json\",

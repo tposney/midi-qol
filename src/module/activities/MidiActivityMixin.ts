@@ -595,6 +595,7 @@ export var MidiActivityMixin = Base => {
       return result ?? [];
     }
 
+
     configureDamageRoll(config): void {
       //@ts-expect-error
       const DamageRoll = CONFIG.Dice.DamageRoll;
@@ -645,6 +646,7 @@ export var MidiActivityMixin = Base => {
       config.ammunition = this.actor.items.get(config.workflow?.ammunition);
       const rollConfig = super.getDamageConfig(config);
       this.configureDamageRoll(rollConfig);
+      this.createDamageRollModifiers(rollConfig);
       for (let roll of rollConfig.rolls) {
         if (rollConfig.ammunition) { // add ammunition properties to the damage roll
           let rollProperties = new Set(roll.options.properties);
@@ -655,6 +657,42 @@ export var MidiActivityMixin = Base => {
         // critical/fumble will be inserted when roll.build is called.
       }
       return rollConfig;
+    }
+
+    getDamageRollModifiers(roll: Roll /* DamageRoll */): string[] {
+      const modifiers: string[] = [];
+      const actionType = this.actionType;
+      const itemType = this.item.type;
+      //@ts-expect-error
+      const damageTypes = roll.options.types;
+      const changes: any[] = [];
+      for (let effect of this.actor.allApplicableEffects()) {
+        if (effect.disabled || effect.isSuppressed) continue;
+        for (let change of effect.changes) {
+          if (!change.key.startsWith("flags.midi-qol.rollModifiers.damage.")) continue;
+          changes.push(change);
+        }
+      }
+      changes.sort((a, b) => a.priority - b.priority);
+      for (let change of changes) {
+        const [_, __, ___, ____, actionOrItem, damageType] = change.key.split(".");
+        if (actionOrItem === "all" || actionOrItem === actionType || actionOrItem === itemType) {
+          if (damageType === "all" || damageTypes.includes(damageType)) {
+            modifiers.push(change.value);
+          }
+        }
+      }
+      return modifiers;
+    }
+
+    createDamageRollModifiers(rollConfig) {
+      const rolls = rollConfig.rolls;
+      rolls.forEach(roll => {
+        const modifiers = this.getDamageRollModifiers(roll);
+        roll.options["midi-qol"] ??= {};
+        roll.options["midi-qol"].modifiers ??= [];
+        roll.options["midi-qol"].modifiers = roll.options["midi-qol"].modifiers.concat(modifiers);
+      })
     }
 
     async postProcessDamageRoll(config, result: Array<Roll>): Promise<Array<Roll>> {
@@ -887,7 +925,7 @@ export var MidiActivityMixin = Base => {
       }
 
       if (options.callMacros && configSettings.allowUseMacro) {
-        const results = await workflow?.callMacros(this.item, workflow?.onUseMacros?.getMacros("preTargeting"), "OnUse", "preTargeting");
+        const results = await workflow?.callMacros(this.item, workflow?.onUseMacros?.getMacros("preTargeting"), "OnUse", "preTargeting", {usage, dialog, message});
         cancelWorkflow ||= results?.some(i => i === false) ?? false;
       }
       if (cancelWorkflow) return removeWorkflow(usage.workflow);
@@ -902,15 +940,17 @@ export var MidiActivityMixin = Base => {
       if (!workflow) return false;
       let options: any = { none: false, checkAoO: true, checkReaction: true, checkBonusAction: true, checkAllowIncapacitated: false, callMacros: true, callHooks: true, checkTargets: true, checkComponents: true, checkUse: true }
       if (optionsConfig.none) options = optionsConfig;
-      options = foundry.utils.mergeObject(options, optionsConfig, { insertKeys: true, overwrite: true });
+      else 
+        options = foundry.utils.mergeObject(options, optionsConfig, { insertKeys: true, overwrite: true });
       if (usage.midiOptions.proceedChecks?.none) options = usage.midiOptions.proceedChecks;
-      options = foundry.utils.mergeObject(options, usage.midiOptions.proceedChecks ?? {}, { insertKeys: true, overwrite: true });
+      else
+        options = foundry.utils.mergeObject(options, usage.midiOptions.proceedChecks ?? {}, { insertKeys: true, overwrite: true });
 
       if (options.callHooks) {
-        let hookAbort = await asyncHooksCall("midi-qol.preItemRoll", { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false 
+        let hookAbort = await asyncHooksCall("midi-qol.preItemRoll", { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false
           || await asyncHooksCall(`midi-qol.preItemRoll.${this.uuid}`, { activity: this, token: usage.workflow.token, config: usage, dialog, message }) === false;
         hookAbort ||= await asyncHooksCall("midi-qol.preItemRollV2", { workflow: usage.workflow, usage, dialog, message }) === false
-        || await asyncHooksCall(`midi-qol.preItemRollV2.${this.item.uuid}`, { workflow: usage.workflow, usage, dialog, message }) === false;
+          || await asyncHooksCall(`midi-qol.preItemRollV2.${this.item.uuid}`, { workflow: usage.workflow, usage, dialog, message }) === false;
         if (hookAbort || workflow.aborted) {
           console.warn("midi-qol | attack roll blocked by preItemRoll hook");
           workflow.aborted = true;
@@ -920,7 +960,7 @@ export var MidiActivityMixin = Base => {
       }
 
       if (options.callMacros && configSettings.allowUseMacro) {
-        const results = await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preItemRoll"), "OnUse", "preItemRoll");
+        const results = await workflow.callMacros(workflow.item, workflow.onUseMacros?.getMacros("preItemRoll"), "OnUse", "preItemRoll", {usage, dialog, message});
         if (workflow.aborted || results.some(i => i === false)) {
           console.warn("midi-qol | item roll blocked by preItemRoll macro");
           workflow.aborted = true;
@@ -1036,9 +1076,11 @@ export var MidiActivityMixin = Base => {
         warn("MidiQOL | postChatCardChecks | Called", this);
       let options: any = { none: false, checkAoO: true, checkReaction: true, checkBonusAction: true, checkAllowIncapacitated: false, callMacros: true, callHooks: true, checkTargets: true, checkComponents: true, checkUse: true }
       if (optionsConfig.none) options = optionsConfig;
-      options = foundry.utils.mergeObject(options, optionsConfig, { insertKeys: true, overwrite: true });
+      else
+        options = foundry.utils.mergeObject(options, optionsConfig, { insertKeys: true, overwrite: true });
       if (usage.midiOptions.proceedChecks?.none) options = usage.midiOptions.proceedChecks;
-      options = foundry.utils.mergeObject(options, usage.midiOptions.proceedChecks ?? {}, { insertKeys: true, overwrite: true });
+      else 
+        options = foundry.utils.mergeObject(options, usage.midiOptions.proceedChecks ?? {}, { insertKeys: true, overwrite: true });
       try {
         // Needs to be after chat card as requires targets
 

@@ -136,7 +136,8 @@ Hooks.once("init", () => {
   // @ts-expect-error
   CONFIG.ChatMessage.documentClass = defineChatMessageMidiClass(CONFIG.ChatMessage.documentClass);
 });
-globalThis.MidiQOL = { checkIncapacitated };
+globalThis.MidiQOL ??= {}
+globalThis.MidiQOL.checkIncapacitated = checkIncapacitated;
 function setupActvities() {
   globalThis.MidiQOL.activityTypes = {};
   setupMidiActivityMixin();
@@ -1275,6 +1276,30 @@ function setupMidiFlags() {
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.min.ability.save.concentration`);
   midiFlags.push(`flags.${MODULE_ID}.sharpShooter`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.sharpShooter`);
+
+  midiFlags.push(`flags.${MODULE_ID}.rollModifiers.damage.all.all`);
+  midiFlags.push(`flags.${MODULE_ID}.rollModifiers.attack.all`);
+
+  attackTypes.forEach(at => {
+    midiFlags.push(`flags.${MODULE_ID}.rollModifiers.attack.${at}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.attack.${at}`);
+    midiFlags.push(`flags.${MODULE_ID}.rollModifiers.damage.${at}.all`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.damage.${at}.all`);
+    Object.keys(config.damageTypes).forEach(dt => {
+      midiFlags.push(`flags.${MODULE_ID}.rollModifiers.damage.${at}.${dt}`);
+      daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.damage.${at}.${dt}`);
+    })
+  });
+  ["weapon", "spell", "tool", "feat"].forEach(it => {
+    midiFlags.push(`flags.${MODULE_ID}.rollModifiers.attack.${it}`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.attack.${it}`);
+    midiFlags.push(`flags.${MODULE_ID}.rollModifiers.damage.${it}.all`);
+    daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.damage.${it}.all`);
+    Object.keys(config.damageTypes).forEach(dt => {
+      midiFlags.push(`flags.${MODULE_ID}.rollModifiers.damage.${it}.${dt}`);
+      daeFieldBrowserFields.push(`flags.${MODULE_ID}.rollModifiers.damage.${it}.${dt}`);
+    })
+  })
 
   Object.keys(config.abilities).forEach(abl => {
     midiFlags.push(`flags.${MODULE_ID}.advantage.ability.check.${abl}`);

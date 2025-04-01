@@ -653,6 +653,7 @@
   "midi-qol.AddDead.Name": "Adicionar Efeito 0 PV",
   "midi-qol.AddDead.Hint1": "Jogador Controlado",
   "midi-qol.AddDead.Hint2": "Mestre Controlado",
+  "midi-qol.markDefeated": "Marcar como Derrotado no Monitor de Combate",
   "midi-qol.AddDeadOptions": {
     "none": "Não Atualizar",
     "overlay": "Sobreposição",
@@ -961,6 +962,7 @@
     "firstSaveTarget": "Primeiro Alvo Sucesso Salv.",
     "firstFailedSaveTarget": "Primeiro Alvo Falha Salv."
   },
+  "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>Monitoramento de Concentração do D&D5e Desabilitado</strong><br></center><br><center>O Monitoramento de Concentração está desabilitado nas configurações do sistema D&D5e.</center><center>Habilite nas configurações do D&D5e para habilitar as configurações de concentração do Midi QOL</center><br>",
   "midi-qol.SHARED": {
     "use-condition": {
       "header": "Condições do Midi QOL"

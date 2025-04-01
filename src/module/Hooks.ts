@@ -1162,12 +1162,9 @@ Hooks.on("dnd5e.preRollConcentrationV2", (rollConfig: any, dialogConfig: any, me
     }
   }
 
-  if (rollConfig.rolls) {
-    for (let roll of rollConfig.rolls) {
-      roll.options.advantage ||= concAdv;
-      roll.options.disadvantage ||= concDisadv;
-    }
-  }
+  rollConfig.advantage ||= concAdv;
+  rollConfig.disadvantage ||= concDisadv;
+
   return true;
 })
 
