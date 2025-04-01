@@ -1,3 +1,6 @@
+### 12.4.38.1
+* Remove some testing code accidentally left if - thanks @Elwin
+
 ### 12.4.38
 * Fix for incorrect dc being used when doing concentration checks chat message+roll.
 * Fix for concentration/saves auto completing with a "1" result when not auto rolling saves in some combinations of settings.
