@@ -15,32 +15,26 @@
       <div class="notes midi-qol-faint">{{localize "midi-qol.AddWounded.Hint"}}</div>
     </div>
 
-    <div class="flexrow 4">
-      <label style="flex-grow: 1"> </label>
-      <label style="flex-grow: 1">{{localize "midi-qol.AddDead.Hint1"}}</label>
-      <label style="flex-grow: 1">{{localize "midi-qol.AddDead.Hint2"}}</label>
-      <label style="flex-grow: 1"> </label>
-    </div>
-    <div class="form-group">
+    <div id="midi-condition-group" class="from-group">
+      <div></div>
+      <label style="text-align: center">{{localize "midi-qol.AddDead.Hint1"}}</label>
+      <label style="text-align: center">{{localize "midi-qol.AddDead.Hint2"}}</label>
+      <div></div>
       <label>{{localize "midi-qol.AddDead.Name"}}</label>
-      <div class="flexrow 5">
-        <select name="midiUnconsciousCondition" data-dtype="String">
-          {{selectOptions StatusEffectOptions selected=configSettings.midiUnconsciousCondition}}
-        </select>
-        <select style="margin: 0 5px" name="midiDeadCondition" data-dtype="String">
-          {{selectOptions StatusEffectOptions selected=configSettings.midiDeadCondition}}
-        </select>
-        <select name="addDead" data-dtype="String">
-          {{selectOptions AddDeadOptions selected=configSettings.addDead}}
-        </select>
-      </div>
-      <div class="flexrow 3">
-        <label>{{localize "midi-qol.markDefeated"}}</label>
-        <input type="checkbox" name="markPlayerDefeated" data-dtype="Boolean" {{checked
-          configSettings.markPlayerDefeated}} />
-        <input type="checkbox" name="markNonPlayerDefeated" data-dtype="Boolean" {{checked
-          configSettings.markNonPlayerDefeated}} />
-      </div>
+      <select name="midiUnconsciousCondition" data-dtype="String">
+        {{selectOptions StatusEffectOptions selected=configSettings.midiUnconsciousCondition}}
+      </select>
+      <select name="midiDeadCondition" data-dtype="String">
+        {{selectOptions StatusEffectOptions selected=configSettings.midiDeadCondition}}
+      </select>
+      <select name="addDead" data-dtype="String">
+        {{selectOptions AddDeadOptions selected=configSettings.addDead}}
+      </select>
+      <label>{{localize "midi-qol.markDefeated"}}</label>
+      <input type="checkbox" name="markPlayerDefeated" data-dtype="Boolean" {{checked
+        configSettings.markPlayerDefeated}} />
+      <input type="checkbox" name="markNonPlayerDefeated" data-dtype="Boolean" {{checked
+        configSettings.markNonPlayerDefeated}} />
     </div>
   </div>
   <div class="midi-qol-box">

@@ -1340,8 +1340,9 @@ export var MidiActivityMixin = Base => {
         }
       }
 
-      if (this.otherActivityId !== "auto") {
+      if (this.otherActivityId !== "") {
         this._otherActivity = this.item.system.activities.get(this.otherActivityId);
+        if (!this._otherActivity) this._otherActivity = this.item.system.activities.find(a => a.identifier === this.otherActivityId);
         this._otherActivity?.prepareData();
         return this._otherActivity;
       }

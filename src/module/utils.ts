@@ -6942,8 +6942,10 @@ function getCPREffect(id: string): ActiveEffect | undefined {
 
 export function updateUserTargets(targetIds: string[]) {
   if (!game.user) return;
-  if (game.release.generation > 12) { // TODO make sure this really works
+  if (game.release.generation > 12) { // TODO make sure this really works NOTE from Michael: Should work now
     game.user.broadcastActivity({ targets: targetIds });
+    // @ts-expect-error types isn't v13 yet but this is how core does it
+    game.user._onUpdateTokenTargets(targetIds);
   } else {
     game.user.updateTokenTargets(targetIds);
   }
