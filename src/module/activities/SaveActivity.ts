@@ -24,7 +24,7 @@ export function setupSaveActivity() {
 
 let defineMidiSaveActivityClass = (ActivityClass: any) => {
   return class MidiSaveActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "DND5E.DAMAGE", "midi-qol.SAVE", "midi-qol.DAMAGE"];
+    static LOCALIZATION_PREFIXES = ["DND5E.DAMAGE", "midi-qol.SAVE", "midi-qol.DAMAGE", ...super.LOCALIZATION_PREFIXES];
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
@@ -69,12 +69,14 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
 
     static #rollDamage(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
+      if (workflow) workflow.activity = this;
       //@ts-expect-error
       return this.rollDamage({event, workflow});
     }
 
     static async #rollSave(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
+      if (workflow) workflow.activity = this;
       // return ActivityClass.#rollSave.bind(this)(event, target, message);
       // Can't call ActivityClass.#rollSave.bind(this)(event, target, message) as it's private
       const targets: Array<Token | Actor> = getSceneTargets();

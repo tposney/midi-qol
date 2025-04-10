@@ -22,7 +22,7 @@ export function setupEnchantActivity() {
 
 let defineMidiEnchantActivityClass = (ActivityClass: any) => {
   return class MidiEnchantActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.ENCHANT"];
+    static LOCALIZATION_PREFIXES = ["midi-qol.ENCHANT", ...super.LOCALIZATION_PREFIXES];
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {

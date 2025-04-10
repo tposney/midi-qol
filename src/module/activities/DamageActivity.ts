@@ -23,7 +23,7 @@ export function setupDamageActivity() {
 
 let defineMidiDamageActivityClass = (ActivityClass: any) => {
   return class MidiDamageActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.DAMAGE"];
+    static LOCALIZATION_PREFIXES = ["midi-qol.DAMAGE", ...super.LOCALIZATION_PREFIXES, ];
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
@@ -40,6 +40,7 @@ let defineMidiDamageActivityClass = (ActivityClass: any) => {
 
     static #rollDamage(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
+      if (workflow) workflow.activity = this;
       //@ts-expect-error
       this.rollDamage({ event, workflow });
     }

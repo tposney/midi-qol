@@ -2,12 +2,13 @@ import { debugEnabled, warn, GameSystemConfig, debug, log, i18n, MODULE_ID, i18n
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
 import { defaultRollOptions } from "../patching.js";
-import { ReplaceDefaultActivities, configSettings } from "../settings.js";
+import { ReplaceDefaultActivities, configSettings, safeGetGameSetting } from "../settings.js";
 import { busyWait } from "../tests/setupTest.js";
-import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, displayDSNForRoll, getSpeaker, processAttackRollBonusFlags } from "../utils.js";
+import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, completeActivityUse, addUpdatesCache, displayDSNForRoll, getSpeaker, processAttackRollBonusFlags } from "../utils.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
+import { error } from "jquery";
 
 export var MidiAttackSheet;
 export var MidiAttackActivity;
@@ -103,7 +104,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
   return class MidiAttackActivity extends MidiActivityMixin(ActivityClass) {
     _otherActivity: any | undefined;
 
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.ATTACK", "midi-qol.SHARED"];
+    static LOCALIZATION_PREFIXES = ["midi-qol.ATTACK", "midi-qol.SHARED", ...super.LOCALIZATION_PREFIXES];
 
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, NumberField, DocumentIdField } = foundry.data.fields;
@@ -130,13 +131,17 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           actions: {
             rollAttack: MidiAttackActivity.#rollAttack,
             rollAttackAdvantage: MidiAttackActivity.#rollAttackAdvantage,
-            rollAttackDisadvantage: MidiAttackActivity.#rollAttackDisadvantage
+            rollAttackDisadvantage: MidiAttackActivity.#rollAttackDisadvantage,
+            rollDamage: MidiAttackActivity.#rollDamage,
+            rollDamageNoCritical: MidiAttackActivity.#rollDamageNoCritical,
+            rollDamageCritical: MidiAttackActivity.#rollDamageCritical,
           }
         },
       }, { inplace: false, insertKeys: true, insertValues: true })
 
     static #rollAttack(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
+
       if (!message || !workflow || workflow.currentAction === workflow.WorkflowState_Aborted || workflow.currentAction === workflow.WorkflowState_Completed) {
         if (workflow?.itemCardUuid) Workflow.removeItemCardButtons(workflow.itemCardUuid, { removeAllButtons: true });
         const attackConfig: any = { event, workflow };
@@ -147,6 +152,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         //@ts-expect-error
         this.use(attackConfig, {}, {});
       } else {
+        workflow.activity = this;
         //@ts-expect-error
         return this.rollAttack({ event, workflow }, {}, {});
       }
@@ -163,11 +169,12 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         //@ts-expect-error
         this.use(attackConfig, {}, {});
       } else {
-        const attackConfig:any = { workflow };
+        const attackConfig: any = { workflow };
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
         attackConfig.advantage = true;
         attackConfig.disadvantage = false;
+        workflow.activity = this;
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
       }
@@ -184,14 +191,52 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         //@ts-expect-error
         this.use(attackConfig, {}, {});
       } else {
-        const attackConfig:any = { workflow };
+        const attackConfig: any = { workflow };
         attackConfig.midiOptions = workflow?.rollOptions ?? {};
         attackConfig.midiOptions.workflowOptions ??= workflow.workflowOptions ?? {};
         attackConfig.advantage = false;
         attackConfig.disadvantage = true;
+        workflow.activity = this;
         //@ts-expect-error
         return this.rollAttack(attackConfig, {}, {});
       }
+    }
+
+
+
+    static #rollDamage(event, target, message) {
+      const workflow = Workflow.getWorkflow(message?.uuid);
+      if (workflow) workflow.activity = this;
+      // @ts-expect-error
+      return this.rollDamage({ event, workflow, critical: { allow: true } }, {}, message);
+    }
+
+    static #rollDamageNoCritical(event, target, message) {
+      const workflow = Workflow.getWorkflow(message?.uuid);
+      if (workflow) workflow.activity = this;
+      // @ts-expect-error
+      return this.rollDamage({ event, workflow, critical: { allow: false }, midiOptions: { isCritical: false } }, {}, message);
+    }
+
+    static #rollDamageCritical(event, target, message) {
+      const workflow = Workflow.getWorkflow(message?.uuid);
+      if (workflow) workflow.activity = this;
+      // @ts-expect-error
+      return this.rollDamage({ event, workflow, midiOptions: { isCritical: true } }, {}, message);
+    }
+
+    async rollDamage(config: any = {}, dialog: any = {}, message: any = {}) {
+      if (!config.ammunition) {
+        let ammunition = this.ammunitionItem;
+        if (!ammunition) ammunition = config.workflow?.ammunition;
+        if (!ammunition && config.workflow) {
+          const data = foundry.utils.getProperty(config.workflow.chatCard, "flags.midi-qol.ammunitionData");
+          if (data) return new Item.implementation(data, { parent: this.actor });
+        }
+        config.ammunition = ammunition;
+        this.ammunitionItem = ammunition;
+      }
+      return super.rollDamage(config, dialog, message);
     }
 
     async _triggerSubsequentActions(config, results) {
@@ -280,6 +325,10 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           advantage: areKeysPressed(config.event ?? workflow.workflowOptions.event, "skipDialogAdvantage"),
           disadvantage: areKeysPressed(config.event ?? workflow.workflowOptions.event, "skipDialogDisadvantage")
         };
+
+        if (this.item.system.properties?.has("ver") && areMidiKeysPressed(config.event ?? workflow.workflowOptions.event, "Versatile")) {
+          config.workflow.attackMode = "twoHanded";
+        }
         if (this.item.system.properties?.has("amm")) {
           const ammoConfirmation = this.confirmAmmunition;
           if (ammoConfirmation.reason) {
@@ -318,9 +367,14 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           }
           return true;
         });
-
+        rollAttackHookId = Hooks.once("dnd5e.rollAttackV2", (rolls, { ammoUpdate, subject }) => {
+          if (ammoUpdate?.destroy) {
+            const data = this.actor.items.get(ammoUpdate.id).toObject();
+            addUpdatesCache(workflow.id, { "flags.midi-qol.ammunitionData": data });
+          }
+        });
         postAttackRollConfigurationHook = Hooks.once("dnd5e.postAttackRollConfiguration", (rolls, config: any, dialog: any, message: any) => {
-          if (this.requireAmmunition && this.item.system.properties?.has("amm") && workflow) {
+          if (this.requireAmmunition && this.item.system.properties?.has("amm")) {
             const chosenAmmunition = this.actor.items.get(rolls[0].options.ammunition);
             if ((chosenAmmunition?.system.quantity ?? 0) <= 0) ui.notifications?.error(i18nFormat("midi-qol.NoAmmunition", { name: chosenAmmunition?.name ?? "Ammunition" }));
             return chosenAmmunition?.system.quantity > 0;
@@ -329,11 +383,17 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         })
         message ??= {};
         message.create ??= config.midiOptions.chatMessage;
+        const rollMode = safeGetGameSetting("core", "rollMode");
+        const showChatAttackCard = game.user?.isGM && configSettings.gmAttackDamageCards && [CONST.DICE_ROLL_MODES.SELF, CONST.DICE_ROLL_MODES.BLIND, CONST.DICE_ROLL_MODES.PRIVATE].includes(rollMode);
+        if (showChatAttackCard) {
+          // Show a chat card for attack rolls if the players are not going to see the card.
+          message.create = true;
+          message.rollMode = rollMode;
+        }
         config.attackMode = this.attackMode ?? "oneHanded";
         if (config.event && areMidiKeysPressed(config.event, "Versatile") && this.item.system.damage?.versatile && this.item.system.properties.has("ver")) {
-          config.attackMode = config.attackMode === "twoHanded" ? "oneHanded" : "twoHanded";
+          config.attackMode = "twoHanded";
         }
-        config.ammunition = this.ammunition;
         if (config.event && workflow) {
           workflow.rollOptions.rollToggle = areMidiKeysPressed(config.event, "RollToggle");
         }
@@ -347,14 +407,18 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           this.ammunition = rolls[0].options.ammunition;
           this._otherActivity = undefined; // reset this in case ammunition changed
         }
+
         if (workflow) {
           workflow.attackMode = rolls[0].options.attackMode ?? config.attackMode;
-          workflow.ammunition = rolls[0].options.ammunition ?? config.ammunition;
-          workflow.ammo = this.ammunitionItem;
+          if (this.ammunition && !this.ammunitionItem) { // assume it was deleted
+            const storedData = foundry.utils.getProperty(workflow.chatCard, "flags.midi-qol.ammunitionData");
+            if (storedData) workflow.ammunition = new Item.implementation(storedData, { parent: this.actor })
+          } else workflow.ammunition = this.ammunitionItem;
+
           if (configSettings.allowUseMacro) {
-            workflow.ammoOnUseMacros = foundry.utils.getProperty(workflow.ammo ?? {}, `flags.${MODULE_ID}.onUseMacroParts`) ?? new OnUseMacros();
+            workflow.ammunitionOnUseMacros = foundry.utils.getProperty(workflow.ammunition ?? {}, `flags.${MODULE_ID}.onUseMacroParts`) ?? new OnUseMacros();
           }
-          if (workflow.workflowOptions?.attackRollDSN !== false) await displayDSNForRoll(rolls[0], "attackRollD20");
+          if (workflow.workflowOptions?.attackRollDSN !== false && !showChatAttackCard) await displayDSNForRoll(rolls[0], "attackRollD20");
           await workflow?.setAttackRoll(rolls[0]);
           rolls[0] = await processAttackRollBonusFlags.bind(workflow)();
           if (["formulaadv", "adv"].includes(configSettings.rollAlternate)) addAdvAttribution(rolls[0], workflow.attackAdvAttribution);
@@ -382,7 +446,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       let workflow: Workflow = config.workflow;
       config.midiOptions ??= {};
 
-      if (debugEnabled > 1) debug("Entering configure attack roll", config.event, workflow, config.rolllOptions);
+      if (debugEnabled > 1) debug("Entering configure attack roll", config.event, workflow, config.rollOptions);
 
       if (workflow.workflowType === "BaseWorkflow") {
         if (workflow.attackRoll && workflow.currentAction === workflow.WorkflowState_Completed) {
@@ -428,7 +492,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
 
       await doActivityReactions(this, workflow);
       await busyWait(0.01);
-      if (configSettings.allowUseMacro && workflow.workflowOptions.noTargetOnusemacro !== true) {
+      if (configSettings.allowUseMacro && workflow.workflowOptions.noTargetOnUseMacro !== true) {
         await workflow.triggerTargetMacros(["isPreAttacked"]);
         if (workflow.aborted) {
           console.warn(`midi-qol | item ${workflow.item?.name ?? ""} roll blocked by isPreAttacked macro`);
@@ -524,17 +588,34 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         delete config.midiOptions.fumble;
 
       config.midiOptions.chatMessage = false;
-      if (config.midiOptions.versatile) config.attackMode = "twoHanded";
+      if (config.midiOptions?.workflowOptions?.versatile) config.attackMode = "twoHanded";
       return true;
     }
-
+    getDamageConfig(config: any = {}) {
+      const rollConfig = super.getDamageConfig(config);
+      for (let roll of rollConfig.rolls) {
+        if (rollConfig.ammunition) { // add ammunition properties to the damage roll
+          let rollProperties = new Set(roll.options.properties);
+          const ammunitionProperties = rollConfig.ammunition.system.properties;
+          //@ts-ignore silly vscode thinks union does not exist
+          roll.options.properties = Array.from(rollProperties.union(ammunitionProperties));
+        }
+        // critical/fumble will be inserted when roll.build is called.
+      }
+      return rollConfig;
+    }
     /** @override */
     get actionType() {
       const type = this.attack.type;
       return `${type.value === "ranged" ? "r" : "m"}${type.classification === "spell" ? "sak" : "wak"}`;
     }
 
+    set ammunitionItem (value) {
+      this._ammunitionItem = value;
+    }
+
     get ammunitionItem() {
+      if (this._ammunitionItem) return this._ammunitionItem;
       if (!this.ammunition) return undefined;
       const ammunitionItem = this.actor?.items?.get(this.ammunition);
       return ammunitionItem

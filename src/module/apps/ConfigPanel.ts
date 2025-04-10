@@ -210,6 +210,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       ColorOptions: colorList.reduce((acc, c) => { acc[c] = c; return acc }, { "Delete": "Delete" }),
       DoConcentrationCheckOptions: geti18nOptions("DoConcentrationCheckOptions"),
       AddChatDamageButtonsOptions: geti18nOptions("AddChatDamageButtonsOptions"),
+      ActivationAutomationOptions: geti18nOptions("ActivationAutomationOptions"),
       rollModes: CONFIG.Dice.rollModes,
     };
     context = foundry.utils.mergeObject(await super._prepareContext(options), context, { inplace: false });
@@ -629,7 +630,7 @@ let quickSettingsDetails: any = {
     },
     codeChecks: (current, settings) => {
       //@ts-expect-error
-      game.settings?.set(game.system?.id, "disableConcentation", false);
+      game.settings?.set(game.system?.id, "disableConcentration", false);
     }
   },
   NoDamageApplication: {
@@ -652,7 +653,7 @@ let quickSettingsDetails: any = {
     },
     codeChecks: (current, settings) => {
       //@ts-expect-error
-      game.settings?.set(game.system?.id, "disableConcentation", true);
+      game.settings?.set(game.system?.id, "disableConcentration", true);
     }
   },
 

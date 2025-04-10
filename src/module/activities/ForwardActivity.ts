@@ -28,7 +28,7 @@ let defineMidiForwardSheetClass = (baseClass: any) => {
 
 let defineMidiForwardActivityClass = (ActivityClass: any) => {
   return class MidiForwardActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.FORWARD"];
+    static LOCALIZATION_PREFIXES = ["midi-qol.FORWARD", ...super.LOCALIZATION_PREFIXES];
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {

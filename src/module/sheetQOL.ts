@@ -1,6 +1,6 @@
 import { configSettings, itemRollButtons } from "./settings.js";
 import { i18n, debug, log, warn, debugEnabled } from "../midi-qol.js";
-import { itemHasDamage, itemIsVersatile } from "./utils.js";
+import { itemHasDamage } from "./utils.js";
 import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
 import { Workflow } from "./Workflow.js";
 import { showItemInfo } from "./activities/activityHelpers.js";

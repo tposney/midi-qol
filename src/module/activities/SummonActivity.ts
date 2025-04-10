@@ -28,7 +28,7 @@ let defineMidiSummonSheetClass = (baseClass: any) => {
 
 let defineMidiSummonActivityClass = (ActivityClass: any) => {
   return class MidiSummonActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.SUMMON"];
+    static LOCALIZATION_PREFIXES = ["midi-qol.SUMMON", ...super.LOCALIZATION_PREFIXES];
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
@@ -44,11 +44,6 @@ let defineMidiSummonActivityClass = (ActivityClass: any) => {
         },
       }, { inplace: false, insertKeys: true, insertValues: true });
 
-    static #placeSummons(event, target, message) {
-      //@ts-expect-error
-      if (message) this.workflow = Workflow.getWorkflow(message.uuid);
-     ActivityClass.#placeSummons.bind(this)(event, target, message);
-    }
     get possibleOtherActivity() {
       return false;
     }

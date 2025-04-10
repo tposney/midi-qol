@@ -1,8 +1,34 @@
 ### 12.4.40
-* Fix for other activities not functioning when set to auto. Thanks @michael
+* Fix for critical modifiers not working on manual damage rolls.
+* Fix for Slayer's Prey item reference to the wrong activity.
+* Fix for midi-sample-items shove item throwing token permission error. Thanks @thatlonelybugbear
+* Fix for versatile key not working.
+* Fix for potent cantrip flag not working.
+* Fix for activity overtime effects to use the source actor for calculating saving throw DCs etc.
+* Fix for ammunition deleted by consumption not being picked up in damage rolls.
+* Fix for damage being displayed when a non-gm makes a blind roll.
+* Fix for damage on save helper text not being displayed - thanks @Michael
+* Added flags.midi-qol.grants.bonus.damage.all/mwak/heal etc. The first target will be checked for the flag and if present will be treated as extra damage to be rolled.
+  - e.g. flags.midi-qol.grants.bonus.damage.mwak override 1d4[cold] will add 1d4 cold damage to the damage rolled against the target.
+  - If damage type is specified the assumed damage type will be the same as the first line in the item damage.
+* Added new setting Preferred GM, which tells midi which GM to pass roll requests etc to. Only set this if you have the case of multiple GMs active and requests for rolls/reactions are sent to the "wrong" GM otherwise leave it as "none".
+* New option (in the mechanics tab) Activation Automation. Allows auto rolling of self targeting activities that trigger on long/short rest, start of combat, turn start/end in combat. 
+  - Options are: (default chat)
+    - "None": no processing of any end of turn/start of turn etc activities.
+    - "Chat": (same as default dnd5e behaviour) a link to the activity is displayed in chat.
+    - "Auto"; self targeting activities are auto rolled, others display the activity in chat.
+      - Item "Regeneration (Activity Only)" added to sample items as an example. This is probably the simplest implementation of regeneration and requires no macros or active effects.
+      - When set to "auto" midi will **not** trigger turnStart activities on combat end. This is different to dnd5e behaviour which will generate a chat message for such activities.
+      - If the use condition is not met the activity will be silently failed, although a message will be logged to the chat log.
+* Changes to Midi Custom Sound Config to make it more forgiving when a Playlist does not exist.
+  - When saving/updating midi will warn of any sounds missing from playlists that are referenced in the settings.
+  - If you create a playlist by hand you will need to refresh/save settings for it to be picked up by Midi.
+  - Saving settings when there are sounds that are not present in the playlist (or the playlist is not present) is now allowed, but you'll be warned.
+  - References to sounds that do not exist in the specified playlist are prefixed with "Missing:".
 
 ### 12.4.39
 * Fix for using monks token bar and skill checks for check activities.
+* Fix for other activities not functioning when set to auto. Thanks @michael
 
 ### 12.4.38.1
 * Remove some testing code accidentally left if - thanks @Elwin

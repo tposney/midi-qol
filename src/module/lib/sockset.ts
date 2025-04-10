@@ -1,4 +1,5 @@
 import { MODULE_ID } from "../../midi-qol.js";
+import { preferredActiveGM } from "../GMAction.js";
 
 /**
  * Imports the Socket class from the specified module.
@@ -112,8 +113,7 @@ export class Socket {
         } else if (users === this.USERS.OTHERS) {
             options.users = active?.filter((u) => u.id !== game.user?.id).map((u) => u.id);
         } else if (users === this.USERS.FIRSTGM) {
-          //@ts-expect-error
-            options.users = game.users?.activeGM.id;
+            options.users = [preferredActiveGM()?.id];
         } else if (users === this.USERS.SELF) {
             options.users = [game.user?.id];
         }

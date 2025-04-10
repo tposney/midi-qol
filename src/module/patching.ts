@@ -38,7 +38,6 @@ export interface Options {
   chatMessage: boolean | undefined,
   rollToggle: boolean | undefined,
   other: boolean | undefined,
-  versatile: boolean | undefined,
   isCritical: boolean | undefined,
   autoRollAttack: boolean | undefined,
   autoRollDamage: boolean | undefined,
@@ -63,7 +62,6 @@ export const defaultRollOptions: Options = {
   chatMessage: undefined,
   rollToggle: undefined,
   other: undefined,
-  versatile: false,
   isCritical: false,
   autoRollAttack: undefined,
   autoRollDamage: undefined,
@@ -369,10 +367,10 @@ function applyDamageModifiers(damageRoll: Roll): Roll {
 }
 
 function configureDamage(wrapped, options: any = { critical: {} }) {
-  if (this.options.configured) {
+  if (this.options.configured && !this.isCritical) {
     return;
   }
-  applyDamageModifiers(this);
+  if (!this.configured) applyDamageModifiers(this);
   if (options.critical.allow === false || !this.isCritical) {
     return wrapped(options);
   }
@@ -587,7 +585,9 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
     let success;
     if (procAutoFail(this, rollType, abilityId)) {
       success = false;
-      result = [new Roll("-1[auto fail]").evaluateSync()];
+      //@ts-expect-error
+      const D20Roll = CONFIG.Dice.D20Roll;
+      result = [new D20Roll("-1[auto fail]").evaluateSync()];
     }
     if (success === undefined) {
       const saveCreate = message.create;
@@ -952,7 +952,7 @@ export function initPatching() {
   libWrapper = globalThis.libWrapper;
 
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
-  // For new onuse macros stuff.
+  // For new onUse macros stuff.
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.prepareData", itemPrepareData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareData", actorPrepareData, "WRAPPER");
   libWrapper.register(MODULE_ID, "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
@@ -960,7 +960,6 @@ export function initPatching() {
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Dice.D20Roll.prototype.configureModifiers", _configureModifiers, "WRAPPER");
-
   currentDAcalculateDamage = window?.customElements?.get("damage-application")?.prototype.calculateDamage;
   if (window?.customElements?.get("damage-application")?.prototype?.calculateDamage) {
     currentDAcalculateDamage = window?.customElements?.get("damage-application")?.prototype?.calculateDamage;
@@ -1024,13 +1023,13 @@ function _DAgetTargetOptions(...args) {
       options.midi = foundry.utils.duplicate(targetDetails);
       const saveMultiplier = targetDetails.saveMults?.[damageType];
       if (targetDetails.saved) {
-        foundry.utils.setProperty(options, "midi.saveMultiplier", saveMultiplier ?? configSettings.defaultSaveMult);
+        foundry.utils.setProperty(options, "midi.saveMultiplier", saveMultiplier ?? configSettings.defaultSaveMultiplier);
       }
       if (saveMultiplier !== undefined) {
-        if (targetDetails.superSaver && saveMultiplier === configSettings.defaultSaveMult) {
-          foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : configSettings.defaultSaveMult);
+        if (targetDetails.superSaver && saveMultiplier === configSettings.defaultSaveMultiplier) {
+          foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : configSettings.defaultSaveMultiplier);
         }
-        if (targetDetails.semiSuperSaver && saveMultiplier === configSettings.defaultSaveMult) {
+        if (targetDetails.semiSuperSaver && saveMultiplier === configSettings.defaultSaveMultiplier) {
           foundry.utils.setProperty(options, "midi.saveMultiplier", targetDetails.saved ? 0 : 1);
         }
       }
@@ -1256,7 +1255,7 @@ export async function checkWounded(actor, update, options, user) {
       const token = tokenForActor(actor);
       if (woundedStatus && token) {
         if (!needsWounded) {
-          // Cater to the possibility that the setings changed while the effect was applied
+          // Cater to the possibility that the settings changed while the effect was applied
           await token.actor?.toggleStatusEffect(woundedStatus?.id, { overlay: true, active: false });
           await token.actor?.toggleStatusEffect(woundedStatus?.id, { overlay: false, active: false });
         } else {

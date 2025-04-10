@@ -197,7 +197,7 @@ async function _removeCEEffect(data: { effectName: string, uuid: string }) {
   // return game.dfreds.effectInterface?.removeEffect({ effectName: data.effectName, uuid: data.uuid });
 }
 
-async function cancelWorkflow(data: { workflowId: string, itemCardUuid: string }) {
+export async function cancelWorkflow(data: { workflowId: string, itemCardUuid: string }) {
   const workflow = Workflow.getWorkflow(data.workflowId);
   if (workflow?.itemCardUuid !== data.itemCardUuid) {
     const itemCard: ChatMessage | undefined = await fromUuid(data.itemCardUuid as `ChatMessage.${string}`) as ChatMessage | undefined;
@@ -334,7 +334,7 @@ async function removeEffectUuids(data: { actorUuid: string; effects: string[]; o
       warn("removeFunc: remove effects completed")
     }
   };
-  // Using the seamphore queue leads to quite a few potential cases of deadlock - disabling for now
+  // Using the semaphore queue leads to quite a few potential cases of deadlock - disabling for now
   // if (globalThis.DAE?.actionQueue) return globalThis.DAE.actionQueue.add(removeFunc)
   // else return removeFunc();
   return removeFunc();
@@ -375,12 +375,30 @@ export async function timedExecuteAsGM(toDo: string, data: any) {
   return returnValue;
 }
 
+export function preferredActiveGM(): User | null {
+  const preferredGMName = safeGetGameSetting("midi-qol", "PreferredGM");
+  if (preferredGMName) {
+    const preferredGM = game.users?.getName(preferredGMName);
+    if (preferredGM?.active) return preferredGM;
+    log(`preferredGM ${preferredGMName} is not active`); 
+  }
+  if (game.user?.isGM) return game.user;
+  return game.users?.activeGM ?? null;
+}
+
 export async function unTimedExecuteAsGM(toDo: string, ...args) {
   if (!socketlibSocket) return undefined;
   const myScene = game.user?.viewedScene;
-  const gmOnScene = game.users?.filter(u => u.active && u.isGM && u.viewedScene === myScene);
-  if (!gmOnScene || gmOnScene.length === 0) return socketlibSocket.executeAsGM(toDo, ...args);
-  else return socketlibSocket.executeAsUser(toDo, gmOnScene[0].id, ...args);
+  const preferredGMName = safeGetGameSetting("midi-qol", "PreferredGM");
+  let preferredGM = game.users?.getName(preferredGMName);
+  if (!preferredGM?.active && preferredGMName) log(`preferredGM ${preferredGMName} is not active`);
+  let gmOnScene;
+  if (preferredGM?.viewedScene === myScene) gmOnScene = [preferredGM];
+  else if (game.user?.isGM && game.user?.viewedScene === myScene) gmOnScene = [game.user];
+  else gmOnScene = [game.users?.filter(u => u.active && u.isGM && u.viewedScene === myScene)];
+  if (gmOnScene && gmOnScene.length > 0) return socketlibSocket.executeAsUser(toDo, gmOnScene[0].id, ...args);
+  if (preferredGM) return socketlibSocket.executeAsUser(toDo, preferredGM.id, ...args);
+  return socketlibSocket.executeAsGM(toDo, ...args);
 }
 
 export async function timedAwaitExecuteAsGM(toDo: string, data: any) {
@@ -689,7 +707,7 @@ async function localDoReactions(data: { tokenUuid: string; reactionActivityList:
   if (data.options.itemUuid) {
     data.options.item = fromUuidSync(data.options.itemUuid);
   }
-  // reactonItemUuidList can't used since magic items don't have a uuid, so must always look them up locally.
+  // reactionItemUuidList can't used since magic items don't have a uuid, so must always look them up locally.
   const result = await promptReactions(data.tokenUuid, data.reactionActivityList, data.triggerTokenUuid, data.reactionFlavor, data.triggerType, data.options)
   return result;
 }

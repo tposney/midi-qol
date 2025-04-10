@@ -148,6 +148,9 @@
     "tidy5e-sheet": {
       "section": "",
       "actionSection": ""
+    },
+    "crux": {
+      "trayVisibility": "default"
     }
   },
   "system": {
@@ -156,9 +159,12 @@
       "chat": ""
     },
     "source": {
-      "custom": "",
+      "custom": "Midi 12.4.40",
       "revision": 1,
-      "rules": "2024"
+      "rules": "2024",
+      "book": "",
+      "page": "",
+      "license": ""
     },
     "uses": {
       "max": "",
@@ -187,14 +193,14 @@
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.3.6",
+    "systemVersion": "4.3.8",
     "createdTime": 1741782991287,
-    "modifiedTime": 1741782991287,
+    "modifiedTime": 1744024502318,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "p5xZZSrJRAJKf5ue",
-  "sort": 1500000,
+  "sort": 1600000,
   "ownership": {
     "default": 0,
     "Zl1BOUaPLwDEujaL": 3

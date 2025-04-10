@@ -141,6 +141,9 @@
         "activity": [],
         "effect": []
       }
+    },
+    "crux": {
+      "trayVisibility": "default"
     }
   },
   "system": {
@@ -298,7 +301,7 @@
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741782991287,
-    "modifiedTime": 1741782991287,
+    "modifiedTime": 1744024448672,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "fZIl4G4qj3C894LI",

@@ -26,8 +26,8 @@ export function setupCheckActivity() {
 
 let defineMidiCheckActivityClass = (ActivityClass: any) => {
   return class MidiCheckActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "DND5E.SAVE", "DND5E.CHECK", "midi-qol.CHECK"];
-    static supermetadata = super.metadata;
+    static LOCALIZATION_PREFIXES = ["DND5E.SAVE", "DND5E.CHECK", "midi-qol.CHECK", ...super.LOCALIZATION_PREFIXES,];
+    static superMetadata = super.metadata;
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
@@ -42,7 +42,7 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
             rollDamage: MidiSaveActivity.metadata.usage.actions.rollDamage,
           }
         },
-      }, { inplace: false, insertKeys: true, invsertValues: true })
+      }, { inplace: false, insertKeys: true, insertValues: true })
 
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField } = foundry.data.fields;
@@ -67,6 +67,7 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
 
     static async #rollCheck(event, target, message) {
       let workflow = message ? Workflow.getWorkflow(message._uuid) : null;
+      if (workflow) workflow.activity = this;
       // return ActivityClass.#rollCheck return ActivityClass.#rollCheck.bind(this)(event, target);
       // Can't do this as it's private
       const targets: Array<Token | Actor> = getSceneTargets();

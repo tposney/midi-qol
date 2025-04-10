@@ -6,7 +6,6 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
   static defaultPlaylist: string | undefined;
   static defaultSound: string | undefined;
-  canSave: boolean = true;
   constructor(options?) {
     super(options);
   }
@@ -32,16 +31,19 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
     },
     form: {
       submitOnChange: false,
-      closeOnSubmit: true,
+      closeOnSubmit: false,
     },
     tag: "form"
   }, { inplace: false });
 
   static PARTS = {
     tabs: { template: "templates/generic/tab-navigation.hbs" },
-    sounds: { template: "modules/midi-qol/templates/sounds/sounds.hbs" },
+    sounds: { 
+      template: "modules/midi-qol/templates/sounds/sounds.hbs",
+      scrollable: [""]
+    },
     quick: { template: "modules/midi-qol/templates/sounds/quick.hbs" },
-    footer: { template: "templates/generic/form-footer.hbs" }
+    footer: { template: "templates/generic/form-footer.hbs" },
   }
 
   tabGroups = {
@@ -50,8 +52,7 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
 
   async _prepareContext(options) {
     const context: any = await super._prepareContext(options);
-    this.canSave = true;
-    // @ts-expect-error
+    //@ts-expect-error
     const systemConfig = (game.system?.id === "dnd5e") ? CONFIG.DND5E : CONFIG.SW5E;
     const consumableSubtypesData = Object.keys(systemConfig.consumableTypes).reduce((obj, key) => { obj[key] = systemConfig.consumableTypes[key].label; return obj }, {});
     const spellSchoolData = Object.keys(systemConfig.spellSchools).reduce((obj, key) => { obj[key] = systemConfig.spellSchools[key].label; return obj }, {});
@@ -76,21 +77,30 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
       "tool": context.toolSubtypes,
       "feat": { any: "Any" },
       "all": context.defaultSubtypes,
-      "none": { none: "None" },
-      "base": { none: "None" }
     }
-    context.itemTypes = Object.keys(itemTypes).reduce((list, key) => { list[key] = i18n(itemTypes[key]); return list }, {});
+    context.itemTypes = Object.keys(itemTypes).reduce((list, key) => {
+      if (!context.subTypes[key]) context.subTypes[key] = { "any": "Any" }; // Add for subtypes we don't know about
+      list[key] = i18n(itemTypes[key]);
+      return list
+    }, {});
     context.midiSoundSettings = foundry.utils.duplicate(midiSoundSettings);
     context.SoundSettingsBlurb = geti18nOptions("SoundSettingsBlurb");
     context.quickSettingsOptions = { createPlaylist: "Create Sample Playlist", basic: "Basic Settings", detailed: "Detailed Settings", full: "Full Settings" };
-    context.playlists = game.playlists?.reduce((acc, pl: any) => {
-      acc[pl.name] = pl.sounds.reduce((list, sound) => {
-        list[sound.name] = sound.name; return list
-      }, {});
-      acc[pl.name].none = "none";
-      acc[pl.name].random = "random";
-      return acc;
-    }, {});
+    context.playlists = this.playlists;
+    const requiredPlayLists = this.requiredPlaylists;
+    context.missingPlaylists = [];
+    for (let playlistName of Object.keys(requiredPlayLists)) {
+      if (!context.playlists[playlistName]) {
+        context.playlists[playlistName] = {"none": "none"};
+        context.missingPlaylists.push(playlistName);
+      }
+      for (let soundName of Array.from(requiredPlayLists[playlistName]) as Array<string>) {
+        if (!context.playlists[playlistName]?.[soundName]) {
+          if (!context.playlists[playlistName]) context.playlists[playlistName] = {};
+          context.playlists[playlistName][soundName] = `Missing:${soundName}`;
+        }
+      }
+    }
     context.actionTypes = MidiSounds.ActionTypes();
     context.tabs = this.#getTabs();
     SoundConfigPanel.defaultPlaylist = Object.keys(context.playlists ?? {})[0];
@@ -101,8 +111,24 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
       label: "Save Changes",
       type: "button",
     }];
+
+    return context;
+  }
+
+  get playlists() {
+   return game.playlists?.reduce((acc, pl: any) => {
+      acc[pl.name] = pl.sounds.reduce((list, sound) => {
+        list[sound.name] = sound.name; return list
+      }, {});
+      acc[pl.name].none = "none";
+      acc[pl.name].random = "random";
+      return acc;
+    }, {}) ?? {};
+  }
+
+  get requiredPlaylists() {
     const requiredPlayLists: any = {};
-    for (let [cek, ce] of Object.entries(context.midiSoundSettings)) {
+    for (let [cek, ce] of Object.entries(midiSoundSettings)) {
       if (cek === "version") continue; // skip the version entry
       for (let [tek, te] of Object.entries(ce as any)) {
         for (let [stek, ste] of Object.entries(te as any)) {
@@ -115,23 +141,50 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
         }
       }
     }
-    context.missingPlaylists = [];
+    return requiredPlayLists;
+  }
+  
+  missingSounds(soundSettings): string[] {
+    const missingSounds: string[] = [];
+    let missingPlaylists: string[] = [];
+    const requiredPlayLists = this.requiredPlaylists;
+    const playlists = this.playlists;
     for (let playlistName of Object.keys(requiredPlayLists)) {
-      if (!context.playlists[playlistName]) {
-        context.playlists[playlistName] = {};
-        context.missingPlaylists.push(playlistName);
-        this.canSave = false;
+      if (!playlists[playlistName]) {
+        playlists[playlistName] = {};
+        missingPlaylists.push(playlistName);
       }
       for (let soundName of Array.from(requiredPlayLists[playlistName]) as Array<string>) {
-        if (!context.playlists[playlistName][soundName]) {
-          context.playlists[playlistName][soundName] = `${soundName} missing`;
-          this.canSave = false;
+        if (!playlists[playlistName][soundName]) {
+          missingSounds.push(`${playlistName}: ${soundName}`);
         }
       }
     }
-    return context;
+    return missingSounds;
   }
 
+  canSave(soundSettings: any): boolean {
+    let missingPlaylists: string[] = [];
+    const requiredPlayLists = this.requiredPlaylists;
+    const playlists = this.playlists;
+    let canSave = true;
+    const missingSounds: string[] = [];
+    for (let playlistName of Object.keys(requiredPlayLists)) {
+      if (!playlists[playlistName]) {
+        playlists[playlistName] = {};
+        missingPlaylists.push(playlistName);
+        canSave = false;
+      }
+      for (let soundName of Array.from(requiredPlayLists[playlistName]) as Array<string>) {
+        if (!playlists[playlistName][soundName]) {
+          playlists[playlistName][soundName] = `${soundName} missing`;
+          missingSounds.push(`${playlistName}:${soundName}`);
+          // canSave = false;
+        }
+      }
+    }
+    return canSave;
+  }
   #getTabs() {
     const tabs = {
       sounds: { id: "sounds", group: "sheet", label: "midi-qol.SoundSettings.Name", active: true },
@@ -148,42 +201,25 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
   }
 
   static async #onAdd(event, target) {
-    if (!SoundConfigPanel.defaultPlaylist) return;
+    if (!SoundConfigPanel.defaultPlaylist) {
+      ui.notifications?.error("Midi Sound Configuration: You must define at least one playlist before adding a sound");
+      event.preventDefault();
+      return;
+    }
     if (!game.user?.can("SETTINGS_MODIFY")) return;
     event.preventDefault();
-    const formData: any = new FormDataExtended(target.form)?.object;
+
+    const formData: any = new FormDataExtended(target.form);
+    const fdo = formData.object;
     for (let key of ["chartype", "action", "category", "playlistName", "soundName", "subtype"]) {
-      if (!formData[key]) formData[key] = [];
-      if (typeof formData[key] === "string") formData[key] = [formData[key]];
-      if (key !== "playlistName") formData[key].push("none");
-      else formData[key].push(SoundConfigPanel.defaultPlaylist);
+      if (!fdo[key]) fdo[key] = [];
+      if (typeof fdo[key] === "string") fdo[key] = [fdo[key]];
+      if (key !== "playlistName") fdo[key].push("none");
+      else fdo[key].push(SoundConfigPanel.defaultPlaylist ?? "none");
     }
-    /*
-    const settings: any = {};
-    if (formData.chartype) {
-      if (typeof formData.chartype === "string") {
-        for (let key of ["chartype", "action", "category", "playlistName", "soundName", "subtype"]) {
-          formData[key] = [formData[key]];
-        }
-      }
-      for (let i = 0; i < (formData.chartype?.length ?? 0); i++) {
-        const chartype = formData.chartype[i];
-        const category = formData.category[i];
-        const subtype = formData.subtype[i];
-        const action = formData.action[i];
-        const playlistName = formData.playlistName[i];
-        const soundName = formData.soundName[i];
-        if (!settings[chartype]) settings[chartype] = {};
-        if (!settings[chartype][category]) settings[chartype][category] = {};
-        if (!settings[chartype][category][subtype]) settings[chartype][category][subtype] = {};
-        settings[chartype][category][subtype][action] = { playlistName, soundName };
-      }
-    }
-    settings.version = "0.9.48";
-    // @ts-expect-error
-    await game.settings?.set("midi-qol", "MidiSoundSettings", settings);
-    */
-    // @ts-expect-error
+
+    await SoundConfigPanel.#onSubmit.bind(this)(event, target, formData);
+    //@ts-expect-error
     this.render({ force: true });
   }
 
@@ -195,17 +231,12 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
   }
 
   static async #onSave(event, target) {
-    //@ts-expect-error
-    if (this.canSave === false) {
-      ui.notifications?.error("Midi Sound Configuration: cannot save. Some referenced sounds are missing");
-      return;
-    }
     const form = event.currentTarget;
     const formData = new FormDataExtended(form);
     SoundConfigPanel.#onSubmit.bind(this)(event, form, formData);
   }
 
-  static async #onSubmit(event, form, formDataIn) {
+  static async #onSubmit(event, form, formDataIn): Promise<void> {
     if (!game.user?.can("SETTINGS_MODIFY")) return;
     if (!game.user?.can("SETTINGS_MODIFY")) return;
 
@@ -230,13 +261,26 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
         settings[chartype][category][subtype][action] = { playlistName, soundName };
       }
     }
-    settings.version = "0.9.48";
+    //@ts-expect-error
+    if (this.canSave(settings) === false) {
+      // ui.notifications?.warn("Midi Sound Configuration: Some referenced sounds are missing")
+      // @ts-expect-error
+      ui.notifications?.warn(`Missing ${this.missingSounds(settings).join("<br>")}`);
+    }
+    settings.version = "12.4.40";
     // @ts-expect-error
     await game.settings?.set("midi-qol", "MidiSoundSettings", settings);
     // @ts-expect-error
-    this.render({ force: true });
+    this.render();
   }
 
+  _onChangeForm(formConfig, event) {
+    super._onChangeForm(formConfig, event);
+    //@ts-expect-error
+    SoundConfigPanel.#onSubmit.bind(this)(event, this.element, new FormDataExtended(this.element))
+    .then(() => this.render({}));
+    // this.render();
+  }
   _onRender(context, options) {
     super._onRender(context, options);
     // html.find(".soundName").change(function (event) {
@@ -254,6 +298,12 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
     // html.find(".subtype").change(function (event) {
     //   this.submit({ preventClose: true }).then(() => this.render());
     // }.bind(this))
+//    for (const elem of Array.from(this.element.querySelectorAll(".playlistName"))) {
+//      elem.addEventListener("change", function (event) {
+//        SoundConfigPanel.#onSubmit.bind(this)(event, event.currentTarget, new FormDataExtended(this.form))
+//        .then(() => this.render({force: true}));
+//      })
+//    };
     for (const elem of Array.from(this.element.querySelectorAll(".import-quick-setting"))) {
       elem.addEventListener("click", function (event) {
         const key = event.currentTarget?.id;
@@ -265,5 +315,12 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
         }
       }.bind(this));
     }
+  }
+
+  changeHandler(event) {
+    if (!this.element.querySelector("form")) return;
+    //@ts-expect-error
+    const formData = new FormDataExtended(this.element.querySelector("form"));
+    this.render({ force: true });
   }
 }

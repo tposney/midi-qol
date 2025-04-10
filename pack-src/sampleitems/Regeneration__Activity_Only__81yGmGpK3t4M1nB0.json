@@ -1,0 +1,254 @@
+{
+  "name": "Regeneration (Activity Only)",
+  "type": "feat",
+  "img": "icons/skills/wounds/anatomy-organ-heart-red.webp",
+  "effects": [],
+  "flags": {
+    "core": {},
+    "midi-qol": {
+      "onUseMacroName": "",
+      "effectActivation": false,
+      "rollAttackPerTarget": "default",
+      "itemCondition": "",
+      "effectCondition": "",
+      "reactionCondition": "",
+      "otherCondition": "",
+      "AoETargetType": "any",
+      "AoETargetTypeIncludeSelf": true,
+      "autoTarget": "default",
+      "removeAttackDamageButtons": "default",
+      "-=onUseMacroName": null
+    },
+    "magicitems": {
+      "enabled": false,
+      "equipped": false,
+      "attuned": false,
+      "charges": "0",
+      "chargeType": "c1",
+      "destroy": false,
+      "destroyFlavorText": "reaches 0 charges: it crumbles into ashes and is destroyed.",
+      "rechargeable": false,
+      "recharge": "0",
+      "rechargeType": "t1",
+      "rechargeUnit": "r1",
+      "sorting": "l"
+    },
+    "cf": {
+      "id": "temp_1xw0kahfmt1",
+      "color": "#000000"
+    },
+    "midiProperties": {
+      "nodam": false,
+      "fulldam": false,
+      "halfdam": false,
+      "rollOther": false,
+      "critOther": false,
+      "magicdam": false,
+      "magiceffect": false,
+      "concentration": false,
+      "toggleEffect": false,
+      "autoFailFriendly": false,
+      "autoSaveFriendly": false,
+      "offHandWeapon": false,
+      "ignoreTotalCover": false,
+      "confirmTargets": "default",
+      "noConcentrationCheck": false,
+      "idr": false,
+      "idi": false,
+      "idv": false,
+      "ida": false
+    },
+    "scene-packer": {
+      "hash": "5a8904f4f9c9da3c5aecf58bb5fb2fb15001ff82",
+      "sourceId": "Compendium.world.backup-sample-items.Item.0uTnI4LdcjO3YE3h"
+    },
+    "dnd5e": {
+      "persistSourceMigration": true,
+      "riders": {
+        "activity": [],
+        "effect": []
+      },
+      "last": {
+        "Q0Co804DC9UwNVlH": {
+          "damageType": {
+            "0": "healing"
+          }
+        }
+      }
+    },
+    "tidy5e-sheet": {
+      "section": "",
+      "actionSection": ""
+    },
+    "chris-premades": {
+      "info": {
+        "source": "midi-qol.midiqol-sample-items",
+        "rules": "modern"
+      },
+      "-=macros": null
+    },
+    "crux": {
+      "trayVisibility": "default"
+    }
+  },
+  "system": {
+    "description": {
+      "value": "<section class=\"secret\"><p>The {creature} regains <strong>10 hit points</strong> at the start of its turn if it has at least <strong>1 hit point</strong>.</p></section><p>The {creature} regains <strong>10 hit points</strong> at the start of its turn.</p>",
+      "chat": ""
+    },
+    "source": {
+      "custom": "Midi 12.4.40",
+      "revision": 1,
+      "rules": "2014",
+      "book": "",
+      "page": "",
+      "license": ""
+    },
+    "uses": {
+      "max": "",
+      "spent": 0,
+      "recovery": []
+    },
+    "type": {
+      "value": "",
+      "subtype": ""
+    },
+    "requirements": "",
+    "properties": [],
+    "activities": {
+      "Q0Co804DC9UwNVlH": {
+        "type": "heal",
+        "_id": "Q0Co804DC9UwNVlH",
+        "sort": 0,
+        "activation": {
+          "type": "turnStart",
+          "value": null,
+          "override": false,
+          "condition": ""
+        },
+        "consumption": {
+          "scaling": {
+            "allowed": false
+          },
+          "spellSlot": true,
+          "targets": []
+        },
+        "description": {
+          "chatFlavor": ""
+        },
+        "duration": {
+          "units": "inst",
+          "concentration": false,
+          "override": false
+        },
+        "effects": [],
+        "range": {
+          "override": false,
+          "units": "self",
+          "special": ""
+        },
+        "target": {
+          "template": {
+            "contiguous": false,
+            "units": "ft",
+            "type": ""
+          },
+          "affects": {
+            "choice": false,
+            "type": "self",
+            "special": "",
+            "count": ""
+          },
+          "override": false,
+          "prompt": true
+        },
+        "uses": {
+          "spent": 0,
+          "recovery": [],
+          "max": ""
+        },
+        "healing": {
+          "number": null,
+          "denomination": 0,
+          "types": [
+            "healing"
+          ],
+          "custom": {
+            "enabled": true,
+            "formula": "10"
+          },
+          "scaling": {
+            "number": 1
+          },
+          "bonus": ""
+        },
+        "useConditionText": "attributes.hp.value < attributes.hp.effectiveMax",
+        "useConditionReason": "Already at full hit points!",
+        "effectConditionText": "",
+        "macroData": {
+          "name": "",
+          "command": ""
+        },
+        "ignoreTraits": {
+          "idi": false,
+          "idr": false,
+          "idv": false,
+          "ida": false
+        },
+        "midiProperties": {
+          "ignoreTraits": [],
+          "triggeredActivityId": "none",
+          "triggeredActivityConditionText": "",
+          "triggeredActivityTargets": "targets",
+          "triggeredActivityRollAs": "self",
+          "forceDialog": false,
+          "confirmTargets": "default",
+          "autoTargetType": "any",
+          "autoTargetAction": "default",
+          "automationOnly": false,
+          "otherActivityCompatible": true,
+          "identifier": "",
+          "displayActivityName": false,
+          "rollMode": "selfroll",
+          "chooseEffects": false,
+          "toggleEffect": false,
+          "ignoreFullCover": false
+        },
+        "isOverTimeFlag": false,
+        "overTimeProperties": {
+          "saveRemoves": true,
+          "preRemoveConditionText": "",
+          "postRemoveConditionText": ""
+        },
+        "name": ""
+      }
+    },
+    "identifier": "regeneration-11426",
+    "enchant": {},
+    "prerequisites": {
+      "level": null,
+      "repeatable": false
+    },
+    "advancement": [],
+    "cover": null,
+    "crewed": false
+  },
+  "_stats": {
+    "compendiumSource": null,
+    "duplicateSource": null,
+    "coreVersion": "12.331",
+    "systemId": "dnd5e",
+    "systemVersion": "4.3.8",
+    "createdTime": 1744025323684,
+    "modifiedTime": 1744266602298,
+    "lastModifiedBy": "Zl1BOUaPLwDEujaL"
+  },
+  "folder": "fZIl4G4qj3C894LI",
+  "_id": "81yGmGpK3t4M1nB0",
+  "sort": 150000,
+  "ownership": {
+    "default": 0,
+    "Zl1BOUaPLwDEujaL": 3
+  },
+  "_key": "!items!81yGmGpK3t4M1nB0"
+}

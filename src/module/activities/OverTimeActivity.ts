@@ -50,7 +50,7 @@ let defineMidiOverTimeSheetClass = (baseClass: any) => {
 
 let defineMidiOverTimeActivityClass = (ActivityClass: any) => {
   return class MidiOverTimeActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.OVERTIME"];
+    static LOCALIZATION_PREFIXES = ["midi-qol.OVERTIME", ...super.LOCALIZATION_PREFIXES];
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, NumberField, DocumentIdField } = foundry.data.fields;
 

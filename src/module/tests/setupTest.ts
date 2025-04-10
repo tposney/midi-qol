@@ -527,7 +527,7 @@ async function registerTests() {
             assert.equal(target3hp - 40, target3?.actor?.system.attributes.hp.value, "undead takes 20 hp"); // 20hp + vulnerability
             assert.equal(effects2.length, 1, "Frightened not applied to non undead");
             assert.equal(effects3.length, 1, "Frightened applied to undead");
-            assert.equal(condition2.length, 0, "Frghtened applied to non undead");
+            assert.equal(condition2.length, 0, "Frightened applied to non undead");
             assert.equal(condition3.length, 0, "Frightened applied to undead");
           });
         });

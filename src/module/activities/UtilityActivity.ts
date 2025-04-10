@@ -26,6 +26,8 @@ export function setupUtilityActivity() {
 
 let defineMidiUtilityActivityClass = (ActivityClass: any) => {
   return class MidiUtilityActivity extends MidiActivityMixin(ActivityClass) {
+    static LOCALIZATION_PREFIXES = ["midi-qol.UTILITY", ...super.LOCALIZATION_PREFIXES];
+
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
@@ -56,6 +58,7 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
       }
     static #rollFormula(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
+      if (workflow) workflow.activity = this;
 
       //@ts-expect-error
       return this.rollFormula({ event, workflow }, {}, {});

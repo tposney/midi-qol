@@ -168,4 +168,12 @@
       <div class="notes midi-qol-faint">{{localize "midi-qol.UndoChatColor.Hint"}}</div>
     </div>
   </div>
+  <div class="midi-qol-box">
+    <div class="form-group">
+      <label>{{localize "midi-qol.ActivationAutomation.Name"}}</label>
+      <select name="activationAutomation" data-dtype="String">
+        {{selectOptions ActivationAutomationOptions selected=configSettings.activationAutomation}}
+      </select>
+      <div class="notes midi-qol-faint">{{localize "midi-qol.ActivationAutomation.Hint"}}</div>
+    </div>
 </section>
