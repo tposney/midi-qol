@@ -88,7 +88,6 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
         const speaker = ChatMessage.getSpeaker({ actor, scene: canvas?.scene, token: token instanceof Token ? token.document : null });
         const message: any = { data: { speaker } };
         // if (!actor?.hasPlayerOwner && workflow) message.create = false - this breaks save checking from chat card
-        message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
         if (token instanceof Token) foundry.utils.setProperty(message, "flags.midi-qol.requestId", token.document.uuid);
         else foundry.utils.setProperty(message, "flags.midi-qol.requestId", token?.uuid);
         if (configSettings.autoCheckSaves !== "none") message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;

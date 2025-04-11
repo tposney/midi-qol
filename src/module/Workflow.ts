@@ -1893,7 +1893,7 @@ export class Workflow {
       // Not auto rolling so display targets
       const rollMode = safeGetGameSetting("core", "rollMode");
       this.whisperAttackCard = configSettings.autoCheckHit === "whisper" || rollMode === CONST.DICE_ROLL_MODES.BLIND || rollMode === CONST.DICE_ROLL_MODES.PRIVATE;
-      if (this.activity.target?.type !== "self") {
+      if (this.activity.target?.affects?.type !== "self") {
         await this.displayHitTargets(this.whisperAttackCard);
       }
     }
@@ -2615,24 +2615,25 @@ export class Workflow {
     const blfxActive = game.modules?.get("boss-loot-assets-premium")?.active ||
       game.modules?.get("boss-loot-assets-free")?.active;
     const AAActive = game.modules?.get("autoanimations")?.active;
+    const elapsedTimeRequired = 5000;
     if (configSettings.autoRemoveInstantaneousTemplate && this.templateUuid && this.activity.duration.units === "inst") {
       if (!blfxActive) {
         const elapsed = Date.now() - this.workflowStartTime;
         // if auto animations is active we need to allow enough time for it to have grabbed the template data before deleting it.
-        let timeout = AAActive ? Math.max(1000 - elapsed, 1) : 1;
-        timeout = Math.max(1000, timeout);
+        let timeout = AAActive ? Math.max(elapsedTimeRequired - elapsed, 1) : 1;
+        timeout = Math.max(elapsedTimeRequired, timeout);
         setTimeout(() => {
           const templateToDelete = fromUuidSync(this.templateUuid) as MeasuredTemplateDocument || null;
           //@ts-expect-error
           templateToDelete?.delete()
         }, timeout);
       } else {
-        const timeout = 2000;
+        const timeout = 5000;
         setTimeout(() => {
           const templateToDelete = fromUuidSync(this.templateUuid) as MeasuredTemplateDocument || null;
           //@ts-expect-error
           templateToDelete?.delete()
-        }, timeout);
+        }, elapsedTimeRequired);
         log("Not auto removing instantaneous template because boss loot assets active")
       }
     }
@@ -2775,7 +2776,7 @@ export class Workflow {
     const rollFinishedStartTime = Date.now();
     const chatMessage = this.chatCard;
     let selfTarget = this.token ?? getOrCreateTokenForActor(this.actor);
-    if (!this.hitTargetsDisplayed && this.targets?.size > 0 && chatMessage && (this.activity.effects.length || this.otherActivity?.effects.length)) {
+    if (!this.hitTargetsDisplayed && this.targets?.size > 0 && chatMessage && (this.activity.effects?.length || this.otherActivity?.effects?.length)) {
       this.hitDisplayData = {};
       const theTargets = this.effectTargets?.size > 0 ? this.effectTargets : this.targets;
       for (let targetToken of theTargets) {
@@ -4309,7 +4310,7 @@ export class Workflow {
     if ((this.activity.save || this.activity.check) && this.activity.damage?.parts.length > 0) {
       switch (getsaveMultiplierForActivity(this.activity)) {
         case 0:
-          noDamage.push(`${this.dmaageFlavor} &#48;`)
+          noDamage.push(`${this.damageFlavor} &#48;`)
           break;
         case 1:
           fullDamage.push(`${this.damageFlavor} &#49;`)
@@ -5538,7 +5539,7 @@ export class Workflow {
     const activity = this.activity;
 
     // check for a hit/critical/fumble
-    if (this.activity.target?.type === "self") {
+    if (this.activity.target?.affects?.type === "self") {
       this.targets = await getOrCreateTokenForActorAsSet(this.actor);
     }
     if (!this.useActiveDefence) {

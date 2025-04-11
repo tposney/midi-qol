@@ -1,3 +1,12 @@
+### 12.4.41
+* If autoCheckSaves is "none" player rolled saves will use the user chat mode instead of always being private.
+* Fix for forwarded activities not respecting consumption.
+* Fix for activation automation not respecting item attunement/equipped.
+* Fix for overtime activities not responding to confirm button.
+* Fix for flanking/flanked calculations with large tokens.
+* Fix for running items when there is no preferredGM and there is no GM on the current scene.
+* If an activities "otherActivity" has a saving throw/ability check and the base activity does not,display the save/check buttons for the other activity in the chat card. Only displayed if the settings include showing the save/check buttons.
+
 ### 12.4.40
 * Fix for critical modifiers not working on manual damage rolls.
 * Fix for Slayer's Prey item reference to the wrong activity.

@@ -991,7 +991,7 @@ export async function localActivityOverTimeEffect(actor, effect, startTurn: bool
       overTimeActivity.target.affects.type = "";
     }
     const overTimeWorkflow: Workflow = await completeActivityUse(overTimeActivity,
-      { dialog: false, midiOptions: { targetsToUse, workflowOptions: { noProvokeReaction: true, isAutoConsumeResource: true } } },
+      { dialog: false, midiOptions: { targetsToUse, workflowOptions: { noProvokeReaction: true, isAutoConsumeResource: "both" } } },
       { configure: overTimeActivity.consumption?.spellSlot === true },
       { create: true }) as Workflow;
 
@@ -1261,20 +1261,21 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       let activityData: any = {
         name: label,
         id: "overtime",
-        type: "damage",
-        damage: {
-          parts: [{
-            custom: {
-              enabled: true,
-              formula: damageRoll,
-            },
-            types: [damageType]
-          }]
-        }
+        type: "damage"
       };
+      if (damageRoll) activityData.damage = {
+        parts: [{
+          custom: {
+            enabled: true,
+            formula: damageRoll,
+          },
+          types: [damageType]
+        }]
+      };
+
       activityData.img = effect.img;
       itemData.img = effect.img; // v12 icon -> img
-
+      foundry.utils.setProperty(itemData, "target.affects.type", "self")
       itemData.type = "equipment";
       foundry.utils.setProperty(itemData, "system.type.value", "trinket");
       foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.noProvokeReaction`, true);
@@ -1331,12 +1332,14 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
         }
       }
 
-      if (damageBeforeSave || saveDamage === "fulldamage") {
-        activityData.damage.onSave = "full";
-      } else if (saveDamage === "halfdamage" || !damageRoll) {
-        activityData.damage.onSave = "half";
-      } else {
-        activityData.damage.onSave = "none";
+      if (activityData.damage) {
+        if (damageBeforeSave || saveDamage === "fulldamage") {
+          activityData.damage.onSave = "full";
+        } else if (saveDamage === "halfdamage") {
+          activityData.damage.onSave = "half";
+        } else {
+          activityData.damage.onSave = "none";
+        }
       }
       itemData.name = label;
       activityData.description = { chat: chatFlavor };
@@ -1377,6 +1380,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
       ownedItem.prepareData();
       // @ts-expect-error no dnd5e-types
       ownedItem.prepareFinalAttributes();
+      foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.syntheticItem`, true);
       if (!actionSave && saveRemove && saveDC > -1)
         // @ts-expect-error no dnd5e-types
         savedOverTimeEffectsToDelete[ownedItem.system.activities.contents[0].uuid] = { uuid: effect.uuid };
@@ -1771,26 +1775,35 @@ export function getUnitDist(x1: number, y1: number, z1: number, token2): number 
   return d;
 }
 
-export function distancePointToken({ x, y, elevation = 0 }, token, wallblocking = false) {
+export function distancePointToken({ x, y, elevation = 0 }, token, wallblocking = false): number | undefined {
   if (!canvas || !canvas.scene) return undefined;
   let coverACBonus = 0;
   let tokenTileACBonus = 0;
+
   let coverData;
   if (!canvas.grid || !canvas.dimensions) undefined;
   if (!token || x === undefined || y === undefined) return undefined;
   if (!canvas || !canvas.grid || !canvas.dimensions) return undefined;
-  const t2StartX = -Math.max(0, token.document.width - 1);
-  const t2StartY = -Math.max(0, token.document.height - 1);
-  var d, r, segments: { ray: Ray }[] = [], rdistance, distance;
+  const t2StartX = -Math.max(0, token.document.width / 2 - 0.5);
+  const t2StartY = -Math.max(0, token.document.height / 2 - 0.5);
   //  const [row, col] = canvas.grid?.getGridPositionFromPixels(x, y) || [0, 0];
   //  const [xBase, yBase] = canvas.grid?.getPixelsFromGridPosition(row, col) || [0, 0];
   let xc, yc;
-
-  //  ({ x: xc, y: yc } = canvas.grid.getCenterPoint.bind(canvas.grid)({ x: xBase, y: yBase }) || { x: 0, y: 0 });
-  ({ x: xc, y: yc } = canvas.grid.getCenterPoint.bind(canvas.grid)({ x, y }) || { x: 0, y: 0 });
-  const origin = new PIXI.Point(x, y);
-  const tokenCenter = token.center;
-  distance = canvas.grid.measurePath([origin, tokenCenter], {}).distance;
+  let distance = +Infinity;
+  for (let xStep = t2StartX; xStep < token.document.width / 2; xStep += 1) {
+    for (let yStep = t2StartY; yStep < token.document.height / 2; yStep += 1) {
+      const xBase = xStep * canvas.grid.size + token.center.x;
+      const yBase = yStep * canvas.grid.size + token.center.y;
+      ({ x: xc, y: yc } = canvas.grid.getCenterPoint({ x: xBase, y: yBase }) || { x: 0, y: 0 });
+      // ({ x: xc, y: yc } = canvas.grid.getCenterPoint.bind(canvas.grid)({ x, y }) || { x: 0, y: 0 });
+      const newDistance = canvas.grid.measurePath([new PIXI.Point(x, y), { x: xc, y: yc }], {}).distance;
+      if (newDistance < 1) {
+        coverACBonus += 1;
+        tokenTileACBonus += 1;
+      }
+      if (newDistance < distance) distance = newDistance;
+    }
+  }
   return distance;
 }
 
@@ -4285,7 +4298,7 @@ export async function reactionDialog(actor: globalThis.dnd5e.documents.Actor5e, 
             createWorkflow: true,
             configureDialog: true,
             checkGMStatus: false,
-            targetUuids: [triggerTokenUuid],
+            targetUuids: activity.target?.affects?.type !== "self" ? [triggerTokenUuid] : [getOrCreateTokenForActor(actor)?.document?.uuid],
             isReaction: true,
             workflowOptions: { targetConfirmation: "none" },
             ignoreUserTargets: true
@@ -5229,9 +5242,21 @@ export async function computeFlankedStatus(target): Promise<boolean> {
       if (hasFlanked) continue;
     }
     // Loop through each square covered by attacker and ally
-    const tokenStartX = token.document.width >= 1 ? 0.5 : token.document.width / 2;
-    const tokenStartY = token.document.height >= 1 ? 0.5 : token.document.height / 2;
     let maxDist = (canvas?.dimensions?.distance ?? 5);
+    const tokenStartX = -Math.max(0, token.document.width / 2 - 0.5);
+    const tokenStartY = -Math.max(0, token.document.height / 2 - 0.5);
+    const tokenPoints: any[] = [];
+    for (let x = tokenStartX; x < token.document.width / 2; x++) {
+      for (let y = tokenStartY; y < token.document.height / 2; y++) {
+        let tx = token.center.x + x * gridW;
+        let ty = token.center.y + y * gridH;
+        if ((distancePointToken({ x: tx, y: ty, elevation: token.elevation }, target) ?? +Infinity) > maxDist) {
+          // console.error("Too far away", tx, ty, ax, ay, token.center, ally.center, target.center);
+          continue;
+        }
+        tokenPoints.push({ x: tx, y: ty });
+      }
+    }
     //@ts-expect-error
     if (game.settings?.get("core", "gridDiagonals") === 1) maxDist *= Math.sqrt(2);
     for (let ally of allies) {
@@ -5249,30 +5274,29 @@ export async function computeFlankedStatus(target): Promise<boolean> {
         const hasFlanked = hasCondition(actor, "flanked");
         if (hasFlanked) continue
       }
-      const allyStartX = ally.document.width >= 1 ? 0.5 : ally.document.width / 2;
-      const allyStartY = ally.document.height >= 1 ? 0.5 : ally.document.height / 2;
-      var x, x1, y, y1, d, r;
-      for (x = tokenStartX; x < token.document.width; x++) {
-        for (y = tokenStartY; y < token.document.height; y++) {
-          for (x1 = allyStartX; x1 < ally.document.width; x1++) {
-            for (y1 = allyStartY; y1 < ally.document.height; y1++) {
-              let tx = token.x + x * gridW;
-              let ty = token.y + y * gridH;
-              let ax = ally.x + x1 * gridW;
-              let ay = ally.y + y1 * gridH;
-              const p1 = canvas.grid?.getCenterPoint({ x: tx, y: ty });
-              const p2 = canvas.grid?.getCenterPoint({ x: ax, y: ay });
-
-              if (distancePointToken({ x: tx, y: ty, elevation: token.elevation }, target) > maxDist) continue;
-              //@ts-expect-error types suggest can be undefined but it can't be
-              const rayToCheck = new Ray(p1, p2);
-              // console.error("Checking ", tx, ty, ax, ay, token.center, ally.center, target.center)
-              const flankedTop = rayToCheck.intersectSegment(top) && rayToCheck.intersectSegment(bottom);
-              const flankedLeft = rayToCheck.intersectSegment(left) && rayToCheck.intersectSegment(right);
-              if (flankedLeft || flankedTop) {
-                return true;
-              }
-            }
+      const allyStartX = -Math.max(0, ally.document.width / 2 - 0.5);
+      const allyStartY = -Math.max(0, ally.document.height / 2 - 0.5);
+      const allyPoints: any[] = [];
+      for (let x1 = allyStartX; x1 < ally.document.width / 2; x1++) {
+        for (let y1 = allyStartY; y1 < ally.document.height / 2; y1++) {
+          let ax = ally.center.x + x1 * gridW;
+          let ay = ally.center.y + y1 * gridH;
+          if ((distancePointToken({ x: ax, y: ay, elevation: ally.elevation }, target) ?? +Infinity) > maxDist) {
+            continue;
+          }
+          allyPoints.push({ x: ax, y: ay });
+        }
+      }
+      for (let tokenPoint of tokenPoints) {
+        for (let allyPoint of allyPoints) {
+          const p1 = canvas.grid?.getCenterPoint(tokenPoint)
+          const p2 = canvas.grid?.getCenterPoint(allyPoint);
+          if (!p1 || !p2) continue;
+          const rayToCheck = new Ray(p1, p2);
+          const flankingTop = rayToCheck.intersectSegment(top) && rayToCheck.intersectSegment(bottom);
+          const flankingLeft = rayToCheck.intersectSegment(left) && rayToCheck.intersectSegment(right);
+          if (flankingLeft || flankingTop) {
+            return true;
           }
         }
       }
@@ -5316,39 +5340,50 @@ export function computeFlankingStatus(token, target): boolean {
   const right: [x0: number, y0: number, x1: number, y1: number] = [tr.x, tr.y, br.x, br.y];
 
   // Loop through each square covered by attacker and ally
-  const tokenStartX = token.document.width >= 1 ? 0.5 : token.document.width / 2;
-  const tokenStartY = token.document.height >= 1 ? 0.5 : token.document.height / 2;
-
-
+  const tokenStartX = -Math.max(0, token.document.width / 2 - 0.5);
+  const tokenStartY = -Math.max(0, token.document.height / 2 - 0.5);
+  const tokenPoints: any[] = [];
+  for (let x = tokenStartX; x < token.document.width / 2; x++) {
+    for (let y = tokenStartY; y < token.document.height / 2; y++) {
+      let tx = token.center.x + x * gridW;
+      let ty = token.center.y + y * gridH;
+      if ((distancePointToken({ x: tx, y: ty, elevation: token.elevation }, target) ?? +Infinity) > maxDist) {
+        // console.error("Too far away", tx, ty, ax, ay, token.center, ally.center, target.center);
+        continue;
+      }
+      tokenPoints.push({ x: tx, y: ty });
+    }
+  }
   for (let ally of allies) {
     if (ally.document.uuid === token.document.uuid) continue;
     if (!heightIntersects(ally.document, target.document)) continue;
     const actor: any = ally.actor;
     if (checkIncapacitated(ally.actor, debugEnabled > 0, false)) continue;
     if (hasCondition(actor, "incapacitated")) continue;
-    const allyStartX = ally.document.width >= 1 ? 0.5 : ally.document.width / 2;
-    const allyStartY = ally.document.height >= 1 ? 0.5 : ally.document.height / 2;
-    var x, x1, y, y1, d, r;
-    for (x = tokenStartX; x < token.document.width; x++) {
-      for (y = tokenStartY; y < token.document.height; y++) {
-        for (x1 = allyStartX; x1 < ally.document.width; x1++) {
-          for (y1 = allyStartY; y1 < ally.document.height; y1++) {
-            let tx = token.x + x * gridW;
-            let ty = token.y + y * gridH;
-            let ax = ally.x + x1 * gridW;
-            let ay = ally.y + y1 * gridH;
-            const p1 = canvas.grid?.getCenterPoint({ x: tx, y: ty })
-            const p2 = canvas.grid?.getCenterPoint({ x: ax, y: ay });
-            if (distancePointToken({ x: tx, y: ty, elevation: token.elevation }, target) > maxDist) continue;
-            //@ts-expect-error types suggest can be undefined but it can't be
-            const rayToCheck = new Ray(p1, p2);
-            // console.error("Checking ", tx, ty, ax, ay, token.center, ally.center, target.center)
-            const flankedTop = rayToCheck.intersectSegment(top) && rayToCheck.intersectSegment(bottom);
-            const flankedLeft = rayToCheck.intersectSegment(left) && rayToCheck.intersectSegment(right);
-            if (flankedLeft || flankedTop) {
-              return true;
-            }
-          }
+    const allyStartX = -Math.max(0, ally.document.width / 2 - 0.5);
+    const allyStartY = -Math.max(0, ally.document.height / 2 - 0.5);
+
+    const allyPoints: any[] = [];
+    for (let x1 = allyStartX; x1 < ally.document.width / 2; x1++) {
+      for (let y1 = allyStartY; y1 < ally.document.height / 2; y1++) {
+        let ax = ally.center.x + x1 * gridW;
+        let ay = ally.center.y + y1 * gridH;
+        if ((distancePointToken({ x: ax, y: ay, elevation: ally.elevation }, target) ?? +Infinity) > maxDist) {
+          continue;
+        }
+        allyPoints.push({ x: ax, y: ay });
+      }
+    }
+    for (let tokenPoint of tokenPoints) {
+      for (let allyPoint of allyPoints) {
+        const p1 = canvas.grid?.getCenterPoint(tokenPoint)
+        const p2 = canvas.grid?.getCenterPoint(allyPoint);
+        if (!p1 || !p2) continue;
+        const rayToCheck = new Ray(p1, p2);
+        const flankingTop = rayToCheck.intersectSegment(top) && rayToCheck.intersectSegment(bottom);
+        const flankingLeft = rayToCheck.intersectSegment(left) && rayToCheck.intersectSegment(right);
+        if (flankingLeft || flankingTop) {
+          return true;
         }
       }
     }

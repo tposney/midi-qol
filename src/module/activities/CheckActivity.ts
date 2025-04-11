@@ -81,7 +81,7 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
       const item: any = this.item;
       const rollData: any = { event, target: Number.isFinite(dc) ? dc : check.dc.value };
       if (ability in globalThis.dnd5e.config.abilities) rollData.ability = ability;
-
+      if (configSettings.autoCheckSaves !== "none") message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
       for (const token of targets) {
         const actor = token instanceof Actor ? token : token.actor;
         const speaker = ChatMessage.getSpeaker({ actor, scene: canvas?.scene, token: token instanceof Token ? token.document : null });

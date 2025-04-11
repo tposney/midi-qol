@@ -355,8 +355,10 @@ export function initHooks() {
       if (message?.system?.activations?.size > 0) {
         for (let activation of message.system.activations) {
           const activity = fromUuidSync(activation, { relative: actor }) as any;
-          if (activity?.target?.affects.type === "self") activityList.push(activity);
-          else activations.add(activation);
+          const item = activity.item;
+          const itemEnabled = item?.system.equipped !== false && (item?.system.attuned === true || item?.system.attunement !== "required");
+          if (itemEnabled && activity?.target?.affects.type === "self") activityList.push(activity);
+          else if (itemEnabled) activations.add(activation);
         }
       }
       message.updateSource({ "system.activations": activations });

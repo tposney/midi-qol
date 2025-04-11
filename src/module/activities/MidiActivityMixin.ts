@@ -332,6 +332,21 @@ export var MidiActivityMixin = Base => {
       super.prepareData();
     }
 
+    async _onChatAction(event, target, message) {
+      const scaling = message.getFlag("dnd5e", "scaling") ?? 0;
+      const item = scaling ? this.item.clone({ "flags.dnd5e.scaling": scaling }, { keepId: true }) : this.item;
+      let activity = this.otherActivity;
+      const action = target.dataset.action;
+      let handler = activity.metadata.usage?.actions?.[action];
+      const workflow = Workflow.getWorkflow(message._uuid);
+      if (!handler && workflow) {
+        activity = workflow.activity;
+        if (activity) handler = activity.metadata.usage?.actions?.[action];
+      }
+      if (handler) await handler.call(activity, event, target, message);
+      
+    }
+
     async useAs(actor, config: any = {}, dialog: any = {}, message: any = {}) {
       // itemData._id = this.item._id;
       actor = getActor(config.midiOptions.rollAs);
@@ -340,7 +355,6 @@ export var MidiActivityMixin = Base => {
       const itemData = this.item.toObject();
       delete itemData._id;
       let item = new CONFIG.Item.documentClass(itemData, { parent: actor });
-      actor.sourcedItems
       item.prepareData();
       //@ts-expect-error no dnd5e-types
       item.prepareFinalAttributes(); // Since actor prepareData is not being called need to do this here
@@ -401,7 +415,8 @@ export var MidiActivityMixin = Base => {
         activity.checkAutoConsume(usage, dialog, message, rollToggle);
         // if (rollToggle) dialog.configure = !dialog.configure; Should this always be looked at
         // Synthetic items don't have an _id so setup for them to be recovered from the chat card
-        if (!activity.item._id) foundry.utils.setProperty(message, "data.flags.dnd5e.item.data", activity.item.toObject());
+        if (!activity.item._id || foundry.utils.getProperty(activity.item, `flags.${MODULE_ID}.syntheticItem`)) 
+          foundry.utils.setProperty(message, "data.flags.dnd5e.item.data", activity.item.toObject());
 
         let useResults;
         let upcastActivity;
@@ -425,7 +440,6 @@ export var MidiActivityMixin = Base => {
         if (!await activity.setupTargets(usage, dialog, message)) return false;
         if (!await activity.preChatChecks(usage, dialog, message)) return false;
         try {
-          activity.aaMarked = "midi-qol"
           useResults = await super.use.bind(activity)(usage, dialog, message);
         } catch (err) {
           error("MidiQOL | MidiActivity | use | Error in super.use", err);
@@ -470,9 +484,9 @@ export var MidiActivityMixin = Base => {
         if (activity.consumption?.spellSlot) {
           usage.workflow.castData = {
             baseLevel: activity.item.system.level,
-            castLevel: activity.item.system.level + usageData.scaling,
-            scaling: usageData.scaling,
-            itemUuid: activity.item.itemUuid
+            castLevel: activity.item.system.level + (usageData?.scaling ?? 0),
+            scaling: usageData?.scaling ?? 0,
+            itemUuid: activity.item.uuid
           };
         }
         const scaling = useResults.message?.getFlag && (useResults.message?.getFlag("dnd5e", "scaling") ?? 0);
@@ -1326,12 +1340,17 @@ export var MidiActivityMixin = Base => {
         OtherFormula: i18n(`${SystemString}.OtherFormula`),
         canCancel: configSettings.undoWorkflow // TODO enable this when more testing done.
       };
-      context.buttons = context.buttons?.filter(b => !["rollAttack", "rollDamage", "rollHealing"].includes(b.dataset?.action));
       const rollSaveOptions = new Set();
       rollSaveOptions.add(configSettings.rollNPCLinkedSaves);
       rollSaveOptions.add(configSettings.rollNPCSaves);
       rollSaveOptions.add(configSettings.playerRollSaves);
       const showSaveButtons = rollSaveOptions.has("none") || rollSaveOptions.has("chat") || configSettings.autoCheckSaves === "none";
+      if (this.otherActivity?.save && !this.save && showSaveButtons) {
+        context.buttons = context.buttons.concat(this.otherActivity._usageChatButtons(message));
+      } else if (this.otherActivity?.check && !this.check && showSaveButtons) {
+        context.buttons = context.buttons.concat(this.otherActivity._usageChatButtons(message));
+      }
+      context.buttons = context.buttons?.filter(b => !["rollAttack", "rollDamage", "rollHealing"].includes(b.dataset?.action));
       if (!showSaveButtons) context.buttons = context.buttons?.filter(b => !["rollSave", "rollCheck"].includes(b.dataset?.action));
       if (configSettings.autoCheckSaves !== "none") context.buttons?.forEach(b => { b.isDisabled = ["rollSave", "rollCheck"].includes(b.dataset?.action) ? "disabled" : "" });
       return foundry.utils.mergeObject(context, midiContextData)
