@@ -5537,7 +5537,7 @@ export class Workflow {
 
     let item = this.item;
     const activity = this.activity;
-
+    const preDefinedTargetACValue = Number(this.attackRoll?.options?.target) || false;
     // check for a hit/critical/fumble
     if (this.activity.target?.affects?.type === "self") {
       this.targets = await getOrCreateTokenForActorAsSet(this.actor);
@@ -5553,10 +5553,10 @@ export class Workflow {
       //@ts-expect-error dnd5e v10
       let targetActor: globalThis.dnd5e.documents.Actor5e = targetToken.actor;
       if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
-      let targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10);
+      let targetAC = preDefinedTargetACValue ?? Number.parseInt(targetActor.system.attributes.ac.value ?? 10);
       let attackBonus = 0;
       const wjVehicle = installedModules.get("wjmais") ? foundry.utils.getProperty(targetActor, "flags.wjmais.crew.min") != null : false;
-      if (targetActor.type === "vehicle" && !wjVehicle) {
+      if (targetActor.type === "vehicle" && !wjVehicle && !preDefinedTargetACValue) {
         const inMotion = foundry.utils.getProperty(targetActor, `flags.${MODULE_ID}.inMotion`);
         if (inMotion) targetAC = Number.parseInt(targetActor.system.attributes.ac.flat ?? 10);
         else targetAC = Number.parseInt(targetActor.system.attributes.ac.motionless);
@@ -5566,6 +5566,8 @@ export class Workflow {
         }
       }
       let hitResultNumeric;
+
+      //thatlonelybugbear: No idea about how to properly evaluate these. Is !preDefinedTargetACValue enough?
       let targetEC = targetActor.system.attributes.ac.EC ?? 0;
       let targetAR = targetActor.system.attributes.ac.AR ?? 0;
 
@@ -5597,7 +5599,7 @@ export class Workflow {
         }
         if (this.token) bonusAC = computeCoverBonus(this.token, targetToken, activity);
         if (ignoreCover && bonusAC < FULL_COVER) bonusAC = 0;
-        targetAC += bonusAC;
+        if (!preDefinedTargetACValue) targetAC += bonusAC;
 
         const midiFlagsAttackBonus = foundry.utils.getProperty(targetActor, `flags.${MODULE_ID}.grants.attack.bonus`);
         if (!this.isFumble) {
@@ -5619,7 +5621,7 @@ export class Workflow {
               const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
               const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
               // TODO what else to do once rolled
-              targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC;
+              if (!preDefinedTargetACValue) targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC;
             }
             isHit = (attackTotal + attackBonus) >= targetAC || this.isCritical;
           }
@@ -5636,7 +5638,7 @@ export class Workflow {
             }
             if (!Workflow.getWorkflow(this.id)) // workflow has been removed - bail out
               return;
-            targetAC = Number.parseInt(targetActor.system.attributes.ac.value) + bonusAC;
+            if (!preDefinedTargetACValue) targetAC = Number.parseInt(targetActor.system.attributes.ac.value) + bonusAC;
             if (targetEC) targetEC = targetActor.system.attributes.ac.EC + bonusAC;
             if (result.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
             if (targetEC) targetEC = targetAC - targetAR;
@@ -5663,7 +5665,7 @@ export class Workflow {
 
             } else {
               // @ts-expect-error no dnd5e-types
-              this.isCritical = attackTotal >= ((targetToken.actor as Actor).system.attributes?.ac?.value ?? 10) + Number(checkRule("optionalCritRule"));
+              this.isCritical = attackTotal >= targetAC + Number(checkRule("optionalCritRule"));
             }
           }
           hitResultNumeric = this.isCritical ? "++" : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
