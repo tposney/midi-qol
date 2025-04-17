@@ -5508,17 +5508,17 @@ export class Workflow {
       // this.diceRoll = terms[0].results.find(d => d.active).result;
     }
     // @ts-expect-error no dnd5e-types
-    let criticalThreshold = this.attackRoll.options.criticalSuccess;
+    let criticalThreshold = this.attackRoll.options.criticalSuccess ?? 20;
     if (this.targets.size > 0) {
       const midiFlags = this.targets.first()?.actor?.flags[MODULE_ID];
-      let targetCrit = 20;
+      let targetCrit = criticalThreshold;
       // @ts-expect-error can't know about flags
       if (midiFlags?.grants?.criticalThreshold) {
         const conditionData = createConditionData({ workflow: this, target: this.targets.first(), actor: this.actor });
         // @ts-expect-error can't know about flags
-        targetCrit = await evalCondition(midiFlags.grants.criticalThreshold, conditionData, { errorReturn: 20, async: true });
+        targetCrit = await evalCondition(midiFlags.grants.criticalThreshold, conditionData, { errorReturn: criticalThreshold, async: true });
       }
-      if (isNaN(targetCrit) || !Number.isNumeric(targetCrit)) targetCrit = 20;
+      if (isNaN(targetCrit) || !Number.isNumeric(targetCrit)) targetCrit = criticalThreshold;
       criticalThreshold = Math.min(criticalThreshold, targetCrit);
     }
     this.isCritical = this.diceRoll >= criticalThreshold;
