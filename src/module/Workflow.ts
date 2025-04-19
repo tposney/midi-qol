@@ -2378,12 +2378,12 @@ export class Workflow {
     let activityEffects = (this.activity.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave !== true).map(efData => efData.effect);
     let onSaveActivityEffects = (this.activity.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave === true).map(efData => efData.effect);
     if (this.activity?.midiProperties?.chooseEffects) { // WIP
-      activityEffects = await this.chooseEffects(activityEffects, {});
+      activityEffects = await this.chooseEffects(activityEffects, { activity: this.activity, activityUuid: this.activity.uuid, isOtherActivity: false });
     }
     let otherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave !== true).map(efData => efData.effect);
     let onSaveOtherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave === true).map(efData => efData.effect);
     if (this.otherActivity?.midiProperties?.chooseEffects) { // WIP
-      otherActivityEffects = await this.chooseEffects(otherActivityEffects, {});
+      otherActivityEffects = await this.chooseEffects(otherActivityEffects, { activity: this.otherActivity, activityUuid: this.otherActivity.uuid, isOtherActivity: true });
     }
     const ceTargetEffect = ceEffect && !(ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
     const ceSelfEffect = ceEffect && (ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
@@ -6204,6 +6204,7 @@ export class Workflow {
         content: `${style}`,
         buttons,
         render,
+        midiOptions: options,
       };
 
       let dialog = new Mixin(data, dialogOptions);
