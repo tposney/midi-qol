@@ -259,7 +259,9 @@
   },
   "midi-qol.playerRollSavesOptions": {
     "none": "None",
-    "noneDialog": "Auto roll and show roll dialog",
+    "noneDialogPublic": "Auto roll and show roll dialog (public roll)",
+    "noneDialogPrivate": "Auto roll and show roll dialog (private roll)",
+    "noneDialogBlind": "Auto roll and show roll dialog (blind roll)",
     "chat": "Chat Message",
     "mtb": "Monks Token Bar",
     "rer": "Rippers Epic Rolls"

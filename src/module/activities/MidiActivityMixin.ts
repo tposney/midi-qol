@@ -7,7 +7,7 @@ import { checkMechanic, configSettings, safeGetGameSetting } from "../settings.j
 import { installedModules } from "../setupModules.js";
 import { busyWait } from "../tests/setupTest.js";
 import { saveUndoData } from "../undo.js";
-import { activityHasAreaTarget, asyncHooksCall, canSee, canSense, checkActivityRange, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getStatusName, getToken, activityHasAutoPlaceTemplate, hasUsedBonusAction, hasUsedReaction, initializeVision, isAutoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, processDamageRollBonusFlags, setBonusActionUsed, setReactionUsed, sumRolls, tokenForActor, getOrCreateTokenForActor, validTargetTokens, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, isAutoFastDamage, updateUserTargets, isValidTarget, needsAOOCheck, addRollTo } from "../utils.js";
+import { activityHasAreaTarget, asyncHooksCall, canSee, canSense, checkActivityRange, checkIncapacitated, createConditionData, displayDSNForRoll, evalActivationCondition, evalCondition, getAutoRollAttack, getAutoRollDamage, getRemoveAttackButtons, getRemoveDamageButtons, getSpeaker, getStatusName, getToken, activityHasAutoPlaceTemplate, hasUsedBonusAction, hasUsedReaction, initializeVision, autoConsumeResource, isInCombat, logIncapacitatedCheckResult, needsBonusActionCheck, needsReactionCheck, processDamageRollBonusFlags, setBonusActionUsed, setReactionUsed, sumRolls, tokenForActor, getOrCreateTokenForActor, validTargetTokens, activityHasEmanationNoTemplate, getActivityAutoTargetAction, areMidiKeysPressed, getActor, setRangedTargets, isAutoFastDamage, updateUserTargets, isValidTarget, needsAOOCheck, addRollTo } from "../utils.js";
 import { confirmWorkflow, postTemplateConfirmTargets, preTemplateTargets, removeFlanking, selectTargets, setDamageRollMinTerms } from "./activityHelpers.js";
 
 export class MidiConditionField extends globalThis.dnd5e.dataModels.fields.FormulaField {
@@ -344,7 +344,7 @@ export var MidiActivityMixin = Base => {
         if (activity) handler = activity.metadata.usage?.actions?.[action];
       }
       if (handler) await handler.call(activity, event, target, message);
-      
+
     }
 
     async useAs(actor, config: any = {}, dialog: any = {}, message: any = {}) {
@@ -354,6 +354,7 @@ export var MidiActivityMixin = Base => {
       if (!actor || actor === this.actor || this.selfOnlyTriggerActivity) return this.use(config, dialog, message);
       const itemData = this.item.toObject();
       delete itemData._id;
+      foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.syntheticItem`, true);
       let item = new CONFIG.Item.documentClass(itemData, { parent: actor });
       item.prepareData();
       //@ts-expect-error no dnd5e-types
@@ -415,7 +416,7 @@ export var MidiActivityMixin = Base => {
         activity.checkAutoConsume(usage, dialog, message, rollToggle);
         // if (rollToggle) dialog.configure = !dialog.configure; Should this always be looked at
         // Synthetic items don't have an _id so setup for them to be recovered from the chat card
-        if (!activity.item._id || foundry.utils.getProperty(activity.item, `flags.${MODULE_ID}.syntheticItem`)) 
+        if (!activity.item._id || foundry.utils.getProperty(activity.item, `flags.${MODULE_ID}.syntheticItem`))
           foundry.utils.setProperty(message, "data.flags.dnd5e.item.data", activity.item.toObject());
 
         let useResults;
@@ -483,9 +484,9 @@ export var MidiActivityMixin = Base => {
           await setBonusActionUsed(this.actor);
         if (activity.consumption?.spellSlot) {
           usage.workflow.castData = {
-            baseLevel: activity.item.system.level,
-            castLevel: activity.item.system.level + (usageData?.scaling ?? 0),
-            scaling: usageData?.scaling ?? 0,
+            baseLevel: activity.item.system.level ?? foundry.utils.getProperty(activity.item, "flags.dnd5e.spellLevel.base"),
+            castLevel: activity.item.system.level ? activity.item.system.level+ (usageData?.scaling ?? 0) : foundry.utils.getProperty(activity.item, "flags.dnd5e.spellLevel.value"), 
+            scaling: (usageData?.scaling ?? foundry.utils.getProperty(activity.item, "flags.dnd5e.scaling")) || 0,
             itemUuid: activity.item.uuid
           };
         }
@@ -498,14 +499,14 @@ export var MidiActivityMixin = Base => {
         await usage.workflow.performState(usage.workflow.WorkflowState_Start, {});
         return useResults;
       } finally {
-        Hooks.off("dnd5e.preUseActivity", preUseActivityHookId);
-        Hooks.off("dnd5e.activityConsumption", activityConsumptionHookId);
+        if (preUseActivityHookId) Hooks.off("dnd5e.preUseActivity", preUseActivityHookId);
+        if (activityConsumptionHookId) Hooks.off("dnd5e.activityConsumption", activityConsumptionHookId);
       }
     }
 
     checkAutoConsume(usage, dialog, message, rollToggle) {
       if (dialog.configure === false) return;
-      if (this.isSpell && ["both", "spell"].includes(isAutoConsumeResource(usage.workflow))) {
+      if (this.isSpell && ["both", "spell"].includes(autoConsumeResource(usage.workflow))) {
         dialog.configure = false;
         // Check that there is a spell slot of the right level
         const spells = this.actor.system.spells;
@@ -520,12 +521,15 @@ export var MidiActivityMixin = Base => {
             this.actor?.sheet.minimize();
           }, 100)
         }
-      } else dialog.configure = !(["both", "item"].includes(isAutoConsumeResource(usage.workflow)));
-      if (isAutoConsumeResource(usage.workflow) !== "none" && rollToggle) dialog.configure = true;
+      } else dialog.configure = !(["both", "item"].includes(autoConsumeResource(usage.workflow)));
+      if (autoConsumeResource(usage.workflow) !== "none" && rollToggle) dialog.configure = true;
     }
 
     async rollDamage(config: any, dialog: any = {}, message: any = {}) {
       // TODO decide what this should mean
+      if (!config.workflow) {
+        return super.rollDamage(config, dialog, message);
+      }
       if (!config.workflow && config.workflow?.currentAction === config.workflow?.WorkflowState_Aborted || config.workflow?.currentAction === config.workflow?.WorkflowState_Completed)
         return this.use(config, dialog, {});
       config.midiOptions ??= {};
@@ -1018,7 +1022,7 @@ export var MidiActivityMixin = Base => {
         }
       }
 
-      if (this.isSpell) {
+      if (this.isSpell || this.item?.system.type.value === "scroll") {
         const midiFlags = this.actor.flags[MODULE_ID];
         const needsVerbal = this.item.system.properties.has("vocal");
         const needsSomatic = this.item.system.properties.has("somatic");
@@ -1084,7 +1088,7 @@ export var MidiActivityMixin = Base => {
       }
 
       workflow.itemUsesBonusAction = false;
-      if (options.checkBonusAction && this.actor.inCombat && needsBonusActionCheck(this.actor)) {
+      if (!usage.midiOptions?.workflowOptions?.notBonusAction && options.checkBonusAction && this.actor.inCombat && needsBonusActionCheck(this.actor)) {
         workflow.itemUsesBonusAction = ["bonus"].includes(this.activation?.type);
         const queryBonus = workflow.itemUsesBonusAction && hasUsedBonusAction(this.actor) && needsBonusActionCheck(this.actor);
         if (queryBonus) {

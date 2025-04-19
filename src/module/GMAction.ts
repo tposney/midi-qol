@@ -811,6 +811,7 @@ workflowId: string
       config.item = tool;
     }
   }
+  if (data.rollMode) message.rollMode = data.rollMode;
   return new Promise(async (resolve) => {
     let timeoutId;
     let result;

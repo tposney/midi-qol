@@ -81,12 +81,21 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
       const item: any = this.item;
       const rollData: any = { event, target: Number.isFinite(dc) ? dc : check.dc.value };
       if (ability in globalThis.dnd5e.config.abilities) rollData.ability = ability;
-      if (configSettings.autoCheckSaves !== "none") message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+      
       for (const token of targets) {
         const actor = token instanceof Actor ? token : token.actor;
         const speaker = ChatMessage.getSpeaker({ actor, scene: canvas?.scene, token: token instanceof Token ? token.document : null });
-        const messageData = { data: { speaker } };
+        const messageData: any = { data: { speaker } };
         if (!actor) continue;
+        if (configSettings.autoCheckSaves !== "none") messageData.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+        if (configSettings.autoCheckSaves === "allShow") messageData.rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
+        else messageData.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+        if (!game.user?.isGM) {
+          if (configSettings.playerRollSaves === "noneDialogPublic") messageData.rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
+          else if (configSettings.playerRollSaves === "noneDialogPrivate") messageData.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+          else if (configSettings.playerRollSaves === "noneDialogSelf") messageData.rollMode = CONST.DICE_ROLL_MODES.SELF;
+          else if (configSettings.playerRollSaves === "noneDialogBlind") messageData.rollMode = CONST.DICE_ROLL_MODES.BLIND;
+        }
         //@ts-expect-error no dnd5e types
         if (skill) await actor.rollSkill({ ...rollData, skill }, {}, messageData);
         else if (tool) {

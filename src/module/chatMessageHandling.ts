@@ -249,7 +249,7 @@ export let hideStuffHandler = (message, html, data) => {
     }
 
     // hide tool tips from non-gm
-    if (configSettings.autoCheckSaves !== "allShow") html.find(".midi-qol-save-tooltip").hide();
+    if (configSettings.autoCheckSaves !== "allShow") html.find(".midi-qol-npc-save-tooltip").remove();
     // Hide the save dc if required
     if (!configSettings.displaySaveDC || !shouldDisplayChallenge) {
       html.find(".midi-qol-saveDC").remove();

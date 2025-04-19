@@ -518,6 +518,7 @@ export let fetchParams = () => {
   if (configSettings.enforceSingleWeaponTarget == undefined) configSettings.enforceSingleWeaponTarget = false;
   if (configSettings.confirmAmmunition === undefined) configSettings.confirmAmmunition = false;
   if (configSettings.gmConfirmAmmunition === undefined) configSettings.gmConfirmAmmunition = false;
+  if (configSettings.playerRollSaves === "noneDialog") configSettings.playerRollSaves = "noneDialogPrivate";
   configSettings.hidePlayerDamageCard = true;
   configSettings.quickSettings = true;
   //@ts-expect-error have removed the definition
@@ -694,7 +695,7 @@ const settings = [
     type: Boolean,
     choices: [],
     config: true,
-    onChange: fetchParams
+    onChange: fetchParams, requiresReload: true
   },
   {
     name: "DragDropTarget",

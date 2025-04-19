@@ -2377,13 +2377,13 @@ export class Workflow {
     }
     let activityEffects = (this.activity.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave !== true).map(efData => efData.effect);
     let onSaveActivityEffects = (this.activity.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave === true).map(efData => efData.effect);
-    if (this.activity?.midiProperties?.chooseEffects) { // WIP
-      activityEffects = await this.chooseEffects(activityEffects, { activity: this.activity, activityUuid: this.activity.uuid, isOtherActivity: false });
-    }
     let otherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave !== true).map(efData => efData.effect);
     let onSaveOtherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave === true).map(efData => efData.effect);
-    if (this.otherActivity?.midiProperties?.chooseEffects) { // WIP
-      otherActivityEffects = await this.chooseEffects(otherActivityEffects, { activity: this.otherActivity, activityUuid: this.otherActivity.uuid, isOtherActivity: true });
+    if (activityEffects.length > 0 && this.effectTargets.size > 0 && this.activity?.midiProperties?.chooseEffects) { // WIP
+      activityEffects = await this.chooseEffects(activityEffects, {activity: this.otherActivity, activityUuid: this.otherActivity.uuid, isOtherActivity: true });
+    }
+    if (otherActivityEffects.length > 0 && this.otherEffectTargets.size > 0 && this.otherActivity?.midiProperties?.chooseEffects) { // WIP
+      otherActivityEffects = await this.chooseEffects(otherActivityEffects, {activity: this.otherActivity, activityUuid: this.otherActivity.uuid, isOtherActivity: true });
     }
     const ceTargetEffect = ceEffect && !(ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
     const ceSelfEffect = ceEffect && (ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
@@ -4595,8 +4595,6 @@ export class Workflow {
     let monkRequestsGM: any[] = [];
     let rerRequestsGM: any[] = [];
     const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
-    let showRoll = saveDisplay === "allShow";
-    if (simulate) showRoll = false;
     const isMagicSave = this.item?.type === "spell" || this.item?.flags.midiProperties?.magiceffect || this.item?.flags.midiProperties?.magiceffect;
 
     try {
@@ -4607,6 +4605,8 @@ export class Workflow {
       }
 
       for (let target of allHitTargets) {
+        let showRoll = saveDisplay === "allShow";
+        if (simulate) showRoll = false;
         if (!foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.noProvokeReaction`) && !this.workflowOptions.noProvokeReaction) {
           await doReactions(target, this.tokenUuid, this.attackRoll ?? new Roll(""), "reactionsave", { workflow: this, activity: this.activity, item: this.item })
         }
@@ -4692,8 +4692,8 @@ export class Workflow {
         else if (saveDetails.disadvantage && !saveDetails.advantage) this.disadvantageSaves.add(target);
         var player = playerFor(target);
         if (!player || !player.active) player = preferredActiveGM();
-        let promptPlayer = !player?.isGM && !(["none", "noneDialog"].includes(configSettings.playerRollSaves));
-        let showRollDialog = !player?.isGM && "noneDialog" === configSettings.playerRollSaves;
+        let promptPlayer = !player?.isGM && !(["none", "noneDialogPublic", "noneDialogPrivate", "noneDialogSelf", "noneDialogBlind"].includes(configSettings.playerRollSaves));
+        let showRollDialog = !player?.isGM && ["noneDialogPublic", "noneDialogPrivate", "noneDialogSelf", "noneDialogBlind"].includes(configSettings.playerRollSaves);
         if (simulate) promptPlayer = false;
         let GMprompt;
         let gmMonksTB;
@@ -4809,6 +4809,7 @@ export class Workflow {
                       ability: rollAbility,
                       skill: rollSkill,
                       tool: rollTool,
+                      // rollDC: saveDetails.rollDC,
                       options: { // GMAction will map this -> midiOptions
                         messageData: { user: playerId },
                         target: saveDetails.rollDC,
@@ -4873,18 +4874,28 @@ export class Workflow {
           if (!owner?.active) owner = preferredActiveGM();
           // Fall back to rolling as the current user
           if (!owner) owner = game.user;
+          let rollMode = ((this.activity?.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties.rollMode : whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC;
+          if (!owner?.isGM) {
+            if ((this.activity?.midiProperties?.rollMode ?? "default") === "default") {
+              if (configSettings.playerRollSaves === "noneDialogPublic") rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
+              else if (configSettings.playerRollSaves === "noneDialogPrivate") rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+              else if (configSettings.playerRollSaves === "noneDialogSelf") rollMode = CONST.DICE_ROLL_MODES.SELF;
+              else if (configSettings.playerRollSaves === "noneDialogBlind") rollMode = CONST.DICE_ROLL_MODES.BLIND;
+            }
+          }
           promises.push(socketlibSocket.executeAsUser("rollAbilityV2", owner?.id, {
             targetUuid: (target.actor as Actor).uuid,
             request: rollType,
             ability: rollAbility,
             skill: rollSkill,
             tool: rollTool,
+            // rollDC: saveDetails.rollDC,
             options: {
               simulate,
               target: saveDetails.rollDC,
               messageData: { user: owner?.id },
               chatMessage: showRoll,
-              rollMode: ((this.activity?.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties.rollMode : whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC,
+              rollMode,
               mapKeys: false,
               advantage: saveDetails.advantage,
               disadvantage: saveDetails.disadvantage,
@@ -5263,6 +5274,7 @@ export class Workflow {
         target,
         saveSymbol: (rollDC === null) ? "" : (saved ? "fa-check" : "fa-times"),
         saveTotalClass: (target.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-save-total",
+        saveToolTipClass: (target.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-save-tooltip",
         rollTotal: saveRollTotal,
         rollDetail: saveRolls[0],
         rollHTML,
@@ -5537,7 +5549,8 @@ export class Workflow {
 
     let item = this.item;
     const activity = this.activity;
-    const preDefinedTargetACValue = Number(this.attackRoll?.options?.target) || false;
+    //@ts-expect-error .target
+    const preDefinedTargetACValue: number | undefined = Number.parseInt(this.attackRoll?.options?.target) || undefined;
     // check for a hit/critical/fumble
     if (this.activity.target?.affects?.type === "self") {
       this.targets = await getOrCreateTokenForActorAsSet(this.actor);
@@ -5553,7 +5566,7 @@ export class Workflow {
       //@ts-expect-error dnd5e v10
       let targetActor: globalThis.dnd5e.documents.Actor5e = targetToken.actor;
       if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
-      let targetAC = preDefinedTargetACValue ?? Number.parseInt(targetActor.system.attributes.ac.value ?? 10);
+      let targetAC: number = preDefinedTargetACValue ?? Number.parseInt(targetActor.system.attributes.ac.value ?? 10);
       let attackBonus = 0;
       const wjVehicle = installedModules.get("wjmais") ? foundry.utils.getProperty(targetActor, "flags.wjmais.crew.min") != null : false;
       if (targetActor.type === "vehicle" && !wjVehicle && !preDefinedTargetACValue) {
@@ -5567,8 +5580,7 @@ export class Workflow {
       }
       let hitResultNumeric;
 
-      //thatlonelybugbear: No idea about how to properly evaluate these. Is !preDefinedTargetACValue enough?
-      let targetEC = targetActor.system.attributes.ac.EC ?? 0;
+      let targetEC = preDefinedTargetACValue ?? targetActor.system.attributes.ac.EC ?? 0;
       let targetAR = targetActor.system.attributes.ac.AR ?? 0;
 
       let bonusAC = 0;
@@ -5662,10 +5674,8 @@ export class Workflow {
           const optionalCrits = checkRule("optionalCritRule");
           if (this.targets.size === 1 && optionalCrits !== false && optionalCrits > -1) {
             if (checkRule("criticalNat20") && this.isCritical) {
-
             } else {
-              // @ts-expect-error no dnd5e-types
-              this.isCritical = attackTotal >= targetAC + Number(checkRule("optionalCritRule"));
+              this.isCritical = attackTotal >= targetAC + optionalCrits;
             }
           }
           hitResultNumeric = this.isCritical ? "++" : `${attackTotal}/${Math.abs(attackTotal - targetAC)}`;
@@ -6275,10 +6285,12 @@ export class DamageOnlyWorkflow extends Workflow {
       let itemData: any = options.item ? options.item.toObject() : options.itemData;
       if (itemData.system?.activities) delete itemData.system.activities;
       itemData = foundry.utils.mergeObject(itemData, extraItemData, { inplace: false });
-      theItem = new CONFIG.Item.documentClass(itemData, { parent: actor });
+      foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.syntheticItem`, true);
       foundry.utils.setProperty(itemData, "_id", itemData._id ?? foundry.utils.randomID());
+      theItem = new CONFIG.Item.documentClass(itemData, { parent: actor });
     } else {
-      // @ts-expect-error no dnd5e-types
+      foundry.utils.setProperty(extraItemData, `flags.${MODULE_ID}.syntheticItem`, true);
+      //@ts-expect-error no dnd5e types
       theItem = new CONFIG.Item.documentClass(extraItemData, { parent: actor });
     }
     if (!theItem) return;
@@ -6502,7 +6514,7 @@ export class TrapWorkflow extends Workflow {
     if (debugEnabled > 1) debug("TrapWorkflow: Rolling damage ", this.event, this.spellLevel, this.workflowOptions.versatile, this.targets, this.hitTargets);
     this.rollOptions.fastForward = true;
     this.rollOptions.spellLevel = this.spellLevel;
-   this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {});
+    this.activity.rollDamage({ workflow: this, midiOptions: { ...this.rollOptions, workflowOptions: this.workflowOptions } }, {}, {});
     return this.WorkflowState_Suspend; // wait for a damage roll to advance the state.
   }
   async WorkflowState_DamageRollComplete(context: any = {}): Promise<WorkflowState> {

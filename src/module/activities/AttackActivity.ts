@@ -314,7 +314,10 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         */
         if (debugEnabled > 0) warn("MidiQOL | AttackActivity | rollAttack | Called", config, dialog, message);
         let returnValue = await this.configureAttackRoll(config);
-        if (workflow?.aborted || !returnValue) return [];
+        if (workflow?.aborted) return [];
+        if (!returnValue) {
+         return super.rollAttack(config, dialog, message);
+        }
 
         let requiresAmmoConfirmation = false;
         await workflow.checkAttackAdvantage();

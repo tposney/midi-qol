@@ -1,7 +1,7 @@
 import { warn, error, debug, i18n, debugEnabled, overTimeEffectsToDelete, allAttackTypes, savedOverTimeEffectsToDelete, geti18nOptions, log, GameSystemConfig, SystemString, MODULE_ID } from "../midi-qol.js";
 import { colorChatMessageHandler, nsaMessageHandler, hideStuffHandler, processItemCardCreation, hideRollUpdate, hideRollRender, processCreateDDBGLMessages, ddbglPendingHook, checkOverTimeSaves } from "./chatMessageHandling.js";
 import { preferredActiveGM, processUndoDamageCard, unTimedExecuteAsGM } from "./GMAction.js";
-import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, isConcentrating, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse } from "./utils.js";
+import { untargetDeadTokens, untargetAllTokens, midiCustomEffect, removeReactionUsed, removeBonusActionUsed, chackFlanking as checkFlanking, expireRollEffect, removeActionUsed, expirePerTurnBonusActions, getCachedDocument, getUpdatesCache, clearUpdatesCache, expireEffects, createConditionData, processConcentrationRequestMessage, evalAllConditions, doSyncRoll, doConcentrationCheck, _processOverTime, isConcentrating, getCEEffectByName, setRollMaxDiceTerm, setRollMinDiceTerm, _processActivityOverTime, completeActivityUse, isAutoFastAttack, isAutoFastDamage } from "./utils.js";
 import { activateMacroListeners, getCurrentSourceMacros } from "./apps/Item.js"
 import { autoFastForwardAbilityRolls, checkMechanic, checkRule, configSettings, dragDropTargeting } from "./settings.js";
 import { checkWounded, checkDeleteTemplate, preUpdateItemActorOnUseMacro, zeroHPExpiry, deathSaveHook } from "./patching.js";
@@ -91,8 +91,11 @@ export let readyHooks = async () => {
   Hooks.on("preUpdateActor", (actor: Actor, changes: any, options: any = {}, userId) => {
 
     if (userId !== game.user?.id) return true;
-    //@ts-expect-error
-    if (game.settings?.get("dnd5e", "disableConcentration")) {
+    if (!isConcentrating(actor) 
+      || configSettings.doConcentrationCheck === "none" 
+      //@ts-expect-error
+      || game.settings?.get("dnd5e", "disableConcentration")
+      || options.noConcentrationCheck) {
       options.noConcentrationCheck = true;
       return true;
     }
@@ -103,16 +106,14 @@ export let readyHooks = async () => {
     //@ts-expect-error no dnd5e-types
     const tempHPDamage = (tempHpUpdate !== undefined) ? actor.system.attributes.hp.temp - tempHpUpdate : 0;
     const totalDamage = tempHPDamage + hpDamage;
-    let isConcentrationCheck = !options.noConcentrationCheck;
-    isConcentrationCheck &&= (hpDamage > 0 || !configSettings.tempHPDamageConcentrationCheck)
-    if (!isConcentrationCheck || (hpDamage === 0 && !configSettings.tempHPDamageConcentrationCheck)) {
-      isConcentrationCheck = false;
+    if (totalDamage <= 0) {
+      options.noConcentrationCheck = true;
+      return true;
     }
-    options.noConcentrationCheck = !isConcentrationCheck;
+    const isConcentrationCheck = (hpDamage > 0 || configSettings.tempHPDamageConcentrationCheck);
     foundry.utils.setProperty(options, "dnd5e.concentrationCheck", isConcentrationCheck);
-    if (!isConcentrationCheck || totalDamage <= 0) return true;
     try {
-      if (configSettings.doConcentrationCheck === "item" && !options.noConcentrationCheck && options.dnd5e?.concentrationCheck !== false && isConcentrating(actor)) {
+      if (configSettings.doConcentrationCheck === "item" && isConcentrationCheck) {
         //@ts-expect-error no dnd5e-types
         const concentrationDc = actor.getConcentrationDC(totalDamage);
         doConcentrationCheck(actor, concentrationDc);
@@ -276,8 +277,11 @@ export function initHooks() {
 
   Hooks.on("updateChatMessage", (message: ChatMessage, update, options, user) => {
     hideRollUpdate(message, update, options, user);
-    //@ ts-ignore scrollBottom
-    // ui.chat?.scrollBottom();
+    if (!update.content) return;
+    if (ui.chat?.isAtBottom || (message.author._id === game.user?._id) ) {
+      //@ts-expect-error
+      setTimeout(() => ui.chat?.scrollBottom({waitImages: true}), 1000);
+    }
   });
 
 
@@ -492,6 +496,28 @@ export function initHooks() {
           params.item.use({ legacy: false, event: params.event, configureDialog: true, systemCard: true }, {}, { systemCard: true });
         },
       },
+      {
+        label: i18n("midi-qol.buttons.attack"),
+        enabled: (params) => ["weapon", "feat"].includes(params.item.type) && params.item.system.activities.some(a=>a.type === "attack") 
+          && params.item.system.activities.find(a => a.type === "attack"),
+        iconClass: 'fas fa-dice-d20',
+        execute: (params) => {
+          if (debugEnabled > 1) log('rollAttack', params.item);
+          const activity = params.item.system.activities.find(a => a.type === "attack");
+          if (activity) activity.rollAttack({event: params.event}, {}, {create: true})
+        }
+      },
+      {
+        label: i18n("midi-qol.buttons.damage"),
+        enabled: (params) => ["weapon", "feat", "save", "check", "damage"].includes(params.item.type) 
+          && params.item.system.activities?.find(a =>  a.damage?.parts?.length),
+        iconClass: 'fas fa-dice-d20',
+        execute: (params) => {
+          if (debugEnabled > 1) log('rollDamage', params.item);
+          const activity = params.item.system.activities.find(a =>  a.damage?.parts?.length);
+          if (activity) activity.rollDamage({event: params.event}, {}, {create: true})
+        }
+      }
     ]);
 
     api.config.actorTraits.registerActorTrait({
@@ -700,6 +726,7 @@ export const itemJSONData = {
               if (MidiQOL.configSettings().autoCheckSaves === 'none') return;
               for (let targetUuid of args[0].targetUuids) {
                 let target = await fromUuid(targetUuid);
+                console.error(target, args[0]);
                 if (MidiQOL.configSettings().removeConcentration 
                   && (target.actor.system.attributes.hp.value === 0 || args[0].failedSaveUuids.find(uuid => uuid === targetUuid))) {
                 await target.actor.endConcentration();
@@ -1161,6 +1188,7 @@ Hooks.on("dnd5e.preRollConcentrationV2", (rollConfig: any, dialogConfig: any, me
 })
 
 Hooks.on("dnd5e.rollConcentrationV2", (rolls, { subject }) => {
+  if (configSettings.doConcentrationCheck === "item") return;
   if (!subject || !(subject instanceof CONFIG.Actor.documentClass)) {
     const message = "dnd5e.rollConcentrationV2 hook called with non-actor";
     TroubleShooter.recordError(new Error(message), message);

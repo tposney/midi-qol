@@ -1,10 +1,22 @@
+### 12.4.42
+* Some fixes for concentration item rolls not respecting the calculated save dc.
+* Roll tooltips for player saves are now always available for player's rolls if at least save results are displayed.
+* Added back attack roll and damage roll buttons to tidy sheet 5e item details. These buttons roll and attack/damage without triggering a workflow, i.e. checking for hits/applying damage.
+* Ability to specify the roll mode for player auto rolled saves. This can be overridden by the item settings. Meant as a way for the gm to configure things so players always see each others rolls.
+  - For GM auto rolled saves the default remains to not show any roll chat card.
+* Fix for workflow.castData being incorrect for scroll casting.
+* Change so that effect choice dialog is only shown when the effect is going to be applied.
+* Added merge requests
+  - Add a reference to the triggering activity for chooseEffects.
+  - Respect target value passed in attackRoll call when checking hits.
+
 ### 12.4.41
 * If autoCheckSaves is "none" player rolled saves will use the user chat mode instead of always being private.
 * Fix for forwarded activities not respecting consumption.
 * Fix for activation automation not respecting item attunement/equipped.
 * Fix for overtime activities not responding to confirm button.
 * Fix for flanking/flanked calculations with large tokens.
-* Fix for running items when there is no preferredGM and there is no GM on the current scene.
+* Fix for running items when there is no preferredGM (or is inactive) and there is no active GM on the current scene.
 * If an activities "otherActivity" has a saving throw/ability check and the base activity does not,display the save/check buttons for the other activity in the chat card. Only displayed if the settings include showing the save/check buttons.
 
 ### 12.4.40

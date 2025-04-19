@@ -530,6 +530,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
   } else {
     config.legacy = false;
   }
+  if (config.midiOptions?.target) config.target = config.midiOptions.target;
   if (config.midiOptions?.isConcentrationCheck) {
     foundry.utils.setProperty(message, "data.flags.midi-qol.isConcentrationCheck", true);
     config.midiOptions.isConcentrationCheck = false; // remove the isConcentrationCheck option so we won't infinitely recurse

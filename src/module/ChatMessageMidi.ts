@@ -37,14 +37,15 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
     // Patch for getAssociatedItem not preparing data on items recovered from item.data
     getAssociatedItem() {
-      // @ts-expect-error no dnd5e-types
-      const item = super.getAssociatedItem();
-      // @ts-expect-error can't know about flags
-      if (this.flags.dnd5e?.item?.data && this.flags.dnd5e?.item.id === item.id) {
-        item.prepareData();
-        item.prepareFinalAttributes();
+      if (foundry.utils.getProperty(this, "flags.midi-qol.syntheticItem")) {
+        //@ts-expect-error no dnd5e-types
+        const storedData = this.flags.dnd5e?.item?.data;
+        //@ts-expect-error no dnd5e-types
+        const actor = super.getAssociatedActor();
+        return new Item.implementation(storedData, {parent: actor})
       }
-      return item;
+      // @ts-expect-error no dnd5e-types
+      return super.getAssociatedItem();
     }
 
     /**
@@ -232,7 +233,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
             }
             html.querySelector(`.midi-qol-${rType}-roll`)?.appendChild(roll);
             if ((configSettings.hideRollDetails ?? "none") !== "none" && !game.user?.isGM && this.author.isGM) {
-              html.querySelectorAll(".dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+              html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
             }
           }
         }
@@ -343,7 +344,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (this.author.isGM && !game.user?.isGM && removeFormula) {
         html.querySelectorAll(".midi-attack-roll .dice-formula")?.forEach(el => el.remove());
         html.querySelectorAll(".midi-attack-roll .dice-tooltip")?.forEach(el => el.remove());
-        html.querySelectorAll(".dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+        html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
       }
     }
 
@@ -356,8 +357,12 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       // @ts-expect-error no dnd5e-types
       super._enrichChatCard(html);
       if (this.author.isGM && (configSettings.hideRollDetails ?? "none") !== "none" && !game.user?.isGM) {
-        html.querySelectorAll(".dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
-        html.querySelectorAll(".dice-tooltip").forEach(el => el.style.height = "0");
+        console.error("midi-qol | ChatMessage5e | _enrichChatCard | hiding details", html);
+        html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+        html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+        html.querySelectorAll(".midi-attack-roll .dice-tooltip").forEach(el => el.style.height = "0");
+        html.querySelectorAll(".midi-damage-roll .dice-tooltip").forEach(el => el.style.height = "0");
+
       }
       // Remove the hit miss check mark for non-gm players if required.
       // Because midi rolls are not marked as attack rolls

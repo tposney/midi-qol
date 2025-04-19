@@ -962,6 +962,7 @@ export async function localActivityOverTimeEffect(actor, effect, startTurn: bool
       const origin = getItemFromEffectOrigin(effect.origin);
       if (origin) itemActor = origin.parent instanceof ActiveEffect ? origin.parent.actor : origin.actor;
     }
+    foundry.utils.setProperty(itemData, "flags.midi-qol.syntheticItem", true);
     const newItem = new CONFIG.Item.documentClass(itemData, { parent: itemActor ?? actor });
     newItem.prepareData();
     // @ts-expect-error no dnd5e-types
@@ -991,7 +992,7 @@ export async function localActivityOverTimeEffect(actor, effect, startTurn: bool
       overTimeActivity.target.affects.type = "";
     }
     const overTimeWorkflow: Workflow = await completeActivityUse(overTimeActivity,
-      { dialog: false, midiOptions: { targetsToUse, workflowOptions: { noProvokeReaction: true, isAutoConsumeResource: "both" } } },
+      { dialog: false, midiOptions: { targetsToUse, workflowOptions: { noProvokeReaction: true, autoConsumeResource: "both" } } },
       { configure: overTimeActivity.consumption?.spellSlot === true },
       { create: true }) as Workflow;
 
@@ -1376,11 +1377,11 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
         origin = origin?.parent;
       }
       itemData.system.activities = { "overtime": activityData };
+      foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.syntheticItem`, true);
       let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: ((origin instanceof Actor) ? origin : actor) });
       ownedItem.prepareData();
       // @ts-expect-error no dnd5e-types
       ownedItem.prepareFinalAttributes();
-      foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.syntheticItem`, true);
       if (!actionSave && saveRemove && saveDC > -1)
         // @ts-expect-error no dnd5e-types
         savedOverTimeEffectsToDelete[ownedItem.system.activities.contents[0].uuid] = { uuid: effect.uuid };
@@ -2590,7 +2591,7 @@ export function isAutoFastDamage(workflow: Workflow | undefined = undefined): bo
   return game.user?.isGM ? configSettings.gmAutoFastForwardDamage : ["all", "damage"].includes(configSettings.autoFastForward)
 }
 
-export function isAutoConsumeResource(workflow: Workflow | undefined = undefined): string {
+export function autoConsumeResource(workflow: Workflow | undefined = undefined): string {
   if (workflow?.workflowOptions?.autoConsumeResource !== undefined) return workflow.workflowOptions.autoConsumeResource;
   return game.user?.isGM ? configSettings.gmConsumeResource : configSettings.consumeResource;
 }
@@ -5753,7 +5754,15 @@ export async function doConcentrationCheck(actor, saveDC) {
           "author": "devnIbfBHb74U9Zv",
           "img": "icons/svg/dice-target.svg",
           "scope": "global",
-          "command": "\n\t\t\tif (MidiQOL.configSettings().autoCheckSaves === 'none') return;\n\t\t\tfor (let targetUuid of args[0].targetUuids) {\n\t\t\t\tlet target = await fromUuid(targetUuid);\n\t\t\t\tif (MidiQOL.configSettings().removeConcentration \n\t\t\t\t&& (target.actor.system.attributes.hp.value === 0 || args[0].failedSaveUuids.find(uuid => uuid === targetUuid))) {\n\t\t\t\tawait target.actor.endConcentration();\n\t\t\t\t}\n\t\t\t}",
+          "command": `
+            if (MidiQOL.configSettings().autoCheckSaves === 'none') return;
+            for (let targetUuid of args[0].targetUuids) {
+              let target = await fromUuid(targetUuid);
+              if (MidiQOL.configSettings().removeConcentration && (target.actor.system.attributes.hp.value === 0 || args[0].failedSaveUuids.find(uuid => uuid === targetUuid))) {
+                await target.actor.endConcentration();
+              }
+            }`
+            ,
           "folder": null,
           "sort": 0,
           "permission": {
@@ -5778,6 +5787,7 @@ export async function doConcentrationCheck(actor, saveDC) {
 async function _doConcentrationCheck(actor, itemData) {
   let result;
   // actor took damage and is concentrating....
+  foundry.utils.setProperty(itemData, `flags.${MODULE_ID}.syntheticItem`, true);
   let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor });
   ownedItem.prepareData();
   // @ts-expect-error no dnd5e-types
