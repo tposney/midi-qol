@@ -482,7 +482,7 @@ export var MidiActivityMixin = Base => {
           await setReactionUsed(this.actor);
         if (usage.workflow.itemUsesBonusAction && !hasUsedBonusAction(this.actor))
           await setBonusActionUsed(this.actor);
-        if (activity.consumption?.spellSlot) {
+        if (activity.item?.type === "spell" || foundry.utils.getProperty(activity.item, "flags.dnd5e.spellLevel")) { 
           usage.workflow.castData = {
             baseLevel: activity.item.system.level ?? foundry.utils.getProperty(activity.item, "flags.dnd5e.spellLevel.base"),
             castLevel: activity.item.system.level ? activity.item.system.level+ (usageData?.scaling ?? 0) : foundry.utils.getProperty(activity.item, "flags.dnd5e.spellLevel.value"), 

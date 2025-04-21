@@ -357,7 +357,6 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       // @ts-expect-error no dnd5e-types
       super._enrichChatCard(html);
       if (this.author.isGM && (configSettings.hideRollDetails ?? "none") !== "none" && !game.user?.isGM) {
-        console.error("midi-qol | ChatMessage5e | _enrichChatCard | hiding details", html);
         html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
         html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
         html.querySelectorAll(".midi-attack-roll .dice-tooltip").forEach(el => el.style.height = "0");

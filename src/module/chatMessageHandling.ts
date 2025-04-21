@@ -167,8 +167,6 @@ export let hideStuffHandler = (message, html, data) => {
   const messageActor: Actor | undefined = (fromUuidSync(foundry.utils.getProperty(message, `flags.${WorkflowDataFlags.actor}`)) ?? game.actors?.get(message.speaker.actor)) as Actor;
   const messageActorOwner = messageActor?.isOwner;
   if (debugEnabled > 1) debug("hideStuffHandler message: ", message.id, message)
-  // if (foundry.utils.getProperty(message, "flags.monks-tokenbar")) return;
-  const midiqolFlags = foundry.utils.getProperty(message, "flags.midi-qol");
   // Hide rolls which are blind and not the GM if force hide is true
   if (forceHideRoll && message.blind && !game.user?.isGM) {
     html.hide();
@@ -227,11 +225,7 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("critical");
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("fumble");
     }
-
-    // @ ts-expect-error protected - but this isn't doing anything, is it?
-    // ui.chat.scrollBottom
     return;
-
   } else {
     if (message.blind) {
       html.find(".midi-attack-roll .dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
@@ -323,21 +317,6 @@ export let hideStuffHandler = (message, html, data) => {
 
 }
 
-export function processItemCardCreation(message, user) {
-  const midiFlags = message.flags[MODULE_ID];
-  if (user === game.user?.id && midiFlags?.workflowId) { // check to see if it is a workflow
-    const workflow = Workflow.getWorkflow(midiFlags.workflowId);
-    if (!workflow) return;
-    if (debugEnabled > 0) warn("processItemCardCreation", message.id, workflow.itemCardUuid, workflow.ItemCardUuid, workflow.workflowName)
-    workflow.itemCardUuid = message.uuid;
-    const shouldUnsuspend = ([workflow.WorkflowState_AwaitItemCard, workflow.WorkflowState_AwaitTemplate, workflow.WorkflowState_NoAction].includes(workflow.currentAction) && workflow.suspended && !workflow.needTemplate && !workflow.needItemCard && workflow.preItemUseComplete);
-    if (debugEnabled > 0) warn(`chat card created: unsuspending ${workflow.workflowName} ${workflow.nameForState(workflow.currentAction)} unsuspending: ${shouldUnsuspend}, workflow suspended: ${workflow.suspended} needs template: ${workflow.needTemplate}, needs Item card ${workflow.needItemCard}, itemUseComplete: ${workflow.preItemUseComplete}`);
-    if (shouldUnsuspend) {
-      workflow.unSuspend({ itemCardUuid: message.uuid, itemUseComplete: true });
-    }
-  }
-}
-
 export function ddbglPendingFired(data:{sceneId: string, tokenId: string, actorId: string, itemId: string, actionType: string}) {
   let { sceneId, tokenId, actorId, itemId, actionType } = data;
   if (!itemId || !["attack", "damage", "heal"].includes(actionType)) {
@@ -392,6 +371,7 @@ export function ddbglPendingFired(data:{sceneId: string, tokenId: string, actorI
     return;
   }
 }
+
 export function ddbglPendingHook(data) { // need to propagate this to all players.
   if (!configSettings.optionalRules.enableddbGL) return;
   socketlibSocket.executeForEveryone("ddbglPendingFired", data);
@@ -480,7 +460,4 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   }
 }
 
-function legacyApplyTokenDamageMany(arg0: any[], arg1: Set<Token>, arg2: null, arg3: { existingDamage: never[]; workflow: undefined; updateContext: undefined; }) {
-  throw new Error("Function not implemented.");
-}
 

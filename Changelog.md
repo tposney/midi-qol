@@ -1,3 +1,10 @@
+### 12.4.43
+* Fix for triggered activities failing when triggered on tokens the player does not own. The activity use is now passed to the GM for rolling. This fixes Ice Knife in the sample items.
+* Undid the "respect target value passed in attackRoll call" changes. This should fix problems with AC bonus/Cover calculations when checking hits.
+* Fix for workflow.castData not being set when item is set to not consume the spell slot.
+* Fix for gm rolls incorrectly displaying hit/miss on player chat logs when not auto checking hits.
+
+
 ### 12.4.42
 * Some fixes for concentration item rolls not respecting the calculated save dc.
 * Roll tooltips for player saves are now always available for player's rolls if at least save results are displayed.

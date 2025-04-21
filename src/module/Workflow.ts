@@ -1311,7 +1311,7 @@ export class Workflow {
     this.targets = new Set(targets);
     this.saves = new Set();
     this.failedSaves = new Set(this.targets)
-    this.hitTargets = new Set(this.targets);
+    this.hitTargets = new Set();
     this.superSavers = new Set();
     this.semiSuperSavers = new Set();
     this.advantageSaves = new Set();
@@ -1335,7 +1335,7 @@ export class Workflow {
       this.item = activity?.item ?? options.item;
       this.activity = activity;
       this.speaker = speaker;
-      this.hitTargets = new Set(this.targets);
+      this.hitTargets = new Set();
       this.hitTargetsEC = new Set();
       this.initSaveResults();
       this.attackTotal = -Infinity;
@@ -1767,7 +1767,7 @@ export class Workflow {
     this.workflowStartTime = Date.now();
     if (this.targets.size === 0 && this.activity?.target?.affects.type === "self") {
       this.targets = await getOrCreateTokenForActorAsSet(this.actor);
-      this.hitTargets = new Set(this.targets);
+      this.hitTargets = new Set();
       this.failedSaves = new Set(this.targets);
       this.selfTargeted = true;
     }
@@ -1824,7 +1824,7 @@ export class Workflow {
     if (!chatMessage?.content) return this.WorkflowState_AoETargetConfirmation;
     // remove the place template button from the chat card.
     this.targets = validTargetTokens(this.targets);
-    this.hitTargets = new Set(this.targets)
+    this.hitTargets = new Set()
     this.hitTargetsEC = new Set();
     let content = chatMessage && foundry.utils.duplicate(chatMessage.content)
     let buttonRe = /<button.*?data-action="placeTemplate"[^>]*?>[\s\S]*?<\/button>/
@@ -2699,6 +2699,7 @@ export class Workflow {
                 break;
             }
           }
+          if (!usage.midiOptions.rollAs.isOwner) usage.midiOptions.checkGMstatus = true;
           if (this.activity.midiProperties?.triggeredActivityTargets)
             switch (this.activity.midiProperties.triggeredActivityTargets) {
               case "self": targetUuids = [this.tokenUuid ?? ""]; break;
@@ -4118,7 +4119,8 @@ export class Workflow {
       newFlags = foundry.utils.mergeObject(flags, {
         "midi-qol": {
           GMOnlyAttackRoll: displayOptions.GMOnlyAttackRoll ?? false,
-          isHit: this.hitTargets.size > 0,
+          //@ts-expect-error no dnd5e types
+          isHit: configSettings.autoCheckHit === "none" ? (this.attackRoll?.isSuccess ?? false) : this.hitTargets.size > 0,
           isHitEC: this.hitTargetsEC.size > 0,
           // roll: this.attackRoll,
           type: MESSAGE_TYPES.ATTACK,
@@ -5549,15 +5551,13 @@ export class Workflow {
 
     let item = this.item;
     const activity = this.activity;
-    //@ts-expect-error .target
-    const preDefinedTargetACValue: number | undefined = Number.parseInt(this.attackRoll?.options?.target) || undefined;
     // check for a hit/critical/fumble
     if (this.activity.target?.affects?.type === "self") {
       this.targets = await getOrCreateTokenForActorAsSet(this.actor);
     }
     if (!this.useActiveDefence) {
       this.hitTargets = new Set();
-      this.hitTargetsEC = new Set(); //TO wonder if this can work with active defence?
+      this.hitTargetsEC = new Set(); //TODO wonder if this can work with active defence?
     };
     this.hitDisplayData = {};
     const challengeModeArmorSet = !([undefined, false, "none"].includes(checkRule("challengeModeArmor")));
@@ -5566,10 +5566,10 @@ export class Workflow {
       //@ts-expect-error dnd5e v10
       let targetActor: globalThis.dnd5e.documents.Actor5e = targetToken.actor;
       if (!targetActor) continue; // tokens without actors are an abomination and we refuse to deal with them.
-      let targetAC: number = preDefinedTargetACValue ?? Number.parseInt(targetActor.system.attributes.ac.value ?? 10);
+      let targetAC: number = Number.parseInt(targetActor.system.attributes.ac.value ?? 10);
       let attackBonus = 0;
       const wjVehicle = installedModules.get("wjmais") ? foundry.utils.getProperty(targetActor, "flags.wjmais.crew.min") != null : false;
-      if (targetActor.type === "vehicle" && !wjVehicle && !preDefinedTargetACValue) {
+      if (targetActor.type === "vehicle" && !wjVehicle) {
         const inMotion = foundry.utils.getProperty(targetActor, `flags.${MODULE_ID}.inMotion`);
         if (inMotion) targetAC = Number.parseInt(targetActor.system.attributes.ac.flat ?? 10);
         else targetAC = Number.parseInt(targetActor.system.attributes.ac.motionless);
@@ -5580,7 +5580,7 @@ export class Workflow {
       }
       let hitResultNumeric;
 
-      let targetEC = preDefinedTargetACValue ?? targetActor.system.attributes.ac.EC ?? 0;
+      let targetEC = targetActor.system.attributes.ac.EC ?? 0;
       let targetAR = targetActor.system.attributes.ac.AR ?? 0;
 
       let bonusAC = 0;
@@ -5611,7 +5611,7 @@ export class Workflow {
         }
         if (this.token) bonusAC = computeCoverBonus(this.token, targetToken, activity);
         if (ignoreCover && bonusAC < FULL_COVER) bonusAC = 0;
-        if (!preDefinedTargetACValue) targetAC += bonusAC;
+        targetAC += bonusAC;
 
         const midiFlagsAttackBonus = foundry.utils.getProperty(targetActor, `flags.${MODULE_ID}.grants.attack.bonus`);
         if (!this.isFumble) {
@@ -5633,7 +5633,7 @@ export class Workflow {
               const workflowOptions = foundry.utils.mergeObject(this.workflowOptions, { sourceActorUuid: this.actor.uuid, sourceItemUuid: this.item?.uuid }, { inplace: false, overwrite: true });
               const result = await doReactions(targetToken, this.tokenUuid, this.attackRoll, "reactionattacked", { activity: this.activity, item: this.item, workflow: this, workflowOptions });
               // TODO what else to do once rolled
-              if (!preDefinedTargetACValue) targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC;
+              targetAC = Number.parseInt(targetActor.system.attributes.ac.value ?? 10) + bonusAC;
             }
             isHit = (attackTotal + attackBonus) >= targetAC || this.isCritical;
           }
@@ -5650,7 +5650,7 @@ export class Workflow {
             }
             if (!Workflow.getWorkflow(this.id)) // workflow has been removed - bail out
               return;
-            if (!preDefinedTargetACValue) targetAC = Number.parseInt(targetActor.system.attributes.ac.value) + bonusAC;
+            targetAC = Number.parseInt(targetActor.system.attributes.ac.value) + bonusAC;
             if (targetEC) targetEC = targetActor.system.attributes.ac.EC + bonusAC;
             if (result.ac) targetAC = result.ac + bonusAC; // deal with bonus ac if any.
             if (targetEC) targetEC = targetAC - targetAR;

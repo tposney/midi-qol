@@ -1625,6 +1625,7 @@ export async function completeActivityUse(activity, usage: any = {}, dialog: any
     const newUsage = foundry.utils.deepClone(usage);
     newUsage.midiOptions ??= {};
     newUsage.midiOptions.targetsToUse = Array.from(targetsToUse).map(t => t.document.uuid);
+    if (usage.midiOptions.rollAs) newUsage.midiOptions.rollAs = usage.midiOptions.rollAs.uuid;
     const data = {
       activityUuid: activity.uuid,
       actorUuid: activity.item.parent.uuid,
