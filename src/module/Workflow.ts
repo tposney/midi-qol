@@ -2380,7 +2380,7 @@ export class Workflow {
     let otherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave !== true).map(efData => efData.effect);
     let onSaveOtherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave === true).map(efData => efData.effect);
     if (activityEffects.length > 0 && this.effectTargets.size > 0 && this.activity?.midiProperties?.chooseEffects) { // WIP
-      activityEffects = await this.chooseEffects(activityEffects, {activity: this.otherActivity, activityUuid: this.otherActivity.uuid, isOtherActivity: true });
+      activityEffects = await this.chooseEffects(activityEffects, {activity: this.activity, activityUuid: this.activity.uuid, isOtherActivity: false });
     }
     if (otherActivityEffects.length > 0 && this.otherEffectTargets.size > 0 && this.otherActivity?.midiProperties?.chooseEffects) { // WIP
       otherActivityEffects = await this.chooseEffects(otherActivityEffects, {activity: this.otherActivity, activityUuid: this.otherActivity.uuid, isOtherActivity: true });

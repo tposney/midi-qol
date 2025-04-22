@@ -1,3 +1,6 @@
+### 12.4.44
+* Fix for chooseEffects being called with the wrong arguments.
+
 ### 12.4.43
 * Fix for triggered activities failing when triggered on tokens the player does not own. The activity use is now passed to the GM for rolling. This fixes Ice Knife in the sample items.
 * Undid the "respect target value passed in attackRoll call" changes. This should fix problems with AC bonus/Cover calculations when checking hits.
