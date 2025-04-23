@@ -1,3 +1,6 @@
+### 12.4.46
+* Fix for edge case optional.name bonuses (each-turn/each-round) not resetting on new combat start.
+
 ### 12.4.45
 * Fix for utility rolls not displaying correctly
 * Updated pt-br.json thanks @kharmans
