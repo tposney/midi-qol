@@ -2179,7 +2179,6 @@ export class Workflow {
   async WorkflowState_UtilityRollComplete(context: any = {}): Promise<WorkflowState> {
     if (this.itemCardUuid && this.utilityRolls) {
       this.displayUtilityRolls();
-      this.extraRolls?.push(this.utilityRolls[0]);
     }
     return this.WorkflowState_WaitForDamageRoll;
   }
@@ -4026,7 +4025,7 @@ export class Workflow {
       const rollString = i18n(`${this.systemString}.UTILITY.Title`);
       let replaceString = `<div class="midi-qol-utility-roll"><div style="text-align:center" >${rollString}</div>${this.utilityRollHTML}<div class="end-midi-qol-utility-roll">`
       content = content.replace(searchRe, replaceString);
-      if (debugEnabled > 0) warn("displayUtilityRoll |", this.attackRoll)
+      if (debugEnabled > 0) warn("displayUtilityRoll |", this.utilityRoll)
       newFlags = foundry.utils.mergeObject(flags, {
         "midi-qol":
         {
@@ -4037,8 +4036,11 @@ export class Workflow {
       )
     }
     // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
-    const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
-    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, /*rolls: rolls*/ }, true);
+     const rolls = [...(this.attackRoll ? [this.attackRoll] : []), 
+                    ...(this.utilityRoll ? [this.utilityRoll] : []),
+                    ...(this.extraRolls ?? [])];
+    // const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
+    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true);
   }
 
   async displayAttackRoll(displayOptions: any = {}) {
@@ -4138,7 +4140,7 @@ export class Workflow {
     }
     // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
     const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
-    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls: rolls }, true);
+    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true);
 
   }
 
@@ -4517,6 +4519,7 @@ export class Workflow {
   get chatRolls(): Roll[] {
     let messageRolls: Roll[] = [];
     if (this.attackRoll) messageRolls.push(this.attackRoll);
+    if (this.utilityRoll) messageRolls.push(this.utilityRoll);
     if (this.damageRolls) messageRolls.push(...this.damageRolls);
     if (this.bonusDamageRolls) messageRolls.push(...this.bonusDamageRolls);
     if (this.otherDamageRolls) messageRolls.push(...this.otherDamageRolls);
