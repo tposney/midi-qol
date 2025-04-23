@@ -349,7 +349,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         if (keys.disadvantage) workflow.rollOptions.disadvantage = keys.disadvantage;
         config.advantage ??= !!keys.advantage || !!(config.midiOptions.advantage ?? workflow.workflowOptions.advantage);
         config.disadvantage ??= !!keys.disadvantage || !!(config.midiOptions.disadvantage ?? workflow.workflowOptions.disadvantage);
-        preRollHookId = Hooks.once("dnd5e.preRollAttackV2", (rollConfig, dialogConfig, messageConfig) => {
+        preRollHookId = Hooks.once("dnd5e.preRollAttack", (rollConfig, dialogConfig, messageConfig) => {
           if (workflow?.aborted) return false;
           if (workflow?.rollOptions?.rollToggle) dialogConfig.configure = !dialogConfig.configure;
           if (configSettings.checkTwoHanded && ["twoHanded", "offhand"].includes(rollConfig.attackMode)) {
@@ -370,7 +370,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
           }
           return true;
         });
-        rollAttackHookId = Hooks.once("dnd5e.rollAttackV2", (rolls, { ammoUpdate, subject }) => {
+        rollAttackHookId = Hooks.once("dnd5e.rollAttack", (rolls, { ammoUpdate, subject }) => {
           if (ammoUpdate?.destroy) {
             const data = this.actor.items.get(ammoUpdate.id).toObject();
             addUpdatesCache(workflow.id, { "flags.midi-qol.ammunitionData": data });
@@ -435,8 +435,8 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
       } catch (err) {
         console.error("midi-qol | AttackActivity | rollAttack | Error configuring dialog", err);
       } finally {
-        if (preRollHookId) Hooks.off("dnd5e.preRollAttackV2", preRollHookId);
-        if (rollAttackHookId) Hooks.off("dnd5e.rollAttackV2", rollAttackHookId);
+        if (preRollHookId) Hooks.off("dnd5e.preRollAttack", preRollHookId);
+        if (rollAttackHookId) Hooks.off("dnd5e.rollAttack", rollAttackHookId);
         if (postAttackRollConfigurationHook) Hooks.off("dnd5e.postRollConfiguration", postAttackRollConfigurationHook);
 
       }

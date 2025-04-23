@@ -373,7 +373,8 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 }
 
 async function importFromJSONDialog() {
-  const content = await renderTemplate("templates/apps/import-data.html", { entity: "midi-qol", name: "settings" });
+  //@ts-expect-error
+  const content = await foundry.applications.handlebars.renderTemplate("templates/apps/import-data.html", { entity: "midi-qol", name: "settings" });
   let dialog = new Promise((resolve, reject) => {
     new DialogV2({
       window: { title: `Import midi-qol settings` },

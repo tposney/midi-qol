@@ -2788,7 +2788,8 @@ export class Workflow {
         if (configSettings.usePlayerPortrait && (targetToken.actor as Actor).type === "character") {
           img = (targetToken.actor as Actor).img ?? targetToken.document?.texture.src;
         }
-        if (VideoHelper.hasVideoExtension(img ?? "")) {
+        //@ts-expect-error
+        if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
           img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 });
         }
         this.hitDisplayData[targetTokenUuid] = {
@@ -4245,7 +4246,8 @@ export class Workflow {
       if (configSettings.usePlayerPortrait && (targetToken.actor as Actor)?.type === "character") {
         img = (targetToken.actor as Actor).img ?? targetToken.document?.texture.src;
       }
-      if (VideoHelper.hasVideoExtension(img ?? "")) {
+      //@ts-expect-error
+      if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
         img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 });
       }
       const tokenUuid = getTokenDocument(targetToken)?.uuid ?? "";
@@ -4279,7 +4281,8 @@ export class Workflow {
       displayHitResultNumeric: configSettings.displayHitResultNumeric && !this.isFumble && !this.isCritical
     };
     if (debugEnabled > 0) warn("displayHits |", templateData, whisper);
-    const hitContent = await renderTemplate("modules/midi-qol/templates/hits.html", templateData) || "No Targets";
+    //@ts-expect-error
+    const hitContent = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/hits.html", templateData) || "No Targets";
     const chatMessage = this.chatCard;
 
     if (chatMessage) {
@@ -4382,7 +4385,8 @@ export class Workflow {
         img = target.actor?.img ?? targetDocument?.texture?.src ?? "";
       }
 
-      if (VideoHelper.hasVideoExtension(img)) {
+      //@ts-expect-error
+      if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
         img = await game.video?.createThumbnail(img, { width: 100, height: 100 }) ?? "";
       }
 
@@ -4414,7 +4418,8 @@ export class Workflow {
     }
     const chatMessage = this.chatCard;
 
-    const saveContent = await renderTemplate("modules/midi-qol/templates/saves.html", templateData);
+    //@ts-expect-error
+    const saveContent = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/saves.html", templateData);
     let content: string = foundry.utils.duplicate(chatMessage.content)
 
     let searchRe = /<div[^>]*?class="midi-qol-saves-display">[\s\S]*?<div class="end-midi-qol-saves-display">/;
@@ -4436,7 +4441,8 @@ export class Workflow {
     let chatMessage = this.chatCard;
     if (chatMessage) {
       templateData.saveDisplayFlavor = this.saveDisplayFlavor;
-      const saveContent = await renderTemplate("modules/midi-qol/templates/saves.html", templateData);
+      //@ts-expect-error
+      const saveContent = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/saves.html", templateData);
       chatMessage = this.chatCard;
       let content: string = foundry.utils.duplicate(chatMessage.content)
       let searchRe;
@@ -4805,7 +4811,7 @@ export class Workflow {
                   const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
                   if (!game.user?.isGM && saveDisplay === "allShow") {
                     // non-gm users don't have permission to create chat cards impersonating the GM so hand the role to a GM client
-                    result = await timedAwaitExecuteAsGM("rollAbilityV2", {
+                    result = await timedAwaitExecuteAsGM("rollAbility", {
                       targetUuid: (target.actor as Actor)?.uuid ?? "",
                       request: rollType,
                       ability: rollAbility,
@@ -4885,7 +4891,7 @@ export class Workflow {
               else if (configSettings.playerRollSaves === "noneDialogBlind") rollMode = CONST.DICE_ROLL_MODES.BLIND;
             }
           }
-          promises.push(socketlibSocket.executeAsUser("rollAbilityV2", owner?.id, {
+          promises.push(socketlibSocket.executeAsUser("rollAbility", owner?.id, {
             targetUuid: (target.actor as Actor).uuid,
             request: rollType,
             ability: rollAbility,
@@ -5255,7 +5261,8 @@ export class Workflow {
         img = target.actor?.img ?? targetDocument?.texture?.src ?? "";
       }
 
-      if (VideoHelper.hasVideoExtension(img)) {
+      //@ts-expect-error
+      if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
         img = await game.video?.createThumbnail(img, { width: 100, height: 100 }) ?? "";
       }
 
@@ -5791,7 +5798,8 @@ export class Workflow {
       if (configSettings.usePlayerPortrait && (targetToken.actor as Actor)?.type === "character") {
         img = (targetToken.actor as Actor).img || (targetToken instanceof Token ? targetToken.document : targetToken)?.texture?.src;
       }
-      if (VideoHelper.hasVideoExtension(img ?? "")) {
+      //@ts-expect-error
+      if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
         img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 }) ?? "";
       }
       // If using active defence hitTargets are up to date already.

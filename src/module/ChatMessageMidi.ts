@@ -274,8 +274,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       // if (!this.flags?.["midi-qol"]) return super._highlightCriticalSuccessFailure(html);
       // @ts-expect-error no dnd5e-types
       super._highlightCriticalSuccessFailure(html);
+      const totals = html.querySelectorAll(".dice-total");
       for (let [index, d20Roll] of this.rolls.entries()) {
-        const total = html.find(".dice-total")[index];
+        const total = totals[index];
         if (!total) continue;
         if (!game.user?.isGM && configSettings.autoCheckHit === "whisper") {
           if (total.classList.contains("success")) total.classList.remove("success");

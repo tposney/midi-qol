@@ -20,8 +20,8 @@
         "id": "dnd5e",
         "type": "system",
         "compatibility": {
-          "minimum": "4.2.2",
-          "maximum": "4.9.99"
+          "minimum": "5.0.0",
+          "maximum": "5.9.99"
         }
       },
       {
@@ -105,16 +105,16 @@
     }
   ],
   "compatibility": {
-    "minimum": "12.331",
-    "verified": "12.331",
-    "maximum": "12.999"
+    "minimum": "13.",
+    "verified": "13.340",
+    "maximum": "13.999"
   },
   "bugs": "https://gitlab.com/tposney/midi-qol/-/issues",
   "flags": {
     "allowBugReporter": true
   },
   "url": "https://gitlab.com/tposney/midi-qol",
-  "manifest": "https://gitlab.com/tposney/midi-qol/raw/v12dnd4/package/module.json",
-  "download": "https://gitlab.com/tposney/midi-qol/raw/v12dnd4/package/midi-qol-v{{version}}.zip",
-  "changelog": "https://gitlab.com/tposney/midi-qol/raw/v12dnd4/Changelog.md"
+  "manifest": "https://gitlab.com/tposney/midi-qol/raw/v13/package/module.json",
+  "download": "https://gitlab.com/tposney/midi-qol/raw/v13/package/midi-qol-v{{version}}.zip",
+  "changelog": "https://gitlab.com/tposney/midi-qol/raw/v13/Changelog.md"
 }

@@ -1,6 +1,6 @@
 import { checkRule, configSettings, safeGetGameSetting } from "./settings.js";
 import { i18n, log, warn, gameStats, getCanvas, error, debugEnabled, debug, GameSystemConfig, MODULE_ID } from "../midi-qol.js";
-import { canSense, completeItemUse, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUseV2, completeActivityUse, localActivityOverTimeEffect, isValidTarget } from "./utils.js";
+import { canSense, getToken, getTokenDocument, gmOverTimeEffect, fromActorUuid, promptReactions, hasUsedAction, hasUsedBonusAction, hasUsedReaction, removeActionUsed, removeBonusActionUsed, removeReactionUsed, ReactionItemReference, isEffectExpired, expireEffects, getAppliedEffects, CERemoveEffect, CEAddEffectWith, getActor, completeItemUse, completeActivityUse, localActivityOverTimeEffect, isValidTarget } from "./utils.js";
 import { ddbglPendingFired } from "./chatMessageHandling.js";
 import { Workflow } from "./Workflow.js";
 import { bonusCheck } from "./patching.js";
@@ -22,7 +22,7 @@ export let setupSocket = () => {
   socketlibSocket.register("bonusCheck", _bonusCheck);
   socketlibSocket.register("chooseReactions", localDoReactions);
   socketlibSocket.register("completeItemUse", _completeItemUse);
-  socketlibSocket.register("completeItemUseV2", _completeItemUseV2);
+  socketlibSocket.register("completeItemUseV2", _completeItemUse);
   socketlibSocket.register("completeActivityUse", _completeActivityUse);
   socketlibSocket.register("confirmDamageRollComplete", confirmDamageRollComplete);
   socketlibSocket.register("confirmDamageRollCompleteHit", confirmDamageRollCompleteHit);
@@ -53,7 +53,7 @@ export let setupSocket = () => {
   socketlibSocket.register("removeStatsForActorId", removeActorStats);
   socketlibSocket.register("removeWorkflow", _removeWorkflow);
   socketlibSocket.register("rollAbility", rollAbility);
-  socketlibSocket.register("rollAbilityV2", rollAbilityV2);
+  socketlibSocket.register("rollAbilityV2", rollAbility);
   socketlibSocket.register("rollConcentration", rollConcentration);
   socketlibSocket.register("startUndoWorkflow", startUndoWorkflow);
   socketlibSocket.register("undoMostRecentWorkflow", _undoMostRecentWorkflow);
@@ -520,7 +520,7 @@ async function _completeActivityUse(data: {
   else return true;
 }
 
-async function _completeItemUseV2(data: {
+async function _completeItemUse(data: {
   itemData: any, actorUuid: string, config: any, dialog: any, message: any, workflowData: boolean
 }) {
   if (!game.user) return null;
@@ -536,29 +536,8 @@ async function _completeItemUseV2(data: {
   ownedItem.prepareFinalAttributes();
   // @ts-expect-error no dnd5e-types
   ownedItem.applyActiveEffects();
-  const workflow = await completeItemUseV2(ownedItem, config, dialog, message);
+  const workflow = await completeItemUse(ownedItem, config, dialog, message);
   if (data.config?.midiOptions?.workflowData) return workflow.getMacroData();
-  else return true;
-}
-
-async function _completeItemUse(data: {
-  itemData: any, actorUuid: string, config: any, options: any, targetUuids: string[], workflowData: boolean
-}) {
-  if (!game.user) return null;
-  let { itemData, actorUuid, config, options } = data;
-  // @ts-expect-error
-  let actor: any = await fromUuid(actorUuid);
-  if (actor.actor) actor = actor.actor;
-  // @ts-expect-error doesn't expect keepId
-  let ownedItem: Item = new CONFIG.Item.documentClass(itemData, { parent: actor, keepId: true });
-  // prepare item data for socketed events
-  ownedItem.prepareData();
-  // @ts-expect-error no dnd5e-types
-  ownedItem.prepareFinalAttributes();
-  // @ts-expect-error no dnd5e-types
-  ownedItem.applyActiveEffects();
-  const workflow = await completeItemUse(ownedItem, config, options);
-  if (data.options?.workflowData) return workflow.getMacroData();
   else return true;
 }
 
@@ -771,7 +750,7 @@ async function rollConcentration(data: { actorUuid, target, whisper, create, rol
   return actor.rollConcentration({ target: data.target, legacy: false }, {}, { create: data.create, whisper: data.whisper, rollMode: data.rollMode });
 }
 
-async function rollAbilityV2(data: any) {
+async function rollAbility(data: any) {
   if (data.request === "abil") data.request = "check";
   if (data.request === "test") data.request = "check";
   const actor = fromActorUuid(data.targetUuid);
@@ -833,34 +812,6 @@ workflowId: string
   });
 
 
-}
-async function rollAbility(data: { request: string; targetUuid: string; ability: string; options: any; }) {
-  if (data.request === "abil") data.request = "check";
-  if (data.request === "test") data.request = "check";
-  const actor = fromActorUuid(data.targetUuid);
-  if (!actor) {
-    error(`GMAction.rollAbility | no actor for ${data.targetUuid}`)
-    return {};
-  }
-  const requestedChatMessage = data.options?.chatMessage ?? true;
-  return new Promise(async (resolve) => {
-    let timeoutId;
-    let result;
-    if (configSettings.playerSaveTimeout > 0) timeoutId = setTimeout(async () => {
-      warn(`Roll request for {actor.name}timed out. Doing roll`);
-      data.options.fastForward = true; // assume player is asleep force roll without dialog
-      data.options.chatMessage = requestedChatMessage;
-      if (data.request === "save") result = await actor.rollAbilitySave(data.ability, data.options)
-      else if (data.request === "check") result = await actor.rollAbilityTest(data.ability, data.options);
-      else if (data.request === "skill") result = await actor.rollSkill(data.ability, data.options);
-      resolve(result ?? {});
-    }, configSettings.playerSaveTimeout * 1000);
-    if (data.request === "save") result = await actor.rollAbilitySave(data.ability, data.options)
-    else if (data.request === "check") result = await actor.rollAbilityTest(data.ability, data.options);
-    else if (data.request === "skill") result = await actor.rollSkill(data.ability, data.options);
-    if (timeoutId) clearTimeout(timeoutId);
-    resolve(result ?? {})
-  });
 }
 
 function monksTokenBarSaves(data: { tokenData: any[]; request: any; silent: any; rollMode: string; dc: number | undefined, isMagicSave: boolean | undefined, midiOptions: any | undefined }) {
@@ -997,7 +948,8 @@ async function prepareDamageListItems(data: {
     let img = tokenDocument?.texture.src || actor.img;
     if (configSettings.usePlayerPortrait && actor.type === "character")
       img = actor?.img ?? tokenDocument?.texture.src;
-    if (VideoHelper.hasVideoExtension(img)) {
+    //@ts-expect-error
+    if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
       //@ts-ignore - createThumbnail not defined
       img = await game.video.createThumbnail(img, { width: 100, height: 100 });
     }
@@ -1101,7 +1053,8 @@ async function createPlayerDamageCard(data: { damageList: any; autoApplyDamage: 
   //@ts-ignore
   templateData.playerButtons = templateData.playerButtons && templateData.damageList.some(listItem => listItem.isCharacter)
   if (["yesCard", "noCard", "yesCardNPC", "yesCardMisses", "noCardMisses"].includes(data.autoApplyDamage)) {
-    const content = await renderTemplate("modules/midi-qol/templates/damage-results-player.html", templateData);
+    //@ts-expect-error
+    const content = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/damage-results-player.html", templateData);
     const speaker: any = ChatMessage.getSpeaker();
     speaker.alias = data.sender;
     let chatData: any = {
@@ -1142,7 +1095,8 @@ async function createGMReverseDamageCard(
   templateData.needsButtonAll = damageList.length > 1;
 
   if (["yesCard", "noCard", "yesCardNPC", "yesCardMisses", "noCardMisses"].includes(data.autoApplyDamage)) {
-    const content = await renderTemplate("modules/midi-qol/templates/damage-results.html", templateData);
+    //@ts-expect-error
+    const content = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/damage-results.html", templateData);
     const speaker: any = ChatMessage.getSpeaker();
     speaker.alias = game.user?.name;
     let chatData: any = {

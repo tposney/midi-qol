@@ -1,6 +1,6 @@
 import { debug, i18n, error, warn, noDamageSaves, cleanSpellName, MQdefaultDamageType, allAttackTypes, debugEnabled, overTimeEffectsToDelete, geti18nOptions, getStaticID, savedOverTimeEffectsToDelete, GameSystemConfig, systemConcentrationId, MQItemMacroLabel, SystemString, MODULE_ID, midiReactionEffect, midiBonusActionEffect, isDnD, MQActivityMacroLabel } from "../midi-qol.js";
 import { configSettings, autoRemoveTargets, checkRule, targetConfirmation, criticalDamage, criticalDamageGM, checkMechanic, safeGetGameSetting, DebounceInterval, _debouncedUpdateAction } from "./settings.js";
-import { log } from "../midi-qol.js";
+import { log, TokenClass } from "../midi-qol.js";
 import { DummyWorkflow, Workflow } from "./Workflow.js";
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { dice3dEnabled, installedModules } from "./setupModules.js";
@@ -1195,7 +1195,8 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
           user: game.user?.id,
           whisper: whisper.map(u => u.id ?? ""),
           rollMode: rollMode ?? "public",
-          content: await renderTemplate("systems/dnd5e/templates/chat/request-card.hbs", {
+          //@ts-expect-error
+          content: await foundry.applications.handlebars.renderTemplate("systems/dnd5e/templates/chat/request-card.hbs", {
             // @ts-expect-error no dnd5e-types
             buttonLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "short", icon: true, hideDC: !owner?.isGM && !configSettings.displaySaveDC }),
             // @ts-expect-error no dnd5e-types
@@ -1422,7 +1423,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
           }
         };
         foundry.utils.setProperty(options, `flags.${MODULE_ID}.isOverTime`, true);
-        await completeItemUseV2(ownedItem, { midiOptions: options }, { configure: false }, { rollMode, systemCard: false }); // worried about multiple effects in flight so do one at a time
+        await completeItemUse(ownedItem, { midiOptions: options }, { configure: false }, { rollMode, systemCard: false }); // worried about multiple effects in flight so do one at a time
         if (actionSaveSuccess) {
           await expireEffects(actor, [effect], { "expiry-reason": "midi-qol:overTime:actionSave" });
         }
@@ -1640,33 +1641,19 @@ export async function completeActivityUse(activity, usage: any = {}, dialog: any
   }
 }
 
-export async function completeItemUse(item, config: any = {}, options: any = { checkGMstatus: false, targetUuids: undefined, asUser: undefined }, dialog: any = {}, message: any = {}) {
-  config.midiOptions = options;
-  if (typeof item === "string") {
-    // @ts-expect-error
-    item = await fromUuid(item);
-  }
-  if (!item) {
-    error("completeItemUse | no item", item);
-    return undefined;
-  }
-  config.midiOptions = options;
-  return completeItemUseV2(item, config, dialog, message);
-}
-
-export async function completeItemUseV2(item, config: any = {}, dialog: any = {}, message: any = {}) {
+export async function completeItemUse(item, config: any = {}, dialog: any = {}, message: any = {}) {
   if (typeof item === "string") {
     // @ts-expect-error
     item = await fromUuid(item);
   }
   const { legacy, chooseActivity, ...activityConfig } = config;
   if (legacy) {
-    console.error("completeItemUseV2 | legacy rolls are no longer supported");
+    console.error("completeItemUse | legacy rolls are no longer supported");
     return;
   }
   config.midiOptions ??= {};
   if (!(item instanceof CONFIG.Item.documentClass)) {
-    error("completeItemUseV2 only works for items", item);
+    error("completeItemUse only works for items", item);
     return undefined;
   }
   if (config.midiOptions.activityId || config.midiOptions.activityIdentifier) {
@@ -1679,7 +1666,7 @@ export async function completeItemUseV2(item, config: any = {}, dialog: any = {}
   if (activities.length === 0) {
     //@ts-expect-error displayCard
     return item.displayCard(message);
-    // error(`completeItemUseV2 | item ${item.name} ${item.uuid} does not have a suitable activity`);
+    // error(`completeItemUse | item ${item.name} ${item.uuid} does not have a suitable activity`);
     // return undefined;
   }
   if (activities.length === 1) { // if there is a single non-automation activity use it
@@ -2754,7 +2741,7 @@ export function findNearby(disposition: number | string | null | Array<string | 
   if (!token) return [];
   if (!canvas || !canvas.scene) return [];
   try {
-    if (!(token instanceof Token)) { throw new Error("find nearby token is not of type token or the token uuid is invalid") };
+    if (!(token instanceof TokenClass)) { throw new Error("find nearby token is not of type token or the token uuid is invalid") };
     let relative = options.relative ?? true;
     let targetDisposition;
     if (typeof disposition === "string") disposition = mapTokenString(disposition);
@@ -2992,7 +2979,7 @@ export function MQfromUuidSync(uuid: string | undefined | null): any {
 export function fromActorUuid(uuid: string | undefined): any {
   let doc = MQfromUuidSync(uuid);
   if (doc instanceof Actor) return doc;
-  if (doc instanceof Token) return doc.actor;
+  if (doc instanceof TokenClass) return doc.actor;
   if (doc instanceof TokenDocument) return doc.actor;
   return null;
 }
@@ -3000,7 +2987,7 @@ export function fromActorUuid(uuid: string | undefined): any {
 export function actorFromUuid(uuid: string | undefined): any {
   let doc = MQfromUuidSync(uuid);
   if (doc instanceof Actor) return doc;
-  if (doc instanceof Token) return doc.actor;
+  if (doc instanceof TokenClass) return doc.actor;
   if (doc instanceof TokenDocument) return doc.actor;
   if (doc instanceof Item) return doc.parent;
   if (doc instanceof ActiveEffect && doc.parent instanceof Actor) return doc.parent;
@@ -5147,7 +5134,8 @@ function getTooltip(roll, options: any = {}) {
     formula: roll.formula,
     parts
   };
-  return renderTemplate("modules/midi-qol/templates/tooltip.html", templateData);
+  //@ts-expect-error
+  return foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/tooltip.html", templateData);
 }
 
 export async function midiRenderRoll(roll) {
@@ -5186,7 +5174,8 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     flavor: options?.flavor ?? roll.options?.flavor,
     total: (roll.total !== undefined) ? Math.round((roll.total) * 100) / 100 : "???"
   };
-  return renderTemplate(template, chatData);
+  //@ts-expect-error
+  return foundry.applications.handlebars.renderTemplate(template, chatData);
 }
 export function heightIntersects(targetDocument: any /*TokenDocument*/, flankerDocument: any /*TokenDocument*/): boolean {
   const targetElevation = targetDocument.elevation ?? 0;
@@ -5795,7 +5784,7 @@ async function _doConcentrationCheck(actor, itemData) {
   ownedItem.prepareFinalAttributes();
   try {
     const midiOptions = { checkGMStatus: true, isConcentrationCheck: true, createWorkflow: true, workflowOptions: { versatile: false, targetConfirmation: "none" } }
-    result = await completeItemUseV2(ownedItem, { midiOptions }, { configure: false }, { systemCard: false }); // worried about multiple effects in flight so do one at a time
+    result = await completeItemUse(ownedItem, { midiOptions }, { configure: false }, { systemCard: false }); // worried about multiple effects in flight so do one at a time
   } catch (err) {
     const message = "midi-qol | doConcentrationCheck";
     TroubleShooter.recordError(err, message);
@@ -6044,8 +6033,8 @@ export async function contestedRoll(data: {
   const sourceConfig = { request: source.rollType.trim(), targetUuid: sourceDocument?.uuid, options: sourceOptions, [source.rollType === "skill" ? "skill" : "ability"]: source.ability.trim() };
   const targetConfig = { request: target.rollType.trim(), targetUuid: targetDocument?.uuid, options: targetOptions, [target.rollType === "skill" ? "skill" : "ability"]: target.ability.trim() };
   const resultPromises = [
-    socketlibSocket.executeAsUser("rollAbilityV2", player1.id, sourceConfig),
-    socketlibSocket.executeAsUser("rollAbilityV2", player2.id, targetConfig),
+    socketlibSocket.executeAsUser("rollAbility", player1.id, sourceConfig),
+    socketlibSocket.executeAsUser("rollAbility", player2.id, targetConfig),
   ];
 
   let results = await Promise.all(resultPromises);
@@ -6093,7 +6082,7 @@ export function hasWallBlockingCondition(target: any /*Token*/): boolean {
 export function getActor(actorRef: Actor | Token | TokenDocument | string | null | undefined): Actor | undefined | null {
   if (!actorRef) return null;
   if (actorRef instanceof Actor) return actorRef;
-  if (actorRef instanceof Token) return (actorRef.actor as unknown as Actor);
+  if (actorRef instanceof TokenClass) return ((actorRef as Token).actor as unknown as Actor);
   if (actorRef instanceof TokenDocument) return (actorRef.actor as unknown as Actor);
   let entity: any = actorRef;
   // @ts-expect-error
@@ -6114,20 +6103,20 @@ export function getTokenDocument(tokenRef: Actor | Token | TokenDocument | strin
     if (document instanceof TokenDocument) return document;
     if (document instanceof Actor) return tokenForActor(document)?.document as unknown as TokenDocument;
   }
-  if (tokenRef instanceof Token) return tokenRef.document as unknown as TokenDocument;
+  if (tokenRef instanceof TokenClass) return (tokenRef as Token).document as unknown as TokenDocument;
   if (tokenRef instanceof Actor) return tokenForActor(tokenRef)?.document as unknown as TokenDocument;
   return undefined;
 }
 
 export function getToken(tokenRef: Actor | Token | TokenDocument | string | undefined | null): Token | undefined {
   if (!tokenRef) return undefined;
-  if (tokenRef instanceof Token) return tokenRef;
+  if (tokenRef instanceof TokenClass) return tokenRef as Token;
   if (tokenRef instanceof TokenDocument) return tokenRef.object ?? undefined;
   let entity: any = tokenRef;
   if (typeof tokenRef === "string") {
     entity = fromUuidSync(tokenRef as any) as any;
   }
-  if (entity instanceof Token) return entity;
+  if (entity instanceof TokenClass) return entity;
   if (entity instanceof TokenDocument) return entity.object ?? undefined;
   if (entity instanceof Actor) return tokenForActor(entity);
   if (entity instanceof Item && entity.parent instanceof Actor) return tokenForActor(entity.parent);
@@ -6187,24 +6176,24 @@ const MaxNameLength = 20;
 export function getLinkText(entity: Token | TokenDocument | Actor | Item | null | undefined) {
   if (!entity) return "<unknown>";
   let name = entity.name ?? "unknown";
-  if (entity instanceof Token && !configSettings.useTokenNames) name = entity.actor?.name ?? name;
-  if (entity instanceof Token) return `@UUID[${entity.document.uuid}]{${name.slice(0, MaxNameLength - 5)}}`;
-  return `@UUID[${entity.uuid}]{${entity.name?.slice(0, MaxNameLength - 5)}}`;
+  if (entity instanceof TokenClass && !configSettings.useTokenNames) name = (entity as Token).actor?.name ?? name;
+  if (entity instanceof TokenClass) return `@UUID[${(entity as Token).document.uuid}]{${name.slice(0, MaxNameLength - 5)}}`;
+  return `@UUID[${(entity as Actor | Item).uuid}]{${entity.name?.slice(0, MaxNameLength - 5)}}`;
 }
 
 export function getTokenName(entity: Token | TokenDocument | undefined | null): string {
   if (!entity) return "<unknown>";
   entity = getToken(entity)
-  if (!(entity instanceof Token)) return "<unknown>";
-  if (configSettings.useTokenNames) return entity.name ?? entity.actor?.name ?? "<unknown>";
-  else return entity.actor?.name ?? entity.name ?? "<unknown>";
+  if (!(entity instanceof TokenClass)) return "<unknown>";
+  if (configSettings.useTokenNames) return (entity as Token).name ?? (entity as Token).actor?.name ?? "<unknown>";
+  else return (entity as Token).actor?.name ?? (entity as Token).name ?? "<unknown>";
 }
 
 export function getIconFreeLink(entity: Token | TokenDocument | Item | Actor | null | undefined) {
   if (!entity) return "<unknown>";
   let name = entity.name ?? "unknown";
-  if (entity instanceof Token && !configSettings.useTokenNames) name = entity.actor?.name ?? name;
-  if (entity instanceof Token) {
+  if (entity instanceof TokenClass && !configSettings.useTokenNames) name = (entity as Token).actor?.name ?? name;
+  if (entity instanceof TokenClass) {
     return name;
     // return `<a class="content-link midi-qol" data-uuid="${entity.actor?.uuid}">${name?.slice(0, MaxNameLength)}</a>`;
   } else {
@@ -6780,7 +6769,7 @@ export function addDependent(document: Document, dependent: Document) {
 }
 
 export async function addConcentrationDependent(actorRef: Token | TokenDocument | Actor | string, dependent: any, item?: Item) {
-  if (dependent instanceof Token) dependent = dependent.document;
+  if (dependent instanceof TokenClass) dependent = dependent.document;
   if (!dependent.uuid) {
     console.warn(`midi-qol | addConcentrationDependent | dependent ${dependent?.name} must have a uuid`);
     return undefined;

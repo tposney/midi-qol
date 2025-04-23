@@ -114,7 +114,8 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
   }
   public static async importTroubleShooterDataFromJSONDialog() {
-    const content = await renderTemplate("templates/apps/import-data.html",
+    //@ts-expect-error
+    const content = await foundry.applications.handlebars.renderTemplate("templates/apps/import-data.html",
       { hint1: "Choose a Trouble Shooter JSON file to import" });
     let dialog = new Promise((resolve, reject) => {
       new DialogV2({

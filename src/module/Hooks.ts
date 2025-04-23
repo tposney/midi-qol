@@ -549,7 +549,8 @@ export function initHooks() {
         }
         tabs.append($('<a class="item" data-tab="midiqol">Midi-qol</a>'));
         data = foundry.utils.mergeObject(data, getItemSheetData(data, item), { recursive: false });
-        renderTemplate("modules/midi-qol/templates/midiPropertiesForm.hbs", data).then(templateHtml => {
+        //@ts-expect-error
+        foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/midiPropertiesForm.hbs", data).then(templateHtml => {
           // tabs = html.find(`form nav.sheet-navigation.tabs`);
           $(html.find(`.sheet-body`)).append(
             $(`<div class="tab midi-qol" data-group="primary" data-tab="midiqol">${templateHtml}</div>`)
@@ -576,7 +577,8 @@ export function initHooks() {
 
       } else {
         data = foundry.utils.mergeObject(data, getItemSheetData(data, item));
-        renderTemplate("modules/midi-qol/templates/midiPropertiesForm.hbs", data).then(templateHtml => {
+        //@ts-expect-error
+        foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/midiPropertiesForm.hbs", data).then(templateHtml => {
           const element = html.find('input[name="system.chatFlavor"]').parent().parent();
           element.append(templateHtml);
           if (app.isEditable) activateMacroListeners(app, html);
@@ -741,7 +743,7 @@ export const itemJSONData = {
     },
   }
 }
-Hooks.on("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, messageConfig) => {
+Hooks.on("dnd5e.preRollDamage", (rollConfig, dialogConfig, messageConfig) => {
   if (!rollConfig.subject) return true;
   if (rollConfig.subject.actor && rollConfig.subject.isSpell) {
     const actorSpellBonus = foundry.utils.getProperty(rollConfig.subject.actor, "system.bonuses.spell.all.damage");
@@ -1160,7 +1162,7 @@ Hooks.on("dnd5e.preApplyDamage", (actor: Actor.Implementation, amount: number, u
   return true;
 });
 
-Hooks.on("dnd5e.preRollConcentrationV2", (rollConfig: any, dialogConfig: any, messageConfig: any) => {
+Hooks.on("dnd5e.preRollConcentration", (rollConfig: any, dialogConfig: any, messageConfig: any) => {
   if (!rollConfig.subject) return true;
   const actor = rollConfig.subject;
   // insert advantage and disadvantage
@@ -1186,10 +1188,10 @@ Hooks.on("dnd5e.preRollConcentrationV2", (rollConfig: any, dialogConfig: any, me
   return true;
 })
 
-Hooks.on("dnd5e.rollConcentrationV2", (rolls, { subject }) => {
+Hooks.on("dnd5e.rollConcentration", (rolls, { subject }) => {
   if (configSettings.doConcentrationCheck === "item") return;
   if (!subject || !(subject instanceof CONFIG.Actor.documentClass)) {
-    const message = "dnd5e.rollConcentrationV2 hook called with non-actor";
+    const message = "dnd5e.rollConcentration hook called with non-actor";
     TroubleShooter.recordError(new Error(message), message);
     error(message, subject);
     return;
@@ -1238,7 +1240,7 @@ Hooks.on("dnd5e.preConfigureInitiative", (actor: Actor, rollConfig: any) => {
   }
 });
 
-Hooks.on("dnd5e.preRollAbilityCheckV2", (config, dialog, message) => {
+Hooks.on("dnd5e.preRollAbilityCheck", (config, dialog, message) => {
   if (autoFastForwardAbilityRolls) {
     dialog.configure = false;
   }

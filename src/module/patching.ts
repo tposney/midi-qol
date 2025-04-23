@@ -134,68 +134,8 @@ export async function bonusCheck(actor, result: Roll, category, detail = "", mes
   return result;
 }
 
-function _applyDeprecatedD20Configs(rollConfig, dialogConfig, messageConfig, options) {
-  const set = (config, keyPath, value) => {
-    if (value === undefined) return;
-    foundry.utils.setProperty(config, keyPath, value);
-  };
-
-  let roll = rollConfig.rolls?.[0] ?? {};
-  set(roll, "parts", options.parts);
-  set(roll, "data", options.data);
-  set(rollConfig, "event", options.event);
-  set(roll, "options.advantage", options.advantage);
-  set(roll, "options.disadvantage", options.disadvantage);
-  set(roll, "options.criticalSuccess", options.critical);
-  set(roll, "options.criticalFailure", options.fumble);
-  set(rollConfig, "target", options.targetValue);
-  set(rollConfig, "ammunition", options.ammunition);
-  set(rollConfig, "attackMode", options.attackMode);
-  set(rollConfig, "mastery", options.mastery);
-  set(rollConfig, "elvenAccuracy", options.elvenAccuracy);
-  set(rollConfig, "halflingLucky", options.halflingLucky);
-  set(rollConfig, "reliableTalent", options.reliableTalent);
-  set(rollConfig, "midiOptions", {});
-  set(rollConfig, "midiOptions.simulate", options.simulate);
-  set(rollConfig, "midiOptions.isMagicalSave", options.isMagicalSave);
-  set(rollConfig, "midiOptions.isConcentrationCheck", options.isConcentrationCheck);
-  set(rollConfig, "midiOptions.saveItemUuid", options.saveItemUuid);
-  set(rollConfig, "midiOptions.fromMars5eChatCard", options.fromMars5eChatCard);
-  if ("fastForward" in options) dialogConfig.configure = !options.fastForward;
-  set(dialogConfig, "options", options.dialogOptions);
-  set(dialogConfig, "options.ammunitionOptions", options.ammunitionOptions);
-  set(dialogConfig, "options.attackModeOptions", options.attackModes);
-  set(dialogConfig, "options.chooseAbility", options.chooseModifier);
-  set(dialogConfig, "options.masteryOptions", options.masteryOptions);
-  set(dialogConfig, "options.title", options.title);
-  set(messageConfig, "create", options.chatMessage);
-  set(messageConfig, "data", options.messageData);
-  set(messageConfig, "rollMode", options.rollMode);
-  set(messageConfig, "data.flavor", options.flavor);
-
-  if (!foundry.utils.isEmpty(roll)) {
-    rollConfig.rolls ??= [];
-    if (rollConfig.rolls[0]) rollConfig.rolls[0] = roll;
-    else rollConfig.rolls.push(roll);
-  }
-}
 async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message: any = {}) {
   let oldFormat = false;
-  if (foundry.utils.getType(config) !== "Object") {
-    oldFormat = true;
-    foundry.utils.logCompatibilityWarning(
-      `The \`rollSkill\` method on Actor5e now takes roll, dialog, and message config objects as parameters.`,
-      { since: "DnD5e 4.1", until: "DnD5e 4.5" }
-    );
-    oldFormat = true;
-    const oldConfig = dialog;
-    config = { "skill": config };
-    if (oldConfig.ability) config.ability = oldConfig.ability;
-    if (oldConfig.bonus) config.bonus = oldConfig.bonus;
-    dialog = {};
-    _applyDeprecatedD20Configs(config, dialog, message, oldConfig);
-  }
-
   config.midiOptions ??= {};
   let preRollSkillHookId;
   let rollSkillHookId;
@@ -243,7 +183,7 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
       const minValue = (minFlags.skill && minFlags.skill.all);
       config.advantage ||= config.midiOptions.advantage;
       config.disadvantage ||= config.midiOptions.disadvantage;
-      preRollSkillHookId = Hooks.once(`${game.system?.id}.preRollSkillV2`, (config, dialog, message) => {
+      preRollSkillHookId = Hooks.once(`${game.system?.id}.preRollSkill`, (config, dialog, message) => {
         message.data ??= {};
         if (overtimeActorUuid)
           message.data["flags.midi-qol.overtimeActorUuid"] = overtimeActorUuid;
@@ -292,7 +232,7 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
     throw err;
   }
   finally {
-    if (preRollSkillHookId) Hooks.off(`${game.system?.id}.preRollSkillV2`, preRollSkillHookId);
+    if (preRollSkillHookId) Hooks.off(`${game.system?.id}.preRollSkill`, preRollSkillHookId);
     if (rollSkillHookId) Hooks.off(`${game.system?.id}.postSkillRollConfiguration`, rollSkillHookId);
     if (saveRollMode) game.settings?.set("core", "rollMode", saveRollMode);
     if (oldFormat) return result?.[0];
@@ -513,23 +453,8 @@ function configureDamage(wrapped, options: any = { critical: {} }) {
   if (this.data.actorType === configSettings.averageDamage || configSettings.averageDamage === "all") averageDice(this);
 }
 
-async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any = {}, message: any = {}) {
+async function doRollAbility(wrapped, rollType, config: any = {}, dialog: any = {}, message: any = {}) {
   let oldFormat = false;
-  if (foundry.utils.getType(config) !== "Object") {
-    oldFormat = true;
-    const method = rollType === "save" ? "rollSavingThrow" : "rollAbilityCheck";
-    foundry.utils.logCompatibilityWarning(
-      `The \`${method}\` method on Actor5e now takes roll, dialog, and message config objects as parameters.`,
-      { since: "DnD5e 4.1", until: "DnD5e 4.5" }
-    );
-    oldFormat = true;
-    const oldConfig = dialog;
-    config = { ability: config };
-    dialog = {};
-    _applyDeprecatedD20Configs(config, dialog, message, oldConfig);
-  } else {
-    config.legacy = false;
-  }
   if (config.midiOptions?.target) config.target = config.midiOptions.target;
   if (config.midiOptions?.isConcentrationCheck) {
     foundry.utils.setProperty(message, "data.flags.midi-qol.isConcentrationCheck", true);
@@ -599,7 +524,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
       const minValue = (minFlags[rollType] && (minFlags[rollType].all || minFlags[rollType][abilityId]));
       config.advantage ||= config.midiOptions.advantage;
       config.disadvantage ||= config.midiOptions.disadvantage;
-      preRollAbilityHookId = Hooks.once(`${game.system?.id}.preRoll${type}V2`, (config, dialog, message) => {
+      preRollAbilityHookId = Hooks.once(`${game.system?.id}.preRoll${type}`, (config, dialog, message) => {
         config.rolls.forEach(roll => {
           if (maxValue !== undefined && Number.isNumeric(maxValue)) roll.options.maximum = Math.min(roll.options.maximum ?? Infinity, Number(maxValue));
           if (minValue !== undefined && Number.isNumeric(minValue)) roll.options.minimum = Math.max(roll.options.minimum ?? -Infinity, Number(minValue));
@@ -615,7 +540,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
     }
     if (!result) return result;
     if (result instanceof Roll) {
-      console.warn("midi-qol | doRollAbilityV2: result is a Roll, not an array of Rolls");
+      console.warn("midi-qol | doRollAbility: result is a Roll, not an array of Rolls");
       result = [result];
     }
     const flavor = result[0].options?.flavor;
@@ -635,7 +560,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
 
     }
     if (config.rollMode) {
-      console.warn("midi-qol | doRollAbilityV2: config.rollMode is deprecated, use message.rollMode instead");
+      console.warn("midi-qol | doRollAbility: config.rollMode is deprecated, use message.rollMode instead");
       message.rollMode ??= config.rollMode;
     }
     if (rollMode !== CONST.DICE_ROLL_MODES.BLIND) rollMode = message.rollMode ?? config.rollMode;
@@ -667,7 +592,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
     TroubleShooter.recordError(err, message);
     error(message, err);
   } finally {
-    if (preRollAbilityHookId) Hooks.off(`${game.system?.id}.preRoll${type}V2`, preRollAbilityHookId);
+    if (preRollAbilityHookId) Hooks.off(`${game.system?.id}.preRoll${type}`, preRollAbilityHookId);
     if (rollAbilityHookId) Hooks.off(`${game.system?.id}.post${type}RollConfiguration`, rollAbilityHookId);
     if (saveRollMode) game.settings?.set("core", "rollMode", saveRollMode);
     return oldFormat ? result?.[0] : result
@@ -675,11 +600,11 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
 }
 
 export async function rollSavingThrow(wrapped, config = {}, dialog = {}, message = {}) {
-  return doRollAbilityV2.bind(this)(wrapped, "save", config, dialog, message);
+  return doRollAbility.bind(this)(wrapped, "save", config, dialog, message);
 }
 
 async function rollAbilityCheck(wrapped, config = {}, dialog = {}, message = {}) {
-  return doRollAbilityV2.bind(this)(wrapped, "check", config, dialog, message);
+  return doRollAbility.bind(this)(wrapped, "check", config, dialog, message);
 }
 
 async function rollDeathSave(wrapped, config: any = {}, dialog: any = {}, message: any = {}) {
@@ -718,7 +643,7 @@ async function rollDeathSave(wrapped, config: any = {}, dialog: any = {}, messag
   }
   config.midiOptions = options;
   const blindSaveRoll = configSettings.rollSavesBlind.includes("all") || configSettings.rollSavesBlind.includes("death");
-  Hooks.once("dnd5e.preRollDeathSaveV2", (config, dialog, message) => {
+  Hooks.once("dnd5e.preRollDeathSave", (config, dialog, message) => {
     for (let roll of config.rolls) {
       roll.options.advantage = config.midiOptions.advantage;
       roll.options.disadvantage = config.midiOptions.disadvantage;
@@ -956,7 +881,7 @@ export function initPatching() {
   // For new onUse macros stuff.
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.prepareData", itemPrepareData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareData", actorPrepareData, "WRAPPER");
-  libWrapper.register(MODULE_ID, "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
+  // I think this can be removed in v13 libWrapper.register(MODULE_ID, "KeyboardManager.prototype._onFocusIn", _onFocusIn, "OVERRIDE");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.getRollData", actorGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.getRollData", itemGetRollData, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.prototype._preCreate", _preCreateActiveEffect, "WRAPPER");
@@ -1345,11 +1270,9 @@ function prepareSheetItem(wrapped, item, ctx) {
 export function readyPatching() {
   if (game.system?.id === "dnd5e" || game.system?.id === "n5e") {
     libWrapper.register(MODULE_ID, `game.${game.system?.id}.canvas.AbilityTemplate.prototype.refresh`, midiATRefresh, "WRAPPER");
-    libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['dnd5e.ActorSheet5eCharacter'].cls.prototype._filterItems", _filterItems, "WRAPPER");
-    libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['dnd5e.ActorSheet5eCharacter2'].cls.prototype._prepareItem", prepareSheetItem, "WRAPPER");
-    libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['dnd5e.ActorSheet5eNPC'].cls.prototype._filterItems", _filterItems, "WRAPPER");
-    libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['dnd5e.ActorSheet5eNPC2'].cls.prototype._prepareItem", prepareSheetItem, "WRAPPER");
-    if (!isDnD) libWrapper.register(MODULE_ID, "CONFIG.Item.sheetClasses.base['dnd5e.ItemSheet5e2'].cls.defaultOptions", itemSheetDefaultOptions, "WRAPPER");
+    libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.character['dnd5e.CharacterActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
+    libWrapper.register(MODULE_ID, "CONFIG.Actor.sheetClasses.npc['dnd5e.NPCActorSheet'].cls.prototype._filterItems", _filterItems, "WRAPPER");
+    if (!isDnD) libWrapper.register(MODULE_ID, "CONFIG.Item.sheetClasses.base['dnd5e.ItemSheet5e'].cls.defaultOptions", itemSheetDefaultOptions, "WRAPPER");
     libWrapper.register(MODULE_ID, "CONFIG.ActiveEffect.documentClass.createConcentrationEffectData", createConcentrationEffectData, "WRAPPER");
     // This controls whether to display the chat message or not
     // dnd5e.damageActor handles picking up concentration item rolls
@@ -1364,7 +1287,7 @@ export function readyPatching() {
   // libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preUpdate", processOverTime, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Combat.documentClass.prototype._preDelete", _preDeleteCombat, "WRAPPER");
 
-  libWrapper.register(MODULE_ID, "Notifications.prototype.notify", notificationNotify, "MIXED");
+  libWrapper.register(MODULE_ID, "foundry.applications.ui.Notifications.prototype.notify", notificationNotify, "MIXED");
   const gameVersion = game.system?.version;
   if ((game.system?.id === "dnd5e" && foundry.utils.isNewerVersion("3.3", gameVersion ?? ""))) {
     if (ui.notifications)
@@ -1603,7 +1526,7 @@ export async function rollToolCheck(wrapped, config: any = {}, dialog: any = {},
     let baseConfig, baseDialog, baseMessage;
     message.create = false;
     if (autoFastForwardAbilityRolls) dialog.configure = false;
-    preRollHookId = Hooks.once("dnd5e.preRollToolV2", (configData, dialogData, messageData) => {
+    preRollHookId = Hooks.once("dnd5e.preRollTool", (configData, dialogData, messageData) => {
       baseConfig = configData;
       baseDialog = dialogData;
       baseMessage = messageData;
@@ -1625,7 +1548,7 @@ export async function rollToolCheck(wrapped, config: any = {}, dialog: any = {},
     TroubleShooter.recordError(err, message);
     throw err;
   } finally {
-    if (preRollHookId) Hooks.off(`dnd5e.preRollToolV2`, preRollHookId);
+    if (preRollHookId) Hooks.off(`dnd5e.preRollTool`, preRollHookId);
     return result;
   }
 }
@@ -1693,8 +1616,7 @@ export async function _preDeleteCombat(wrapped, ...args) {
 
 export async function doItemUse(wrapped, config: any = {}, dialog: any = {}, message: any = {}) {
   if (this.pack) return;
-  if (config.legacy !== false) return wrapped(config, dialog, message);
-  const { legacy, chooseActivity, ...activityConfig } = config;
+  const {chooseActivity, ...activityConfig } = config;
   const activities = this.system.activities?.filter(a => !this.getFlag("dnd5e", "riders.activity")?.includes(a.id) && !a.midiProperties?.automationOnly);
   const attackActivities = activities?.filter(a => a instanceof MidiAttackActivity);
   if (attackActivities?.length === 1) { // if there is a single attack activity and no other non-automation activities use it
