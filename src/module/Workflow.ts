@@ -4038,7 +4038,7 @@ export class Workflow {
     const rolls = [...(this.attackRoll ? [this.attackRoll] : []), 
                    ...(this.utilityRoll ? [this.utilityRoll] : []),
                    ...(this.extraRolls ?? [])];
-    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, /*rolls: rolls*/ }, true);
+    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true);
   }
 
   async displayAttackRoll(displayOptions: any = {}) {
@@ -4138,7 +4138,7 @@ export class Workflow {
     }
     // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
     const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
-    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls: rolls }, true);
+    await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true);
 
   }
 
@@ -4512,7 +4512,7 @@ export class Workflow {
   get chatRolls(): Roll[] {
     let messageRolls: Roll[] = [];
     if (this.attackRoll) messageRolls.push(this.attackRoll);
-
+    if (this.utilityRoll) messageRolls.push(this.utilityRoll);
     if (this.damageRolls) messageRolls.push(...this.damageRolls);
     if (this.bonusDamageRolls) messageRolls.push(...this.bonusDamageRolls);
     if (this.otherDamageRolls) messageRolls.push(...this.otherDamageRolls);
