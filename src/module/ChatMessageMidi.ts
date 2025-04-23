@@ -386,6 +386,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       const bonusDamageRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.bonusDamageRolls);
       if (bonusDamageRolls)
         foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.bonusDamageRolls, bonusDamageRolls.map(d => Roll.fromData(d)));
+      const utilityRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.utilityRolls);
+      if (utilityRolls)
+        foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.utilityRolls, utilityRolls.map(d => Roll.fromData(d)));
       const extraRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.extraRolls);
       if (extraRolls)
         foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.extraRolls, extraRolls.map(d => Roll.fromData(d)));

@@ -1,3 +1,7 @@
+### 12.4.45
+* Fix for utility rolls not displaying correctly
+* Updated pt-br.json thanks @kharmans
+
 ### 12.4.44
 * Fix for chooseEffects being called with the wrong arguments.
 

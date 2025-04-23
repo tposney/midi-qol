@@ -110,11 +110,10 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
       if (rollToggle) dialog.configure = !!!dialog.configure;
       message.create ??= false;
       let result = await super.rollFormula(config, dialog, message);
-      if (result && workflow && config.midiOptions.updateWorkflow !== false) await workflow.setUtilityRolls(result);
-
+//      if (result && workflow && config.midiOptions.updateWorkflow !== false) await workflow.setUtilityRolls(result);
       // result = await postProcessUtilityRoll(this, config, result);
-      if (config.midiOptions.updateWorkflow !== false && workflow) {
-        workflow.utilityRolls = result;
+      if (result && config.midiOptions.updateWorkflow !== false && workflow) {
+        await workflow.setUtilityRolls(result);
         if (workflow.suspended)
           workflow.unSuspend.bind(workflow)({ utilityRolls: result });
       }
