@@ -259,7 +259,9 @@
   },
   "midi-qol.playerRollSavesOptions": {
     "none": "Nenhum",
-    "noneDialog": "Rolar e Mostrar o Diálogo de Rolagem",
+    "noneDialogPublic": "Auto-Rolar e Exibir Diálogo (Rolagem Pública)",
+    "noneDialogPrivate": "Auto-Rolar e Exibir Diálogo (Rolagem Privada)",
+    "noneDialogBlind": "Auto-Rolar e Exibir Diálogo (Rolagem Cega)",
     "chat": "Mensagem do Chat",
     "mtb": "Monk's Token Bar",
     "rer": "Rippers Epic Rolls"
