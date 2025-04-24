@@ -95,6 +95,7 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
           else if (configSettings.playerRollSaves === "noneDialogPrivate") messageData.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
           else if (configSettings.playerRollSaves === "noneDialogSelf") messageData.rollMode = CONST.DICE_ROLL_MODES.SELF;
           else if (configSettings.playerRollSaves === "noneDialogBlind") messageData.rollMode = CONST.DICE_ROLL_MODES.BLIND;
+          else message.rollMode = game.settings?.get("core", "rollMode");
         }
         //@ts-expect-error no dnd5e types
         if (skill) await actor.rollSkill({ ...rollData, skill }, {}, messageData);

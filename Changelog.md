@@ -1,9 +1,17 @@
+### 13.0.1
+* Fixed a bug when rolling a bonus in optional.name fields which led to an term is already evaluated and immutable error.
+**v12** ported changes
+* Fix for sharpshooter flag
+* If not checking save results, player saves rolled from the chat card will default to the player's roll mode and GM saves will be private GM rolls.
+* Fix for edge case optional.name bonuses (each-turn/each-round) not resetting on new combat start.
+* Fix for utility rolls not displaying correctly
+
 ### 13.0.0
 * This is a testing version only and **not** ready for game play so that other module writers can tell what is not working. Requires dae 13.0.0 as well
 * Remove reference to deprecated hooks in dnd5e (all the v2 versions).
 * Remove support for legacy item.use, activityUse etc (activityUseV2 renamed to activityUse)
 * Couple of bug fixes that have come to light.
-
+ 
 ### 12.4.44
 * Fix for chooseEffects being called with the wrong arguments.
 

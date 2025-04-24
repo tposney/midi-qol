@@ -4823,7 +4823,7 @@ export class Workflow {
                       // rollDC: saveDetails.rollDC,
                       options: { // GMAction will map this -> midiOptions
                         messageData: { user: playerId },
-                        target: saveDetails.rollDC,
+                        target: configSettings.autoCheckSaves === "whisper" ? undefined : saveDetails.rollDC,
                         chatMessage: showRoll,
                         mapKeys: false,
                         rollMode: ((this.activity?.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties.rollMode : CONST.DICE_ROLL_MODES.PUBLIC, // since it's allShow we want to display the roll to evryone whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC,

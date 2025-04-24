@@ -129,7 +129,8 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
         buttons: [
           {
             action: "import",
-            label: '<i class="fas fa-file-import"></i> Import',
+            icon: "fa-solid fa-file-import",
+            label: 'Import',
             default: true,
             callback: event => {
               const form = (event.currentTarget as HTMLElement | null)?.querySelector("form");
@@ -154,7 +155,8 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           },
           {
             action: "no",
-            label: '<i class="fas fa-times"></i> Cancel',
+            icon: "fa-solid fa-times",
+            label: 'Cancel',
             callback: event => resolve(false)
           }
         ],
@@ -262,7 +264,8 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
         buttons: [
           {
             action: "overwrite",
-            label: '<i class="fas fa-file-import"></i> Overwrite',
+            icon: "fa-solid fa-file-import",
+            label: 'Overwrite',
             callback: async (event) => {
               await exportSettingsToJSON(); // Just a safety net saving of the settings
               const settingsJSON = TroubleShooter.data.midiSettings;
@@ -274,7 +277,8 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
           {
             action: "cancel",
             default: true,
-            label: '<i class="fas fa-times"></i> Cancel',
+            icon: "fa-solid fa-times",
+            label: 'Cancel',
             callback: event => resolve(false)
           }
         ],

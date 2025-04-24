@@ -290,7 +290,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
         },
         ok: {
           label: "DND5E.TraitSave",
-          icon: "far fa-save",
+          icon: "fa-solid fa-save",
           callback: (evt, button) => {
             const data = new FormDataExtended(button.form as HTMLFormElement);
             // @ts-expect-error
@@ -386,7 +386,8 @@ async function importFromJSONDialog() {
       buttons: [
         {
           action: "import",
-          label: '<i class="fas fa-file-import"></i> Import',
+          icon: "fa-solid fa-file-import",
+          label: 'Import',
           default: true,
           callback: event => {
             const form = (event.currentTarget as HTMLElement | null)?.querySelector("form");
@@ -398,7 +399,8 @@ async function importFromJSONDialog() {
         },
         {
           action: "no",
-          label: '<i class="fas fa-times"></i> Cancel',
+          icon: "fa-solid fa-times",
+          label: 'Cancel',
           callback: event => resolve(false)
         }
       ],
@@ -451,12 +453,14 @@ function showDiffs(current: any, changed: any, flavor: string = "", title: strin
         {
           action: "apply",
           default: true,
-          label: '<i class="fas fa-check"></i> Apply Changes',
+          icon: "fa-solid fa-check",
+          label: 'Apply',
           callback: () => resolve(true)
         },
         {
           action: "abort",
-          label: '<i class="fas fa-xmark"></i> Don\'t Apply Changes',
+          icon: "fa-solid fa-xmark",
+          label: 'Don\'t Apply',
           callback: () => resolve(false)
         }
       ],

@@ -2099,7 +2099,7 @@ export function checkActivityRange(activityIn, tokenRef: Token | TokenDocument |
           break;
       }
     }
-    if (range < longRange && activity.actionType === "rawk" &&
+    if (range < longRange && activity.actionType === "rwak" &&
       (foundry.utils.getProperty(actor, "flags.dnd5e.sharpShooter") || foundry.utils.getProperty(actor, `flags.${MODULE_ID}.sharpShooter`))) {
       const conditionData = createConditionData({ item: activity.item, actor, activity, target: targets.first() });
       let sharpShooterEnabled = evalCondition(foundry.utils.getProperty(actor, `flags.dnd5e.sharpShooter`), conditionData);
@@ -3766,13 +3766,10 @@ export function getOptionalCountRemaining(actor: globalThis.dnd5e.documents.Acto
   if (["each-round", "each-turn"].includes(countValue) && game.combat) {
     let usedFlag = flag.replace(".count", ".used");
     // check for the flag
-    if (foundry.utils.getProperty(actor, usedFlag)) return 0;
-  } else if (["turn"].includes(countValue)) {
+    if (foundry.utils.getProperty(actor, usedFlag) === game.combat.uuid) return 0;
+  } else if (["turn"].includes(countValue) && game.combat?.turn)  {
     let usedFlag = flag.replace(".count", ".used");
-    //@ts-expect-error
-    const combat: Combat | undefined = game.combat
-    //@ts-expect-error
-    if (combat && foundry.utils.getProperty(actor, usedFlag) || combat?.turns[combat?.turn]?.actor !== actor) return 0;
+    if (foundry.utils.getProperty(actor, usedFlag) === game.combat.uuid || game.combat?.turns[game.combat?.turn]?.actor !== actor) return 0;
   } else if (countValue === "reaction") {
     // return await hasUsedReaction(actor)
     return actor.getFlag(MODULE_ID, "actions.reactionCombatRound") && needsReactionCheck(actor) ? 0 : 1;
@@ -3851,12 +3848,12 @@ export async function removeEffectGranting(actor: globalThis.dnd5e.documents.Act
 
   if (["turn", "each-round", "each-turn"].includes(count.value)) {
     const flagKey = `${changeKey}.used`.replace(`flags.${MODULE_ID}.`, "");
-    actorUpdates[`${changeKey}.used`] = true;
+    actorUpdates[`${changeKey}.used`] = game.combat?.uuid;
     // await actor.setFlag(MODULE_ID, flagKey, true);
   }
   if (["turn", "each-round", "each-turn"].includes(countAlt?.value)) {
     const flagKey = `${changeKey}.used`.replace(`flags.${MODULE_ID}.`, "");
-    actorUpdates[`${changeKey}.used`] = true;
+    actorUpdates[`${changeKey}.used`] = game.combat?.uuid;
     // await actor.setFlag(MODULE_ID, flagKey, true);
   }
   if (!foundry.utils.isEmpty(actorUpdates)) await actor.update(actorUpdates);
@@ -6390,7 +6387,7 @@ export function addRollTo(roll: Roll, bonusRoll: Roll): Roll {
     terms = roll.terms.concat(bonusRoll.terms);
   } else {
     const operatorTerm = new OperatorTerm({ operator: "+" });
-    operatorTerm.evaluate();
+    // v13 not required operatorTerm.evaluate();
     terms = roll.terms.concat([operatorTerm]);
     terms = terms.concat(bonusRoll.terms);
   }

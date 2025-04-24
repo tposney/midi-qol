@@ -97,6 +97,7 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
           else if (configSettings.playerRollSaves === "noneDialogPrivate") message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
           else if (configSettings.playerRollSaves === "noneDialogSelf") message.rollMode = CONST.DICE_ROLL_MODES.SELF;
           else if (configSettings.playerRollSaves === "noneDialogBlind") message.rollMode = CONST.DICE_ROLL_MODES.BLIND;
+          else message.rollMode = game.settings?.get("core", "rollMode");
         }
         
 
@@ -107,7 +108,7 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
           //@ts-expect-error this has been bound to an activity
           ability: target.dataset.ability ?? this.save.ability.first(),
           //@ts-expect-error this has been bound to an activity
-          target: Number.isFinite(dc) ? dc : this.save.dc.value
+          target: configSettings.autoCheckSaves === "whisper" ? undefined : (Number.isFinite(dc) ? dc : this.save.dc.value)
         }, {}, message);
       }
     }
