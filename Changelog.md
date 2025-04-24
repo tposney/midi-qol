@@ -1,3 +1,7 @@
+### 12.4.47
+* Fix for sharpshooter flag
+* If not checking save results, player saves rolled from the chat card will default to the player's roll mode and GM saves will be private GM rolls.
+
 ### 12.4.46
 * Fix for edge case optional.name bonuses (each-turn/each-round) not resetting on new combat start.
 

@@ -2112,7 +2112,7 @@ export function checkActivityRange(activityIn, tokenRef: Token | TokenDocument |
           break;
       }
     }
-    if (range < longRange && activity.actionType === "rawk" &&
+    if (range < longRange && activity.actionType === "rwak" &&
       (foundry.utils.getProperty(actor, "flags.dnd5e.sharpShooter") || foundry.utils.getProperty(actor, `flags.${MODULE_ID}.sharpShooter`))) {
       const conditionData = createConditionData({ item: activity.item, actor, activity, target: targets.first() });
       let sharpShooterEnabled = evalCondition(foundry.utils.getProperty(actor, `flags.dnd5e.sharpShooter`), conditionData);

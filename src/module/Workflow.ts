@@ -4896,7 +4896,7 @@ export class Workflow {
             // rollDC: saveDetails.rollDC,
             options: {
               simulate,
-              target: saveDetails.rollDC,
+              target: configSettings.autoCheckSaves === "whisper" ? undefined : saveDetails.rollDC,
               messageData: { user: owner?.id },
               chatMessage: showRoll,
               rollMode,
