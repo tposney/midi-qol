@@ -555,7 +555,7 @@ async function doRollAbility(wrapped, rollType, config: any = {}, dialog: any = 
       if (blindRollSetting) {
         rollMode = CONST.DICE_ROLL_MODES.BLIND;
         game.settings?.set("core", "rollMode", CONST.DICE_ROLL_MODES.BLIND);
-        result.forEach(r => r.options.rollMode = CONST.DICE_ROLL_MODES.BLIND);
+        // result.forEach(r => r.options.rollMode = CONST.DICE_ROLL_MODES.BLIND);
       }
 
     }
@@ -564,6 +564,7 @@ async function doRollAbility(wrapped, rollType, config: any = {}, dialog: any = 
       message.rollMode ??= config.rollMode;
     }
     if (rollMode !== CONST.DICE_ROLL_MODES.BLIND) rollMode = message.rollMode ?? config.rollMode;
+    result.forEach(r => r.options.rollMode = rollMode);
     await displayDSNForRoll(result, rollType, rollMode);
     foundry.utils.mergeObject(message.data, { "flags": config.flags ?? {} });
     if (!config.midiOptions.simulate) {

@@ -1,3 +1,9 @@
+### 13.0.2
+* Port of 12.4.48
+* Change to handling of saving throws when not auto checking saves. Any saves rolled from the chat card will use the currently set roll mode for both players and GM. This is the same as the basic dnd5e behaviour.
+* New options when auto checking saves via "none" as the player roll mode, "None (public roll)" and "None (private roll)", which will set the roll mode for the auto rolled player save.
+* GM save roll modes will be determined via the auto check saves setting. (Private roll unless all see results plus rolls).
+
 ### 13.0.1
 * Fixed a bug when rolling a bonus in optional.name fields which led to an term is already evaluated and immutable error.
 **v12** ported changes

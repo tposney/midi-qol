@@ -87,8 +87,7 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
         const speaker = ChatMessage.getSpeaker({ actor, scene: canvas?.scene, token: token instanceof Token ? token.document : null });
         const messageData: any = { data: { speaker } };
         if (!actor) continue;
-        if (configSettings.autoCheckSaves !== "none") messageData.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
-        if (configSettings.autoCheckSaves === "allShow") messageData.rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
+        if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) message.rollMode = game.settings?.get("core", "rollMode");
         else messageData.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
         if (!game.user?.isGM) {
           if (configSettings.playerRollSaves === "noneDialogPublic") messageData.rollMode = CONST.DICE_ROLL_MODES.PUBLIC;

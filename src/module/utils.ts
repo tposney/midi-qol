@@ -3384,7 +3384,10 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
     }
     await unTimedExecuteAsGM("queueUndoDataDirect", undoData)
 
-    const rollMode = foundry.utils.getProperty(this.actor ?? {}, button.key)?.rollMode ?? safeGetGameSetting("core", "rollMode");
+    // const rollMode = foundry.utils.getProperty(this.actor ?? {}, button.key)?.rollMode ?? safeGetGameSetting("core", "rollMode");
+    // @ts-expect-error .rollMode
+    let rollMode = roll.options.rollMode;
+    rollMode = foundry.utils.getProperty(this.actor ?? {}, button.key)?.rollMode ?? rollMode ?? safeGetGameSetting("core", "rollMode");
     if (!hasEffectGranting(this.actor, button.key, flagSelector)) return;
     let resultApplied = false; // This is just for macro calls
     let macroToCall;
@@ -3605,7 +3608,9 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
   }
   if (showRoll && lastForceFlag !== "") {
     DSNMarkDiceDisplayed(roll);
-    const rollMode = foundry.utils.getProperty(this.actor ?? {}, lastForceFlag)?.rollMode ?? options.rollMode ?? safeGetGameSetting("core", "rollMode");
+    // const rollMode = foundry.utils.getProperty(this.actor ?? {}, lastForceFlag)?.rollMode ?? options.rollMode ?? safeGetGameSetting("core", "rollMode");
+    //@ts-expect-error
+    const rollMode = foundry.utils.getProperty(this.actor ?? {}, lastForceFlag)?.rollMode ?? oldRoll.options.rollMode ?? safeGetGameSetting("core", "rollMode");
     const card = await displayBeforeAfterRolls({ originalRoll: oldRoll, newRoll: roll, rollMode, title, player, options, actor: this.actor });
     if (card?.uuid && this instanceof Workflow) { // this does not work currently since the undoId has not yet been set
       await unTimedExecuteAsGM("updateUndoChatCardUuidsById", { id: this.undoId, chatCardUuids: [card.uuid] });
@@ -3616,15 +3621,14 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
   return new Promise((resolve, reject) => {
     async function onClose() {
       if (timeoutId) clearTimeout(timeoutId);
-      // @ts-expect-error
-      newRoll.options.rollMode = rollMode;
       // The original roll is dsn displayed before the bonus dialog is called so mark it as displayed
       DSNMarkDiceDisplayed(originalRoll);
       // The new roll has had dsn display done for each bonus term/reroll so mark it as displayed
       DSNMarkDiceDisplayed(newRoll);
 
       if (showRoll && newRoll !== originalRoll) {
-        const card = await displayBeforeAfterRolls({ originalRoll, newRoll, rollMode, title, player, options, actor: this.actor });
+        //@ts-expect-error
+        const card = await displayBeforeAfterRolls({ originalRoll, newRoll, rollMode: originalRoll.options.rollMode, title, player, options, actor: this.actor });
         if (card?.uuid && this instanceof Workflow) { // this does not work currently since the undoId has not yet been set
           await unTimedExecuteAsGM("updateUndoChatCardUuidsById", { id: this.undoId, chatCardUuids: [card.uuid] });
         }

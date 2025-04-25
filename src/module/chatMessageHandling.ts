@@ -191,8 +191,8 @@ export let hideStuffHandler = (message, html, data) => {
   }
   if (foundry.utils.getProperty(message, "flags.midi-qol.type") === MESSAGE_TYPES.SAVES) {
     const matched = htmlElement?.querySelectorAll(`[data-action="rollSave"]`);
-    htmlElement?.querySelectorAll(`[data-action="rollSave"]`).forEach((el) => {el.disabled = false});
-    htmlElement?.querySelectorAll(`[data-action="rollCheck"]`).forEach((el) => {el.disabled = false});
+    htmlElement?.querySelectorAll(`[data-action="rollSave"]`).forEach((el) => { el.disabled = false });
+    htmlElement?.querySelectorAll(`[data-action="rollCheck"]`).forEach((el) => { el.disabled = false });
   }
 
   if (!message.isAuthor && !(messageActorOwner && SaveToChatCard)) {
@@ -242,16 +242,24 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-saves-display").hide();
     }
 
+    const displayNPCSaves = safeGetGameSetting("dnd5e", "challengeVisibility") === "all";
+    const displayPlayerSaves = safeGetGameSetting("dnd5e", "challengeVisibility") !== "none";
     // hide tool tips from non-gm
-    if (configSettings.autoCheckSaves !== "allShow") html.find(".midi-qol-npc-save-tooltip").remove();
-    // Hide the save dc if required
-    if (!configSettings.displaySaveDC || !shouldDisplayChallenge) {
-      html.find(".midi-qol-saveDC").remove();
-    }
-    if (!["allShow", "all"].includes(configSettings.autoCheckSaves)) {
+    if (!displayPlayerSaves) 
+      html.find(".midi-qol-save-tooltip").remove()
+    else if (!displayNPCSaves || configSettings.autoCheckSaves !== "allShow") 
+      html.find(".midi-qol-npc-save-tooltip").remove();
+
+    if (!displayPlayerSaves) html.find(".midi-qol-save-total").remove();
+    else if (!["allShow", "all"].includes(configSettings.autoCheckSaves) || !displayNPCSaves) {
       html.find(".midi-qol-npc-save-total").remove();
     }
-    if (!shouldDisplayChallenge || !configSettings.highlightSuccess)
+
+    if (!displayPlayerSaves)
+      html.find(".midi-qol-saves-display .midi-qol-save-symbol").remove();
+    else if (!displayNPCSaves) 
+      html.find(".midi-qol-npc-save-symbol").remove();
+    else if (!shouldDisplayChallenge || configSettings.autoCheckSaves === "whisper")
       html.find(".midi-qol-saves-display .midi-qol-save-symbol").remove();
     if (!configSettings.highlightSuccess || !shouldDisplayChallenge) {
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("success");
@@ -298,7 +306,7 @@ export let hideStuffHandler = (message, html, data) => {
         html.find(".midi-qol-hits-display .midi-qol-hit-class").removeClass("fumble");
       }
     }
-    if (message.isAuthor|| configSettings.confirmAttackDamage === "gmOnly") {
+    if (message.isAuthor || configSettings.confirmAttackDamage === "gmOnly") {
       html.find(".midi-qol-confirm-damage-roll-complete-hit").hide();
       html.find(".midi-qol-confirm-damage-roll-complete-miss").hide();
       html.find(".midi-qol-confirm-damage-roll-complete-critical").hide();
@@ -317,14 +325,14 @@ export let hideStuffHandler = (message, html, data) => {
 
 }
 
-export function ddbglPendingFired(data:{sceneId: string, tokenId: string, actorId: string, itemId: string, actionType: string}) {
+export function ddbglPendingFired(data: { sceneId: string, tokenId: string, actorId: string, itemId: string, actionType: string }) {
   let { sceneId, tokenId, actorId, itemId, actionType } = data;
   if (!itemId || !["attack", "damage", "heal"].includes(actionType)) {
     error("DDB Game Log - no item/action for pending roll"); return
   }
   // const tokenUuid = `Scene.${sceneId??0}.Token.${tokenId??0}`;
   const token: Token | undefined = fromUuidSync(`Scene.${sceneId ?? 0}.Token.${tokenId ?? 0}`)?.object as Token | undefined;
-  const actor: Actor | undefined = (token instanceof CONFIG.Token.documentClass) ? token?.actor ?? game.actors?.get(actorId ?? "") as Actor: undefined;
+  const actor: Actor | undefined = (token instanceof CONFIG.Token.documentClass) ? token?.actor ?? game.actors?.get(actorId ?? "") as Actor : undefined;
   if (!actor || !(token instanceof CONFIG.Token.documentClass)) {
     warn(" ddb-game-log hook could not find actor");
     return;

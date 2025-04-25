@@ -258,7 +258,8 @@
     "rer": "Rippers Epic Rolls"
   },
   "midi-qol.playerRollSavesOptions": {
-    "none": "None",
+    "none": "None (private roll)",
+    "nonePublic": "None (public roll)",
     "noneDialogPublic": "Auto roll and show roll dialog (public roll)",
     "noneDialogPrivate": "Auto roll and show roll dialog (private roll)",
     "noneDialogBlind": "Auto roll and show roll dialog (blind roll)",
