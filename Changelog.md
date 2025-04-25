@@ -1,3 +1,14 @@
+### 12.4.48
+* Change to handling of saving throws when not auto checking saves. Any saves rolled from the chat card will use the currently set roll mode for both players and GM. This is the same as the basic dnd5e behaviour.
+* New options when auto checking saves via "none" as the player roll mode, "None (public roll)" and "None (private roll)", which will set the roll mode for the auto rolled player saves.
+* GM save roll modes will be determined via the auto check saves setting. (Private roll unless all see results plus rolls).
+* **Breaking** Change to save displays:
+  * dnd5e challenge visibility now takes precedence on the saves display.
+    * "hide all" no roll result/save/failed save will be displayed to players.
+    * "show other players" information (according to the midi settings) will be displayed for player owned tokens. If player rolls are being displayed the tooltip will have details of the save roll.
+    * "show all" information according to the midi settings will be displayed for all tokens
+  * In particular, check saves and all see result depends on the dnd5e challenge visibility. So you can have display result with dnd5e set to hide all which means a list of tokens doing the save will be shown to players, but no results.
+
 ### 12.4.47
 * Fix for sharpshooter flag
 * If not checking save results, player saves rolled from the chat card will default to the player's roll mode and GM saves will be private GM rolls.

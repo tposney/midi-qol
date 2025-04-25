@@ -90,7 +90,7 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
         // if (!actor?.hasPlayerOwner && workflow) message.create = false - this breaks save checking from chat card
         if (token instanceof Token) foundry.utils.setProperty(message, "flags.midi-qol.requestId", token.document.uuid);
         else foundry.utils.setProperty(message, "flags.midi-qol.requestId", token?.uuid);
-        if (configSettings.autoCheckSaves === "allShow") message.rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
+        if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) message.rollMode = game.settings?.get("core", "rollMode");
         else message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
         if (!game.user?.isGM) {
           if (configSettings.playerRollSaves === "noneDialogPublic") message.rollMode = CONST.DICE_ROLL_MODES.PUBLIC;

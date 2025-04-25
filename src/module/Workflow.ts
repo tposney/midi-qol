@@ -4881,8 +4881,8 @@ export class Workflow {
           let rollMode = ((this.activity?.midiProperties?.rollMode ?? "default") !== "default") ? this.activity.midiProperties.rollMode : whisper ? CONST.DICE_ROLL_MODES.PRIVATE : CONST.DICE_ROLL_MODES.PUBLIC;
           if (!owner?.isGM) {
             if ((this.activity?.midiProperties?.rollMode ?? "default") === "default") {
-              if (configSettings.playerRollSaves === "noneDialogPublic") rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
-              else if (configSettings.playerRollSaves === "noneDialogPrivate") rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+              if (["noneDialogPublic", "nonePublic"].includes(configSettings.playerRollSaves)) rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
+              else if (["noneDialogPrivate", "none"].includes(configSettings.playerRollSaves)) rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
               else if (configSettings.playerRollSaves === "noneDialogSelf") rollMode = CONST.DICE_ROLL_MODES.SELF;
               else if (configSettings.playerRollSaves === "noneDialogBlind") rollMode = CONST.DICE_ROLL_MODES.BLIND;
             }
@@ -5276,7 +5276,10 @@ export class Workflow {
         img,
         isPC: isPlayerOwned,
         target,
-        saveSymbol: (rollDC === null) ? "" : (saved ? "fa-check" : "fa-times"),
+        saveSymbol: (rollDC === null) ? "" : (
+              ((target.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-save-symbol")
+              + " midi-qol-save-symbol "
+              + (saved ? "fa-check" : "fa-times")),
         saveTotalClass: (target.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-save-total",
         saveToolTipClass: (target.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-save-tooltip",
         rollTotal: saveRollTotal,

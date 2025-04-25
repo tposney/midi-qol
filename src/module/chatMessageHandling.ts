@@ -242,17 +242,27 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-saves-display").hide();
     }
 
-    // hide tool tips from non-gm
-    if (configSettings.autoCheckSaves !== "allShow") html.find(".midi-qol-npc-save-tooltip").remove();
     // Hide the save dc if required
     if (!configSettings.displaySaveDC || !shouldDisplayChallenge) {
       html.find(".midi-qol-saveDC").remove();
     }
-    if (!["allShow", "all"].includes(configSettings.autoCheckSaves)) {
+    const displayNPCSaves = safeGetGameSetting("dnd5e", "challengeVisibility") === "all";
+    const displayPlayerSaves = safeGetGameSetting("dnd5e", "challengeVisibility") !== "none";
+    // hide tool tips from non-gm
+    if (!displayPlayerSaves) html.find(".midi-qol-save-tooltip").remove()
+    else if (!displayNPCSaves || configSettings.autoCheckSaves !== "allShow") html.find(".midi-qol-npc-save-tooltip").remove();
+
+    if (!displayPlayerSaves) html.find(".midi-qol-save-total").remove();
+    else if (!["allShow", "all"].includes(configSettings.autoCheckSaves) || !displayNPCSaves) {
       html.find(".midi-qol-npc-save-total").remove();
     }
-    if (!shouldDisplayChallenge || !configSettings.highlightSuccess)
+
+    if (!displayPlayerSaves) 
       html.find(".midi-qol-saves-display .midi-qol-save-symbol").remove();
+    else if (!displayNPCSaves) html.find(".midi-qol-npc-save-symbol").remove();
+    else if (!shouldDisplayChallenge || configSettings.autoCheckSaves === "whisper")
+      html.find(".midi-qol-saves-display .midi-qol-save-symbol").remove();
+
     if (!configSettings.highlightSuccess || !shouldDisplayChallenge) {
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("success");
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("failure");

@@ -618,6 +618,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
       console.warn("midi-qol | doRollAbilityV2: result is a Roll, not an array of Rolls");
       result = [result];
     }
+
     const flavor = result[0].options?.flavor;
 
     let rollMode: string = message.rollMode ?? safeGetGameSetting("core", "rollMode");
@@ -630,7 +631,6 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
       if (blindRollSetting) {
         rollMode = CONST.DICE_ROLL_MODES.BLIND;
         game.settings?.set("core", "rollMode", CONST.DICE_ROLL_MODES.BLIND);
-        result.forEach(r => r.options.rollMode = CONST.DICE_ROLL_MODES.BLIND);
       }
 
     }
@@ -639,6 +639,7 @@ async function doRollAbilityV2(wrapped, rollType, config: any = {}, dialog: any 
       message.rollMode ??= config.rollMode;
     }
     if (rollMode !== CONST.DICE_ROLL_MODES.BLIND) rollMode = message.rollMode ?? config.rollMode;
+    result.forEach(r => r.options.rollMode = rollMode);
     await displayDSNForRoll(result, rollType, rollMode);
     foundry.utils.mergeObject(message.data, { "flags": config.flags ?? {} });
     if (!config.midiOptions.simulate) {
