@@ -1278,33 +1278,43 @@ export let processUndoDamageCard = (message: ChatMessage, html, data) => {
 
 async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: number }, animate: boolean }): Promise<any> {
   const tokenDocument: TokenDocument | undefined = fromUuidSync(data.tokenUuid as any) as TokenDocument | undefined;
-  if (!tokenDocument) return;
+  if (!tokenDocument || !canvas?.grid || !tokenDocument.object) return;
+  const targetToken = tokenDocument.object;
+  const newCenter = canvas.grid.getSnappedPoint(data.newCenter, { mode: CONST.GRID_SNAPPING_MODES.CENTER });
+  const newPosition = {x: data.newCenter.x - targetToken.w / 2, y: data.newCenter.y - targetToken.h / 2};
   //@ts-expect-error types thinks update data is of type never
-  return tokenDocument.update({ x: data.newCenter?.x ?? 0, y: data.newCenter?.y ?? 0 }, { animate: data.animate ?? true });
+  return tokenDocument.update(newPosition, { animate: data.animate ?? true });
 }
 
 
-async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: number, y: number }, distance: number, animate: boolean, checkCollision: boolean }): Promise<void> {
+async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: number, y: number }, distance: number, animate: boolean, checkCollision: boolean }): Promise<any> {
   const targetToken = getToken(data.targetUuid);
   const targetTokenDocument = getTokenDocument(targetToken);
-  if (!canvas || !canvas.dimensions || !canvas.grid || !targetToken || !data.point) return;
+  if (!canvas || !canvas.dimensions || !canvas.grid || !targetToken || !data.point || !targetTokenDocument) return;
   let ray = new Ray(data.point, targetToken.center);
   let distance = data.distance / canvas.dimensions.distance * canvas.dimensions.size;
   let newCenter = ray.project(1 + distance / ray.distance);
   const M = CONST.GRID_SNAPPING_MODES;
-  newCenter = canvas.grid.getSnappedPoint({ x: newCenter.x - targetToken.w / 2, y: newCenter.y - targetToken.h / 2 }, { mode: M.CENTER });
+  newCenter = canvas.grid.getSnappedPoint(newCenter, { mode: M.CENTER });
 
   if (data.checkCollision) {
     //@ts-expect-error
     const testCollision = CONFIG.Canvas.polygonBackends.move.testCollision(targetToken.center, newCenter, { source: targetToken.document, type: "move", any: "closest" });
-    if (testCollision && testCollision instanceof foundry.canvas.edges.PolygonVertex) {
-      const collisionPoint = { x: testCollision.x, y: testCollision.y };
+    if (testCollision?.length > 0 && testCollision[0] instanceof foundry.canvas.edges.PolygonVertex ) {
+      const collisionPoint = { x: testCollision[0].x, y: testCollision[0].y };
       const getCenterCollisionPoint = canvas.grid.getCenterPoint(collisionPoint);
-      newCenter = canvas.grid.getSnappedPosition(getCenterCollisionPoint.x - targetToken.w / 2, getCenterCollisionPoint.y - targetToken.h / 2, 1);
+      if (Math.sign(ray.dx) > 0) getCenterCollisionPoint.x -= canvas.grid.sizeX;
+      if (Math.sign(ray.dy) > 0) getCenterCollisionPoint.y -= canvas.grid.sizeY;
+      const newPosition = canvas.grid.getSnappedPoint({x: getCenterCollisionPoint.x - Math.sign(ray.dx) * targetToken.w / 2, y: getCenterCollisionPoint.y - Math.sign(ray.dy) * targetToken.h / 2}, { mode: M.TOP_LEFT_VERTEX });
+      //@ts-expect-error
+      return targetTokenDocument.update(newPosition, { animate: data.animate ?? true });
     }
   }
+  const newX = targetToken.position.x + newCenter.x - targetToken.center.x;
+  const newY = targetToken.position.y + newCenter.y - targetToken.center.y;
+
   //@ts-expect-error
-  return targetTokenDocument.update({ x: newCenter?.x ?? 0, y: newCenter?.y ?? 0 }, { animate: data.animate ?? true });
+  return targetTokenDocument.update({ x: newX, y: newY }, { animate: data.animate ?? true });
 }
 
 async function rollActionSave(data: any) {

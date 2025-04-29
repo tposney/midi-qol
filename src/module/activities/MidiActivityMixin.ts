@@ -485,7 +485,7 @@ export var MidiActivityMixin = Base => {
         if (activity.item?.type === "spell" || foundry.utils.getProperty(activity.item, "flags.dnd5e.spellLevel")) { 
           usage.workflow.castData = {
             baseLevel: activity.item.system.level ?? foundry.utils.getProperty(activity.item, "flags.dnd5e.spellLevel.base"),
-            castLevel: activity.item.system.level ? activity.item.system.level+ (usageData?.scaling ?? 0) : foundry.utils.getProperty(activity.item, "flags.dnd5e.spellLevel.value"), 
+            castLevel: activity.item.system.level !== undefined ? activity.item.system.level + (usageData?.scaling ?? 0) : foundry.utils.getProperty(activity.item, "flags.dnd5e.spellLevel.value"), 
             scaling: (usageData?.scaling ?? foundry.utils.getProperty(activity.item, "flags.dnd5e.scaling")) || 0,
             itemUuid: activity.item.uuid
           };
