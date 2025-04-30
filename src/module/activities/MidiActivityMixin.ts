@@ -696,7 +696,7 @@ export var MidiActivityMixin = Base => {
       //@ts-expect-error
       const damageTypes = roll.options.types;
       const changes: any[] = [];
-      for (let effect of this.actor.allApplicableEffects()) {
+      if (this.actor) for (let effect of this.actor.allApplicableEffects()) {
         if (effect.disabled || effect.isSuppressed) continue;
         for (let change of effect.changes) {
           if (!change.key.startsWith("flags.midi-qol.rollModifiers.damage.")) continue;

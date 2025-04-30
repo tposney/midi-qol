@@ -1,3 +1,7 @@
+### 12.4.50
+* Fix for error thrown on init in dnd5e v4.4.0
+  Error: Failed data preparation for Item. Cannot read properties of null (reading allApplicableEffects')
+
 ### 12.4.49
 * Fix for MidiQOL.moveToken and MidiQOL.moveTokenAwayFromPoint to avoid positioning tokens in the middle of squares.
 * Fix for workflow.castData.spellLevel when casting a cantrip, will now be 0.
