@@ -2726,6 +2726,8 @@ export class Workflow {
           }
           if (shouldTrigger) {
             foundry.utils.setProperty(usage, "midiOptions.isCritical", this.isCritical);
+            foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringWorkflowId", this.id);
+            foundry.utils.setProperty(usage, "midiOptions.workflowOptions.triggeringActivityUuid", this.activity.uuid);
             await completeActivityUse(triggeredActivity, usage, { configure: false }, {});
           }
         }

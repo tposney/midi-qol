@@ -143,6 +143,11 @@ Hooks.once("init", () => {
 
 globalThis.MidiQOL ??= {}
 globalThis.MidiQOL.checkIncapacitated = checkIncapacitated;
+
+function setupSheets() {
+  setupMidiItemSheet5e();
+}
+
 function setupActivities() {
   globalThis.MidiQOL.activityTypes = {};
   setupMidiActivityMixin();
@@ -176,6 +181,7 @@ Hooks.once('init', async function () {
   if (game.release.generation < 12) Math.clamp = Math.clamped;
   log('Initializing midi-qol');
   setupActivities();
+  setupSheets();
   //@ts-expect-error
   const systemVersion = game.system.version;
   Hooks.once('dfreds-convenient-effects.ready()', () => {
@@ -740,6 +746,7 @@ import { MidiActivityMixin, setupMidiActivityMixin } from './module/activities/M
 import { MidiForwardActivity, setupForwardActivity } from './module/activities/ForwardActivity.js';
 import { MidiEnchantActivity, setupEnchantActivity } from './module/activities/EnchantActivity.js';
 import { MidiCombat5e } from './module/MidiCombat5e.js';
+import { setupMidiItemSheet5e } from './module/ItemSheet5e.js';
 
 Hooks.once("midi-qol.midiReady", () => {
   setupMidiTests();

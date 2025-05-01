@@ -5652,7 +5652,7 @@ export function _canSenseModes(tokenEntity: Token | TokenDocument, targetEntity:
       }
     }
   }
-  for (let tk of [token]) {
+  for (let tk of [token, target]) {
     if (!tk.document.sight.enabled) {
       const sourceId = tk.sourceId;
       canvas?.effects?.visionSources.delete(sourceId);

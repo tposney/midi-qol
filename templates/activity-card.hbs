@@ -44,8 +44,8 @@
           class="fas fa-caret-up"></i><i class="fas fa-dice-d20"></i><i class="fas fa-dice-d20"></i></button>
     </div>
     {{else}}
-    <div class="midi-qol-attack-buttons">
-      <button data-action="rollAttack">{{ localize "DND5E.Attack" }}</button>
+    <div class="midi-qol-attack-buttons flexrow 1">
+      <button type="button" data-action="rollAttack"><span>{{ localize "DND5E.Attack" }}X</span></button>
     </div>
     {{/if}}
     {{/if}}
@@ -61,8 +61,8 @@
           class="fas fa-dice-d6"></i><i class="fas fa-dice-d6"></i></button>
     </div>
     {{else}}
-    <div class="midi-qol-damage-buttons">
-      <button data-action="rollDamage">{{ dmgBtnText }}</button>
+    <div class="midi-qol-damage-buttons flexrow 1">
+      <button data-action="rollDamage"><span>{{ dmgBtnText }}</span></button>
     </div>
     {{/if}}
     {{/if}}

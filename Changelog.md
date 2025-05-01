@@ -1,3 +1,10 @@
+### 13.0.3
+* Add usage.midiOptions.triggeringWorkflowId and usage.midiOptions.triggeringActivityUuid to triggered activities.
+
+**v12** ported changes
+  * Fix for MidiQOL.moveToken and MidiQOL.moveTokenAwayFromPoint to avoid positioning tokens in the middle of squares.
+  * Fix for workflow.castData.spellLevel when casting a cantrip, will now be 0.
+
 ### 13.0.2
 * Port of 12.4.48
 * Change to handling of saving throws when not auto checking saves. Any saves rolled from the chat card will use the currently set roll mode for both players and GM. This is the same as the basic dnd5e behaviour.

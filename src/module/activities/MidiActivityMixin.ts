@@ -485,7 +485,7 @@ export var MidiActivityMixin = Base => {
         if (activity.item?.type === "spell" || foundry.utils.getProperty(activity.item, "flags.dnd5e.spellLevel")) { 
           usage.workflow.castData = {
             baseLevel: activity.item.system.level ?? foundry.utils.getProperty(activity.item, "flags.dnd5e.spellLevel.base"),
-            castLevel: activity.item.system.level ? activity.item.system.level+ (usageData?.scaling ?? 0) : foundry.utils.getProperty(activity.item, "flags.dnd5e.spellLevel.value"), 
+            castLevel: activity.item.system.level !== undefined ? activity.item.system.level + (usageData?.scaling ?? 0) : foundry.utils.getProperty(activity.item, "flags.dnd5e.spellLevel.value"), 
             scaling: (usageData?.scaling ?? foundry.utils.getProperty(activity.item, "flags.dnd5e.scaling")) || 0,
             itemUuid: activity.item.uuid
           };
@@ -567,7 +567,7 @@ export var MidiActivityMixin = Base => {
           }
           if (config.workflow?.rollOptions?.rollToggle) dialog.configure = !dialog.configure;
           // if (dialog.configure) config.midiOptions.isCritical = false;
-          preRollDamageHookId = Hooks.once(`${game.system?.id}.preRollDamage`, (rollConfig, dialogConfig, messageConfig) => {
+          preRollDamageHookId = Hooks.once(`${game.system?.id}.preRollDamageV2`, (rollConfig, dialogConfig, messageConfig) => {
             if (keys.critical) rollConfig.isCritical = true;
             else if (keys.normal) rollConfig.isCritical = false;
             else if (!dialogConfig.configure) rollConfig.isCritical ||= rollConfig.midiOptions.isCritical;
@@ -577,7 +577,7 @@ export var MidiActivityMixin = Base => {
               } else dialogConfig.options.defaultButton = "normal";
             } return true;
           });
-          rollDamageHookId = Hooks.once(`${game.system?.id}.rollDamage`, rolls => {
+          rollDamageHookId = Hooks.once(`${game.system?.id}.rollDamageV2`, rolls => {
             if (rolls[0] && config.workflow && config.midiOptions.updateWorkflow !== false) config.workflow.isCritical = rolls[0].options.isCritical;
           });
           message.create ??= false;
@@ -629,8 +629,8 @@ export var MidiActivityMixin = Base => {
         TroubleShooter.recordError(err, message);
         error(message, err);
       } finally {
-        if (preRollDamageHookId) Hooks.off(`${game.system?.id}.preRollDamage`, preRollDamageHookId);
-        if (rollDamageHookId) Hooks.off(`${game.system?.id}.rollDamage`, rollDamageHookId);
+        if (preRollDamageHookId) Hooks.off(`${game.system?.id}.preRollDamageV2`, preRollDamageHookId);
+        if (rollDamageHookId) Hooks.off(`${game.system?.id}.rollDamageV2`, rollDamageHookId);
       }
       return result ?? [];
     }
