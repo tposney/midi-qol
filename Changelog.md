@@ -1,3 +1,6 @@
+### 12.4.51.1
+* Version bump to complete release creation
+
 ### 12.4.51
 * Fix so that skill checks/tool checks, rolled from the character sheet respect the configuration dialog roll mode.
 
