@@ -1,3 +1,6 @@
+### 12.4.51
+* Fix so that skill checks/tool checks, rolled from the character sheet respect the configuration dialog roll mode.
+
 ### 12.4.50
 * Fix for error thrown on init in dnd5e v4.4.0
   Error: Failed data preparation for Item. Cannot read properties of null (reading allApplicableEffects')
