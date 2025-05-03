@@ -206,6 +206,7 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
       message.create = saveCreate;
     }
     if (!result) return result;
+    rollMode = message.rollMode ?? rollMode;
     /*
     if (rollMode !== CONST.DICE_ROLL_MODES.BLIND) rollMode = result.options.rollMode;
     else result.options.rollMode = CONST.DICE_ROLL_MODES.BLIND;
@@ -1524,13 +1525,13 @@ export async function rollToolCheck(wrapped, config: any = {}, dialog: any = {},
   let preRollHookId
   try {
     const chatMessage = message.create;
-    let baseConfig, baseDialog, baseMessage;
+    let baseConfig, baseDialog;
     message.create = false;
     if (autoFastForwardAbilityRolls) dialog.configure = false;
     preRollHookId = Hooks.once("dnd5e.preRollTool", (configData, dialogData, messageData) => {
       baseConfig = configData;
       baseDialog = dialogData;
-      baseMessage = messageData;
+      message = messageData;
     });
     result = await wrapped(config, dialog, message);
     let rollMode = message.rollMode ?? safeGetGameSetting("core", "rollMode");
@@ -1538,7 +1539,7 @@ export async function rollToolCheck(wrapped, config: any = {}, dialog: any = {},
     result[0] = await bonusCheck(this, result[0], "check", config.ability ?? "");
     if (!result) return result;
     if (chatMessage !== false && result) {
-      const messageData: any = { rolls: result, ...baseMessage.data, rollMode };
+      const messageData: any = { rolls: result, ...message.data, rollMode };
       //@ts-expect-error
       CONFIG.Dice.D20Roll._prepareMessageData(result, messageData);
       messageData.template = "modules/midi-qol/templates/roll.html";
