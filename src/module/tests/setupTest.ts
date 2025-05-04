@@ -22,7 +22,6 @@ export async function resetActors() {
       //@ts-expect-error
       { "data.attributes.hp.value": foundry.utils.getProperty(a, "system.attributes.hp.max")}, 
       {});
-    //@ts-expect-error
     if (a.effects?.contents.length > 0) await a.deleteEmbeddedDocuments("ActiveEffect", a?.effects?.contents?.map(e => e.id ?? ""));
     //@ts-expect-error
     await a.unsetFlag("dnd5e", "initiativeAdv");
@@ -37,7 +36,6 @@ export async function resetActors() {
         const actor: Actor = token.actor;
         // @ts-expect-error no dnd5e-types
         await actor.update({ "system.attributes.hp.value": actor.system.attributes.hp.max });
-        //@ts-expect-error
         if (actor.effects?.contents.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", actor.effects.contents.map(e => e.id ?? ""));
         //@ts-expect-error
         await actor.unsetFlag("dnd5e", "initiativeAdv");
@@ -153,7 +151,6 @@ async function registerTests() {
                 await busyWait(1);
                 const fireballEffect = targetActor?.effects.find(e => e.name === "FireballTest Template");
                 assert.ok(fireballEffect, "No template effect found");
-                //@ts-expect-error
                 await fireballEffect?.delete();
                 assert.ok(workflow?.targets.size === 2, "Wrong number of targets");
                 assert.ok(workflow.damageRoll !== undefined, "No damage roll");
@@ -241,7 +238,6 @@ async function registerTests() {
             const combat = await cls.create({ scene: canvas?.scene?.id, active: true }, { render: false });
             // await combat?.startCombat();
             await actor.rollInitiative({ createCombatants: true, rerollInitiative: true });
-            //@ts-expect-error
             await combat?.delete();
             const roll: Roll = await rollResult;
             //@ts-ignore
@@ -262,7 +258,6 @@ async function registerTests() {
             await combat?.startCombat();
             // await actor.rollInitiativeDialog({ createCombatants: true, rerollInitiative: true });
             await actor.rollInitiative({ createCombatants: true, rerollInitiative: true });
-            //@ts-expect-error
             await combat?.delete();
             const roll: Roll = await rollResult;
             await actor.unsetFlag(game.system?.id, "initiativeAdv");
@@ -421,7 +416,6 @@ async function registerTests() {
             await busyWait(0.5);
             assert.ok(cltInterface.hasCondition("Blinded", [target]));
             const effect: ActiveEffect | undefined = targetActor?.effects.find(e => e.name === "Clt Test");
-            //@ts-expect-error
             results = await targetActor?.deleteEmbeddedDocuments("ActiveEffect", [effect?.id ?? "bad"]);
             // results = await globalThis.DAE.actionQueue.add(target.actor?.deleteEmbeddedDocuments.bind(target.actor),"ActiveEffect", [effect?.id ?? "bad"]);
             await busyWait(0.5);
@@ -451,7 +445,6 @@ async function registerTests() {
             await busyWait(0.5);
             assert.ok(await CEHasEffectApplied({ effectName: "Deafened", uuid: targetActor?.uuid ?? "" }));
             const effect: ActiveEffect | undefined = targetActor?.effects.find(e => e.name === "CE Test");
-            //@ts-expect-error
             results = await targetActor?.deleteEmbeddedDocuments("ActiveEffect", [effect?.id ?? "bad"]);
             await busyWait(0.1);
             if (await CEHasEffectApplied({ effectName: "Deafened", uuid: targetActor?.uuid ?? "" })) {
@@ -541,10 +534,8 @@ async function registerTests() {
             assert.ok(target);
             try {
               let hasEffect: any[] = actor.effects.filter(e => e.name === "Macro Execute Test") ?? [];
-              //@ts-expect-error
               if (hasEffect?.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", hasEffect.map(e => e.id))
               hasEffect = targetActor?.effects.filter(e => e.name === "Macro Execute Test") ?? [];
-              //@ts-expect-error
               if (hasEffect?.length > 0) await targetActor?.deleteEmbeddedDocuments("ActiveEffect", hasEffect.map(e => e.id));
               updateUserTargets([target?.id ?? ""]);
               await completeItemUse(actor.items.getName("Macro Execute Test"), {}, { workflowOptions });
@@ -554,7 +545,6 @@ async function registerTests() {
               assert.equal(flags?.test, "metest")
               hasEffect = targetActor?.effects.filter(e => e.name === "Macro Execute Test") ?? [];
               assert.ok(hasEffect);
-              //@ts-expect-error
               await targetActor?.deleteEmbeddedDocuments("ActiveEffect", hasEffect.map(e => e.id));
               flags = foundry.utils.getProperty(actor, "flags.midi-qol.test");
               assert.ok(!flags?.test);
@@ -562,7 +552,6 @@ async function registerTests() {
               assert.equal(hasEffect.length, 0)
             } finally {
               let hasEffect: any = targetActor?.effects.filter(e => e.name === "Macro Execute Test") ?? [];
-              //@ts-expect-error
               await targetActor?.deleteEmbeddedDocuments("ActiveEffect", hasEffect.map(e => e.id));
               //@ts-expect-error
               await actor.unsetFlag(MODULE_ID, "test")
@@ -577,14 +566,12 @@ async function registerTests() {
               changes: [{ key: "macro.tokenMagic", mode: 0, value: "blur" }]
             };
             assert.ok(globalThis.TokenMagic);
-            //@ts-expect-error
             const theEffects: ActiveEffect.Implementation[] = (await actor.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect[];
             assert.ok(actor.effects.find(ef => (ef.name === effectData.name)));
             await busyWait(3);
             const actorToken = canvas?.tokens?.placeables.find(t => t.name === (actor.token?.name ?? actor.name))
             assert.ok(actorToken, "found actor token");
             assert.ok(globalThis.TokenMagic.hasFilterId(actorToken, "blur"), "applied blur effect");
-            //@ts-expect-error
             await actor.deleteEmbeddedDocuments("ActiveEffect", theEffects.map(ef => ef.id as string));
             await busyWait(3);
             assert.equal(globalThis.TokenMagic.hasFilterId(actorToken, "blur"), false, "test blur");
@@ -621,7 +608,6 @@ async function registerTests() {
             Hooks.off("OnUseMacroTest", hookId);
             let hasEffects: any = actor.effects.filter(e => e.name === "OnUseMacroTest") ?? [];
             assert.ok(hasEffects);
-            //@ts-expect-error
             await actor.deleteEmbeddedDocuments("ActiveEffect", hasEffects.map(e => e.id))
             warn("en.json passes", Object.keys(game.i18n?.translations[MODULE_ID]["onUseMacroOptions"]))
             const expectedPasses = ['preTargeting', 'preItemRoll', 'preStart',
@@ -726,7 +712,6 @@ async function registerTests() {
             }
             //@ts-expect-error
             const hp = actor?.system.attributes.hp.value;
-            //@ts-expect-error
             await combat?.createEmbeddedDocuments("Combatant", [createData]);
 
             const effectData = {
@@ -740,7 +725,6 @@ async function registerTests() {
               label=OverTime test`}],
               duration: { rounds: 10 }
             }
-            //@ts-expect-error
             const theEffects: any[] | undefined = await actor?.createEmbeddedDocuments("ActiveEffect", [effectData]);
             assert.ok(theEffects?.length, "Effects created");
             // actor && console.error(foundry.utils.getProperty(actor, "data.flags.midi-qol.OverTime.Test"))
@@ -757,7 +741,6 @@ async function registerTests() {
             //@ts-expect-error no dnd5e-types
             newHp = actor?.system.attributes.hp.value;
             assert.equal(hp - 15, newHp, "verify hp deduction 2nd");
-            //@ts-expect-error
             await combat?.delete();
 
           })
@@ -779,10 +762,8 @@ async function registerTests() {
               label: "test effect",
               changes: [{ key: "flags.midi-qol.advantage.all", mode: 0, value: "false" }]
             }
-            //@ts-expect-error
             const theEffects: ActiveEffect.Implementation[] = (await actor.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect[];
             assert.ok(foundry.utils.getProperty(actor, "flags.midi-qol.advantage.all") === false, "advantage all false");
-            //@ts-expect-error
             await actor.deleteEmbeddedDocuments("ActiveEffect", theEffects.map(ef => ef.id as string))
             assert.ok(foundry.utils.getProperty(actor, "flags.midi-qol.advantage.all") === undefined, "advantage all removed")
           });
@@ -794,10 +775,8 @@ async function registerTests() {
               label: "test effect",
               changes: [{ key: "flags.midi-qol.advantage.all", mode: 0, value: "0" }]
             }
-            //@ts-expect-error
             const theEffects: ActiveEffect.Implementation[] = (await actor.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect.Implementation[];
             assert.ok(foundry.utils.getProperty(actor, "flags.midi-qol.advantage.all") === false, "advantage all false");
-            //@ts-expect-error
             await actor.deleteEmbeddedDocuments("ActiveEffect", theEffects.map(ef => ef.id as string))
             assert.ok(foundry.utils.getProperty(actor, "flags.midi-qol.advantage.all") === undefined, "advantage all removed")
           });
@@ -809,10 +788,8 @@ async function registerTests() {
               label: "test effect",
               changes: [{ key: "flags.midi-qol.advantage.all", mode: 0, value: "true" }]
             }
-            //@ts-expect-error
             const theEffects: ActiveEffect.Implementation[] = (await actor.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect[];
             assert.ok(foundry.utils.getProperty(actor, "flags.midi-qol.advantage.all") === true, "advantage all set to true");
-            //@ts-expect-error
             await actor.deleteEmbeddedDocuments("ActiveEffect", theEffects.map(ef => ef.id as string))
             assert.ok(foundry.utils.getProperty(actor, "flags.midi-qol.advantage.all") === undefined, "advantage all removed")
           });
@@ -824,10 +801,8 @@ async function registerTests() {
               label: "test effect",
               changes: [{ key: "flags.midi-qol.advantage.all", mode: 0, value: "1" }]
             }
-            //@ts-expect-error
             const theEffects: ActiveEffect.Implementation[] = (await actor.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect[];
             assert.ok(foundry.utils.getProperty(actor, "flags.midi-qol.advantage.all") === true, "advantage all set to true");
-            //@ts-expect-error
             await actor.deleteEmbeddedDocuments("ActiveEffect", theEffects.map(ef => ef.id as string))
             assert.ok(foundry.utils.getProperty(actor, "flags.midi-qol.advantage.all") === undefined, "advantage all removed")
           });
@@ -943,11 +918,9 @@ async function registerTests() {
               label: "test effect",
               changes: [{ key: "system.traits.dm.midi.all", mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: "-5" }]
             };
-            //@ts-expect-error
             let theEffects = (await tokenActor?.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect[];
             await applyTokenDamage([{ damage: 5, type: 'piercing' }], 5, new Set([token]), null, new Set(), {});
             assert.equal(token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value"), oldHp);
-            //@ts-expect-error
             await token?.actor?.deleteEmbeddedDocuments("ActiveEffect", theEffects.map(ef => ef.id as string));
           });
 
@@ -961,11 +934,9 @@ async function registerTests() {
               label: "test effect",
               changes: [{ key: "system.traits.dr.value", mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: "fire" }]
             };
-            //@ts-expect-error
             let theEffects = (await tokenActor?.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect[];
             await applyTokenDamage([{ damage: 10, type: 'fire' }], 10, new Set([token]), null, new Set(), {});
             assert.equal(token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value"), oldHp - 5);
-            //@ts-expect-error
             await tokenActor?.deleteEmbeddedDocuments("ActiveEffect", theEffects.map(ef => ef.id as string));
             // @ts-expect-error no dnd5e-types
             await tokenActor?.update({ "system.attributes.hp.value": oldHp });

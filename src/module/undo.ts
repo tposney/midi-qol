@@ -456,10 +456,8 @@ export async function removeChatCard(chatCard: ChatMessage | undefined) {
   const shouldDelete = configSettings.undoChatColor === "Delete";
   if (shouldDelete) {
     if (debugEnabled > 1) debug("Deleting chat card ", chatCard.id, chatCard.uuid);
-    //@ts-expect-error
     return await chatCard.delete();
   }
-  //@ts-expect-error
   return await chatCard.update({ content: `<div style="background-color: ${configSettings.undoChatColor};"> ${chatCard.content}</div>` });
 }
 

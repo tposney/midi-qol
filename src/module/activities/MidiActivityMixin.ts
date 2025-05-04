@@ -1259,7 +1259,6 @@ export var MidiActivityMixin = Base => {
         if (this.item) foundry.utils.setProperty(templateData, `flags.${MODULE_ID}.itemUuid`, this.item.uuid);
         if (this.actor) foundry.utils.setProperty(templateData, `flags.${MODULE_ID}.actorUuid`, this.actor.uuid);
         if (!foundry.utils.getProperty(templateData, `flags.${game.system?.id}.origin`)) foundry.utils.setProperty(templateData, `flags.${game.system?.id}.origin`, this.item?.uuid);
-        //@ts-expect-error
         const templateDocuments: MeasuredTemplateDocument[] | undefined = await canvas?.scene?.createEmbeddedDocuments("MeasuredTemplate", [templateData]) as MeasuredTemplateDocument[];
 
         if (templateDocuments && templateDocuments.length > 0) {

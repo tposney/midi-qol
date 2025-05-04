@@ -149,7 +149,6 @@ export let readyHooks = async () => {
           if (origin.statuses?.has(CONFIG.specialStatusEffects.CONCENTRATING) && origin.getDependents()?.length === 0) {
             // @ts-expect-error duration.remaining
             if (!installedModules.get("times-up") || (origin?.duration?.remaining ?? 1) > 0) {
-              //@ts-expect-error
               await origin.delete();
             }
           }
@@ -175,7 +174,6 @@ export let readyHooks = async () => {
     if (!checkMechanic("autoRerollInitiative")) return;
     let combatantIds: any = combat.combatants.map(c => c.id);
     if (combat.combatants?.size > 0) {
-      //@ts-expect-error types things update data is never
       combat.rollInitiative(combatantIds, { updateTurn: true }).then(() => combat.update({ turn: 0 }));
     }
   });
@@ -417,7 +415,7 @@ export function initHooks() {
       data.showCEOn = ["none", "itempri"].includes(configSettings.autoCEEffects);
     }
 
-    foundry.utils.setProperty(data, "flags.midiProperties", item.flags?.midiProperties ?? {});
+    foundry.utils.setProperty(data, "flags.midiProperties", (item.flags as any)?.midiProperties ?? {});
     if (["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver"].includes(item?.type)) {
       for (let prop of Object.keys(midiProps)) {
         //@ts-expect-error no dnd5e types

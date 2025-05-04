@@ -748,7 +748,7 @@ export function readySettingsSetup() {
       config: true,
       type: String,
       choices: game.users?.filter(user => user.isGM).reduce((acc, user) => {
-        acc[user.name] = user.name;
+        acc[user.id] = user.name;
         return acc;
       }, { "": i18n("None") }),
     });
@@ -764,19 +764,6 @@ export function readySettingsSetup() {
     //@ts-expect-error
     game.settings?.set("midi-qol", "CriticalDamageGM", criticalDamage);
   }
-  //@ts-expect-error
-  game.settings?.register("midi-qol", "PreferredGM", {
-    name: "midi-qol.PreferredGM.Name",
-    hint: "midi-qol.PreferredGM.Hint",
-    scope: "world",
-    default: "none",
-    config: true,
-    type: String,
-    choices: game.users?.filter(user => user.isGM).reduce((acc, user) => {
-      acc[user.name] = user.name;
-      return acc;
-    }, { "none": "none" }),
-  });
 }
 
 export function registerSetupSettings() {
@@ -905,7 +892,7 @@ export const registerSettings = function () {
     label: "midi-qol.WorkflowSettings",
     hint: i18n("midi-qol.Hint"),
     icon: "fas fa-dice-d20",
-    type: ConfigPanel,
+    type: ConfigPanel as any,
     restricted: true
   });
 
@@ -924,7 +911,7 @@ export const registerSettings = function () {
     label: "midi-qol.SoundSettings.Label",
     hint: i18n("midi-qol.SoundSettings.Hint"),
     icon: "fas fa-dice-d20",
-    type: SoundConfigPanel,
+    type: SoundConfigPanel as any,
     restricted: true
   });
 
@@ -1005,9 +992,10 @@ export const registerSettings = function () {
   game.settings?.registerMenu("midi-qol", "troubleShooter", {
     name: i18n("midi-qol.TroubleShooter.Name"),
     label: "midi-qol.TroubleShooter.Label",
+    icon: "fas fa-wrench",
     hint: i18n("midi-qol.TroubleShooter.Hint"),
     // icon: "fas fa-dice-d20",
-    type: TroubleShooter,
+    type: TroubleShooter as any,
     restricted: false
   });
 

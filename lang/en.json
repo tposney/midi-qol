@@ -957,6 +957,7 @@
   "midi-qol.dummyCards.Name": "Always display attack/damage cards for hidden merge cards",
   "midi-qol.dummyCards.Hint": "(Experimental) For GM rolls (self, private, blind) display an attack/damage roll card which will trigger a 'gm rollsed some dice' card on the players chats. Only for the case that you want the players to know you rolled something, but not what it was",
   "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>DND5E Concentration Tracking Disabled</strong><br></center><br><center>Concentration Tracking is disabled in the dnd5e system settings.</center><center>Enable in DND5E settings to enable midi concentration settings</center><br>",
+  "midi-qol.ItemSheetMidiTab": "Midi QoL",
   "midi-qol.SHARED": {
     "use-condition": {
       "header": "Midi Conditions"

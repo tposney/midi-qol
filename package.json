@@ -3,7 +3,7 @@
 	"title": "Midi QOL",
 	"version": "13.0.3",
 	"description": "Automates rolling weapon/spell attacks and applying damage amongst other things",
-	"devDir": "/home/timp/foundry-data/foundryv11dnd3/Data/modules/",
+	"devDir": "/home/timp/foundry-data/foundryv13/Data/modules/",
 	"main": "src/midi-qol.ts",
 	"scripts": {
 		"build": "npx gulp",
@@ -28,7 +28,7 @@
 		"@types/jest": "^27.4.1",
 		"cross-var": "^1.1.0",
 		"del": "^6.0.0",
-		"fvtt-types": "github:League-of-Foundry-Developers/foundry-vtt-types#documents-v2",
+		"fvtt-types": "npm:@league-of-foundry-developers/foundry-vtt-types@^13.340.1",
 		"gulp": "^4.0.2",
 		"gulp-cli": "^2.3.0",
 		"gulp-minify": "^3.1.0",

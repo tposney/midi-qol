@@ -2623,14 +2623,12 @@ export class Workflow {
         timeout = Math.max(elapsedTimeRequired, timeout);
         setTimeout(() => {
           const templateToDelete = fromUuidSync(this.templateUuid) as MeasuredTemplateDocument || null;
-          //@ts-expect-error
           templateToDelete?.delete()
         }, timeout);
       } else {
         const timeout = 5000;
         setTimeout(() => {
           const templateToDelete = fromUuidSync(this.templateUuid) as MeasuredTemplateDocument || null;
-          //@ts-expect-error
           templateToDelete?.delete()
         }, elapsedTimeRequired);
         log("Not auto removing instantaneous template because boss loot assets active")
@@ -3051,11 +3049,10 @@ export class Workflow {
     // Check hidden
     if (checkRule("hiddenAdvantage") && checkRule("HiddenAdvantage") !== "none" && target) {
       if (checkRule("hiddenAdvantage") === "perceptive" && installedModules.get("perceptive")?.active) {
+        //@ts-expect-error .api
         const perceptiveApi = game.modules?.get("perceptive")?.api;
-        // @ts-expect-error
-        const tokenSpotted = await perceptiveApi?.isSpottedby(token, target, { LOS: false, Range: true, Effects: true, Hidden: false, canbeSpotted: true }) ?? true;
-        // @ts-expect-error
-        const targetSpotted = await perceptiveApi?.isSpottedby(target, token, { LOS: false, Range: true, Effects: true, Hidden: false, canbeSpotted: true }) ?? true;
+        const tokenSpotted = await perceptiveApi?.isSpottedby(this.token, target, { LOS: false, Range: true, Effects: true, Hidden: false, canbeSpotted: true }) ?? true;
+        const targetSpotted = await perceptiveApi?.isSpottedby(target, this.token, { LOS: false, Range: true, Effects: true, Hidden: false, canbeSpotted: true }) ?? true;
         if (!tokenSpotted) {
           this.attackAdvAttribution.add("ADV:Attacker hidden");
           this.advReminderAttackAdvAttribution.add("ADV:Hidden");
@@ -3167,9 +3164,7 @@ export class Workflow {
     // check target critical/noCritical
     if (this.hitTargets.size === 1) {
       const firstTarget = this.hitTargets.first();
-      // @ts-expect-error can't know about flags
       const grants = (firstTarget?.actor as Actor)?.flags[MODULE_ID]?.grants?.critical ?? {};
-      // @ts-expect-error can't know about flags
       const fails = (firstTarget?.actor as Actor)?.flags[MODULE_ID]?.fail?.critical ?? {};
       if (grants || fails) {
         if (Number.isNumeric(grants.range) && computeDistance(firstTarget, this.token, { wallsBlock: false }) <= Number(grants.range)) {
@@ -3256,7 +3251,6 @@ export class Workflow {
         }
       }
     }
-    //@ts-expect-error .flags
     const grants = firstTargetDocument.actor?.flags[MODULE_ID]?.grants;
     if (!grants) return;
     if (!["rwak", "mwak", "rsak", "msak", "rpak", "mpak"].includes(actionType)) return;
@@ -5038,7 +5032,6 @@ export class Workflow {
 
     if (debugEnabled > 1) debug("check saves: requests are ", this.saveRequests)
     var results = await Promise.all(promises);
-    //@ts-expect-error
     (await Promise.all(requestCards)).forEach(chatMessage => chatMessage?.delete());
     if (rerRequests?.length > 0) await busyWait(0.01);
     delete this.saveDetails;
@@ -5111,7 +5104,6 @@ export class Workflow {
             coverSaveBonus = computeCoverBonus({
               center: position,
               document: {
-                //@ts-expect-error
                 elevation: template.document.elevation,
                 disposition: targetDocument?.disposition,
               }
@@ -5541,10 +5533,8 @@ export class Workflow {
     if (this.targets.size > 0) {
       const midiFlags = this.targets.first()?.actor?.flags[MODULE_ID];
       let targetCrit = criticalThreshold;
-      // @ts-expect-error can't know about flags
       if (midiFlags?.grants?.criticalThreshold) {
         const conditionData = createConditionData({ workflow: this, target: this.targets.first(), actor: this.actor });
-        // @ts-expect-error can't know about flags
         targetCrit = await evalCondition(midiFlags.grants.criticalThreshold, conditionData, { errorReturn: criticalThreshold, async: true });
       }
       if (isNaN(targetCrit) || !Number.isNumeric(targetCrit)) targetCrit = criticalThreshold;
@@ -6443,7 +6433,6 @@ export class TrapWorkflow extends Workflow {
     templateData.direction = this.templateLocation?.direction || 0;
 
     // Create the template
-    //@ts-expect-error
     let templates = await (canvas?.scene as unknown as Scene)?.createEmbeddedDocuments("MeasuredTemplate", [templateData]);
     if (templates) {
       const templateDocument: any = templates[0];
@@ -6456,7 +6445,6 @@ export class TrapWorkflow extends Workflow {
       if (this.templateLocation?.removeDelay) {
         let ids: string[] = templates.map(td => td._id as string)
         //TODO test this again
-        //@ts-expect-error
         setTimeout(() => canvas?.scene?.deleteEmbeddedDocuments("MeasuredTemplate", ids), this.templateLocation.removeDelay * 1000);
       }
     }

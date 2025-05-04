@@ -81,7 +81,7 @@ export class RollStatsDisplay extends HandlebarsApplicationMixin(ApplicationV2) 
     return tabs;
   }
 
-  _onRender(context, options) {
+  async _onRender(context, options) {
     super._onRender(context, options);
     Object.keys(this.stats.currentStats).forEach(id => {
       const elemX = this.element.querySelector(`#${id}-X`);

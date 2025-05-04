@@ -2669,10 +2669,9 @@ export function getTokenPlayerName(token: TokenDocument | Token, checkGM: boolea
   let name = getTokenName(token);
   if (checkGM && game.user?.isGM) return name;
   if (game.modules?.get("anonymous")?.active) {
-    const api = game.modules?.get("anonymous")?.api;
     // @ts-expect-error
+    const api: any = game.modules?.get("anonymous")?.api;
     if (api?.playersSeeName(token.actor)) return name;
-    // @ts-expect-error
     else return api?.getName(token.actor);
   }
   return name;
@@ -2881,8 +2880,8 @@ export async function removeHiddenCondition(tokenRef: Token | TokenDocument | st
   // Try and remove hidden if set by another active effect
   await removeTokenConditionEffect(token, i18n(`midi-qol.hidden`) ?? "");
   if (installedModules.get("perceptive")) {
-    const api = game.modules?.get("perceptive")?.api;
-    // @ts-expect-error
+    //@ts-expect-error
+    const api: any = game.modules?.get("perceptive")?.api;
     api?.PerceptiveFlags.setPerceptiveStealthing(token.document, false);
   }
   if (debugEnabled > 0) log(`Hidden removed for ${token.name}`)
@@ -3065,7 +3064,7 @@ class RollModifyDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     else return this.data.title ?? "Dialog";
   }
 
-  _onRender(context, options) {
+  async _onRender(context, options) {
     for (const button of Array.from(this.element.querySelectorAll(".dialog-button"))) {
       button.addEventListener("click", this._onClickButton.bind(this));
     }
@@ -3443,7 +3442,6 @@ export async function bonusDialog(bonusFlags, flagSelector, showRoll, title, rol
         reRoll = reRoll = await roll.reroll();
         if (showDiceSoNice) await displayDSNForRoll(reRoll, rollType, rollMode);
         const newRollHTML = await midiRenderRoll(reRoll);
-        // @ts-expect-error types needs to make window partial
         if (await DialogV2.confirm({ window: { title: "Confirm reroll" }, content: `Replace ${rollHTML} with ${newRollHTML}`, defaultYes: true }))
           newRoll = reRoll
         else
@@ -4158,7 +4156,6 @@ export async function requestReactions(target: Token, player: User, triggerToken
     const endTime = Date.now();
     if (debugEnabled > 0) warn("requestReactions | returned after ", endTime - startTime, result);
     resolve(result);
-    //@ts-expect-error
     if (chatPromptMessage) chatPromptMessage.delete();
   } catch (err) {
     const message = `requestReactions | error ${triggerType} for ${target?.name} ${triggerTokenUuid}`;
@@ -4390,7 +4387,7 @@ class ReactionDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     else return this.data.title ?? "Dialog";
   }
 
-  _onRender(context, options) {
+  async _onRender(context, options) {
     for (const button of Array.from(this.element.querySelectorAll(".dialog-button"))) {
       button.addEventListener("click", this._onClickButton.bind(this));
     }
@@ -4533,7 +4530,6 @@ export function getConcentrationEffect(actor, itemRef?: Item | string): ActiveEf
 
 async function confirm(title: string = "Are you sure", { content, defaultYes } = { content: "", defaultYes: true }): Promise<any> {
   return DialogV2.confirm({
-    // @ts-expect-error types needs to make window partial
     window: { title: title ?? "Confirm" },
     content,
     defaultYes
@@ -4915,13 +4911,11 @@ export async function setReactionUsed(actor: Actor, active: boolean = true) {
   if (!getReactionEffect()) return;
   if (!active) {
     const id = "reaction";
-    //@ts-expect-error
     await actor.effects.get(getStaticID(id))?.delete();
   } else {
     if (!["all", "displayOnly"].includes(configSettings.enforceReactions) && configSettings.enforceReactions !== actor.type) return;
     // await actor.update({"flags.midi-qol.actions.reaction": true, "flags.midi-qol.actions.reactionCombatRound": game.combat?.round});  
     const id = "reaction";
-    //@ts-expect-error
     await actor.effects.get(getStaticID(id))?.delete();
     const effect = foundry.utils.deepClone(getReactionEffect());
     if (!effect) return;
@@ -4945,7 +4939,6 @@ export async function setBonusActionUsed(actor: Actor) {
   if (!["all", "displayOnly"].includes(configSettings.enforceBonusActions) && configSettings.enforceBonusActions !== actor.type) return;
   // await actor.update({ "flags.midi-qol.actions.bonus": true, "flags.midi-qol.actions.bonusActionCombatRound": game.combat?.round });
   const id = "bonusaction";
-  //@ts-expect-error
   await actor.effects.get(getStaticID(id))?.delete();
   const effect = foundry.utils.deepClone(getBonusActionEffect());
   if (!effect) return;
@@ -4971,7 +4964,6 @@ export async function removeActionUsed(actor: Actor) {
 export async function removeReactionUsed(actor: Actor, force = false) {
   if (debugEnabled > 0) warn("removeReactionUsed | starting", actor);
   if (force || !installedModules.get("times-up")) { // if times-up installed the special duration will expire the effect
-    //@ts-expect-error
     await actor.effects.get(getStaticID("reaction"))?.delete(); // reaction always non-transfer
   }
   // safety net unset of flags - just in case.
@@ -5023,7 +5015,6 @@ export function hasUsedBonusAction(actor: Actor) {
 
 export async function removeBonusActionUsed(actor: Actor, force = false) {
   if (force || !installedModules.get("times-up")) { // bonus action will be expired by times-up if installed
-    //@ts-expect-error
     await actor.effects.get(getStaticID("bonusaction"))?.delete()
   }
   // Safety net flag reset just in case
@@ -5558,7 +5549,6 @@ export function initializeVision(tk: Token, force = false) {
   // @ts-expect-error protected
   tk.document._prepareDetectionModes();
   const sourceId = tk.sourceId;
-  // @ts-expect-error
   tk.vision = new CONFIG.Canvas.visionSourceClass({ sourceId, object: tk });
 
   tk.vision.initialize({
@@ -5573,6 +5563,7 @@ export function initializeVision(tk: Token, force = false) {
     brightness: tk.document.sight.brightness,
     attenuation: tk.document.sight.attenuation,
     rotation: tk.document.rotation,
+    //@ts-expect-error
     visionMode: tk.document.sight.visionMode,
     // preview: !!tk._original,
     color: tk.document.sight.color?.toNearest(),
@@ -5610,6 +5601,7 @@ export function _canSenseModes(tokenEntity: Token | TokenDocument, targetEntity:
     elevation: target?.document.elevation ?? 0,
     los: new Map()
   }));
+  //@ts-expect-error
   const config: CanvasVisibilityTestConfig = { tests, object: target };
   const tokenDetectionModes = token.detectionModes;
   const modes = CONFIG.Canvas.detectionModes;
@@ -5641,7 +5633,6 @@ export function _canSenseModes(tokenEntity: Token | TokenDocument, targetEntity:
   }
   for (const detectionMode of tokenDetectionModes) {
     if (detectionMode.id === DetectionModeCONST.BASIC_MODE_ID) continue;
-    // @ts-expect-error DetectionMode somehow different from TokenDetectionMode?
     if (!detectionMode.enabled) continue;
     const dm = modes[detectionMode.id as string];
     if (validModes.has("all") || validModes.has(detectionMode.id as string)) {
@@ -5668,7 +5659,6 @@ export function tokensForActor(actorRef: Actor | string | undefined | null): Tok
   else actor = actorRef;
   if (!(actor instanceof Actor)) return undefined;
   if (actor.token) return [actor.token.object as Token];
-  // @ts-expect-error getActiveTokens error
   const tokens: Token[] = actor.getActiveTokens();
   if (!tokens.length) return undefined;
   const controlled = tokens.filter(t => t.controlled);
@@ -6669,13 +6659,11 @@ export async function expireEffects(actor, effects: ActiveEffect[], options: any
   if (actorEffectsToDelete.length > 0) await actor.deleteEmbeddedDocuments("ActiveEffect", actorEffectsToDelete, options);
   if (effectsToDisable.length > 0) {
     for (let effect of effectsToDisable) {
-      //@ts-expect-error types things first arg is type never
       await effect.update({ "disabled": true }, options)
     }
   }
   if (effectsToDelete.length > 0) {
     for (let effect of effectsToDelete)
-      //@ts-expect-error
       await effect.delete(options);
   }
   return { deleted: actorEffectsToDelete, disabled: effectsToDisable, itemEffects: effectsToDelete };
@@ -7038,7 +7026,6 @@ export async function cleanCPRFlanked() {
     }
   });
   if (updateNeeded) {
-    //@ts-expect-error
     await cprEffect.update({ "changes": changes });
     console.warn("midi-qol | cleanCPRFlanked | corrected flanked effect", cprEffect);
   }

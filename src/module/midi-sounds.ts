@@ -26,7 +26,7 @@ export class MidiSounds {
   static async playSound(playListName: string, soundName: string) {
     const { playlist, sound } = this.getSound(playListName, soundName);
     if (playlist && sound) {
-        return foundry.audio.AudioHelper.play({ src: sound.path as string, volume: sound.volume, autoplay: true, loop: false }, true);
+        return foundry.audio.AudioHelper.play({ src: sound.path as string, volume: sound.volume, loop: false }, true);
     }
     return null;
   }
@@ -99,7 +99,7 @@ export class MidiSounds {
       const soundIndex = Math.floor(Math.random() * sounds.contents.length);
       //@ts-ignore
       const sound = playlist.sounds.contents[soundIndex];
-      return foundry.audio.AudioHelper.play({ src: sound.path as string, volume: sound.volume, autoplay: true, loop: false }, true);
+      return foundry.audio.AudioHelper.play({ src: sound.path as string, volume: sound.volume, loop: false }, true);
     }
     return null;
   }

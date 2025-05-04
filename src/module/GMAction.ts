@@ -187,7 +187,6 @@ async function removeActionBonusReaction(data: { actorUuid: string }) {
 async function _removeEffect(data: { effectUuid: string }) {
   const effect: ActiveEffect | undefined = fromUuidSync(data.effectUuid as any) as ActiveEffect | undefined;
   if (!effect) return;
-  //@ts-expect-error
   return effect.delete({});
 }
 
@@ -201,7 +200,6 @@ export async function cancelWorkflow(data: { workflowId: string, itemCardUuid: s
   const workflow = Workflow.getWorkflow(data.workflowId);
   if (workflow?.itemCardUuid !== data.itemCardUuid) {
     const itemCard: ChatMessage | undefined = await fromUuid(data.itemCardUuid as `ChatMessage.${string}`) as ChatMessage | undefined;
-    //@ts-expect-error
     if (itemCard) itemCard.delete();
     return undefined;
   }
@@ -390,7 +388,7 @@ export async function unTimedExecuteAsGM(toDo: string, ...args) {
   if (!socketlibSocket) return undefined;
   const myScene = game.user?.viewedScene;
   const preferredGMName = safeGetGameSetting("midi-qol", "PreferredGM");
-  let preferredGM = game.users?.getName(preferredGMName);
+  let preferredGM = game.users?.get(preferredGMName);
   if (!preferredGM?.active) {
     if (preferredGMName !== "none") log(`preferredGM ${preferredGMName} is not active`);
     preferredGM = undefined;
@@ -432,21 +430,21 @@ async function _canSense(data: { tokenUuid, targetUuid }) {
   const target = (fromUuidSync(data.targetUuid) as TokenDocument)?.object;
   if (!target || !token) return true;
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-  if (!token.vision.active || !token.vision.los) {
+  if (token.vision &&(!token.vision.active || !token.vision.los)) {
     token.vision.initialize({
       x: token.center.x,
       y: token.center.y,
       radius: clamp(token.sightRange, 0, canvas?.dimensions?.maxR ?? 0),
-      externalRadius: Math.max(token.mesh.width, token.mesh.height) / 2,
+      externalRadius: Math.max(token.mesh?.width ?? 0, token.mesh?.height ?? 0) / 2,
       angle: token.document.sight.angle,
       contrast: token.document.sight.contrast,
       saturation: token.document.sight.saturation,
       brightness: token.document.sight.brightness,
       attenuation: token.document.sight.attenuation,
       rotation: token.document.rotation,
+      //@ts-expect-error vision mode wrong type
       visionMode: token.document.sight.visionMode,
       color: globalThis.Color.from(token.document.sight.color),
-      //@ts-expect-error TODO check isPreview
       isPreview: !!token._original,
       blinded: token.document.hasStatusEffect(CONFIG.specialStatusEffects.BLIND)
     });
@@ -478,7 +476,7 @@ async function _bonusCheck(data: { actorUuid, result, rollType, selector }) {
   const tokenOrActor: any = await fromUuid(data.actorUuid);
   const actor = tokenOrActor?.actor ?? tokenOrActor;
   const roll = Roll.fromJSON(data.result);
-  if (actor) return await bonusCheck(actor, roll, data.rollType, data.selector);
+  if (actor) return await bonusCheck(actor, roll as Roll, data.rollType, data.selector);
   else return null;
 }
 
@@ -546,10 +544,8 @@ async function updateActor(data: any) {
   if (!actor) return;
   if (data.actorData) {
     console.warn(`midi-qol | updateActor actorData deprecated. Call await MidiQOL.socket().executeAsGM("updateActor"({ updates }) instead`)
-    // @ts-expect-error types has update data as never
     await actor.update(data.actorData);
   }
-  //@ts-expect-error types has update data as never
   if (data.updates) await actor.update(data.updates);
 }
 
@@ -573,10 +569,8 @@ async function deleteEffectsByUuid(data: { effectsToDelete: string[], options: a
     const effect: ActiveEffect | undefined = fromUuidSync(effectUuid as any) as ActiveEffect | undefined;
     if (effect !== undefined && !isEffectExpired(effect)) {
       if (effect.transfer)
-      //@ts-expect-error
         await effect.update({ disabled: true });
       else
-        //@ts-expect-error
         await effect.delete();
     }
   }
@@ -1115,7 +1109,7 @@ async function createGMReverseDamageCard(
 }
 
 export let processUndoDamageCard = (message: ChatMessage, html, data) => {
-  if (!(message.flags?.midiqol as any)?.undoDamage) return true;
+  if (!((message.flags as any)?.midiqol)?.undoDamage) return true;
   let button = html.find("#all-reverse");
   button.click((ev: { stopPropagation: () => void; }) => {
     (async () => {
@@ -1236,7 +1230,6 @@ async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: 
   const targetToken = tokenDocument.object;
   const newCenter = canvas.grid.getSnappedPoint(data.newCenter, { mode: CONST.GRID_SNAPPING_MODES.CENTER });
   const newPosition = {x: data.newCenter.x - targetToken.w / 2, y: data.newCenter.y - targetToken.h / 2};
-  //@ts-expect-error types thinks update data is of type never
   return tokenDocument.update(newPosition, { animate: data.animate ?? true });
 }
 
@@ -1315,7 +1308,6 @@ async function rollActionSave(data: any) {
       });
       const id = `overtime-dialog-${foundry.utils.randomID()}`;
       await DialogV2.wait({
-        // @ts-expect-error types needs to make window partial
         window: { title },
         content: `<style>  #${id} .form-footer { flex-direction: column;} </style> ${content}`,
         buttons,

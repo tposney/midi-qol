@@ -270,7 +270,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
 
-  _onRender(context, options) {
+  async _onRender(context, options) {
     super._onRender(context, options);
     // Don't think this was doing anything
     // html.find(".playlist").change(this._playList.bind(this));

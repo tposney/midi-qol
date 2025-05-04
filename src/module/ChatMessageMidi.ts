@@ -7,13 +7,11 @@ import { WorkflowDataFlags } from "./Workflow.js";
 export function defineChatMessageMidiClass(baseClass: ChatMessage.ImplementationClass) {
   return class ChatMessageMidi extends baseClass /*globalThis.dnd5e.documents.ChatMessage5e*/ {
     get isRoll() {
-      // @ts-expect-error can't know about flags
       if (this.flags?.["midi-qol"]?.messageType) return false // do this so that dsn won't trigger
       return super.isRoll;
     }
 
     get hasRolls() {
-      // @ts-expect-error can't know about flags
       if (this.flags?.["midi-qol"].roll?.length > 0) return true;
       return super.isRoll;
     }
@@ -22,14 +20,12 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       return;
     }
     get canSelectTargets() {
-      // @ts-expect-error can't know about flags
       if (this.flags?.["midi-qol"]?.messageType === "attack") return true;
       // @ts-expect-error no dnd5e-types
       return super.canSelectTargets;
     }
 
     get canApplyDamage() {
-      // @ts-expect-error can't know about flags
       if (this.flags?.["midi-qol"]?.damageDetail?.length > 0 && this.isContentVisible && !!canvas?.tokens?.controlled.length) return true;
       // @ts-expect-error no dnd5e-types
       return super.canApplyDamage;

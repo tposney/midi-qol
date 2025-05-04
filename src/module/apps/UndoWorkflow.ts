@@ -54,7 +54,7 @@ export class UndoWorkflow extends HandlebarsApplicationMixin(ApplicationV2) {
     return context;
   }
 
-  _onRender(context, options) {
+  async _onRender(context, options) {
     super._onRender(context, options);
     this.element.querySelector("#undo-first-workflow")?.addEventListener("click", (e) => {
       undoMostRecentWorkflow();

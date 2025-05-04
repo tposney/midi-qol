@@ -1228,7 +1228,6 @@ async function setDeadStatus(actor, options: any) {
       }
       if (useDefeated) {
         const combatants = game.combat?.getCombatantsByActor(actor) ?? [];
-        //@ts-expect-error
         for (let combatant of combatants) await combatant.update({ defeated: makeDead }, {})
       }
     }
@@ -1239,7 +1238,6 @@ async function setDeadStatus(actor, options: any) {
       await actor.toggleStatusEffect(effect.id, { overlay: (configSettings.addDead === "overlay") || options.overlay, active: makeDead });
       if (useDefeated) {
         const combatants = game.combat?.getCombatantsByActor(actor) ?? [];
-        //@ts-expect-error
         for (let combatant of combatants) await combatant.update({ defeated: makeDead }, {});
       }
     }
@@ -1491,7 +1489,6 @@ export async function checkDeleteTemplate(templateDocument: MeasuredTemplateDocu
   if (origin instanceof ActiveEffect && !options.noConcentrationCheck && configSettings.removeConcentrationEffects !== "none") {
     // @ts-expect-error no dnd5e-types
     if (origin?.getDependents()?.length === 0) {
-      //@ts-expect-error
       await origin.delete();
     }
   }

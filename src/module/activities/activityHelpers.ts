@@ -19,7 +19,6 @@ export async function confirmWorkflow(existingWorkflow: Workflow): Promise<boole
       await existingWorkflow.performState(existingWorkflow.WorkflowState_Cleanup);
     } else {
       switch (await DialogV2.wait({
-        // @ts-expect-error types needs to make window partial
         window: { title: game.i18n?.format("midi-qol.WaitingForPreviousWorkflow", { name: existingWorkflow.activity.name }) },
         content: game.i18n?.localize("midi-qol.ResolvePreviousWorkflow"),
         rejectClose: false,
@@ -383,7 +382,6 @@ function isTokenInside(template: MeasuredTemplate, token: Token, wallsBlockTarge
             //@ts-ignore
             z: elevation
           }
-          //@ts-expect-error
           contains = getUnitDist(p2.x, p2.y, p2.z, token) <= template.document.distance;
           //@ts-expect-error .Levels
           contains = contains && !CONFIG.Levels?.API?.testCollision(p1, p2, "collision");

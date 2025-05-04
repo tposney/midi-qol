@@ -1,5 +1,5 @@
 <div class="midi-qol-tab">
-
+<form>
   {{#if allowUseMacro}}
   <div class="form-group">
     <h3 class="form-header">{{localize "midi-qol.onUseMacroLabel"}}
@@ -81,24 +81,25 @@
   <div class="midi-activation-conditions">
     <h3>{{localize "midi-qol.ConditionHeader"}}</h3>
     <div>
-      <label>{{localize "midi-qol.ItemActivationCondition.Name"}}</label>
+      <label>{{localize "midi-qol.ItemActivationCondition.Name"}}</label><br>
       <textarea name="flags.midi-qol.itemCondition">{{item.flags.midi-qol.itemCondition}}</textarea>
     </div>
     {{#if hasReaction}}
     <div>
-      <label>{{localize "midi-qol.ReactionActivationCondition.Name"}}</label>
+      <label>{{localize "midi-qol.ReactionActivationCondition.Name"}}</label><br>
       <textarea name="flags.midi-qol.reactionCondition">{{item.flags.midi-qol.reactionCondition}}</textarea>
     </div>
     {{/if}}
     {{#if hasOtherDamage}}
     <div>
-      <label>{{localize "midi-qol.OtherActivationCondition.Name"}}</label>
+      <label>{{localize "midi-qol.OtherActivationCondition.Name"}}</label><br>
       <textarea name="flags.midi-qol.otherCondition">{{item.flags.midi-qol.otherCondition}}</textarea>
     </div>
     {{/if}}
     <div>
-      <label>{{localize "midi-qol.EffectActivationCondition.Name"}}</label>
+      <label>{{localize "midi-qol.EffectActivationCondition.Name"}}</label><br>
       <textarea name="flags.midi-qol.effectCondition">{{item.flags.midi-qol.effectCondition}}</textarea>
     </div>
   </div>
+  </form>
 </div>

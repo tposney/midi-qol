@@ -281,7 +281,7 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
     .then(() => this.render({}));
     // this.render();
   }
-  _onRender(context, options) {
+  async _onRender(context, options) {
     super._onRender(context, options);
     // html.find(".soundName").change(function (event) {
     //   this.submit({ preventClose: true }).then(() => this.render());

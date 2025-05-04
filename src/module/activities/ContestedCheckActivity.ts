@@ -26,14 +26,13 @@ function getSceneTargets() {
   if (!canvas?.tokens) return [];
   const controlledTokens: Token[] | undefined = canvas?.tokens?.controlled;
   let targets: Token[] | undefined = controlledTokens?.filter(t => t.actor);
-  //@ts-expect-error getActiveTokens should actually be an array of tokens - not just linked and not document
   if (!targets?.length && game.user?.character) targets = game.user?.character?.getActiveTokens(false, false);
   return targets;
 }
 let defineMidiContestedCheckActivityClass = (ActivityClass: any) => {
   return class MidiContestedCheckActivity extends MidiActivityMixin(ActivityClass) {
     static LOCALIZATION_PREFIXES = ["DND5E.SAVE", "DND5E.CHECK", "midi-qol.CHECK", "midi-qol.SAVE", ...super.LOCALIZATION_PREFIXES];
-    static supermetadata = super.metadata;
+    static superMetadata = super.metadata;
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {

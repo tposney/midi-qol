@@ -230,7 +230,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     this.overWriteMidiSettings();
   }
 
-  _onRender(context, options) {
+  async _onRender(context, options) {
     super._onRender(context, options);
     for (let i = 0; i < this._fixerFuncs.length; i++) {
       const id = `#fixer-${i + 1}`;
