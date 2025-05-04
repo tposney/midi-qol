@@ -33,13 +33,7 @@
         <input type="Number" name="flags.midi-qol.fumbleThreshold" value="{{item.flags.midi-qol.fumbleThreshold}}" />
       </div>
       {{/if}}
-      <!--
-  <div class="form-group">
-    <label>{{localize "midi-qol.AoETargetTypeIncludeSelf.Name"}}</label>
-    <input type="checkbox" name="flags.midi-qol.AoETargetTypeIncludeSelf" data-dtype="Boolean" {{checked
-      item.flags.midi-qol.AoETargetTypeIncludeSelf}} />
-  </div>
-  -->
+
       {{#if true}}
       <div class="form-group">
         <label>{{ localize "midi-qol.AttackPerTarget.Name"}}</label>
@@ -75,7 +69,7 @@
         "otherSaveDamage") (eq key "confirmTargets") (eq key "grpact") )}}
         <label class="checkbox">
           <input type="checkbox" name="flags.midiProperties.{{key}}" {{checked value}} />
-          {{lookup ../midiPropertyLabels key}}
+            {{lookup ../midiPropertyLabels key}}
         </label>
         {{/unless}}
         {{/each}}

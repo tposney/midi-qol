@@ -1,3 +1,7 @@
+### 13.0.4
+* Change so that preferred GM is stored as an id rather than a name.
+* migrate to the v13 version of fvtt-types
+
 ### 13.0.3
 * Add usage.midiOptions.triggeringWorkflowId and usage.midiOptions.triggeringActivityUuid to triggered activities.
 

@@ -9,11 +9,13 @@ export function setupMidiItemSheet5e() {
   const baseClass = globalThis.dnd5e.applications.item.ItemSheet5e;
   MidiItemSheet5e = defineMidiItemSheet5eClass(baseClass);
 
+  /*
   DocumentSheetConfig.registerSheet(Item, "dnd5e", MidiItemSheet5e, {
     makeDefault: false,
     label: "midi-qol.ItemSheetMidiTab",
     types: ["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver"],
   });
+  */
 }
 
 let defineMidiItemSheet5eClass = (baseClass: any) => {
@@ -33,7 +35,7 @@ let defineMidiItemSheet5eClass = (baseClass: any) => {
         name: "midi",
         icon: "fas fa-dice-d20",
         condition: () => true, // function () { return ["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver"].includes(this.item?.type) }.bind(this),
-        template: "modules/midi-qol/templates/midiPropertiesForm.hbs",
+        template: "modules/midi-qol/templates/midiPropertiesFormDefault.hbs",
       }
     ];
     async _preparePartContext(partId, context, options) {
@@ -43,6 +45,7 @@ let defineMidiItemSheet5eClass = (baseClass: any) => {
       const RemoveAttackDamageButtonsOptions = foundry.utils.mergeObject({ "default": i18n("midi-qol.MidiSettings") }, geti18nOptions("removeButtonsOptions"));
 
       if (partId === "midi-qol") {
+        console.error("MidiItemSheet5e._preparePartContext", partId, context, options);
         context = foundry.utils.mergeObject(context, {
           allowUseMacro: configSettings.allowUseMacro,
           MacroPassOptions: Workflow.allMacroPasses,
@@ -57,7 +60,8 @@ let defineMidiItemSheet5eClass = (baseClass: any) => {
           hasReaction: true, // can't test the item since any of the activities might be a reaction item.system.activation?.type?.includes("reaction"),
           onUseMacroParts: getCurrentSourceMacros(context.item),
           isGM: game.user?.isGM,
-          isOwner: this.item.isOwner
+          isOwner: this.item.isOwner,
+          flags: foundry.utils.deepClone(context.item.flags)
         })
       }
       return context;
