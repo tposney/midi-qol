@@ -748,7 +748,7 @@ export function readySettingsSetup() {
       config: true,
       type: String,
       choices: game.users?.filter(user => user.isGM).reduce((acc, user) => {
-        acc[user.name] = user.name;
+        acc[user.id] = user.name;
         return acc;
       }, { "": i18n("None") }),
     });
@@ -764,19 +764,6 @@ export function readySettingsSetup() {
     //@ts-expect-error
     game.settings?.set("midi-qol", "CriticalDamageGM", criticalDamage);
   }
-  //@ts-expect-error
-  game.settings?.register("midi-qol", "PreferredGM", {
-    name: "midi-qol.PreferredGM.Name",
-    hint: "midi-qol.PreferredGM.Hint",
-    scope: "world",
-    default: "none",
-    config: true,
-    type: String,
-    choices: game.users?.filter(user => user.isGM).reduce((acc, user) => {
-      acc[user.name] = user.name;
-      return acc;
-    }, { "none": "none" }),
-  });
 }
 
 export function registerSetupSettings() {

@@ -1,3 +1,6 @@
+### 12.4.52
+* Change so that preferred GM is stored as an id rather than a name.
+
 ### 12.4.51.1
 * Version bump to complete release creation
 

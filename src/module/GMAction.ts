@@ -376,11 +376,11 @@ export async function timedExecuteAsGM(toDo: string, data: any) {
 }
 
 export function preferredActiveGM(): User | null {
-  const preferredGMName = safeGetGameSetting("midi-qol", "PreferredGM");
-  if (preferredGMName !== "none") {
-    const preferredGM = game.users?.getName(preferredGMName);
+  const preferredGMId = safeGetGameSetting("midi-qol", "PreferredGM");
+  if (preferredGMId !== "none") {
+    const preferredGM = game.users?.get(preferredGMId) as User | undefined;
     if (preferredGM?.active) return preferredGM;
-    log(`preferredGM ${preferredGMName} is not active`); 
+    log(`preferredGM ${preferredGMId} is not active`); 
   }
   if (game.user?.isGM) return game.user;
   return game.users?.activeGM ?? null;
@@ -389,10 +389,10 @@ export function preferredActiveGM(): User | null {
 export async function unTimedExecuteAsGM(toDo: string, ...args) {
   if (!socketlibSocket) return undefined;
   const myScene = game.user?.viewedScene;
-  const preferredGMName = safeGetGameSetting("midi-qol", "PreferredGM");
-  let preferredGM = game.users?.getName(preferredGMName);
+  const preferredGMId = safeGetGameSetting("midi-qol", "PreferredGM");
+  let preferredGM = game.users?.get(preferredGMId);
   if (!preferredGM?.active) {
-    if (preferredGMName !== "none") log(`preferredGM ${preferredGMName} is not active`);
+    if (preferredGMId !== "none") log(`preferredGM ${preferredGMId} is not active`);
     preferredGM = undefined;
   }
   let gmOnScene;
