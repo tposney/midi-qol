@@ -58,10 +58,11 @@ let defineMidiAttackSheetClass = (baseClass: any) => {
       }
       let indexOffset = 0;
       if (activity.damage?.parts) {
+        const isCantrip = activity.item.type === "spell" && activity.item.system.level === 0; 
         const scalingOptions = [
           { value: "", label: i18n("DND5E.DAMAGE.Scaling.None") },
           //@ts-expect-error
-          ...Object.entries(GameSystemConfig.damageScalingModes).map(([value, config]) => ({ value, label: config.label }))
+          ...Object.entries(GameSystemConfig.damageScalingModes).map(([value, config]) => ({ value, label: isCantrip ? config.labelCantrip : config.label }))
         ];
         const types = Object.entries(GameSystemConfig.damageTypes).concat(Object.entries(GameSystemConfig.healingTypes));
         context.damageParts = activity.damage.parts.map((data, index) => {
