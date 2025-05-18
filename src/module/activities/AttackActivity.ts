@@ -78,6 +78,7 @@ let defineMidiAttackSheetClass = (baseClass: any) => {
               value, label: config.label, selected: data.types.has(value)
             }))
           };
+          if (foundry.utils.isNewerVersion(game.system.version, "4.4.2")) part.locked = data.locked || (index === undefined);
           return this._prepareDamagePartContext(context, part);
         })
       }
