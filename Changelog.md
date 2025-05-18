@@ -1,3 +1,8 @@
+### 12.4.53
+* If present, appropriate weapon mastery will be shown in midi chat cards
+* Fixed localization for cantrip scaling
+* Fixed bug with modifying damage parts in v4.4.3
+
 ### 12.4.52
 * Change so that preferred GM is stored as an id rather than a name.
 
