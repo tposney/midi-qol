@@ -1,3 +1,6 @@
+### 12.4.53.1
+* Fixed weapon mastery display breaking condensed chat cards
+
 ### 12.4.53
 * If present, appropriate weapon mastery will be shown in midi chat cards
 * Fixed localization for cantrip scaling

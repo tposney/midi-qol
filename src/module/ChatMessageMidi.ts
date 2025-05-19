@@ -33,10 +33,15 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       let mastery = masteryConfig.label;
       if (masteryConfig.reference) mastery = `
         <a class="content-link" draggable="true" data-link data-uuid="${masteryConfig.reference}"
-           data-tooltip="${mastery}">${mastery}</a>
+           data-tooltip="${mastery}" style="text-wrap: auto;">${mastery}</a>
       `;
       p.innerHTML = `<string>${i18n("DND5E.WEAPON.Mastery.Flavor")}</string> ${mastery}`;
-      html.querySelector(".midi-qol-attack-roll")?.appendChild(p);
+      const condensedSection = html.querySelector(".midi-results > .flexrow");
+      if (condensedSection) {
+        condensedSection.after(p);
+      } else {
+        html.querySelector(".midi-qol-attack-roll")?.appendChild(p);
+      }
       return;
     }
     get canSelectTargets() {
