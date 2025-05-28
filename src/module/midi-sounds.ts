@@ -249,7 +249,7 @@ export class MidiSounds {
     const playlistData = {
       "name": "Midi Item Tracks",
       "description": "Midi Qol sample custom sounds",
-      "mode": -1,
+      "mode": CONST.PLAYLIST_MODES.DISABLED,
       "sounds": [
         {
           "path": "modules/midi-qol/sounds/success-drums.ogg",

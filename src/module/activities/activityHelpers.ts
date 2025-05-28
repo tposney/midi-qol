@@ -254,8 +254,10 @@ export async function resolveTargetConfirmation(activity, options: any = {}): Pr
   if (!canvas?.tokens?.active) {
     await canvas?.tokens?.activate();
   }
-  const savedTokensTool = ui.controls?.activeTool;
-  await ui.controls?.initialize({ tool: "target" });
+  const savedControl = ui.controls?.control?.name;
+  const savedTool = ui.controls?.tool?.name;
+  // @ts-expect-error v13ism
+  await ui.controls?.render({ control: "tokens", tool: "target" });
   const wasMaximized = !(activity.actor.sheet?._minimized);
   // Hide the sheet that originated the preview
   if (wasMaximized) await activity.actor.sheet.minimize();
@@ -270,7 +272,8 @@ export async function resolveTargetConfirmation(activity, options: any = {}): Pr
   let shouldContinue = await targets;
   //@ts-expect-error
   for (let token of canvas?.tokens?.placeables) await token.initializeVisionSource();
-  if (savedTokensTool) await ui.controls?.initialize({tool: savedTokensTool});
+  // @ts-expect-error v13ism
+  if (savedTool) await ui.controls?.render({ control: savedControl, tool: savedTool });
 
 
   if (wasMaximized) await activity.actor.sheet.maximize();
@@ -361,7 +364,8 @@ function isTokenInside(template: MeasuredTemplate, token: Token, wallsBlockTarge
           tx = tx + template.shape.width / 2;
           ty = ty + template.shape.height / 2;
         }
-        const r = new Ray({ x: tx, y: ty }, { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y });
+        // @ts-expect-error v13ism
+        const r = new foundry.canvas.geometry.Ray({ x: tx, y: ty }, { x: currGrid.x + templatePos.x, y: currGrid.y + templatePos.y });
 
         // If volumetric templates installed always leave targeting to it.
         if (

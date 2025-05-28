@@ -14,11 +14,12 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
     return i18n("midi-qol.ConfigTitle") ?? "Sound Config";
   }
 
-  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+  static override DEFAULT_OPTIONS = {
     id: "midi-qol-sound-config",
     window: {
       title: "midi-qol.SoundSettings.Name",
-      resizable: true
+      resizable: true,
+      contentClasses: ["standard-form"]
     },
     position: {
       height: "auto" as "auto",
@@ -34,9 +35,9 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
       closeOnSubmit: false,
     },
     tag: "form"
-  }, { inplace: false });
+  };
 
-  static PARTS = {
+  static override PARTS = {
     tabs: { template: "templates/generic/tab-navigation.hbs" },
     sounds: { 
       template: "modules/midi-qol/templates/sounds/sounds.hbs",
@@ -209,7 +210,7 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
     if (!game.user?.can("SETTINGS_MODIFY")) return;
     event.preventDefault();
 
-    const formData: any = new FormDataExtended(target.form);
+    const formData: any = new foundry.applications.ux.FormDataExtended(target.form);
     const fdo = formData.object;
     for (let key of ["chartype", "action", "category", "playlistName", "soundName", "subtype"]) {
       if (!fdo[key]) fdo[key] = [];
@@ -232,7 +233,7 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
 
   static async #onSave(event, target) {
     const form = event.currentTarget;
-    const formData = new FormDataExtended(form);
+    const formData = new foundry.applications.ux.FormDataExtended(form);
     SoundConfigPanel.#onSubmit.bind(this)(event, form, formData);
   }
 
@@ -277,7 +278,7 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
   _onChangeForm(formConfig, event) {
     super._onChangeForm(formConfig, event);
     //@ts-expect-error
-    SoundConfigPanel.#onSubmit.bind(this)(event, this.element, new FormDataExtended(this.element))
+    SoundConfigPanel.#onSubmit.bind(this)(event, this.element, new foundry.applications.ux.FormDataExtended(this.element))
     .then(() => this.render({}));
     // this.render();
   }
@@ -320,7 +321,7 @@ export class SoundConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) 
   changeHandler(event) {
     if (!this.element.querySelector("form")) return;
     //@ts-expect-error
-    const formData = new FormDataExtended(this.element.querySelector("form"));
+    const formData = new foundry.applications.ux.FormDataExtended(this.element.querySelector("form"));
     this.render({ force: true });
   }
 }

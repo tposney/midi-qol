@@ -1195,7 +1195,6 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
           user: game.user?.id,
           whisper: whisper.map(u => u.id ?? ""),
           rollMode: rollMode ?? "public",
-          //@ts-expect-error
           content: await foundry.applications.handlebars.renderTemplate("systems/dnd5e/templates/chat/request-card.hbs", {
             // @ts-expect-error no dnd5e-types
             buttonLabel: game.system.enrichers.createRollLabel({ ...dataset, format: "short", icon: true, hideDC: !owner?.isGM && !configSettings.displaySaveDC }),
@@ -1883,7 +1882,8 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
           for (y1 = t2StartY; y1 < t2DocHeight; y1++) {
             const point = canvas.grid.getCenterPoint({ x: Math.round(t2.document.x + (canvas.dimensions.size * x1)), y: Math.round(t2.document.y + (canvas.dimensions.size * y1)) });
             let dest = new PIXI.Point(point.x, point.y);
-            const r = new Ray(origin, dest);
+            // @ts-expect-error v13ism
+            const r = new foundry.canvas.geometry.Ray(origin, dest);
             if (wallsBlock) {
               switch (configSettings.optionalRules.wallsBlockRange) {
                 case "center":
@@ -1962,7 +1962,8 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
   } else {
     const w = t2.document
     let closestPoint = foundry.utils.closestPointToSegment(t1.center, w.object.edge.a, w.object.edge.b);
-    distance = midiMeasureDistances([{ ray: new Ray(t1.center, closestPoint) }], { gridSpaces: true });
+    // @ts-expect-error v13ism
+    distance = midiMeasureDistances([{ ray: new foundry.canvas.geometry.Ray(t1.center, closestPoint) }], { gridSpaces: true });
     if (configSettings.optionalRules.distanceIncludesHeight) {
       if (!w.flags?.["wall-height"]) heightDifference = 0;
       else {
@@ -5126,7 +5127,6 @@ function getTooltip(roll, options: any = {}) {
     formula: roll.formula,
     parts
   };
-  //@ts-expect-error
   return foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/tooltip.html", templateData);
 }
 
@@ -5166,7 +5166,6 @@ export async function midiRenderTemplateRoll(roll: Roll | undefined, template: s
     flavor: options?.flavor ?? roll.options?.flavor,
     total: (roll.total !== undefined) ? Math.round((roll.total) * 100) / 100 : "???"
   };
-  //@ts-expect-error
   return foundry.applications.handlebars.renderTemplate(template, chatData);
 }
 export function heightIntersects(targetDocument: any /*TokenDocument*/, flankerDocument: any /*TokenDocument*/): boolean {
@@ -5275,7 +5274,8 @@ export async function computeFlankedStatus(target): Promise<boolean> {
           const p1 = canvas.grid?.getCenterPoint(tokenPoint)
           const p2 = canvas.grid?.getCenterPoint(allyPoint);
           if (!p1 || !p2) continue;
-          const rayToCheck = new Ray(p1, p2);
+          // @ts-expect-error v13ism
+          const rayToCheck = new foundry.canvas.geometry.Ray(p1, p2);
           const flankingTop = rayToCheck.intersectSegment(top) && rayToCheck.intersectSegment(bottom);
           const flankingLeft = rayToCheck.intersectSegment(left) && rayToCheck.intersectSegment(right);
           if (flankingLeft || flankingTop) {
@@ -5362,7 +5362,8 @@ export function computeFlankingStatus(token, target): boolean {
         const p1 = canvas.grid?.getCenterPoint(tokenPoint)
         const p2 = canvas.grid?.getCenterPoint(allyPoint);
         if (!p1 || !p2) continue;
-        const rayToCheck = new Ray(p1, p2);
+        // @ts-expect-error v13ism
+        const rayToCheck = new foundry.canvas.geometry.Ray(p1, p2);
         const flankingTop = rayToCheck.intersectSegment(top) && rayToCheck.intersectSegment(bottom);
         const flankingLeft = rayToCheck.intersectSegment(left) && rayToCheck.intersectSegment(right);
         if (flankingLeft || flankingTop) {
@@ -5585,7 +5586,8 @@ export function initializeVision(tk: Token, force = false) {
 export function _canSenseModes(tokenEntity: Token | TokenDocument, targetEntity: Token | TokenDocument, validModesParam: Array<string> = ["all"]): Array<string> {
   let target: Token | null = targetEntity instanceof TokenDocument ? targetEntity.object : targetEntity;
   const detectionModes = CONFIG.Canvas.detectionModes;
-  const DetectionModeCONST = DetectionMode;
+  // @ts-expect-error v13ism
+  const DetectionModeCONST = foundry.canvas.perception.DetectionMode;
   let token: Token | null | undefined = getToken(tokenEntity);
   if (!token || !target) return ["noToken"];
   if (target.document?.hidden || token.document?.hidden) return [];
@@ -6116,15 +6118,19 @@ export function getToken(tokenRef: Actor | Token | TokenDocument | string | unde
   return undefined;
 }
 
-export function getPlaceable(tokenRef: Actor | Token | TokenDocument | string | PlaceableObject | undefined): PlaceableObject | undefined | null {
+// @ts-expect-error v13ism
+export function getPlaceable(tokenRef: Actor | Token | TokenDocument | string | foundry.canvas.placeables.PlaceableObject | undefined): foundry.canvas.placeables.PlaceableObject | undefined | null {
   if (!tokenRef) return undefined;
-  if (tokenRef instanceof PlaceableObject) return tokenRef;
+  // @ts-expect-error v13ism
+  if (tokenRef instanceof foundry.canvas.placeables.PlaceableObject) return tokenRef;
   let entity: any = tokenRef;
   if (typeof tokenRef === "string") {
     entity = MQfromUuidSync(tokenRef);
   }
-  if (entity instanceof PlaceableObject) return entity;
-  if (entity.object instanceof PlaceableObject) return entity.object;
+  // @ts-expect-error v13ism
+  if (entity instanceof foundry.canvas.placeables.PlaceableObject) return entity;
+  // @ts-expect-error v13ism
+  if (entity.object instanceof foundry.canvas.placeables.PlaceableObject) return entity.object;
   if (entity instanceof Actor) return tokenForActor(entity);
   if (entity instanceof Item && entity.parent instanceof Actor) return tokenForActor(entity.parent);
   if (entity instanceof ActiveEffect && entity.parent instanceof Actor) return tokenForActor(entity.parent);
@@ -6228,7 +6234,8 @@ export function midiMeasureDistances(segments: { ray: Ray }[], options: any = {}
         const gridPosB = canvasGridProxy.getOffset(s.ray.B);
         //@ts-ignore
         const bCenter = canvasGridProxy.getCenterPoint(gridPosB);
-        return { ray: new Ray(aCenter, bCenter) };
+        // @ts-expect-error v13ism
+        return { ray: new foundry.canvas.geometry.Ray(aCenter, bCenter) };
       });
     }
     let distances: any[] = segments.map(s => canvasGridProxy.measurePath([s.ray.A, s.ray.B], {}));
@@ -6541,7 +6548,8 @@ export function canSee(tokenEntity, targetEntity) {
   const detectionModes = CONFIG.Canvas.detectionModes;
   const sightDetectionModes = Object.keys(detectionModes).filter(
     (d) =>
-      detectionModes[d].type === DetectionMode.DETECTION_TYPES.SIGHT ||
+      // @ts-expect-error v13ism
+      detectionModes[d].type === foundry.canvas.perception.DetectionMode.DETECTION_TYPES.SIGHT ||
       NON_SIGHT_CONSIDERED_SIGHT.includes(d)
   );
   return canSense(tokenEntity, targetEntity, sightDetectionModes);
@@ -6959,7 +6967,8 @@ export function setRangedTargets(tokenToUse, targetDetails) {
 
       if (maxTargets !== "" && targetIds.length >= maxTargets) break;
       if (!isValidTarget(target)) continue;
-      const ray = new Ray(target.center, tokenToUse.center);
+      // @ts-expect-error v13ism
+      const ray = new foundry.canvas.geometry.Ray(target.center, tokenToUse.center);
       const wallsBlock = ["wallsBlock", "wallsBlockIgnoreDefeated", "wallsBlockIgnoreIncapacitated"].includes(configSettings.rangeTarget)
       let inRange = target.actor && dispositions.includes(targetDocument.disposition);
       if (target.actor && ["wallsBlockIgnoreIncapacited", "alwaysIgnoreIncapacitated"].includes(configSettings.rangeTarget))

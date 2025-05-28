@@ -95,15 +95,17 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     }
   }
 
-  static PARTS = {
-    main: {template: "modules/midi-qol/templates/targetConfirmation.hbs"}
+  static override PARTS = {
+    main: {template: "modules/midi-qol/templates/targetConfirmation.hbs"},
+    footer: {template: "templates/generic/form-footer.hbs"}
   };
 
-  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+  static override DEFAULT_OPTIONS = {
     id: "midi-qol-targetConfirmation",
     window: {
       title: "midi-qol.TargetConfirmation.Name",
-      resizable: true
+      resizable: true,
+      contentClasses: ["standard-form"]
     },
     classes: ["midi-targeting"],
     position: {
@@ -111,8 +113,12 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       height: "auto" as "auto",
       left: 100,
       top: 100
+    },
+    actions: {
+      roll: this.#onRoll,
+      cancel: this.#onCancel
     }
-  }, { inplace: false });
+  };
 
   async _prepareContext(options) {
     let data: any = foundry.utils.mergeObject(this.data, await super._prepareContext(options));
@@ -130,7 +136,8 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         default: break;
       }
       let img = target.document.texture.src;
-      if (VideoHelper.hasVideoExtension(img as string)) {
+      // @ts-expect-error v13ism
+      if (foundry.helpers.media.VideoHelper.hasVideoExtension(img as string)) {
         img = await game.video?.createThumbnail(img as string, { width: 50, height: 50 }) ?? "";
       }
 
@@ -208,23 +215,29 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         data.blurb = i18nFormat("midi-qol.TargetConfirmation.Blurb", { targetCount: this.data.maxTargets, targetType: this.data.activity.target.affects.type || "targets" })
       else data.blurb = i18n("midi-qol.TargetConfirmation.BlurbAny");
     }
+    data.buttons = [
+      { type: "button", icon: "fa-solid fa-dice-d20", label: "DND5E.Roll", action: "roll" },
+      { type: "button", icon: "fa-solid fa-stop", label: "Cancel", action: "cancel" }
+    ];
     return data;
+  }
+
+  static #onRoll(this: TargetConfirmationDialog) {
+    if (this.data.maxTargets && (game.user?.targets?.size ?? 0) > this.data.maxTargets) {
+      ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets: this.data.maxTargets }));
+      return;
+    }
+    this.doCallback(true);
+    this.close();
+  }
+
+  static #onCancel(this: TargetConfirmationDialog) {
+    this.doCallback(false);
+    this.close();
   }
 
   async _onRender(context, options) {
     await super._onRender(context, options);
-    this.element.querySelector(".midi-roll-confirm")?.addEventListener("click", () => {
-      if (this.data.maxTargets && (game.user?.targets?.size ?? 0) > this.data.maxTargets) {
-        ui.notifications?.warn(i18nFormat("midi-qol.wrongNumberTargets", { allowedTargets: this.data.maxTargets }));
-        return;
-      }
-      this.doCallback(true);
-      this.close();
-    });
-    this.element.querySelector(".midi-roll-cancel")?.addEventListener("click", () => {
-      this.doCallback(false);
-      this.close();
-    });
     if (canvas) {
       let targetNames = this.element.getElementsByClassName("content-link midi-qol");
       for (let targetName of Array.from(targetNames)) {

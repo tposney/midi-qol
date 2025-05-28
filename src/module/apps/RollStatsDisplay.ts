@@ -22,19 +22,20 @@ export class RollStatsDisplay extends HandlebarsApplicationMixin(ApplicationV2) 
     });
   }
 
-  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+  static override DEFAULT_OPTIONS = {
     id: "midi-qol-statistics",
     window: {
       title: "midi-qol.StatsTitle",
-      resizable: true
+      resizable: true,
+      contentClasses: ["standard-form"]
     },
     position: {
       width: 500,
       height: "auto" as "auto"
     }
-  }, { inplace: false });
+  };
 
-  static PARTS = {
+  static override PARTS = {
     tabs: {template: "templates/generic/tab-navigation.hbs"},
     stats: {template: "modules/midi-qol/templates/stats/stats.hbs"},
     config: {template: "modules/midi-qol/templates/stats/config.hbs"}

@@ -28,7 +28,7 @@
 		"@types/jest": "^27.4.1",
 		"cross-var": "^1.1.0",
 		"del": "^6.0.0",
-		"fvtt-types": "npm:@league-of-foundry-developers/foundry-vtt-types@^13.340.1",
+		"fvtt-types": "github:League-of-Foundry-Developers/foundry-vtt-types#main",
 		"gulp": "^4.0.2",
 		"gulp-cli": "^2.3.0",
 		"gulp-minify": "^3.1.0",

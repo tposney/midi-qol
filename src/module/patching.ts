@@ -785,7 +785,8 @@ function _midiATIRefresh(template) {
     distance *= dimensions.size / dimensions.distance;
     const tokens: Token[] | undefined = canvas.tokens.placeables;
     const tokensToCheck = tokens?.filter(tk => {
-      const r: Ray = new Ray(
+      // @ts-expect-error v13ism
+      const r: Ray = new foundry.canvas.geometry.Ray(
         { x: template.document?.x ?? template.x, y: template.document?.y ?? template.y },
         //@ts-ignore .width .height TODO check this v10
         { x: tk.x + tk.document.width * dimensions.size, y: tk.y + tk.document.height * dimensions.size }

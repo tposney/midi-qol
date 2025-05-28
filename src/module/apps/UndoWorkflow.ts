@@ -19,21 +19,22 @@ export class UndoWorkflow extends HandlebarsApplicationMixin(ApplicationV2) {
     }
   }
   
-  static PARTS = foundry.utils.mergeObject(super.PARTS, {
+  static override PARTS = {
     main: { template: "modules/midi-qol/templates/undo-workflow.hbs" },
-  }, { inplace: false })
+  };
   
-  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+  static override DEFAULT_OPTIONS = {
     id: "midi-qol-undo-workflow",
     window: {
       title: "midi-qol.UndoWorkflow.title",
-      resizable: true
+      resizable: true,
+      contentClasses: ["standard-form"]
     },
     position: {
       width: 400,
       height: 700
     }
-  }, {inplace: false});
+  };
   
   async _prepareContext(options) {
     const context: any = await super._prepareContext(options);

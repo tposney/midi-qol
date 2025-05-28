@@ -1047,7 +1047,6 @@ async function createPlayerDamageCard(data: { damageList: any; autoApplyDamage: 
   //@ts-ignore
   templateData.playerButtons = templateData.playerButtons && templateData.damageList.some(listItem => listItem.isCharacter)
   if (["yesCard", "noCard", "yesCardNPC", "yesCardMisses", "noCardMisses"].includes(data.autoApplyDamage)) {
-    //@ts-expect-error
     const content = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/damage-results-player.html", templateData);
     const speaker: any = ChatMessage.getSpeaker();
     speaker.alias = data.sender;
@@ -1089,7 +1088,6 @@ async function createGMReverseDamageCard(
   templateData.needsButtonAll = damageList.length > 1;
 
   if (["yesCard", "noCard", "yesCardNPC", "yesCardMisses", "noCardMisses"].includes(data.autoApplyDamage)) {
-    //@ts-expect-error
     const content = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/damage-results.html", templateData);
     const speaker: any = ChatMessage.getSpeaker();
     speaker.alias = game.user?.name;
@@ -1238,7 +1236,8 @@ async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: n
   const targetToken = getToken(data.targetUuid);
   const targetTokenDocument = getTokenDocument(targetToken);
   if (!canvas || !canvas.dimensions || !canvas.grid || !targetToken || !data.point || !targetTokenDocument) return;
-  let ray = new Ray(data.point, targetToken.center);
+  // @ts-expect-error v13ism
+  let ray = new foundry.canvas.geometry.Ray(data.point, targetToken.center);
   let distance = data.distance / canvas.dimensions.distance * canvas.dimensions.size;
   let newCenter = ray.project(1 + distance / ray.distance);
   const M = CONST.GRID_SNAPPING_MODES;
