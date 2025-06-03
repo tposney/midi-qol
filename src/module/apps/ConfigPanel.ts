@@ -20,11 +20,12 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     return this;
   }
 
-  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+  static override DEFAULT_OPTIONS = {
     id: "midi-qol-settings",
     tag: "form",
     window: {
-      title: "midi-qol.ConfigTitle"
+      title: "midi-qol.ConfigTitle",
+      contentClasses: ["standard-form"]
     },
     position: {
       width: 800,
@@ -34,10 +35,9 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
       closeOnSubmit: true,
       handler: this.#onSubmit as any
     }
-  }, { inplace: false });
-  // template: "modules/midi-qol/templates/config.html",
+  };
 
-  static PARTS = {
+  static override PARTS = {
     tabs: { template: "templates/generic/tab-navigation.hbs" },
     gm: { template: "modules/midi-qol/templates/config/gm.hbs" },
     player: { template: "modules/midi-qol/templates/config/player.hbs" },
@@ -277,7 +277,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     this.element.querySelector(".itemTypeListEdit")?.addEventListener("click", event => {
       const options = Object.entries(CONFIG.Item.typeLabels).filter(kv => !["backpack", "base"].includes(kv[0])).map(([k, v]) => ({ value: k, label: i18n(v), selected: configSettings.itemTypeList?.includes(k) }));
       options.sort((a, b) => a.label.compare(b.label));
-      DialogV2.prompt({
+      DialogV2.prompt<foundry.applications.api.DialogV2.PromptConfig>({
         id: "midi-qol-item-selector",
         content: foundry.applications.fields.createMultiSelectInput({
           type: "checkboxes",
@@ -292,7 +292,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
           label: "DND5E.TraitSave",
           icon: "fa-solid fa-save",
           callback: (evt, button) => {
-            const data = new FormDataExtended(button.form as HTMLFormElement);
+            const data = new foundry.applications.ux.FormDataExtended(button.form as HTMLFormElement);
             // @ts-expect-error
             if (data) configSettings.itemTypeList = data.object?.items ?? configSettings.itemTypeList;
           }
@@ -373,7 +373,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
 }
 
 async function importFromJSONDialog() {
-  //@ts-expect-error
   const content = await foundry.applications.handlebars.renderTemplate("templates/apps/import-data.hbs", { entity: "midi-qol", name: "settings" });
   let dialog = new Promise((resolve, reject) => {
     new DialogV2({

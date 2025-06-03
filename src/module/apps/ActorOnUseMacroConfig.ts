@@ -12,7 +12,7 @@ export class ActorOnUseMacrosConfig extends HandlebarsApplicationMixin(Applicati
   }
 
   // old "form" "active-effect-sheet" "sheet"
-  static PARTS = {
+  static override PARTS = {
     dialog: {
       id: "dialog-onuse-config",
       classes: ["dialog", "active-effect-sheet", "midi-qol"],
@@ -21,7 +21,7 @@ export class ActorOnUseMacrosConfig extends HandlebarsApplicationMixin(Applicati
   }
 
   // TODO: dragDrop? dropSelector .key
-  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+  static override DEFAULT_OPTIONS = {
     window: {
       resizable: false,
       title: "midi-qol.ActorOnUseMacros"
@@ -34,7 +34,7 @@ export class ActorOnUseMacrosConfig extends HandlebarsApplicationMixin(Applicati
       closeOnSubmit: false,
       submitOnClose: true
     }
-  }, { inplace: false });
+  };
 
   async _onRender(context, options) {
     await super._onRender(context, options);
@@ -74,7 +74,8 @@ export class ActorOnUseMacrosConfig extends HandlebarsApplicationMixin(Applicati
     event?.preventDefault();
     const a = event?.currentTarget;
     const macros = getCurrentSourceMacros(this.document);
-    const formMacros = Object.entries(new FormDataExtended(this.element.querySelector("form") as HTMLFormElement)?.object) ?? [];
+    // @ts-expect-error v13 stub
+    const formMacros = Object.entries(new foundry.applications.ux.FormDataExtended(this.element.querySelector("form") as HTMLFormElement)?.object) ?? [];
     for (const [k, v] of formMacros) {
       foundry.utils.setProperty(macros, k.split('.').slice(1).join('.'), v);
     }

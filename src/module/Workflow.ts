@@ -3637,12 +3637,15 @@ export class Workflow {
     let semiSuperSavers: TokenDocument[] = [];
     let semiSuperSaverUuids: string[] = [];
     for (let target of this.targets) {
-      if (target instanceof Token) {
-        targets.push(target.document as unknown as TokenDocument);
-        targetUuids.push(target.document.uuid);
+      // @ts-expect-error v13ism
+      if (target instanceof foundry.canvas.placeables.Token) {
+        // TODO: remove these `as` once types understands `foundry.canvas.placeables.Token`
+        targets.push((target as Token).document as unknown as TokenDocument);
+        targetUuids.push((target as Token).document.uuid);
       } else {
-        targets.push(target);
-        targetUuids.push(target.uuid);
+        // TODO: same thing
+        targets.push(target as TokenDocument);
+        targetUuids.push((target as TokenDocument).uuid);
       }
     }
     for (let save of this.saves) {
@@ -3670,24 +3673,34 @@ export class Workflow {
     }
 
     for (let failed of this.failedSaves) {
-      failedSaves.push(failed instanceof Token ? failed.document as unknown as TokenDocument : failed);
-      failedSaveUuids.push(failed instanceof Token ? failed.document?.uuid : failed.uuid);
+      // @ts-expect-error v13ism
+      failedSaves.push(failed instanceof foundry.canvas.placeables.Token ? failed.document as unknown as TokenDocument : failed);
+      // @ts-expect-error v13ism
+      failedSaveUuids.push(failed instanceof foundry.canvas.placeables.Token ? failed.document?.uuid : failed.uuid);
     }
     for (let critical of this.criticalSaves) {
-      criticalSaves.push(critical instanceof Token ? critical.document as unknown as TokenDocument : critical);
-      criticalSaveUuids.push(critical instanceof Token ? critical.document?.uuid : critical.uuid);
+      // @ts-expect-error v13ism
+      criticalSaves.push(critical instanceof foundry.canvas.placeables.Token ? critical.document as unknown as TokenDocument : critical);
+      // @ts-expect-error v13ism
+      criticalSaveUuids.push(critical instanceof foundry.canvas.placeables.Token ? critical.document?.uuid : critical.uuid);
     }
     for (let fumble of this.fumbleSaves) {
-      fumbleSaves.push(fumble instanceof Token ? fumble.document as unknown as TokenDocument : fumble);
-      fumbleSaveUuids.push(fumble instanceof Token ? fumble.document?.uuid : fumble.uuid);
+      // @ts-expect-error v13ism
+      fumbleSaves.push(fumble instanceof foundry.canvas.placeables.Token ? fumble.document as unknown as TokenDocument : fumble);
+      // @ts-expect-error v13ism
+      fumbleSaveUuids.push(fumble instanceof foundry.canvas.placeables.Token ? fumble.document?.uuid : fumble.uuid);
     }
     for (let save of this.superSavers) {
-      superSavers.push(save instanceof Token ? save.document as unknown as TokenDocument : save);
-      superSaverUuids.push(save instanceof Token ? save.document?.uuid : save.uuid);
+      // @ts-expect-error v13ism
+      superSavers.push(save instanceof foundry.canvas.placeables.Token ? save.document as unknown as TokenDocument : save);
+      // @ts-expect-error v13ism
+      superSaverUuids.push(save instanceof foundry.canvas.placeables.Token ? save.document?.uuid : save.uuid);
     };
     for (let save of this.semiSuperSavers) {
-      semiSuperSavers.push(save instanceof Token ? save.document as unknown as TokenDocument : save);
-      semiSuperSaverUuids.push(save instanceof Token ? save.document?.uuid : save.uuid);
+      // @ts-expect-error v13ism
+      semiSuperSavers.push(save instanceof foundry.canvas.placeables.Token ? save.document as unknown as TokenDocument : save);
+      // @ts-expect-error v13ism
+      semiSuperSaverUuids.push(save instanceof foundry.canvas.placeables.Token ? save.document?.uuid : save.uuid);
     };
     const itemData: any = item?.toObject(false) ?? {};
     itemData.uuid = item?.uuid; // provide the uuid so the actual item can be recovered
@@ -4279,7 +4292,6 @@ export class Workflow {
       displayHitResultNumeric: configSettings.displayHitResultNumeric && !this.isFumble && !this.isCritical
     };
     if (debugEnabled > 0) warn("displayHits |", templateData, whisper);
-    //@ts-expect-error
     const hitContent = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/hits.html", templateData) || "No Targets";
     const chatMessage = this.chatCard;
 
@@ -4416,7 +4428,6 @@ export class Workflow {
     }
     const chatMessage = this.chatCard;
 
-    //@ts-expect-error
     const saveContent = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/saves.html", templateData);
     let content: string = foundry.utils.duplicate(chatMessage.content)
 
@@ -4439,7 +4450,6 @@ export class Workflow {
     let chatMessage = this.chatCard;
     if (chatMessage) {
       templateData.saveDisplayFlavor = this.saveDisplayFlavor;
-      //@ts-expect-error
       const saveContent = await foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/saves.html", templateData);
       chatMessage = this.chatCard;
       let content: string = foundry.utils.duplicate(chatMessage.content)
@@ -5791,10 +5801,12 @@ export class Workflow {
         }
       }
 
-      let img = (targetToken instanceof Token ? targetToken.document : targetToken)?.texture?.src || (targetToken.actor as Actor).img;
+      // @ts-expect-error v13ism
+      let img = (targetToken instanceof foundry.canvas.placeables.Token ? targetToken.document : targetToken)?.texture?.src || (targetToken.actor as Actor).img;
       // @ts-expect-error no dnd5e-types
       if (configSettings.usePlayerPortrait && (targetToken.actor as Actor)?.type === "character") {
-        img = (targetToken.actor as Actor).img || (targetToken instanceof Token ? targetToken.document : targetToken)?.texture?.src;
+        // @ts-expect-error v13ism
+        img = (targetToken.actor as Actor).img || (targetToken instanceof foundry.canvas.placeables.Token ? targetToken.document : targetToken)?.texture?.src;
       }
       //@ts-expect-error
       if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
@@ -5843,7 +5855,8 @@ export class Workflow {
         showAC: true,
         img,
         gmName: getIconFreeLink(targetToken),
-        playerName: getTokenPlayerName((targetToken instanceof Token ? targetToken.document : targetToken) as TokenDocument),
+        // @ts-expect-error v13ism
+        playerName: getTokenPlayerName((targetToken instanceof foundry.canvas.placeables.Token ? targetToken.document : targetToken) as TokenDocument),
         bonusAC,
         hitResultNumeric,
         attackTotal
@@ -5920,7 +5933,8 @@ export class Workflow {
         advantage = true;
         formula = `2d20kh${modString}`;
       }
-      var player = playerFor(target instanceof Token ? target : target.object);
+      // @ts-expect-error v13ism
+      var player = playerFor(target instanceof foundry.canvas.placeables.Token ? target : target.object);
       // if (!player || !player.active) player = ChatMessage.getWhisperRecipients("GM").find(u => u.active);
       if (debugEnabled > 0) warn(`checkSaves | Player ${player?.name} controls actor ${(target.actor as Actor).name} - requesting ${this.activity.save.ability} save`);
       if (player && player.active && !player.isGM) {

@@ -563,7 +563,7 @@ async function registerTests() {
             const actor = getActor(actor1Name);
             const effectData = {
               name: "test effect",
-              changes: [{ key: "macro.tokenMagic", mode: 0, value: "blur" }]
+              changes: [{ key: "macro.tokenMagic", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "blur" }]
             };
             assert.ok(globalThis.TokenMagic);
             const theEffects: ActiveEffect.Implementation[] = (await actor.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect[];
@@ -718,7 +718,7 @@ async function registerTests() {
               name: "test over time",
               label: "test over time",
               changes: [{
-                key: "flags.midi-qol.OverTime.Test", mode: 0, value: `turn=end,
+                key: "flags.midi-qol.OverTime.Test", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: `turn=end,
               removeCondition=true,
               damageRoll=15,
               damageType=acid,
@@ -760,7 +760,7 @@ async function registerTests() {
             const effectData = {
               name: "test effect",
               label: "test effect",
-              changes: [{ key: "flags.midi-qol.advantage.all", mode: 0, value: "false" }]
+              changes: [{ key: "flags.midi-qol.advantage.all", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "false" }]
             }
             const theEffects: ActiveEffect.Implementation[] = (await actor.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect[];
             assert.ok(foundry.utils.getProperty(actor, "flags.midi-qol.advantage.all") === false, "advantage all false");
@@ -773,7 +773,7 @@ async function registerTests() {
             const effectData = {
               name: "test effect",
               label: "test effect",
-              changes: [{ key: "flags.midi-qol.advantage.all", mode: 0, value: "0" }]
+              changes: [{ key: "flags.midi-qol.advantage.all", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "0" }]
             }
             const theEffects: ActiveEffect.Implementation[] = (await actor.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect.Implementation[];
             assert.ok(foundry.utils.getProperty(actor, "flags.midi-qol.advantage.all") === false, "advantage all false");
@@ -786,7 +786,7 @@ async function registerTests() {
             const effectData = {
               name: "test effect",
               label: "test effect",
-              changes: [{ key: "flags.midi-qol.advantage.all", mode: 0, value: "true" }]
+              changes: [{ key: "flags.midi-qol.advantage.all", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "true" }]
             }
             const theEffects: ActiveEffect.Implementation[] = (await actor.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect[];
             assert.ok(foundry.utils.getProperty(actor, "flags.midi-qol.advantage.all") === true, "advantage all set to true");
@@ -799,7 +799,7 @@ async function registerTests() {
             const effectData = {
               name: "test effect",
               label: "test effect",
-              changes: [{ key: "flags.midi-qol.advantage.all", mode: 0, value: "1" }]
+              changes: [{ key: "flags.midi-qol.advantage.all", mode: CONST.ACTIVE_EFFECT_MODES.CUSTOM, value: "1" }]
             }
             const theEffects: ActiveEffect.Implementation[] = (await actor.createEmbeddedDocuments("ActiveEffect", [effectData]) ?? []) as ActiveEffect[];
             assert.ok(foundry.utils.getProperty(actor, "flags.midi-qol.advantage.all") === true, "advantage all set to true");

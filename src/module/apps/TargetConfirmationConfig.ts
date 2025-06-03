@@ -22,14 +22,15 @@ i
     this.selectedPosition = targetConfirmation.gridPosition ?? foundry.utils.duplicate(defaultTargetConfirmationSettings.gridPosition);
   }
 
-  static PARTS = {
+  static override PARTS = {
     main: { template: "modules/midi-qol/templates/targetConfirmationConfig.hbs" }
   };
 
-  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+  static override DEFAULT_OPTIONS = {
     id: "midi-qol-target-confirmation-config",
     window: {
-      title: "midi-qol.ConfigTitle"
+      title: "midi-qol.ConfigTitle",
+      contentClasses: ["standard-form"]
     },
     position: {
       width: 400,
@@ -41,7 +42,7 @@ i
     actions: {
       submit: TargetConfirmationConfig.#onSubmit
     }
-  }, { inplace: false });
+  };
     // scrollY: [".tab.workflow"],
     // tabs: [{ navSelector: ".tabs", contentSelector: ".content", initial: "gm" }]
 

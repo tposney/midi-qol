@@ -36,12 +36,13 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
   //   return this;
   // }
 
-  static DEFAULT_OPTIONS = foundry.utils.mergeObject(super.DEFAULT_OPTIONS, {
+  static override DEFAULT_OPTIONS = {
     id: "midi-trouble-shooter",
     classes: ["midi-trouble-shooter"],
     window: {
       title: "midi-qol.TroubleShooter.Label",
-      resizable: true
+      resizable: true,
+      contentClasses: ["standard-form"]
     },
     position: {
       height: "auto" as "auto",
@@ -57,9 +58,9 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
       clear: TroubleShooter.#onClear,
       overwrite: TroubleShooter.#onOverwrite
     }
-  }, { inplace: false });
+  };
 
-  static PARTS = {
+  static override PARTS = {
     tabs: {template: "templates/generic/tab-navigation.hbs"},
     summary: {template: "modules/midi-qol/templates/troubleshooter/summary.hbs"},
     common: {template: "modules/midi-qol/templates/troubleshooter/common.hbs"},
@@ -114,7 +115,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
   }
   public static async importTroubleShooterDataFromJSONDialog() {
-    //@ts-expect-error
     const content = await foundry.applications.handlebars.renderTemplate("templates/apps/import-data.html",
       { hint1: "Choose a Trouble Shooter JSON file to import" });
     let dialog = new Promise((resolve, reject) => {
@@ -408,7 +408,6 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
       "moduleSettings": {}
     }
     if (canvas?.scene) {
-      // @ts-expect-error environment
       const globalIllumination = canvas.scene?.environment?.globalLight?.enabled;
       data.summary["coreSettings"]["Scene Details"] =
         `${canvas.scene.dimensions.height} x ${canvas.scene.dimensions.width} | Size: ${canvas.scene.grid.size} | Type: ${Object.keys(CONST.GRID_TYPES)[canvas.scene.grid.type]} | Distance: ${canvas.scene.grid.distance} | Global Illumination ${globalIllumination}`;
