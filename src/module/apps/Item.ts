@@ -82,10 +82,10 @@ export class OnUseMacroOptions {
   }
 }
 
-export function activateMacroListeners(app: Application, html) {
-  //@ts-ignore
+export function activateMacroListeners(app: foundry.applications.api.DocumentSheetV2<Item>, html: HTMLElement) {
   if (app.isEditable) {
-    $(html).find(".macro-control").on("click", _onMacroControl.bind(app));
+    html.querySelectorAll(".macro-control").forEach(el => 
+      el.addEventListener("click", _onMacroControl.bind(app)));
     const dd = new DragDrop({
       dragSelector: undefined,
       dropSelector: ".midi-onuse-macro-name",
@@ -93,7 +93,6 @@ export function activateMacroListeners(app: Application, html) {
       callbacks: { drop: _onDrop },
     });
 
-    //@ts-expect-error .form
     dd.bind(app.form ?? app.element);
   }
 }
@@ -115,23 +114,23 @@ async function _onMacroControl(event) {
 
   // Add new macro component
   if (a.classList.contains("add-macro")) {
-    const macros = getCurrentSourceMacros(this.object);
+    const macros = getCurrentSourceMacros(this.document);
     this.selectMidiTab = true;
     if (this._onSubmit) await this._onSubmit(event);  // Submit any unsaved changes
     macros.items.push(new OnUseMacro());
     this.selectMidiTab = true;
-    await this.object.update({ "flags.midi-qol.onUseMacroName": macros.toString() });
+    await this.document.update({ "flags.midi-qol.onUseMacroName": macros.toString() });
   }
 
   // Remove a macro component
   if (a.classList.contains("delete-macro")) {
-    const macros = getCurrentSourceMacros(this.object);
+    const macros = getCurrentSourceMacros(this.document);
     const li = a.closest(".damage-part");
     this.selectMidiTab = true;
     if (this._onSubmit) await this._onSubmit(event);  // Submit any unsaved changes
     macros.items.splice(Number(li.dataset.midiqolMacroPart), 1);
     this.selectMidiTab = true;
-    await this.object.update({ "flags.midi-qol.onUseMacroName": macros.toString() });
+    await this.document.update({ "flags.midi-qol.onUseMacroName": macros.toString() });
   }
 
   if (a.classList.contains("edit-macro")) {

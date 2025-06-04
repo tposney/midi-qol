@@ -814,27 +814,37 @@
   }
 
   /* Item sheet midi tab */
-  .midi-qol-tab .form-header {
-    color: var(--color-text-dark-primary);
+  section.midi-qol.tab {
+    row-gap: 0px;
+
+    .form-header {
+      color: var(--color-text-dark-primary);
+    }
+    label.checkbox {
+      line-height: 0px;
+    }
+    textarea {
+      width: 100%;
+      &:not(:read-only) {
+        color: var(--color-text-dark-primary);
+      }
+    }
+    .midi-properties {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+    .form-group {
+      margin-bottom: 5px;
+    }
+    .midi-properties label.checkbox {
+      align-items: baseline;
+    }
+    .midi-activation-conditions h3 {
+      border-bottom-color: var(--color-border-light-primary)
+    }
   }
-  .midi-qol-tab textarea {
-    color: var(--color-text-dark-primary);
-  }
-  .midi-qol-tab .midi-properties {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-  .midi-qol-tab .form-group {
-    margin-bottom: 5px;
-  }
-  .midi-qol-tab .midi-properties label.checkbox {
-    align-items: baseline;
-  }
-  .theme-dark .midi-qol-tab textarea {
+  .theme-dark .midi-qol.tab textarea:not(:read-only) {
     background: var(--dnd5e-background-card);
-  }
-  .midi-qol-tab .midi-activation-conditions h3 {
-    border-bottom-color: var(--color-border-light-primary)
   }
 
   #midi-qol-undo-workflow .midi-qol-box {

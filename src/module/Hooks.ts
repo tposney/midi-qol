@@ -380,6 +380,83 @@ export function initHooks() {
     }
   });
 
+  function getItemSheetContext(context, item: Item) {
+    const config = GameSystemConfig;
+    const midiProps = config.midiProperties;
+    if (!item) {
+      const message = "item not defined in getItemSheetData";
+      console.error(message, context);
+      TroubleShooter.recordError(new Error(message));
+      return;
+    }
+    // let autoTargetOptions = foundry.utils.mergeObject({ "default": i18n("midi-qol.MidiSettings") }, geti18nOptions("autoTargetOptions"));
+    let RemoveAttackDamageButtonsOptions = foundry.utils.mergeObject({ "default": i18n("midi-qol.MidiSettings") }, geti18nOptions("removeButtonsOptions"));
+    const ceForItem = getCEEffectByName(item.name);
+    context = foundry.utils.mergeObject(context, {
+      allowUseMacro: configSettings.allowUseMacro,
+      MacroPassOptions: Workflow.allMacroPasses,
+      showCEOff: false,
+      showCEOn: false,
+      hasOtherDamage: true, // TODO fix this for activities 
+      showHeader: !configSettings.midiFieldsTab,
+      midiPropertyLabels: midiProps,
+      ConfirmTargetOptions: geti18nOptions("ConfirmTargetOptions"), // this is used for attack per target
+      // AutoTargetOptions: autoTargetOptions,
+      RemoveAttackDamageButtonsOptions,
+      hasReaction: true, // can't test the item since any of the activities might be a reaction item.system.activation?.type?.includes("reaction"),
+      onUseMacroParts: getCurrentSourceMacros(item)
+    });
+    if (!foundry.utils.getProperty(item, "flags.midi-qol.removeAttackDamageButtons")) {
+      foundry.utils.setProperty(context, "flags.midi-qol.removeAttackDamageButtons", "default");
+    }
+
+    if (ceForItem) {
+      context.showCEOff = ["both", "cepri", "itempri"].includes(configSettings.autoCEEffects);
+      context.showCEOn = ["none", "itempri"].includes(configSettings.autoCEEffects);
+    }
+
+    foundry.utils.setProperty(context, "flags.midiProperties", (item.flags as any)?.midiProperties ?? {});
+    if (["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver"].includes(item?.type)) {
+      for (let prop of Object.keys(midiProps)) {
+        //@ts-expect-error no dnd5e types
+        if ((item.system.properties)?.has(prop)
+          && foundry.utils.getProperty(item, `flags.midiProperties.${prop}`) === undefined) {
+          foundry.utils.setProperty(item, `flags.midiProperties.${prop}`, true);
+        } else if (foundry.utils.getProperty(item, `flags.midiProperties.${prop}`) === undefined) {
+          /* This has been moved to the activity
+                    if (["confirmTargets"].includes(prop)) {
+                      foundry.utils.setProperty(data, `flags.midiProperties.${prop}`, "default");
+                    } else foundry.utils.setProperty(data, `flags.midiProperties.${prop}`, false);
+          */
+          foundry.utils.setProperty(context, `flags.midiProperties.${prop}`, false);
+        }
+      }
+      if (!foundry.utils.getProperty(context, "flags.midi-qol.rollAttackPerTarget")) foundry.utils.setProperty(context, "flags.midi-qol.rollAttackPerTarget", "default");
+      delete context.flags.midiProperties.rollOther;
+      delete context.flags.midiProperties.fulldam;
+      delete context.flags.midiProperties.halfdam
+      delete context.flags.midiProperties.nodam;
+      delete context.flags.midiProperties.concentration;
+      delete context.flags.midiProperties.critOther
+      delete context.flags.midiProperties.rollOther;
+      delete context.flags.midiProperties.saveDamage;
+      delete context.flags.midiProperties.bonusSaveDamage;
+      delete context.flags.midiProperties.offHandWeapon;
+      delete context.flags.midiProperties.otherSaveDamage;
+      delete context.flags.midiProperties.confirmTargets;
+      delete context.flags.midiProperties.idi;
+      delete context.flags.midiProperties.idr;
+      delete context.flags.midiProperties.ida;
+      delete context.flags.midiProperties.idv;
+      delete context.flags.AoETargetTypeIncludeSelf;
+      if (context.flags["midi-qol"]?.AoETargetType)
+        delete context.flags["midi-qol"].AoETargetType;
+    }
+    if (context.flags["midi-qol"]?.autoTarget)
+      delete context.flags["midi-qol"].autoTarget;
+    return context;
+  }
+
   function getItemSheetData(data, item: Item) {
     const config = GameSystemConfig;
     const midiProps = config.midiProperties;
@@ -529,52 +606,62 @@ export function initHooks() {
 
   });
 
-  Hooks.on("renderItemSheet", (app, html, data) => {
-    const item = app.object;
+  Hooks.on("renderItemSheet5e", (
+    app: foundry.applications.api.DocumentSheetV2<Item>,
+    html: HTMLElement,
+    context: foundry.applications.api.DocumentSheetV2.RenderContext
+  ) => {
+    const item = app.document;
     if (!item) return;
     if ((configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER) > (game.user?.role ?? CONST.USER_ROLES.NONE)) return;
     if (app.constructor.name !== "Tidy5eKgarItemSheet") {
-      if (!item || !["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver", "tool"].includes(data.item.type))
+      if (!["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver", "tool"].includes(context.item.type))
         return;
 
       if (configSettings.midiFieldsTab) {
-        let tabs = html.find(`nav.sheet-navigation.tabs`);
-        if (tabs.find("a[data-tab=midiqol]").length > 0) {
+        let tabs = html.querySelector(`nav.sheet-tabs.tabs`);
+        if (context.tabs!.midiqol) {
           const message = "render item sheet: Midi Tab already present";
           TroubleShooter.recordError(new Error(message), message);
           error(message);
           return;
         }
-        tabs.append($('<a class="item" data-tab="midiqol">Midi-qol</a>'));
-        data = foundry.utils.mergeObject(data, getItemSheetData(data, item), { recursive: false });
-        renderTemplate("modules/midi-qol/templates/midiPropertiesForm.hbs", data).then(templateHtml => {
-          // tabs = html.find(`form nav.sheet-navigation.tabs`);
-          $(html.find(`.sheet-body`)).append(
-            $(`<div class="tab midi-qol" data-group="primary" data-tab="midiqol">${templateHtml}</div>`)
-          );
-          if (app.isEditable) {
-            $(html.find(".midi-qol-tab")).find(":input").change(evt => {
-              app.selectMidiTab = true;
-            });
-            $(html.find(".midi-qol-tab")).find("textarea").change(evt => {
-              app.selectMidiTab = true;
-            });
+        context.tabs!.midiqol = {
+          active: !Object.values(context.tabs!).find(i => i.active),
+          cssClass: "midi-qol",
+          group: "primary",
+          id: "midiqol",
+          label: "Midi-qol"
+        };
+        const midiHeaderTab = document.createElement("a");
+        midiHeaderTab.dataset.action = "tab";
+        midiHeaderTab.dataset.group = "primary";
+        midiHeaderTab.dataset.tab = "midiqol";
+        midiHeaderTab.classList.add("midi-qol");
+        if (context.tabs!.midiqol.active) midiHeaderTab.classList.add("active");
+        midiHeaderTab.innerHTML = "<span>Midi-qol</span>";
+        tabs?.appendChild(midiHeaderTab);
+        context = foundry.utils.mergeObject(context, getItemSheetContext(context, item), { recursive: false });
+        html.querySelector("section.tab.midi-qol")?.remove();
+        if (!html.querySelector("section.tab.midi-qol")) {
+          foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/midiPropertiesForm.hbs", context).then(templateHtml => {
+            // tabs = html.find(`form nav.sheet-navigation.tabs`);
+            const midiTab = document.createElement("section");
+            midiTab.classList.add("tab", "midi-qol");
+            if (context.tabs!.midiqol.active) midiTab.classList.add("active");
+            midiTab.dataset.tab = "midiqol";
+            midiTab.dataset.group = "primary";
+            midiTab.dataset.applicationPart = "midi-qol";
+            midiTab.innerHTML = templateHtml;
+            html.querySelector("section.window-content")?.append(midiTab);
             activateMacroListeners(app, html);
-
-          } else {
-            $(html.find(".midi-qol-tab")).find(":input").prop("disabled", true);
-            $(html.find(".midi-qol-tab")).find("textarea").prop("readonly", true);
-          }
-          if (app.selectMidiTab) {
-            app._tabs[0].activate("midiqol");
-            app.selectMidiTab = false;
-          }
-
-        });
-
+            // @ts-expect-error no dnd5e-types
+            if (!app.classList.contains("editable")) app._disableFields();
+          });
+        }
       } else {
-        data = foundry.utils.mergeObject(data, getItemSheetData(data, item));
-        renderTemplate("modules/midi-qol/templates/midiPropertiesForm.hbs", data).then(templateHtml => {
+        context = foundry.utils.mergeObject(context, getItemSheetData(context, item));
+        renderTemplate("modules/midi-qol/templates/midiPropertiesForm.hbs", context).then(templateHtml => {
           const element = html.find('input[name="system.chatFlavor"]').parent().parent();
           element.append(templateHtml);
           if (app.isEditable) activateMacroListeners(app, html);
