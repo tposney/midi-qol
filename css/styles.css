@@ -862,3 +862,15 @@
   .midi-targeting dl .midi-qol-box dd {
     margin: 1rem;
   }
+
+  /* item on-use config */
+  .item-on-use-sheet {
+    h3 {
+      text-align: center;
+    }
+
+    .form-group .form-fields {
+      display: grid;
+      grid-template-columns: 2fr 1fr 2fr var(--input-height);
+    }
+  }

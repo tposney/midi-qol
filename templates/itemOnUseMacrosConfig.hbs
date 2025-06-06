@@ -1,0 +1,30 @@
+<section>
+  <h3>{{localize "midi-qol.onUseMacroLabel"}}</h3>
+  {{#each onUseMacros}}
+    <div class="form-group">
+      <div class="form-fields" data-macro-index={{@index}}>
+        <select name="onUseMacros.{{@index}}.macro">
+          {{selectOptions ../macros selected=macro}}
+        </select>
+        {{#if (eq macro "Custom")}}
+          <input type="text" name="onUseMacros.{{@index}}.macroName" value='{{macroName}}' placeholder='{{localize "midi-qol.MacroName"}}'/>
+        {{else}}
+          <button type="button" data-action="editMacro">
+            <i class="fa-solid fa-file-pen"></i>
+            {{localize "MACRO.Edit"}}
+          </button>
+        {{/if}}
+        <select name="onUseMacros.{{@index}}.option">
+          {{selectOptions macroPassOptions selected=option}}
+        </select>
+        <button type="button" data-action="deleteMacro">
+          <i class="fa-solid fa-minus"></i>
+        </button>
+      </div>
+    </div>
+  {{/each}}
+  <button type="button" data-action="addMacro">
+    <i class="fa-solid fa-plus"></i>
+    {{localize "midi-qol.AddOnUseMacro"}}
+  </button>
+</section>

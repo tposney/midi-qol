@@ -1302,7 +1302,7 @@ export class Workflow {
   get spellLevel(): number {
     let spellLevel;
     if (this.chatCard) spellLevel = foundry.utils.getProperty(this.chatCard, "flags.dnd5e.use.spellLevel")
-    return spellLevel ?? this.castData.castLevel ?? 0;
+    return spellLevel ?? this.castData?.castLevel ?? 0;
   }
 
   get workflowType() { return "BaseWorkflow" };
@@ -3833,7 +3833,7 @@ export class Workflow {
       }
     }
     if (options.otherActivityOnly) {
-      if (!this.activity?.otherActivity || name !== "ActivityMacro") return;
+      if (!this.activity?.otherActivity || (name !== "ActivityMacro") && !name.startsWith("ActivityMacro-")) return;
       macroActivity = this.activity.otherActivity;
       macroItem = this.item;
     } else
@@ -3900,6 +3900,12 @@ export class Workflow {
           if (name === MQActivityMacroLabel || name === "ActivityMacro") {
             if (!macroActivity) return {};
             macro = macroActivity.macro;
+          } else if (name.startsWith("ActivityMacro-")) {
+            // SPECIAL: ActivityMacro-id - this is programmatically set with the new app
+            const activityId = name.split("-").slice(1).join("-");
+            // Don't call if current activity isn't the specified one
+            if (!macroActivity || (activityId !== macroActivity?.id)) return {};
+            macro = macroActivity.macro;
           } else {
             const parts = name.split(".");
             const activitySpec = parts.slice(1).join(".");
@@ -3954,13 +3960,13 @@ export class Workflow {
               itemMacroData = foundry.utils.getProperty(itemOrMacro, "flags.dae.macro") ?? foundry.utils.getProperty(itemOrMacro, "flags.itemacro.macro");
             } else if (itemOrMacro instanceof Macro) macro = itemOrMacro;
           }
-
+          
           if (macro?.type === "chat") {
             macro.execute(); // use the core foundry processing for chat macros
             return {}
           }
         }
-
+        
         if (!itemMacroData && !macro) {
           const message = `Could not find item/macro ${name}`;
           TroubleShooter.recordError(new Error(message), message);

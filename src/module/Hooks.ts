@@ -11,6 +11,7 @@ import { ActorOnUseMacrosConfig } from "./apps/ActorOnUseMacroConfig.js";
 import { installedModules } from "./setupModules.js";
 import { preActivityConsumptionHook, activityConsumptionHook, showItemInfo } from "./activities/activityHelpers.js";
 import { busyWait } from "./tests/setupTest.js";
+import { ItemOnUseMacrosConfig } from "./apps/ItemOnUseMacrosConfig.js";
 
 export const concentrationCheckItemName = "Concentration Check - Midi QOL";
 export var concentrationCheckItemDisplayName = "Concentration Check";
@@ -669,7 +670,22 @@ export function initHooks() {
       }
     }
     // activateMacroListeners(app, html);
-  })
+  });
+
+  Hooks.on("getHeaderControlsItemSheet5e", (
+    app: foundry.applications.api.DocumentSheetV2<Item>,
+    controls: foundry.applications.api.ApplicationV2.HeaderControlsEntry[]
+  ) => {
+    // TODO: Localize this to maybe be on-use macros? Needs to be clear it's a midi thing
+    // TODO: permissions
+    const title = "Midi-qol";
+    controls.push({
+      label: title,
+      icon: "fa-solid fa-gears", // TODO: better icon?
+      // @ts-expect-error v13-ism
+      onClick: () => new ItemOnUseMacrosConfig({ document: app.document }).render({ force: true })
+    });
+  });
 
   Hooks.on('dropCanvasData', function (canvas: Canvas, dropData: any) {
     if (!dragDropTargeting) return true;

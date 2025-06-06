@@ -337,7 +337,7 @@
   "midi-qol.AllowUseMacro.Name": "Add item on use macro to sheet",
   "midi-qol.AllowActorUseMacro.Name": "Add actor on use macro to sheet",
   "midi-qol.AllowUseMacro.Hint": "When enabled adds a macro name field which will be called on use. See the Readme for the details",
-  "midi-qol.onUseMacroLabel": " On Use Macros",
+  "midi-qol.onUseMacroLabel": " On-Use Macros",
   "midi-qol.onUseMacroOptions": {
     "preTargeting": "Called before targeting is resolved (*)",
     "preItemRoll": "Called before the item is rolled (*)",
@@ -958,6 +958,8 @@
   "midi-qol.dummyCards.Hint": "(Experimental) For GM rolls (self, private, blind) display an attack/damage roll card which will trigger a 'gm rollsed some dice' card on the players chats. Only for the case that you want the players to know you rolled something, but not what it was",
   "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>DND5E Concentration Tracking Disabled</strong><br></center><br><center>Concentration Tracking is disabled in the dnd5e system settings.</center><center>Enable in DND5E settings to enable midi concentration settings</center><br>",
   "midi-qol.ItemSheetMidiTab": "Midi QoL",
+  "midi-qol.AddOnUseMacro": "Add On-Use Macro",
+  "midi-qol.CustomMacro": "Custom Macro",
   "midi-qol.SHARED": {
     "use-condition": {
       "header": "Midi Conditions"
