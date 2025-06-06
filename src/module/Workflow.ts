@@ -1301,8 +1301,8 @@ export class Workflow {
 
   get spellLevel(): number {
     let spellLevel;
-    if (this.chatCard && SaveToChatCard) spellLevel = foundry.utils.getProperty(this.chatCard, "flags.dnd5e.use.spellLevel")
-    return spellLevel ?? this.item?.level ?? 0;
+    if (this.chatCard) spellLevel = foundry.utils.getProperty(this.chatCard, "flags.dnd5e.use.spellLevel")
+    return spellLevel ?? this.castData.castLevel ?? 0;
   }
 
   get workflowType() { return "BaseWorkflow" };
@@ -2787,7 +2787,6 @@ export class Workflow {
         if (configSettings.usePlayerPortrait && (targetToken.actor as Actor).type === "character") {
           img = (targetToken.actor as Actor).img ?? targetToken.document?.texture.src;
         }
-        //@ts-expect-error
         if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
           img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 });
         }
@@ -2868,6 +2867,7 @@ export class Workflow {
         const inCombat = (game?.combat as unknown as Combat)?.turns.some(combatant => (combatant.tokenId === selfTarget?.id));
         const convertedDuration = globalThis.DAE.convertDuration(activityDuration, inCombat);
         if (convertedDuration?.type === "seconds") {
+          //@ts-expect-error worldTime
           effectData.duration = { seconds: convertedDuration.seconds, startTime: game.time?.worldTime }
         } else if (convertedDuration?.type === "turns") {
           effectData.duration = {
@@ -2913,6 +2913,7 @@ export class Workflow {
         const inCombat = (game.combat?.turns.some(combatant => (combatant as unknown as Combatant).token?.id === selfTarget.id));
         const convertedDuration = globalThis.DAE.convertDuration(activityDuration, inCombat);
         if (convertedDuration?.type === "seconds") {
+          //@ts-expect-error worldTime
           effectData.duration = { seconds: Math.max(convertedDuration.seconds, 1), startTime: game.time?.worldTime }
         } else if (convertedDuration?.type === "turns") {
           effectData.duration = {
@@ -4257,7 +4258,6 @@ export class Workflow {
       if (configSettings.usePlayerPortrait && (targetToken.actor as Actor)?.type === "character") {
         img = (targetToken.actor as Actor).img ?? targetToken.document?.texture.src;
       }
-      //@ts-expect-error
       if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
         img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 });
       }
@@ -4395,7 +4395,6 @@ export class Workflow {
         img = target.actor?.img ?? targetDocument?.texture?.src ?? "";
       }
 
-      //@ts-expect-error
       if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
         img = await game.video?.createThumbnail(img, { width: 100, height: 100 }) ?? "";
       }
@@ -5268,7 +5267,6 @@ export class Workflow {
         img = target.actor?.img ?? targetDocument?.texture?.src ?? "";
       }
 
-      //@ts-expect-error
       if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
         img = await game.video?.createThumbnail(img, { width: 100, height: 100 }) ?? "";
       }
@@ -5808,7 +5806,6 @@ export class Workflow {
         // @ts-expect-error v13ism
         img = (targetToken.actor as Actor).img || (targetToken instanceof foundry.canvas.placeables.Token ? targetToken.document : targetToken)?.texture?.src;
       }
-      //@ts-expect-error
       if (foundry.helpers.media.VideoHelper.hasVideoExtension(img ?? "")) {
         img = await game.video?.createThumbnail(img ?? "", { width: 100, height: 100 }) ?? "";
       }

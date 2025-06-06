@@ -1248,7 +1248,7 @@ async function setDeadStatus(actor, options: any) {
 function itemSheetDefaultOptions(wrapped) {
   const options = wrapped();
   const modulesToCheck = ["magic-items-2", "magicitems", "items-with-spells-5e", "ready-set-roll-5e"];
-  const installedModules = modulesToCheck.filter(mid => game.modules?.get(mid)?.active).length + (configSettings.midiFieldsTab ? 1 : 0);
+  const installedModules = modulesToCheck.filter(mid => game.modules?.get(mid)?.active).length + 1;
   const newWidth = 560 + Math.max(0, (installedModules - 2) * 100);
   if (options.width < newWidth) {
     log(`increasing item sheet width from ${options.width} to ${newWidth}`);

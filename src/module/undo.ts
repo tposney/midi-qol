@@ -55,6 +55,7 @@ export function _queueUndoDataDirect(undoDataDef) {
   undoData.itemName = undoDataDef.itemName;
   undoData.userName = undoDataDef.userName;
   undoData.allTargets = undoDataDef.targets ?? new Collection();
+  //@ts-expect-error
   undoData.serverTime = game.time?.serverTime;
   undoData.templateUuids = undoDataDef.templateUuids ?? [];
   undoData.isReaction = undoDataDef.isReaction;
@@ -162,6 +163,7 @@ export async function saveTargetsUndoData(workflow: Workflow) {
     if ((tokendoc?.actor as unknown as Actor)?.uuid === workflow.actor.uuid) return;
     workflow.undoData.targets.push({ tokenUuid: tokendoc?.uuid, actorUuid: (tokendoc?.actor as unknown as Actor)?.uuid });
   });
+  //@ts-expect-error
   workflow.undoData.serverTime = game.time?.serverTime;
   workflow.undoData.itemCardUuid = workflow.itemCardUuid;
   if (workflow.templateUuid) workflow.undoData.templateUuids.push(workflow.templateUuid);

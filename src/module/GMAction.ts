@@ -942,7 +942,6 @@ async function prepareDamageListItems(data: {
     let img = tokenDocument?.texture.src || actor.img;
     if (configSettings.usePlayerPortrait && actor.type === "character")
       img = actor?.img ?? tokenDocument?.texture.src;
-    //@ts-expect-error
     if (foundry.helpers.media.VideoHelper.hasVideoExtension(img)) {
       //@ts-ignore - createThumbnail not defined
       img = await game.video.createThumbnail(img, { width: 100, height: 100 });

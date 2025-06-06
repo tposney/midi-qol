@@ -73,7 +73,6 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
     const left = 100;
     const middle = window.innerWidth / 2 - 155;
     let adjustment = 10;
-    if ((game.release?.generation ?? 12) < 13) adjustment = (ui.sidebar?.element.hasClass("collapsed") ? 10 : (ui.sidebar?.position.width ?? 300))
     const right = window.innerWidth - 310 - adjustment
     switch (targetConfirmation.gridPosition?.x) {
       case -1: return left;
@@ -136,7 +135,6 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
         default: break;
       }
       let img = target.document.texture.src;
-      // @ts-expect-error v13ism
       if (foundry.helpers.media.VideoHelper.hasVideoExtension(img as string)) {
         img = await game.video?.createThumbnail(img as string, { width: 50, height: 50 }) ?? "";
       }

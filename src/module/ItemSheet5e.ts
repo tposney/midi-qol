@@ -52,7 +52,7 @@ let defineMidiItemSheet5eClass = (baseClass: any) => {
           showCEOff: false,
           showCEOn: false,
           hasOtherDamage: true, // TODO fix this for activities 
-          showHeader: !configSettings.midiFieldsTab,
+          showHeader: false,
           midiPropertyLabels: config.midiProperties,
           ConfirmTargetOptions: geti18nOptions("ConfirmTargetOptions"), // this is used for attack per target
           // AutoTargetOptions: autoTargetOptions,

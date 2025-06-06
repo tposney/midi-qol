@@ -367,6 +367,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     if (game.user?.can("SETTINGS_MODIFY")) {
       // @ts-expect-error
       game.settings?.set("midi-qol", "ConfigSettings", newSettings);
+      //@ts-expect-error reloadConfirm
       if (needReload) SettingsConfig.reloadConfirm({world: true});
     }
   }

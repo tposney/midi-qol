@@ -59,7 +59,6 @@ export async function preloadTemplates() {
     "modules/midi-qol/templates/troubleshooter/problems.hbs",
     "modules/midi-qol/templates/troubleshooter/summary.hbs"
   ];
-  //@ts-expect-error
 	return foundry.applications.handlebars.loadTemplates(templatePaths);
 }
 

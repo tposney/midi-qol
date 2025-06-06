@@ -254,7 +254,9 @@ export async function resolveTargetConfirmation(activity, options: any = {}): Pr
   if (!canvas?.tokens?.active) {
     await canvas?.tokens?.activate();
   }
+  //@ts-expect-error
   const savedControl = ui.controls?.control?.name;
+  //@ts-expect-error
   const savedTool = ui.controls?.tool?.name;
   // @ts-expect-error v13ism
   await ui.controls?.render({ control: "tokens", tool: "target" });

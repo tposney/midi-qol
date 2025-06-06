@@ -91,8 +91,8 @@ export let readyHooks = async () => {
   Hooks.on("preUpdateActor", (actor: Actor, changes: any, options: any = {}, userId) => {
 
     if (userId !== game.user?.id) return true;
-    if (!isConcentrating(actor) 
-      || configSettings.doConcentrationCheck === "none" 
+    if (!isConcentrating(actor)
+      || configSettings.doConcentrationCheck === "none"
       //@ts-expect-error
       || game.settings?.get("dnd5e", "disableConcentration")
       || options.noConcentrationCheck) {
@@ -275,9 +275,10 @@ export function initHooks() {
   Hooks.on("updateChatMessage", (message: ChatMessage, update, options, user) => {
     hideRollUpdate(message, update, options, user);
     if (!update.content) return;
-    if (ui.chat?.isAtBottom || (message.author._id === game.user?._id) ) {
+    //@ts-expect-error
+    if (ui.chat?.isAtBottom || (message.author._id === game.user?._id)) {
       //@ts-expect-error
-      setTimeout(() => ui.chat?.scrollBottom({waitImages: true}), 1000);
+      setTimeout(() => ui.chat?.scrollBottom({ waitImages: true }), 1000);
     }
   });
 
@@ -342,9 +343,11 @@ export function initHooks() {
 
   // Handle start/end of turn, long/short rest auto triggered activities.
   Hooks.on("preCreateChatMessage", (message, messageData, options, userId) => {
+    //@ts-expect-error no dnd5e-types
     if (!message.system?.activations) return true;
     if (configSettings.activationAutomation === "chat") return true;
     if (configSettings.activationAutomation === "none") {
+      //@ts-expect-error no dnd5e-types
       message.updateSource({ "system.activations": [] });
       if (message.content?.length === 0) return false;
       return true
@@ -352,8 +355,11 @@ export function initHooks() {
     try {
       const activations: Set<string> = new Set();
       const activityList: any[] = [];
+      //@ts-expect-error
       const actor = message.system.actor;
+      //@ts-expect-error
       if (message?.system?.activations?.size > 0) {
+        //@ts-expect-error
         for (let activation of message.system.activations) {
           const activity = fromUuidSync(activation, { relative: actor }) as any;
           const item = activity.item;
@@ -362,11 +368,12 @@ export function initHooks() {
           else if (itemEnabled) activations.add(activation);
         }
       }
+      //@ts-expect-error
       message.updateSource({ "system.activations": activations });
       const processActivations = async () => {
         // if (activityList.length > 0) await busyWait(0.01);
         for (let activity of activityList) {
-          await completeActivityUse(activity, {midiOptions: {noUseWarning: true}}, {}, {});
+          await completeActivityUse(activity, { midiOptions: { noUseWarning: true } }, {}, {});
           // await unTimedExecuteAsGM("completeActivityUse", { activityUuid: activity.uuid, actorUuid: actor.uuid, usage: {}, dialog: {}, message: {} });
         }
       }
@@ -376,6 +383,7 @@ export function initHooks() {
       error(errMessage, err);
       TroubleShooter.recordError(err, errMessage);
     } finally {
+      //@ts-expect-error no dnd5e-types
       return message.content.length === 0 && message.system.activations.size === 0 ? false : true;
     }
   });
@@ -398,7 +406,7 @@ export function initHooks() {
       showCEOff: false,
       showCEOn: false,
       hasOtherDamage: true, // TODO fix this for activities 
-      showHeader: !configSettings.midiFieldsTab,
+      showHeader: false,
       midiPropertyLabels: midiProps,
       ConfirmTargetOptions: geti18nOptions("ConfirmTargetOptions"), // this is used for attack per target
       // AutoTargetOptions: autoTargetOptions,
@@ -475,7 +483,7 @@ export function initHooks() {
       showCEOff: false,
       showCEOn: false,
       hasOtherDamage: true, // TODO fix this for activities 
-      showHeader: !configSettings.midiFieldsTab,
+      showHeader: false,
       midiPropertyLabels: midiProps,
       ConfirmTargetOptions: geti18nOptions("ConfirmTargetOptions"), // this is used for attack per target
       // AutoTargetOptions: autoTargetOptions,
@@ -572,24 +580,24 @@ export function initHooks() {
       },
       {
         label: i18n("midi-qol.buttons.attack"),
-        enabled: (params) => ["weapon", "feat"].includes(params.item.type) && params.item.system.activities.some(a=>a.type === "attack") 
+        enabled: (params) => ["weapon", "feat"].includes(params.item.type) && params.item.system.activities.some(a => a.type === "attack")
           && params.item.system.activities.find(a => a.type === "attack"),
         iconClass: 'fas fa-dice-d20',
         execute: (params) => {
           if (debugEnabled > 1) log('rollAttack', params.item);
           const activity = params.item.system.activities.find(a => a.type === "attack");
-          if (activity) activity.rollAttack({event: params.event}, {}, {create: true})
+          if (activity) activity.rollAttack({ event: params.event }, {}, { create: true })
         }
       },
       {
         label: i18n("midi-qol.buttons.damage"),
-        enabled: (params) => ["weapon", "feat", "save", "check", "damage"].includes(params.item.type) 
-          && params.item.system.activities?.find(a =>  a.damage?.parts?.length),
+        enabled: (params) => ["weapon", "feat", "save", "check", "damage"].includes(params.item.type)
+          && params.item.system.activities?.find(a => a.damage?.parts?.length),
         iconClass: 'fas fa-dice-d20',
         execute: (params) => {
           if (debugEnabled > 1) log('rollDamage', params.item);
-          const activity = params.item.system.activities.find(a =>  a.damage?.parts?.length);
-          if (activity) activity.rollDamage({event: params.event}, {}, {create: true})
+          const activity = params.item.system.activities.find(a => a.damage?.parts?.length);
+          if (activity) activity.rollDamage({ event: params.event }, {}, { create: true })
         }
       }
     ]);
@@ -609,6 +617,7 @@ export function initHooks() {
   Hooks.on("renderItemSheet5e", (
     app: foundry.applications.api.DocumentSheetV2<Item>,
     html: HTMLElement,
+    //@ts-expect-error no dnd5e-types
     context: foundry.applications.api.DocumentSheetV2.RenderContext
   ) => {
     const item = app.document;
@@ -618,57 +627,44 @@ export function initHooks() {
       if (!["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver", "tool"].includes(context.item.type))
         return;
 
-      if (configSettings.midiFieldsTab) {
-        let tabs = html.querySelector(`nav.sheet-tabs.tabs`);
-        if (context.tabs!.midiqol) {
-          const message = "render item sheet: Midi Tab already present";
-          TroubleShooter.recordError(new Error(message), message);
-          error(message);
-          return;
-        }
-        context.tabs!.midiqol = {
-          active: !Object.values(context.tabs!).find(i => i.active),
-          cssClass: "midi-qol",
-          group: "primary",
-          id: "midiqol",
-          label: "Midi-qol"
-        };
-        const midiHeaderTab = document.createElement("a");
-        midiHeaderTab.dataset.action = "tab";
-        midiHeaderTab.dataset.group = "primary";
-        midiHeaderTab.dataset.tab = "midiqol";
-        midiHeaderTab.classList.add("midi-qol");
-        if (context.tabs!.midiqol.active) midiHeaderTab.classList.add("active");
-        midiHeaderTab.innerHTML = "<span>Midi-qol</span>";
-        tabs?.appendChild(midiHeaderTab);
-        context = foundry.utils.mergeObject(context, getItemSheetContext(context, item), { recursive: false });
-        html.querySelector("section.tab.midi-qol")?.remove();
-        if (!html.querySelector("section.tab.midi-qol")) {
-          foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/midiPropertiesForm.hbs", context).then(templateHtml => {
-            // tabs = html.find(`form nav.sheet-navigation.tabs`);
-            const midiTab = document.createElement("section");
-            midiTab.classList.add("tab", "midi-qol");
-            if (context.tabs!.midiqol.active) midiTab.classList.add("active");
-            midiTab.dataset.tab = "midiqol";
-            midiTab.dataset.group = "primary";
-            midiTab.dataset.applicationPart = "midi-qol";
-            midiTab.innerHTML = templateHtml;
-            html.querySelector("section.window-content")?.append(midiTab);
-            activateMacroListeners(app, html);
-            // @ts-expect-error no dnd5e-types
-            if (!app.classList.contains("editable")) app._disableFields();
-          });
-        }
-      } else {
-        context = foundry.utils.mergeObject(context, getItemSheetData(context, item));
-        renderTemplate("modules/midi-qol/templates/midiPropertiesForm.hbs", context).then(templateHtml => {
-          const element = html.find('input[name="system.chatFlavor"]').parent().parent();
-          element.append(templateHtml);
-          if (app.isEditable) activateMacroListeners(app, html);
-          else {
-            element.find(".midi-qol-tab").find(":input").prop("disabled", true);
-            element.find(".midi-qol-tab").find("textarea").prop("readonly", true);
-          }
+      let tabs = html.querySelector(`nav.sheet-tabs.tabs`);
+      if (context.tabs!.midiqol) {
+        const message = "render item sheet: Midi Tab already present";
+        TroubleShooter.recordError(new Error(message), message);
+        error(message);
+        return;
+      }
+      context.tabs!.midiqol = {
+        active: !Object.values(context.tabs!).find(i => (i as any).active),
+        cssClass: "midi-qol",
+        group: "primary",
+        id: "midiqol",
+        label: "Midi-qol"
+      };
+      const midiHeaderTab = document.createElement("a");
+      midiHeaderTab.dataset.action = "tab";
+      midiHeaderTab.dataset.group = "primary";
+      midiHeaderTab.dataset.tab = "midiqol";
+      midiHeaderTab.classList.add("midi-qol");
+      if (context.tabs!.midiqol.active) midiHeaderTab.classList.add("active");
+      midiHeaderTab.innerHTML = "<span>Midi-qol</span>";
+      tabs?.appendChild(midiHeaderTab);
+      context = foundry.utils.mergeObject(context, getItemSheetContext(context, item), { recursive: false });
+      html.querySelector("section.tab.midi-qol")?.remove();
+      if (!html.querySelector("section.tab.midi-qol")) {
+        foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/midiPropertiesForm.hbs", context).then(templateHtml => {
+          // tabs = html.find(`form nav.sheet-navigation.tabs`);
+          const midiTab = document.createElement("section");
+          midiTab.classList.add("tab", "midi-qol");
+          if (context.tabs!.midiqol.active) midiTab.classList.add("active");
+          midiTab.dataset.tab = "midiqol";
+          midiTab.dataset.group = "primary";
+          midiTab.dataset.applicationPart = "midi-qol";
+          midiTab.innerHTML = templateHtml;
+          html.querySelector("section.window-content")?.append(midiTab);
+          activateMacroListeners(app, html);
+          // @ts-expect-error no dnd5e-types
+          if (!app.classList.contains("editable")) app._disableFields();
         });
       }
     }

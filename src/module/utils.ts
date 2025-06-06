@@ -4645,6 +4645,7 @@ export function createConditionData(data: { workflow?: any, target?: Token | Tok
   rollData.actor = {};
   rollData.actor.raceOrType = actor ? raceOrType(actor) : "";
   rollData.actor.typeOrRace = actor ? typeOrRace(actor) : "";
+  //@ts-expect-error
   rollData.worldTime = game.time?.worldTime;
   try {
     if (data.target) {

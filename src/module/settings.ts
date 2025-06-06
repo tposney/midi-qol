@@ -135,7 +135,6 @@ class ConfigSettings {
   mergeCardCondensed: boolean = false;
   mergeCardMulti: boolean = false;
   mergeCardMultiDamage: boolean = false;
-  midiFieldsTab: boolean = true;
   midiPropertiesTabRole: number = CONST.USER_ROLES.PLAYER;
   confirmAttackDamage: string = "none";
   highlightSuccess: boolean = false;
@@ -549,9 +548,6 @@ export let fetchParams = () => {
   if (configSettings.autoTarget === "wallsBlockIgnoreIncapcitated") configSettings.autoTarget = "wallsBlockIgnoreIncapacitated";
   if (configSettings.autoTarget === "wallsBlockIgnoreIncapacitated") configSettings.autoTarget = "wallsBlockIgnoreIncapacitated";
   if (configSettings.autoTarget === "alwaysIgnoreIncapcitated") configSettings.autoTarget = "alwaysIgnoreIncapacitated";
-  //till here?
-  // if (configSettings.midiFieldsTab === undefined) configSettings.midiFieldsTab = true;
-  configSettings.midiFieldsTab = true;
   //configSettings.v3DamageApplication = true;
   configSettings.useDamageDetail = false;
   if (configSettings.collapsibleTargets === undefined) configSettings.collapsibleTargets = true;
