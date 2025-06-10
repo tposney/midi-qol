@@ -96,7 +96,8 @@ export let readyHooks = async () => {
       || configSettings.doConcentrationCheck === "none"
       //@ts-expect-error
       || game.settings?.get("dnd5e", "disableConcentration")
-      || options.noConcentrationCheck) {
+      || options.noConcentrationCheck
+      || options.dnd5e?.concentrationCheck === false) {
       options.noConcentrationCheck = true;
       return true;
     }
