@@ -577,7 +577,7 @@ export async function processDamageRoll(workflow: Workflow, defaultDamageType: s
     }
   }
   */
-    timedAwaitExecuteAsGM("createReverseDamageCard", {
+    await timedAwaitExecuteAsGM("createReverseDamageCard", {
       autoApplyDamage: configSettings.autoApplyDamage,
       sender: game.user?.name,
       actorId: workflow.actor?.id,
@@ -1889,11 +1889,23 @@ export function computeDistance(t1: any /*Token*/, t2: any /*Token*/, options: b
   if (!(t2.document instanceof WallDocument)) {
     for (x = t1StartX; x < t1DocWidth; x++) {
       for (y = t1StartY; y < t1DocHeight; y++) {
+        if (y === t1StartY + 1) {
+          if (x > t1StartX && x < t1DocWidth - t1StartX) {
+            // skip to the last y position;
+            y = t1DocHeight - t1StartY;
+          }
+        }
         let origin;
         const point = canvas.grid.getCenterPoint({ x: Math.round(t1.document.x + (canvas.dimensions.size * x)), y: Math.round(t1.document.y + (canvas.dimensions.size * y)) });
         origin = new PIXI.Point(point.x, point.y);
         for (x1 = t2StartX; x1 < t2DocWidth; x1++) {
           for (y1 = t2StartY; y1 < t2DocHeight; y1++) {
+            if (y1 === t2StartY + 1) {
+              if (x1 > t2StartX && x1 < t2DocWidth - t2StartX) {
+                // skip to the last y position;
+                y1 = t2DocHeight - t2StartY;
+              }
+            }
             const point = canvas.grid.getCenterPoint({ x: Math.round(t2.document.x + (canvas.dimensions.size * x1)), y: Math.round(t2.document.y + (canvas.dimensions.size * y1)) });
             let dest = new PIXI.Point(point.x, point.y);
             const r = new Ray(origin, dest);

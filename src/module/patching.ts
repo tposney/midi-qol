@@ -267,6 +267,8 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
     }
     if (!result) return result;
     rollMode = message.rollMode ?? rollMode;
+    result.forEach(r => r.options.rollMode = rollMode);
+
     /*
     if (rollMode !== CONST.DICE_ROLL_MODES.BLIND) rollMode = result.options.rollMode;
     else result.options.rollMode = CONST.DICE_ROLL_MODES.BLIND;

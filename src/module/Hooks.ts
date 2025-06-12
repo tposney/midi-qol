@@ -95,8 +95,10 @@ export let readyHooks = async () => {
       || configSettings.doConcentrationCheck === "none" 
       //@ts-expect-error
       || game.settings?.get("dnd5e", "disableConcentration")
-      || options.noConcentrationCheck) {
+      || options.noConcentrationCheck
+      || options.dnd5e?.concentrationCheck === false) {
       options.noConcentrationCheck = true;
+      foundry.utils.setProperty(options, "dnd5e.concentrationCheck", false);
       return true;
     }
     const hpUpdate = changes.system?.attributes?.hp?.value;
@@ -105,9 +107,10 @@ export let readyHooks = async () => {
     const hpDamage = (hpUpdate !== undefined) ? actor.system.attributes.hp.value - hpUpdate : 0;
     //@ts-expect-error no dnd5e-types
     const tempHPDamage = (tempHpUpdate !== undefined) ? actor.system.attributes.hp.temp - tempHpUpdate : 0;
-    const totalDamage = tempHPDamage + hpDamage;
+    const totalDamage = configSettings.tempHPDamageConcentrationCheck ? tempHPDamage + hpDamage : hpDamage;
     if (totalDamage <= 0) {
       options.noConcentrationCheck = true;
+      foundry.utils.setProperty(options, "dnd5e.concentrationCheck", false);
       return true;
     }
     const isConcentrationCheck = (hpDamage > 0 || configSettings.tempHPDamageConcentrationCheck);

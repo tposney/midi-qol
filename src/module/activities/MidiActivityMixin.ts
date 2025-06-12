@@ -3,7 +3,7 @@ import { cancelWorkflow, socketlibSocket } from "../GMAction.js";
 import { DDBGameLogWorkflow, DamageOnlyWorkflow, TrapWorkflow, Workflow } from "../Workflow.js";
 import { OnUseMacro, OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { checkMechanic, configSettings, safeGetGameSetting } from "../settings.js";
+import { checkMechanic, configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { busyWait } from "../tests/setupTest.js";
 import { saveUndoData } from "../undo.js";
@@ -548,6 +548,15 @@ export var MidiActivityMixin = Base => {
           console.warn("midi-qol | Damage roll blocked via pre-hook");
           return;
         }
+        if (configSettings.allowUseMacro) {
+          const results = await config.workflow?.callMacros(this.item, config.workflow?.onUseMacros?.getMacros("preDamageRollConfig"), "OnUse", "preDamageRollConfig", { config, dialog, message });
+          const cancelWorkflow = results?.some(i => i === false) ?? false;
+          if (cancelWorkflow) {
+            console.warn("midi-qol | Damage roll blocked by preDamageRollConfig onUseMacro");
+            return;
+          }
+        }
+
         //@ts-expect-error
         const areKeysPressed = game.system.utils.areKeysPressed;
         const keys = {
@@ -906,7 +915,10 @@ export var MidiActivityMixin = Base => {
       if (config.midiOptions?.targetsToUse?.size > 0 && !activityHasAreaTarget(this)) {
         workflow.setTargets(config.midiOptions.targetsToUse);
       } else {
-        if (((this.target?.affects.type ?? "") !== "") || configSettings.enforceSingleWeaponTarget) {
+        if (((this.target?.affects.type ?? "") !== "") 
+          || configSettings.enforceSingleWeaponTarget
+          || (targetConfirmation.enabled && targetConfirmation.all)
+          || this.forcedTargetConfirmation) {
           if (!(await preTemplateTargets(this, config.midiOptions)))
             return false;
           // TODO clean this up

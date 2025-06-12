@@ -2379,19 +2379,26 @@ export class Workflow {
     let otherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave !== true).map(efData => efData.effect);
     let onSaveOtherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave === true).map(efData => efData.effect);
     if (activityEffects.length > 0 && this.effectTargets.size > 0 && this.activity?.midiProperties?.chooseEffects) { // WIP
-      activityEffects = await this.chooseEffects(activityEffects, {activity: this.activity, activityUuid: this.activity.uuid, isOtherActivity: false });
+      activityEffects = await this.chooseEffects(activityEffects, { activity: this.activity, activityUuid: this.activity.uuid, isOtherActivity: false });
     }
     if (otherActivityEffects.length > 0 && this.otherEffectTargets.size > 0 && this.otherActivity?.midiProperties?.chooseEffects) { // WIP
-      otherActivityEffects = await this.chooseEffects(otherActivityEffects, {activity: this.otherActivity, activityUuid: this.otherActivity.uuid, isOtherActivity: true });
+      otherActivityEffects = await this.chooseEffects(otherActivityEffects, { activity: this.otherActivity, activityUuid: this.otherActivity.uuid, isOtherActivity: true });
     }
     const ceTargetEffect = ceEffect && !(ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
     const ceSelfEffect = ceEffect && (ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
     const hasActivityEffects = hasDAE(this) && activityEffects.length > 0;
     const hasOtherActivityEffects = hasDAE(this) && otherActivityEffects.length > 0;
+    /* Thanks Elwin
     const activitySelfEffects = activityEffects.filter(ef => ef.flags?.dae?.selfTarget || ef.flags?.dae?.selfTargetAlways) ?? [];
     const activitySelfAllEffect = activityEffects.filter(ef => ef.flags?.dae?.selfTargetAlways && !ef.transfer) ?? [];
     const otherActivitySelfEffects = otherActivityEffects.filter(ef => ef.flags?.dae?.selfTarget || ef.flags?.dae?.selfTargetAlways) ?? [];
     const otherActivitySelfAllEffects = otherActivityEffects.filter(ef => ef.flags?.dae?.selfTargetAlways) ?? [];
+    */
+    const activitySelfEffects = [...activityEffects, ...onSaveActivityEffects].filter(ef => ef.flags?.dae?.selfTarget || ef.flags?.dae?.selfTargetAlways) ?? [];
+    const activitySelfAllEffect = [...activityEffects, ...onSaveActivityEffects].filter(ef => ef.flags?.dae?.selfTargetAlways) ?? [];
+    const otherActivitySelfEffects = [...otherActivityEffects, ...onSaveOtherActivityEffects].filter(ef => ef.flags?.dae?.selfTarget || ef.flags?.dae?.selfTargetAlways) ?? [];
+    const otherActivitySelfAllEffects = [...otherActivityEffects, ...onSaveOtherActivityEffects].filter(ef => ef.flags?.dae?.selfTargetAlways) ?? [];
+
     activityEffects = activityEffects.filter(ef => !ef.flags?.dae?.selfTarget && !ef.flags?.dae?.selfTargetAlways);
     otherActivityEffects = otherActivityEffects.filter(ef => !ef.flags?.dae?.selfTarget && !ef.flags?.dae?.selfTargetAlways);
     // let anyApplication = this.effectTargets.size > 0 || this.otherEffectTargets.size > 0;
@@ -2627,13 +2634,13 @@ export class Workflow {
           templateToDelete?.delete()
         }, timeout);
       } else {
+        // when blfx active wait 5 seconds and if the template is still there delete it.
         const timeout = 5000;
         setTimeout(() => {
           const templateToDelete = fromUuidSync(this.templateUuid) as MeasuredTemplateDocument || null;
           //@ts-expect-error
           templateToDelete?.delete()
         }, elapsedTimeRequired);
-        log("Not auto removing instantaneous template because boss loot assets active")
       }
     }
     if (this.postSummonHookId) Hooks.off("dnd5e.postSummon", this.postSummonHookid);
@@ -2866,7 +2873,21 @@ export class Workflow {
 
         const inCombat = (game?.combat as unknown as Combat)?.turns.some(combatant => (combatant.tokenId === selfTarget?.id));
         const convertedDuration = globalThis.DAE.convertDuration(activityDuration, inCombat);
-        if (convertedDuration?.type === "seconds") {
+        if (activityDuration.units === "inst") {
+          if (isInCombat(this.actor)) {
+            effectData.duration = {
+              rounds: 0,
+              turns: 1,
+              startRound: (game?.combat as unknown as Combat)?.round,
+              StartTurn: (game?.combat as unknown as Combat)?.turn,
+            }
+          } else {
+            effectData.duration = {
+              seconds: 1,
+              startTime: game.time?.worldTime
+            }
+          }
+        } else if (convertedDuration?.type === "seconds") {
           effectData.duration = { seconds: convertedDuration.seconds, startTime: game.time?.worldTime }
         } else if (convertedDuration?.type === "turns") {
           effectData.duration = {
@@ -4035,9 +4056,9 @@ export class Workflow {
       )
     }
     // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
-    const rolls = [...(this.attackRoll ? [this.attackRoll] : []), 
-                   ...(this.utilityRoll ? [this.utilityRoll] : []),
-                   ...(this.extraRolls ?? [])];
+    const rolls = [...(this.attackRoll ? [this.attackRoll] : []),
+    ...(this.utilityRoll ? [this.utilityRoll] : []),
+    ...(this.extraRolls ?? [])];
     await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true);
   }
 
@@ -5277,9 +5298,9 @@ export class Workflow {
         isPC: isPlayerOwned,
         target,
         saveSymbol: (rollDC === null) ? "" : (
-              ((target.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-save-symbol")
-              + " midi-qol-save-symbol "
-              + (saved ? "fa-check" : "fa-times")),
+          ((target.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-save-symbol")
+          + " midi-qol-save-symbol "
+          + (saved ? "fa-check" : "fa-times")),
         saveTotalClass: (target.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-save-total",
         saveToolTipClass: (target.actor as Actor).hasPlayerOwner ? "" : "midi-qol-npc-save-tooltip",
         rollTotal: saveRollTotal,

@@ -1,3 +1,20 @@
+### 12.4.54
+* Fix for stack overflow when computing distance between very large tokens - thanks @woodser
+* Fix for applying some self target effects - thanks @Elwin
+* Fix for target confirmation dialog - thanks @Elwin
+* Fix for target confirmation dialog leaving canvas selection tool in odd state if closing dialog.
+* Fix for respecting roll mode when doing a skill roll and changing it in the roll dialog.
+* Added new onUseMacro pass, preDamageRollConfig, called before confirming damage config.
+* Respect activity options, dnd5e.concentrationCheck.
+* Reinstate 1 second/1 turn time out for instantaneous templates removal.
+* If ignoring temphp when doing concentration checks, no concentration check will be triggered if only temphp damage is done for both midi's item roll concentration check and dnd5e's chat message.
+  - For the midi item roll temphp damage will not be included in the concentration dc calculation.
+  - For the dnd5e chat message, temphp damage will be included in the concentration dc calculation.
+* Fix for multiple items triggering multiple damage rolls only applying last damage done.
+
+### 12.4.53
+* various fixes - thanks @thatlonelybugbear and @michael
+
 ### 12.4.52
 * Change so that preferred GM is stored as an id rather than a name.
 

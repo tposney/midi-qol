@@ -350,6 +350,7 @@
     "damageBonus": "Return a damage bonus",
     "preSave": "Before Checking Saves",
     "postSave": "After Checking Saves",
+    "preDamageConfiguration": "Before Damage Configuration",
     "preDamageApplication": "Before Damage Application",
     "preActiveEffects": "Before Active Effects",
     "postActiveEffects": "After Active Effects ",
