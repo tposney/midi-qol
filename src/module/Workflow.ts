@@ -1302,7 +1302,7 @@ export class Workflow {
   get spellLevel(): number {
     let spellLevel;
     if (this.chatCard && SaveToChatCard) spellLevel = foundry.utils.getProperty(this.chatCard, "flags.dnd5e.use.spellLevel")
-    return spellLevel ?? this.item?.level ?? 0;
+    return spellLevel ?? this.castData?.castLevel ?? this.castData?.baseLevel ?? this.item?.level ?? 0;
   }
 
   get workflowType() { return "BaseWorkflow" };
@@ -2442,15 +2442,16 @@ export class Workflow {
             scaling: this.chatCard.getFlag("dnd5e", "scaling"),
             spellLevel: this.chatCard.getFlag("dnd5e", "use.spellLevel")
           }
-        }
+        },
+        utilityRoll: this.utilityRoll?.total,
       }
     }
     for (let token of this.targets) {
       const tokenDamages = this.damageList?.find(di => di.targetUuid === getTokenDocument(token)?.uuid);
       if (tokenDamages) {
-        totalDamage = tokenDamages.totalDamage;
-        hpDamage = tokenDamages.hpDamage;
-        damageComponents = [tokenDamages.damageDetails["combinedDamage"], configSettings.singleConcentrationRoll ? [] : (tokenDamages.damageDetails["otherDamage"] ?? [])]
+        doEffectsData.damageTotal = tokenDamages.totalDamage;
+        doEffectsData.context.damageApplied = tokenDamages.hpDamage;
+        doEffectsData.context.damageComponents = [tokenDamages.damageDetails["combinedDamage"], configSettings.singleConcentrationRoll ? [] : (tokenDamages.damageDetails["otherDamage"] ?? [])]
           .reduce((summary, damages) => {
             let damagesSummary = damages.reduce((damageComponents, damageEntry) => {
               damageComponents[damageEntry.type] = damageEntry.value + (damageComponents[damageEntry.type] ?? 0);

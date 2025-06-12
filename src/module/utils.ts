@@ -6455,7 +6455,7 @@ export async function chooseEffect({ speaker, actor, token, character, item, arg
         itemCardUuid: "",
         metaData: {},
         selfEffects: "none",
-        spellLevel: (applyItem.level ?? 0),
+        spellLevel: (workflow?.spellLevel ?? applyItem.level ?? 0),
         toggleEffect: applyItem?.flags.midiProperties?.toggleEffect,
         tokenUuid: token.document.uuid,
         actorUuid: actor.uuid,

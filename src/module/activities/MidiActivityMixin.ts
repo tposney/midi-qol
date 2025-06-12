@@ -411,8 +411,8 @@ export var MidiActivityMixin = Base => {
         foundry.utils.setProperty(message, "data.flags.midi-qol.messageType", "attack");
         if (usage.midiOptions?.configureDialog === false) dialog.configure = false;
         const rollToggle = areMidiKeysPressed(usage.event, "RollToggle");
-        if (rollToggle) usage.workflow.rollOptions.rollToggle = usage.workflow.rollOptions.rollToggle = true;
-        ;
+        if (rollToggle && usage.workflow) 
+          foundry.utils.setProperty(usage.workflow, "rollOptions.rollToggle", true);
         activity.checkAutoConsume(usage, dialog, message, rollToggle);
         // if (rollToggle) dialog.configure = !dialog.configure; Should this always be looked at
         // Synthetic items don't have an _id so setup for them to be recovered from the chat card

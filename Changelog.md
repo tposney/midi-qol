@@ -12,9 +12,6 @@
   - For the dnd5e chat message, temphp damage will be included in the concentration dc calculation.
 * Fix for multiple items triggering multiple damage rolls only applying last damage done.
 
-### 12.4.53
-* various fixes - thanks @thatlonelybugbear and @michael
-
 ### 12.4.52
 * Change so that preferred GM is stored as an id rather than a name.
 
