@@ -506,20 +506,22 @@ export var MidiActivityMixin = Base => {
 
     checkAutoConsume(usage, dialog, message, rollToggle) {
       if (dialog.configure === false) return;
-      if (this.isSpell && ["both", "spell"].includes(autoConsumeResource(usage.workflow))) {
-        dialog.configure = false;
-        // Check that there is a spell slot of the right level
-        const spells = this.actor.system.spells;
-        // Come back and check for spell level in activities
-        if (spells[`spell${this.item.system.level}`]?.value === 0 &&
-          (spells.pact.value === 0 || spells.pact.level < this.item.system.level)) {
-          dialog.configure = true;
-        }
+      if (this.isSpell) {
+        if (["both", "spell"].includes(autoConsumeResource(usage.workflow))) {
+          dialog.configure = false;
+          // Check that there is a spell slot of the right level
+          const spells = this.actor.system.spells;
+          // Come back and check for spell level in activities
+          if (spells[`spell${this.item.system.level}`]?.value === 0 &&
+            (spells.pact.value === 0 || spells.pact.level < this.item.system.level)) {
+            dialog.configure = true;
+          }
 
-        if (!dialog.configure && this.hasAreaTarget && this.actor?.sheet) {
-          setTimeout(() => {
-            this.actor?.sheet.minimize();
-          }, 100)
+          if (!dialog.configure && this.hasAreaTarget && this.actor?.sheet) {
+            setTimeout(() => {
+              this.actor?.sheet.minimize();
+            }, 100)
+          }
         }
       } else dialog.configure = !(["both", "item"].includes(autoConsumeResource(usage.workflow)));
       if (autoConsumeResource(usage.workflow) !== "none" && rollToggle) dialog.configure = true;
