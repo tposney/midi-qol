@@ -1,3 +1,6 @@
+### 12.4.55
+* Include fix for auto consumption not distinguishing spells/non-spells correctly.Thanks @thatlonelybugbear
+
 ### 12.4.54
 * Fix for stack overflow when computing distance between very large tokens - thanks @woodser
 * Fix for applying some self target effects - thanks @Elwin
