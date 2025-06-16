@@ -1,3 +1,7 @@
+### 12.4.56
+* Fix for preDamageRollConfig not being setup correctly - thanks @Elwin
+* Fix for chat card activity action resulting in cannot read metadata on undefined. Thanks @thatlonelybugbear
+
 ### 12.4.55
 * Include fix for auto consumption not distinguishing spells/non-spells correctly.Thanks @thatlonelybugbear
 
