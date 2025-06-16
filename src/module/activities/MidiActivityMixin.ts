@@ -337,7 +337,7 @@ export var MidiActivityMixin = Base => {
       const item = scaling ? this.item.clone({ "flags.dnd5e.scaling": scaling }, { keepId: true }) : this.item;
       let activity = this.otherActivity;
       const action = target.dataset.action;
-      let handler = activity.metadata.usage?.actions?.[action];
+      let handler = activity?.metadata?.usage?.actions?.[action];
       const workflow = Workflow.getWorkflow(message._uuid);
       if (!handler && workflow) {
         activity = workflow.activity;
