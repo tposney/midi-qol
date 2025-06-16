@@ -350,7 +350,7 @@
     "damageBonus": "Retornar um Bônus de Dano",
     "preSave": "Antes de Verificar Salvaguardas",
     "postSave": "Depois de Verificar Salvaguardas",
-    "preDamageConfiguration": "Antes da Configuração do Dano",
+    "preDamageRollConfig": "Antes da Configuração do Dano",
     "preDamageApplication": "Antes de Aplicar Dano",
     "preActiveEffects": "Antes de Efeitos Ativos",
     "postActiveEffects": "Depois de Efeitos Ativos ",
