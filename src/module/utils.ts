@@ -1592,8 +1592,9 @@ export async function completeActivityUse(activity, usage: any = {}, dialog: any
       });
 
       let completeHookName = `midi-qol.postCleanup.${activity.uuid}`;
-      if (!(activity)) {
+      if (!activity || activity.activity?.id) {
         // Magic items create a pseudo item when doing the roll so have to hope we get the right completion
+        // forward activities wont call the expected postCleanup Hook
         completeHookName = "midi-qol.postCleanup";
       }
       const completeHookId = Hooks.on(completeHookName, (workflow) => {
@@ -4011,9 +4012,10 @@ export async function doReactions(targetRef: Token | TokenDocument | string, tri
           // cast activities will get picked up by the spells they create on the actor
           if (activity instanceof GameSystemConfig.activityTypes.cast.documentClass) continue;
           if (item.type === "spell") {
-            if (item.system.linkedActivity) {
-              if (!theItem.system.linkedActivity.item.system.magicAvailable
-                || !theItem.system.linkedActivity.item.system.equipped) continue;
+            if (item.system.linkedActivity && ["weapon", "consumable", "equipment", "loot", "feat"].includes(item.system.linkedActivity.item.type)) {
+              if (item.system.linkedActivity.item.type === "weapon" && !item.system.linkedActivity.item.system.magicAvailable) continue;
+              if (["weapon", "consumable", "equipment", "loot"].includes(item.system.linkedActivity.item.type)
+                && !theItem.system.linkedActivity.item.system.equipped) continue;
               const config = activity._prepareUsageConfig({ create: false });
               const canUse = await activity._prepareUsageUpdates(config, { returnErrors: true });
               if (canUse instanceof Array) continue; // insufficent uses available

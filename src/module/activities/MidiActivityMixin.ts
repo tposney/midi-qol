@@ -435,6 +435,7 @@ export var MidiActivityMixin = Base => {
         activityConsumptionHookId = Hooks.on("dnd5e.activityConsumption", (newActivity, usageConfig, messageConfig) => {
           if (usage.workflow.activity.uuid !== newActivity.uuid) return;
           usageData = usageConfig;
+          usageConfig.workflow.activity = newActivity;
         });
 
         if (!await activity.preTargetingChecks(usage, dialog, message)) return false;
@@ -459,6 +460,7 @@ export var MidiActivityMixin = Base => {
         usage.workflow.id = useResults.message.uuid;
         usage.workflow.activity = usage.workflow.activity;
         usage.workflow.item = usage.workflow.activity.item;
+        activity = usage.workflow.activity;
         Workflow.addWorkflow(usage.workflow);
         if (usage.workflow.templateUuid) { // A template was placed check to see if there is a concentration effect to add it to
           const concentrationEffect = usage.workflow.actor.effects.get(usage.workflow.chatCard.getFlag("dnd5e", "use.concentrationId"));
@@ -914,7 +916,7 @@ export var MidiActivityMixin = Base => {
         return false;
       }
       const workflow = config.workflow;
-      if (config.midiOptions?.targetsToUse?.size > 0 && !activityHasAreaTarget(this)) {
+      if (config.midiOptions?.targetsToUse?.size > 0 && !activityHasAreaTarget(this) && this.target.affects.type !== "self") {
         workflow.setTargets(config.midiOptions.targetsToUse);
       } else {
         if (((this.target?.affects.type ?? "") !== "") 

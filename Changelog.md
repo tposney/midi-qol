@@ -1,3 +1,7 @@
+### 12.4.57
+* Fix for items that are not weapons with reaction cast activities.
+* Fix for reaction activities that are a self target forward activity not targeting self.
+
 ### 12.4.56
 * Fix for preDamageRollConfig not being setup correctly - thanks @Elwin
 * Fix for chat card activity action resulting in cannot read metadata on undefined. Thanks @thatlonelybugbear
