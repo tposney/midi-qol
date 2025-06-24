@@ -1,5 +1,5 @@
 ### 12.4.59
-* Added Czecg language files - thanks @Lethrendis
+* Added Czech language files - thanks @Lethrendis
 * Fix for self applied effects - thanks @Elwin
 
 ### 12.4.58
