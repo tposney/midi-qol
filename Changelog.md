@@ -1,3 +1,6 @@
+### 12.4.58
+* Updated pt.BR thanks @kharmans
+
 ### 12.4.57
 * Fix for items that are not weapons with reaction cast activities.
 * Fix for reaction activities that are a self target forward activity not targeting self.
