@@ -60,8 +60,6 @@ function addItemSheetButtons(app, html, data, triggeringElement = "", buttonCont
     triggeringElement = ".item .collapsible";
   if (buttonContainer === "")
     buttonContainer = ".wrapper .item-summary";
-  // adding an event for when the description is shown
-  console.error("Adding event for ", triggeringElement, html[0].querySelectorAll(triggeringElement));
   html[0].querySelectorAll(triggeringElement)?.forEach((element) => {
       addItemRowButtonForTarget(app, data, element, buttonContainer);
   });

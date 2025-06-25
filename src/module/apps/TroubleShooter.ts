@@ -1,4 +1,4 @@
-import { geti18nOptions, i18n, systemConcentrationId } from "../../midi-qol.js";
+import { geti18nOptions, i18n, systemConcentrationId, error } from "../../midi-qol.js";
 import { CheckedAuthorsList, checkedModuleList, checkMechanic, collectSettingData, configSettings, enableWorkflow, exportSettingsToJSON, fetchParams, importSettingsFromJSON, safeGetGameSetting } from "../settings.js";
 import { REQUIRED_MODULE_VERSIONS, getModuleVersion, installedModules } from "../setupModules.js";
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -115,7 +115,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
     saveDataToFile(JSON.stringify(data, null, 2), "text/json", filename);
   }
   public static async importTroubleShooterDataFromJSONDialog() {
-    const content = await foundry.applications.handlebars.renderTemplate("templates/apps/import-data.html",
+    const content = await foundry.applications.handlebars.renderTemplate("templates/apps/import-data.hbs",
       { hint1: "Choose a Trouble Shooter JSON file to import" });
     let dialog = new Promise((resolve, reject) => {
       new DialogV2({
@@ -182,7 +182,7 @@ export class TroubleShooter extends HandlebarsApplicationMixin(ApplicationV2) {
 
   async _onSubmit(...args): Promise<any> {
     let [event, options] = args;
-    // console.error("On Submit", event, options.updateData, options.preventClose, options.preventRender);
+    // error("On Submit", event, options.updateData, options.preventClose, options.preventRender);
     return {};
   }
 

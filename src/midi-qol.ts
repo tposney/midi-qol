@@ -6,7 +6,7 @@ import { initHooks, readyHooks, setupHooks } from './module/Hooks.js';
 import { SaferSocket, initGMActionSetup, setupSocket, socketlibSocket, unTimedExecuteAsGM } from './module/GMAction.js';
 import { setupSheetQol } from './module/sheetQOL.js';
 import { TrapWorkflow, DamageOnlyWorkflow, Workflow, DummyWorkflow, DDBGameLogWorkflow, UserWorkflow } from './module/Workflow.js';
-import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, checkRange, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, debouncedUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, reportMidiCriticalFlags, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, MQfromUuidSync, actorFromUuid, createDamageDetail, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, addDependent, cleanCPRFlanked, updatesCache } from './module/utils.js';
+import { addConcentrationDependent, addRollTo, applyTokenDamage, canSee, canSense, canSenseModes, checkDistance, checkIncapacitated, checkNearby, checkRange, chooseEffect, completeItemUse, computeCoverBonus, contestedRoll, createConditionData, debouncedUpdate, displayDSNForRoll, doConcentrationCheck, doOverTimeEffect, evalAllConditions, evalCondition, findNearby, findNearbyCount, getCachedDocument, getChanges, getConcentrationEffect, getTokenDocument, getOrCreateTokenForActor, getOrCreateTokenForActorAsSet, getTokenPlayerName, getTokenPlayerNameForUser, getTraitMult, hasCondition, hasUsedBonusAction, hasUsedReaction, isValidTarget, midiRenderAttackRoll, midiRenderBonusDamageRoll, midiRenderDamageRoll, midiRenderOtherDamageRoll, midiRenderRoll, fromActorUuid, playerFor, playerForActor, raceOrType, reactionDialog, removeHiddenCondition, removeInvisibleCondition, removeReactionUsed, reportMidiCriticalFlags, setBonusActionUsed, setReactionUsed, tokenForActor, typeOrRace, validRollAbility, MQfromUuidSync, actorFromUuid, createDamageDetail, removeActionUsed, removeBonusActionUsed, getCheckRollModeFor, getSaveRollModeFor, completeActivityUse, checkActivityRange, modifyDamageBy, computeDistance, addDependent, cleanCPRFlanked, updatesCache } from './module/utils.js';
 import { ConfigPanel } from './module/apps/ConfigPanel.js';
 import { RollStats } from './module/RollStats.js';
 import { OnUseMacroOptions } from './module/apps/Item.js';
@@ -487,22 +487,8 @@ function addConfigOptions() {
   let config = game.system?.config ?? {};
   if (game.system?.id === "dnd5e" || game.system?.id === "n5e") {
     config.midiProperties = {};
-    // Add additional vision types? How to modify token properties doing this.
-    // config.midiProperties["confirmTargets"] = i18n("midi-qol.confirmTargetsProp");
-    config.midiProperties["autoFailFriendly"] = i18n("midi-qol.FailFriendly");
-    config.midiProperties["autoSaveFriendly"] = i18n("midi-qol.SaveFriendly");
-    config.midiProperties["magicdam"] = i18n("midi-qol.magicalDamageProp");
-    config.midiProperties["magiceffect"] = i18n("midi-qol.magicalEffectProp");
-    config.midiProperties["noConcentrationCheck"] = i18n("midi-qol.noConcentrationEffectProp");
-    config.midiProperties["toggleEffect"] = i18n("midi-qol.toggleEffectProp");
-    config.midiProperties["ignoreTotalCover"] = i18n("midi-qol.ignoreTotalCover");
-    // config.midiProperties["idr"] = "Ignore dr";
-    // config.midiProperties["idi"] = "Ignore di";
-    // config.midiProperties["idv"] = "Ignore dv";
-    // config.midiProperties["ida"] = "Ignore da";
     config.damageTypes["none"] = { label: i18n("midi-qol.noType"), icon: "systems/dnd5e/icons/svg/trait-damage-immunities.svg", toString: function () { return this.label } };
     config.damageTypes["midi-none"] = { label: i18n("midi-qol.midi-none"), icon: "systems/dnd5e/icons/svg/trait-damage-immunities.svg", toString: function () { return this.label } };
-
     // sliver, adamant, spell, nonmagic, magic are all deprecated and should only appear as custom
     config.customDamageResistanceTypes = {
       "spell": i18n("midi-qol.SpellDamage"),
@@ -621,6 +607,7 @@ Hooks.once('ready', function () {
     "preDamageRoll": "Before Damage Roll",
     "postDamageRoll": "After Damage Roll",
     "damageBonus": "return a damage bonus",
+    "preDamageRollConfig": "Before Damage Configuration",
     "preDamageApplication": "Before Damage Application",
     "preActiveEffects": "Before Active Effects",
     "postActiveEffects": "After Active Effects ",
@@ -641,10 +628,10 @@ Hooks.once('ready', function () {
     const camelKey = `${key.charAt(0).toUpperCase()}${key.slice(1)}`;
     if (MQOnUseOptions[`pre${camelKey}`] === undefined) {
       MQOnUseOptions[`pre${camelKey}`] = `Before state ${camelKey}`;
-    } else console.error(`midi-qol | pre${camelKey} already exists`);
+    } else error(`pre${camelKey} already exists`);
     if (MQOnUseOptions[`post${camelKey}`] === undefined) {
       MQOnUseOptions[`post${camelKey}`] = `After state ${camelKey}`;
-    } else console.error(`midi-qol | post${camelKey} already exists`);
+    } else error(`post${camelKey} already exists`);
   }
   OnUseMacroOptions.setOptions(MQOnUseOptions);
   globalThis.MidiQOL.MQOnUseOptions = MQOnUseOptions;
@@ -803,6 +790,7 @@ Hooks.on("monaco-editor.ready", (registerTypes) => {
     getTokenForActor: function getTokenForActor(actor: Actor): Token | undefined,
     getTokenForActorAsSet: function getTokenForActorAsSet(actor: Actor): Set<Token>,
     getTokenPlayerName: function getTokenPlayerName(token: Token | TokenDocument | string): string,
+    getTokenPlayerNameForUser: function getTokenPlayerName(user: User, token: Token | TokenDocument | string): string,
     getTraitMult: function getTraitMult(actor: Actor, damageType: string, item: Item): number,
     hasCondition: function hasCondition(tokenRef: Token | TokenDocument | UUID, condition: string): boolean,
     hasUsedBonusAction: function hasUsedBonusAction(actor: Actor): boolean,
@@ -877,7 +865,7 @@ function setupMidiQOLApi() {
   const Workflows = { "Workflow": Workflow, "DamageOnlyWorkflow": DamageOnlyWorkflow, "TrapWorkflow": TrapWorkflow, "DummyWorkflow": DummyWorkflow, "DDBGameLogWorkflow": DDBGameLogWorkflow };
   //@ts-ignore
   globalThis.MidiQOL = foundry.utils.mergeObject(globalThis.MidiQOL ?? {}, {
-    addConcentration: () => { console.error("midi-qol | addConcentration is no longer supported.") },
+    addConcentration: () => {error("addConcentration is no longer supported.") },
     addDependent,
     addConcentrationDependent,
     addRollTo,
@@ -892,7 +880,7 @@ function setupMidiQOLApi() {
     checkRange,
     checkActivityRange,
     checkRule,
-    completeItemRoll: () => console.error("midi-qol completeItemRoll is no longer supported. Please use completeItemUse instead"),
+    completeItemRoll: () => error("completeItemRoll is no longer supported. Please use completeItemUse instead"),
     completeItemUse,
     completeActivityUse,
     computeCoverBonus,
@@ -926,6 +914,7 @@ function setupMidiQOLApi() {
     getSaveRollModeFor,
     getCheckRollModeFor,
     getTokenPlayerName,
+    getTokenPlayerNameForUser,
     getTokenForActor: getOrCreateTokenForActor,
     getTokenForActorAsSet: getOrCreateTokenForActorAsSet,
     getTraitMult: getTraitMult,
@@ -999,23 +988,23 @@ function setupMidiQOLApi() {
     createEffects: async (data: { actorUuid: string, effects: [], options: { keepId: true } }) => {
       const { actorUuid, effects, options } = data;
       if (!actorUuid) {
-        console.error("Midi-QOL createEffects failed. Missing actorUuid")
+        error("createEffects failed. Missing actorUuid")
         return false;
       }
       if (effects?.length)
         return unTimedExecuteAsGM("createEffects", { actorUuid, effects, options });
       else {
-        console.error("Midi-QOL createEffects failed with missing data, which should include {actorUuid, effects: [], options: {}} but got", data);
+        error("createEffects failed with missing data, which should include {actorUuid, effects: [], options: {}} but got", data);
         return false;
       }
     },
     removeEffects: async (data: { actorUuid: string, effects: string[] }) => {  // data: {actorUuid, effects: [<effect.ids>]}
       if (!data.actorUuid) {
-        console.error("Midi-QOL createEffects failed. Missing actorUuid")
+        error("createEffects failed. Missing actorUuid")
         return false;
       };
       if (!data.effects.length) {
-        console.error("Midi-QOL removeEffects failed with missing data, which should include {actorUuid, effects: [<effectIDs>],} but got", data)
+        error("removeEffects failed with missing data, which should include {actorUuid, effects: [<effectIDs>],} but got", data)
         return false;
       }
       const statusEffectIds = new Set(CONFIG.statusEffects.map((statusEffect) => statusEffect.id));
@@ -1032,7 +1021,7 @@ function setupMidiQOLApi() {
       if (data.actorUuid && data.updates?.length)
         return unTimedExecuteAsGM("updateEffects", data);
       else {
-        console.error("Midi-QOL updateEffects failed missing data which should include {actorUuid, updates: []} but got", data)
+        error("updateEffects failed missing data which should include {actorUuid, updates: []} but got", data)
         return false;
       }
     },
@@ -1513,7 +1502,7 @@ function setupMidiFlags() {
       }
       return false;
     };
-    initDAE().then(value => { if (!value) console.error(`midi-qol | initDae settings failed`) });
+    initDAE().then(value => { if (!value) error(`initDae settings failed`) });
   }
 }
 

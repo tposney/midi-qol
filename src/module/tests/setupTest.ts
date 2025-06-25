@@ -122,7 +122,7 @@ async function registerTests() {
               targetActor?.unsetFlag(MODULE_ID, "fail.ability.save.all");
               assert.ok(!!workflow, "workflow not defined");
             } catch (err) {
-              console.error("Damage Only Workflow Error", err);
+              error("Damage Only Workflow Error", err);
               assert.ok(false);
             } finally {
             }
@@ -156,7 +156,7 @@ async function registerTests() {
                 assert.ok(workflow.damageRoll !== undefined, "No damage roll");
               }
             } catch (err) {
-              console.error("TrapWorkflow Error", err);
+              error("TrapWorkflow Error", err);
               assert.ok(false);
             } finally {
             }
@@ -727,7 +727,6 @@ async function registerTests() {
             }
             const theEffects: any[] | undefined = await actor?.createEmbeddedDocuments("ActiveEffect", [effectData]);
             assert.ok(theEffects?.length, "Effects created");
-            // actor && console.error(foundry.utils.getProperty(actor, "data.flags.midi-qol.OverTime.Test"))
             assert.ok(actor && foundry.utils.getProperty(actor, "flags.midi-qol.OverTime.Test"), "overtime flag set");
 
             await combat?.nextRound();

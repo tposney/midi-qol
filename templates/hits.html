@@ -11,10 +11,11 @@
         <i class="fas fa-caret-down" inert></i>
       </label>
       <div class="collapsible-content">
-        {{/if}}
+    {{/if}}
         <ul class="dnd5e2 unlist evaluation wrapper">
           {{#each hits as |hit iid|}}
-          <li data-uuid="{{actorUuid}}" data-id="{{hit.target.id}}" class="target {{hit.hitClass}} midi-qol midi-qol-hit-class midi-qol-target-select">
+          <li data-uuid="{{actorUuid}}" data-id="{{hit.target.id}}"
+            class="target {{hit.hitClass}} midi-qol midi-qol-hit-class midi-qol-target-select">
             <i class="midi-qol-hit-symbol fas {{hit.hitSymbol}}"></i>
             <img src="{{hit.img}}"
               style="background-color: var(--dnd5e-background-10); width: 22px !important; height: 22px !important;" />

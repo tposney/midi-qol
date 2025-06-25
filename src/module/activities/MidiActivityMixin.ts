@@ -3,7 +3,7 @@ import { cancelWorkflow, socketlibSocket } from "../GMAction.js";
 import { DDBGameLogWorkflow, DamageOnlyWorkflow, TrapWorkflow, Workflow } from "../Workflow.js";
 import { OnUseMacro, OnUseMacros } from "../apps/Item.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
-import { checkMechanic, configSettings, safeGetGameSetting } from "../settings.js";
+import { checkMechanic, configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";
 import { installedModules } from "../setupModules.js";
 import { busyWait } from "../tests/setupTest.js";
 import { saveUndoData } from "../undo.js";
@@ -41,7 +41,7 @@ export var MidiActivityMixin = Base => {
       foundry.utils.logCompatibilityWarning("MidiActivityMixin | setting activity.targets is not supported. Use workflow.targets instead");
     }
 
-    static LOCALIZATION_PREFIXES = ["midi-qol.SHARED", ...super.LOCALIZATION_PREFIXES];
+    static LOCALIZATION_PREFIXES = ["midi-qol.SHARED", "midi-qol.DAMAGE", ...super.LOCALIZATION_PREFIXES];
 
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField, SetField } = foundry.data.fields;
@@ -66,23 +66,28 @@ export var MidiActivityMixin = Base => {
         }),
         midiProperties: new SchemaField({
           ignoreTraits: new SetField(new StringField(), { initial: [] }),
-          triggeredActivityId: new StringField({ name: "triggeredActivity", initial: "none" }),
+          triggeredActivityId: new StringField({ name: "triggeredActivity", initial: "none", required: true, blank: false }),
           //@ts-expect-error
           triggeredActivityConditionText: new MidiConditionField({ name: "triggeredActivityCondition", initial: "" }),
-          triggeredActivityTargets: new StringField({ name: "triggeredActivityTargets", initial: "targets" }),
+          triggeredActivityTargets: new StringField({ name: "triggeredActivityTargets", initial: "targets", required: true, blank: false }),
           triggeredActivityRollAs: new StringField({ name: "triggeredActivityRollAs", initial: "self" }),
           forceDialog: new BooleanField({ name: "forceDialog", initial: false }),
-          confirmTargets: new StringField({ name: "confirmTargets", initial: "default" }),
-          autoTargetType: new StringField({ name: "autoTargetType", initial: "any" }),
+          confirmTargets: new StringField({ name: "confirmTargets", initial: "default", required: true, blank: false }),
+          autoTargetType: new StringField({ name: "autoTargetType", initial: "any", required: true, blank: false }),
           autoTargetAction: new StringField({ name: "autoTargetAction", initial: "default" }),
           automationOnly: new BooleanField({ name: "automationOnly", initial: false }),
           otherActivityCompatible: new BooleanField({ name: "otherActivityCompatible", initial: true }),
           identifier: new StringField({ name: "identifier", initial: "", required: false }),
           displayActivityName: new BooleanField({ name: "displayActivityName", initial: false }),
-          rollMode: new StringField({ name: "rollMode", initial: "default" }),
+          rollMode: new StringField({ name: "rollMode", initial: "default", required: true, blank: false }),
           chooseEffects: new BooleanField({ name: "chooseEffects", initial: false }),
           toggleEffect: new BooleanField({ name: "toggleEffects", initial: false }),
           ignoreFullCover: new BooleanField({ name: "ignoreFullCover", initial: false }),
+          removeChatButtons: new StringField({ name: "removeChatButtons", initial: "default", blank: false, required: true }),
+          magicEffect: new BooleanField({ name: "magicEffect", initial: false }),
+          magicDamage: new BooleanField({ name: "magicDamage", initial: false }),
+          noConcentrationCheck: new BooleanField({ name: "noConcentrationCheck", initial: false }),
+          autoCEEffects: new StringField({ name: "autoCEEffects", initial: "default", blank: false, required: true }),
         }),
         isOverTimeFlag: new BooleanField({ name: "isOverTimeFlag", initial: false }),
         overTimeProperties: new SchemaField({
@@ -337,11 +342,11 @@ export var MidiActivityMixin = Base => {
       const item = scaling ? this.item.clone({ "flags.dnd5e.scaling": scaling }, { keepId: true }) : this.item;
       let activity = this.otherActivity;
       const action = target.dataset.action;
-      let handler = activity.metadata.usage?.actions?.[action];
+      let handler = activity?.metadata.usage?.actions?.[action];
       const workflow = Workflow.getWorkflow(message._uuid);
       if (!handler && workflow) {
         activity = workflow.activity;
-        if (activity) handler = activity.metadata.usage?.actions?.[action];
+        if (activity) handler = activity?.metadata.usage?.actions?.[action];
       }
       if (handler) await handler.call(activity, event, target, message);
 
@@ -411,8 +416,8 @@ export var MidiActivityMixin = Base => {
         foundry.utils.setProperty(message, "data.flags.midi-qol.messageType", "attack");
         if (usage.midiOptions?.configureDialog === false) dialog.configure = false;
         const rollToggle = areMidiKeysPressed(usage.event, "RollToggle");
-        if (rollToggle) usage.workflow.rollOptions.rollToggle = usage.workflow.rollOptions.rollToggle = true;
-        ;
+        if (rollToggle && usage.workflow) 
+          foundry.utils.setProperty(usage.workflow, "rollOptions.rollToggle", true);
         activity.checkAutoConsume(usage, dialog, message, rollToggle);
         // if (rollToggle) dialog.configure = !dialog.configure; Should this always be looked at
         // Synthetic items don't have an _id so setup for them to be recovered from the chat card
@@ -435,6 +440,8 @@ export var MidiActivityMixin = Base => {
         activityConsumptionHookId = Hooks.on("dnd5e.activityConsumption", (newActivity, usageConfig, messageConfig) => {
           if (usage.workflow.activity.uuid !== newActivity.uuid) return;
           usageData = usageConfig;
+          usageConfig.workflow.activity = newActivity;
+          usageConfig.activity = newActivity;
         });
 
         if (!await activity.preTargetingChecks(usage, dialog, message)) return false;
@@ -459,6 +466,7 @@ export var MidiActivityMixin = Base => {
         usage.workflow.id = useResults.message.uuid;
         usage.workflow.activity = usage.workflow.activity;
         usage.workflow.item = usage.workflow.activity.item;
+        activity = usage.workflow.activity;
         Workflow.addWorkflow(usage.workflow);
         if (usage.workflow.templateUuid) { // A template was placed check to see if there is a concentration effect to add it to
           const concentrationEffect = usage.workflow.actor.effects.get(usage.workflow.chatCard.getFlag("dnd5e", "use.concentrationId"));
@@ -534,7 +542,7 @@ export var MidiActivityMixin = Base => {
       }
       if (!config.workflow && config.workflow?.currentAction === config.workflow?.WorkflowState_Aborted || config.workflow?.currentAction === config.workflow?.WorkflowState_Completed)
         return this.use(config, dialog, {});
-      config.midiOptions ??= {};
+      config.midiOptions ??= config.workflow?.workflowOptions ?? {};
       if (debugEnabled > 0) {
         warn("MidiActivity | rollDamage | Called", config, dialog, message);
       }
@@ -542,13 +550,20 @@ export var MidiActivityMixin = Base => {
       let otherResult: Roll[] | undefined;
       let preRollDamageHookId;
       let rollDamageHookId;
-      config.midiOptions ??= config.workflow?.workflowOptions ?? {};
       try {
         if (await asyncHooksCall("midi-qol.preDamageRoll", config.workflow, this, config, dialog, message) === false
           || await asyncHooksCall(`midi-qol.preDamageRoll.${this.item.uuid}`, config.workflow, this, config, dialog, message) === false
           || await asyncHooksCall(`midi-qol.preDamageRoll.${this.uuid}`, config.workflow, this, config, dialog, message) === false) {
           console.warn("midi-qol | Damage roll blocked via pre-hook");
           return;
+        }
+        if (configSettings.allowUseMacro) {
+          const results = await config.workflow?.callMacros(this.item, config.workflow?.onUseMacros?.getMacros("preDamageRollConfig"), "OnUse", "preDamageRollConfig", { config, dialog, message });
+          const cancelWorkflow = results?.some(i => i === false) ?? false;
+          if (cancelWorkflow) {
+            console.warn("midi-qol | Damage roll blocked by preDamageRollConfig onUseMacro");
+            return;
+          }
         }
         //@ts-expect-error
         const areKeysPressed = game.system.utils.areKeysPressed;
@@ -724,6 +739,7 @@ export var MidiActivityMixin = Base => {
         roll.options["midi-qol"] ??= {};
         roll.options["midi-qol"].modifiers ??= [];
         roll.options["midi-qol"].modifiers = roll.options["midi-qol"].modifiers.concat(modifiers);
+        if (roll.options?.properties && this.midiProperties?.magicDamage && !roll.options.properties.includes("mgc")) roll.options.properties.push("mgc");
       })
     }
 
@@ -737,8 +753,8 @@ export var MidiActivityMixin = Base => {
       try {
         if (!config.workflow) return result;
 
-        let magicalDamage = this.item?.system.properties?.has("mgc") || this.item?.flags?.midiProperties?.magicdam;
-        magicalDamage ||= config.ammunition?.system.properties.has("mgc") || config.ammunition?.flags?.midiProperties?.magicdam;
+        let magicalDamage = this.item?.system.magicAvailable;
+        magicalDamage ??= this.item?.system.properties.has("mgc");
         magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && this.attackBonus > 0);
         magicalDamage ||= configSettings.requireMagical === "off" && config.ammunition?.attackBonus > 0;
         magicalDamage = magicalDamage || (configSettings.requireMagical === "off" && (this.attack?.type.classification ?? "none") !== "weapon");
@@ -905,14 +921,15 @@ export var MidiActivityMixin = Base => {
         return false;
       }
       const workflow = config.workflow;
-      if (config.midiOptions?.targetsToUse?.size > 0 && !activityHasAreaTarget(this)) {
+      if (config.midiOptions?.targetsToUse?.size > 0 && !activityHasAreaTarget(this) && this.target.affects.type !== "self") {
         workflow.setTargets(config.midiOptions.targetsToUse);
       } else {
-        if (((this.target?.affects.type ?? "") !== "") || configSettings.enforceSingleWeaponTarget) {
+        if (((this.target?.affects.type ?? "") !== "") 
+          || configSettings.enforceSingleWeaponTarget
+          || (targetConfirmation.enabled && targetConfirmation.all)
+          || this.forcedTargetConfirmation) {
           if (!(await preTemplateTargets(this, config.midiOptions)))
             return false;
-          // TODO clean this up
-          // if ((dialog.targets?.size ?? 0) === 0 && game.user?.targets) dialog.targets = game.user?.targets;
         }
         // Setup targets.
         let selfTarget = this.target?.affects.type === "self";
@@ -1064,7 +1081,7 @@ export var MidiActivityMixin = Base => {
       if (!usage.midiOptions?.workflowOptions?.notReaction && options.checkReaction && this.actor.inCombat) {
         const isTurn = game.combat?.combatant === game.combat?.getCombatantsByActor(this.actor)[0];
         if (["reaction", "reactiondamage", "reactionmanual", "reactionpreattack"].includes(this.activation?.type)
-          && (this.activation?.cost ?? 1) > 0 && needsReactionCheck(this.actor)) {
+          && (this.activation?.cost ?? 1) > 0) {
           workflow.itemUsesReaction = true;
         }
 
@@ -1077,7 +1094,7 @@ export var MidiActivityMixin = Base => {
           && needsReactionCheck(this.actor)
         if (queryReaction) {
           let shouldRoll = false;
-          let d = await Dialog.confirm({
+          let d = await foundry.appv1.api.Dialog.confirm({
             title: i18n("midi-qol.EnforceReactions.Title"),
             content: i18n("midi-qol.EnforceReactions.Content"),
             yes: () => { shouldRoll = true },
@@ -1304,13 +1321,13 @@ export var MidiActivityMixin = Base => {
       foundry.utils.setProperty(message.data, "flags.dnd5e.targets", globalThis.dnd5e.utils.getTargetDescriptors());
       const context = await super._usageChatContext(message);
       if (debugEnabled > 0) warn("show item card ", this, this.actor, this.actor.token, systemCard, workflow);
-      let needAttackButton = !getRemoveAttackButtons(this.item) || configSettings.mergeCardMulti
+      let needAttackButton = !getRemoveAttackButtons(this) || configSettings.mergeCardMulti
         || configSettings.confirmAttackDamage !== "none" ||
         !(workflow?.someAutoRollEventKeySet() && !getAutoRollAttack(workflow));
       const needDamageButton = (this.hasDamage || this.hasHealing) && (
         (["none", "saveOnly"].includes(getAutoRollDamage(workflow)) || workflow?.rollOptions.rollToggle)
         || configSettings.confirmAttackDamage !== "none"
-        || !getRemoveDamageButtons(this.item)
+        || !getRemoveDamageButtons(this)
         || systemCard
         || configSettings.mergeCardMulti);
       // not used const sceneId = token?.scene && token.scene.id || canvas?.scene?.id;
@@ -1413,23 +1430,31 @@ export var MidiActivityMixin = Base => {
     }
 
     get useCondition() {
-      if (this.useConditionText && this.useConditionText !== "") return this.useConditionText;
-      return foundry.utils.getProperty(this.item, "flags.midi-qol.itemCondition") ?? "";
+      return this.useConditionText ?? "";
+      // flags.midi-properties.itemCondition etc now removed
+      // if (this.useConditionText && this.useConditionText !== "") return this.useConditionText;
+      // return foundry.utils.getProperty(this.item, "flags.midi-qol.itemCondition") ?? "";
     }
 
     get effectCondition() {
-      if (this.effectConditionText && this.effectConditionText !== "") return this.effectConditionText;
-      return foundry.utils.getProperty(this.item, "flags.midi-qol.effectCondition") ?? "";
+      return this.effectConditionText ?? "";
+      // flags.midi-properties.itemCondition etc now removed
+      // if (this.effectConditionText && this.effectConditionText !== "") return this.effectConditionText;
+      // return foundry.utils.getProperty(this.item, "flags.midi-qol.effectCondition") ?? "";
     }
 
     get reactionCondition() {
-      if (this.useCondition && this.useCondition !== "") return this.useCondition;
-      return foundry.utils.getProperty(this.item, "flags.midi-qol.reactionCondition") ?? "";
+      return this.useCondition ?? "";
+      // flags.midi-properties.itemCondition etc now removed
+      // if (this.useCondition && this.useCondition !== "") return this.useCondition;
+      // return foundry.utils.getProperty(this.item, "flags.midi-qol.reactionCondition") ?? "";
     }
 
     get otherCondition() {
-      if (this.otherActivity && this.otherActivity?.useCondition !== "") return this.otherActivity.useCondition;
-      return foundry.utils.getProperty(this.item, "flags.midi-qol.otherCondition") ?? "";
+      return this.otherActivity?.useCondition ?? "";
+      // flags.midi-properties.itemCondition etc now removed
+      // if (this.otherActivity && this.otherActivity?.useCondition !== "") return this.otherActivity.useCondition;
+      // return foundry.utils.getProperty(this.item, "flags.midi-qol.otherCondition") ?? "";
     }
 
     get hasDamage() {
@@ -1494,6 +1519,8 @@ export var MidiActivityMixinSheet = Base => {
         { value: ROLL_MODES.BLIND, label: i18n("CHAT.RollBlind") },
         { value: ROLL_MODES.SELF, label: i18n("CHAT.RollSelf") }
       ];
+      context.RemoveChatButtonsOptions = Object.entries(foundry.utils.mergeObject({ "default": i18n("midi-qol.MidiSettings") }, geti18nOptions("removeButtonsOptions")))
+      .map(([value, label]) => ({ value, label }));
       context.placeholderIdentifier = context.activity.identifier;
       const midiProperties = context.activity.midiProperties;
 
@@ -1531,7 +1558,8 @@ export var MidiActivityMixinSheet = Base => {
         return { value, label: entry.label, selected: this.activity.midiProperties.ignoreTraits.has(value) }
       });
       context.AutoTargetTypeOptions = Object.entries(geti18nOptions("AoETargetTypeOptions")).map(([value, label]) => ({ value, label }));
-
+      const AutoCEEffectsOptions = Object.entries(geti18nOptions("AutoCEEffectsOptions")).map(([value, label]) => ({ value, label }));  
+      context.AutoCEEffectsOptions = [{value: "default", label: i18n("midi-qol.MidiSettings")}, ...AutoCEEffectsOptions];
       const defaultAction = { "default": i18n("midi-qol.MidiSettings") };
       context.AutoTargetActionOptions = Object.entries(foundry.utils.mergeObject(defaultAction, geti18nOptions("autoTargetOptions"))).map(([value, label]) => ({ value, label }));
       context.hasAreaTarget = this.activity.target?.template?.type;

@@ -6,33 +6,25 @@
     {{{fullDamageText}}} {{{halfDamageText}}} {{{noDamageText}}}
   </strong>
 </div>
-<div class="dnd5e2 evaluation">
+<ul class="dnd5e2 unlist evaluation wrapper">
   {{#each saves as |save iid|}}
-  <div>
-    <div class="midi-qol target midi-qol-save-class {{save.saveClass}}" style="align-content: center;">
-      <img src="{{save.img}}" style="background-color: var(--dnd5e-background-10); width: 30px; height: 30px;" />
-      <div class="name-stacked">
-        <span class="midi-qol-target-name title midi-qol-tooltip " id="{{save.target.id}}"
-          data-uuid="{{save.target.document.uuid}}">
-          <div class="midi-qol-gmTokenName">
-            {{{save.gmName}}}
-          </div>
-          <i class="fas {{save.saveSymbol}}"></i>
-          <div class="midi-qol-playerTokenName">
-            {{save.playerName}}
-          </div>
-          <div class="midi-qol-tooltiptext midi-qol-save-tooltip {{save.saveToolTipClass}}" style="text-align: left;">
-            {{{save.rollHTML}}}
-<!--           <div>{{save.rollDetail.formula}}</div>
-            <div>{{save.rollDetail.result}}</div>
--->
-          </div>
+  <li class="midi-qol midi-qol-save-class target {{save.saveClass}}">
+    <i class="fas {{save.saveSymbol}}"></i>
+    <img src="{{save.img}}" style="background-color: var(--dnd5e-background-10); width: 30px; height: 30px;" />
+    <div class="midi-qol-target-name" id="{{save.target.id}}" data-uuid="{{save.target.document.uuid}}">
+      <div class="name-stacked midi-qol-tooltip" style="width:170px">
+        <span class="midi-qol-gmTokenName midi-qol-target-name title" id="save.target.id">
+          {{{save.gmName}}}
         </span>
-      </div>
-      <div class="midi-qol-save-total {{save.saveTotalClass}}">
-        <span style="font-weight: bold;">{{save.rollTotal}}</span>
+        <span class="midi-qol-playerTokenName midi-qol-target-name title" style="text-align: right" id="save.target.id">
+          {{save.playerName}}
+        </span>
+        <div class="midi-qol-tooltiptext midi-qol-save-tooltip {{save.saveToolTipClass}}" style="text-align: left;">
+          {{{save.rollHTML}}}
+        </div>
       </div>
     </div>
-  </div>
+    <div style="font-weight: bold;">{{save.rollTotal}}</div>
+  </li>
   {{/each}}
-</div>
+</ul>

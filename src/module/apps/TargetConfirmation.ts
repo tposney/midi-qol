@@ -1,6 +1,6 @@
 import { i18n, error, i18nFormat, allAttackTypes } from "../../midi-qol.js";
 import { checkMechanic, checkRule, configSettings, targetConfirmation } from "../settings.js";
-import { FULL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, computeCoverBonus, computeFlankingStatus, getIconFreeLink, getToken, isInCombat, isValidTarget, markFlanking, tokenForActor, updateUserTargets } from "../utils.js";
+import { FULL_COVER, HALF_COVER, THREE_QUARTERS_COVER, activityHasAreaTarget, checkActivityRange, computeCoverBonus, computeFlankingStatus, getToken, isInCombat, isValidTarget, markFlanking, tokenForActor, updateUserTargets, getTokenName } from "../utils.js";
 import { getTokenPlayerName } from "../utils.js";
 import { TroubleShooter } from "./TroubleShooter.js";
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
@@ -130,8 +130,10 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
       switch (this.data.activity.target?.affects?.type ?? "any") {
         case "enemy":
           if ((token?.document?.disposition ?? 1) * target.document.disposition >= 0) continue;
+          break;
         case "ally": 
           if ((token?.document?.disposition ?? 1) * target.document.disposition < 0) continue;
+          break;
         default: break;
       }
       let img = target.document.texture.src;
@@ -183,7 +185,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
 
       let name;
       if (game.user?.isGM) {
-        name = getIconFreeLink(target);
+        name = getTokenName(target);
       } else {
         name = getTokenPlayerName(target);
       }
@@ -280,6 +282,7 @@ export class TargetConfirmationDialog extends HandlebarsApplicationMixin(Applica
 
   close(options = {}) {
     Hooks.off("targetToken", this.hookId);
+    this.doCallback(false);
     return super.close(options);
   }
 

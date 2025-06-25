@@ -464,7 +464,7 @@ async function _localActivityOverTimeEffect(data: { actorUuid, effectUuid, start
   const effect: Actor | undefined = await fromUuid(data.effectUuid) as Actor | undefined;
   if (!actor || !effect) {
     const message = `localActivityOverTimeEffect | actor or effect not found actor: ${data.actorUuid} effect: ${data.effectUuid}`;
-    console.error(message);
+    error(message);
     TroubleShooter.recordError(new Error("GMAction failed"), message);
     return undefined
   };
@@ -667,12 +667,12 @@ async function _addDependent(data: { documentUuid: string, dependentUuid: string
   const document: Document | undefined = fromUuidSync(data.documentUuid as any) as any | undefined;
   // @ts-expect-error .addDependent
   if (!document || !document.addDependent) {
-    console.error("GMAction.addDependent | document not found or does not support addDependent", data.documentUuid);
+    error("GMAction.addDependent | document not found or does not support addDependent", data.documentUuid);
     return undefined;
   }
   const dependent: Document | undefined = fromUuidSync(data.dependentUuid as any) as any | undefined;
   if (!dependent) {
-    console.error("GMAction.addDependent | dependent not found", data.dependentUuid);
+    error("GMAction.addDependent | dependent not found", data.dependentUuid);
     return undefined;
   }
   //@ts-expect-error .addDependent

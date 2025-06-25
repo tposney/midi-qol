@@ -1,4 +1,4 @@
-import { geti18nOptions, i18n } from "../midi-qol.js";
+import { geti18nOptions, i18n, error } from "../midi-qol.js";
 import { Workflow } from "./Workflow.js";
 import { getCurrentSourceMacros } from "./apps/Item.js";
 import { configSettings } from "./settings.js";
@@ -45,7 +45,7 @@ let defineMidiItemSheet5eClass = (baseClass: any) => {
       const RemoveAttackDamageButtonsOptions = foundry.utils.mergeObject({ "default": i18n("midi-qol.MidiSettings") }, geti18nOptions("removeButtonsOptions"));
 
       if (partId === "midi-qol") {
-        console.error("MidiItemSheet5e._preparePartContext", partId, context, options);
+        error("MidiItemSheet5e._preparePartContext", partId, context, options);
         context = foundry.utils.mergeObject(context, {
           allowUseMacro: configSettings.allowUseMacro,
           MacroPassOptions: Workflow.allMacroPasses,

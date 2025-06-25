@@ -6,10 +6,12 @@
     {{ formField fields.effectConditionText value=source.effectConditionText }}
     {{ formField fields.midiProperties.fields.chooseEffects value=source.midiProperties.chooseEffects }}
     {{ formField fields.midiProperties.fields.toggleEffect value=source.midiProperties.toggleEffect }}
+    {{ formField fields.midiProperties.fields.noConcentrationCheck value=source.midiProperties.noConcentrationCheck}}
   </fieldset>
   <fieldset>
     {{#with fields.midiProperties.fields as |fields|}}
     {{ formField fields.rollMode value=../source.midiProperties.rollMode options=../RollModeOptions}}
+    {{ formField fields.removeChatButtons value=../source.midiProperties.removeChatButtons options=../RemoveChatButtonsOptions}}
     {{ formField fields.displayActivityName value=../source.midiProperties.displayActivityName }}
     {{ formField fields.identifier value=../source.midiProperties.identifier placeholder=../placeholderIdentifier }}
     {{ formField fields.forceDialog value=../source.midiProperties.forceDialog }}
@@ -19,6 +21,7 @@
     {{ formField fields.autoTargetAction value=../source.midiProperties.autoTargetAction
     options=../AutoTargetActionOptions}}
     {{/if}}
+    {{ formField fields.autoCEEffects value=../source.midiProperties.autoCEEffects options=../AutoCEEffectsOptions}}
     {{ formField fields.automationOnly value=../source.midiProperties.automationOnly }}
     {{#if ../possibleOtherActivity}}
     {{ formField fields.otherActivityCompatible value=../source.midiProperties.otherActivityCompatible }}
@@ -26,6 +29,7 @@
     {{ formField fields.ignoreFullCover value=../source.midiProperties.ignoreFullCover}}
     {{ formField fields.ignoreTraits value=../source.midiProperties.ignoreTraits options=../ignoreTraitsOptions
     label="midi-qol.SHARED.ignore.header" localize=true classes="multi-select"}}
+    {{ formField fields.magicDamage value=../source.midiProperties.magicDamage}}
     {{/with}}
   </fieldset>
   {{#if (ne fields.otherActivityId undefined)}}

@@ -2,7 +2,6 @@ import { criticalDamage, nsaFlag, coloredBorders, autoFastForwardAbilityRolls, i
 import { configSettings } from "../settings.js"
 import { warn, i18n, error, debug, gameStats, debugEnabled, geti18nOptions, log, GameSystemConfig } from "../../midi-qol.js";
 import { installedModules } from "../setupModules.js";
-import { get } from "jquery";
 const { ApplicationV2, DialogV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 const PATH = "./modules/midi-qol/sample-config/";
@@ -217,7 +216,6 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     //@ts-expect-error
     context.concentrationDisabled = game.settings?.get("dnd5e", "disableConcentration")
 
-    // V12-only:
     context.tabs = this.#getTabs();
     if (debugEnabled > 0) warn("Config Panel: getData ", context)
     return context;
@@ -228,7 +226,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     this.activeTab = tab;
   }
 
-  // V12-only:
+  // V12-only: It does not seem to be
   #getTabs() {
     const tabs = {
       gm: { id: "gm", group: "sheet", label: "midi-qol.Config.Tabs.gm" },
@@ -245,7 +243,7 @@ export class ConfigPanel extends HandlebarsApplicationMixin(ApplicationV2) {
     return tabs;
   }
 
-  // V12-only (I think):
+  // V12-only (I think): does not seem to be
   async _preparePartContext(partId, context) {
     if (Object.keys(context.tabs).includes(partId)) {
       context.tab = context.tabs[partId];

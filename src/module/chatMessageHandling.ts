@@ -136,7 +136,6 @@ export let hideRollRender = (msg, html, data) => {
     if (!game.user?.isGM && !msg.isAuthor && msg.whisper.indexOf(game.user?.id) === -1) {
       if (debugEnabled > 0) warn("hideRollRender | hiding message", msg.whisper);
       html.hide();
-      console.error("hideRollRender | hiding message", msg);
       // It seems that html.remove() can get called before the message is rendered to the dom?
       setTimeout(() => { html.remove() }, 10);
     }
@@ -185,7 +184,6 @@ export let hideStuffHandler = (message, html, data) => {
     && !game.user?.isGM
     && message.whisper.length > 0 && !message.whisper.includes(game.user?.id)
     && !message.isAuthor) {
-    console.error("hideStuffHandler | hiding message", message.whisper);
     html.hide();
     return;
   }

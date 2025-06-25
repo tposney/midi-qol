@@ -26,7 +26,7 @@ export function setupCheckActivity() {
 
 let defineMidiCheckActivityClass = (ActivityClass: any) => {
   return class MidiCheckActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = ["DND5E.SAVE", "DND5E.CHECK", "midi-qol.CHECK", ...super.LOCALIZATION_PREFIXES,];
+    static LOCALIZATION_PREFIXES = ["DND5E.CHECK", "DND5E.DAMAGE", "midi-qol.CHECK", "midi-qol.SAVE", ...super.LOCALIZATION_PREFIXES];
     static superMetadata = super.metadata;
     static metadata =
       foundry.utils.mergeObject(
@@ -51,14 +51,20 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
       const { ActivationField: ActivationField, CreatureTypeField, CurrencyTemplate, DamageData,
         DamageField, DurationField, MovementField, RangeField, RollConfigField, SensesField,
         SourceField, TargetField, UsesField } = dataModels.shared
+        const FormulaField = dataModels.fields.FormulaField;
 
       const schema = {
         ...super.defineSchema(),
         otherActivityId: new StringField({ name: "otherActivity", initial: "none" }),
         damage: new SchemaField({
-          onSave: new StringField({ name: "onSave", initial: "half" }),
-          parts: new ArrayField(new DamageField())
+          onSave: new StringField({ initial: "half", default: "half", name: "onSave" }),
+          critical: new SchemaField({
+            allow: new BooleanField(),
+            bonus: new FormulaField(),
+          }),
+          parts: new ArrayField(new DamageField()),
         }),
+        friendlySave: new StringField({ initial: "default", name: "friendlySave"})
         // WIP
         // saveDisplay: new StringField({initial: "default"}),
       };
@@ -163,6 +169,7 @@ export function defineMidiCheckSheetClass(baseClass: any) {
         template: "modules/midi-qol/templates/activity/check-effect.hbs",
         templates: [
           ...super.PARTS.effect.templates,
+          "modules/midi-qol/templates/activity/parts/save-extras.hbs",
           "systems/dnd5e/templates/activity/parts/save-damage.hbs",
           "systems/dnd5e/templates/activity/parts/damage-part.hbs",
           "systems/dnd5e/templates/activity/parts/damage-parts.hbs",
@@ -172,6 +179,11 @@ export function defineMidiCheckSheetClass(baseClass: any) {
 
     async _prepareEffectContext(context) {
       context = await super._prepareEffectContext(context);
+      context.FriendlySaveOptions = [
+        {value: "default", label: i18n("midi-qol.SAVE.FriendlySave.Default")},
+        {value: "friendlySuccess", label: i18n("midi-qol.SAVE.FriendlySave.FriendlySuccess")},
+        {value: "friendlyFail", label: i18n("midi-qol.SAVE.FriendlySave.FriendlyFail")},
+      ];
       context.onSaveOptions = [
         { value: "none", label: i18n("DND5E.SAVE.FIELDS.damage.onSave.None") },
         { value: "half", label: i18n("DND5E.SAVE.FIELDS.damage.onSave.Half") },

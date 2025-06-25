@@ -148,20 +148,12 @@
     </div>
   </div>
 
-  {{!-- Reactions --}}
-  {{#if (and activity.activation.condition (eq activity.activation.type "reaction"))}}
-  <p class="supplement"><strong>{{ localize "DND5E.Reaction" }}</strong>{{ activity.activation.condition }}
-  </p>
-  {{/if}}
-
-  {{!-- Materials --}}
-  {{#if item.system.materials.value}}
-  <p class="supplement"><strong>{{ localize "DND5E.Materials" }}</strong>{{ item.system.materials.value }}
-  </p>
-  {{/if}}
+  {{#each supplements}}
+  <p class="supplement">{{{ this }}}</p>
+  {{/each}}
 
   {{!-- Item Properties --}}
-  {{#if properties.length}}
+  {{#if properties}}
   <ul class="card-footer pills unlist">
     {{#each properties}}
     <li class="pill transparent">

@@ -207,6 +207,7 @@ async function doRollSkill(wrapped, config: any = {}, dialog: any = {}, message:
     }
     if (!result) return result;
     rollMode = message.rollMode ?? rollMode;
+    result.forEach(r => r.options.rollMode = rollMode);
     /*
     if (rollMode !== CONST.DICE_ROLL_MODES.BLIND) rollMode = result.options.rollMode;
     else result.options.rollMode = CONST.DICE_ROLL_MODES.BLIND;
@@ -857,8 +858,8 @@ export function _prepareDerivedData(wrapped, ...args) {
         this.system.attributes.ac.AR = armorReduction;;
       } else {
         if (!this.system.abilities) {
-          console.error("midi-qol | challenge mode armor failed to find abilities");
-          console.error(this);
+          error("challenge mode armor failed to find abilities");
+          error(this);
           return;
         }
         let dexMod = this.system.abilities.dex.mod;
@@ -870,16 +871,49 @@ export function _prepareDerivedData(wrapped, ...args) {
     }
   } catch (err) {
     const message = "midi-qol failed to prepare derived data";
-    console.error(message, err);
+    error(message, err);
     TroubleShooter.recordError(err, message);
   }
 }
 let currentDAcalculateDamage;
 let currentDAGetTargetOptions;
 
+function removeMidiProperties(wrapped, ...args) {
+  const [source] = args;
+  try {
+    if (source.flags?.midiProperties) {
+      const props = source.flags.midiProperties;
+      if (!foundry.utils.isEmpty(source.system.activities)) {
+        for (let activity of Object.values(source.system.activities) as any[]) {
+          if (activity.midiProperties) {      // can migrate the data
+            if (props.confirmTargets !== undefined) activity.midiProperties.confirmTargets = props.confirmTargets;
+            if (props.autoFailFriendly === true && activity.friendlySave !== undefined) activity.midiProperties.friendlySave = "friendlySuccess";
+            if (props.autoSaveFriendly === true && activity.friendlySave !== undefined) activity.midiProperties.friendlySave = "friendlyFail";
+            if (props.magicdam !== undefined) activity.midiProperties.magicDamage = props.magicdam;
+            if (props.magiceffect !== undefined) activity.midiProperties.magicEffect = props.magiceffect;
+            if (props.noConcentrationCheck !== undefined) activity.midiProperties.noConcentrationCheck = props.noConcentrationCheck;
+            if (props.toggleEffect !== undefined) activity.midiProperties.toggleEffect = props.toggleEffect;
+            if (props.ignoreTotalCover !== undefined) activity.midiProperties.ignoreFullCover = props.ignoreFullCover;
+          }
+        }
+      }
+      console.error("migrating midiProperties to dnd5e.persistSourceMigration", source.name, source);  
+      delete source.flags.midiProperties;
+      source.flags.midiProperties = {};
+      foundry.utils.setProperty(source, "flags.dnd5e.persistSourceMigration", true);
+      console.error("migrating midiProperties to dnd5e.persistSourceMigration", source.name, source);  
+    }
+  } catch (err) {
+    TroubleShooter.recordError(err, "removeMidiProperties error");
+    error("removeMidiProperties error", err);
+  } finally {
+    return wrapped(...args);
+  }
+}
+
 export function initPatching() {
   libWrapper = globalThis.libWrapper;
-
+  // libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.migrateData", removeMidiProperties, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
   // For new onUse macros stuff.
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.prepareData", itemPrepareData, "WRAPPER");
@@ -1454,10 +1488,10 @@ export let visionPatching = () => {
     console.warn("midi-qol | Player control vision is deprecated, use it at your own risk")
 
     log("Patching Token._isVisionSource")
-    libWrapper.register(MODULE_ID, "Token.prototype._isVisionSource", _isVisionSource, "WRAPPER");
+    libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype._isVisionSource", _isVisionSource, "WRAPPER");
 
     log("Patching Token.isVisible")
-    libWrapper.register(MODULE_ID, "Token.prototype.isVisible", isVisible, "WRAPPER");
+    libWrapper.register(MODULE_ID, "foundry.canvas.placeables.Token.prototype.isVisible", isVisible, "WRAPPER");
   }
   log("Vision patching - ", patchVision ? "enabled" : "disabled")
 }
@@ -1572,7 +1606,7 @@ async function _preCreateActiveEffect(wrapped, data, options, user): Promise<voi
     }
   } catch (err) {
     const message = "midi-qol | error in preCreateActiveEffect";
-    console.error(message, err);
+    error(message, err);
     TroubleShooter.recordError(err, message);
   } finally {
     return wrapped(data, options, user);
@@ -1616,7 +1650,7 @@ export async function _preDeleteCombat(wrapped, ...args) {
 
 export async function doItemUse(wrapped, config: any = {}, dialog: any = {}, message: any = {}) {
   if (this.pack) return;
-  const {chooseActivity, ...activityConfig } = config;
+  const { chooseActivity, ...activityConfig } = config;
   const activities = this.system.activities?.filter(a => !this.getFlag("dnd5e", "riders.activity")?.includes(a.id) && !a.midiProperties?.automationOnly);
   const attackActivities = activities?.filter(a => a instanceof MidiAttackActivity);
   if (attackActivities?.length === 1) { // if there is a single attack activity and no other non-automation activities use it

@@ -205,6 +205,12 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       return returns;
     }
 
+    _enrichUsageEffects(html) {
+      if (["off", "applyLeave"].includes(configSettings.autoItemEffects))
+      //@ts-expect-error
+      return super._enrichUsageEffects(html);
+    }
+
     _enrichDamageTooltip(rolls, html) {
       if (foundry.utils.getProperty(this, "flags.dnd5e.roll.type") !== undefined || !this.flags?.["midi-qol"])
         // @ts-expect-error no dnd5e-types

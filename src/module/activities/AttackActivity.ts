@@ -1,4 +1,4 @@
-import { debugEnabled, warn, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat } from "../../midi-qol.js";
+import { debugEnabled, warn, error, GameSystemConfig, debug, log, i18n, MODULE_ID, i18nFormat, geti18nOptions } from "../../midi-qol.js";
 import { unTimedExecuteAsGM } from "../GMAction.js";
 import { Workflow } from "../Workflow.js";
 import { defaultRollOptions } from "../patching.js";
@@ -8,7 +8,6 @@ import { addAdvAttribution, areMidiKeysPressed, asyncHooksCall, completeActivity
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { doActivityReactions, preTemplateTargets, requiresTargetConfirmation } from "./activityHelpers.js";
 import { OnUseMacros } from "../apps/Item.js";
-import { error } from "jquery";
 
 export var MidiAttackSheet;
 export var MidiAttackActivity;
@@ -83,6 +82,8 @@ let defineMidiAttackSheetClass = (baseClass: any) => {
           return this._prepareDamagePartContext(context, part);
         })
       }
+      context.ConfirmTargetOptions = Object.entries(geti18nOptions("ConfirmTargetOptions")).map(([value, label]) => ({ value, label }));
+
       if (debugEnabled > 0) {
         warn(("prepareEffectContext | context"), context);
       }
@@ -119,6 +120,9 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         ammunition: new StringField({ name: "ammunition", initial: "" }),
         // deprecated 
         otherActivityUuid: new StringField({ name: "otherActivityUuid", required: false, initial: "" }),
+        attackRollPerTarget: new StringField({ name: "attackRollPerTarget", initial: "default", required: true }),
+        fumbleThreshold: new NumberField({ name: "fumbleThreshold", initial: 1, required: false }),
+
       };
       return schema;
     }
@@ -250,7 +254,8 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         if (debugEnabled > 0) warn("MidiQOL | AttackActivity | use | Called", usage, dialog, message);
         usage.midiOptions ??= {};
         if (foundry.utils.getProperty(usage, "midiOptions.checkRollPerTarget") !== false) {
-          const itemAttackPerTarget = foundry.utils.getProperty(this.item, "flags.midi-qol.rollAttackPerTarget");
+          // const itemAttackPerTarget = foundry.utils.getProperty(this.item, "flags.midi-qol.rollAttackPerTarget");
+          const itemAttackPerTarget = this.attackRollPerTarget ?? "default";
           let isAttackPerTarget = itemAttackPerTarget === "always"
             || (configSettings.attackPerTarget && itemAttackPerTarget !== "never")
           // isAttackPerTarget &&= this.target?.template?.type === "";
@@ -267,7 +272,8 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
     async use(usage: any = {}, dialog: any = {}, message: any = {}) {
       if (debugEnabled > 0) warn("MidiQOL | AttackActivity | use | Called", usage, dialog, message);
       usage.midiOptions ??= {};
-      const itemAttackPerTarget = foundry.utils.getProperty(this.item, "flags.midi-qol.rollAttackPerTarget");
+      // const itemAttackPerTarget = foundry.utils.getProperty(this.item, "flags.midi-qol.rollAttackPerTarget");
+      const itemAttackPerTarget = this.attackRollPerTarget ?? "default";
       let isAttackPerTarget = itemAttackPerTarget === "always"
         || (configSettings.attackPerTarget && itemAttackPerTarget !== "never")
       isAttackPerTarget &&= this.target?.template?.type === ""; // only works if there is no AoE template targeting.
@@ -435,7 +441,7 @@ let defineMidiAttackActivityClass = (ActivityClass: any) => {
         }
         if (workflow?.suspended) workflow.unSuspend.bind(workflow)({ attackRoll: rolls[0] })
       } catch (err) {
-        console.error("midi-qol | AttackActivity | rollAttack | Error configuring dialog", err);
+        error("AttackActivity | rollAttack | Error configuring dialog", err);
       } finally {
         if (preRollHookId) Hooks.off("dnd5e.preRollAttack", preRollHookId);
         if (rollAttackHookId) Hooks.off("dnd5e.rollAttack", rollAttackHookId);

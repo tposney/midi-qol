@@ -2,7 +2,7 @@ import { warn, debug, log, i18n, MESSAGE_TYPES, error, MQdefaultDamageType, debu
 import { preferredActiveGM, prepareDamageListToJSON, socketlibSocket, timedAwaitExecuteAsGM, timedExecuteAsGM, unTimedExecuteAsGM } from "./GMAction.js";
 import { installedModules } from "./setupModules.js";
 import { configSettings, autoRemoveTargets, checkRule, checkMechanic, safeGetGameSetting, UseWeakReferences, SaveToChatCard } from "./settings.js";
-import { createDamageDetailV4, processDamageRoll, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, getAutoRollAttack, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, expireMyEffects, validTargetTokens, getOrCreateTokenForActorAsSet, doReactions, playerFor, requestPCActiveDefence, evalActivationCondition, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, MQfromUuidSync, midiRenderRoll, markFlanking, canSense, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, removeHidden, hasDAE, computeCoverBonus, FULL_COVER, isInCombat, displayDSNForRoll, setActionUsed, removeInvisible, getTokenDocument, getToken, getIconFreeLink, activityHasAutoPlaceTemplate, addRollTo, sumRolls, midiRenderAttackRoll, midiRenderDamageRoll, midiRenderBonusDamageRoll, midiRenderOtherDamageRoll, debouncedUpdate, getCachedDocument, clearUpdatesCache, getDamageType, getTokenName, setRollOperatorEvaluated, evalAllConditionsAsync, getAppliedEffects, canSee, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, getsaveMultiplierForActivity, checkActivityRange, computeDistance, getAoETargetType, getActivityAutoTargetAction, activityHasEmanationNoTemplate, isAutoFastDamage, completeActivityUse, getActor, getRemoveAllButtons, requestPCSave, addUpdatesCache, addUpdatesCacheFlags, updatesCache } from "./utils.js"
+import { createDamageDetailV4, processDamageRoll, untargetDeadTokens, checkIncapacitated, getAutoRollDamage, isAutoFastAttack, getAutoRollAttack, getRemoveDamageButtons, getRemoveAttackButtons, getTokenPlayerName, checkNearby, hasCondition, expireMyEffects, validTargetTokens, getOrCreateTokenForActorAsSet, doReactions, playerFor, requestPCActiveDefence, evalActivationCondition, processDamageRollBonusFlags, asyncHooksCallAll, asyncHooksCall, MQfromUuidSync, midiRenderRoll, markFlanking, canSense, tokenForActor, getOrCreateTokenForActor, createConditionData, evalCondition, removeHidden, hasDAE, computeCoverBonus, FULL_COVER, isInCombat, displayDSNForRoll, setActionUsed, removeInvisible, getTokenDocument, getToken, activityHasAutoPlaceTemplate, addRollTo, sumRolls, midiRenderAttackRoll, midiRenderDamageRoll, midiRenderBonusDamageRoll, midiRenderOtherDamageRoll, debouncedUpdate, getCachedDocument, clearUpdatesCache, getDamageType, getTokenName, setRollOperatorEvaluated, evalAllConditionsAsync, getAppliedEffects, canSee, CEAddEffectWith, getCEEffectByName, CEHasEffectApplied, CERemoveEffect, CEToggleEffect, getActivityDefaultDamageType, activityHasAreaTarget, getsaveMultiplierForActivity, checkActivityRange, computeDistance, getAoETargetType, getActivityAutoTargetAction, activityHasEmanationNoTemplate, isAutoFastDamage, completeActivityUse, getActor, getRemoveAllButtons, requestPCSave, addUpdatesCache, addUpdatesCacheFlags, updatesCache } from "./utils.js"
 import { OnUseMacros } from "./apps/Item.js";
 import { bonusCheck, collectBonusFlags, defaultRollOptions, procAbilityAdvantage } from "./patching.js";
 import { saveTargetsUndoData, saveUndoData } from "./undo.js";
@@ -10,7 +10,6 @@ import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { busyWait } from "./tests/setupTest.js";
 import { MidiSummonActivity } from "./activities/SummonActivity.js";
 import { postTemplateConfirmTargets, selectTargets, templateTokens } from "./activities/activityHelpers.js";
-import { get } from "jquery";
 
 export const shiftOnlyEvent = { shiftKey: true, altKey: false, ctrlKey: false, metaKey: false, type: "" };
 export function noKeySet(event) { return !(event?.shiftKey || event?.ctrlKey || event?.altKey || event?.metaKey) }
@@ -299,7 +298,7 @@ export class Workflow {
       if (!this._activity) {
         const message = `midi-qol | get activity() | Could not find activity for workflow ${this.id} with activityUuid ${activityUuid}`;
         TroubleShooter.recordError(new Error(message));
-        console.error(message);
+        error(message);
       }
     }
     return this._activity;
@@ -320,9 +319,9 @@ export class Workflow {
       this._item = fromUuidSync(itemUuid);
       if (!this._item) {
         // foundry.utils.getProperty(this.chatCard, "flags." + chatCardFlags.item)?.itemData - can use this get the item back?
-        const message = `midi-qol | get item() | Could not find item for workflow ${this.id} with itemUuid ${itemUuid}`;
+        const message = `get item() | Could not find item for workflow ${this.id} with itemUuid ${itemUuid}`;
         TroubleShooter.recordError(new Error(message));
-        console.error(message);
+        error(message);
       }
     }
     return this._item;
@@ -1274,7 +1273,7 @@ export class Workflow {
   }
 
   get otherDamageFormula() {
-    console.error("workflow.otherDamageFormula is deprecated without replacement.");
+    error("workflow.otherDamageFormula is deprecated without replacement.");
     return "";
   }
 
@@ -1370,7 +1369,6 @@ export class Workflow {
       this.advReminderAttackAdvAttribution = new Set();
       this.extraRolls = [];
       const token: Token | undefined = canvas?.tokens?.get(speaker.tokenId);
-
       if (this.speaker.scene) this.speaker.scene = canvas?.scene?.id;
     }
 
@@ -1398,6 +1396,8 @@ export class Workflow {
     }, { inplace: false });
     if (options.workflowOptions)
       this.workflowOptions = foundry.utils.mergeObject(this.workflowOptions, options.workflowOptions, { overwrite: true });
+    if (this.activity?.midiProperties?.noConcentrationCheck) this.workflowOptions.noConcentrationCheck = true;
+
     // For some hooks which rely on it....
     this.systemString = game.system?.id.toUpperCase();
     this.needsAttackAdvantageCheck = true;
@@ -2117,7 +2117,7 @@ export class Workflow {
   }
   async WorkflowState_DamageRollStarted(context: any = {}): Promise<WorkflowState> {
     if (this.itemCardUuid) {
-      await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: false, removeAttackButtons: getRemoveAttackButtons(this.item), removeDamageButtons: getRemoveDamageButtons(this.item), removeConfirmButtons: true });
+      await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: false, removeAttackButtons: getRemoveAttackButtons(this.activity), removeDamageButtons: getRemoveDamageButtons(this.activity), removeConfirmButtons: true });
     }
     if (getActivityAutoTargetAction(this.activity) === "none" && activityHasAreaTarget(this.activity) && !this.activity.attack) {
       // we are not auto targeting so for area effect attacks, without hits (e.g. fireball)
@@ -2365,10 +2365,9 @@ export class Workflow {
     // no item, not auto effects or not module skip
     let useCE = configSettings.autoCEEffects;
     if (!this.activity.item) return this.WorkflowState_RollFinished;
-    const midiFlags = this.item.flags[MODULE_ID];
-    if (midiFlags?.forceCEOff && ["both", "cepri", "itempri"].includes(useCE)) useCE = "none";
-    else if (midiFlags?.forceCEOn && ["none", "itempri"].includes(useCE)) useCE = "cepri";
-    const hasCE = installedModules.get("dfreds-convenient-effects")
+    if (this.activity.midiProperties?.autoCEEffects !== "default") {
+      useCE = this.activity.midiProperties?.autoCEEffects;
+    }
     let ceEffect = getCEEffectByName(this.activity.name);
     if (!ceEffect) ceEffect = getCEEffectByName(this.activity.item.name);
     const isApplicableEffect = (activeEffect: ActiveEffect | undefined | null): boolean => {
@@ -2388,12 +2387,16 @@ export class Workflow {
     const ceSelfEffect = ceEffect && (ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
     const hasActivityEffects = hasDAE(this) && activityEffects.length > 0;
     const hasOtherActivityEffects = hasDAE(this) && otherActivityEffects.length > 0;
-    const activitySelfEffects = activityEffects.filter(ef => ef.flags?.dae?.selfTarget || ef.flags?.dae?.selfTargetAlways) ?? [];
-    const activitySelfAllEffect = activityEffects.filter(ef => ef.flags?.dae?.selfTargetAlways && !ef.transfer) ?? [];
-    const otherActivitySelfEffects = otherActivityEffects.filter(ef => ef.flags?.dae?.selfTarget || ef.flags?.dae?.selfTargetAlways) ?? [];
-    const otherActivitySelfAllEffects = otherActivityEffects.filter(ef => ef.flags?.dae?.selfTargetAlways) ?? [];
+
+    const activitySelfEffects = [...activityEffects, ...onSaveActivityEffects].filter(ef => ef.flags?.dae?.selfTarget || ef.flags?.dae?.selfTargetAlways) ?? [];
+    const activitySelfAllEffect = [...activityEffects, ...onSaveActivityEffects].filter(ef => ef.flags?.dae?.selfTargetAlways) ?? [];
+    const otherActivitySelfEffects = [...otherActivityEffects, ...onSaveOtherActivityEffects].filter(ef => ef.flags?.dae?.selfTarget || ef.flags?.dae?.selfTargetAlways) ?? [];
+    const otherActivitySelfAllEffects = [...otherActivityEffects, ...onSaveOtherActivityEffects].filter(ef => ef.flags?.dae?.selfTargetAlways) ?? [];
+
     activityEffects = activityEffects.filter(ef => !ef.flags?.dae?.selfTarget && !ef.flags?.dae?.selfTargetAlways);
     otherActivityEffects = otherActivityEffects.filter(ef => !ef.flags?.dae?.selfTarget && !ef.flags?.dae?.selfTargetAlways);
+    onSaveActivityEffects = onSaveActivityEffects.filter(ef => !ef.flags?.dae?.selfTarget && !ef.flags?.dae?.selfTargetAlways);
+    onSaveOtherActivityEffects = onSaveOtherActivityEffects.filter(ef => !ef.flags?.dae?.selfTarget && !ef.flags?.dae?.selfTargetAlways);
     // let anyApplication = this.effectTargets.size > 0 || this.otherEffectTargets.size > 0;
 
     let selfEffectsToApply = "none";
@@ -2418,7 +2421,7 @@ export class Workflow {
       metaData,
       selfEffects: "none",
       spellLevel: this.spellLevel,
-      toggleEffect: this.activity.midiProperties.toggleEffect ?? this.item?.flags.midiProperties?.toggleEffect,
+      toggleEffect: this.activity.midiProperties.toggleEffect,
       tokenUuid: this.tokenUuid,
       actorUuid: this.actor.uuid,
       whisper: false,
@@ -2476,9 +2479,9 @@ export class Workflow {
           }
         }
         if (ceTargetEffect && this.activity.item && token.actor) {
-          if (ceEffect && ["both", "cepri"].includes(useCE) || (useCE === "itempri" && !hasActivityEffects)) {
+          if (ceEffect && ["both", "cepri", "ceOnly"].includes(useCE) || (useCE === "itempri" && !hasActivityEffects)) {
             const targetHasEffect = (token.actor as Actor).effects.find(ef => ef.name === ceEffect.name);
-            if ((this.activity.midiProperties?.toggleEffect ?? this.item?.flags.midiProperties?.toggleEffect) && targetHasEffect) {
+            if (this.activity.midiProperties?.toggleEffect && targetHasEffect) {
               await CEToggleEffect({ effectName: ceEffect.name, uuid: (token.actor as Actor).uuid, origin });
             } else {
               // Check stacking status
@@ -2575,7 +2578,7 @@ export class Workflow {
     if (ceSelfEffect && (this.effectTargets?.size > 0 || ceSelfEffect.flags?.dae?.selfTargetAlways)) {
       if (["both", "cepri"].includes(useCE) || (useCE === "itempri" && !selfEffects.length)) {
         const actorHasEffect = this.actor.effects.find(ef => ef.name === this.activity.name);
-        if ((this.activity.midiProperties?.toggleEffect ?? this.item?.flags.midiProperties?.toggleEffect) && actorHasEffect) {
+        if (this.activity.midiProperties?.toggleEffect && actorHasEffect) {
           CEToggleEffect({ effectName: this.activity.name, uuid: this.actor.uuid, origin });
         } else {
           // Check stacking status
@@ -2651,7 +2654,7 @@ export class Workflow {
         damageListData.forEach((di => delete di.damageDetails))
         addUpdatesCacheFlags(this.id, { [WorkflowDataFlags.damageList]: damageListData });
       }
-      await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: getRemoveAllButtons(this.item), removeAttackButtons: getRemoveAttackButtons(this.item), removeDamageButtons: getRemoveDamageButtons(this.item), removeDnD5eButtons: getRemoveAllButtons(this.item) && configSettings.autoCheckSaves !== "none", removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none" });
+      await Workflow.removeItemCardButtons(this.itemCardUuid, { removeAllButtons: getRemoveAllButtons(this.activity), removeAttackButtons: getRemoveAttackButtons(this.activity), removeDamageButtons: getRemoveDamageButtons(this.activity), removeDnD5eButtons: getRemoveAllButtons(this.activity) && configSettings.autoCheckSaves !== "none", removeDnd5eSaveButtons: configSettings.autoCheckSaves !== "none" });
     }
     if (context.attackRoll) return this.WorkflowState_AttackRollComplete;
     if (context.damageRoll) return this.WorkflowState_ConfirmRoll;
@@ -2808,7 +2811,7 @@ export class Workflow {
     let content = chatMessage?.content && foundry.utils.duplicate(chatMessage?.content);
     let contentChanged = false;
     // TODO move this to call the omnibus remove buttons function
-    if (content && getRemoveAttackButtons(this.item) && chatMessage && configSettings.confirmAttackDamage === "none") {
+    if (content && getRemoveAttackButtons(this.activity) && chatMessage && configSettings.confirmAttackDamage === "none") {
       let searchRe = /<button[^>]*? data-action="attack"[\s\S]*?<\/button>/;
       // searchRe = /<div class="midi-attack-buttons".*<\/div>/
       content = content.replace(searchRe, "");
@@ -2866,7 +2869,22 @@ export class Workflow {
 
         const inCombat = (game?.combat as unknown as Combat)?.turns.some(combatant => (combatant.tokenId === selfTarget?.id));
         const convertedDuration = globalThis.DAE.convertDuration(activityDuration, inCombat);
-        if (convertedDuration?.type === "seconds") {
+        if (activityDuration.units === "inst") {
+          if (isInCombat(this.actor)) {
+            effectData.duration = {
+              rounds: 0,
+              turns: 1,
+              startRound: (game?.combat as unknown as Combat)?.round,
+              StartTurn: (game?.combat as unknown as Combat)?.turn,
+            }
+          } else {
+            effectData.duration = {
+              seconds: 1,
+              //@ts-expect-error
+              startTime: game.time?.worldTime
+            }
+          }
+        } else if (convertedDuration?.type === "seconds") {
           //@ts-expect-error worldTime
           effectData.duration = { seconds: convertedDuration.seconds, startTime: game.time?.worldTime }
         } else if (convertedDuration?.type === "turns") {
@@ -4169,7 +4187,7 @@ export class Workflow {
       return;
     }
     let content = (chatMessage && foundry.utils.duplicate(chatMessage.content)) ?? "";
-    if ((getRemoveDamageButtons(this.item) && configSettings.confirmAttackDamage === "none") || this.workflowType === "TrapWorkflow") {
+    if ((getRemoveDamageButtons(this.activity) && configSettings.confirmAttackDamage === "none") || this.workflowType === "TrapWorkflow") {
       const damageRe = /<button[^>]*?data-action="damage">[\s\S]*<\/button>/
       const formulaRe = /<button[^>]*?data-action="rollFormula"[\s\S]*?\/button>/
       content = content?.replace(damageRe, "<div></div>")
@@ -4617,7 +4635,7 @@ export class Workflow {
     let monkRequestsGM: any[] = [];
     let rerRequestsGM: any[] = [];
     const saveDisplay = (this.activity?.saveDisplay ?? "default") === "default" ? configSettings.autoCheckSaves : this.activity?.saveDisplay;
-    const isMagicSave = this.item?.type === "spell" || this.item?.flags.midiProperties?.magiceffect || this.item?.flags.midiProperties?.magiceffect;
+    const isMagicSave = this.item?.type === "spell" || this.activity?.midiProperties?.magicEffect;
 
     try {
       let actorDisposition;
@@ -4747,9 +4765,9 @@ export class Workflow {
 
         if (saveDetails.isFriendly &&
           (this.item.system.description.value.toLowerCase().includes(i18n("midi-qol.autoFailFriendly")?.toLowerCase())
-            || this.item.flags.midiProperties?.autoFailFriendly)) {
+            || this.activity.friendlySave === "friendlyFailure")) {
           promises.push(new D20Roll("-1").evaluate());
-        } else if (saveDetails.isFriendly && this.item.flags.midiProperties?.autoSaveFriendly) {
+        } else if (saveDetails.isFriendly && this.activity.friendlySave === "friendlySuccess") {  
           promises.push(new D20Roll("99").evaluate());
         } else if ((!player?.isGM && playerMonksTB) || (player?.isGM && gmMonksTB)) {
           promises.push(new Promise((resolve) => {
@@ -5555,7 +5573,8 @@ export class Workflow {
       criticalThreshold = Math.min(criticalThreshold, targetCrit);
     }
     this.isCritical = this.diceRoll >= criticalThreshold;
-    const midiFumble = this.item && foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.fumbleThreshold`);
+    // const midiFumble = this.item && foundry.utils.getProperty(this.item, `flags.${MODULE_ID}.fumbleThreshold`);
+    const midiFumble = this.activity && this.activity.fumbleThreshold;
     //@ts-expect-error .funble
     let fumbleTarget = this.attackRoll.terms[0].options.criticalFailure ?? 1;
     if (Number.isNumeric(midiFumble)) fumbleTarget = midiFumble;
@@ -5857,7 +5876,7 @@ export class Workflow {
         attackType,
         showAC: true,
         img,
-        gmName: getIconFreeLink(targetToken),
+        gmName: getTokenName(targetToken),
         // @ts-expect-error v13ism
         playerName: getTokenPlayerName((targetToken instanceof foundry.canvas.placeables.Token ? targetToken.document : targetToken) as TokenDocument),
         bonusAC,
@@ -6038,7 +6057,7 @@ export class Workflow {
       else if (this.activity.hasHealing) damageType = this.activity.healing.types[0] ?? "healing";
       const message = `convertRollToDamageRoll: roll is not a damage roll, setting type to ${damageType}`;
       TroubleShooter.recordError(new Error(message));
-      console.error("convertRollToDamageRoll: roll is not a damage roll", DamageRoll.fromRoll(roll, {}, { type: damageType }));
+      error("convertRollToDamageRoll: roll is not a damage roll", DamageRoll.fromRoll(roll, {}, { type: damageType }));
       return new DamageRoll.fromRoll(roll.formula, {}, { type: damageType })[0];
     }
     return roll;

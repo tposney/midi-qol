@@ -4,4 +4,6 @@
   {{#if hasAmmunition}}
   {{ formField fields.ammunition value=source.ammunition options=ammunitionOptions }}
   {{/if}}
+  {{ formField fields.fumbleThreshold value=source.fumbleThreshold }}
+  {{ formField fields.attackRollPerTarget value=source.attackRollPerTarget options=ConfirmTargetOptions}}
 </fieldset>

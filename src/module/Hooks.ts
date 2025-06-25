@@ -99,6 +99,7 @@ export let readyHooks = async () => {
       || options.noConcentrationCheck
       || options.dnd5e?.concentrationCheck === false) {
       options.noConcentrationCheck = true;
+      foundry.utils.setProperty(options, "dnd5e.concentrationCheck", false);
       return true;
     }
     const hpUpdate = changes.system?.attributes?.hp?.value;
@@ -108,20 +109,20 @@ export let readyHooks = async () => {
     //@ts-expect-error no dnd5e-types
     const tempHPDamage = (tempHpUpdate !== undefined) ? actor.system.attributes.hp.temp - tempHpUpdate : 0;
     const totalDamage = tempHPDamage + hpDamage;
-    if (totalDamage <= 0) {
+    if (hpDamage <= 0 && !configSettings.tempHPDamageConcentrationCheck) {
       options.noConcentrationCheck = true;
+      foundry.utils.setProperty(options, "dnd5e.concentrationCheck", false);
       return true;
     }
-    const isConcentrationCheck = (hpDamage > 0 || configSettings.tempHPDamageConcentrationCheck);
-    foundry.utils.setProperty(options, "dnd5e.concentrationCheck", isConcentrationCheck);
+    foundry.utils.setProperty(options, "dnd5e.concentrationCheck", true);
     try {
-      if (configSettings.doConcentrationCheck === "item" && isConcentrationCheck) {
+      if (configSettings.doConcentrationCheck === "item") {
         //@ts-expect-error no dnd5e-types
         const concentrationDc = actor.getConcentrationDC(totalDamage);
         doConcentrationCheck(actor, concentrationDc);
       }
     } catch (err) {
-      console.error("Error in preUpdateActor", err);
+      error("Error in preUpdateActor", err);
     } finally {
       return true;
     }
@@ -395,7 +396,7 @@ export function initHooks() {
     const midiProps = config.midiProperties;
     if (!item) {
       const message = "item not defined in getItemSheetData";
-      console.error(message, context);
+      error(message, context);
       TroubleShooter.recordError(new Error(message));
       return;
     }
@@ -454,11 +455,22 @@ export function initHooks() {
       delete context.flags.midiProperties.offHandWeapon;
       delete context.flags.midiProperties.otherSaveDamage;
       delete context.flags.midiProperties.confirmTargets;
+      delete context.flags.midiProperties.autoFailFriendly;
+      delete context.flags.midiProperties.autoSaveFriendly;
+      delete context.flags.midiProperties.magicdam;
+      delete context.flags.midiProperties.magiceffect;
+      delete context.flags.midiProperties.noConcentrationCheck;
       delete context.flags.midiProperties.idi;
       delete context.flags.midiProperties.idr;
       delete context.flags.midiProperties.ida;
       delete context.flags.midiProperties.idv;
+      delete context.flags.midiProperties.toggleEffect;
+      delete context.flags.midiProperties.ignoreTotalCover;
       delete context.flags.AoETargetTypeIncludeSelf;
+      if (context.flags[`${MODULE_ID}`]?.rollAttackPerTarget !== undefined)
+        delete context.flags[`${MODULE_ID}`].rollAttackPerTarget;
+      if (context.flags[`${MODULE_ID}`]?.fumbleThreshold !== undefined)
+        delete context.flags[`${MODULE_ID}`].fumbleThreshold;
       if (context.flags["midi-qol"]?.AoETargetType)
         delete context.flags["midi-qol"].AoETargetType;
     }
@@ -472,7 +484,7 @@ export function initHooks() {
     const midiProps = config.midiProperties;
     if (!item) {
       const message = "item not defined in getItemSheetData";
-      console.error(message, data);
+      error(message, data);
       TroubleShooter.recordError(new Error(message));
       return;
     }
@@ -510,11 +522,7 @@ export function initHooks() {
           && foundry.utils.getProperty(item, `flags.midiProperties.${prop}`) === undefined) {
           foundry.utils.setProperty(item, `flags.midiProperties.${prop}`, true);
         } else if (foundry.utils.getProperty(item, `flags.midiProperties.${prop}`) === undefined) {
-          /* This has been moved to the activity
-                    if (["confirmTargets"].includes(prop)) {
-                      foundry.utils.setProperty(data, `flags.midiProperties.${prop}`, "default");
-                    } else foundry.utils.setProperty(data, `flags.midiProperties.${prop}`, false);
-          */
+
           foundry.utils.setProperty(data, `flags.midiProperties.${prop}`, false);
         }
       }
@@ -545,30 +553,11 @@ export function initHooks() {
   }
 
   Hooks.once('tidy5e-sheet.ready', (api) => {
-    if ((game.user?.role ?? CONST.USER_ROLES.PLAYER) < (configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER)) return;
-    const myTab = new api.models.HandlebarsTab({
-      title: 'Midi Qol',
-      tabId: "midi-qol-properties-tab",
-      path: '/modules/midi-qol/templates/midiPropertiesForm.hbs',
-      enabled: (data) => { return ["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver", "tool"].includes(data.item.type) },
-      getData: (data) => {
-        data = getItemSheetData(data, data.item);
-        data.showHeader = false;
-        return data;
-      },
-      onRender: (params: any) => {
-        activateMacroListeners(params.app, params.tabContentsElement);
-      }
-    });
-
     Hooks.on('tidy5e-sheet.getActivitiesForPlay', (parent, data) => {
       if (data.activities && data.activities instanceof Array) {
         data.activities = data.activities.filter(activity => !activity?.midiProperties?.automationOnly && !parent.getFlag("dnd5e", "riders.activity")?.includes(activity.id));
       }
     });
-
-    api.registerItemTab(myTab);
-
     api.config.itemSummary.registerCommands([
       {
         label: i18n("midi-qol.buttons.roll"),
@@ -603,80 +592,29 @@ export function initHooks() {
         }
       }
     ]);
-
-    api.config.actorTraits.registerActorTrait({
-      title: i18n("midi-qol.ActorOnUseMacros"),
-      iconClass: "fas fa-cog",
-      enabled: () => configSettings.allowActorUseMacro,
-      openConfiguration: (params) => {
-        new ActorOnUseMacrosConfig({ document: params.app.object }).render({ force: true });
-      },
-      openConfigurationTooltip: i18n("midi-qol.ActorOnUseMacros"),
-    });
-
+    return;
   });
-
-  Hooks.on("renderItemSheet5e", (
-    app: foundry.applications.api.DocumentSheetV2<Item>,
-    html: HTMLElement,
-    //@ts-expect-error no dnd5e-types
-    context: foundry.applications.api.DocumentSheetV2.RenderContext
-  ) => {
-    const item = app.document;
-    if (!item) return;
-    if ((configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER) > (game.user?.role ?? CONST.USER_ROLES.NONE)) return;
-    if (app.constructor.name !== "Tidy5eKgarItemSheet") {
-      if (!["spell", "feat", "weapon", "consumable", "equipment", "power", "maneuver", "tool"].includes(context.item.type))
-        return;
-
-      let tabs = html.querySelector(`nav.sheet-tabs.tabs`);
-      if (context.tabs!.midiqol) {
-        const message = "render item sheet: Midi Tab already present";
-        TroubleShooter.recordError(new Error(message), message);
-        error(message);
-        return;
-      }
-      context.tabs!.midiqol = {
-        active: !Object.values(context.tabs!).find(i => (i as any).active),
-        cssClass: "midi-qol",
-        group: "primary",
-        id: "midiqol",
-        label: "Midi-qol"
-      };
-      const midiHeaderTab = document.createElement("a");
-      midiHeaderTab.dataset.action = "tab";
-      midiHeaderTab.dataset.group = "primary";
-      midiHeaderTab.dataset.tab = "midiqol";
-      midiHeaderTab.classList.add("midi-qol");
-      if (context.tabs!.midiqol.active) midiHeaderTab.classList.add("active");
-      midiHeaderTab.innerHTML = "<span>Midi-qol</span>";
-      tabs?.appendChild(midiHeaderTab);
-      context = foundry.utils.mergeObject(context, getItemSheetContext(context, item), { recursive: false });
-      html.querySelector("section.tab.midi-qol")?.remove();
-      if (!html.querySelector("section.tab.midi-qol")) {
-        foundry.applications.handlebars.renderTemplate("modules/midi-qol/templates/midiPropertiesForm.hbs", context).then(templateHtml => {
-          // tabs = html.find(`form nav.sheet-navigation.tabs`);
-          const midiTab = document.createElement("section");
-          midiTab.classList.add("tab", "midi-qol");
-          if (context.tabs!.midiqol.active) midiTab.classList.add("active");
-          midiTab.dataset.tab = "midiqol";
-          midiTab.dataset.group = "primary";
-          midiTab.dataset.applicationPart = "midi-qol";
-          midiTab.innerHTML = templateHtml;
-          html.querySelector("section.window-content")?.append(midiTab);
-          activateMacroListeners(app, html);
-          // @ts-expect-error no dnd5e-types
-          if (!app.classList.contains("editable")) app._disableFields();
-        });
-      }
-    }
-    // activateMacroListeners(app, html);
+  
+  Hooks.once("tidy5e-sheet.ready", api => {
+    if ((game.user?.role ?? CONST.USER_ROLES.PLAYER) < (configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER)) return;
+    api.registerItemHeaderControls?.({
+      controls: [
+        {
+          icon: 'fas fa-cog',
+          label: "Midi-QOL",
+          async onClickAction() {
+            new ItemOnUseMacrosConfig({ document: this.document }).render({ force: true });
+          }
+        },
+      ]
+    });
   });
 
   Hooks.on("getHeaderControlsItemSheet5e", (
     app: foundry.applications.api.DocumentSheetV2<Item>,
     controls: foundry.applications.api.ApplicationV2.HeaderControlsEntry[]
   ) => {
+    if ((game.user?.role ?? CONST.USER_ROLES.PLAYER) < (configSettings.midiPropertiesTabRole ?? CONST.USER_ROLES.PLAYER)) return;
     // TODO: Localize this to maybe be on-use macros? Needs to be clear it's a midi thing
     // TODO: permissions
     const title = "Midi-qol";
@@ -1219,7 +1157,7 @@ Hooks.on("dnd5e.calculateDamage", (actor: Actor.Implementation /* Actor - no dnd
       }));
     }
   } catch (err) {
-    console.error(err);
+    error(err);
   }
   return true;
 });

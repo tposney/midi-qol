@@ -86,7 +86,8 @@ export function activateMacroListeners(app: foundry.applications.api.DocumentShe
   if (app.isEditable) {
     html.querySelectorAll(".macro-control").forEach(el => 
       el.addEventListener("click", _onMacroControl.bind(app)));
-    const dd = new DragDrop({
+    //@ts-expect-error
+    const dd = new foundry.applications.ux.DragDrop.implementation({
       dragSelector: undefined,
       dropSelector: ".midi-onuse-macro-name",
       permissions: {dragstart: () => false, drop: () => true},

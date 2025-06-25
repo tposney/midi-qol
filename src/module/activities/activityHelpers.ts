@@ -1,4 +1,4 @@
-import { MODULE_ID, debugEnabled, warn } from "../../midi-qol.js";
+import { MODULE_ID, debugEnabled, warn, error } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { TargetConfirmationDialog } from "../apps/TargetConfirmation.js";
 import { configSettings, safeGetGameSetting, targetConfirmation } from "../settings.js";

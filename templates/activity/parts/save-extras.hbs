@@ -1,0 +1,10 @@
+<fieldset>
+  <legend> {{ localize "midi-qol.SAVE.extras.header" }} </legend>
+  {{ formField fields.friendlySave value=source.friendlySave options=FriendlySaveOptions }}
+  {{ formField fields.midiProperties.fields.magicEffect value=source.midiProperties.magicEffect }}
+  {{ formField fields.damage.fields.critical.fields.allow value=source.damage.critical.allow
+  input=@root.inputs.createCheckboxInput }}
+  {{#if source.damage.critical.allow}}
+  {{ formField fields.damage.fields.critical.fields.bonus value=source.damage.critical.bonus }}
+  {{/if}}
+</fieldset>

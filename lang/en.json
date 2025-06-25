@@ -72,7 +72,6 @@
   "midi-qol.noTemplateSeen": "Template has not been placed",
   "midi-qol.AutoTarget.Name": "Auto target on template draw",
   "midi-qol.AutoTarget.Hint": "When placing a template (e.g. spell) auto target tokens inside the template. If 'Center + Levels' is set in ranged targeting Levels Volumetric Templates will be used (if installed)",
-  "midi-qol._comment for translators_noDamageOnSaveSpells": "In foundry v9 the array json element is no longer supported, so only the v9 version will be used",
   "midi-qol.undoDamageFrom": "Undo applied damage from ",
   "midi-qol.noGM": "No GM user connected cannot apply effects/update Hit Points",
   "midi-qol.noSelection": "No Token/Actor selected",
@@ -317,19 +316,6 @@
   "midi-qol.ForceHideRoll.Hint": "Display nothing to non-recipients for private/blind/self-rolls. Thanks to felix.mueller.86@web.de",
   "midi-qol.EnableWorkflow.Name": "Enable roll automation support",
   "midi-qol.EnableWorkflow.Hint": "If enabled automation of rolls can be configured in the Workflow Settings panel",
-  "midi-qol.magicalProp": "Magical",
-  "midi-qol.confirmTargetsProp": "Confirm Targets",
-  "midi-qol.noDamageSaveProp": "No Damage Save",
-  "midi-qol.fullDamageSaveProp": "Full Damage Save",
-  "midi-qol.defaultDamageType": "midi-none",
-  "midi-qol.halfDamageSaveProp": "Half Damage Save",
-  "midi-qol.rollOtherProp": "Also Roll Other",
-  "midi-qol.otherCritProp": "Critical Other",
-  "midi-qol.magicalDamageProp": "Magic Damage",
-  "midi-qol.magicalEffectProp": "Magic Effect",
-  "midi-qol.concentrationEffectProp": "Concentration",
-  "midi-qol.noConcentrationEffectProp": "No Conc Save",
-  "midi-qol.toggleEffectProp": "Toggle effect (Deprecated)",
   "midi-qol.playerControlsInvisibleTokens.Name": "Players control owned hidden tokens",
   "midi-qol.playerControlsInvisibleTokens.Hint": "Experimental - might work",
   "midi-qol.Debug.Name": "Enable debug",
@@ -350,6 +336,7 @@
     "damageBonus": "Return a damage bonus",
     "preSave": "Before Checking Saves",
     "postSave": "After Checking Saves",
+    "preDamageRollConfig": "Before Damage Configuration",
     "preDamageApplication": "Before Damage Application",
     "preActiveEffects": "Before Active Effects",
     "postActiveEffects": "After Active Effects ",
@@ -549,13 +536,13 @@
   "midi-qol.ExportJSon": "Export Roll Stats to Json file",
   "midi-qol.ExportCSV": "Export Roll Stats to CSV file",
   "midi-qol.AutoCEEffectsOptions": {
-    "none": "Don't Apply",
-    "itempri": "Apply Item effects, if absent apply CE",
-    "cepri": "Apply CE, if absent apply item effects",
-    "both": "Apply CE and item effects"
+    "none": "Only activity effects",
+    "itempri": "Apply activity effects, if absent apply CE",
+    "cepri": "Apply CE, if absent apply activity effects",
+    "both": "Apply CE and activity effects"
   },
   "midi-qol.AutoCEEffects.Name": "Apply Convenient Effects",
-  "midi-qol.AutoCEEffects.Hint": "Apply convenient effects which match item name when item used. Requires auto apply active effects enabled as well.",
+  "midi-qol.AutoCEEffects.Hint": "Apply convenient effects which match activity name (if no match, item name) when item used. Requires auto apply active effects enabled as well.",
   "midi-qol.BonusACCover": "AC Cover",
   "midi-qol.NoChangelogs": "Midi-qol supports and recommends the ChangeLogs or Module Manager+ modules to show you any changes since you last updated",
   "midi-qol.ActiveDefenceString": "Active Defence",
@@ -719,7 +706,6 @@
   "midi-qol.DisplayHitResultNumeric.Name": "Display target AC",
   "midi-qol.EnforceBonusActions.Title": "Bonus Action Used",
   "midi-qol.EnforceBonusActions.Content": "You have used your bonus action this round. Do you want to proceed anyway?",
-  "midi-qol.MidiProperties": "Midi-qol Item Properties",
   "midi-qol.SoundSettings.Name": "Configure Midi Custom Sounds",
   "midi-qol.SoundSettings.Hint": "Setup midi-qol custom sounds for item rolls",
   "midi-qol.SoundSettings.Label": "Configure Midi Custom Sounds",
@@ -989,8 +975,11 @@
           "label": "Roll Mode",
           "hint": "Roll mode to use for the activity"
         },
-        "ignoreFullCover":
-        {
+        "removeChatButtons": {
+          "label": "Remove Chat Buttons",
+          "hint": "Remove buttons from the activity chat card"
+        },
+        "ignoreFullCover": {
           "label": "Ignore Full Cover",
           "hint": "Ignore full cover when applying damage/saves"
         },
@@ -1050,6 +1039,18 @@
           "label": "Toggle Effect",
           "hint": "Disabling an effect will toggle it rather than removing it"
         },
+        "magicEffect": {
+          "label": "Magic Effect",
+          "hint": "Saves against this activity are treated as saves against magic"
+        },
+        "magicDamage": {
+          "label": "Magic Damage",
+          "hint": "Damage from this activity is treated as magic damage"
+        },
+        "noConcentrationCheck": {
+          "label": "No Concentration Save",
+          "hint": "The activity's damage does not trigger a concentration save"
+        },
         "ignoreTraits": {
           "idi": {
             "label": "Immunity",
@@ -1071,6 +1072,10 @@
             "label": "Modification",
             "hint": "Ignore damage modification when applying damage"
           }
+        },
+        "autoCEEffects": {
+          "label": "Apply Convenient Effects",
+          "hint": "Apply convenient effects which match activity name (if no match, item name) when item used. Requires auto apply active effects enabled as well."
         }
       },
       "isOverTimeFlag": {
@@ -1141,6 +1146,14 @@
       "ammunition": {
         "label": "Ammunition",
         "hint": "Default ammunition to consume"
+      },
+      "attackRollPerTarget": {
+        "label": "Attack Roll Per Target",
+        "hint": "Roll a separate attack roll for each target"
+      },
+      "fumbleThreshold": {
+        "label": "Fumble Threshold",
+        "hint": "If the attack roll is less than or equal to this value it is a fumble"
       }
     }
   },
@@ -1159,7 +1172,23 @@
   "midi-qol.DAMAGE": {
     "Title": {
       "one": "Midi Damage",
-      "other": "Midi Damage"
+      "other": "Midi Damage",
+      "FIELDS": {
+        "damage": {
+          "label": "Save Damage",
+          "critical": {
+            "label": "Critical Damage",
+            "allow": {
+              "label": "Allow Critical Damage",
+              "hint": "Allow critical damage to be applied"
+            },
+            "bonus": {
+              "label": "Bonus Critical Damage",
+              "hint": "Bonus critical damage to be applied if critical damage is allowed"
+            }
+          }
+        }
+      }
     }
   },
   "midi-qol.ENCHANT": {
@@ -1213,6 +1242,20 @@
     "Title": {
       "one": "Midi Save",
       "other": "Midi Saves"
+    },
+    "extras": {
+      "header": "Midi Save Fields"
+    },
+    "FriendlySave": {
+      "Default": "Roll save",
+      "FriendlySuccess": "Friends Succeed",
+      "FriendlyFail": "Friends Fail"
+    },
+    "FIELDS": {
+      "friendlySave": {
+        "label": "Friendly Save",
+        "hint": "If enabled allow allies to succeed or fail rather than rolling a save"
+      }
     }
   },
   "midi-qol.UTILITY": {

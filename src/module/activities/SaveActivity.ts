@@ -1,4 +1,4 @@
-import { debugEnabled, warn } from "../../midi-qol.js";
+import { debugEnabled, warn, i18n } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
@@ -20,11 +20,12 @@ export function setupSaveActivity() {
   } else {
     GameSystemConfig.activityTypes["midiSave"] = { documentClass: MidiSaveActivity };
   }
+  // Localization.localizeDataModel(MidiSaveActivity);
 }
 
 let defineMidiSaveActivityClass = (ActivityClass: any) => {
   return class MidiSaveActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = ["DND5E.DAMAGE", "midi-qol.SAVE", "midi-qol.DAMAGE", ...super.LOCALIZATION_PREFIXES];
+    static LOCALIZATION_PREFIXES = ["DND5E.SAVE", "DND5E.DAMAGE", "midi-qol.SAVE", ...super.LOCALIZATION_PREFIXES];
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
@@ -55,13 +56,14 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
         ...super.defineSchema(),
         otherActivityId: new StringField({ name: "otherActivity", initial: "" }),
         damage: new SchemaField({
-          onSave: new StringField(),
-          parts: new ArrayField(new DamageField()),
+          onSave: new StringField({ initial: "half", default: "half", name: "onSave" }),
           critical: new SchemaField({
             allow: new BooleanField(),
             bonus: new FormulaField(),
           }),
+          parts: new ArrayField(new DamageField()),
         }),
+        friendlySave: new StringField({ initial: "default", name: "friendlySave"}),
         // WIP
         // saveDisplay: new StringField({initial: "default"})
       }
@@ -157,7 +159,8 @@ let defineMidiSaveSheetClass = (baseClass: any) => {
         template: "modules/midi-qol/templates/activity/save-effect.hbs",
         templates: [
           ...super.PARTS.effect.templates,
-          "modules/midi-qol/templates/activity/parts/save-damage.hbs",
+          "modules/midi-qol/templates/activity/parts/save-extras.hbs",
+          "systems/dnd5e/templates/activity/parts/save-damage.hbs"
         ]
       }
     };
@@ -168,8 +171,13 @@ let defineMidiSaveSheetClass = (baseClass: any) => {
     }
     async _prepareContext(options) {
       await this.activity.prepareData({});
-      const returnvalue = await super._prepareContext(options);
-      return returnvalue;
+      const context = await super._prepareContext(options);
+      context.FriendlySaveOptions = [
+        {value: "default", label: i18n("midi-qol.SAVE.FriendlySave.Default")},
+        {value: "friendlySuccess", label: i18n("midi-qol.SAVE.FriendlySave.FriendlySuccess")},
+        {value: "friendlyFail", label: i18n("midi-qol.SAVE.FriendlySave.FriendlyFail")},
+      ];
+      return context;
     }
   }
 }

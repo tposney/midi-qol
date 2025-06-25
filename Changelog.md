@@ -1,6 +1,50 @@
 ### 13.0.4
 * Change so that preferred GM is stored as an id rather than a name.
+* Fix for stack overflow when computing distance between very large tokens - thanks @woodser
+* Fix for target confirmation dialog - thanks @Elwin
+* Fix for target confirmation dialog leaving canvas selection tool in odd state if closing dialog.
+* Fix for respecting roll mode when doing a skill roll and changing it in the roll dialog.
+* Fix for reaction setting displayOnly to actually display the reaction effect on tokens.
+* Respect activity options, dnd5e.concentrationCheck.
+* Reinstate 1 second/1 turn time out for instantaneous templates removal.
+* If ignoring temphp when doing concentration checks, no concentration check will be triggered if only temphp damage is done for both midi's item roll concentration check and dnd5e's chat message.
+  - For the midi item roll temphp damage will not be included in the concentration dc calculation.
+  - For the dnd5e chat message, temphp damage will be included in the concentration dc calculation.
+* Fix for items which trigger multiple damage rolls only applying last damage done.
+* Fix for chat card activity action resulting in cannot read metadata on undefined. Thanks @thatlonelybugbear
+* Include fix for auto consumption not distinguishing spells/non-spells correctly.Thanks @thatlonelybugbear
+* Fix for importing midi settings from misc tab.
+* Fix for items that are not weapons with reaction cast activities.
+* Fix for reaction activities that are a self target forward activity not targeting self.
 * migrate to the v13 version of fvtt-types
+* Added support for hide-npc-names to replace the now defunct anonymous module for hiding token names.
+* Added new onUseMacro pass, preDamageRollConfig, called before confirming damage config.
+* Fix for preDamageRollConfig not being setup correctly - thanks @Elwin
+* Added Czech language files - thanks @Lethrendis
+
+* **Breaking** The midi-qol tab on the item sheet has been removed. Fields that will continue to be supported have been moved to the activity sheet instead.
+  - Magic Damage has moved to the activity midi-tab and only affects the activity.
+  - Magic Effect has moved to the activity midi-tab and only affects the activity.
+  - Toggle Effect has moved to the activity midi-tab and only affects the activity.
+  - noConcentrationSave is moved to the activity midi-tab and only affects the activity.
+  - Friends fail/save moved to the save activity sheet.
+  - When an actor/item is loaded (world load/import) the midiProperties are migrated to the new scheme and the midiProperties are deleted. If you have already manually migrated these fields then be aware that the settings may be overwritten by this migration.
+  
+  **Breaking** Instead of the previous onUseMacro field on the midi tab, a new header bar app, "midi-qol" (courtesy of @micheal) is supported. This allows you to specify access to item based macros (called on all activity workflows), custom macros (called on all activity workflows) or activity macros (called when the specified activity is run). This is improved functionality compared to the v12 version where all macros were called on all activities.
+
+* **Breaking** Settings for applying convenient effects have been moved to be per activity.
+  - There will be a possible convenient effect (CE) for an activity if there is a CE that matches the activity name, and if not, matches the item name.
+  - The possible settings are:
+    Midi Settings: Use the midi workflow settings to decide
+    Only activity effects: Only apply activity effects, ignore CE effects
+    Apply activity effects, if absent apply CE: Prefer the activity effects and if none present use the CE effect if present.
+    Apply CE, if absent apply activity effects: Prefer to apply the CE effect if present.
+    Apply CE and activity effect: Apply both activity and CE effects.
+
+* Known issues:
+  * Allow Critical/Critical bonus not displaying headings on save/check activities.
+  * Using levels to check visibility is not working properly with walls - any wall blocks visibility - affects advantage/disadvantage, but not distance calculations.
+  * Midi still hooks renderChatMessage and has not migrated to renderChatMessageHTML, so you will get a bunch of compatibility warnings.
 
 ### 13.0.3
 * Add usage.midiOptions.triggeringWorkflowId and usage.midiOptions.triggeringActivityUuid to triggered activities.
