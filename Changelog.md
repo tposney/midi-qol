@@ -28,7 +28,7 @@
   - Toggle Effect has moved to the activity midi-tab and only affects the activity.
   - noConcentrationSave is moved to the activity midi-tab and only affects the activity.
   - Friends fail/save moved to the save activity sheet.
-  - When an actor/item is loaded (world load/import) the midiProperties are migrated to the new scheme and the midiProperties are deleted. If you have already manually migrated these fields then be aware that the settings may be overwritten by this migration.
+  - **this is not enabled yet** When an actor/item is loaded (world load/import) the midiProperties are migrated to the new scheme and the midiProperties are deleted. If you have already manually migrated these fields then be aware that the settings may be overwritten by this migration.
   
   **Breaking** Instead of the previous onUseMacro field on the midi tab, a new header bar app, "midi-qol" (courtesy of @micheal) is supported. This allows you to specify access to item based macros (called on all activity workflows), custom macros (called on all activity workflows) or activity macros (called when the specified activity is run). This is improved functionality compared to the v12 version where all macros were called on all activities.
 

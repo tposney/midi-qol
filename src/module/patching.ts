@@ -879,6 +879,7 @@ let currentDAcalculateDamage;
 let currentDAGetTargetOptions;
 
 function removeMidiProperties(wrapped, ...args) {
+  // This needs more work
   const [source] = args;
   try {
     if (source.flags?.midiProperties) {
@@ -913,7 +914,7 @@ function removeMidiProperties(wrapped, ...args) {
 
 export function initPatching() {
   libWrapper = globalThis.libWrapper;
-  // libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.migrateData", removeMidiProperties, "WRAPPER");
+  // TODO this needs more work libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.migrateData", removeMidiProperties, "WRAPPER");
   libWrapper.register(MODULE_ID, "CONFIG.Actor.documentClass.prototype.prepareDerivedData", _prepareDerivedData, "WRAPPER");
   // For new onUse macros stuff.
   libWrapper.register(MODULE_ID, "CONFIG.Item.documentClass.prototype.prepareData", itemPrepareData, "WRAPPER");

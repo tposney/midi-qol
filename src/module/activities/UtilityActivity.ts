@@ -1,4 +1,4 @@
-import { debugEnabled, i18n, warn } from "../../midi-qol.js";
+import { debugEnabled, i18n, warn, error } from "../../midi-qol.js";
 import { Workflow } from "../Workflow.js";
 import { TroubleShooter } from "../apps/TroubleShooter.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
@@ -81,7 +81,7 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
       const workflow = config.workflow;
       if (!workflow) {
         const errorMessage = "MidiUtilityActivity | rollFormula | No workflow found";
-        console.error(errorMessage);
+        error(errorMessage);
         TroubleShooter.recordError(new Error("No Workflow Found"), errorMessage);
         return;
       }
