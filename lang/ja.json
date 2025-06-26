@@ -246,7 +246,7 @@
     "off": "オフ",
     "attack": "攻撃のみ",
     "damage": "ダメージのみ",
-    "all": "攻撃とダメージ"
+    "all": "攻撃とダメージ",
     "everything": "すべて"
   },
   "midi-qol.damageImmunitiesOptions": {
