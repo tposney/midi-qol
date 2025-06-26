@@ -73,35 +73,13 @@
   "midi-qol.AutoTarget.Name": "範囲指定で対象を自動選択",
   "midi-qol.AutoTarget.Hint": "呪文等を発動したときにテンプレートを置くと、範囲内のコマを自動的にターゲットします。遠隔攻撃における壁の処理で「中心点＋Levels」が選択されている場合、Levels - Volumetric Templates機能が使用されます (インストールされている場合)。",
   "midi-qol._comment for translators_noDamageonSaveSpells": "（翻訳作業者へ）FVTT v9ではarray jsonがサポートされなくなったため、以下はv9以降でのみ使用されます。",
-  "midi-qol.noDamageonSaveSpells": [
-    "アシッド・スプラッシュ",
-    "ソード・バースト",
-    "サンダー・クラップ",
-    "ヴィシャス・モッカリィ",
-    "クリエイト・ボンファイア",
-    "ライトニング・ルアー",
-    "ポイズン・スプレー",
-    "コードン・オヴ・アローズ",
-    "ディスインテグレート",
-    "セイクリッド・フレイム",
-    "コードン・オヴ・アローズ",
-    "フロストバイト",
-    "インフェステイション",
-    "トウル・ザ・デッド",
-    "ワード・オヴ・レイディアンス",
-    "カタパルト",
-    "アース・トレマー"
-  ],
-  "midi-qol.noDamageonSaveSpellsv9": "アシッド・スプラッシュ, ソード・バースト, サンダー・クラップ, ヴィシャス・モッカリィ, クリエイト・ボンファイア, ライトニング・ルアー, ポイズン・スプレー, コードン・オヴ・アローズ, ディスインテグレート, セイクリッド・フレイム, コードン・オヴ・アローズ, フロストバイト,  インフェステイション, トウル・ザ・デッド, ワード・オヴ・レイディアンス, カタパルト,  アース・トレマー",
-  "midi-qol.fullDamageText": "※セーヴ成功時も完全なダメージ",
-  "midi-qol._comment for translators_fullDamage": "（翻訳作業者へ）次の2行はMidi-QOLが呪文の説明文を検索するためのものです。",
-  "midi-qol.fullDamage": "セーヴ成功時も完全なダメージ",
-  "midi-qol.fullDamageAlt": "セーヴを貫通",
   "midi-qol.undoDamageFrom": "適用されたダメージを巻き戻す：",
   "midi-qol.noGM": "GMユーザが接続していないためダメージを適用出来ませんでした。",
   "midi-qol.noSelection": "コマが選択されていません。",
   "midi-qol.showGM.Name": "GMはすべての秘話を閲覧できる",
   "midi-qol.showGM.Hint": "ゲーム設定に関わらず、GMはすべての秘話メッセージを見ることができます。",
+  "midi-qol.PreferredGM.Name": "優先GM",
+  "midi-qol.PreferredGM.Hint": "ソケットコール時の優先GMを指定します。「なし」なら、現在シーンにいる最初のGMが使われます。",
   "midi-qol.ColoredBorders.Name": "メッセージ枠に色をつける",
   "midi-qol.ColoredBorders.Hint": "チャットのメッセージが、対応したプレイヤーカラーで縁取られるようになります。",
   "midi-qol.AutoEffects.Name": "アクティブ効果を自動適用する",
@@ -135,7 +113,6 @@
   "midi-qol.noDamage": "セーヴ成功時はダメージなし",
   "midi-qol.noDamageAlt": "セーヴで無効",
   "midi-qol.noDamageText": "※セーヴ成功時はダメージなし",
-
   "midi-qol.wrongNumberTargets": "攻撃ロールの前にコマをターゲットする必要があります（最大{allowedTargets}つまで）。",
   "midi-qol.noSaveTargets": "セーヴする対象がありません。",
   "midi-qol.UseTokenNames.Name": "チャットカードにコマの名前を使用する",
@@ -156,7 +133,7 @@
     "explodeCharacter": "キャラクターの最大出目は振り足す",
     "explodeNPC": "NPCの最大出目は振り足す",
     "baseDamage": "設定した追加ダメージ",
-    "maxBaseRollCrit": "Max Base Roll Crit",
+    "maxBaseRollCrit": "最大基礎ロールクリティカル",
     "bestOfTwo": "２回ダメージロールして高い方を採用"
   },
   "midi-qol.MergeCard.Name": "ロールを1枚のチャットカードに統合する",
@@ -172,6 +149,7 @@
   "midi-qol.saving-throw": "セーヴ",
   "midi-qol.ability-check": "能力値判定",
   "midi-qol.ability-checks": "能力値判定",
+  "midi-qol.skill-check": "技能判定",
   "midi-qol.noAttackRoll": "ダメージロールする前に、攻撃をロールする必要があります。",
   "midi-qol.config": "Midi-QOL設定",
   "midi-qol.Hint": "Midi-QOLの各種ワークフロー設定を行います。たくさんありますのでご注意ください。",
@@ -269,6 +247,7 @@
     "attack": "攻撃のみ",
     "damage": "ダメージのみ",
     "all": "攻撃とダメージ"
+    "everything": "すべて"
   },
   "midi-qol.damageImmunitiesOptions": {
     "none": "オフ",
@@ -325,13 +304,15 @@
     "d20Only": "d20の出目＋総ダメージを表示",
     "hitDamage": "命中結果＋総ダメージを表示",
     "hitCriticalDamage": "命中結果（クリティカル等含む）＋総ダメージを表示",
+    "attackTotalOnly": "攻撃ロールの合計のみ表示",
     "d20AttackOnly": "d20の出目のみ表示",
     "all": "すべて隠す"
   },
   "midi-qol.RollOtherDamageOptions": {
     "none": "オフ",
-    "ifSave": "セーヴがあるとき",
-    "activation": "使用条件を参照"
+    "always": "常にロール",
+    "condition": "その他の状態異常が真",
+    "ifSave": "セーヴがあるとき"
   },
   "midi-qol.potion": "ポーション",
   "midi-qol.HideRollDetails.Name": "GMロールの詳細を隠す",
@@ -375,7 +356,6 @@
     "preTargeting": "目標選択が解決される前(*)",
     "preItemRoll": "アイテムがロールされる前(*)",
     "templatePlaced": "テンプレートが配置後のみ",
-    "preambleComplete": "目標選択後",
     "preAttackRoll": "攻撃ロール前",
     "preCheckHits": "ヒット確認前",
     "postAttackRoll": "攻撃ロール後",
@@ -384,9 +364,12 @@
     "damageBonus": "ダメージボーナスを戻す",
     "preSave": "セーヴ前",
     "postSave": "セーヴ後",
+    "preDamageRollConfig": "ダメージ編集前",
     "preDamageApplication": "ダメージ適用前",
     "preActiveEffects": "アクティブ効果の前",
     "postActiveEffects": "アクティブ効果の後",
+    "isTargeted": "目標がターゲットされ、アイテムロール前",
+    "isPreAttacked": "ターゲットが攻撃され、リアクション前",
     "isAttacked": "攻撃されたとき",
     "isHit": "ヒットを受けたとき",
     "preTargetSave": "セーヴを要求されたとき",
@@ -405,6 +388,7 @@
   "midi-qol.AutoFastForwardAttack.Name": "確認スキップ（攻撃）",
   "midi-qol.AutoFastForwardDamage.Name": "確認スキップ（ダメージ）",
   "midi-qol.midi-none": "ダメージなし",
+  "midi-qol.noType": "種別なし",
   "midi-qol.ItemList": "詳細を表示するアイテムの種別を選択します",
   "midi-qol.DisplayItems": "個別設定",
   "midi-qol.fastForward": "（先行）",
@@ -449,6 +433,9 @@
   "midi-qol.Hits": "命中判定",
   "midi-qol.Misses": "ミス",
   "midi-qol.Saves": "セーヴ",
+  "midi-qol.SavesBase": "ターゲットのセーヴ成功時、これは次を行う:",
+  "midi-qol.SavesBonus": "ターゲットのセーヴ成功時、ボーナスダメージマクロは次を行う:",
+  "midi-qol.SavesOther": "ターゲットのセーヴ成功時、他の式が次を行う:",
   "midi-qol.Damage": "ダメージ",
   "midi-qol.Concentrating": "集中状態",
   "midi-qol.concentrationCheckName": "集中判定",
@@ -516,6 +503,11 @@
   },
   "midi-qol.NearbyAllyRanged.Hint": "相手がこの値（w*h）より小さい場合、味方の5ft以内にいる対象への遠隔攻撃には不利がつきます。0を指定すると無効になります。",
   "midi-qol.Incapacitated.Name": "無力状態のアクターはアクションやリアクションができない",
+  "midi-qol.IncapacitatedOptions": {
+    "nothing": "何もしない",
+    "enforce": "アクションの使用禁止",
+    "warn": "警告のみ投稿"
+  },
   "midi-qol.RemoveHiddenInvis.Name": "攻撃は隠れ身状態を解除する（要CE/CV/CUBまたはコア機能の状態変化）",
   "midi-qol.CriticalSaves.Name": "（ハウスルール）セーヴ時のクリティカル（ファンブル）は常に成功（失敗）として扱う。",
   "midi-qol.MaxDRValue.Name": "（ハウスルール）最も効果的なダメージ軽減（DR）のみを適用します。オフの場合はDRを累積して計算します。",
@@ -552,6 +544,14 @@
     "nonspell": "呪文のみ",
     "allitems": "すべて非魔法"
   },
+  "midi-qol.DoConcentrationCheck.Name": "ダメージを受けた時精神集中セーヴを強制",
+  "midi-qol.DoConcentrationCheckOptions": {
+    "none": "しない",
+    "chatOnly": "チャットメッセージのみ（dnd5eのデフォルト挙動）",
+    "chat": "チャットメッセージ＋自動ロール",
+    "item": "精神集中アイテムをロール"
+  },
+  "midi-qol.DoConcentrationCheck.Hint": "<strong>チャットメッセージのみ</strong>ボタン付きのチャットメッセージを表示（dnd5eのデフォルト挙動、要dnd5e 精神集中）<br><strong>チャットメッセージ＋自動ロール</strong>チャットメッセージを表示し自動でセーヴを実行（要dnd5e 精神集中）<br><strong>精神集中アイテムをロール</strong>精神集中アイテム判定をロールします（midiの基本挙動）",
   "midi-qol.RemoveConcentration.Name": "セーヴ失敗時の集中自動解除",
   "midi-qol.RemoveConcentration.Hint": "被ダメージ時のセーヴに失敗すると、精神集中状態が自動で解除されます。",
   "midi-qol.UsePlayerPortrait.Name": "チャットカードにポートレートを使用する",
@@ -605,9 +605,12 @@
   "midi-qol.ChallengeModeArmorScaleNoAR.Hint": "拡張されたチャレンジモードを使用しますが、ARによるダメージ軽減は適用しません（詳細はReadmeを参照）",
   "midi-qol.NonSilverPhysical": "非銀製かつ非魔法の物理",
   "midi-qol.NonAdamantinePhysical": "非アダマンティン製武器",
-  "midi-qol.NonMagical": "非魔法的",
   "midi-qol.NonMagicalPhysical": "非魔法物理",
+  "midi-qol.Physical": "物理ダメージ",
   "midi-qol.Magical": "魔法的",
+  "midi-qol.NonMagical": "非魔法ダメージ",
+  "midi-qol.SpellDamage": "呪文ダメージ",
+  "midi-qol.NonSpellDamage": "非呪文ダメージ",
   "midi-qol.ConditionHeader": "発動条件",
   "midi-qol.EffectActivationCondition.Name": "アクティブ効果の適用",
   "midi-qol.EffectActivation": "アクティブ効果の適用にシステム機能を使用する（非推奨）",
@@ -636,6 +639,8 @@
   "midi-qol.reactionFlavorSaveFail":  "{itemName} によるセーヴに失敗した {actorName} のリアクションを待っています。",
   "midi-qol.reactionFlavorSaveSuccess":  "{itemName} によるセーヴに成功した {actorName} のリアクションを待っています。",
   "midi-qol.reactionFlavorMoved": "{itemName} の移動に対する {actorName} のリアクションを待っています。",
+  "midi-qol.reactionUsed": "リアクション使用済",
+  "midi-qol.bonusActionUsed": "ボーナスアクション使用済",
   "midi-qol.AccelKeysOverride.Name": "Midi-QOLのキーバインドを優先する",
   "midi-qol.AccelKeysOverride.Hint": "有利/不利を指定してロールを行うとき、（BetterRollsなど）ほかのModよりMidi-QOLのキー設定が優先して使用されるようになります。",
   "midi-qol.NoWorkflow": "アイテム {itemName} にはワークフローがありません。",
@@ -653,6 +658,7 @@
 
   "midi-qol.AddDead.Hint1": "プレイヤーによる操作",
   "midi-qol.AddDead.Hint2": "GMによる操作",
+  "midi-qol.markDefeated": "戦闘トラッカーの敗北者にマークを付与",
   "midi-qol.AddDeadOptions": {
     "none": "無効",
     "overlay": "大アイコンで効果をつける",
@@ -748,13 +754,16 @@
   "midi-qol.CheckFlanking.Hint": "自分と味方によって挟まれた相手を攻撃するとき、有利で判定を行うようにできます。攻撃側に有利をつけ、Convenient Effectsの挟撃効果を適用するのか、もしくは対象にConvenient Effectsの被挟撃効果を適用するのか、どちらで処理するかを指定してください。",
   "midi-qol.CheckFlankingOptions": {
     "off": "なし",
-    "ceonly": "攻撃側へのCE挟撃効果のみ",
     "advonly": "攻撃側への有利のみ",
+    "ceonly": "攻撃側へのCE挟撃効果のみ",
     "ceadv": "攻撃側のCE挟撃効果＋有利",
     "ceflanked": "対象へのCE被挟撃効果のみ",
-    "ceflankedNoconga": "対象へのCE被挟撃＋挟撃に参加できない"
+    "midiFlanked": "Midi被挟撃効果",
+    "ceflankedNoconga": "対象へのCE被挟撃＋挟撃に参加できない",
+    "midiFlankedNoConga": "Midi挟撃＋挟撃に参加できない"
   },
-  "midi-qol.Flanked": "挟撃",
+  "midi-qol.Flanked": "被挟撃",
+  "midi-qol.Flanking": "挟撃",
   "midi-qol.RollAlternate.Name": "ロール式をツールチップに移動する",
   "midi-qol.RollAlternate.Hint": "代替ダメージのロール式をツールチップに表示します。またオプションで有利フラグ追加します。",
   "midi-qol.RollAlternateOptions": {
@@ -1720,7 +1729,7 @@
       "description": ""
     },
     "flags.midi-qol.disadvantage.ability.save.all": {
-      "name": "不利：(All Saves)",
+      "name": "不利：すべてのセーヴ",
       "description": ""
     },
     "flags.midi-qol.disadvantage.ability.save.cha": {
