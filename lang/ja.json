@@ -1119,49 +1119,49 @@
         }
       },
       "ActivityMacro": {
-        "label": "Activity Macro",
+        "label": "アクティビティマクロ",
         "hint": "Macro which can be run when activity used"
       },
       "useSystemActivity": {
-        "label": "Use System Activity",
+        "label": "システムのアクティビティを使用する",
         "hint": "Use the dnd5e system activity rather than the midi one"
       },
       "ignoreTraits": {
         "idi": {
-          "label": "Ignore Immunity",
-          "hint": "Ignore damage immunity when applying damage"
+          "label": "完全耐性無視",
+          "hint": "ダメージ適用時にダメージ完全耐性を無視します"
         },
         "idr": {
-          "label": "Ignore Resistance",
-          "hint": "Ignore damage resistance when applying damage"
+          "label": "抵抗無視",
+          "hint": "ダメージ適用時にダメージ抵抗を無視します"
         },
         "idv": {
-          "label": "Ignore Vulnerability",
-          "hint": "Ignore damage vulnerability when applying damage"
+          "label": "脆弱性無視",
+          "hint": "ダメージ適用時にダメージ脆弱性を無視します"
         },
         "ida": {
-          "label": "Ignore Absorption",
-          "hint": "Ignore damage absorption when applying damage"
+          "label": "吸収無視",
+          "hint": "ダメージ適用時にダメージ吸収を無視します"
         }
       }
     }
   },
   "midi-qol.ATTACK": {
     "Title": {
-      "one": "Midi Attack",
-      "other": "Midi Attacks"
+      "one": "Midi 攻撃",
+      "other": "Midi 攻撃"
     },
     "extras": {
-      "header": "Midi Attack Fields"
+      "header": "Midi攻撃領域"
     },
     "FIELDS": {
       "attackMode": {
-        "label": "Attack Mode",
-        "hint": "Default attack mode"
+        "label": "攻撃モード",
+        "hint": "デフォルト攻撃モード"
       },
       "ammunition": {
-        "label": "Ammunition",
-        "hint": "Default ammunition to consume"
+        "label": "矢弾",
+        "hint": "デフォルトで消費する矢弾"
       }
     }
   },
@@ -1203,18 +1203,18 @@
   },
   "midi-qol.OVERTIME": {
     "Title": {
-      "one": "Midi Overtime",
-      "other": "Midi Overtime"
+      "one": "Midi 継続",
+      "other": "Midi 継続"
     },
     "extras": {
       "header": "Midi Overtime Settings"
     },
     "FIELDS": {
       "turnChoice": {
-        "label": "Turn Choice",
-        "hint": "Start or end of turn",
-        "start": "Start of Turn",
-        "end": "End of Turn"
+        "label": "ターン時選択",
+        "hint": "ターン開始/終了時",
+        "start": "ターン開始時",
+        "end": "ターン終了時"
       },
       "saveRemoves": {
         "label": "セーヴ成功で除外",
@@ -1256,13 +1256,15 @@
     "midi-automation-only": "midi自動化でのみ使用する"
   },
   "midi-qol.BaseDamageFlavor": "基礎ダメージ",
+  "midi-qol.BaseHealingFlavor": "回復",
   "midi-qol.OtherDamageFlavor": "その他のダメージ",
+  "midi-qol.OtherHealingFlavor": "その他の回復",
   "midi-qol.RequireAmmunition.Name": "攻撃ロールに有効化された矢弾が必要です",
-  "midi-qol.CheckTwoHanded.Name": "Require no shield equipped for two-handed/off-hand attacks",
-  "midi-qol.NoAmmunition": "There are 0 {name} in your inventory",
-  "midi-qol.NoAmmunitionAvailable": "There is no ammunition in your inventory.",
-  "midi-qol.NoAmmunitionSelected": "You must select the ammunition to use.",
-  "midi-qol.TwoHandedShieldWarning": "Cannot use two-handed or off-hand attack with a shield equipped",
+  "midi-qol.CheckTwoHanded.Name": "両手/逆手攻撃のためにはシールド未装備であることが必要です",
+  "midi-qol.NoAmmunition": "あなたの所持品には{name}がありません",
+  "midi-qol.NoAmmunitionAvailable": "あなたは矢弾を持っていません。",
+  "midi-qol.NoAmmunitionSelected": "使用する矢弾を選択してください。",
+  "midi-qol.TwoHandedShieldWarning": "シールドを装備しているので両手/逆手攻撃が行えません",
   "dae.MidiQOL.fieldData": {
     "flags.midi-qol.absorption.acid": {
       "name": "吸収：［酸］",
