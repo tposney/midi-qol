@@ -194,6 +194,13 @@
   max-width: 200px;
 }
 
+#midi-qol-settings #midi-config-mechanics .midi-qol-box #midi-condition-group {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-areas: "label in1 in2 in3";
+  column-gap: 5px;
+}
+
 .midi-qol-quick-config .window-content {
   overflow-y: scroll;
 }

@@ -197,7 +197,7 @@ async function _removeCEEffect(data: { effectName: string, uuid: string }) {
   // return game.dfreds.effectInterface?.removeEffect({ effectName: data.effectName, uuid: data.uuid });
 }
 
-async function cancelWorkflow(data: { workflowId: string, itemCardUuid: string }) {
+export async function cancelWorkflow(data: { workflowId: string, itemCardUuid: string }) {
   const workflow = Workflow.getWorkflow(data.workflowId);
   if (workflow?.itemCardUuid !== data.itemCardUuid) {
     const itemCard: ChatMessage | undefined = await fromUuid(data.itemCardUuid as `ChatMessage.${string}`) as ChatMessage | undefined;
@@ -334,7 +334,7 @@ async function removeEffectUuids(data: { actorUuid: string; effects: string[]; o
       warn("removeFunc: remove effects completed")
     }
   };
-  // Using the seamphore queue leads to quite a few potential cases of deadlock - disabling for now
+  // Using the semaphore queue leads to quite a few potential cases of deadlock - disabling for now
   // if (globalThis.DAE?.actionQueue) return globalThis.DAE.actionQueue.add(removeFunc)
   // else return removeFunc();
   return removeFunc();
@@ -375,12 +375,33 @@ export async function timedExecuteAsGM(toDo: string, data: any) {
   return returnValue;
 }
 
+export function preferredActiveGM(): User | null {
+  const preferredGMId = safeGetGameSetting("midi-qol", "PreferredGM");
+  if (preferredGMId !== "none") {
+    const preferredGM = game.users?.get(preferredGMId) as User | undefined;
+    if (preferredGM?.active) return preferredGM;
+    log(`preferredGM ${preferredGMId} is not active`); 
+  }
+  if (game.user?.isGM) return game.user;
+  return game.users?.activeGM ?? null;
+}
+
 export async function unTimedExecuteAsGM(toDo: string, ...args) {
   if (!socketlibSocket) return undefined;
   const myScene = game.user?.viewedScene;
-  const gmOnScene = game.users?.filter(u => u.active && u.isGM && u.viewedScene === myScene);
-  if (!gmOnScene || gmOnScene.length === 0) return socketlibSocket.executeAsGM(toDo, ...args);
-  else return socketlibSocket.executeAsUser(toDo, gmOnScene[0].id, ...args);
+  const preferredGMId = safeGetGameSetting("midi-qol", "PreferredGM");
+  let preferredGM = game.users?.get(preferredGMId);
+  if (!preferredGM?.active) {
+    if (preferredGMId !== "none") log(`preferredGM ${preferredGMId} is not active`);
+    preferredGM = undefined;
+  }
+  let gmOnScene;
+  if (preferredGM?.viewedScene === myScene) gmOnScene = [preferredGM];
+  else if (game.user?.isGM && game.user?.viewedScene === myScene) gmOnScene = [game.user];
+  else gmOnScene = game.users?.filter(u => u.active && u.isGM && u.viewedScene === myScene);
+  if (gmOnScene && gmOnScene.length > 0) return socketlibSocket.executeAsUser(toDo, gmOnScene[0].id, ...args);
+  if (preferredGM) return socketlibSocket.executeAsUser(toDo, preferredGM.id, ...args);
+  return socketlibSocket.executeAsGM(toDo, ...args);
 }
 
 export async function timedAwaitExecuteAsGM(toDo: string, data: any) {
@@ -689,7 +710,7 @@ async function localDoReactions(data: { tokenUuid: string; reactionActivityList:
   if (data.options.itemUuid) {
     data.options.item = fromUuidSync(data.options.itemUuid);
   }
-  // reactonItemUuidList can't used since magic items don't have a uuid, so must always look them up locally.
+  // reactionItemUuidList can't used since magic items don't have a uuid, so must always look them up locally.
   const result = await promptReactions(data.tokenUuid, data.reactionActivityList, data.triggerTokenUuid, data.reactionFlavor, data.triggerType, data.options)
   return result;
 }
@@ -790,6 +811,7 @@ workflowId: string
       config.item = tool;
     }
   }
+  if (data.rollMode) message.rollMode = data.rollMode;
   return new Promise(async (resolve) => {
     let timeoutId;
     let result;
@@ -1256,33 +1278,43 @@ export let processUndoDamageCard = (message: ChatMessage, html, data) => {
 
 async function _moveToken(data: { tokenUuid: string, newCenter: { x: number, y: number }, animate: boolean }): Promise<any> {
   const tokenDocument: TokenDocument | undefined = fromUuidSync(data.tokenUuid as any) as TokenDocument | undefined;
-  if (!tokenDocument) return;
+  if (!tokenDocument || !canvas?.grid || !tokenDocument.object) return;
+  const targetToken = tokenDocument.object;
+  const newCenter = canvas.grid.getSnappedPoint(data.newCenter, { mode: CONST.GRID_SNAPPING_MODES.CENTER });
+  const newPosition = {x: data.newCenter.x - targetToken.w / 2, y: data.newCenter.y - targetToken.h / 2};
   //@ts-expect-error types thinks update data is of type never
-  return tokenDocument.update({ x: data.newCenter?.x ?? 0, y: data.newCenter?.y ?? 0 }, { animate: data.animate ?? true });
+  return tokenDocument.update(newPosition, { animate: data.animate ?? true });
 }
 
 
-async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: number, y: number }, distance: number, animate: boolean, checkCollision: boolean }): Promise<void> {
+async function _moveTokenAwayFromPoint(data: { targetUuid: string, point: { x: number, y: number }, distance: number, animate: boolean, checkCollision: boolean }): Promise<any> {
   const targetToken = getToken(data.targetUuid);
   const targetTokenDocument = getTokenDocument(targetToken);
-  if (!canvas || !canvas.dimensions || !canvas.grid || !targetToken || !data.point) return;
+  if (!canvas || !canvas.dimensions || !canvas.grid || !targetToken || !data.point || !targetTokenDocument) return;
   let ray = new Ray(data.point, targetToken.center);
   let distance = data.distance / canvas.dimensions.distance * canvas.dimensions.size;
   let newCenter = ray.project(1 + distance / ray.distance);
   const M = CONST.GRID_SNAPPING_MODES;
-  newCenter = canvas.grid.getSnappedPoint({ x: newCenter.x - targetToken.w / 2, y: newCenter.y - targetToken.h / 2 }, { mode: M.CENTER });
+  newCenter = canvas.grid.getSnappedPoint(newCenter, { mode: M.CENTER });
 
   if (data.checkCollision) {
     //@ts-expect-error
     const testCollision = CONFIG.Canvas.polygonBackends.move.testCollision(targetToken.center, newCenter, { source: targetToken.document, type: "move", any: "closest" });
-    if (testCollision && testCollision instanceof foundry.canvas.edges.PolygonVertex) {
-      const collisionPoint = { x: testCollision.x, y: testCollision.y };
+    if (testCollision?.length > 0 && testCollision[0] instanceof foundry.canvas.edges.PolygonVertex ) {
+      const collisionPoint = { x: testCollision[0].x, y: testCollision[0].y };
       const getCenterCollisionPoint = canvas.grid.getCenterPoint(collisionPoint);
-      newCenter = canvas.grid.getSnappedPosition(getCenterCollisionPoint.x - targetToken.w / 2, getCenterCollisionPoint.y - targetToken.h / 2, 1);
+      if (Math.sign(ray.dx) > 0) getCenterCollisionPoint.x -= canvas.grid.sizeX;
+      if (Math.sign(ray.dy) > 0) getCenterCollisionPoint.y -= canvas.grid.sizeY;
+      const newPosition = canvas.grid.getSnappedPoint({x: getCenterCollisionPoint.x - Math.sign(ray.dx) * targetToken.w / 2, y: getCenterCollisionPoint.y - Math.sign(ray.dy) * targetToken.h / 2}, { mode: M.TOP_LEFT_VERTEX });
+      //@ts-expect-error
+      return targetTokenDocument.update(newPosition, { animate: data.animate ?? true });
     }
   }
+  const newX = targetToken.position.x + newCenter.x - targetToken.center.x;
+  const newY = targetToken.position.y + newCenter.y - targetToken.center.y;
+
   //@ts-expect-error
-  return targetTokenDocument.update({ x: newCenter?.x ?? 0, y: newCenter?.y ?? 0 }, { animate: data.animate ?? true });
+  return targetTokenDocument.update({ x: newX, y: newY }, { animate: data.animate ?? true });
 }
 
 async function rollActionSave(data: any) {

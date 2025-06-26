@@ -2,7 +2,7 @@ import { debug, warn, i18n, error, debugEnabled, i18nFormat, MODULE_ID, MESSAGE_
 import { DDBGameLogWorkflow, Workflow, WorkflowDataFlags } from "./Workflow.js";
 import { nsaFlag, coloredBorders, configSettings, forceHideRoll, safeGetGameSetting, SaveToChatCard } from "./settings.js";
 import { playerFor, playerForActor, doOverTimeEffect, isInCombat, isAutoFastAttack } from "./utils.js";
-import { socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
+import { preferredActiveGM, socketlibSocket, unTimedExecuteAsGM } from "./GMAction.js";
 import { TroubleShooter } from "./apps/TroubleShooter.js";
 import { MidiSaveActivity } from "./activities/SaveActivity.js";
 export const MAESTRO_MODULE_NAME = "maestro";
@@ -136,7 +136,8 @@ export let hideRollRender = (msg, html, data) => {
     if (!game.user?.isGM && !msg.isAuthor && msg.whisper.indexOf(game.user?.id) === -1) {
       if (debugEnabled > 0) warn("hideRollRender | hiding message", msg.whisper);
       html.hide();
-      // It seems that html.remove() can get called before the messagge is rendered to the dom?
+      console.error("hideRollRender | hiding message", msg);
+      // It seems that html.remove() can get called before the message is rendered to the dom?
       setTimeout(() => { html.remove() }, 10);
     }
   }
@@ -145,7 +146,7 @@ export let hideRollRender = (msg, html, data) => {
 
 
 export let hideRollUpdate = (message, data, diff, id) => {
-  if (forceHideRoll && message.whisper.length > 0 || message.blind) {
+  if (forceHideRoll && (message.whisper.length > 0 || message.blind)) {
     if (!game.user?.isGM && ((!message.isAuthor && (message.whisper.indexOf(game.user?.id) === -1) || message.blind))) {
       let messageLi = $(`.message[data-message-id=${data._id}]`);
       if (debugEnabled > 0) warn("hideRollUpdate: Hiding ", message.whisper, messageLi)
@@ -166,8 +167,6 @@ export let hideStuffHandler = (message, html, data) => {
   const messageActor: Actor | undefined = (fromUuidSync(foundry.utils.getProperty(message, `flags.${WorkflowDataFlags.actor}`)) ?? game.actors?.get(message.speaker.actor)) as Actor;
   const messageActorOwner = messageActor?.isOwner;
   if (debugEnabled > 1) debug("hideStuffHandler message: ", message.id, message)
-  // if (foundry.utils.getProperty(message, "flags.monks-tokenbar")) return;
-  const midiqolFlags = foundry.utils.getProperty(message, "flags.midi-qol");
   // Hide rolls which are blind and not the GM if force hide is true
   if (forceHideRoll && message.blind && !game.user?.isGM) {
     html.hide();
@@ -186,7 +185,8 @@ export let hideStuffHandler = (message, html, data) => {
     && !game.user?.isGM
     && message.whisper.length > 0 && !message.whisper.includes(game.user?.id)
     && !message.isAuthor) {
-    html.remove();
+    console.error("hideStuffHandler | hiding message", message.whisper);
+    html.hide();
     return;
   }
   if (foundry.utils.getProperty(message, "flags.midi-qol.type") === MESSAGE_TYPES.SAVES) {
@@ -199,7 +199,6 @@ export let hideStuffHandler = (message, html, data) => {
     html.find(".midi-qol-attack-buttons").hide();
     html.find(".midi-qol-damage-buttons").hide();
     html.find(".midi-qol-otherDamage-button").hide();
-    html.find(".midi-qol-versatile-damage-button").hide();
   }
 
   let ids = html.find(".midi-qol-target-select")
@@ -226,11 +225,7 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("critical");
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("fumble");
     }
-
-    // @ ts-expect-error protected - but this isn't doing anything, is it?
-    // ui.chat.scrollBottom
     return;
-
   } else {
     if (message.blind) {
       html.find(".midi-attack-roll .dice-roll").replaceWith(`<span>${i18n("midi-qol.DiceRolled")}</span>`);
@@ -247,17 +242,27 @@ export let hideStuffHandler = (message, html, data) => {
       html.find(".midi-qol-saves-display").hide();
     }
 
-    // hide tool tips from non-gm
-    if (configSettings.autoCheckSaves !== "allShow") html.find(".midi-qol-save-tooltip").hide();
     // Hide the save dc if required
     if (!configSettings.displaySaveDC || !shouldDisplayChallenge) {
       html.find(".midi-qol-saveDC").remove();
     }
-    if (!["allShow", "all"].includes(configSettings.autoCheckSaves)) {
+    const displayNPCSaves = safeGetGameSetting("dnd5e", "challengeVisibility") === "all";
+    const displayPlayerSaves = safeGetGameSetting("dnd5e", "challengeVisibility") !== "none";
+    // hide tool tips from non-gm
+    if (!displayPlayerSaves) html.find(".midi-qol-save-tooltip").remove()
+    else if (!displayNPCSaves || configSettings.autoCheckSaves !== "allShow") html.find(".midi-qol-npc-save-tooltip").remove();
+
+    if (!displayPlayerSaves) html.find(".midi-qol-save-total").remove();
+    else if (!["allShow", "all"].includes(configSettings.autoCheckSaves) || !displayNPCSaves) {
       html.find(".midi-qol-npc-save-total").remove();
     }
-    if (!shouldDisplayChallenge || !configSettings.highlightSuccess)
+
+    if (!displayPlayerSaves) 
       html.find(".midi-qol-saves-display .midi-qol-save-symbol").remove();
+    else if (!displayNPCSaves) html.find(".midi-qol-npc-save-symbol").remove();
+    else if (!shouldDisplayChallenge || configSettings.autoCheckSaves === "whisper")
+      html.find(".midi-qol-saves-display .midi-qol-save-symbol").remove();
+
     if (!configSettings.highlightSuccess || !shouldDisplayChallenge) {
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("success");
       html.find(".midi-qol-saves-display .midi-qol-save-class").removeClass("failure");
@@ -310,7 +315,7 @@ export let hideStuffHandler = (message, html, data) => {
     }
 
     if (!game.user?.isGM) {
-      // Can update the attack roll here, but damage rolls are redone in the ChatmessageMidi code so do the hiding for those there
+      // Can update the attack roll here, but damage rolls are redone in the ChatMessageMidi code so do the hiding for those there
       html.find(".midi-qol-confirm-damage-roll-cancel").hide();
       // hide the gm version of the name from` players
       html.find(".midi-qol-gmTokenName").remove();
@@ -320,21 +325,6 @@ export let hideStuffHandler = (message, html, data) => {
   // setTimeout(() => ui.chat?.scrollBottom(), 0);
   return true;
 
-}
-
-export function processItemCardCreation(message, user) {
-  const midiFlags = message.flags[MODULE_ID];
-  if (user === game.user?.id && midiFlags?.workflowId) { // check to see if it is a workflow
-    const workflow = Workflow.getWorkflow(midiFlags.workflowId);
-    if (!workflow) return;
-    if (debugEnabled > 0) warn("processItemCardCreation", message.id, workflow.itemCardUuid, workflow.ItemCardUuid, workflow.workflowName)
-    workflow.itemCardUuid = message.uuid;
-    const shouldUnsuspend = ([workflow.WorkflowState_AwaitItemCard, workflow.WorkflowState_AwaitTemplate, workflow.WorkflowState_NoAction].includes(workflow.currentAction) && workflow.suspended && !workflow.needTemplate && !workflow.needItemCard && workflow.preItemUseComplete);
-    if (debugEnabled > 0) warn(`chat card created: unsuspending ${workflow.workflowName} ${workflow.nameForState(workflow.currentAction)} unsuspending: ${shouldUnsuspend}, workflow suspended: ${workflow.suspended} needs template: ${workflow.needTemplate}, needs Item card ${workflow.needItemCard}, itemUseomplete: ${workflow.preItemUseComplete}`);
-    if (shouldUnsuspend) {
-      workflow.unSuspend({ itemCardUuid: message.uuid, itemUseComplete: true });
-    }
-  }
 }
 
 export function ddbglPendingFired(data:{sceneId: string, tokenId: string, actorId: string, itemId: string, actionType: string}) {
@@ -391,6 +381,7 @@ export function ddbglPendingFired(data:{sceneId: string, tokenId: string, actorI
     return;
   }
 }
+
 export function ddbglPendingHook(data) { // need to propagate this to all players.
   if (!configSettings.optionalRules.enableddbGL) return;
   socketlibSocket.executeForEveryone("ddbglPendingFired", data);
@@ -420,7 +411,7 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   } else {
     player = game.users?.players.find(p => p.active && actor?.testUserPermission(p, "OWNER"));
   }
-  if (!player || !player.active) player = game.users?.activeGM;
+  if (!player || !player.active) player = preferredActiveGM();
   if (player?.id !== game.user?.id) return;
 
   const item = actor.items.get(itemId);
@@ -432,7 +423,7 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   let workflow: Workflow | undefined = DDBGameLogWorkflow.get(item.uuid);
   //@ts-expect-error no dnd5e-types
   if (!workflow && flags.dnd5e.roll.type === "damage" && item.hasAttack && ["rwak", "mwak"].includes(item.actionType)) {
-    warn(`ddb-game-log roll damage roll wihtout workflow being started ${actor.name} using ${item.name}`);
+    warn(`ddb-game-log roll damage roll without workflow being started ${actor.name} using ${item.name}`);
     return;
   }
   if (!workflow) {
@@ -462,7 +453,7 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   if (["damage", "heal"].includes(flags.dnd5e.roll.type)) {
     let rolls = message.rolls;
     if (!rolls) return;
-    // workflow.needItemCard = false; TODO revist this
+    // workflow.needItemCard = false; TODO revisit this
     workflow.attackRolled = true;
     if (!(rolls instanceof Array)) rolls = [rolls];
     if (workflow.needsDamage && rolls?.length) {
@@ -479,7 +470,4 @@ export function processCreateDDBGLMessages(message: ChatMessage, options: any, u
   }
 }
 
-function legacyApplyTokenDamageMany(arg0: any[], arg1: Set<Token>, arg2: null, arg3: { existingDamage: never[]; workflow: undefined; updateContext: undefined; }) {
-  throw new Error("Function not implemented.");
-}
 

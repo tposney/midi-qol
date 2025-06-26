@@ -94,7 +94,7 @@
         "effectConditionText": "",
         "macroData": {
           "name": "Use",
-          "command": "try {\n    async function success(sourceToken, targetToken, results) {\n    d = new Dialog({\n        title: `${item.name} ${game.i18n.localize(\"midi-qol.save-success\")}`,\n        content: \"what do you want to do?\",\n        buttons: {\n                        move: {\n                icon: '<image src=\"icons/svg/direction.svg\" width=\"30\" height=\"30\" style=\"border:0px\">',\n                label: \"Move\",\n                callback: () => {MidiQOL.moveTokenAwayFromPoint(targetToken, 5, sourceToken.center)}\n            },\n            prone: {\n                icon: '<image src=\"icons/svg/falling.svg\" width=\"30\" height=\"30\" style=\"border:0px\">',\n                label: `${game.i18n.localize(\"EFFECT.StatusProne\")}`,\n                callback: () => {\n                    if (MidiQOL.hasCondition(targetToken, \"Prone\")) return;\n                    let se = CONFIG.statusEffects.find(i => { // This will find a convenient effect\n                            if (i.statuses instanceof Set) return i.statuses.has(\"prone\");\n                            return i.statuses?.find(s => s === \"prone\")\n                        });\n                        \n                    if (!se) se = CONFIG.statusEffects.find(i => i.id === \"prone\"); // get the default status effect\n                    targetToken.toggleEffect(se, {active: true});\n                }\n            }\n\n        },\n        default: \"move\"\n    })\n    d.render(true);\n}\n\n\nif (!token) token = MidiQOL.tokenForActor(actor);\nif (!token) {\n    ui.notifications.warn(`${actor.name} does not have a token on the canvas`)\n    return;\n}\nlet target = workflow.targets?.first();\nif (!target ) {\n    ui.Notificatons.warn(`${item.name} must have a token targeted`)\n    return;\n}\nconst tokenSize = token.actor.system.traits.size;\nconst targetSize = target.actor.system.traits.size;\nconst tokenSizeNum = Object.keys(CONFIG.DND5E.actorSizes).indexOf(tokenSize);\nconst targetSizeNum = Object.keys(CONFIG.DND5E.actorSizes).indexOf(targetSize); \nif (targetSizeNum - tokenSizeNum > 1) {\n    ui.notifications.warn(`${item.name} creature size difference too great ${token.name}:${CONFIG.DND5E.actorSizes[tokenSize]} vs ${target.name}:${CONFIG.DND5E.actorSizes[targetSize]}`)\n    return;\n}\nconst targetSkill = target.actor.system.skills.ath.total > target.actor.system.skills.acr.total ? \"ath\" : \"acr\";\nawait MidiQOL.contestedRoll({\n    source: {token, rollType: \"skill\", ability: \"Athletics\"},\n    target: {token: target, rollType: \"skill\", ability: targetSkill},\n    flavor: item.name, success: success.bind(this, token, target), displayResults: true, itemCardId: workflow.itemCardId, \n    rollOptions: {fastForward: false, chatMessage: true, rollMode: \"gmroll\"}\n});\n} catch (err) {\n    console.error(`${item.name} 11.0.7 item macro error`, err)\n}\n// A fun variant if the roll fails turn the tables and have the attacker pushed back/made prone\n/*\nawait MidiQOL.contestedRoll({\n    source: {token, rollType: \"skill\", ability: \"Acrobatics\"},\n    target: {token: target, rollType: \"skill\", ability: targetSkill},\n    flavor: item.name, success: success.bind(this, token, target), failure: success.bind(this, target, token) displayResults: true, itemCardId: workflow.itemCardId, \n    rollOptions: {fastForward: false, chatMessage: true}\n});\n*/"
+          "command": "try {\n    async function success(sourceToken, targetToken, results) {\n    d = new Dialog({\n        title: `${item.name} ${game.i18n.localize(\"midi-qol.save-success\")}`,\n        content: \"what do you want to do?\",\n        buttons: {\n                        move: {\n                icon: '<image src=\"icons/svg/direction.svg\" width=\"30\" height=\"30\" style=\"border:0px\">',\n                label: \"Move\",\n                callback: () => {MidiQOL.moveTokenAwayFromPoint(targetToken, 5, sourceToken.center)}\n            },\n            prone: {\n                icon: '<image src=\"icons/svg/falling.svg\" width=\"30\" height=\"30\" style=\"border:0px\">',\n                label: `${game.i18n.localize(\"EFFECT.StatusProne\")}`,\n                callback: () => {\n                    if (MidiQOL.hasCondition(targetToken, \"Prone\")) return;\n                    MidiQOL.socket().executeAsGM('toggleStatusEffect', {actorUuid: targetToken.actor.uuid, statusId: 'prone', options: {active:true}})\n                }\n            }\n\n        },\n        default: \"move\"\n    })\n    d.render(true);\n}\n\n\nif (!token) token = MidiQOL.tokenForActor(actor);\nif (!token) {\n    ui.notifications.warn(`${actor.name} does not have a token on the canvas`)\n    return;\n}\nlet target = workflow.targets?.first();\nif (!target ) {\n    ui.Notificatons.warn(`${item.name} must have a token targeted`)\n    return;\n}\nconst tokenSize = token.actor.system.traits.size;\nconst targetSize = target.actor.system.traits.size;\nconst tokenSizeNum = Object.keys(CONFIG.DND5E.actorSizes).indexOf(tokenSize);\nconst targetSizeNum = Object.keys(CONFIG.DND5E.actorSizes).indexOf(targetSize); \nif (targetSizeNum - tokenSizeNum > 1) {\n    ui.notifications.warn(`${item.name} creature size difference too great ${token.name}:${CONFIG.DND5E.actorSizes[tokenSize]} vs ${target.name}:${CONFIG.DND5E.actorSizes[targetSize]}`)\n    return;\n}\nconst targetSkill = target.actor.system.skills.ath.total > target.actor.system.skills.acr.total ? \"ath\" : \"acr\";\nawait MidiQOL.contestedRoll({\n    source: {token, rollType: \"skill\", ability: \"Athletics\"},\n    target: {token: target, rollType: \"skill\", ability: targetSkill},\n    flavor: item.name, success: success.bind(this, token, target), displayResults: true, itemCardId: workflow.itemCardId, \n    rollOptions: {fastForward: false, chatMessage: true, rollMode: \"gmroll\"}\n});\n} catch (err) {\n    console.error(`${item.name} 11.0.7 item macro error`, err)\n}\n// A fun variant if the roll fails turn the tables and have the attacker pushed back/made prone\n/*\nawait MidiQOL.contestedRoll({\n    source: {token, rollType: \"skill\", ability: \"Acrobatics\"},\n    target: {token: target, rollType: \"skill\", ability: targetSkill},\n    flavor: item.name, success: success.bind(this, token, target), failure: success.bind(this, target, token) displayResults: true, itemCardId: workflow.itemCardId, \n    rollOptions: {fastForward: false, chatMessage: true}\n});\n*/"
         },
         "ignoreTraits": {
           "idi": false,
@@ -127,7 +127,43 @@
           "saveRemoves": true,
           "preRemoveConditionText": "",
           "postRemoveConditionText": ""
-        }
+        },
+        "img": "",
+        "flags": {
+          "dnd5e": {
+            "riders": {
+              "activity": false
+            }
+          },
+          "dae": {
+            "macro": {
+              "name": "Use",
+              "img": "systems/dnd5e/icons/svg/activity/utility.svg",
+              "type": "script",
+              "scope": "global",
+              "command": "try {\n    async function success(sourceToken, targetToken, results) {\n    d = new Dialog({\n        title: `${item.name} ${game.i18n.localize(\"midi-qol.save-success\")}`,\n        content: \"what do you want to do?\",\n        buttons: {\n                        move: {\n                icon: '<image src=\"icons/svg/direction.svg\" width=\"30\" height=\"30\" style=\"border:0px\">',\n                label: \"Move\",\n                callback: () => {MidiQOL.moveTokenAwayFromPoint(targetToken, 5, sourceToken.center)}\n            },\n            prone: {\n                icon: '<image src=\"icons/svg/falling.svg\" width=\"30\" height=\"30\" style=\"border:0px\">',\n                label: `${game.i18n.localize(\"EFFECT.StatusProne\")}`,\n                callback: () => {\n                    if (MidiQOL.hasCondition(targetToken, \"Prone\")) return;\n                    MidiQOL.socket().executeAsGM('toggleStatusEffect', {actorUuid: targetToken.actor.uuid, statusId: 'prone', options: {active:true}})\n                }\n            }\n\n        },\n        default: \"move\"\n    })\n    d.render(true);\n}\n\n\nif (!token) token = MidiQOL.tokenForActor(actor);\nif (!token) {\n    ui.notifications.warn(`${actor.name} does not have a token on the canvas`)\n    return;\n}\nlet target = workflow.targets?.first();\nif (!target ) {\n    ui.Notificatons.warn(`${item.name} must have a token targeted`)\n    return;\n}\nconst tokenSize = token.actor.system.traits.size;\nconst targetSize = target.actor.system.traits.size;\nconst tokenSizeNum = Object.keys(CONFIG.DND5E.actorSizes).indexOf(tokenSize);\nconst targetSizeNum = Object.keys(CONFIG.DND5E.actorSizes).indexOf(targetSize); \nif (targetSizeNum - tokenSizeNum > 1) {\n    ui.notifications.warn(`${item.name} creature size difference too great ${token.name}:${CONFIG.DND5E.actorSizes[tokenSize]} vs ${target.name}:${CONFIG.DND5E.actorSizes[targetSize]}`)\n    return;\n}\nconst targetSkill = target.actor.system.skills.ath.total > target.actor.system.skills.acr.total ? \"ath\" : \"acr\";\nawait MidiQOL.contestedRoll({\n    source: {token, rollType: \"skill\", ability: \"Athletics\"},\n    target: {token: target, rollType: \"skill\", ability: targetSkill},\n    flavor: item.name, success: success.bind(this, token, target), displayResults: true, itemCardId: workflow.itemCardId, \n    rollOptions: {fastForward: false, chatMessage: true, rollMode: \"gmroll\"}\n});\n} catch (err) {\n    console.error(`${item.name} 11.0.7 item macro error`, err)\n}\n// A fun variant if the roll fails turn the tables and have the attacker pushed back/made prone\n/*\nawait MidiQOL.contestedRoll({\n    source: {token, rollType: \"skill\", ability: \"Acrobatics\"},\n    target: {token: target, rollType: \"skill\", ability: targetSkill},\n    flavor: item.name, success: success.bind(this, token, target), failure: success.bind(this, target, token) displayResults: true, itemCardId: workflow.itemCardId, \n    rollOptions: {fastForward: false, chatMessage: true}\n});\n*/",
+              "author": "Zl1BOUaPLwDEujaL",
+              "ownership": {
+                "default": 3
+              },
+              "_id": null,
+              "folder": null,
+              "sort": 0,
+              "flags": {},
+              "_stats": {
+                "coreVersion": "12.331",
+                "systemId": "dnd5e",
+                "systemVersion": "4.3.8",
+                "createdTime": null,
+                "modifiedTime": null,
+                "lastModifiedBy": null,
+                "compendiumSource": null,
+                "duplicateSource": null
+              }
+            }
+          }
+        },
+        "appliedEffects": []
       }
     },
     "identifier": "shove",
@@ -253,6 +289,9 @@
           "duplicateSource": null
         }
       }
+    },
+    "crux": {
+      "trayVisibility": "default"
     }
   },
   "_stats": {
@@ -260,9 +299,9 @@
     "duplicateSource": null,
     "coreVersion": "12.331",
     "systemId": "dnd5e",
-    "systemVersion": "4.3.6",
+    "systemVersion": "4.3.8",
     "createdTime": 1741782987307,
-    "modifiedTime": 1741782987307,
+    "modifiedTime": 1743596919733,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "tWh6UgUeg2lxQ8uJ",

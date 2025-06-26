@@ -23,7 +23,7 @@ export function setupHealActivity() {
 
 let defineMidiHealActivityClass = (ActivityClass: any) => {
   return class MidiHealActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.HEAL"];
+    static LOCALIZATION_PREFIXES = ["midi-qol.HEAL", ...super.LOCALIZATION_PREFIXES];
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {

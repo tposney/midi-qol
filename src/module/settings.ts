@@ -58,6 +58,7 @@ class ConfigSettings {
   addWounded: number = 0;
   addWoundedStyle: string = "none";
   activityNamePrefix: boolean = true;
+  activationAutomation: string = "chat";
   midiWoundedCondition: string = "none";
   midiDeadCondition: string = "none";
   midiUnconsciousCondition: string = "none";
@@ -97,7 +98,7 @@ class ConfigSettings {
   damageImmunityMultiplier: number = 0.0;
   damageResistanceMultiplier: number = 0.5;
   damageVulnerabilityMultiplier: number = 2;
-  defaultSaveMult: number = 0.5;
+  defaultSaveMultiplier: number = 0.5;
   diceSound: string = "";
   displayHitResultNumeric: boolean = true;
   displaySaveAdvantage: boolean = true;
@@ -107,7 +108,7 @@ class ConfigSettings {
   gridlessFudge: number | undefined = 0;
   doReactions: string = "all";
   effectActivation: boolean = false;
-  enableddbGL: boolean = false;
+  enableDDBGL: boolean = false;
   enforceReactions = "none";
   enforceBonusActions = "none";
   enforceSingleWeaponTarget: boolean = false;
@@ -123,6 +124,7 @@ class ConfigSettings {
   gmHide3dDice: boolean = false;
   gmLateTargeting: string = "none";
   gmRemoveButtons: string = "all";
+  gmAttackDamageCards: boolean = false;
   hideRollDetails: string = "none";
   ignoreSpellReactionRestriction: boolean = false;
   itemRollStartWorkflow: boolean = false;
@@ -138,6 +140,8 @@ class ConfigSettings {
   confirmAttackDamage: string = "none";
   highlightSuccess: boolean = false;
   highLightCriticalAttackOnly: boolean = false;
+  markPlayerDefeated: boolean = false;
+  markNonPlayerDefeated: boolean = false;
   optionalRulesEnabled: boolean = false;
   paranoidGM: boolean = false;
   playerRollSaves: string = "none";
@@ -172,7 +176,6 @@ class ConfigSettings {
   spellHitSound: string = "";
   spellUseSound: string = "";
   spellUseSoundRanged: string = "";
-  syrinToken: string | undefined = undefined;
   tempHPDamageConcentrationCheck: boolean = false;
   concentrationIncapacitatedConditionCheck: boolean = false;
   toggleOptionalRules: boolean = false;
@@ -192,13 +195,13 @@ class ConfigSettings {
     activeDefence: false,
     activeDefenceShow: "selfroll",
     autoRerollInitiative: false,
-    challengModeArmor: "none",
+    challengeModeArmor: "none",
     checkFlanking: "off",
     checkRange: "longFail",
     coverCalculation: "none",
     criticalNat20: false,
     criticalSaves: false,
-    diplsayBonusRolls: true,
+    displayBonusRolls: true,
     distanceIncludesHeight: false,
     DRAllPerDamageDetail: true,
     hiddenAdvantage: "none",
@@ -394,7 +397,7 @@ export let fetchParams = () => {
   if (configSettings.addFakeDice === undefined) configSettings.addFakeDice = false;
   if (typeof configSettings.gmConsumeResource !== "string") configSettings.gmConsumeResource = "none";
   if (typeof configSettings.consumeResource !== "string") configSettings.consumeResource = "none";
-  if (!configSettings.enableddbGL) configSettings.enableddbGL = false;
+  if (!configSettings.enableDDBGL) configSettings.enableDDBGL = false;
   if (!configSettings.showReactionChatMessage) configSettings.showReactionChatMessage = false;
   if (configSettings.fixStickyKeys === undefined) configSettings.fixStickyKeys = true;
   //@ts-ignore legacy boolean value
@@ -499,7 +502,7 @@ export let fetchParams = () => {
     configSettings.itemTypeList.filter((type) => !["base", "backpack"].includes(type));
   }
   if (configSettings.itemTypeList === undefined) configSettings.itemTypeList = Object.keys(CONFIG.Item.typeLabels);
-  if (configSettings.defaultSaveMult === undefined) configSettings.defaultSaveMult = 0.5;
+  if (configSettings.defaultSaveMultiplier === undefined) configSettings.defaultSaveMultiplier = 0.5;
   if (configSettings.ignoreSpellReactionRestriction === undefined) configSettings.ignoreSpellReactionRestriction = false;
   if (configSettings.damageImmunityMultiplier === undefined) configSettings.damageImmunityMultiplier = 0.0;
   if (configSettings.damageResistanceMultiplier === undefined) configSettings.damageResistanceMultiplier = 0.5;
@@ -515,6 +518,7 @@ export let fetchParams = () => {
   if (configSettings.enforceSingleWeaponTarget == undefined) configSettings.enforceSingleWeaponTarget = false;
   if (configSettings.confirmAmmunition === undefined) configSettings.confirmAmmunition = false;
   if (configSettings.gmConfirmAmmunition === undefined) configSettings.gmConfirmAmmunition = false;
+  if (configSettings.playerRollSaves === "noneDialog") configSettings.playerRollSaves = "noneDialogPrivate";
   configSettings.hidePlayerDamageCard = true;
   configSettings.quickSettings = true;
   //@ts-expect-error have removed the definition
@@ -595,6 +599,7 @@ export let fetchParams = () => {
   if (configSettings.griddedGridless === undefined) configSettings.griddedGridless = false;
   if (configSettings.gridlessFudge === undefined) configSettings.gridlessFudge = 0;
   if (configSettings.concentrationIncapacitatedConditionCheck === undefined) configSettings.concentrationIncapacitatedConditionCheck = false;
+  if (configSettings.activationAutomation === undefined) configSettings.activationAutomation = "chat";
   if (configSettings.activityNamePrefix === undefined) configSettings.activityNamePrefix = true;
   if (blfxActive && configSettings.activityNamePrefix) {
     TroubleShooter.recordError({}, "Boss Loot FX is active - disabling activity name prefix");
@@ -644,6 +649,13 @@ const settings = [
     onChange: fetchParams
   },
   {
+    name: "PreferredGM",
+    scope: "world",
+    default: "none",
+    config: true,
+    type: String,
+  },
+  {
     name: "ReplaceDefaultActivities",
     scope: "world",
     default: true,
@@ -683,7 +695,7 @@ const settings = [
     type: Boolean,
     choices: [],
     config: true,
-    onChange: fetchParams
+    onChange: fetchParams, requiresReload: true
   },
   {
     name: "DragDropTarget",
@@ -727,6 +739,19 @@ const settings = [
 ];
 
 export function readySettingsSetup() {
+    //@ts-expect-error
+    game.settings?.register("midi-qol", "PreferredGM", {
+      name: "midi-qol.PreferredGM.Name",
+      hint: "midi-qol.PreferredGM.Hint",
+      scope: "world",
+      default: "none",
+      config: true,
+      type: String,
+      choices: game.users?.filter(user => user.isGM).reduce((acc, user) => {
+        acc[user.id] = user.name;
+        return acc;
+      }, { "": i18n("None") }),
+    });
   //@ts-expect-error
   if (game.settings?.get("midi-qol", "CriticalDamage") === "none") {
     criticalDamage = "default;"
@@ -740,6 +765,7 @@ export function readySettingsSetup() {
     game.settings?.set("midi-qol", "CriticalDamageGM", criticalDamage);
   }
 }
+
 export function registerSetupSettings() {
   const translations = geti18nTranslations();
 
@@ -754,6 +780,7 @@ export function registerSetupSettings() {
     choices: geti18nOptions("CriticalDamageChoices"),
     onChange: fetchParams
   });
+
   //@ts-expect-error
   game.settings?.register("midi-qol", "CriticalDamage", {
     name: "midi-qol.CriticalDamage.Name",
@@ -765,7 +792,6 @@ export function registerSetupSettings() {
     choices: geti18nOptions("CriticalDamageChoices"),
     onChange: fetchParams
   });
-
 }
 
 export const registerSettings = function () {
@@ -812,7 +838,6 @@ export const registerSettings = function () {
     choices: geti18nOptions("CriticalDamageChoices"),
     onChange: fetchParams
   });
-
 
   //@ts-expect-error - remove this in v12.5.x??
   game.settings?.register("midi-qol", "AddChatDamageButtons", {

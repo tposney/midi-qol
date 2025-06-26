@@ -22,7 +22,7 @@ export class MidiKeyManager {
       precedence: normalPrecedence
     });
     keybindings.register("midi-qol", "Versatile", {
-      name: i18n("DND5E.Versatile") ?? "Verstatile",
+      name: i18n("DND5E.Versatile") ?? "Versatile",
       hint: "midi-qol.KeysVersatile.Hint",
       editable: [
         { key: "KeyV" },

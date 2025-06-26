@@ -26,6 +26,8 @@ export function setupUtilityActivity() {
 
 let defineMidiUtilityActivityClass = (ActivityClass: any) => {
   return class MidiUtilityActivity extends MidiActivityMixin(ActivityClass) {
+    static LOCALIZATION_PREFIXES = ["midi-qol.UTILITY", ...super.LOCALIZATION_PREFIXES];
+
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
@@ -56,6 +58,7 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
       }
     static #rollFormula(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
+      if (workflow) workflow.activity = this;
 
       //@ts-expect-error
       return this.rollFormula({ event, workflow }, {}, {});
@@ -107,11 +110,10 @@ let defineMidiUtilityActivityClass = (ActivityClass: any) => {
       if (rollToggle) dialog.configure = !!!dialog.configure;
       message.create ??= false;
       let result = await super.rollFormula(config, dialog, message);
-      if (result && workflow && config.midiOptions.updateWorkflow !== false) await workflow.setUtilityRolls(result);
-
+//      if (result && workflow && config.midiOptions.updateWorkflow !== false) await workflow.setUtilityRolls(result);
       // result = await postProcessUtilityRoll(this, config, result);
-      if (config.midiOptions.updateWorkflow !== false && workflow) {
-        workflow.utilityRolls = result;
+      if (result && config.midiOptions.updateWorkflow !== false && workflow) {
+        await workflow.setUtilityRolls(result);
         if (workflow.suspended)
           workflow.unSuspend.bind(workflow)({ utilityRolls: result });
       }

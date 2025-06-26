@@ -1,3 +1,187 @@
+### 12.4.59
+* Added Czech language files - thanks @Lethrendis
+* Fix for self applied effects - thanks @Elwin
+
+### 12.4.58
+* Updated pt.BR thanks @kharmans
+
+### 12.4.57
+* Fix for items that are not weapons with reaction cast activities.
+* Fix for reaction activities that are a self target forward activity not targeting self.
+
+### 12.4.56
+* Fix for preDamageRollConfig not being setup correctly - thanks @Elwin
+* Fix for chat card activity action resulting in cannot read metadata on undefined. Thanks @thatlonelybugbear
+
+### 12.4.55
+* Include fix for auto consumption not distinguishing spells/non-spells correctly.Thanks @thatlonelybugbear
+
+### 12.4.54
+* Fix for stack overflow when computing distance between very large tokens - thanks @woodser
+* Fix for applying some self target effects - thanks @Elwin
+* Fix for target confirmation dialog - thanks @Elwin
+* Fix for target confirmation dialog leaving canvas selection tool in odd state if closing dialog.
+* Fix for respecting roll mode when doing a skill roll and changing it in the roll dialog.
+* Added new onUseMacro pass, preDamageRollConfig, called before confirming damage config.
+* Respect activity options, dnd5e.concentrationCheck.
+* Reinstate 1 second/1 turn time out for instantaneous templates removal.
+* If ignoring temphp when doing concentration checks, no concentration check will be triggered if only temphp damage is done for both midi's item roll concentration check and dnd5e's chat message.
+  - For the midi item roll temphp damage will not be included in the concentration dc calculation.
+  - For the dnd5e chat message, temphp damage will be included in the concentration dc calculation.
+* Fix for multiple items triggering multiple damage rolls only applying last damage done.
+
+### 12.4.52
+* Change so that preferred GM is stored as an id rather than a name.
+
+### 12.4.51.1
+* Version bump to complete release creation
+
+### 12.4.51
+* Fix so that skill checks/tool checks, rolled from the character sheet respect the configuration dialog roll mode.
+
+### 12.4.50
+* Fix for error thrown on init in dnd5e v4.4.0
+  Error: Failed data preparation for Item. Cannot read properties of null (reading allApplicableEffects')
+
+### 12.4.49
+* Fix for MidiQOL.moveToken and MidiQOL.moveTokenAwayFromPoint to avoid positioning tokens in the middle of squares.
+* Fix for workflow.castData.spellLevel when casting a cantrip, will now be 0.
+
+### 12.4.48
+* Change to handling of saving throws when not auto checking saves. Any saves rolled from the chat card will use the currently set roll mode for both players and GM. This is the same as the basic dnd5e behaviour.
+* New options when auto checking saves via "none" as the player roll mode, "None (public roll)" and "None (private roll)", which will set the roll mode for the auto rolled player saves.
+* GM save roll modes will be determined via the auto check saves setting. (Private roll unless all see results plus rolls).
+* **Breaking** Change to save displays:
+  * dnd5e challenge visibility now takes precedence on the saves display.
+    * "hide all" no roll result/save/failed save will be displayed to players.
+    * "show other players" information (according to the midi settings) will be displayed for player owned tokens. If player rolls are being displayed the tooltip will have details of the save roll.
+    * "show all" information according to the midi settings will be displayed for all tokens
+  * In particular, check saves and all see result depends on the dnd5e challenge visibility. So you can have display result with dnd5e set to hide all which means a list of tokens doing the save will be shown to players, but no results.
+
+### 12.4.47
+* Fix for sharpshooter flag
+* If not checking save results, player saves rolled from the chat card will default to the player's roll mode and GM saves will be private GM rolls.
+
+### 12.4.46
+* Fix for edge case optional.name bonuses (each-turn/each-round) not resetting on new combat start.
+
+### 12.4.45
+* Fix for utility rolls not displaying correctly
+* Updated pt-br.json thanks @kharmans
+
+### 12.4.44
+* Fix for chooseEffects being called with the wrong arguments.
+
+### 12.4.43
+* Fix for triggered activities failing when triggered on tokens the player does not own. The activity use is now passed to the GM for rolling. This fixes Ice Knife in the sample items.
+* Undid the "respect target value passed in attackRoll call" changes. This should fix problems with AC bonus/Cover calculations when checking hits.
+* Fix for workflow.castData not being set when item is set to not consume the spell slot.
+* Fix for gm rolls incorrectly displaying hit/miss on player chat logs when not auto checking hits.
+
+### 12.4.42
+* Some fixes for concentration item rolls not respecting the calculated save dc.
+* Roll tooltips for player saves are now always available for player's rolls if at least save results are displayed.
+* Added back attack roll and damage roll buttons to tidy sheet 5e item details. These buttons roll and attack/damage without triggering a workflow, i.e. checking for hits/applying damage.
+* Ability to specify the roll mode for player auto rolled saves. This can be overridden by the item settings. Meant as a way for the gm to configure things so players always see each others rolls.
+  - For GM auto rolled saves the default remains to not show any roll chat card.
+* Fix for workflow.castData being incorrect for scroll casting.
+* Change so that effect choice dialog is only shown when the effect is going to be applied.
+* Added merge requests
+  - Add a reference to the triggering activity for chooseEffects.
+  - Respect target value passed in attackRoll call when checking hits.
+
+### 12.4.41
+* If autoCheckSaves is "none" player rolled saves will use the user chat mode instead of always being private.
+* Fix for forwarded activities not respecting consumption.
+* Fix for activation automation not respecting item attunement/equipped.
+* Fix for overtime activities not responding to confirm button.
+* Fix for flanking/flanked calculations with large tokens.
+* Fix for running items when there is no preferredGM (or is inactive) and there is no active GM on the current scene.
+* If an activities "otherActivity" has a saving throw/ability check and the base activity does not,display the save/check buttons for the other activity in the chat card. Only displayed if the settings include showing the save/check buttons.
+
+### 12.4.40
+* Fix for critical modifiers not working on manual damage rolls.
+* Fix for Slayer's Prey item reference to the wrong activity.
+* Fix for midi-sample-items shove item throwing token permission error. Thanks @thatlonelybugbear
+* Fix for versatile key not working.
+* Fix for potent cantrip flag not working.
+* Fix for activity overtime effects to use the source actor for calculating saving throw DCs etc.
+* Fix for ammunition deleted by consumption not being picked up in damage rolls.
+* Fix for damage being displayed when a non-gm makes a blind roll.
+* Fix for damage on save helper text not being displayed - thanks @Michael
+* Added flags.midi-qol.grants.bonus.damage.all/mwak/heal etc. The first target will be checked for the flag and if present will be treated as extra damage to be rolled.
+  - e.g. flags.midi-qol.grants.bonus.damage.mwak override 1d4[cold] will add 1d4 cold damage to the damage rolled against the target.
+  - If damage type is specified the assumed damage type will be the same as the first line in the item damage.
+* Added new setting Preferred GM, which tells midi which GM to pass roll requests etc to. Only set this if you have the case of multiple GMs active and requests for rolls/reactions are sent to the "wrong" GM otherwise leave it as "none".
+* New option (in the mechanics tab) Activation Automation. Allows auto rolling of self targeting activities that trigger on long/short rest, start of combat, turn start/end in combat. 
+  - Options are: (default chat)
+    - "None": no processing of any end of turn/start of turn etc activities.
+    - "Chat": (same as default dnd5e behaviour) a link to the activity is displayed in chat.
+    - "Auto"; self targeting activities are auto rolled, others display the activity in chat.
+      - Item "Regeneration (Activity Only)" added to sample items as an example. This is probably the simplest implementation of regeneration and requires no macros or active effects.
+      - When set to "auto" midi will **not** trigger turnStart activities on combat end. This is different to dnd5e behaviour which will generate a chat message for such activities.
+      - If the use condition is not met the activity will be silently failed, although a message will be logged to the chat log.
+* Changes to Midi Custom Sound Config to make it more forgiving when a Playlist does not exist.
+  - When saving/updating midi will warn of any sounds missing from playlists that are referenced in the settings.
+  - If you create a playlist by hand you will need to refresh/save settings for it to be picked up by Midi.
+  - Saving settings when there are sounds that are not present in the playlist (or the playlist is not present) is now allowed, but you'll be warned.
+  - References to sounds that do not exist in the specified playlist are prefixed with "Missing:".
+
+### 12.4.39
+* Fix for using monks token bar and skill checks for check activities.
+* Fix for other activities not functioning when set to auto. Thanks @michael
+
+### 12.4.38.1
+* Remove some testing code accidentally left if - thanks @Elwin
+
+### 12.4.38
+* Fix for incorrect dc being used when doing concentration checks chat message+roll.
+* Fix for concentration/saves auto completing with a "1" result when not auto rolling saves in some combinations of settings.
+* Fix so that "not checking saves" leaves dnd5e save buttons on the chat card if remove all buttons is not set.
+* Fix for flags.midi-qol.optional.NAME.save.xxx custom ItemMacro not being able to roll the macro.
+* Fix for globalThis.MidiQOL not being correctly initialised.
+* Fix for target AC display when a target grants an attack bonus.
+* New set of flags, flags.midi-qol.rollModifiers.damage.itemOrActionType.damageType.
+  - itemOrActionType can be all/weapon/spell/feat/tool/mwak/msak/heal etc
+  - damageType can be all/piercing/fire etc
+  - you can specify any of the dnd5e roll modifiers, like r<3, x etc, i.e. any of the foundry roll modifier strings.
+  - The modifier will be appended to each of the dice terms in the damage roll.
+  - change priority can be used to specify the order in which the modifiers are added to the roll.
+  so for example:
+    flags.midi-qol.rollModifiers.damage.spell.fire override rr<3 and
+    flags.midi-qol.rollModifiers.damage.spell.fire override x
+    will roll spell fire damage as reroll any 1s or 2s and then explode the resulting rolls.
+* Similarly for flags.midi-qol.rollModifiers.attack.itemOrActionType
+  - itemOrActionType can be all/weapon/spell/feat/tool/mwak/msak/heal etc
+* For macro writers.
+  - preTargeting and preItemUse macro calls now include usage, dialog and message in the options variable.
+    - these are "live" versions, so changes made will affect the rest of the workflow. i.e. options.dialog.configure = false will skip the configure dialog for the activity.
+
+### 12.4.37
+* Fix for counting every attack as an Attack of Opportunity.
+* For Macro writers
+  - Added new versions of the preItemRoll and preTargeting hooks,
+    - preItemRollV2(workflow, usage, dialog, message)
+    - preTargetingV2(workflow, usage, dialog, message)
+  - The existing hooks are still called with the existing signatures
+    - preItemRoll(activity, token, config, dialog, message)
+    - preTargeting(activity, token, config, dialog, message)
+    In both of the old form hooks workflow can be accessed via config.workflow.
+  - For all the versions of these hooks, Workflow.getWorkflow(activity.uuid) will fail, the workflow is not recorded until after the chat card is created.
+
+### 12.4.36
+* Fix for chat card damage button not picking up critical hits when not auto rolling damage.
+* Change to attack/damage roll behaviour - backing out of the roll configuration dialog no longer aborts the workflow.
+* Addition to triggeredActivityIds. You may now use an activity identifier (shown on the midi-qol tab) rather than an ID or uuid. This should make enchantments that add triggered activities simpler since you will know the identifier of the activity you added via the enchantment.
+* **Breaking** Adding effects when reaching 0 HP now supports toggling defeated in the combat tracker via check boxes, one for player characters (and tokens they control) and one for GM controlled actors.
+* For Macro writers
+  - moved pre-targeting macro/hook calls prior to targets being set.
+  - preItemUse hooks/macro calls prior to item card being displayed.
+  - moved incapacitated check prior to item card being displayed.
+  - moved verbal/somatic/material checks prior to item card being displayed.
+  - moved use condition check prior to item card being displayed.
+* Updated dragon slayer weapons to not require attunement.
+
 ### 12.4.35
 * Fix for rolling attacks/damage when actor sheet is popped out.
 * Fix for completeItemUse not actually doing anything in some cases.

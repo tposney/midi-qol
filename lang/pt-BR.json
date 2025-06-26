@@ -73,31 +73,13 @@
   "midi-qol.AutoTarget.Name": "Marcar ao Posicionar Modelo",
   "midi-qol.AutoTarget.Hint": "Quando posicionar um modelo (como de uma magia), marca automaticamente os tokens dentro do modelo. Se 'Centro + Levels' estiver configurado em alvos à distância, Levels Volumetric Templates será usado (se instalado).",
   "midi-qol._comment for translators_noDamageOnSaveSpells": "In foundry v9 the array json element is no longer supported, so only the v9 version will be used",
-  "midi-qol.noDamageonSaveSpells": [
-    "Borrifo Ácido",
-    "Rompante de Espadas",
-    "Golpe Trovejante",
-    "Zombaria Viciosa",
-    "Criar Fogueira",
-    "Isca Relâmpago",
-    "Borrifo Venenoso",
-    "Cordão de Flecha",
-    "Desintegrar",
-    "Chama Sagrada",
-    "Cordão de Flechas",
-    "Picada Congelante",
-    "Infestação",
-    "Soar os Mortos",
-    "Palavra do Esplendor",
-    "Catapulta",
-    "Tremor de Terra"
-  ],
-  "midi-qol.noDamageonSaveSpellsv9": "Borrifo Ácido, Rompante de Espadas, Golpe Trovejante, Zombaria Viciosa, Criar Fogueira, Isca Relâmpago, Borrifo Venenoso, Cordão de Flecha, Desintegrar, Chama Sagrada, Cordão de Flechas, Picada Congelante, Infestação, Soar os Mortos, Palavra do Esplendor, Catapulta, Tremor de Terra",
   "midi-qol.undoDamageFrom": "Desfazer dano aplicado de ",
   "midi-qol.noGM": "Sem usuário Mestre conectado. Não é possível aplicar efeitos ou atualizar Pontos de Vida",
   "midi-qol.noSelection": "Nenhum Token/Ator selecionado",
   "midi-qol.showGM.Name": "Mestre Vê Todos os Sussurros",
   "midi-qol.showGM.Hint": "O Mestre consegue ver todas as mensagens sussurradas, mesmo que a configuração do jogo diga que o Mestre não consegue vê-las.",
+  "midi-qol.PreferredGM.Name": "Mestre Principal",
+  "midi-qol.PreferredGM.Hint": "Mestre preferido para chamadas de rolagens. Se escolhido 'Nenhum', o primeiro Mestre na cena atual será usado.",
   "midi-qol.ColoredBorders.Name": "Borda Colorida de Mensagens",
   "midi-qol.ColoredBorders.Hint": "Cada cartão no chat passa a ter uma borda de acordo com a cor escolhida pelo jogador.",
   "midi-qol.AutoEffects.Name": "Aplicar Efeito de Itens",
@@ -276,11 +258,14 @@
     "rer": "Ripper's Epic Rolls"
   },
   "midi-qol.playerRollSavesOptions": {
-    "none": "Nenhum",
-    "noneDialog": "Rolar e Mostrar o Diálogo de Rolagem",
+    "none": "Nenhum (Rolagem Privada)",
+    "nonePublic": "Nenhum (Rolagem Pública)",
+    "noneDialogPublic": "Auto-Rolar e Exibir Diálogo (Rolagem Pública)",
+    "noneDialogPrivate": "Auto-Rolar e Exibir Diálogo (Rolagem Privada)",
+    "noneDialogBlind": "Auto-Rolar e Exibir Diálogo (Rolagem Cega)",
     "chat": "Mensagem do Chat",
     "mtb": "Monk's Token Bar",
-    "rer": "Rippers Epic Rolls"
+    "rer": "Ripper's Epic Rolls"
   },
   "midi-qol.playerRollSavesOptionsReduced": {
     "none": "Nenhum",
@@ -365,6 +350,7 @@
     "damageBonus": "Retornar um Bônus de Dano",
     "preSave": "Antes de Verificar Salvaguardas",
     "postSave": "Depois de Verificar Salvaguardas",
+    "preDamageRollConfig": "Antes da Configuração do Dano",
     "preDamageApplication": "Antes de Aplicar Dano",
     "preActiveEffects": "Antes de Efeitos Ativos",
     "postActiveEffects": "Depois de Efeitos Ativos ",
@@ -653,6 +639,7 @@
   "midi-qol.AddDead.Name": "Adicionar Efeito 0 PV",
   "midi-qol.AddDead.Hint1": "Jogador Controlado",
   "midi-qol.AddDead.Hint2": "Mestre Controlado",
+  "midi-qol.markDefeated": "Marcar como Derrotado no Monitor de Combate",
   "midi-qol.AddDeadOptions": {
     "none": "Não Atualizar",
     "overlay": "Sobreposição",
@@ -961,6 +948,16 @@
     "firstSaveTarget": "Primeiro Alvo Sucesso Salv.",
     "firstFailedSaveTarget": "Primeiro Alvo Falha Salv."
   },
+  "midi-qol.ActivationAutomation.Name": "Automação de Custo de Ativação",
+  "midi-qol.ActivationAutomation.Hint": "Ativa automaticamente atividades de Descanso Curto/Longo, início de encontro ou custos de ativação de início/fim de turno.",
+  "midi-qol.ActivationAutomationOptions": {
+    "none": "Sem Automação/Chat",
+    "chat": "Padrão D&D5e",
+    "auto": "Apenas Si Mesmo"
+  },
+  "midi-qol.dummyCards.Name": "Exibir Ataque/Dano em Cartão Mesclado Oculto",
+  "midi-qol.dummyCards.Hint": "(Experimental) Para jogadas do Mestre (pessoal, privado, cego), exibe um cartão da jogada de ataque/dano que acionará um cartão 'o Mestre rolou alguns dados' nos chats dos jogadores. Somente para o caso de você querer que os jogadores saibam que você rolou algo, mas não o que foi",
+  "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>Monitoramento de Concentração do D&D5e Desabilitado</strong><br></center><br><center>O Monitoramento de Concentração está desabilitado nas configurações do sistema D&D5e.</center><center>Habilite nas configurações do D&D5e para habilitar as configurações de concentração do Midi QOL</center><br>",
   "midi-qol.SHARED": {
     "use-condition": {
       "header": "Condições do Midi QOL"
@@ -1235,8 +1232,10 @@
     "force-dialog": "Forçar Diálogo de Configuração",
     "midi-automation-only": "Usar Apenas em Automações Midi"
   },
-  "midi-qol.BaseDamageFlavor": "Dano Base",
-  "midi-qol.OtherDamageFlavor": "Outro Dano",
+  "midi-qol.BaseDamageFlavor": "Dano",
+  "midi-qol.BaseHealingFlavor": "Cura",
+  "midi-qol.OtherDamageFlavor": "Outro",
+  "midi-qol.OtherHealingFlavor": "Outra Cura",
   "midi-qol.RequireAmmunition.Name": "Exigir Munição Disponível Se Usado",
   "midi-qol.CheckTwoHanded.Name": "Não Requer Escudo em Ataques com Duas Mãos/Ambidestro",
   "midi-qol.NoAmmunition": "Existem 0 {name} no seu inventário",

@@ -295,7 +295,6 @@ export async function showItemInfo() {
     hasAttack: false,
     isHealing: false,
     hasDamage: false,
-    isVersatile: false,
     isSpell: this.type === "spell",
     isPower: this.type === "power",
     hasSave: false,

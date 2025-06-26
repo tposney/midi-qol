@@ -1,4 +1,5 @@
 import { debugEnabled, geti18nOptions, i18n, warn } from "../../midi-qol.js";
+import { Workflow } from "../Workflow.js";
 import { ReplaceDefaultActivities, configSettings } from "../settings.js";
 import { MidiActivityMixin, MidiActivityMixinSheet } from "./MidiActivityMixin.js";
 import { MidiSaveActivity } from "./SaveActivity.js";
@@ -31,7 +32,7 @@ function getSceneTargets() {
 }
 let defineMidiContestedCheckActivityClass = (ActivityClass: any) => {
   return class MidiContestedCheckActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "DND5E.SAVE", "DND5E.CHECK", "midi-qol.CHECK"];
+    static LOCALIZATION_PREFIXES = ["DND5E.SAVE", "DND5E.CHECK", "midi-qol.CHECK", "midi-qol.SAVE", ...super.LOCALIZATION_PREFIXES];
     static supermetadata = super.metadata;
     static metadata =
       foundry.utils.mergeObject(
@@ -46,7 +47,7 @@ let defineMidiContestedCheckActivityClass = (ActivityClass: any) => {
             rollDamage: MidiSaveActivity.metadata.usage.actions.rollDamage
           }
         },
-      }, { inplace: false, insertKeys: true, invsertValues: true })
+      }, { inplace: false, insertKeys: true, insertValues: true })
 
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField } = foundry.data.fields;
@@ -69,6 +70,8 @@ let defineMidiContestedCheckActivityClass = (ActivityClass: any) => {
     }
 
     static async #rollCheck(event, target, message) {
+      const workflow = message ? Workflow.getWorkflow(message._uuid) : null;
+      if (workflow) workflow.activity = this;
       const targets = getSceneTargets();
       if (!targets?.length) ui.notifications?.warn("DND5E.ActionWarningNoToken", { localize: true });
       let { ability, dc, skill, tool } = target.dataset;

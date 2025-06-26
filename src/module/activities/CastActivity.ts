@@ -28,7 +28,7 @@ let defineMidiCastSheetClass = (baseClass: any) => {
 
 let defineMidiCastActivityClass = (ActivityClass: any) => {
   return class MidiCastActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.CAST"];
+    static LOCALIZATION_PREFIXES = ["midi-qol.CAST", ...super.LOCALIZATION_PREFIXES];
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {

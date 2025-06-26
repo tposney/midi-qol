@@ -174,18 +174,15 @@
                 "formula": ""
               },
               "number": 3,
-              "denomination": 6,
+              "denomination": "6",
               "bonus": "",
               "types": [
                 "slashing"
-              ],
-              "scaling": {
-                "number": 1
-              }
+              ]
             }
           ]
         },
-        "useConditionText": "raceOrType.includes(\"dragon\") && (item.attuned || item.attunement !== \"required\")",
+        "useConditionText": "raceOrType.includes(\"dragon\")",
         "effectConditionText": "",
         "name": "Slayer Damage",
         "macroData": {
@@ -223,7 +220,9 @@
           "saveRemoves": true,
           "preRemoveConditionText": "",
           "postRemoveConditionText": ""
-        }
+        },
+        "img": "",
+        "appliedEffects": []
       }
     },
     "uses": {
@@ -342,12 +341,6 @@
           "mode": 4,
           "value": "1",
           "priority": 40
-        },
-        {
-          "key": "system.attunement",
-          "mode": 5,
-          "value": "required",
-          "priority": 20
         }
       ],
       "duration": {
@@ -392,7 +385,13 @@
           "displayTemp": false,
           "hostile": false,
           "onlyOnce": false,
-          "wallsBlock": "system"
+          "wallsBlock": "system",
+          "statuses": []
+        },
+        "dnd5e": {
+          "riders": {
+            "statuses": []
+          }
         }
       },
       "_stats": {
@@ -402,8 +401,8 @@
         "systemId": "dnd5e",
         "systemVersion": "4.3.6",
         "createdTime": null,
-        "modifiedTime": null,
-        "lastModifiedBy": null
+        "modifiedTime": 1743048781871,
+        "lastModifiedBy": "Zl1BOUaPLwDEujaL"
       },
       "_key": "!items.effects!S8Slo3MWDGp9trV9.ZveR6kPKafjcwQdY"
     }
@@ -452,7 +451,7 @@
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741783003985,
-    "modifiedTime": 1741783004001,
+    "modifiedTime": 1743048889858,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "_id": "S8Slo3MWDGp9trV9",

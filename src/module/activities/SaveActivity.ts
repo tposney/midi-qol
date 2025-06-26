@@ -24,7 +24,7 @@ export function setupSaveActivity() {
 
 let defineMidiSaveActivityClass = (ActivityClass: any) => {
   return class MidiSaveActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "DND5E.DAMAGE", "midi-qol.SAVE", "midi-qol.DAMAGE"];
+    static LOCALIZATION_PREFIXES = ["DND5E.DAMAGE", "midi-qol.SAVE", "midi-qol.DAMAGE", ...super.LOCALIZATION_PREFIXES];
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
@@ -69,12 +69,14 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
 
     static #rollDamage(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
+      if (workflow) workflow.activity = this;
       //@ts-expect-error
       return this.rollDamage({event, workflow});
     }
 
     static async #rollSave(event, target, message) {
       const workflow = Workflow.getWorkflow(message?.uuid);
+      if (workflow) workflow.activity = this;
       // return ActivityClass.#rollSave.bind(this)(event, target, message);
       // Can't call ActivityClass.#rollSave.bind(this)(event, target, message) as it's private
       const targets: Array<Token | Actor> = getSceneTargets();
@@ -86,10 +88,19 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
         const speaker = ChatMessage.getSpeaker({ actor, scene: canvas?.scene, token: token instanceof Token ? token.document : null });
         const message: any = { data: { speaker } };
         // if (!actor?.hasPlayerOwner && workflow) message.create = false - this breaks save checking from chat card
-        message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
         if (token instanceof Token) foundry.utils.setProperty(message, "flags.midi-qol.requestId", token.document.uuid);
         else foundry.utils.setProperty(message, "flags.midi-qol.requestId", token?.uuid);
-        if (configSettings.autoCheckSaves !== "none") message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+        if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) message.rollMode = game.settings?.get("core", "rollMode");
+        else message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+        if (!game.user?.isGM) {
+          if (configSettings.playerRollSaves === "noneDialogPublic") message.rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
+          else if (configSettings.playerRollSaves === "noneDialogPrivate") message.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+          else if (configSettings.playerRollSaves === "noneDialogSelf") message.rollMode = CONST.DICE_ROLL_MODES.SELF;
+          else if (configSettings.playerRollSaves === "noneDialogBlind") message.rollMode = CONST.DICE_ROLL_MODES.BLIND;
+          else message.rollMode = game.settings?.get("core", "rollMode");
+        }
+        
+
         //@ts-expect-error no dnd5e types
         await actor?.rollSavingThrow({
           event,
@@ -97,7 +108,7 @@ let defineMidiSaveActivityClass = (ActivityClass: any) => {
           //@ts-expect-error this has been bound to an activity
           ability: target.dataset.ability ?? this.save.ability.first(),
           //@ts-expect-error this has been bound to an activity
-          target: Number.isFinite(dc) ? dc : this.save.dc.value
+          target: configSettings.autoCheckSaves === "whisper" ? undefined : (Number.isFinite(dc) ? dc : this.save.dc.value)
         }, {}, message);
       }
     }

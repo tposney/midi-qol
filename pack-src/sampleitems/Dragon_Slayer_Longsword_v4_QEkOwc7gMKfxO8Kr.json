@@ -174,7 +174,7 @@
       "value": 8000,
       "denomination": "gp"
     },
-    "attunement": "required",
+    "attunement": "",
     "rarity": "rare",
     "identified": true,
     "cover": null,
@@ -482,7 +482,7 @@
     "identifier": "dragon-slayer-longsword-11438",
     "ammunition": {},
     "mastery": "",
-    "attuned": true,
+    "attuned": false,
     "equipped": true
   },
   "_stats": {
@@ -492,7 +492,7 @@
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741782992877,
-    "modifiedTime": 1741782992877,
+    "modifiedTime": 1743049166751,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "folder": "5Ok9Jbl5nOokCkqf",

@@ -17,8 +17,31 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       if (this.flags?.["midi-qol"].roll?.length > 0) return true;
       return super.isRoll;
     }
-    // midi has it's own target handling so don't display the attack targets here
+    // midi has it's own target handling so don't display the attack targets here (however, DO display the mastery)
     _enrichAttackTargets(html) {
+      // This code borrowed from the start of the system's ChatMessage5e#_enrichAttackTargets method
+      const attackRoll = this.rolls[0];
+      // @ts-expect-error no dnd5e-types
+      if (!(attackRoll instanceof dnd5e.dice.D20Roll)) return;
+
+      // @ts-expect-error no dnd5e-types
+      const masteryConfig = CONFIG.DND5E.weaponMasteries[attackRoll.options.mastery];
+      if (!masteryConfig) return;
+
+      const p = document.createElement("p");
+      p.classList.add("supplement");
+      let mastery = masteryConfig.label;
+      if (masteryConfig.reference) mastery = `
+        <a class="content-link" draggable="true" data-link data-uuid="${masteryConfig.reference}"
+           data-tooltip="${mastery}" style="text-wrap: auto;">${mastery}</a>
+      `;
+      p.innerHTML = `<string>${i18n("DND5E.WEAPON.Mastery.Flavor")}</string> ${mastery}`;
+      const condensedSection = html.querySelector(".midi-results > .flexrow");
+      if (condensedSection) {
+        condensedSection.after(p);
+      } else {
+        html.querySelector(".midi-qol-attack-roll")?.appendChild(p);
+      }
       return;
     }
     get canSelectTargets() {
@@ -37,14 +60,15 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
 
     // Patch for getAssociatedItem not preparing data on items recovered from item.data
     getAssociatedItem() {
-      // @ts-expect-error no dnd5e-types
-      const item = super.getAssociatedItem();
-      // @ts-expect-error can't know about flags
-      if (this.flags.dnd5e?.item?.data && this.flags.dnd5e?.item.id === item.id) {
-        item.prepareData();
-        item.prepareFinalAttributes();
+      if (foundry.utils.getProperty(this, "flags.midi-qol.syntheticItem")) {
+        //@ts-expect-error no dnd5e-types
+        const storedData = this.flags.dnd5e?.item?.data;
+        //@ts-expect-error no dnd5e-types
+        const actor = super.getAssociatedActor();
+        return new Item.implementation(storedData, {parent: actor})
       }
-      return item;
+      // @ts-expect-error no dnd5e-types
+      return super.getAssociatedItem();
     }
 
     /**
@@ -111,7 +135,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       }));
     }
 
-    collectRolls(rollsToAccumulate: Roll[], multiRolls: boolean = false): any[] {
+    collectRolls(rollsToAccumulate: Roll[], multiRolls: boolean = false, options: any): any[] {
       let returns: any[] = [];
       let rolls: Roll[] = [];
       setDamageRollMinTerms(rollsToAccumulate);
@@ -138,6 +162,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         let formulaInToolTip = ["formula", "formulaadv"].includes(configSettings.rollAlternate);
         let hideDetails = this.author.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none";
         let hideFormula = this.author.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none";
+        if (options.blind && !game.user?.isGM) hideFormula = true;
         if (this.author.isGM && !game.user?.isGM && (configSettings.hideRollDetails ?? "none") !== "none") {
           switch (configSettings.hideRollDetails) {
             case "none":
@@ -154,14 +179,14 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
               break;
             case "attackTotalOnly":
             case "d20AttackOnly":
-              total = "Damage Roll";
+              total = "--";
               break;
             case "all":
-              total = "Damage Roll";
+              total = "--";
               break;
           }
         }
-
+        if (options.blind && !game.user?.isGM) total = "--";
         const roll = document.createElement("div");
         roll.classList.add("dice-roll");
         let tooltipContents = ""
@@ -218,7 +243,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         else if (rollType === "bonusDamage") rType = "bonus-damage";
         if (rollsToCheck?.length) {
           html.querySelectorAll(`.midi-${rType}-roll`)?.forEach(el => el.remove());
-          for (let roll of this.collectRolls(rollsToCheck, configSettings.mergeCardMultiDamage)) {
+          for (let roll of this.collectRolls(rollsToCheck, configSettings.mergeCardMultiDamage, {blind: this.blind})) {
             roll.classList.add(`midi-${rType}-roll`);
             if (rType === "bonus-damage") {
               const flavor = document.createElement("div");
@@ -231,7 +256,7 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
             }
             html.querySelector(`.midi-qol-${rType}-roll`)?.appendChild(roll);
             if ((configSettings.hideRollDetails ?? "none") !== "none" && !game.user?.isGM && this.author.isGM) {
-              html.querySelectorAll(".dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+              html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
             }
           }
         }
@@ -268,18 +293,23 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
     }
 
     _highlightCriticalSuccessFailure(html) {
-      // @ts-expect-error no dnd5e-types
-      if (!this.flags?.["midi-qol"]) return super._highlightCriticalSuccessFailure(html);
+      // @ t s-expect-error no dnd5e-types
+      // if (!this.flags?.["midi-qol"]) return super._highlightCriticalSuccessFailure(html);
       // @ts-expect-error no dnd5e-types
       super._highlightCriticalSuccessFailure(html);
       for (let [index, d20Roll] of this.rolls.entries()) {
         const total = html.find(".dice-total")[index];
+        if (!total) continue;
         if (!game.user?.isGM && configSettings.autoCheckHit === "whisper") {
           if (total.classList.contains("success")) total.classList.remove("success");
           if (total.classList.contains("failure")) total.classList.remove("failure");
           if (total.classList.contains("critical")) total.classList.remove("critical");
           if (total.classList.contains("fumble")) total.classList.remove("fumble");
         } else if (total && configSettings.highLightCriticalAttackOnly) {
+          //@ts-expect-error
+          if (d20Roll?.isCritical) total.classList.add("critical");
+          //@ts-expect-error
+          if (d20Roll?.isFumble) total.classList.add("fumble");
           if (total.classList.contains("success")) total.classList.remove("success");
           if (total.classList.contains("failure")) total.classList.remove("failure");
         } else if (total && !configSettings.highlightSuccess) {
@@ -287,13 +317,18 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
           if (total.classList.contains("failure")) total.classList.remove("failure");
           if (total.classList.contains("critical")) total.classList.remove("critical");
           if (total.classList.contains("fumble")) total.classList.remove("fumble");
+        } else if (total && !configSettings.highlightSuccess) {
+          //@ts-expect-error
+          if (d20Roll.isCritical) total.classList.add("critical");
+          //@ts-expect-error
+          if (d20Roll.isFumble) total.classList.add("fumble");
         }
       }
       return;
     }
 
-    enrichAttackRolls(html) {
-      if (!this.author.isGM || game.user?.isGM) return;
+    maskAttackRolls(html) {
+      if (!this.author?.isGM || game.user?.isGM) return;
       const hitFlag = foundry.utils.getProperty(this, "flags.midi-qol.isHit");
       const hitString = hitFlag === undefined ? "" : hitFlag ? i18n("midi-qol.hits") : i18n("midi-qol.misses");
       let attackRollText;
@@ -325,14 +360,14 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
         case "all":
           html.querySelectorAll(".midi-qol-attack-roll .dice-total")?.forEach(el => el.classList.remove("critical"));
           html.querySelectorAll(".midi-qol-attack-roll .dice-total")?.forEach(el => el.classList.remove("fumble"));
-          attackRollText = "Attack Roll";
+          attackRollText = "--";
           break;
       }
       if (attackRollText) html.querySelectorAll(".midi-attack-roll .dice-total")?.forEach(el => el.innerHTML = attackRollText);
       if (this.author.isGM && !game.user?.isGM && removeFormula) {
         html.querySelectorAll(".midi-attack-roll .dice-formula")?.forEach(el => el.remove());
         html.querySelectorAll(".midi-attack-roll .dice-tooltip")?.forEach(el => el.remove());
-        html.querySelectorAll(".dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+        html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
       }
     }
 
@@ -340,13 +375,16 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       // @ts-expect-error no dnd5e-types
       if (!foundry.utils.getProperty(this, "flags.midi-qol.messageType")) return super._enrichChatCard(html);
       if (debugEnabled > 1) warn("Enriching chat card", this.id);
-      this.enrichAttackRolls(html); // This has to run first to stop errors when ChatMessage5e._enrichDamageTooltip runs
+      this.maskAttackRolls(html); // This has to run first to stop errors when ChatMessage5e._enrichDamageTooltip runs
 
       // @ts-expect-error no dnd5e-types
       super._enrichChatCard(html);
       if (this.author.isGM && (configSettings.hideRollDetails ?? "none") !== "none" && !game.user?.isGM) {
-        html.querySelectorAll(".dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
-        html.querySelectorAll(".dice-tooltip").forEach(el => el.style.height = "0");
+        html.querySelectorAll(".midi-attack-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+        html.querySelectorAll(".midi-damage-roll .dice-roll").forEach(el => el.addEventListener("click", this.noDiceClicks.bind(this)));
+        html.querySelectorAll(".midi-attack-roll .dice-tooltip").forEach(el => el.style.height = "0");
+        html.querySelectorAll(".midi-damage-roll .dice-tooltip").forEach(el => el.style.height = "0");
+
       }
       // Remove the hit miss check mark for non-gm players if required.
       // Because midi rolls are not marked as attack rolls
@@ -371,6 +409,9 @@ export function defineChatMessageMidiClass(baseClass: ChatMessage.Implementation
       const bonusDamageRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.bonusDamageRolls);
       if (bonusDamageRolls)
         foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.bonusDamageRolls, bonusDamageRolls.map(d => Roll.fromData(d)));
+      const utilityRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.utilityRolls);
+      if (utilityRolls)
+        foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.utilityRolls, utilityRolls.map(d => Roll.fromData(d)));
       const extraRolls = foundry.utils.getProperty(this, "flags." + WorkflowDataFlags.extraRolls);
       if (extraRolls)
         foundry.utils.setProperty(this, "flags." + WorkflowDataFlags.extraRolls, extraRolls.map(d => Roll.fromData(d)));

@@ -323,6 +323,9 @@
     "tidy5e-sheet": {
       "section": "",
       "actionSection": ""
+    },
+    "crux": {
+      "trayVisibility": "default"
     }
   },
   "system": {
@@ -483,7 +486,7 @@
     "systemId": "dnd5e",
     "systemVersion": "4.3.6",
     "createdTime": 1741782991287,
-    "modifiedTime": 1741782991287,
+    "modifiedTime": 1744024473273,
     "lastModifiedBy": "Zl1BOUaPLwDEujaL"
   },
   "ownership": {
@@ -494,6 +497,6 @@
   },
   "folder": "fZIl4G4qj3C894LI",
   "_id": "gSuPSCJ9EMcUCEpx",
-  "sort": 800000,
+  "sort": 1000000,
   "_key": "!items!gSuPSCJ9EMcUCEpx"
 }

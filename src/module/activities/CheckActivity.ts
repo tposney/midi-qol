@@ -26,8 +26,8 @@ export function setupCheckActivity() {
 
 let defineMidiCheckActivityClass = (ActivityClass: any) => {
   return class MidiCheckActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "DND5E.SAVE", "DND5E.CHECK", "midi-qol.CHECK"];
-    static supermetadata = super.metadata;
+    static LOCALIZATION_PREFIXES = ["DND5E.SAVE", "DND5E.CHECK", "midi-qol.CHECK", ...super.LOCALIZATION_PREFIXES,];
+    static superMetadata = super.metadata;
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
@@ -42,7 +42,7 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
             rollDamage: MidiSaveActivity.metadata.usage.actions.rollDamage,
           }
         },
-      }, { inplace: false, insertKeys: true, invsertValues: true })
+      }, { inplace: false, insertKeys: true, insertValues: true })
 
     static defineSchema() {
       const { StringField, ArrayField, BooleanField, SchemaField, ObjectField } = foundry.data.fields;
@@ -67,6 +67,7 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
 
     static async #rollCheck(event, target, message) {
       let workflow = message ? Workflow.getWorkflow(message._uuid) : null;
+      if (workflow) workflow.activity = this;
       // return ActivityClass.#rollCheck return ActivityClass.#rollCheck.bind(this)(event, target);
       // Can't do this as it's private
       const targets: Array<Token | Actor> = getSceneTargets();
@@ -80,12 +81,20 @@ let defineMidiCheckActivityClass = (ActivityClass: any) => {
       const item: any = this.item;
       const rollData: any = { event, target: Number.isFinite(dc) ? dc : check.dc.value };
       if (ability in globalThis.dnd5e.config.abilities) rollData.ability = ability;
-
+      
       for (const token of targets) {
         const actor = token instanceof Actor ? token : token.actor;
         const speaker = ChatMessage.getSpeaker({ actor, scene: canvas?.scene, token: token instanceof Token ? token.document : null });
-        const messageData = { data: { speaker } };
+        const messageData: any = { data: { speaker } };
         if (!actor) continue;
+        if (["none", "allShow"].includes(configSettings.autoCheckSaves) || actor?.hasPlayerOwner) message.rollMode = game.settings?.get("core", "rollMode");
+        else messageData.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+        if (!game.user?.isGM) {
+          if (configSettings.playerRollSaves === "noneDialogPublic") messageData.rollMode = CONST.DICE_ROLL_MODES.PUBLIC;
+          else if (configSettings.playerRollSaves === "noneDialogPrivate") messageData.rollMode = CONST.DICE_ROLL_MODES.PRIVATE;
+          else if (configSettings.playerRollSaves === "noneDialogSelf") messageData.rollMode = CONST.DICE_ROLL_MODES.SELF;
+          else if (configSettings.playerRollSaves === "noneDialogBlind") messageData.rollMode = CONST.DICE_ROLL_MODES.BLIND;
+        }
         //@ts-expect-error no dnd5e types
         if (skill) await actor.rollSkill({ ...rollData, skill }, {}, messageData);
         else if (tool) {

@@ -73,31 +73,13 @@
   "midi-qol.AutoTarget.Name": "Auto target on template draw",
   "midi-qol.AutoTarget.Hint": "When placing a template (e.g. spell) auto target tokens inside the template. If 'Center + Levels' is set in ranged targeting Levels Volumetric Templates will be used (if installed)",
   "midi-qol._comment for translators_noDamageOnSaveSpells": "In foundry v9 the array json element is no longer supported, so only the v9 version will be used",
-  "midi-qol.noDamageonSaveSpells": [
-    "Acid Splash",
-    "Sword Burst",
-    "Thunderclap",
-    "Vicious Mockery",
-    "Create Bonfire",
-    "Lightning Lure",
-    "Poison Spray",
-    "Cordon of Arrow",
-    "Disintegrate",
-    "Sacred Flame",
-    "Cordon of Arrows",
-    "Frostbite",
-    "Infestation",
-    "Toll the Dead",
-    "Word of Radiance",
-    "Catapult",
-    "Earth Tremor"
-  ],
-  "midi-qol.noDamageonSaveSpellsv9": "Acid Splash, Sword Burst, Thunderclap, Vicious Mockery, Create Bonfire, Lightning Lure, Poison Spray, Cordon of Arrow, Disintegrate, Sacred Flame, Cordon of Arrows, Frostbite,  Infestation, Toll the Dead, Word of Radiance, Catapult,  Earth Tremor",
   "midi-qol.undoDamageFrom": "Undo applied damage from ",
   "midi-qol.noGM": "No GM user connected cannot apply effects/update Hit Points",
   "midi-qol.noSelection": "No Token/Actor selected",
   "midi-qol.showGM.Name": "GM Sees all whispered messages",
   "midi-qol.showGM.Hint": "GM sees all whispered messages sent even if the game settings say the GM won't see them",
+  "midi-qol.PreferredGM.Name": "Preferred GM",
+  "midi-qol.PreferredGM.Hint": "Preferred GM for socket calls. If 'none' the first gm on the current scene will be used.",
   "midi-qol.ColoredBorders.Name": "Colored Border Messages",
   "midi-qol.ColoredBorders.Hint": "Each chat message has a border in the player characters color",
   "midi-qol.AutoEffects.Name": "Auto apply item effects",
@@ -127,7 +109,7 @@
   "midi-qol.UseTokenNames.Name": "Chat cards use token name",
   "midi-qol.UseTokenNames.Hint": "Chat card titles and target names use the token name rather than the actor name",
   "midi-qol.CriticalDamage.Name": "Choose critical damage for Players",
-  "midi-qol.CriticalDamage.Hint": "DND5e Settings Only - standard dnd5e critical roll, Max Normal Damage - base weapon dice only (no critical dice) but all maximised, Max Critical Dice - critical dice maximised, Max All Dice - item + critical dice maximised, double dice value - result of dice x2, Explode Critical Dice - roll normal critical exploding any critical dice, Only Weapon Extra Critical - the only bonus damage for critical is from the item extra critical field, Max Base Roll Crit - use maximum base damage then roll critical dice as usual",
+  "midi-qol.CriticalDamage.Hint": "DND5e Settings Only - standard dnd5e critical roll, Max Normal Damage - base weapon dice only (no critical dice) but all maximised, Max Critical Dice - critical dice maximised, Max All Dice - item + critical dice maximised, double dice value - result of dice x2, Explode Critical Dice - roll normal critical exploding any critical dice, Only Item Extra Critical - the only bonus damage for critical is from the item extra critical field, Max Base Roll Crit - use maximum base damage then roll critical dice as usual",
   "midi-qol.CriticalDamageGM.Name": "Choose critical damage for GM",
   "midi-qol.CriticalDamageGM.Hint": "",
   "midi-qol.CriticalDamageChoices": {
@@ -276,8 +258,11 @@
     "rer": "Rippers Epic Rolls"
   },
   "midi-qol.playerRollSavesOptions": {
-    "none": "None",
-    "noneDialog": "Auto roll and show roll dialog",
+    "none": "None (private roll)",
+    "nonePublic": "None (public roll)",
+    "noneDialogPublic": "Auto roll and show roll dialog (public roll)",
+    "noneDialogPrivate": "Auto roll and show roll dialog (private roll)",
+    "noneDialogBlind": "Auto roll and show roll dialog (blind roll)",
     "chat": "Chat Message",
     "mtb": "Monks Token Bar",
     "rer": "Rippers Epic Rolls"
@@ -365,6 +350,7 @@
     "damageBonus": "Return a damage bonus",
     "preSave": "Before Checking Saves",
     "postSave": "After Checking Saves",
+    "preDamageRollConfig": "Before Damage Configuration",
     "preDamageApplication": "Before Damage Application",
     "preActiveEffects": "Before Active Effects",
     "postActiveEffects": "After Active Effects ",
@@ -653,6 +639,7 @@
   "midi-qol.AddDead.Name": "Add effect when HP = 0",
   "midi-qol.AddDead.Hint1": "Player Controlled",
   "midi-qol.AddDead.Hint2": "GM Controlled",
+  "midi-qol.markDefeated": "Mark defeated in combat tracker",
   "midi-qol.AddDeadOptions": {
     "none": "Do Not Update",
     "overlay": "Add effect as overlay",
@@ -961,6 +948,15 @@
     "firstSaveTarget": "First saved target",
     "firstFailedSaveTarget": "First failed save target"
   },
+  "midi-qol.ActivationAutomation.Name": "Activation Cost Automation",
+  "midi-qol.ActivationAutomation.Hint": "Automatically activate activities with short/long rest or encounter start or turn start/end activation costs.",
+  "midi-qol.ActivationAutomationOptions": {
+    "none": "No Automation/No Chat",
+    "chat": "Default dnd5e behavior",
+    "auto": "Auto trigger self targeted activities"
+  },
+  "midi-qol.dummyCards.Name": "Always display attack/damage cards for hidden merge cards",
+  "midi-qol.dummyCards.Hint": "(Experimental) For GM rolls (self, private, blind) display an attack/damage roll card which will trigger a 'gm rollsed some dice' card on the players chats. Only for the case that you want the players to know you rolled something, but not what it was",
   "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>DND5E Concentration Tracking Disabled</strong><br></center><br><center>Concentration Tracking is disabled in the dnd5e system settings.</center><center>Enable in DND5E settings to enable midi concentration settings</center><br>",
   "midi-qol.SHARED": {
     "use-condition": {
@@ -1236,8 +1232,10 @@
     "force-dialog": "Force Configuration Dialog",
     "midi-automation-only": "Only use in midi automation"
   },
-  "midi-qol.BaseDamageFlavor": "Base Damage",
-  "midi-qol.OtherDamageFlavor": "Other Damage",
+  "midi-qol.BaseDamageFlavor": "Damage",
+  "midi-qol.BaseHealingFlavor": "Healing",
+  "midi-qol.OtherDamageFlavor": "Other",
+  "midi-qol.OtherHealingFlavor": "Other Healing",
   "midi-qol.RequireAmmunition.Name": "Require ammunition available to roll attack",
   "midi-qol.CheckTwoHanded.Name": "Require no shield equipped for two-handed/off-hand attacks",
   "midi-qol.NoAmmunition": "There are 0 {name} in your inventory",

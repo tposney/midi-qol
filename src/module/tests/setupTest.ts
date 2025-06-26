@@ -527,7 +527,7 @@ async function registerTests() {
             assert.equal(target3hp - 40, target3?.actor?.system.attributes.hp.value, "undead takes 20 hp"); // 20hp + vulnerability
             assert.equal(effects2.length, 1, "Frightened not applied to non undead");
             assert.equal(effects3.length, 1, "Frightened applied to undead");
-            assert.equal(condition2.length, 0, "Frghtened applied to non undead");
+            assert.equal(condition2.length, 0, "Frightened applied to non undead");
             assert.equal(condition3.length, 0, "Frightened applied to undead");
           });
         });
@@ -730,6 +730,7 @@ async function registerTests() {
             await combat?.createEmbeddedDocuments("Combatant", [createData]);
 
             const effectData = {
+              name: "test over time",
               label: "test over time",
               changes: [{
                 key: "flags.midi-qol.OverTime.Test", mode: 0, value: `turn=end,
@@ -774,6 +775,7 @@ async function registerTests() {
             await resetActors();
             const actor = getActor(actor2Name);
             const effectData = {
+              name: "test effect",
               label: "test effect",
               changes: [{ key: "flags.midi-qol.advantage.all", mode: 0, value: "false" }]
             }
@@ -788,6 +790,7 @@ async function registerTests() {
             await resetActors();
             const actor = getActor(actor2Name);
             const effectData = {
+              name: "test effect",
               label: "test effect",
               changes: [{ key: "flags.midi-qol.advantage.all", mode: 0, value: "0" }]
             }
@@ -802,6 +805,7 @@ async function registerTests() {
             await resetActors();
             const actor = getActor(actor2Name);
             const effectData = {
+              name: "test effect",
               label: "test effect",
               changes: [{ key: "flags.midi-qol.advantage.all", mode: 0, value: "true" }]
             }
@@ -816,6 +820,7 @@ async function registerTests() {
             await resetActors();
             const actor = getActor(actor2Name);
             const effectData = {
+              name: "test effect",
               label: "test effect",
               changes: [{ key: "flags.midi-qol.advantage.all", mode: 0, value: "1" }]
             }
@@ -839,6 +844,7 @@ async function registerTests() {
             let changeValue = "-10";
             let changeMode: number = CONST.ACTIVE_EFFECT_MODES.OVERRIDE;
             const effectData = {
+              name:"test effect",
               label: "test effect",
               changes: [{ key: changeKey, mode: changeMode, value: changeValue }]
             };
@@ -867,6 +873,7 @@ async function registerTests() {
             const changeValue = "-10";
             const changeMode = CONST.ACTIVE_EFFECT_MODES.OVERRIDE;
             const effectData = {
+              name: "test effect",
               label: "test effect",
               changes: [{ key: changeKey, mode: changeMode, value: changeValue }]
             };
@@ -891,6 +898,7 @@ async function registerTests() {
             const changeValue = "-10";
             const changeMode = CONST.ACTIVE_EFFECT_MODES.OVERRIDE;
             const effectData = {
+              name: "test effect",
               label: "test effect",
               changes: [{ key: changeKey, mode: changeMode, value: changeValue }]
             };
@@ -931,6 +939,7 @@ async function registerTests() {
             const tokenActor: Actor | null | undefined = token?.actor;
             const oldHp = token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value");
             const effectData = {
+              name: "test effect",
               label: "test effect",
               changes: [{ key: "system.traits.dm.midi.all", mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: "-5" }]
             };
@@ -948,6 +957,7 @@ async function registerTests() {
             const tokenActor: Actor | null | undefined = token?.actor;
             const oldHp = token && foundry.utils.getProperty(token, "actor.system.attributes.hp.value");
             let effectData = {
+              name: "test effect",
               label: "test effect",
               changes: [{ key: "system.traits.dr.value", mode: CONST.ACTIVE_EFFECT_MODES.OVERRIDE, value: "fire" }]
             };

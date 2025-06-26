@@ -28,22 +28,39 @@ let defineMidiForwardSheetClass = (baseClass: any) => {
 
 let defineMidiForwardActivityClass = (ActivityClass: any) => {
   return class MidiForwardActivity extends MidiActivityMixin(ActivityClass) {
-    static LOCALIZATION_PREFIXES = [...super.LOCALIZATION_PREFIXES, "midi-qol.FORWARD"];
+    static LOCALIZATION_PREFIXES = ["midi-qol.FORWARD", ...super.LOCALIZATION_PREFIXES];
     static metadata =
       foundry.utils.mergeObject(
         super.metadata, {
-        title: configSettings.activityNamePrefix ? "midi-qol.FORWARD.Title.one": ActivityClass.metadata.title,
+        title: configSettings.activityNamePrefix ? "midi-qol.FORWARD.Title.one" : ActivityClass.metadata.title,
         dnd5eTitle: ActivityClass.metadata.title,
         sheetClass: MidiForwardSheet,
         usage: {
           chatCard: "modules/midi-qol/templates/activity-card.hbs",
         },
-      }, {inplace: false, insertKeys: true, insertValues: true});
+      }, { inplace: false, insertKeys: true, insertValues: true });
 
     get possibleOtherActivity() {
       return false;
     }
+    get effects() { return [] };
 
+    /** @override */
+    async use(usage = {}, dialog = {}, message = {}) {
+      const usageConfig = foundry.utils.mergeObject({
+        cause: {
+          activity: this.relativeUUID
+        },
+        consume: {
+          resources: false,
+          spellSlot: false
+        }
+      }, usage);
+
+      const activity = this.item.system.activities.get(this.activity.id);
+      if (!activity) ui.notifications?.error("DND5E.FORWARD.Warning.NoActivity", { localize: true });
+      return activity?.use(usageConfig, dialog, message);
+    }
     get isSelfTriggerableOnly() {
       return false;
     }
@@ -51,7 +68,7 @@ let defineMidiForwardActivityClass = (ActivityClass: any) => {
     get isTriggerableActivity() {
       return false;
     }
-    
+
     get forcedTargetConfirmation() {
       return "never";
     }
