@@ -793,6 +793,7 @@
   "midi-qol.ShowFastForward.Hint": "攻撃/ダメージボタンに一括ロールのインジケータを表示します。",
   "midi-qol.MeasuredTemplate": "テンプレート",
   "midi-qol.AutoRemoveTemplate.Name": "持続時間が切れたテンプレートの自動削除",
+  "midi-qol.AutoRemoveSummonedCreature.Name": "アイテム持続時間／精神集中終了時に召喚したクリーチャーを自動削除（dnd5e召喚アイテム用）",
   "midi-qol.AttackPerTarget.Name": "目標ごとに1回の攻撃ロール",
   "midi-qol.SkillAbilityCheckAdvantage.Name": "能力値判定の有利は技能判定にも影響する",
   "midi-qol.SkillAbilityCheckAdvantage.Hint": "特定の能力値判定で有利/不利を得た場合、同じ能力値に基づく技能判定においても有利/不利となります。",
@@ -800,6 +801,8 @@
   "midi-qol.InitPromptTitle": "イニシアチブロール",
   "midi-qol.HighlightSuccess.Name": "ヒット/ミス/セーヴの表示に色を付ける",
   "midi-qol.HighlightSuccess.Hint": "判定の自動化時、ヒットとセーヴ成功は緑色で、ミスとセーヴ失敗は赤色で文字が表示されます。",
+  "midi-qol.HighLightCriticalAttackOnly.Name": "クリティカル/ファンブルのみ色を付ける",
+  "midi-qol.HighLightCriticalAttackOnly.Hint": "Override dnd5eの攻撃ヒット及びミスの色付けを上書きして攻撃ロールのクリティカル/ファンブルのみ色を付けます",
   "midi-qol.OptionalRuleVitality.Name": "（ハウスルール）バイタリティプール",
   "midi-qol.OptionalRuleVitality.Hint": "リソース（system.resources.primary.valueなど）を指定すると、hp0以降のダメージは指定したリソースを減少させるようになります。それも尽きると対象は死亡します。",
   "midi-qol.AutoRerollInitiative.Name": "イニシアチブの自動リロール",
@@ -831,9 +834,11 @@
       "summary": "概要",
       "common": "共通モジュール",
       "problems": "問題",
-      "modules": "すべてのモジュール",
-      "errors": "エラー"
-    }
+      "errors": "エラー",
+      "modules": "すべてのモジュール"
+    },
+    "ClearErrors": "エラー消去",
+    "Overwrite": "Midi設定上書き"
   },
   "midi-qol.Inactive": "無効",
   "midi-qol.Active": "有効",
@@ -853,7 +858,13 @@
   "midi-qol.ConfirmRoll": "OK！",
   "midi-qol.ConfirmMiss": "ミス扱い",
   "midi-qol.ConfirmHit": "ヒット扱い",
-  "midi-qol.AverageNPCDamage.Name": "NPCのダメージロール（クリティカル含む）は平均値で処理する",
+  "midi-qol.AverageDamage.Name": "ダメージロール（クリティカル含む）は平均値で処理する",
+  "midi-qol.AverageDamageOptions": {
+    "none": "しない",
+    "npc": "NPCのダメージロールのみ",
+    "character": "キャラクターのダメージロールのみ",
+    "all": "すべてのダメージロール"
+  },
   "midi-qol.GriddedGridless.Name": "グリッドレス・グリッド",
   "midi-qol.GridlessFudge.Name": "補正係数",
   "midi-qol.GridlessFudge.Hint": "射程を確認するとき測定距離から差し引く補正係数を、グリッドのスケール単位（ft/mなど）で指定します。",
@@ -879,6 +890,7 @@
     "SaveDRdr": "セーヴ→ダメージ軽減→ダメージ耐性 (dr/dv/di)"
   },
   "midi-qol.WaitingForPreviousWorkflow": "{name}のロール処理がまだが完了していません",
+  "midi-qol.ResolvePreviousWorkflow": "前回ロールに対する処理を選択してください",
   "midi-qol.ConfirmTargetOptions": {
     "default": "Midiの設定準拠",
     "always": "常に",
@@ -895,22 +907,12 @@
   "midi-qol.ConcentrationIncapacitatedConditionCheck.Hint": "無力/死亡/気絶/石化/麻痺/朦朧の各状態は集中を解除します。",
   "midi-qol.AoETargetType.Name": "範囲攻撃時のターゲットタイプ",
   "midi-qol.AoETargetType.Hint": "テンプレートによってターゲットを指定するとき、指定されたタイプのコマのみが選択されます。",
-  "midi-qol.AoETargetTypeOptions": {
-    "any": "すべて",
-    "ally": "味方",
-    "notAlly": "味方以外",
-    "enemy": "敵",
-    "notEnemy": "敵以外",
-    "neutral": "中立",
-    "notNeutral": "中立以外",
-    "hostile": "敵対的",
-    "notHostile": "敵対的以外",
-    "Friendly": "友好的",
-    "notFriendly": "友好的以外"
-  },
   "midi-qol.AoETargetTypeIncludeSelf.Name": "範囲攻撃のターゲットに自身を含める",
   "midi-qol.AutoCompleteWorkflow.Name": "必要に応じてワークフローをオートコンプリートする",
   "midi-qol.AutoCompleteWorkflow.Hint": "先行するワークフローの完了前にロールが行われたとき、先の処理を完了扱いにします。余分なロールは実行されません。",
+  "midi-qol.emanationNoTemplate": "放射/半径 - テンプレートなし",
+  "midi-qol.emanationTemplate.counted.one": "放射 テンプレートなし",
+  "midi-qol.emanationTemplate.counted.other": "放射 テンプレートなし",
   "midi-qol.squareRadius": "半径指定の正方形",
   "midi-qol.AddFakeDice.Name": "GMがロールするDice So Niceの出目に偽のダイスを加える",
   "midi-qol.MidiFieldsTab.Name": "Midiのアイテム設定を別のタブに表示する",
@@ -927,18 +929,31 @@
   "DND5E.DamageApplication.Change.DR": "DR",
   "midi-qol.SettingsSearch": "設定の検索",
   "midi-qol.MidiPropertiesTab.Name": "アイテムの特性を使用するための最低ユーザー権限",
-  "midi-qol.MidiPropertiesTab.Hint": "Lowest user role than can access an Item's midi-qol properties tab. <strong>Requires reload on change</strong>",
-  "midi-qol.CollapsibleTargets.Name": "Collapsible Targets",
-  "midi-qol.CollapsibleTargets.Hint": "The Hit/Miss target display in the chat card are collapsible",
-  "midi-qol.AutoRemoveInstantaneousTemplate.Name": "Auto remove instantaneous templates",
-  "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "Templates placed by an item with duration instantaneous are removed at the end of the item roll",
-  "midi-qol.ReplaceDefaultActivities.Name": "Replace dnd5e activities with midi-qol equivalents",
-  "midi-qol.ReplaceDefaultActivities.Hint": "Any existing activities, Attack, Damage, Save, Check, Utility will instead use the midi versions. This is required to automate SRD items, otherwise you will need to hand configure every item for midi automation.",
-  "midi-qol.AutoMergeActivityOther.Name": "Auto merge other activity for Midi Attack Activities (Requires Reload)",
+  "midi-qol.MidiPropertiesTab.Hint": "指定したユーザ権限を最低ラインとしてアイテムのmidi-qolプロパティタブにアクセスできます。<strong>変更時にリロードが必要です。</strong>",
+  "midi-qol.CollapsibleTargets.Name": "ターゲット折り畳み可",
+  "midi-qol.CollapsibleTargets.Hint": "チャットカード内のターゲットへの命中/ミス表示が折り畳めるようになります",
+  "midi-qol.AutoRemoveInstantaneousTemplate.Name": "瞬間テンプレートを自動削除",
+  "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "持続時間：瞬間のアイテムによって配置されたテンプレートはアイテムロール終了後に削除されます",
+  "midi-qol.ReplaceDefaultActivities.Name": "dnd5eアクティビティをmidi-qol内で相当するものに置き換える",
+  "midi-qol.ReplaceDefaultActivities.Hint": "存在するあらゆるアクティビティ（攻撃、ダメージ、セーヴ、判定、ユーティリティ）の代わりにmidiバージョンを使用します。これはSRDアイテムを自動化するために必要です。それ以外のアイテムはmidi自動化の設定が必要です。",
+  "midi-qol.AutoMergeActivityOther.Name": "他のアクティビティをMidi攻撃アクティビティに自動マージ（要リロード）",
   "midi-qol.AutoMergeActivityOther.Hint": "If an item only has an attack activity and single Damage, Save, Check or Utility it will be merged with the Attack activity",
   "midi-qol.ConfirmAmmunition.Name": "Confirm Ammunition choice when rolling attack - shows attack roll configuration",
-  "midi-qol.ActivityNamePrefix.Name": "Activity Prefix",
+  "midi-qol.ActivityNamePrefix.Name": "アクティビティ接頭辞",
   "midi-qol.ActivityNamePrefix.Hint": "Prefix midi-qol activities name with Midi. Change requires reload",
+  "midi-qol.AoETargetTypeOptions": {
+    "any": "すべて",
+    "ally": "味方",
+    "notAlly": "味方以外",
+    "enemy": "敵",
+    "notEnemy": "敵以外",
+    "neutral": "中立",
+    "notNeutral": "中立以外",
+    "hostile": "敵対的",
+    "notHostile": "敵対的以外",
+    "Friendly": "友好的",
+    "notFriendly": "友好的以外"
+  },
   "midi-qol.TriggeredActivityTargetOptions": {
     "self": "目標のアイテム所有者",
     "targets": "同じ目標",
@@ -956,6 +971,15 @@
     "firstSaveTarget": "最初のセーヴ成功目標",
     "firstFailedSaveTarget": "最初のセーヴ失敗目標"
   },
+  "midi-qol.ActivationAutomation.Name": "起動コスト自動化",
+  "midi-qol.ActivationAutomation.Hint": "小/大休憩、遭遇開始やターン開始/終了時の起動コストを持つアクティビティを自動で起動します",
+  "midi-qol.ActivationAutomationOptions": {
+    "none": "自動化/チャットなし",
+    "chat": "dnd5eの既定の挙動",
+    "auto": "自分をターゲットにしたアクティビティを自動起動"
+  },
+  "midi-qol.dummyCards.Name": "Always display attack/damage cards for hidden merge cards",
+  "midi-qol.dummyCards.Hint": "(Experimental) For GM rolls (self, private, blind) display an attack/damage roll card which will trigger a 'gm rollsed some dice' card on the players chats. Only for the case that you want the players to know you rolled something, but not what it was",
   "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>DND5Eシステムの集中管理が無効</strong><br></center><br><center>dnd5eシステム設定にて精神集中の管理が無効化されています。</center><center>midi集中を使用するためにはDND5E設定でも有効化してください</center><br>",
   "midi-qol.SHARED": {
     "use-condition": {
@@ -1008,31 +1032,31 @@
           "hint": "AoEテンプレート使用時、Midiは指定されたタイプのコマのみターゲットにします"
         },
         "autoTargetAction": {
-          "label": "Target on template draw",
-          "hint": "When placing a template (e.g. spell) target tokens inside the template. If 'Center + Levels' is set in ranged targeting Levels Volumetric Templates will be used (if installed)"
+          "label": "テンプレートの枠上にいるターゲット",
+          "hint": "テンプレートを配置する時（例：呪文）、テンプレート内のコマをターゲットします。「中央＋Levels」が設定されているなら、Levels Volumetric(体積)テンプレートが使用されます（インストールされているなら）"
         },
         "automationOnly": {
           "label": "自動化のみ",
-          "hint": "The activity is only intended for midi automation and not for manual use"
+          "hint": "このアクティビティはmidi自動化の利用を想定しており、手動利用は想定していません"
         },
         "displayActivityName": {
-          "label": "Display Activity Name",
-          "hint": "Display the activity name in the chat card"
+          "label": "アクティビティ名を表示",
+          "hint": "チャットカードにアクティビティ名を表示します"
         },
         "identifier": {
-          "label": "Identifier",
-          "hint": "An identifier for the activity"
+          "label": "固有名称",
+          "hint": "アクティビティの固有名称"
         },
         "triggeredActivityId": {
-          "label": "起動アクティビティ",
-          "hint": "実行するアクティビティ"
+          "label": "トリガーするアクティビティ",
+          "hint": "実行されるアクティビティ"
         },
         "triggeredActivityConditionText": {
-          "label": "起動させる状態異常",
+          "label": "トリガーさせる状態異常",
           "hint": "Condition to activate the trigger activity"
         },
         "triggeredActivityTargets": {
-          "label": "Trigger Targets",
+          "label": "トリガーするターゲット",
           "hint": "Which targets to select for the triggered activity"
         },
         "triggeredActivityRollAs": {
@@ -1071,19 +1095,19 @@
         }
       },
       "isOverTimeFlag": {
-        "label": "Is Over Time",
-        "hint": "The activity can be an over time activity"
+        "label": "継続する",
+        "hint": "このアクティビティは継続アクティビティになれます"
       },
       "overTimeProperties": {
         "turnChoice": {
-          "label": "Turn Choice",
-          "hint": "Start or end of turn",
-          "start": "Start of Turn",
-          "end": "End of Turn"
+          "label": "ターン時選択",
+          "hint": "ターン開始/終了時",
+          "start": "ターン開始時",
+          "end": "ターン終了時"
         },
         "saveRemoves": {
-          "label": "Save Removes",
-          "hint": "Save removes effect"
+          "label": "セーヴで除去",
+          "hint": "セーヴ成功でこの効果は除去されます"
         },
         "preRemoveConditionText": {
           "label": "Pre activity remove condition",
