@@ -3564,7 +3564,7 @@
       "description": "セーヴ成功でダメージ無し、失敗で半減ダメージ。"
     },
     "flags.midi-qol.uncanny-dodge": {
-      "name": "直観回避",
+      "name": "直感回避",
       "description": "ダメージ半減"
     }
   }
