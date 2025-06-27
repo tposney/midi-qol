@@ -119,10 +119,13 @@ export async function bonusCheck(actor, result: Roll, category, detail = "", mes
       else if (category.startsWith("save")) title = i18nFormat(`${systemString}.SavePromptTitle`, { ability: GameSystemConfig.abilities[detail] ?? "" });
       else if (category.startsWith("skill")) title = i18nFormat(`${systemString}.SkillPromptTitle`, { skill: GameSystemConfig.skills[detail] ?? "" });
     }
+    
+    const displayBonusRolls = bonusFlags.reduce((returnValue, flag) => returnValue || foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`), undefined) 
+      ?? checkMechanic("displayBonusRolls");
     const newRoll = await bonusDialog.bind(data)(
       bonusFlags,
       detail ? `${category}.${detail}` : category,
-      checkMechanic("displayBonusRolls"),
+      displayBonusRolls,
       `${actor.name} - ${title}`,
       data.roll,
       "roll",

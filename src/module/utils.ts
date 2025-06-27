@@ -3341,7 +3341,9 @@ export async function processAttackRollBonusFlags() { // bound to workflow
     .map(flag => `flags.${MODULE_ID}.optional.${flag}`);
 
   if (bonusFlags.length > 0) {
-    const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, checkMechanic("displayBonusRolls"), `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll")
+    const displayBonusRolls = bonusFlags.reduce((returnValue, flag) => returnValue || foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`), undefined) 
+      ?? checkMechanic("displayBonusRolls");
+    const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll")
     this.setAttackRoll(newRoll);
   }
   if (this.targets.size === 1) {
@@ -3362,7 +3364,9 @@ export async function processAttackRollBonusFlags() { // bound to workflow
         })
         .map(flag => `flags.${MODULE_ID}.optional.${flag}`);
       if (bonusFlags.length > 0) {
-        const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, checkMechanic("displayBonusRolls"), `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll");
+        const displayBonusRolls = bonusFlags.reduce((returnValue, flag) => returnValue || foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`), undefined) 
+          ?? checkMechanic("displayBonusRolls");
+        const newRoll = await bonusDialog.bind(this)(bonusFlags, attackBonus, displayBonusRolls, `${this.actor.name} - ${i18n("DND5E.Attack")} ${i18n("DND5E.Roll")}`, this.attackRoll, "attackRoll");
         this.setAttackRoll(newRoll);
       }
     }
@@ -3388,7 +3392,9 @@ export async function processDamageRollBonusFlags(damageRolls): Promise<Roll[]> 
     // this.damageRollHTML = await midiRenderDamageRoll(this.damageRoll);
     // this.damamgeRollHTML = $(this.damageRolHTML).find(".dice-roll").remove();
     // TODO dnd3 work out what this means for multiple rolls
-    let newRoll = await bonusDialog.bind(this)(bonusFlags, damageBonus, false, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, damageRolls[0], "damageRoll", { hideDSN })
+    const displayBonusRolls = bonusFlags.reduce((returnValue, flag) => returnValue || foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`), undefined) 
+      ?? checkMechanic("displayBonusRolls");
+    let newRoll = await bonusDialog.bind(this)(bonusFlags, damageBonus, displayBonusRolls === true, `${this.actor.name} - ${i18n("DND5E.Damage")} ${i18n("DND5E.Roll")}`, damageRolls[0], "damageRoll", { hideDSN })
     if (newRoll) damageRolls[0] = newRoll;
   }
   return damageRolls;
@@ -4284,8 +4290,9 @@ export async function promptReactions(tokenUuid: string, reactionActivityList: R
         rollHTML: reactionFlavor,
         rollTotal: acRoll.total,
       }
-      // @ts-expect-error no dnd5e-types
-      const newAC = await bonusDialog.bind(data)(validFlags, "ac", true, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll");
+      const displayBonusRolls = validFlags.reduce((returnValue, flag) => returnValue || foundry.utils.getProperty(this.actor ?? {}, `${flag}.displayBonusRolls`), undefined) 
+        ?? checkMechanic("displayBonusRolls");      // @ts-expect-error no dnd5e-types
+      const newAC = await bonusDialog.bind(data)(validFlags, "ac", displayBonusRolls !== false, `${actor.name} - ${i18n("DND5E.AC")} ${actor.system.attributes.ac.value}`, acRoll, "roll");
       const endTime = Date.now();
       if (debugEnabled > 0) warn("promptReactions | returned via bonus dialog ", endTime - startTime)
       return { name: actor.name, uuid: actor.uuid, ac: newAC?.total };

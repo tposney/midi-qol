@@ -1035,8 +1035,8 @@
           "label": "Other Activity Compatible",
           "hint": "Can be used as an other activity"
         },
-        "toggleEffect": {
-          "label": "Toggle Effect",
+        "toggleEffects": {
+          "label": "Toggle EffectS",
           "hint": "Disabling an effect will toggle it rather than removing it"
         },
         "magicEffect": {

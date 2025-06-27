@@ -21,7 +21,9 @@
     {{ formField fields.autoTargetAction value=../source.midiProperties.autoTargetAction
     options=../AutoTargetActionOptions}}
     {{/if}}
+    {{#if CEActive}}
     {{ formField fields.autoCEEffects value=../source.midiProperties.autoCEEffects options=../AutoCEEffectsOptions}}
+    {{/if}}
     {{ formField fields.automationOnly value=../source.midiProperties.automationOnly }}
     {{#if ../possibleOtherActivity}}
     {{ formField fields.otherActivityCompatible value=../source.midiProperties.otherActivityCompatible }}

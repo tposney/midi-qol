@@ -1,3 +1,10 @@
+### 13.0.5
+* Added flags.midi-qol.options.NAME.XXX.displayBonusRolls
+  - false means no bonus rolls change chat messages will be displayed
+  - true means bonus rolls change chat message will be displayed.
+  - Overrides the config setting.
+* Fix for error in activity .hbs file which meant you could not edit activities - oops.
+
 ### 13.0.4
 * Change so that preferred GM is stored as an id rather than a name.
 * Fix for stack overflow when computing distance between very large tokens - thanks @woodser

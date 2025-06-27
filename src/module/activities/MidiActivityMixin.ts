@@ -81,7 +81,7 @@ export var MidiActivityMixin = Base => {
           displayActivityName: new BooleanField({ name: "displayActivityName", initial: false }),
           rollMode: new StringField({ name: "rollMode", initial: "default", required: true, blank: false }),
           chooseEffects: new BooleanField({ name: "chooseEffects", initial: false }),
-          toggleEffect: new BooleanField({ name: "toggleEffects", initial: false }),
+          toggleEffects: new BooleanField({ name: "toggleEffects", initial: false }),
           ignoreFullCover: new BooleanField({ name: "ignoreFullCover", initial: false }),
           removeChatButtons: new StringField({ name: "removeChatButtons", initial: "default", blank: false, required: true }),
           magicEffect: new BooleanField({ name: "magicEffect", initial: false }),
@@ -1565,6 +1565,7 @@ export var MidiActivityMixinSheet = Base => {
       context.hasAreaTarget = this.activity.target?.template?.type;
       context.possibleOtherActivity = this.activity.possibleOtherActivity;
       context.turnChoiceOptions = [{ value: "start", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.start") }, { value: "end", label: i18n("midi-qol.OVERTIME.FIELDS.turnChoice.end") }];
+      context.CEActive = installedModules.get("dfreds-convenient-effects");
       return context;
     }
 

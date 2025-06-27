@@ -145,7 +145,6 @@ globalThis.MidiQOL ??= {}
 globalThis.MidiQOL.checkIncapacitated = checkIncapacitated;
 
 function setupSheets() {
-  setupMidiItemSheet5e();
 }
 
 function setupActivities() {
@@ -1433,6 +1432,8 @@ function setupMidiFlags() {
     daeFieldBrowserFields.push(`flags.${MODULE_ID}.DR.temphp`);
   }
 
+  midiFlags.push(`flags.${MODULE_ID}.optional.NAME.displayBonusRolls`);  
+  daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.displayChatCard`);
   midiFlags.push(`flags.${MODULE_ID}.optional.NAME.attack.all`);
   daeFieldBrowserFields.push(`flags.${MODULE_ID}.optional.NAME.attack.all`);
   midiFlags.push(`flags.${MODULE_ID}.optional.NAME.attack.fail.all`);
