@@ -1452,6 +1452,7 @@ export async function gmOverTimeEffect(actor, effect, startTurn: boolean = true,
 
 export async function _processActivityOverTime(combat, data, options, userId) {
   if (!preferredActiveGM()?.isSelf) return;
+  const combatStart = combat.round === 1 && combat.turn === 0;
   let prev = (combat.previous?.round ?? 0) * 100 + (combat.previous.turn ?? 0);
   let testTurn = combat.previous.turn ?? 0;
   let testRound = combat.previous.round ?? 0;
@@ -1459,7 +1460,8 @@ export async function _processActivityOverTime(combat, data, options, userId) {
 
   let toTest = prev;
   let count = 0;
-  while (toTest <= last && count < 200) { // step through each turn from prev to current
+  const maxIterations = combatStart ? 1 : 200;
+  while (toTest <= last && count < maxIterations) { // step through each turn from prev to current
     count += 1; // make sure we don't do an infinite loop
     const actor = combat.turns[testTurn]?.actor;
     const endTurn = toTest < last;
@@ -1480,6 +1482,7 @@ export async function _processActivityOverTime(combat, data, options, userId) {
 }
 export async function _processOverTime(combat, data, options, userId) {
   if (!preferredActiveGM()?.isSelf) return;
+  const combatStart = combat.round === 1 && combat.turn === 0;
   let prev = (combat.previous?.round ?? 0) * 100 + (combat.previous.turn ?? 0);
   let testTurn = combat.previous.turn ?? 0;
   let testRound = combat.previous.round ?? 0;
@@ -1492,7 +1495,8 @@ export async function _processOverTime(combat, data, options, userId) {
 
   let toTest = prev;
   let count = 0;
-  while (toTest <= last && count < 200) { // step through each turn from prev to current
+  const maxIterations = combatStart ? 1 : 200;
+  while (toTest <= last && count < maxIterations) { // step through each turn from prev to current
     count += 1; // make sure we don't do an infinite loop
     const actor = combat.turns[testTurn]?.actor;
     const endTurn = toTest < last;
