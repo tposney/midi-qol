@@ -73,35 +73,13 @@
   "midi-qol.AutoTarget.Name": "範囲指定で対象を自動選択",
   "midi-qol.AutoTarget.Hint": "呪文等を発動したときにテンプレートを置くと、範囲内のコマを自動的にターゲットします。遠隔攻撃における壁の処理で「中心点＋Levels」が選択されている場合、Levels - Volumetric Templates機能が使用されます (インストールされている場合)。",
   "midi-qol._comment for translators_noDamageonSaveSpells": "（翻訳作業者へ）FVTT v9ではarray jsonがサポートされなくなったため、以下はv9以降でのみ使用されます。",
-  "midi-qol.noDamageonSaveSpells": [
-    "アシッド・スプラッシュ",
-    "ソード・バースト",
-    "サンダー・クラップ",
-    "ヴィシャス・モッカリィ",
-    "クリエイト・ボンファイア",
-    "ライトニング・ルアー",
-    "ポイズン・スプレー",
-    "コードン・オヴ・アローズ",
-    "ディスインテグレート",
-    "セイクリッド・フレイム",
-    "コードン・オヴ・アローズ",
-    "フロストバイト",
-    "インフェステイション",
-    "トウル・ザ・デッド",
-    "ワード・オヴ・レイディアンス",
-    "カタパルト",
-    "アース・トレマー"
-  ],
-  "midi-qol.noDamageonSaveSpellsv9": "アシッド・スプラッシュ, ソード・バースト, サンダー・クラップ, ヴィシャス・モッカリィ, クリエイト・ボンファイア, ライトニング・ルアー, ポイズン・スプレー, コードン・オヴ・アローズ, ディスインテグレート, セイクリッド・フレイム, コードン・オヴ・アローズ, フロストバイト,  インフェステイション, トウル・ザ・デッド, ワード・オヴ・レイディアンス, カタパルト,  アース・トレマー",
-  "midi-qol.fullDamageText": "※セーヴ成功時も完全なダメージ",
-  "midi-qol._comment for translators_fullDamage": "（翻訳作業者へ）次の2行はMidi-QOLが呪文の説明文を検索するためのものです。",
-  "midi-qol.fullDamage": "セーブ成功時も完全なダメージ",
-  "midi-qol.fullDamageAlt": "セーヴを貫通",
   "midi-qol.undoDamageFrom": "適用されたダメージを巻き戻す：",
   "midi-qol.noGM": "GMユーザが接続していないためダメージを適用出来ませんでした。",
   "midi-qol.noSelection": "コマが選択されていません。",
   "midi-qol.showGM.Name": "GMはすべての秘話を閲覧できる",
   "midi-qol.showGM.Hint": "ゲーム設定に関わらず、GMはすべての秘話メッセージを見ることができます。",
+  "midi-qol.PreferredGM.Name": "優先GM",
+  "midi-qol.PreferredGM.Hint": "ソケットコール時の優先GMを指定します。「なし」なら、現在シーンにいる最初のGMが使われます。",
   "midi-qol.ColoredBorders.Name": "メッセージ枠に色をつける",
   "midi-qol.ColoredBorders.Hint": "チャットのメッセージが、対応したプレイヤーカラーで縁取られるようになります。",
   "midi-qol.AutoEffects.Name": "アクティブ効果を自動適用する",
@@ -123,6 +101,9 @@
   "midi-qol.PlayerSaveTimeout.Hint": "プレイヤーのロールが遅れているとき、自動的にロールを行います。ここでは時間切れまで何秒待つかを指定します。",
   "midi-qol.MagicResistant": "魔法抵抗",
   "midi-qol.MagicResistanceFeat": "魔法抵抗",
+  "midi-qol.PreRollChecks.Name": "試用：一括ロール / マクロロールの前に確認を行う",
+  "midi-qol.PreRollChecks.Hint": "これは実験的機能です。ロールを行う前に、それが有効なものであるかを確認します。つまり対象が現在射程内にあり、ロールの主体のHPが0以上であるかどうかです。",
+  "midi-qol.noTargets": "攻撃ロールの前にコマをターゲットする必要があります。",
   "midi-qol._comment for translators_halfDamage": "（翻訳作業者へ）この下のテキストは、Midi-QOLが呪文の説明文を検索するためのものです。",
   "midi-qol.halfDamage": "半分のダメージ",
   "midi-qol._comment for translators_halfDamageAlt": "（翻訳作業者へ）この下のテキストは、Midi-QOLが呪文の説明文を検索するためのものです。",
@@ -132,9 +113,6 @@
   "midi-qol.noDamage": "セーヴ成功時はダメージなし",
   "midi-qol.noDamageAlt": "セーヴで無効",
   "midi-qol.noDamageText": "※セーヴ成功時はダメージなし",
-  "midi-qol.PreRollChecks.Name": "試用：一括ロール / マクロロールの前に確認を行う",
-  "midi-qol.PreRollChecks.Hint": "これは実験的機能です。ロールを行う前に、それが有効なものであるかを確認します。つまり対象が現在射程内にあり、ロールの主体のHPが0以上であるかどうかです。",
-  "midi-qol.noTargets": "攻撃ロールの前にコマをターゲットする必要があります。",
   "midi-qol.wrongNumberTargets": "攻撃ロールの前にコマをターゲットする必要があります（最大{allowedTargets}つまで）。",
   "midi-qol.noSaveTargets": "セーヴする対象がありません。",
   "midi-qol.UseTokenNames.Name": "チャットカードにコマの名前を使用する",
@@ -154,7 +132,9 @@
     "maxDamageExplode": "基本ダメージを最大化し、クリティカルダイスの最大出目を振り足す",
     "explodeCharacter": "キャラクターの最大出目は振り足す",
     "explodeNPC": "NPCの最大出目は振り足す",
-    "baseDamage": "設定した追加ダメージ"
+    "baseDamage": "設定した追加ダメージ",
+    "maxBaseRollCrit": "最大基礎ロールクリティカル",
+    "bestOfTwo": "２回ダメージロールして高い方を採用"
   },
   "midi-qol.MergeCard.Name": "ロールを1枚のチャットカードに統合する",
   "midi-qol.MergeCard.Hint": "攻撃・ヒット・ダメージ・セーヴを1枚のチャットカードに統合して表示します。",
@@ -169,6 +149,7 @@
   "midi-qol.saving-throw": "セーヴ",
   "midi-qol.ability-check": "能力値判定",
   "midi-qol.ability-checks": "能力値判定",
+  "midi-qol.skill-check": "技能判定",
   "midi-qol.noAttackRoll": "ダメージロールする前に、攻撃をロールする必要があります。",
   "midi-qol.config": "Midi-QOL設定",
   "midi-qol.Hint": "Midi-QOLの各種ワークフロー設定を行います。たくさんありますのでご注意ください。",
@@ -248,10 +229,10 @@
   "midi-qol.autoApplyDamageOptions": {
     "none": "オフ",
     "noCard": "オフ（ダメージカードあり）",
-    "noCardMisses": "No + damage card + misses",
+    "noCardMisses": "オフ + ダメージカード + ミス",
     "yes": "適用する",
     "yesCard": "適用する（ダメージカードあり）",
-    "yesCardMisses": "Yes + damage card + misses",
+    "yesCardMisses": "適用 + ダメージカード + ミス",
     "yesCardNPC": "NPCのみ適用（ダメージカードあり）"
   },
   "midi-qol.playerDamageCardOptions": {
@@ -265,7 +246,8 @@
     "off": "オフ",
     "attack": "攻撃のみ",
     "damage": "ダメージのみ",
-    "all": "攻撃とダメージ"
+    "all": "攻撃とダメージ",
+    "everything": "すべて"
   },
   "midi-qol.damageImmunitiesOptions": {
     "none": "オフ",
@@ -289,6 +271,9 @@
   "midi-qol.playerRollSavesOptions": {
     "none": "オフ",
     "noneDialog": "自動でダイアログを表示",
+    "noneDialogPublic": "自動ロールしダイアログを表示（公開ロール）",
+    "noneDialogPrivate": "自動ロールしダイアログを表示（プライベートロール）",
+    "noneDialogBlind": "自動ロールしダイアログを表示（ブラインドロール）",
     "letme": "LMRTFYで通知",
     "letmeQuery": "LMRTFYで通知（クエリ付）",
     "chat": "チャットメッセージで通知",
@@ -304,7 +289,7 @@
     "none": "何もしない",
     "dead": "ターゲットが死亡したとき",
     "allGM": "ターゲットが死亡したとき（＋GMは常に）",
-    "all": "全員が常に"
+    "all": "全員ターン終了時に"
   },
   "midi-qol.ColoredBordersOptions": {
     "none": "オフ",
@@ -319,13 +304,15 @@
     "d20Only": "d20の出目＋総ダメージを表示",
     "hitDamage": "命中結果＋総ダメージを表示",
     "hitCriticalDamage": "命中結果（クリティカル等含む）＋総ダメージを表示",
+    "attackTotalOnly": "攻撃ロールの合計のみ表示",
     "d20AttackOnly": "d20の出目のみ表示",
     "all": "すべて隠す"
   },
   "midi-qol.RollOtherDamageOptions": {
     "none": "オフ",
-    "ifSave": "セーヴがあるとき",
-    "activation": "使用条件を参照"
+    "always": "常にロール",
+    "condition": "その他の状態異常が真",
+    "ifSave": "セーヴがあるとき"
   },
   "midi-qol.potion": "ポーション",
   "midi-qol.HideRollDetails.Name": "GMロールの詳細を隠す",
@@ -369,7 +356,6 @@
     "preTargeting": "目標選択が解決される前(*)",
     "preItemRoll": "アイテムがロールされる前(*)",
     "templatePlaced": "テンプレートが配置後のみ",
-    "preambleComplete": "目標選択後",
     "preAttackRoll": "攻撃ロール前",
     "preCheckHits": "ヒット確認前",
     "postAttackRoll": "攻撃ロール後",
@@ -378,9 +364,12 @@
     "damageBonus": "ダメージボーナスを戻す",
     "preSave": "セーヴ前",
     "postSave": "セーヴ後",
+    "preDamageRollConfig": "ダメージ編集前",
     "preDamageApplication": "ダメージ適用前",
     "preActiveEffects": "アクティブ効果の前",
     "postActiveEffects": "アクティブ効果の後",
+    "isTargeted": "目標がターゲットされ、アイテムロール前",
+    "isPreAttacked": "ターゲットが攻撃され、リアクション前",
     "isAttacked": "攻撃されたとき",
     "isHit": "ヒットを受けたとき",
     "preTargetSave": "セーヴを要求されたとき",
@@ -399,6 +388,7 @@
   "midi-qol.AutoFastForwardAttack.Name": "確認スキップ（攻撃）",
   "midi-qol.AutoFastForwardDamage.Name": "確認スキップ（ダメージ）",
   "midi-qol.midi-none": "ダメージなし",
+  "midi-qol.noType": "種別なし",
   "midi-qol.ItemList": "詳細を表示するアイテムの種別を選択します",
   "midi-qol.DisplayItems": "個別設定",
   "midi-qol.fastForward": "（先行）",
@@ -443,6 +433,9 @@
   "midi-qol.Hits": "命中判定",
   "midi-qol.Misses": "ミス",
   "midi-qol.Saves": "セーヴ",
+  "midi-qol.SavesBase": "ターゲットのセーヴ成功時、これは次を行う:",
+  "midi-qol.SavesBonus": "ターゲットのセーヴ成功時、ボーナスダメージマクロは次を行う:",
+  "midi-qol.SavesOther": "ターゲットのセーヴ成功時、他の式が次を行う:",
   "midi-qol.Damage": "ダメージ",
   "midi-qol.Concentrating": "集中状態",
   "midi-qol.concentrationCheckName": "集中判定",
@@ -510,6 +503,11 @@
   },
   "midi-qol.NearbyAllyRanged.Hint": "相手がこの値（w*h）より小さい場合、味方の5ft以内にいる対象への遠隔攻撃には不利がつきます。0を指定すると無効になります。",
   "midi-qol.Incapacitated.Name": "無力状態のアクターはアクションやリアクションができない",
+  "midi-qol.IncapacitatedOptions": {
+    "nothing": "何もしない",
+    "enforce": "アクションの使用禁止",
+    "warn": "警告のみ投稿"
+  },
   "midi-qol.RemoveHiddenInvis.Name": "攻撃は隠れ身状態を解除する（要CE/CV/CUBまたはコア機能の状態変化）",
   "midi-qol.CriticalSaves.Name": "（ハウスルール）セーヴ時のクリティカル（ファンブル）は常に成功（失敗）として扱う。",
   "midi-qol.MaxDRValue.Name": "（ハウスルール）最も効果的なダメージ軽減（DR）のみを適用します。オフの場合はDRを累積して計算します。",
@@ -546,6 +544,14 @@
     "nonspell": "呪文のみ",
     "allitems": "すべて非魔法"
   },
+  "midi-qol.DoConcentrationCheck.Name": "ダメージを受けた時精神集中セーヴを強制",
+  "midi-qol.DoConcentrationCheckOptions": {
+    "none": "しない",
+    "chatOnly": "チャットメッセージのみ（dnd5eのデフォルト挙動）",
+    "chat": "チャットメッセージ＋自動ロール",
+    "item": "精神集中アイテムをロール"
+  },
+  "midi-qol.DoConcentrationCheck.Hint": "<strong>チャットメッセージのみ</strong>ボタン付きのチャットメッセージを表示（dnd5eのデフォルト挙動、要dnd5e 精神集中）<br><strong>チャットメッセージ＋自動ロール</strong>チャットメッセージを表示し自動でセーヴを実行（要dnd5e 精神集中）<br><strong>精神集中アイテムをロール</strong>精神集中アイテム判定をロールします（midiの基本挙動）",
   "midi-qol.RemoveConcentration.Name": "セーヴ失敗時の集中自動解除",
   "midi-qol.RemoveConcentration.Hint": "被ダメージ時のセーヴに失敗すると、精神集中状態が自動で解除されます。",
   "midi-qol.UsePlayerPortrait.Name": "チャットカードにポートレートを使用する",
@@ -599,9 +605,12 @@
   "midi-qol.ChallengeModeArmorScaleNoAR.Hint": "拡張されたチャレンジモードを使用しますが、ARによるダメージ軽減は適用しません（詳細はReadmeを参照）",
   "midi-qol.NonSilverPhysical": "非銀製かつ非魔法の物理",
   "midi-qol.NonAdamantinePhysical": "非アダマンティン製武器",
-  "midi-qol.NonMagical": "非魔法的",
   "midi-qol.NonMagicalPhysical": "非魔法物理",
+  "midi-qol.Physical": "物理ダメージ",
   "midi-qol.Magical": "魔法的",
+  "midi-qol.NonMagical": "非魔法ダメージ",
+  "midi-qol.SpellDamage": "呪文ダメージ",
+  "midi-qol.NonSpellDamage": "非呪文ダメージ",
   "midi-qol.ConditionHeader": "発動条件",
   "midi-qol.EffectActivationCondition.Name": "アクティブ効果の適用",
   "midi-qol.EffectActivation": "アクティブ効果の適用にシステム機能を使用する（非推奨）",
@@ -630,6 +639,8 @@
   "midi-qol.reactionFlavorSaveFail":  "{itemName} によるセーヴに失敗した {actorName} のリアクションを待っています。",
   "midi-qol.reactionFlavorSaveSuccess":  "{itemName} によるセーヴに成功した {actorName} のリアクションを待っています。",
   "midi-qol.reactionFlavorMoved": "{itemName} の移動に対する {actorName} のリアクションを待っています。",
+  "midi-qol.reactionUsed": "リアクション使用済",
+  "midi-qol.bonusActionUsed": "ボーナスアクション使用済",
   "midi-qol.AccelKeysOverride.Name": "Midi-QOLのキーバインドを優先する",
   "midi-qol.AccelKeysOverride.Hint": "有利/不利を指定してロールを行うとき、（BetterRollsなど）ほかのModよりMidi-QOLのキー設定が優先して使用されるようになります。",
   "midi-qol.NoWorkflow": "アイテム {itemName} にはワークフローがありません。",
@@ -647,6 +658,7 @@
 
   "midi-qol.AddDead.Hint1": "プレイヤーによる操作",
   "midi-qol.AddDead.Hint2": "GMによる操作",
+  "midi-qol.markDefeated": "戦闘トラッカーの敗北者にマークを付与",
   "midi-qol.AddDeadOptions": {
     "none": "無効",
     "overlay": "大アイコンで効果をつける",
@@ -742,13 +754,16 @@
   "midi-qol.CheckFlanking.Hint": "自分と味方によって挟まれた相手を攻撃するとき、有利で判定を行うようにできます。攻撃側に有利をつけ、Convenient Effectsの挟撃効果を適用するのか、もしくは対象にConvenient Effectsの被挟撃効果を適用するのか、どちらで処理するかを指定してください。",
   "midi-qol.CheckFlankingOptions": {
     "off": "なし",
-    "ceonly": "攻撃側へのCE挟撃効果のみ",
     "advonly": "攻撃側への有利のみ",
+    "ceonly": "攻撃側へのCE挟撃効果のみ",
     "ceadv": "攻撃側のCE挟撃効果＋有利",
     "ceflanked": "対象へのCE被挟撃効果のみ",
-    "ceflankedNoconga": "対象へのCE被挟撃＋挟撃に参加できない"
+    "midiFlanked": "Midi被挟撃効果",
+    "ceflankedNoconga": "対象へのCE被挟撃＋挟撃に参加できない",
+    "midiFlankedNoConga": "Midi挟撃＋挟撃に参加できない"
   },
-  "midi-qol.Flanked": "挟撃",
+  "midi-qol.Flanked": "被挟撃",
+  "midi-qol.Flanking": "挟撃",
   "midi-qol.RollAlternate.Name": "ロール式をツールチップに移動する",
   "midi-qol.RollAlternate.Hint": "代替ダメージのロール式をツールチップに表示します。またオプションで有利フラグ追加します。",
   "midi-qol.RollAlternateOptions": {
@@ -778,6 +793,7 @@
   "midi-qol.ShowFastForward.Hint": "攻撃/ダメージボタンに一括ロールのインジケータを表示します。",
   "midi-qol.MeasuredTemplate": "テンプレート",
   "midi-qol.AutoRemoveTemplate.Name": "持続時間が切れたテンプレートの自動削除",
+  "midi-qol.AutoRemoveSummonedCreature.Name": "アイテム持続時間／精神集中終了時に召喚したクリーチャーを自動削除（dnd5e召喚アイテム用）",
   "midi-qol.AttackPerTarget.Name": "目標ごとに1回の攻撃ロール",
   "midi-qol.SkillAbilityCheckAdvantage.Name": "能力値判定の有利は技能判定にも影響する",
   "midi-qol.SkillAbilityCheckAdvantage.Hint": "特定の能力値判定で有利/不利を得た場合、同じ能力値に基づく技能判定においても有利/不利となります。",
@@ -785,6 +801,8 @@
   "midi-qol.InitPromptTitle": "イニシアチブロール",
   "midi-qol.HighlightSuccess.Name": "ヒット/ミス/セーヴの表示に色を付ける",
   "midi-qol.HighlightSuccess.Hint": "判定の自動化時、ヒットとセーヴ成功は緑色で、ミスとセーヴ失敗は赤色で文字が表示されます。",
+  "midi-qol.HighLightCriticalAttackOnly.Name": "クリティカル/ファンブルのみ色を付ける",
+  "midi-qol.HighLightCriticalAttackOnly.Hint": "Override dnd5eの攻撃ヒット及びミスの色付けを上書きして攻撃ロールのクリティカル/ファンブルのみ色を付けます",
   "midi-qol.OptionalRuleVitality.Name": "（ハウスルール）バイタリティプール",
   "midi-qol.OptionalRuleVitality.Hint": "リソース（system.resources.primary.valueなど）を指定すると、hp0以降のダメージは指定したリソースを減少させるようになります。それも尽きると対象は死亡します。",
   "midi-qol.AutoRerollInitiative.Name": "イニシアチブの自動リロール",
@@ -806,7 +824,7 @@
   "midi-qol.cubNotSupported": "「Combat Utility Belt」はVer.11への対応が行われないため，MidiによるCUBのサポートはVer.11.1.0で終了となります。",
   "midi-qol.ContestedRoll": "対抗ロール",
   "midi-qol.versus": "vs.",
-  "midi-qol.Skipped": "Skipped",
+  "midi-qol.Skipped": "スキップ",
   "midi-qol.ExportTroubleShooting": "トラブルシューディング用のデータを出力する",
   "midi-qol.TroubleShooter": {
     "Name": "トラブルシューターを開く",
@@ -816,9 +834,11 @@
       "summary": "概要",
       "common": "共通モジュール",
       "problems": "問題",
-      "modules": "すべてのモジュール",
-      "errors": "エラー"
-    }
+      "errors": "エラー",
+      "modules": "すべてのモジュール"
+    },
+    "ClearErrors": "エラー消去",
+    "Overwrite": "Midi設定上書き"
   },
   "midi-qol.Inactive": "無効",
   "midi-qol.Active": "有効",
@@ -838,7 +858,13 @@
   "midi-qol.ConfirmRoll": "OK！",
   "midi-qol.ConfirmMiss": "ミス扱い",
   "midi-qol.ConfirmHit": "ヒット扱い",
-  "midi-qol.AverageNPCDamage.Name": "NPCのダメージロール（クリティカル含む）は平均値で処理する",
+  "midi-qol.AverageDamage.Name": "ダメージロール（クリティカル含む）は平均値で処理する",
+  "midi-qol.AverageDamageOptions": {
+    "none": "しない",
+    "npc": "NPCのダメージロールのみ",
+    "character": "キャラクターのダメージロールのみ",
+    "all": "すべてのダメージロール"
+  },
   "midi-qol.GriddedGridless.Name": "グリッドレス・グリッド",
   "midi-qol.GridlessFudge.Name": "補正係数",
   "midi-qol.GridlessFudge.Hint": "射程を確認するとき測定距離から差し引く補正係数を、グリッドのスケール単位（ft/mなど）で指定します。",
@@ -864,6 +890,7 @@
     "SaveDRdr": "セーヴ→ダメージ軽減→ダメージ耐性 (dr/dv/di)"
   },
   "midi-qol.WaitingForPreviousWorkflow": "{name}のロール処理がまだが完了していません",
+  "midi-qol.ResolvePreviousWorkflow": "前回ロールに対する処理を選択してください",
   "midi-qol.ConfirmTargetOptions": {
     "default": "Midiの設定準拠",
     "always": "常に",
@@ -880,6 +907,40 @@
   "midi-qol.ConcentrationIncapacitatedConditionCheck.Hint": "無力/死亡/気絶/石化/麻痺/朦朧の各状態は集中を解除します。",
   "midi-qol.AoETargetType.Name": "範囲攻撃時のターゲットタイプ",
   "midi-qol.AoETargetType.Hint": "テンプレートによってターゲットを指定するとき、指定されたタイプのコマのみが選択されます。",
+  "midi-qol.AoETargetTypeIncludeSelf.Name": "範囲攻撃のターゲットに自身を含める",
+  "midi-qol.AutoCompleteWorkflow.Name": "必要に応じてワークフローをオートコンプリートする",
+  "midi-qol.AutoCompleteWorkflow.Hint": "先行するワークフローの完了前にロールが行われたとき、先の処理を完了扱いにします。余分なロールは実行されません。",
+  "midi-qol.emanationNoTemplate": "放射/半径 - テンプレートなし",
+  "midi-qol.emanationTemplate.counted.one": "放射 テンプレートなし",
+  "midi-qol.emanationTemplate.counted.other": "放射 テンプレートなし",
+  "midi-qol.squareRadius": "半径指定の正方形",
+  "midi-qol.AddFakeDice.Name": "GMがロールするDice So Niceの出目に偽のダイスを加える",
+  "midi-qol.MidiFieldsTab.Name": "Midiのアイテム設定を別のタブに表示する",
+  "midi-qol.UndoChatColor.Name": "チャットカードの色を元に戻す",
+  "midi-qol.UndoChatColor.Hint": "Deleteはアンドゥ時にチャットカードを削除することを意味します。それ以外では、アンドゥ後のチャットカードは指定色で表示されます。",
+  "DND5E.DamageApplication.Change.Absorption": "{type} ダメージ吸収",
+  "DND5E.DamageApplication.Change.Spell": "カスタム呪文",
+  "DND5E.DamageApplication.Change.Magic": "カスタム魔法的",
+  "DND5E.DamageApplication.Change.Nonmagic": "カスタム非魔法的",
+  "DND5E.DamageApplication.Change.Saved": "セーヴ {type}",
+  "DND5E.DamageApplication.Change.SuperSaver": "半減もしくはダメージ無しセーヴ {type}",
+  "DND5E.DamageApplication.Change.SemiSuperSaver": "全ダメージもしくはダメージ無しセーヴ {type}",
+  "DND5E.DamageApplication.Change.UncannyDodge": "直観回避 {type}",
+  "DND5E.DamageApplication.Change.DR": "DR",
+  "midi-qol.SettingsSearch": "設定の検索",
+  "midi-qol.MidiPropertiesTab.Name": "アイテムの特性を使用するための最低ユーザー権限",
+  "midi-qol.MidiPropertiesTab.Hint": "指定したユーザ権限を最低ラインとしてアイテムのmidi-qolプロパティタブにアクセスできます。<strong>変更時にリロードが必要です。</strong>",
+  "midi-qol.CollapsibleTargets.Name": "ターゲット折り畳み可",
+  "midi-qol.CollapsibleTargets.Hint": "チャットカード内のターゲットへの命中/ミス表示が折り畳めるようになります",
+  "midi-qol.AutoRemoveInstantaneousTemplate.Name": "瞬間テンプレートを自動削除",
+  "midi-qol.AutoRemoveInstantaneousTemplate.Hint": "持続時間：瞬間のアイテムによって配置されたテンプレートはアイテムロール終了後に削除されます",
+  "midi-qol.ReplaceDefaultActivities.Name": "dnd5eアクティビティをmidi-qol内で相当するものに置き換える",
+  "midi-qol.ReplaceDefaultActivities.Hint": "存在するあらゆるアクティビティ（攻撃、ダメージ、セーヴ、判定、ユーティリティ）の代わりにmidiバージョンを使用します。これはSRDアイテムを自動化するために必要です。それ以外のアイテムはmidi自動化の設定が必要です。",
+  "midi-qol.AutoMergeActivityOther.Name": "他のアクティビティをMidi攻撃アクティビティに自動マージ（要リロード）",
+  "midi-qol.AutoMergeActivityOther.Hint": "If an item only has an attack activity and single Damage, Save, Check or Utility it will be merged with the Attack activity",
+  "midi-qol.ConfirmAmmunition.Name": "Confirm Ammunition choice when rolling attack - shows attack roll configuration",
+  "midi-qol.ActivityNamePrefix.Name": "アクティビティ接頭辞",
+  "midi-qol.ActivityNamePrefix.Hint": "Prefix midi-qol activities name with Midi. Change requires reload",
   "midi-qol.AoETargetTypeOptions": {
     "any": "すべて",
     "ally": "味方",
@@ -893,12 +954,2653 @@
     "Friendly": "友好的",
     "notFriendly": "友好的以外"
   },
-  "midi-qol.AoETargetTypeIncludeSelf.Name": "範囲攻撃のターゲットに自身を含める",
-  "midi-qol.AutoCompleteWorkflow.Name": "必要に応じてワークフローをオートコンプリートする",
-  "midi-qol.AutoCompleteWorkflow.Hint": "先行するワークフローの完了前にロールが行われたとき、先の処理を完了扱いにします。余分なロールは実行されません。",
-  "midi-qol.squareRadius": "半径指定の正方形",
-  "midi-qol.AddFakeDice.Name": "GMがロールするDice So Niceの出目に偽のダイスを加える",
-  "midi-qol.MidiFieldsTab.Name": "Midiのアイテム設定を別のタブに表示する",
-  "midi-qol.UndoChatColor.Name": "チャットカードの色を元に戻す",
-  "midi-qol.UndoChatColor.Hint": "Deleteはアンドゥ時にチャットカードを削除することを意味します。それ以外では、アンドゥ後のチャットカードは指定色で表示されます。"
+  "midi-qol.TriggeredActivityTargetOptions": {
+    "self": "目標のアイテム所有者",
+    "targets": "同じ目標",
+    "hitTargets": "ヒットした目標",
+    "missedTargets": "ミスした目標",
+    "failedSaves": "目標のセーヴ失敗",
+    "saveTargets": "目標のセーヴ成功",
+    "retarget": "新たな目標を生成"
+  },
+  "midi-qol.TriggeredActivityRollAsOptions": {
+    "self": "アイテムの所有者",
+    "firstTarget": "最初の目標",
+    "firstHitTarget": "最初にヒットした目標",
+    "firstMissedTarget": "最初にミスした目標",
+    "firstSaveTarget": "最初のセーヴ成功目標",
+    "firstFailedSaveTarget": "最初のセーヴ失敗目標"
+  },
+  "midi-qol.ActivationAutomation.Name": "起動コスト自動化",
+  "midi-qol.ActivationAutomation.Hint": "小/大休憩、遭遇開始やターン開始/終了時の起動コストを持つアクティビティを自動で起動します",
+  "midi-qol.ActivationAutomationOptions": {
+    "none": "自動化/チャットなし",
+    "chat": "dnd5eの既定の挙動",
+    "auto": "自分をターゲットにしたアクティビティを自動起動"
+  },
+  "midi-qol.dummyCards.Name": "Always display attack/damage cards for hidden merge cards",
+  "midi-qol.dummyCards.Hint": "(Experimental) For GM rolls (self, private, blind) display an attack/damage roll card which will trigger a 'gm rollsed some dice' card on the players chats. Only for the case that you want the players to know you rolled something, but not what it was",
+  "midi-qol.dnd5eConcentrationTrackingDisabled": "<br><strong><center>DND5Eシステムの集中管理が無効</strong><br></center><br><center>dnd5eシステム設定にて精神集中の管理が無効化されています。</center><center>midi集中を使用するためにはDND5E設定でも有効化してください</center><br>",
+  "midi-qol.SHARED": {
+    "use-condition": {
+      "header": "Midi 状態異常"
+    },
+    "ignore": {
+      "header": "ダメージ特徴を無視"
+    },
+    "FIELDS": {
+      "useConditionText": {
+        "label": "状態異常の使用",
+        "hint": "アクティビティが進行するために、trueである必要のある状態異常"
+      },
+      "useConditionReason": {
+        "label": "状態異常の使用理由",
+        "hint": "状態異常がfalseである場合に表示されるメッセージ"
+      },
+      "effectConditionText": {
+        "label": "アクティブ効果　状態異常",
+        "hint": "アクティブ効果を適用するための状態異常"
+      },
+      "otherActivityId": {
+        "label": "その他のアクティビティを使用",
+        "hint": "「その他」ダメージを実行するための追加アクティビティ"
+      },
+      "midiProperties": {
+        "rollMode": {
+          "label": "ロールモード",
+          "hint": "この活動に使用するロールのモード"
+        },
+        "ignoreFullCover":
+        {
+          "label": "完全遮蔽を無視",
+          "hint": "ダメージ／セーヴを適用する時、完全遮蔽を無視"
+        },
+        "chooseEffects": {
+          "label": "効果を選択",
+          "hint": "適用する効果を選択"
+        },
+        "forceDialog": {
+          "label": "設定ダイアログ強制",
+          "hint": "活動使用時に設定ダイアログを強制"
+        },
+        "confirmTargets": {
+          "label": "ターゲット確認",
+          "hint": "ロール前にターゲットを確認"
+        },
+        "autoTargetType": {
+          "label": "AoE ターゲット種別",
+          "hint": "AoEテンプレート使用時、Midiは指定されたタイプのコマのみターゲットにします"
+        },
+        "autoTargetAction": {
+          "label": "テンプレートの枠上にいるターゲット",
+          "hint": "テンプレートを配置する時（例：呪文）、テンプレート内のコマをターゲットします。「中央＋Levels」が設定されているなら、Levels Volumetric(体積)テンプレートが使用されます（インストールされているなら）"
+        },
+        "automationOnly": {
+          "label": "自動化のみ",
+          "hint": "このアクティビティはmidi自動化の利用を想定しており、手動利用は想定していません"
+        },
+        "displayActivityName": {
+          "label": "アクティビティ名を表示",
+          "hint": "チャットカードにアクティビティ名を表示します"
+        },
+        "identifier": {
+          "label": "固有名称",
+          "hint": "アクティビティの固有名称"
+        },
+        "triggeredActivityId": {
+          "label": "トリガーするアクティビティ",
+          "hint": "実行されるアクティビティ"
+        },
+        "triggeredActivityConditionText": {
+          "label": "トリガーさせる状態異常",
+          "hint": "Condition to activate the trigger activity"
+        },
+        "triggeredActivityTargets": {
+          "label": "トリガーするターゲット",
+          "hint": "Which targets to select for the triggered activity"
+        },
+        "triggeredActivityRollAs": {
+          "label": "次としてロール：",
+          "hint": "特定の所有者かのように活動をロール"
+        },
+        "otherActivityCompatible": {
+          "label": "Other Activity Compatible",
+          "hint": "Can be used as an other activity"
+        },
+        "toggleEffect": {
+          "label": "効果起動",
+          "hint": "Disabling an effect will toggle it rather than removing it"
+        },
+        "ignoreTraits": {
+          "idi": {
+            "label": "ダメージ完全耐性",
+            "hint": "ダメージ適用時にダメージ完全耐性を無視"
+          },
+          "idr": {
+            "label": "ダメージ抵抗",
+            "hint": "ダメージ適用時にダメージ抵抗を無視"
+          },
+          "idv": {
+            "label": "ダメージ脆弱性",
+            "hint": "ダメージ適用時にダメージ脆弱性を無視"
+          },
+          "ida": {
+            "label": "ダメージ吸収",
+            "hint": "ダメージ適用時にダメージ吸収を無視"
+          },
+          "idm": {
+            "label": "ダメージ修正",
+            "hint": "ダメージ適用時にダメージ修正を無視"
+          }
+        }
+      },
+      "isOverTimeFlag": {
+        "label": "継続する",
+        "hint": "このアクティビティは継続アクティビティになれます"
+      },
+      "overTimeProperties": {
+        "turnChoice": {
+          "label": "ターン時選択",
+          "hint": "ターン開始/終了時",
+          "start": "ターン開始時",
+          "end": "ターン終了時"
+        },
+        "saveRemoves": {
+          "label": "セーヴで除去",
+          "hint": "セーヴ成功でこの効果は除去されます"
+        },
+        "preRemoveConditionText": {
+          "label": "Pre activity remove condition",
+          "hint": "Tested prior to rolling activity, effect removed if true"
+        },
+        "postRemoveConditionText": {
+          "label": "Post activity remove condition",
+          "hint": "Tested after rolling activity, effect removed if true"
+        }
+      },
+      "ActivityMacro": {
+        "label": "アクティビティマクロ",
+        "hint": "Macro which can be run when activity used"
+      },
+      "useSystemActivity": {
+        "label": "システムのアクティビティを使用する",
+        "hint": "Use the dnd5e system activity rather than the midi one"
+      },
+      "ignoreTraits": {
+        "idi": {
+          "label": "完全耐性無視",
+          "hint": "ダメージ適用時にダメージ完全耐性を無視します"
+        },
+        "idr": {
+          "label": "抵抗無視",
+          "hint": "ダメージ適用時にダメージ抵抗を無視します"
+        },
+        "idv": {
+          "label": "脆弱性無視",
+          "hint": "ダメージ適用時にダメージ脆弱性を無視します"
+        },
+        "ida": {
+          "label": "吸収無視",
+          "hint": "ダメージ適用時にダメージ吸収を無視します"
+        }
+      }
+    }
+  },
+  "midi-qol.ATTACK": {
+    "Title": {
+      "one": "Midi 攻撃",
+      "other": "Midi 攻撃"
+    },
+    "extras": {
+      "header": "Midi攻撃領域"
+    },
+    "FIELDS": {
+      "attackMode": {
+        "label": "攻撃モード",
+        "hint": "デフォルト攻撃モード"
+      },
+      "ammunition": {
+        "label": "矢弾",
+        "hint": "デフォルトで消費する矢弾"
+      }
+    }
+  },
+  "midi-qol.CAST": {
+    "Title": {
+      "one": "Midi 発動",
+      "other": "Midi 発動"
+    }
+  },
+  "midi-qol.CHECK": {
+    "Title": {
+      "one": "Midi 判定",
+      "other": "Midi 判定"
+    }
+  },
+  "midi-qol.DAMAGE": {
+    "Title": {
+      "one": "Midi ダメージ",
+      "other": "Midi ダメージ"
+    }
+  },
+  "midi-qol.ENCHANT": {
+    "Title": {
+      "one": "Midi エンチャント",
+      "other": "Midi エンチャント"
+    }
+  },
+  "midi-qol.FORWARD": {
+    "Title": {
+      "one": "Midi Forward",
+      "other": "Midi Forwards"
+    }
+  },
+  "midi-qol.HEAL": {
+    "Title": {
+      "one": "Midi 回復",
+      "other": "Midi 回復"
+    }
+  },
+  "midi-qol.OVERTIME": {
+    "Title": {
+      "one": "Midi 継続",
+      "other": "Midi 継続"
+    },
+    "extras": {
+      "header": "Midi Overtime Settings"
+    },
+    "FIELDS": {
+      "turnChoice": {
+        "label": "ターン時選択",
+        "hint": "ターン開始/終了時",
+        "start": "ターン開始時",
+        "end": "ターン終了時"
+      },
+      "saveRemoves": {
+        "label": "セーヴ成功で除外",
+        "hint": "セーヴにより効果が除去される"
+      },
+      "removeConditionBeforeActivity": {
+        "label": "ロール前に効果を除去",
+        "hint": "It the Remove Condition is met the effect is removed before the activity is rolled"
+      },
+      "removeConditionText": {
+        "label": "状態異常　除去",
+        "hint": "効果を除去する状態異常"
+      }
+    }
+  },
+  "midi-qol.SAVE": {
+    "Title": {
+      "one": "Midi セーヴ",
+      "other": "Midi セーヴ"
+    }
+  },
+  "midi-qol.UTILITY": {
+    "Title": {
+      "one": "Midi 使用",
+      "other": "Midi 使用"
+    }
+  },
+  "midi-qol.SUMMON": {
+    "Title": {
+      "one": "Midi 召喚",
+      "other": "Midi 召喚（複）"
+    }
+  },
+  "midi-qol.fields": {
+    "use-condition-header": "Midi Activity Allow Use Condition",
+    "attack-extras": "Midi Attack Fields",
+    "effects-conditon": "Midi Effect application condition",
+    "force-dialog": "Force Configuration Dialog",
+    "midi-automation-only": "midi自動化でのみ使用する"
+  },
+  "midi-qol.BaseDamageFlavor": "基礎ダメージ",
+  "midi-qol.BaseHealingFlavor": "回復",
+  "midi-qol.OtherDamageFlavor": "その他のダメージ",
+  "midi-qol.OtherHealingFlavor": "その他の回復",
+  "midi-qol.RequireAmmunition.Name": "攻撃ロールに有効化された矢弾が必要です",
+  "midi-qol.CheckTwoHanded.Name": "両手/逆手攻撃のためにはシールド未装備であることが必要です",
+  "midi-qol.NoAmmunition": "あなたの所持品には{name}がありません",
+  "midi-qol.NoAmmunitionAvailable": "あなたは矢弾を持っていません。",
+  "midi-qol.NoAmmunitionSelected": "使用する矢弾を選択してください。",
+  "midi-qol.TwoHandedShieldWarning": "シールドを装備しているので両手/逆手攻撃が行えません",
+  "dae.MidiQOL.fieldData": {
+    "flags.midi-qol.absorption.acid": {
+      "name": "吸収：［酸］",
+      "description": "受けた［酸］ダメージを回復に変換"
+    },
+    "flags.midi-qol.absorption.bludgeoning": {
+      "name": "吸収：［殴打］",
+      "description": "受けた［殴打］ダメージを回復に変換"
+    },
+    "flags.midi-qol.absorption.cold": {
+      "name": "吸収：［冷気］",
+      "description": "受けた［冷気］ダメージを回復に変換"
+    },
+    "flags.midi-qol.absorption.fire": {
+      "name": "吸収：［火］",
+      "description": "受けた［火］ダメージを回復に変換"
+    },
+    "flags.midi-qol.absorption.force": {
+      "name": "吸収：［力場］",
+      "description": "受けた［力場］ダメージを回復に変換"
+    },
+    "flags.midi-qol.absorption.lightning": {
+      "name": "吸収：［電撃］",
+      "description": "受けた［電撃］ダメージを回復に変換"
+    },
+    "flags.midi-qol.absorption.midi-none": {
+      "name": "吸収：種別なし",
+      "description": ""
+    },
+    "flags.midi-qol.absorption.necrotic": {
+      "name": "吸収：［死霊］",
+      "description": "受けた［死霊］ダメージを回復に変換"
+    },
+    "flags.midi-qol.absorption.none": {
+      "name": "吸収なし",
+      "description": ""
+    },
+    "flags.midi-qol.absorption.piercing": {
+      "name": "吸収：［刺突］",
+      "description": "受けた［刺突］ダメージを回復に変換"
+    },
+    "flags.midi-qol.absorption.poison": {
+      "name": "吸収：［毒］",
+      "description": "受けた［毒］ダメージを回復に変換"
+    },
+    "flags.midi-qol.absorption.psychic": {
+      "name": "吸収：［精神］",
+      "description": "受けた［精神］ダメージを回復に変換"
+    },
+    "flags.midi-qol.absorption.radiant": {
+      "name": "吸収：［光輝］",
+      "description": "受けた［光輝］ダメージを回復に変換"
+    },
+    "flags.midi-qol.absorption.slashing": {
+      "name": "吸収：［斬撃］",
+      "description": "受けた［斬撃］ダメージを回復に変換"
+    },
+    "flags.midi-qol.absorption.thunder": {
+      "name": "吸収：［雷鳴］",
+      "description": "受けた［雷鳴］ダメージを回復に変換"
+    },
+    "flags.midi-qol.advantage.ability.all": {
+      "name": "有利：すべての能力",
+      "description": "すべてのセーヴ、能力値判定、技能に有利"
+    },
+    "flags.midi-qol.advantage.ability.check.all": {
+      "name": "有利：すべての能力値判定",
+      "description": "すべての能力値判定、技能に有利"
+    },
+    "flags.midi-qol.advantage.ability.check.cha": {
+      "name": "有利：【魅力】判定",
+      "description": "【魅力】判定に有利"
+    },
+    "flags.midi-qol.advantage.ability.check.con": {
+      "name": "有利：【耐久力】判定",
+      "description": "【耐久力】判定に有利"
+    },
+    "flags.midi-qol.advantage.ability.check.dex": {
+      "name": "有利：【敏捷力】判定",
+      "description": "【敏捷力】判定に有利"
+    },
+    "flags.midi-qol.advantage.ability.check.int": {
+      "name": "有利：【知力】判定",
+      "description": "【知力】判定に有利"
+    },
+    "flags.midi-qol.advantage.ability.check.str": {
+      "name": "有利：【筋力】判定",
+      "description": "【筋力】判定に有利"
+    },
+    "flags.midi-qol.advantage.ability.check.wis": {
+      "name": "有利：【判断力】判定",
+      "description": "【判断力】判定に有利"
+    },
+    "flags.midi-qol.advantage.ability.save.all": {
+      "name": "有利：すべてのセーヴ",
+      "description": "すべてのセーヴに有利"
+    },
+    "flags.midi-qol.advantage.ability.save.cha": {
+      "name": "有利：【魅力】セーヴ",
+      "description": "【魅力】セーヴに有利"
+    },
+    "flags.midi-qol.advantage.ability.save.con": {
+      "name": "有利：【耐久力】セーヴ",
+      "description": "【耐久力】セーヴに有利"
+    },
+    "flags.midi-qol.advantage.ability.save.dex": {
+      "name": "有利：【敏捷力】セーヴ",
+      "description": "【敏捷力】セーヴに有利"
+    },
+    "flags.midi-qol.advantage.ability.save.int": {
+      "name": "有利：【知力】セーヴ",
+      "description": "【知力】セーヴに有利"
+    },
+    "flags.midi-qol.advantage.ability.save.str": {
+      "name": "有利：【筋力】セーヴ",
+      "description": "【筋力】セーヴに有利"
+    },
+    "flags.midi-qol.advantage.ability.save.wis": {
+      "name": "有利：【判断力】セーヴ",
+      "description": "【判断力】セーヴに有利"
+    },
+    "flags.midi-qol.advantage.all": {
+      "name": "有利：すべて",
+      "description": "すべてのd20判定に有利"
+    },
+    "flags.midi-qol.advantage.attack.all": {
+      "name": "有利：すべての攻撃",
+      "description": "すべての攻撃種別（近接、遠隔、呪文）に有利"
+    },
+    "flags.midi-qol.advantage.attack.cha": {
+      "name": "有利：【魅力】攻撃",
+      "description": "【魅力】を使用した攻撃に有利"
+    },
+    "flags.midi-qol.advantage.attack.con": {
+      "name": "有利：【耐久力】攻撃",
+      "description": "【耐久力】を使用した攻撃に有利"
+    },
+    "flags.midi-qol.advantage.attack.dex": {
+      "name": "有利：【敏捷力】攻撃",
+      "description": "【敏捷力】を使用した攻撃に有利"
+    },
+    "flags.midi-qol.advantage.attack.heal": {
+      "name": "有利：回復攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.advantage.attack.int": {
+      "name": "有利：【知力】攻撃",
+      "description": "【知力】を使用した攻撃に有利"
+    },
+    "flags.midi-qol.advantage.attack.msak": {
+      "name": "有利：近接呪文攻撃",
+      "description": "近接呪文攻撃に有利"
+    },
+    "flags.midi-qol.advantage.attack.mwak": {
+      "name": "有利：近接武器攻撃",
+      "description": "近接武器攻撃に有利"
+    },
+    "flags.midi-qol.advantage.attack.other": {
+      "name": "有利：その他の攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.advantage.attack.rsak": {
+      "name": "有利：遠隔呪文攻撃",
+      "description": "遠隔呪文攻撃に有利"
+    },
+    "flags.midi-qol.advantage.attack.rwak": {
+      "name": "有利：遠隔武器攻撃",
+      "description": "遠隔武器攻撃に有利"
+    },
+    "flags.midi-qol.advantage.attack.save": {
+      "name": "有利：セーヴ攻撃",
+      "description": "セーヴのアクション種別を持つ攻撃すべてに有利"
+    },
+    "flags.midi-qol.advantage.attack.str": {
+      "name": "有利：【筋力】攻撃",
+      "description": "【筋力】を使用した攻撃に有利"
+    },
+    "flags.midi-qol.advantage.attack.util": {
+      "name": "有利：Utility Attacks",
+      "description": "utilアイテム種別を持つ攻撃すべてに有利"
+    },
+    "flags.midi-qol.advantage.attack.wis": {
+      "name": "有利：【判断力】攻撃",
+      "description": "【判断力】を使用した攻撃に有利"
+    },
+    "flags.midi-qol.fail.disadvantage.heavy": {
+      "name": "失敗：重装鎧不利",
+      "description": "重装鎧により〈隠密〉に不利"
+    },
+    "flags.midi-qol.": {
+      "name": "MIDI-QOL用フラグ",
+      "description": ""
+    },
+    "flags.midi-qol.DR.msak": {
+      "name": "Damage Reduction (msak) (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.mwak": {
+      "name": "Damage Reduction (mwak) (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.non-adamant": {
+      "name": "Damage Reduction (non-adamant) (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.non-magical": {
+      "name": "Damage Reduction (non-magical) (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.non-magical-physical": {
+      "name": "Damage Reduction (non-magical physical) (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.non-physical": {
+      "name": "Damage Reduction (non-physical) (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.non-silver": {
+      "name": "Damage Reduction (non-silver) (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.other": {
+      "name": "Damage Reduction (other) (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.rsak": {
+      "name": "Damage Reduction (rsak) (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.rwak": {
+      "name": "Damage Reduction (rwak) (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.save": {
+      "name": "Damage Reduction (save) (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.util": {
+      "name": "Damage Reduction (util) (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.acid": {
+      "name": "Damage Reduction Acid (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.all": {
+      "name": "Damage Reduction All (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.bludgeoning": {
+      "name": "Damage Reduction Bludgeoning (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.cold": {
+      "name": "Damage Reduction Cold (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.final": {
+      "name": "Damage Reduction Final (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.fire": {
+      "name": "Damage Reduction Fire (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.force": {
+      "name": "Damage Reduction Force (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.healing": {
+      "name": "Damage Reduction Healing (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.lightning": {
+      "name": "Damage Reduction Lightning (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.midi-none": {
+      "name": "Damage Reduction None (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.necrotic": {
+      "name": "Damage Reduction Necrotic (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.none": {
+      "name": "No Damage Reduction (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.piercing": {
+      "name": "Damage Reduction Piercing (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.poison": {
+      "name": "Damage Reduction Poison (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.psychic": {
+      "name": "Damage Reduction Psychic (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.radiant": {
+      "name": "Damage Reduction Radiant (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.slashing": {
+      "name": "Damage Reduction Slashing (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.temphp": {
+      "name": "Damage Reduction Temp HP (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.DR.thunder": {
+      "name": "Damage Reduction Thunder (廃止)",
+      "description": "system.traits.dm フィールド（負の値で）を使用してください。"
+    },
+    "flags.midi-qol.OverTime": {
+      "name": "Over Time Effects",
+      "description": ""
+    },
+    "flags.midi-qol.advantage.concentration": {
+      "name": "有利：集中セーヴ",
+      "description": "集中セーヴに有利"
+    },
+    "flags.midi-qol.advantage.deathSave": {
+      "name": "有利：死亡セーヴ",
+      "description": "死亡セーヴに有利"
+    },
+    "flags.midi-qol.advantage.skill.acr": {
+      "name": "有利：〈軽業〉",
+      "description": "〈軽業〉に有利"
+    },
+    "flags.midi-qol.advantage.skill.all": {
+      "name": "有利：すべての技能",
+      "description": "すべての技能判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.ani": {
+      "name": "有利：〈動物使い〉",
+      "description": "〈動物使い〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.arc": {
+      "name": "有利：〈魔法学〉",
+      "description": "〈魔法学〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.ath": {
+      "name": "有利：〈運動〉",
+      "description": "〈運動〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.dec": {
+      "name": "有利：〈ペテン〉",
+      "description": "〈ペテン〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.his": {
+      "name": "有利：〈歴史〉",
+      "description": "〈歴史〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.ins": {
+      "name": "有利：〈看破〉",
+      "description": "〈看破〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.inv": {
+      "name": "有利：〈捜査〉",
+      "description": "〈捜査〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.itm": {
+      "name": "有利：〈威圧〉",
+      "description": "〈威圧〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.med": {
+      "name": "有利：〈医術〉",
+      "description": "〈医術〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.nat": {
+      "name": "有利：〈自然〉",
+      "description": "〈自然〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.per": {
+      "name": "有利：〈説得〉",
+      "description": "〈説得〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.prc": {
+      "name": "有利：〈知覚〉",
+      "description": "〈知覚〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.prf": {
+      "name": "有利：〈芸能〉",
+      "description": "〈芸能〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.rel": {
+      "name": "有利：〈宗教〉",
+      "description": "〈宗教〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.slt": {
+      "name": "有利：〈手先の早業〉",
+      "description": "〈手先の早業〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.ste": {
+      "name": "有利：〈隠密〉",
+      "description": "〈隠密〉判定に有利。"
+    },
+    "flags.midi-qol.advantage.skill.sur": {
+      "name": "有利：〈生存〉",
+      "description": "〈生存〉判定に有利。"
+    },
+    "flags.midi-qol.carefulSpells": {
+      "name": "呪文敵味方識別",
+      "description": "事前に選択したセーヴ呪文のターゲットはセーヴに自動成功します"
+    },
+    "flags.midi-qol.concentrationSaveBonus": {
+      "name": "集中セーヴボーナス",
+      "description": ""
+    },
+    "flags.midi-qol.critical.all": {
+      "name": "クリティカル・ヒット：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.critical.heal": {
+      "name": "クリティカル・ヒット：回復",
+      "description": ""
+    },
+    "flags.midi-qol.critical.msak": {
+      "name": "クリティカル・ヒット：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.critical.mwak": {
+      "name": "クリティカル・ヒット：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.critical.other": {
+      "name": "クリティカル・ヒット：その他",
+      "description": ""
+    },
+    "flags.midi-qol.critical.rsak": {
+      "name": "クリティカル・ヒット：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.critical.rwak": {
+      "name": "クリティカル・ヒット：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.critical.save": {
+      "name": "クリティカル・ヒット：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.critical.util": {
+      "name": "クリティカル・ヒット：その他",
+      "description": ""
+    },
+    "flags.midi-qol.damage.reroll-kh": {
+      "name": "ダメージ再ロール（高い方を採用）",
+      "description": ""
+    },
+    "flags.midi-qol.damage.reroll-kl": {
+      "name": "ダメージ再ロール（低い方を採用）",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.all": {
+      "name": "不利：すべての能力",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.check.all": {
+      "name": "不利：すべての能力値判定",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.check.cha": {
+      "name": "不利：【魅力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.check.con": {
+      "name": "不利：【耐久力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.check.dex": {
+      "name": "不利：【敏捷力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.check.int": {
+      "name": "不利：【知力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.check.str": {
+      "name": "不利：【筋力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.check.wis": {
+      "name": "不利：【判断力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.save.all": {
+      "name": "不利：すべてのセーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.save.cha": {
+      "name": "不利：【魅力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.save.con": {
+      "name": "不利：【耐久力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.save.dex": {
+      "name": "不利：【敏捷力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.save.int": {
+      "name": "不利：【知力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.save.str": {
+      "name": "不利：【筋力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.ability.save.wis": {
+      "name": "不利：【判断力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.all": {
+      "name": "不利：すべて",
+      "description": "すべてのd20判定に不利"
+    },
+    "flags.midi-qol.disadvantage.attack.all": {
+      "name": "不利：すべての攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.attack.cha": {
+      "name": "不利：【魅力】攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.attack.con": {
+      "name": "不利：【耐久力】攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.attack.dex": {
+      "name": "不利：【敏捷力】攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.attack.heal": {
+      "name": "不利：回復",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.attack.int": {
+      "name": "不利：【知力】攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.attack.msak": {
+      "name": "不利：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.attack.mwak": {
+      "name": "不利：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.attack.other": {
+      "name": "不利：その他の攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.attack.rsak": {
+      "name": "不利：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.attack.rwak": {
+      "name": "不利：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.attack.save": {
+      "name": "不利：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.attack.util": {
+      "name": "不利：その他",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.attack.wis": {
+      "name": "不利：【判断力】攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.concentration": {
+      "name": "不利：集中セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.deathSave": {
+      "name": "不利：死亡セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.acr": {
+      "name": "不利：〈軽業〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.all": {
+      "name": "不利：すべての技能",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.ani": {
+      "name": "不利：〈動物使い〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.arc": {
+      "name": "不利：〈魔法学〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.ath": {
+      "name": "不利：〈運動〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.dec": {
+      "name": "不利：〈ペテン〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.his": {
+      "name": "不利：〈歴史〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.ins": {
+      "name": "不利：〈看破〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.inv": {
+      "name": "不利：〈捜査〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.itm": {
+      "name": "不利：〈威圧〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.med": {
+      "name": "不利：〈医術〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.nat": {
+      "name": "不利：〈自然〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.per": {
+      "name": "不利：〈説得〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.prc": {
+      "name": "不利：〈知覚〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.prf": {
+      "name": "不利：〈芸能〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.rel": {
+      "name": "不利：〈宗教〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.slt": {
+      "name": "不利：〈手先の早業〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.ste": {
+      "name": "不利：〈隠密〉",
+      "description": ""
+    },
+    "flags.midi-qol.disadvantage.skill.sur": {
+      "name": "不利：〈生存〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.all": {
+      "name": "失敗：すべての能力",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.check.all": {
+      "name": "失敗：すべての能力値判定",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.check.cha": {
+      "name": "失敗：【魅力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.check.con": {
+      "name": "失敗：【耐久力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.check.dex": {
+      "name": "失敗：【敏捷力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.check.int": {
+      "name": "失敗：【知力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.check.str": {
+      "name": "失敗：【筋力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.check.wis": {
+      "name": "失敗：【判断力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.save.all": {
+      "name": "失敗：すべてのセーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.save.cha": {
+      "name": "失敗：【魅力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.save.con": {
+      "name": "失敗：【耐久力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.save.dex": {
+      "name": "失敗：【敏捷力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.save.int": {
+      "name": "失敗：【知力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.save.str": {
+      "name": "失敗：【筋力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.fail.ability.save.wis": {
+      "name": "失敗：【判断力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.fail.all": {
+      "name": "失敗：すべてのアクション",
+      "description": ""
+    },
+    "flags.midi-qol.fail.attack.all": {
+      "name": "失敗：すべての攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.fail.attack.heal": {
+      "name": "失敗：回復",
+      "description": ""
+    },
+    "flags.midi-qol.fail.attack.msak": {
+      "name": "失敗：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.fail.attack.mwak": {
+      "name": "失敗：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.fail.attack.other": {
+      "name": "失敗：その他の攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.fail.attack.rsak": {
+      "name": "失敗：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.fail.attack.rwak": {
+      "name": "失敗：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.fail.attack.save": {
+      "name": "失敗：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.fail.attack.util": {
+      "name": "失敗：その他",
+      "description": ""
+    },
+    "flags.midi-qol.fail.critical.all": {
+      "name": "ファンブル：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.fail.critical.heal": {
+      "name": "ファンブル：回復",
+      "description": ""
+    },
+    "flags.midi-qol.fail.critical.msak": {
+      "name": "ファンブル：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.fail.critical.mwak": {
+      "name": "ファンブル：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.fail.critical.other": {
+      "name": "ファンブル：その他",
+      "description": ""
+    },
+    "flags.midi-qol.fail.critical.rsak": {
+      "name": "ファンブル：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.fail.critical.rwak": {
+      "name": "ファンブル：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.fail.critical.save": {
+      "name": "ファンブル：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.fail.critical.util": {
+      "name": "ファンブル：その他",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.acr": {
+      "name": "失敗：〈軽業〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.all": {
+      "name": "失敗：すべての技能",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.ani": {
+      "name": "失敗：〈動物使い〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.arc": {
+      "name": "失敗：〈魔法学〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.ath": {
+      "name": "失敗：〈運動〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.dec": {
+      "name": "失敗：〈ペテン〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.his": {
+      "name": "失敗：〈歴史〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.ins": {
+      "name": "失敗：〈看破〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.inv": {
+      "name": "失敗：〈捜査〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.itm": {
+      "name": "失敗：〈威圧〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.med": {
+      "name": "失敗：〈医術〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.nat": {
+      "name": "失敗：〈自然〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.per": {
+      "name": "失敗：〈説得〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.prc": {
+      "name": "失敗：〈知覚〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.prf": {
+      "name": "失敗：〈芸能〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.rel": {
+      "name": "失敗：〈宗教〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.slt": {
+      "name": "失敗：〈手先の早業〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.ste": {
+      "name": "失敗：〈隠密〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.skill.sur": {
+      "name": "失敗：〈生存〉",
+      "description": ""
+    },
+    "flags.midi-qol.fail.spell.material": {
+      "name": "失敗：物質要素",
+      "description": ""
+    },
+    "flags.midi-qol.fail.spell.somatic": {
+      "name": "失敗：動作要素",
+      "description": ""
+    },
+    "flags.midi-qol.fail.spell.vocal": {
+      "name": "失敗：音声要素",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.attack.all": {
+      "name": "付与　有利：全ての攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.attack.heal": {
+      "name": "付与　有利：回復",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.attack.msak": {
+      "name": "付与　有利：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.attack.mwak": {
+      "name": "付与　有利：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.attack.other": {
+      "name": "付与　有利：その他の攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.attack.rsak": {
+      "name": "付与　有利：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.attack.rwak": {
+      "name": "付与　有利：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.attack.save": {
+      "name": "付与　有利：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.attack.util": {
+      "name": "付与　有利：その他",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.check.all": {
+      "name": "付与　有利：すべての判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.check.cha": {
+      "name": "付与　有利：【魅力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.check.con": {
+      "name": "付与　有利：【耐久力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.check.dex": {
+      "name": "付与　有利：【敏捷力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.check.int": {
+      "name": "付与　有利：【知力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.check.str": {
+      "name": "付与　有利：【筋力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.check.wis": {
+      "name": "付与　有利：【判断力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.save.all": {
+      "name": "付与　有利：すべてのセーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.save.cha": {
+      "name": "付与　有利：【魅力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.save.con": {
+      "name": "付与　有利：【耐久力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.save.dex": {
+      "name": "付与　有利：【敏捷力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.save.int": {
+      "name": "付与　有利：【知力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.save.str": {
+      "name": "付与　有利：【筋力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.save.wis": {
+      "name": "付与　有利：【判断力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.skill.all": {
+      "name": "付与　有利：すべての技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.skill.cha": {
+      "name": "付与　有利：【魅力】技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.skill.con": {
+      "name": "付与　有利：【耐久力】技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.skill.dex": {
+      "name": "付与　有利：【敏捷力】技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.skill.int": {
+      "name": "付与　有利：【知力】技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.skill.str": {
+      "name": "付与　有利：【筋力】技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.advantage.skill.wis": {
+      "name": "付与　有利：【判断力】技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.bonus.all": {
+      "name": "付与　攻撃ボーナス：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.bonus.heal": {
+      "name": "付与　攻撃ボーナス：回復",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.bonus.msak": {
+      "name": "付与　攻撃ボーナス：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.bonus.mwak": {
+      "name": "付与　攻撃ボーナス：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.bonus.other": {
+      "name": "付与　攻撃ボーナス：その他",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.bonus.rsak": {
+      "name": "付与　攻撃ボーナス：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.bonus.rwak": {
+      "name": "付与　攻撃ボーナス：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.bonus.save": {
+      "name": "付与　攻撃ボーナス：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.bonus.util": {
+      "name": "付与　攻撃ボーナス：その他",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.fail.all": {
+      "name": "付与　攻撃失敗：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.success.all": {
+      "name": "付与　攻撃成功：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.success.heal": {
+      "name": "付与　攻撃成功：回復",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.success.msak": {
+      "name": "付与　攻撃成功：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.success.mwak": {
+      "name": "付与　攻撃成功：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.success.other": {
+      "name": "付与　攻撃成功：その他",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.success.rsak": {
+      "name": "付与　攻撃成功：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.success.rwak": {
+      "name": "付与　攻撃成功：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.success.save": {
+      "name": "付与　攻撃成功：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.attack.success.util": {
+      "name": "付与　攻撃成功：その他",
+      "description": ""
+    },
+    "flags.midi-qol.grants.critical.all": {
+      "name": "付与　クリティカル・ヒット：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.grants.critical.heal": {
+      "name": "付与　クリティカル・ヒット：回復",
+      "description": ""
+    },
+    "flags.midi-qol.grants.critical.msak": {
+      "name": "付与　クリティカル・ヒット：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.critical.mwak": {
+      "name": "付与　クリティカル・ヒット：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.critical.other": {
+      "name": "付与　クリティカル・ヒット：その他",
+      "description": ""
+    },
+    "flags.midi-qol.grants.critical.range": {
+      "name": "付与　クリティカル・ヒット：遠隔",
+      "description": ""
+    },
+    "flags.midi-qol.grants.critical.rsak": {
+      "name": "付与　クリティカル・ヒット：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.critical.rwak": {
+      "name": "付与　クリティカル・ヒット：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.critical.save": {
+      "name": "付与　クリティカル・ヒット：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.critical.util": {
+      "name": "付与　クリティカル・ヒット：その他",
+      "description": ""
+    },
+    "flags.midi-qol.grants.criticalThreshold": {
+      "name": "クリティカル・ヒット閾値",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.attack.all": {
+      "name": "付与　不利：全ての攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.attack.heal": {
+      "name": "付与　不利：回復",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.attack.msak": {
+      "name": "付与　不利：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.attack.mwak": {
+      "name": "付与　不利：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.attack.other": {
+      "name": "付与　不利：その他の攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.attack.rsak": {
+      "name": "付与　不利：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.attack.rwak": {
+      "name": "付与　不利：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.attack.save": {
+      "name": "付与　不利：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.attack.util": {
+      "name": "付与　不利：その他",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.check.all": {
+      "name": "付与　不利：全ての技能判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.check.cha": {
+      "name": "付与　不利：【魅力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.check.con": {
+      "name": "付与　不利：【耐久力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.check.dex": {
+      "name": "付与　不利：【敏捷力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.check.int": {
+      "name": "付与　不利：【知力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.check.str": {
+      "name": "付与　不利：【筋力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.check.wis": {
+      "name": "付与　不利：【判断力】判定",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.save.all": {
+      "name": "付与　不利：すべてのセーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.save.cha": {
+      "name": "付与　不利：【魅力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.save.con": {
+      "name": "付与　不利：【耐久力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.save.dex": {
+      "name": "付与　不利：【敏捷力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.save.int": {
+      "name": "付与　不利：【知力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.save.str": {
+      "name": "付与　不利：【筋力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.save.wis": {
+      "name": "付与　不利：【判断力】セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.skill.all": {
+      "name": "付与　不利：すべての技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.skill.cha": {
+      "name": "付与　不利：【魅力】技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.skill.con": {
+      "name": "付与　不利：【耐久力】技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.skill.dex": {
+      "name": "付与　不利：【敏捷力】技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.skill.int": {
+      "name": "付与　不利：【知力】技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.skill.str": {
+      "name": "付与　不利：【筋力】技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.disadvantage.skill.wis": {
+      "name": "付与　不利：【判断力】技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.all": {
+      "name": "付与　有利なし：全ての攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.noAdvantage.attack.all": {
+      "name": "付与　有利なし：全ての攻撃",
+      "description": "目標に対するすべての攻撃は有利を得られない"
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.heal": {
+      "name": "付与　有利なし：回復",
+      "description": "ターゲットに対する回復攻撃は有利にならない"
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.msak": {
+      "name": "付与　有利なし：近接呪文攻撃",
+      "description": "ターゲットに対する近接呪文攻撃は有利にならない"
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.mwak": {
+      "name": "付与　有利なし：近接武器攻撃",
+      "description": "ターゲットに対する近接武器攻撃は有利にならない"
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.rsak": {
+      "name": "付与　有利なし：遠隔呪文攻撃",
+      "description": "ターゲットに対する遠隔呪文攻撃は有利にならない"
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.rwak": {
+      "name": "付与　有利なし：遠隔武器攻撃",
+      "description": "ターゲットに対する遠隔武器攻撃は有利にならない"
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.save": {
+      "name": "付与　有利なし：セーヴ",
+      "description": "アクターに強制されたセーヴは有利にならない"
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.check": {
+      "name": "付与　有利なし：判定",
+      "description": "アクターに強制された能力値判定は有利にならない"
+    },
+    "flags.midi-qol.grants.noAdvantage.attack.skill": {
+      "name": "付与　有利なし：技能",
+      "description": "アクターに強制された技能判定は有利にならない"
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.msak": {
+      "name": "付与　有利なし：近接呪文攻撃",
+      "description": "ターゲットに対するAny Melee Spell Attack against the target 有利にならない"
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.mwak": {
+      "name": "付与　有利なし：近接武器攻撃",
+      "description": "ターゲットに対するAny Melee Weapon Attack against the target 有利にならない"
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.rsak": {
+      "name": "付与　有利なし：遠隔呪文攻撃",
+      "description": "ターゲットに対するAny Ranged Spell attack against the target 有利にならない"
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.rwak": {
+      "name": "付与　有利なし：遠隔武器攻撃",
+      "description": "ターゲットに対するAny Ranged Weapon attack against the target 有利にならない"
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.save": {
+      "name": "付与　有利なし：セーヴ",
+      "description": "ターゲットに対するAny saving throw forced by actor 有利にならない"
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.check": {
+      "name": "付与　有利なし：判定",
+      "description": "ターゲットに対するAny ability check forced by the attacker 有利にならない"
+    },
+    "flags.midi-qol.grants.fail.advantage.attack.skill": {
+      "name": "付与　有利なし：技能",
+      "description": "ターゲットに対するAny skill roll forced by the attacker 不利にならない"
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.all": {
+      "name": "付与　不利なし：全ての攻撃",
+      "description": "ターゲットに対するAny Attack against the target 不利にならない"
+    },
+    "flags.midi-qol.grants.noDisadvantage.attack.all": {
+      "name": "付与　不利なし：全ての攻撃",
+      "description": "ターゲットに対するAny Attack against the target 不利にならない"
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.msak": {
+      "name": "付与　不利なし： 近接呪文攻撃",
+      "description": "ターゲットに対するAny Melee Spell Attack against the target 不利にならない"
+    },
+    "flags.midi-qol.grants.noDisadvantage.attack.msak": {
+      "name": "付与　不利なし： 近接呪文攻撃",
+      "description": "ターゲットに対するAny Melee Spell Attack against the target 不利にならない"
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.mwak": {
+      "name": "付与　Fail Disadvantage 近接武器攻撃",
+      "description": "ターゲットに対するAny Melee Weapon attack against the target 不利にならない"
+    },
+    "flags.midi-qol.grants.NoDisadvantage.attack.mwak": {
+      "name": "付与　不利なし： 近接武器攻撃",
+      "description": "ターゲットに対するAny Melee Weapon attack against the target 不利にならない"
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.rsak": {
+      "name": "付与　不利なし： 遠隔呪文攻撃",
+      "description": "ターゲットに対するAny Ranged Spell attack against the target 不利にならない"
+    },
+    "flags.midi-qol.grants.NoDisadvantage.attack.rsak": {
+      "name": "付与　不利なし： 遠隔呪文攻撃",
+      "description": "ターゲットに対するAny Ranged Spell attack against the target 不利にならない"
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.rwak": {
+      "name": "付与　不利なし： 遠隔武器攻撃",
+      "description": "ターゲットに対するAny Ranged Weapon attack against the target 不利にならない"
+    },
+    "flags.midi-qol.grants.noDisadvantage.attack.rwak": {
+      "name": "付与　不利なし： 遠隔武器攻撃",
+      "description": "ターゲットに対するAny Ranged Weapon attack against the target 不利にならない"
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.save": {
+      "name": "付与　不利なし：セーヴ",
+      "description": "Any save forced by the actor 不利にならない"
+    },
+    "flags.midi-qol.grants.noDisadvantage.attack.save": {
+      "name": "付与　不利なし：セーヴ",
+      "description": "Any save forced by the actor 不利にならない"
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.check": {
+      "name": "付与　不利なし：判定",
+      "description": "Any ability check forced by the actor 不利にならない"
+    },
+    "flags.midi-qol.grants.noDisadvantage.attack.check": {
+      "name": "付与　Fail Disadvantage その他",
+      "description": "ターゲットに対するny ability check forced by the actor 不利にならない"
+    },
+    "flags.midi-qol.grants.fail.disadvantage.attack.skill": {
+      "name": "付与　不利なし：技能",
+      "description": ""
+    },
+    "flags.midi-qol.grants.noDisadvantage.attack.skill": {
+      "name": "付与　不利なし：技能",
+      "description": "Any skill roll forced by the attacker 不利にならない"
+    },
+    "flags.midi-qol.grants.max.damage.all": {
+      "name": "付与　ダメージ最大値：すべて",
+      "description": "すべてのダメージロールは最大ダメージを与える"
+    },
+    "flags.midi-qol.grants.max.damage.heal": {
+      "name": "付与　ダメージ最大値：回復",
+      "description": "すべての回復ロールは最大値を回復する"
+    },
+    "flags.midi-qol.grants.max.damage.msak": {
+      "name": "付与　ダメージ最大値：近接呪文攻撃",
+      "description": "All spell attacks 最大ダメージを与える"
+    },
+    "flags.midi-qol.grants.max.damage.mwak": {
+      "name": "付与　ダメージ最大値：近接武器攻撃",
+      "description": "All melee weapon attacks 最大ダメージを与える"
+    },
+    "flags.midi-qol.grants.max.damage.rsak": {
+      "name": "付与　ダメージ最大値：遠隔呪文攻撃",
+      "description": "All ranged spell attacks 最大ダメージを与える"
+    },
+    "flags.midi-qol.grants.max.damage.rwak": {
+      "name": "付与　ダメージ最大値：遠隔武器攻撃",
+      "description": "All ranged weapon attacks 最大ダメージを与える"
+    },
+    "flags.midi-qol.grants.max.damage.save": {
+      "name": "付与　ダメージ最大値：セーヴ",
+      "description": "All save activities 最大ダメージを与える"
+    },
+    "flags.midi-qol.grants.min.damage.all": {
+      "name": "付与　ダメージ最低値：すべて",
+      "description": "All damage rolls 最低ダメージを与える"
+    },
+    "flags.midi-qol.grants.min.damage.heal": {
+      "name": "付与　ダメージ最低値：回復",
+      "description": "すべての回復ロールは最低値になる"
+    },
+    "flags.midi-qol.grants.min.damage.msak": {
+      "name": "付与　ダメージ最低値：近接呪文攻撃",
+      "description": "すべての近接呪文攻撃は最低ダメージを与える"
+    },
+    "flags.midi-qol.grants.min.damage.mwak": {
+      "name": "付与　ダメージ最低値：近接武器攻撃",
+      "description": "すべての武器攻撃は最低ダメージを与える"
+    },
+    "flags.midi-qol.grants.min.damage.other": {
+      "name": "付与　ダメージ最低値：その他",
+      "description": ""
+    },
+    "flags.midi-qol.grants.min.damage.rsak": {
+      "name": "付与　ダメージ最低値：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.min.damage.rwak": {
+      "name": "付与　ダメージ最低値：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.min.damage.save": {
+      "name": "付与　ダメージ最低値：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.min.damage.util": {
+      "name": "付与　ダメージ最低値：その他",
+      "description": ""
+    },
+    "flags.midi-qol.grants.noCritical.all": {
+      "name": "付与　クリティカル・ヒットなし：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.grants.noCritical.heal": {
+      "name": "付与　クリティカル・ヒットなし：回復",
+      "description": ""
+    },
+    "flags.midi-qol.grants.noCritical.msak": {
+      "name": "付与　クリティカル・ヒットなし：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.noCritical.mwak": {
+      "name": "付与　クリティカル・ヒットなし：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.noCritical.other": {
+      "name": "付与　クリティカル・ヒットなし：その他",
+      "description": ""
+    },
+    "flags.midi-qol.grants.noCritical.rsak": {
+      "name": "付与　クリティカル・ヒットなし：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.noCritical.rwak": {
+      "name": "付与　クリティカル・ヒットなし：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.grants.noCritical.save": {
+      "name": "付与　クリティカル・ヒットなし：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.grants.noCritical.util": {
+      "name": "付与　クリティカル・ヒットなし：その他",
+      "description": ""
+    },
+    "flags.midi-qol.ignoreNearbyFoes": {
+      "name": "隣接した敵を無視",
+      "description": "敵に隣接していることで起きる遠隔攻撃の不利を無視"
+    },
+    "flags.midi-qol.inMotion": {
+      "name": "In Motion",
+      "description": ""
+    },
+    "flags.midi-qol.long.all": {
+      "name": "長距離射程：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.long.heal": {
+      "name": "長距離射程：回復",
+      "description": ""
+    },
+    "flags.midi-qol.long.msak": {
+      "name": "長距離射程：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.long.mwak": {
+      "name": "長距離射程：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.long.other": {
+      "name": "長距離射程：その他",
+      "description": ""
+    },
+    "flags.midi-qol.long.rsak": {
+      "name": "長距離射程：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.long.rwak": {
+      "name": "長距離射程：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.long.save": {
+      "name": "長距離射程：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.long.util": {
+      "name": "長距離射程：その他",
+      "description": ""
+    },
+    "flags.midi-qol.magicResistance.all": {
+      "name": "魔法抵抗：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.magicResistance.cha": {
+      "name": "魔法抵抗：【魅力】",
+      "description": ""
+    },
+    "flags.midi-qol.magicResistance.check.all": {
+      "name": "魔法抵抗：(Checks)",
+      "description": ""
+    },
+    "flags.midi-qol.magicResistance.con": {
+      "name": "魔法抵抗：【耐久力】",
+      "description": ""
+    },
+    "flags.midi-qol.magicResistance.dex": {
+      "name": "魔法抵抗：【敏捷力】",
+      "description": ""
+    },
+    "flags.midi-qol.magicResistance.int": {
+      "name": "魔法抵抗：【知力】",
+      "description": ""
+    },
+    "flags.midi-qol.magicResistance.save.all": {
+      "name": "魔法抵抗：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.magicResistance.skill.all": {
+      "name": "魔法抵抗：技能",
+      "description": ""
+    },
+    "flags.midi-qol.magicResistance.str": {
+      "name": "魔法抵抗：【筋力】",
+      "description": ""
+    },
+    "flags.midi-qol.magicResistance.wis": {
+      "name": "魔法抵抗：【判断力】",
+      "description": ""
+    },
+    "flags.midi-qol.magicVulnerability.all": {
+      "name": "魔法脆弱性： すべて",
+      "description": ""
+    },
+    "flags.midi-qol.magicVulnerability.all.cha": {
+      "name": "魔法脆弱性： 【魅力】",
+      "description": ""
+    },
+    "flags.midi-qol.magicVulnerability.all.con": {
+      "name": "魔法脆弱性： 【耐久力】",
+      "description": ""
+    },
+    "flags.midi-qol.magicVulnerability.all.dex": {
+      "name": "魔法脆弱性： 【敏捷力】",
+      "description": ""
+    },
+    "flags.midi-qol.magicVulnerability.all.int": {
+      "name": "魔法脆弱性： 【知力】",
+      "description": ""
+    },
+    "flags.midi-qol.magicVulnerability.all.str": {
+      "name": "魔法脆弱性：【筋力】",
+      "description": ""
+    },
+    "flags.midi-qol.magicVulnerability.all.wis": {
+      "name": "魔法脆弱性： 【判断力】",
+      "description": ""
+    },
+    "flags.midi-qol.max.ability.check.all": {
+      "name": "能力値判定最大値：すべて",
+      "description": "d20のロール結果最大値all ability checks."
+    },
+    "flags.midi-qol.max.ability.check.cha": {
+      "name": "能力値判定最大値：【魅力】",
+      "description": "d20のロール結果最大値Charisma ability checks."
+    },
+    "flags.midi-qol.max.ability.check.con": {
+      "name": "能力値判定最大値：【耐久力】",
+      "description": "d20のロール結果最大値Constitution ability checks."
+    },
+    "flags.midi-qol.max.ability.check.dex": {
+      "name": "能力値判定最大値：【敏捷力】",
+      "description": "d20のロール結果最大値Dexterity ability checks."
+    },
+    "flags.midi-qol.max.ability.check.int": {
+      "name": "能力値判定最大値：【知力】",
+      "description": "d20のロール結果最大値Intelligence ability checks."
+    },
+    "flags.midi-qol.max.ability.check.str": {
+      "name": "能力値判定最大値：【筋力】",
+      "description": "d20のロール結果最大値Strength ability checks."
+    },
+    "flags.midi-qol.max.ability.check.wis": {
+      "name": "能力値判定最大値：【判断力】",
+      "description": "d20のロール結果最大値Wisdom ability checks."
+    },
+    "flags.midi-qol.max.ability.save.all": {
+      "name": "セーヴ最大値：すべて",
+      "description": "d20のロール結果最大値all saving throws."
+    },
+    "flags.midi-qol.max.ability.save.cha": {
+      "name": "セーヴ最大値：【魅力】",
+      "description": "d20のロール結果最大値Charisma saving throws."
+    },
+    "flags.midi-qol.max.ability.save.con": {
+      "name": "セーヴ最大値：【耐久力】",
+      "description": "d20のロール結果最大値Constitution saving throws."
+    },
+    "flags.midi-qol.max.ability.save.concentration": {
+      "name": "集中セーヴ最大値",
+      "description": "d20のロール結果最大値Concentration saving throws."
+    },
+    "flags.midi-qol.max.ability.save.dex": {
+      "name": "セーヴ最大値：【敏捷力】",
+      "description": "d20のロール結果最大値Dexterity saving throws."
+    },
+    "flags.midi-qol.max.ability.save.int": {
+      "name": "セーヴ最大値：【知力】",
+      "description": "d20のロール結果最大値Intelligence saving throws."
+    },
+    "flags.midi-qol.max.ability.save.str": {
+      "name": "セーヴ最大値：【筋力】",
+      "description": "d20のロール結果最大値Strength saving throws."
+    },
+    "flags.midi-qol.max.ability.save.wis": {
+      "name": "セーヴ最大値：【判断力】",
+      "description": "d20のロール結果最大値Wisdom saving throws."
+    },
+    "flags.midi-qol.max.damage.all": {
+      "name": "ダメージ最大値：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.max.damage.heal": {
+      "name": "ダメージ最大値：回復",
+      "description": ""
+    },
+    "flags.midi-qol.max.damage.msak": {
+      "name": "ダメージ最大値：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.max.damage.mwak": {
+      "name": "ダメージ最大値：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.max.damage.other": {
+      "name": "ダメージ最大値：その他",
+      "description": ""
+    },
+    "flags.midi-qol.max.damage.rsak": {
+      "name": "ダメージ最大値：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.max.damage.rwak": {
+      "name": "ダメージ最大値：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.max.damage.save": {
+      "name": "最大ダメージセーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.max.damage.util": {
+      "name": "ダメージ最大値：その他",
+      "description": ""
+    },
+    "flags.midi-qol.max.skill.all": {
+      "name": "最大技能判定：すべて",
+      "description": "すべての技能判定のd20ロール結果最大値"
+    },
+    "flags.midi-qol.min.ability.check.all": {
+      "name": "能力値判定最低値：すべて",
+      "description": "判定のd20ロール結果最低値all ability checks."
+    },
+    "flags.midi-qol.min.ability.check.cha": {
+      "name": "能力値判定最低値：【魅力】",
+      "description": "判定のd20ロール結果最低値Charisma ability checks."
+    },
+    "flags.midi-qol.min.ability.check.con": {
+      "name": "能力値判定最低値：【耐久力】",
+      "description": "判定のd20ロール結果最低値Constitution ability checks."
+    },
+    "flags.midi-qol.min.ability.check.dex": {
+      "name": "能力値判定最低値：【敏捷力】",
+      "description": "判定のd20ロール結果最低値Dexterity ability checks."
+    },
+    "flags.midi-qol.min.ability.check.int": {
+      "name": "能力値判定最低値：【知力】",
+      "description": "【知力】判定のd20ロール結果最低値"
+    },
+    "flags.midi-qol.min.ability.check.str": {
+      "name": "能力値判定最低値：【筋力】",
+      "description": "【筋力】判定のd20ロール結果最低値"
+    },
+    "flags.midi-qol.min.ability.check.wis": {
+      "name": "能力値判定最低値：【判断力】",
+      "description": "【判断力】判定のd20ロール結果最低値"
+    },
+    "flags.midi-qol.min.ability.save.all": {
+      "name": "セーヴ最低値：すべて",
+      "description": "すべてのセーヴのd20ロール結果最低値"
+    },
+    "flags.midi-qol.min.ability.save.cha": {
+      "name": "セーヴ最低値：【魅力】",
+      "description": "セーヴのd20ロール結果最低値"
+    },
+    "flags.midi-qol.min.ability.save.con": {
+      "name": "セーヴ最低値：【耐久力】",
+      "description": "【耐久力】セーヴにおけるd20ロール結果最低値"
+    },
+    "flags.midi-qol.min.ability.save.concentration": {
+      "name": "集中セーヴ最低値",
+      "description": "集中セーヴにおけるd20ロール結果最低値"
+    },
+    "flags.midi-qol.min.ability.save.dex": {
+      "name": "セーヴ最低値：【敏捷力】",
+      "description": "【判断力】セーヴにおけるd20ロール結果最低値"
+    },
+    "flags.midi-qol.min.ability.save.int": {
+      "name": "セーヴ最低値：【知力】",
+      "description": "【判断力】セーヴにおけるd20ロール結果最低値"
+    },
+    "flags.midi-qol.min.ability.save.str": {
+      "name": "セーヴ最低値：【筋力】",
+      "description": "【判断力】セーヴにおけるd20ロール結果最低値"
+    },
+    "flags.midi-qol.min.ability.save.wis": {
+      "name": "セーヴ最低値：【判断力】",
+      "description": "【判断力】セーヴにおけるd20ロール結果最低値"
+    },
+    "flags.midi-qol.min.damage.all": {
+      "name": "ダメージ最低値：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.min.damage.heal": {
+      "name": "ダメージ最低値：回復",
+      "description": ""
+    },
+    "flags.midi-qol.min.damage.msak": {
+      "name": "ダメージ最低値：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.min.damage.mwak": {
+      "name": "ダメージ最低値：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.min.damage.other": {
+      "name": "ダメージ最低値：その他",
+      "description": ""
+    },
+    "flags.midi-qol.min.damage.rsak": {
+      "name": "ダメージ最低値：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.min.damage.rwak": {
+      "name": "ダメージ最低値：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.min.damage.save": {
+      "name": "ダメージ最低値：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.min.damage.util": {
+      "name": "ダメージ最低値：その他",
+      "description": ""
+    },
+    "flags.midi-qol.neverTarget": {
+      "name": "目標にしない",
+      "description": ""
+    },
+    "flags.midi-qol.noCritical.all": {
+      "name": "クリティカル・ヒット無効：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.noCritical.heal": {
+      "name": "クリティカル・ヒット無効：回復",
+      "description": ""
+    },
+    "flags.midi-qol.noCritical.msak": {
+      "name": "クリティカル・ヒット無効：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.noCritical.mwak": {
+      "name": "クリティカル・ヒット無効：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.noCritical.other": {
+      "name": "クリティカル・ヒット無効：その他",
+      "description": ""
+    },
+    "flags.midi-qol.noCritical.rsak": {
+      "name": "クリティカル・ヒット無効：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.noCritical.rwak": {
+      "name": "クリティカル・ヒット無効：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.noCritical.save": {
+      "name": "クリティカル・ヒット無効：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.noCritical.util": {
+      "name": "クリティカル・ヒット無効：その他",
+      "description": ""
+    },
+    "flags.midi-qol.onUseMacroName": {
+      "name": "",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.macroToCall": {
+      "name": "",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.ac": {
+      "name": "オプションAC",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.activation": {
+      "name": "オプション起動",
+      "description": "オプションボーナスを起動する状態異常"
+    },
+    "flags.midi-qol.optional.NAME.attack.all": {
+      "name": "オプション攻撃ボーナス：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.all": {
+      "name": "オプション攻撃失敗：すべて",
+      "description": "ミスのみ出力。"
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.heal": {
+      "name": "オプション攻撃失敗：回復",
+      "description": "ミスのみ出力。"
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.msak": {
+      "name": "オプション攻撃失敗：近接呪文攻撃",
+      "description": "ミスのみ出力。"
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.mwak": {
+      "name": "オプション攻撃失敗：近接武器攻撃",
+      "description": "ミスのみ出力。"
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.other": {
+      "name": "オプション攻撃失敗：その他",
+      "description": "ミスのみ出力。"
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.rsak": {
+      "name": "オプション攻撃失敗：遠隔呪文攻撃",
+      "description": "ミスのみ出力。"
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.rwak": {
+      "name": "オプション攻撃失敗：遠隔武器攻撃",
+      "description": "ミスのみ出力。"
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.save": {
+      "name": "オプション攻撃失敗：セーヴ",
+      "description": "ミスのみ出力。"
+    },
+    "flags.midi-qol.optional.NAME.attack.fail.util": {
+      "name": "オプション攻撃失敗：その他",
+      "description": "ミスのみ出力。"
+    },
+    "flags.midi-qol.optional.NAME.attack.heal": {
+      "name": "オプション攻撃ボーナス：回復",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.attack.msak": {
+      "name": "オプション攻撃ボーナス：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.attack.mwak": {
+      "name": "オプション攻撃ボーナス：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.attack.other": {
+      "name": "オプション攻撃ボーナス：その他",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.attack.rsak": {
+      "name": "オプション攻撃ボーナス：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.attack.rwak": {
+      "name": "オプション攻撃ボーナス：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.attack.save": {
+      "name": "オプション攻撃ボーナス：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.attack.util": {
+      "name": "オプション攻撃ボーナス：その他",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.check.all": {
+      "name": "オプション判定ボーナス：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.check.cha": {
+      "name": "オプション判定ボーナス：【魅力】",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.check.con": {
+      "name": "オプション判定ボーナス：【耐久力】",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.check.dex": {
+      "name": "オプション判定ボーナス：【敏捷力】",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.check.fail.all": {
+      "name": "オプション判定失敗：すべて",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.check.fail.cha": {
+      "name": "オプション判定失敗：【魅力】",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.check.fail.con": {
+      "name": "オプション判定失敗：【耐久力】",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.check.fail.dex": {
+      "name": "オプション判定失敗：【敏捷力】",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.check.fail.int": {
+      "name": "オプション判定失敗：【知力】",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.check.fail.str": {
+      "name": "オプション判定失敗：【筋力】",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.check.fail.wis": {
+      "name": "オプション判定失敗：【判断力】",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.check.int": {
+      "name": "オプション判定ボーナス：【知力】",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.check.str": {
+      "name": "オプション判定ボーナス：【筋力】",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.check.wis": {
+      "name": "オプション判定ボーナス：【判断力】",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.count": {
+      "name": "オプションカウント",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.countAlt": {
+      "name": "オプションカウント　オルタナティブ",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.criticalDamage": {
+      "name": "オプションクリティカルダメージ",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.damage.all": {
+      "name": "オプションダメージ：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.damage.heal": {
+      "name": "オプションダメージ：回復",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.damage.msak": {
+      "name": "オプションダメージ：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.damage.mwak": {
+      "name": "オプションダメージ：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.damage.other": {
+      "name": "オプションダメージ：その他",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.damage.rsak": {
+      "name": "オプションダメージ：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.damage.rwak": {
+      "name": "オプションダメージ：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.damage.save": {
+      "name": "オプションダメージ：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.damage.util": {
+      "name": "オプションダメージ：その他",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.force": {
+      "name": "オプションの強制",
+      "description": "ボーナスを強制起動させる状態の指定"
+    },
+    "flags.midi-qol.optional.NAME.label": {
+      "name": "オプションラベル",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.save.all": {
+      "name": "オプションセーヴボーナス：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.save.cha": {
+      "name": "オプションセーヴボーナス：【魅力】",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.save.con": {
+      "name": "オプションセーヴボーナス：【耐久力】",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.save.dex": {
+      "name": "オプションセーヴボーナス：【敏捷力】",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.save.fail.all": {
+      "name": "オプションセーヴ失敗：すべて",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.save.fail.cha": {
+      "name": "オプションセーヴ失敗：【魅力】",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.save.fail.con": {
+      "name": "オプションセーヴ失敗：【耐久力】",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.save.fail.dex": {
+      "name": "オプションセーヴ失敗：【敏捷力】",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.save.fail.int": {
+      "name": "オプションセーヴ失敗：【知力】",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.save.fail.str": {
+      "name": "オプションセーヴ失敗：【筋力】",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.save.fail.wis": {
+      "name": "オプションセーヴ失敗：【判断力】",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.save.int": {
+      "name": "オプションセーヴボーナス：【知力】",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.save.str": {
+      "name": "オプションセーヴボーナス：【筋力】",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.save.wis": {
+      "name": "オプションセーヴボーナス：【判断力】",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.acr": {
+      "name": "オプション技能ボーナス：〈軽業〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.all": {
+      "name": "オプション技能ボーナス：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.ani": {
+      "name": "オプション技能ボーナス：〈動物使い〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.arc": {
+      "name": "オプション技能ボーナス：〈魔法学〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.ath": {
+      "name": "オプション技能ボーナス：〈運動〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.fail.all": {
+      "name": "オプション技能失敗：すべて",
+      "description": "失敗時のみプロンプト"
+    },
+    "flags.midi-qol.optional.NAME.skill.his": {
+      "name": "オプション技能ボーナス：〈歴史〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.ins": {
+      "name": "オプション技能ボーナス：〈看破〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.inv": {
+      "name": "オプション技能ボーナス：〈捜査〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.itm": {
+      "name": "オプション技能ボーナス：〈威圧〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.med": {
+      "name": "オプション技能ボーナス：〈医術〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.nat": {
+      "name": "オプション技能ボーナス：〈自然〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.per": {
+      "name": "オプション技能ボーナス：〈説得〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.prc": {
+      "name": "オプション技能ボーナス：〈知覚〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.prf": {
+      "name": "オプション技能ボーナス：〈芸能〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.rel": {
+      "name": "オプション技能ボーナス：〈宗教〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.slt": {
+      "name": "オプション技能ボーナス：〈手先の早業〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.ste": {
+      "name": "オプション技能ボーナス：〈隠密〉",
+      "description": ""
+    },
+    "flags.midi-qol.optional.NAME.skill.sur": {
+      "name": "オプション技能ボーナス：〈生存〉",
+      "description": ""
+    },
+    "flags.midi-qol.potentCantrip": {
+      "name": "初級呪文強化",
+      "description": ""
+    },
+    "flags.midi-qol.range.all": {
+      "name": "射程：すべて",
+      "description": ""
+    },
+    "flags.midi-qol.range.heal": {
+      "name": "射程：回復",
+      "description": ""
+    },
+    "flags.midi-qol.range.msak": {
+      "name": "射程：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.range.mwak": {
+      "name": "射程：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.range.other": {
+      "name": "射程：その他",
+      "description": ""
+    },
+    "flags.midi-qol.range.rsak": {
+      "name": "射程：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.range.rwak": {
+      "name": "射程：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.range.save": {
+      "name": "射程：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.range.util": {
+      "name": "射程：その他",
+      "description": ""
+    },
+    "flags.midi-qol.rangeOverride.attack.all": {
+      "name": "射程上書き：全ての攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.rangeOverride.attack.heal": {
+      "name": "射程上書き：回復",
+      "description": ""
+    },
+    "flags.midi-qol.rangeOverride.attack.msak": {
+      "name": "射程上書き：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.rangeOverride.attack.mwak": {
+      "name": "射程上書き： 近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.rangeOverride.attack.other": {
+      "name": "射程上書き： その他",
+      "description": ""
+    },
+    "flags.midi-qol.rangeOverride.attack.rsak": {
+      "name": "射程上書き：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.rangeOverride.attack.rwak": {
+      "name": "射程上書き：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.rangeOverride.attack.save": {
+      "name": "射程上書き：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.rangeOverride.attack.util": {
+      "name": "射程上書き：その他",
+      "description": ""
+    },
+    "flags.midi-qol.sculptSpells": {
+      "name": "呪文効果範囲操作",
+      "description": "セーヴ呪文の選択であるターゲットは自動的にセーヴ成功し\"super-saver\"ステータスを得ます。"
+    },
+    "flags.midi-qol.semiSuperSaver.all": {
+      "name": "半超セーヴ： すべて",
+      "description": "セーヴ成功でダメージ無し。"
+    },
+    "flags.midi-qol.semiSuperSaver.cha": {
+      "name": "半超セーヴ：【魅力】",
+      "description": "セーヴ成功でダメージ無し。"
+    },
+    "flags.midi-qol.semiSuperSaver.con": {
+      "name": "半超セーヴ：【耐久力】",
+      "description": "セーヴ成功でダメージ無し。"
+    },
+    "flags.midi-qol.semiSuperSaver.dex": {
+      "name": "半超セーヴ：【敏捷力】",
+      "description": "セーヴ成功でダメージ無し。"
+    },
+    "flags.midi-qol.semiSuperSaver.int": {
+      "name": "半超セーヴ：【知力】",
+      "description": "セーヴ成功でダメージ無し。"
+    },
+    "flags.midi-qol.semiSuperSaver.str": {
+      "name": "半超セーヴ：【筋力】",
+      "description": "セーヴ成功でダメージ無し。"
+    },
+    "flags.midi-qol.semiSuperSaver.wis": {
+      "name": "半超セーヴ：【判断力】",
+      "description": "セーヴ成功でダメージ無し。"
+    },
+    "flags.midi-qol.sharpShooter": {
+      "name": "射撃の名手",
+      "description": ""
+    },
+    "flags.midi-qol.success.attack.all": {
+      "name": "成功：すべての攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.success.attack.heal": {
+      "name": "成功：回復",
+      "description": ""
+    },
+    "flags.midi-qol.success.attack.msak": {
+      "name": "成功：近接呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.success.attack.mwak": {
+      "name": "成功：近接武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.success.attack.other": {
+      "name": "成功：other",
+      "description": ""
+    },
+    "flags.midi-qol.success.attack.rsak": {
+      "name": "成功：遠隔呪文攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.success.attack.rwak": {
+      "name": "成功：遠隔武器攻撃",
+      "description": ""
+    },
+    "flags.midi-qol.success.attack.save": {
+      "name": "成功：セーヴ",
+      "description": ""
+    },
+    "flags.midi-qol.success.attack.util": {
+      "name": "成功：その他",
+      "description": ""
+    },
+    "flags.midi-qol.superSaver.all": {
+      "name": "超セーヴ：すべて",
+      "description": "セーヴ成功でダメージ無し、失敗で半減ダメージ。"
+    },
+    "flags.midi-qol.superSaver.cha": {
+      "name": "超セーヴ：【魅力】",
+      "description": "セーヴ成功でダメージ無し、失敗で半減ダメージ。"
+    },
+    "flags.midi-qol.superSaver.con": {
+      "name": "超セーヴ：【耐久力】",
+      "description": "セーヴ成功でダメージ無し、失敗で半減ダメージ。"
+    },
+    "flags.midi-qol.superSaver.dex": {
+      "name": "超セーヴ：【敏捷力】",
+      "description": "セーヴ成功でダメージ無し、失敗で半減ダメージ。"
+    },
+    "flags.midi-qol.superSaver.int": {
+      "name": "超セーヴ：【知力】",
+      "description": "セーヴ成功でダメージ無し、失敗で半減ダメージ。"
+    },
+    "flags.midi-qol.superSaver.str": {
+      "name": "超セーヴ：【筋力】",
+      "description": "セーヴ成功でダメージ無し、失敗で半減ダメージ。"
+    },
+    "flags.midi-qol.superSaver.wis": {
+      "name": "超セーヴ：【判断力】",
+      "description": "セーヴ成功でダメージ無し、失敗で半減ダメージ。"
+    },
+    "flags.midi-qol.uncanny-dodge": {
+      "name": "直感回避",
+      "description": "ダメージ半減"
+    }
+  }
 }
