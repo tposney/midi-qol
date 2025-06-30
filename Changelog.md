@@ -1,3 +1,9 @@
+### 12.4.60
+* Fix for reactions using a save activity not rolling the save.
+* Fix for sometimes generating extra concentration checks on combat start or advancing combat. thanks @thatlonelybugbear
+* Proper effect data to remove summoned creature on expiry. thanks @thatlonelybugbrear
+* Updated ja.json thanks @doumoku
+
 ### 12.4.59
 * Added Czech language files - thanks @Lethrendis
 * Fix for self applied effects - thanks @Elwin

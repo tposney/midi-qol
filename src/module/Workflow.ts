@@ -4552,8 +4552,8 @@ export class Workflow {
     }
 
     if (!this.saveActivity) return;
-    //@ts-expect-error
-    if (!evalActivationCondition(this, this.saveActivity.useCondition, this.targets.first())) return;
+    // this is just wrong I think
+    // if (!evalActivationCondition(this, this.saveActivity.useCondition, this.targets.first())) return;
     const allHitTargets = new Set([...this.hitTargets, ...this.hitTargetsEC]);
     if (allHitTargets.size === 0) return;
     let rollDC = this.saveActivity?.save?.dc.value ?? this.saveActivity?.check?.dc.value;

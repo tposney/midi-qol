@@ -89,20 +89,34 @@ export let readyHooks = async () => {
 
   //TODO: if/when options are passed to dnd5e.damageActor can use that hook instead and not do any calculations.
   Hooks.on("preUpdateActor", (actor: Actor, changes: any, options: any = {}, userId) => {
-
     if (userId !== game.user?.id) return true;
-    if (!isConcentrating(actor) 
-      || configSettings.doConcentrationCheck === "none" 
-      //@ts-expect-error
-      || game.settings?.get("dnd5e", "disableConcentration")
-      || options.noConcentrationCheck
-      || options.dnd5e?.concentrationCheck === false) {
-      options.noConcentrationCheck = true;
-      foundry.utils.setProperty(options, "dnd5e.concentrationCheck", false);
-      return true;
+    if (userId !== game.user?.id)
+        return true;
+
+    const shouldCheckTempHP = configSettings.tempHPDamageConcentrationCheck;
+    const relevantHpChange = changes.system?.attributes?.hp;
+
+    const isHpChangeInvalid =
+        relevantHpChange &&
+        !("value" in relevantHpChange) &&
+        (!shouldCheckTempHP || !("temp" in relevantHpChange));
+
+    if (
+        isHpChangeInvalid ||
+        !isConcentrating(actor) ||
+        configSettings.doConcentrationCheck === "none" ||
+        // @ts-expect-error
+        game.settings?.get("dnd5e", "disableConcentration") ||
+        options.noConcentrationCheck ||
+        options.dnd5e?.concentrationCheck === false
+    ) {
+        options.noConcentrationCheck = true;
+        foundry.utils.setProperty(options, "dnd5e.concentrationCheck", false);
+        return true;
     }
-    const hpUpdate = changes.system?.attributes?.hp?.value;
-    const tempHpUpdate = changes.system?.attributes?.hp?.temp;
+
+    const hpUpdate = relevantHpChange?.value;
+    const tempHpUpdate = relevantHpChange?.temp;
     //@ts-expect-error no dnd5e-types
     const hpDamage = (hpUpdate !== undefined) ? actor.system.attributes.hp.value - hpUpdate : 0;
     //@ts-expect-error no dnd5e-types
@@ -113,7 +127,7 @@ export let readyHooks = async () => {
       foundry.utils.setProperty(options, "dnd5e.concentrationCheck", false);
       return true;
     }
-    const isConcentrationCheck = (hpDamage > 0 || configSettings.tempHPDamageConcentrationCheck);
+    const isConcentrationCheck = (hpDamage > 0 || (tempHPDamage > 0 && configSettings.tempHPDamageConcentrationCheck));
     foundry.utils.setProperty(options, "dnd5e.concentrationCheck", isConcentrationCheck);
     try {
       if (configSettings.doConcentrationCheck === "item" && isConcentrationCheck) {
