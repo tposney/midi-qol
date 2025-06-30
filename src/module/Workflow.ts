@@ -2918,8 +2918,8 @@ export class Workflow {
         effectData = {
           origin: this.item?.uuid, //flag the effect as associated to the spell being cast
           disabled: false,
-          icon: this.item?.img,
-          label: summonString + this.item?.name,
+          img: this.item?.img,
+          name: summonString + this.item?.name,
           duration: {},
           flags: {
             dae: {
