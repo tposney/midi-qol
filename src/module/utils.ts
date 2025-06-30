@@ -1465,7 +1465,7 @@ export async function _processActivityOverTime(combat, data, options, userId) {
     count += 1; // make sure we don't do an infinite loop
     const actor = combat.turns[testTurn]?.actor;
     const endTurn = toTest < last;
-    const startTurn = toTest > prev;
+    const startTurn = toTest > prev || combatStart;
 
     if (actor) for (let effect of actor.appliedEffects) {
       if (effect.changes.some(change => change.key.startsWith(`flags.${MODULE_ID}.ActivityOverTime`))) {
@@ -1500,7 +1500,7 @@ export async function _processOverTime(combat, data, options, userId) {
     count += 1; // make sure we don't do an infinite loop
     const actor = combat.turns[testTurn]?.actor;
     const endTurn = toTest < last;
-    const startTurn = toTest > prev;
+    const startTurn = toTest > prev || combatStart;
 
     // Remove reaction used status from each combatant
     if (actor && toTest !== prev && !installedModules.get("times-up")) {

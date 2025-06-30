@@ -90,20 +90,34 @@ export let readyHooks = async () => {
 
   //TODO: if/when options are passed to dnd5e.damageActor can use that hook instead and not do any calculations.
   Hooks.on("preUpdateActor", (actor: Actor, changes: any, options: any = {}, userId) => {
-
     if (userId !== game.user?.id) return true;
-    if (!isConcentrating(actor)
-      || configSettings.doConcentrationCheck === "none"
-      //@ts-expect-error
-      || game.settings?.get("dnd5e", "disableConcentration")
-      || options.noConcentrationCheck
-      || options.dnd5e?.concentrationCheck === false) {
-      options.noConcentrationCheck = true;
-      foundry.utils.setProperty(options, "dnd5e.concentrationCheck", false);
-      return true;
+    if (userId !== game.user?.id)
+        return true;
+
+    const shouldCheckTempHP = configSettings.tempHPDamageConcentrationCheck;
+    const relevantHpChange = changes.system?.attributes?.hp;
+
+    const isHpChangeInvalid =
+        relevantHpChange &&
+        !("value" in relevantHpChange) &&
+        (!shouldCheckTempHP || !("temp" in relevantHpChange));
+
+    if (
+        isHpChangeInvalid ||
+        !isConcentrating(actor) ||
+        configSettings.doConcentrationCheck === "none" ||
+        // @ts-expect-error
+        game.settings?.get("dnd5e", "disableConcentration") ||
+        options.noConcentrationCheck ||
+        options.dnd5e?.concentrationCheck === false
+    ) {
+        options.noConcentrationCheck = true;
+        foundry.utils.setProperty(options, "dnd5e.concentrationCheck", false);
+        return true;
     }
-    const hpUpdate = changes.system?.attributes?.hp?.value;
-    const tempHpUpdate = changes.system?.attributes?.hp?.temp;
+
+    const hpUpdate = relevantHpChange?.value;
+    const tempHpUpdate = relevantHpChange?.temp;
     //@ts-expect-error no dnd5e-types
     const hpDamage = (hpUpdate !== undefined) ? actor.system.attributes.hp.value - hpUpdate : 0;
     //@ts-expect-error no dnd5e-types
@@ -114,9 +128,10 @@ export let readyHooks = async () => {
       foundry.utils.setProperty(options, "dnd5e.concentrationCheck", false);
       return true;
     }
-    foundry.utils.setProperty(options, "dnd5e.concentrationCheck", true);
+    const isConcentrationCheck = (hpDamage > 0 || (tempHPDamage > 0 && configSettings.tempHPDamageConcentrationCheck));
+    foundry.utils.setProperty(options, "dnd5e.concentrationCheck", isConcentrationCheck);
     try {
-      if (configSettings.doConcentrationCheck === "item") {
+      if (configSettings.doConcentrationCheck === "item" && isConcentrationCheck) {
         //@ts-expect-error no dnd5e-types
         const concentrationDc = actor.getConcentrationDC(totalDamage);
         doConcentrationCheck(actor, concentrationDc);
@@ -180,8 +195,6 @@ export let readyHooks = async () => {
       combat.rollInitiative(combatantIds, { updateTurn: true }).then(() => combat.update({ turn: 0 }));
     }
   });
-  // Concentration Check is rolled as an item roll so we need an item.
-  itemJSONData.name = concentrationCheckItemName;
 }
 
 // function registerBaBonusHooks() {
@@ -712,71 +725,6 @@ function setupMidiFlagTypes() {
 export function setupHooks() {
 }
 
-export const itemJSONData = {
-  "name": "Concentration Check - Midi QOL",
-  "type": "weapon",
-  "img": "./modules/midi-qol/icons/concentrate.png",
-  "system": {
-    "description": {
-      "value": "",
-      "chat": "",
-      "unidentified": ""
-    },
-
-    "activation": {
-      "type": "special",
-      "cost": 0,
-      "condition": ""
-    },
-    "target": {
-      "type": ""
-    },
-    "ability": "",
-    "actionType": "save",
-    "attackBonus": 0,
-    "chatFlavor": "",
-    "weaponType": "simpleM",
-    "proficient": false,
-    "attributes": {
-      "spelldc": 10
-    }
-  },
-  "effects": [],
-  "sort": 0,
-  "flags": {
-    "midi-qol": {
-      "onUseMacroName": "ItemMacro",
-      "isConcentrationCheck": true
-    },
-    "itemacro": {
-      "macro": {
-
-        "_id": null,
-        "name": "Concentration Check - Midi QOL",
-        "type": "script",
-        "author": "devnIbfBHb74U9Zv",
-        "img": "icons/svg/dice-target.svg",
-        "scope": "global",
-        "command": `
-              if (MidiQOL.configSettings().autoCheckSaves === 'none') return;
-              for (let targetUuid of args[0].targetUuids) {
-                let target = await fromUuid(targetUuid);
-                console.error(target, args[0]);
-                if (MidiQOL.configSettings().removeConcentration 
-                  && (target.actor.system.attributes.hp.value === 0 || args[0].failedSaveUuids.find(uuid => uuid === targetUuid))) {
-                await target.actor.endConcentration();
-                }
-              }`,
-        "folder": null,
-        "sort": 0,
-        "permission": {
-          "default": 0
-        },
-        "flags": {}
-      }
-    },
-  }
-}
 Hooks.on("dnd5e.preRollDamageV2", (rollConfig, dialogConfig, messageConfig) => {
   if (!rollConfig.subject) return true;
   if (rollConfig.subject.actor && rollConfig.subject.isSpell) {

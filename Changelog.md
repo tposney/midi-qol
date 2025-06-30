@@ -1,3 +1,9 @@
+### 13.0.6
+* First open beta for midi-qol and foundry v13 dnd5e v5. This is **NOT** ready for gameplay but we are actively seeking feedback on any issues. Please read the whole changelog as there are substantial changes. The main one being that the item midi-qol tab is no more.
+* Fix for reactions using a save activity not rolling the save.
+* Fix for sometimes generating extra concentration checks on combat start or advancing combat. thanks @thatlonelybugbear
+* Proper effect data to remove summoned creature on expiry. thanks @thatlonelybugbrear
+
 ### 13.0.5
 * Added flags.midi-qol.optional.NAME.XXX.displayBonusRolls
   - false means no bonus rolls change chat messages will be displayed
