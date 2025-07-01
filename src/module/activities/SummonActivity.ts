@@ -39,7 +39,9 @@ let defineMidiSummonActivityClass = (ActivityClass: any) => {
           chatCard: "modules/midi-qol/templates/activity-card.hbs",
           dialog: ActivityClass.metadata.usage.dialog,
           actions: {
-            // placeSummons: MidiSummonActivity.#placeSummons
+            // placeSummons: MidiSummonActivity.#placeSummons 
+            // not doing this as it would require a physical copy of the dnd5e #placeSummons code
+            // Downside is that the summons button on the activity card will not create a remove summoned creature effect since there is no workflow looked up
           },
         },
       }, { inplace: false, insertKeys: true, insertValues: true });

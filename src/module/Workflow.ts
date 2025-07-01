@@ -2928,15 +2928,31 @@ export class Workflow {
           },
         }
         const inCombat = (game.combat?.turns.some(combatant => (combatant as unknown as Combatant).token?.id === selfTarget.id));
-        const convertedDuration = globalThis.DAE.convertDuration(activityDuration, inCombat);
-        if (convertedDuration?.type === "seconds") {
-          effectData.duration = { seconds: Math.max(convertedDuration.seconds, 1), startTime: game.time?.worldTime }
-        } else if (convertedDuration?.type === "turns") {
+        if (activityDuration.units === "inst") {
+          // This seems wrong, however lots of dnd5e summons activities have a duration of inst - e.g. find familiar
           effectData.duration = {
-            rounds: convertedDuration.rounds,
-            turns: convertedDuration.rounds > 0 ? convertedDuration.turns : Math.max(convertedDuration.turns, 1),
             startRound: game.combat?.round,
             startTurn: game.combat?.turn,
+          startTime: game.time?.worldTime
+          }
+          //@ts-expect-error CONFIG.DND5E
+        } else if (CONFIG.DND5E.permanentTimePeriods[activityDuration.units]) {
+          effectData.duration = {
+            startRound: game.combat?.round,
+            startTurn: game.combat?.turn,
+            startTime: game.time?.worldTime
+          }
+        } else {
+          const convertedDuration = globalThis.DAE.convertDuration(activityDuration, inCombat);
+          if (convertedDuration?.type === "seconds") {
+            effectData.duration = { seconds: Math.max(convertedDuration.seconds, 1), startTime: game.time?.worldTime }
+          } else if (convertedDuration?.type === "turns") {
+            effectData.duration = {
+              rounds: convertedDuration.rounds,
+              turns: convertedDuration.rounds > 0 ? convertedDuration.turns : Math.max(convertedDuration.turns, 1),
+              startRound: game.combat?.round,
+              startTurn: game.combat?.turn,
+            }
           }
         }
         await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
