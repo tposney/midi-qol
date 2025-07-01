@@ -1,8 +1,14 @@
 ### 13.0.6
 * First open beta for midi-qol and foundry v13 dnd5e v5. This is **NOT** ready for gameplay but we are actively seeking feedback on any issues. Please read the whole changelog as there are substantial changes. The main one being that the item midi-qol tab is no more.
+* Requires the v13 branch of dae: https://gitlab.com/tposney/dae/raw/v13/package/module.json
 * Fix for reactions using a save activity not rolling the save.
 * Fix for sometimes generating extra concentration checks on combat start or advancing combat. thanks @thatlonelybugbear
 * Proper effect data to remove summoned creature on expiry. thanks @thatlonelybugbrear
+
+* Known issues:
+  * Allow Critical/Critical bonus not displaying headings on save/check activities.
+  * Using levels to check visibility is not working properly with walls - any wall blocks visibility - affects advantage/disadvantage, but not distance calculations.
+  * Midi still hooks renderChatMessage and has not migrated to renderChatMessageHTML, so you will get a bunch of compatibility warnings.
 
 ### 13.0.5
 * Added flags.midi-qol.optional.NAME.XXX.displayBonusRolls
@@ -41,7 +47,6 @@
   - Toggle Effect has moved to the activity midi-tab and only affects the activity.
   - noConcentrationSave is moved to the activity midi-tab and only affects the activity.
   - Friends fail/save moved to the save activity sheet.
-  - **this is not enabled yet** When an actor/item is loaded (world load/import) the midiProperties are migrated to the new scheme and the midiProperties are deleted. If you have already manually migrated these fields then be aware that the settings may be overwritten by this migration.
   
   **Breaking** Instead of the previous onUseMacro field on the midi tab, a new header bar app, "midi-qol" (courtesy of @micheal) is supported. This allows you to specify access to item based macros (called on all activity workflows), custom macros (called on all activity workflows) or activity macros (called when the specified activity is run). This is improved functionality compared to the v12 version where all macros were called on all activities.
 
@@ -53,11 +58,6 @@
     Apply activity effects, if absent apply CE: Prefer the activity effects and if none present use the CE effect if present.
     Apply CE, if absent apply activity effects: Prefer to apply the CE effect if present.
     Apply CE and activity effect: Apply both activity and CE effects.
-
-* Known issues:
-  * Allow Critical/Critical bonus not displaying headings on save/check activities.
-  * Using levels to check visibility is not working properly with walls - any wall blocks visibility - affects advantage/disadvantage, but not distance calculations.
-  * Midi still hooks renderChatMessage and has not migrated to renderChatMessageHTML, so you will get a bunch of compatibility warnings.
 
 ### 13.0.3
 * Add usage.midiOptions.triggeringWorkflowId and usage.midiOptions.triggeringActivityUuid to triggered activities.
