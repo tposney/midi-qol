@@ -2378,10 +2378,10 @@ export class Workflow {
     let otherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave !== true).map(efData => efData.effect);
     let onSaveOtherActivityEffects = (this.otherActivity?.effects ?? []).filter(efData => isApplicableEffect(efData.effect) && efData.onSave === true).map(efData => efData.effect);
     if (activityEffects.length > 0 && this.effectTargets.size > 0 && this.activity?.midiProperties?.chooseEffects) { // WIP
-      activityEffects = await this.chooseEffects(activityEffects, {activity: this.activity, activityUuid: this.activity.uuid, isOtherActivity: false });
+      activityEffects = await this.chooseEffects(activityEffects, { activity: this.activity, activityUuid: this.activity.uuid, isOtherActivity: false });
     }
     if (otherActivityEffects.length > 0 && this.otherEffectTargets.size > 0 && this.otherActivity?.midiProperties?.chooseEffects) { // WIP
-      otherActivityEffects = await this.chooseEffects(otherActivityEffects, {activity: this.otherActivity, activityUuid: this.otherActivity.uuid, isOtherActivity: true });
+      otherActivityEffects = await this.chooseEffects(otherActivityEffects, { activity: this.otherActivity, activityUuid: this.otherActivity.uuid, isOtherActivity: true });
     }
     const ceTargetEffect = ceEffect && !(ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
     const ceSelfEffect = ceEffect && (ceEffect?.flags?.dae?.selfTarget || ceEffect?.flags?.dae?.selfTargetAlways);
@@ -2868,7 +2868,6 @@ export class Workflow {
         }
 
         const inCombat = (game?.combat as unknown as Combat)?.turns.some(combatant => (combatant.tokenId === selfTarget?.id));
-        const convertedDuration = globalThis.DAE.convertDuration(activityDuration, inCombat);
         if (activityDuration.units === "inst") {
           if (isInCombat(this.actor)) {
             effectData.duration = {
@@ -2884,15 +2883,31 @@ export class Workflow {
               startTime: game.time?.worldTime
             }
           }
-        } else if (convertedDuration?.type === "seconds") {
-          //@ts-expect-error worldTime
-          effectData.duration = { seconds: convertedDuration.seconds, startTime: game.time?.worldTime }
-        } else if (convertedDuration?.type === "turns") {
+          //@ts-expect-error no dnd5e-types
+        } else if (CONFIG.DND5E.permanentTimePeriods[activityDuration.units]) {
           effectData.duration = {
-            rounds: convertedDuration.rounds,
-            turns: convertedDuration.turns,
             startRound: (game?.combat as unknown as Combat)?.round,
             startTurn: (game?.combat as unknown as Combat)?.turn,
+            //@ts-expect-error worldTime
+            startTime: game.time?.worldTime
+          }
+        } else {
+          const convertedDuration = globalThis.DAE.convertDuration(activityDuration, inCombat);
+          if (convertedDuration?.type === "seconds") {
+            //@ts-expect-error worldTime
+            effectData.duration = { startTime: game.time?.worldTime }
+            if (convertedDuration.seconds !== undefined) effectData.duration.seconds = convertedDuration.seconds;
+          } else if (convertedDuration?.type === "turns") {
+            effectData.duration = {
+              startRound: (game?.combat as unknown as Combat)?.round,
+              startTurn: (game?.combat as unknown as Combat)?.turn,
+            }
+            if (convertedDuration.rounds !== undefined) {
+              effectData.duration.rounds = convertedDuration.rounds;
+            }
+            if (convertedDuration.turns !== undefined) {
+              effectData.duration.turns = convertedDuration.turns;
+            }
           }
         }
         if (!(this.activity.duration?.units == "inst" && configSettings.autoRemoveInstantaneousTemplate)) {
@@ -2929,16 +2944,34 @@ export class Workflow {
           },
         }
         const inCombat = (game.combat?.turns.some(combatant => (combatant as unknown as Combatant).token?.id === selfTarget.id));
-        const convertedDuration = globalThis.DAE.convertDuration(activityDuration, inCombat);
-        if (convertedDuration?.type === "seconds") {
-          //@ts-expect-error worldTime
-          effectData.duration = { seconds: Math.max(convertedDuration.seconds, 1), startTime: game.time?.worldTime }
-        } else if (convertedDuration?.type === "turns") {
+        if (activityDuration.units === "inst") {
+          // This seems wrong, however lots of dnd5e summons activities have a duration of inst - e.g. find familiar
           effectData.duration = {
-            rounds: convertedDuration.rounds,
-            turns: convertedDuration.rounds > 0 ? convertedDuration.turns : Math.max(convertedDuration.turns, 1),
             startRound: game.combat?.round,
             startTurn: game.combat?.turn,
+          //@ts-expect-error worldTime
+          startTime: game.time?.worldTime
+          }
+          //@ts-expect-error CONFIG.DND5E
+        } else if (CONFIG.DND5E.permanentTimePeriods[activityDuration.units]) {
+          effectData.duration = {
+            startRound: game.combat?.round,
+            startTurn: game.combat?.turn,
+            //@ts-expect-error worldTime
+            startTime: game.time?.worldTime
+          }
+        } else {
+          const convertedDuration = globalThis.DAE.convertDuration(activityDuration, inCombat);
+          if (convertedDuration?.type === "seconds") {
+            //@ts-expect-error worldTime
+            effectData.duration = { seconds: Math.max(convertedDuration.seconds, 1), startTime: game.time?.worldTime }
+          } else if (convertedDuration?.type === "turns") {
+            effectData.duration = {
+              rounds: convertedDuration.rounds,
+              turns: convertedDuration.rounds > 0 ? convertedDuration.turns : Math.max(convertedDuration.turns, 1),
+              startRound: game.combat?.round,
+              startTurn: game.combat?.turn,
+            }
           }
         }
         await this.actor.createEmbeddedDocuments("ActiveEffect", [effectData]);
@@ -3978,13 +4011,13 @@ export class Workflow {
               itemMacroData = foundry.utils.getProperty(itemOrMacro, "flags.dae.macro") ?? foundry.utils.getProperty(itemOrMacro, "flags.itemacro.macro");
             } else if (itemOrMacro instanceof Macro) macro = itemOrMacro;
           }
-          
+
           if (macro?.type === "chat") {
             macro.execute(); // use the core foundry processing for chat macros
             return {}
           }
         }
-        
+
         if (!itemMacroData && !macro) {
           const message = `Could not find item/macro ${name}`;
           TroubleShooter.recordError(new Error(message), message);
@@ -4070,9 +4103,9 @@ export class Workflow {
       )
     }
     // for active defence, this.attackRoll is undefined, thus create the array like this to prevent errors further on
-     const rolls = [...(this.attackRoll ? [this.attackRoll] : []), 
-                    ...(this.utilityRoll ? [this.utilityRoll] : []),
-                    ...(this.extraRolls ?? [])];
+    const rolls = [...(this.attackRoll ? [this.attackRoll] : []),
+    ...(this.utilityRoll ? [this.utilityRoll] : []),
+    ...(this.extraRolls ?? [])];
     // const rolls = [...(this.attackRoll ? [this.attackRoll] : []), ...(this.extraRolls ?? [])];
     await this.performDebouncedUpdate(chatMessage, { content, flags: newFlags, rolls }, true);
   }
@@ -4765,7 +4798,7 @@ export class Workflow {
           (this.item.system.description.value.toLowerCase().includes(i18n("midi-qol.autoFailFriendly")?.toLowerCase())
             || this.activity.friendlySave === "friendlyFailure")) {
           promises.push(new D20Roll("-1").evaluate());
-        } else if (saveDetails.isFriendly && this.activity.friendlySave === "friendlySuccess") {  
+        } else if (saveDetails.isFriendly && this.activity.friendlySave === "friendlySuccess") {
           promises.push(new D20Roll("99").evaluate());
         } else if ((!player?.isGM && playerMonksTB) || (player?.isGM && gmMonksTB)) {
           promises.push(new Promise((resolve) => {

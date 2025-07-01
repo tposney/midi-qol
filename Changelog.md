@@ -1,3 +1,6 @@
+### 13.0.7
+* Fix for summons with instantaneous duration throwing an error
+
 ### 13.0.6
 * First open beta for midi-qol and foundry v13 dnd5e v5. This is **NOT** ready for gameplay but we are actively seeking feedback on any issues. Please read the whole changelog as there are substantial changes. The main one being that the item midi-qol tab is no more.
 * Requires the v13 branch of dae: https://gitlab.com/tposney/dae/raw/v13/package/module.json
