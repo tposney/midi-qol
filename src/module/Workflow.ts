@@ -2444,9 +2444,9 @@ export class Workflow {
     for (let token of this.targets) {
       const tokenDamages = this.damageList?.find(di => di.targetUuid === getTokenDocument(token)?.uuid);
       if (tokenDamages) {
-        totalDamage = tokenDamages.totalDamage;
-        hpDamage = tokenDamages.hpDamage;
-        damageComponents = [tokenDamages.damageDetails["combinedDamage"], configSettings.singleConcentrationRoll ? [] : (tokenDamages.damageDetails["otherDamage"] ?? [])]
+        doEffectsData.damageTotal = tokenDamages.totalDamage;
+        doEffectsData.context.damageApplied = tokenDamages.hpDamage;
+        doEffectsData.context.damageComponent = [tokenDamages.damageDetails["combinedDamage"], configSettings.singleConcentrationRoll ? [] : (tokenDamages.damageDetails["otherDamage"] ?? [])]
           .reduce((summary, damages) => {
             let damagesSummary = damages.reduce((damageComponents, damageEntry) => {
               damageComponents[damageEntry.type] = damageEntry.value + (damageComponents[damageEntry.type] ?? 0);
